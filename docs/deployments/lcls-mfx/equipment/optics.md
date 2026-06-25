@@ -2,7 +2,7 @@
 
 *The MFX-hutch beam conditioning, the pump-probe laser, the sample delivery, and the emission spectrometer. Design-phase, with the `pcdshub`-derived handles recorded.*
 
-The MFX experiment hutch is where the transported beam is conditioned to its final state and meets the sample. This is the stage that most exercises the family-fold finding: every conditioning device folds into an existing Family, and the one device that does not (the emission spectrometer) is the single new loose family.
+The MFX experiment hutch is where the transported beam is conditioned to its final state and meets the sample. This is the stage that most exercises the family-fold finding: every conditioning device folds into an existing Family, and the one device that did not (the emission spectrometer) introduced the `EmissionSpectrometer` family, since graduated into the catalog once ISS earned the second sighting.
 
 ## Conditioning the beam
 
@@ -25,6 +25,6 @@ The femtosecond optical laser (`LAS:FS45` timing, `MFX:LAS:MMN:*` motors) excite
 ## The interaction point
 
 - **Sample delivery** (`MFX:LJH`): a Beckhoff-controlled liquid jet (and a fixed-target option) streams microcrystals into the beam for serial crystallography. Sample delivery is endstation-specific with no storage-ring analog; it is carried with its shape and the `Subject` custody lifecycle deferred, and no Family is coined (SAMPLE-1), mirroring how I03 carries its sample-exchange arm.
-- **Von Hamos emission spectrometer** (`MFX:SPEC`): a 6-crystal X-ray emission spectrometer for XES and HERFD. It is the **one device with no CORA Family**: a crystal-analyzer dispersive spectrometer that composes analyzer crystals and a 2D detector along a dispersive geometry, structurally distinct from a `Monochromator`. It is carried as the single new loose family, `EmissionSpectrometer`, routed to naming-r3. The same gap appeared at MAX IV Balder (the SCANIA-2D spectrometer), so the rule-of-three that would graduate it may already be near (SPEC-1).
+- **Von Hamos emission spectrometer** (`MFX:SPEC`): a 6-crystal X-ray emission spectrometer for XES and HERFD. A crystal-analyzer dispersive spectrometer that composes analyzer crystals and a 2D detector along a dispersive geometry, structurally distinct from a `Monochromator`. It introduced the `EmissionSpectrometer` family, which **GRADUATED into the catalog** once NSLS-II ISS (8-ID) earned the second sighting (its Johann + von Hamos XES / HERFD spectrometers); MAX IV Balder (the SCANIA-2D spectrometer) is a third near-sighting. Whether each analyzer crystal is a child Asset is the residual question (SPEC-1).
 
 See the [Detector](detector.md) page for how the recorded shots leave the hutch, and [Open questions](../questions.md) for the conditioning and endstation items still to confirm.

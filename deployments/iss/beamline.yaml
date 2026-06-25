@@ -1,0 +1,263 @@
+# ISS beamline descriptor (NSLS-II), reverse-engineered
+#
+# ISS (Inner-Shell Spectroscopy) is the NSLS-II X-ray absorption / emission
+# spectroscopy beamline at sector 8-ID. A single hard-X-ray insertion-device source
+# feeds a high-heat-load trajectory monochromator (HHM) whose energy axis is swept as
+# a fly-scan: the energy sweep IS the EXAFS measurement. Transmission and fluorescence
+# detectors read absorption; two crystal emission spectrometers (a Johann and a von
+# Hamos) read X-ray emission for XES and high-energy-resolution fluorescence detection
+# (HERFD). It is bound to the NSLS-II Site (deployments/nsls2/site.yaml), the
+# thirteenth NSLS-II beamline after FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, SMI,
+# IXS, SST.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the NSLS2/iss-profile-collection bluesky / ophyd startup files) or inferred,
+# carried `confirm: true` pending ISS staff. EPICS PVs are real and verified against
+# the startup/*.py device classes; crystal cuts, undulator parameters, vendor part
+# numbers, and physical positions are not in source and are open questions. Same
+# descriptor mode as the other NSLS-II beamlines: this scaffold is descriptor + docs,
+# scenarios deferred.
+#
+# ISS is the EXAFS-AND-EMISSION deployment: CORA's first dedicated X-ray absorption
+# spectroscopy beamline driven by a trajectory energy fly-scan, and the SECOND sighting
+# of the crystal emission spectrometer. The HHM / HRM monochromators reuse the catalog
+# Monochromator, the mirrors Mirror, the filter box Filter, the ion chambers FluxMonitor,
+# the Xspress3 SDD EnergyDispersiveSpectrometer, the Pilatus area detector Camera, the
+# sample stages LinearStage / Goniometer / RotaryStage, the thermal stage
+# TemperatureController, the slits Slit, the shutters Shutter, the energy pseudo-axis
+# PseudoAxis. The Johann and von Hamos crystal emission spectrometers bind the
+# EmissionSpectrometer family that LCLS-MFX introduced (its von Hamos XES spectrometer):
+# ISS is the SECOND sighting, earning the rule-of-three, so EmissionSpectrometer
+# GRADUATED into the catalog (SPEC-1). One loose family remains: BeamPositionMonitor
+# (DIAG-1). No Capability or Method is coined: the energy sweep strengthens the deferred
+# energy_scan case but a descriptor scaffold does not force it (ENERGY-1 stays deferred,
+# the BMM question), and the XAS / XES techniques sit on pending Methods (TECH-1). The
+# ion-chamber fill-gas flow and the in-situ sample environment are deferred (ENV-1).
+
+beamline:
+  name: ISS
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 8"           # PV namespace XF:08ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "8-ID in-vacuum undulator on the NSLS-II 3 GeV ring (SR:OPS-BI{DCCT:1} reads the ring current). The profile collection drives photon energy through the HHM trajectory and does not expose the undulator gap / period PVs, so the source identity and range are inferred (SRC-1)."
+
+enclosures:
+  # 8-ID has an optics enclosure (PV zone XF:08IDA, the FOE: mirrors, monochromators,
+  # filter box) and an experiment enclosure (PV zone XF:08IDB: sample stages, ion
+  # chambers, detectors, the emission spectrometers). The zone letters A / B are
+  # grounded in the PV prefixes; the physical hutch names / numbering are not in source.
+  - name: 8-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf not in source; the front-end shutter is XF:08ID-PPS{Sh:FE} and the photon shutter is XF:08IDA-PPS{PSh} (PSS-1)"}
+  - name: 8-ID-B
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; 8-ID-B (PV zone XF:08IDB) is the experiment enclosure carrying the sample stages, ion chambers, detectors, and emission spectrometers (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the insertion-device source and the front-end / photon shutters
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 8-ID-A
+  intro: The 8-ID insertion-device source, the front-end beam-defining slit, and the front-end and photon shutters.
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      confirm: "8-ID in-vacuum undulator; energy is driven through the HHM trajectory and the undulator gap PV is not in the profile collection (SRC-1)"
+      note: "The hard-X-ray insertion device feeding 8-ID on the NSLS-II 3 GeV ring (ring current SR:OPS-BI{DCCT:1}I:Real-I). Period, gap range, and the gap-tracking coupling to the monochromator are not in source (SRC-1)."
+    - name: FrontEndSlit
+      family: Slit
+      pv: "FE:C08A-OP{Slt:12-Ax:"
+      confirm: true
+      note: "Front-end white-beam slit (FE:C08A-OP{Slt:12-Ax:X} / {Slt:12-Ax:Y}, horizontal and vertical gap / center) defining the accepted beam."
+    - name: FrontEndShutter
+      family: Shutter
+      pv: "XF:08ID-PPS{Sh:FE}"
+      confirm: true
+      note: "Front-end photon shutter."
+    - name: PhotonShutter
+      family: Shutter
+      pv: "XF:08IDA-PPS{PSh}"
+      confirm: true
+      note: "Photon shutter gating the beam into the optics enclosure (a two-button open / close shutter)."
+
+# ===========================================================================
+# OPTICS STAGE: the monochromators, the mirrors, the filter box, the slits
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: 8-ID-A
+  intro: "Condition the beam and set its energy: the high-heat-load trajectory monochromator (HHM) and the high-resolution monochromator (HRM), the collimating and focusing mirrors, the harmonic-rejection mirror, the filter box, and the hutch slits. PVs verified against the iss-profile-collection startup files."
+  devices:
+    - name: HighHeatLoadMonochromator
+      family: Monochromator
+      pv: "XF:08IDA-OP{Mono:HHM-Ax:"
+      confirm: true
+      note: "The primary double-crystal monochromator (HHM; pitch / roll / theta / Y crystal axes XF:08IDA-OP{Mono:HHM-Ax:P/R/Th/Y}Mtr, and a flying energy axis XF:08IDA-OP{Mono:HHM-Ax:E}Mtr). Energy is swept as a trajectory fly-scan: the Bragg angle follows a pre-computed look-up table on the Delta-Tau controller (XF:08IDA-OP{MC:06}, with per-element Traj:1-9 element / edge / E0 descriptors). Reuses the Monochromator family. Crystal cut and energy range pending (DCM-1)."
+    - name: HighResolutionMonochromator
+      family: Monochromator
+      pv: "XF:08IDA-OP{Mono:HRM-Ax:"
+      confirm: true
+      note: "The high-resolution monochromator (HRM; theta / Y / pitch axes XF:08IDA-OP{Mono:HRM-Ax:Th/Y/P}Mtr) used for high-energy-resolution incident-beam conditioning. Reuses the Monochromator family. Crystal cut and reflection pending (DCM-1)."
+    - name: CollimatingMirror1
+      family: Mirror
+      pv: "XF:08IDA-OP{Mir:1-CM"
+      confirm: true
+      note: "First collimating mirror (CM1; pitch / roll / X / Y multi-jack axes, with Rh / Si / Pt stripes selected by the X translation). Reuses the Mirror family."
+    - name: CollimatingMirror2
+      family: Mirror
+      pv: "XF:08IDA-OP{Mir:2-CM"
+      confirm: true
+      note: "Second collimating mirror (CM2; Pt / Rh stripes) with a bender (XF:08IDA-OP{Mir:2-CM-Ax:BEN}Mtr and a load-cell readback). Reuses the Mirror family."
+    - name: FocusingMirror
+      family: Mirror
+      pv: "XF:08IDA-OP{Mir:FM"
+      confirm: true
+      note: "Focusing mirror (FM; Pt / Rh stripes) with a bender (XF:08IDA-OP{Mir:FM-Bender}Mtr and a load-cell readback). Reuses the Mirror family."
+    - name: HarmonicRejectionMirror
+      family: Mirror
+      pv: "XF:08IDB-OP{Mir:HRM:"
+      enclosure: 8-ID-B
+      confirm: true
+      note: "High-harmonic-rejection mirror (HHRM; YU / YD1 / YD2 / pitch / table axes and a horizontal stripe translation, Si / Pt / Rh). It sits in the experiment enclosure (PV zone XF:08IDB). Reuses the Mirror family."
+    - name: FilterBox
+      family: Filter
+      pv: "XF:08IDA-OP{Fltr:FB"
+      confirm: true
+      note: "Attenuator / filter box (XF:08IDA-OP{Fltr:FB-Ax:Y}Mtr positioning five insertable filters Fltr1-5) hardening the beam and limiting flux. Reuses the Filter family."
+    - name: HutchSlit
+      family: Slit
+      pv: "XF:08IDB-OP{Slt"
+      enclosure: 8-ID-B
+      confirm: true
+      note: "Beam-defining slit in the experiment enclosure (XF:08IDB-OP{Slt-Ax:V-GAP / V-POS / XI / XO}Mtr); a second four-blade hutch slit sits at XF:08IDB-OP{Misc:2-Ax:}. Reuses the Slit family."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "The master energy axis: a pseudopositioner mapping photon energy to the HHM Bragg angle (and the coupled undulator gap), realized as the trajectory fly-scan. The energy sweep is the EXAFS measurement, which strengthens but does not coin the deferred energy_scan Capability (ENERGY-1, the BMM question); the technique scope is TECH-1."
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      pv: "XF:08IDA-BI{BPM:FM}"
+      confirm: true
+      note: "Beam-position monitors along the optics (Prosilica cameras XF:08IDA-BI{BPM:FM / CM / 1-BT / 2-BT}) and sample-positioning cameras downstream (XF:08IDB-BI{BPM:SP-n}, XF:08IDB-BI{BPM:ES}). Binds the loose BeamPositionMonitor family that 4-ID / 8-ID / 9-ID also use (held; DIAG-1)."
+
+# ===========================================================================
+# SAMPLE STAGE: the sample stages, the reference foil wheel, the thermal control
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 8-ID-B
+  intro: "The sample stages, the energy-calibration reference foil wheel, and the sample-environment thermal control. PVs verified against the iss-profile-collection startup files."
+  note: >
+    ISS positions the sample in the transmission / fluorescence beam path on a
+    multi-axis stage and rotates it on a goniometer; an upstream reference foil wheel
+    provides an energy-calibration standard read on a reference ion chamber. The thermal
+    control reuses TemperatureController. The ion-chamber fill-gas mass-flow controllers
+    (He / N2) and the broader in-situ sample environment are deferred (ENV-1).
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: "XF:08IDB-OP{Stage:Sample-Ax:"
+      confirm: true
+      note: "Primary sample translation stage (X / Y at XF:08IDB-OP{Stage:Sample-Ax:X / Y}Mtr, Z at XF:08IDB-OP{Misc-Ax:2}Mtr); a finer SampleXY (XF:08IDB-OP{SampleXY}) and an auxiliary stage (XF:08IDB-OP{Stage:Aux1}) sit on it. Reuses the LinearStage family."
+    - name: SampleGoniometer
+      family: Goniometer
+      pv: "XF:08IDB-OP{Gon:Th"
+      confirm: true
+      note: "Sample rotation goniometer (theta axes XF:08IDB-OP{Gon:Th:1 / :2}Mtr) setting the sample angle to the beam. Reuses the Goniometer family."
+    - name: ReferenceFoilWheel
+      family: RotaryStage
+      pv: "XF:08IDB-OP{FoilWheel1:Rot}Mtr"
+      confirm: true
+      note: "Reference-foil wheel (XF:08IDB-OP{FoilWheel1:Rot}Mtr, with a second wheel on the SampleXY stage) presenting metal-foil standards for per-scan energy calibration on the reference ion chamber. Reuses the RotaryStage family."
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: "XF:08ID-ES{LS:331-1}:"
+      confirm: true
+      note: "Sample-environment thermal control (a Lakeshore 331 at XF:08ID-ES{LS:331-1}:). Reuses the TemperatureController family. Which sample-environment units are live is TEMP-1."
+
+# ===========================================================================
+# DETECTION STAGE: the ion chambers, the fluorescence + area detectors, the
+# Johann and von Hamos emission spectrometers
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 8-ID-B
+  intro: "The detectors that make ISS an absorption + emission beamline: the transmission / fluorescence ion chambers, the silicon-drift fluorescence detector, the area detector, and the two crystal emission spectrometers (Johann and von Hamos). PVs verified against the iss-profile-collection startup files."
+  note: >
+    Which detector is read decides the technique: the ion chambers (I0 / It / Ir) for
+    transmission EXAFS, the Xspress3 silicon-drift array for fluorescence EXAFS, and the
+    Johann or von Hamos crystal emission spectrometer for XES and HERFD. The emission
+    spectrometers are the signature ISS instruments; both bind the EmissionSpectrometer
+    family (graduated, LCLS-MFX + ISS). The full per-detector channel map is DET-1.
+  devices:
+    - name: IonChambers
+      family: FluxMonitor
+      pv: "XF:08IDB-CT{Amp-I0}"
+      confirm: true
+      note: "The transmission / fluorescence ion chambers I0 / It / Ir / If, read through configurable amplifiers (the in-house ICAmplifier at XF:08IDB-CT{Amp-I0 / It / Ir / If} and, currently, Keithley 428 preamps at XF:08ID-ES:{K428}:A-D:) and digitized by the analog pizza box (XF:08IDB-CT{PBA:1}); each chamber rides a vertical positioner XF:08IDB-OP{IC-Ax:Y:1-3}Mtr. Reuses the FluxMonitor family (graduated #353). The channel-to-chamber map is DET-1."
+    - name: FluorescenceDetector
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:08IDB-ES{Xsp:1}:"
+      confirm: true
+      note: "A four-channel silicon-drift fluorescence detector read by an Xspress3 (XF:08IDB-ES{Xsp:1}: channels C1-C4, with per-channel ROIs and an HDF5 stream) for fluorescence EXAFS. Reuses the EnergyDispersiveSpectrometer family. Element count and ROI map pending (DET-1)."
+    - name: AreaDetector
+      family: Camera
+      pv: "XF:08IDB-ES{Det:PIL1}:"
+      confirm: true
+      note: "A Pilatus 100k pixel-array detector (XF:08IDB-ES{Det:PIL1}; a second Pilatus PIL2 is also defined) reading the emission-spectrometer focus and 2D patterns. Reuses the Camera family. Which detector is live per spectrometer is DET-1."
+    - name: JohannSpectrometer
+      family: EmissionSpectrometer
+      pv: "XF:08IDB-OP{HRS:1-"
+      confirm: true
+      note: "The Johann high-energy-resolution crystal emission spectrometer (XES / HERFD): a Rowland-circle back-scattering analyzer composing a main crystal plus four auxiliary crystals (XF:08IDB-OP{HRS:1-Stk:1-5:X / Y / Roll / Yaw}Mtr) on a Y assembly (XF:08IDB-OP{HRS:1-Ana:Assy:Y}Mtr) with a two-theta detector arm (XF:08IDB-OP{HRS:1-Det:Gon:Theta1 / Theta2}Mtr). Binds the EmissionSpectrometer family (graduated): ISS is the SECOND sighting after LCLS-MFX's von Hamos XES spectrometer (SPEC-1). Crystal cut, Rowland radius, and whether each analyzer crystal is a child Asset are SPEC-1."
+    - name: VonHamosSpectrometer
+      family: EmissionSpectrometer
+      pv: "XF:08IDB-OP{MC:3-Ax:"
+      confirm: true
+      note: "The von Hamos wavelength-dispersive crystal emission spectrometer (XES; a cylindrically-bent crystal spreading the emitted spectrum onto the area detector, motors XF:08IDB-OP{MC:3-Ax:} for the assembly and crystal, sharing the XF:08IDB-OP{HRS:1-Det} detector arm; a separate FIP von Hamos sits at XF:08IDB-OP{FIP-VHS:Stage1 / 2}). Binds the EmissionSpectrometer family (graduated). Crystal cut and geometry are SPEC-1."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    ISS scans run as trajectory fly-scans: the HHM energy axis follows a look-up table
+    on a Delta-Tau motion controller while the ion-chamber and fluorescence detectors
+    stream against an encoder. The analog pizza box provides the synchronized
+    multi-channel readout. Controller box models / firmware / IPs are not fully in the
+    profile collection (DRIVE-1).
+  motion_controllers:
+    - name: TrajectoryMotionController
+      family: MotionController
+      pv: "XF:08IDA-OP{MC:06}"
+      confirm: true
+      note: "The Delta-Tau motion controller running the HHM energy trajectory (LUT load / transfer, prepare / start / stop trajectory, progress); a second controller (the XF:08IDB-OP{MC:3-Ax:} axes) drives the von Hamos spectrometer. Standard EPICS motor records drive the remaining axes. Box model / firmware pending (DRIVE-1)."
+  triggering:
+    - name: AnalogPizzaBox
+      family: TimingController
+      pv: "XF:08IDB-CT{PBA:1}:"
+      confirm: true
+      note: "The analog pizza box (APB): an eight-channel synchronized ADC (XF:08IDB-CT{PBA:1}: streaming the ion-chamber voltages) plus a trigger / pulse generator (apb_trigger) that times the detectors against the encoder pizza box (XF:08IDA-CT{Enc09:1}) during the fly-scan. Reuses the TimingController family."
+  software_iocs_not_modeled:
+    [Xspress3, Pilatus, Keithley428, Lakeshore331, AnalogPizzaBox, TrajectoryManager, ProsilicaBPM, Databroker]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum                # in-vacuum undulator + optics + spectrometer beam path
+    - kind: LiquidNitrogen        # monochromator crystal cooling
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["analyzer crystals", "reference foils", "ion-chamber fill gas", "silicon-drift detector"]

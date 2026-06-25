@@ -37,11 +37,11 @@ Root Asset `LCLS-MFX` (`tier = Unit`, `facility_code = slac`); sub-systems nest 
 | `Wave8` | **FluxMonitor** | `MFX:DG1:MMS:08` | fast per-shot intensity / wavefront Sensor (DIAG-1) |
 | `PumpProbeLaser` | **Laser** | `LAS:FS45` / `MFX:LAS:MMN:*` | fs optical pump-probe laser; loose family reused from 4-ID; fs sync is the gap (LASER-1) |
 | `LiquidJet` | (deferred) | `MFX:LJH` | liquid-jet / fixed-target sample delivery; no Family coined yet (SAMPLE-1) |
-| `EmissionSpectrometer` | **EmissionSpectrometer** | `MFX:SPEC` | von Hamos 6-crystal XES spectrometer; the single new loose family (SPEC-1) |
+| `EmissionSpectrometer` | **EmissionSpectrometer** | `MFX:SPEC` | von Hamos 6-crystal XES spectrometer; the family it introduced, graduated once ISS earned the 2nd sighting (SPEC-1) |
 | `Detector` | Camera | (Rayonix / ePix10k / Jungfrau) | per-shot area detector; frames flow through the DAQ data plane (DAQ-1, DET-1) |
 | `EventSequencer` | TimingController | `ECS:SYS0:7` | beam-synchronous event-code sequencer; event-code parameter has no typed home (TIMING-1) |
 
-Reused catalog Families (no new Family needed): `InsertionDevice`, `Filter`, `Mirror`, `Shutter`, `Slit`, `Scintillator`, `Monochromator`, `Camera`, `TimingController`, and `Transfocator` (the graduated CRL focusing optic, also bound at I22 / 4-ID / 8-ID). **No new catalog Family graduated here.** Loose families reused from sibling deployments: `FluxMonitor` and `Diagnostic` (Sensor families, from I22 / 2-BM), `Laser` (from 4-ID POLAR). Only one genuinely new loose family: `EmissionSpectrometer` (the von Hamos, a crystal-analyzer emission spectrometer no Family carries; the same gap appeared at MAX IV Balder). The liquid jet presents an endstation Role and is carried with its shape deferred rather than minting a Family, mirroring how I03 and 19-BM handle sample delivery and the exchange arm.
+Reused catalog Families (no new Family needed): `InsertionDevice`, `Filter`, `Mirror`, `Shutter`, `Slit`, `Scintillator`, `Monochromator`, `Camera`, `TimingController`, and `Transfocator` (the graduated CRL focusing optic, also bound at I22 / 4-ID / 8-ID). **No new catalog Family graduated here.** Loose families reused from sibling deployments: `FluxMonitor` and `Diagnostic` (Sensor families, from I22 / 2-BM), `Laser` (from 4-ID POLAR). One genuinely new family at the time: `EmissionSpectrometer` (the von Hamos, a crystal-analyzer emission spectrometer), which has since GRADUATED into the catalog once NSLS-II ISS (8-ID) earned the second sighting (SPEC-1; MAX IV Balder is a third near-sighting). The liquid jet presents an endstation Role and is carried with its shape deferred rather than minting a Family, mirroring how I03 and 19-BM handle sample delivery and the exchange arm.
 
 ## Pending confirmations
 
@@ -61,7 +61,7 @@ Every value below is reverse-engineered from `pcdshub` or inferred, awaiting the
 | Pump-probe fs synchronization and laser model-vs-hazard | `PumpProbeLaser`, `TimeTool` | `unknown-pending-confirmation` | (LASER-1) |
 | Diagnostics Sensor modelling | `TransportIPM`, `MFXIntensityMonitor`, `Wave8`, `GasDetector` | `unknown-pending-confirmation` | (DIAG-1) |
 | Sample-delivery model and Subject custody thread | `LiquidJet` | `unknown-pending-confirmation` | (SAMPLE-1) |
-| Emission-spectrometer Family and analyzer-crystal composition | `EmissionSpectrometer` | `unknown-pending-confirmation` | (SPEC-1) |
+| Emission-spectrometer analyzer-crystal composition (child-Asset) | `EmissionSpectrometer` | `unknown-pending-confirmation` | (SPEC-1) |
 | Detector model and per-shot frame referencing | `Detector` | `unknown-pending-confirmation` | (DET-1) |
 
 Assertion-style questions that do not leave a value blank (the scope question SCOPE-1, the computed lightpath LIGHTPATH-1, and the pulse-picker Family PULSE-1) are on [Open questions](questions.md) without a placeholder here.

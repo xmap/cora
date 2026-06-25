@@ -270,7 +270,7 @@ _PENDING_METHODS = {
     "powder_diffraction": "i11 powder diffraction; portable Method not yet earned",
     "serial_crystallography": "LCLS-MFX + i24 serial crystallography; 2 consumers, not earned",
     "pump_probe": "LCLS-MFX fs optical-laser pump / X-ray probe; XFEL Method not yet earned",
-    "xas_spectroscopy": "LCLS-MFX XAS / XES via the von Hamos spectrometer; Method not yet earned",
+    "xas_spectroscopy": "MFX + ISS emission-spectrometer XAS / XES; 2 consumers (TECH-1)",
 }
 
 

@@ -55,6 +55,7 @@ The fourth Site CORA models. Like the Diamond exercise, its beamlines are revers
 | [SMI](smi/index.md) | Reverse-engineered | small- and wide-angle scattering (SAXS/WAXS) with grazing incidence (GISAXS/GIWAXS), 12-ID; the NSLS-II twin of Diamond i22, modelled from public beamline config |
 | [IXS](ixs/index.md) | Reverse-engineered | momentum-resolved hard inelastic X-ray scattering, 10-ID; modelled from public beamline config |
 | [SST](sst/index.md) | Reverse-engineered | soft-and-tender dual-branch, multi-endstation (RSoXS scattering, NEXAFS absorption, HAXPES photoemission), 7-ID; modelled from public beamline config |
+| [ISS](iss/index.md) | Reverse-engineered | inner-shell spectroscopy (EXAFS by trajectory energy fly-scan, plus XES / HERFD on the Johann + von Hamos crystal emission spectrometers), 8-ID; modelled from public beamline config |
 
 ## [SLAC](slac/index.md)
 

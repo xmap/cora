@@ -19,7 +19,8 @@
 # whether CORA generalizes beyond the storage-ring acquisition paradigm.
 #
 # THE HEADLINE FINDING: MFX's DEVICE FAMILIES FOLD. Of the full device set, exactly
-# one type has no CORA Family (the von Hamos emission spectrometer, carried loose).
+# one type had no CORA Family at the time (the von Hamos emission spectrometer; its
+# EmissionSpectrometer family has since graduated, ISS 2nd sighting).
 # Everything else reuses a catalog Family or an existing loose family. The genuine
 # gaps MFX exposes are ARCHITECTURAL, not taxonomic, and are recorded as deliberate
 # deferrals on docs/deployments/lcls-mfx/model.md (not invented here):
@@ -38,7 +39,8 @@
 # optic); EventSequencer ->
 # TimingController; the area detector -> Camera. The gas detector (a BeamStats PV,
 # not a happi device) -> FluxMonitor. Vacuum gate valves and the DAQ are floor and
-# not modelled (as at i03). Only NEW loose family: EmissionSpectrometer (SPEC-1).
+# not modelled (as at i03). One new family at the time: EmissionSpectrometer, since
+# GRADUATED into the catalog once NSLS-II ISS (8-ID) earned the second sighting (SPEC-1).
 #
 # Every device carries `new: true` (not a registered Asset) and `confirm: true`
 # (PVs + values to be verified by LCLS staff). Calibrated numbers, the PPS safety
@@ -258,10 +260,12 @@ mfx-endstation:
   note: >
     Sample delivery at MFX is a liquid jet / fixed target (serial femtosecond
     crystallography), with no storage-ring analog; it is deferred (SAMPLE-1). The von
-    Hamos spectrometer is the one device with no CORA Family: a crystal-analyzer
-    X-ray emission spectrometer (it composes analyzer crystals + a 2D detector along
-    a dispersive geometry). It is carried as the single new loose family (SPEC-1),
-    routed to naming-r3; the same gap appeared at MAX IV Balder (SCANIA-2D).
+    Hamos spectrometer is a crystal-analyzer X-ray emission spectrometer (it composes
+    analyzer crystals + a 2D detector along a dispersive geometry). It introduced the
+    EmissionSpectrometer family, which GRADUATED into the catalog once NSLS-II ISS
+    (8-ID) earned the second sighting (the Johann + von Hamos XES / HERFD spectrometers);
+    the same gap appeared at MAX IV Balder (SCANIA-2D). Whether each analyzer crystal is
+    a child Asset is still open (SPEC-1).
   devices:
     - name: PumpProbeLaser
       family: Laser
@@ -279,7 +283,7 @@ mfx-endstation:
       pv: "MFX:SPEC"
       new: true
       confirm: true
-      note: "von Hamos 6-crystal X-ray emission spectrometer (XES / HERFD). No catalog Family fits: it is a crystal-analyzer dispersive spectrometer composing analyzer crystals + a 2D detector, distinct from a Monochromator. The single new loose family; routed to naming-r3 (SPEC-1)"
+      note: "von Hamos 6-crystal X-ray emission spectrometer (XES / HERFD): a crystal-analyzer dispersive spectrometer composing analyzer crystals + a 2D detector, distinct from a Monochromator. Binds the EmissionSpectrometer family, which it introduced and which GRADUATED into the catalog once NSLS-II ISS (8-ID) earned the second sighting (SPEC-1)"
 
 # --- DETECTION STAGE: the per-shot area detector ---
 

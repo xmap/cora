@@ -373,7 +373,6 @@ _ALLOWED_LOOSE_FAMILIES = {
     "MultilayerLaueLens": "staged: novel 1D crossed-pair nano-focus optic, HXN-only (OPTIC-3)",
     "Chopper": "staged: rotary duty-cycle device; fold-vs-Family open (CHOP-1)",
     "Photodiode": "staged: PIN photodiode, Sensor Role; Family-vs-Sensor open (RAD-1)",
-    "EmissionSpectrometer": "staged: crystal-analyzer emission spectrometer; new (SPEC-1)",
     "Baffle": "staged: passive baffle inside the 2-BM SafetyStack; review name/role",
     "Screen": "staged: motorized phosphor diagnostic flag (2-BM, FLAG-1); review name-vs-behavior",
     "BeamPositionMonitor": "staged: position/intensity Sensor; fold-vs-promote open (DIAG-1)",

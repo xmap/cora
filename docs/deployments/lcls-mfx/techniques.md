@@ -23,7 +23,7 @@ An optical laser pulse excites the sample a controlled femtoseconds before (or a
 The von Hamos 6-crystal spectrometer disperses the X-ray fluorescence emitted by the sample onto a 2D detector, resolving emission energy; in HERFD mode the incident energy is scanned at a fixed emission line.
 
 - **Spine shape:** an `xas_spectroscopy` Method binding the emission spectrometer and, for HERFD, the incident-energy choreography (the DCCM), over a per-shot acquisition.
-- **Gap it leans on:** the emission spectrometer has no CORA Family (SPEC-1, the single new loose family), and HERFD's incident-energy scan reuses the energy-change choreography CORA already models well.
+- **Gap it leans on:** the emission spectrometer binds the `EmissionSpectrometer` family it introduced, since graduated once ISS earned the 2nd sighting (SPEC-1 now tracks only the analyzer-crystal composition), and HERFD's incident-energy scan reuses the energy-change choreography CORA already models well.
 
 ## Why none is in the catalog yet
 

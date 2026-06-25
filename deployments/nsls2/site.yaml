@@ -24,7 +24,7 @@ facility:
   heading: "NSLS-II"
   kind: Site
   institution: Brookhaven National Laboratory
-  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, SMI, IXS, SST]
+  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, SMI, IXS, SST, ISS]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the FXI profile collection, not yet
@@ -73,6 +73,14 @@ practices:
   # photoemission) each sit on a deferred / pending Capability (TECH-1, ENERGY-1, the
   # ESM angle_resolved_photoemission); no SST Practice is recorded until they land.
   # SST is bound via beamlines.
+  # ISS (8-ID) does X-ray absorption (EXAFS, by HHM trajectory energy fly-scan) and
+  # X-ray emission (XES, and incident-energy HERFD) on the Johann / von Hamos crystal
+  # emission spectrometers. This is the same emission-spectrometer XAS / XES shape that
+  # LCLS-MFX left pending as xas_spectroscopy, so ISS reuses that Method as the second
+  # consumer rather than coining a new one (TECH-1). The energy sweep also leans on the
+  # deferred energy_scan Capability (ENERGY-1, the BMM question), which ISS strengthens
+  # as a further consumer without forcing it in this descriptor scaffold.
+  - {name: ISS_xas_spectroscopy_practice, method: xas_spectroscopy, pending: true, note: "X-ray absorption (EXAFS) by HHM trajectory energy fly-scan, plus X-ray emission (XES) and high-energy-resolution fluorescence detection (HERFD) on the Johann and von Hamos crystal emission spectrometers; reuses the xas_spectroscopy Method that LCLS-MFX left pending, the second consumer (TECH-1). The incident-energy sweep also leans on the deferred energy_scan Capability (ENERGY-1)"}
 
 # Access BC Actors conceptually facility-wide at NSLS-II. Pending until the NSLS-II
 # operator and review structure is confirmed; the profile collection only exposes
