@@ -23,11 +23,11 @@
 #     swings to a scattering angle and disperses the emitted soft X-rays onto a
 #     photon-counting camera.
 #   - the sample sits on a UHV cryostat MANIPULATOR (x/y/z/theta).
-# None of these fit a hard X-ray catalog Family. GratingMonochromator GRADUATED into
-# the catalog once CSX (NSLS-II 23-ID) earned the rule-of-three for the soft X-ray
-# PGM, so the Monochromator below binds the catalog GratingMonochromator Family. The
-# other two (SpectrometerArm, Manipulator) remain LOOSE at n=1 (SIX only); a second
-# soft X-ray beamline must earn them before any catalog change. Everything else
+# None of these fit a hard X-ray catalog Family. Two have since GRADUATED into the
+# catalog: GratingMonochromator (CSX, NSLS-II 23-ID, earned the soft X-ray PGM) and
+# Manipulator (ESM, NSLS-II 21-ID, earned the UHV sample manipulator), so the
+# Monochromator and SampleManipulator below bind catalog Families. Only SpectrometerArm
+# remains LOOSE at n=1 (SIX only); a second RIXS beamline must earn it. Everything else
 # reuses an existing catalog Family.
 #
 # Items left open are tagged inline with a (QUESTION-ID) answered on
@@ -201,13 +201,13 @@ rixs-sample:
   enclosure: 2-ID-D
   intro: "The UHV cryostat sample manipulator, the sample chamber, the endstation mirrors, and the sample temperature controller."
   note: >
-    cryo is the UHV cryostat sample manipulator (x/y/z/theta), bound to a loose
-    Manipulator Family (no catalog motion Family fits a UHV multi-axis cryo
-    manipulator; SAMPLE-1). M5 and M6 are the endstation mirrors; the optics-wheel
+    cryo is the UHV cryostat sample manipulator (x/y/z/theta), bound to the catalog
+    Manipulator Family (graduated across SIX + ESM; the UHV serial-stack sample
+    manipulator role, SAMPLE-1). M5 and M6 are the endstation mirrors; the optics-wheel
     theta sits on M5 (OPT-1).
   devices:
     - name: SampleManipulator
-      family: Manipulator              # loose Family (n=1; UHV cryostat manipulator; SAMPLE-1)
+      family: Manipulator              # catalog Family (graduated SIX + ESM; UHV cryostat manipulator)
       pv: { x: "XF:02IDD-ES{SC:1-Cryo:S1_B-Ax:X}Mtr", y: "XF:02IDD-ES{SC:1-Cryo:S1_B-Ax:Y}Mtr", z: "XF:02IDD-ES{SC:1-Cryo:S1_B-Ax:Z}Mtr", theta: "XF:02IDD-ES{SC:1-Cryo:S1_B-Ax:T}Mtr" }
       new: true
       confirm: true
