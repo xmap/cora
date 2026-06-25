@@ -1,7 +1,31 @@
 \label{sec:substrate}
-\textit{[Draft pending. Figure~5, the single architecture figure, labeled
-``substrate, not contribution'': the event record behind the scrubber, with
-just enough of the envelope, the run-start payload, and the decision record to
-show where the fold and the recorded hash come from. Immutability is stated in
-one sentence supporting the fidelity badge, with a citation to the append-only
-store, not given its own section.]}
+% Largely data-independent: describes the event-record structure behind the
+% scrubber. Figure 5 (the single architecture figure) is still pending.
+
+The scrubber needs nothing from the backend beyond what an event-sourced
+system of record already keeps, which is why the design transfers to any system
+of that shape. We summarize the substrate here, and stress that it is the
+enabling condition, not the contribution (Figure~5).
+
+A run is not stored as current state. It is an append-only, totally ordered
+stream of events, and any state the scrubber shows is produced by folding that
+stream up to a chosen position. Three records carry everything the four tasks
+need. Each event's envelope records who or what caused it and its position in
+the stream, which gives the cursor a well-defined instant to fold to (T2) and
+gives an unfinished activity a position to mark as an open interval (T1). The
+run-start payload records the recipe the run expanded from, together with
+content-addressed hashes of that expansion; recomputing and comparing those
+hashes is exactly the fidelity badge (T4). The per-iteration boundary events
+carry the verdict that colors each bracket (T3). The swim-lane activities,
+the setpoint, check, and capture rows, are themselves events appended as the
+conductor acts, with the intent recorded before the effect so that an
+interruption leaves a detectable open record rather than a silent truncation.
+
+Two properties make the visualization trustworthy by construction rather than
+by convention. Folding is deterministic: the same prefix of the stream always
+reconstructs the same state, so the cursor's reconstruction is reproducible and
+not a re-execution that might diverge. And the store is append-only at the
+database level, so the record the badge checks against cannot have been edited
+after the fact. We state this once, in support of the badge, rather than as a
+separate systems contribution; the visual claim, that the timeline you are
+scrubbing is faithful to an unaltered record, is what the paper is about.

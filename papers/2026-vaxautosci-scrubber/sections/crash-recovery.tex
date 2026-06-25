@@ -1,5 +1,25 @@
 \label{sec:crash}
-\textit{[Draft pending. Figure~3: a simulated mid-conduct crash removes one
-activity outcome, leaving a dangling in-flight marker; the scrubber localizes
-the exact unfinished step index as a visible gap. This is the payoff for T1
-(recover the interrupted state) and the most operationally vivid figure.]}
+% First pass written without the exported figure data; Figure 3 pending.
+% TODO(data): name the exact step index, activity kind, and timestamp of the
+% dangling in-flight record from the simulated-crash export.
+
+The most operationally pressing question an auditor asks is also the one
+conventional records answer worst: when a run stops unexpectedly, what was in
+flight, and did it take effect? We reproduce that situation directly. Starting
+from the recorded autofocus run, we drop the closing outcome of one activity,
+simulating a conductor that died after recording its intent to act but before
+recording the result, and replay the truncated stream through the scrubber
+(Figure~3).
+
+Because the conductor writes intent before effect, the unfinished activity is
+still present in the log, just without its closing event. The fold therefore
+reconstructs a state in which exactly one activity is open, and the scrubber
+draws it as an open interval at its lane and time, with the convergence bracket
+around it left unclosed. Rather than a timeline that simply ends, the auditor
+sees precisely which step was mid-flight and where, the payoff for T1. Dragging
+the cursor to the instant just before the gap shows the last state known to be
+complete, which is the state a recovery would resume from. This is the case
+post-hoc provenance graphs handle least gracefully, since a graph assembled
+after the fact has no node for an action that never reported a result; the
+intent-before-effect record, read by replay, makes the missing result itself
+legible.
