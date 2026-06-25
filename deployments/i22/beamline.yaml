@@ -23,10 +23,11 @@
 # beam-path tier, and the technique/Capability binding. Each gap is tagged inline
 # with a (QUESTION-ID) answered on docs/deployments/i22/questions.md.
 #
-# Loose families (StorageRing, Transfocator, FluxMonitor, TemperatureController,
-# FlowController) are design-intent names not in the catalog; they render as plain
-# text. An adversarial new-kind review refuted all five as catalog Families on the
-# strength of I22 alone (rule-of-three), so each is carried loose and deferred.
+# Loose families (StorageRing, Transfocator, FlowController) are design-intent
+# names not in the catalog; they render as plain text. An adversarial new-kind
+# review refuted all five proposed kinds on the strength of I22 alone; FluxMonitor
+# and TemperatureController have since graduated to the catalog on their
+# rule-of-three, while these three stay loose and deferred.
 
 beamline:
   name: I22
@@ -186,9 +187,11 @@ sample-environment:
   intro: "The sample base, the on-axis-view alignment camera, the incident and transmitted flux monitors, and the sample-environment actuators."
   note: >
     The flux monitors present the existing Sensor Role (the Role docstring names
-    ion chambers); they are carried as a loose FluxMonitor family (FLUX-1). The
-    Linkam and pump are settable actuators with no clean catalog home, the same
-    open settable-actuator shape as the 7-BM flow controllers (ENV-1).
+    ion chambers); they bind the FluxMonitor catalog Family, graduated on the
+    i22/i03/i15-1 rule-of-three (FLUX-1). The Linkam binds the graduated
+    TemperatureController Family (presents Regulator); the pump is a loose
+    FlowController that would present Regulator once it graduates. What stays open
+    is whether CORA commands the setpoints (ENV-1).
   devices:
     - name: SampleBase
       family: LinearStage
@@ -208,19 +211,19 @@ sample-environment:
       pv: "BL22I-EA-XBPM-02:"
       new: true
       confirm: true
-      note: "incident-flux ion chamber / XBPM (Tetramm, 4-channel current); presents the Sensor Role; loose family (FLUX-1)"
+      note: "incident-flux ion chamber / XBPM (Tetramm, 4-channel current); presents the Sensor Role; FluxMonitor catalog Family (graduated) (FLUX-1)"
     - name: It
       family: FluxMonitor
       pv: "BL22I-EA-TTRM-02:"
       new: true
       confirm: true
-      note: "transmitted-flux ion chamber (Tetramm); presents the Sensor Role; loose family (FLUX-1)"
+      note: "transmitted-flux ion chamber (Tetramm); presents the Sensor Role; FluxMonitor catalog Family (graduated) (FLUX-1)"
     - name: SampleTemperature
       family: TemperatureController
       pv: "BL22I-EA-TEMPC-05:"
       new: true
       confirm: true
-      note: "sample-environment temperature controller (Linkam); a settable actuator, the FlowController sibling (ENV-1)"
+      note: "sample-environment temperature controller (Linkam); a settable actuator binding the graduated TemperatureController Family (presents Regulator); the loose FlowController pump is its settable-actuator sibling (ENV-1)"
     - name: SamplePump
       family: FlowController
       pv: "BL22I-EA-PUMP-01:"

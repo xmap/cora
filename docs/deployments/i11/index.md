@@ -19,9 +19,9 @@
 I11 is the deployment that **genuinely earns** the abstraction the earlier Diamond beamlines only flirted with. It carries **four continuous-setpoint thermal actuators** (two Cyberstar hot-air blowers wrapping Eurotherm controllers with `set(value)`/`setpoint`/`ramprate`/PID, and two Oxford cryostreams). After the loose `TemperatureController` family was carried at I22 and I03, I11 is the **rule-of-three** that earns:
 
 1. graduating the `TemperatureController` catalog Family, and
-2. a **new settable-continuous-setpoint actuator Role** (CORA has none today: Positioner is spatial, Controller supervises, GenericProbe is read-only).
+2. a **new settable-continuous-setpoint actuator Role** (CORA had none at the time: Positioner is spatial, Controller supervises, GenericProbe is read-only).
 
-But a new Role is a **code change** (to `cora.equipment.aggregates.role.SEED_ROLES`, drift-guarded by an exact-match test) and core cross-facility vocabulary, so it belongs in a **separate, gate-reviewed change**, not this families-only scaffold. So this scaffold carries the four actuators as loose `TemperatureController` (as I22/I03 did) and **TEMP-1** tracks the earn; the Role + graduation land via gate-review next. This is the earn-the-abstraction discipline working: the trigger fires in a deployment, the abstraction is banked deliberately.
+But a new Role is a **code change** (to `cora.equipment.aggregates.role.SEED_ROLES`, drift-guarded by an exact-match test) and core cross-facility vocabulary, so it belonged in a **separate, gate-reviewed change**, not this families-only scaffold. This scaffold carried the four actuators as loose `TemperatureController` (as I22/I03 did) and **TEMP-1** recorded the earn; that gate-reviewed change has since landed, graduating `TemperatureController` to a catalog Family presenting the new `Regulator` Role. This is the earn-the-abstraction discipline working: the trigger fires in a deployment, the abstraction is banked deliberately, then graduated under gate-review.
 
 Three other intentional decisions the eval settled, each resisting a mirror-the-controls trap:
 
@@ -51,7 +51,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Model
 
-[Model](model.md): the developer's by-kind index, and the TemperatureController earn routed to gate-review.
+[Model](model.md): the developer's by-kind index, and the TemperatureController earn that landed via gate-review.
 
 ## Not yet documented
 

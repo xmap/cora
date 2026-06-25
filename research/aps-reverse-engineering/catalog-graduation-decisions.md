@@ -29,7 +29,7 @@ Distinct physical beamlines, after the fork correction below: 4-ID (`polar-bits`
 | Diffractometer | 4-ID, 8-ID | none | model as Assembly (design in step 3) | `Diffractometer` passes (Assembly) |
 | Chopper | 4-ID | loose at 7-BM (CHOP-1 pending) | resolve CHOP-1 toward graduating; staff owns the boundary | `Chopper` passes |
 | BeamPositionMonitor | 4-ID, 8-ID, 2-BM | loose at 2-BM (Sensor) | graduate when a 2nd CORA deployment references it (closest to ready) | spelled-out form passes; not `XBPM` |
-| TemperatureController | 4-ID, 8-ID | none | graduate with first deployment using it | passes (`<Domain>Controller`) |
+| TemperatureController | 4-ID, 8-ID | GRADUATED (#350) | graduated as a catalog Family presenting `Regulator`, on the Diamond i22/i03/i11 rule-of-three | passes (`<Domain>Controller`) |
 | Magnet | 4-ID only | none | hold: single physical beamline (see correction); needs a genuine 2nd magnet beamline | passes (bare thing-noun) |
 | Transfocator | 4-ID, 8-ID, 9-ID | none | graduate with first deployment using it | passes (prefer over `CompoundRefractiveLens`) |
 | Preamplifier | 4-ID | none | hold: single physical beamline; confirm device-is (preamp vs electrometer) | passes (or `Electrometer`) |
@@ -49,9 +49,10 @@ beamline (4-ID). The "independent beamlines" column above is the de-duplicated c
 Consequence: `Magnet` and `Preamplifier` rest on a single physical beamline (4-ID), so they do
 NOT meet the two-deployment graduation trigger yet; they are held until a genuinely independent
 beamline references them (for `Magnet`, a different magnetism beamline; 8-ID XPCS has no sample
-magnet). `Diffractometer`, `TemperatureController`, `Transfocator`, and `BeamPositionMonitor`
-retain two or more independent beamlines (via 8-ID / 9-ID / 2-BM) and remain graduation
-candidates once a second deployment is curated. `6idb-bits` itself was used only to enrich the
+magnet). `Diffractometer`, `Transfocator`, and `BeamPositionMonitor` retain two or more
+independent beamlines (via 8-ID / 9-ID / 2-BM) and remain graduation candidates once a
+second deployment is curated; `TemperatureController` has since graduated (presents
+`Regulator`) on the Diamond i22/i03/i11 rule-of-three. `6idb-bits` itself was used only to enrich the
 4-ID POLAR descriptor, not to build a duplicate deployment.
 
 ## Detail
@@ -78,12 +79,14 @@ decision the beamline staff own (whether a chopper is meaningfully distinct from
 shutter at these beamlines). Recommendation: carry the corpus evidence into CHOP-1 and lean
 toward graduating; do not graduate unilaterally.
 
-### The five graduate-with-curation Families
+### The graduate-with-curation Families
 
-`BeamPositionMonitor`, `TemperatureController`, `Magnet`, `Transfocator`, `Preamplifier` are
+`BeamPositionMonitor`, `Magnet`, `Transfocator`, `Preamplifier` are
 genuine new device-type Families, each recurring across two or three diffraction or
-sample-environment beamlines, none used by any current CORA deployment. Their names are
-pre-cleared. Each graduates in the commit that first curates a deployment referencing it.
+sample-environment beamlines, none used by any current CORA deployment at the time of this
+analysis. Their names are pre-cleared. Each graduates in the commit that first curates a
+deployment referencing it. (`TemperatureController`, originally on this list, has since
+graduated as a catalog Family presenting `Regulator` on the Diamond i22/i03/i11 rule-of-three.)
 `BeamPositionMonitor` is closest to ready: it is already loose at 2-BM as a Sensor-presenting
 device, so the first additional reference makes it a clean two-deployment graduation.
 
@@ -92,8 +95,8 @@ device, so the first additional reference makes it a clean two-deployment gradua
 For each Family above, when curating a deployment that references it:
 
 1. Add the Family to `catalog/catalog.yaml` with its `presents_as` Role (`Sensor` for
-   `BeamPositionMonitor` and `Preamplifier`; `Controller` for `TemperatureController`;
-   confirm for `Magnet` and `Transfocator`).
+   `BeamPositionMonitor` and `Preamplifier`; `Regulator` for `TemperatureController`, which
+   graduated in #350; confirm for `Magnet` and `Transfocator`).
 2. Reference it from the curated `deployments/<id>/beamline.yaml`.
 3. Run the descriptor tests manually (`tests/unit/deployments/`), since catalog edits pass
    pre-commit but can break referential integrity.

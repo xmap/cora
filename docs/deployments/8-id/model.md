@@ -9,20 +9,21 @@
 | Beamline descriptor | [`deployments/8-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/8-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `8-ID` added to its beamline list, with XPCS Practices |
 | Extraction provenance | [`research/aps-reverse-engineering/extracted/8id-bits/`](https://github.com/xmap/cora/tree/main/research/aps-reverse-engineering) | the facts report and candidate the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | the three families 8-ID shares with 4-ID are held loose for gate-review (below); 8-ID's other new classes stay loose too |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | of the families 8-ID shares with 4-ID, `Transfocator` and `BeamPositionMonitor` are held loose for gate-review (below) while `TemperatureController` has since graduated (#350); 8-ID's other new classes stay loose too |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; XPCS / scattering Methods are not yet coined (TECH-1) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 8-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## Loose families held for gate-review
 
-8-ID adds a second independent APS beamline (after 4-ID POLAR) to three device classes that recur widely: `TemperatureController`, `Transfocator`, and `BeamPositionMonitor`. The count crosses the promotion threshold, but `main` deliberately holds them loose pending cross-facility abstraction reviews that the parallel Diamond deployments opened: the settable-actuator abstraction (`ENV-1`), the CRL optic's catalog home (`CRL-1`), and the beam-position sensor's fold-vs-promote question against the held `Diagnostic` family, with the now-graduated `FluxMonitor` as the precedent for a Sensor family earned by what it measures (`DIAG-1`). So they stay loose here too, allowlisted and recorded in the promotion-review register; their naming-r3 review (during the [catalog-graduation pass](https://github.com/xmap/cora/blob/main/research/aps-reverse-engineering/catalog-graduation-decisions.md)) is done, but the abstraction decision is gate-review's, not this PR's.
+8-ID adds a second independent APS beamline (after 4-ID POLAR) to three device classes that recur widely: `TemperatureController`, `Transfocator`, and `BeamPositionMonitor`. `TemperatureController` has since graduated to a catalog Family: the parallel Diamond i22/i03/i11 rule-of-three settled the settable-actuator abstraction (`ENV-1`), and it presents the new `Regulator` Role. `Transfocator` and `BeamPositionMonitor` stay loose, held pending their cross-facility abstraction reviews: the CRL optic's catalog home (`CRL-1`), and the beam-position sensor's fold-vs-promote question against the held `Diagnostic` family, with the now-graduated `FluxMonitor` as the precedent for a Sensor family earned by what it measures (`DIAG-1`). They stay loose here too, allowlisted and recorded in the promotion-review register; their naming-r3 review (during the [catalog-graduation pass](https://github.com/xmap/cora/blob/main/research/aps-reverse-engineering/catalog-graduation-decisions.md)) is done, but the abstraction decision is gate-review's, not the 8-ID scaffold's.
 
 | Loose family | Presents (when graduated) | At 4-ID | At 8-ID |
 | --- | --- | --- | --- |
-| `TemperatureController` | Controller | LakeShore 336 / 340 | LakeShore 336 (8-ID-E) + Quantum Northwest holders (8-ID-I) |
 | `Transfocator` | Positioner | CRL transfocator | two CRL transfocators (8-ID-D) |
 | `BeamPositionMonitor` | Sensor | XBPM / Sydor / TetrAMM | Sydor (8-ID-E) + TetrAMM (8-ID-I) |
+
+`TemperatureController` was tracked here too and has since graduated to a catalog Family (#350), presenting the `Regulator` Role (the LakeShore 336 at 8-ID-E and the Quantum Northwest holders at 8-ID-I bind it); it is no longer held for gate-review.
 
 `Magnet` and `Preamplifier` are also loose on a single physical beamline (4-ID; `6idb-bits` is a 4-ID fork, see the [4-ID model page](../4-id/model.md#deliberately-not-here-yet)).
 

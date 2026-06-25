@@ -24,8 +24,8 @@ Root Asset `I22` (`tier = Unit`, `facility_code = diamond`); sub-systems nest be
 | `Slit1`..`Slit6` | Slit | `BL22I-AL-SLITS-0N:` | beam-defining slits; five four-blade, one gap+centre |
 | `SampleBase` | LinearStage | `BL22I-MO-STABL-01:` | sample base table (X/Y/PITCH) |
 | `OAV` | Camera | `BL22I-DI-OAV-01:` | on-axis-view alignment camera (Mako G-507B) |
-| `I0` | **FluxMonitor** | `BL22I-EA-XBPM-02:` | incident-flux ion chamber; presents the Sensor Role |
-| `It` | **FluxMonitor** | `BL22I-EA-TTRM-02:` | transmitted-flux ion chamber; presents the Sensor Role |
+| `I0` | FluxMonitor | `BL22I-EA-XBPM-02:` | incident-flux ion chamber; presents the Sensor Role |
+| `It` | FluxMonitor | `BL22I-EA-TTRM-02:` | transmitted-flux ion chamber; presents the Sensor Role |
 | `SampleTemperature` | TemperatureController | `BL22I-EA-TEMPC-05:` | Linkam temperature controller; settable actuator (now a catalog Family, presents Regulator) |
 | `SamplePump` | **FlowController** | `BL22I-EA-PUMP-01:` | peristaltic pump; settable actuator |
 | `SaxsDetector` | Camera | `BL22I-EA-PILAT-01:` | Pilatus3 2M, 0.172 mm pixel, Si 0.45 mm (dodal) |

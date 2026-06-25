@@ -177,19 +177,19 @@ diffractometer:
       confirm: true
       note: "hklpy2 reciprocal-space pseudo-axis over the six-circle geometry (psic); the partition rule is DIFF-2"
     - name: TemperatureController_1
-      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
+      family: TemperatureController   # catalog Family (graduated #350; presents Regulator)
       pv: "8ideSoft:LS336:1:"
       new: true
       confirm: true
       note: "LakeShore 336 sample temperature controller (TEMP-1)"
     - name: TemperatureController_2
-      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
+      family: TemperatureController   # catalog Family (graduated #350; presents Regulator)
       pv: "8ideSoft:LS336:2:"
       new: true
       confirm: true
       note: "second LakeShore 336 controller (TEMP-1)"
     - name: BeamPositionMonitor_E
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
       pv: "8ideBPM:T4U_BPM:"
       new: true
       confirm: true
@@ -223,7 +223,7 @@ xpcs-sample:
       confirm: true
       note: "six-axis rheometer shear-cell sample environment (SAMPLE-1)"
     - name: SampleHolder_QNW
-      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
+      family: TemperatureController   # catalog Family (graduated #350; presents Regulator)
       pv: "8idiSoft:QNWenv_1:"
       new: true
       confirm: true
@@ -285,7 +285,7 @@ xpcs-detectors:
       confirm: true
       note: "flight-tube beam stop"
     - name: TetrAMM_QUAD1
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
       pv: "8idTetra:QUAD1:"
       new: true
       confirm: true

@@ -270,8 +270,8 @@ sample-environment:
   intro: "The sample-environment apparatus: superconducting magnets, temperature controllers, and the sample positioning tables. POLAR's magnetic-scattering signature."
   note: >
     Magnets (bmag/emag 2 T, magnet911, the Kepco-driven gmag) bind a loose Magnet
-    Family (MAG-1, FAM-1); the LakeShore 336/340 controllers bind a loose
-    TemperatureController Family (TEMP-1, FAM-1). Tables bind the catalog Table
+    Family (MAG-1, FAM-1); the LakeShore 336/340 controllers bind the catalog
+    TemperatureController Family (presents Regulator; TEMP-1). Tables bind the catalog Table
     Family. gmag was misinferred as a "4-ID-K" enclosure from the Kepco vendor
     prefix; it is placed at 4-ID-G pending confirmation (TOPO-3).
   devices:
@@ -302,14 +302,14 @@ sample-environment:
       enclosure: 4-ID-G
       note: "Kepco-driven electromagnet (gmag); station and field unconfirmed (TOPO-3, MAG-1)"
     - name: TemperatureController_336
-      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
+      family: TemperatureController   # catalog Family (graduated #350; presents Regulator)
       pv: "4idgSoft:LS336:TC1:"
       new: true
       confirm: true
       enclosure: 4-ID-G
       note: "LakeShore 336 sample temperature controller (TEMP-1)"
     - name: TemperatureController_340
-      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
+      family: TemperatureController   # catalog Family (graduated #350; presents Regulator)
       pv: "4idgSoftX:LS340:TC1:"
       new: true
       confirm: true
@@ -410,33 +410,33 @@ beam-position-monitors:
     Sensor Role when graduated.
   devices:
     - name: XBPM_G
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
       pv: { x: "4idgSoft:m48", y: "4idgSoft:m47" }
       new: true
       confirm: true
       note: "4-ID-G X-ray beam-position monitor"
     - name: XBPM_H
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
       pv: { x: "4idhSoft:m6", y: "4idhSoft:m5" }
       new: true
       confirm: true
       enclosure: 4-ID-H
       note: "4-ID-H X-ray beam-position monitor"
     - name: Sydor_G
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
       pv: "4idgSydor:T4U_BPM:"
       new: true
       confirm: true
       note: "4-ID-G Sydor electrometer beam-position monitor"
     - name: Sydor_H
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
       pv: "4idhSydor:T4U_BPM:"
       new: true
       confirm: true
       enclosure: 4-ID-H
       note: "4-ID-H Sydor electrometer beam-position monitor"
     - name: TetrAMM_B
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
       pv: "4idbSoft:TetrAMM:"
       new: true
       confirm: true

@@ -17,4 +17,4 @@ Along the beam, in order, sit the three **stages**: the [Source](../beamline.md)
 
 ## Reference
 
-- [Inventory](../inventory.md): the full planned CORA Asset model (every device by `parent_id`, with Families, the dodal control handles, and pending confirmations). The TemperatureController graduation + settable-actuator Role earn is routed to a separate gate-reviewed change (TEMP-1).
+- [Inventory](../inventory.md): the full planned CORA Asset model (every device by `parent_id`, with Families, the dodal control handles, and pending confirmations). The TemperatureController graduation + settable-actuator Role earn landed via a separate gate-reviewed change (TEMP-1): it is now a catalog Family presenting `Regulator`.

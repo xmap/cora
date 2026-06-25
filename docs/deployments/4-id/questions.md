@@ -49,7 +49,7 @@
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | MAG-1 | Blocks-go-live | The sample magnets: the two 2 T magnets (`bmag`/`emag`) and the high-field magnet (`magnet911`) field ranges and control PVs (the 2 T magnets had no control PV in the config), and the Kepco-driven `gmag`. | Four `Magnet` Assets (loose Family); fields and several PVs unconfirmed. | The magnet specs and handles. |
-| TEMP-1 | Nice-to-have | The LakeShore 336 and 340 controllers: sensor channels and the sample stages they regulate. | Two `TemperatureController` Assets (loose Family) at 4-ID-G. | The temperature-controller model. |
+| TEMP-1 | Nice-to-have | The LakeShore 336 and 340 controllers: sensor channels and the sample stages they regulate. | Two `TemperatureController` Assets (catalog Family, presents `Regulator`) at 4-ID-G. | The temperature-controller model. |
 | SAMPLE-1 | Nice-to-have | The Ventus laser at 4-ID-H: is it a pump-probe source CORA should model as a device, or only carry as a Clearance hazard? | One `Laser` Asset (loose Family); modelling-versus-hazard is open. | The laser model or hazard treatment. |
 | SAMPLE-2 | Nice-to-have | The preamplifiers, lock-in (`srs810`), and high-pressure-cell controllers (Pace `PC1`/`PC2`) are in the config but not modelled here. Which are beamline equipment versus user-brought? | Deferred as peripheral. | Whether these become Assets. |
 

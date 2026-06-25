@@ -25,15 +25,15 @@ Root Asset `I03` (`tier = Unit`, `facility_code = diamond`); sub-systems nest be
 | `HutchShutter` | Shutter | `BL03I` (PSS-interlocked) | hutch safety shutter |
 | `SampleShutter` | Shutter | `BL03I-EA-SHTR-01:` | fast sample shutter (Zebra-driven) |
 | `QBPM` | **Diagnostic** | `BL03I-DI-QBPM-01:` | quadrant BPM; presents Sensor; loose, reuses 2-BM's Diagnostic family |
-| `Flux` | **FluxMonitor** | `BL03I-MO-FLUX-01:` | flux readout; presents Sensor; catalog Family (graduated) |
-| `IPin` | **FluxMonitor** | `BL03I-EA-PIN-01:` | ion-chamber pin diode; presents Sensor; catalog Family (graduated) |
+| `Flux` | FluxMonitor | `BL03I-MO-FLUX-01:` | flux readout; presents Sensor; catalog Family (graduated) |
+| `IPin` | FluxMonitor | `BL03I-EA-PIN-01:` | ion-chamber pin diode; presents Sensor; catalog Family (graduated) |
 | `XBPMFeedback` | (deferred) | `BL03I-EA-FDBK-01:` | beam-position feedback loop; modelling deferred |
 | `Goniometer` | Goniometer | `BL03I-MO-SGON-01:` | the Smargon; graduated the Goniometer Family (catalog) |
 | `LowerGonio` | LinearStage | `BL03I-MO-GONP-01:` | lower goniometer x/y/z base |
 | `Robot` | (Positioner, deferred) | `BL03I-MO-ROBOT-01:` | sample-changing robot; one Positioner Asset + Subject + Clearance (19-BM shape), not a new Family |
 | `Backlight` | **Backlight** | `BL03I` | sample illumination; new loose family |
-| `Cryostream` | TemperatureController | `BL03I-EA-CSTRM-01:` | Oxford cryostream; settable actuator; loose, reused from I22 |
-| `Thawer` | TemperatureController | `BL03I-EA-THAW-01` | sample thawer; settable actuator; loose |
+| `Cryostream` | TemperatureController | `BL03I-EA-CSTRM-01:` | Oxford cryostream; settable actuator; catalog Family (graduated), reused from I22 |
+| `Thawer` | TemperatureController | `BL03I-EA-THAW-01` | sample thawer; settable actuator; catalog Family (graduated) |
 | `Eiger` | Camera | `BL03I-EA-EIGER-01:` | Dectris Eiger area detector (Detector Role) |
 | `DetectorMotion` | LinearStage | `BL03I-MO-DET-01:` | detector translation; integrated shutter |
 | `FluorescenceDetector` | (Sensor, deferred) | `BL03I-EA-FLU-01:` | retractable fluorescence detector; presents Sensor; loose |
