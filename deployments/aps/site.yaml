@@ -23,7 +23,7 @@ facility:
   kind: Site
   institution: Argonne
   sectors: [Sector 2, Sector 4, Sector 7, Sector 8, Sector 9, Sector 32, Sector 19]
-  beamlines: [2-BM, 2-ID, 7-BM, 32-ID, 19-BM, 4-ID, 8-ID, 9-ID]
+  beamlines: [2-BM, 2-ID, 7-BM, 32-ID, 19-BM, 4-ID, 8-ID, 9-ID, 12-ID-E]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. A method
 # that exists in the Catalog renders as a link; a method still pending in the
@@ -91,6 +91,12 @@ practices:
   - {name: 9ID_gisaxs_practice, method: grazing_incidence_scattering, pending: true, note: "grazing-incidence small- and wide-angle scattering (GISAXS / GIWAXS); Method not yet in catalog (TECH-1)"}
   - {name: 9ID_xpcs_practice, method: xpcs, note: "surface XPCS on the coherent detectors; shares the 8-ID XPCS Method"}
   - {name: 9ID_waxs_practice, method: wide_angle_scattering, pending: true, note: "wide-angle scattering on the GIWAXS detector; shares the i22 WAXS Method (TECH-1)"}
+  # 12-ID-E USAXS Practices (first cut). Bonse-Hart crystal-analyzer
+  # ultra-small-angle scattering plus pinhole SAXS and WAXS; Methods not in the
+  # catalog, carried pending until a technique enters scope (USAXS-1, TECH-1).
+  - {name: 12IDE_usaxs_practice, method: ultra_small_angle_scattering, pending: true, note: "Bonse-Hart rocking-curve ultra-small-angle scattering on the autoranging photodiode; new Capability not yet in catalog (USAXS-1)"}
+  - {name: 12IDE_saxs_practice, method: small_angle_scattering, pending: true, note: "pinhole small-angle scattering on the SAXS area detector; shares the i22 SAXS Method (TECH-1)"}
+  - {name: 12IDE_waxs_practice, method: wide_angle_scattering, pending: true, note: "wide-angle scattering on the WAXS area detector; shares the i22 WAXS Method (TECH-1)"}
 
 # Access BC Actors that are conceptually facility-wide at APS. Actor display
 # names live in actor_profile (the PII vault), not in event-sourced Actor state.

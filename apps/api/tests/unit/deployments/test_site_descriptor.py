@@ -263,6 +263,7 @@ _PENDING_METHODS = {
     "sample_exchange": "i03 autonomous robotic sample exchange; Method not yet earned",
     "small_angle_scattering": "i22 + 8-ID SAXS; portable Method not yet earned",
     "wide_angle_scattering": "i22 + 9-ID WAXS; portable Method not yet earned",
+    "ultra_small_angle_scattering": "12-ID-E Bonse-Hart USAXS; not yet earned (USAXS-1)",
     "total_scattering": "i15-1 total scattering / PDF; Method not yet earned",
     "powder_diffraction": "i11 powder diffraction; portable Method not yet earned",
     "serial_crystallography": "LCLS-MFX + i24 serial crystallography; 2 consumers, not earned",
