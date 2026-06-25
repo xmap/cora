@@ -35,7 +35,7 @@ The third Site CORA models, and a deliberate off-roadmap exercise: real, operati
 | [I22](i22/index.md) | Modelling exercise | small- and wide-angle X-ray scattering (SAXS/WAXS), reverse-engineered from dodal |
 | [I03](i03/index.md) | Modelling exercise | macromolecular crystallography (MX); graduates the Goniometer Family and exercises autonomous sample handling |
 | [I15-1](i15-1/index.md) | Modelling exercise | X-ray total scattering / pair distribution function (XPDF); a reuse + reinforce deployment (no new vocabulary) |
-| [I11](i11/index.md) | Modelling exercise | high-resolution powder diffraction; the rule-of-three that earns the TemperatureController graduation + a settable-actuator Role (routed to gate-review) |
+| [I11](i11/index.md) | Modelling exercise | high-resolution powder diffraction; the rule-of-three that earned the TemperatureController graduation + the Regulator Role (landed via gate-review) |
 
 ## [NSLS-II](nsls2/index.md)
 
@@ -47,6 +47,7 @@ The fourth Site CORA models. Like the Diamond exercise, its beamlines are revers
 | [HXN](hxn/index.md) | Reverse-engineered | scanning hard X-ray nanoprobe (nano-XRF, ptychography, nano-tomography), 3-ID; modelled from public beamline config |
 | [BMM](bmm/index.md) | Reverse-engineered | X-ray absorption spectroscopy (transmission + fluorescence XAS/EXAFS), 6-BM; modelled from public beamline config |
 | [SRX](srx/index.md) | Reverse-engineered | submicron X-ray fluorescence microprobe (XRF mapping, XANES, XRF-tomography, diffraction), 5-ID; modelled from public beamline config |
+| [SIX](six/index.md) | Reverse-engineered | soft X-ray resonant inelastic scattering (RIXS), 2-ID; CORA's first soft X-ray beamline, modelled from public beamline config |
 | [CHX](chx/index.md) | Reverse-engineered | coherent hard X-ray scattering (XPCS, SAXS/WAXS, GISAXS), 11-ID; the second coherent beamline after APS 8-ID, modelled from public beamline config |
 
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

@@ -1,0 +1,318 @@
+# SIX beamline descriptor (NSLS-II), reverse-engineered
+#
+# SIX (Soft Inelastic X-ray scattering) is the NSLS-II resonant inelastic X-ray
+# scattering (RIXS) beamline at sector 2-ID. It is bound to the NSLS-II Site
+# (deployments/nsls2/site.yaml), the fourth NSLS-II beamline after FXI, HXN, and
+# BMM, and CORA's FIRST soft X-ray deployment.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/six-profile-collection) or inferred,
+# carried `new: true` + `confirm: true` pending SIX staff. EPICS PVs are real and
+# verified against the profile collection startup files; vendor part numbers,
+# serials, and physical positions are not in it and are open questions. Same
+# descriptor mode as FXI / HXN / BMM; this scaffold is descriptor + docs, scenarios
+# deferred.
+#
+# SIX is CORA's first SOFT X-RAY beamline, a new optics + detector + sample-
+# environment regime that the all-hard-X-ray fleet has never modelled:
+#   - the monochromator is a plane-GRATING monochromator (PGM), not a crystal DCM:
+#     it disperses with an interchangeable grating (500 / 1200 / 1800 l/mm) and a
+#     premirror at a fixed-focus c-value (cff), and the exit slit sets resolution.
+#   - the signature instrument is a meters-long energy-dispersive RIXS SPECTROMETER
+#     arm (a bridge truss + an in-arm optics chamber + a detector chamber) that
+#     swings to a scattering angle and disperses the emitted soft X-rays onto a
+#     photon-counting camera.
+#   - the sample sits on a UHV cryostat MANIPULATOR (x/y/z/theta).
+# None of these fit an existing catalog Family, so three LOOSE families are
+# introduced at n=1 (GratingMonochromator, SpectrometerArm, Manipulator); they are
+# NOT graduated. Per earn-the-abstraction, a second soft X-ray beamline (NSLS-II
+# CSX / ESM / SST) must independently earn them before any catalog change. Their
+# names are provisional pending the naming-r3 gate at graduation (see model.md).
+# Everything else reuses an existing catalog Family.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/six/questions.md.
+
+beamline:
+  name: SIX
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 2"           # PV namespace XF:02ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "2-ID elliptically-polarizing undulator (EPU) on SR:C02-ID:G1A{EPU:1}; gap + phase (polarization) axes; whether SIX shares a canted straight with a sibling beamline is TOPO-1, the EPU type/period is SRC-1"
+
+# PV zones along the beamline: XF:02IDA (front-end optics), XF:02IDB (the PGM),
+# XF:02IDC (refocusing optics + exit slit), XF:02IDD-ES / XF:02ID1-ES (the RIXS
+# endstation). Whether these are four separate shielded hutches or beam zones
+# within fewer hutches, and the PSS permit leaves, are open (ENC-1, PSS-1).
+enclosures:
+  - name: 2-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf not in source; front-end and photon shutters are XF:02ID-PPS{Sh:FE} and XF:02IDA-PPS{PSh} (PSS-1)"}
+  - name: 2-ID-B
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; photon shutter XF:02IDB-PPS{PSh} (PSS-1, ENC-1)"}
+  - name: 2-ID-C
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; whether A/B/C are one optics hutch or several is ENC-1"}
+  - name: 2-ID-D
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the RIXS endstation hutch (ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the EPU, the front-end optics, the PGM, and the refocusing optics
+# ===========================================================================
+
+insertion-devices:
+  stage: source
+  enclosure: 2-ID-A
+  intro: "The elliptically-polarizing undulator source on the SR:C02-ID straight."
+  note: "One InsertionDevice Asset; the EPU adds a phase (polarization) axis beyond gap, carried as a setting (SRC-1). Whether the straight is canted with a sibling beamline is TOPO-1."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: "SR:C02-ID:G1A{EPU:1}"
+      new: true
+      confirm: true
+      note: "elliptically-polarizing undulator (gap + phase); type and period are SRC-1, the polarization-phase DOF is carried as a setting not a separate Family"
+
+optics:
+  stage: source
+  enclosure: 2-ID-A
+  intro: "The first mirror, the front-end slit, the polarization diagnostic, and the front-end / photon shutters."
+  note: "M1 is the first horizontal-deflecting mirror; diagon is the soft X-ray polarization diagnostic (DIAG-1)."
+  devices:
+    - name: Mirror_1
+      family: Mirror
+      pv: "XF:02IDA-OP{Mir:1-Ax:4"
+      new: true
+      confirm: true
+      note: "first mirror M1; coatings and axis roles are OPT-1"
+    - name: FrontEndSlit
+      family: Slit
+      pv: "XF:02IDA-OP{Mir:1-Slt:4_D_1"
+      new: true
+      confirm: true
+      note: "front-end baffle slit downstream of M1 (OPT-2)"
+    - name: PolarizationDiagnostic
+      family: GenericProbe
+      pv: "XF:02IDA-OP{Diag:1-Ax:3"
+      new: true
+      confirm: true
+      note: "DIAGON soft X-ray polarization diagnostic; classification a placeholder (DIAG-1)"
+    - name: FrontEndShutter
+      family: Shutter
+      pv: "XF:02ID-PPS{Sh:FE}"
+      new: true
+      confirm: true
+      note: "front-end safety shutter, PPS-gated"
+    - name: PhotonShutter_A
+      family: Shutter
+      pv: "XF:02IDA-PPS{PSh}"
+      new: true
+      confirm: true
+      note: "2-ID-A photon shutter"
+
+monochromator:
+  stage: source
+  enclosure: 2-ID-B
+  intro: "The plane-grating monochromator that selects the soft X-ray energy, and its slits."
+  note: >
+    pgm is the plane-grating monochromator (PGM): a premirror at a fixed-focus
+    c-value (cff) plus an interchangeable grating (500 / 1200 / 1800 l/mm) set the
+    energy. It binds a loose GratingMonochromator Family, not the catalog
+    Monochromator (which is a crystal/multilayer Bragg DCM): a grating mono has no
+    Bragg crystal and its resolution is set by the exit slit (MONO-1, see model.md).
+  devices:
+    - name: Monochromator
+      family: GratingMonochromator     # loose Family (n=1; soft X-ray PGM, not a crystal DCM; MONO-1)
+      pv: { energy: "XF:02IDB-OP{Mono:1-Ax:9_Eng}Mtr", cff: "XF:02IDB-OP{Mono:1-Ax:9_Cff}Mtr", grating_pitch: "XF:02IDB-OP{Mono:1-Ax:9_GP}Mtr", premirror_pitch: "XF:02IDB-OP{Mono:1-Ax:9_MP}Mtr", grating_translation: "XF:02IDB-OP{Mono:1-Ax:9_GT}Trans:Mtr" }
+      new: true
+      confirm: true
+      note: "plane-grating monochromator; three gratings 500/1200/1800 l/mm, energy range is MONO-1"
+    - name: MonoSlit_Upstream
+      family: Slit
+      pv: "XF:02IDB-OP{Mono:1-Slt:8_U_1"
+      new: true
+      confirm: true
+      note: "upstream PGM baffle slit (OPT-2)"
+    - name: MonoSlit_Downstream
+      family: Slit
+      pv: "XF:02IDB-OP{Mono:1-Slt:9_D_1"
+      new: true
+      confirm: true
+      note: "downstream PGM baffle slit (OPT-2)"
+    - name: PhotonShutter_B
+      family: Shutter
+      pv: "XF:02IDB-PPS{PSh}"
+      new: true
+      confirm: true
+      note: "2-ID-B photon shutter"
+
+refocusing:
+  stage: source
+  enclosure: 2-ID-C
+  intro: "The refocusing mirrors, their slits, and the exit slit that sets the energy resolution."
+  note: "M3 and M4 are hexapod-mounted refocusing mirrors; extslt is the exit slit, the PGM resolution-defining element (OPT-1, OPT-2)."
+  devices:
+    - name: Mirror_3
+      family: Mirror
+      pv: "XF:02IDC-OP{Mir:3-Ax:13"
+      new: true
+      confirm: true
+      note: "hexapod-mounted refocusing mirror M3 (OPT-1)"
+    - name: Mirror_4
+      family: Mirror
+      pv: "XF:02IDC-OP{Mir:4-Ax:18"
+      new: true
+      confirm: true
+      note: "hexapod-mounted refocusing mirror M4 (OPT-1)"
+    - name: MirrorSlit_3
+      family: Slit
+      pv: "XF:02IDC-OP{Mir:3-Slt:12_U_1"
+      new: true
+      confirm: true
+      note: "M3 baffle slit (OPT-2)"
+    - name: MirrorSlit_4
+      family: Slit
+      pv: "XF:02IDC-OP{Mir:4-Slt:18_U_1"
+      new: true
+      confirm: true
+      note: "M4 baffle slit (OPT-2)"
+    - name: ExitSlit
+      family: Slit
+      pv: "XF:02IDC-OP{Slt:1-Ax:15"
+      new: true
+      confirm: true
+      note: "exit slit; sets the PGM energy resolution (OPT-2)"
+
+# ===========================================================================
+# SAMPLE STAGE: the UHV cryostat manipulator and the endstation mirrors
+# ===========================================================================
+
+rixs-sample:
+  stage: sample
+  enclosure: 2-ID-D
+  intro: "The UHV cryostat sample manipulator, the sample chamber, the endstation mirrors, and the sample temperature controller."
+  note: >
+    cryo is the UHV cryostat sample manipulator (x/y/z/theta), bound to a loose
+    Manipulator Family (no catalog motion Family fits a UHV multi-axis cryo
+    manipulator; SAMPLE-1). M5 and M6 are the endstation mirrors; the optics-wheel
+    theta sits on M5 (OPT-1).
+  devices:
+    - name: SampleManipulator
+      family: Manipulator              # loose Family (n=1; UHV cryostat manipulator; SAMPLE-1)
+      pv: { x: "XF:02IDD-ES{SC:1-Cryo:S1_B-Ax:X}Mtr", y: "XF:02IDD-ES{SC:1-Cryo:S1_B-Ax:Y}Mtr", z: "XF:02IDD-ES{SC:1-Cryo:S1_B-Ax:Z}Mtr", theta: "XF:02IDD-ES{SC:1-Cryo:S1_B-Ax:T}Mtr" }
+      new: true
+      confirm: true
+      note: "UHV cryostat sample manipulator; cryo temperature range and load-lock are SAMPLE-1"
+    - name: SampleChamber
+      family: LinearStage
+      pv: { x: "XF:02IDD-ES{SC:Pvt-Ax:X}Mtr", z: "XF:02IDD-ES{SC:Pvt-Ax:Z}Mtr" }
+      new: true
+      confirm: true
+      note: "sample chamber pivot translation; the spectrometer arm swings about it (RIXS-1)"
+    - name: Mirror_5
+      family: Mirror
+      pv: "XF:02IDD-ES{Mir:5}Pos:"
+      new: true
+      confirm: true
+      note: "endstation mirror M5; carries the optics-wheel theta (OPT-1)"
+    - name: Mirror_6
+      family: Mirror
+      pv: "XF:02IDD-ES{Mir:6-Ax:"
+      new: true
+      confirm: true
+      note: "endstation mirror M6 (OPT-1)"
+    - name: MirrorMask_5
+      family: Aperture
+      pv: "XF:02IDD-ES{Msk:Mir5-Ax:Y}Mtr"
+      new: true
+      confirm: true
+      note: "single-axis mask at M5 (OPT-2)"
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: "XF:02IDD-ES{TCtrl:1"
+      new: true
+      confirm: true
+      note: "Lakeshore 336 sample temperature controller (reuses the graduated Family; SAMPLE-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the RIXS spectrometer arm, its camera, and the counters
+# ===========================================================================
+
+rixs-spectrometer:
+  stage: detection
+  enclosure: 2-ID-D
+  intro: "The energy-dispersive RIXS spectrometer arm, the photon-counting camera at its end, and the counting electronics."
+  note: >
+    The RIXS spectrometer is a meters-long energy-dispersive arm modelled as one
+    loose SpectrometerArm Asset (no catalog Family fits a multi-chamber dispersive
+    collection arm; the catalog EnergyDispersiveSpectrometer presents a point Sensor
+    Role, not this). It is three coupled chambers: the bridge truss (br), the in-arm
+    optics chamber (oc) that disperses, and the detector chamber (dc). The camera is
+    a photon-counting / centroiding RIXSCam; whether that warrants its own Family or
+    binds the catalog Camera with settings is RIXS-2 (modelled as Camera here).
+  devices:
+    - name: RIXSSpectrometer
+      family: SpectrometerArm          # loose Family (n=1; multi-chamber energy-dispersive RIXS arm; RIXS-1)
+      pv: { bridge_pitch: "XF:02IDD-ES{BT:1-Ax:Pch}Mtr", bridge_roll: "XF:02IDD-ES{BT:1-Ax:Roll}Mtr", bridge_y: "XF:02IDD-ES{BT:1-Ax:Y}Mtr", optics_two_theta: "XF:02IDD-ES{3AA:1-Ax:2T}Mtr", optics_roll: "XF:02IDD-ES{3AA:1-Ax:Roll}Mtr", detector_two_theta: "XF:02IDD-ES{DC:1-Ax:2T}Mtr", detector_z: "XF:02IDD-ES{DC:1-Ax:Z}Mtr" }
+      new: true
+      confirm: true
+      note: "energy-dispersive RIXS arm; bridge truss (BT:1) + optics chamber (3AA:1) + detector chamber (DC:1); full chamber geometry is RIXS-1"
+    - name: RIXSCamera
+      family: Camera
+      pv: "XF:02ID1-ES{RIXSCam}:"
+      new: true
+      confirm: true
+      note: "photon-counting RIXS camera with on-detector centroiding (XIPPlugin) and isolinear curvature correction; Camera-vs-photon-counting-Family is RIXS-2 (DET-1)"
+    - name: DetectorSlit
+      family: Slit
+      pv: "XF:02IDD-ES{DC:1-Slt:1"
+      new: true
+      confirm: true
+      note: "detector-chamber baffle slit (OPT-2)"
+    - name: Scaler
+      family: FluxMonitor
+      pv: "XF:02ID1-ES:1{Sclr:1}scaler1"
+      new: true
+      confirm: true
+      note: "counting scaler for the I0 / drain-current channels (DET-1)"
+    - name: Electrometer
+      family: FluxMonitor
+      pv: "XF:02ID1-ES{GPIO:1_"
+      new: true
+      confirm: true
+      note: "Femto transimpedance electrometer (DET-1)"
+
+# Cross-cutting control. SIX runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were
+# read from the six-profile-collection startup files and carried confirm (CTRL-1).
+controls:
+  intro: >
+    SIX runs on the NSLS-II EPICS / ophyd control stack, the same floor as FXI,
+    HXN, and BMM. The device handles above are bound from the beamline's bluesky
+    profile collection (NSLS2/six-profile-collection), carried confirm pending staff
+    verification (CTRL-1). The RIXS acquisition (energy moves, the alignment scans,
+    the spectrometer geometry moves) runs through bluesky plans and the queue server
+    (41-custom-plans.py, 43-alignment_scans.py, 97-standard-plans.py); that
+    orchestration is the seam CORA's edge replaces, driving through ophyd/EPICS,
+    while the RIXSCam HDF5 file-writing to the NSLS-II filestore is plumbing CORA
+    observes, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a SIX run needs. The PGM, the
+    spectrometer arm, and the sample chamber are under UHV; the cryostat manipulator
+    draws on cryogens (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics, the RIXS spectrometer arm, and the sample chamber are UHV (SUP-1)"

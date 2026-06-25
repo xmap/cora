@@ -5,8 +5,8 @@
 # it records long, fast time series of a coherent speckle pattern on an area
 # detector to measure sample dynamics, plus static small- and wide-angle scattering
 # (SAXS/WAXS) and grazing-incidence scattering (GISAXS) on the same detectors. It
-# is bound to the NSLS-II Site (deployments/nsls2/site.yaml), the fifth NSLS-II
-# beamline after FXI, HXN, BMM, and SRX.
+# is bound to the NSLS-II Site (deployments/nsls2/site.yaml), the sixth NSLS-II
+# beamline after FXI, HXN, BMM, SRX, and SIX.
 #
 # STATUS: reverse-engineered, design-phase. Every value is read from public open
 # source (the bluesky profile collection NSLS2/chx-profile-collection) or inferred,

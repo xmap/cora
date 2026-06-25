@@ -93,6 +93,25 @@ class CaptureRef:
 
 
 @dataclass(frozen=True)
+class OutputRef:
+    """Sentinel value: substitute with the artifact produced into `output_name`.
+
+    The compute-branch sibling of `CaptureRef`. Where `CaptureRef` resolves a
+    scalar reading (`captures` dict, feeds `SetpointStep.value`), an `OutputRef`
+    resolves a produced file artifact's URI (`outputs` dict, feeds a later
+    `ComputeStep.input_uris`). A producing `RecipeComputeStep` declares the name
+    via `output_ref_name`; a consuming step references it as an element of its
+    `input_uris` tuple. `expand` passes it through UNCHANGED (it rides into the
+    conduct `Step` and the determinism hash as an opaque sentinel); only the
+    Conductor resolves it at execute time against the per-conduct `outputs`
+    bus. `output_name` must be declared by an EARLIER `RecipeComputeStep` in the
+    same Recipe (see `validate_output_refs`).
+    """
+
+    output_name: str
+
+
+@dataclass(frozen=True)
 class RecipeSetpointStep:
     """Setpoint step template: `value` is a literal, a `BindingRef`, or a `CaptureRef`.
 
@@ -163,13 +182,25 @@ class RecipeComputeStep:
     The recipe-template twin of the Conductor's `ComputeStep`. `output_uri`
     selects the result arm, mirroring the Conductor: SET means the FILE arm
     (the job writes an artifact; the conduct surfaces an `ArtifactRef`), None
-    means the VALUE arm (the conduct surfaces a `Measurement`). Fields are
-    LITERAL (no `BindingRef` on a compute step yet): the `command` argv +
-    `input_uris` (authored literal URIs pointing at the well-known paths the
-    acquisition action bodies wrote) + optional `output_uri` + literal
-    `parameters`. The expansion function passes the fields through verbatim;
+    means the VALUE arm (the conduct surfaces a `Measurement`). The `command`
+    argv + `parameters` are LITERAL (no `BindingRef` on a compute step yet);
     binding a compute parameter is a deferred widening (the first deployment
     that needs an operator-tunable compute parameter fires it).
+
+    `input_uris` elements are each a literal URI (an authored well-known path
+    an acquisition action body wrote) OR an `OutputRef` naming an EARLIER
+    file-arm step's produced artifact. An `OutputRef` element rides through
+    expansion unresolved and the Conductor resolves it at execute time to the
+    produced artifact's URI; a tuple of independently-named `OutputRef`s IS the
+    fan-in (a step consuming several upstream outputs).
+
+    `output_ref_name` declares the `outputs` slot the produced `ArtifactRef`
+    deposits into (the FILE arm), so a later step's `OutputRef` input reads the
+    produced URI: this is the compute-branch chaining (the artifact-bus twin of
+    `capture_name`). None (the default) deposits nothing. `validate_output_refs`
+    treats a non-None `output_ref_name` as a declared output (its OWN ordered
+    set, separate from the `captures` declared set) so a forward / missing
+    `OutputRef` or a duplicate output is caught at define-recipe time.
 
     `capture_name` names the captures slot the produced `Measurement` deposits
     into (the VALUE arm), so a later `CaptureRef` setpoint (or the
@@ -182,10 +213,11 @@ class RecipeComputeStep:
     """
 
     command: tuple[str, ...]
-    input_uris: tuple[str, ...] = ()
+    input_uris: tuple[str | OutputRef, ...] = ()
     output_uri: str | None = None
     parameters: Mapping[str, Any] = field(default_factory=dict[str, Any])
     capture_name: str | None = None
+    output_ref_name: str | None = None
 
 
 RecipeStep = (
@@ -233,6 +265,38 @@ _CAPTURE_KEY = "__capture__"
 
 Same escape caveat as `_BINDING_KEY`: a literal `dict` value MUST NOT
 carry this key at v1."""
+
+_OUTPUT_KEY = "__output__"
+"""Wire-format key distinguishing an `OutputRef` input-uris element from a
+literal URI string.
+
+A plain `input_uris` element is a `str`; an `OutputRef` element serializes to
+`{"__output__": name}`. The element-wise encoding (vs the whole-list `list(...)`
+form) is load-bearing for the determinism hash: `canonical_json_bytes` has no
+`default=`, so a raw `OutputRef` in the hashed list would crash the encoder."""
+
+
+def _input_uri_to_wire(uri: str | OutputRef) -> Any:
+    """Serialize ONE `input_uris` element (literal URI or `OutputRef`) to wire form.
+
+    Shared by every step serializer so a raw `OutputRef` never reaches the
+    JSON / hash encoder. An `OutputRef` becomes `{"__output__": name}`; a
+    literal URI passes through unchanged."""
+    if isinstance(uri, OutputRef):
+        return {_OUTPUT_KEY: uri.output_name}
+    return uri
+
+
+def _input_uri_from_wire(value: Any) -> str | OutputRef:
+    """Deserialize ONE wire `input_uris` element; reconstruct an `OutputRef`.
+
+    Inverse of `_input_uri_to_wire`: a `{"__output__": name}` dict becomes an
+    `OutputRef`, any other value (a literal URI string) passes through."""
+    if isinstance(value, dict):
+        typed = cast("dict[str, Any]", value)
+        if set(typed.keys()) == {_OUTPUT_KEY}:
+            return OutputRef(output_name=typed[_OUTPUT_KEY])
+    return cast("str", value)
 
 
 def _value_to_wire(value: Any | BindingRef | CaptureRef) -> Any:
@@ -285,10 +349,11 @@ def _step_to_wire(step: RecipeStep) -> dict[str, Any]:
         return {
             "kind": "compute",
             "command": list(step.command),
-            "input_uris": list(step.input_uris),
+            "input_uris": [_input_uri_to_wire(u) for u in step.input_uris],
             "output_uri": step.output_uri,
             "parameters": dict(step.parameters),
             "capture_name": step.capture_name,
+            "output_ref_name": step.output_ref_name,
         }
     return {
         "kind": "check",
@@ -322,10 +387,11 @@ def _step_from_wire(payload: dict[str, Any]) -> RecipeStep:
         if kind == "compute":
             return RecipeComputeStep(
                 command=tuple(payload["command"]),
-                input_uris=tuple(payload.get("input_uris", ())),
+                input_uris=tuple(_input_uri_from_wire(u) for u in payload.get("input_uris", ())),
                 output_uri=payload.get("output_uri"),
                 parameters=dict(payload.get("parameters", {})),
                 capture_name=payload.get("capture_name"),
+                output_ref_name=payload.get("output_ref_name"),
             )
         if kind == "check":
             return RecipeCheckStep(
@@ -450,11 +516,94 @@ def validate_capture_refs(steps: tuple[RecipeStep, ...]) -> None:
             _check_capture_ref(step.value, declared)
 
 
+class UnboundRecipeOutputError(Exception):
+    """An `OutputRef.output_name` is not declared by a preceding `RecipeComputeStep`.
+
+    The compute-branch twin of `UnboundRecipeCaptureError`. Family:
+    `Invalid<X>`. HTTP 422. An `OutputRef` in a step's `input_uris` must
+    reference an artifact produced EARLIER in the same Recipe (a file-arm
+    `RecipeComputeStep` whose `output_ref_name` declared the name); a forward
+    or missing reference is an authoring error caught at define-recipe time.
+    """
+
+    def __init__(self, output_name: str) -> None:
+        super().__init__(
+            f"output reference {output_name!r} not declared by a preceding compute step"
+        )
+        self.output_name = output_name
+
+
+class DuplicateRecipeOutputError(Exception):
+    """A `RecipeComputeStep` re-declares an `output_ref_name` already declared.
+
+    The compute-branch twin of `DuplicateRecipeCaptureError`. Family:
+    `Invalid<X>`. HTTP 422. Two file-arm steps declaring the same output name
+    within one Recipe is rejected as an authoring error: the second deposit
+    would collide at execute time (the Conductor loud-fails the duplicate slot).
+    """
+
+    def __init__(self, output_name: str) -> None:
+        super().__init__(f"output ref name {output_name!r} declared more than once")
+        self.output_name = output_name
+
+
+def validate_output_refs(steps: tuple[RecipeStep, ...]) -> None:
+    """Every `OutputRef` input must reference an `output_ref_name` declared earlier.
+
+    Pure structural check (no I/O), run at define-recipe time. The
+    compute-branch twin of `validate_capture_refs`, with its OWN ordered
+    `declared_outputs` set (NOT merged with the captures declared set: outputs
+    are artifact URIs feeding `input_uris`, captures are scalars feeding
+    `SetpointStep.value`; two namespaces). Walks the steps in order:
+
+      - a `RecipeComputeStep` with a non-None `output_ref_name` DECLARES that
+        name into `declared_outputs`; a re-declaration raises
+        `DuplicateRecipeOutputError`.
+      - each `OutputRef` element in a `RecipeComputeStep.input_uris` must
+        reference an already-declared name (forward / missing ->
+        `UnboundRecipeOutputError`). The consume check runs BEFORE this step's
+        own declaration so a step cannot reference its own output.
+
+    Additionally asserts EXACTLY ONE unconsumed declared output survives the
+    walk. This is an ambiguity guard, not a sink selector: it does not identify
+    WHICH output is the Dataset-of-record (the caller selects that by name);
+    it only rejects an authoring shape where more than one output is left
+    unconsumed. So a stray post-terminal file-arm step (a QC / thumbnail step
+    after the reconstruct) that would leave two unconsumed outputs is caught at
+    define time rather than making the by-name selection ambiguous. A Recipe
+    with NO declared output (a control-only or value-arm Recipe) is exempt from
+    the one-sink rule.
+    """
+    declared_outputs: set[str] = set()
+    consumed: set[str] = set()
+    for step in steps:
+        if isinstance(step, RecipeComputeStep):
+            for element in step.input_uris:
+                if isinstance(element, OutputRef):
+                    if element.output_name not in declared_outputs:
+                        raise UnboundRecipeOutputError(element.output_name)
+                    consumed.add(element.output_name)
+            if step.output_ref_name is not None:
+                if step.output_ref_name in declared_outputs:
+                    raise DuplicateRecipeOutputError(step.output_ref_name)
+                declared_outputs.add(step.output_ref_name)
+    unconsumed = declared_outputs - consumed
+    if declared_outputs and len(unconsumed) != 1:
+        msg = (
+            "a Dataset-producing recipe must leave EXACTLY ONE unconsumed output "
+            f"(the terminal sink); found {sorted(unconsumed)} unconsumed of "
+            f"{sorted(declared_outputs)} declared"
+        )
+        raise InvalidRecipeStepShapeError(msg)
+
+
 __all__ = [
     "BindingRef",
     "CaptureRef",
     "DuplicateRecipeCaptureError",
+    "DuplicateRecipeOutputError",
     "InvalidRecipeStepShapeError",
+    "OutputRef",
     "RecipeActionStep",
     "RecipeCaptureStep",
     "RecipeCheckStep",
@@ -463,8 +612,10 @@ __all__ = [
     "RecipeStep",
     "UnboundRecipeBindingError",
     "UnboundRecipeCaptureError",
+    "UnboundRecipeOutputError",
     "from_dict",
     "resolve_value",
     "to_dict",
     "validate_capture_refs",
+    "validate_output_refs",
 ]

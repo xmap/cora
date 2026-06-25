@@ -27,7 +27,7 @@ POLAR's magnetic-scattering signature: applied field and low temperature at the 
 | `Magnet_2T_B`, `Magnet_2T_E` | `Magnet` (loose) | 2 T sample magnets at 4-ID-B; control PVs not in the config (`MAG-1`) |
 | `Magnet_9T_H` | `Magnet` (loose) | high-field magnet at 4-ID-H (`MAG-1`) |
 | `Magnet_Kepco_G` | `Magnet` (loose) | Kepco-driven electromagnet; station a guess (`TOPO-3`, `MAG-1`) |
-| `TemperatureController_336/340` | `TemperatureController` (loose) | LakeShore 336 / 340 controllers at 4-ID-G (`TEMP-1`) |
+| `TemperatureController_336/340` | `TemperatureController` | LakeShore 336 / 340 controllers at 4-ID-G; catalog Family, presents `Regulator` (`TEMP-1`) |
 | `SampleTable_B`, `SampleTable_H` | `Table` | per-station sample positioning tables |
 | `PumpProbeLaser` | `Laser` (loose) | Ventus laser at 4-ID-H; model-versus-hazard open (`SAMPLE-1`) |
 | `SampleSlit_B/G/H` | `Slit` | per-station sample-defining slits |

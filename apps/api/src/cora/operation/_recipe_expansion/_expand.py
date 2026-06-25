@@ -35,7 +35,7 @@ from cora.recipe.aggregates.recipe import (
     RecipeSetpointStep,
     RecipeStep,
 )
-from cora.recipe.aggregates.recipe.body import CaptureRef, resolve_value
+from cora.recipe.aggregates.recipe.body import CaptureRef, OutputRef, resolve_value
 from cora.shared.canonical_json import canonical_json_bytes
 
 _CAPTURE_WIRE_KEY = "__capture__"
@@ -46,6 +46,28 @@ substitutes away), so the hash serializer must encode it deterministically.
 This serializer's hash is compared only against itself (re-expand vs the
 pinned `steps_hash`), so the key need only be internally stable; it mirrors
 the Recipe BC / Conductor `__capture__` sentinel for readability."""
+
+_OUTPUT_WIRE_KEY = "__output__"
+"""Stable sentinel key for an `OutputRef` `input_uris` element in the
+expanded-steps hash form.
+
+An `OutputRef` survives `expand` (the Conductor resolves it at execute time),
+so the hash serializer must encode it deterministically + IDENTICALLY to the
+conductor's `_OUTPUT_REF_KEY` (a mismatch would silently mis-hash the step ->
+`RecipeExpansionDeterminismError`). The element-wise encoding is also required
+for correctness: `canonical_json_bytes` has no `default=`, so a raw `OutputRef`
+in the whole-list form would crash the encoder."""
+
+
+def _input_uri_to_wire(uri: str | OutputRef) -> Any:
+    """Serialize ONE ComputeStep `input_uris` element to the hash wire form.
+
+    Mirrors the conductor + Recipe BC element encoders: an `OutputRef` becomes
+    `{"__output__": name}`, a literal URI passes through. Encode-only (the
+    expansion hash serializer never decodes)."""
+    if isinstance(uri, OutputRef):
+        return {_OUTPUT_WIRE_KEY: uri.output_name}
+    return uri
 
 
 def _criterion_from_wire(
@@ -88,14 +110,17 @@ def _expand_step(step: RecipeStep, bindings: Mapping[str, Any]) -> Step:
     if isinstance(step, RecipeComputeStep):
         # All fields are LITERAL (no BindingRef on a compute step yet), so they
         # pass through verbatim with no resolve_value pass; `capture_name`
-        # (slice 6c) is a literal template field carried through unresolved.
-        # Binding a compute parameter is the deferred widening.
+        # (slice 6c) + `output_ref_name` (compute-branch chaining) are literal
+        # template fields carried through unresolved, and an `OutputRef` element
+        # of `input_uris` rides through UNRESOLVED (the Conductor resolves it at
+        # execute time). Binding a compute parameter is the deferred widening.
         return ComputeStep(
             command=step.command,
             input_uris=step.input_uris,
             output_uri=step.output_uri,
             parameters=dict(step.parameters),
             capture_name=step.capture_name,
+            output_ref_name=step.output_ref_name,
         )
     # RecipeCheckStep: criterion is a wire-format dict (kept dict-shaped
     # in Recipe BC to avoid an Operation -> Recipe import).
@@ -162,10 +187,11 @@ def _step_to_wire(step: Step) -> dict[str, Any]:
         return {
             "kind": "compute",
             "command": list(step.command),
-            "input_uris": list(step.input_uris),
+            "input_uris": [_input_uri_to_wire(u) for u in step.input_uris],
             "output_uri": step.output_uri,
             "parameters": dict(step.parameters),
             "capture_name": step.capture_name,
+            "output_ref_name": step.output_ref_name,
         }
     return {
         "kind": "check",

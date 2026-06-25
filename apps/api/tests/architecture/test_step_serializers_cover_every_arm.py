@@ -34,33 +34,41 @@ from cora.operation.conductor import (
     step_to_payload,
     steps_from_payload,
 )
+from cora.recipe.aggregates.recipe.body import OutputRef
 
 # One representative instance per Step arm. The mapping is keyed by the arm
 # class so a new union arm with no instance here trips the coverage assertion
-# in `_instances_cover_every_arm` below.
+# in `_instances_cover_every_arm` below. The ComputeStep representative carries
+# BOTH an OutputRef element in `input_uris` (mixed with a literal URI) AND an
+# `output_ref_name` so the compute-branch chaining sentinel + field round-trip
+# through every serializer (a raw OutputRef would crash canonical_json if a
+# serializer whole-list-encoded it instead of element-encoding).
 _INSTANCES: dict[type, Step] = {
     SetpointStep: SetpointStep(address="2bma:rot:val", value=45.0, verify=True),
     ActionStep: ActionStep(name="collect", params={"repetitions": 3}),
     CheckStep: CheckStep(address="2bma:shutter", criterion=EqualsCriterion(expected=1)),
     CaptureStep: CaptureStep(address="2bma:sample:x", capture_name="home"),
     ComputeStep: ComputeStep(
-        command=("tomopy", "find_center"),
-        input_uris=("file:///a.h5", "file:///b.h5"),
-        output_uri="file:///center.json",
-        parameters={"algorithm": "vo"},
+        command=("tomopy", "recon"),
+        input_uris=("file:///raw.h5", OutputRef(output_name="pr")),
+        output_uri="file:///recon.h5",
+        parameters={"algorithm": "sirt"},
         capture_name="rotation_center_offset",
+        output_ref_name="recon",
     ),
 }
 
-# A capture_name=None ComputeStep round-trips too (the field is additive +
-# optional, slice 6c). Kept SEPARATE from `_INSTANCES` (which holds one
-# representative per arm) so both the set + unset cases are exercised.
+# A capture_name=None + output_ref_name=None ComputeStep with ALL-literal
+# input_uris round-trips too (the fields are additive + optional). Kept SEPARATE
+# from `_INSTANCES` (which holds the set + OutputRef case) so both the set +
+# unset cases are exercised for each serializer.
 _COMPUTE_STEP_NO_CAPTURE = ComputeStep(
     command=("tomopy", "find_center"),
     input_uris=("file:///a.h5", "file:///b.h5"),
     output_uri="file:///center.json",
     parameters={"algorithm": "vo"},
     capture_name=None,
+    output_ref_name=None,
 )
 
 _CHECK_WIRE_KIND = "check"
@@ -154,3 +162,34 @@ def test_compute_step_capture_name_round_trips_both_serializers() -> None:
         # a capture_name-set step from a capture_name=None one)
         (wire,) = steps_to_wire((instance,))
         assert wire["capture_name"] == instance.capture_name
+
+
+@pytest.mark.architecture
+def test_compute_step_output_ref_round_trips_both_serializers() -> None:
+    """A ComputeStep `output_ref_name` + an `OutputRef` `input_uris` element
+    (compute-branch chaining) survive both serializers, set OR None.
+
+    The B1 risk this pins: `input_uris` is element-encoded so a raw `OutputRef`
+    never reaches `canonical_json_bytes` (no `default=`). `_INSTANCES` covers the
+    SET case (its ComputeStep carries an OutputRef element + output_ref_name);
+    this pins the UNSET case (all-literal input + output_ref_name=None) so a
+    serializer that drops or whole-list-encodes the field is caught, and checks
+    the OutputRef element survives as an OutputRef (not flattened to a dict).
+    """
+    with_output = _INSTANCES[ComputeStep]
+    assert isinstance(with_output, ComputeStep)
+    assert with_output.output_ref_name == "recon"
+    assert OutputRef(output_name="pr") in with_output.input_uris
+
+    for instance in (with_output, _COMPUTE_STEP_NO_CAPTURE):
+        assert isinstance(instance, ComputeStep)
+        # payload serializer round-trip (value-identical, incl. the OutputRef element)
+        (rebuilt,) = steps_from_payload([step_to_payload(instance)])
+        assert rebuilt == instance, (
+            f"ComputeStep(output_ref_name={instance.output_ref_name!r}) did not round-trip "
+            f"through step_to_payload/_step_from_payload."
+        )
+        # hash/wire serializer carries the field + the element sentinel (so the
+        # determinism hash splits an output_ref_name-set step from a None one)
+        (wire,) = steps_to_wire((instance,))
+        assert wire["output_ref_name"] == instance.output_ref_name

@@ -27,8 +27,8 @@
 #   3. The PSS / gonio interlocks are NOT equipment devices: they are the data
 #      behind the Enclosure permit_signal (the shipped Enclosure aggregate), so
 #      they are carried on the enclosures below, not as a device walk (INTERLOCK-1).
-# It also reuses I22's loose FluxMonitor (the JBPM TetrAMM i0), pushing it toward
-# rule-of-three graduation, and adds a third robot-as-Positioner instance.
+# It also reuses FluxMonitor (the JBPM TetrAMM i0); this deployment completed its
+# rule-of-three graduation into the catalog, and adds a third robot-as-Positioner instance.
 #
 # Every device carries new: true + confirm: true. Families-only (no Model bindings).
 # DEFERRED out of scope: the bent-Laue energy as a goto-command (dodal exposes it
@@ -264,7 +264,7 @@ detector:
       pv: "BL15I-EA-JBPM-03:"
       new: true
       confirm: true
-      note: "incident-flux monitor (TetrAMM JBPM); presents the Sensor Role; loose family reused from I22, now at a 2nd Diamond deployment (rule-of-three building) (FLUX-1)"
+      note: "incident-flux monitor (TetrAMM JBPM); presents the Sensor Role; FluxMonitor catalog Family (graduated; this deployment completed the i22/i03/i15-1 rule-of-three) (FLUX-1)"
 
 # Cross-cutting timing.
 controls:

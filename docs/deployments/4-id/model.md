@@ -16,13 +16,13 @@
 
 ## Loose-Family graduation
 
-POLAR introduced eight device classes CORA had not earned into the catalog. Graduation needs two or more independent CORA deployments AND a settled abstraction. The 8-ID XPCS deployment adds the second independent beamline for `TemperatureController`, `Transfocator`, and `BeamPositionMonitor`, but `main` deliberately holds all three loose pending cross-facility abstraction reviews opened by the parallel Diamond deployments (settable-actuator `ENV-1`; CRL catalog home `CRL-1`; sensor fold-vs-promote `DIAG-1` / `FLUX-1`), so they stay loose here too, allowlisted and recorded in the promotion register. The `Diffractometer` is the one that landed: as the `Assembly(Diffractometer)` blueprint (4-ID + 8-ID), which composes the catalog `Goniometer` Family, with an 8-ID Fixture scenario. The remaining four (`PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `Laser`) are single-beamline loose. All names were cleared by the naming-r3 review during the catalog-graduation pass.
+POLAR introduced eight device classes CORA had not earned into the catalog. Graduation needs two or more independent CORA deployments AND a settled abstraction. The 8-ID XPCS deployment adds the second independent beamline for `TemperatureController`, `Transfocator`, and `BeamPositionMonitor`. `TemperatureController` has since graduated to a catalog Family: the parallel Diamond i22/i03/i11 rule-of-three settled the settable-actuator abstraction, and it presents the new `Regulator` Role. `Transfocator` and `BeamPositionMonitor` stay loose pending their cross-facility abstraction reviews (CRL catalog home `CRL-1`; sensor fold-vs-promote `DIAG-1`), allowlisted and recorded in the promotion register. The `Diffractometer` is the one that landed: as the `Assembly(Diffractometer)` blueprint (4-ID + 8-ID), which composes the catalog `Goniometer` Family, with an 8-ID Fixture scenario. The remaining four (`PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `Laser`) are single-beamline loose. All names were cleared by the naming-r3 review during the catalog-graduation pass.
 
 | Loose Family | Presents (when graduated) | Status |
 | --- | --- | --- |
-| `TemperatureController` | Controller | HELD loose: 2nd beamline (LakeShore + QNW) but abstraction open (ENV-1) |
+| `TemperatureController` | Regulator | GRADUATED: catalog Family on the Diamond i22/i03/i11 rule-of-three; presents Regulator, requires Settable; 4-ID device details still to confirm (TEMP-1) |
 | `Transfocator` | Positioner | HELD loose: 2nd beamline (two CRL transfocators) but no catalog home yet (CRL-1) |
-| `BeamPositionMonitor` | Sensor | HELD loose: 2nd beamline (Sydor + TetrAMM) but fold-vs-promote open (DIAG-1/FLUX-1) |
+| `BeamPositionMonitor` | Sensor | HELD loose: 2nd beamline (Sydor + TetrAMM) but fold-vs-promote open (DIAG-1) |
 | `PhaseRetarder` | Positioner | loose: a second polarization beamline, or POLAR registration |
 | `PolarizationAnalyzer` | Positioner | loose: a second polarization beamline |
 | `Magnet` | confirm (Positioner or Sensor) | loose: needs a second magnetism beamline (8-ID has no sample magnet) |

@@ -12,7 +12,7 @@
 | Source | IVU20 in-vacuum undulator (`SR:C11-ID:G1{IVU20:1}`) |
 
 !!! note "How CORA would land on CHX"
-    These pages describe how CORA would model, govern, and conduct CHX, the fifth NSLS-II beamline after [FXI](../fxi/index.md), [HXN](../hxn/index.md), [BMM](../bmm/index.md), and [SRX](../srx/index.md). They are not a survey of the beamline's current software. The hardware facts (devices, EPICS PVs, axes) are read from public NSLS-II open source (the [`NSLS2/chx-profile-collection`](https://github.com/NSLS2/chx-profile-collection) profile collection) and verified against it; vendor part numbers and physical positions are not in it, so they, and every read value, are carried `confirm` until CHX staff verify them ([Open questions](questions.md)). This is a design-phase scaffold: the descriptor and these docs, with scenarios deferred.
+    These pages describe how CORA would model, govern, and conduct CHX, the sixth NSLS-II beamline after [FXI](../fxi/index.md), [HXN](../hxn/index.md), [BMM](../bmm/index.md), [SRX](../srx/index.md), and [SIX](../six/index.md). They are not a survey of the beamline's current software. The hardware facts (devices, EPICS PVs, axes) are read from public NSLS-II open source (the [`NSLS2/chx-profile-collection`](https://github.com/NSLS2/chx-profile-collection) profile collection) and verified against it; vendor part numbers and physical positions are not in it, so they, and every read value, are carried `confirm` until CHX staff verify them ([Open questions](questions.md)). This is a design-phase scaffold: the descriptor and these docs, with scenarios deferred.
 
 ## The defining shape: coherence, a second time
 

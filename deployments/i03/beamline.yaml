@@ -20,10 +20,11 @@
 #   adversarial new-kind review refuted a SampleChanger Family (covered by the
 #   existing Positioner Role).
 #
-# Reuses I22's loose design-intent families (StorageRing, FluxMonitor,
-# TemperatureController) and 2-BM's loose Diagnostic family, rather than coining
-# synonyms. Only one genuinely-new loose family: Backlight (an illumination
-# affordance no existing Family carries; carried loose pending rule-of-three).
+# Reuses I22's loose StorageRing design-intent family and 2-BM's loose Diagnostic
+# family, rather than coining synonyms; FluxMonitor and TemperatureController were
+# first carried loose at I22 too and have since graduated to the catalog. Only one
+# genuinely-new loose family: Backlight (an illumination affordance no existing
+# Family carries; carried loose pending rule-of-three).
 # Attenuator folds into the existing Filter Family; the aperture-scatterguard
 # folds into the existing Aperture Family (both adversarially verified).
 #
@@ -171,9 +172,10 @@ diagnostics:
   enclosure: i03-optics
   intro: "The beam-position and flux monitors. All present the Sensor Role (scalar Readings)."
   note: >
-    These reuse loose Sensor-presenting families rather than coining synonyms:
-    Diagnostic from 2-BM (its BeamPositionMonitor device), FluxMonitor from I22. The XBPM feedback loop is
-    carried with its modelling deferred (FEEDBACK-1).
+    These present the Sensor Role rather than coining synonyms: the beam-position
+    monitor reuses the loose Diagnostic family from 2-BM (its BeamPositionMonitor
+    device); the flux monitors bind the FluxMonitor catalog Family (reused from I22,
+    since graduated). The XBPM feedback loop is carried with its modelling deferred (FEEDBACK-1).
   devices:
     - name: QBPM
       family: Diagnostic
@@ -186,13 +188,13 @@ diagnostics:
       pv: "BL03I-MO-FLUX-01:"
       new: true
       confirm: true
-      note: "flux readout (ion-chamber-derived); presents the Sensor Role; loose family reused from I22 (DIAG-1)"
+      note: "flux readout (ion-chamber-derived); presents the Sensor Role; FluxMonitor catalog Family (graduated), reused from I22 (DIAG-1)"
     - name: IPin
       family: FluxMonitor
       pv: "BL03I-EA-PIN-01:"
       new: true
       confirm: true
-      note: "ion-chamber pin-diode current; presents the Sensor Role; loose family (DIAG-1)"
+      note: "ion-chamber pin-diode current; presents the Sensor Role; FluxMonitor catalog Family (graduated) (DIAG-1)"
     - name: XBPMFeedback
       pv: "BL03I-EA-FDBK-01:"
       new: true
@@ -240,13 +242,13 @@ sample:
       pv: "BL03I-EA-CSTRM-01:"
       new: true
       confirm: true
-      note: "Oxford cryostream cold-gas sample cooling; a settable actuator; loose family reused from I22 (ENV-1)"
+      note: "Oxford cryostream cold-gas sample cooling; a settable actuator; TemperatureController catalog Family (graduated, presents Regulator), reused from I22 (ENV-1)"
     - name: Thawer
       family: TemperatureController
       pv: "BL03I-EA-THAW-01"
       new: true
       confirm: true
-      note: "sample thawing actuator; a settable actuator; loose family (ENV-1)"
+      note: "sample thawing actuator; a settable actuator; TemperatureController catalog Family (graduated, presents Regulator) (ENV-1)"
 
 # --- DETECTION STAGE: the Eiger and the fluorescence detector ---
 
