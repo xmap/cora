@@ -16,15 +16,15 @@ SIX is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 
 ## New loose families
 
-SIX is CORA's first soft X-ray beamline, a new optics, detector, and sample-environment regime. It introduces three device classes no existing catalog Family covers. Per earn-the-abstraction, each is held **loose at n=1** and graduates nothing: a second independent soft X-ray beamline must earn the abstraction before any catalog change. Their names are provisional, to be settled by the naming-r3 gate at graduation.
+SIX is CORA's first soft X-ray beamline, a new optics, detector, and sample-environment regime. It introduced three device classes no hard X-ray catalog Family covered. One has since **graduated**: `GratingMonochromator` became a catalog Family once CSX (NSLS-II 23-ID) earned the rule-of-three for the soft X-ray PGM (the Monochromator here binds it). The other two remain **loose at n=1** (SIX only) and graduate nothing until a second soft X-ray beamline earns them; their names are provisional, to be settled by the naming-r3 gate at graduation.
 
-| Loose family | Presents (when graduated) | What it is | Earns when |
+| Family | Presents (when graduated) | What it is | Status |
 | --- | --- | --- | --- |
-| `GratingMonochromator` | Positioner | the soft X-ray plane-grating monochromator (PGM): premirror at a fixed-focus c-value plus an interchangeable grating, no Bragg crystal | a 2nd PGM beamline (NSLS-II CSX / ESM / SST) (`MONO-1`) |
-| `SpectrometerArm` | confirm (Sensor or Positioner) | the meters-long energy-dispersive RIXS arm (bridge truss + optics chamber + detector chamber) | a 2nd RIXS / dispersive-arm beamline (`RIXS-1`) |
-| `Manipulator` | Positioner | the UHV cryostat sample manipulator (x/y/z/theta) | a 2nd UHV-manipulator soft beamline (`SAMPLE-1`) |
+| `GratingMonochromator` | Positioner | the soft X-ray plane-grating monochromator (PGM): premirror at a fixed-focus c-value plus an interchangeable grating, no Bragg crystal | graduated (SIX + CSX, `MONO-1`) |
+| `SpectrometerArm` | confirm (Sensor or Positioner) | the meters-long energy-dispersive RIXS arm (bridge truss + optics chamber + detector chamber) | loose at n=1; earns at a 2nd RIXS / dispersive-arm beamline (`RIXS-1`) |
+| `Manipulator` | Positioner | the UHV cryostat sample manipulator (x/y/z/theta) | loose at n=1; earns at a 2nd UHV-manipulator soft beamline (`SAMPLE-1`) |
 
-The catalog `Monochromator` is deliberately not stretched to cover the PGM: its note describes a crystal / multilayer Bragg monochromator, and a plane-grating mono has no Bragg crystal, selects energy by grating pitch and translation, and takes its resolution from the exit slit. Whether `GratingMonochromator` graduates as its own Family or the catalog `Monochromator` is generalized is a gate-review / naming-r3 decision at the 2nd sighting, not this PR's. Likewise `SpectrometerArm` is distinct from the catalog `EnergyDispersiveSpectrometer` (a point Sensor, not a multi-chamber dispersive arm).
+The catalog `Monochromator` is deliberately not stretched to cover the PGM: its note describes a crystal / multilayer Bragg monochromator, and a plane-grating mono has no Bragg crystal, selects energy by grating pitch and translation, and takes its resolution from the exit slit, so `GratingMonochromator` is a distinct Family rather than a settings variant. Likewise `SpectrometerArm` is distinct from the catalog `EnergyDispersiveSpectrometer` (a point Sensor, not a multi-chamber dispersive arm).
 
 ## Deliberately not here yet
 

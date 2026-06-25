@@ -23,12 +23,12 @@
 #     swings to a scattering angle and disperses the emitted soft X-rays onto a
 #     photon-counting camera.
 #   - the sample sits on a UHV cryostat MANIPULATOR (x/y/z/theta).
-# None of these fit an existing catalog Family, so three LOOSE families are
-# introduced at n=1 (GratingMonochromator, SpectrometerArm, Manipulator); they are
-# NOT graduated. Per earn-the-abstraction, a second soft X-ray beamline (NSLS-II
-# CSX / ESM / SST) must independently earn them before any catalog change. Their
-# names are provisional pending the naming-r3 gate at graduation (see model.md).
-# Everything else reuses an existing catalog Family.
+# None of these fit a hard X-ray catalog Family. GratingMonochromator GRADUATED into
+# the catalog once CSX (NSLS-II 23-ID) earned the rule-of-three for the soft X-ray
+# PGM, so the Monochromator below binds the catalog GratingMonochromator Family. The
+# other two (SpectrometerArm, Manipulator) remain LOOSE at n=1 (SIX only); a second
+# soft X-ray beamline must earn them before any catalog change. Everything else
+# reuses an existing catalog Family.
 #
 # Items left open are tagged inline with a (QUESTION-ID) answered on
 # docs/deployments/six/questions.md.
@@ -125,12 +125,13 @@ monochromator:
   note: >
     pgm is the plane-grating monochromator (PGM): a premirror at a fixed-focus
     c-value (cff) plus an interchangeable grating (500 / 1200 / 1800 l/mm) set the
-    energy. It binds a loose GratingMonochromator Family, not the catalog
-    Monochromator (which is a crystal/multilayer Bragg DCM): a grating mono has no
-    Bragg crystal and its resolution is set by the exit slit (MONO-1, see model.md).
+    energy. It binds the catalog GratingMonochromator Family (graduated across SIX +
+    CSX), not the Monochromator Family (which is a crystal/multilayer Bragg DCM): a
+    grating mono has no Bragg crystal and its resolution is set by the exit slit
+    (MONO-1, see model.md).
   devices:
     - name: Monochromator
-      family: GratingMonochromator     # loose Family (n=1; soft X-ray PGM, not a crystal DCM; MONO-1)
+      family: GratingMonochromator     # catalog Family (graduated SIX + CSX; soft X-ray PGM, not a crystal DCM)
       pv: { energy: "XF:02IDB-OP{Mono:1-Ax:9_Eng}Mtr", cff: "XF:02IDB-OP{Mono:1-Ax:9_Cff}Mtr", grating_pitch: "XF:02IDB-OP{Mono:1-Ax:9_GP}Mtr", premirror_pitch: "XF:02IDB-OP{Mono:1-Ax:9_MP}Mtr", grating_translation: "XF:02IDB-OP{Mono:1-Ax:9_GT}Trans:Mtr" }
       new: true
       confirm: true

@@ -1,7 +1,7 @@
 # CORA Site descriptor: the NSLS-II site-level surface
 #
 # NSLS-II (National Synchrotron Light Source II, Brookhaven National Laboratory)
-# is a Site CORA models, the home of the FXI, HXN, BMM, SRX, SIX, and CHX beamlines. This file is
+# is a Site CORA models, the home of the FXI, HXN, BMM, SRX, SIX, CHX, and CSX beamlines. This file is
 # the single human-readable source for the facility's site-level instances: the
 # Facility itself, the Practices it would run, and the facility principals.
 #
@@ -24,7 +24,7 @@ facility:
   heading: "NSLS-II"
   kind: Site
   institution: Brookhaven National Laboratory
-  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX]
+  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the FXI profile collection, not yet
@@ -50,6 +50,12 @@ practices:
   # CHX's defining techniques (XPCS, small-angle scattering) sit on the deferred
   # xpcs / small_angle_scattering Methods that APS 8-ID left pending (TECH-1); no
   # CHX Practice is recorded until those Methods exist. CHX is bound via beamlines.
+  # CSX (23-ID) does coherent / resonant soft X-ray scattering on the TARDIS
+  # diffractometer; both legs reuse existing pending Methods (resonant_scattering
+  # from 4-ID, diffraction from 4-ID / 8-ID). The coherence is a beam-quality
+  # enabler carried as settings, not coined as its own Method (TECH-1).
+  - {name: CSX_rsxs_practice, method: resonant_scattering, pending: true, note: "resonant soft X-ray scattering (RSXS); reuses the 4-ID resonant_scattering Method (TECH-1)"}
+  - {name: CSX_diffraction_practice, method: diffraction, pending: true, note: "coherent soft X-ray diffraction on the TARDIS E6C; reuses the 4-ID / 8-ID diffraction Method (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at NSLS-II. Pending until the NSLS-II
 # operator and review structure is confirmed; the profile collection only exposes
