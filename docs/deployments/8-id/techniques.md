@@ -2,7 +2,7 @@
 
 *What the modelled part of 8-ID is designed to do, as intent. First cut.*
 
-A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practice](../aps/index.md#the-techniques-adapted-here) is how a facility adapts it. 8-ID's techniques are coherent-scattering and diffraction, new to CORA's imaging-heritage catalog, so the Methods below render unlinked and are carried pending until one enters scope (`TECH-1`).
+A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practice](../aps/index.md#the-techniques-adapted-here) is how a facility adapts it. 8-ID's signature technique, **XPCS, is now a catalog Method** (`cora.capability.xpcs`): it is the second beamline after LCLS-MFX to need a DAQ-owned high-rate frame stream, which graduated XPCS out of the imaging-heritage catalog. Small-angle scattering and six-circle diffraction stay pending until they enter scope (`TECH-1`).
 
 ## X-ray photon correlation spectroscopy
 
@@ -10,7 +10,7 @@ XPCS measures the time correlations of a coherent speckle pattern to probe sampl
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| XPCS | `xpcs` | coherent-scattering intensity time series on the Eiger / Lambda / Rigaku detectors, gated by the softGlue timing; Method not yet in catalog |
+| XPCS | [`xpcs`](../../catalog/methods.md) | coherent-scattering intensity time series on the Eiger / Lambda / Rigaku detectors, gated by the softGlue timing; now a catalog Method. Its acquisition is a DAQ-owned high-rate frame stream with no executing body yet, the [event-stream acquisition axis](model.md#deliberately-not-here-yet) (Stage 1) |
 | Small-angle scattering | `small_angle_scattering` | static SAXS on the same detectors; a Plan setting over the same chain |
 
 Both need the [XPCS sample stage](equipment/sample.md), the [coherent detectors](equipment/detector.md), and the flight path. The fast shutter and softGlue timing (`XPCS-1`, `XPCS-3`) gate the exposure.
@@ -27,4 +27,4 @@ It needs the [diffractometer](equipment/sample.md). The reciprocal-space coordin
 
 ## Not modelled yet
 
-The concrete acquisition recipes (correlation time series, frame rates, exposures) are not written yet; they join as the deployment approaches the point where CORA drives 8-ID. Whether XPCS and scattering Methods enter CORA's catalog is an owner-scope decision on [Model](model.md#deliberately-not-here-yet); see [Open questions](questions.md) for the world-facts to confirm first.
+The XPCS Method now exists, but the concrete acquisition primitive that executes it (a DAQ-owned high-rate frame stream, not a poll-to-Done capture) does not: that is the [event-stream acquisition axis](model.md#deliberately-not-here-yet), now at Stage 1 (8-ID XPCS is its second beamline after LCLS-MFX). Small-angle scattering and diffraction Methods remain an owner-scope decision (`TECH-1`); see [Open questions](questions.md) for the world-facts to confirm first.

@@ -1,0 +1,214 @@
+# XPD beamline descriptor (NSLS-II), reverse-engineered
+#
+# XPD (X-ray Powder Diffraction) is the NSLS-II high-energy powder-diffraction and
+# total-scattering beamline at sector 28-ID-2. Its defining techniques are powder
+# diffraction and rapid-acquisition pair distribution function (PDF / total
+# scattering): a high-energy beam through a powder or capillary sample onto a large
+# flat-panel area detector, with the detector distance setting the accessible Q. It
+# is bound to the NSLS-II Site (deployments/nsls2/site.yaml), the eighth NSLS-II
+# beamline after FXI, HXN, BMM, SRX, SIX, CHX, and CSX.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/xpd-profile-collection) or inferred,
+# carried `confirm: true` pending XPD staff. EPICS PVs are real and verified against
+# the startup scripts; vendor part numbers, serials, and physical positions are not
+# in it and are open questions. Same descriptor mode as FXI / HXN / BMM / SRX / SIX
+# / CHX; this scaffold is descriptor + docs, scenarios deferred.
+#
+# XPD is the POWDER-DIFFRACTION / PDF reinforcement: it is the NSLS-II twin of the
+# Diamond i11 (high-resolution powder diffraction) and i15-1 (total scattering / PDF)
+# beamlines, the second facility for that science axis. It introduces NO new catalog
+# family: the flat-panel detectors reuse Camera, the ion chamber and quad electrometer
+# FluxMonitor (#353), the cryostream / furnace TemperatureController (#350, graduated
+# BY i11), the bent double-Laue and high-resolution monochromators Monochromator, the
+# focusing mirror Mirror. Its one loose family is the BeamPositionMonitor, shared with
+# 4-ID/8-ID/9-ID and held (DIAG-1). Per the i11 / i15-1 precedent the powder-diffraction
+# and total-scattering Capabilities are NOT coined here; they are the deferred
+# owner-scope cohort (TECH-1), and the autonomous sample robot is the deferred
+# i03 / i15-1 autonomous-loop shape (ROBOT-1).
+
+beamline:
+  name: XPD
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 28"          # PV namespace XF:28ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "the source is an insertion device; no source PV or parameters are in the profile collection. It is understood from facility knowledge (not the profile collection) to be a damping wiggler, the high-flux high-energy source PDF needs; that subtype is an inference pending staff confirmation (SRC-1)"
+
+enclosures:
+  # PV zones: 28IDA first-optics hutch (FOE: the double-Laue mono and focusing
+  # mirror), 28IDC the main experiment hutch (the PDF / powder endstation), 28IDD a
+  # downstream high-resolution endstation (noted, deferred ENDSTATION-1). Modelled as
+  # the optics hutch + the main experiment hutch.
+  - name: 28-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf not in source; only the endstation exposure shutter (XF:28IDC-ES:1{Sh:Exp}) is exposed, not the front-end PPS leaves (PSS-1)"}
+  - name: 28-ID-C
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; 28-ID-C is the main PDF / powder endstation, with a downstream high-resolution endstation 28-ID-D deferred (ENDSTATION-1) (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the insertion-device source
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 28-ID-A
+  intro: The insertion-device source feeding the high-energy beam.
+  devices:
+    - name: Source
+      family: InsertionDevice
+      confirm: true
+      note: "28-ID insertion-device source. No source PV or parameters are in the profile collection; from facility knowledge (not the public config) it is understood to be a damping wiggler, the high-flux high-energy regime PDF needs, which is an inference pending staff confirmation (SRC-1)."
+
+# ===========================================================================
+# OPTICS STAGE: the double-Laue and high-resolution monochromators, mirror, slits
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: 28-ID-A
+  intro: "Condition the high-energy beam and set its energy: the bent double-Laue monochromator for high flux, the vertical focusing mirror, the white-beam slit, and the filters. PVs verified against startup/15-optics.py and 10-motors.py. (A separate high-resolution monochromator in the 28-ID-C hutch feeds the high-resolution endstation, deferred with it, ENDSTATION-1.)"
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:28IDA-OP:1{Mono:DLM-C:"
+      confirm: true
+      note: "Bent double-Laue monochromator (dlm, two crystals C:1 / C:2 with many bender axes); a transmission Laue mono giving high flux at high energy, the same bent-Laue shape Diamond i15-1 uses for PDF. The EnergyAxis below is the master energy; crystal and range pending (DCM-1)."
+    - name: VerticalFocusingMirror
+      family: Mirror
+      pv: "XF:28IDA-OP:1{Mir:VFM-Ax:"
+      confirm: true
+      note: "Vertical focusing mirror (vfm) with bender axes; reuses the Mirror family."
+    - name: WhiteBeamSlit
+      family: Slit
+      pv: "XF:28IDA-OP:2{Slt:H-Ax:"
+      confirm: true
+      note: "Horizontal beam-defining slit (class Slits)."
+    - name: Filters
+      family: Filter
+      pv: "XF:28IDA-OP:2{Fltr:1-Ax:Y}"
+      confirm: true
+      note: "Attenuator filter (fltr1) trimming flux; a separate filter on a different optical leg (fltr6 at OP:0) and an endstation filter bank (XF:28IDC-OP:1{Fltr}) also exist. Reuses the Filter family."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "The master energy axis set by the double-Laue monochromator. XPD runs at a fixed high energy per experiment; whether energy is ever scanned as the measurement is ENERGY-1."
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      pv: "XF:28IDA-BI:0{BPM:1-Ax:"
+      confirm: true
+      note: "Beam-position monitor (bpm1) in the optics hutch. Binds the loose BeamPositionMonitor family that 4-ID/8-ID/9-ID also use (held; DIAG-1), matching the catalog note that position monitors stay loose."
+
+# ===========================================================================
+# SAMPLE STAGE: the diffractometer, sample stages, pinhole, sample environment
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 28-ID-C
+  intro: "The diffractometer that holds the sample and detector arm, the sample-array stage, the beam-defining pinhole, and the sample-environment thermal stages. PVs verified against startup/10-motors.py and 11-temperature-controller.py."
+  note: >
+    XPD positions a powder or capillary sample in the high-energy beam and records
+    the diffraction / total-scattering pattern on the area detector. The sample stack
+    reuses LinearStage; the rich sample-environment cluster (cryostream, furnace,
+    hot-air blower) reuses the TemperatureController family, the same one Diamond i11
+    graduated for variable-temperature powder diffraction.
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: "XF:28IDC-ES:1{Dif:1-Ax:"
+      confirm: true
+      note: "Sample and detector-arm diffractometer (diff, Dif:1: Th, X, Y, two-theta inboard/outboard). Bound to LinearStage as a design-phase placeholder; the diffractometer carries goniometric axes, so whether its orientation is modelled as a Goniometer plus a Diffractometer Assembly (the 8-ID / i11 precedent) is folded into STAGE-1."
+    - name: SampleArrayStage
+      family: LinearStage
+      pv: "XF:28IDC-ES:1{SampArray-Ax:"
+      confirm: true
+      note: "Sample-array stage (sample_x / sample_y) presenting many samples for high-throughput acquisition, plus a secondary sample stage (Stg:Smpl2). Reuses LinearStage."
+    - name: Pinhole
+      family: Aperture
+      pv: "XF:28IDC-ES:1{PinHole:XRD-Ax:"
+      confirm: true
+      note: "Beam-defining pinhole (pinhole_x / pinhole_y) cleaning the beam onto the sample; reuses the Aperture family."
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: "XF:28IDC-ES:1{CS:800}"
+      confirm: true
+      note: "Sample-environment thermal control: the cs700 (XF:28IDC-ES:1{Env:01}) and cs800 (XF:28IDC-ES:1{CS:800}) cryostream controllers, Eurotherm and hot-air blowers (Env:03 / 04 / 06), a Lakeshore cryostat (XF:28IDC-ES1:LS335:{CryoStat}), and a Linkam furnace (XF:28IDC-ES:2:{LINKAM}:). The cs700 / cs800 are understood to be Oxford Cryostreams (inference, not in source; TEMP-1). Modelled as one thermal-environment Asset; reuses TemperatureController (graduated by Diamond i11, #350). Which units are live is TEMP-1."
+
+# ===========================================================================
+# DETECTION STAGE: the flat-panel area detectors, distance stage, flux, shutter
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 28-ID-C
+  intro: "The large flat-panel area detectors for powder / PDF, the detector distance stage that sets the accessible Q, the flux counters, and the exposure shutter. PVs verified against startup/80-areadetector.py, 18-ion-chamber.py, 16-electrometer.py, 10-motors.py."
+  note: >
+    XPD's measurement is the diffraction pattern on a large flat-panel detector. For
+    total scattering / PDF the detector sits close to reach high Q; the distance stage
+    moves it, the PDF two-distance shape. All reuse existing families. Which panels are
+    live versus the spare set is a staff question (DET-1).
+  devices:
+    - name: AreaDetector
+      family: Camera
+      pv: "XF:28IDC-ES:1{Det:PE1}"
+      confirm: true
+      note: "PerkinElmer flat-panel area detector (pe1, class XPDPerkinElmer; a second panel pe2 at Det:PE2, a third pe3 at the 28-ID-D endstation). The primary powder / PDF detector; reuses Camera."
+    - name: DexelaDetector
+      family: Camera
+      pv: "XF:28IDC-ES:1{Det:DEX}"
+      confirm: true
+      note: "Dexela flat-panel detector (the Det:DEX namespace is real, but the device is defined-and-currently-commented-out in source, not a live panel); reuses Camera. Live status pending (DET-1)."
+    - name: DetectorStage
+      family: LinearStage
+      pv: "XF:28IDC-ES:1{Det:PE1-Ax:"
+      confirm: true
+      note: "Detector translation (pe1_x, pe1_z): the Z axis sets the sample-to-detector distance and hence the accessible Q-range, the close / far distances a PDF measurement uses. Reuses LinearStage."
+    - name: IonChamber
+      family: FluxMonitor
+      pv: "XF:28IDC-BI{IC101}"
+      confirm: true
+      note: "Ion chamber (ion_chamber) measuring incident flux for normalization; reuses FluxMonitor (graduated #353)."
+    - name: QuadElectrometer
+      family: FluxMonitor
+      pv: "XF:28IDC-BI{IM:02}EM180:"
+      confirm: true
+      note: "Quad electrometer (qem1, NSLS-II QuadEM) reading I0 intensity (and a scaler em / sc); reuses FluxMonitor. Channel map pending (DIAG-1)."
+    - name: ExposureShutter
+      family: Shutter
+      pv: "XF:28IDC-ES:1{Sh:Exp}"
+      confirm: true
+      note: "Endstation exposure-shutter command signal (Sh:Exp, used by the area-detector multi-trigger and the beam suspender) gating the detector exposure; a separate motorized fast shutter (shctl1) sits on Sh2:Exp. Reuses the Shutter family."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    XPD acquisition is software-triggered: the area detector runs in continuous or
+    multi-trigger mode gated by the endstation exposure shutter, with no separate
+    hardware timing box in the profile collection. Controller box models / firmware
+    are not in the profile collection (DRIVE-1).
+  triggering:
+    - name: EndstationMotionController
+      family: MotionController
+      confirm: true
+      note: "Endstation and optics motion controllers driving the diffractometer, sample, and detector stages; box model / protocol / IP not in the profile collection (DRIVE-1)."
+  software_iocs_not_modeled:
+    [PerkinElmer, Dexela, QuadEM, Cryostream, Lakeshore, Linkam, Robot]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen        # cryostream
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["flat-panel detectors", "capillary samples", "filters"]

@@ -355,6 +355,32 @@ nav:
         - Techniques: deployments/chx/techniques.md
         - Governance: deployments/chx/governance.md
         - Model: deployments/chx/model.md
+      - CSX:
+        - deployments/csx/index.md
+        - Open questions: deployments/csx/questions.md
+        - The beamline:
+          - deployments/csx/equipment/index.md
+          - Source: deployments/csx/beamline.md
+          - Sample: deployments/csx/equipment/sample.md
+          - Detector: deployments/csx/equipment/detector.md
+          - Controls: deployments/csx/equipment/controls.md
+          - Inventory: deployments/csx/inventory.md
+        - Techniques: deployments/csx/techniques.md
+        - Governance: deployments/csx/governance.md
+        - Model: deployments/csx/model.md
+      - XPD:
+        - deployments/xpd/index.md
+        - Open questions: deployments/xpd/questions.md
+        - The beamline:
+          - deployments/xpd/equipment/index.md
+          - Source: deployments/xpd/beamline.md
+          - Sample: deployments/xpd/equipment/sample.md
+          - Detector: deployments/xpd/equipment/detector.md
+          - Controls: deployments/xpd/equipment/controls.md
+          - Inventory: deployments/xpd/inventory.md
+        - Techniques: deployments/xpd/techniques.md
+        - Governance: deployments/xpd/governance.md
+        - Model: deployments/xpd/model.md
       - IXS:
         - deployments/ixs/index.md
         - Open questions: deployments/ixs/questions.md
@@ -368,6 +394,21 @@ nav:
         - Techniques: deployments/ixs/techniques.md
         - Governance: deployments/ixs/governance.md
         - Model: deployments/ixs/model.md
+    - SLAC:
+      - deployments/slac/index.md
+      - LCLS-MFX:
+        - deployments/lcls-mfx/index.md
+        - Open questions: deployments/lcls-mfx/questions.md
+        - The beamline:
+          - deployments/lcls-mfx/equipment/index.md
+          - Source: deployments/lcls-mfx/beamline.md
+          - Optics and endstation: deployments/lcls-mfx/equipment/optics.md
+          - Detector: deployments/lcls-mfx/equipment/detector.md
+          - Controls: deployments/lcls-mfx/equipment/controls.md
+          - Inventory: deployments/lcls-mfx/inventory.md
+        - Techniques: deployments/lcls-mfx/techniques.md
+        - Governance: deployments/lcls-mfx/governance.md
+        - Model: deployments/lcls-mfx/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

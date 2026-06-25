@@ -1,0 +1,68 @@
+# CORA Site descriptor: the SLAC site-level surface
+#
+# SLAC National Accelerator Laboratory (Menlo Park, USA) is the fifth Site CORA
+# models, and the home of the LCLS / LCLS-II X-ray free-electron laser. This file
+# is the single human-readable source for the facility's site-level instances: the
+# Facility itself, the Practices it runs, and the facility principals.
+#
+# Status: LCLS-MFX is an off-roadmap modelling exercise (like the Diamond and FXI
+# beamlines), reverse-engineered from SLAC's open `pcdshub` controls stack. It is
+# the first XFEL CORA models, chosen to test whether the model generalizes beyond
+# the storage-ring acquisition paradigm. Everything below is carried `pending`
+# until LCLS staff confirm it; do not invent facility specifics here, carry them
+# as questions on the LCLS-MFX open-questions page.
+#
+# Source-of-truth boundary (same as the APS site):
+#   - the closed facility-kind / actor-kind vocabularies are validated against
+#     code-mirrored frozensets in scripts/site_descriptor.py.
+#   - the facility records the bootstrap invariants (kind=Site, display_name
+#     equals code); `heading` carries the human title used on the rendered page.
+#   - a non-pending practice method must resolve to a catalog Method; LCLS runs
+#     none of the catalog's tomography methods, so each practice is carried
+#     pending until its Method is earned (registered in the methods-axis guard).
+
+facility:
+  code: slac
+  display_name: slac
+  heading: "SLAC"
+  kind: Site
+  institution: SLAC National Accelerator Laboratory
+  beamlines: [LCLS-MFX]
+
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. None of
+# CORA's catalog Methods (all tomography-family today) fit an XFEL, so every LCLS
+# practice is pending, naming the Method it would earn. Confirm with LCLS staff.
+practices:
+  - {name: MFX_serial_crystallography_practice, method: serial_crystallography, pending: true, note: "serial femtosecond crystallography (fixed-target + liquid-jet sample delivery)"}
+  - {name: MFX_pump_probe_practice, method: pump_probe, pending: true, note: "femtosecond optical-laser pump / X-ray probe; needs laser-to-X-ray timing"}
+  - {name: MFX_spectroscopy_practice, method: xas_spectroscopy, pending: true, note: "XAS / XES via the von Hamos emission spectrometer"}
+
+# Access BC Actors conceptually facility-wide at SLAC. Pending until the LCLS
+# operator and review structure is confirmed.
+actors:
+  - {name: LCLS beamline staff, kind: human, pending: true, note: "instrument scientist and operator pool; structure TBD"}
+  - {name: LCLS safety review, kind: human, pending: true, note: "facility safety review body; membership TBD"}
+
+# Agent BC Agents seeded at this deployment. None: the CORA system agents are not
+# wired for an LCLS deployment, and LCLS-MFX is a modelling exercise.
+agents: []
+
+# Supply BC: facility-wide continuously-available resources. Pending in design.
+# The FEL beam is carried as a PhotonBeam supply (as at MAX IV); its per-shot,
+# pulse-ID-tagged nature is an acquisition concern, recorded on the LCLS-MFX
+# open questions (DAQ-1), not a supply attribute.
+supplies:
+  - {name: FEL photon beam, kind: PhotonBeam, pending: true, note: "LCLS / LCLS-II free-electron-laser beam, shared across all instruments (TOPO-1)"}
+  - {name: Cooling water, kind: CoolingWater, pending: true}
+  - {name: Beamline vacuum, kind: Vacuum, pending: true}
+
+# Safety BC: facility-issued Clearances. LCLS personnel safety (PPS) and the
+# pump-probe optical-laser safety (BTPS-governed) are both carried pending; the
+# pump-probe laser is modelled as a Clearance hazard, not an Asset CORA drives
+# (the 32-ID AM-laser precedent, LASER-1).
+clearances:
+  - {name: LCLS personnel protection system, kind: PSS, pending: true, note: "facility safety-form names TBD; confirm with LCLS staff (PSS-1)"}
+  - {name: MFX pump-probe laser clearance, kind: Clearance, pending: true, note: "class-4 optical laser, BTPS-governed; modelled as a hazard on the experiment, not a driven Asset (LASER-1)"}
+
+# Caution BC: operator tribal knowledge. None yet for a modelling exercise.
+cautions: []

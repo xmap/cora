@@ -253,7 +253,6 @@ _PENDING_METHODS = {
     "magnetic_scattering": "4-ID POLAR magnetic scattering; not yet in pilot scope (TECH-1)",
     "resonant_scattering": "4-ID POLAR resonant scattering; not yet in pilot scope (TECH-1)",
     "xmcd": "4-ID POLAR magnetic circular dichroism; not yet in pilot scope (TECH-1)",
-    "xpcs": "8-ID + 9-ID photon correlation spectroscopy; not yet in pilot scope (TECH-1)",
     "coherent_surface_scattering": "9-ID CSSI surface scattering; not yet in pilot scope (TECH-1)",
     "grazing_incidence_scattering": "9-ID GISAXS / GIWAXS; not yet in pilot scope (TECH-1)",
     "resonant_inelastic_scattering": "SIX RIXS; soft X-ray, not yet in pilot scope (TECH-1)",
@@ -265,6 +264,9 @@ _PENDING_METHODS = {
     "wide_angle_scattering": "i22 + 9-ID WAXS; portable Method not yet earned",
     "total_scattering": "i15-1 total scattering / PDF; Method not yet earned",
     "powder_diffraction": "i11 powder diffraction; portable Method not yet earned",
+    "serial_crystallography": "LCLS-MFX serial crystallography; XFEL Method not yet earned",
+    "pump_probe": "LCLS-MFX fs optical-laser pump / X-ray probe; XFEL Method not yet earned",
+    "xas_spectroscopy": "LCLS-MFX XAS / XES via the von Hamos spectrometer; Method not yet earned",
 }
 
 

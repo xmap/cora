@@ -1,12 +1,14 @@
 """Substrate-neutral data-acquisition action bodies for the Conductor.
 
-The three primitives `collect` / `discrete` / `continuous` register as
-named `ActionBody` callables in the `InMemoryActionRegistry` the
-`Conductor` consumes. `collect` is the single-detector capture cycle;
+The four primitives `collect` / `discrete` / `continuous` / `stream`
+register as named `ActionBody` callables in the `InMemoryActionRegistry`
+the `Conductor` consumes. `collect` is the single-detector capture cycle;
 `discrete` walks a trajectory of axis points and runs a `collect` cycle
 at each; `continuous` drives the axis from `start` to `stop` while the
 detector receives external trigger pulses fired by an emitter during
-motion.
+motion; `stream` records a DAQ-owned high-rate frame stream to an
+external file, terminal on a frame count or a wall-clock duration (the
+event-stream acquisition axis, for XPCS and XFEL per-shot DAQ).
 
 See `project_scan_primitives_design` for the design lock and
 `project_scan_primitives_research` for the corpus that backs the
@@ -355,11 +357,132 @@ async def continuous(ctx: ActionContext) -> Mapping[str, Any]:
     }
 
 
+class StreamParams(BaseModel):
+    """Validated parameters for the `stream` action body.
+
+    The event-stream acquisition axis (per-shot / DAQ-owned high-rate
+    frame stream) per [[project_event_stream_axis_stage1_design]]. Unlike
+    `collect`, the stream is free-running: an external DAQ / file-writer
+    records frames and CORA does not pace a per-frame trigger, so there is
+    no `trigger_mode` / `Acquire` semantics and this is NOT a
+    `CollectParams` subclass.
+
+    Exactly one terminal is required: `events` (stop after N frames ->
+    Completed) XOR `duration` (stop after a wall-clock cap -> Truncated),
+    enforced by the `@model_validator` mirroring
+    `CollectParams._check_trigger_constraints`. `dwell` (per-frame
+    exposure) and `duration` carry the canonical `unit: {system, code}`
+    annotation per [[project_units_design]].
+    """
+
+    detector: str
+    events: int | None = Field(default=None, ge=1)
+    duration: float | None = Field(
+        default=None,
+        gt=0,
+        json_schema_extra={"unit": {"system": "udunits", "code": "s"}},
+    )
+    dwell: float = Field(
+        ...,
+        gt=0,
+        json_schema_extra={"unit": {"system": "udunits", "code": "s"}},
+    )
+
+    @model_validator(mode="after")
+    def _check_terminal(self) -> StreamParams:
+        if (self.events is None) == (self.duration is None):
+            raise ValueError(
+                "exactly one of events or duration is required (count vs time terminal)"
+            )
+        return self
+
+
+async def stream(ctx: ActionContext) -> Mapping[str, Any]:
+    """DAQ-owned high-rate frame stream against the areaDetector file-writer convention.
+
+    The event-stream acquisition axis. `params.detector` is the DAQ /
+    file-writer root prefix (e.g., an areaDetector HDF plugin root); the
+    body writes the per-frame exposure and the capture count, starts the
+    recording, then runs its OWN terminal loop (NOT a `collect`-style
+    `Acquire_RBV` done-poll, and NOT composing `_run_collect_cycle`):
+
+      - `{detector}:AcquireTime` <- `dwell` (per-frame exposure, seconds)
+      - `{detector}:NumCapture`  <- `events` (or `0` for the duration cap)
+      - `{detector}:Capture`     <- `1` to start recording
+      - terminal: `{detector}:NumCaptured_RBV` >= `events` (-> "count"),
+        or `clock.now() - started_at` >= `duration` (-> "duration")
+      - `{detector}:Capture`     <- `0` to STOP, in a `finally` so an
+        aborted (task-cancelled) stream never leaves the DAQ free-running
+      - `{detector}:FullFileName_RBV` -> read for the output `uri`
+
+    Data plane: per-frame data stays in the external DAQ file; CORA never
+    ingests it. The returned evidence carries the `uri` (matching the
+    `register_dataset` field) plus capture provenance; the Dataset is
+    registered by the caller via the existing `register_dataset` path
+    (`producing_run_id`), which supplies `checksum_*` / `byte_size` from
+    the file (a ControlPort body cannot hash a file). This is the same
+    caller-driven acquisition -> Dataset path the 2-BM tomography stack
+    uses; the stream does NOT ride `RunCompleted.artifact_uri` (a
+    compute-only field).
+
+    v1 contract is the areaDetector file-writer PV layout; a non-AD DAQ
+    (psdaq, etc.) lands as its own action body when a second arrives
+    (rule-of-three), mirroring the `collect` note.
+
+    `Control*Error` from any read or write propagates unchanged; the
+    Conductor records the failure per its standard contract.
+    """
+    params = StreamParams.model_validate(ctx.params)
+    started_at = ctx.clock.now()
+
+    await ctx.control_port.write(f"{params.detector}:AcquireTime", params.dwell)
+    await ctx.control_port.write(
+        f"{params.detector}:NumCapture",
+        params.events if params.events is not None else 0,
+    )
+    await ctx.control_port.write(f"{params.detector}:Capture", 1)
+
+    terminal: str | None = None
+    try:
+        while True:
+            if params.events is not None:
+                captured = await ctx.control_port.read(f"{params.detector}:NumCaptured_RBV")
+                if captured.value >= params.events:
+                    terminal = "count"
+                    break
+            elif params.duration is not None:
+                elapsed = (ctx.clock.now() - started_at).total_seconds()
+                if elapsed >= params.duration:
+                    terminal = "duration"
+                    break
+            await asyncio.sleep(_POLL_INTERVAL_S)
+    finally:
+        await ctx.control_port.write(f"{params.detector}:Capture", 0)
+
+    assert terminal is not None
+    stopped_at = ctx.clock.now()
+    file_reading = await ctx.control_port.read(f"{params.detector}:FullFileName_RBV")
+    captured_reading = await ctx.control_port.read(f"{params.detector}:NumCaptured_RBV")
+
+    return {
+        "started_at": started_at.isoformat(),
+        "stopped_at": stopped_at.isoformat(),
+        "terminal": terminal,
+        "frames_captured": captured_reading.value,
+        "uri": file_reading.value,
+        "events_requested": params.events,
+        "duration_requested": params.duration,
+        "dwell": params.dwell,
+    }
+
+
 __all__ = [
     "CollectParams",
     "ContinuousParams",
     "DiscreteParams",
+    "StreamParams",
     "collect",
     "continuous",
     "discrete",
+    "stream",
 ]

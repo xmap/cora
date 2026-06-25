@@ -81,7 +81,7 @@ practices:
   # 8-ID XPCS Practices (first cut). Coherent-scattering correlation spectroscopy
   # and the 8-ID-E diffraction; Methods not in the imaging-heritage catalog, render
   # unlinked, carried pending until a technique enters scope (TECH-1).
-  - {name: 8ID_xpcs_practice, method: xpcs, pending: true, note: "X-ray photon correlation spectroscopy; coherent-scattering time series on the area detectors; Method not yet in catalog (TECH-1)"}
+  - {name: 8ID_xpcs_practice, method: xpcs, note: "X-ray photon correlation spectroscopy; coherent-scattering time series on the area detectors"}
   - {name: 8ID_saxs_practice, method: small_angle_scattering, pending: true, note: "small-angle scattering on the XPCS detectors; Method not yet in catalog (TECH-1)"}
   - {name: 8ID_diffraction_practice, method: diffraction, pending: true, note: "six-circle diffraction at 8-ID-E; shares the 4-ID diffraction Method (TECH-1)"}
   # 9-ID CSSI Practices (first cut). Coherent surface scattering at grazing
@@ -89,7 +89,7 @@ practices:
   # carried pending until a technique enters scope (TECH-1).
   - {name: 9ID_coherent_surface_scattering_practice, method: coherent_surface_scattering, pending: true, note: "coherent surface scattering at grazing incidence; the CSSI signature; Method not yet in catalog (TECH-1)"}
   - {name: 9ID_gisaxs_practice, method: grazing_incidence_scattering, pending: true, note: "grazing-incidence small- and wide-angle scattering (GISAXS / GIWAXS); Method not yet in catalog (TECH-1)"}
-  - {name: 9ID_xpcs_practice, method: xpcs, pending: true, note: "surface XPCS on the coherent detectors; shares the 8-ID XPCS Method (TECH-1)"}
+  - {name: 9ID_xpcs_practice, method: xpcs, note: "surface XPCS on the coherent detectors; shares the 8-ID XPCS Method"}
   - {name: 9ID_waxs_practice, method: wide_angle_scattering, pending: true, note: "wide-angle scattering on the GIWAXS detector; shares the i22 WAXS Method (TECH-1)"}
 
 # Access BC Actors that are conceptually facility-wide at APS. Actor display

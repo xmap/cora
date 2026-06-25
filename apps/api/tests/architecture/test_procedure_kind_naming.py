@@ -45,6 +45,7 @@ APPROVED_OPERATION_NOUNS = frozenset(
         "reconstruction",
         "setting",
         "change",
+        "xpcs",  # the XPCS technique (cora.capability.xpcs); an established acronym technique-noun
     }
 )
 
