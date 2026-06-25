@@ -185,8 +185,12 @@ sample-environment:
         FlowController Family (graduated; presents the Regulator Role), the settable-actuator
         sibling of TemperatureController, earned across i22 / 7-BM / LIX / XFP. A settable
         actuator with a commanded setpoint and a flow readback, unlike any 2-BM device.
-        What stays open (FLOW-1) is whether CORA commands the setpoint versus reading it
-        back only.
+        CORA COMMANDS the setpoint (a one-shot SetpointStep), not read-back-only (FLOW-1,
+        command-vs-read: settled to command). What it cannot yet express is a continuous
+        setpoint PROGRAM (a hold or ramp held during a Run, orthogonal to the scan
+        step-list); the regulation loop is device/IOC-owned and CORA programs and observes
+        it, not hosts it. That is the continuous-regulation runtime gap, deferred to the
+        axis research (see model.md).
 
 # ===========================================================================
 # Detection: the multiple detector modalities 7-BM runs
