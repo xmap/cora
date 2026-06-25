@@ -1,0 +1,288 @@
+# ESM beamline descriptor (NSLS-II), reverse-engineered
+#
+# ESM (Electron Spectro-Microscopy) is the NSLS-II soft X-ray photoemission beamline
+# at sector 21-ID. It has two endstation branches: ARPES (angle-resolved photoemission,
+# 21-ID-1) and XPEEM/LEEM (photoemission electron microscopy, 21-ID-2). It is bound to
+# the NSLS-II Site (deployments/nsls2/site.yaml), the eighth NSLS-II beamline and
+# CORA's third soft X-ray deployment.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/esm-arpes-profile-collection) or
+# inferred, carried `new: true` + `confirm: true` pending ESM staff. EPICS PVs are
+# real and verified against the startup/*.py files; vendor part numbers, serials, and
+# physical positions are not in it and are open questions. Same descriptor mode as the
+# other NSLS-II beamlines; scenarios deferred.
+#
+# ESM is the FIRST PHOTOEMISSION deployment: it measures photon-in / electron-out,
+# so the detector is a hemispherical ELECTRON ENERGY ANALYZER (Scienta SES), a regime
+# no prior CORA beamline modelled. The analyzer binds a new loose ElectronAnalyzer
+# Family at n=1 (presents Detector); a second ARPES beamline must earn it.
+#
+# CONSOLIDATION: ESM is the 3rd soft X-ray PGM (after SIX + CSX), reusing the catalog
+# GratingMonochromator Family; and the 2nd UHV sample manipulator (after SIX), which
+# GRADUATES the Manipulator Family into the catalog (2nd UHV manipulator after SIX) -- SIX's references
+# are swept loose -> graduated in this PR (see docs/deployments/esm/model.md).
+#
+# DELIBERATELY OUT OF THIS CUT (recorded on docs/deployments/esm/model.md): the
+# XPEEM/LEEM branch (21-ID-2, the LEEM/PEEM electron microscope -> a future loose
+# ElectronMicroscope Family); the sample-prep / analysis-chamber manipulators and the
+# load-lock sample-transfer claw; the simulated devices.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/esm/questions.md.
+
+beamline:
+  name: ESM
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 21"          # PV namespace XF:21ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "two elliptically-polarizing undulators on the SR:C21-ID straight (EPU57 on G1A, EPU105 on G1B); gap + phase (polarization) per device; the dual-EPU coordination and periods are SRC-1"
+
+# PV zones: XF:21IDA (front-end optics), XF:21IDB (the PGM), XF:21IDC (branch optics +
+# exit slits), XF:21IDD-ES / XF:21ID1-ES (the ARPES endstation). Whether these are
+# separate shielded hutches, and the PSS permit leaves, are open (ENC-1, PSS-1).
+enclosures:
+  - name: 21-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf not in source; front-end / FOE shutters XF:21ID-PPS{Sh:FE} and XF:21IDA-PPS{PSh} (PSS-1)"}
+  - name: 21-ID-B
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the PGM optics zone (ENC-1)"}
+  - name: 21-ID-C
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the branch optics + exit slits; branch shutters XF:21IDC-PPS{PSh:1A/1B} (ENC-1)"}
+  - name: 21-ID-D
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the ARPES endstation (ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the dual EPUs, the front-end mirror, the PGM, the refocusing optics
+# ===========================================================================
+
+insertion-devices:
+  stage: source
+  enclosure: 21-ID-A
+  intro: "The two elliptically-polarizing undulators on the SR:C21-ID straight."
+  note: "Two InsertionDevice Assets; each adds a polarization (phase) axis beyond gap, carried as a setting (SRC-1)."
+  devices:
+    - name: Undulator_1
+      family: InsertionDevice
+      pv: "SR:C21-ID:G1A{EPU:1"
+      new: true
+      confirm: true
+      note: "EPU57 elliptically-polarizing undulator (gap + phase); period and polarization model are SRC-1"
+    - name: Undulator_2
+      family: InsertionDevice
+      pv: "SR:C21-ID:G1B{EPU:2"
+      new: true
+      confirm: true
+      note: "EPU105 elliptically-polarizing undulator (gap + phase); coordinated with EPU57 (SRC-1)"
+
+optics:
+  stage: source
+  enclosure: 21-ID-A
+  intro: "The front-end mirror, the polarization diagnostic, and the front-end / FOE shutters."
+  note: "M1 is the first mirror; Diagon is the soft X-ray polarization diagnostic (DIAG-1)."
+  devices:
+    - name: Mirror_1
+      family: Mirror
+      pv: "XF:21IDA-OP{Mir:1-Ax:4_"
+      new: true
+      confirm: true
+      note: "first mirror M1; coatings and axis roles are OPT-1"
+    - name: PolarizationDiagnostic
+      family: GenericProbe
+      pv: "XF:21IDA-OP{Diag:1"
+      new: true
+      confirm: true
+      note: "ESM Diagon soft X-ray polarization diagnostic; classification a placeholder (DIAG-1)"
+    - name: FrontEndShutter
+      family: Shutter
+      pv: "XF:21ID-PPS{Sh:FE}"
+      new: true
+      confirm: true
+      note: "front-end safety shutter, PPS-gated"
+    - name: FOEShutter
+      family: Shutter
+      pv: "XF:21IDA-PPS{PSh}"
+      new: true
+      confirm: true
+      note: "first-optics-enclosure photon shutter"
+
+monochromator:
+  stage: source
+  enclosure: 21-ID-B
+  intro: "The plane-grating monochromator that selects the soft X-ray energy, the M3 mirror, and the PGM slits."
+  note: >
+    PGM is the plane-grating monochromator: a premirror (Mirror_Pitch) plus an
+    interchangeable grating (Grating_Pitch / Grating_Trans) at a fixed-focus c-value
+    (Focus_Const) set the energy. It reuses the catalog GratingMonochromator Family
+    (ESM is the 3rd soft X-ray PGM after SIX + CSX). M3 is a hexapod-mounted mirror.
+  devices:
+    - name: Monochromator
+      family: GratingMonochromator     # catalog Family (3rd soft X-ray PGM after SIX + CSX)
+      pv: { energy: "XF:21IDB-OP{Mono:1-Ax:8_Eng}Mtr", focus_const: "XF:21IDB-OP{Mono:1-Ax:8_Cff}Mtr", grating_translation: "XF:21IDB-OP{Mono:1-Ax:8_GT}Mtr", mirror_pitch: "XF:21IDB-OP{Mono:1-Ax:8_MP}Mtr", grating_pitch: "XF:21IDB-OP{Mono:1-Ax:8_GP}Mtr" }
+      new: true
+      confirm: true
+      note: "plane-grating monochromator; grating line densities and energy range are MONO-1"
+    - name: Mirror_3
+      family: Mirror
+      pv: "XF:21IDB-OP{Mir:3-Ax:11"
+      new: true
+      confirm: true
+      note: "hexapod-mounted mirror M3 (OPT-1)"
+    - name: MonoSlit_Upstream
+      family: Slit
+      pv: "XF:21IDB-OP{Mono:1-Slt:7_U_1"
+      new: true
+      confirm: true
+      note: "upstream PGM slit (OPT-2)"
+    - name: MonoSlit_Downstream
+      family: Slit
+      pv: "XF:21IDB-OP{Mono:1-Slt:8_D_1"
+      new: true
+      confirm: true
+      note: "downstream PGM slit (OPT-2)"
+    - name: MirrorSlit_3
+      family: Slit
+      pv: "XF:21IDB-OP{Mir:3-Slt:10_U_1"
+      new: true
+      confirm: true
+      note: "M3 slit (OPT-2)"
+
+refocusing:
+  stage: source
+  enclosure: 21-ID-C
+  intro: "The KB refocusing pair, the M4B mirror, the exit slits that set the energy resolution, and the branch shutters."
+  note: "M4A is the KB focusing pair, M4B a hexapod mirror; the A/B exit slits are the PGM resolution-defining elements for the two endstation branches (OPT-1, OPT-2)."
+  devices:
+    - name: Mirror_4A
+      family: Mirror
+      pv: "XF:21IDC-OP{Mir:4A-"
+      new: true
+      confirm: true
+      note: "Kirkpatrick-Baez refocusing pair M4A (OPT-1)"
+    - name: Mirror_4B
+      family: Mirror
+      pv: "XF:21IDC-OP{Mir:4B-Ax:B4"
+      new: true
+      confirm: true
+      note: "hexapod-mounted mirror M4B (OPT-1)"
+    - name: ExitSlit_A
+      family: Slit
+      pv: "XF:21IDC-OP{Slt:1A-Ax:A1"
+      new: true
+      confirm: true
+      note: "A-branch exit slit; sets the energy resolution (OPT-2)"
+    - name: ExitSlit_B
+      family: Slit
+      pv: "XF:21IDC-OP{Slt:1B-Ax:B1"
+      new: true
+      confirm: true
+      note: "B-branch exit slit (OPT-2)"
+    - name: PhotonShutter_A
+      family: Shutter
+      pv: "XF:21IDC-PPS{PSh:1A}"
+      new: true
+      confirm: true
+      note: "A-branch photon shutter"
+    - name: PhotonShutter_B
+      family: Shutter
+      pv: "XF:21IDC-PPS{PSh:1B}"
+      new: true
+      confirm: true
+      note: "B-branch photon shutter"
+
+# ===========================================================================
+# SAMPLE STAGE: the ARPES UHV cryostat manipulator
+# ===========================================================================
+
+arpes-sample:
+  stage: sample
+  enclosure: 21-ID-D
+  intro: "The ARPES UHV cryostat sample manipulator and the sample temperature readback."
+  note: >
+    LT is the low-temperature six-axis UHV sample manipulator (x/y/z + three
+    rotations), bound to the catalog Manipulator Family, which GRADUATES with this
+    deployment (ESM is the 2nd UHV manipulator after SIX; see model.md). The sample-
+    prep and analysis-chamber manipulators and the load-lock transfer claw are
+    deferred (SAMPLE-1). Stinger/D3 are the cryostat temperature readbacks.
+  devices:
+    - name: SampleManipulator
+      family: Manipulator              # catalog Family (graduated this PR: 2nd UHV manipulator, SIX + ESM)
+      pv: { x: "XF:21IDD-ES{PRV-Ax:X}Mtr", y: "XF:21IDD-ES{PRV-Ax:Y}Mtr", z: "XF:21IDD-ES{PRV-Ax:Z}Mtr", ry: "XF:21IDD-ES{PRV-Ax:R1}Mtr", rz: "XF:21IDD-ES{PRV-Ax:R2}Mtr", rx: "XF:21IDD-ES{PRV-Ax:R3}Mtr" }
+      new: true
+      confirm: "the live manipulator prefix is the provisional {PRV; the config also carries a commented {LT:1-Manip:EA5_1 form, so the prefix is unconfirmed (SAMPLE-1)"
+      note: "LT six-axis UHV cryostat sample manipulator (x/y/z + Rx/Ry/Rz); cryo range and load-lock are SAMPLE-1"
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: "XF:21ID1-ES{TCtrl:2"
+      new: true
+      confirm: true
+      note: "Lakeshore cryostat temperature controller (Stinger / D3 channels); sample stages it regulates are SAMPLE-1"
+
+# ===========================================================================
+# DETECTION STAGE: the hemispherical electron analyzer and the flux monitors
+# ===========================================================================
+
+detectors:
+  stage: detection
+  enclosure: 21-ID-D
+  intro: "The ARPES hemispherical electron energy analyzer and the beam-current flux monitors."
+  note: >
+    SES is the Scienta hemispherical electron energy analyzer: the ARPES detector,
+    photon-in / electron-out, recording electron counts over a kinetic-energy x
+    emission-angle window set by the pass energy and lens mode. It binds a NEW loose
+    ElectronAnalyzer Family at n=1 (presents Detector; no photon-detector Family fits;
+    ARPES-1). The QuadEM electrometers are the I0 / drain-current flux monitors.
+  devices:
+    - name: ElectronAnalyzer
+      family: ElectronAnalyzer         # loose Family (n=1; hemispherical electron energy analyzer; ARPES-1)
+      pv: "XF21ID1-ES-SES"
+      new: true
+      confirm: true
+      note: "Scienta SES hemispherical electron energy analyzer; pass-energy / lens-mode / kinetic-energy-window controls; the ARPES detector (ARPES-1, DET-1)"
+    - name: FluxMonitor_Upstream
+      family: FluxMonitor
+      pv: "XF:21IDB-BI{EM:4}EM180:"
+      new: true
+      confirm: true
+      note: "QuadEM electrometer (one of qem01-12 along the beamline); I0 / drain-current monitor (DET-1)"
+    - name: FluxMonitor_Branch
+      family: FluxMonitor
+      pv: "XF:21IDC-BI{EM:6}EM180:"
+      new: true
+      confirm: true
+      note: "branch QuadEM electrometer; I0 monitor (DET-1)"
+
+# Cross-cutting control. ESM runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were
+# read from the esm-arpes-profile-collection startup files and carried confirm (CTRL-1).
+controls:
+  intro: >
+    ESM runs on the NSLS-II EPICS / ophyd control stack, the same floor as the other
+    NSLS-II beamlines. The device handles above are bound from the beamline's bluesky
+    profile collection (NSLS2/esm-arpes-profile-collection), carried confirm pending
+    staff verification (CTRL-1). The ARPES acquisition (the energy moves, the analyzer
+    sweeps, the manipulator scans) runs through bluesky plans and the queue server
+    (40-ESM_plans.py, 41-ESM_motion.py); that orchestration is the seam CORA's edge
+    replaces, driving through ophyd / EPICS. The analyzer's spectrum file-writing is
+    plumbing CORA observes, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an ESM run needs. The optics, the
+    analyzer, and the sample chamber are under UHV; the cryostat manipulator draws on
+    cryogens (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics and the ARPES endstation are UHV (SUP-1)"
