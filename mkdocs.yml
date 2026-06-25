@@ -290,6 +290,19 @@ nav:
         - Techniques: deployments/hxn/techniques.md
         - Governance: deployments/hxn/governance.md
         - Model: deployments/hxn/model.md
+      - BMM:
+        - deployments/bmm/index.md
+        - Open questions: deployments/bmm/questions.md
+        - The beamline:
+          - deployments/bmm/equipment/index.md
+          - Source: deployments/bmm/beamline.md
+          - Sample: deployments/bmm/equipment/sample.md
+          - Detector: deployments/bmm/equipment/detector.md
+          - Controls: deployments/bmm/equipment/controls.md
+          - Inventory: deployments/bmm/inventory.md
+        - Techniques: deployments/bmm/techniques.md
+        - Governance: deployments/bmm/governance.md
+        - Model: deployments/bmm/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

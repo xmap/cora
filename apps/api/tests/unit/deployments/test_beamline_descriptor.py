@@ -397,8 +397,9 @@ _SUPPLY_LOOSE_FAMILIES = {"Beam", "Vacuum", "StorageRing"}
 # graduated into the catalog or recorded here with a one-line decision: the
 # signal is mechanical, the decision stays human.
 _PROMOTION_REVIEWED = {
-    "FluxMonitor": "hold: fold-vs-promote still open across i03/i15-1/i22 (FLUX-1)",
+    "FluxMonitor": "hold: fold-vs-promote open across i03/i15-1/i22 + BMM ion chambers (FLUX-1)",
     "Diagnostic": "hold: Sensor fold-vs-promote still open (DIAG-1)",
+    "Screen": "hold: phosphor beam-viewing screen (2-BM, BMM); fold-vs-promote open (FLAG-1)",
     "FlowController": "hold: earn-vs-defer still open (FLOW-1)",
     "Transfocator": "hold: CRL optic abstraction still open across i22 / 4-id / 8-id (CRL-1)",
     "BeamPositionMonitor": "hold: Sensor fold-vs-promote open across 4-id/8-id (DIAG-1/FLUX-1)",

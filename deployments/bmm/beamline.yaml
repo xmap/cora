@@ -1,0 +1,222 @@
+# BMM beamline descriptor (NSLS-II), reverse-engineered
+#
+# BMM (Beamline for Materials Measurement) is the NSLS-II X-ray absorption
+# spectroscopy beamline at sector 6-BM (a bending-magnet source). It does
+# transmission and fluorescence XAS / EXAFS: the experiment IS an energy scan
+# across an absorption edge, recording the incident, transmitted, and reference
+# ion-chamber currents (and the fluorescence spectrum) at each energy point. It is
+# bound to the NSLS-II Site (deployments/nsls2/site.yaml), the third NSLS-II
+# beamline after FXI and HXN.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/bmm-profile-collection) or inferred,
+# carried `new: true` + `confirm: true` pending BMM staff. EPICS PVs are real and
+# verified against the profile collection; vendor part numbers, serials, and
+# physical positions are not in it and are open questions. Same descriptor mode as
+# FXI / HXN; this scaffold is descriptor + docs, scenarios deferred.
+#
+# BMM's defining new shape is ENERGY-SCAN-AS-THE-MEASUREMENT: every prior CORA
+# deployment measures by scanning position (raster, rotation) or imaging at a fixed
+# energy; BMM sweeps the monochromator energy across an edge and the per-energy
+# detector readings ARE the data. This is the first real consumer of the
+# energy_scan Capability the catalog already anticipates ("pending in code", noted
+# beside cora.capability.energy_change). Per the design-phase discipline (Diamond /
+# 32-ID / HXN coined no Capability at scaffold time), energy_scan is NOT coined
+# here; it is the live earn-the-abstraction question (see techniques.md, ENERGY-1).
+#
+# No new family is introduced: every device reuses an existing catalog Family or a
+# loose family already carried by a sibling deployment (the ion chambers reuse the
+# loose FluxMonitor, the fluorescence detector the catalog EnergyDispersiveSpectrometer).
+
+beamline:
+  name: BMM
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 6"           # PV namespace XF:06BM*
+  tier: Unit
+  parent: null
+  source: bending-magnet
+  source_confirm: "6-BM bending-magnet source (BMPS/IDPS on SR:C06-EPS); not an insertion device (SRC-1)"
+
+enclosures:
+  # 6-BM-A optics + the endstation. PV zones XF:06BMA (optics) and XF:06BM-ES
+  # (endstation); the photon shutter is XF:06BM-PPS{Sh:A}.
+  - name: 6-BM-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf not in source; the front-end and photon shutters are XF:06BM-PPS{Sh:FE} and {Sh:A} (PSS-1)"}
+  - name: 6-BM-B
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; endstation hutch boundary to confirm (ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the bending-magnet source, mirrors, monochromator, slits, filters
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 6-BM-A
+  intro: The bending-magnet source and the front-end / photon shutters.
+  devices:
+    - name: Source
+      family: Beam
+      new: true
+      confirm: true
+      note: "6-BM bending-magnet source, recorded as a PhotonBeam Supply, not an Asset (the 2-BM precedent). Beam-parameter machine state is on SR:C06."
+    - name: FrontEndShutter
+      family: Shutter
+      pv: "XF:06BM-PPS{Sh:FE}"
+      confirm: true
+      note: "Front-end safety shutter (sha); PPS-gated."
+    - name: PhotonShutter
+      family: Shutter
+      pv: "XF:06BM-PPS{Sh:A}"
+      confirm: true
+      note: "Photon shutter into the optics (shb); PPS permit leaf pending (PSS-1)."
+
+optics:
+  stage: source
+  enclosure: 6-BM-A
+  intro: "Condition the beam and set its energy: two mirrors, the double-crystal monochromator, the beam-defining slits, and the attenuating filters. PVs verified against startup/BMM/user_ns/instruments.py and dcm.py."
+  devices:
+    - name: CollimatingMirror
+      family: Mirror
+      pv: "XF:06BM-OP{Mir:M1"
+      confirm: true
+      note: "First mirror M1 (class Mirrors, 556 mm), collimating; bend/translation axes (YU/YDO/YDI/XU/XD)."
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:06BMA-OP{Mono:DCM1"
+      axis_channels: { Bragg: "XF:06BMA-OP{Mono:DCM1-Ax:Bragg}Mtr" }
+      crystal_cut: "Si(111)"
+      confirm: true
+      note: "Double-crystal monochromator (class DCM, instance dcm, Si(111)). The Bragg angle is the energy actuator; the EnergyAxis below is the master energy. A second crystal set may be available (DCM-1)."
+    - name: FocusingMirror
+      family: Mirror
+      pv: "XF:06BMA-OP{Mir:M2"
+      confirm: true
+      note: "Second mirror M2 (class Mirrors, 1288 mm), focusing and harmonic-rejection; bend/translation axes."
+    - name: ConditioningSlit
+      family: Slit
+      pv: "XF:06BMA-OP{Slt:01"
+      confirm: true
+      note: "Optics-hutch beam-defining slit (slits2, class StandardSlits): outboard/inboard/top/bottom blades."
+    - name: SampleSlit
+      family: Slit
+      pv: "XF:06BM-BI{Slt:02"
+      confirm: true
+      note: "Endstation entrance slit (slits3): O/I/T/B blades defining the beam onto the sample."
+    - name: Filter
+      family: Filter
+      pv: "XF:06BMA-BI{Fltr:01"
+      confirm: true
+      note: "Attenuating filter paddles (dm1_filters, Y1/Y2) in the first diagnostic module."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "The master energy axis: driving it sets the monochromator Bragg angle. An XAS measurement SWEEPS this axis across an absorption edge; that sweep is the energy_scan Capability the catalog anticipates but does not yet coin (ENERGY-1)."
+    - name: DiagnosticScreen
+      family: Screen
+      pv: "XF:06BMA-BI{Diag:02"
+      new: true
+      confirm: true
+      note: "Fluorescent diagnostic screens (dm2_fs, dm3_fs) for beam viewing; loose Screen family (the 2-BM FLAG precedent)."
+    - name: BeamPositionMonitor
+      family: GenericProbe
+      pv: "XF:06BM-BI{BPM:1"
+      confirm: true
+      note: "Beam-position monitor and beam-current transmitter (dm3_bpm, dm3_bct) in the diagnostic module; read-only."
+
+# ===========================================================================
+# SAMPLE STAGE: the XAFS sample table, the sample wheel, and the reference holder
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 6-BM-B
+  intro: "The endstation XAFS stages: the sample positioning table, the rotating sample wheel for batch scans, and the reference-foil holder. PVs verified against startup/BMM/user_ns/motors.py."
+  note: >
+    BMM runs batch XAS: many samples mounted on a rotating wheel, each indexed into
+    the beam and scanned in turn. The wheel reuses the RotaryStage family (the
+    sample-changer behaviour is an automation / Method concern, not a new device
+    kind); whether a dedicated sample-changer Family is earned across BMM and the
+    Diamond robots is an open question (WHEEL-1).
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: "XF:06BM-ES{MC:09"
+      axis_channels: { x: "XF:06BM-ES{MC:09-Ax:6}Mtr", y: "XF:06BM-ES{MC:09-Ax:7}Mtr" }
+      confirm: true
+      note: "Sample positioning table (xafs_x, xafs_y), with pitch/roll (xafs_pitch, xafs_roll) on the XAFS table; encoded."
+    - name: SampleWheel
+      family: RotaryStage
+      pv: "XF:06BMA-BI{XAFS-Ax:RotB}Mtr"
+      confirm: true
+      note: "Rotating sample wheel (xafs_wheel, xafs_rotb) indexing many samples through the beam for batch XAS; a second rotation (xafs_rots) carries a reference wheel. Sample-changer role noted (WHEEL-1)."
+    - name: ReferenceHolder
+      family: LinearStage
+      pv: "XF:06BMA-BI{XAFS-Ax:RefX}Mtr"
+      confirm: true
+      note: "Reference-foil holder (xafs_refx, xafs_refy) positioning a standard foil for per-scan energy calibration (the reference channel Ir is measured through it)."
+
+# ===========================================================================
+# DETECTION STAGE: the ion chambers (transmission XAS) and the fluorescence detector
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 6-BM-B
+  intro: "The XAS detectors read at each energy point: the ion chambers for transmission (I0, It, Iref) and the energy-dispersive detector for fluorescence. PVs verified against startup/BMM/user_ns/detectors.py."
+  note: >
+    For a transmission XAS scan the absorption is ln(I0 / It) versus energy; for a
+    dilute sample the fluorescence yield from the EnergyDispersiveSpectrometer is
+    used instead. The ion chambers are the primary signal here, not auxiliary flux
+    monitors, but they are the same device kind as the sibling FluxMonitor (DIAG-1 /
+    FLUX-1: whether ion chambers earn a dedicated Family is an open cross-deployment
+    question).
+  devices:
+    - name: IonChambers
+      family: FluxMonitor
+      pv: "XF:06BM-BI{EM:1}EM180:"
+      new: true
+      confirm: true
+      note: "Quad electrometer (quadem1, class BMMQuadEM) reading the I0 (incident), It (transmitted), and Ir (reference) ion chambers, the transmission-XAS signal. Reuses the loose FluxMonitor family carried by i03 / i15-1 / i22; BMM is a further sighting (FLUX-1)."
+    - name: FluorescenceSpectrometer
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:06BM-ES"
+      confirm: true
+      note: "Xspress3 energy-dispersive fluorescence detector (1-, 4-, and 7-element configurations in source) for fluorescence-yield XAS of dilute samples; presents the Sensor Role. Element count / vendor pending (DET-1)."
+    - name: ScalerCounter
+      family: GenericProbe
+      pv: "XF:06BM-ES:1{Sclr:1}"
+      confirm: true
+      note: "Scaler-counted scintillation / point detector (bicron, class GonioStruck) for alignment and auxiliary counting; read-only."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    BMM is a step/continuous XAS beamline: the conducting engine sweeps the
+    monochromator energy and reads the detectors per point. The motion-controller
+    boxes (model, firmware, IP) are not in the profile collection (DRIVE-1).
+  motion_controllers:
+    - name: EndstationMotionController
+      family: MotionController
+      pv: "XF:06BM-ES{MC:09"
+      confirm: true
+      note: "Endstation motion controller (MC:09) driving the XAFS sample table; box model/firmware pending (DRIVE-1)."
+  software_iocs_not_modeled:
+    [Xspress3, QuadEM, Struck]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen        # DCM crystal cooling
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["reference foils", "DCM crystal sets", "fluorescence detector elements"]

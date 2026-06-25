@@ -1,7 +1,7 @@
 # CORA Site descriptor: the NSLS-II site-level surface
 #
 # NSLS-II (National Synchrotron Light Source II, Brookhaven National Laboratory)
-# is a Site CORA models, the home of the FXI and HXN beamlines. This file is
+# is a Site CORA models, the home of the FXI, HXN, and BMM beamlines. This file is
 # the single human-readable source for the facility's site-level instances: the
 # Facility itself, the Practices it would run, and the facility principals.
 #
@@ -24,7 +24,7 @@ facility:
   heading: "NSLS-II"
   kind: Site
   institution: Brookhaven National Laboratory
-  beamlines: [FXI, HXN]
+  beamlines: [FXI, HXN, BMM]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the FXI profile collection, not yet
@@ -35,6 +35,10 @@ practices:
   - {name: FXI_energy_change_practice, method: beamline_energy_change, pending: true, note: "coupled energy move (move_zp_ccd_xh) for XANES and spectro-tomography"}
   - {name: HXN_nano_tomography_practice, method: tomography, pending: true, note: "scanning nano-tomography (raster x rotation); reverse-engineered from the HXN profile collection"}
   - {name: HXN_energy_change_practice, method: beamline_energy_change, pending: true, note: "energy change co-moving the zone-plate refocus per element edge (XANES / spectro-tomo)"}
+  # BMM's defining technique is transmission/fluorescence XAS, an energy SCAN whose
+  # Method (energy_scan) the catalog anticipates but does not yet coin (ENERGY-1).
+  # No BMM Practice is recorded until that Method exists; adding one now would
+  # reference a non-existent or wrong method. BMM is bound to the Site via beamlines.
 
 # Access BC Actors conceptually facility-wide at NSLS-II. Pending until the NSLS-II
 # operator and review structure is confirmed; the profile collection only exposes
