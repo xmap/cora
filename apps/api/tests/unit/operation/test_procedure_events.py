@@ -694,6 +694,12 @@ def test_to_payload_serializes_iteration_ended(converged: bool | None, reason: s
         "converged": converged,
         "reason": reason,
         "occurred_at": _NOW.isoformat(),
+        "advised_stop": None,
+        "reasoning": None,
+        "confidence": None,
+        "confidence_source": None,
+        "alternatives": [],
+        "model_ref": None,
     }
 
 

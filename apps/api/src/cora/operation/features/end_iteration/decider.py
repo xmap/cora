@@ -15,6 +15,13 @@ abort / truncate reason posture), so a whitespace-only reason is
 rejected and the persisted `ProcedureIterationEnded.reason` carries the
 trimmed string. None passes through unvalidated.
 
+The steering-provenance fields (`advised_stop`, `reasoning`,
+`confidence`, `confidence_source`, `alternatives`, `model_ref`) are
+stream-only and pass through to the event as-is. They arrive
+pre-validated from a self-validated `SteeringAdvice` (the only writer,
+via `conduct_until_advised`: confidence in [0,1], rationale bounded), so
+the decider does not re-bound them.
+
 Invariants:
   - state is None -> ProcedureNotFoundError
   - command.reason, when present, must be 1-500 chars after trimming
@@ -80,5 +87,11 @@ def decide(
             converged=command.converged,
             reason=reason,
             occurred_at=now,
+            advised_stop=command.advised_stop,
+            reasoning=command.reasoning,
+            confidence=command.confidence,
+            confidence_source=command.confidence_source,
+            alternatives=command.alternatives,
+            model_ref=command.model_ref,
         )
     ]

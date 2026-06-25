@@ -67,6 +67,12 @@ async def test_handler_appends_iteration_ended_event() -> None:
         "converged": False,
         "reason": "off by 2px",
         "occurred_at": _NOW.isoformat(),
+        "advised_stop": None,
+        "reasoning": None,
+        "confidence": None,
+        "confidence_source": None,
+        "alternatives": [],
+        "model_ref": None,
     }
 
 
