@@ -13,7 +13,7 @@ The analyzer binds the **`ElectronAnalyzer` Family** (graduated across ESM + SST
 | `ElectronAnalyzer` | `ElectronAnalyzer` | Scienta SES hemispherical analyzer; pass-energy / lens-mode / kinetic-energy-window controls; the ARPES detector (`ARPES-1`) |
 | `FluxMonitor_Upstream` / `FluxMonitor_Branch` | `FluxMonitor` | QuadEM electrometers (qem01-12); I0 / drain-current monitors (`DET-1`) |
 
-The analyzer is the defining instrument of the beamline: it measures electrons, not photons, so it sits outside the photon-detector families CORA had (`Camera`, `EnergyDispersiveSpectrometer`, `FluxMonitor`). It is held loose at n=1 until a second photoemission beamline (a future ESM XPEEM branch, or another ARPES beamline) earns it; its lens modes, pass energies, and acquisition modes are `ARPES-1`.
+The analyzer is the defining instrument of the beamline: it measures electrons, not photons, so it sat outside the photon-detector families CORA had (`Camera`, `EnergyDispersiveSpectrometer`, `FluxMonitor`). ESM introduced the `ElectronAnalyzer` Family for it, and it graduated into the catalog once SST (NSLS-II 7-ID HAXPES) earned the second Scienta SES; a future ESM XPEEM branch would reinforce it. Its lens modes, pass energies, and acquisition modes are `ARPES-1`.
 
 ## Families
 
