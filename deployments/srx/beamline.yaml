@@ -1,0 +1,221 @@
+# SRX beamline descriptor (NSLS-II), reverse-engineered
+#
+# SRX (Submicron Resolution X-ray spectroscopy) is the NSLS-II hard X-ray
+# microprobe at sector 5-ID. It is a MULTI-TECHNIQUE beamline: scanning X-ray
+# fluorescence (XRF) mapping, XANES, XRF-tomography, diffraction (via pixel
+# detectors), and full-field imaging, across a micro endstation and a KB-focused
+# nano endstation. It is bound to the NSLS-II Site (deployments/nsls2/site.yaml),
+# the fourth NSLS-II beamline after FXI, HXN, and BMM.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/srx-profile-collection) or inferred,
+# carried `new: true` + `confirm: true` pending SRX staff. EPICS PVs are real and
+# verified against the profile collection; vendor part numbers, serials, and
+# physical positions are not in it and are open questions. Same descriptor mode as
+# FXI / HXN / BMM; this scaffold is descriptor + docs, scenarios deferred.
+#
+# SRX's value is breadth: it is the first deployment that runs several techniques on
+# one instrument (XRF + XANES + XRF-tomo + diffraction + imaging), so it exercises
+# the multi-Capability-per-beamline shape and reuses the families the earlier NSLS-II
+# beamlines and the catalog already carry. It introduces NO new family: the
+# fluorescence detector reuses EnergyDispersiveSpectrometer (graduated), the pixel
+# detectors Camera (the Diamond Eiger precedent), the ion chambers FluxMonitor
+# (graduated #353), the sample-environment thermal stage TemperatureController
+# (graduated #350). Per the design-phase discipline, no new Capability is coined;
+# the XRF-mapping / scanning question stays the deferred HXN question.
+
+beamline:
+  name: SRX
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 5"           # PV namespace XF:05ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "IVU21 in-vacuum undulator (SR:C5-ID:G1{IVU21:1}), verified in source; parameters not fully in the profile collection (SRC-1)"
+
+enclosures:
+  # PV zones: 05IDA optics, 05IDB secondary-source / mono, 05IDD endstation. Modelled
+  # as optics + experiment hutches; the intermediate 05IDB boundary is a staff
+  # question (ENC-1). Shutters span XF:05ID-PPS / 05IDA-PPS / 05IDB-PPS.
+  - name: 5-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf not in source; shutters are XF:05ID-PPS{Sh:WB}, 05IDA-PPS:1{PSh:2}, 05IDB-PPS:1{PSh:4} (PSS-1)"}
+  - name: 5-ID-D
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the micro (05IDB) vs nano (05IDD) endstation hutch boundary to confirm (ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator, monochromator, mirror, and beam-defining slits
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 5-ID-A
+  intro: The in-vacuum undulator source and the white-beam shutter.
+  devices:
+    - name: Source
+      family: InsertionDevice
+      pv: "SR:C5-ID:G1{IVU21:1}"
+      confirm: true
+      note: "IVU21 in-vacuum undulator (instance id_fly_device); gap-driven, fly-scannable for undulator-tracked energy scans. Parameters pending (SRC-1)."
+    - name: WhiteBeamShutter
+      family: Shutter
+      pv: "XF:05ID-PPS{Sh:WB}"
+      confirm: true
+      note: "White-beam front-end shutter (shut_fe, SRXTwoButtonShutter); two more photon shutters gate 5-ID-A and 5-ID-B."
+
+optics:
+  stage: source
+  enclosure: 5-ID-A
+  intro: "Condition the beam and set its energy: the high-heat-load monochromator, the horizontal focusing mirror, the white/pink-beam and secondary-source slits. PVs verified against startup/11-optics.py."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:05IDA-OP:1{Mono:HDCM-Ax:"
+      confirm: true
+      note: "High-heat-load double-crystal monochromator (HDCM, class SRXDCM, instance dcm). The EnergyAxis below is the master energy; crystal cut and range pending (DCM-1)."
+    - name: FocusingMirror
+      family: Mirror
+      pv: "XF:05IDA-OP:1{Mir:1-Ax:"
+      confirm: true
+      note: "Horizontal focusing mirror (hfm, class SRXHFM)."
+    - name: WhiteBeamSlit
+      family: Slit
+      pv: "XF:05IDA-OP:1{Slt:1-Ax:"
+      confirm: true
+      note: "White-beam-defining slit (slt_wb); a pink-beam slit slt_pb sits at {Slt:2}."
+    - name: SecondarySourceAperture
+      family: Slit
+      pv: "XF:05IDB-OP:1{Slt:SSA-Ax:"
+      confirm: true
+      note: "Secondary-source aperture (slt_ssa) defining the coherence-matched source for the nano endstation."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "The master energy axis driving the HDCM Bragg angle (with undulator tracking). XANES sweeps it across an edge; that energy sweep is the energy_scan Capability the catalog anticipates but does not yet coin (ENERGY-1, the BMM question)."
+    - name: BeamPositionMonitor
+      family: GenericProbe
+      pv: "XF:05IDA-BI:1{BPM:1-Ax:"
+      confirm: true
+      note: "Beam-position monitors (bpm3_pos, bpm4_pos) in the optics and secondary-source zones; read-only."
+
+# ===========================================================================
+# SAMPLE STAGE: the KB nanofocus optics and the nano endstation sample stack
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 5-ID-D
+  intro: "The KB nanofocus optics and the sample stack. SRX has a micro endstation and a KB-focused nano endstation; the nano endstation is modelled here. PVs verified against startup/16-nanoES.py and 15-microES.py."
+  note: >
+    SRX scans the sample through a KB-focused spot for XRF mapping, the same
+    scanning-probe acquisition HXN introduced. The KB mirror pair reuses the Mirror
+    family; the sample stack reuses LinearStage / RotaryStage (XRF-tomography adds a
+    rotation). Interferometric stage feedback (FPS, PICOSCALE) stays on the floor.
+  devices:
+    - name: NanoKBMirror
+      family: Mirror
+      pv: "XF:05IDD-ES:1{nKB:"
+      confirm: true
+      note: "Kirkpatrick-Baez nanofocusing mirror pair (nanoKB, class SRXNanoKB); reuses the Mirror family. KB slits (jjslits) define the beam onto it."
+    - name: SampleStage
+      family: LinearStage
+      pv: "XF:05IDD-ES:1{nKB:Smpl-Ax:"
+      confirm: true
+      note: "Nano-endstation sample stack (nano_stage, class SRXNanoStage): the fine raster axes scanned for XRF mapping. Coarse and visible-light-microscope stages alongside (nano_vlm_stage). Interferometer feedback (FPS / PICOSCALE) is floor."
+    - name: SampleRotary
+      family: RotaryStage
+      pv: "XF:05IDD-ES:1{nKB:Smpl-Ax:"
+      confirm: true
+      note: "Sample rotation for XRF-tomography (raster x rotation, the 63-xrftomo path). Axis and encoder pending (STAGE-1)."
+    - name: Attenuators
+      family: Filter
+      pv: "XF:05IDD-ES{IO:4}DO:"
+      confirm: true
+      note: "Pneumatic attenuator foils (attenuators, class SRXAttenuators), digital-output relays."
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: "XF:05IDD-ES{LS:1-Chan:"
+      confirm: true
+      note: "Sample-environment thermal control (temp_nanoKB, Lakeshore); reuses the TemperatureController family (graduated #350)."
+
+# ===========================================================================
+# DETECTION STAGE: the per-point and area detectors for the several techniques
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 5-ID-D
+  intro: "The detectors for SRX's several techniques: the fluorescence spectrometer (XRF / XANES), the pixel detectors (diffraction / ptychography), the imaging camera, and the flux counters. PVs verified against startup/31-xspress3.py, 34-merlin.py, 35-dexela.py, 36-eiger.py, 30-scaler.py."
+  note: >
+    SRX's multi-technique nature shows in its detector set: which detector is read
+    selects the technique (the EnergyDispersiveSpectrometer for XRF/XANES maps, a
+    Camera pixel detector for diffraction, the PCO for full-field imaging). All reuse
+    existing families. Which are live vs legacy is a staff question (CAM-1).
+  devices:
+    - name: FluorescenceSpectrometer
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:05IDD-ES{Xsp:3}:"
+      confirm: true
+      note: "Xspress3 energy-dispersive fluorescence detector for XRF mapping, XANES, and XRF-tomography; presents the Sensor Role. Element count / vendor pending (DET-1)."
+    - name: MerlinDetector
+      family: Camera
+      pv: "XF:05IDD-ES{Merlin:1}"
+      confirm: true
+      note: "Merlin pixel detector for diffraction / ptychography; reuses Camera."
+    - name: DexelaDetector
+      family: Camera
+      pv: "XF:05IDD-ES{Dexela:1}"
+      confirm: true
+      note: "Dexela flat-panel detector for wide-field diffraction; reuses Camera."
+    - name: EigerDetector
+      family: Camera
+      pv: "XF:05IDD-ES{Det:Eig1M}"
+      confirm: true
+      note: "Eiger 1M pixel detector; reuses Camera."
+    - name: ImagingCamera
+      family: Camera
+      pv: "XF:05IDD-ES{Det:3-Ax:"
+      confirm: true
+      note: "PCO Edge full-field imaging camera on the downstream gantry (pcoedge); reuses Camera. A Point Grey visible-light camera (XF:05ID1-ES{PG-Cam:1}) serves on-axis viewing."
+    - name: FluxCounter
+      family: FluxMonitor
+      pv: "XF:05IDD-ES:1{Sclr:1}"
+      confirm: true
+      note: "Scaler-counted ion-chamber flux channels (I0 and others) for normalization; reuses FluxMonitor (graduated #353). Channel map pending (DIAG-1)."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    The Zebra position-capture trigger for fly XRF mapping and the motion
+    controllers. Controller box models / firmware are not in the profile collection
+    (DRIVE-1).
+  triggering:
+    - name: Zebra
+      family: TimingController
+      pv: "XF:05IDD-ES:1{Dev:Zebra1}:"
+      trigger_source: PSO
+      confirm: true
+      note: "Zebra FPGA position-capture box (Zebra1) gating the per-point detector triggers during a fly XRF raster; a second Zebra2 is also present (ZEBRA-1)."
+    - name: EndstationMotionController
+      family: MotionController
+      confirm: true
+      note: "Endstation motion controllers driving the nano stages and KB; box model/protocol/IP not in the profile collection (DRIVE-1)."
+  software_iocs_not_modeled:
+    [Xspress3, Merlin, Dexela, Eiger, PCO, Zebra, Struck, Qmini]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen        # HDCM cryocooler
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["KB mirrors", "pixel detectors", "attenuator foils"]

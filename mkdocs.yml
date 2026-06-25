@@ -316,6 +316,19 @@ nav:
         - Techniques: deployments/bmm/techniques.md
         - Governance: deployments/bmm/governance.md
         - Model: deployments/bmm/model.md
+      - SRX:
+        - deployments/srx/index.md
+        - Open questions: deployments/srx/questions.md
+        - The beamline:
+          - deployments/srx/equipment/index.md
+          - Source: deployments/srx/beamline.md
+          - Sample: deployments/srx/equipment/sample.md
+          - Detector: deployments/srx/equipment/detector.md
+          - Controls: deployments/srx/equipment/controls.md
+          - Inventory: deployments/srx/inventory.md
+        - Techniques: deployments/srx/techniques.md
+        - Governance: deployments/srx/governance.md
+        - Model: deployments/srx/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
