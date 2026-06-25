@@ -1,32 +1,33 @@
 % The Auditor's Tasks body.
 
-We derive four recurring tasks from what a beamline scientist needs when
-returning to a conducted run, and make each concrete as a query over the
-event log paired with a visual encoding (Table~\ref{tab:tasks}). The tasks are
+We derive four recurring tasks, which we label T1 through T4, from what a
+beamline scientist needs when returning to a conducted run, and make each
+concrete as a query over the event log paired with a visual encoding
+(Table~\ref{tab:tasks}). The tasks are
 not hypothetical: each is a question we ask of the lights-out, agent-supervised
 run in Section~\ref{sec:scrubber}, and each is answerable only because the record is
 an ordered, immutable event stream rather than a final-state snapshot.
 
-\paragraph{T1, recover the interrupted state.}
-\emph{What was in flight when the beam dropped?} The conductor records intent
+\textbf{T1, recover the interrupted state.}
+\emph{What was in flight when the beam dropped?} The system records intent
 before effect, so an unfinished step appears in the log as an activity that
 was opened but never closed. The query finds the activity with no matching
 outcome; the encoding draws it as an open interval, a visible gap rather than
 a silent truncation.
 
-\paragraph{T2, reproduce a decision.}
+\textbf{T2, reproduce a decision.}
 \emph{Replay the run to the instant a choice was made, and show the state
 then.} The query folds the event stream up to the chosen position; the
 encoding is the draggable cursor together with the reconstructed state read
 out beside it.
 
-\paragraph{T3, confirm convergence.}
+\textbf{T3, confirm convergence.}
 \emph{Did this loop converge, and on which pass?} The query reads the
 per-iteration verdict carried by each iteration-boundary event; the encoding
 colors nested brackets by that verdict, so the bracketing search is legible at
 a glance.
 
-\paragraph{T4, confirm the record is intact.}
+\textbf{T4, confirm the record is intact.}
 \emph{Can I trust that nothing was altered?} The query recomputes the
 content-addressed hash recorded with the run and compares it at the cursor;
 the encoding is an inline fidelity badge that turns ``trust me'' into ``the

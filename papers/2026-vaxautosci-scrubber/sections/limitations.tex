@@ -9,8 +9,8 @@ than a deployed beamline tool, so we make no claims about throughput, scale, or
 integration cost.
 
 Two scope boundaries matter for how the contribution should be read. First, the
-run is \emph{conducted} and \emph{agent-supervised}, not agent-closed: CORA
-orchestrates the alignment and records every step, and a RunSupervisor agent
+run is \emph{conducted} and \emph{agent-supervised}, not agent-closed: the
+system orchestrates the alignment and records every step, and a supervisor agent
 holds and resumes the run on beam conditions, but neither chooses the science.
 That supervisor is a deterministic, rule-based agent making recorded decisions;
 the figures show a genuine human-agent handoff, not a model selecting

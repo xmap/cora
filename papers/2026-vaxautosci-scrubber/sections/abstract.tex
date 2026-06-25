@@ -16,10 +16,10 @@ recorded instant, showing a run-lifecycle lane of who or what drove each
 transition, nested convergence brackets colored by verdict, open-interval
 markers for unfinished steps, and a fidelity badge that lets the view verify the
 replayed state matches the record. We ground the prototype in a real overnight
-run on the APS 2-BM micro-CT beamline, in which CORA conducts a rotation-axis
-centering alignment, a RunSupervisor agent holds the run on beam loss and
-auto-resumes it, and the scrubber localizes the interrupted projection by folding
-to the beam-loss instant. We are deliberate about scope: the run is
+run on the APS 2-BM micro-CT beamline, in which an event-sourced system of
+record conducts a rotation-axis centering alignment, a supervisor agent holds the
+run on beam loss and auto-resumes it, and the scrubber localizes the interrupted
+projection by folding to the beam-loss instant. We are deliberate about scope: the run is
 \emph{agent-supervised}, not agent-closed (the agent recovers a conducted run,
 it does not select the science), the prototype is a research visualization over
 exported run data, and we report a case-based walkthrough rather than a user

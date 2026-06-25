@@ -9,7 +9,7 @@
   \includegraphics[width=\textwidth]{figures/f1_scrubber}
   \caption{The replay scrubber over one lights-out, agent-supervised run at APS
   2-BM. The top lane is the run lifecycle, colored by who drove each transition:
-  the operator started and the run completes, while the RunSupervisor agent held
+  the operator started and the run completes, while the supervisor agent held
   the run when the beam dropped and resumed it when the beam returned (the gray
   band is the hold). Below it, one convergence bracket per pass of the conducted
   rotation-axis centering search, colored by verdict (amber open, green
@@ -65,14 +65,14 @@ see at the exact instant they are inspecting, rather than a claim they must take
 on faith.
 
 We walk through a lights-out, agent-supervised run on APS 2-BM. An operator
-starts the run and leaves; CORA conducts the pre-scan rotation-axis centering
+starts the run and leaves; the system conducts the pre-scan rotation-axis centering
 alignment, a four-iteration peak-bracket search over the sample stage
 \texttt{SampleTop\_X} that minimizes the center-of-rotation residual. The
 residual falls from $2.00$ to $1.05$\,px, rises to $1.40$\,px at $0.080$\,mm
 (bracketing the minimum in $[0.040, 0.080]$\,mm), and the fourth pass bisects to
 $0.060$\,mm at $0.30$\,px and converges; read by color, the brackets show the
 verdict sequence open, open, open, converged (T3). The first projection then
-begins, recorded as an in-flight marker, and the beam drops. The RunSupervisor
+begins, recorded as an in-flight marker, and the beam drops. The supervisor
 agent holds the run; the beam returns and the supervisor resumes it, each
 transition recorded as the agent's decision in the lifecycle lane. With the
 cursor at the beam-loss instant (Figure~\ref{fig:scrubber}), the fold shows the

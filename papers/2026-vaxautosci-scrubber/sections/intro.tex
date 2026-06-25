@@ -37,10 +37,11 @@ and deterministic-fold assumptions, not against an adversary with database write
 access).
 
 We ground the design in a real run from an operating instrument: a lights-out,
-agent-supervised run at the APS 2-BM micro-CT beamline, in which CORA conducts a
-rotation-axis centering alignment that converges, a first projection is in flight
-when the beam drops, and a deterministic RunSupervisor agent holds the run and
-auto-resumes it when the beam returns. We are deliberate about scope. The agent
+agent-supervised run at the APS 2-BM micro-CT beamline, in which our
+event-sourced system of record, CORA, conducts a rotation-axis centering
+alignment that converges, a first projection is in flight when the beam drops,
+and a deterministic supervisor agent holds the run and auto-resumes it when the
+beam returns. We are deliberate about scope. The agent
 supervises and recovers a \emph{conducted} run, recording each hold and resume
 as a decision; the fully agent-closed perceive-decide-act loop, in which a model
 selects the science itself, is out of scope, and the prototype is a research
