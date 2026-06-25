@@ -1,0 +1,56 @@
+% LOCAL READING PREVIEW, not the submission.
+% Renders the shared sections/*.tex under a generic two-column article
+% class so the draft is readable without the venue's VGTC class. The real
+% submission is main.tex (VGTC). Layout, fonts, and spacing here are NOT
+% the final VGTC look. Build: latexmk -pdf preview.tex (artifacts are
+% gitignored).
+\documentclass[10pt,twocolumn]{article}
+\usepackage[margin=1.5cm]{geometry}
+\usepackage{times}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+
+\title{\vspace{-2.2em}Scrubbing the Run: Replay-Native Provenance
+Visualization for Closed-Loop Beamline Experiments\\[0.35em]
+{\normalsize\normalfont\itshape Local content preview, not the final VGTC
+two-column layout}}
+\author{\normalsize CORA -- VAxAutoSci (IEEE VIS 2026) draft}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent\input{sections/abstract}
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+\input{sections/intro}
+
+\section{The Auditor's Tasks}
+\label{sec:tasks}
+\input{sections/tasks}
+
+\section{The Replay Scrubber}
+\input{sections/scrubber}
+
+\section{Crash Recovery}
+\input{sections/crash-recovery}
+
+\section{Substrate}
+\input{sections/substrate}
+
+\section{Related Work}
+\label{sec:related}
+\input{sections/related-work}
+
+\section{Limitations and Future Work}
+\input{sections/limitations}
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}

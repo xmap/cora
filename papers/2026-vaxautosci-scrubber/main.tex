@@ -6,15 +6,15 @@
 % Science), an IEEE VIS 2026 workshop. Short paper, 4-6 pages excluding
 % references, two-column VGTC conference style.
 %
-% TEMPLATE: This file assumes the official IEEE VIS / VGTC conference
-% LaTeX template. Download the VIS 2026 author kit (vgtc.cls, the
-% abbrv-doi .bst, and supporting .sty files) and place them in this
-% folder, then reconcile the preamble macros below with that kit. We do
-% not vendor the class files here. Until they are present, this file will
-% not compile; that is expected (see README.md).
+% This is the submission file. The prose lives in sections/*.tex so that
+% this file and the generic-layout preview.tex read the SAME text.
 %
-% The content below (abstract, contributions, related work) is drafted
-% and grounded; the section stubs are to be filled in.
+% TEMPLATE: this file assumes the official IEEE VIS / VGTC conference
+% LaTeX template. Download the VIS 2026 author kit (vgtc.cls, the
+% abbrv-doi .bst, and supporting .sty files), place them in this folder,
+% and reconcile the front-matter macros below with that kit. We do not
+% vendor the class files. Until they are present this file will not
+% compile; use preview.tex for a quick read (see README.md).
 % =====================================================================
 
 \documentclass[journal]{vgtc}                % per the VIS author kit
@@ -31,8 +31,7 @@
 \vgtccategory{Research}
 \vgtcpapertype{application/design study}
 \authorfooter{
-  \item
-  Author affiliation and contact. Placeholder for submission.
+  \item Author affiliation and contact. Placeholder for submission.
 }
 
 \title{Scrubbing the Run: Replay-Native Provenance Visualization for
@@ -40,27 +39,7 @@ Closed-Loop Beamline Experiments}
 
 \author{Anonymous or named per single/double-blind choice}
 
-\abstract{%
-Autonomous and closed-loop scientific instruments, from self-driving labs
-to conducted synchrotron experiments, generate provenance at machine
-speed: dense in decisions, multi-pass, and largely invisible to the
-humans who must later audit it. A scientist returning to a finished run
-asks plain questions: why did it stop here, which pass converged, can I
-prove what it actually did? Conventional post-hoc provenance graphs
-flatten the temporal and causal texture those questions depend on. We
-observe that event-sourced systems of record already answer such
-questions internally, because they reconstruct any past state by folding
-an immutable, ordered event stream. We turn that fold into an
-interaction. This paper contributes (1) a task abstraction for auditing
-closed-loop runs, and (2) a \emph{replay scrubber}: a draggable time
-cursor that replays a run to any recorded instant, showing per-step
-activity swim-lanes, nested convergence brackets colored by verdict, and
-a content-addressed fidelity badge that lets the view verify the replayed
-state matches the record. We ground the prototype in a real closed-loop
-autofocus alignment on the APS 2-BM micro-CT beamline, and discuss how
-event-sourced records reshape provenance visualization for autonomous
-science.%
-}
+\abstract{\input{sections/abstract}}
 
 % \CCScatlist{ ... }   % add per the author kit
 % \teaser{ ... }       % optional teaser figure
@@ -69,161 +48,30 @@ science.%
 
 \maketitle
 
-% ---------------------------------------------------------------------
 \firstsection{Introduction}
-\maketitlepage % no-op placeholder if the class lacks it; remove as needed
+\label{sec:intro}
+\input{sections/intro}
 
-% TODO: open with the auditor's question (why did this autonomous run stop,
-% and can I prove what it did). State the structural-difference hook. One
-% scoping sentence: this is a CORA-conducted (closed-loop, semi-autonomous)
-% alignment procedure; the agent-closed perceive-decide-act loop is future
-% work. Close with the contributions list.
-
-\noindent This paper makes four contributions:
-\begin{itemize}
-  \item \textbf{Replay-native provenance (insight).} We reframe the
-        fold-on-read mechanism of an event-sourced system of record as an
-        interaction primitive for provenance: the fold the backend uses to
-        reconstruct state becomes a control the auditor drags through
-        recorded time, rather than a static post-hoc graph to read.
-  \item \textbf{A task abstraction for auditing closed-loop runs.} We
-        characterize four recurring audit tasks and map each to an
-        event-log query and a visual encoding.
-  \item \textbf{The replay scrubber (technique).} We design a single
-        timeline that unifies per-step activity swim-lanes, nested
-        convergence brackets colored by verdict, open-interval markers for
-        unfinished steps, a draggable fold-to-version cursor, and a
-        content-addressed fidelity badge.
-  \item \textbf{A grounded case study.} We demonstrate the tasks on a real
-        closed-loop autofocus alignment on the APS 2-BM micro-CT beamline,
-        including an interrupted-run scenario in which the scrubber
-        localizes the exact unfinished step.
-\end{itemize}
-
-% ---------------------------------------------------------------------
 \section{The Auditor's Tasks}
-% TODO: Figure 4 (task abstraction, the VIS spine). Four tasks ->
-% event-log query -> visual encoding. T1 recover interrupted state; T2
-% reproduce a decision (fold-to-version); T3 confirm convergence
-% (per-iteration verdict); T4 confirm the record is intact (fidelity).
+\label{sec:tasks}
+\input{sections/tasks}
 
-% ---------------------------------------------------------------------
 \section{The Replay Scrubber}
-% TODO: Figure 1 (centerpiece, real exported data) + Figure 2 inset
-% (fidelity badge). Swim-lanes, nested brackets colored by converged
-% verdict, in-flight open intervals, draggable fold-to-version cursor.
+\input{sections/scrubber}
 
-% ---------------------------------------------------------------------
 \section{Crash Recovery}
-% TODO: Figure 3. A simulated mid-conduct crash leaves one in_flight
-% activity with no outcome; the scrubber surfaces the exact step index as
-% a visual gap. Payoff for T1.
+\input{sections/crash-recovery}
 
-% ---------------------------------------------------------------------
 \section{Substrate}
-% TODO: Figure 5 (the ONE capped architecture figure), labeled
-% "substrate, not contribution." Immutability stated in one sentence with
-% a citation to the append-only store, not its own figure.
+\input{sections/substrate}
 
-% ---------------------------------------------------------------------
 \section{Related Work}
+\label{sec:related}
+\input{sections/related-work}
 
-Our work draws on five lines of research, none of which composes its
-central primitive: a deterministic fold over an immutable event record,
-exposed as a scrub interaction, carrying a content-addressed fidelity
-check and provenance semantics for autonomous loops.
-
-\paragraph{Provenance visualization and notebook time travel.}
-Retrospective provenance, the record of what an execution actually did,
-has long been distinguished from the prospective recipe that specifies
-it~\cite{lim2010}. Systems that visualize it, such as
-VisTrails~\cite{vistrails2006} and Loops~\cite{loops2024}, let an analyst
-navigate a version tree and compare or diff recorded versions of a
-workflow or notebook. Verdant~\cite{verdant2018, verdant2019} is the
-closest prior interaction to ours: it pairs recorded notebook history
-with a draggable timeline cursor. Its replay, however, reconstructs a
-past version by re-executing it and explicitly ignores the dependencies
-the older version originally had, so it cannot guarantee that the
-reconstructed state matches what happened, and it targets a single
-analyst's local notebook rather than an autonomous run. QIIME~2
-Provenance Replay~\cite{qiime2replay} likewise turns a recorded
-provenance graph into regenerated code that is re-run offline, not an
-interactive view. We differ in that we reconstruct state by folding an
-immutable event record and certify the match at the cursor, rather than
-navigating versions or replaying by re-execution.
-
-\paragraph{Record-replay and time-travel debugging.}
-Omniscient debuggers such as Pernosco and rr~\cite{rr2017}, the
-Whyline~\cite{whyline2008}, and reducer-based state containers share our
-record-once, replay-later posture and give instant access to any past
-instant. In all of them, deterministic replay is held as an internal
-guarantee and is never rendered to the user. We differ in that we surface
-a per-cursor, content-addressed fidelity badge that makes the
-faithfulness of the replay a visible, checkable affordance.
-
-\paragraph{Tamper-evident and verifiable provenance.}
-The canonical integrity structures, Crosby and Wallach's history
-tree~\cite{crosby2009} and Certificate Transparency's Merkle
-logs~\cite{ct2013}, verify membership and consistency as machine-checked
-proofs with no user interface; content-addressed identifiers such as
-SWHID~\cite{swhid} expose the same recompute-and-compare primitive only
-as a command-line property. The closest human-facing analog is C2PA
-Content Credentials~\cite{c2pa}, which renders the authenticity of
-recorded media, and its recent extension to machine-learning
-pipelines~\cite{atlas2025}, which performs a content-addressed
-hash-versus-reference check but does so at a programmatic service layer
-over discrete static artifacts, with no visualization and no notion of
-replayed state. We differ in that we render a content-addressed
-verification verdict to a human, at each scrubbed instant, over
-reconstructed run state.
-
-\paragraph{Reproducibility records and badges.}
-Provenance-record tools such as CPR~\cite{cpr2021} and Whole
-Tale~\cite{wholetale}, workflow-run provenance crates~\cite{wrroc2024},
-and artifact badges~\cite{acmbadges} either emit static reports and
-immutable output snapshots, or certify a run through human audit with
-results required to agree only within a tolerance. None reconstructs
-per-instant state or renders an exact, content-addressed match. We differ
-in that our fidelity badge is an automated equality check recomputed as
-the user scrubs, not a coarse, evaluation-time certification.
-
-\paragraph{Conformance checking.}
-Process mining supplies the canonical quantitative verdict of whether a
-run conformed, through token-replay fitness~\cite{rozinat2008} and
-localized alignment diagnostics~\cite{berti2019, pm4py}; online variants
-detect deviations on a live stream~\cite{vanzelst2019}. These verdicts
-are encoded as static overlays on a process model, or as per-move type
-coloring along a completed trace, never as verdicts along an iteration
-axis with interval structure, and alignments computed post hoc on
-complete traces have no representation for an interrupted step. Tellingly,
-recent surveys of conformance visualization conclude that the visual
-encoding of conformance results remains an open
-problem~\cite{rehse2022, hagerehse2025}. We contribute exactly such an
-encoding: nested convergence brackets colored by per-iteration verdict,
-with open intervals for in-flight steps.
-
-\paragraph{Visual analytics for autonomous experimentation.}
-Self-driving-lab and autonomous-beamline systems increasingly keep
-complete operations logs and present live dashboards.
-VISION~\cite{vision2025} logs operations for backend monitoring, while
-optimizer and campaign tools such as Olympus~\cite{olympus2021}, the
-autonomous SAXS/WAXS framework at ALS and PETRA~III~\cite{alspetra2026},
-Tsuchinoko~\cite{tsuchinoko}, ChemOS~2.0~\cite{chemos2},
-A-Lab~\cite{alab2023}, and Bluesky's live callbacks~\cite{bluesky} render
-score and posterior fields, convergence lines, and live plots. These are
-forward-streaming views of a run in progress; none offers a scrubbable,
-post-hoc audit of the recorded run, per-iteration convergence verdicts,
-or a fidelity check. That gap, and the audit and steering tasks it
-implies, is what our replay scrubber addresses.
-
-% ---------------------------------------------------------------------
 \section{Limitations and Future Work}
-% TODO: honest box. No shipped frontend (prototype); single beamline and
-% scenario; no user study; the fold-to-version helper was written for the
-% visualization; the agent-closed loop is future work; live streaming,
-% run-to-run diffing, and a deployed front end are named, not built.
+\input{sections/limitations}
 
-% ---------------------------------------------------------------------
 \bibliographystyle{abbrv-doi}                % per the VIS author kit
 \bibliography{refs}
 

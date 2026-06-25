@@ -1,0 +1,17 @@
+Autonomous and closed-loop scientific instruments, from self-driving labs to
+conducted synchrotron experiments, generate provenance at machine speed: dense
+in decisions, multi-pass, and largely invisible to the humans who must later
+audit it. A scientist returning to a finished run asks plain questions: why did
+it stop here, which pass converged, can I prove what it actually did?
+Conventional post-hoc provenance graphs flatten the temporal and causal texture
+those questions depend on. We observe that event-sourced systems of record
+already answer such questions internally, because they reconstruct any past
+state by folding an immutable, ordered event stream. We turn that fold into an
+interaction. This paper contributes (1) a task abstraction for auditing
+closed-loop runs, and (2) a \emph{replay scrubber}: a draggable time cursor
+that replays a run to any recorded instant, showing per-step activity
+swim-lanes, nested convergence brackets colored by verdict, and a
+content-addressed fidelity badge that lets the view verify the replayed state
+matches the record. We ground the prototype in a real closed-loop autofocus
+alignment on the APS 2-BM micro-CT beamline, and discuss how event-sourced
+records reshape provenance visualization for autonomous science.

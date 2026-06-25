@@ -69,17 +69,30 @@ activities, `in_flight` markers, per-iteration `converged` verdicts). The
 interrupted-run figure removes one activity outcome to leave a dangling
 `in_flight` marker.
 
+## Layout
+
+The prose lives in `sections/*.tex` (abstract, intro, tasks, scrubber,
+crash-recovery, substrate, related-work, limitations). Two drivers read the
+same fragments so the text never drifts:
+
+- `main.tex`: the submission, in the venue's VGTC class.
+- `preview.tex`: a local reading build in a generic two-column class, for
+  reading the draft without the VGTC class. Not the submission; layout differs.
+
+Edit a fragment once; both builds pick it up.
+
 ## Build
 
-This folder does not vendor the venue's LaTeX class. To compile:
+The submission (`main.tex`) does not vendor the venue's LaTeX class:
 
 1. Download the VIS 2026 author kit and place `vgtc.cls`, `abbrv-doi.bst`, and
    supporting `.sty` files in this folder.
 2. Reconcile the front-matter macros in `main.tex` with that kit.
-3. `latexmk -pdf main.tex` (or `pdflatex main && bibtex main && pdflatex main`
-   twice).
+3. `latexmk -pdf main.tex`.
 
-Build artifacts are gitignored.
+Quick local read (works today, no author kit needed): `latexmk -pdf
+preview.tex`, then open `preview.pdf`. Build artifacts (including both PDFs)
+are gitignored.
 
 ## Camera-ready checklist (deferred)
 

@@ -1,0 +1,84 @@
+% Related Work body.
+
+Our work draws on five lines of research, none of which composes its central
+primitive: a deterministic fold over an immutable event record, exposed as a
+scrub interaction, carrying a content-addressed fidelity check and provenance
+semantics for autonomous loops.
+
+\paragraph{Provenance visualization and notebook time travel.}
+Retrospective provenance, the record of what an execution actually did, has
+long been distinguished from the prospective recipe that specifies
+it~\cite{lim2010}. Systems that visualize it, such as
+VisTrails~\cite{vistrails2006} and Loops~\cite{loops2024}, let an analyst
+navigate a version tree and compare or diff recorded versions of a workflow or
+notebook. Verdant~\cite{verdant2018, verdant2019} is the closest prior
+interaction to ours: it pairs recorded notebook history with a draggable
+timeline cursor. Its replay, however, reconstructs a past version by
+re-executing it and explicitly ignores the dependencies the older version
+originally had, so it cannot guarantee that the reconstructed state matches
+what happened, and it targets a single analyst's local notebook rather than an
+autonomous run. QIIME~2 Provenance Replay~\cite{qiime2replay} likewise turns a
+recorded provenance graph into regenerated code that is re-run offline, not an
+interactive view. We differ in that we reconstruct state by folding an
+immutable event record and certify the match at the cursor, rather than
+navigating versions or replaying by re-execution.
+
+\paragraph{Record-replay and time-travel debugging.}
+Omniscient debuggers such as Pernosco and rr~\cite{rr2017}, the
+Whyline~\cite{whyline2008}, and reducer-based state containers share our
+record-once, replay-later posture and give instant access to any past instant.
+In all of them, deterministic replay is held as an internal guarantee and is
+never rendered to the user. We differ in that we surface a per-cursor,
+content-addressed fidelity badge that makes the faithfulness of the replay a
+visible, checkable affordance.
+
+\paragraph{Tamper-evident and verifiable provenance.}
+The canonical integrity structures, Crosby and Wallach's history
+tree~\cite{crosby2009} and Certificate Transparency's Merkle logs~\cite{ct2013},
+verify membership and consistency as machine-checked proofs with no user
+interface; content-addressed identifiers such as SWHID~\cite{swhid} expose the
+same recompute-and-compare primitive only as a command-line property. The
+closest human-facing analog is C2PA Content Credentials~\cite{c2pa}, which
+renders the authenticity of recorded media, and its recent extension to
+machine-learning pipelines~\cite{atlas2025}, which performs a content-addressed
+hash-versus-reference check but does so at a programmatic service layer over
+discrete static artifacts, with no visualization and no notion of replayed
+state. We differ in that we render a content-addressed verification verdict to
+a human, at each scrubbed instant, over reconstructed run state.
+
+\paragraph{Reproducibility records and badges.}
+Provenance-record tools such as CPR~\cite{cpr2021} and Whole Tale~\cite{wholetale},
+workflow-run provenance crates~\cite{wrroc2024}, and artifact
+badges~\cite{acmbadges} either emit static reports and immutable output
+snapshots, or certify a run through human audit with results required to agree
+only within a tolerance. None reconstructs per-instant state or renders an
+exact, content-addressed match. We differ in that our fidelity badge is an
+automated equality check recomputed as the user scrubs, not a coarse,
+evaluation-time certification.
+
+\paragraph{Conformance checking.}
+Process mining supplies the canonical quantitative verdict of whether a run
+conformed, through token-replay fitness~\cite{rozinat2008} and localized
+alignment diagnostics~\cite{berti2019, pm4py}; online variants detect
+deviations on a live stream~\cite{vanzelst2019}. These verdicts are encoded as
+static overlays on a process model, or as per-move type coloring along a
+completed trace, never as verdicts along an iteration axis with interval
+structure, and alignments computed post hoc on complete traces have no
+representation for an interrupted step. Tellingly, recent surveys of
+conformance visualization conclude that the visual encoding of conformance
+results remains an open problem~\cite{rehse2022, hagerehse2025}. We contribute
+exactly such an encoding: nested convergence brackets colored by per-iteration
+verdict, with open intervals for in-flight steps.
+
+\paragraph{Visual analytics for autonomous experimentation.}
+Self-driving-lab and autonomous-beamline systems increasingly keep complete
+operations logs and present live dashboards. VISION~\cite{vision2025} logs
+operations for backend monitoring, while optimizer and campaign tools such as
+Olympus~\cite{olympus2021}, the autonomous SAXS/WAXS framework at ALS and
+PETRA~III~\cite{alspetra2026}, Tsuchinoko~\cite{tsuchinoko},
+ChemOS~2.0~\cite{chemos2}, A-Lab~\cite{alab2023}, and Bluesky's live
+callbacks~\cite{bluesky} render score and posterior fields, convergence lines,
+and live plots. These are forward-streaming views of a run in progress; none
+offers a scrubbable, post-hoc audit of the recorded run, per-iteration
+convergence verdicts, or a fidelity check. That gap, and the audit and steering
+tasks it implies, is what our replay scrubber addresses.
