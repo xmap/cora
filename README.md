@@ -641,7 +641,7 @@
 | src/cora/equipment/aggregates/asset/state.py                                             |      294 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/family/\_\_init\_\_.py                                     |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/family/\_family\_registry.py                               |        8 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/equipment/aggregates/family/affordance.py                                       |       65 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/aggregates/family/affordance.py                                       |       67 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/family/events.py                                           |       60 |        0 |       22 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/family/evolver.py                                          |       31 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/family/read.py                                             |       52 |        2 |       10 |        2 |     93.5% |  139, 233 |
@@ -669,7 +669,7 @@
 | src/cora/equipment/aggregates/mount/read.py                                              |       10 |        3 |        0 |        0 |     70.0% |     21-23 |
 | src/cora/equipment/aggregates/mount/state.py                                             |       77 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/role/\_\_init\_\_.py                                       |        8 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/equipment/aggregates/role/\_role\_registry.py                                   |       19 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/equipment/aggregates/role/\_role\_registry.py                                   |       21 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/role/\_signal\_type.py                                     |       13 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/role/events.py                                             |       36 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/equipment/aggregates/role/evolver.py                                            |       15 |        0 |        2 |        0 |    100.0% |           |
@@ -2349,7 +2349,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **48758** |  **982** | **6928** |  **296** | **97.5%** |           |
+| **TOTAL**                                                                                | **48762** |  **982** | **6928** |  **296** | **97.5%** |           |
 
 
 ## Setup coverage badge
