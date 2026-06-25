@@ -4,7 +4,7 @@
 
 A deployment is a beamline pilot: one instrument where the recipe ladder, BCs, and trust boundaries meet real users. Vertical before horizontal. CORA's domain model only contains what at least one real deployment forced into it; until a beamline demands a shape, the shape stays out.
 
-A beamline is never standalone: it sits inside a Site, a Federation `Facility` that owns the clearances, principals, practices, and facility-scope supplies the beamline inherits but does not own. The deployments below are grouped by that Site; each beamline page links up to its Site rather than restating it. CORA's operational pilot is 2-BM. Most of the rest are in the design phase, modelled from a design report ahead of construction or recommissioning. The Diamond and NSLS-II beamlines and SLAC's LCLS-MFX are a third kind: operating beamlines reverse-engineered from public controls configuration, so their pages carry real control facts but every value stays `confirm` until the beamline team verifies it.
+A beamline is never standalone: it sits inside a Site, a Federation `Facility` that owns the clearances, principals, practices, and facility-scope supplies the beamline inherits but does not own. The deployments below are grouped by that Site; each beamline page links up to its Site rather than restating it. CORA's operational pilot is 2-BM. Most of the rest are in the design phase, modelled from a design report ahead of construction or recommissioning. The Diamond and NSLS-II beamlines, SLAC's LCLS-MFX, and the Australian Synchrotron's MX3 are a third kind: operating beamlines reverse-engineered from public controls configuration, so their pages carry real control facts but every value stays `confirm` until the beamline team verifies it.
 
 ## [APS](aps/index.md)
 
@@ -63,5 +63,13 @@ The fifth Site CORA models, and its first X-ray free-electron laser. Like the Di
 | Beamline | Status | What it is |
 | --- | --- | --- |
 | [LCLS-MFX](lcls-mfx/index.md) | Modelling exercise | macromolecular femtosecond crystallography at the LCLS free-electron laser; the first XFEL, where the device families fold but the per-shot acquisition paradigm does not |
+
+## [Australian Synchrotron](as/index.md)
+
+The sixth Site CORA models, and its first Australian facility (operated by ANSTO). Its MX3 beamline is reverse-engineered from the public `AustralianSynchrotron/mx3-beamline-library`, chosen to test that the Site / Federation kernel ports again and to stress the seam against a heterogeneous control plane (EPICS plus the MXCuBE Exporter protocol, the DECTRIS SIMPLON REST API, and a TCP sample robot).
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [MX3](mx3/index.md) | Reverse-engineered | macromolecular crystallography (rotation MX) on an MD3 microdiffractometer + DECTRIS Eiger with an ISARA robot; reuses the i03 Goniometer and MX Methods, novelty is the Site and its heterogeneous control plane |
 
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

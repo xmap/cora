@@ -1,0 +1,212 @@
+# MX3 beamline descriptor (Australian Synchrotron), reverse-engineered
+#
+# MX3 is the Australian Synchrotron macromolecular-crystallography beamline: rotation
+# (oscillation) MX on an MD3 microdiffractometer goniometer reading a DECTRIS Eiger,
+# with an ISARA robot mounting samples from a dewar for unattended high-throughput
+# collection. It is bound to the Australian Synchrotron Site (deployments/as/site.yaml),
+# CORA's sixth Site and first Australian facility. It is understood to be an undulator
+# beamline, but the source is not in the device library (SRC-1), so the descriptor
+# carries the source generically.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the AustralianSynchrotron/mx3-beamline-library device library) or inferred,
+# carried `confirm: true` pending Australian Synchrotron staff. EPICS PVs are real and
+# verified against the device modules; the MD3, the Eiger, and the ISARA robot are NOT
+# on EPICS (see below); vendor part numbers, serials, and physical positions are not in
+# the library and are open questions.
+#
+# THE DISTINCTIVE FACT (a new controls house-style): MX3 is EPICS-PV-bound for most
+# devices (literal in-code PVs, the ring at SR11*, the beamline at MX3*), but it drives
+# THREE first-class non-EPICS control planes: the MD3 microdiffractometer goniometer
+# over the MXCuBE Exporter protocol (TCP), the DECTRIS Eiger over the SIMPLON REST API,
+# and the ISARA robot over a TCP client library. Those three devices carry no EPICS PV;
+# their note records the control interface, and the concrete host / endpoint is
+# deployment config, not a baked value. This heterogeneous control plane is the seam
+# story (equipment/controls.md).
+#
+# It introduces NO new catalog family: the MD3 goniometer reuses the graduated
+# Goniometer family (the i03 MX precedent), the DECTRIS Eiger and the OAV camera Camera,
+# the DMM Monochromator, the cryojet TemperatureController, the attenuator Filter, the
+# flux monitor FluxMonitor, the beamstop BeamStop, the shutters Shutter. Three loose
+# families are reused (all allowlisted): StorageRing (the ring-current monitor),
+# BeamPositionMonitor (the beam-steering BPM), and Backlight (the MD3 backlight). The
+# ISARA robot is modelled as a deferred Procedure (sample exchange), not a device family
+# (the i03 / i24 ROBOT-1 precedent). No Capability or Method is coined; the rotation-MX
+# techniques reuse the pending i03 Methods (mx_data_collection / grid_scan /
+# sample_exchange) recorded as Practices on the Site.
+
+beamline:
+  name: MX3
+  facility: as                  # Australian Synchrotron Site (facility_code: as)
+  sector: "MX3"                 # PV namespace MX3* (storage ring at SR11*)
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "MX3 is an undulator beamline, but the insertion-device / front-end source PV is not in the device library; only the storage-ring current monitor (SR11BCM01:CURRENT_MONITOR) is exposed. The source identity and parameters are an open question (SRC-1)"
+
+enclosures:
+  # The device library exposes no enclosure / hutch layout, only the front-end and
+  # mono-beam PSS shutters. Modelled as the optics hutch + the experiment hutch; the
+  # hutch names and the PSS permit leaves are a staff question (ENC-1, PSS-1).
+  - name: MX3-OH
+    role: optics-hutch
+    facility_code: as
+    permit_signal: {confirm: "PSS permit leaf not in source; the front-end shutter is MX3FE01SHT01 and the mono-beam shutter MX3BLSH01SHT01 (PSS-1, ENC-1)"}
+  - name: MX3-EH
+    role: experiment-hutch
+    facility_code: as
+    permit_signal: {confirm: "PSS permit leaf unknown; the experiment hutch carries the MD3 microdiffractometer, the Eiger, and the ISARA robot (PSS-1, ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the storage ring and the front-end shutter
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: MX3-OH
+  intro: "The storage-ring source-current monitor and the front-end shutter. The insertion-device source itself is not in the device library (SRC-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing            # loose Family (facility source representation)
+      pv: "SR11BCM01:CURRENT_MONITOR"
+      confirm: true
+      note: "Storage-ring beam-current monitor (ring_current); the only source-side PV in the library. MX3's undulator / insertion device is not exposed here (SRC-1). Reuses the loose StorageRing family."
+    - name: WhiteBeamShutter
+      family: Shutter
+      pv: "MX3FE01SHT01"
+      confirm: true
+      note: "Front-end photon shutter (white_beam_shutter, a PSS shutter; OPEN_CLOSE_CMD / OPEN_CLOSE_STATUS / OPEN_ENABLED_STATUS)."
+
+# ===========================================================================
+# OPTICS STAGE: the monochromator, the energy axis, the attenuators
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: MX3-OH
+  intro: "Set the energy and condition the beam: the double-multilayer monochromator, the master energy axis, and the attenuator / transmission unit. PVs verified against mx3_beamline_library/devices/beam.py. No standalone mirror or slit device is in the library (OPT-1)."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "MX3MONO01:"
+      confirm: true
+      note: "Double-multilayer monochromator (energy_dmm; ENERGY_MONITOR / ENERGY_SP, with a coating-stripe position monitor STRIPE_POSITION_MONITOR, read-only in the library; physical stripe selection inferred). Reuses the Monochromator family; the stripe is a per-Asset setting. Crystal / multilayer detail pending (DCM-1)."
+    - name: EnergyAxis
+      family: PseudoAxis
+      pv: "MX3:MASTER_ENERGY_SP"
+      confirm: true
+      note: "The master beamline energy setpoint (MX3:MASTER_ENERGY_SP), which the monochromator tracks. Whether energy is scanned as the measurement (anomalous MX) is ENERGY-1."
+    - name: Attenuators
+      family: Filter
+      pv: "MX3FLT05:"
+      confirm: true
+      note: "Attenuator / transmission unit (a filter wheel; AttenuationSet / TransmissionSet, with BeamSize_X / BeamSize_Y readbacks). Reuses the Filter family. Foil set pending (DCM-1)."
+
+# ===========================================================================
+# SAMPLE STAGE: the MD3 microdiffractometer goniometer, environment, robot
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: MX3-EH
+  intro: "The MD3 microdiffractometer goniometer that holds and orients the crystal, the cryojet sample cooling, the MD3 backlight, and the beamstop. PVs / interfaces verified against mx3_beamline_library/devices/{motors,cryo}.py and classes/motors.py."
+  note: >
+    MX3 holds a cryocooled crystal on the MD3 microdiffractometer and rotates it
+    through an oscillation while the Eiger reads frames. The MD3 goniometer reuses the
+    graduated Goniometer family (the i03 MX precedent), but it is driven over the
+    MXCuBE Exporter protocol (TCP), not EPICS, so it carries no PV. The ISARA sample
+    robot is modelled as a deferred Procedure (sample exchange), not a device, per the
+    i03 / i24 ROBOT-1 precedent.
+  devices:
+    - name: Goniometer
+      family: Goniometer
+      confirm: true
+      note: "MD3 (Arinax) microdiffractometer goniometer (md3): omega rotation plus a mini-kappa (kappa / phi), sample centring (CentringX / Y), and alignment (AlignmentX / Y / Z). Reuses the graduated Goniometer family (richer than the i03 Smargon). Driven over the MXCuBE Exporter protocol (TCP at MD3_ADDRESS:MD3_PORT, per-axis Exporter property names), NOT EPICS, so no PV; the host is deployment config (GONIO-1)."
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: "MX3CRYOJET01:"
+      confirm: true
+      note: "Cryojet sample cooling (cryo_temperature; SAMPLET_MON / SETP_CMD). Reuses the TemperatureController family (graduated #350)."
+    - name: Backlight
+      family: Backlight              # loose Family (i03 / i24 precedent)
+      confirm: true
+      note: "MD3 sample backlight / frontlight illumination for on-axis viewing and centring; an Exporter-driven MD3 sub-device (no EPICS PV). Reuses the loose Backlight family (i03 / i24)."
+    - name: BeamStop
+      family: BeamStop
+      confirm: true
+      note: "MD3 beamstop (beamstop_x / y / z), an Exporter-driven MD3 sub-device (no EPICS PV) blocking the direct beam at the sample. Reuses BeamStop."
+
+# ===========================================================================
+# DETECTION STAGE: the Eiger, the detector stage, flux and beam-position monitors
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: MX3-EH
+  intro: "The DECTRIS Eiger area detector and its translation stage, the on-axis viewing camera, the flux monitor, and the beam-position / steering monitor. PVs / interfaces verified against mx3_beamline_library/devices/{detectors,motors,beam}.py."
+  note: >
+    The Eiger reads the rotation frames; it is driven over the DECTRIS SIMPLON REST
+    API (HTTP), not EPICS area-detector, the first such control plane in the fleet, so
+    it carries no PV (the endpoint base is deployment config). The detector stage,
+    flux, OAV camera, and beam-position monitor are EPICS.
+  devices:
+    - name: EigerDetector
+      family: Camera
+      confirm: true
+      note: "DECTRIS Eiger (16M / 4M) area detector (dectris_detector). Driven over the SIMPLON REST API (arm / trigger / disarm / config at /detector/api/1.8.0/, base URL SIMPLON_API), NOT EPICS area-detector, so it carries no PV; the endpoint is deployment config (DET-1). Reuses Camera (the new REST control-plane is a seam, not a new Family)."
+    - name: DetectorStage
+      family: LinearStage
+      pv: "MX3STG03MOT04"
+      confirm: true
+      note: "Detector translation (detector_fast_stage MX3STG03MOT04, detector_slow_stage MX3STG03MOT01) setting the sample-to-detector distance (read back at MX3ES01:SAMPLE_DETECTOR_DISTANCE). Reuses LinearStage."
+    - name: FluxMonitor
+      family: FluxMonitor
+      pv: "MX3FLUXIOC:FLUX"
+      confirm: true
+      note: "Incident-flux monitor (flux). Reuses FluxMonitor (graduated #353)."
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      pv: "MX3DAQIOC04:"
+      confirm: true
+      note: "Beam-position monitor and closed-loop steering (BPM0 PosX / PosY / Int readbacks plus a PID steering DAC). Binds the loose BeamPositionMonitor family (held; DIAG-1). The PID beam-steering controller half has no clean existing family and is a deferred new-device question (STEER-1)."
+    - name: OAVCamera
+      family: Camera
+      pv: "MX3MD3ZOOM0"
+      confirm: true
+      note: "On-axis viewing camera (blackfly_camera, an EPICS area-detector BlackFly at the MD3 zoom optic) for sample centring; an MD3 coaxial camera also streams over Redis. Reuses Camera."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    The mono-beam and fast shutters that gate the exposure, and the endstation motion
+    controllers. MX3's control plane is heterogeneous: EPICS for the shutters / stages
+    / mono / flux, the MXCuBE Exporter protocol for the MD3 goniometer, the SIMPLON
+    REST API for the Eiger, and a TCP client for the ISARA robot.
+  triggering:
+    - name: MonoBeamShutter
+      family: Shutter
+      pv: "MX3BLSH01SHT01"
+      confirm: true
+      note: "Mono-beam PSS shutter (mono_beam_shutter) gating the conditioned beam into the experiment hutch; an MD3 fast shutter (Exporter-driven) gates the per-oscillation exposure at the sample."
+  motion_controllers:
+    - name: EndstationMotionController
+      family: MotionController
+      pv: "MX3STG"
+      confirm: true
+      note: "The endstation, goniometer-base (MX3STG02), and detector (MX3STG03) stages run on Australian Synchrotron Power Brick (PMAC) motion controllers (the MX3STG..MOT.. axis records, class ASBrickMotor); box firmware / IP not in the library (DRIVE-1)."
+  software_iocs_not_modeled:
+    [DECTRIS-SIMPLON, MD3-Exporter, ISARA-robot, BlackFly, MD3-Redis-camera]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/as/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen        # cryojet
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["sample pucks", "Eiger detector", "attenuator foils"]

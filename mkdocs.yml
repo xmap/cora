@@ -487,6 +487,21 @@ nav:
         - Techniques: deployments/lcls-mfx/techniques.md
         - Governance: deployments/lcls-mfx/governance.md
         - Model: deployments/lcls-mfx/model.md
+    - Australian Synchrotron:
+      - deployments/as/index.md
+      - MX3:
+        - deployments/mx3/index.md
+        - Open questions: deployments/mx3/questions.md
+        - The beamline:
+          - deployments/mx3/equipment/index.md
+          - Source: deployments/mx3/beamline.md
+          - Sample: deployments/mx3/equipment/sample.md
+          - Detector: deployments/mx3/equipment/detector.md
+          - Controls: deployments/mx3/equipment/controls.md
+          - Inventory: deployments/mx3/inventory.md
+        - Techniques: deployments/mx3/techniques.md
+        - Governance: deployments/mx3/governance.md
+        - Model: deployments/mx3/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
