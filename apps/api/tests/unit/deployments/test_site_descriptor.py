@@ -89,11 +89,11 @@ def test_site_loads_and_validates() -> None:
     # lower bounds, not exact: additive edits should not break this test, except
     # agents which are drift-guarded against the code seeds below. The two
     # non-pending LLM agents are equality-checked in test_agents_match_seed_constants;
-    # RunSupervisor + CautionPromoter + ClearanceExpirer + ClearanceWatcher are
-    # authored pending (identity seeded, runtimes not yet operational).
+    # RunSupervisor + CautionPromoter + ClearanceExpirer + ClearanceWatcher +
+    # RunInitiator are authored pending (identity seeded, runtimes not yet operational).
     assert len(site.practices) >= 17
     assert len(site.actors) >= 9
-    assert len(site.agents) == 6
+    assert len(site.agents) == 7
     assert len(site.supplies) >= 1
     assert len(site.clearances) >= 1
     assert len(site.cautions) >= 1
@@ -192,9 +192,15 @@ def test_renders_single_site_narrative() -> None:
     # both active agents surfaced with their models (the gap-fix)
     assert "CautionDrafter" in page and "claude-sonnet-4-6" in page
     assert "RunDebriefer" in page and "claude-haiku-4-5" in page
-    # the three deterministic agents are seeded pending; surface them so all five
-    # are discoverable on the deployment page, not just the two live LLM ones
-    for pending_agent in ("RunSupervisor", "CautionPromoter", "ClearanceExpirer"):
+    # the deterministic agents are seeded pending; surface every one so they are
+    # discoverable on the deployment page, not just the two live LLM agents
+    for pending_agent in (
+        "RunSupervisor",
+        "CautionPromoter",
+        "ClearanceExpirer",
+        "ClearanceWatcher",
+        "RunInitiator",
+    ):
         assert pending_agent in page, f"pending agent {pending_agent} not surfaced"
     # content woven in from every folded list
     assert "[`tomography`](../../catalog/methods.md)" in page  # practice -> catalog method

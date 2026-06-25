@@ -62,6 +62,7 @@ from cora.agent import (
     seed_clearance_watcher_agent,
     seed_procedure_watcher_agent,
     seed_run_debriefer_agent,
+    seed_run_initiator_agent,
     seed_run_supervisor_agent,
     wire_agent,
 )
@@ -802,6 +803,9 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_caution_drafter_agent(deps)
             # same shape for RunSupervisor (deterministic in-loop agent).
             await seed_run_supervisor_agent(deps)
+            # same shape for RunInitiator (deterministic agent that starts Runs;
+            # identity seeded now, autonomous loop lands in a later slice).
+            await seed_run_initiator_agent(deps)
             # same shape for CautionPromoter (deterministic auto-promote agent).
             await seed_caution_promoter_agent(deps)
             # same shape for ClearanceExpirer (deterministic in-loop agent).

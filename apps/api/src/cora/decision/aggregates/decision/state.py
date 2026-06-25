@@ -159,6 +159,10 @@ DECISION_CONTEXT_RECIPE_APPROVAL = "RecipeApproval"
 DECISION_CONTEXT_RUN_ABORT = "RunAbort"
 DECISION_CONTEXT_RUN_STOP = "RunStop"
 DECISION_CONTEXT_RUN_TRUNCATE = "RunTruncate"
+# RunInitiator agent writes one Decision per Run it autonomously starts.
+# Open-ended convention; the closed choice vocabulary lives in the
+# `RunInitiationChoice` Literal below.
+DECISION_CONTEXT_RUN_INITIATION = "RunInitiation"
 DECISION_CONTEXT_RESOURCE_ALLOCATION = "ResourceAllocation"
 DECISION_CONTEXT_POLICY_GRANT = "PolicyGrant"
 DECISION_CONTEXT_PROCEDURE_EXECUTION = "ProcedureExecution"
@@ -360,6 +364,15 @@ RUN_SUPERVISION_CHOICES: Final = frozenset(
         "SupervisionBreached",
     }
 )
+
+
+# RunInitiator agent: closed `choice` value set for context = "RunInitiation".
+# One value today (`Start`): the agent decided to start an eligible Run.
+# Projection-validated, not domain-enforced (same open-string shape as the
+# other agent vocabularies). `Start` mirrors the StartRun command verb, as
+# RunSupervision's Hold / Resume mirror HoldRun / ResumeRun.
+RunInitiationChoice = Literal["Start"]
+RUN_INITIATION_CHOICES: Final = frozenset({"Start"})
 
 
 # CautionPromoter agent writes one Decision per CautionProposal it

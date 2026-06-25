@@ -130,6 +130,7 @@ agents:
   - {name: CautionPromoter, kind: CautionPromoter, version: 1.0.0, model_provider: deterministic, model_name: "agent:CautionPromoter:v1", pending: true, note: "deterministic auto-promoter of Notice-only caution proposals; identity seeded, subscriber not yet operational"}
   - {name: ClearanceExpirer, kind: ClearanceExpirer, version: 1.0.0, model_provider: deterministic, model_name: "agent:ClearanceExpirer:v1", pending: true, note: "deterministic in-loop expirer of Active clearances past valid_until; identity seeded, runtime not yet operational"}
   - {name: ClearanceWatcher, kind: ClearanceWatcher, version: 1.0.0, model_provider: deterministic, model_name: "agent:ClearanceWatcher:v1", pending: true, note: "deterministic flag-only watcher of stalled front-of-lifecycle clearances (Submitted/UnderReview/Approved); identity seeded, runtime not yet operational"}
+  - {name: RunInitiator, kind: RunInitiator, version: 1.0.0, model_provider: deterministic, model_name: "agent:RunInitiator:v1", pending: true, note: "deterministic agent that autonomously starts Runs; identity seeded, autonomous loop not yet operational (slice 2)"}
 
 # Supply BC: facility-wide continuously-available resources whose availability the facility tracks.
 supplies:
