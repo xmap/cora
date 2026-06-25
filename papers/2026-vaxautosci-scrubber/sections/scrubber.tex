@@ -1,7 +1,7 @@
 \label{sec:scrubber}
-% First pass: design and walkthrough written without the exported figure
-% data. Exact setpoints, sharpness values, and timestamps are marked TODO
-% and will be filled from the run export; Figures 1 and 2 are pending.
+% Design + walkthrough. Numbers come from data/focus_run.json, which mirrors
+% the test_2bm_alignment_focus.py run. Figures 1 and 2 are pending; the
+% wall-clock spacing on the axis is synthetic (see data/README.md).
 
 The scrubber presents one recorded run on a single horizontal time axis
 (Figure~1). Each row is a swim-lane for one kind of activity the procedure
@@ -31,17 +31,17 @@ record is append-only and the expansion is content-addressed, into something a
 reader can see at the exact instant they are inspecting, rather than a claim
 they must take on faith.
 
-We walk through a CORA-conducted autofocus alignment on APS 2-BM. The procedure
-is a four-iteration peak-bracket search over the sample-stage focus axis: each
-pass sets a focus position and measures image sharpness, and the loop brackets
-the sharpness peak, narrowing the interval until the change between passes falls
-within tolerance. Read left to right, Figure~1 shows the setpoint and check
-activities of each pass under its bracket; read by color, the brackets show the
-verdict turning from not-converged to converged on the final pass (T3). Dragging
-the cursor back to the third pass reconstructs the run as it stood before the
-last move, showing the bracket the search was about to bisect
-% TODO(data): name the exact focus setpoints (mm), per-pass sharpness values,
-% and the converged tolerance from the exported run; confirm the [F,F,F,T]
-% verdict pattern and the locked peak position.
-, and the fidelity badge confirms that reconstructed state is faithful to the
-record.
+We walk through a CORA-conducted autofocus alignment on APS 2-BM that tunes the
+sample-stage focus axis, \texttt{SampleTop\_Z}, with a four-iteration
+peak-bracket search; the recorded run holds twelve procedure events, thirteen
+activities, and four iteration verdicts. The first pass measures image sharpness
+$0.50$ at the start position $0.000$\,mm; stepping to $0.500$\,mm raises sharpness
+to $0.70$, and stepping again to $1.000$\,mm drops it to $0.65$, which brackets
+the peak in $[0.500, 1.000]$\,mm; the fourth pass bisects to $0.750$\,mm,
+measures $0.74$, and converges, after which a final setpoint locks the stage at
+$0.750$\,mm. Read left to right, Figure~1 shows each pass's setpoint,
+acquisition, and sharpness-check activities under its bracket; read by color, the
+brackets show the verdict sequence not-converged, not-converged, not-converged,
+converged (T3). Dragging the cursor back to the third pass reconstructs the run
+as it stood with the peak just bracketed but not yet bisected, and the fidelity
+badge confirms that reconstructed state is faithful to the record (T4).

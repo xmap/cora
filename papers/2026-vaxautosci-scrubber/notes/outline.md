@@ -29,21 +29,31 @@
 ## Figures (4 data : 1 architecture)
 
 - F1 (data): the scrubber timeline (swim-lanes + nested brackets + cursor).
-- F2 (data, inset on F1): fidelity badge at the cursor.
-- F3 (data): crash-recovery in-flight gap.
-- F4 (design/data): the task abstraction table (task -> query -> encoding).
+  Data ready: data/focus_run.json.
+- F2 (data, inset on F1): fidelity badge at the cursor. Data ready (same file).
+- F3 (data): crash-recovery in-flight gap. Needs a conductor-path export
+  (pending; the append-path focus run has no in-flight markers).
+- Table 1 (data/design): the task abstraction (task -> query -> encoding),
+  authored in sections/tasks.tex (replaces the originally-planned "Figure 4").
 - F5 (architecture): the provenance/event-record substrate; one figure only.
 
 ## Data export
 
-Source: `apps/api/tests/integration/scenarios/test_2bm_alignment_focus.py`
-(passing). It writes setpoint/check activities, a four-iteration peak-bracket
-search with start/end iteration brackets and converged verdicts, and an
-in_flight marker. Export those rows to JSON; stagger per-step timestamps (the
-scenario shares one clock value). The activities table has no GET route today;
-the export reuses the scenario's direct SQL read (no new backend code needed for
-figures). Building a real `GET /procedures/{id}/activities` read route is the
-roadmap-frontend step, not required for the paper figures.
+DONE for F1/F2/Table 1: `data/focus_run.json`, derived from
+`apps/api/tests/integration/scenarios/test_2bm_alignment_focus.py` (the
+authoritative run definition; it asserts the rows round-trip through the real
+Kernel and Postgres projections) via `data/build_run_data.py`. Twelve events,
+thirteen activities, verdicts [F,F,F,T]; timestamps staggered synthetically.
+
+This focus run is the append-path, so it carries NO in-flight markers. The
+crash/in-flight data for F3 must come from the conductor path
+(`test_conductor_against_softioc_postgres.py`), where a setpoint/action records
+an in-flight marker before the outcome. That export is the next step.
+
+The activities table has no GET route today; the export reuses the scenario's
+direct SQL read shape (no new backend code needed for figures). Building a real
+`GET /procedures/{id}/activities` read route is the roadmap-frontend step, not
+required for the paper figures.
 
 ## Two-week build/write plan (deadline July 8 2026)
 
