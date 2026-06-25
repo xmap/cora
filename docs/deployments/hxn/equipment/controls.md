@@ -32,8 +32,8 @@ CORA **drives through** (the floor it actuates and observes, and does not replac
 - the EPICS IOCs via the ophyd hardware abstraction: the `ControlPort` boundary;
 - the Zebra position-compare gating (the per-point pulses are generated in hardware off the scan position);
 - the PMAC and Attocube closed-loop stage feedback, the PSS/PPS interlock, and the detector IOCs;
-- the facility filestore where the detectors' raw frames and spectra land. CORA's Porter moves them into CORA's own Dataset of record; CORA records the Dataset, it does not adopt the facility's data catalog.
+- the facility filestore where the detectors' raw frames and spectra land. CORA moves them, over the `TransferPort`, into CORA's own Dataset of record; CORA records the Dataset, it does not adopt the facility's data catalog.
 
-CORA brings three edge runtimes to HXN: the Conductor (raster orchestration over the ControlPort), the Reckoner (reconstruction over the ComputePort, including ptychographic phase retrieval, a heavier multi-step compute leg than tomography), and the Porter (data egress into the CORA Dataset).
+So CORA brings one conducting engine to HXN, working over three ports: raster orchestration over the `ControlPort`, reconstruction over the `ComputePort` (ptychographic phase retrieval is the heavier multi-step compute leg here, beyond tomographic reconstruction), and data egress over the `TransferPort` into the CORA Dataset.
 
 The software IOCs (`Merlin`, `Eiger`, `Dexela`, `Xspress3`, `Zebra`, `PandA`, `MCS`) are referenced by PV namespace only, never registered as Assets.
