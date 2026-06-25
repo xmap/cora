@@ -107,9 +107,10 @@ vendored class and bibstyle files are tracked.
 - [x] Fill all sections.
 - [x] Confirm the four flagged references in `refs.bib`.
 - [x] Build `main.tex` on the official VGTC class (5 pages, within limit).
-- [x] Author block: Doga Gursoy and Francesco De Carlo (Advanced Photon Source,
-      Argonne National Laboratory), single-blind. For double-blind instead, set
-      `\documentclass[review]{vgtc}` + the assigned `\onlineid`. Confirm emails.
+- [x] Author block: Doga Gursoy (corresponding, dgursoy@anl.gov) and Francesco
+      De Carlo (no email), Advanced Photon Source, Argonne National Laboratory,
+      single-blind. For double-blind instead, set `\documentclass[review]{vgtc}`
+      + the assigned `\onlineid`. Confirm the corresponding email.
 - [ ] Optional: source F3's crash from a real conductor run (currently a
       labeled truncation).
 - [ ] Add `papers/<slug>/<slug>.pdf` and a `Build papers` step in
