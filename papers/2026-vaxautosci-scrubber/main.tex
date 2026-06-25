@@ -2,54 +2,48 @@
 % Scrubbing the Run: Replay-Native Provenance Visualization for
 % Closed-Loop Beamline Experiments
 %
-% Target venue: VAxAutoSci (Visual Analytics in the Age of Autonomous
-% Science), an IEEE VIS 2026 workshop. Short paper, 4-6 pages excluding
-% references, two-column VGTC conference style.
+% Submission file, VGTC conference style (VAxAutoSci, an IEEE VIS 2026
+% workshop). The official VGTC conference template is vendored in this
+% folder (vgtc.cls + abbrv-doi*.bst, from github.com/ieeevgtc/
+% vgtc_conference_latex; see VGTC_TEMPLATE_README.txt). Prose lives in
+% sections/*.tex, shared with the IEEEtran proxy in preview.tex.
 %
-% This is the submission file. The prose lives in sections/*.tex so that
-% this file and the generic-layout preview.tex read the SAME text.
-%
-% TEMPLATE: this file assumes the official IEEE VIS / VGTC conference
-% LaTeX template. Download the VIS 2026 author kit (vgtc.cls, the
-% abbrv-doi .bst, and supporting .sty files), place them in this folder,
-% and reconcile the front-matter macros below with that kit. We do not
-% vendor the class files. Until they are present this file will not
-% compile; use preview.tex for a quick read (see README.md).
+% Build: latexmk -pdf main.tex
+% For double-blind review, switch to \documentclass[review]{vgtc} and set
+% \onlineid to the assigned id.
 % =====================================================================
 
-\documentclass[journal]{vgtc}                % per the VIS author kit
+\documentclass{vgtc}                 % conference style (final)
 
+\graphicspath{{figures/}{./}}
+\usepackage{times}
+\renewcommand*\ttdefault{txtt}
 \usepackage{mathptmx}
 \usepackage{graphicx}
-\usepackage{times}
 \usepackage{booktabs}
-\usepackage{url}
-\usepackage{microtype}
+\usepackage{amsmath}
 
-% --- VGTC front matter (reconcile names with the author kit) -----------
 \onlineid{0}
 \vgtccategory{Research}
-\vgtcpapertype{application/design study}
-\authorfooter{
-  \item Author affiliation and contact. Placeholder for submission.
-}
+\vgtcinsertpkg
 
 \title{Scrubbing the Run: Replay-Native Provenance Visualization for
 Closed-Loop Beamline Experiments}
 
-\author{Anonymous or named per single/double-blind choice}
+\author{Anonymous Author\thanks{e-mail: anon@example.org}\\ %
+        \scriptsize Affiliation withheld for review}
 
 \abstract{\input{sections/abstract}}
 
-% \CCScatlist{ ... }   % add per the author kit
-% \teaser{ ... }       % optional teaser figure
+\keywords{Provenance visualization, event sourcing, replay, closed-loop
+experiments, synchrotron, human-in-the-loop, auditability.}
 
 \begin{document}
 
-\maketitle
-
 \firstsection{Introduction}
 \label{sec:intro}
+\maketitle
+
 \input{sections/intro}
 
 \section{The Auditor's Tasks}
@@ -72,7 +66,7 @@ Closed-Loop Beamline Experiments}
 \section{Limitations and Future Work}
 \input{sections/limitations}
 
-\bibliographystyle{abbrv-doi}                % per the VIS author kit
+\bibliographystyle{abbrv-doi}
 \bibliography{refs}
 
 \end{document}

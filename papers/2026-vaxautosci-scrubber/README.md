@@ -13,10 +13,10 @@ record.
 - **Format:** short paper, 4-6 pages excluding references, two-column VGTC
   conference style, published to IEEE Xplore.
 - **Deadline:** July 8 2026 (23:59 AoE).
-- **Status:** Full draft. All sections written; all figures rendered (F1, F2,
-  F3, Table 1, F5) from real run data. Length on the IEEEtran two-column proxy
-  is about 4.5 pages of body excluding references, inside the 4-6 limit. Not yet
-  built on the official VGTC class (see Build).
+- **Status:** Full draft, builds on the official VGTC conference class.
+  `main.tex` is 5 pages total (references start on page 5), about 4 pages of body
+  excluding references, inside the 4-6 limit. All sections written; all figures
+  (F1, F2, F3, Table 1, F5) rendered from real run data; references confirmed.
 
 ## Topic landing (PCS)
 
@@ -86,27 +86,34 @@ Edit a fragment once; both builds pick it up.
 
 ## Build
 
-The submission (`main.tex`) does not vendor the venue's LaTeX class (it is not
-on CTAN; it ships in the VIS author kit):
+The official VGTC conference class is vendored here (`vgtc.cls` +
+`abbrv-doi*.bst`, from `github.com/ieeevgtc/vgtc_conference_latex`; see
+`VGTC_TEMPLATE_README.txt`), so the submission builds directly:
 
-1. Download the VIS 2026 author kit and place `vgtc.cls`, `abbrv-doi.bst`, and
-   supporting `.sty` files in this folder.
-2. Reconcile the front-matter macros in `main.tex` with that kit.
-3. `latexmk -pdf main.tex`, and confirm the exact page count there.
+    latexmk -pdf main.tex
 
-Proxy build (works today, no author kit needed): `latexmk -pdf preview.tex`,
-then open `preview.pdf`. On this proxy the body is about 4.5 pages excluding
-references (references begin on page 5 of 6), inside the 4-6 page limit. Build
-artifacts (including both PDFs) are gitignored.
+This produces the exact VGTC conference format: 5 pages total, references
+beginning on page 5, so about 4 pages of body excluding references, inside the
+4-6 page limit. For double-blind review, switch to
+`\documentclass[review]{vgtc}` and set `\onlineid` to the assigned id.
 
-## Camera-ready checklist (deferred)
+`preview.tex` is a no-frills IEEEtran proxy over the same shared sections, for
+quick reading. Build artifacts (PDFs, `.aux`, `.bbl`, ...) are gitignored; the
+vendored class and bibstyle files are tracked.
 
-- [ ] Produce the five figures (export real run data; see `notes/outline.md`).
-- [ ] Fill the stub sections.
-- [ ] Confirm the four `% TODO confirm` references in `refs.bib`.
+## Camera-ready checklist
+
+- [x] Produce the figures (F1, F2, F3, Table 1, F5) from real run data.
+- [x] Fill all sections.
+- [x] Confirm the four flagged references in `refs.bib`.
+- [x] Build `main.tex` on the official VGTC class (5 pages, within limit).
+- [ ] Replace the placeholder author block (or set `[review]` + `\onlineid` for
+      double-blind).
+- [ ] Optional: source F3's crash from a real conductor run (currently a
+      labeled truncation).
 - [ ] Add `papers/<slug>/<slug>.pdf` and a `Build papers` step in
-      `.github/workflows/docs.yml` (see `../README.md`).
-- [ ] Update the card in `docs/papers.md` with a PDF download link.
+      `.github/workflows/docs.yml` (see `../README.md`), then update the
+      `docs/papers.md` card with a PDF download link.
 
 ## Notes
 

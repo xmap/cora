@@ -51,9 +51,11 @@ Sources only: `main.tex`, `refs.bib`, `README.md`, `notes/`, and `figures/`
 `main.tex` (the submission) and an optional `preview.tex` (a two-column proxy
 build, e.g. under `IEEEtran`, that needs no venue class) reading the same
 fragments so the text does not drift. LaTeX build artifacts (`*.aux`, `*.log`, `*.bbl`, `*.pdf`, and
-friends) are gitignored at the repo root. The venue's class and style files
-(`*.cls`, `*.bst`, `*.sty`) are added per paper by the author and are not
-vendored here.
+friends) are gitignored at the repo root. The venue's class and bibstyle files
+(`*.cls`, `*.bst`) may be vendored per paper when the kit is freely
+redistributable: the VAxAutoSci pilot vendors the official VGTC conference
+template (`vgtc.cls` + `abbrv-doi*.bst`); otherwise the author drops them in
+locally.
 
 ## How papers are surfaced
 

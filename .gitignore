@@ -92,6 +92,7 @@ papers/*/*.toc
 papers/*/*.synctex.gz
 papers/*/*.fls
 papers/*/*.fdb_latexmk
+papers/*/*.brf
 papers/*/*.pdf
 papers/*/_minted*/
 
