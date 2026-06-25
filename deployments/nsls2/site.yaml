@@ -24,7 +24,7 @@ facility:
   heading: "NSLS-II"
   kind: Site
   institution: Brookhaven National Laboratory
-  beamlines: [FXI, HXN, BMM, SRX]
+  beamlines: [FXI, HXN, BMM, SRX, SIX]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the FXI profile collection, not yet
@@ -43,6 +43,10 @@ practices:
   # SRX's defining techniques (scanning XRF mapping, XANES) sit on the same two
   # deferred Methods, scanning (HXN) and energy_scan (BMM); only its XRF-tomography
   # leg binds an existing Method, so only that Practice is recorded here.
+  # SIX's defining technique is RIXS (resonant inelastic X-ray scattering), a soft
+  # X-ray scattering Method not in the imaging-heritage catalog; rendered pending
+  # until a technique enters scope (TECH-1).
+  - {name: SIX_rixs_practice, method: resonant_inelastic_scattering, pending: true, note: "resonant inelastic X-ray scattering on the soft X-ray spectrometer arm; Method not yet in catalog (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at NSLS-II. Pending until the NSLS-II
 # operator and review structure is confirmed; the profile collection only exposes
