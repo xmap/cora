@@ -1,8 +1,47 @@
 \label{sec:scrubber}
-\textit{[Draft pending. Figure~1 (centerpiece, real exported data) plus a
-Figure~2 inset (the fidelity badge): a time axis with per-step activity
-swim-lanes, nested iteration brackets colored by the converged verdict,
-in-flight steps drawn as open intervals, and a draggable fold-to-version
-cursor whose position selects the folded state shown alongside. Walk through
-the 2-BM autofocus run, answering T2 (reproduce a decision) and T3 (confirm
-convergence).]}
+% First pass: design and walkthrough written without the exported figure
+% data. Exact setpoints, sharpness values, and timestamps are marked TODO
+% and will be filled from the run export; Figures 1 and 2 are pending.
+
+The scrubber presents one recorded run on a single horizontal time axis
+(Figure~1). Each row is a swim-lane for one kind of activity the procedure
+performs, a position setpoint, a sharpness check, and an image capture, and
+every activity is drawn at its recorded time within its lane. The iterative
+structure sits above the lanes as nested brackets, one per pass of the search,
+and each bracket is colored by that pass's recorded verdict, so a reader sees
+at a glance how many passes ran and which one converged. An activity that was
+opened but never closed, the conductor's record of intent before effect, is
+drawn as an open interval rather than a filled mark, so an unfinished step
+reads as a visible gap instead of disappearing.
+
+The interaction is a single draggable cursor. Setting the cursor to a position
+$t$ folds the event stream up to $t$ and renders the reconstructed state of the
+run beside the timeline, so dragging the cursor replays the run to any recorded
+instant (T2). The fold is the system's own read path, not a separate
+reconstruction built for the figure, which is what lets every recorded instant
+be reached exactly rather than approximately. Where most timelines let a user
+read \emph{when} something happened, the scrubber lets them recover \emph{what
+the run knew} at that moment.
+
+A small badge travels with the cursor (Figure~2, inset). At each position it
+recomputes the content-addressed expansion hashes recorded with the run and
+compares them against the reconstructed state, reporting whether the two match
+(T4). The badge turns the integrity property of the underlying store, that the
+record is append-only and the expansion is content-addressed, into something a
+reader can see at the exact instant they are inspecting, rather than a claim
+they must take on faith.
+
+We walk through a CORA-conducted autofocus alignment on APS 2-BM. The procedure
+is a four-iteration peak-bracket search over the sample-stage focus axis: each
+pass sets a focus position and measures image sharpness, and the loop brackets
+the sharpness peak, narrowing the interval until the change between passes falls
+within tolerance. Read left to right, Figure~1 shows the setpoint and check
+activities of each pass under its bracket; read by color, the brackets show the
+verdict turning from not-converged to converged on the final pass (T3). Dragging
+the cursor back to the third pass reconstructs the run as it stood before the
+last move, showing the bracket the search was about to bisect
+% TODO(data): name the exact focus setpoints (mm), per-pass sharpness values,
+% and the converged tolerance from the exported run; confirm the [F,F,F,T]
+% verdict pattern and the locked peak position.
+, and the fidelity badge confirms that reconstructed state is faithful to the
+record.
