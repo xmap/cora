@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Render Figure 1, the replay scrubber, from data/lights_out_run.json.
 
-Static rendering of the interactive scrubber over one lights-out, agent-
-supervised run: a run-lifecycle / who-drove-it lane (operator vs RunSupervisor),
+Static rendering of the interactive scrubber over one agent-supervised
+run: a run-lifecycle / who-drove-it lane (operator vs RunSupervisor),
 per-iteration convergence brackets colored by verdict (the rotation-axis
 centering search), activity swim-lanes, a shaded held band, and a fold-to-
 version cursor parked at the beam-loss instant, where the first projection is an
@@ -156,7 +156,7 @@ def main() -> None:
                   fontsize=s.SIZE["label"])
     ax.tick_params(axis="x", labelsize=s.SIZE["tick"])
     s.despine(ax, keep=("bottom",))
-    s.title(ax, "Replay scrubber: a lights-out, agent-supervised run at APS 2-BM")
+    s.title(ax, "Replay scrubber: an agent-supervised run at APS 2-BM")
 
     legend = [
         Line2D([0], [0], marker="s", color="w", markerfacecolor=s.OPERATOR,
