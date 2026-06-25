@@ -17,4 +17,4 @@ SST is two beamlines in one sector: a soft branch and a tender branch, each with
 - [Detector](detector.md): the soft-scattering CCD, the hemispherical electron analyzer, the microcalorimeter, the flux monitors, and the beamstop.
 - [Controls](controls.md): the fast shutter, the branch-selection, and the motion controllers.
 
-Each device binds a catalog [Family](../../../catalog/families.md) and a verified EPICS PV; none binds a vendor Model (part numbers are not in the public config). The loose families are the hemispherical `ElectronAnalyzer` (a graduation candidate at its second sighting) and the `BeamPositionMonitor`, both held for gate-review.
+Each device binds a catalog [Family](../../../catalog/families.md) and a verified EPICS PV; none binds a vendor Model (part numbers are not in the public config). The `ElectronAnalyzer` graduated this PR (its second sighting, after ESM); the one loose family is the `BeamPositionMonitor`, held for gate-review.

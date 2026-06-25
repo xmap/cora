@@ -23,10 +23,10 @@
 # sighting after SIX / CSX / ESM), the tender DCM Monochromator, the area detector
 # Camera, the sample manipulators the graduated Manipulator family (ESM), the flux
 # channels FluxMonitor, the thermal stage TemperatureController, the NEXAFS
-# microcalorimeter EnergyDispersiveSpectrometer. Two loose families are bound, both
-# held: the hemispherical ElectronAnalyzer (the HAXPES Scienta SES, a SECOND sighting
-# after ESM, so a graduation candidate recorded in the promotion register but held
-# pending gate-review, ARPES-1) and the BeamPositionMonitor (DIAG-1). Per the multi-
+# microcalorimeter EnergyDispersiveSpectrometer. The hemispherical ElectronAnalyzer
+# (the HAXPES Scienta SES) GRADUATED into the catalog: SST-HAXPES is the SECOND sighting
+# after ESM, earning the rule-of-three. One loose family remains: the BeamPositionMonitor
+# (DIAG-1). Per the multi-
 # technique discipline no Capability or Method is coined; the soft-scattering,
 # absorption, and photoemission techniques sit on deferred / pending Methods and SST
 # records no Practice. The non-spectroscopy in-situ accessories (flood gun, source-
@@ -199,10 +199,10 @@ detector:
       confirm: true
       note: "Greateyes 4k x 4k CCD area detector (the RSoXS WAXS detector); reuses Camera. A second Greateyes SAXS arm is commented out in source (DET-1)."
     - name: ElectronAnalyzer
-      family: ElectronAnalyzer     # loose Family (held; ARPES-1)
+      family: ElectronAnalyzer     # catalog Family (graduated ESM + SST)
       pv: "XF:07ID-ES-SES"
       confirm: true
-      note: "Scienta SES hemispherical electron analyzer (the HAXPES photoemission detector in the SST-2 tender branch; pass energy, lens mode, kinetic / excitation energy, acquisition mode, from the NSLS-II-SST/haxpes ses.py SES class). A photon-in / electron-out device that fits no photon-detector family. Binds the loose ElectronAnalyzer family ESM introduced; SST-HAXPES is a SECOND sighting (n=2, the same Scienta SES type), so it is recorded as a graduation candidate in the promotion register but held loose pending gate-review (ARPES-1)."
+      note: "Scienta SES hemispherical electron analyzer (the HAXPES photoemission detector in the SST-2 tender branch; pass energy, lens mode, kinetic / excitation energy, acquisition mode, from the NSLS-II-SST/haxpes ses.py SES class). A photon-in / electron-out device that fits no photon-detector family. Binds the catalog ElectronAnalyzer family: SST-HAXPES is the SECOND sighting (n=2, the same Scienta SES type) after ESM, which GRADUATED the family into the catalog (ARPES-1)."
     - name: CalorimeterSpectrometer
       family: EnergyDispersiveSpectrometer
       pv: "XF:07ID-ES{UCAL}:"

@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/sst/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against the `NSLS2/sst-*-profile-collection` TOML manifests and the `NSLS-II-SST/sst-base` device classes). No vendor Model is bound: part numbers are not in the profile collection. SST introduces **no new catalog family**: every device reuses an existing Family, including the recently-graduated soft-X-ray ones (`GratingMonochromator` for the soft PGM, `Manipulator` for the sample stages, `EnergyDispersiveSpectrometer` for the microcalorimeter). Two devices bind loose families, both held: the hemispherical `ElectronAnalyzer` (a second sighting after ESM, recorded in the promotion register, ARPES-1) and the `BeamPositionMonitor` (DIAG-1); see [Model](model.md#deliberately-not-here-yet).
+Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against the `NSLS2/sst-*-profile-collection` TOML manifests and the `NSLS-II-SST/sst-base` device classes). No vendor Model is bound: part numbers are not in the profile collection. SST introduces **no new catalog family**: every device reuses an existing Family, including the recently-graduated soft-X-ray ones (`GratingMonochromator` for the soft PGM, `Manipulator` for the sample stages, `EnergyDispersiveSpectrometer` for the microcalorimeter). The hemispherical `ElectronAnalyzer` (a second sighting after ESM) GRADUATED into the catalog (ARPES-1); one loose family remains, the `BeamPositionMonitor` (DIAG-1); see [Model](model.md#deliberately-not-here-yet).
 
 ## The Asset tree
 
@@ -30,7 +30,7 @@ Root Asset `SST` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `HAXPESManipulator` | Manipulator | `XF:07ID1-BI{HAX-Ax:}` | photoemission sample stage |
 | `SampleTemperature` | TemperatureController | `XF:07ID2-ES1{TCtrl:1}LS336:` | Lakeshore thermal control |
 | `ScatteringDetector` | Camera | `XF:07ID1-ES:1{GE:2}` | Greateyes CCD (RSoXS) |
-| `ElectronAnalyzer` | ElectronAnalyzer (loose) | `XF:07ID-ES-SES` | Scienta SES (HAXPES) |
+| `ElectronAnalyzer` | ElectronAnalyzer | `XF:07ID-ES-SES` | Scienta SES (HAXPES) |
 | `CalorimeterSpectrometer` | EnergyDispersiveSpectrometer | `XF:07ID-ES{UCAL}:` | TES microcalorimeter (NEXAFS) |
 | `FluxMonitor` | FluxMonitor | `XF:07ID-ES1{DMR:I400-1}` | I0 / drain-current channels |
 | `BeamStop` | BeamStop | `XF:07ID2-ES1{BS-Ax:1}` | RSoXS direct-beam stop |
@@ -38,7 +38,7 @@ Root Asset `SST` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `FastShutter` | Shutter | `XF:07ID2-ES1{FSh-Ax:1}` | endstation exposure shutter |
 | `EndstationMotionController` | MotionController | (pending) | branch / endstation controllers |
 
-Every family is in the catalog except the loose `ElectronAnalyzer` and `BeamPositionMonitor` (both held); SST coins none. Notably the soft PGM reuses `GratingMonochromator` (graduated across SIX / CSX / ESM, a fourth sighting), the sample manipulators reuse `Manipulator` (graduated by ESM), and the microcalorimeter reuses `EnergyDispersiveSpectrometer` (graduated in #345), so SST is a clean reuse-and-reinforce deployment that exercises the soft-X-ray vocabulary at Site scale.
+Every family is in the catalog except the loose `BeamPositionMonitor` (held); the `ElectronAnalyzer` graduated this PR (2nd sighting after ESM); SST coins none. Notably the soft PGM reuses `GratingMonochromator` (graduated across SIX / CSX / ESM, a fourth sighting), the sample manipulators reuse `Manipulator` (graduated by ESM), and the microcalorimeter reuses `EnergyDispersiveSpectrometer` (graduated in #345), so SST is a clean reuse-and-reinforce deployment that exercises the soft-X-ray vocabulary at Site scale.
 
 ## Pending confirmations
 
@@ -50,7 +50,6 @@ Every value below is read from the profile collection or inferred, awaiting the 
 | PSS search-and-secure permit-leaf PVs | all enclosures | `unknown-pending-confirmation` | (PSS-1) |
 | Branch-to-hutch endstation mapping | enclosures | `unknown-pending-confirmation` | (ENC-1) |
 | PGM grating set and DCM crystal / ranges | `SoftMonochromator` / `TenderMonochromator` | `unknown-pending-confirmation` | (DCM-1) |
-| ElectronAnalyzer graduation (n=2 with ESM) | `ElectronAnalyzer` | `unknown-pending-confirmation` | (ARPES-1) |
 | Live detector roster per endstation | `ScatteringDetector` / `ElectronAnalyzer` / `CalorimeterSpectrometer` | `unknown-pending-confirmation` | (DET-1) |
 | Flux / beam-position channel maps | `FluxMonitor` / `BeamPositionMonitor` | `unknown-pending-confirmation` | (DIAG-1) |
 | Motion-controller box models / firmware / IP | `EndstationMotionController` | `unknown-pending-confirmation` | (DRIVE-1) |

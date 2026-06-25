@@ -4,7 +4,7 @@
 
 This cut models the `XF:21IDA/B/C` optics and the `XF:21ID1-ES` ARPES endstation; the XPEEM/LEEM branch and the simulated devices are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/esm/beamline.yaml) descriptor.
 
-ESM introduces one new family (`ElectronAnalyzer`, loose at n=1), graduates `Manipulator` into the catalog (its 2nd UHV manipulator after SIX), and reuses the rest, including the graduated `GratingMonochromator` (its 3rd PGM). Control handles are filled from the profile collection; no vendor Models are bound.
+ESM introduces one new family (`ElectronAnalyzer`, since graduated once SST earned the 2nd SES), graduates `Manipulator` into the catalog (its 2nd UHV manipulator after SIX), and reuses the rest, including the graduated `GratingMonochromator` (its 3rd PGM). Control handles are filled from the profile collection; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -27,10 +27,10 @@ Root Asset `ESM` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `PhotonShutter_A` / `PhotonShutter_B` | `Device` | Shutter | 21-ID-C | branch photon shutters |
 | `SampleManipulator` | `Device` | Manipulator | 21-ID-D | LT six-axis UHV cryostat (graduates the Family) (SAMPLE-1) |
 | `SampleTemperature` | `Device` | TemperatureController | 21-ID-D | Lakeshore cryostat (SAMPLE-1) |
-| `ElectronAnalyzer` | `Device` | ElectronAnalyzer (loose) | 21-ID-D | Scienta SES hemispherical analyzer (ARPES-1) |
+| `ElectronAnalyzer` | `Device` | ElectronAnalyzer | 21-ID-D | Scienta SES hemispherical analyzer (ARPES-1) |
 | `FluxMonitor_Upstream` / `FluxMonitor_Branch` | `Device` | FluxMonitor | 21-ID-D | QuadEM I0 monitors (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Mirror`, `Slit`, `Shutter`, `GenericProbe`, `TemperatureController`, `FluxMonitor`, `GratingMonochromator` (3rd PGM), and `Manipulator` (graduated with this deployment). Held loose at n=1: `ElectronAnalyzer` (the SES; ESM only).
+Families reused from the catalog: `InsertionDevice`, `Mirror`, `Slit`, `Shutter`, `GenericProbe`, `TemperatureController`, `FluxMonitor`, `GratingMonochromator` (3rd PGM), `Manipulator` (graduated with this deployment), and `ElectronAnalyzer` (graduated once SST earned the 2nd SES). No loose family remains.
 
 ## Pending confirmations
 
