@@ -398,8 +398,8 @@ _SUPPLY_LOOSE_FAMILIES = {"Beam", "Vacuum", "StorageRing"}
 _PROMOTION_REVIEWED = {
     "Diagnostic": "hold: Sensor fold-vs-promote still open (DIAG-1)",
     "FlowController": "hold: earn-vs-defer still open (FLOW-1)",
-    "Transfocator": "hold: CRL optic abstraction still open across i22 / 4-id / 8-id (CRL-1)",
-    "BeamPositionMonitor": "hold: Sensor fold-vs-promote open across 4-id/8-id (DIAG-1/FLUX-1)",
+    "Transfocator": "hold: CRL optic abstraction still open across i22/4-id/8-id/9-id (CRL-1)",
+    "BeamPositionMonitor": "hold: Sensor fold-vs-promote across 4-id/8-id/9-id (DIAG-1/FLUX-1)",
 }
 
 # Catalog families bound by no deployment device. Symmetric to the orphan-model

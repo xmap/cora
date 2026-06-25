@@ -1,0 +1,307 @@
+# CORA Beamline descriptor: 9-ID (APS), operational-PV first cut
+#
+# 9-ID is the Coherent Surface Scattering Instrument (CSSI) at APS (Argonne),
+# operational across stations 9-ID-A (optics) and 9-ID-D (the CSSI endstation). It
+# is bound to the APS Site (deployments/aps/site.yaml). It is a coherent-scattering
+# beamline whose signature technique is grazing-incidence surface scattering: the
+# sample sits at a shallow incidence angle and a coherent beam probes its surface
+# structure and dynamics (GISAXS / GIWAXS and surface XPCS).
+#
+# It is almost entirely catalog REUSE: every optic and detector binds a catalog
+# Family (InsertionDevice, Monochromator, Mirror, Aperture, Filter, Slit, Camera,
+# BeamStop, Hexapod), so it adds no new catalog Family. The two device classes it
+# does not graduate (the CRL Transfocator and the beam-position monitors) are the
+# same loose Families 4-ID and 8-ID use, held for cross-facility gate-review.
+#
+# STATUS: first cut, reverse-engineered. Like 4-ID and 8-ID, this binds the real
+# EPICS control handles, read from the beamline's own Bluesky instrument repo
+# (BCDA-APS/9id_bits); the extraction is in
+# research/aps-reverse-engineering/extracted/9id_bits/. Every value is carried
+# `confirm: true` until 9-ID staff verify it, and `new: true` (not yet registered
+# in CORA). No vendor `model` is bound.
+#
+# DELIBERATELY OUT OF THIS CUT (recorded on docs/deployments/9-id/model.md): the
+# bluesky / APS Data Management metadata PVs (experiment_name, file_path, qmap_file,
+# workflow_name, the DM_WorkflowConnector), which are the experiment-record
+# bookkeeping CORA's own system of record replaces rather than models as Assets;
+# the simulated devices; integration scenarios; vendor Models; z-positions. The
+# grazing-incidence sample stack is modelled as plain devices, not yet an Assembly.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/9-id/questions.md.
+
+beamline:
+  name: 9-ID
+  facility: aps                 # APS, the Site-level Facility (facility_code: aps)
+  sector: "Sector 9"            # organizational label, not a registered asset
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "one planar undulator on the S09ID straight section (DSID extracted); whether a second undulator or a canted pair feeds a branch is SRC-1 / TOPO-1"
+
+# Two lead-shielded stations: 9-ID-A holds the optics; 9-ID-D the CSSI endstation
+# (focusing, the grazing-incidence sample stack, and the detectors). PSS permit
+# signals are APS facility signals, not yet on file (PSS-1).
+enclosures:
+  - name: 9-ID-A
+    role: optics-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure signal TBD (PSS-1)"}
+  - name: 9-ID-D
+    role: experiment-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure signal TBD (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the 9-ID-A optics spine and the 9-ID-D focusing
+# ===========================================================================
+
+insertion-devices:
+  stage: source
+  enclosure: 9-ID-A
+  intro: "The undulator source on the S09ID straight section."
+  note: "One InsertionDevice Asset; whether a second undulator or a canted pair feeds a branch is SRC-1 / TOPO-1."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: "S09ID:DSID:"
+      new: true
+      confirm: true
+      note: "planar undulator (SRC-1)"
+
+optics:
+  stage: source
+  enclosure: 9-ID-A
+  intro: "The monochromator, the high-heat-load mirrors, the white-beam apertures, and the attenuator."
+  note: >
+    mono is the Kohzu double-crystal monochromator; mr1/mr2 are the FMBO mirrors
+    with coarse pitch, piezo fine pitch, and benders. The diagnostic flag cameras
+    (flag1-3) and the DAMM mask carried only their insertion-motor PVs in the
+    config and are folded into this note pending identification (DIAG-1).
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "9ida:"
+      new: true
+      confirm: true
+      note: "Kohzu sequence-controlled double-crystal monochromator (idt_mono); energy range and crystal set unconfirmed (MONO-1)"
+    - name: Mirror_1
+      family: Mirror
+      pv: { x: "9ida:FMBO:m4", y: "9ida:FMBO:m2", coarse_pitch: "9ida:FMBO:m6", fine_pitch: "9ida:FMBO:Piezo:m1", bender: "9ida:FMBO:m8" }
+      new: true
+      confirm: true
+      note: "first FMBO mirror; coarse and piezo fine pitch (OPT-1)"
+    - name: Mirror_2
+      family: Mirror
+      pv: { x: "9ida:FMBO:m3", y: "9ida:FMBO:m1", coarse_pitch: "9ida:FMBO:m5", fine_pitch: "9ida:FMBO:Piezo:m2", bender: "9ida:FMBO:m7" }
+      new: true
+      confirm: true
+      note: "second FMBO mirror with bender (OPT-1)"
+    - name: Aperture_1
+      family: Aperture
+      pv: "9ida:SL-1:"
+      new: true
+      confirm: true
+      note: "high-heat-load white-beam aperture (HHLApertureWBA); axis map is OPT-2"
+    - name: Aperture_2
+      family: Aperture
+      pv: "9ida:SL-2:"
+      new: true
+      confirm: true
+      note: "second high-heat-load white-beam aperture; axis map is OPT-2"
+    - name: Filter
+      family: Filter
+      pv: "9idPyFilter:FL1:"
+      new: true
+      confirm: true
+      note: "AVS filter bank attenuator (fl1); lens/foil set is OPT-4"
+
+focusing:
+  stage: source
+  enclosure: 9-ID-D
+  intro: "The compound refractive lens transfocator and the Kirkpatrick-Baez mirror that focus the coherent beam into the CSSI endstation."
+  note: >
+    crl is a JJ CRL transfocator lens stack (9idPyCRL:CRL9ID), bound to a loose
+    Transfocator Family that 4-ID and 8-ID also use, held for gate-review (OPT-3,
+    CRL-1; see model.md). kb is the KB focusing pair carrying capacitive-sensor
+    bender axes; modelled as one Mirror Asset (OPT-5).
+  devices:
+    - name: Transfocator
+      family: Transfocator           # loose Family (held; CRL-1, OPT-3)
+      pv: "9idPyCRL:CRL9ID:"
+      new: true
+      confirm: true
+      note: "JJ CRL transfocator focusing the coherent beam (crl9id2x); lens material and count are OPT-3"
+    - name: KBMirror
+      family: Mirror
+      pv: { hor_upstream: "9idKB:", hor_downstream: "9idKB:", ver_upstream: "9idKB:", ver_downstream: "9idKB:", granite: "9idd:CR9D1M1:m29" }
+      new: true
+      confirm: true
+      note: "Kirkpatrick-Baez focusing pair; the four bender axes carry capacitive-sensor suffixes resolved at runtime, the granite support is a base motor (OPT-5)"
+
+beam-defining:
+  stage: source
+  enclosure: 9-ID-D
+  intro: "The guard slits that define the focused beam entering the CSSI endstation."
+  note: "Three guard slits (slit3/4/5) on the 9-ID-D soft-IOC optics; the per-blade axis maps are OPT-2."
+  devices:
+    - name: Slit_3
+      family: Slit
+      pv: "9idd:Slit3"
+      new: true
+      confirm: true
+      note: "first 9-ID-D guard slit (OPT-2)"
+    - name: Slit_4
+      family: Slit
+      pv: "9idd:Slit4"
+      new: true
+      confirm: true
+      note: "second 9-ID-D guard slit (OPT-2)"
+    - name: Slit_5
+      family: Slit
+      pv: "9idd:Slit5"
+      new: true
+      confirm: true
+      note: "third 9-ID-D guard slit (OPT-2)"
+
+# ===========================================================================
+# SAMPLE STAGE: the 9-ID-D grazing-incidence CSSI sample stack
+# ===========================================================================
+
+cssi-sample:
+  stage: sample
+  enclosure: 9-ID-D
+  intro: "The Coherent Surface Scattering Instrument sample stack: the grazing-incidence sample stage, its incidence rotation, the alignment hexapods, and the on-axis viewing microscope."
+  note: >
+    The CSSI signature is grazing incidence: the sample translation places the
+    surface in the beam and the incidence rotation sets the shallow angle that makes
+    the measurement surface-sensitive. The stack is modelled as plain devices with
+    its axis maps; whether it composes into a sample Assembly is deferred (CSSI-1).
+    A sample-positioning Kohzu stage (kohzu_linear / kohzu_rotate) is folded into
+    this note pending its role (CSSI-1).
+  devices:
+    - name: CSSISampleStage
+      family: LinearStage
+      pv: { x: "9idCSSI:mcs2-01:m4", y: "9idCSSI:mcs2-01:m3", z: "9idCSSI:mcs2-01:m2", fly_z: "9idANT95:aero:c0:m1", gixs_x: "9idd:CR9D4M1:m3" }
+      new: true
+      confirm: true
+      note: "grazing-incidence sample translation; fly_z is the Aerotech fly-scan axis (CSSI-1)"
+    - name: CSSIIncidence
+      family: RotaryStage
+      pv: { theta: "9idCSSI:mcs2-01:m1" }
+      new: true
+      confirm: true
+      note: "grazing-incidence rotation setting the shallow surface angle; a second capacitive theta (theta3) is resolved at runtime (CSSI-1)"
+    - name: Hexapod_1
+      family: Hexapod
+      pv: "9idAerotech:HP1:"
+      new: true
+      confirm: true
+      note: "Aerotech six-axis alignment hexapod (CSSI-2)"
+    - name: Hexapod_2
+      family: Hexapod
+      pv: "9idAerotech2:HP2:"
+      new: true
+      confirm: true
+      note: "second Aerotech six-axis alignment hexapod (CSSI-2)"
+    - name: ViewingMicroscope
+      family: Camera
+      pv: { x: "9idCSSI:CR9D1M2:m5", y: "9idCSSI:CR9D1M2:m9", z: "9idCSSI:CR9D1M2:m6", focus: "9idCSSI:CR9D1M2:m10" }
+      new: true
+      confirm: true
+      note: "on-axis sample-viewing microscope (uscope); an optical alignment camera, not the TXM Microscope Assembly (CSSI-3)"
+
+# ===========================================================================
+# DETECTION STAGE: the coherent area detectors and the beam-position monitors
+# ===========================================================================
+
+detectors:
+  stage: detection
+  enclosure: 9-ID-D
+  intro: "The coherent-scattering area detectors (a Pilatus, an Eiger on a translation stage, and a WAXS detector on a pedestal), the beam stop, and the beam-position monitors."
+  note: >
+    Pilatus and Eiger record the small-angle coherent pattern; the WAXS detector on
+    its pedestal records the wide-angle signal for GIWAXS. The beam stop and its
+    carriage block the direct beam. The TetrAMM and the two XBPMs bind a loose
+    BeamPositionMonitor Family that 4-ID and 8-ID also use, held for gate-review
+    (DIAG-1 / FLUX-1, BPM-1).
+  devices:
+    - name: Pilatus1M
+      family: Camera
+      pv: "PILATUS_1MF:"
+      new: true
+      confirm: true
+      note: "Pilatus 1M coherent-scattering detector (DET-1)"
+    - name: EigerDetector
+      family: Camera
+      pv: "9idEiger:"
+      new: true
+      confirm: true
+      note: "Eiger coherent-scattering detector; model unconfirmed, prefix is a guess pending CTRL-1 (DET-1)"
+    - name: DetectorStage
+      family: LinearStage
+      pv: { x: "9idGT:m11", y: "9idGT:m12" }
+      new: true
+      confirm: true
+      note: "Eiger detector positioning stage (eiger_x / eiger_y)"
+    - name: WAXSDetector
+      family: Camera
+      pv: { pedestal_x: "9idd:CR9D1M1:m31", pedestal_y: "9idd:CR9D1M1:m32" }
+      new: true
+      confirm: true
+      note: "wide-angle (GIWAXS) detector on its pedestal; detector model is DET-1"
+    - name: BeamStop
+      family: BeamStop
+      pv: { x: "9idd:CR9D4M1:m14", z: "9idd:CR9D4M1:m15", carriage_y: "9idGT:m1", carriage_bottom: "9idGT:mcs2-02:m3" }
+      new: true
+      confirm: true
+      note: "direct-beam stop and its carriage"
+    - name: TetrAMM
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      pv: "9idTetra:QUAD1:"
+      new: true
+      confirm: true
+      note: "TetrAMM picoammeter / position monitor, four channels (BPM-1)"
+    - name: XBPM_1
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      pv: "9idd:"
+      new: true
+      confirm: "device prefix inferred from the 9-ID-D station; the xpbm1 sum/x/y signals carried no device prefix in the config (CTRL-1)"
+      note: "X-ray beam-position monitor (xpbm1 sum/x/y signals, lifted from the config's metadata bucket as a genuine diagnostic); position-vs-intensity role is BPM-1"
+    - name: XBPM_2
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      pv: "9idd:"
+      new: true
+      confirm: "device prefix inferred from the 9-ID-D station; the xpbm2 sum/x/y signals carried no device prefix in the config (CTRL-1)"
+      note: "second X-ray beam-position monitor (xpbm2 sum/x/y signals, lifted from the config's metadata bucket); position-vs-intensity role is BPM-1"
+
+# Cross-cutting control. 9-ID runs EPICS (the floor); CORA observes and, where it
+# replaces Bluesky-style orchestration, conducts over it. The handles above were
+# read from the 9id_bits instrument config and carried confirm (CTRL-1).
+controls:
+  intro: >
+    9-ID runs on the APS EPICS control stack. The device handles above are bound
+    from the beamline's Bluesky instrument repo (BCDA-APS/9id_bits), carried confirm
+    pending staff verification (CTRL-1). The instrument config also carries a large
+    set of metadata PVs (experiment_name, file_path, qmap_file, workflow_name) and a
+    DM_WorkflowConnector that trigger APS Data Management workflows; these are the
+    experiment-record bookkeeping CORA's own system of record replaces, so they are
+    a seam, not modelled as Assets (see model.md).
+  triggering:
+    - name: FlyScanScaler
+      family: GenericProbe
+      pv: "9idCSSI:mcs2-01:"
+      new: true
+      confirm: true
+      note: "multi-channel scaler gating the grazing-incidence fly scans (coarse; the full timing graph is CTRL-2)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a 9-ID run needs. The transfocator,
+    the KB mirror, and the detector flight draw on vacuum (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the focusing optics and the detector flight path (SUP-1)"

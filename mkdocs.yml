@@ -186,6 +186,19 @@ nav:
         - Techniques: deployments/8-id/techniques.md
         - Governance: deployments/8-id/governance.md
         - Model: deployments/8-id/model.md
+      - 9-ID:
+        - deployments/9-id/index.md
+        - Open questions: deployments/9-id/questions.md
+        - The beamline:
+          - deployments/9-id/equipment/index.md
+          - Source: deployments/9-id/beamline.md
+          - Sample: deployments/9-id/equipment/sample.md
+          - Detector: deployments/9-id/equipment/detector.md
+          - Controls: deployments/9-id/equipment/controls.md
+          - Inventory: deployments/9-id/inventory.md
+        - Techniques: deployments/9-id/techniques.md
+        - Governance: deployments/9-id/governance.md
+        - Model: deployments/9-id/model.md
     - MAX IV:
       - deployments/maxiv/index.md
       - TomoWise:
