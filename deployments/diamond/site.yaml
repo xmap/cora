@@ -27,7 +27,7 @@ facility:
   heading: "Diamond Light Source"
   kind: Site
   institution: Diamond Light Source Ltd, Harwell Campus, Didcot, UK
-  beamlines: [I22, I03, I15-1, I11, I24]
+  beamlines: [I22, I03, I15-1, I11, I24, I06]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All
 # pending in the design phase. I22 is a scattering beamline, so its practices
@@ -43,6 +43,13 @@ practices:
   - {name: I15-1_total_scattering_practice, method: total_scattering, pending: true, note: "XPDF / pair-distribution-function total scattering on the bent-Laue mono + Eiger; new Capability not yet in the catalog (TECH-1)"}
   - {name: I11_powder_diffraction_practice, method: powder_diffraction, pending: true, note: "high-resolution powder diffraction on the diffractometer + Mythen3 strip detector + spinner, often with a temperature ramp; new Capability not yet in the catalog (TECH-1)"}
   - {name: I24_serial_crystallography_practice, method: serial_crystallography, pending: true, note: "fixed-target serial MX: raster a chip of thousands of static crystals, one snapshot per window, Zebra-gated, no rotation; the serial_crystallography Method is pending, now at i24 + LCLS-MFX (SSX-1)"}
+  # i06 nanoscience soft X-ray Practices (first cut). Magnetic / electronic
+  # structure on the APPLE-II variable-polarization source; Methods not yet in the
+  # catalog, carried pending until a technique enters scope (TECH-1).
+  - {name: I06_xmcd_practice, method: xmcd, pending: true, note: "X-ray magnetic circular dichroism on the APPLE-II polarization axis; shares the 4-ID XMCD Method (TECH-1)"}
+  - {name: I06_xmld_practice, method: xmld, pending: true, note: "X-ray magnetic linear dichroism on the APPLE-II polarization axis; new Capability not yet in the catalog (TECH-1)"}
+  - {name: I06_peem_practice, method: photoemission_microscopy, pending: true, note: "photoemission electron microscopy: a magnified electron image of the photoemitting surface; new Capability not yet in the catalog, the imaging detector is deferred (PEEM-1)"}
+  - {name: I06_resonant_diffraction_practice, method: resonant_scattering, pending: true, note: "resonant soft X-ray diffraction / dichroism on the i06-1 diffractometer; shares the 4-ID resonant-scattering Method (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at Diamond. Pending until the
 # Diamond operator and review structure is confirmed.

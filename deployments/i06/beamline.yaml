@@ -1,0 +1,279 @@
+# i06 beamline descriptor (Diamond), reverse-engineered
+#
+# i06 is the Diamond nanoscience soft X-ray beamline: magnetic and electronic
+# structure by X-ray magnetic dichroism (XMCD / XMLD), photoemission electron
+# microscopy (PEEM), and resonant soft X-ray diffraction / dichroism. It is bound
+# to the Diamond Site (deployments/diamond/site.yaml), the sixth Diamond beamline
+# after I22, I03, I15-1, I11, and I24, and CORA's FIRST APPLE-II (variable
+# polarization) source.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the DiamondLightSource/dodal beamline package, its src/dodal/beamlines/
+# i06.py + i06_shared.py + i06_1.py + i06_2.py factories and the device classes in
+# src/dodal/devices/) or inferred, carried `new: true` + `confirm: true` pending
+# i06 staff. EPICS PVs are real and verified against dodal; vendor part numbers,
+# serials, and physical positions are not in dodal and are open questions. Same
+# descriptor mode as the other Diamond deployments; this scaffold is descriptor +
+# docs, scenarios deferred.
+#
+# WHAT IS NEW: i06 is the first beamline in the fleet whose source is an APPLE-II
+# undulator, so it is the first that drives the X-ray POLARIZATION as an experiment
+# axis (linear horizontal / vertical / arbitrary-angle, circular positive /
+# negative, and third-harmonic variants), alongside the usual incident-energy axis.
+# It is also CORA's first PEEM (photoemission electron microscopy) endstation, an
+# electron-IMAGING technique distinct from the electron-energy analysis of ARPES.
+#
+# MODELLING: i06 coins NO new Family and changes nothing in the catalog. Two
+# decisions carry the novelty by REUSE rather than coinage:
+#   - The two APPLE-II undulators (idd, idu) bind the catalog InsertionDevice
+#     Family. An APPLE-II is the same source-undulator anatomy as the EPUs already
+#     bound by SIX / CSX / ESM (InsertionDevice "spans the undulator and the
+#     wiggler; the device type and its gap / field parameters are a per-Asset
+#     settings difference"); the variable-polarization rows, the energy <-> gap
+#     polynomial lookup, and the coordinating controller are the per-Asset settings
+#     and the bound Model (HOW the gap and phase are driven), not a new device
+#     class. This resolves the long-standing SRC-1 question toward reuse.
+#   - POLARIZATION is modelled as a PseudoAxis Asset, a sibling of the incident
+#     energy PseudoAxis over the same source. The Pol value domain (LH / LV / PC /
+#     NC / LA + third harmonics) is the axis's value set; the controller's
+#     polarization-to-phase conversion is its partition rule, carried rule-less by
+#     default (the live i06 controller owns the kinematics; CORA names the axis,
+#     writes the value, records the move). This is the 2-BM beam-energy-as-PseudoAxis
+#     precedent, extended to a second driven source quantity. No new primitive.
+# Every other device reuses an existing catalog or loose Family: the soft X-ray
+# plane-grating monochromator binds GratingMonochromator (the SIX / CSX / ESM
+# precedent); the PEEM UHV sample manipulators bind the graduated Manipulator; the
+# diffraction-dichroism sample circles bind Goniometer; the Lakeshore controllers
+# bind the graduated TemperatureController; the machine state reuses the loose
+# StorageRing.
+#
+# DEFERRED (absent from dodal, not invented): the PEEM electron-optical column and
+# its magnified electron-image detector are not dodal devices (only the PEEM sample
+# manipulator and its energy slit are), so the PEEM imaging detector is carried as
+# an open question (PEEM-1, the ElectronMicroscope anatomy: an electron-imaging
+# column, distinct from the photon Camera and from the energy-analyzing
+# ElectronAnalyzer); it is NOT coined here. The i06-1 diffraction detector and the
+# incident-flux / drain-current monitors are likewise absent from dodal and carried
+# as DET-1; the geometry is modelled now and the detectors bound later.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/i06/questions.md.
+
+beamline:
+  name: I06
+  facility: diamond            # Diamond Site (facility_code: diamond)
+  sector: "Sector 06"          # PV zones BL06I (spine) / BL06J (i06-1) / BL06K (i06-2); SR06I (ID servos)
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "i06 is a soft X-ray APPLE-II undulator beamline; dodal binds the two APPLE-II insertion devices (modelled below) but not their period; the undulator detail is SRC-1"
+
+# PV zones: BL06I (the shared optics spine: PGM, the APPLE-II controllers, the i06
+# PEEM sample stage), SR06I (the APPLE-II servo crates SERVC-01 / SERVC-21), BL06J
+# (the i06-1 diffraction-dichroism endstation), BL06K (the i06-2 PEEM endstation).
+# Whether the three PV zones are separate hutches and the PSS permit leaves are open
+# (ENC-1, PSS-1).
+enclosures:
+  - name: i06-optics
+    role: optics-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf not in dodal; the shared soft X-ray optics zone (BL06I), hutch grouping is ENC-1 (PSS-1)"}
+  - name: i06-1
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf unknown; the diffraction-dichroism endstation (BL06J), ENC-1 (PSS-1)"}
+  - name: i06-2
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf unknown; the PEEM endstation (BL06K), ENC-1 (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state, the APPLE-II undulators, and the monochromator
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: i06-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "dodal's Synchrotron device is the observe-only machine state, the loose StorageRing pattern reused from the Diamond siblings (MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: "SR-DI-DCCT-01:"
+      new: true
+      confirm: true
+      note: "Diamond storage-ring state (ring current SR-DI-DCCT-01, energy / mode CS-CS-MSTAT-01, top-up SR-CS-FILL-01); observe-only (MACHINE-1)"
+
+insertion-devices:
+  stage: source
+  enclosure: i06-optics
+  intro: "The twin APPLE-II undulators, the variable-polarization soft X-ray source."
+  note: >
+    Both APPLE-II undulators bind the catalog InsertionDevice Family, the same
+    source-undulator anatomy as the EPUs at SIX / CSX / ESM. The variable-polarization
+    phase rows, the EPICS energy <-> gap polynomial lookup, and the coordinating
+    controller are per-Asset settings and the bound Model, not a new Family. Only the
+    upstream IDU exposes the driven energy / polarization handles in dodal; the
+    idd / idu asymmetry is POL-2.
+  devices:
+    - name: UndulatorDownstream
+      family: InsertionDevice
+      pv: "SR06I-MO-SERVC-01:"
+      new: true
+      confirm: true
+      note: "the downstream (IDD) APPLE-II undulator: gap on SR06I-MO-SERVC-01, locked phase rows, the energy <-> gap polynomial on BL06I-OP-IDD-01; period is SRC-1"
+    - name: UndulatorUpstream
+      family: InsertionDevice
+      pv: "SR06I-MO-SERVC-21:"
+      new: true
+      confirm: true
+      note: "the upstream (IDU) APPLE-II undulator: gap on SR06I-MO-SERVC-21, the energy <-> gap polynomial on BL06I-OP-IDU-01; exposes the driven energy / polarization handles (SRC-1, POL-2)"
+
+optics:
+  stage: source
+  enclosure: i06-optics
+  intro: "The soft X-ray plane-grating monochromator."
+  note: "The PGM binds GratingMonochromator, the SIX / CSX / ESM soft X-ray precedent; grating line density and cff are per-Asset settings."
+  devices:
+    - name: Monochromator
+      family: GratingMonochromator
+      pv: "BL06I-OP-PGM-01:"
+      new: true
+      confirm: true
+      note: "soft X-ray plane-grating monochromator: energy on ENERGY, the interchangeable grating (150 / 400 / 1200 l/mm) and the fixed-focus cff are per-Asset settings (MONO-1)"
+
+# ===========================================================================
+# BEAM AXES: the driven source quantities, energy and polarization
+# ===========================================================================
+
+beam-axes:
+  stage: source
+  enclosure: i06-optics
+  intro: "The two driven source quantities a soft X-ray dichroism run sets: the incident energy and, the fleet-first, the X-ray polarization."
+  note: >
+    Both are virtual axes over the source, bound to the catalog PseudoAxis Family
+    (the 2-BM beam-energy precedent). The incident energy decomposes to the PGM and
+    the APPLE-II gap; the polarization decomposes to the APPLE-II phase rows via the
+    i06 controller. Modelling polarization as a PseudoAxis sibling of energy is how
+    i06 carries the variable-polarization novelty without a new primitive; the
+    polarization partition rule is carried rule-less by default (POL-1).
+  devices:
+    - name: BeamEnergy
+      family: PseudoAxis
+      pv: {confirm: "incident-energy virtual axis (70-2200 eV) over the PGM energy and the APPLE-II gap (InsertionDeviceEnergy, Flyable); the partition rule (grating + the energy <-> gap polynomial) is MONO-1"}
+      new: true
+      confirm: true
+      note: "incident-energy pseudo-axis over the PGM and the upstream APPLE-II (the 2-BM beam-energy pattern); MONO-1"
+    - name: Polarization
+      family: PseudoAxis
+      pv: {confirm: "polarization virtual axis (InsertionDevicePolarisation); value domain LH / LV / PC / NC / LA plus third-harmonic variants, decomposing to the APPLE-II locked phase rows via the controller; rule-less by default (POL-1)"}
+      new: true
+      confirm: true
+      note: "the fleet-first polarization pseudo-axis over the upstream APPLE-II; the Pol value set is the axis domain, the controller's polarization-to-phase conversion is its partition rule, carried rule-less (POL-1, POL-2)"
+
+# ===========================================================================
+# i06-1 DIFFRACTION-DICHROISM ENDSTATION (BL06J)
+# ===========================================================================
+
+diffraction-dichroism:
+  stage: sample
+  enclosure: i06-1
+  intro: "The i06-1 endstation: resonant soft X-ray diffraction and dichroism, with a sample-orientation diffractometer, an absorption sample stage, and sample temperature control."
+  note: >
+    The diffraction-dichroism sample circles bind the catalog Goniometer (the
+    sample-orientation role), with a reciprocal-space PseudoAxis over them (the 4-ID /
+    8-ID / CSX diffractometer pattern; the Assembly is named, not built, DIFF-1). The
+    absorption stage binds LinearStage as a design-phase placeholder (STAGE-1). The
+    scattering detector and the incident-flux / drain-current monitors are not dodal
+    devices and are carried as DET-1, not invented.
+  devices:
+    - name: Diffractometer
+      family: Goniometer
+      pv: "BL06J-EA-DDIFF-01:"
+      new: true
+      confirm: true
+      note: "diffraction-dichroism sample circles (sample x/y/z, theta incidence, chi / phi orientation) plus the DET:2THETA / DET:Y detector arm; the circle roles and the Assembly(Diffractometer) binding are DIFF-1"
+    - name: ReciprocalSpace
+      family: PseudoAxis
+      pv: {confirm: "reciprocal-space virtual axis over the diffraction-dichroism circles; the inverse-kinematics partition rule is deferred as on 4-ID / 8-ID / CSX (DIFF-2)"}
+      new: true
+      confirm: true
+      note: "reciprocal-space pseudo-axis over the diffractometer (the Diffractometer reciprocal_space pattern); DIFF-2"
+    - name: AbsorptionStage
+      family: LinearStage
+      pv: "BL06J-EA-XABS-01:"
+      new: true
+      confirm: true
+      note: "the XAS / absorption sample stage (x / y / theta); design-phase placeholder, whether theta warrants Goniometer is STAGE-1"
+    - name: CoolingController
+      family: TemperatureController
+      pv: "BL06J-EA-TCTRL-02:"
+      new: true
+      confirm: true
+      note: "Lakeshore 336 sample cooling controller; reuses the graduated Family (presents Regulator); range is TEMP-1"
+    - name: HeatingController
+      family: TemperatureController
+      pv: "BL06J-EA-TCTRL-03:"
+      new: true
+      confirm: true
+      note: "Lakeshore 336 sample heating controller; reuses the graduated Family (presents Regulator); cooling-vs-heating is a per-Asset setting (TEMP-1)"
+
+# ===========================================================================
+# i06-2 PEEM ENDSTATION (BL06K), plus the i06-branch PEEM stage
+# ===========================================================================
+
+peem:
+  stage: sample
+  enclosure: i06-2
+  intro: "The PEEM (photoemission electron microscopy) endstation: a UHV sample manipulator under the electron-optical imaging column."
+  note: >
+    The PEEM UHV sample manipulators bind the graduated Manipulator Family (the
+    SIX / ESM serial multi-axis sample-manipulator precedent); the energy-slit
+    translation and axis count are per-Asset settings. The PEEM electron-optical
+    column and its magnified electron-image detector are NOT dodal devices (only the
+    manipulators are), so the PEEM imaging detector is carried as PEEM-1, the
+    ElectronMicroscope anatomy, NOT coined here: it is electron-imaging, distinct
+    from the photon Camera and from the energy-analyzing ElectronAnalyzer.
+  devices:
+    - name: PeemManipulator
+      family: Manipulator
+      pv: "BL06K-MO-PEEM-01:"
+      new: true
+      confirm: true
+      note: "the i06-2 PEEM UHV sample manipulator (x / y / phi plus the es energy-slit translation); reuses the graduated Family; axis set is MANIP-1"
+    - name: PeemSampleStage
+      family: Manipulator
+      pv: "BL06I-MO-PEEM-01:"
+      new: true
+      confirm: true
+      note: "the i06-branch PEEM sample stage (x / y / phi); reuses the graduated Family (MANIP-1)"
+
+# Cross-cutting control. i06 runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were
+# read from dodal and carried confirm (CTRL-1).
+controls:
+  intro: >
+    i06 runs on the Diamond EPICS / ophyd-async control stack, the same floor as
+    I22 / I03 / I15-1 / I11 / I24. The device handles above are bound from the
+    DiamondLightSource/dodal beamline package (its i06 / i06_shared / i06_1 / i06_2
+    factories and the device classes), carried confirm pending staff verification
+    (CTRL-1). The i06 acquisition (the coordinated energy / polarization moves over
+    the APPLE-II controller, the dichroism asymmetry sequences, the PEEM imaging, the
+    resonant diffraction scans) runs through bluesky plans; that orchestration is the
+    seam CORA's edge replaces, driving through ophyd-async / EPICS, while the live
+    APPLE-II energy <-> gap polynomial controller stays the floor (CORA names the
+    polarization and energy axes and records the moves; the IOC owns the kinematics,
+    POL-1). The PEEM electron-image stream and the diffraction detector file-writing
+    are absent from dodal (DET-1, PEEM-1); when bound, the file-writing to the Diamond
+    filestore is plumbing CORA observes, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an i06 run needs. The soft X-ray
+    beam path and the endstations run under ultra-high vacuum (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the soft X-ray optics and the UHV endstations (SUP-1)"
