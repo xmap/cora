@@ -383,7 +383,6 @@ _ALLOWED_LOOSE_FAMILIES = {
     "Laser": "staged: pump-probe laser (4-ID POLAR); model-vs-hazard open (SAMPLE-1)",
     "Rheometer": "staged: rheometer shear-cell (8-ID); rule-of-three open (SAMPLE-1)",
     "FlightPath": "staged: evacuated XPCS flight path (8-ID); rule-of-three open (XPCS-2)",
-    "GratingMonochromator": "staged: soft X-ray PGM (SIX); not a crystal DCM (MONO-1)",
     "SpectrometerArm": "staged: energy-dispersive RIXS arm (SIX); no point-Sensor fit (RIXS-1)",
     "Manipulator": "staged: UHV cryostat manipulator (SIX); no motion Family fits (SAMPLE-1)",
 }

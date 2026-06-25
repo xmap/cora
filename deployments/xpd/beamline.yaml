@@ -5,8 +5,8 @@
 # diffraction and rapid-acquisition pair distribution function (PDF / total
 # scattering): a high-energy beam through a powder or capillary sample onto a large
 # flat-panel area detector, with the detector distance setting the accessible Q. It
-# is bound to the NSLS-II Site (deployments/nsls2/site.yaml), the seventh NSLS-II
-# beamline after FXI, HXN, BMM, SRX, SIX, and CHX.
+# is bound to the NSLS-II Site (deployments/nsls2/site.yaml), the eighth NSLS-II
+# beamline after FXI, HXN, BMM, SRX, SIX, CHX, and CSX.
 #
 # STATUS: reverse-engineered, design-phase. Every value is read from public open
 # source (the bluesky profile collection NSLS2/xpd-profile-collection) or inferred,

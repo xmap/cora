@@ -23,7 +23,7 @@ SIX was reverse-engineered from the beamline's own bluesky profile collection ([
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | SRC-1 | Blocks-go-live | The EPU (`SR:C02-ID:G1A{EPU:1}`): type, period, and the polarization (phase) model. | One `InsertionDevice` Asset; the phase axis carried as a setting. | The insertion-device spec. |
-| MONO-1 | Blocks-build | The plane-grating monochromator: energy range, the three grating line densities (500 / 1200 / 1800 l/mm), and the c-value (cff) model. | A loose `GratingMonochromator` Asset with energy / cff / grating-pitch / premirror-pitch / grating-translation axes. | The monochromator model and whether it stays a distinct Family. |
+| MONO-1 | Blocks-build | The plane-grating monochromator: energy range, the three grating line densities (500 / 1200 / 1800 l/mm), and the c-value (cff) model. | A `GratingMonochromator` Asset (catalog Family) with energy / cff / grating-pitch / premirror-pitch / grating-translation axes. | The monochromator energy and grating model. |
 | OPT-1 | Nice-to-have | The mirrors (M1, M3, M4, M5, M6): coatings, stripes, and the hexapod / bender axis roles. | `Mirror` Assets with the config's PV roots; coatings unconfirmed. | The mirror specs. |
 | OPT-2 | Nice-to-have | The baffle slits, the exit slit, and the M5 mask: the internal axis maps. | `Slit` / `Aperture` Assets with base PVs; per-blade axes partial. | The slit and aperture axis maps. |
 
