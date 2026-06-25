@@ -117,6 +117,7 @@ from cora.recipe.aggregates.practice import (
 )
 from cora.recipe.aggregates.recipe import (
     DuplicateRecipeCaptureError,
+    DuplicateRecipeOutputError,
     EmptyRecipeStepsError,
     InvalidRecipeNameError,
     InvalidRecipeStepShapeError,
@@ -130,6 +131,7 @@ from cora.recipe.aggregates.recipe import (
     RecipeVersionNotFoundError,
     UnboundRecipeBindingError,
     UnboundRecipeCaptureError,
+    UnboundRecipeOutputError,
 )
 from cora.recipe.errors import UnauthorizedError
 from cora.recipe.features import (
@@ -458,6 +460,8 @@ def register_recipe_routes(app: FastAPI) -> None:
         UnboundRecipeBindingError,
         UnboundRecipeCaptureError,
         DuplicateRecipeCaptureError,
+        UnboundRecipeOutputError,
+        DuplicateRecipeOutputError,
     ):
         app.add_exception_handler(unprocessable_cls, _handle_unprocessable)
     app.add_exception_handler(UnauthorizedError, _handle_unauthorized)

@@ -179,6 +179,7 @@ def bind(
             ),
             measurements=result.measurements,
             artifacts=result.artifacts,
+            outputs=result.outputs,
         )
 
     return handler
