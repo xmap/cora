@@ -51,5 +51,6 @@ The fourth Site CORA models. Like the Diamond exercise, its beamlines are revers
 | [CHX](chx/index.md) | Reverse-engineered | coherent hard X-ray scattering (XPCS, SAXS/WAXS, GISAXS), 11-ID; the second coherent beamline after APS 8-ID, modelled from public beamline config |
 | [CSX](csx/index.md) | Reverse-engineered | coherent soft X-ray scattering and RSXS (TARDIS diffractometer), 23-ID; graduates the GratingMonochromator Family, modelled from public beamline config |
 | [XPD](xpd/index.md) | Reverse-engineered | high-energy powder diffraction and total scattering / PDF, 28-ID; the NSLS-II twin of Diamond i11 and i15-1, modelled from public beamline config |
+| [SMI](smi/index.md) | Reverse-engineered | small- and wide-angle scattering (SAXS/WAXS) with grazing incidence (GISAXS/GIWAXS), 12-ID; the NSLS-II twin of Diamond i22, modelled from public beamline config |
 
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

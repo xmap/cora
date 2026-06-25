@@ -381,6 +381,19 @@ nav:
         - Techniques: deployments/xpd/techniques.md
         - Governance: deployments/xpd/governance.md
         - Model: deployments/xpd/model.md
+      - SMI:
+        - deployments/smi/index.md
+        - Open questions: deployments/smi/questions.md
+        - The beamline:
+          - deployments/smi/equipment/index.md
+          - Source: deployments/smi/beamline.md
+          - Sample: deployments/smi/equipment/sample.md
+          - Detector: deployments/smi/equipment/detector.md
+          - Controls: deployments/smi/equipment/controls.md
+          - Inventory: deployments/smi/inventory.md
+        - Techniques: deployments/smi/techniques.md
+        - Governance: deployments/smi/governance.md
+        - Model: deployments/smi/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
