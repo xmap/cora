@@ -355,6 +355,19 @@ nav:
         - Techniques: deployments/chx/techniques.md
         - Governance: deployments/chx/governance.md
         - Model: deployments/chx/model.md
+      - XPD:
+        - deployments/xpd/index.md
+        - Open questions: deployments/xpd/questions.md
+        - The beamline:
+          - deployments/xpd/equipment/index.md
+          - Source: deployments/xpd/beamline.md
+          - Sample: deployments/xpd/equipment/sample.md
+          - Detector: deployments/xpd/equipment/detector.md
+          - Controls: deployments/xpd/equipment/controls.md
+          - Inventory: deployments/xpd/inventory.md
+        - Techniques: deployments/xpd/techniques.md
+        - Governance: deployments/xpd/governance.md
+        - Model: deployments/xpd/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
