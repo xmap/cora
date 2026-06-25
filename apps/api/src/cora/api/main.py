@@ -71,10 +71,10 @@ from cora.api._clearance_expirer import clearance_expirer_lifespan
 from cora.api._clearance_watcher import clearance_watcher_lifespan
 from cora.api._conduct_run_route import register_conduct_run_routes
 from cora.api._conduct_run_tool import register_conduct_run_tools
+from cora.api._edge_conductor import ComputeRunDriver
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
 from cora.api._inference_recorder import DelegatingInferenceRecorder
 from cora.api._procedure_watcher import procedure_watcher_lifespan
-from cora.api._reckoner import Reckoner
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
@@ -531,8 +531,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
         handlers: RunHandlers = fastapi_app.state.run
         return handlers
 
-    def _get_reckoner() -> Reckoner:
-        runtime: Reckoner = fastapi_app.state.reckoner
+    def _get_compute_run_driver() -> ComputeRunDriver:
+        runtime: ComputeRunDriver = fastapi_app.state.compute_run_driver
         return runtime
 
     def _get_deps() -> Kernel:
@@ -596,7 +596,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_calibration_tools(mcp, get_handlers=_get_calibration_handlers)
     register_campaign_tools(mcp, get_handlers=_get_campaign_handlers)
     register_agent_tools(mcp, get_handlers=_get_agent_handlers)
-    register_conduct_run_tools(mcp, get_runtime=_get_reckoner, get_deps=_get_deps)
+    register_conduct_run_tools(mcp, get_runtime=_get_compute_run_driver, get_deps=_get_deps)
     mcp_app = mcp.streamable_http_app()
 
     @asynccontextmanager
@@ -679,14 +679,15 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             app.state.supply = wire_supply(deps)
             app.state.enclosure = wire_enclosure(deps)
 
-            # Compute CONDUCT substrate: ONE ComputePort shared by the Reckoner
-            # (the L2 Run-compute runtime) AND the Procedure Conductor (via
-            # wire_operation, slice 6a's ComputeStep). Built BEFORE
+            # Compute CONDUCT substrate: ONE ComputePort shared by the
+            # ComputeRunDriver (the L2 Run-compute runtime over the
+            # EdgeConductor shell) AND the Procedure Conductor (via
+            # wire_operation, the ComputeStep arm). Built BEFORE
             # wire_operation so the Conductor closes over the SAME instance the
-            # Reckoner holds. `in_memory` substrate (default) keeps every job
+            # driver holds. `in_memory` substrate (default) keeps every job
             # Simulated; `local_process` runs real subprocesses. The single
             # `aclose` lives on app.state.compute_port in the teardown below
-            # (mirrors the shared ControlPort); the Conductor + Reckoner hold
+            # (mirrors the shared ControlPort); the Conductor + driver hold
             # BORROWED references and must NOT aclose it.
             compute_port = build_compute_port(
                 ComputePortConfig(
@@ -705,7 +706,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             app.state.campaign = wire_campaign(deps)
             app.state.agent = wire_agent(deps)
 
-            app.state.reckoner = Reckoner(
+            app.state.compute_run_driver = ComputeRunDriver(
                 compute_port=compute_port,
                 complete_run=app.state.run.complete_run,
                 abort_run=app.state.run.abort_run,

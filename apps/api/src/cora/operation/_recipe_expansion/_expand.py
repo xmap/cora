@@ -86,14 +86,16 @@ def _expand_step(step: RecipeStep, bindings: Mapping[str, Any]) -> Step:
     if isinstance(step, RecipeCaptureStep):
         return CaptureStep(address=step.address, capture_name=step.capture_name)
     if isinstance(step, RecipeComputeStep):
-        # All fields are LITERAL at 6a (no BindingRef on a compute step yet),
-        # so they pass through verbatim with no resolve_value pass. Binding a
-        # compute parameter is the deferred widening.
+        # All fields are LITERAL (no BindingRef on a compute step yet), so they
+        # pass through verbatim with no resolve_value pass; `capture_name`
+        # (slice 6c) is a literal template field carried through unresolved.
+        # Binding a compute parameter is the deferred widening.
         return ComputeStep(
             command=step.command,
             input_uris=step.input_uris,
             output_uri=step.output_uri,
             parameters=dict(step.parameters),
+            capture_name=step.capture_name,
         )
     # RecipeCheckStep: criterion is a wire-format dict (kept dict-shaped
     # in Recipe BC to avoid an Operation -> Recipe import).
@@ -163,6 +165,7 @@ def _step_to_wire(step: Step) -> dict[str, Any]:
             "input_uris": list(step.input_uris),
             "output_uri": step.output_uri,
             "parameters": dict(step.parameters),
+            "capture_name": step.capture_name,
         }
     return {
         "kind": "check",

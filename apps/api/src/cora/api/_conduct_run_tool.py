@@ -4,7 +4,7 @@ Mirrors `POST /runs/{run_id}/conduct`: accepts a job spec, returns a
 structured result summary. Failures land in the return value (not
 raised); the LLM caller inspects `succeeded` + `failure` to decide
 retry / abort / escalation. Lives at `cora.api` for the same reason as
-the route (needs the composition-root `Reckoner` + an
+the route (needs the composition-root `ComputeRunDriver` + an
 Operation-BC `JobSpec`).
 """
 
@@ -21,7 +21,7 @@ from cora.api._conduct_run_route import (
     build_conduct_job_spec,
     result_to_wire,
 )
-from cora.api._reckoner import Reckoner
+from cora.api._edge_conductor import ComputeRunDriver
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
@@ -47,7 +47,7 @@ class _ToolResult(BaseModel):
 def register(
     mcp: FastMCP,
     *,
-    get_runtime: Callable[[], Reckoner],
+    get_runtime: Callable[[], ComputeRunDriver],
     get_deps: Callable[[], Kernel],
 ) -> None:
     """Register the `conduct_run` tool on the given MCP server."""
@@ -105,7 +105,7 @@ def register(
 def register_conduct_run_tools(
     mcp: FastMCP,
     *,
-    get_runtime: Callable[[], Reckoner],
+    get_runtime: Callable[[], ComputeRunDriver],
     get_deps: Callable[[], Kernel],
 ) -> None:
     """Register all compute MCP tools (currently just conduct_run)."""

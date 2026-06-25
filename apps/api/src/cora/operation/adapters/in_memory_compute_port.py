@@ -128,6 +128,21 @@ class InMemoryComputePort:
         """
         self.set_next_result(ComputeStatus.SUCCEEDED, measurements=measurements)
 
+    def set_measurement_sequence(self, sequence: tuple[tuple[Measurement, ...], ...]) -> None:
+        """Seed a SEQUENCE of measurement-sets, one consumed per submit (FIFO).
+
+        The convergence-loop (slice 6c) consumer: a multi-pass conduct submits
+        one job per pass, so pass K's `fetch_measurements` returns the Kth
+        seeded set. The single-set `set_next_result` / `set_next_measurements`
+        already append to the same FIFO, so this is the batch convenience over
+        the existing queue (the loop seeds an offset sequence that shrinks into
+        tolerance by pass N). Seed exactly as many sets as the loop runs passes;
+        an empty queue past the last seed yields a Succeeded job with no
+        measurements (`fetch_measurements` then raises MeasurementNotFoundError).
+        """
+        for measurements in sequence:
+            self.set_next_measurements(measurements)
+
     async def submit(self, job_spec: JobSpec) -> JobId:
         self._counter += 1
         job_id = JobId(f"inmem-job-{self._counter}")

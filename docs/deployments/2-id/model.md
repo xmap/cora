@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | Beamline descriptor | [`deployments/2-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-id/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface, shared with 2-BM; `2-ID` added to its beamline list, with a pending scanning-fluorescence Practice and a pending beamline scientist |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | no new Family added; the source reuses existing Families, and the new device classes (`ZonePlate`, the fluorescence detector) are bound to loose Family strings pending registration |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | reuses `ZonePlate` (graduated with 32-ID + FXI) and `EnergyDispersiveSpectrometer` (graduated once 2-ID and 7-BM shared it); this deployment coins no new Family of its own |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; `scanning_fluorescence_microscopy` is named but not coined (see below) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 2-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
@@ -30,8 +30,6 @@ These are the parts of 2-ID this scaffold leaves out on purpose. Each is a CORA 
 - **The sister experiment hutch and the hutch roster.** The descriptor models one root Unit Asset `2-ID` with one experiment hutch (`2-ID-D`). Whether the sector adds a sister station (a 2-ID-E-class hutch) as a second hutch sub-tree, and where the shared optics sit, is held until `TOPO-1` resolves the roster. The root identity and `facility_code` binding do not migrate when it does: adding a hutch adds Component sub-trees, it does not re-home the root. This mirrors the 32-ID scaffold modelling only 32-ID-C and deferring 32-ID-B.
 
 - **Coining the scanning-fluorescence Method.** `scanning_fluorescence_microscopy` is a new modality (point-raster XRF, mechanistically unlike full-field projection). A design-phase scaffold coins no Method, so it is named and rendered unlinked, carried as a pending Practice (`METHOD-1`). It is earned into the catalog when a confirmed scenario uses it and a naming review accepts the name.
-
-- **The fluorescence-detector Family name.** The energy-dispersive detector is bound to a loose Family string (`EnergyDispersiveSpectrometer`). The eventual catalog Family name is a naming-review decision that must avoid the reserved `Detector` Role noun (a detector is the Role an Asset plays, not its Family); `EnergyDispersiveSpectrometer` is the working placeholder, not a committed name.
 
 - **Scanning fluorescence tomography as a Plan, not a Method.** A rotation over a sequence of XRF maps is a Plan setpoint over the scanning-XRF Method, the same way laminography is a tomography Plan at a tilt setpoint at 2-BM. It is not a separate Method, and it waits on a confirmed rotation axis (`ENV-1`).
 

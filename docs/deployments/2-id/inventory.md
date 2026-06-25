@@ -4,7 +4,7 @@
 
 This scaffold models the 2-ID-D scanning fluorescence microprobe hutch; the sister station and the rest of the sector are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages. The shape is generated-honest: it is authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-id/beamline.yaml) descriptor that the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) where one fits. The probe-forming zone plate (`ZonePlate`) and the energy-dispersive fluorescence detector (`EnergyDispersiveSpectrometer`) bind to loose Family strings, rendered as plain text: they are device classes not yet earned into the catalog, and no Asset is registered yet to earn them. No vendor Models are bound and no control handles are filled, because parts are not catalogued and PV names are not published (the EAA launcher is a simulation).
+Devices bind to catalog [Families](../../catalog/families.md). The probe-forming zone plate binds `ZonePlate` (graduated with 32-ID + FXI) and the energy-dispersive fluorescence detector binds `EnergyDispersiveSpectrometer` (graduated once 2-ID and 7-BM shared it). No vendor Models are bound and no control handles are filled, because parts are not catalogued and PV names are not published (the EAA launcher is a simulation).
 
 ## The Asset tree
 
@@ -15,11 +15,11 @@ Root Asset `2-ID` (`tier = Unit`, `facility_code = aps`); the modelled 2-ID-D hu
 | `2-ID` | `Unit` | (root) | bound to the APS Site; Sector 2 microprobe beamline, 2-ID-D hutch modelled |
 | `Undulator` | `Device` | InsertionDevice | Sector 2 undulator source, upstream and shared |
 | `Monochromator` | `Device` | Monochromator | double-crystal monochromator assumed; upstream optics, energy unconfirmed |
-| `ZonePlate` | `Device` | ZonePlate (loose) | probe-forming Fresnel zone plate in 2-ID-D; `zp_z` focus axis driven by EAA autofocus |
+| `ZonePlate` | `Device` | ZonePlate | probe-forming Fresnel zone plate in 2-ID-D; `zp_z` focus axis driven by EAA autofocus |
 | `SamplePositioning` | `Device` | LinearStage | sample-scanning raster stack in 2-ID-D; `samy` and `samz` evidenced |
-| `FluorescenceDetector` | `Device` | EnergyDispersiveSpectrometer (loose) | energy-dispersive XRF detector in 2-ID-D; records a spectrum per scan point |
+| `FluorescenceDetector` | `Device` | EnergyDispersiveSpectrometer | energy-dispersive XRF detector in 2-ID-D; records a spectrum per scan point |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `LinearStage`. Bound to loose Family strings (not yet in the catalog): `ZonePlate`, `EnergyDispersiveSpectrometer`. These are earned into the catalog only when a confirmed device registers and a naming review accepts the name; that does not happen in a design-phase scaffold. The detector Family name in particular must avoid the reserved `Detector` Role noun (see [Model](model.md#deliberately-not-here-yet)).
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `LinearStage`, `ZonePlate`, and `EnergyDispersiveSpectrometer`. The last two graduated when a second deployment shared each (`ZonePlate` with 32-ID + FXI; `EnergyDispersiveSpectrometer` with 2-ID + 7-BM); the `EnergyDispersiveSpectrometer` name deliberately avoids the reserved `Detector` Role noun (a detector is the Role an Asset plays, not its Family). This deployment coins no new Family of its own.
 
 ## Pending confirmations
 

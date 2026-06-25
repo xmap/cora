@@ -98,6 +98,15 @@ _DOMAIN_NOUN_ALLOWLIST: frozenset[str] = frozenset(
     }
 )
 
+# Slices exempt from the subject rule by EXACT fully-qualified name (not by
+# token). The locked orchestration name names the loop's terminal condition;
+# sibling of conduct_procedure; subject is Procedure. Scoped to the one slice
+# so the guard stays tight: a hypothetical `mark_converged` in any BC still
+# fails (the `converged` token is NOT globally allowlisted).
+_SUBJECT_EXEMPT_SLICES: frozenset[str] = frozenset(
+    {"cora.operation.features.conduct_until_converged"}
+)
+
 
 def _plural_to_singular(token: str) -> str:
     """Map common English plural forms back to singular for matching."""
@@ -164,12 +173,14 @@ def _slice_id(p: Path) -> str:
 @pytest.mark.parametrize("slice_dir", _slice_dirs(), ids=_slice_id)
 def test_slice_dir_carries_subject(slice_dir: Path) -> None:
     """Slice directory name contains at least one known subject token."""
+    bc = slice_dir.parent.parent.name
+    qualified = f"cora.{bc}.features.{slice_dir.name}"
+    if qualified in _SUBJECT_EXEMPT_SLICES:
+        return
     known = _known_subjects()
     tokens = slice_dir.name.split("_")
     if any(_normalized(token) in known or token in known for token in tokens):
         return
-    bc = slice_dir.parent.parent.name
-    qualified = f"cora.{bc}.features.{slice_dir.name}"
     pytest.fail(
         f"Slice {qualified} carries no recognized SUBJECT noun.\n"
         f"  Tokens: {tokens}\n"

@@ -1,0 +1,321 @@
+# CORA Beamline descriptor: 8-ID (APS), operational-PV first cut
+#
+# 8-ID is the X-ray Photon Correlation Spectroscopy (XPCS) beamline at APS
+# (Argonne), operational across stations 8-ID-A (optics), 8-ID-D (focusing),
+# 8-ID-E (a six-circle diffractometer endstation), and 8-ID-I (the XPCS sample and
+# coherent-detector endstation). It is bound to the APS Site
+# (deployments/aps/site.yaml). It is the second diffraction-capable APS deployment
+# after 4-ID POLAR, and it independently carries the device classes 4-ID
+# introduced (a diffractometer, a transfocator, a temperature controller, and
+# beam-position monitors), so it is the deployment that earns those into the
+# catalog.
+#
+# STATUS: first cut, reverse-engineered. Like 4-ID, this binds the real EPICS
+# control handles, read from the beamline's own Bluesky instrument repo
+# (BCDA-APS/8id-bits); the extraction is in
+# research/aps-reverse-engineering/extracted/8id-bits/. Every value is carried
+# `confirm: true` until 8-ID staff verify it, and `new: true` (not yet registered
+# in CORA). No vendor `model` is bound. Devices bind to a catalog Family where one
+# fits, or to a loose Family string where the device class is new to the catalog.
+#
+# DELIBERATELY OUT OF THIS CUT (recorded on docs/deployments/8-id/model.md): the
+# UR5 robotic sample changer (a sample-changer shape CORA does not have yet); the
+# softGlue timing fabric beyond a single TimingController; integration scenarios,
+# vendor Models, z-positions. The six-circle diffractometer is modelled as plain
+# devices; the Assembly(Diffractometer) is designed in model.md.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/8-id/questions.md.
+
+beamline:
+  name: 8-ID
+  facility: aps                 # APS, the Site-level Facility (facility_code: aps)
+  sector: "Sector 8"            # organizational label, not a registered asset
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "two undulators on the S08ID straight section (downstream DSID, upstream USID); whether canted feeding two branches is SRC-1 / TOPO-1"
+
+# Four lead-shielded stations: 8-ID-A holds the optics; 8-ID-D the focusing
+# transfocators; 8-ID-E the six-circle diffractometer endstation; 8-ID-I the XPCS
+# sample and coherent-detector endstation. PSS permit signals are APS facility
+# signals, not yet on file (PSS-1).
+enclosures:
+  - name: 8-ID-A
+    role: optics-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure signal TBD (PSS-1)"}
+  - name: 8-ID-D
+    role: optics-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure signal TBD (PSS-1)"}
+  - name: 8-ID-E
+    role: experiment-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure signal TBD (PSS-1)"}
+  - name: 8-ID-I
+    role: experiment-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure signal TBD (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the 8-ID-A optics spine and the 8-ID-D focusing
+# ===========================================================================
+
+insertion-devices:
+  stage: source
+  enclosure: 8-ID-A
+  intro: "The undulator source: a downstream and an upstream undulator on the S08ID straight section."
+  note: "Two InsertionDevice Assets; whether the pair is canted feeding two branches is SRC-1 / TOPO-1."
+  devices:
+    - name: Undulator_Downstream
+      family: InsertionDevice
+      pv: "S08ID:DSID:"
+      new: true
+      confirm: true
+      note: "downstream undulator (SRC-1)"
+    - name: Undulator_Upstream
+      family: InsertionDevice
+      pv: "S08ID:USID:"
+      new: true
+      confirm: true
+      note: "upstream undulator (SRC-1)"
+
+optics:
+  stage: source
+  enclosure: 8-ID-A
+  intro: "The monochromator, the high-heat-load mirrors, and the white-beam and mono slits."
+  note: "mono is the MN1 monochromator (energy/theta/wavelength); mr1/mr2 are the FMBO mirrors with coarse and piezo fine pitch and benders. A second in-line monochromator (idt_mono) is MONO-2."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: { energy: "8idaSoft:MN1:Energy", theta: "8idaSoft:MN1:Bragg", gap: "8idaSoft:MN1:Gap", offset: "8idaSoft:MN1:Offset", wavelength: "8idaSoft:MN1:Lambda" }
+      new: true
+      confirm: true
+      note: "main monochromator (MONO-1)"
+    - name: Mirror_1
+      family: Mirror
+      pv: { x: "8idaSoft:FMBO:m4", y: "8idaSoft:FMBO:m2", coarse_pitch: "8idaSoft:FMBO:m6", fine_pitch: "8idaSoft:FMBO:Piezo:m1", flag: "8idaSoft:CR8-A1:m5" }
+      new: true
+      confirm: true
+      note: "first FMBO mirror; coarse and piezo fine pitch (OPT-1)"
+    - name: Mirror_2
+      family: Mirror
+      pv: { x: "8idaSoft:FMBO:m3", y: "8idaSoft:FMBO:m1", coarse_pitch: "8idaSoft:FMBO:m5", fine_pitch: "8idaSoft:FMBO:Piezo:m2", bender1: "8idaSoft:FMBO:m7", bender2: "8idaSoft:FMBO:m8", flag: "8idaSoft:CR8-A1:m6" }
+      new: true
+      confirm: true
+      note: "second FMBO mirror with benders (OPT-1)"
+    - name: WhiteBeamSlit
+      family: Slit
+      pv: "8idaSoft:CR8-A1:US"
+      new: true
+      confirm: true
+      note: "white-beam slit (8-ID-A)"
+    - name: MonoSlit
+      family: Slit
+      pv: "8idaSoft:CR8-A1:US"
+      new: true
+      confirm: true
+      note: "post-mono slit; full axis map is OPT-2"
+
+focusing:
+  stage: source
+  enclosure: 8-ID-D
+  intro: "The compound refractive lens transfocators that focus the coherent beam for XPCS, and the 8-ID-D slits."
+  note: >
+    rl1 and rl2 are CRL transfocator lens stacks (ten lenses each on 8iddSoft:TRANS),
+    bound to a loose Transfocator Family that 4-ID also uses; held for gate-review
+    (OPT-3, CRL-1; see model.md).
+  devices:
+    - name: Transfocator_1
+      family: Transfocator           # loose Family (held; CRL-1, OPT-3)
+      pv: { x: "8iddSoft:TRANS:m2", y: "8iddSoft:TRANS:m1", pitch: "8iddSoft:TRANS:m4", yaw: "8iddSoft:TRANS:m3" }
+      new: true
+      confirm: true
+      lens_count: 10
+      note: "first CRL transfocator (rl1); ten lens actuators 8iddSoft:TRANS:m5-m14, summarized (OPT-3)"
+    - name: Transfocator_2
+      family: Transfocator           # loose Family (held; CRL-1, OPT-3)
+      pv: { x: "8iddSoft:TRANS:m26", y: "8iddSoft:TRANS:m25", pitch: "8iddSoft:TRANS:m28", yaw: "8iddSoft:TRANS:m27" }
+      new: true
+      confirm: true
+      lens_count: 10
+      note: "second CRL transfocator (rl2); ten lens actuators 8iddSoft:TRANS:m15-m24, summarized (OPT-3)"
+    - name: Slit_8idd
+      family: Slit
+      pv: "8iddSoft:Slit1"
+      new: true
+      confirm: true
+      note: "8-ID-D slit"
+
+# ===========================================================================
+# SAMPLE STAGE: the 8-ID-E six-circle diffractometer and the 8-ID-I XPCS sample
+# ===========================================================================
+
+diffractometer:
+  stage: sample
+  enclosure: 8-ID-E
+  intro: "The 8-ID-E six-circle Huber diffractometer endstation, with its temperature controllers and beam-position monitor."
+  note: >
+    huber is a six-circle diffractometer (mu, eta, chi, phi, nu, delta) plus x/y/z
+    sample translation, modelled as a plain device with its circle axis map; the
+    reusable Assembly(Diffractometer) is designed on model.md (DIFF-1). psic is the
+    reciprocal-space pseudo-axis layer (hklpy2). The LakeShore controllers and the
+    Sydor beam-position monitor bind loose Families that 4-ID also uses, held for
+    gate-review (see model.md).
+  devices:
+    - name: Diffractometer_SixCircle
+      family: Goniometer             # catalog Family; the sample-orientation goniometer of the Diffractometer Assembly (DIFF-1)
+      pv: { mu: "8ideSoft:CR8-E1:m6", eta: "8ideSoft:CR8-E1:m7", chi: "8ideSoft:CR8-E1:m8", phi: "8ideSoft:CR8-E1:m9", nu: "8ideSoft:CR8-E1:m4", delta: "8ideSoft:CR8-E1:m5", x: "8ideSoft:CR8-E1:m15", y: "8ideSoft:CR8-E1:m10", z: "8ideSoft:CR8-E1:m11" }
+      new: true
+      confirm: true
+      note: "six-circle Huber diffractometer; the six circles (mu/eta/chi/phi/nu/delta) confirm the Assembly slot shape (DIFF-1)"
+    - name: ReciprocalSpace
+      family: PseudoAxis
+      pv: "8ideSoft:CR8-E1:"
+      new: true
+      confirm: true
+      note: "hklpy2 reciprocal-space pseudo-axis over the six-circle geometry (psic); the partition rule is DIFF-2"
+    - name: TemperatureController_1
+      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
+      pv: "8ideSoft:LS336:1:"
+      new: true
+      confirm: true
+      note: "LakeShore 336 sample temperature controller (TEMP-1)"
+    - name: TemperatureController_2
+      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
+      pv: "8ideSoft:LS336:2:"
+      new: true
+      confirm: true
+      note: "second LakeShore 336 controller (TEMP-1)"
+    - name: BeamPositionMonitor_E
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      pv: "8ideBPM:T4U_BPM:"
+      new: true
+      confirm: true
+      note: "Sydor TetrAMM beam-position monitor at 8-ID-E (BPM-1)"
+    - name: FastShutter
+      family: Shutter
+      pv: "8ideSoft:fastshutter:"
+      new: true
+      confirm: true
+      note: "fast shutter gating the XPCS exposure (XPCS-1)"
+
+xpcs-sample:
+  stage: sample
+  enclosure: 8-ID-I
+  intro: "The XPCS sample endstation in 8-ID-I: the Aerotech sample and rheometer stages and the temperature-controlled sample holders."
+  note: >
+    sample is a three-axis Aerotech translation stage (LinearStage); the rheometer
+    is a six-axis shear-cell sample environment bound to a loose Rheometer Family.
+    The Quantum Northwest holders (qnw) are temperature-controlled sample cells.
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: { x: "8idiAerotech:m1", y: "8idiAerotech:m3", z: "8idiAerotech:m2" }
+      new: true
+      confirm: true
+      note: "Aerotech XPCS sample positioning stage"
+    - name: Rheometer
+      family: Rheometer              # loose Family (SAMPLE-1)
+      pv: { x: "8idiAerotech:m8", y: "8idiAerotech:m9", z: "8idiAerotech:m7", pitch: "8idiAerotech:m11", roll: "8idiAerotech:m10", yaw: "8idiAerotech:m12" }
+      new: true
+      confirm: true
+      note: "six-axis rheometer shear-cell sample environment (SAMPLE-1)"
+    - name: SampleHolder_QNW
+      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
+      pv: "8idiSoft:QNWenv_1:"
+      new: true
+      confirm: true
+      note: "Quantum Northwest temperature-controlled sample holder; three units QNWenv_1..3 (TEMP-1)"
+    - name: SampleSlit
+      family: Slit
+      pv: "8idiSoft:Slit1"
+      new: true
+      confirm: true
+      note: "8-ID-I sample slit"
+
+# ===========================================================================
+# DETECTION STAGE: the XPCS coherent area detectors and the flight path
+# ===========================================================================
+
+xpcs-detectors:
+  stage: detection
+  enclosure: 8-ID-I
+  intro: "The XPCS coherent-scattering area detectors (Eiger, Lambda, Rigaku), their positioning stage, and the evacuated flight path that carries the scattered beam to them."
+  note: >
+    Three area detectors on a translation stage, downstream of an evacuated flight
+    path with a beam stop. The flight path binds a loose FlightPath Family; the beam
+    stop binds the catalog BeamStop Family.
+  devices:
+    - name: Eiger4M
+      family: Camera
+      pv: "8idEiger4m:"
+      new: true
+      confirm: true
+      note: "Eiger 4M coherent-scattering detector (DET-1)"
+    - name: Lambda2M
+      family: Camera
+      pv: "8idLambda2m:"
+      new: true
+      confirm: true
+      note: "Lambda 2M detector (DET-1)"
+    - name: Rigaku3M
+      family: Camera
+      pv: "8idRigaku3m:"
+      new: true
+      confirm: true
+      note: "Rigaku 3M high-frame-rate detector (DET-1)"
+    - name: DetectorStage
+      family: LinearStage
+      pv: { x: "8idiAerotech:m4", y: "8idiAerotech:m5" }
+      new: true
+      confirm: true
+      note: "Aerotech detector positioning stage"
+    - name: FlightPath
+      family: FlightPath             # loose Family (XPCS-2)
+      pv: { length: "8idiSoft:FLIGHT:m1", swing: "8idiSoft:FLIGHT:m2", ds_x: "8idiSoft:FLIGHT:m5", ds_y: "8idiSoft:FLIGHT:m6", us: "8idiSoft:FLIGHT:m7" }
+      new: true
+      confirm: true
+      note: "evacuated flight path carrying the scattered beam to the detectors (XPCS-2)"
+    - name: BeamStop
+      family: BeamStop
+      pv: { ds_x: "8idiSoft:FLIGHT:m5", ds_y: "8idiSoft:FLIGHT:m6", us: "8idiSoft:FLIGHT:m7" }
+      new: true
+      confirm: true
+      note: "flight-tube beam stop"
+    - name: TetrAMM_QUAD1
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      pv: "8idTetra:QUAD1:"
+      new: true
+      confirm: true
+      note: "TetrAMM picoammeter / position monitor; four channels QUAD1..4 (BPM-1)"
+
+# Cross-cutting control. 8-ID runs EPICS (the floor); CORA observes and, where it
+# replaces Bluesky-style orchestration, conducts over it. The handles above were
+# read from the 8id-bits instrument config and carried confirm (CTRL-1).
+controls:
+  intro: >
+    8-ID runs on the APS EPICS control stack. The device handles above are bound
+    from the beamline's Bluesky instrument repo (BCDA-APS/8id-bits), carried
+    confirm pending staff verification (CTRL-1). XPCS acquisition timing runs on a
+    softGlueZynq FPGA fabric (8idMZ1:), modelled here as a single TimingController;
+    the full softGlue signal graph is XPCS-3.
+  triggering:
+    - name: Timing
+      family: TimingController
+      pv: "8idMZ1:SG:"
+      new: true
+      confirm: true
+      note: "softGlueZynq timing fabric driving the coherent-detector exposure gating (XPCS-3)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an 8-ID run needs. The flight
+    path and sample environments draw on vacuum and process gases (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the evacuated flight path and the XPCS sample environment (SUP-1)"

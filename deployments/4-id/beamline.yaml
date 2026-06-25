@@ -1,0 +1,493 @@
+# CORA Beamline descriptor: 4-ID POLAR (APS), operational-PV first cut
+#
+# 4-ID POLAR is the polarization and magnetic-scattering beamline at APS (Argonne),
+# operational across stations 4-ID-A (optics), 4-ID-B, 4-ID-G, and 4-ID-H. It is
+# bound to the APS Site (deployments/aps/site.yaml), the same Site as the 2-BM
+# pilot. It is CORA's first non-tomography APS deployment: diffraction, magnetism,
+# and X-ray polarization control rather than imaging.
+#
+# STATUS: first cut, reverse-engineered. Unlike the 7-BM / 32-ID design-phase
+# scaffolds, this descriptor binds the real EPICS control handles (`pv`), because
+# POLAR is operational and its handles were read from the beamline's own Bluesky
+# instrument repo (BCDA-APS/polar-bits). Provenance and the extraction are in
+# research/aps-reverse-engineering/extracted/polar-bits/. A second snapshot of the
+# same instrument (BCDA-APS/6idb-bits, a 4-ID fork carrying a grafted 6-ID-B psic
+# endstation) was cross-checked to fill a few gaps (the emag magnet axes, the Euler
+# diffractometer chi/phi circles); see docs/deployments/4-id/model.md. Every value is still
+# carried `confirm: true` until 4-ID staff verify it: a PV read from the operator's
+# config is strong evidence, not a CORA-owned fact (the docs-drift rule). Devices
+# carry `new: true` (not yet registered in CORA). No vendor `model` is bound (parts
+# are not catalogued). Devices bind to a catalog Family where one fits, or to a
+# loose Family string (rendered as plain text) where the device class is genuinely
+# new and not yet earned into the catalog.
+#
+# DELIBERATELY OUT OF THIS CUT (recorded on docs/deployments/4-id/model.md):
+#   - The 4-ID-Raman station: its devices.yml is a symlink that did not resolve in
+#     the source clone, so it did not extract. Scope + devices are TOPO-2.
+#   - Assembly(Diffractometer): the Huber diffractometers are modelled here as
+#     plain devices with axis maps; the reusable Assembly (RotaryStage circles +
+#     reciprocal-space PseudoAxis, the Microscope pattern) is designed on model.md
+#     and deferred until a scenario registers a Fixture (DIFF-1).
+#   - Integration scenarios, vendor Models, z-positions.
+#
+# PREFIX-INFERENCE CAVEATS (TOPO-3): the extractor inferred a "4-ID-D" enclosure
+# from `4iddMZ0:` (the SGZ Vortex fluorescence detector) and a "4-ID-K" from
+# `4idkepco:` (a Kepco magnet power supply; "kepco" is a vendor, not a station).
+# Neither is treated as a real enclosure here; both devices are placed in their
+# best-guess station with a confirm note.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/4-id/questions.md.
+
+beamline:
+  name: 4-ID POLAR
+  facility: aps                 # APS, the Site-level Facility (facility_code: aps)
+  sector: "Sector 4"            # organizational label, not a registered asset
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "undulator pair on the S04ID straight section (PolarUndulatorPair, prefix S04ID:); periods and gaps unconfirmed (SRC-1)"
+
+# Four lead-shielded stations: 4-ID-A holds the polarization and beam-defining
+# optics; 4-ID-B, 4-ID-G, and 4-ID-H are the experimental stations (4-ID-G carries
+# the diffractometers). PSS permit signals are APS facility signals, not yet on
+# file (PSS-1). The Raman station is out of this cut (TOPO-2).
+enclosures:
+  - name: 4-ID-A
+    role: optics-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure signal TBD (PSS-1)"}
+  - name: 4-ID-B
+    role: experiment-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure signal TBD (PSS-1)"}
+  - name: 4-ID-G
+    role: experiment-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure signal TBD (PSS-1)"}
+  - name: 4-ID-H
+    role: experiment-hutch
+    facility_code: aps
+    permit_signal: {confirm: "APS PSS search-and-secure signal TBD (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the 4-ID-A optics spine (source, polarization, monochromator)
+# ===========================================================================
+
+insertion-devices:
+  stage: source
+  enclosure: 4-ID-A
+  intro: "The undulator source: a pair on the S04ID straight section feeding the POLAR optics."
+  note: "Modelled as one InsertionDevice Asset for the pair (PolarUndulatorPair); the period and gap detail is SRC-1, and whether to split it into two Assets is SRC-2."
+  devices:
+    - name: Undulators
+      family: InsertionDevice
+      pv: "S04ID:"
+      new: true
+      confirm: true
+      note: "undulator pair (PolarUndulatorPair); energy-tracking source (SRC-1)"
+
+polarization-optics:
+  stage: source
+  enclosure: 4-ID-A
+  intro: "The phase retarders that set the X-ray polarization state: POLAR's defining capability. Three diamond phase-retarder stages, energy-tracking, on the 4idam motor crate."
+  note: >
+    pr1, pr2, pr3 are PRDevice / PRDeviceBase stages (each th/x/y). PhaseRetarder
+    is a loose Family: the polarization-control device class is genuinely new to
+    CORA and not yet earned into the catalog (POL-1, FAM-1).
+  devices:
+    - name: PhaseRetarder_1
+      family: PhaseRetarder          # loose Family (POL-1)
+      pv: { th: "4idam4", x: "4idam1", y: "4idam2" }
+      new: true
+      confirm: true
+      note: "diamond phase retarder, energy-tracking (PRDevice); polarization control (POL-1)"
+    - name: PhaseRetarder_2
+      family: PhaseRetarder          # loose Family (POL-1)
+      pv: { th: "4idam9", x: "4idam6", y: "4idam7" }
+      new: true
+      confirm: true
+      note: "second phase retarder (PRDevice); polarization control (POL-1)"
+    - name: PhaseRetarder_3
+      family: PhaseRetarder          # loose Family (POL-1)
+      pv: { th: "4idam12", x: "4idam10", y: "4idam11" }
+      new: true
+      confirm: true
+      note: "third phase retarder (PRDeviceBase); polarization control (POL-1)"
+
+monochromator:
+  stage: source
+  enclosure: 4-ID-A
+  intro: "The vertical double-crystal monochromator (4idVDCM) and its white-beam and mono slits."
+  note: "mono is the VDCM with a crystal-select axis; mono_feedback is a beam-stabilization loop folded into the Monochromator note (MONO-1)."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: { th: "4idVDCM:m1", crystal_select: "4idVDCM:m2", y2: "4idVDCM:m3", thf2: "4idVDCM:m4", chi2: "4idVDCM:m5" }
+      new: true
+      confirm: true
+      note: "vertical DCM with crystal-select; energy range and saved positions unconfirmed (MONO-1)"
+    - name: WhiteBeamSlit
+      family: Slit
+      pv: { hor: "4idVDCM:m9", diag: "4idVDCM:m10", pitch: "4idVDCM:m11", yaw: "4idVDCM:m12" }
+      new: true
+      confirm: true
+      note: "white-beam slit upstream of the mono (4idVDCM crate)"
+    - name: MonoSlit
+      family: Slit
+      pv: { top: "4idVDCM:m14", bot: "4idVDCM:m13", inb: "4idVDCM:m15", out: "4idVDCM:m16" }
+      new: true
+      confirm: true
+      note: "post-mono slit (4idVDCM crate)"
+
+front-end-optics:
+  stage: source
+  enclosure: 4-ID-B
+  intro: "The diamond window, toroidal pre-focusing mirror, and HHL (high-heat-load) mirror that condition the beam into the experimental stations."
+  note: "hhl_mirror is a multi-axis HHL mirror (bend, pitch, ellipticity); t_mirror is a toroidal mirror. Window/Mirror are catalog Families."
+  devices:
+    - name: DiamondWindow
+      family: Window
+      pv: { x: "4idbSoft:m1", y: "4idbSoft:m2" }
+      new: true
+      confirm: true
+      note: "diamond window on a 2-axis stage"
+    - name: ToroidalMirror
+      family: Mirror
+      pv: "4idbToro:"
+      new: true
+      confirm: true
+      note: "toroidal pre-focusing mirror (OPT-1)"
+    - name: HHLMirror
+      family: Mirror
+      pv: { y: "4idHHLM:m1", x: "4idHHLM:pm1", pitch: "4idHHLM:pm2", curvature: "4idHHLM:pm3", ellipticity: "4idHHLM:pm4", us_bend: "4idHHLM:m4", ds_bend: "4idHHLM:m5" }
+      new: true
+      confirm: true
+      note: "high-heat-load bendable mirror; piezo fine axes plus benders (OPT-1)"
+
+beam-conditioning:
+  stage: source
+  enclosure: 4-ID-G
+  intro: "The compound refractive lens transfocator and the per-station filters and KB mirrors shared across the experimental branches."
+  note: >
+    crl is a CRL transfocator (Transfocator, a loose Family, FAM-1, OPT-2). The KB
+    mirrors (bkb/gkb/hkb) are per-station Kirkpatrick-Baez focusing pairs bound to
+    the Mirror Family; their internal axis maps are OPT-3.
+  devices:
+    - name: Transfocator
+      family: Transfocator           # loose Family (held; CRL-1, OPT-2)
+      pv: "4idPyCRL:CRL4ID:"
+      new: true
+      confirm: true
+      note: "compound refractive lens transfocator, energy-tracking; serves 4-ID-G and 4-ID-H (OPT-2)"
+    - name: KBMirror_B
+      family: Mirror
+      pv: { rot: "4idbSoft:m15", x: "4idbSoft:m16" }
+      new: true
+      confirm: true
+      enclosure: 4-ID-B
+      note: "4-ID-B KB focusing mirror (bkb); full axis map is OPT-3"
+    - name: KBMirror_G
+      family: Mirror
+      pv: "4idgKB:"
+      new: true
+      confirm: true
+      note: "4-ID-G KB focusing mirror (gkb, GKBDevice); axis map is OPT-3"
+    - name: KBMirror_H
+      family: Mirror
+      pv: "4idhKB:"
+      new: true
+      confirm: true
+      enclosure: 4-ID-H
+      note: "4-ID-H KB focusing mirror (hkb, HKBDevice); axis map is OPT-3"
+
+filters:
+  stage: source
+  enclosure: 4-ID-B
+  intro: "The per-station attenuator filter banks."
+  note: "APSFilter / AVSfilters banks; bound to the Filter catalog Family."
+  devices:
+    - name: Filter_B
+      family: Filter
+      pv: "4idbSoft:filter:"
+      new: true
+      confirm: true
+      note: "4-ID-B filter bank"
+    - name: Filter_G
+      family: Filter
+      pv: "4idPyFilter:FL1:"
+      new: true
+      confirm: true
+      enclosure: 4-ID-G
+      note: "4-ID-G filter bank"
+    - name: Filter_H
+      family: Filter
+      pv: "4idPyFilter:FL2:"
+      new: true
+      confirm: true
+      enclosure: 4-ID-H
+      note: "4-ID-H filter bank"
+
+# ===========================================================================
+# SAMPLE STAGE: the diffractometers and sample environments per station
+# ===========================================================================
+
+diffractometers:
+  stage: sample
+  enclosure: 4-ID-G
+  intro: "The 4-ID-G diffractometers: a Huber Eulerian cradle and a high-pressure diffractometer. These are POLAR's diffraction core."
+  note: >
+    huber_euler and huber_hp are modelled as plain multi-axis devices with their
+    circle axis maps. The reusable Assembly(Diffractometer) (omega/chi/phi
+    RotaryStage circles plus a reciprocal-space PseudoAxis, the Microscope-assembly
+    pattern) is in the catalog as an Assembly composing the Goniometer Family, with
+    an 8-ID Fixture scenario; the 4-ID Fixture is the follow-on (DIFF-1). Meanwhile
+    these devices bind the Goniometer Family directly.
+  devices:
+    - name: Diffractometer_Euler
+      family: Goniometer             # catalog Family; the sample-orientation goniometer of the Diffractometer Assembly (DIFF-1)
+      pv: { chi: "4idgSoft:m37", phi: "4idgSoft:m38", x: "4idgSoft:m40", y: "4idgSoft:m41", z: "4idgSoft:m42" }
+      new: true
+      confirm: true
+      note: "Huber Eulerian-cradle diffractometer (CradleDiffractometer); chi and phi circles added from the 6idb-bits snapshot, the full circle set is DIFF-1"
+    - name: Diffractometer_HighPressure
+      family: Goniometer             # catalog Family; the sample-orientation goniometer of the Diffractometer Assembly (DIFF-1)
+      pv: { chi: "4idgSoft:m5", phi: "4idgSoft:m6", sample_tilt: "4idgSoft:m11", x: "4idgSoft:m12", y: "4idgSoft:m14", z: "4idgSoft:m13" }
+      new: true
+      confirm: true
+      note: "high-pressure diffractometer (HPDiffractometer); reciprocal-space axis via hklpy2 (DIFF-1, DIFF-2)"
+    - name: PolarizationAnalyzer
+      family: PolarizationAnalyzer   # loose Family (POL-2, FAM-1)
+      pv: { th: "4idbSoft:m9", y: "4idbSoft:m17" }
+      new: true
+      confirm: true
+      enclosure: 4-ID-B
+      note: "polarization analyzer crystal stage (PolAnalyzer); analyzes scattered-beam polarization (POL-2)"
+
+sample-environment:
+  stage: sample
+  enclosure: 4-ID-B
+  intro: "The sample-environment apparatus: superconducting magnets, temperature controllers, and the sample positioning tables. POLAR's magnetic-scattering signature."
+  note: >
+    Magnets (bmag/emag 2 T, magnet911, the Kepco-driven gmag) bind a loose Magnet
+    Family (MAG-1, FAM-1); the LakeShore 336/340 controllers bind a loose
+    TemperatureController Family (TEMP-1, FAM-1). Tables bind the catalog Table
+    Family. gmag was misinferred as a "4-ID-K" enclosure from the Kepco vendor
+    prefix; it is placed at 4-ID-G pending confirmation (TOPO-3).
+  devices:
+    - name: Magnet_2T_B
+      family: Magnet                 # loose Family (MAG-1)
+      pv: {confirm: "Magnet2T (bmag); control PV not in the extracted config (MAG-1)"}
+      new: true
+      confirm: true
+      note: "2 T sample magnet at 4-ID-B (MAG-1)"
+    - name: Magnet_2T_E
+      family: Magnet                 # loose Family (MAG-1)
+      pv: { mrot: "4idb:m20", mx: "4idb:m22", my: "4idb:m21", srot: "4idb:m19", sx: "4idb:m18", sy: "4idb:m17" }
+      new: true
+      confirm: true
+      note: "second 2 T sample magnet at 4-ID-B (emag), with magnet rotate/translate and sample rotate/translate axes from the 6idb-bits snapshot; the field-control PV is still pending (MAG-1)"
+    - name: Magnet_9T_H
+      family: Magnet                 # loose Family (MAG-1)
+      pv: "4idhSoft:"
+      new: true
+      confirm: true
+      enclosure: 4-ID-H
+      note: "high-field magnet at 4-ID-H (Magnet911); field range unconfirmed (MAG-1)"
+    - name: Magnet_Kepco_G
+      family: Magnet                 # loose Family (MAG-1)
+      pv: "4idkepco:"
+      new: true
+      confirm: "station is a guess: the 4idkepco prefix is a Kepco power-supply vendor name, not a station (TOPO-3, MAG-1)"
+      enclosure: 4-ID-G
+      note: "Kepco-driven electromagnet (gmag); station and field unconfirmed (TOPO-3, MAG-1)"
+    - name: TemperatureController_336
+      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
+      pv: "4idgSoft:LS336:TC1:"
+      new: true
+      confirm: true
+      enclosure: 4-ID-G
+      note: "LakeShore 336 sample temperature controller (TEMP-1)"
+    - name: TemperatureController_340
+      family: TemperatureController   # loose Family (held; ENV-1, TEMP-1)
+      pv: "4idgSoftX:LS340:TC1:"
+      new: true
+      confirm: true
+      enclosure: 4-ID-G
+      note: "LakeShore 340 sample temperature controller (TEMP-1)"
+    - name: SampleTable_B
+      family: Table
+      pv: { x_us: "4idbSoft:m5", x_ds: "4idbSoft:m8", y_us: "4idbSoft:m4", y_ds_in: "4idbSoft:m7", y_ds_out: "4idbSoft:m6" }
+      new: true
+      confirm: true
+      note: "4-ID-B sample positioning table (Table4idb)"
+    - name: SampleTable_H
+      family: Table
+      pv: { x_us: "4idhSoft:m1", x_ds: "4idhSoft:m2", y_us: "4idhSoft:m3", y_ds: "4idhSoft:m4" }
+      new: true
+      confirm: true
+      enclosure: 4-ID-H
+      note: "4-ID-H sample positioning table (Table4idh)"
+    - name: PumpProbeLaser
+      family: Laser                  # loose Family (SAMPLE-1, FAM-1)
+      pv: "4idhSoft:LQE1:"
+      new: true
+      confirm: true
+      enclosure: 4-ID-H
+      note: "Ventus laser for pump-probe at 4-ID-H; whether CORA models or only hazards it is SAMPLE-1"
+
+station-slits:
+  stage: sample
+  enclosure: 4-ID-B
+  intro: "The per-station sample-defining slits."
+  note: "Standard four-blade slits on each station's soft IOC; Slit catalog Family."
+  devices:
+    - name: SampleSlit_B
+      family: Slit
+      pv: { top: "4idbSoft:m11", bot: "4idbSoft:m10", inb: "4idbSoft:m12", out: "4idbSoft:m13" }
+      new: true
+      confirm: true
+      note: "4-ID-B sample slit"
+    - name: SampleSlit_G
+      family: Slit
+      pv: { top: "4idgSoft:m44", bot: "4idgSoft:m43", inb: "4idgSoft:m45", out: "4idgSoft:m46" }
+      new: true
+      confirm: true
+      enclosure: 4-ID-G
+      note: "4-ID-G sample slit"
+    - name: SampleSlit_H
+      family: Slit
+      pv: { top: "4idhSoft:m11", bot: "4idhSoft:m10", inb: "4idhSoft:m13", out: "4idhSoft:m12" }
+      new: true
+      confirm: true
+      enclosure: 4-ID-H
+      note: "4-ID-H sample slit"
+
+# ===========================================================================
+# DETECTION STAGE: area detectors, beam-position monitors, counters
+# ===========================================================================
+
+area-detectors:
+  stage: detection
+  enclosure: 4-ID-G
+  intro: "The area and point detectors: an Eiger 1M, flag-view cameras, and a Vortex fluorescence detector."
+  note: "Eiger binds the Camera Family (area detector); the Vimba flag cameras are alignment views. sgz_vortex was misinferred as a 4-ID-D enclosure (4iddMZ0 prefix); placed at 4-ID-G pending confirmation (TOPO-3, DET-2)."
+  devices:
+    - name: Eiger1M
+      family: Camera
+      pv: "4idEiger:"
+      new: true
+      confirm: true
+      note: "Eiger 1M area detector (DET-1)"
+    - name: FlagCamera_HHL
+      family: Camera
+      pv: "4idaPostMirrBeam:"
+      new: true
+      confirm: true
+      enclosure: 4-ID-A
+      note: "post-mirror beam-view flag camera (Vimba)"
+    - name: FlagCamera_Mono
+      family: Camera
+      pv: "4idaPostMonoBeam:"
+      new: true
+      confirm: true
+      enclosure: 4-ID-A
+      note: "post-mono beam-view flag camera (Vimba)"
+    - name: VortexFluorescence
+      family: BeamPositionMonitor     # loose Family, held; placeholder classification for a fluorescence point detector pending DET-2 (not the graduated EnergyDispersiveSpectrometer)
+      pv: "4iddMZ0:"
+      new: true
+      confirm: "station is a guess: the 4iddMZ0 prefix was misread as a 4-ID-D enclosure (TOPO-3, DET-2)"
+      note: "SGZ Vortex fluorescence detector; classification and station unconfirmed (DET-2, TOPO-3)"
+
+beam-position-monitors:
+  stage: detection
+  enclosure: 4-ID-G
+  intro: "The beam-position and intensity monitors (XBPMs, Sydor electrometers, TetrAMM, I0 chambers) that diagnose beam position and normalize intensity."
+  note: >
+    These bind a loose BeamPositionMonitor Family (already loose at 2-BM, so this
+    is the second deployment that references it; BPM-1, FAM-1). They present the
+    Sensor Role when graduated.
+  devices:
+    - name: XBPM_G
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      pv: { x: "4idgSoft:m48", y: "4idgSoft:m47" }
+      new: true
+      confirm: true
+      note: "4-ID-G X-ray beam-position monitor"
+    - name: XBPM_H
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      pv: { x: "4idhSoft:m6", y: "4idhSoft:m5" }
+      new: true
+      confirm: true
+      enclosure: 4-ID-H
+      note: "4-ID-H X-ray beam-position monitor"
+    - name: Sydor_G
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      pv: "4idgSydor:T4U_BPM:"
+      new: true
+      confirm: true
+      note: "4-ID-G Sydor electrometer beam-position monitor"
+    - name: Sydor_H
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      pv: "4idhSydor:T4U_BPM:"
+      new: true
+      confirm: true
+      enclosure: 4-ID-H
+      note: "4-ID-H Sydor electrometer beam-position monitor"
+    - name: TetrAMM_B
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1/FLUX-1, BPM-1)
+      pv: "4idbSoft:TetrAMM:"
+      new: true
+      confirm: true
+      enclosure: 4-ID-B
+      note: "4-ID-B TetrAMM picoammeter / position monitor"
+
+counters:
+  stage: detection
+  enclosure: 4-ID-B
+  intro: "The scaler / counter channels shared across the stations."
+  note: "CTR8-based scalers; bound to the GenericProbe Family (the APS facility-scope counter probe)."
+  devices:
+    - name: Scaler_1
+      family: GenericProbe
+      pv: "4idCTR8_1:scaler1"
+      new: true
+      confirm: true
+      note: "CTR8 scaler channel set 1 (shared B/G/H)"
+    - name: Scaler_2
+      family: GenericProbe
+      pv: "4idCTR8_1:scaler2"
+      new: true
+      confirm: true
+      note: "CTR8 scaler channel set 2 (shared B/G/H)"
+
+# Cross-cutting control. 4-ID runs EPICS (the floor); CORA observes and, where it
+# replaces Bluesky-style scan and alignment orchestration, conducts over it. The
+# PV handles above were read from the beamline's polar-bits instrument config and
+# are carried confirm pending staff verification (CTRL-1).
+controls:
+  intro: >
+    4-ID POLAR runs on the APS EPICS control stack, like 2-BM. Unlike the design-
+    phase scaffolds, the device control handles above are bound from the beamline's
+    own Bluesky instrument repo (BCDA-APS/polar-bits) rather than left empty, but
+    they remain confirm-pending: a value read from the operator's config is evidence
+    to verify with staff, not a CORA-owned fact (CTRL-1). The preamplifiers
+    (LocalPreAmp, a loose Preamplifier Family, PREAMP-1), the lock-in (srs810), the
+    LabJacks, and the high-pressure-cell controllers (Pace PC1/PC2) are present in
+    the config but not modelled as Assets in this cut (SAMPLE-2).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a 4-ID run needs. Carried pending
+    in this first cut; the cryogen and process-gas supplies for the magnet and
+    high-pressure environments are unconfirmed (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidHelium
+      note: "for the superconducting magnets and low-temperature sample environment (SUP-1)"
+    - kind: LiquidNitrogen
+      note: "sample cooling (SUP-1)"

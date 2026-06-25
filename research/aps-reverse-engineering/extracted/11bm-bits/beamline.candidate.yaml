@@ -1,0 +1,83 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: 11-BM
+  facility: aps
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 11-BM-B
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: shutter
+    family: Shutter
+    new: true
+    confirm: no prefix and no resolvable axes; enclosure unresolved from prefix or
+      labels; ophyd class 'SimulatedApsPssShutterWithStatus' not found in devices/*.py
+    labels:
+    - shutters
+    - baseline
+    source_class: apstools.devices.SimulatedApsPssShutterWithStatus
+  - name: slew
+    family: SlewDevice
+    pv: '11bmb:'
+    enclosure: 11-BM-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''SlewDevice''; needs a CORA Family; mda_root:
+      non-literal or absent component suffix'
+    labels:
+    - slew
+    source_class: bm11_b.devices.slew_scan_devices.SlewDevice
+  - name: spy_lambda
+    family: SpyLambda
+    pv: '11bmbLambda:'
+    enclosure: 11-BM-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''SpyLambda''; needs a CORA Family'
+    source_class: bm11_b.devices.slew_scan_devices.SpyLambda
+  - name: tth
+    family: EpicsMotor
+    pv: 11bmb:m28
+    enclosure: 11-BM-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; ophyd class
+      ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: spinner
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    source_class: ophyd.EpicsSignal
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: scaler1
+    family: GenericProbe
+    pv: 11bmb:scaler1
+    enclosure: 11-BM-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      ophyd class ''ScalerCH'' not found in devices/*.py'
+    labels:
+    - scalers
+    - detectors
+    role_hints:
+    - Detector
+    source_class: ophyd.scaler.ScalerCH

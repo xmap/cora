@@ -22,8 +22,8 @@ facility:
   display_name: aps
   kind: Site
   institution: Argonne
-  sectors: [Sector 2, Sector 7, Sector 32, Sector 19]
-  beamlines: [2-BM, 2-ID, 7-BM, 32-ID, 19-BM]
+  sectors: [Sector 2, Sector 4, Sector 7, Sector 8, Sector 32, Sector 19]
+  beamlines: [2-BM, 2-ID, 7-BM, 32-ID, 19-BM, 4-ID, 8-ID]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. A method
 # that exists in the Catalog renders as a link; a method still pending in the
@@ -71,6 +71,19 @@ practices:
   # raster XRF), distinct from the projection-tomography Methods above, so its
   # Method is not yet in the catalog; the practice renders unlinked, pending (METHOD-1).
   - {name: 2ID_scanning_fluorescence_microscopy_practice, method: scanning_fluorescence_microscopy, pending: true, note: "2-ID-D sample-scanning XRF mapping; Method not yet in catalog (METHOD-1)"}
+  # 4-ID POLAR Practices (first cut). POLAR is a diffraction / magnetism /
+  # polarization beamline; its Methods are not in the imaging-heritage catalog and
+  # render unlinked, carried pending until a technique enters the pilot scope (TECH-1).
+  - {name: 4ID_diffraction_practice, method: diffraction, pending: true, note: "single-crystal X-ray diffraction on the Huber diffractometers; Method not yet in catalog (TECH-1)"}
+  - {name: 4ID_magnetic_scattering_practice, method: magnetic_scattering, pending: true, note: "resonant magnetic scattering in field and at low temperature; Method not yet in catalog (TECH-1)"}
+  - {name: 4ID_xmcd_practice, method: xmcd, pending: true, note: "X-ray magnetic circular dichroism via the phase retarders; Method not yet in catalog (TECH-1)"}
+  - {name: 4ID_resonant_scattering_practice, method: resonant_scattering, pending: true, note: "energy-resonant scattering across an absorption edge; Method not yet in catalog (TECH-1)"}
+  # 8-ID XPCS Practices (first cut). Coherent-scattering correlation spectroscopy
+  # and the 8-ID-E diffraction; Methods not in the imaging-heritage catalog, render
+  # unlinked, carried pending until a technique enters scope (TECH-1).
+  - {name: 8ID_xpcs_practice, method: xpcs, pending: true, note: "X-ray photon correlation spectroscopy; coherent-scattering time series on the area detectors; Method not yet in catalog (TECH-1)"}
+  - {name: 8ID_saxs_practice, method: small_angle_scattering, pending: true, note: "small-angle scattering on the XPCS detectors; Method not yet in catalog (TECH-1)"}
+  - {name: 8ID_diffraction_practice, method: diffraction, pending: true, note: "six-circle diffraction at 8-ID-E; shares the 4-ID diffraction Method (TECH-1)"}
 
 # Access BC Actors that are conceptually facility-wide at APS. Actor display
 # names live in actor_profile (the PII vault), not in event-sourced Actor state.
@@ -90,6 +103,8 @@ actors:
   - {name: Real ESRB membership, kind: human, pending: true, note: "vs committee-as-actor"}
   - {name: 7-BM Beamline Scientist, kind: human, pending: true, note: "7-BM beamline-bound staff"}
   - {name: 2-ID Beamline Scientist, kind: human, pending: true, note: "2-ID scanning fluorescence microprobe (Sector 2), 2-ID-D hutch; pre-build, operator pool TBD"}
+  - {name: 4-ID Beamline Scientist, kind: human, pending: true, note: "4-ID POLAR beamline-bound staff; operator pool TBD"}
+  - {name: 8-ID Beamline Scientist, kind: human, pending: true, note: "8-ID XPCS beamline-bound staff; operator pool TBD"}
 
 # Agent BC Agents seeded at this deployment. Each Agent's id is shared with an
 # Access BC Actor (kind=agent) via a cross-BC atomic write. This list mirrors

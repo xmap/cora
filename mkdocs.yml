@@ -160,6 +160,32 @@ nav:
         - Techniques: deployments/32-id/techniques.md
         - Governance: deployments/32-id/governance.md
         - Model: deployments/32-id/model.md
+      - 4-ID POLAR:
+        - deployments/4-id/index.md
+        - Open questions: deployments/4-id/questions.md
+        - The beamline:
+          - deployments/4-id/equipment/index.md
+          - Source: deployments/4-id/beamline.md
+          - Sample: deployments/4-id/equipment/sample.md
+          - Detector: deployments/4-id/equipment/detector.md
+          - Controls: deployments/4-id/equipment/controls.md
+          - Inventory: deployments/4-id/inventory.md
+        - Techniques: deployments/4-id/techniques.md
+        - Governance: deployments/4-id/governance.md
+        - Model: deployments/4-id/model.md
+      - 8-ID:
+        - deployments/8-id/index.md
+        - Open questions: deployments/8-id/questions.md
+        - The beamline:
+          - deployments/8-id/equipment/index.md
+          - Source: deployments/8-id/beamline.md
+          - Sample: deployments/8-id/equipment/sample.md
+          - Detector: deployments/8-id/equipment/detector.md
+          - Controls: deployments/8-id/equipment/controls.md
+          - Inventory: deployments/8-id/inventory.md
+        - Techniques: deployments/8-id/techniques.md
+        - Governance: deployments/8-id/governance.md
+        - Model: deployments/8-id/model.md
     - MAX IV:
       - deployments/maxiv/index.md
       - TomoWise:

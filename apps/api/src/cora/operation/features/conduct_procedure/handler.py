@@ -178,6 +178,7 @@ def bind(
                 result.actuation_kind.value if result.actuation_kind is not None else None
             ),
             measurements=result.measurements,
+            artifacts=result.artifacts,
         )
 
     return handler

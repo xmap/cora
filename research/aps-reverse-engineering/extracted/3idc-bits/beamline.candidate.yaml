@@ -1,0 +1,130 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: 3-ID
+  facility: aps
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 3-ID-A
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+- name: 3-ID-S
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+- name: 3-ID-X
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: shutterc
+    family: Shutter
+    pv: '3ida:shutterC:'
+    enclosure: 3-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      ophyd class ''ApsPssShutter'' not found in devices/*.py'
+    labels:
+    - shutters
+    - baseline
+    source_class: apstools.devices.ApsPssShutter
+  - name: sample_stage
+    family: mb_creator
+    new: true
+    confirm: 'no prefix and no resolvable axes; family is the ophyd class name ''mb_creator'';
+      needs a CORA Family; enclosure unresolved from prefix or labels; factory device
+      (ad_creator): plugins and file paths need a human; ophyd class ''mb_creator''
+      not found in devices/*.py'
+    labels:
+    - baseline
+    source_class: apstools.devices.motor_factory.mb_creator
+  - name: detector_stage
+    family: mb_creator
+    new: true
+    confirm: 'no prefix and no resolvable axes; family is the ophyd class name ''mb_creator'';
+      needs a CORA Family; enclosure unresolved from prefix or labels; factory device
+      (ad_creator): plugins and file paths need a human; ophyd class ''mb_creator''
+      not found in devices/*.py'
+    labels:
+    - baseline
+    source_class: apstools.devices.motor_factory.mb_creator
+  - name: laser_optics
+    family: LaserOptics
+    pv: '3idxps1:'
+    enclosure: 3-ID-X
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''LaserOptics''; needs a CORA Family; in_position:
+      non-literal or absent component suffix; out_position: non-literal or absent
+      component suffix; tolerance: non-literal or absent component suffix; settle_time:
+      non-literal or absent component suffix; out_status: non-literal or absent component
+      suffix'
+    labels:
+    - baseline
+    source_class: id3c.devices.laser_optics.LaserOptics
+  - name: IC0_B_VDC
+    family: EpicsSignalRO
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignalRO';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignalRO' not found in devices/*.py
+    labels:
+    - monitor
+    source_class: ophyd.EpicsSignalRO
+  - name: IC0_C_VDC
+    family: EpicsSignalRO
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignalRO';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignalRO' not found in devices/*.py
+    labels:
+    - monitor
+    source_class: ophyd.EpicsSignalRO
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: eiger2
+    family: Camera
+    pv: 'dp_eiger_sn:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      enclosure unresolved from prefix or labels; factory device (ad_creator): plugins
+      and file paths need a human; ophyd class ''ad_creator'' not found in devices/*.py'
+    labels:
+    - area_detector
+    - detectors
+    role_hints:
+    - Detector
+    source_class: apstools.devices.ad_creator
+  - name: scaler_c
+    family: GenericProbe
+    pv: 3ids:scaler1
+    enclosure: 3-ID-S
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      ophyd class ''ScalerCH'' not found in devices/*.py'
+    labels:
+    - scalers
+    - detectors
+    role_hints:
+    - Detector
+    source_class: ophyd.scaler.ScalerCH
+  - name: scaler_b
+    family: GenericProbe
+    pv: 3ida:scaler1
+    enclosure: 3-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      ophyd class ''ScalerCH'' not found in devices/*.py'
+    labels:
+    - scalers
+    - detectors
+    role_hints:
+    - Detector
+    source_class: ophyd.scaler.ScalerCH

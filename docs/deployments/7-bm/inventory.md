@@ -30,10 +30,10 @@ Root Asset `7-BM` (`tier = Unit`, `facility_code = aps`); sub-systems nest below
 | `TomographyCamera` | `Device` | Camera | area camera via visible optics |
 | `HighSpeedCamera` | `Device` | Camera | high-speed movie camera (Photron Nova S16) |
 | `Photodiode` | `Device` | **Photodiode** | PIN diode for time-resolved radiography; presents the Sensor Role |
-| `EnergyDispersiveSpectrometer` | `Device` | **EnergyDispersiveSpectrometer** | germanium energy-dispersive detector; presents the Sensor Role |
+| `EnergyDispersiveSpectrometer` | `Device` | EnergyDispersiveSpectrometer | germanium energy-dispersive detector; presents the Sensor Role |
 | `Timing` | `Device` | TimingController | two DG645 generators plus softGlue; ring-sync and top-up inhibit |
 
-Reused catalog Families (no new Family needed): `Beam`, `Shutter`, `Filter`, `Slit`, `Monochromator`, `Mirror`, `RotaryStage`, `LinearStage`, `Scintillator`, `Camera`, `TimingController`. The tomography path (scintillator plus visible optics plus area camera) is the same shape as 2-BM and could later compose the cross-facility `Microscope` Assembly. The four loose families (`Chopper`, `FlowController`, `Photodiode`, `EnergyDispersiveSpectrometer`) are bound by design intent and earned into the catalog only when a confirmed device and the naming review settle them; this mirrors how TomoWISE carried `HeatAbsorber` and `SlipRing`.
+Reused catalog Families (no new Family needed): `Beam`, `Shutter`, `Filter`, `Slit`, `Monochromator`, `Mirror`, `RotaryStage`, `LinearStage`, `Scintillator`, `Camera`, `TimingController`, and `EnergyDispersiveSpectrometer` (graduated once 2-ID and 7-BM shared it). The tomography path (scintillator plus visible optics plus area camera) is the same shape as 2-BM and could later compose the cross-facility `Microscope` Assembly. The three loose families (`Chopper`, `FlowController`, `Photodiode`) are bound by design intent and earned into the catalog only when a confirmed device and the naming review settle them; this mirrors how TomoWISE carried `HeatAbsorber` and `SlipRing`.
 
 ## Pending confirmations
 

@@ -10,6 +10,7 @@ from cora.recipe.aggregates.recipe import (
     RecipeActionStep,
     RecipeCaptureStep,
     RecipeCheckStep,
+    RecipeComputeStep,
     RecipeSetpointStep,
     UnboundRecipeBindingError,
     UnboundRecipeCaptureError,
@@ -156,6 +157,74 @@ def test_validate_capture_refs_rejects_duplicate_capture_name() -> None:
     )
     with pytest.raises(DuplicateRecipeCaptureError, match="home"):
         validate_capture_refs(steps)
+
+
+@pytest.mark.unit
+def test_recipe_compute_step_capture_name_defaults_none() -> None:
+    step = RecipeComputeStep(command=("tomopy", "find_center"))
+    assert step.capture_name is None
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_compute_step_declares_for_later_setpoint() -> None:
+    """A RecipeComputeStep with capture_name DECLARES the slot a later CaptureRef reads."""
+    steps = (
+        RecipeComputeStep(command=("tomopy", "find_center"), capture_name="offset"),
+        RecipeSetpointStep(address="dev:rot:center", value=CaptureRef("offset")),
+    )
+    validate_capture_refs(steps)  # does not raise
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_rejects_cross_kind_duplicate_capture_name() -> None:
+    """A capture step + a compute step declaring the same name is a cross-kind dup."""
+    steps = (
+        RecipeCaptureStep(address="dev:sample:x", capture_name="offset"),
+        RecipeComputeStep(command=("tomopy", "find_center"), capture_name="offset"),
+    )
+    with pytest.raises(DuplicateRecipeCaptureError, match="offset"):
+        validate_capture_refs(steps)
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_rejects_forward_ref_to_compute_declared_name() -> None:
+    """A CaptureRef before the compute step that declares its name is a forward ref."""
+    steps = (
+        RecipeSetpointStep(address="dev:rot:center", value=CaptureRef("offset")),
+        RecipeComputeStep(command=("tomopy", "find_center"), capture_name="offset"),
+    )
+    with pytest.raises(UnboundRecipeCaptureError, match="offset"):
+        validate_capture_refs(steps)
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_compute_none_capture_name_declares_nothing() -> None:
+    """A capture_name=None compute step declares no slot (no spurious duplicate)."""
+    steps = (
+        RecipeComputeStep(command=("tomopy", "find_center"), capture_name=None),
+        RecipeComputeStep(command=("tomopy", "find_center"), capture_name=None),
+    )
+    validate_capture_refs(steps)  # does not raise
+
+
+@pytest.mark.unit
+def test_to_dict_from_dict_roundtrip_preserves_compute_step_capture_name() -> None:
+    steps = (
+        RecipeComputeStep(
+            command=("tomopy", "find_center"),
+            input_uris=("file:///a.h5",),
+            output_uri="file:///c.json",
+            parameters={"algorithm": "vo"},
+            capture_name="offset",
+        ),
+    )
+    assert steps_from_dict(steps_to_dict(steps)) == steps
+
+
+@pytest.mark.unit
+def test_to_dict_from_dict_roundtrip_preserves_compute_step_none_capture_name() -> None:
+    steps = (RecipeComputeStep(command=("tomopy", "find_center"), capture_name=None),)
+    assert steps_from_dict(steps_to_dict(steps)) == steps
 
 
 @pytest.mark.unit

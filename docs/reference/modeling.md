@@ -114,8 +114,8 @@ Two structural facts already enforce most of this, so it is mostly derivation, n
 
 Orthogonal axes, do not conflate with selection:
 
-- **Conducted vs recorded** (who drives the act): the `Conductor` over `ControlPort` and `Reckoner` over `ComputePort` are L2 edge runtimes that drive either spine aggregate; an externally-driven act (a scan loop a facility tool runs) is recorded. Both Runs and Procedures span both modes.
-- **Compute** homes by the same test: a reconstruction leaves a Dataset, so it is a Run (driven by `Reckoner`); its provenance is the Dataset's `derived_from` plus `used_calibration_ids`.
+- **Conducted vs recorded** (who drives the act): CORA's conducting engine drives either spine aggregate across the relevant port (control over `ControlPort`, compute over `ComputePort`, transfer over `TransferPort`); an externally-driven act (a scan loop a facility tool runs) is recorded. Both Runs and Procedures span both modes.
+- **Compute** homes by the same test: a reconstruction leaves a Dataset, so it is a Run (conducted over `ComputePort`); its provenance is the Dataset's `derived_from` plus `used_calibration_ids`.
 - **Transfer** moves bytes onto a `Distribution` and leaves no new Dataset of record, so it is an edge job, not a spine aggregate, until a publish / custody invariant earns it one.
 
 The one genuinely undecidable shape is an act whose registered Dataset and Calibration are co-equal deliverables. No shipped act crosses that seam today; resolve it then by a declared primary output, not now.

@@ -73,6 +73,7 @@ from cora.operation.features import (
     append_activities,
     complete_procedure,
     conduct_procedure,
+    conduct_until_converged,
     end_iteration,
     get_procedure,
     hold_procedure,
@@ -119,6 +120,7 @@ class OperationHandlers:
     list_procedures: list_procedures.Handler
     list_procedure_iterations: list_procedure_iterations.Handler
     conduct_procedure: conduct_procedure.Handler
+    conduct_until_converged: conduct_until_converged.Handler
     try_conduct_procedure: try_conduct_procedure.Handler
     control_port: ControlPort
     """The ControlPort the Conductor talks to. Surfaced on the bundle
@@ -224,6 +226,19 @@ def wire_operation(
         command_name="AppendProcedureActivities",
         bc=_BC,
     )
+    # Hoisted to locals so the bundle fields AND the Conductor share ONE
+    # post-tracing iteration-lifecycle handler each; Conductor.conduct_until_converged
+    # composes start_iteration + end_iteration around each convergence pass.
+    start_iteration_handler = with_tracing(
+        start_iteration.bind(deps),
+        command_name="StartProcedureIteration",
+        bc=_BC,
+    )
+    end_iteration_handler = with_tracing(
+        end_iteration.bind(deps),
+        command_name="EndProcedureIteration",
+        bc=_BC,
+    )
     control_port = (
         control_port
         if control_port is not None
@@ -248,6 +263,8 @@ def wire_operation(
         abort_procedure=abort_handler,
         resume_procedure=resume_handler,
         hold_procedure=hold_handler,
+        start_iteration=start_iteration_handler,
+        end_iteration=end_iteration_handler,
     )
     # Resume-and-replay orchestration: a thin slice handler over
     # Conductor.reconduct (which composes resume + execute_from +
@@ -303,16 +320,8 @@ def wire_operation(
         hold_procedure=hold_handler,
         resume_procedure=resume_handler,
         reconduct_procedure=reconduct_handler,
-        start_iteration=with_tracing(
-            start_iteration.bind(deps),
-            command_name="StartProcedureIteration",
-            bc=_BC,
-        ),
-        end_iteration=with_tracing(
-            end_iteration.bind(deps),
-            command_name="EndProcedureIteration",
-            bc=_BC,
-        ),
+        start_iteration=start_iteration_handler,
+        end_iteration=end_iteration_handler,
         append_activities=append_step_handler,
         get_procedure=with_tracing(
             get_procedure.bind(deps),
@@ -335,6 +344,11 @@ def wire_operation(
         conduct_procedure=with_tracing(
             conduct_procedure.bind(deps, conductor=conductor, expansion_port=recipe_expander),
             command_name="ConductProcedure",
+            bc=_BC,
+        ),
+        conduct_until_converged=with_tracing(
+            conduct_until_converged.bind(deps, conductor=conductor, expansion_port=recipe_expander),
+            command_name="ConductUntilConverged",
             bc=_BC,
         ),
         try_conduct_procedure=try_conduct_handler,

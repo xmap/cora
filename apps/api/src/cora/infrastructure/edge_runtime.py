@@ -1,21 +1,23 @@
-"""Shared shape for the L2 edge runtimes (Conductor, Reckoner).
+"""Shared shape for the L2 edge runtimes.
 
 An L2 edge runtime conducts an aggregate to a terminal across a substrate
-port: the `Conductor` drives a Procedure FSM over `ControlPort`, the
-`Reckoner` drives a Run FSM over `ComputePort`. They are siblings with a
+port: the Operation BC's `Conductor` drives a Procedure FSM over
+`ControlPort` (walking a step list); the composition-root `EdgeConductor`
+shell drives a Run FSM over `ComputePort` (the compute-Run path is
+`ComputeRunDriver`, which absorbed the dissolved Reckoner). They share a
 deliberately mirrored shape (best-effort abort, the observed
 `ActuationKind` threaded onto the terminal, a result that reports success
-plus the observed kind), but their inner work and FSMs genuinely diverge.
+plus the observed kind), but their inner work genuinely diverges.
 
-This module captures only what they TRULY share, not a forced engine:
+This module captures what they TRULY share, below the BCs:
 - `ConductOutcome`, the terminal-outcome contract their result types
-  structurally satisfy (the slice-6 merge collapses to one engine that
-  still yields a `ConductOutcome`);
+  structurally satisfy (`ConductorResult` + `RunConductOutcome`);
 - `abort_orphan_on_cancel`, the cancel-orphan-abort control flow both
   wrap their inner await in.
 
-Collapsing the two into one engine is the deferred slice-6 merge's job,
-not this module's. See [[project_reckoner_dissolution_stage0_design]].
+The compute-Run + Procedure-phase merge consolidated the two `conduct()`
+spines onto the `EdgeConductor` shell at `cora.api`; this module stays the
+substrate-agnostic shared shape both reach for.
 """
 
 from __future__ import annotations
@@ -39,7 +41,7 @@ class ConductOutcome(Protocol):
     a raw string onto the terminal event. It is typed `str | None` here
     (the StrEnum is assignable to `str`) so this module stays
     substrate-agnostic and below the BCs. `ConductorResult` and
-    `ReckonerResult` structurally satisfy it.
+    `RunConductOutcome` structurally satisfy it.
     """
 
     @property
@@ -61,8 +63,8 @@ async def abort_orphan_on_cancel(
     transitions it to its abort terminal best-effort (a failing abort is
     suppressed so signals / shutdown still behave), then re-raises so the
     caller's task still sees the cancellation. Shared by the L2 edge
-    runtimes (Conductor, Reckoner); the observed kind is unrecoverable on
-    cancellation, so callers record None on the abort.
+    runtimes (the Conductor + the EdgeConductor shell); the observed kind
+    is unrecoverable on cancellation, so callers record None on the abort.
     """
     try:
         yield

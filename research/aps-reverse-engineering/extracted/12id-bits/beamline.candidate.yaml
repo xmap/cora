@@ -1,0 +1,103 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: 12-ID
+  facility: aps
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 12-ID-C
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+- name: 12-ID-E
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: beamstop
+    family: mb_creator
+    pv: '12ideSFT:'
+    enclosure: 12-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''mb_creator''; needs a CORA Family; factory
+      device (ad_creator): plugins and file paths need a human; ophyd class ''mb_creator''
+      not found in devices/*.py'
+    labels:
+    - beamstop
+    source_class: apstools.devices.motor_factory.mb_creator
+  - name: saxs_det_stage
+    family: mb_creator
+    pv: '12idcACS1:'
+    enclosure: 12-ID-C
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''mb_creator''; needs a CORA Family; factory
+      device (ad_creator): plugins and file paths need a human; ophyd class ''mb_creator''
+      not found in devices/*.py'
+    labels:
+    - detector_stage
+    - baseline
+    - SAXS
+    source_class: apstools.devices.motor_factory.mb_creator
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: sample_stage
+    family: mb_creator
+    pv: '12idc:'
+    enclosure: 12-ID-C
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''mb_creator''; needs a CORA Family; factory
+      device (ad_creator): plugins and file paths need a human; ophyd class ''mb_creator''
+      not found in devices/*.py'
+    labels:
+    - sample
+    source_class: apstools.devices.motor_factory.mb_creator
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: pilatus2m
+    family: Camera
+    pv: 'S12-PILATUS1:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      enclosure unresolved from prefix or labels; factory device (ad_creator): plugins
+      and file paths need a human; ophyd class ''ad_creator'' not found in devices/*.py'
+    labels:
+    - area_detector
+    - detectors
+    - SAXS
+    role_hints:
+    - Detector
+    source_class: apstools.devices.area_detector_factory.ad_creator
+  - name: pilatus900k
+    family: Camera
+    pv: '12idcPIL:'
+    enclosure: 12-ID-C
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      factory device (ad_creator): plugins and file paths need a human; ophyd class
+      ''ad_creator'' not found in devices/*.py'
+    labels:
+    - area_detector
+    - detectors
+    - WAXS
+    role_hints:
+    - Detector
+    source_class: apstools.devices.area_detector_factory.ad_creator
+  - name: xsp3
+    family: Camera
+    new: true
+    confirm: 'no prefix and no resolvable axes; enclosure unresolved from prefix or
+      labels; factory device (ad_creator): plugins and file paths need a human; ophyd
+      class ''ad_creator'' not found in devices/*.py'
+    source_class: apstools.devices.area_detector_factory.ad_creator

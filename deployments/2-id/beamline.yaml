@@ -102,17 +102,16 @@ focusing-optics:
   enclosure: 2-ID-D
   intro: "The probe-forming optic in the 2-ID-D hutch: a Fresnel zone plate focuses the monochromatic beam to the scanning spot just upstream of the sample. This is the defining optic of the microprobe and the one EAA's autofocus loop drives (the zp_z focus axis)."
   note: >
-    The zone plate is bound to a loose Family string (ZonePlate): it is a device
-    class not yet in the catalog, and no Asset is registered to earn it (the 32-ID
-    TXM precedent). Its focus axis (zp_z in EAA) is the actuator CORA's Conductor
-    would drive during autofocus; the order-sorting aperture standard to a
-    zone-plate microprobe is not evidenced and is folded into OPTICS-1, not invented.
+    The zone plate binds the catalog ZonePlate Family (graduated with 32-ID + FXI).
+    Its focus axis (zp_z in EAA) is the actuator CORA's Conductor would drive during
+    autofocus; the order-sorting aperture standard to a zone-plate microprobe is not
+    evidenced and is folded into OPTICS-1, not invented.
   devices:
     - name: ZonePlate
       family: ZonePlate
       new: true
       confirm: true
-      note: "probe-forming Fresnel zone plate with a zp_z focus axis (EAA aps_mic autofocus); outermost-zone width, diameter, and the order-sorting aperture unconfirmed (OPTICS-1). Loose Family"
+      note: "probe-forming Fresnel zone plate with a zp_z focus axis (EAA aps_mic autofocus); outermost-zone width, diameter, and the order-sorting aperture unconfirmed (OPTICS-1)."
 
 # ===========================================================================
 # SAMPLE STAGE: the sample-scanning stack in the 2-ID-D hutch (the raster axes)
@@ -144,18 +143,16 @@ fluorescence-detector:
   enclosure: 2-ID-D
   intro: "The energy-dispersive detector in 2-ID-D that records the X-ray fluorescence spectrum at each scan point; element maps are fit from the spectra downstream (EAA's XRF-Maps lineage)."
   note: >
-    Bound to a loose Family string (EnergyDispersiveSpectrometer): a fluorescence
-    energy-dispersive detector is a new device class, and the eventual catalog
-    Family name is a naming-review decision that must avoid the reserved Detector
-    Role noun (see model.md). The readout chain EAA names (a preamplifier and EPICS
-    scalers, plus the I0 flux monitors a microprobe normalizes against) is the
-    detection electronics, identities unconfirmed (DET-2).
+    Binds the catalog EnergyDispersiveSpectrometer Family (graduated once 2-ID and
+    7-BM shared it), presenting the Sensor Role. The readout chain EAA names (a
+    preamplifier and EPICS scalers, plus the I0 flux monitors a microprobe
+    normalizes against) is the detection electronics, identities unconfirmed (DET-2).
   devices:
     - name: FluorescenceDetector
       family: EnergyDispersiveSpectrometer
       new: true
       confirm: true
-      note: "energy-dispersive fluorescence detector; element channels, model, and segmentation unconfirmed (DET-1). Loose Family"
+      note: "energy-dispersive fluorescence detector; element channels, model, and segmentation unconfirmed (DET-1)."
 
 # Cross-cutting control. 2-ID runs EPICS (the floor) with a Bluesky RunEngine over
 # the EPICS scanRecord for the raster. CORA observes and, where it replaces EAA's

@@ -1,0 +1,748 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: 8-ID
+  facility: aps
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 8-ID-A
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+- name: 8-ID-D
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+- name: 8-ID-E
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+- name: 8-ID-I
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: fofb_s09
+    family: FOFB
+    pv: S09-FOFB
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''FOFB''; needs a CORA Family; enclosure unresolved
+      from prefix or labels'
+    source_class: id8_common.devices.fofb.FOFB
+  - name: cam_stage_8idi
+    family: XY_Motors
+    new: true
+    confirm: 'no prefix and no resolvable axes; family is the ophyd class name ''XY_Motors'';
+      needs a CORA Family; enclosure unresolved from prefix or labels; x: FormattedComponent
+      suffix resolved at runtime; y: FormattedComponent suffix resolved at runtime'
+    source_class: id8_common.devices.xy_motors.XY_Motors
+  - name: shutter_8ide
+    family: Shutter
+    pv: '8ideSoft:fastshutter:'
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm'
+    source_class: id8_common.devices.fast_shutter.FastShutter
+  - name: filter_8ide
+    family: AVSfilters
+    pv: '8idPyFilter:FL2:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AVSfilters''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; index: FormattedComponent suffix resolved
+      at runtime; attenuation: FormattedComponent suffix resolved at runtime; transmission:
+      FormattedComponent suffix resolved at runtime'
+    source_class: id8_common.devices.avs_filters.AVSfilters
+  - name: granite
+    family: granite_device
+    pv: 8idiSoft:CR8-I2:US
+    enclosure: 8-ID-I
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''granite_device''; needs a CORA Family; x: FormattedComponent
+      suffix resolved at runtime'
+    source_class: id8_common.devices.granite.granite_device
+  - name: granite_8idi_valve
+    family: Valve_Enable
+    pv: '8idiSoft:CR8-I2:'
+    enclosure: 8-ID-I
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''Valve_Enable''; needs a CORA Family'
+    source_class: id8_common.devices.granite_enable.Valve_Enable
+  - name: mr1
+    family: Mirror
+    pv:
+      coarse_pitch: 8idaSoft:FMBO:m6
+      fine_pitch: 8idaSoft:FMBO:Piezo:m1
+      flag: 8idaSoft:CR8-A1:m5
+      x: 8idaSoft:FMBO:m4
+      y: 8idaSoft:FMBO:m2
+    enclosure: 8-ID-A
+    new: true
+    confirm: false
+    source_class: id8_common.devices.hhl_mirrors.HHL_Mirror1
+  - name: mr2
+    family: Mirror
+    pv:
+      bender1: 8idaSoft:FMBO:m7
+      bender2: 8idaSoft:FMBO:m8
+      coarse_pitch: 8idaSoft:FMBO:m5
+      fine_pitch: 8idaSoft:FMBO:Piezo:m2
+      flag: 8idaSoft:CR8-A1:m6
+      x: 8idaSoft:FMBO:m3
+      y: 8idaSoft:FMBO:m1
+    enclosure: 8-ID-A
+    new: true
+    confirm: false
+    source_class: id8_common.devices.hhl_mirrors.HHL_Mirror2
+  - name: wb_slit
+    family: Slit
+    pv: 8idaSoft:CR8-A1:US
+    enclosure: 8-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      pitch: FormattedComponent suffix resolved at runtime; yaw: FormattedComponent
+      suffix resolved at runtime; horizontal: FormattedComponent suffix resolved at
+      runtime; diagonal: FormattedComponent suffix resolved at runtime; hgap: FormattedComponent
+      suffix resolved at runtime; hcen: FormattedComponent suffix resolved at runtime;
+      vgap: FormattedComponent suffix resolved at runtime; vcen: FormattedComponent
+      suffix resolved at runtime'
+    source_class: id8_common.devices.hhl_slits.HHLSlits
+  - name: mono_slit
+    family: Slit
+    pv: 8idaSoft:CR8-A1:US
+    enclosure: 8-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      pitch: FormattedComponent suffix resolved at runtime; yaw: FormattedComponent
+      suffix resolved at runtime; horizontal: FormattedComponent suffix resolved at
+      runtime; diagonal: FormattedComponent suffix resolved at runtime; hgap: FormattedComponent
+      suffix resolved at runtime; hcen: FormattedComponent suffix resolved at runtime;
+      vgap: FormattedComponent suffix resolved at runtime; vcen: FormattedComponent
+      suffix resolved at runtime'
+    source_class: id8_common.devices.hhl_slits.HHLSlits
+  - name: bd6a
+    family: HV_Motors
+    pv:
+      h: 8ideSoft:CR8-E2:m9
+      v: 8ideSoft:CR8-E2:m10
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'family is the ophyd class name ''HV_Motors''; needs a CORA Family; h:
+      FormattedComponent suffix resolved at runtime; v: FormattedComponent suffix
+      resolved at runtime'
+    source_class: id8_common.devices.hv_motors.HV_Motors
+  - name: bd5a
+    family: HV_Motors
+    pv:
+      h: 8iddSoft:CR8-D1:m9
+      v: 8iddSoft:CR8-D1:m10
+    enclosure: 8-ID-D
+    new: true
+    confirm: 'family is the ophyd class name ''HV_Motors''; needs a CORA Family; h:
+      FormattedComponent suffix resolved at runtime; v: FormattedComponent suffix
+      resolved at runtime'
+    source_class: id8_common.devices.hv_motors.HV_Motors
+  - name: labjack
+    family: LabJack
+    pv: '8idiSoft:LJT705:'
+    enclosure: 8-ID-I
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''LabJack''; needs a CORA Family'
+    source_class: id8_common.devices.labjack_support.LabJack
+  - name: qnw_env1
+    family: QnwDevice
+    pv: '8idiSoft:QNWenv_1:'
+    enclosure: 8-ID-I
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''QnwDevice''; needs a CORA Family; tolerance:
+      non-literal or absent component suffix'
+    source_class: id8_common.devices.qnw_device.QnwDevice
+  - name: qnw_env2
+    family: QnwDevice
+    pv: '8idiSoft:QNWenv_2:'
+    enclosure: 8-ID-I
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''QnwDevice''; needs a CORA Family; tolerance:
+      non-literal or absent component suffix'
+    source_class: id8_common.devices.qnw_device.QnwDevice
+  - name: qnw_env3
+    family: QnwDevice
+    pv: '8idiSoft:QNWenv_3:'
+    enclosure: 8-ID-I
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''QnwDevice''; needs a CORA Family; tolerance:
+      non-literal or absent component suffix'
+    source_class: id8_common.devices.qnw_device.QnwDevice
+  - name: pv_registers
+    family: EpicsPvStorageRegisters
+    pv: '8ideSoft:'
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsPvStorageRegisters''; needs a CORA Family'
+    source_class: id8_common.devices.registers_device.EpicsPvStorageRegisters
+  - name: sl4_base
+    family: Slit
+    pv: 8iddSoft:CR8-D1:US
+    enclosure: 8-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      h: FormattedComponent suffix resolved at runtime; v: FormattedComponent suffix
+      resolved at runtime'
+    source_class: id8_common.devices.slit_base.SlitBase
+  - name: sl5_base
+    family: Slit
+    pv: 8ideSoft:CR8-E2:US
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      h: FormattedComponent suffix resolved at runtime; v: FormattedComponent suffix
+      resolved at runtime'
+    source_class: id8_common.devices.slit_base.SlitBase
+  - name: sl7_base
+    family: Slit
+    pv: 8ideSoft:CR8-E2:US
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      h: FormattedComponent suffix resolved at runtime; v: FormattedComponent suffix
+      resolved at runtime'
+    source_class: id8_common.devices.slit_base.SlitBase
+  - name: sl8_base
+    family: Slit
+    pv: 8idiSoft:CR8-I2:US
+    enclosure: 8-ID-I
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      h: FormattedComponent suffix resolved at runtime; v: FormattedComponent suffix
+      resolved at runtime'
+    source_class: id8_common.devices.slit_base.SlitBase
+  - name: sl9_base
+    family: Slit
+    pv: 8idiSoft:CR8-I2:US
+    enclosure: 8-ID-I
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      h: FormattedComponent suffix resolved at runtime; v: FormattedComponent suffix
+      resolved at runtime'
+    source_class: id8_common.devices.slit_base.SlitBase
+  - name: sl4
+    family: Slit
+    pv: 8iddSoft:Slit1
+    enclosure: 8-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm'
+    source_class: id8_common.devices.slit.ID8Optics2Slit2D_HV
+  - name: sl5
+    family: Slit
+    pv: 8ideSoft:Slit1
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm'
+    source_class: id8_common.devices.slit.ID8Optics2Slit2D_HV
+  - name: sl7
+    family: Slit
+    pv: 8ideSoft:Slit2
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm'
+    source_class: id8_common.devices.slit.ID8Optics2Slit2D_HV
+  - name: sl8
+    family: Slit
+    pv: 8idiSoft:Slit1
+    enclosure: 8-ID-I
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm'
+    source_class: id8_common.devices.slit.ID8Optics2Slit2D_HV
+  - name: sl9
+    family: Slit
+    pv: 8idiSoft:Slit2
+    enclosure: 8-ID-I
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm'
+    source_class: id8_common.devices.slit.ID8Optics2Slit2D_HV
+  - name: sl9_motors
+    family: Slit
+    pv: 8idiSoft:CR8-I2:US
+    enclosure: 8-ID-I
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      hp: FormattedComponent suffix resolved at runtime; hn: FormattedComponent suffix
+      resolved at runtime; vp: FormattedComponent suffix resolved at runtime; vn:
+      FormattedComponent suffix resolved at runtime'
+    source_class: id8_common.devices.individual_slits.IndividualSlits
+  - name: sl5_motors
+    family: Slit
+    pv: 8ideSoft:CR8-E2:US
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      hp: FormattedComponent suffix resolved at runtime; hn: FormattedComponent suffix
+      resolved at runtime; vp: FormattedComponent suffix resolved at runtime; vn:
+      FormattedComponent suffix resolved at runtime'
+    source_class: id8_common.devices.individual_slits.IndividualSlits
+  - name: softglue
+    family: SoftGlue
+    pv:
+      acq_period: 8idMZ1:userTran1.A
+      acq_time: 8idMZ1:userTran1.C
+      clear1: 8idMZ1:SG:UpCntr-1_CLEAR_Signal
+      clear2: 8idMZ1:SG:UpCntr-2_CLEAR_Signal
+      clear3: 8idMZ1:SG:UpCntr-3_CLEAR_Signal
+      enable_rigaku: 8idMZ1:SG:MUX2-1_SEL_Signal
+      num_triggers: 8idMZ1:userTran1.J
+      start_pulses: 8idMZ1:SG:plsTrn-1_Inp_Signal
+      stop_pulses: 8idMZ1:SG:plsTrn-1_Dis_Signal
+    new: true
+    confirm: 'family is the ophyd class name ''SoftGlue''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; acq_period: FormattedComponent suffix resolved
+      at runtime; acq_time: FormattedComponent suffix resolved at runtime; num_triggers:
+      FormattedComponent suffix resolved at runtime; start_pulses: FormattedComponent
+      suffix resolved at runtime; stop_pulses: FormattedComponent suffix resolved
+      at runtime; enable_rigaku: FormattedComponent suffix resolved at runtime'
+    source_class: id8_common.devices.softglue.SoftGlue
+  - name: softglue_8id_mz2
+    family: softglue_mz2
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'softglue_mz2';
+      needs a CORA Family; enclosure unresolved from prefix or labels
+    source_class: id8_common.devices.softglue.softglue_mz2
+  - name: softglue_8id_acq
+    family: softglue_acq8id
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'softglue_acq8id';
+      needs a CORA Family; enclosure unresolved from prefix or labels
+    source_class: id8_common.devices.softglue.softglue_acq8id
+  - name: rl1
+    family: Transfocator
+    pv:
+      lens1: 8iddSoft:TRANS:m5
+      lens10: 8iddSoft:TRANS:m14
+      lens2: 8iddSoft:TRANS:m6
+      lens3: 8iddSoft:TRANS:m7
+      lens4: 8iddSoft:TRANS:m8
+      lens5: 8iddSoft:TRANS:m9
+      lens6: 8iddSoft:TRANS:m10
+      lens7: 8iddSoft:TRANS:m11
+      lens8: 8iddSoft:TRANS:m12
+      lens9: 8iddSoft:TRANS:m13
+      pitch: 8iddSoft:TRANS:m4
+      x: 8iddSoft:TRANS:m2
+      y: 8iddSoft:TRANS:m1
+      yaw: 8iddSoft:TRANS:m3
+    enclosure: 8-ID-D
+    new: true
+    confirm: 'family is the ophyd class name ''Transfocator''; needs a CORA Family;
+      x: FormattedComponent suffix resolved at runtime; y: FormattedComponent suffix
+      resolved at runtime; pitch: FormattedComponent suffix resolved at runtime; yaw:
+      FormattedComponent suffix resolved at runtime; lens1: FormattedComponent suffix
+      resolved at runtime; lens2: FormattedComponent suffix resolved at runtime; lens3:
+      FormattedComponent suffix resolved at runtime; lens4: FormattedComponent suffix
+      resolved at runtime; lens5: FormattedComponent suffix resolved at runtime; lens6:
+      FormattedComponent suffix resolved at runtime; lens7: FormattedComponent suffix
+      resolved at runtime; lens8: FormattedComponent suffix resolved at runtime; lens9:
+      FormattedComponent suffix resolved at runtime; lens10: FormattedComponent suffix
+      resolved at runtime'
+    source_class: id8_common.devices.transfocator.Transfocator
+  - name: rl2
+    family: Transfocator
+    pv:
+      lens1: 8iddSoft:TRANS:m15
+      lens10: 8iddSoft:TRANS:m24
+      lens2: 8iddSoft:TRANS:m16
+      lens3: 8iddSoft:TRANS:m17
+      lens4: 8iddSoft:TRANS:m18
+      lens5: 8iddSoft:TRANS:m19
+      lens6: 8iddSoft:TRANS:m20
+      lens7: 8iddSoft:TRANS:m21
+      lens8: 8iddSoft:TRANS:m22
+      lens9: 8iddSoft:TRANS:m23
+      pitch: 8iddSoft:TRANS:m28
+      x: 8iddSoft:TRANS:m26
+      y: 8iddSoft:TRANS:m25
+      yaw: 8iddSoft:TRANS:m27
+    enclosure: 8-ID-D
+    new: true
+    confirm: 'family is the ophyd class name ''Transfocator''; needs a CORA Family;
+      x: FormattedComponent suffix resolved at runtime; y: FormattedComponent suffix
+      resolved at runtime; pitch: FormattedComponent suffix resolved at runtime; yaw:
+      FormattedComponent suffix resolved at runtime; lens1: FormattedComponent suffix
+      resolved at runtime; lens2: FormattedComponent suffix resolved at runtime; lens3:
+      FormattedComponent suffix resolved at runtime; lens4: FormattedComponent suffix
+      resolved at runtime; lens5: FormattedComponent suffix resolved at runtime; lens6:
+      FormattedComponent suffix resolved at runtime; lens7: FormattedComponent suffix
+      resolved at runtime; lens8: FormattedComponent suffix resolved at runtime; lens9:
+      FormattedComponent suffix resolved at runtime; lens10: FormattedComponent suffix
+      resolved at runtime'
+    source_class: id8_common.devices.transfocator.Transfocator
+  - name: huber
+    family: Huber_Diffractometer
+    pv:
+      chi: 8ideSoft:CR8-E1:m8
+      delta: 8ideSoft:CR8-E1:m5
+      eta: 8ideSoft:CR8-E1:m7
+      mu: 8ideSoft:CR8-E1:m6
+      nu: 8ideSoft:CR8-E1:m4
+      phi: 8ideSoft:CR8-E1:m9
+      x: 8ideSoft:CR8-E1:m15
+      y: 8ideSoft:CR8-E1:m10
+      z: 8ideSoft:CR8-E1:m11
+    enclosure: 8-ID-E
+    new: true
+    confirm: family is the ophyd class name 'Huber_Diffractometer'; needs a CORA Family
+    source_class: id8_common.devices.huber_diffractometer.Huber_Diffractometer
+  - name: lakeshore1
+    family: Lakeshore
+    pv: '8ideSoft:LS336:1:'
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''Lakeshore''; needs a CORA Family'
+    source_class: id8_common.devices.lakeshore.Lakeshore
+  - name: lakeshore2
+    family: Lakeshore
+    pv: '8ideSoft:LS336:2:'
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''Lakeshore''; needs a CORA Family'
+    source_class: id8_common.devices.lakeshore.Lakeshore
+  - name: flight_path_8idi
+    family: FlightPath
+    pv:
+      ds_x: 8idiSoft:FLIGHT:m5
+      ds_y: 8idiSoft:FLIGHT:m6
+      length: 8idiSoft:FLIGHT:m1
+      swing: 8idiSoft:FLIGHT:m2
+      us: 8idiSoft:FLIGHT:m7
+    enclosure: 8-ID-I
+    new: true
+    confirm: family is the ophyd class name 'FlightPath'; needs a CORA Family
+    source_class: id8_common.devices.flight_path.FlightPath
+  - name: tetramm1
+    family: MyTetrAMM
+    pv: '8idTetra:QUAD1:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MyTetrAMM''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; conf: non-literal or absent component suffix'
+    source_class: id8_common.devices.tetramm_picoammeter.MyTetrAMM
+  - name: tetramm2
+    family: MyTetrAMM
+    pv: '8idTetra:QUAD2:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MyTetrAMM''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; conf: non-literal or absent component suffix'
+    source_class: id8_common.devices.tetramm_picoammeter.MyTetrAMM
+  - name: tetramm3
+    family: MyTetrAMM
+    pv: '8idTetra:QUAD3:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MyTetrAMM''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; conf: non-literal or absent component suffix'
+    source_class: id8_common.devices.tetramm_picoammeter.MyTetrAMM
+  - name: tetramm4
+    family: MyTetrAMM
+    pv: '8idTetra:QUAD4:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MyTetrAMM''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; conf: non-literal or absent component suffix'
+    source_class: id8_common.devices.tetramm_picoammeter.MyTetrAMM
+  - name: mono
+    family: Monochromator
+    pv:
+      energy: 8idaSoft:MN1:Energy
+      gap: 8idaSoft:MN1:Gap
+      offset: 8idaSoft:MN1:Offset
+      theta: 8idaSoft:MN1:Bragg
+      wavelength: 8idaSoft:MN1:Lambda
+    enclosure: 8-ID-A
+    new: true
+    confirm: 'bragg_motor: FormattedComponent suffix resolved at runtime; gap_motor:
+      FormattedComponent suffix resolved at runtime'
+    source_class: id8_common.devices.idt_mono.BraggGap_Monochromator
+  - name: det_motors
+    family: FlightTubeDetector
+    pv:
+      tth: 8idiSoft:FLIGHT:m2
+      z: 8idiSoft:FLIGHT:m1
+    enclosure: 8-ID-I
+    new: true
+    confirm: family is the ophyd class name 'FlightTubeDetector'; needs a CORA Family
+    source_class: id8_common.devices.flight_tube.FlightTubeDetector
+  - name: bs_motors
+    family: FlightTubeBeamStop
+    pv:
+      ds_x: 8idiSoft:FLIGHT:m5
+      ds_y: 8idiSoft:FLIGHT:m6
+      us: 8idiSoft:FLIGHT:m7
+    enclosure: 8-ID-I
+    new: true
+    confirm: family is the ophyd class name 'FlightTubeBeamStop'; needs a CORA Family
+    source_class: id8_common.devices.flight_tube.FlightTubeBeamStop
+  - name: undulator_upstream
+    family: InsertionDevice
+    pv: 'S08ID:USID:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      enclosure unresolved from prefix or labels'
+    source_class: id8_common.devices.undulator.RevolverUndulator_8ID
+  - name: undulator_downstream
+    family: InsertionDevice
+    pv: 'S08ID:DSID:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      enclosure unresolved from prefix or labels'
+    source_class: id8_common.devices.undulator.RevolverUndulator_8ID
+  - name: sim_psic
+    family: creator
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'creator';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'creator' not found in devices/*.py
+    labels:
+    - diffractometer
+    source_class: hklpy2.creator
+  - name: psic
+    family: creator
+    pv: '8ideSoft:CR8-E1:'
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''creator''; needs a CORA Family; ophyd class
+      ''creator'' not found in devices/*.py'
+    labels:
+    - diffractometer
+    source_class: hklpy2.creator
+  - name: pd
+    family: PIND
+    pv: '8ideSoft:pdu1:'
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''PIND''; needs a CORA Family'
+    source_class: id8_common.devices.pin_diode.PIND
+  - name: fl2
+    family: EpicsMotor
+    pv: 8ideSoft:CR8-E2:m7
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; ophyd class
+      ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: fl3
+    family: EpicsMotor
+    pv: 8idiSoft:CR8-I2:m7
+    enclosure: 8-ID-I
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; ophyd class
+      ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: flag4
+    family: EpicsMotor
+    pv: 8iddSoft:CR8-D1:m1
+    enclosure: 8-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; ophyd class
+      ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: softglue_8idi
+    family: SoftGlue
+    pv:
+      acq_period: 8idMZ1:userTran1.A
+      acq_time: 8idMZ1:userTran1.A
+      enable_rigaku: 8idMZ1:SG:MUX2-1_SEL_Signal
+      num_triggers: 8idMZ1:userTran1.J
+      start_pulses: 8idMZ1:SG:plsTrn-1_Inp_Signal
+      stop_pulses: 8idMZ1:SG:plsTrn-1_Dis_Signal
+    new: true
+    confirm: 'family is the ophyd class name ''SoftGlue''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; acq_period: FormattedComponent suffix resolved
+      at runtime; acq_time: FormattedComponent suffix resolved at runtime; num_triggers:
+      FormattedComponent suffix resolved at runtime; start_pulses: FormattedComponent
+      suffix resolved at runtime; stop_pulses: FormattedComponent suffix resolved
+      at runtime; enable_rigaku: FormattedComponent suffix resolved at runtime'
+    source_class: id8_common.devices.softglue.SoftGlue
+  - name: ur5
+    family: UR5
+    pv: 'RobocartUR5:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''UR5''; needs a CORA Family; enclosure unresolved
+      from prefix or labels'
+    source_class: id8_common.devices.ur5_control.UR5
+  - name: dpKeysight
+    family: Function_Generator
+    pv: 'dpKeysight:KEY1:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''Function_Generator''; needs a CORA Family;
+      enclosure unresolved from prefix or labels'
+    source_class: id8_common.devices.func_gen.Function_Generator
+  - name: keysight
+    family: Function_Generator
+    pv: '8idKeysight:KEY1:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''Function_Generator''; needs a CORA Family;
+      enclosure unresolved from prefix or labels'
+    source_class: id8_common.devices.func_gen.Function_Generator
+  - name: xbpm1
+    family: SydorTP4U
+    pv: '8ideBPM:T4U_BPM:'
+    enclosure: 8-ID-E
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''SydorTP4U''; needs a CORA Family; conf: non-literal
+      or absent component suffix'
+    source_class: id8_common.devices.sydor_tp4u.SydorTP4U
+  - name: mcr_wait_signal
+    family: Rheometer_Wait
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'Rheometer_Wait';
+      needs a CORA Family; enclosure unresolved from prefix or labels
+    source_class: id8_common.devices.rheometer_wait_signal.Rheometer_Wait
+  - name: idt_mono
+    family: IDTMono
+    pv: '8idaSoft:MONO:'
+    enclosure: 8-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''IDTMono''; needs a CORA Family; bragg: FormattedComponent
+      suffix resolved at runtime; xtal_gap: FormattedComponent suffix resolved at
+      runtime; flag: FormattedComponent suffix resolved at runtime; coarse_pitch:
+      FormattedComponent suffix resolved at runtime; coarse_roll: FormattedComponent
+      suffix resolved at runtime; x_slide: FormattedComponent suffix resolved at runtime;
+      y_slide: FormattedComponent suffix resolved at runtime; energy: FormattedComponent
+      suffix resolved at runtime; moving: FormattedComponent suffix resolved at runtime;
+      allstop_button: FormattedComponent suffix resolved at runtime; move_button:
+      FormattedComponent suffix resolved at runtime'
+    labels:
+    - mono
+    - baseline
+    source_class: id8_common.devices.idt_mono.IDTMono
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: sample
+    family: AerotechSampleStage
+    pv:
+      x: 8idiAerotech:m1
+      y: 8idiAerotech:m3
+      z: 8idiAerotech:m2
+    enclosure: 8-ID-I
+    new: true
+    confirm: family is the ophyd class name 'AerotechSampleStage'; needs a CORA Family
+    labels:
+    - sample
+    - stage
+    role_hints:
+    - Positioner
+    source_class: id8_common.devices.aerotech_stages.AerotechSampleStage
+  - name: rheometer
+    family: AerotechRheometerStage
+    pv:
+      pitch: 8idiAerotech:m11
+      roll: 8idiAerotech:m10
+      x: 8idiAerotech:m8
+      y: 8idiAerotech:m9
+      yaw: 8idiAerotech:m12
+      z: 8idiAerotech:m7
+    enclosure: 8-ID-I
+    new: true
+    confirm: family is the ophyd class name 'AerotechRheometerStage'; needs a CORA
+      Family
+    labels:
+    - rheometer
+    - stage
+    role_hints:
+    - Positioner
+    source_class: id8_common.devices.aerotech_stages.AerotechRheometerStage
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: detector
+    family: AerotechDetectorStage
+    pv:
+      x: 8idiAerotech:m4
+      y: 8idiAerotech:m5
+    enclosure: 8-ID-I
+    new: true
+    confirm: family is the ophyd class name 'AerotechDetectorStage'; needs a CORA
+      Family
+    labels:
+    - detector
+    - stage
+    role_hints:
+    - Detector
+    - Positioner
+    source_class: id8_common.devices.aerotech_stages.AerotechDetectorStage
+  - name: eiger4M
+    family: Camera
+    pv: '8idEiger4m:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      enclosure unresolved from prefix or labels; factory device (ad_creator): plugins
+      and file paths need a human; ophyd class ''ad_creator'' not found in devices/*.py'
+    labels:
+    - area_detector
+    - detectors
+    role_hints:
+    - Detector
+    source_class: apstools.devices.area_detector_factory.ad_creator
+  - name: lambda2M
+    family: Camera
+    pv: '8idLambda2m:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      enclosure unresolved from prefix or labels; factory device (ad_creator): plugins
+      and file paths need a human; ophyd class ''ad_creator'' not found in devices/*.py'
+    labels:
+    - area_detector
+    - detectors
+    role_hints:
+    - Detector
+    source_class: apstools.devices.area_detector_factory.ad_creator
+  - name: rigaku3M
+    family: Camera
+    pv: '8idRigaku3m:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      enclosure unresolved from prefix or labels; factory device (ad_creator): plugins
+      and file paths need a human; ophyd class ''ad_creator'' not found in devices/*.py'
+    labels:
+    - area_detector
+    - detectors
+    role_hints:
+    - Detector
+    source_class: apstools.devices.area_detector_factory.ad_creator

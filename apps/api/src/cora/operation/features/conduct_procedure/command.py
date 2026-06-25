@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from cora.operation.conductor import ConductorFailure, Step
+from cora.operation.ports.compute_port import ArtifactRef
 from cora.operation.ports.measurement import Measurement
 
 
@@ -48,11 +49,14 @@ class ConductProcedureResult:
     value is the one the Conductor records on the Procedure terminal
     event, where the Data BC reads it back to gate promotion.
 
-    `measurements` carries the `Measurement`s every `ComputeStep` in the
-    conduct produced (slice 6a), threaded from `ConductorResult.measurements`,
-    so the caller reads the produced measurements (a detector pixel size that
-    homes to a Calibration) without re-parsing the activity log. Empty on
-    a conduct with no ComputeStep.
+    `measurements` carries the `Measurement`s every value-arm `ComputeStep`
+    produced (threaded from `ConductorResult.measurements`), so the caller
+    reads the produced measurements (a detector pixel size that homes to a
+    Calibration) without re-parsing the activity log. `artifacts` carries
+    the `ArtifactRef`s every file-arm `ComputeStep` produced (threaded from
+    `ConductorResult.artifacts`), so a caller (the Phase-of-Run glue) can
+    register a volume Dataset against the file a reconstruction wrote. Both
+    empty on a conduct with no ComputeStep.
     """
 
     procedure_id: UUID
@@ -61,3 +65,4 @@ class ConductProcedureResult:
     failure: ConductorFailure | None = None
     actuation_kind: str | None = None
     measurements: tuple[Measurement, ...] = ()
+    artifacts: tuple[ArtifactRef, ...] = ()
