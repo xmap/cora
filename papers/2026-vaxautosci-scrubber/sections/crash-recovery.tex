@@ -1,7 +1,19 @@
 \label{sec:crash}
-% Conductor-path case. The in-flight-marker data comes from a conductor run,
-% not the append-path focus_run.json; see data/README.md. Figure 3 and the
-% exact interrupted step index are pending that conductor-path export.
+% Conductor-path case. Data: data/crash_run.json (conductor-path shapes and
+% values from test_conductor_against_softioc_postgres.py; the crash is a
+% truncation). Figure 3 rendered by figures/render_f3.py.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/f3_crash}
+  \caption{An interrupted conducted run. Each side-effecting setpoint records a
+  pre-effect in-flight marker (diamond) before its outcome (circle), and a
+  completed step joins the two with a solid bar. Truncating after the final
+  marker leaves that step an open interval with no outcome: the interrupted step
+  the scrubber localizes by step index. Conductor-path shapes and values are
+  from the softIOC integration test; only the truncation is constructed.}
+  \label{fig:crash}
+\end{figure}
 
 The most operationally pressing question an auditor asks is also the one
 conventional records answer worst: when a run stops unexpectedly, what was in
@@ -16,7 +28,7 @@ the effect.
 
 We reproduce that situation on a conducted run by simulating a crash after a
 marker is written but before its outcome, and replay the truncated stream
-through the scrubber (Figure~3). The fold reconstructs a state in which exactly
+through the scrubber (Figure~\ref{fig:crash}). The fold reconstructs a state in which exactly
 one activity is open, and the scrubber draws it as an open interval at its lane
 and time, with the surrounding convergence bracket left unclosed. Rather than a
 timeline that simply ends, the auditor sees precisely which step was mid-flight

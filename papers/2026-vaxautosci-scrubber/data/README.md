@@ -27,15 +27,25 @@ it carries no in-flight markers (`result` is null on every activity). The
 `sampled_at` times are staggered synthetically for a readable axis; the source
 scenario records a single logical instant, so wall-clock spacing is not real.
 
-## Crash / in-flight data (Figure 3), pending
+## `crash_run.json` (Figure 3)
 
-The crash-recovery figure needs the **conductor** path, which records a
-`result="in_flight"` marker before each side-effecting setpoint or action and
-the outcome after (see `apps/api/src/cora/operation/conductor.py`, "Pre-effect
-in-flight marker"). An interrupted conduct leaves an in-flight entry with no
-matching outcome at one step index. That data comes from a conductor-path run
-(e.g. `apps/api/tests/integration/test_conductor_against_softioc_postgres.py`),
-not from `focus_run.json`, and will be exported separately.
+A CORA-conducted run on the **conductor** path, truncated to simulate a crash:
+the backing data for Figure 3. The conductor records a `result="in_flight"`
+marker before each side-effecting setpoint or action and the outcome after (see
+`apps/api/src/cora/operation/conductor.py`, "Pre-effect in-flight marker"; the
+payload carries `step_index` + `result` per the `{**body, step_index, result}`
+append). Truncating after the final marker leaves an in-flight entry with no
+matching outcome at one step index, the interrupted step.
+
+**Provenance.** Conductor-path activity shapes and values come from
+[`apps/api/tests/integration/test_conductor_against_softioc_postgres.py`](../../../apps/api/tests/integration/test_conductor_against_softioc_postgres.py)
+(real softIOC + Postgres). Only the truncation (the crash) is constructed.
+Regenerate with `python3 data/build_crash_data.py`.
+
+**What it contains.** Four activity rows: setpoint marker + outcome (step 0,
+completed), check (step 1, completed), setpoint marker (step 2, dangling, no
+outcome); `interrupted_step_index = 2`. Channel names are the softIOC test
+channels with the per-test prefix omitted.
 
 ## Regenerating from a live run (optional, authoritative)
 
