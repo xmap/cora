@@ -79,3 +79,18 @@ cursor at the beam-loss instant (Figure~\ref{fig:scrubber}), the fold shows the
 alignment already converged, the first projection still open, and the run held
 by the agent, and the fidelity badge confirms that reconstructed state is
 faithful to the record (T4).
+
+\textbf{Design rationale.} Each encoding answers an audit question rather than
+decorating the timeline. We give the run lifecycle its own lane, colored by
+actor, instead of annotating events in place, so that \emph{who or what was
+driving} is legible across the whole run and accountability is separated from
+activity. We draw convergence as nested brackets colored by verdict rather than
+a metric curve: the auditor is asking whether and on which pass the search
+decided it had converged, which is the verdict, not the residual value. We place
+the fidelity badge inline at the cursor rather than in a separate trust panel, so
+trust is judged at the instant being inspected. We render an unfinished step as
+an open interval rather than truncating the timeline, so a missing outcome is a
+positive mark that is seen rather than inferred. And we keep one linear time axis
+with an explicit held band rather than collapsing the hold, because the gap
+itself is the evidence that the run waited, on the same scale as everything
+else.

@@ -1,9 +1,37 @@
 % Related Work body.
 
+\begin{table*}[t]
+  \centering
+  \caption{Where the replay scrubber sits relative to the closest prior work.
+  $\bullet$ = present, $\circ$ = absent or not surfaced to the user.
+  \emph{Replay} names the reconstruction mechanism; \emph{fidelity} is a
+  per-cursor integrity check, over the replayed run state, shown to a human;
+  \emph{run-state provenance} is per-iteration verdict and in-flight semantics
+  along a run; \emph{who / handoff} is a per-transition actor (human or agent)
+  record; \emph{scrub} is an interactive time cursor. No prior system combines
+  all five.}
+  \label{tab:compare}
+  \footnotesize
+  \begin{tabular}{@{}llcccc@{}}
+    \toprule
+    System & Replay & Fidelity & Run-state prov. & Who / handoff & Scrub \\
+    \midrule
+    Verdant~\cite{verdant2018} & re-execute & $\circ$ & $\circ$ & $\circ$ & $\bullet$ \\
+    Pernosco / rr~\cite{rr2017} & record-fold & $\circ$ & $\circ$ & $\circ$ & $\bullet$ \\
+    QIIME~2 Replay~\cite{qiime2replay} & code-gen, offline & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
+    Conformance checking~\cite{rozinat2008, pm4py} & token-replay & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
+    C2PA / Atlas~\cite{c2pa, atlas2025} & none & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
+    Workflow-Run RO-Crate~\cite{wrroc2024} & none & $\circ$ & $\circ$ & $\circ$ & $\circ$ \\
+    \midrule
+    \textbf{Replay scrubber (ours)} & deterministic fold & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
 Our work draws on five lines of research, none of which composes its central
 primitive: a deterministic fold over an immutable event record, exposed as a
 scrub interaction, carrying a content-addressed fidelity check and provenance
-semantics for autonomous loops.
+semantics for autonomous loops (Table~\ref{tab:compare}).
 
 \textbf{Provenance visualization and notebook time travel.}
 Retrospective provenance, the record of what an execution actually did, has

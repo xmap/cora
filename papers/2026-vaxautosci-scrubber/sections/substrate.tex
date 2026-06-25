@@ -49,3 +49,35 @@ path. We state this once, in support of the badge, rather than as a separate
 systems contribution; the visual claim, that the timeline you are scrubbing is
 faithful to an unaltered record under those assumptions, is what the paper is
 about.
+
+The records the scrubber reads are summarized in Table~\ref{tab:schema}.
+
+\begin{table}[t]
+  \centering
+  \caption{The four records the scrubber reads from the event log. The scrubber
+  needs nothing beyond these, which is why the technique transfers to any
+  append-only, deterministically-foldable event store.}
+  \label{tab:schema}
+  \footnotesize
+  \begin{tabular}{@{}p{0.30\linewidth}p{0.62\linewidth}@{}}
+    \toprule
+    \textbf{Record} & \textbf{Key fields} \\
+    \midrule
+    Event envelope & stream id, position, actor (human or agent), timestamp \\[0.3em]
+    Run-start payload & plan reference, parameter bindings, content-addressed
+      expansion hashes \\[0.3em]
+    Iteration boundary & iteration index, converged verdict, reason \\[0.3em]
+    Activity entry & step kind, payload, result (e.g. in-flight or ok),
+      sampled-at \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Assumptions.} The fidelity claim holds under four conditions, stated
+here so it is not read more strongly than intended: the fold is deterministic
+(the same event prefix always reconstructs the same state); storage is
+append-only, so the recorded side is not editable through the normal application
+path; the event writer is trusted; and the hash inputs are stable. It is an
+integrity check under these conditions, not adversarial tamper resistance: an
+attacker with direct write access to the store is out of scope, and authenticity
+against forgery would need a separate trust anchor.
