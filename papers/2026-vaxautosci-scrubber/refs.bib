@@ -1,0 +1,288 @@
+% Bibliography for "Scrubbing the Run".
+% Pointers were verified across four research passes; see notes/research-findings.md.
+% Entries marked "TODO confirm" need their exact title/authors/venue checked
+% against the primary source before camera-ready.
+
+% --- Provenance visualization and notebook time travel ----------------
+
+@inproceedings{lim2010,
+  author    = {Lim, Chunhyeok and Lu, Shiyong and Chebotko, Artem and Fotouhi, Farshad},
+  title     = {Prospective and Retrospective Provenance Collection in Scientific Workflow Environments},
+  booktitle = {IEEE International Conference on Services Computing (SCC)},
+  year      = {2010},
+  doi       = {10.1109/SCC.2010.18}
+}
+
+% Cite the IPAW 2006 version for the version-tree / delta provenance text,
+% not only the SIGMOD 2006 demo.
+@inproceedings{vistrails2006,
+  author    = {Freire, Juliana and Silva, Cl{\'a}udio T. and Callahan, Steven P. and Santos, Emanuele and Scheidegger, Carlos E. and Vo, Huy T.},
+  title     = {Managing Rapidly-Evolving Scientific Workflows},
+  booktitle = {Provenance and Annotation of Data (IPAW)},
+  series    = {LNCS},
+  volume    = {4145},
+  year      = {2006},
+  doi       = {10.1007/11890850_2}
+}
+
+@article{loops2024,
+  author  = {Eckelt, Klaus and Gadhave, Kiran and Lex, Alexander and Streit, Marc},
+  title   = {Loops: Leveraging Provenance and Visualization to Support Exploratory Data Analysis in Notebooks},
+  journal = {IEEE Transactions on Visualization and Computer Graphics (VIS)},
+  year    = {2024},
+  doi     = {10.1109/TVCG.2024.3456186}
+}
+
+@inproceedings{verdant2018,
+  author    = {Kery, Mary Beth and Myers, Brad A.},
+  title     = {Interactions for Untangling Messy History in a Computational Notebook},
+  booktitle = {IEEE Symposium on Visual Languages and Human-Centric Computing (VL/HCC)},
+  year      = {2018},
+  doi       = {10.1109/VLHCC.2018.8506576}
+}
+
+% The foraging framing and the 15-participant / median-80% study are CHI 2019,
+% NOT the VL/HCC 2018 paper.
+@inproceedings{verdant2019,
+  author    = {Kery, Mary Beth and John, Bonnie E. and O'Flaherty, Patrick and Horvath, Amber and Myers, Brad A.},
+  title     = {Towards Effective Foraging by Data Scientists to Find Past Analysis Choices},
+  booktitle = {Proceedings of the CHI Conference on Human Factors in Computing Systems},
+  year      = {2019},
+  doi       = {10.1145/3290605.3300322}
+}
+
+@article{qiime2replay,
+  author  = {Keefe, Christopher R. and Dillon, Matthew R. and Gehret, Elizabeth and Herman, Chloe and Jewell, Mary and Wood, Colin V. and Bolyen, Evan and Caporaso, J. Gregory},
+  title   = {Facilitating bioinformatics reproducibility with QIIME 2 Provenance Replay},
+  journal = {PLOS Computational Biology},
+  volume  = {19},
+  number  = {11},
+  pages   = {e1011676},
+  year    = {2023},
+  doi     = {10.1371/journal.pcbi.1011676}
+}
+
+% --- Record-replay and time-travel debugging --------------------------
+
+@inproceedings{rr2017,
+  author    = {O'Callahan, Robert and Jones, Chris and Froyd, Nathan and Huey, Kyle and Noll, Albert and Partush, Nimrod},
+  title     = {Engineering Record and Replay for Deployability},
+  booktitle = {USENIX Annual Technical Conference (ATC)},
+  year      = {2017}
+}
+
+@inproceedings{whyline2008,
+  author    = {Ko, Andrew J. and Myers, Brad A.},
+  title     = {Debugging Reinventing the Question: Finding Causes of Program Output with the Java Whyline},
+  booktitle = {Proceedings of the SIGCHI Conference on Human Factors in Computing Systems (CHI)},
+  year      = {2008},
+  doi       = {10.1145/1357054.1357646}
+}
+
+% --- Tamper-evident and verifiable provenance -------------------------
+
+@inproceedings{crosby2009,
+  author    = {Crosby, Scott A. and Wallach, Dan S.},
+  title     = {Efficient Data Structures for Tamper-Evident Logging},
+  booktitle = {USENIX Security Symposium},
+  year      = {2009}
+}
+
+@techreport{ct2013,
+  author      = {Laurie, Ben and Langley, Adam and Kasper, Emilia},
+  title       = {{Certificate Transparency}},
+  institution = {IETF},
+  type        = {RFC},
+  number      = {6962},
+  year        = {2013},
+  doi         = {10.17487/RFC6962}
+}
+
+@inproceedings{swhid,
+  author    = {Di Cosmo, Roberto and Gruenpeter, Morane and Zacchiroli, Stefano},
+  title     = {Identifiers for Digital Objects: the Case of Software Source Code Preservation},
+  booktitle = {International Conference on Digital Preservation (iPRES)},
+  year      = {2018},
+  doi       = {10.17605/OSF.IO/KDE56}
+}
+
+@misc{c2pa,
+  author       = {{Coalition for Content Provenance and Authenticity}},
+  title        = {{C2PA} Technical Specification},
+  howpublished = {\url{https://spec.c2pa.org/}},
+  note         = {Content Credentials Verify: \url{https://verify.contentauthenticity.org/}},
+  year         = {2024}
+}
+
+% TODO confirm exact title and authors of the C2PA-for-ML "Atlas" preprint.
+@misc{atlas2025,
+  author       = {Anonymous},
+  title        = {{Atlas}: Content Credentials for Machine Learning Pipelines},
+  howpublished = {arXiv:2502.19567},
+  year         = {2025}
+}
+
+% --- Reproducibility records and badges -------------------------------
+
+% TODO confirm exact title of the CPR paper (IPAW/ProvenanceWeek 2021).
+@inproceedings{cpr2021,
+  author    = {McPhillips, Timothy and Ludaescher, Bertram and others},
+  title     = {CPR: A Provenance-Record System for Reproducibility},
+  booktitle = {Provenance and Annotation of Data and Processes (IPAW), ProvenanceWeek},
+  series    = {LNCS},
+  volume    = {12839},
+  pages     = {263--269},
+  year      = {2021},
+  doi       = {10.1007/978-3-030-80960-7_23}
+}
+
+@article{wholetale,
+  author  = {Brinckman, Adam and Chard, Kyle and Gaffney, Niall and Hategan, Mihael and Jones, Matthew B. and Kowalik, Kacper and Kulasekaran, Sivakumar and Lud{\"a}scher, Bertram and Mecum, Bryce D. and Nabrzyski, Jaroslaw and Stodden, Victoria and Taylor, Ian J. and Turk, Matthew J. and Turner, Kandace},
+  title   = {Computing environments for reproducibility: Capturing the ``Whole Tale''},
+  journal = {Future Generation Computer Systems},
+  volume  = {94},
+  pages   = {854--867},
+  year    = {2019},
+  doi     = {10.1016/j.future.2017.12.029}
+}
+
+@article{wrroc2024,
+  author  = {Leo, Simone and Crusoe, Michael R. and Rodr{\'i}guez-Navas, Luca and Sirvent, Ra{\"u}l and Kanitz, Alexander and De Geest, Paul and Wittner, Rudolf and Pireddu, Luca and Garijo, Daniel and Fern{\'a}ndez, Jos{\'e} M. and others},
+  title   = {Recording provenance of workflow runs with RO-Crate},
+  journal = {PLOS ONE},
+  volume  = {19},
+  number  = {9},
+  pages   = {e0309210},
+  year    = {2024},
+  doi     = {10.1371/journal.pone.0309210}
+}
+
+@misc{acmbadges,
+  author       = {{Association for Computing Machinery}},
+  title        = {Artifact Review and Badging, Version 1.1},
+  howpublished = {\url{https://www.acm.org/publications/policies/artifact-review-and-badging-current}},
+  year         = {2020}
+}
+
+% --- Conformance checking ---------------------------------------------
+
+@article{rozinat2008,
+  author  = {Rozinat, Anne and van der Aalst, Wil M. P.},
+  title   = {Conformance checking of processes based on monitoring real behavior},
+  journal = {Information Systems},
+  volume  = {33},
+  number  = {1},
+  pages   = {64--95},
+  year    = {2008},
+  doi     = {10.1016/j.is.2007.07.001}
+}
+
+@inproceedings{berti2019,
+  author    = {Berti, Alessandro and van der Aalst, Wil M. P.},
+  title     = {Reviving Token-based Replay: Increasing Speed While Improving Diagnostics},
+  booktitle = {Algorithms \& Theories for the Analysis of Event Data (ATAED)},
+  series    = {CEUR Workshop Proceedings},
+  volume    = {2371},
+  year      = {2019}
+}
+
+@misc{pm4py,
+  author       = {Berti, Alessandro and van Zelst, Sebastiaan J. and van der Aalst, Wil M. P.},
+  title        = {Process Mining for Python (PM4Py): Bridging the Gap Between Process- and Data Science},
+  howpublished = {arXiv:1905.06169},
+  year         = {2019}
+}
+
+@article{vanzelst2019,
+  author  = {van Zelst, Sebastiaan J. and Bolt, Alfredo and Hassani, Marwan and van Dongen, Boudewijn F. and van der Aalst, Wil M. P.},
+  title   = {Online conformance checking: relating event streams to process models using prefix-alignments},
+  journal = {International Journal of Data Science and Analytics},
+  volume  = {8},
+  pages   = {269--284},
+  year    = {2019},
+  doi     = {10.1007/s41060-017-0078-6}
+}
+
+@inproceedings{rehse2022,
+  author    = {Rehse, Jana-Rebecca and Pufahl, Luise and Grohs, Michael and Klein, Lisa-Marie},
+  title     = {Process Mining Meets Visual Analytics: The Case of Conformance Checking},
+  booktitle = {Hawaii International Conference on System Sciences (HICSS-56)},
+  year      = {2023},
+  note      = {arXiv:2209.09712}
+}
+
+@article{hagerehse2025,
+  author  = {H{\"a}ge, Tom and Rehse, Jana-Rebecca},
+  title   = {A taxonomy of conformance checking visualizations},
+  journal = {Process Science},
+  year    = {2025},
+  doi     = {10.1007/s44311-025-00025-5}
+}
+
+% --- Visual analytics for autonomous experimentation ------------------
+
+@article{vision2025,
+  author  = {others},
+  title   = {VISION: A Virtual Scientific Companion for autonomous experiments},
+  journal = {Machine Learning: Science and Technology},
+  year    = {2025},
+  doi     = {10.1088/2632-2153/add9e4}
+}
+
+@article{olympus2021,
+  author  = {H{\"a}se, Florian and Aldeghi, Matteo and Hickman, Riley J. and Roch, Lo{\"i}c M. and Christensen, Melodie and Liles, Elena and Hein, Jason E. and Aspuru-Guzik, Al{\'a}n},
+  title   = {Olympus: a benchmarking framework for noisy optimization and experiment planning},
+  journal = {Machine Learning: Science and Technology},
+  volume  = {2},
+  number  = {3},
+  pages   = {035021},
+  year    = {2021},
+  doi     = {10.1088/2632-2153/abedc8}
+}
+
+% TODO confirm exact title, authors, and venue of the ALS/PETRA III
+% autonomous SAXS/WAXS framework paper.
+@article{alspetra2026,
+  author  = {Koepp, Wiebke and Sochor, Linus and McReynolds, Daniel and Hexemer, Alexander and others},
+  title   = {An autonomous SAXS/WAXS framework across ALS and PETRA III},
+  journal = {ACS Photonics Science (to confirm)},
+  year    = {2026},
+  doi     = {10.1021/photonsci.5c00044}
+}
+
+@software{tsuchinoko,
+  author       = {{Lawrence Berkeley National Laboratory, CAMERA}},
+  title        = {Tsuchinoko: an adaptive-experiment GUI},
+  howpublished = {\url{https://tsuchinoko.readthedocs.io/}},
+  note         = {OSTI code-135210},
+  year         = {2024}
+}
+
+% TODO confirm exact venue (Digital Discovery vs Matter) and author list.
+@article{chemos2,
+  author  = {Sim, Malcolm and others},
+  title   = {ChemOS 2.0: an orchestration architecture for self-driving laboratories},
+  journal = {Digital Discovery (to confirm)},
+  year    = {2024}
+}
+
+@article{alab2023,
+  author  = {Szymanski, Nathan J. and Rendy, Bernardus and Fei, Yuxing and Kumar, Rishi E. and He, Tanjin and Milsted, David and McDermott, Matthew J. and Gallant, Max and Cubuk, Ekin Dogus and Merchant, Amil and Kim, Haegyeom and Jain, Anubhav and Bartel, Christopher J. and Persson, Kristin and Zeng, Yan and Ceder, Gerbrand},
+  title   = {An autonomous laboratory for the accelerated synthesis of novel materials},
+  journal = {Nature},
+  volume  = {624},
+  pages   = {86--91},
+  year    = {2023},
+  doi     = {10.1038/s41586-023-06734-w}
+}
+
+@article{bluesky,
+  author  = {Allan, Daniel and Caswell, Thomas and Campbell, Stuart and Rakitin, Maksim},
+  title   = {Bluesky's Ahead: A Multi-Facility Collaboration for an a la Carte Software Project for Data Acquisition and Management},
+  journal = {Synchrotron Radiation News},
+  volume  = {32},
+  number  = {3},
+  pages   = {19--22},
+  year    = {2019},
+  doi     = {10.1080/08940886.2019.1608121}
+}

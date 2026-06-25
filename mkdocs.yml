@@ -340,6 +340,7 @@ nav:
   - Blog:
     - blog/index.md
   - Talks: talks.md
+  - Papers: papers.md
   - Reference:
     - reference/index.md
     - Workflow: reference/workflow.md

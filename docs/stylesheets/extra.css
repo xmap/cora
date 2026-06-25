@@ -467,6 +467,13 @@ body::before {
   grid-template-columns: 1fr;
 }
 
+/* Papers page: same single-column card list as talks. The card's last
+   link (Source on GitHub) becomes the stretched click target via the
+   Material grid-cards behavior; no download icon yet (source-only). */
+.md-typeset .grid.cards.papers-list {
+  grid-template-columns: 1fr;
+}
+
 /* ---- Labelled aside ----
    Left amber rule + small uppercase kicker, ported from the talks deck
    (border-l-2 / pl-5 / tracking-[0.22em]). Lighter than a Material

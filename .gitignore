@@ -81,6 +81,20 @@ talks/*/node_modules/
 talks/*/dist/
 talks/*/*.pdf
 
+# Papers (LaTeX): track sources, ignore build artifacts. The venue class
+# files (*.cls/*.bst/*.sty) are added per paper and not vendored here.
+papers/*/*.aux
+papers/*/*.log
+papers/*/*.out
+papers/*/*.bbl
+papers/*/*.blg
+papers/*/*.toc
+papers/*/*.synctex.gz
+papers/*/*.fls
+papers/*/*.fdb_latexmk
+papers/*/*.pdf
+papers/*/_minted*/
+
 # Mutmut working tree (regenerated per audit; holds the AST-mutated copy
 # of src/ + tests/ under apps/api/mutants/). Never committed.
 apps/api/mutants/
