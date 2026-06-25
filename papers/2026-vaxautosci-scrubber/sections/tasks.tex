@@ -4,30 +4,30 @@ We derive four recurring tasks, which we label T1 through T4, from what a
 beamline scientist needs when returning to a conducted run, and make each
 concrete as a query over the event log paired with a visual encoding
 (Table~\ref{tab:tasks}). The tasks are
-not hypothetical: each is a question we ask of the lights-out, agent-supervised
+not hypothetical: each is a question we ask of the agent-supervised
 run in Section~\ref{sec:scrubber}, and each is answerable only because the record is
 an ordered, immutable event stream rather than a final-state snapshot.
 
-\textbf{T1, recover the interrupted state.}
+\textbf{T1: recover the interrupted state.}
 \emph{What was in flight when the beam dropped?} The system records intent
 before effect, so an unfinished step appears in the log as an activity that
 was opened but never closed. The query finds the activity with no matching
 outcome; the encoding draws it as an open interval, a visible gap rather than
 a silent truncation.
 
-\textbf{T2, reproduce a decision.}
+\textbf{T2: reproduce a decision.}
 \emph{Replay the run to the instant a choice was made, and show the state
 then.} The query folds the event stream up to the chosen position; the
 encoding is the draggable cursor together with the reconstructed state read
 out beside it.
 
-\textbf{T3, confirm convergence.}
+\textbf{T3: confirm convergence.}
 \emph{Did this loop converge, and on which pass?} The query reads the
 per-iteration verdict carried by each iteration-boundary event; the encoding
 colors nested brackets by that verdict, so the bracketing search is legible at
 a glance.
 
-\textbf{T4, confirm the record is intact.}
+\textbf{T4: confirm the record is intact.}
 \emph{Can I trust that nothing was altered?} The query recomputes the
 content-addressed hash recorded with the run and compares it at the cursor;
 the encoding is an inline fidelity badge that turns ``trust me'' into ``the
@@ -48,16 +48,16 @@ walkthrough (Section~\ref{sec:crash}), and T4 rests on the immutable substrate
     \toprule
     \textbf{Task} & \textbf{Event-log query} & \textbf{Visual encoding} \\
     \midrule
-    T1 Recover interrupted state &
+    T1: Recover interrupted state &
       Activity opened with no closing outcome &
       Open interval (a visible gap) \\[0.4em]
-    T2 Reproduce a decision &
+    T2: Reproduce a decision &
       Fold the stream to position $t$ &
       Draggable cursor + folded state \\[0.4em]
-    T3 Confirm convergence &
+    T3: Confirm convergence &
       Per-iteration verdict on boundary events &
       Nested brackets colored by verdict \\[0.4em]
-    T4 Confirm integrity &
+    T4: Confirm integrity &
       Recompute and compare the recorded hash &
       Inline fidelity badge \\
     \bottomrule

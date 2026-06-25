@@ -36,7 +36,7 @@ shown at the cursor matches the record (under the system's append-only storage
 and deterministic-fold assumptions, not against an adversary with database write
 access).
 
-We ground the design in a real run from an operating instrument: a lights-out,
+We ground the design in a real run from an operating instrument: an unattended,
 agent-supervised run at the APS 2-BM micro-CT beamline, in which our
 event-sourced system of record, CORA, conducts a rotation-axis centering
 alignment that converges, a first projection is in flight when the beam drops,
@@ -68,7 +68,7 @@ autonomous runs.
         open-interval markers for unfinished steps, a draggable fold-to-version
         cursor, and a content-addressed fidelity badge.
   \item \textbf{A grounded case study.} We demonstrate the tasks on a real
-        lights-out, agent-supervised run on the APS 2-BM micro-CT beamline,
+        unattended, agent-supervised run on the APS 2-BM micro-CT beamline,
         including the beam-loss instant at which the scrubber localizes the
         interrupted projection and the agent that held the run.
 \end{itemize}
