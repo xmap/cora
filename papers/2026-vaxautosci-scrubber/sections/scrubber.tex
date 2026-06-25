@@ -80,6 +80,20 @@ alignment already converged, the first projection still open, and the run held
 by the agent, and the fidelity badge confirms that reconstructed state is
 faithful to the record (T4).
 
+Now the morning audit. The scientist opens the run and reads the bracket band
+first: four passes, the last one green, so the centering converged overnight
+without anyone watching (T3). They drag the cursor into the gap in the held band,
+the beam-loss instant, and the first projection shows as an open interval with no
+outcome, which is exactly the exposure that was in flight when the beam dropped,
+localized rather than guessed (T1, developed in Section~\ref{sec:crash}). To
+check the recovery they drag to the resume transition and open its decision: the
+supervisor resumed because the start-safety envelope was satisfied again, and the
+folded state shows what the agent saw at that instant (T2). At every cursor
+position the fidelity badge stays verified, so the reconstruction they reason
+over is faithful to the record (T4). In a few minutes, and without re-running
+anything, the auditor has recovered what the run did overnight, what was
+interrupted, why the agent acted, and that the account can be trusted.
+
 \textbf{Design rationale.} Each encoding answers an audit question rather than
 decorating the timeline. We give the run lifecycle its own lane, colored by
 actor, instead of annotating events in place, so that \emph{who or what was
@@ -94,3 +108,20 @@ positive mark that is seen rather than inferred. And we keep one linear time axi
 with an explicit held band rather than collapsing the hold, because the gap
 itself is the evidence that the run waited, on the same scale as everything
 else.
+
+\textbf{Auditing autonomous agents.} The lifecycle lane, and the decision
+records behind it, make the scrubber an instrument for agent accountability,
+which is the harder half of the human-agent handoff. Each transition the
+supervisor drives is recorded with the actor that caused it and a decision the
+auditor can open: not only that the run was held and resumed, but who or what
+decided, when, and on what basis. Scrubbing to a transition reconstructs the
+state the agent saw at that instant, so ``why did it resume here'' is answered by
+replay rather than by trusting a log line. This is the capability that lets a
+human cede control to an agent overnight and still answer for the result in the
+morning: the questions an auditor asks do not change as autonomy deepens, only
+how many of the recorded decisions were the agent's rather than a person's. The
+same lane that here distinguishes operator from supervisor would, with more
+agents in the loop, separate their contributions and surface where they
+contended or handed off, which is the multi-agent orchestration view the
+visualization community has called for but the provenance tools above do not
+provide.
