@@ -9,7 +9,7 @@ The MFX experiment hutch is where the transported beam is conditioned to its fin
 - **Pulse picker** (`MFX:DIA:MMS:07`): a fast single-pulse selector. It folds into the `Shutter` Family as a fast beam gate; whether a rotary pulse-picking chopper deserves its own Family (the loose `Chopper` shape) is open (PULSE-1).
 - **Attenuator** (`MFX:ATT`): a solid-Si binary attenuator. The `Filter` Family covers the discrete foil selection. What it does not cover is the `AttBase` solver that picks a foil combination for a requested transmission, energy-dependent; that is the deferred `Attenuable` leg, and MFX is its rule-of-three trigger (ATT-1).
 - **DCCM**: a diamond double-channel-cut monochromator for monochromatic and spectroscopy modes; MFX also runs pink / SASE beam with the mono out. It folds into `Monochromator`; the crystal details and the pink-vs-mono mode boundary are carried `confirm` (MONO-1).
-- **Transfocator and prefocus** (`MFX:LENS`, `MFX:DIA:XFLS`): compound-refractive-lens (beryllium) stacks that focus the beam. They reuse the loose `Transfocator` family from I22 / 4-ID / 8-ID. Selecting a lens set for a target focal length is a solver with the same shape as the attenuator (CRL-1).
+- **Transfocator and prefocus** (`MFX:LENS`, `MFX:DIA:XFLS`): compound-refractive-lens (beryllium) stacks that focus the beam. They reuse the graduated `Transfocator` catalog Family (a CRL focusing optic), also bound at I22 / 4-ID / 8-ID. Selecting a lens set for a target focal length is a solver with the same shape as the attenuator (ATT-1).
 - **Slits** (`MFX:DG1:JAWS`, `MFX:DG2:JAWS:*`) and **profile imagers** (`MFX:DG1:PIM`): standard 4-blade slits (`Slit`) and YAG-screen imagers (`Scintillator` + `Camera`).
 
 ## Per-shot diagnostics

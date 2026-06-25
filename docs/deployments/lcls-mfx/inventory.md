@@ -27,8 +27,8 @@ Root Asset `LCLS-MFX` (`tier = Unit`, `facility_code = slac`); sub-systems nest 
 | `PulsePicker` | Shutter | `MFX:DIA:MMS:07` | fast single-pulse selector; Shutter Role (Shutter-vs-Chopper open, PULSE-1) |
 | `Attenuator` | Filter | `MFX:ATT` | solid-Si attenuator; transmission solver deferred (ATT-1) |
 | `DCCM` | Monochromator | (diamond channel-cut) | mono for some modes; pink-vs-mono boundary (MONO-1) |
-| `Transfocator` | **Transfocator** | `MFX:LENS` | Be CRL stack; loose family reused (CRL-1) |
-| `Prefocus` | **Transfocator** | `MFX:DIA:XFLS` | upstream CRL prefocus; loose family reused (CRL-1) |
+| `Transfocator` | Transfocator | `MFX:LENS` | Be CRL stack; reuses the graduated `Transfocator` catalog Family (a CRL focusing optic) |
+| `Prefocus` | Transfocator | `MFX:DIA:XFLS` | upstream CRL prefocus; reuses the graduated `Transfocator` catalog Family (a CRL focusing optic) |
 | `MFXSlits` | Slit | `MFX:DG1:JAWS` | DG1 4-blade slits |
 | `MFXSlitsDownstream` | Slit | `MFX:DG2:JAWS:US` | DG2 slit set |
 | `MFXIntensityMonitor` | **FluxMonitor** | `MFX:DG1:IPM` | intensity-position monitor (DIAG-1) |
@@ -41,7 +41,7 @@ Root Asset `LCLS-MFX` (`tier = Unit`, `facility_code = slac`); sub-systems nest 
 | `Detector` | Camera | (Rayonix / ePix10k / Jungfrau) | per-shot area detector; frames flow through the DAQ data plane (DAQ-1, DET-1) |
 | `EventSequencer` | TimingController | `ECS:SYS0:7` | beam-synchronous event-code sequencer; event-code parameter has no typed home (TIMING-1) |
 
-Reused catalog Families (no new Family needed): `InsertionDevice`, `Filter`, `Mirror`, `Shutter`, `Slit`, `Scintillator`, `Monochromator`, `Camera`, `TimingController`. **No new catalog Family graduated.** Loose families reused from sibling deployments: `FluxMonitor` and `Diagnostic` (Sensor families, from I22 / 2-BM), `Transfocator` (from I22 / 4-ID / 8-ID), `Laser` (from 4-ID POLAR). Only one genuinely new loose family: `EmissionSpectrometer` (the von Hamos, a crystal-analyzer emission spectrometer no Family carries; the same gap appeared at MAX IV Balder). The liquid jet presents an endstation Role and is carried with its shape deferred rather than minting a Family, mirroring how I03 and 19-BM handle sample delivery and the exchange arm.
+Reused catalog Families (no new Family needed): `InsertionDevice`, `Filter`, `Mirror`, `Shutter`, `Slit`, `Scintillator`, `Monochromator`, `Camera`, `TimingController`, and `Transfocator` (the graduated CRL focusing optic, also bound at I22 / 4-ID / 8-ID). **No new catalog Family graduated here.** Loose families reused from sibling deployments: `FluxMonitor` and `Diagnostic` (Sensor families, from I22 / 2-BM), `Laser` (from 4-ID POLAR). Only one genuinely new loose family: `EmissionSpectrometer` (the von Hamos, a crystal-analyzer emission spectrometer no Family carries; the same gap appeared at MAX IV Balder). The liquid jet presents an endstation Role and is carried with its shape deferred rather than minting a Family, mirroring how I03 and 19-BM handle sample delivery and the exchange arm.
 
 ## Pending confirmations
 
@@ -64,4 +64,4 @@ Every value below is reverse-engineered from `pcdshub` or inferred, awaiting the
 | Emission-spectrometer Family and analyzer-crystal composition | `EmissionSpectrometer` | `unknown-pending-confirmation` | (SPEC-1) |
 | Detector model and per-shot frame referencing | `Detector` | `unknown-pending-confirmation` | (DET-1) |
 
-Assertion-style questions that do not leave a value blank (the scope question SCOPE-1, the computed lightpath LIGHTPATH-1, the transfocator focus solver CRL-1, and the pulse-picker Family PULSE-1) are on [Open questions](questions.md) without a placeholder here.
+Assertion-style questions that do not leave a value blank (the scope question SCOPE-1, the computed lightpath LIGHTPATH-1, and the pulse-picker Family PULSE-1) are on [Open questions](questions.md) without a placeholder here.

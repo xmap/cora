@@ -22,11 +22,11 @@
 # (the Eiger-to-Camera precedent), the ion-chamber/diode flux reuses FluxMonitor
 # (#353), the thermal stage TemperatureController (#350), the occasional anomalous
 # fluorescence EnergyDispersiveSpectrometer (#345), the beamstop BeamStop, the
-# mirrors Mirror, the two monochromators Monochromator. Its one loose family is the
-# compound-refractive-lens Transfocator, ALREADY loose at 4-ID, 8-ID, 9-ID, and i22
-# and HELD for gate-review: the open question is the abstraction (a CRL-specific
-# Family vs a general focusing optic), NOT the count (CRL-1), so CHX (the fifth
-# sighting) keeps it loose, consistent with the others. Per the 8-ID precedent the
+# mirrors Mirror, the two monochromators Monochromator. The compound-refractive-lens
+# focusing optic reuses the graduated Transfocator catalog Family (a CRL focusing
+# optic, also bound at 4-ID, 8-ID, 9-ID, and i22): the abstraction is settled, so
+# the only residual is the per-optic lens material and count for the transfocator
+# and the endstation kinoform lenses (CRL-1). Per the 8-ID precedent the
 # XPCS / small-angle-scattering Methods are NOT coined here; they are the deferred
 # owner-scope cohort (TECH-1).
 
@@ -97,10 +97,10 @@ optics:
       confirm: true
       note: "Horizontal-deflecting focusing mirror (hdm, class HorizontalDiffractionMirror); pitch on a separate read/write PV pair."
     - name: Transfocator
-      family: Transfocator           # loose Family (held; CRL-1)
+      family: Transfocator
       pv: "XF:11IDA-OP{Lens:"
       confirm: true
-      note: "Compound-refractive-lens transfocator (tran, class Transfocator) focusing the coherent beam. Loose family with no clean catalog home yet, ALREADY loose at 4-ID/8-ID/9-ID/i22 and held for gate-review; the open question is the abstraction, not the count (CRL-1). Lens material and count pending (CRL-1)."
+      note: "Compound-refractive-lens transfocator (tran, class Transfocator) focusing the coherent beam. Reuses the graduated Transfocator catalog Family (a CRL focusing optic, also bound at 4-ID/8-ID/9-ID/i22). Lens material and count pending (CRL-1)."
     - name: PinkBeamSlit
       family: Slit
       pv: "XF:11IDA-OP{Slt:PB-Ax:"

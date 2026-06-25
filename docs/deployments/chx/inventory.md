@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/chx/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/chx-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection. CHX introduces **no new catalog family**: every device reuses an existing Family, including the ones recently graduated from earlier reverse-engineered deployments (`Camera` for the Eiger detectors, `FluxMonitor` for the flux counter, `TemperatureController` for the thermal stage, `EnergyDispersiveSpectrometer` for the occasional fluorescence detector). Two devices bind loose families shared across deployments and held for gate-review: the compound-refractive-lens `Transfocator` (4-ID, 8-ID, 9-ID, i22) and the `BeamPositionMonitor` (4-ID, 8-ID, 9-ID), both recorded in the promotion-review register (see [Model](model.md#deliberately-not-here-yet)).
+Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/chx-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection. CHX introduces **no new catalog family**: every device reuses an existing Family, including the ones recently graduated from earlier reverse-engineered deployments (`Camera` for the Eiger detectors, `FluxMonitor` for the flux counter, `TemperatureController` for the thermal stage, `EnergyDispersiveSpectrometer` for the occasional fluorescence detector, and the graduated `Transfocator` Family (a CRL focusing optic, also bound at 4-ID, 8-ID, 9-ID, i22) for the compound-refractive-lens optic). One device binds a loose family shared across deployments and held for gate-review: the `BeamPositionMonitor` (4-ID, 8-ID, 9-ID), recorded in the promotion-review register (see [Model](model.md#deliberately-not-here-yet)).
 
 ## The Asset tree
 
@@ -18,7 +18,7 @@ Root Asset `CHX` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `Monochromator` | Monochromator | `XF:11IDA-OP{Mono:DCM}` | silicon double-crystal monochromator |
 | `MultilayerMonochromator` | Monochromator | `XF:11IDA-OP{Mono:DMM}` | double-multilayer mono (high coherent flux) |
 | `HorizontalMirror` | Mirror | `XF:11IDA-OP{Mir:HDM}` | horizontal-deflecting focusing mirror |
-| `Transfocator` | Transfocator (loose) | `XF:11IDA-OP{Lens:}` | compound-refractive-lens focusing stack |
+| `Transfocator` | Transfocator | `XF:11IDA-OP{Lens:}` | compound-refractive-lens focusing stack |
 | `PinkBeamSlit` | Slit | `XF:11IDA-OP{Slt:PB}` | pink-beam-defining slit |
 | `MonoBeamSlit` | Slit | `XF:11IDA-OP{Slt:MB}` | coherence-matched mono-beam slit |
 | `EnergyAxis` | PseudoAxis | (computed) | master energy (DCM energy axis) |
@@ -39,7 +39,7 @@ Root Asset `CHX` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `Zebra` | TimingController | `XF:11IDB-ES{Zebra}` | fast-shutter / frame trigger box |
 | `EndstationMotionController` | MotionController | (pending) | sample / optics motion controllers |
 
-Every family is in the catalog except the loose `Transfocator` and `BeamPositionMonitor` (both shared and held); CHX coins none. Notably the area detectors reuse `Camera` (the Diamond Eiger-to-Camera precedent), the flux counter reuses `FluxMonitor` (graduated in #353), the thermal stage reuses `TemperatureController` (graduated in #350), and the fluorescence detector reuses `EnergyDispersiveSpectrometer` (graduated in #345), so CHX is a clean reuse-and-reinforce deployment.
+Every family is in the catalog except the loose `BeamPositionMonitor` (shared and held); CHX coins none. Notably the area detectors reuse `Camera` (the Diamond Eiger-to-Camera precedent), the flux counter reuses `FluxMonitor` (graduated in #353), the thermal stage reuses `TemperatureController` (graduated in #350), the fluorescence detector reuses `EnergyDispersiveSpectrometer` (graduated in #345), and the compound-refractive-lens optic reuses the graduated `Transfocator` Family, so CHX is a clean reuse-and-reinforce deployment.
 
 ## Pending confirmations
 
@@ -50,7 +50,7 @@ Every value below is read from the profile collection or inferred, awaiting the 
 | Undulator period / gap range | `Source` | `unknown-pending-confirmation` | (SRC-1) |
 | PSS search-and-secure permit-leaf PVs | both enclosures | `unknown-pending-confirmation` | (PSS-1) |
 | DCM cryo detail / range (Si(111) cut is read from source) and DMM coating | `Monochromator` / `MultilayerMonochromator` | `unknown-pending-confirmation` | (DCM-1) |
-| Focusing-optic catalog home; transfocator and kinoform lens material / count | `Transfocator` | `unknown-pending-confirmation` | (CRL-1) |
+| Transfocator lens material / count | `Transfocator` | `unknown-pending-confirmation` | (CRL-1) |
 | Whether GISAXS is a live routine | `GrazingIncidenceMirror` | `unknown-pending-confirmation` | (GI-1) |
 | Diffractometer axis set; Goniometer / Assembly modelling | `SampleStage` | `unknown-pending-confirmation` | (STAGE-1) |
 | Primary Eiger, whether an along-beam distance stage exists, Xspress3 element count | `Eiger4M` / `SAXSDetectorStage` / `FluorescenceSpectrometer` | `unknown-pending-confirmation` | (DET-1) |

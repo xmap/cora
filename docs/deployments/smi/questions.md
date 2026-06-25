@@ -16,7 +16,7 @@ Priorities: `Blocks-build`, `Blocks-go-live`, `Nice-to-have`.
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DCM-1 | Nice-to-have | The double-crystal monochromator energy range (the crystal is Si(111) per the source energy math, on bare motor records `XF:12ID:m65`-`m68`, driven by the coupled energy pseudopositioner). | One Monochromator Asset, Si(111) recorded, range blank. | The Monochromator settings. |
-| CRL-1 | Blocks-go-live | The transfocator (`XF:12IDC-OP:2{Lens:CRL}`): lens material and count (twelve elements). And the cross-deployment abstraction: is the compound refractive lens a new catalog Family, or does it fold into an existing Family plus settings? It is loose at 4-ID, 8-ID, 9-ID, i22, and CHX; SMI is the sixth sighting. | A loose `Transfocator` Family, kept loose pending the abstraction decision (not the count). | The transfocator modelling boundary. |
+| CRL-1 | Blocks-go-live | The transfocator (`XF:12IDC-OP:2{Lens:CRL}`) lens material and count (twelve elements). The cross-deployment abstraction is resolved: the compound refractive lens reuses the graduated `Transfocator` catalog Family (a CRL focusing optic), bound at 4-ID, 8-ID, 9-ID, i22, and CHX too; only the per-Asset lens spec is still open. | The graduated `Transfocator` Family is bound; lens material and count blank. | The transfocator lens specification. |
 | ENERGY-1 | Nice-to-have | Does SMI ever scan energy as the measurement, or is it always fixed-energy per experiment? | Fixed-energy; energy_scan not modelled. | The energy Capability decision. |
 
 ## Sample and detectors

@@ -108,7 +108,7 @@ front-end:
   stage: source
   enclosure: 10-ID-A
   intro: "The front-end beam-defining slit and the compound-refractive-lens transfocator."
-  note: "The CRL transfocator reuses the loose Transfocator family (4-id / 8-id / 9-id / chx / i22), still held at gate-review (CRL-1); its x/y/th are Asset-layer settings."
+  note: "The CRL transfocator reuses the graduated Transfocator catalog Family (a CRL focusing optic; 4-id / 8-id / 9-id / chx / i22); its x/y/th are Asset-layer settings."
   devices:
     - name: FrontEndSlit
       family: Slit
@@ -117,11 +117,11 @@ front-end:
       confirm: true
       note: "front-end beam-defining slit (blades + virtual centre/gap); axis roles are OPT-2"
     - name: Transfocator
-      family: Transfocator             # loose Family (CRL optic, held; CRL-1)
+      family: Transfocator             # catalog Family (CRL focusing optic)
       pv: { x: "FE:C10A-OP{CRL:1-Ax:X}Mtr", y: "FE:C10A-OP{CRL:1-Ax:Y}Mtr", th: "FE:C10A-OP{CRL:1-Ax:P}Mtr" }
       new: true
       confirm: true
-      note: "front-end compound-refractive-lens transfocator; lens-stack composition is a setting, catalog home is CRL-1"
+      note: "front-end compound-refractive-lens transfocator; lens-stack composition is a setting"
 
 monochromator:
   stage: source

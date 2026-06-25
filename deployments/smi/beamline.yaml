@@ -21,9 +21,10 @@
 # detectors reuse Camera, the TetrAMM flux monitor FluxMonitor (#353), the Linkam /
 # LakeShore stages TemperatureController (#350), the Amptek fluorescence MCA
 # EnergyDispersiveSpectrometer (#345), the beamstops BeamStop, the mirrors Mirror,
-# the DCM Monochromator. Two loose families are bound, both shared and held: the
-# compound-refractive-lens Transfocator (4-ID / 8-ID / 9-ID / i22 / CHX, now a sixth
-# sighting; CRL-1) and the BeamPositionMonitor (4-ID / 8-ID / 9-ID; DIAG-1). Per the
+# the DCM Monochromator, and the compound-refractive-lens Transfocator (now a
+# graduated CRL focusing-optic Family, bound at 4-ID / 8-ID / 9-ID / i22 / CHX too;
+# the residual lens material / count fact is CRL-1). One loose family is still bound:
+# the BeamPositionMonitor (4-ID / 8-ID / 9-ID; DIAG-1). Per the
 # i22 precedent the SAXS / WAXS / GISAXS Capabilities are NOT coined here; they are
 # the deferred owner-scope cohort (TECH-1), simultaneous SAXS+WAXS is coordinated
 # Runs not a new technique, and the in-situ cells are deferred (INSITU-1).
@@ -96,10 +97,10 @@ optics:
       confirm: true
       note: "Vertical focusing mirror (vfm, with a bimorph voltage controller); reuses the Mirror family."
     - name: Transfocator
-      family: Transfocator           # loose Family (held; CRL-1)
+      family: Transfocator
       pv: "XF:12IDC-OP:2{Lens:CRL-Ax:"
       confirm: true
-      note: "Compound-refractive-lens transfocator (crl, twelve individually-insertable lens elements L1-L12 plus x / y / z / pitch / theta alignment) for micro-focusing versus low-divergence modes; a DSA aperture shares its controller. Loose family with no clean catalog home yet, ALREADY loose at 4-ID / 8-ID / 9-ID / i22 / CHX and held for gate-review; the open question is the abstraction, not the count (CRL-1). Lens material and count pending (CRL-1)."
+      note: "Compound-refractive-lens transfocator (crl, twelve individually-insertable lens elements L1-L12 plus x / y / z / pitch / theta alignment) for micro-focusing versus low-divergence modes; a DSA aperture shares its controller. Reuses the graduated Transfocator catalog Family (a CRL focusing optic, bound at 4-ID / 8-ID / 9-ID / i22 / CHX too). Lens material and count pending (CRL-1)."
     - name: WhiteBeamSlit
       family: Slit
       pv: "XF:12IDA-OP:2{Slt:WB-Ax:"

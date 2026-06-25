@@ -34,7 +34,8 @@
 # solid-Si Attenuator -> Filter; Slits(JAWS) -> Slit; PulsePicker -> Shutter (fast
 # pulse gate; Shutter-vs-Chopper open, PULSE-1); PIM -> Scintillator + Camera; IPM
 # -> FluxMonitor + Diagnostic (loose, reused from i22/2-BM); DCCM -> Monochromator;
-# Transfocator/XFLS -> Transfocator (loose, reused, CRL-1); EventSequencer ->
+# Transfocator/XFLS -> Transfocator (graduated catalog Family, a CRL focusing
+# optic); EventSequencer ->
 # TimingController; the area detector -> Camera. The gas detector (a BeamStats PV,
 # not a happi device) -> FluxMonitor. Vacuum gate valves and the DAQ are floor and
 # not modelled (as at i03). Only NEW loose family: EmissionSpectrometer (SPEC-1).
@@ -176,8 +177,9 @@ mfx-conditioning:
   enclosure: LCLS-MFX
   intro: "The pulse picker, attenuator, channel-cut mono, focusing lenses, slits, and per-shot diagnostics that condition the beam inside the MFX hutch."
   note: >
-    The compound-refractive-lens transfocator + prefocus reuse the loose Transfocator
-    family (CRL-1). The pulse picker is a fast single-pulse gate folded into the
+    The compound-refractive-lens transfocator + prefocus reuse the graduated
+    Transfocator catalog Family (a CRL focusing optic). The pulse picker is a fast
+    single-pulse gate folded into the
     Shutter Family; whether a fast pulse-picking chopper deserves its own Family is
     open (PULSE-1). The diamond channel-cut mono (DCCM) is used for some modes;
     pink-vs-mono operation is carried confirm (MONO-1).
@@ -205,13 +207,13 @@ mfx-conditioning:
       pv: "MFX:LENS"
       new: true
       confirm: true
-      note: "compound-refractive-lens (Be) transfocator stack; loose family reused (CRL-1). Selecting a lens set for a target focal length is a transmission/focus solver, like the attenuator (ATT-1)"
+      note: "compound-refractive-lens (Be) transfocator stack; reuses the graduated Transfocator catalog Family (a CRL focusing optic). Selecting a lens set for a target focal length is a transmission/focus solver, like the attenuator (ATT-1)"
     - name: Prefocus
       family: Transfocator
       pv: "MFX:DIA:XFLS"
       new: true
       confirm: true
-      note: "upstream X-ray focusing lens set (prefocus CRL); loose family reused (CRL-1)"
+      note: "upstream X-ray focusing lens set (prefocus CRL); reuses the graduated Transfocator catalog Family (a CRL focusing optic)"
     - name: MFXSlits
       family: Slit
       pv: "MFX:DG1:JAWS"

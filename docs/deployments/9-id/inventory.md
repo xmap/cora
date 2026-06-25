@@ -4,7 +4,7 @@
 
 This cut models the 9-ID-A optics, the 9-ID-D focusing and guard slits, the grazing-incidence CSSI sample stack, and the detectors; the metadata / Data Management PVs and the simulated devices are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/9-id/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits, and for 9-ID one always does except for two classes. The CRL `Transfocator` and the `BeamPositionMonitor` monitors are held loose pending a cross-facility gate-review, the same Families 4-ID and 8-ID use (see [Model](model.md#loose-families-held-for-gate-review)). Control handles are filled from the beamline config; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits, and for 9-ID one always does except for one class. The CRL `Transfocator` now binds the graduated catalog Family (a CRL focusing optic), the same Family 4-ID and 8-ID use; the `BeamPositionMonitor` monitors are still held loose pending a cross-facility gate-review (see [Model](model.md#a-loose-family-still-held-for-gate-review)). Control handles are filled from the beamline config; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -18,7 +18,7 @@ Root Asset `9-ID` (`tier = Unit`, `facility_code = aps`); sub-systems nest below
 | `Mirror_1/2` | `Device` | Mirror | 9-ID-A | FMBO mirrors, coarse + piezo pitch + bender (OPT-1) |
 | `Aperture_1/2` | `Device` | Aperture | 9-ID-A | high-heat-load white-beam apertures (OPT-2) |
 | `Filter` | `Device` | Filter | 9-ID-A | AVS attenuator bank (OPT-4) |
-| `Transfocator` | `Device` | Transfocator (loose) | 9-ID-D | JJ CRL transfocator (OPT-3) |
+| `Transfocator` | `Device` | Transfocator | 9-ID-D | JJ CRL transfocator (OPT-3) |
 | `KBMirror` | `Device` | Mirror | 9-ID-D | Kirkpatrick-Baez focusing pair (OPT-5) |
 | `Slit_3/4/5` | `Device` | Slit | 9-ID-D | guard slits (OPT-2) |
 | `CSSISampleStage` | `Device` | LinearStage | 9-ID-D | grazing-incidence sample translation + fly Z (CSSI-1) |
@@ -34,7 +34,7 @@ Root Asset `9-ID` (`tier = Unit`, `facility_code = aps`); sub-systems nest below
 | `XBPM_1/2` | `Device` | BeamPositionMonitor (loose) | 9-ID-D | X-ray beam-position monitors (BPM-1) |
 | `FlyScanScaler` | `Device` | GenericProbe | 9-ID-D | multi-channel scaler gating the fly scans (CTRL-2) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Aperture`, `Filter`, `Slit`, `LinearStage`, `RotaryStage`, `Hexapod`, `Camera`, `BeamStop`, `GenericProbe`. Held loose pending gate-review (a third independent beamline, but the abstraction is open): `Transfocator`, `BeamPositionMonitor`. 9-ID adds **no new loose family of its own**.
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Aperture`, `Filter`, `Slit`, `LinearStage`, `RotaryStage`, `Hexapod`, `Camera`, `BeamStop`, `GenericProbe`, and the graduated `Transfocator`. Held loose pending gate-review (a third independent beamline, but the abstraction is open): `BeamPositionMonitor`. 9-ID adds **no new loose family of its own**.
 
 ## Pending confirmations
 

@@ -17,7 +17,7 @@ Root Asset `IXS` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `StorageRing` | `Device` | StorageRing (loose) | - | machine-level ring current, observe-only (MACHINE-1) |
 | `OrbitFeedback` | `Device` | (deferred) | - | source-orbit feedback, modelling deferred (FEEDBACK-1) |
 | `FrontEndSlit` | `Device` | Slit | 10-ID-A | front-end beam-defining slit (OPT-2) |
-| `Transfocator` | `Device` | Transfocator (loose) | 10-ID-A | front-end CRL transfocator (CRL-1) |
+| `Transfocator` | `Device` | Transfocator | 10-ID-A | front-end CRL transfocator |
 | `Monochromator` | `Device` | Monochromator | 10-ID-A | Si(111) double-crystal mono (MONO-1) |
 | `IncidentEnergy` | `Device` | PseudoAxis | 10-ID-A | incident-energy axis, DCM + undulator gap (MONO-1) |
 | `MonoSlit` | `Device` | Slit | 10-ID-A | post-DCM beam-defining slit (OPT-2) |
@@ -41,7 +41,7 @@ Root Asset `IXS` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `AnalyzerThermalControl` | `Device` | TemperatureController | 10-ID-D | per-crystal PID thermal stabilization (TEMP-1) |
 | `AnalyzerElectrometers` / `IncidentScaler` | `Device` | FluxMonitor | 10-ID-D | quad electrometers + I0 scaler (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Slit`, `Monochromator`, `PseudoAxis`, `Mirror`, `Aperture`, `Filter`, `Hexapod`, `Table`, `LinearStage`, `Goniometer`, `TemperatureController`, `FluxMonitor`. Loose families reused from siblings: `StorageRing`, `Transfocator`, `BeamPositionMonitor`. Coined loose at n=1 (new to the catalog, graduates nothing): `EnergyAnalyzer`.
+Families reused from the catalog: `InsertionDevice`, `Slit`, `Monochromator`, `PseudoAxis`, `Mirror`, `Aperture`, `Filter`, `Hexapod`, `Table`, `LinearStage`, `Goniometer`, `Transfocator`, `TemperatureController`, `FluxMonitor`. Loose families reused from siblings: `StorageRing`, `BeamPositionMonitor`. Coined loose at n=1 (new to the catalog, graduates nothing): `EnergyAnalyzer`.
 
 ## Pending confirmations
 
@@ -56,7 +56,6 @@ Families reused from the catalog: `InsertionDevice`, `Slit`, `Monochromator`, `P
 | Orbit-feedback modelling | `OrbitFeedback` | `unknown-pending-confirmation` | (FEEDBACK-1) |
 | DCM cut, energy range, pseudo-axis rule | `Monochromator`, `IncidentEnergy` | `unknown-pending-confirmation` | (MONO-1) |
 | HRM crystals, meV resolution, beamstop | `HighResolutionMonochromator`, `HighResolutionEnergy` | `unknown-pending-confirmation` | (HRM-1) |
-| Transfocator catalog home | `Transfocator` | `unknown-pending-confirmation` | (CRL-1) |
 | Mirror coatings and axis roles | the mirrors | `unknown-pending-confirmation` | (OPT-1) |
 | Slit blade-axis maps | the slits | `unknown-pending-confirmation` | (OPT-2) |
 | Pinhole Aperture-vs-Mask | `Pinhole` | `unknown-pending-confirmation` | (PH-1) |

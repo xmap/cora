@@ -19,4 +19,4 @@ Along the beam, in order, sit the **stations**: the [Source](../beamline.md) tha
 
 ## Reference
 
-- [Inventory](../inventory.md): the full planned CORA Asset model (every device by `parent_id`, with Families and pending confirmations), including which loose families are held for gate-review.
+- [Inventory](../inventory.md): the full planned CORA Asset model (every device by `parent_id`, with Families and pending confirmations), including which loose family is still held for gate-review.

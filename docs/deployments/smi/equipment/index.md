@@ -16,4 +16,4 @@ SMI runs from an in-vacuum undulator through a first-optics hutch into an experi
 - [Detector](detector.md) (`12-ID-C`): the simultaneous SAXS and WAXS Pilatus detectors, the SAXS camera-length stage and beamstops, the flux monitor, and the fluorescence detector.
 - [Controls](controls.md): the fast shutter that gates the exposure, and the motion controllers.
 
-Each device binds a catalog [Family](../../../catalog/families.md) and a verified EPICS PV; none binds a vendor Model (part numbers are not in the public config). The loose families are the `Transfocator` and the `BeamPositionMonitor`, both shared with other deployments and held for gate-review.
+Each device binds a catalog [Family](../../../catalog/families.md) and a verified EPICS PV; none binds a vendor Model (part numbers are not in the public config). The `Transfocator` reuses the graduated catalog Family (a CRL focusing optic, shared with 4-ID, 8-ID, 9-ID, i22, and CHX). The one loose family is the `BeamPositionMonitor`, shared with other deployments and held for gate-review.
