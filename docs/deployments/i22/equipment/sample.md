@@ -17,10 +17,10 @@ The quantitative-flux axis is what the imaging-camera pilots never needed. Two i
 
 | Device | Family | Control handle | Notes |
 | --- | --- | --- | --- |
-| `I0` | `FluxMonitor` (loose) | `BL22I-EA-XBPM-02:` | incident-flux ion chamber / XBPM (Tetramm 4-channel current); transmission and dose normalization |
-| `It` | `FluxMonitor` (loose) | `BL22I-EA-TTRM-02:` | transmitted-flux ion chamber (Tetramm) |
+| `I0` | `FluxMonitor` | `BL22I-EA-XBPM-02:` | incident-flux ion chamber / XBPM (Tetramm 4-channel current); transmission and dose normalization |
+| `It` | `FluxMonitor` | `BL22I-EA-TTRM-02:` | transmitted-flux ion chamber (Tetramm) |
 
-The flux monitors are carried as a loose `FluxMonitor` family that presents the existing Sensor Role (the Role docstring names ion chambers explicitly). An adversarial new-kind review deferred minting a catalog Family on the strength of I22 alone; whether `FluxMonitor` is earned, or these stay deployment-local Sensor devices, is settled when staff confirm the devices and a rule-of-three fires (FLUX-1). This is the same loose-Sensor pattern 7-BM uses for its `Photodiode` and 2-BM uses for its `BeamPositionMonitor`.
+The flux monitors bind the `FluxMonitor` catalog Family, which presents the existing Sensor Role (the Role docstring names ion chambers explicitly). An adversarial new-kind review deferred minting a Family on the strength of I22 alone; it has since graduated, having reached the rule-of-three across I22, I03, and I15-1 (FLUX-1). It earned its place by what it measures (beam flux, a scalar Reading), the way `EnergyDispersiveSpectrometer` did, and stays distinct from the position-measuring Sensor families still held loose (7-BM's `Photodiode`, 2-BM's `BeamPositionMonitor`).
 
 ## The sample environment
 

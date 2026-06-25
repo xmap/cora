@@ -59,6 +59,8 @@ families:
   - name: Scintillator
   - name: EnergyDispersiveSpectrometer
     note: "Energy-dispersive X-ray detector Family: resolves photon energy per event to give a spectrum, from which element maps or absorption edges are fit downstream. Presents_as Sensor (it produces a scalar or short-vector Reading per point, not a 2D Frame, so it is distinct from Camera and the Detector Role). One Family spans the silicon-drift and germanium variants; channel count and vendor are per-Asset settings. 2-ID: the 2-ID-D fluorescence detector (XRF mapping). 7-BM: the germanium energy-dispersive-diffraction detector. Earned in once two deployments shared it; the name deliberately avoids the reserved Detector Role noun (a detector is a Role an Asset plays, not its Family)."
+  - name: FluxMonitor
+    note: "Beam-flux / intensity monitor Family: measures incident or transmitted beam intensity as a scalar (ion chamber, X-ray beam-position monitor read as flux, four-channel picoammeter). Presents_as Sensor (a scalar Reading, not a 2D Frame, so distinct from Camera and the Detector Role); and distinct from the position-measuring beam monitors (the loose Diagnostic / BeamPositionMonitor families) by what it measures, flux not centroid. One Family spans the ion chambers, XBPMs, and TetrAMM picoammeters; incident-vs-transmitted placement is a per-Asset setting. i22: the I0 / It ion chambers. i03: the Flux readout and the IPin ion chamber. i15-1: the JBPM TetrAMM. Earned in once three deployments shared it (the EnergyDispersiveSpectrometer precedent: a Sensor-presenting measurement Family graduates by what it measures). The position-measuring loose families stay loose pending their own rule-of-three."
   - name: Shutter
   - name: Hexapod
   - name: MotionController

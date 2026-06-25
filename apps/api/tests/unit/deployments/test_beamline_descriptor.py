@@ -367,7 +367,6 @@ _ALLOWED_LOOSE_FAMILIES = {
     "SlipRing": "passive-deferred: passive rotation feedthrough (TomoWISE)",
     "Wedge": "passive-deferred: passive fixed wedge (2-BM)",
     "Diagnostic": "staged: beam-position monitor, Sensor Role; fold-vs-promote open (DIAG-1)",
-    "FluxMonitor": "staged: ion-chamber/XBPM flux Sensor; promote-vs-fold open (FLUX-1/DIAG-1)",
     "FlowController": "staged: settable flow/pump actuator; earn-vs-defer open (FLOW-1/ENV-1)",
     "Backlight": "staged: new illumination affordance; rule-of-three open (ROBOT-1/DET-1)",
     "BetrandLens": "staged: novel TXM optic, FXI-only; rule-of-three open (OPTIC-3)",
@@ -397,7 +396,6 @@ _SUPPLY_LOOSE_FAMILIES = {"Beam", "Vacuum", "StorageRing"}
 # graduated into the catalog or recorded here with a one-line decision: the
 # signal is mechanical, the decision stays human.
 _PROMOTION_REVIEWED = {
-    "FluxMonitor": "hold: fold-vs-promote still open across i03/i15-1/i22 (FLUX-1)",
     "Diagnostic": "hold: Sensor fold-vs-promote still open (DIAG-1)",
     "FlowController": "hold: earn-vs-defer still open (FLOW-1)",
     "Transfocator": "hold: CRL optic abstraction still open across i22 / 4-id / 8-id (CRL-1)",
