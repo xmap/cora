@@ -18,7 +18,7 @@
 
 ESM is **CORA's first photoemission beamline**. Every prior beamline measures photons; ESM measures **electrons** (photon-in / electron-out), which brings a new detector regime:
 
-- **A hemispherical electron analyzer.** The Scienta SES records electron counts over a kinetic-energy by emission-angle window set by the pass energy and lens mode. No photon-detector Family fits, so it binds a new loose `ElectronAnalyzer` Family at n=1 (presents the Detector Role); a second ARPES beamline earns it.
+- **A hemispherical electron analyzer.** The Scienta SES records electron counts over a kinetic-energy by emission-angle window set by the pass energy and lens mode. No photon-detector Family fits, so it binds the `ElectronAnalyzer` Family (presents the Detector Role), which graduated once SST earned the 2nd Scienta SES.
 
 It is also a **consolidation** of the soft X-ray regime:
 

@@ -16,7 +16,7 @@
 
 ## The defining shape: two branches, many techniques, one beamline
 
-SST is the broadest NSLS-II beamline CORA models: **two source-and-monochromator branches** (a soft branch, an EPU60 undulator with a plane-grating monochromator; a tender branch, a U42 undulator with a double-crystal monochromator) feeding **several endstations** across three technique families, soft X-ray scattering (RSoXS), absorption spectroscopy (NEXAFS), and photoemission (HAXPES). The value to CORA is breadth at the Site level: it reuses the soft-X-ray vocabulary the earlier NSLS-II beamlines earned (the `GratingMonochromator`, the `Manipulator`, the `ElectronAnalyzer`) across one more, larger instrument, and it brings the loose `ElectronAnalyzer` family to a second sighting (a graduation candidate). SST introduces no new catalog Family.
+SST is the broadest NSLS-II beamline CORA models: **two source-and-monochromator branches** (a soft branch, an EPU60 undulator with a plane-grating monochromator; a tender branch, a U42 undulator with a double-crystal monochromator) feeding **several endstations** across three technique families, soft X-ray scattering (RSoXS), absorption spectroscopy (NEXAFS), and photoemission (HAXPES). The value to CORA is breadth at the Site level: it reuses the soft-X-ray vocabulary the earlier NSLS-II beamlines earned (the `GratingMonochromator`, the `Manipulator`, the `ElectronAnalyzer`) across one more, larger instrument, and it brings the `ElectronAnalyzer` family to its second sighting, which GRADUATED it into the catalog. SST coins no new catalog Family of its own.
 
 ## The beamline
 
@@ -42,4 +42,4 @@ The cross-cutting reference view is the [Inventory](inventory.md).
 
 ## Model
 
-[Model](model.md): the developer's by-kind index into where each CORA aggregate's SST content lives, and the `ElectronAnalyzer` graduation candidate.
+[Model](model.md): the developer's by-kind index into where each CORA aggregate's SST content lives, and the `ElectronAnalyzer` graduation it earned.

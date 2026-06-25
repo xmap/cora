@@ -26,7 +26,7 @@ ESM was reverse-engineered from the beamline's own bluesky profile collection ([
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| ARPES-1 | Blocks-build | The Scienta SES analyzer (`XF21ID1-ES-SES`): the model, the lens modes, the pass-energy and kinetic-energy-window controls, and the acquisition modes. | A loose `ElectronAnalyzer` Asset presenting the Detector Role. | The analyzer model and whether the Family stays distinct. |
+| ARPES-1 | Blocks-build | The Scienta SES analyzer (`XF21ID1-ES-SES`): the model, the lens modes, the pass-energy and kinetic-energy-window controls, and the acquisition modes. | An `ElectronAnalyzer` Asset (catalog Family) presenting the Detector Role. | The analyzer model and lens / pass-energy controls. |
 | SAMPLE-1 | Blocks-go-live | The LT UHV cryostat manipulator: the live prefix (the config shows a provisional `{PRV` and a commented `{LT:1-Manip:EA5_1`), the six axes, the cryo range, and the sample-prep / load-lock chambers. | A `Manipulator` Asset (x/y/z + Rx/Ry/Rz) plus a `TemperatureController`. | The sample-environment model. |
 | DET-1 | Nice-to-have | The QuadEM flux monitors (qem01-12): which are I0 versus drain-current, and where each sits. | Two representative `FluxMonitor` Assets; the full set summarized. | The flux-monitor map. |
 

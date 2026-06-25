@@ -9,7 +9,7 @@ ESM is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 | Beamline descriptor | [`deployments/esm/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/esm/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `ESM` added to its beamline list, with an ARPES Practice |
 | Extraction provenance | [NSLS2/esm-arpes-profile-collection](https://github.com/NSLS2/esm-arpes-profile-collection) | the `startup/*.py` device classes the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | `Manipulator` graduates with this deployment (below); `ElectronAnalyzer` stays loose at n=1 |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | `Manipulator` graduates with this deployment (below); `ElectronAnalyzer` graduated once SST earned the 2nd Scienta SES |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the ARPES Method is not yet coined (TECH-1) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers ESM Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
@@ -18,7 +18,7 @@ ESM is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 
 ESM both earns a new abstraction and consolidates two existing ones.
 
-- **`ElectronAnalyzer` (new, loose at n=1).** The Scienta SES hemispherical electron energy analyzer is the ARPES detector: photon-in, electron-out, recording electron counts over a kinetic-energy by emission-angle window set by the pass energy and lens mode. No photon-detector Family covers an electron spectrometer, so it binds a new loose `ElectronAnalyzer` Family (presents the Detector Role), held at n=1 until a second photoemission beamline earns it (`ARPES-1`).
+- **`ElectronAnalyzer` (new, since graduated).** The Scienta SES hemispherical electron energy analyzer is the ARPES detector: photon-in, electron-out, recording electron counts over a kinetic-energy by emission-angle window set by the pass energy and lens mode. No photon-detector Family covers an electron spectrometer, so ESM introduced a new `ElectronAnalyzer` Family (presents the Detector Role); it graduated into the catalog once SST (NSLS-II 7-ID HAXPES) earned the second Scienta SES (`ARPES-1`).
 - **`Manipulator` (graduates).** ESM's LT six-axis UHV cryostat manipulator is the **second** UHV sample manipulator after SIX, earning the abstraction at the two-deployment threshold. `Manipulator` graduates into the catalog with this deployment, distinct from `Hexapod` (parallel-kinematic), `Goniometer` (crystal orientation), and a plain `LinearStage` / `RotaryStage`; axis count and cryo range are a per-Asset settings difference. SIX's references are swept loose to graduated in the same change. Its naming-r3 review (done at the SIX sighting, with the watch-item to confirm it is not a `Hexapod` / `Goniometer` synonym) is resolved: a serial UHV stack is a distinct mechanism.
 - **`GratingMonochromator` (reuses).** ESM's PGM is the third soft X-ray plane-grating monochromator after SIX and CSX, so it binds the catalog Family rather than minting one.
 

@@ -19,4 +19,4 @@ Along the beam, in order, sit the **stations**: the [Source](../beamline.md) tha
 
 ## Reference
 
-- [Inventory](../inventory.md): the full planned CORA Asset model (every device by `parent_id`, with Families and pending confirmations). ESM graduates `Manipulator`, reuses the graduated `GratingMonochromator`, and introduces the loose `ElectronAnalyzer`.
+- [Inventory](../inventory.md): the full planned CORA Asset model (every device by `parent_id`, with Families and pending confirmations). ESM graduates `Manipulator`, reuses the graduated `GratingMonochromator`, and introduces `ElectronAnalyzer` (since graduated by SST).

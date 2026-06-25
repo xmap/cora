@@ -15,7 +15,7 @@
 #
 # ESM is the FIRST PHOTOEMISSION deployment: it measures photon-in / electron-out,
 # so the detector is a hemispherical ELECTRON ENERGY ANALYZER (Scienta SES), a regime
-# no prior CORA beamline modelled. The analyzer binds a new loose ElectronAnalyzer
+# no prior CORA beamline modelled. The analyzer binds the catalog ElectronAnalyzer
 # Family at n=1 (presents Detector); a second ARPES beamline must earn it.
 #
 # CONSOLIDATION: ESM is the 3rd soft X-ray PGM (after SIX + CSX), reusing the catalog
@@ -239,11 +239,11 @@ detectors:
     SES is the Scienta hemispherical electron energy analyzer: the ARPES detector,
     photon-in / electron-out, recording electron counts over a kinetic-energy x
     emission-angle window set by the pass energy and lens mode. It binds a NEW loose
-    ElectronAnalyzer Family at n=1 (presents Detector; no photon-detector Family fits;
+    ElectronAnalyzer Family (graduated across ESM + SST; presents Detector; no photon-detector Family fits;
     ARPES-1). The QuadEM electrometers are the I0 / drain-current flux monitors.
   devices:
     - name: ElectronAnalyzer
-      family: ElectronAnalyzer         # loose Family (n=1; hemispherical electron energy analyzer; ARPES-1)
+      family: ElectronAnalyzer         # catalog Family (graduated ESM + SST; hemispherical electron energy analyzer)
       pv: "XF21ID1-ES-SES"
       new: true
       confirm: true
