@@ -47,5 +47,6 @@ The fourth Site CORA models. Like the Diamond exercise, its beamlines are revers
 | [HXN](hxn/index.md) | Reverse-engineered | scanning hard X-ray nanoprobe (nano-XRF, ptychography, nano-tomography), 3-ID; modelled from public beamline config |
 | [BMM](bmm/index.md) | Reverse-engineered | X-ray absorption spectroscopy (transmission + fluorescence XAS/EXAFS), 6-BM; modelled from public beamline config |
 | [SRX](srx/index.md) | Reverse-engineered | submicron X-ray fluorescence microprobe (XRF mapping, XANES, XRF-tomography, diffraction), 5-ID; modelled from public beamline config |
+| [CHX](chx/index.md) | Reverse-engineered | coherent hard X-ray scattering (XPCS, SAXS/WAXS, GISAXS), 11-ID; the second coherent beamline after APS 8-ID, modelled from public beamline config |
 
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.
