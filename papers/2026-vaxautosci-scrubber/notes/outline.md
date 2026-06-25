@@ -2,7 +2,7 @@
 
 ## Section-by-section (VGTC two-column; 6 pages total, ~4.5 body excl refs)
 
-1. **Intro + contributions.** The lights-out overnight audit motivation; the
+1. **Intro + contributions.** The overnight unattended-run audit motivation; the
    event-sourced-fold insight; scope honesty (conducted + agent-supervised, not
    agent-closed; deterministic supervisor); the four contributions. No figure.
 2. **The auditor's tasks, Table 1.** T1-T4 mapped to event-log query and visual
@@ -33,8 +33,8 @@ All data figures come from one passing scenario,
 
 ## Grounding
 
-The scenario is a real, passing integration test: an operator starts a
-lights-out calibration run; CORA conducts a rotation-axis centering alignment
+The scenario is a real, passing integration test: an operator starts an
+unattended calibration run; CORA conducts a rotation-axis centering alignment
 (4-iteration peak-bracket on `SampleTop_X`, converges); the first projection is
 in flight when the beam drops; the RunSupervisor agent holds the run and
 auto-resumes it (RunResumed carries a Resume Decision); the run completes.

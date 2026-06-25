@@ -34,6 +34,8 @@ a supervisor that recovers a conducted one; because it records its choices
 through the same decision substrate, the run-lifecycle lane and the decision
 records would carry the optimizer's next-action choices and be audited exactly as
 the supervisor's holds and resumes are here. We also expect the design to
-generalize beyond this run to other conducted procedures and other facilities,
-since nothing in the scrubber is specific to it beyond the lifecycle, iteration,
-and activity vocabulary it reads from the event log.
+generalize beyond this run to other conducted procedures and other facilities:
+nothing in the scrubber is specific to this case beyond a small vocabulary it
+reads from the log, so the requirement on a host system is modest, an
+append-only, deterministically-foldable event log with a content-addressed
+expansion and a recorded actor on each event.

@@ -1,5 +1,5 @@
 \label{sec:scrubber}
-% Design + walkthrough over the lights-out run. Numbers come from
+% Design + walkthrough over the agent-supervised run. Numbers come from
 % data/lights_out_run.json (mirrors test_2bm_lights_out_supervised_alignment.py).
 % Figure 1 is rendered by figures/render_f1.py; wall-clock spacing on the axis
 % is synthetic and compressed (the hold can last tens of minutes).
@@ -7,7 +7,7 @@
 \begin{figure*}[t]
   \centering
   \includegraphics[width=\textwidth]{figures/f1_scrubber}
-  \caption{The replay scrubber over one lights-out, agent-supervised run at APS
+  \caption{The replay scrubber over one agent-supervised run at APS
   2-BM. The top lane is the run lifecycle, colored by who drove each transition:
   the operator started and the run completes, while the supervisor agent held
   the run when the beam dropped and resumed it when the beam returned (the gray
@@ -64,7 +64,7 @@ append-only and the expansion is content-addressed, into something a reader can
 see at the exact instant they are inspecting, rather than a claim they must take
 on faith.
 
-We walk through a lights-out, agent-supervised run on APS 2-BM. An operator
+We walk through an unattended, agent-supervised run on APS 2-BM. An operator
 starts the run and leaves; the system conducts the pre-scan rotation-axis centering
 alignment, a four-iteration peak-bracket search over the sample stage
 \texttt{SampleTop\_X} that minimizes the center-of-rotation residual. The
@@ -79,3 +79,18 @@ cursor at the beam-loss instant (Figure~\ref{fig:scrubber}), the fold shows the
 alignment already converged, the first projection still open, and the run held
 by the agent, and the fidelity badge confirms that reconstructed state is
 faithful to the record (T4).
+
+\textbf{Design rationale.} Each encoding answers an audit question rather than
+decorating the timeline. We give the run lifecycle its own lane, colored by
+actor, instead of annotating events in place, so that \emph{who or what was
+driving} is legible across the whole run and accountability is separated from
+activity. We draw convergence as nested brackets colored by verdict rather than
+a metric curve: the auditor is asking whether and on which pass the search
+decided it had converged, which is the verdict, not the residual value. We place
+the fidelity badge inline at the cursor rather than in a separate trust panel, so
+trust is judged at the instant being inspected. We render an unfinished step as
+an open interval rather than truncating the timeline, so a missing outcome is a
+positive mark that is seen rather than inferred. And we keep one linear time axis
+with an explicit held band rather than collapsing the hold, because the gap
+itself is the evidence that the run waited, on the same scale as everything
+else.
