@@ -17,7 +17,7 @@ Builds the table the energy-change recipe interpolates.
 Locates the tomographic rotation axis on the detector before or during reconstruction.
 
 - What CORA does: reconstruct trial slices across candidate center offsets and select the sharpest, or derive the center from a 0/180-degree projection pair.
-- Outcome: the rotation-center value the reconstruction (Reckoner) leg consumes.
+- Outcome: the rotation-center value the reconstruction (compute) leg consumes.
 
 ## Focus and field alignment
 

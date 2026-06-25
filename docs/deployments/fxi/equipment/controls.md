@@ -39,8 +39,8 @@ CORA **drives through** (the floor it actuates and observes, and does not replac
 - the EPICS IOCs, via the ophyd hardware abstraction (`Device.read()/set()/trigger()`): this is the `ControlPort` boundary, the handles CORA commands the hardware with;
 - the Zebra FPGA position-compare gating (the trigger pulses are generated in hardware off the rotary encoder);
 - the DCM PID feedback (`-Ax:Th2}PID.FBON`, `-Ax:Chi2}PID.FBON`), the PSS/PPS interlock, the camera IOCs, and the motion-controller IOCs;
-- the facility filestore where the detector's raw frames physically land. CORA's Porter (the TransferPort edge runtime) moves frames from there into CORA's own Dataset of record; CORA records the Dataset, it does not adopt the facility's data catalog (see [Experiment > Datasets](../experiment.md#datasets)).
+- the facility filestore where the detector's raw frames physically land. CORA's transfer leg moves frames from there over its `TransferPort` into CORA's own Dataset of record; CORA records the Dataset, it does not adopt the facility's data catalog (see [Experiment > Datasets](../experiment.md#datasets)).
 
-So CORA brings three edge runtimes to FXI: the Conductor (scan orchestration over the ControlPort), the Reckoner (reconstruction over the ComputePort), and the Porter (data egress into the CORA Dataset). Each does work the beamline's software stack does today; CORA does it as its own design, against the same floor.
+So CORA brings one conducting engine to FXI, working over three ports: scan orchestration over the ControlPort, reconstruction over the ComputePort, and data egress over the TransferPort into the CORA Dataset. Each does work the beamline's software stack does today; CORA does it as its own design, against the same floor.
 
 The software IOCs (`Andor`, `Kinetix`, `Marana`, `Manta`, `Zebra`, `ioLogik`) are referenced by PV namespace only, never registered as Assets.

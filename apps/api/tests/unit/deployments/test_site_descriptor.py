@@ -47,6 +47,7 @@ pytestmark = pytest.mark.unit
 _REPO_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 _SITE = _REPO_ROOT / "deployments" / "aps" / "site.yaml"
+_CATALOG = _REPO_ROOT / "catalog" / "catalog.yaml"
 # Every site descriptor, so a new Site (e.g. MAX IV) is auto-enrolled in the
 # generic load + facility-invariant guard below. The APS-specific agent-seed
 # assertions stay pinned to _SITE.
@@ -67,6 +68,7 @@ def _load(name: str) -> ModuleType:
 
 sd = _load("site_descriptor")
 sp = _load("site_pages")
+cd = _load("catalog_descriptor")
 
 
 @pytest.mark.parametrize("site_path", _ALL_SITES, ids=lambda p: p.parent.name)
@@ -219,6 +221,86 @@ def test_practice_method_links_only_known() -> None:
     # a method not in the catalog renders unlinked (bare code span)
     assert "`hexapod_reboot`" in page
     assert "[`hexapod_reboot`]" not in page
+
+
+# ---------------------------------------------------------------------------
+# Methods-axis guards: practice (ISA-88 Site Recipe) -> catalog Method.
+#
+# A practice names a catalog Method. If the Method exists it renders as a link;
+# if not, the practice marks it pending: true and it renders unlinked until the
+# Method graduates into the catalog. The site loader never sees the catalog, so a
+# typo'd method name is otherwise indistinguishable from a deliberate pending
+# method. These two guards close that, the methods-axis analog of the family
+# guards in test_beamline_descriptor.py:
+#   - a non-pending practice method must resolve in the catalog;
+#   - a pending method must be a deliberate, reasoned registry entry.
+# The >=2-deployment promotion SIGNAL (the family-promotion analog) is not added
+# yet: methods are staged per-site, so a method's beamline spread is not
+# structurally measurable today (it lives only in the practice-name prefix), and
+# no pending method spans two sites. _PENDING_METHODS is the registry a future
+# signal would read once practices carry a typed beamline.
+# ---------------------------------------------------------------------------
+
+_PENDING_METHODS = {
+    "energy_dispersive_diffraction": "7-BM white-beam EDD; not yet in pilot scope (TECH-1)",
+    "high_speed_imaging": "7-BM chopper-gated movie bursts; not yet in pilot scope (TECH-1)",
+    "radiography": "7-BM time-resolved point radiography; not yet in scope (TECH-1)",
+    "first_light": "19-BM-FACT commissioning method; design phase",
+    "ioc_restart": "2-BM maintenance recovery; portable Method not yet authored",
+    "mirror_recoat_return": "2-BM mirror recoat-and-return; Method not yet authored",
+    "scanning_fluorescence_microscopy": "2-ID scanning XRF microprobe; Method not yet earned",
+    "grid_scan": "i03 MX fast grid scan; portable Method not yet earned",
+    "mx_data_collection": "i03 MX rotation data collection; Method not yet earned",
+    "sample_exchange": "i03 autonomous robotic sample exchange; Method not yet earned",
+    "small_angle_scattering": "i22 SAXS; portable Method not yet earned",
+    "wide_angle_scattering": "i22 WAXS; portable Method not yet earned",
+    "total_scattering": "i15-1 total scattering / PDF; Method not yet earned",
+    "powder_diffraction": "i11 powder diffraction; portable Method not yet earned",
+}
+
+
+def _catalog_method_names() -> set[str]:
+    return {m.name for m in cd.load(_CATALOG).methods}
+
+
+def _pending_practice_methods() -> set[str]:
+    catalog_methods = _catalog_method_names()
+    return {
+        practice.method
+        for site_path in _ALL_SITES
+        for practice in sd.load(site_path).practices
+        if practice.pending and practice.method not in catalog_methods
+    }
+
+
+@pytest.mark.parametrize("site_path", _ALL_SITES, ids=lambda p: p.parent.name)
+def test_nonpending_practice_methods_resolve_in_catalog(site_path: Path) -> None:
+    catalog_methods = _catalog_method_names()
+    site = sd.load(site_path)
+    dangling = sorted(
+        f"{practice.name} -> {practice.method}"
+        for practice in site.practices
+        if not practice.pending and practice.method not in catalog_methods
+    )
+    assert not dangling, (
+        f"{site_path.parent.name}: non-pending practices name a method absent from the "
+        f"catalog (a typo, or a method that should be marked pending: true): {dangling}"
+    )
+
+
+def test_pending_practice_methods_are_registered() -> None:
+    pending = _pending_practice_methods()
+    unexpected = sorted(pending - set(_PENDING_METHODS))
+    assert not unexpected, (
+        "site practices mark methods pending: that are not registered (a typo, or a newly "
+        "staged technique); add to _PENDING_METHODS with a reason or graduate into the "
+        f"catalog: {unexpected}"
+    )
+    stale = sorted(set(_PENDING_METHODS) - pending)
+    assert not stale, (
+        "registered pending methods no longer named by any pending practice (graduated into "
+        f"the catalog or removed); drop from _PENDING_METHODS: {stale}"
+    )
 
 
 def test_malformed_site_raises(tmp_path: Path) -> None:

@@ -18,7 +18,7 @@ A multi-run initiative. CORA maps this to the NSLS-II proposal and cycle (the fa
 
 ## Datasets
 
-The data of record. CORA records its own Dataset for each Run within its Experiment model; the data-of-record store is CORA's, not the facility's. The raw frames the detector produces land on the facility filestore (floor); CORA's Porter (the TransferPort edge runtime) handles egress from there into the CORA Dataset and its lineage. CORA references where the frames physically sit; it does not depend on the facility's catalog as its own system of record.
+The data of record. CORA records its own Dataset for each Run within its Experiment model; the data-of-record store is CORA's, not the facility's. The raw frames the detector produces land on the facility filestore (floor); CORA's transfer leg moves the frames from there over its `TransferPort` into the CORA Dataset and its lineage. CORA references where the frames physically sit; it does not depend on the facility's catalog as its own system of record.
 
 ## Decisions
 

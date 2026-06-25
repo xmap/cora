@@ -25,4 +25,4 @@ Continuously-available resources a run draws on. Facility-scope supplies are own
 | Liquid nitrogen | LiquidNitrogen | DCM crystal cooling (`XF:18IDA-UT` Cryo:1 levels/flow; valves V4/V5) |
 | Power | Power | beamline power |
 
-The data a run produces is recorded as a CORA Dataset (CORA's own data of record); the raw frames land on the facility filestore and are moved into that Dataset by the Porter. See [Experiment > Datasets](experiment.md#datasets).
+The data a run produces is recorded as a CORA Dataset (CORA's own data of record); the raw frames land on the facility filestore and are moved into that Dataset over CORA's `TransferPort` (the transfer leg). See [Experiment > Datasets](experiment.md#datasets).

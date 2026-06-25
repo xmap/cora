@@ -28,4 +28,4 @@ FXI is a full-field transmission X-ray microscope that does fly and step tomogra
 | Rotation-center finding | [`center_alignment`](../../catalog/methods.md) | center search during reconstruction |
 | Calibration-position recording | [`focus_alignment`](../../catalog/methods.md) | building the energy lookup table |
 
-Reconstruction (the tomographic recon, ring removal, rotation-center search) is CORA's compute leg, run by the Reckoner over the ComputePort rather than as a beamline Method; see [Controls](equipment/controls.md#the-seam-cora-and-the-floor).
+Reconstruction (the tomographic recon, ring removal, rotation-center search) is CORA's compute leg, conducted over the ComputePort rather than as a beamline Method; see [Controls](equipment/controls.md#the-seam-cora-and-the-floor).
