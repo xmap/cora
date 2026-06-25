@@ -265,7 +265,7 @@ _PENDING_METHODS = {
     "wide_angle_scattering": "i22 + 9-ID WAXS; portable Method not yet earned",
     "total_scattering": "i15-1 total scattering / PDF; Method not yet earned",
     "powder_diffraction": "i11 powder diffraction; portable Method not yet earned",
-    "serial_crystallography": "LCLS-MFX serial crystallography; XFEL Method not yet earned",
+    "serial_crystallography": "LCLS-MFX + i24 serial crystallography; 2 consumers, not earned",
     "pump_probe": "LCLS-MFX fs optical-laser pump / X-ray probe; XFEL Method not yet earned",
     "xas_spectroscopy": "LCLS-MFX XAS / XES via the von Hamos spectrometer; Method not yet earned",
 }

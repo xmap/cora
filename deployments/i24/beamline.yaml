@@ -1,0 +1,232 @@
+# i24 beamline descriptor (Diamond), reverse-engineered
+#
+# i24 is the Diamond Light Source serial / fixed-target macromolecular
+# crystallography beamline at sector 24. It is bound to the Diamond Site
+# (deployments/diamond/site.yaml), the fifth Diamond beamline after I22, I03,
+# I15-1, and I11, and CORA's FIRST synchrotron serial-crystallography deployment.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (Diamond's dodal controls library, src/dodal/beamlines/i24.py + its
+# device classes) or inferred, carried `new: true` + `confirm: true` pending i24
+# staff. EPICS PVs are real and verified against dodal; vendor part numbers,
+# serials, and physical positions are not in it and are open questions. Same
+# descriptor mode as the other Diamond deployments; this scaffold is descriptor +
+# docs, scenarios deferred.
+#
+# WHAT IS NEW: i24 is CORA's first SERIAL / FIXED-TARGET crystallography. Unlike
+# I03 rotation MX (one crystal, a continuous omega sweep), i24 raster-scans a
+# fixed-target chip holding thousands of static crystals, taking one diffraction
+# snapshot per addressable chip window, hardware-sequenced on the PMAC motion
+# controller with Zebra TTL gating and no goniometer rotation. The acquisition
+# primitive is a triggered chip-raster fly-collection over a sample grid. This is
+# a new Capability, deferred as a question (SSX-1); the fleet has serial
+# crystallography only as a pending stub at the SLAC LCLS-MFX XFEL.
+#
+# MODELLING: every device reuses an existing catalog or loose Family. i24 coins
+# NO new Family and changes nothing in the catalog. The vertical goniometer reuses
+# the catalog Goniometer (graduated at I03); the PMAC chip stage is an XYZ
+# LinearStage (the serial raster trajectory and the laser / Zebra triggering are
+# the orchestration seam CORA's edge replaces, not a device Family); the
+# fixed-target chip itself (the addressable sample grid the stage rasters) is a
+# Fixture / Subject-grid, a CORA modelling decision deferred as CHIP-1 (the chip
+# well map is not a PV). The serial-crystallography Capability is deferred (SSX-1).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/i24/questions.md.
+
+beamline:
+  name: I24
+  facility: diamond            # Diamond Site (facility_code: diamond)
+  sector: "Sector 24"          # PV namespace BL24I*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "i24 is an undulator MX beamline; dodal exposes the Synchrotron source state (modelled below) but not the insertion-device gap as a device, so the undulator detail is SRC-1"
+
+# PV zones: BL24I-OP / -DI (optics, DCM, mirrors, OAV), BL24I-AL (aperture),
+# BL24I-MO (motion: goniometer, chip stage, beamstop, detector stage),
+# BL24I-EA (endstation: Eiger / Jungfrau detectors, Zebra, sample shutter).
+# Whether i24 is one optics hutch plus one experiment hutch, and the PSS permit
+# leaves, are open (ENC-1, PSS-1).
+enclosures:
+  - name: i24-optics
+    role: optics-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf not in source; the hutch shutter is the dodal InterlockedHutchShutter (PSSInterlock), permit-leaf names are PSS-1"}
+  - name: i24-experiment
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf unknown; the serial-crystallography endstation hutch (ENC-1, PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine source state and the optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: i24-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "dodal's Synchrotron device is the observe-only machine state, the loose StorageRing pattern reused from the Diamond siblings (MACHINE-1). The undulator gap is not a dodal device here (SRC-1)."
+  devices:
+    - name: Synchrotron
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: {confirm: "dodal Synchrotron device (ring current, top-up, machine mode); observe-only, the exact PVs are MACHINE-1"}
+      new: true
+      confirm: true
+      note: "machine source state; observe-only, not photon-path flux (MACHINE-1)"
+
+optics:
+  stage: source
+  enclosure: i24-optics
+  intro: "The double-crystal monochromator, the focusing mirrors, the attenuator, and the aperture."
+  note: "All reuse existing catalog Families. The DCM selects the incident energy; the focusing mirrors set the beam at the sample; the attenuator reuses the Filter Family (the I03 / i15-1 attenuator precedent)."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "BL24I-MO-DCM-01:"
+      new: true
+      confirm: true
+      note: "double-crystal monochromator (motion BL24I-MO-DCM-01:, diagnostics BL24I-DI-DCM-01:); crystal cut, d-spacing, energy range are MONO-1"
+    - name: FocusingMirrors
+      family: Mirror
+      pv: "BL24I-OP-MFM-01:"
+      new: true
+      confirm: true
+      note: "focusing mirrors with selectable focus mode (dodal FocusMirrorsMode); coatings and the focus-mode set are OPT-1"
+    - name: Attenuator
+      family: Filter
+      pv: "BL24I-OP-ATTN-01:"
+      new: true
+      confirm: true
+      note: "filter-based attenuator (two filter-selection enums); reuses the Filter Family, not a new Attenuator kind (ATTN-1)"
+    - name: Aperture
+      family: Aperture
+      pv: "BL24I-AL-APTR-01:"
+      new: true
+      confirm: true
+      note: "beam-defining aperture (OPT-2)"
+
+# ===========================================================================
+# SAMPLE STAGE: the goniometer, the fixed-target chip stage, the backlight, OAV
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: i24-experiment
+  intro: "The vertical goniometer, the fixed-target chip stage, the sample backlight, the on-axis-view camera, the beamstop, and the sample shutter."
+  note: >
+    vgonio is the vertical pin goniometer, reusing the catalog Goniometer (the
+    Family I03 graduated). pmac is the fixed-target chip stage: an XYZ LinearStage
+    that rasters the addressable chip across the beam. The chip itself (the grid of
+    thousands of static crystals) is a Fixture / Subject grid, a CORA modelling
+    decision deferred (CHIP-1); the serial raster trajectory, the encoder
+    position-compare, and the laser triggers run on the PMAC controller and are the
+    orchestration seam CORA's edge replaces, not device Families (SSX-1, LASER-1).
+  devices:
+    - name: Goniometer
+      family: Goniometer
+      pv: "BL24I-MO-VGON-01:"
+      new: true
+      confirm: true
+      note: "vertical pin goniometer (dodal VerticalGoniometer); reuses the I03-graduated Goniometer Family; the circle / pin-translation axes are GONIO-1"
+    - name: ChipStage
+      family: LinearStage
+      pv: "BL24I-MO-CHIP-01:"
+      new: true
+      confirm: true
+      note: "fixed-target chip stage (dodal PMAC, an XYZ stage); positions the addressable chip. The chip-as-Fixture / Subject-grid modelling is CHIP-1; the on-controller raster trajectory + laser / encoder triggering is the serial-collection seam (SSX-1)"
+    - name: Backlight
+      family: Backlight                # loose Family (illumination; reused from I03; ROBOT-1 / DET-1)
+      pv: "BL24I"
+      new: true
+      confirm: true
+      note: "dual sample backlight (dodal DualBacklight); reuses I03's loose Backlight family; the PV root and positions are BACKLIGHT-1"
+    - name: OnAxisViewer
+      family: Camera
+      pv: "BL24I-DI-OAV-01:"
+      new: true
+      confirm: true
+      note: "on-axis-view alignment camera with beam-centre file (dodal OAVBeamCentreFile); the zoom / beam-centre config lives in GDA files under /dls_sw (CTRL-1)"
+    - name: Beamstop
+      family: BeamStop
+      pv: "BL24I-MO-BS-01:"
+      new: true
+      confirm: true
+      note: "beamstop (positioned); axis roles are OPT-2"
+    - name: SampleShutter
+      family: Shutter
+      pv: "BL24I-EA-SHTR-01:"
+      new: true
+      confirm: true
+      note: "fast sample shutter (dodal MXZebraShutter), Zebra-controlled; gates the per-window exposure (SSX-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the area detectors, the detector stage, and the timing
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: i24-experiment
+  intro: "The area detectors, the detector translation stage, and the Zebra timing / triggering."
+  note: >
+    The Eiger is the production area detector (modelled as Camera presenting the
+    Detector Role); the Jungfrau is carried as a commissioning detector (DET-1).
+    The Zebra hardware-sequences the chip-raster collection (per-window TTL gating
+    of the detector and the fast shutter), the TimingController Family; the detailed
+    trigger graph is the serial-collection seam CORA's edge drives (SSX-1).
+  devices:
+    - name: EigerDetector
+      family: Camera
+      pv: "BL24I-EA-EIGER-01:CAM:"
+      new: true
+      confirm: true
+      note: "Eiger area detector (Detector Role); dodal exposes a DetectorBeamCenter helper here, the full detector + beam-centre are DET-1"
+    - name: JungfrauDetector
+      family: Camera
+      pv: "BL24I-EA-JFRAU-01:"
+      new: true
+      confirm: true
+      note: "Jungfrau area detector, carried as commissioning (dodal CommissioningJungfrauDetector); model the Eiger path as primary (DET-1)"
+    - name: DetectorStage
+      family: LinearStage
+      pv: "BL24I-MO-DET-01:"
+      new: true
+      confirm: true
+      note: "detector translation stage (Y/Z); sets the detector distance / position (OPT-2)"
+    - name: Timing
+      family: TimingController
+      pv: "BL24I-EA-ZEBRA-01:"
+      new: true
+      confirm: true
+      note: "Zebra FPGA timing / triggering (TTL map: Eiger / Jungfrau / fast shutter); hardware-sequences the chip raster (SSX-1)"
+    - name: HutchShutter
+      family: Shutter
+      pv: {confirm: "dodal InterlockedHutchShutter with a PSSInterlock; the photon-shutter and permit-leaf PVs are PSS-1"}
+      new: true
+      confirm: true
+      note: "interlocked hutch photon shutter; the PSS permit structure is PSS-1"
+
+# Cross-cutting control. i24 runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky / GDA-style orchestration, conducts over it. The handles above
+# were read from dodal (src/dodal/beamlines/i24.py) and carried confirm (CTRL-1).
+controls:
+  intro: >
+    i24 runs on the Diamond EPICS / ophyd-async control stack, the same floor as
+    the other Diamond beamlines. The device handles above are bound from dodal,
+    carried confirm pending staff verification (CTRL-1). The serial collection (the
+    PMAC chip-raster motion program, the encoder position-compare, the laser
+    triggers, the Zebra TTL gating of the detector and fast shutter) is the
+    orchestration CORA's edge replaces, driving through ophyd / EPICS; the OAV zoom
+    and beam-centre config and the detector file-writing to the Diamond filestore
+    are plumbing CORA observes, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an i24 run needs. The optics run
+    under vacuum (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics beam path is under vacuum (SUP-1)"

@@ -268,6 +268,19 @@ nav:
         - Techniques: deployments/i11/techniques.md
         - Governance: deployments/i11/governance.md
         - Model: deployments/i11/model.md
+      - I24:
+        - deployments/i24/index.md
+        - Open questions: deployments/i24/questions.md
+        - The beamline:
+          - deployments/i24/equipment/index.md
+          - Source: deployments/i24/beamline.md
+          - Sample: deployments/i24/equipment/sample.md
+          - Detector: deployments/i24/equipment/detector.md
+          - Controls: deployments/i24/equipment/controls.md
+          - Inventory: deployments/i24/inventory.md
+        - Techniques: deployments/i24/techniques.md
+        - Governance: deployments/i24/governance.md
+        - Model: deployments/i24/model.md
     - NSLS-II:
       - deployments/nsls2/index.md
       - FXI:
