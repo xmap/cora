@@ -66,7 +66,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from cora.api._reckoner import Reckoner
+from cora.api._edge_conductor import ComputeRunDriver
 from cora.api._run_phase_conduct import conduct_phase_then_complete_run
 from cora.data.aggregates.dataset import DatasetCannotPromoteError
 from cora.data.features.promote_dataset import PromoteDataset
@@ -411,10 +411,10 @@ async def test_reconstruction_records_recipe_run_and_lineage(
 
 
 @pytest.mark.integration
-async def test_reconstruction_conducts_via_reckoner_and_gates_promotion(
+async def test_reconstruction_conducts_via_compute_run_driver_and_gates_promotion(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """End-to-end CONDUCT-the-recon: the Reckoner submits the recon
+    """End-to-end CONDUCT-the-recon: the ComputeRunDriver submits the recon
     job to a (Simulated) ComputePort, awaits its terminal state, and
     completes the Run carrying the observed actuation kind. The recon
     Dataset registered against that conducted Run inherits
@@ -435,10 +435,10 @@ async def test_reconstruction_conducts_via_reckoner_and_gates_promotion(
         correlation_id=_CORRELATION_ID,
     )
 
-    # The Reckoner drives submit -> await -> complete via the
+    # The ComputeRunDriver drives submit -> await -> complete via the
     # in-memory (Simulated) ComputePort. The default seed is Succeeded
     # with an artifact synthesised from the job spec's output_uri.
-    runtime = Reckoner(
+    runtime = ComputeRunDriver(
         compute_port=InMemoryComputePort(),
         complete_run=bind_complete_run(deps),
         abort_run=bind_abort_run(deps),
@@ -521,7 +521,7 @@ async def test_reconstruction_conducts_on_a_real_subprocess_and_is_promotable(
     tmp_path: Path,
 ) -> None:
     """End-to-end CONDUCT on the real local-process executor: the
-    Reckoner runs an actual subprocess that writes the recon output,
+    ComputeRunDriver runs an actual subprocess that writes the recon output,
     captures Physical actuation, and the resulting Dataset (lineage-linked
     and with its raw input promoted) IS promotable to Production. The
     Physical counterpart of the Simulated gate test."""
@@ -544,7 +544,7 @@ async def test_reconstruction_conducts_on_a_real_subprocess_and_is_promotable(
     # checksum + size are genuine (not synthesised). LocalProcessComputePort
     # declares Physical actuation, so the output is promotable.
     output_path = tmp_path / "recon_sirt.h5"
-    runtime = Reckoner(
+    runtime = ComputeRunDriver(
         compute_port=LocalProcessComputePort(),
         complete_run=bind_complete_run(deps),
         abort_run=bind_abort_run(deps),
@@ -611,7 +611,7 @@ async def test_reconstruction_conducts_directory_output_and_records_tree_hash(
 ) -> None:
     """End-to-end CONDUCT of a DIRECTORY output: a real subprocess writes a
     tomopy-style per-slice TIFF stack into a `{stem}_rec/` directory, the
-    Reckoner conducts it without aborting (the pre-tree-hash behavior
+    ComputeRunDriver conducts it without aborting (the pre-tree-hash behavior
     raised ArtifactNotFoundError on any non-file output), and the artifact
     carries a deterministic `sha256-tree` digest + summed byte_size + file
     count. The reconstructed Dataset registers with that tree checksum 1:1.
@@ -638,7 +638,7 @@ async def test_reconstruction_conducts_directory_output_and_records_tree_hash(
     # A real subprocess writes a directory of per-slice TIFFs (tomopy's
     # default save-format=tiff), so fetch_artifact_ref folds the tree.
     output_dir = tmp_path / "recon_sirt_rec"
-    runtime = Reckoner(
+    runtime = ComputeRunDriver(
         compute_port=LocalProcessComputePort(),
         complete_run=bind_complete_run(deps),
         abort_run=bind_abort_run(deps),
@@ -720,7 +720,7 @@ async def test_reconstruction_conducts_from_vetted_launch_spec(
     """End-to-end CONDUCT from a vetted launch_spec: the recon Method carries
     a SIRT launch_spec; the server derives the argv from that recipe plus the
     Run's effective_parameters (no caller-supplied command), and the
-    Reckoner conducts it to a completed, Simulated-provenance Run.
+    ComputeRunDriver conducts it to a completed, Simulated-provenance Run.
 
     This is the injection-safe path the conduct endpoint takes for a
     launch_spec Method: a parameter value (num_iter=200) is rendered as
@@ -781,7 +781,7 @@ async def test_reconstruction_conducts_from_vetted_launch_spec(
 
     # ----- Conduct the derived job via the (Simulated) ComputePort -----
 
-    runtime = Reckoner(
+    runtime = ComputeRunDriver(
         compute_port=InMemoryComputePort(),
         complete_run=bind_complete_run(deps),
         abort_run=bind_abort_run(deps),
@@ -837,13 +837,13 @@ async def test_reconstruction_conducts_single_stage_phase_via_merged_engine(
     (output_uri set -> fetch_artifact_ref), the conduct_phase_then_complete_run
     glue completes the parent Run carrying the folded Simulated kind, and the
     reconstructed volume Dataset registers against producing_run_id with the
-    surfaced ArtifactRef. Parity with the single-job Reckoner baseline: the Run
-    stays Running across the phase, then RunStarted -> RunCompleted, and the
-    Simulated provenance bars promotion (Simulated-blocks).
+    surfaced ArtifactRef. Parity with the single-job ComputeRunDriver baseline:
+    the Run stays Running across the phase, then RunStarted -> RunCompleted, and
+    the Simulated provenance bars promotion (Simulated-blocks).
 
-    This is the floor's proof that the Reckoner class dissolved into one
-    step-walking engine: the same recon, conducted as a Procedure PHASE of the
-    Run rather than a bespoke compute runtime."""
+    This is the floor's proof that the single-job compute-Run path folded into
+    one step-walking engine: the same recon, conducted as a Procedure PHASE of
+    the Run rather than a bespoke compute runtime."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
     fixture = await _seed_recon_recipe(deps)
 
