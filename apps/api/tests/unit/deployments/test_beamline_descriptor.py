@@ -374,6 +374,7 @@ _ALLOWED_LOOSE_FAMILIES = {
     "Chopper": "staged: rotary duty-cycle device; fold-vs-Family open (CHOP-1)",
     "Photodiode": "staged: PIN photodiode, Sensor Role; Family-vs-Sensor open (RAD-1)",
     "Transfocator": "staged: compound-refractive-lens optic; no catalog home yet (CRL-1)",
+    "EmissionSpectrometer": "staged: crystal-analyzer emission spectrometer; new (SPEC-1)",
     "Baffle": "staged: passive baffle inside the 2-BM SafetyStack; review name/role",
     "Screen": "staged: motorized phosphor diagnostic flag (2-BM, FLAG-1); review name-vs-behavior",
     "BeamPositionMonitor": "staged: position/intensity Sensor; fold-vs-promote open (DIAG-1)",
@@ -403,6 +404,7 @@ _PROMOTION_REVIEWED = {
     "FlowController": "hold: earn-vs-defer still open (FLOW-1)",
     "Transfocator": "hold: CRL optic abstraction still open across i22/4-id/8-id/9-id (CRL-1)",
     "BeamPositionMonitor": "hold: Sensor fold-vs-promote across 4-id/8-id/9-id (DIAG-1/FLUX-1)",
+    "Laser": "hold: pump-probe laser model-vs-hazard open (4-id + lcls-mfx; SAMPLE-1)",
 }
 
 # Catalog families bound by no deployment device. Symmetric to the orphan-model
@@ -501,7 +503,7 @@ def test_no_unexpected_orphan_catalog_families() -> None:
 
 def test_site_facility_codes_cover_known_sites() -> None:
     # Anchor so the resolution check below cannot pass vacuously on an empty set.
-    assert {"aps", "diamond", "maxiv", "nsls2"} <= _site_facility_codes()
+    assert {"aps", "diamond", "maxiv", "nsls2", "slac"} <= _site_facility_codes()
 
 
 @pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)

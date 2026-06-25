@@ -381,6 +381,21 @@ nav:
         - Techniques: deployments/xpd/techniques.md
         - Governance: deployments/xpd/governance.md
         - Model: deployments/xpd/model.md
+    - SLAC:
+      - deployments/slac/index.md
+      - LCLS-MFX:
+        - deployments/lcls-mfx/index.md
+        - Open questions: deployments/lcls-mfx/questions.md
+        - The beamline:
+          - deployments/lcls-mfx/equipment/index.md
+          - Source: deployments/lcls-mfx/beamline.md
+          - Optics and endstation: deployments/lcls-mfx/equipment/optics.md
+          - Detector: deployments/lcls-mfx/equipment/detector.md
+          - Controls: deployments/lcls-mfx/equipment/controls.md
+          - Inventory: deployments/lcls-mfx/inventory.md
+        - Techniques: deployments/lcls-mfx/techniques.md
+        - Governance: deployments/lcls-mfx/governance.md
+        - Model: deployments/lcls-mfx/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
