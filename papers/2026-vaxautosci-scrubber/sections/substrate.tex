@@ -73,4 +73,8 @@ append-only, so the recorded side is not editable through the normal application
 path; the event writer is trusted; and the hash inputs are stable. It is an
 integrity check under these conditions, not adversarial tamper resistance: an
 attacker with direct write access to the store is out of scope, and authenticity
-against forgery would need a separate trust anchor.
+against forgery would need a separate trust anchor. A faithfully recorded run
+therefore always reads verified; the badge reads altered only when the
+reconstruction has drifted from the run it describes, through a change to how
+state is rebuilt, a schema migration, or a corrupted store, which makes it a
+continuous regression check on the read model rather than a decorative light.
