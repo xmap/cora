@@ -1,7 +1,8 @@
 # CORA Site descriptor: the NSLS-II site-level surface
 #
 # NSLS-II (National Synchrotron Light Source II, Brookhaven National Laboratory)
-# is a Site CORA models, the home of the FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, SMI, IXS, and SST beamlines. This file is
+# is a Site CORA models, the home of the reverse-engineered NSLS-II beamline
+# scaffolds listed in the facility.beamlines field below (FXI ... HEX). This file is
 # the single human-readable source for the facility's site-level instances: the
 # Facility itself, the Practices it would run, and the facility principals.
 #
@@ -24,7 +25,7 @@ facility:
   heading: "NSLS-II"
   kind: Site
   institution: Brookhaven National Laboratory
-  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, SMI, IXS, SST, ISS, FMX, CMS, XFM]
+  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, IOS, XPD, ESM, SMI, IXS, SST, ISS, FMX, CMS, XFM, LIX, HEX, AMX]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the FXI profile collection, not yet
@@ -100,6 +101,14 @@ practices:
   - {name: CMS_wide_angle_scattering_practice, method: wide_angle_scattering, pending: true, note: "wide- and medium-angle scattering on the Pilatus 800K detectors; shares the i22 WAXS Method (TECH-1)"}
   - {name: CMS_grazing_incidence_scattering_practice, method: grazing_incidence_scattering, pending: true, note: "grazing-incidence small- and wide-angle scattering (GISAXS / GIWAXS) on thin films; shares the 9-ID Method, SMI the NSLS-II twin (TECH-1)"}
   - {name: CMS_reflectivity_practice, method: reflectivity, pending: true, note: "specular hard X-ray reflectivity (XR): step the sample theta and track the reflected beam in a sliding region on the fixed Pilatus; second consumer of the reflectivity Method after i10 (XR-1, TECH-1)"}
+  # IOS (23-ID-2) does ambient-pressure photoemission (AP-XPS / AP-PES) and soft
+  # NEXAFS / XAS, the in-situ / operando twin of CSX on the same canted 23-ID straight.
+  # Its photoemission sits on the pending angle_resolved_photoemission Method ESM coined
+  # (AP-XPS is chemical-state, not angle-resolved, so the slug names a shape it was not
+  # coined for), and its NEXAFS sits on the deferred energy_scan Capability (ENERGY-1,
+  # the BMM question) rather than the crystal-emission-spectrometer xas_spectroscopy.
+  # Following SST, no IOS Practice is recorded until a Method lands (TECH-1); IOS is
+  # bound via beamlines.
   # XFM (4-BM) is a scanning X-ray fluorescence microprobe: raster the sample through a
   # focused bending-magnet beam, read element maps on the Xspress3 / Maia detectors. This
   # reuses the scanning_fluorescence_microscopy Method 2-ID left pending; XFM is the second
@@ -107,6 +116,33 @@ practices:
   # deferral discipline; METHOD-1 / TECH-1). The XANES microspectroscopy leg leans on the
   # deferred energy_scan Capability (ENERGY-1, the BMM question), no practice recorded.
   - {name: XFM_scanning_fluorescence_microscopy_practice, method: scanning_fluorescence_microscopy, pending: true, note: "4-BM sample-scanning XRF mapping on the UTS raster stage + Xspress3 / Maia detectors; reuses the 2-ID scanning_fluorescence_microscopy Method, the second consumer (METHOD-1)"}
+  # LIX (16-ID) life-science solution-scattering Practices (first cut). The science
+  # axis (small- / wide-angle scattering) overlaps the materials-scattering fleet, but
+  # the SUBJECT (a protein in solution, often an eluting SEC peak) and the fluidic
+  # SAMPLE DELIVERY are new. The bio-SAXS / SEC-SAXS Method is new to the catalog
+  # (solution_scattering); the scanning-microbeam mode reuses the existing pending
+  # scanning_fluorescence_microscopy Method. All carried pending (TECH-1).
+  - {name: LIX_solution_scattering_practice, method: solution_scattering, pending: true, note: "biological solution small- / wide-angle scattering (bio-SAXS / WAXS) on protein solutions in a flow cell; the fleet's first solution-scattering Method, new to the catalog (TECH-1)"}
+  - {name: LIX_sec_saxs_practice, method: solution_scattering, pending: true, note: "in-line size-exclusion-chromatography-coupled SAXS (SEC-SAXS): the HPLC delivery pump flows the eluting peak through the cell while the SAXS detector reads; the same solution_scattering Method with the elution as the acquisition axis, a Procedure over the fluidic seam (TECH-1, FLUID-1)"}
+  - {name: LIX_microbeam_scanning_practice, method: scanning_fluorescence_microscopy, pending: true, note: "scanning-microbeam mapping of cells and tissue (raster x scattering / fluorescence) on the SmarAct goniometer; reuses the existing pending scanning_fluorescence_microscopy Method (TECH-1)"}
+  # HEX (27-ID) high-energy engineering Practices (first cut). All reuse Methods the fleet
+  # already holds: tomography is graduated (2-BM / FXI); radiography and
+  # energy_dispersive_diffraction are the pending APS 7-BM Methods (HEX the second consumer
+  # of each); powder_diffraction is the pending Diamond i11 Method (HEX the second consumer).
+  # Nothing new is coined; the diffraction Methods stay pending (TECH-1).
+  - {name: HEX_tomography_practice, method: tomography, pending: true, note: "high-energy white-beam and monochromatic X-ray tomography (tomo_flyscan / tomo_loop) for engineering-materials and operando imaging on the Kinetix sCMOS cameras; reuses the graduated tomography Method (2-BM / FXI)"}
+  - {name: HEX_radiography_practice, method: radiography, pending: true, note: "time-resolved high-speed radiography on the Phantom Veo; reuses the radiography Method APS 7-BM left pending, the second consumer (TECH-1)"}
+  - {name: HEX_energy_dispersive_diffraction_practice, method: energy_dispersive_diffraction, pending: true, note: "spatially-resolved energy-dispersive X-ray diffraction (EDXD) on the GeRM germanium strip detector; reuses the energy_dispersive_diffraction Method APS 7-BM left pending, the second consumer (TECH-1)"}
+  - {name: HEX_powder_diffraction_practice, method: powder_diffraction, pending: true, note: "monochromatic angle-dispersive / powder diffraction (ADXD) on the PerkinElmer flat panel; reuses the powder_diffraction Method Diamond i11 left pending, the second consumer (TECH-1)"}
+  # AMX (17-ID-1) is FMX's high-throughput MX sibling on the shared 17-ID straight: rotation
+  # data collection on a single-omega goniometer + Eiger, fast grid scans, and an autonomous
+  # EMBL-robot sample-exchange loop. These reuse the three MX Methods i03 / FMX left pending;
+  # AMX is the third consumer of each. They stay pending: Methods coin on a conduct-path (an
+  # integration scenario that runs them), not a sighting count, so n=3 strengthens the case
+  # but does not coin them (the energy_scan discipline; TECH-1 / ROBOT-1).
+  - {name: AMX_mx_data_collection_practice, method: mx_data_collection, pending: true, note: "rotation / oscillation MX data collection on the single-omega goniometer + Eiger via the mxtools vector / Zebra flyer; reuses the i03 / FMX mx_data_collection Method, the third consumer (TECH-1)"}
+  - {name: AMX_grid_scan_practice, method: grid_scan, pending: true, note: "fast grid scan for sample location / centring via the Zebra-triggered goniometer raster; reuses the i03 / FMX grid_scan Method, the third consumer (TECH-1)"}
+  - {name: AMX_sample_exchange_practice, method: sample_exchange, pending: true, note: "autonomous EMBL-robot load / centre / collect / unmount loop coordinated by the LSDC Governor; reuses the i03 / FMX sample_exchange Method, the third consumer; a Procedure over the spine + a Subject custody thread (ROBOT-1)"}
 
 # Access BC Actors conceptually facility-wide at NSLS-II. Pending until the NSLS-II
 # operator and review structure is confirmed; the profile collection only exposes

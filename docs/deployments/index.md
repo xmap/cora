@@ -54,6 +54,7 @@ The fourth Site CORA models. Like the Diamond exercise, its beamlines are revers
 | [SIX](six/index.md) | Reverse-engineered | soft X-ray resonant inelastic scattering (RIXS), 2-ID; CORA's first soft X-ray beamline, modelled from public beamline config |
 | [CHX](chx/index.md) | Reverse-engineered | coherent hard X-ray scattering (XPCS, SAXS/WAXS, GISAXS), 11-ID; the second coherent beamline after APS 8-ID, modelled from public beamline config |
 | [CSX](csx/index.md) | Reverse-engineered | coherent soft X-ray scattering and RSXS (TARDIS diffractometer), 23-ID; graduates the GratingMonochromator Family, modelled from public beamline config |
+| [IOS](ios/index.md) | Reverse-engineered | in situ / operando soft X-ray spectroscopy (ambient-pressure XPS / AP-PES, NEXAFS / XAS), 23-ID-2; the twin of CSX on the canted 23-ID straight; modelled from public beamline config |
 | [XPD](xpd/index.md) | Reverse-engineered | high-energy powder diffraction and total scattering / PDF, 28-ID; the NSLS-II twin of Diamond i11 and i15-1, modelled from public beamline config |
 | [ESM](esm/index.md) | Reverse-engineered | electron spectro-microscopy (ARPES), 21-ID; CORA's first photoemission beamline, graduates the Manipulator Family, modelled from public beamline config |
 | [SMI](smi/index.md) | Reverse-engineered | small- and wide-angle scattering (SAXS/WAXS) with grazing incidence (GISAXS/GIWAXS), 12-ID; the NSLS-II twin of Diamond i22, modelled from public beamline config |
@@ -61,7 +62,11 @@ The fourth Site CORA models. Like the Diamond exercise, its beamlines are revers
 | [SST](sst/index.md) | Reverse-engineered | soft-and-tender dual-branch, multi-endstation (RSoXS scattering, NEXAFS absorption, HAXPES photoemission), 7-ID; modelled from public beamline config |
 | [ISS](iss/index.md) | Reverse-engineered | inner-shell spectroscopy (EXAFS by trajectory energy fly-scan, plus XES / HERFD on the Johann + von Hamos crystal emission spectrometers), 8-ID; modelled from public beamline config |
 | [FMX](fmx/index.md) | Reverse-engineered | frontier microfocusing macromolecular crystallography (rotation MX on a single-omega goniometer + Eiger, autonomous robot sample exchange), 17-ID-2; CORA's 2nd MX after i03; modelled from public beamline config |
+| [CMS](cms/index.md) | Reverse-engineered | complex-materials scattering (SAXS/WAXS/MAXS, GISAXS/GIWAXS) and the fleet's first hard X-ray reflectivity (XR), 11-BM; the NSLS-II twin of SMI; modelled from public beamline config |
 | [XFM](xfm/index.md) | Reverse-engineered | scanning X-ray fluorescence microprobe (raster XRF mapping on the Xspress3 + Maia detectors, bending magnet), 4-BM; CORA's 2nd scanning-XRF after 2-ID; modelled from public beamline config |
+| [LIX](lix/index.md) | Reverse-engineered | life-science solution scattering (bio-SAXS/WAXS, in-line SEC-SAXS) and scanning-microbeam mapping, 16-ID; the fleet's first solution beamline and fluidic sample-delivery chain; modelled from public beamline config |
+| [HEX](hex/index.md) | Reverse-engineered | high-energy engineering X-ray scattering (imaging/tomography + energy-dispersive and powder diffraction on a superconducting wiggler, white 30-250 keV / mono 30-200 keV), 27-ID; the fleet's first true high-energy hard X-ray beamline; modelled from public beamline config |
+| [AMX](amx/index.md) | Reverse-engineered | highly automated macromolecular crystallography (rotation MX on a single-omega goniometer + Eiger, EMBL robot sample exchange), 17-ID-1; FMX's sibling, CORA's 3rd MX; modelled from public beamline config |
 
 ## [SLAC](slac/index.md)
 

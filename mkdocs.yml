@@ -333,6 +333,19 @@ nav:
         - Techniques: deployments/i20-1/techniques.md
         - Governance: deployments/i20-1/governance.md
         - Model: deployments/i20-1/model.md
+      - I19:
+        - deployments/i19/index.md
+        - Open questions: deployments/i19/questions.md
+        - The beamline:
+          - deployments/i19/equipment/index.md
+          - Source: deployments/i19/beamline.md
+          - Sample: deployments/i19/equipment/sample.md
+          - Detector: deployments/i19/equipment/detector.md
+          - Controls: deployments/i19/equipment/controls.md
+          - Inventory: deployments/i19/inventory.md
+        - Techniques: deployments/i19/techniques.md
+        - Governance: deployments/i19/governance.md
+        - Model: deployments/i19/model.md
     - NSLS-II:
       - deployments/nsls2/index.md
       - FXI:
@@ -433,6 +446,19 @@ nav:
         - Techniques: deployments/csx/techniques.md
         - Governance: deployments/csx/governance.md
         - Model: deployments/csx/model.md
+      - IOS:
+        - deployments/ios/index.md
+        - Open questions: deployments/ios/questions.md
+        - The beamline:
+          - deployments/ios/equipment/index.md
+          - Source: deployments/ios/beamline.md
+          - Sample: deployments/ios/equipment/sample.md
+          - Detector: deployments/ios/equipment/detector.md
+          - Controls: deployments/ios/equipment/controls.md
+          - Inventory: deployments/ios/inventory.md
+        - Techniques: deployments/ios/techniques.md
+        - Governance: deployments/ios/governance.md
+        - Model: deployments/ios/model.md
       - XPD:
         - deployments/xpd/index.md
         - Open questions: deployments/xpd/questions.md
@@ -550,6 +576,45 @@ nav:
         - Techniques: deployments/xfm/techniques.md
         - Governance: deployments/xfm/governance.md
         - Model: deployments/xfm/model.md
+      - LIX:
+        - deployments/lix/index.md
+        - Open questions: deployments/lix/questions.md
+        - The beamline:
+          - deployments/lix/equipment/index.md
+          - Source: deployments/lix/beamline.md
+          - Sample: deployments/lix/equipment/sample.md
+          - Detector: deployments/lix/equipment/detector.md
+          - Controls: deployments/lix/equipment/controls.md
+          - Inventory: deployments/lix/inventory.md
+        - Techniques: deployments/lix/techniques.md
+        - Governance: deployments/lix/governance.md
+        - Model: deployments/lix/model.md
+      - HEX:
+        - deployments/hex/index.md
+        - Open questions: deployments/hex/questions.md
+        - The beamline:
+          - deployments/hex/equipment/index.md
+          - Source: deployments/hex/beamline.md
+          - Sample: deployments/hex/equipment/sample.md
+          - Detector: deployments/hex/equipment/detector.md
+          - Controls: deployments/hex/equipment/controls.md
+          - Inventory: deployments/hex/inventory.md
+        - Techniques: deployments/hex/techniques.md
+        - Governance: deployments/hex/governance.md
+        - Model: deployments/hex/model.md
+      - AMX:
+        - deployments/amx/index.md
+        - Open questions: deployments/amx/questions.md
+        - The beamline:
+          - deployments/amx/equipment/index.md
+          - Source: deployments/amx/beamline.md
+          - Sample: deployments/amx/equipment/sample.md
+          - Detector: deployments/amx/equipment/detector.md
+          - Controls: deployments/amx/equipment/controls.md
+          - Inventory: deployments/amx/inventory.md
+        - Techniques: deployments/amx/techniques.md
+        - Governance: deployments/amx/governance.md
+        - Model: deployments/amx/model.md
     - SLAC:
       - deployments/slac/index.md
       - LCLS-MFX:

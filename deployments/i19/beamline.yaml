@@ -1,0 +1,295 @@
+# i19 beamline descriptor (Diamond), reverse-engineered
+#
+# i19 is the Diamond small-molecule single-crystal diffraction beamline (chemical
+# crystallography): monochromatic and variable-wavelength single-crystal diffraction
+# on a Newport kappa four-circle goniometer with an Eiger detector, plus a serial /
+# microfocus fixed-target arm. It is bound to the Diamond Site
+# (deployments/diamond/site.yaml), the eighth Diamond beamline after I22, I03, I15-1,
+# I11, I24, I06, I10, I20-1, and CORA's FIRST chemical (small-molecule) crystallography
+# deployment (the fleet's other diffraction-imaging crystallography is all
+# macromolecular MX: I03, I24, FMX, MX3).
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the DiamondLightSource/dodal beamline package, its src/dodal/beamlines/i19.py
+# + i19_shared.py + i19_1.py + i19_2.py factories and the device classes in
+# src/dodal/devices/) or inferred, carried new: true + confirm: true pending i19 staff.
+# EPICS PVs are real and verified against dodal; vendor part numbers, serials, and
+# physical positions are not in dodal and are open questions. Same descriptor mode as
+# the other Diamond deployments; this scaffold is descriptor + docs, scenarios deferred.
+#
+# WHAT IS NEW: the genuine novelty is NOT the instrument (the kappa four-circle is plain
+# Goniometer reuse, see MODELLING) but the GOVERNANCE seam. i19 has two experiment
+# hutches (EH1 and EH2) in series that SHARE one optics line, and only the active hutch
+# may drive the shared optics. dodal expresses this through a central arbiter (the
+# i19-blueapi optics service): a hutch reads the shared-optics state directly over EPICS
+# but its WRITES (change energy, operate the experiment shutter, move the attenuator,
+# set a mirror piezo) are posted to the arbiter, which compares the requesting hutch
+# against the active-hutch readback and runs or rejects. This dual-hutch shared-optics
+# access-control is modelled as an Enclosure-permit + Trust-gate over the shared-optics
+# Assets, with the arbiter as an actuate-floor seam partner (the "EPICS is the floor"
+# pattern, here a blueapi-arbiter floor). It is the trigger for ACCESS-1; it is NOT a
+# device family.
+#
+# MODELLING: i19 coins NO new Family and changes nothing in the catalog.
+#   - The Newport kappa FOUR-CIRCLE (phi / omega / kappa sample circles + a 2theta
+#     detector arm + sample centring) binds the catalog Goniometer: the catalog
+#     Goniometer note states "chi-vs-kappa and axis-count are a per-Asset settings
+#     difference, not a Family split", and the larger four-circle composes the catalog
+#     Assembly(Diffractometer) (a Goniometer + a RotaryStage 2theta detector arm + a
+#     reciprocal-space PseudoAxis), the 8-ID / i06-1 pattern, named-not-built here
+#     (DIFF-1, DIFF-2).
+#   - The single-crystal diffraction technique reuses the pending `diffraction` Method
+#     (4-ID / 8-ID / CSX are the prior consumers); i19 is chemical single-crystal
+#     diffraction, the same Method, a Practice-level science difference (TECH-1).
+#   - The MAPT pinhole + collimator binds the catalog Aperture (the i03
+#     ApertureScatterguard-at-MAPT precedent), composing the pinhole and collimator XY
+#     stages with a configuration lookup table (APERTURE-1).
+# Everything else reuses an existing catalog Family: the DCM binds Monochromator; the
+# focusing mirrors bind Mirror; the attenuator binds Filter; the undulator binds
+# InsertionDevice; the Eiger and the OAV viewing cameras bind Camera; the Zebra and
+# PandA hardware triggers bind TimingController; the serial / microfocus arm binds
+# Goniometer; the beamstops bind BeamStop; the shutter binds Shutter; the incident
+# energy is a PseudoAxis. The machine state reuses the loose StorageRing; the sample
+# backlight reuses the loose Backlight (already held under review, now its fourth
+# sighting after i03 / i24 / fmx).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/i19/questions.md.
+
+beamline:
+  name: I19
+  facility: diamond            # Diamond Site (facility_code: diamond)
+  sector: "Sector 19"          # PV zones BL19I (optics + both hutches); SR19I (undulator)
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "i19 is an undulator beamline; dodal binds the undulator (UndulatorInKeV on SR19I-MO-SERVC-01) but not its period; the undulator detail is SRC-1"
+
+# PV zones: BL19I (the shared optics and both experiment hutches: -OP / -MO optics and
+# motion, -EA endstation, -PS shutter, -RS beamstop), SR19I (the storage-ring undulator
+# servo). The two hutches EH1 and EH2 share the BL19I optics; which hutch holds which
+# endstation instrument, and the precise EH1 / EH2 grouping, are open (ENC-1). The
+# dual-hutch shared-optics access-control seam is ACCESS-1; the PSS permit leaves are
+# PSS-1.
+enclosures:
+  - name: i19-optics
+    role: optics-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf not in dodal; the shared optics enclosure, the optics shutter is the dodal InterlockedHutchShutter (PSSInterlock); permit-leaf names are PSS-1"}
+  - name: i19-1
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf unknown; the EH1 experiment hutch; the active-hutch shared-optics permit is ACCESS-1 (ENC-1, PSS-1)"}
+  - name: i19-2
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf unknown; the EH2 experiment hutch (the four-circle + serial endstation); the active-hutch shared-optics permit is ACCESS-1 (ENC-1, PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state and the shared optics (contended by EH1 / EH2)
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: i19-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "dodal's Synchrotron device is the observe-only machine state, the loose StorageRing pattern reused from the Diamond siblings (MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: {confirm: "Diamond storage-ring state (current, fill); observe-only, the exact PVs are MACHINE-1"}
+      new: true
+      confirm: true
+      note: "Diamond storage-ring state; observe-only (MACHINE-1)"
+
+optics:
+  stage: source
+  enclosure: i19-optics
+  intro: "The shared optics line: the undulator, the double-crystal monochromator, the focusing mirrors, the attenuator, the incident-energy axis, and the optics shutter. Both hutches share these; only the active hutch may drive them (ACCESS-1)."
+  note: >
+    All reuse existing catalog Families. These are SINGLE Assets in the shared optics
+    enclosure; a non-active hutch may read them but not drive them, and the energy move
+    is a coordinated procedure over the monochromator, undulator, and mirrors gated by
+    the active-hutch permit (ACCESS-1). The mirror coating stripe is a hutch-keyed
+    setting on the mirror (OPT-1).
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: "SR19I-MO-SERVC-01:"
+      new: true
+      confirm: true
+      note: "the undulator (UndulatorInKeV, energy-to-gap lookup); coordinated with the DCM on an energy move; period is SRC-1"
+    - name: Monochromator
+      family: Monochromator
+      pv: "BL19I-MO-DCM-01:"
+      new: true
+      confirm: true
+      note: "double-crystal monochromator (Si stationary crystal + pitch/roll crystal); energy / wavelength / Bragg / offset with d-spacing readback; a non-active hutch reads it read-only (ACCESS-1, MONO-1)"
+    - name: HorizontalFocusingMirror
+      family: Mirror
+      pv: "BL19I-OP-HFM-01:"
+      new: true
+      confirm: true
+      note: "horizontal focusing mirror with a piezo fine-pitch; coating stripe (Si / Rh / Pt by energy band) is a hutch-keyed setting; the piezo write is access-gated (OPT-1, ACCESS-1)"
+    - name: VerticalFocusingMirror
+      family: Mirror
+      pv: "BL19I-OP-VFM-01:"
+      new: true
+      confirm: true
+      note: "vertical focusing mirror with a piezo fine-pitch; coating stripe setting as the HFM (OPT-1)"
+    - name: Attenuator
+      family: Filter
+      pv: "BL19I-OP-ATTN-04:"
+      new: true
+      confirm: true
+      note: "absorber-wedge attenuator (X / Y wedge motors, BL19I-OP-ATTN-04 / -05); reuses Filter (the i03 precedent); the wedge write is access-gated (ATTN-1, ACCESS-1)"
+    - name: BeamEnergy
+      family: PseudoAxis
+      pv: {confirm: "incident-energy virtual axis over the DCM and the undulator (the access-controlled energy composite); the coordinated DCM + undulator + mirror-stripe move is gated by the active-hutch permit; partition rule and range are MONO-1 / ACCESS-1"}
+      new: true
+      confirm: true
+      note: "incident-energy pseudo-axis over the DCM and undulator (the 2-BM beam-energy pattern); the coordinated cross-Asset move is the access-gated energy procedure (MONO-1, ACCESS-1)"
+    - name: OpticsShutter
+      family: Shutter
+      pv: "BL19I-PS-SHTR-01:"
+      new: true
+      confirm: true
+      note: "the experiment shutter (InterlockedHutchShutter, PSS-interlocked); the per-hutch operate is access-gated, the interlock is an Enclosure permit concern (PSS-1, ACCESS-1)"
+
+# ===========================================================================
+# EH1 ENDSTATION (i19-1): on-axis sample viewing, triggering, beamstop
+# ===========================================================================
+
+eh1:
+  stage: sample
+  enclosure: i19-1
+  intro: "The EH1 experiment hutch endstation: the on-axis sample-viewing cameras, the hardware trigger, and the beamstop. Which hutch holds the four-circle is ENC-1."
+  note: "All reuse existing catalog Families. The OAV viewing cameras bind Camera; their pin-tip image recognition is a centring behaviour, not a device. The Zebra binds TimingController; the beamstop binds BeamStop."
+  devices:
+    - name: SampleViewerOnAxis
+      family: Camera
+      pv: "BL19I-EA-OAV-01:"
+      new: true
+      confirm: true
+      note: "on-axis OAV viewing camera with zoom lens; pin-tip recognition for sample centring is a Method behaviour on the Camera (DET-1)"
+    - name: SampleViewerDiagonal
+      family: Camera
+      pv: "BL19I-EA-OAV-02:"
+      new: true
+      confirm: true
+      note: "diagonal OAV viewing camera (no zoom); second viewing camera for centring (DET-1)"
+    - name: TriggerControllerEH1
+      family: TimingController
+      pv: "BL19I-EA-ZEBRA-02:"
+      new: true
+      confirm: true
+      note: "the EH1 Zebra hardware-trigger box (TTL routing); a second Zebra box is connected but unused (DET-1)"
+    - name: BeamstopEH1
+      family: BeamStop
+      pv: "BL19I-RS-ABSB-01:"
+      new: true
+      confirm: true
+      note: "the EH1 beamstop (X / Y / Z with homing) blocking the direct beam (DET-1)"
+
+# ===========================================================================
+# EH2 ENDSTATION (i19-2): the four-circle, the Eiger, the serial arm, the MAPT
+# ===========================================================================
+
+eh2:
+  stage: sample
+  enclosure: i19-2
+  intro: "The EH2 experiment hutch endstation: the Newport kappa four-circle diffractometer, the Eiger area detector, the serial / microfocus arm, the MAPT pinhole and collimator, the beamstop, the backlight, and the hardware triggers."
+  note: >
+    The four-circle binds the catalog Goniometer (kappa is a setting) composed into the
+    catalog Assembly(Diffractometer) with a reciprocal-space PseudoAxis, named-not-built
+    (DIFF-1, DIFF-2). The Eiger binds Camera; the serial / microfocus arm binds a second
+    Goniometer (SERIAL-1); the MAPT pinhole + collimator binds Aperture (APERTURE-1); the
+    beamstop binds BeamStop; the backlight reuses the loose Backlight; the Zebra and PandA
+    bind TimingController.
+  devices:
+    - name: Diffractometer
+      family: Goniometer
+      pv: "BL19I-MO-CIRC-02:"
+      new: true
+      confirm: true
+      note: "the Newport kappa four-circle: phi / omega / kappa sample circles + the 2THETA detector arm + det_z, with sample centring on BL19I-MO-SAMP-02; kappa is a setting; the circle roles and the Assembly(Diffractometer) binding are DIFF-1"
+    - name: ReciprocalSpace
+      family: PseudoAxis
+      pv: {confirm: "reciprocal-space virtual axis over the four-circle; the kappa-to-eulerian / hkl partition rule is deferred as on 4-ID / 8-ID / i06-1 (DIFF-2)"}
+      new: true
+      confirm: true
+      note: "reciprocal-space pseudo-axis over the diffractometer (the Diffractometer reciprocal_space pattern); DIFF-2"
+    - name: Detector
+      family: Camera
+      pv: "BL19I-EA-EIGER-01:"
+      new: true
+      confirm: true
+      note: "the Eiger area detector recording the single-crystal diffraction pattern (DET-1)"
+    - name: SerialStage
+      family: Goniometer
+      pv: "BL19I-MO-SRL-01:"
+      new: true
+      confirm: true
+      note: "the serial / microfocus fixed-target arm (x / y / z + phi); a second sample-orientation stage; the fixed-target raster sub-mode is SERIAL-1"
+    - name: Aperture
+      family: Aperture
+      pv: "BL19I-OP-PCOL-01:"
+      new: true
+      confirm: true
+      note: "the MAPT pinhole + collimator microfocus aperture (pinhole BL19I-MO-PIN-01, collimator BL19I-MO-COL-01, configuration lookup table BL19I-OP-PCOL-01:CONFIG); reuses Aperture (the i03 MAPT precedent); the aperture-size config is a Capability settings schema (APERTURE-1)"
+    - name: BeamstopEH2
+      family: BeamStop
+      pv: "BL19I-OP-ABSB-02:"
+      new: true
+      confirm: true
+      note: "the EH2 beamstop (X / Y / Z with homing); same Family as the EH1 beamstop (DET-1)"
+    - name: Backlight
+      family: Backlight                # loose Family, already held under review; 4th sighting (i03 + i24 + fmx + i19)
+      pv: "BL19I-EA-IOC-12:"
+      new: true
+      confirm: true
+      note: "the sample backlight (in / out illumination for OAV centring); reuses the loose Backlight Family, its fourth sighting after i03 / i24 / fmx, held under review (DET-1)"
+    - name: TriggerControllerEH2
+      family: TimingController
+      pv: "BL19I-EA-ZEBRA-03:"
+      new: true
+      confirm: true
+      note: "the EH2 Zebra hardware-trigger box (DET-1)"
+    - name: TriggerSequencer
+      family: TimingController
+      pv: "BL19I-EA-PANDA-01:"
+      new: true
+      confirm: true
+      note: "the EH2 PandA hardware sequencer (HDF-writing); same Family as the Zebra, PandA-vs-Zebra is a bound-Model difference (DET-1)"
+
+# Cross-cutting control. i19 runs EPICS (the floor) plus a blueapi optics ARBITER that
+# enforces the dual-hutch access control; CORA observes and conducts over both. The
+# handles above were read from dodal and carried confirm (CTRL-1, ACCESS-1).
+controls:
+  intro: >
+    i19 runs on the Diamond EPICS / ophyd-async control stack, the same floor as I22,
+    I03, I15-1, I11, I24, I06, I10, I20-1. The device handles above are bound from the
+    DiamondLightSource/dodal beamline package (its i19 / i19_shared / i19_1 / i19_2
+    factories and the device classes), carried confirm (CTRL-1). i19 adds a SECOND floor
+    element beyond EPICS: a central blueapi optics ARBITER. The shared-optics writes
+    (change energy, operate the experiment shutter, move the attenuator, set a mirror
+    piezo) are not direct EPICS writes; each hutch posts the operation to the arbiter
+    with its hutch identity, and the arbiter compares it against the active-hutch
+    readback (BL19I-OP-STAT-01:EHStatus) and runs or rejects it. CORA models this as an
+    Enclosure-permit + Trust-gate over the shared-optics Assets, with the arbiter as an
+    actuate-floor seam partner (the "EPICS is the floor" pattern, here a blueapi-arbiter
+    floor): CORA's edge would conduct the run over its ControlPort, either driving
+    through the arbiter or replacing its plan-orchestration per routine, a seam decision
+    not pre-empted here (ACCESS-1). The Eiger file-writing to the Diamond filestore is
+    plumbing CORA observes, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an i19 run needs. The optics run under
+    vacuum (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the shared optics line (SUP-1)"

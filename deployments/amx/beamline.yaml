@@ -1,0 +1,235 @@
+# AMX beamline descriptor (NSLS-II), reverse-engineered
+#
+# AMX (Highly Automated Macromolecular Crystallography) is the NSLS-II high-throughput MX
+# beamline at sector 17-ID-1, the sibling of FMX (17-ID-2): they share the 17-ID straight
+# and the IVU21 undulator. A vertical double-crystal monochromator, tandem-deflection and
+# KB focusing mirrors, and a beam-conditioning unit feed a single-omega micro-goniometer;
+# an EMBL robot loads cryo-cooled crystals from a 48-position dewar, and an Eiger pixel
+# detector reads the rotation data. It is bound to the NSLS-II Site
+# (deployments/nsls2/site.yaml), the seventeenth NSLS-II beamline after FXI, HXN, BMM, SRX,
+# SIX, CHX, CSX, XPD, ESM, SMI, IXS, SST, ISS, FMX, CMS, XFM, and CORA's third
+# macromolecular-crystallography deployment after Diamond i03 and NSLS-II FMX.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open source
+# (the NSLS2/amx-profile-collection bluesky / ophyd startup files; the real MX acquisition
+# logic lives in the lsdc / mxtools libraries, referenced not modelled) or inferred,
+# carried `confirm: true` pending AMX staff. EPICS PVs are real and verified against the
+# startup/*.py device classes; the goniometer / robot / detector vendor identities and the
+# crystal cut are not in source and are open questions. Same descriptor mode as the other
+# NSLS-II beamlines: descriptor + docs, scenarios deferred.
+#
+# AMX is a PURE-REUSE deployment: it coins NO new Family and graduates nothing. It reuses
+# the MX vocabulary i03 / FMX established: the graduated Goniometer (the single-omega
+# micro-goniometer), the Camera (the Eiger), the Monochromator (the vertical DCM), the
+# Mirror (the tandem-deflection + KB mirrors), the Filter (the BCU attenuator), the
+# BeamStop, the EnergyDispersiveSpectrometer (the Mercury fluorescence detector), the
+# FluxMonitor (the Keithley), the TimingController (the Zebra), and the loose
+# BeamPositionMonitor (DIAG-1). The robotic sample changer is one Positioner-presenting
+# Asset (NO new SampleChanger Family), the i03 / 19-BM / FMX precedent (ROBOT-1). The MX
+# Methods (mx_data_collection, grid_scan, sample_exchange) stay PENDING: AMX is their THIRD
+# consumer (after i03, FMX), which strengthens but does not coin them (Methods coin on a
+# conduct-path, not a sighting count; the energy_scan deferral discipline; TECH-1). Unlike
+# FMX, AMX has no CRL transfocator and no on-axis backlight in source.
+
+beamline:
+  name: AMX
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 17"          # PV namespace XF:17ID* (the 17-ID-1 branch)
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "AMX (17-ID-1) shares its IVU21 in-vacuum undulator (SR:C17-ID:G1{IVU21:1}) and the 17-ID straight with its sibling FMX (17-ID-2, which uses IVU21:2); modelled as one root Unit feeding the 17-ID-1 branch (the FMX / CSX precedent), not two roots. Undulator period and gap range not fully in the profile collection (SRC-1, TOPO-1)."
+
+enclosures:
+  # 17-ID has a shared front-end / optics enclosure (PV zone XF:17IDA, the FOE: the
+  # high-heat-load slit, the vertical DCM, the tandem-deflection mirrors) and the AMX
+  # experiment enclosure (PV zone XF:17IDB: the KB mirrors, the goniometer, the robot, the
+  # Eiger). The zone letters A / B are grounded in the PV prefixes (note AMX's endstation
+  # is 17IDB, where FMX's is 17IDC); the AMX-shared layout is not fully in source (TOPO-1).
+  - name: 17-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf and the shutter PVs are not in the profile collection; the front end is shared with FMX (PSS-1, TOPO-1)"}
+  - name: 17-ID-B
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; 17-ID-B (PV zone XF:17IDB) is the AMX experiment enclosure carrying the KB mirrors, the goniometer, the robot, and the Eiger (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the shared insertion device and the shutters
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 17-ID-A
+  intro: The shared 17-ID insertion device, the front-end and photon shutters, and the high-heat-load slit.
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: "SR:C17-ID:G1{IVU21:1}"
+      confirm: true
+      note: "IVU21 in-vacuum undulator on the NSLS-II 3 GeV ring (ring current SR:OPS-BI{DCCT:1}I:Real-I), shared with FMX (17-ID-2, IVU21:2) on the 17-ID straight; AMX drives gap index :1. Gap axis SR:C17-ID:G1{IVU21:1-Ax:Gap}-Mtr. Period and range not fully in source (SRC-1, TOPO-1)."
+    - name: FrontEndShutter
+      family: Shutter
+      confirm: "shared FMX / AMX front-end (FOE) photon shutter; PV not in the profile collection (PSS-1)"
+      note: "Front-end photon shutter (not exposed in the profile collection)."
+    - name: PhotonShutter
+      family: Shutter
+      confirm: "AMX photon shutter into the experiment enclosure; PV not in the profile collection (PSS-1)"
+      note: "Photon shutter gating the beam into the experiment enclosure (not exposed in the profile collection)."
+    - name: FrontEndSlit
+      family: Slit
+      pv: "FE:C17A-OP{Slt"
+      confirm: true
+      note: "Front-end white-beam slit (FE:C17A-OP{Slt:1 / Slt:2 / Slt:12 blades and center / gap) defining the accepted beam, shared with FMX."
+    - name: HighHeatLoadSlit
+      family: Slit
+      pv: "XF:17IDA-OP:AMX{Slt:0"
+      confirm: true
+      note: "High-heat-load white-beam slit ahead of the monochromator."
+
+# ===========================================================================
+# OPTICS STAGE: the monochromator, the focusing mirrors, the attenuator
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: 17-ID-A
+  intro: "Condition the beam and set its energy: the vertical double-crystal monochromator, the tandem-deflection harmonic-rejection mirrors and the KB focusing pair, the beam-conditioning attenuator, and the slits. PVs verified against the amx-profile-collection startup files."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:17IDA-OP:AMX{Mono:DCM"
+      confirm: true
+      note: "Vertical double-crystal monochromator (VDCM; Bragg / gap / pitch / roll / W axes XF:17IDA-OP:AMX{Mono:DCM-Ax:B/G/P/R/W}Mtr and an energy axis XF:17IDA-OP:AMX{Mono:DCM-Ax:E}Mtr). The vertical geometry is the AMX-vs-FMX difference (FMX is horizontal). Reuses the Monochromator family. Crystal cut and energy range pending (DCM-1)."
+    - name: TandemMirror
+      family: Mirror
+      pv: "XF:17IDA-OP:AMX{Mir:TDM"
+      confirm: true
+      note: "Tandem-deflection mirror pair (TDM; pitch / roll / X / Y up-and-down-stream axes) for harmonic rejection and steering, AMX's analog of FMX's horizontal focusing mirror. Reuses the Mirror family (KB-1)."
+    - name: KBMirrors
+      family: Mirror
+      pv: "XF:17IDB-OP:AMX{Mir"
+      enclosure: 17-ID-B
+      confirm: true
+      note: "Kirkpatrick-Baez microfocus mirror pair (horizontal KBH with P/R/X/Y axes, vertical KBV with P/X/Y, XF:17IDB-OP:AMX{Mir:KBH / KBV-Ax:...}Mtr) focusing the microbeam at the sample, with a piezo tweaker. Reuses the Mirror family (KB-1)."
+    - name: BeamConditioningAttenuator
+      family: Filter
+      pv: "XF:17IDB-OP:AMX{Attn:BCU"
+      enclosure: 17-ID-B
+      confirm: true
+      note: "Beam-conditioning-unit attenuator (BCU; four insertable absorber foils XF:17IDB-OP:AMX{Attn:BCU-Ax:1-4}Mtr solving a foil combination for a requested transmission XF:17IDB-OP:AMX{Attn:BCU}). Reuses the Filter family; the energy-dependent transmission solver is the deferred Attenuable leg (the LCLS-MFX ATT-1 precedent). Unlike FMX, AMX has no CRL transfocator in source."
+    - name: ExperimentSlits
+      family: Slit
+      pv: "XF:17IDB-OP:AMX{Slt:2"
+      enclosure: 17-ID-B
+      confirm: true
+      note: "Beam-defining slits in the experiment enclosure (XF:17IDB-OP:AMX{Slt:2 / Slt:3 / Slt:4}); a first slit station sits at XF:17IDA-OP:AMX{Slt:1} in the FOE. Reuses the Slit family."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "The master energy axis: a pseudopositioner coordinating the undulator gap, the VDCM, and the mirrors from per-energy look-up tables (the set_energy plan). Energy is set for the experiment and scanned for anomalous (SAD / MAD) data collection; the MX technique scope is TECH-1."
+
+# ===========================================================================
+# SAMPLE STAGE: the goniometer, the robot, the sample environment
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 17-ID-B
+  intro: "The micro-goniometer, the automated sample-changing robot, the on-axis viewing, and the sample cooling. PVs verified against the amx-profile-collection startup files."
+  note: >
+    AMX mounts cryo-cooled protein crystals on a single-omega micro-goniometer with x/y/z
+    centring and PI fine stages, exchanged by an EMBL robot from a 48-position dewar. The
+    goniometer reuses the graduated Goniometer family; the robot is one Positioner Asset
+    (not a new Family). Sample cryo-cooling (the cold-gas cryostream) is not exposed in the
+    profile collection, so it is deferred (CRYO-1).
+  devices:
+    - name: Goniometer
+      family: Goniometer
+      pv: "XF:17IDB-ES:AMX{Gon:1"
+      confirm: true
+      note: "The MX micro-goniometer (single omega rotation XF:17IDB-ES:AMX{Gon:1-Ax:O}Mtr plus GX / GY / GZ sample-centring and PY / PZ pin fine stages). Reuses the Goniometer family (graduated on the i03 Smargon, reused at FMX); per-axis decomposition and centre-of-rotation calibration pending (GONIO-1)."
+    - name: Robot
+      pv: "XF:17IDB-ES:AMX{EMBL}:"
+      confirm: true
+      note: "Automated sample-changing EMBL robot (XF:17IDB-ES:AMX{EMBL}:) coordinated by the LSDC / mxtools Governor state machine (XF:17IDB-ES:AMX{Gov:...}) with a 48-position dewar and a sample-detection smart magnet. Per the i03 / 19-BM / FMX precedent: one Positioner-presenting Asset loading / unloading a Subject, gated by a Clearance, vendor in a bound Model; NOT a new SampleChanger Family. The exchange workflow and Subject custody lifecycle are deferred (ROBOT-1)."
+    - name: SampleCamera
+      family: Camera
+      pv: "XF:17IDB-ES:AMX{Cam:7}"
+      confirm: true
+      note: "On-axis sample-viewing camera (a Prosilica; low-mag XF:17IDB-ES:AMX{Cam:6} and X-eye XF:17IDB-ES:AMX{Cam:9} cameras serve alignment). Reuses the Camera family. AMX exposes no separate on-axis backlight PV (an FMX-vs-AMX difference)."
+
+# ===========================================================================
+# DETECTION STAGE: the Eiger, the fluorescence detector, the beam monitors
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 17-ID-B
+  intro: "The Eiger area detector, the fluorescence detector for energy / edge selection, the on-axis beamstop, and the beam-position and flux monitors. PVs verified against the amx-profile-collection startup files."
+  note: >
+    The Eiger reads the rotation diffraction data; the Mercury multi-element detector reads
+    fluorescence for energy-edge selection (anomalous MX); both bind catalog Families. The
+    full detector roster (Eiger model, beam centre, fluorescence ROIs) is DET-1.
+  devices:
+    - name: AreaDetector
+      family: Camera
+      confirm: "the MX science detector (an Eiger pixel-array detector); its PV is not exposed in the AMX profile collection (DET-1)"
+      note: "The Eiger area detector reading the rotation diffraction data. Reuses the Camera family (Detector Role). Not exposed in the profile collection, so model and beam centre are pending (DET-1)."
+    - name: FluorescenceDetector
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:17IDB-ES:AMX{Det:Mer}"
+      confirm: true
+      note: "Mercury multi-element fluorescence detector (an energy-dispersive multi-channel analyzer reading the XRF spectrum to pick the absorption edge for anomalous data collection). Reuses the EnergyDispersiveSpectrometer family. Element count and ROI map pending (DET-1)."
+    - name: BeamStop
+      family: BeamStop
+      pv: "XF:17IDB-ES:AMX{BS:1"
+      confirm: true
+      note: "On-axis motorized beamstop (XF:17IDB-ES:AMX{BS:1-Ax:FX / FY}Mtr) blocking the direct beam ahead of the Eiger. Reuses the BeamStop family."
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor      # loose Family (held; DIAG-1)
+      pv: "XF:17IDA-BI:AMX{BPM:1}"
+      confirm: true
+      note: "Beam-position monitors along the beam (XF:17IDA-BI:AMX{BPM:1}, XF:17IDB-BI:AMX{BPM:2 / BPM:3} four-quadrant monitors). Binds the loose BeamPositionMonitor family that the other NSLS-II beamlines also use (held; DIAG-1)."
+    - name: FluxMonitor
+      family: FluxMonitor
+      pv: "XF:17IDB-BI:AMX{Keith:1}readFloat"
+      confirm: true
+      note: "Keithley picoammeter reading the beam-intensity photocurrent (I0 normalization). Reuses the FluxMonitor family."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    AMX runs the NSLS-II EPICS control stack driven by LSDC (the macromolecular-
+    crystallography acquisition system) and the mxtools bluesky library. Rotation data
+    collection is triggered against the Eiger by a Zebra FPGA; the autonomous sample
+    exchange is coordinated by the Governor state machine. Controller box models / firmware
+    are not fully in source (DRIVE-1).
+  motion_controllers:
+    - name: MotionController
+      family: MotionController
+      confirm: "the goniometer / optics motion controllers (a PowerBrick vector controller drives rotation data collection); box model / firmware not reliably in the profile collection (DRIVE-1)"
+      note: "Drives the goniometer vector and the optics axes. Reuses the MotionController family. The profile's PowerBrick vector PV is misconfigured to the FMX prefix in source, so it is not quoted here (DRIVE-1)."
+  triggering:
+    - name: Zebra
+      family: TimingController
+      pv: "XF:17IDB-ES:AMX{Zeb:1}:"
+      confirm: true
+      note: "Zebra FPGA position-capture and trigger box (a second Zebra sits at XF:17IDB-ES:AMX{Zeb:2}): gates the Eiger against the goniometer for rotation and fast grid scans. Reuses the TimingController family."
+  software_iocs_not_modeled:
+    [LSDC, mxtools, EigerIOC, EMBL, Governor, MercuryDXP]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum                # in-vacuum undulator + optics beam path
+    - kind: LiquidNitrogen        # sample cryo-cooling
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["sample pucks / pins", "attenuator foils", "KB mirror stripes", "the Eiger detector"]
