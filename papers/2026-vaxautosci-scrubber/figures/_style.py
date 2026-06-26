@@ -53,7 +53,7 @@ PANEL = "#F4F6F8"    # subtle panel / card fill
 HELD = "#EEF1F4"     # shaded "held" band
 
 OPERATOR = "#3B6FB6"  # human-driven
-AGENT = "#7A5AC2"     # agent / RunSupervisor (distinct from the alarm hue)
+AGENT = "#7A5AC2"     # agent / supervisor (distinct from the alarm hue)
 GOOD = "#2E9E6B"      # converged, verified, closed
 WARN = "#E0A21B"      # open, not-yet-converged
 ALARM = "#E2533B"     # cursor, beam loss, in-flight without outcome

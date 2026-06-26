@@ -2,7 +2,7 @@
 """Render Figure 1, the replay scrubber, from data/lights_out_run.json.
 
 Static rendering of the interactive scrubber over one agent-supervised
-run: a run-lifecycle / who-drove-it lane (operator vs RunSupervisor),
+run: a run-lifecycle / who-drove-it lane (operator vs supervisor),
 per-iteration convergence brackets colored by verdict (the rotation-axis
 centering search), activity swim-lanes, a shaded held band, and a fold-to-
 version cursor parked at the beam-loss instant, where the first projection is an
@@ -72,7 +72,7 @@ def main() -> None:
                    edgecolors="white", linewidths=0.7, zorder=4)
         label = {"RunStarted": "started", "RunHeld": "held", "RunResumed": "resumed",
                  "RunCompleted": "completed"}[ev["type"]]
-        who = "RunSupervisor" if agent else "operator"
+        who = "supervisor" if agent else "operator"
         dx, dy, ha = label_pos[ev["type"]]
         ax.annotate(f"{label}\n({who})", (x, Y_RUN), textcoords="offset points",
                     xytext=(dx, dy), ha=ha, fontsize=s.SIZE["small"], color=col,
@@ -137,7 +137,7 @@ def main() -> None:
         _row("Folded state at cursor", s.ALARM, "bold", s.SIZE["anno"]),
         _row("alignment: converged (0.30 px)", s.INK),
         _row("first projection: in flight", s.INK),
-        _row("run: held by RunSupervisor", s.INK),
+        _row("run: held by supervisor", s.INK),
         _row("fidelity: verified", s.INK),
     ])
     card = AnchoredOffsetbox(loc="center", child=readout, pad=0.6, borderpad=0,
@@ -162,7 +162,7 @@ def main() -> None:
         Line2D([0], [0], marker="s", color="w", markerfacecolor=s.OPERATOR,
                markersize=6.5, label="operator"),
         Line2D([0], [0], marker="D", color="w", markerfacecolor=s.AGENT,
-               markersize=6.5, label="RunSupervisor"),
+               markersize=6.5, label="supervisor"),
         Line2D([0], [0], color=s.WARN, lw=4, label="bracket: open"),
         Line2D([0], [0], color=s.GOOD, lw=4, label="bracket: converged"),
         Line2D([0], [0], color=s.ALARM, lw=3, ls=(0, (4, 2.6)), label="in-flight (open)"),

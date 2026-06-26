@@ -78,7 +78,7 @@ def main() -> None:
         ax.set_ylim(-1.0, 1.05)
         s.despine(ax, keep=("bottom",))
 
-    lane(axes[0], cursor=beam_loss, closed=False, run_status="HELD (RunSupervisor)",
+    lane(axes[0], cursor=beam_loss, closed=False, run_status="HELD (supervisor)",
          tag="cursor at beam loss")
     lane(axes[1], cursor=end + 5, closed=True, run_status="COMPLETED",
          tag="cursor after resume")
