@@ -24,7 +24,7 @@ facility:
   heading: "NSLS-II"
   kind: Site
   institution: Brookhaven National Laboratory
-  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, SMI, IXS, SST, ISS]
+  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, SMI, IXS, SST, ISS, FMX]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the FXI profile collection, not yet
@@ -81,6 +81,17 @@ practices:
   # deferred energy_scan Capability (ENERGY-1, the BMM question), which ISS strengthens
   # as a further consumer without forcing it in this descriptor scaffold.
   - {name: ISS_xas_spectroscopy_practice, method: xas_spectroscopy, pending: true, note: "X-ray absorption (EXAFS) by HHM trajectory energy fly-scan, plus X-ray emission (XES) and high-energy-resolution fluorescence detection (HERFD) on the Johann and von Hamos crystal emission spectrometers; reuses the xas_spectroscopy Method that LCLS-MFX left pending, the second consumer (TECH-1). The incident-energy sweep also leans on the deferred energy_scan Capability (ENERGY-1)"}
+  # FMX (17-ID-2) does microfocus macromolecular crystallography: rotation data
+  # collection on a single-omega goniometer + Eiger, fast grid scans for centring, and
+  # an autonomous robot sample-exchange loop. These reuse the three MX Methods Diamond
+  # i03 left pending (mx_data_collection, grid_scan, sample_exchange); FMX is the second
+  # consumer of each. They stay pending (no mechanical promotion for Methods; the
+  # energy_scan deferral discipline) and the autonomous loop is a Procedure over the
+  # spine plus a Subject custody thread (TECH-1 / ROBOT-1). The fixed-target chip-scanner
+  # serial mode is deferred (SERIAL-1), not a practice.
+  - {name: FMX_mx_data_collection_practice, method: mx_data_collection, pending: true, note: "rotation / oscillation MX data collection on the single-omega goniometer + Eiger via the mxtools vector / Zebra flyer; reuses the i03 mx_data_collection Method, the second consumer (TECH-1)"}
+  - {name: FMX_grid_scan_practice, method: grid_scan, pending: true, note: "fast grid scan for sample location / centring via the Zebra-triggered goniometer raster; reuses the i03 grid_scan Method, the second consumer (TECH-1)"}
+  - {name: FMX_sample_exchange_practice, method: sample_exchange, pending: true, note: "autonomous robot load / centre / collect / unmount loop coordinated by the LSDC Governor; reuses the i03 sample_exchange Method, the second consumer; a Procedure over the spine + a Subject custody thread (ROBOT-1)"}
 
 # Access BC Actors conceptually facility-wide at NSLS-II. Pending until the NSLS-II
 # operator and review structure is confirmed; the profile collection only exposes

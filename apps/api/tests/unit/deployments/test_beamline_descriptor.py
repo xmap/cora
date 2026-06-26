@@ -400,9 +400,9 @@ _PROMOTION_REVIEWED = {
     "Diagnostic": "hold: Sensor fold-vs-promote still open (DIAG-1)",
     "Screen": "hold: phosphor beam-viewing screen (2-BM, BMM); fold-vs-promote open (FLAG-1)",
     "FlowController": "hold: earn-vs-defer still open (FLOW-1)",
-    "BeamPositionMonitor": "hold: Sensor fold-vs-promote across 4-id/8-id/9-id (DIAG-1/FLUX-1)",
+    "BeamPositionMonitor": "hold: Sensor fold-vs-promote across 4-id/8-id/9-id/iss/fmx (DIAG-1)",
     "Laser": "hold: pump-probe laser model-vs-hazard open (4-id + lcls-mfx; SAMPLE-1)",
-    "Backlight": "hold: sample-illumination affordance fold-vs-promote open (i03 + i24; DET-1)",
+    "Backlight": "hold: sample-illumination fold-vs-promote open (i03 + i24 + fmx; DET-1)",
     "PolarizationAnalyzer": "hold: 4-id + i10 RASOR PaStage; rule-of-three open (POL-2)",
     "Magnet": "hold: sample-env magnet, 4-id + i10-1; rule-of-three open (MAG-1)",
 }
