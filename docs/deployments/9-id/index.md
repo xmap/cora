@@ -51,7 +51,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Techniques
 
-[Techniques](techniques.md): what the modelled part of 9-ID is designed to do, as intent. Coherent surface scattering, grazing-incidence scattering, and XPCS are new to CORA's imaging-heritage catalog and render unlinked, carried pending.
+[Techniques](techniques.md): what the modelled part of 9-ID is designed to do, as intent. Surface XPCS shares 8-ID's now-catalog `xpcs` Method; coherent surface scattering and grazing-incidence scattering are still new to CORA's imaging-heritage catalog and render unlinked, carried pending.
 
 ## Governance
 

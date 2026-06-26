@@ -40,5 +40,5 @@ SIX was reverse-engineered from the beamline's own bluesky profile collection ([
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| SAMPLE-1 | Blocks-go-live | The UHV cryostat manipulator (`SC:1-Cryo:S1_B`) and the Lakeshore controller: the cryo temperature range, the base pressure, and any load-lock / sample-transfer mechanism. | A loose `Manipulator` Asset (x/y/z/theta) plus a `TemperatureController`. | The sample-environment model. |
+| SAMPLE-1 | Blocks-go-live | The UHV cryostat manipulator (`SC:1-Cryo:S1_B`) and the Lakeshore controller: the cryo temperature range, the base pressure, and any load-lock / sample-transfer mechanism. | A `Manipulator` Asset (catalog Family, x/y/z/theta) plus a `TemperatureController`. | The sample-environment model. |
 | SUP-1 | Nice-to-have | The vacuum and cryogen supplies the UHV optics, the spectrometer arm, and the cryostat draw on. | Photon beam, cooling water, and vacuum carried in the descriptor. | The Supply records. |

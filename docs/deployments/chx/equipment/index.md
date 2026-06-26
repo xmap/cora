@@ -16,4 +16,4 @@ CHX runs from the in-vacuum undulator through a first-optics hutch into a long e
 - [Detector](detector.md) (`11-ID-B`): the Eiger area detectors that record the speckle time series, the SAXS detector positioner and beamstop, the flux counter, and the occasional fluorescence detector.
 - [Controls](controls.md): the Zebra trigger gating the fast shutter and detector frames, and the motion controllers.
 
-Each device binds a catalog [Family](../../../catalog/families.md) and a verified EPICS PV; none binds a vendor Model (part numbers are not in the public config). The loose families are the `Transfocator` and the `BeamPositionMonitor`, both shared with other deployments and held for gate-review.
+Each device binds a catalog [Family](../../../catalog/families.md) and a verified EPICS PV; none binds a vendor Model (part numbers are not in the public config). The compound-refractive-lens optic reuses the graduated `Transfocator` catalog Family (a CRL focusing optic, shared with other deployments). The one loose family is the `BeamPositionMonitor`, shared with other deployments and held for gate-review.

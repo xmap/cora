@@ -9,9 +9,10 @@
 #
 # It is almost entirely catalog REUSE: every optic and detector binds a catalog
 # Family (InsertionDevice, Monochromator, Mirror, Aperture, Filter, Slit, Camera,
-# BeamStop, Hexapod), so it adds no new catalog Family. The two device classes it
-# does not graduate (the CRL Transfocator and the beam-position monitors) are the
-# same loose Families 4-ID and 8-ID use, held for cross-facility gate-review.
+# BeamStop, Hexapod, plus the graduated CRL Transfocator), so it adds no new
+# catalog Family. The one device class it still does not graduate (the
+# beam-position monitors) is the same loose Family 4-ID and 8-ID use, held for
+# cross-facility gate-review.
 #
 # STATUS: first cut, reverse-engineered. Like 4-ID and 8-ID, this binds the real
 # EPICS control handles, read from the beamline's own Bluesky instrument repo
@@ -121,13 +122,14 @@ focusing:
   enclosure: 9-ID-D
   intro: "The compound refractive lens transfocator and the Kirkpatrick-Baez mirror that focus the coherent beam into the CSSI endstation."
   note: >
-    crl is a JJ CRL transfocator lens stack (9idPyCRL:CRL9ID), bound to a loose
-    Transfocator Family that 4-ID and 8-ID also use, held for gate-review (OPT-3,
-    CRL-1; see model.md). kb is the KB focusing pair carrying capacitive-sensor
-    bender axes; modelled as one Mirror Asset (OPT-5).
+    crl is a JJ CRL transfocator lens stack (9idPyCRL:CRL9ID), bound to the
+    graduated Transfocator catalog Family (a CRL focusing optic) that 4-ID and
+    8-ID also use; its lens material and count stay open (OPT-3; see model.md). kb
+    is the KB focusing pair carrying capacitive-sensor bender axes; modelled as one
+    Mirror Asset (OPT-5).
   devices:
     - name: Transfocator
-      family: Transfocator           # loose Family (held; CRL-1, OPT-3)
+      family: Transfocator           # catalog Family (OPT-3: lens spec)
       pv: "9idPyCRL:CRL9ID:"
       new: true
       confirm: true

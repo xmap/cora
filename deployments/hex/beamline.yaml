@@ -1,0 +1,310 @@
+# HEX beamline descriptor (NSLS-II), reverse-engineered
+#
+# HEX (High Energy Engineering X-ray Scattering) is the NSLS-II 27-ID beamline for
+# engineering-materials and energy-storage science by high-energy X-ray imaging and
+# tomography, energy-dispersive X-ray diffraction (EDXD), and angle-dispersive /
+# powder diffraction (ADXD). It is bound to the NSLS-II Site (deployments/nsls2/
+# site.yaml). It is the fleet's first true high-energy hard X-ray beamline: a white
+# beam of 30 to 250 keV and a monochromatic beam of 30 to 200 keV, from a
+# superconducting wiggler.
+#
+# STATUS: reverse-engineered, design-phase. HEX is an operating beamline (the
+# superconducting wiggler was commissioned in 2023 and user operations began in
+# 2024), but CORA has not been connected to it and no HEX staff have confirmed this
+# model. Every value is read from public open source (the BNL beamline page, the
+# wiki-nsls2.bnl.gov/beamline27ID wiki, the github.com/NSLS2/hex-profile-collection
+# and github.com/NSLS2/hextools repositories, and peer-reviewed superconducting-
+# wiggler papers) or inferred, and is carried new: true + confirm: true pending HEX
+# staff. A few EPICS PVs (the endstation detectors) are real and read from the
+# profile collection; vendor part numbers, serials, FOE-optics PVs, and physical
+# positions are not in it and are open questions. Same descriptor mode as CMS / SMI /
+# ISS / FMX, the NSLS-II siblings: this scaffold is descriptor + docs, scenarios
+# deferred.
+#
+# WHAT IS (AND IS NOT) NEW: HEX is mostly reinforcement. Its X-ray imaging and
+# tomography overlap the fleet heavily (the 2-BM operational pilot and the NSLS-II
+# FXI both do tomography), and its high-energy diffraction reuses the energy-
+# dispersive and powder-diffraction shapes the fleet already debates as pending
+# Methods (APS 7-BM EDD, Diamond i11 powder diffraction). It coins NO new Family and
+# changes nothing in the catalog. HEX's three genuinely distinct contributions are:
+#   1. Multi-technique-in-one-experiment. Imaging / tomography, EDXD, and ADXD are
+#      all available in the single operational endstation (the F-hutch) during the
+#      same experiment, with detectors and optics moved into place remotely per
+#      technique. This stresses the one-technique-per-acquisition assumption and the
+#      Controls seam (a technique switch is a positioning leg over the ControlPort),
+#      but it is modelled as multiple Methods over one endstation, not a new
+#      Capability (TECH-1).
+#   2. Very large / heavy engineering samples. The sample tower carries up to 500 kg
+#      and is fully removable for custom in-situ / operando environments. The heavy
+#      reconfigurable fixture reuses the Table / RotaryStage / LinearStage families
+#      with capacity and configuration carried as settings; no HeavyStage Family is
+#      coined (STAGE-1).
+#   3. A high-energy hard X-ray source. The superconducting wiggler (4.3 T, 70 mm
+#      period) reaching 200 keV monochromatic is a first for the fleet; it binds the
+#      existing InsertionDevice Family (the undulator precedent), the high field and
+#      energy reach carried as source specs (SCW-1).
+#
+# MODELLING: HEX coins NO new Family. The superconducting wiggler binds
+# InsertionDevice; the low-energy filters bind Filter; the Si bent-Laue monochromator
+# binds Monochromator (its in / out crystal selects monochromatic vs white beam) with
+# the incident energy a PseudoAxis over it; the front-end slits bind Slit; the
+# tomographic rotation binds RotaryStage and the sample translations LinearStage; the
+# 500 kg removable sample tower binds Table; the Kinetix sCMOS and Phantom Veo cameras
+# and the PerkinElmer flat panel bind Camera; the imaging scintillator-lens table
+# binds Scintillator; the GeRM germanium strip detector binds the existing
+# EnergyDispersiveSpectrometer Family (HEX is its third consumer, after the APS 2-ID
+# fluorescence detector and the 7-BM germanium energy-dispersive-diffraction detector,
+# a reuse not a graduation). The detector / optics positioning that switches technique
+# binds LinearStage.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/hex/questions.md.
+
+beamline:
+  name: HEX
+  facility: nsls2              # NSLS-II Site (facility_code: nsls2)
+  sector: "27-ID"             # PV zones XF:27ID1 (endstation) seen in the profile collection; FOE-optics zone is CTRL-1
+  tier: Unit
+  parent: null
+  source: superconducting-wiggler
+  source_confirm: "superconducting wiggler (SCW), 4.3 T on-axis peak field, 70 mm period, 1.2 m device length, cell-27 low-beta straight on the 3 GeV NSLS-II ring; cryogen-free (no liquid helium); commissioned 2023. Pole count and critical photon energy are SCW-1"
+
+# All six designed enclosures are declared, forward-looking. Two are operational and
+# carry the device walk: the First Optics Enclosure (hex-foe, the A-hutch) and the
+# F-hutch endstation (hex-endstation), in a satellite building adjacent to Bldg. 742,
+# about 100 m from the source. The intermediate hutches B, C, D, and E are declared as
+# device-free shells: B is designed but not erected, and C, D, and E are built for a
+# future upgrade but not operational. They carry no devices in this cut (the operational
+# beam path is FOE -> F-hutch); their exact positions, roles, and permit signals are
+# open (ENC-1, SAT-1, LAYOUT-1, PSS-1).
+enclosures:
+  - name: hex-foe
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf not in the profile collection; the First Optics Enclosure (A-hutch), the filters and the monochromator (PSS-1)"}
+  - name: hex-b
+    role: future-hutch
+    facility_code: nsls2
+    note: "B-hutch: designed but not erected; beam-guiding provisions made. A device-free forward-looking shell, no devices in this cut (ENC-1, LAYOUT-1)"
+  - name: hex-c
+    role: future-hutch
+    facility_code: nsls2
+    note: "C-hutch: built for a future upgrade, not operational. A device-free forward-looking shell (ENC-1, LAYOUT-1)"
+  - name: hex-d
+    role: future-hutch
+    facility_code: nsls2
+    note: "D-hutch: built for a future upgrade, not operational. A device-free forward-looking shell (ENC-1, LAYOUT-1)"
+  - name: hex-e
+    role: future-hutch
+    facility_code: nsls2
+    note: "E-hutch: built for a future upgrade, not operational. A device-free forward-looking shell (ENC-1, LAYOUT-1)"
+  - name: hex-endstation
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the operational F-hutch in the satellite building adjacent to Bldg. 742 (PSS-1, SAT-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state, the superconducting wiggler, and the FOE optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: hex-foe
+  intro: "The machine-level source state, observed not driven."
+  note: "Observe-only NSLS-II machine state, the loose StorageRing pattern reused from the NSLS-II siblings. The exact ring-state PVs are MACHINE-1."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: {confirm: "NSLS-II storage-ring state (current, fill, status); observe-only, the exact PVs are MACHINE-1"}
+      new: true
+      confirm: true
+      note: "NSLS-II 3 GeV storage-ring state; observe-only (MACHINE-1)"
+
+insertion-device:
+  stage: source
+  enclosure: hex-foe
+  intro: "The superconducting wiggler that delivers the high-energy white beam."
+  note: >
+    The superconducting wiggler binds the existing InsertionDevice Family (the
+    undulator precedent at the NSLS-II siblings). Its high field (4.3 T) and energy
+    reach (a useful spectrum from about 20 to 200 keV) are what make HEX a high-energy
+    beamline; the field, period, and length are confirmed from peer-reviewed papers,
+    but the pole count and critical photon energy are SCW-1.
+  devices:
+    - name: Wiggler
+      family: InsertionDevice
+      pv: {confirm: "the superconducting wiggler gap / field handle; not in the profile collection (SCW-1, CTRL-1)"}
+      new: true
+      confirm: true
+      note: "superconducting wiggler (SCW): 4.3 T on-axis, 70 mm period, 1.2 m, cell 27; cryogen-free; delivers the 30 to 250 keV white spectrum; pole count and critical energy are SCW-1"
+
+foe-optics:
+  stage: source
+  enclosure: hex-foe
+  intro: "The low-energy filters that harden the white beam, the bent-Laue monochromator that selects energy (or retracts for white beam), the incident-energy axis, and the front-end defining slits."
+  note: >
+    The low-energy filters bind Filter; the monochromator binds Monochromator (a Si
+    bent-Laue Bragg optic, not the soft X-ray GratingMonochromator), and inserting or
+    retracting its first crystal selects monochromatic versus white beam, so the beam
+    mode is a setting on the optic, not a second source (MONO-2). The incident energy
+    is a PseudoAxis over the monochromator (the 2-BM / CMS beam-energy pattern). The
+    front-end slits bind Slit. The focusing optic for the monochromatic beam is "being
+    commissioned" on the official beamline page and is not yet modelled as a device
+    (FOCUS-1).
+  devices:
+    - name: BeamFilters
+      family: Filter
+      pv: {confirm: "the FOE low-energy filter / absorber positions (per-branch SiC and Cu); not in the profile collection (FILT-1, CTRL-1)"}
+      new: true
+      confirm: true
+      note: "the FOE low-energy (beam-hardening) filters: center-branch SiC (3 / 6 / 9 / 12 mm) and outboard / inboard Cu (0.5 to 2 mm) plus SiC (12 / 24 mm) on a 35 mm pitch; the materials and thicknesses are FILT-1"
+    - name: Monochromator
+      family: Monochromator
+      pv: {confirm: "the monochromator crystal Bragg / translation handle (a Phytron VSS-42 stepper drives the crystal in / out); not in the profile collection (MONO-1, CTRL-1)"}
+      new: true
+      confirm: true
+      note: "the bent-Laue monochromator: a single first crystal (Si(111) bent Laue, MONO-1) on a vertical translation, inserted for the 30 to 200 keV monochromatic beam and retracted for the 30 to 250 keV white beam; the crystal material / geometry are MONO-1 and the 200 keV upper bound is MONO-2"
+    - name: BeamEnergy
+      family: PseudoAxis
+      pv: {confirm: "incident-energy virtual axis over the monochromator (lambda = 2 d sin(Bragg)); the d-spacing and partition rule are MONO-1 / MONO-2"}
+      new: true
+      confirm: true
+      note: "incident-energy pseudo-axis over the monochromator (the 2-BM / CMS beam-energy pattern); the 30 to 200 keV monochromatic range is MONO-2"
+    - name: FoeSlit
+      family: Slit
+      pv: {confirm: "the front-end defining slits (a center, inboard, and outboard branch); not in the profile collection (BRANCH-1, CTRL-1)"}
+      new: true
+      confirm: true
+      note: "the front-end defining slits; the beam has a center branch and inboard / outboard branches reserved for the future-hutch upgrade, only the center branch is presently in use (BRANCH-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the heavy reconfigurable sample tower, the tomographic rotation,
+# and the sample translations, in the F-hutch endstation
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: hex-endstation
+  intro: "The reconfigurable sample tower (up to 500 kg, fully removable), the tomographic rotation, and the sample translations."
+  note: >
+    The tomographic rotation binds RotaryStage and the sample translations LinearStage
+    (the 2-BM tomography pattern). The 500 kg removable sample tower binds Table; its
+    load capacity and the configuration set (configs A to D, with interface plates) are
+    carried as settings, not a new HeavyStage Family (STAGE-1). No in-situ rig (load
+    frame, furnace, cryostat, battery cycler) is modelled: the endstation is "capable
+    of housing" user-brought environments but no specific rig is source-confirmed as
+    installed (INSITU-1).
+  devices:
+    - name: SampleTower
+      family: Table
+      pv: {confirm: "the modular sample tower / support stage (configs A to D, interface plates); not in the profile collection (STAGE-1, CTRL-1)"}
+      new: true
+      confirm: true
+      note: "the reconfigurable sample tower: up to 500 kg, fully removable for custom in-situ / operando environments, configurable (configs A to D) with interface plates; capacity and config set are STAGE-1"
+    - name: SampleRotation
+      family: RotaryStage
+      pv: {confirm: "the tomographic rotation axis driven by the bluesky tomo_flyscan / tomo_loop plans; the PV is CTRL-1"}
+      new: true
+      confirm: true
+      note: "the tomographic rotation axis (continuous fly-rotation for CT and stepped for diffraction); the axis map is STAGE-1"
+    - name: SampleStage
+      family: LinearStage
+      pv: {confirm: "the sample x / y / z translations (tomo_y_scan_loop drives the vertical); the PVs are CTRL-1"}
+      new: true
+      confirm: true
+      note: "the sample translations (x / y / z) that position the specimen and gauge volume in the beam; the axis map is STAGE-1"
+
+# ===========================================================================
+# DETECTION STAGE: the imaging / tomography cameras, the high-energy diffraction
+# detectors (energy-dispersive and area), and the technique-switch positioning
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: hex-endstation
+  intro: "The Kinetix sCMOS imaging / tomography cameras and their scintillator-lens table, the Phantom Veo high-speed camera, the PerkinElmer flat panel for angle-dispersive diffraction, the GeRM germanium strip detector for energy-dispersive diffraction, and the detector / optics positioning that switches technique."
+  note: >
+    The sCMOS and high-speed cameras and the flat panel bind Camera; the imaging
+    scintillator-lens table binds Scintillator; the GeRM germanium strip detector binds
+    the existing EnergyDispersiveSpectrometer Family (HEX is its third consumer, a
+    reuse). The detector / optics positioning that moves a detector into the beam per
+    technique binds LinearStage; it is the mechanism behind HEX's multi-technique-in-
+    one-experiment endstation (the technique switch is a positioning leg, not a new
+    Capability). The PerkinElmer's role as the angle-dispersive (ADXD) detector is an
+    inference (DET-1).
+  devices:
+    - name: ImagingCamera
+      family: Camera
+      pv: "XF:27ID1-BI{Kinetix-Det:1}"
+      new: true
+      confirm: true
+      note: "the Teledyne Photometrics Kinetix sCMOS cameras for imaging / tomography (kinetix1 default, kinetix3 alternate; PV root XF:27ID1-BI{Kinetix-Det:N}, HEXKinetixDetector); the default-camera and frame details are DET-3"
+    - name: ImagingScintillator
+      family: Scintillator
+      pv: {confirm: "the imaging scintillator-lens table (magnification positions '2 & 4 mm', '20 & 40 mm', 'Dual cam'); the PV is CTRL-1 and the scintillator / lens set is DET-3"}
+      new: true
+      confirm: true
+      note: "the scintillator-lens imaging table that converts the X-ray image for the sCMOS cameras; magnification positions read '2 & 4 mm', '20 & 40 mm', and 'Dual cam', the scintillator and lens set is DET-3"
+    - name: HighSpeedCamera
+      family: Camera
+      pv: {confirm: "the Phantom (Vision Research) Veo high-speed camera (hextools/detectors/phantom.py); the PV is CTRL-1"}
+      new: true
+      confirm: true
+      note: "the Phantom Veo high-speed camera for fast / time-resolved radiography (DET-3)"
+    - name: FlatPanelDetector
+      family: Camera
+      pv: "XF:27ID1-ES{PE-Det:1}"
+      new: true
+      confirm: true
+      note: "the PerkinElmer XRD1621 amorphous-silicon flat-panel area detector (HEXPerkinElmer); inferred to be the angle-dispersive / powder diffraction (ADXD) detector, the model and role are DET-1"
+    - name: EnergyDispersiveDetector
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:27ID1-ES{GeRM-Det:1}"
+      new: true
+      confirm: true
+      note: "the GeRM germanium strip detector for energy-dispersive X-ray diffraction (EDXD), controlled via Phoebus (run-phoebus) with caput thresholds and the edxd_viewer GUI; the third consumer of the existing EnergyDispersiveSpectrometer Family; channel count, energy resolution, and EDXD gauge-volume dimensions are DET-2"
+    - name: DetectorStage
+      family: LinearStage
+      pv: {confirm: "the detector / optics positioning that moves a detector into the beam per technique; the PV is CTRL-1"}
+      new: true
+      confirm: true
+      note: "the remote detector / optics positioning that switches technique in the single endstation (imaging, EDXD, or ADXD into the beam); the positioning leg behind HEX's multi-technique-in-one-experiment endstation (TECH-1, DET-1)"
+
+# Cross-cutting control. HEX runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were read
+# from the profile collection and carried confirm (CTRL-1).
+controls:
+  intro: >
+    HEX runs on the NSLS-II EPICS / ophyd control stack, the same floor as the other
+    NSLS-II beamlines. The endstation detector handles above are bound from the
+    beamline's bluesky profile collection (github.com/NSLS2/hex-profile-collection,
+    its startup/*.py files: 10-kinetix.py, 11-perkin-elmer.py) and the hextools
+    package, carried confirm pending staff verification (CTRL-1). The FOE-optics PVs
+    are not in the profile collection and are carried confirm. The HEX acquisition (the
+    tomo_flyscan / tomo_dark_flat / tomo_loop / tomo_y_scan_loop tomography plans, the
+    diffraction acquisition, and the technique switch that repositions detectors and
+    optics) runs through bluesky plans driven from a queue server (run-qserver-gui);
+    that orchestration is the seam CORA's edge replaces, driving through ophyd / EPICS.
+    The area-detector and tomography file-writing to the NSLS-II filestore is plumbing
+    CORA observes, not data it owns (see model.md). The motion layer (Phytron and Delta
+    Tau PowerBrick controllers) and the fly-scan triggering that gates tomography are
+    observed, not modelled as devices, until their per-axis functional map is confirmed;
+    no controller instance is invented from the vendor names alone (CTRL-1).
+  software_iocs_not_modeled:
+    - "bluesky + queue server (run-qserver-gui): the acquisition orchestration CORA's edge replaces"
+    - "CS-Studio / Phoebus (run-css, run-phoebus): the operator GUI layer"
+    - "Phytron and Delta Tau PowerBrick motion controllers: the motion layer, observed not modelled (functional map is CTRL-1)"
+    - "fly-scan triggering (for tomo_flyscan): the position / time triggering, observed not modelled (CTRL-1)"
+    - "Moxa ioLogik relays: discrete I/O, observed not modelled"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a HEX run needs. The FOE optics run
+    under vacuum, and the superconducting wiggler is cryogen-free, so no liquid-helium
+    supply is drawn (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the FOE optics (filters, monochromator) run under vacuum (SUP-1)"

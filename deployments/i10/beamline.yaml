@@ -1,0 +1,345 @@
+# i10 beamline descriptor (Diamond), reverse-engineered
+#
+# i10 (BLADE) is the Diamond beamline for magnetic materials by resonant soft X-ray
+# scattering (RASOR endstation) and X-ray magnetic dichroism in applied magnetic
+# fields (the i10-1 / I10J endstation). It is bound to the Diamond Site
+# (deployments/diamond/site.yaml), the seventh Diamond beamline after I22, I03,
+# I15-1, I11, I24, and I06, and i06's variable-polarization soft X-ray twin.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the DiamondLightSource/dodal beamline package, its src/dodal/beamlines/
+# i10.py + i10_shared.py + i10_1.py factories and the device classes in
+# src/dodal/devices/) or inferred, carried `new: true` + `confirm: true` pending i10
+# staff. EPICS PVs are real and verified against dodal; vendor part numbers, serials,
+# and physical positions are not in dodal and are open questions. Same descriptor
+# mode as the other Diamond deployments; this scaffold is descriptor + docs,
+# scenarios deferred.
+#
+# WHAT IS NEW: i10 is the second APPLE-II (variable-polarization) source in the
+# fleet, after i06 (PR #378), and it adds two device families that were loose at one
+# beamline (4-ID) to a second sighting: the polarization analyzer (the RASOR PaStage)
+# and the sample-environment magnet (the i10-1 electromagnet and superconducting
+# field-sweep magnet). Both reach n=2 here and are held under review (POL-2, MAG-1).
+#
+# MODELLING: i10 coins NO new Family and changes nothing in the catalog. The
+# polarization decisions follow the merged i06 precedent: the two APPLE-II undulators
+# (idd, idu) bind the catalog InsertionDevice (the phase rows, the energy <-> gap
+# polynomial, and the controller are per-Asset settings / bound-Model), and the
+# polarization is a PseudoAxis sibling of the incident-energy axis (the Pol value set
+# LH / LV / PC / NC / LA plus third-harmonic variants is the axis domain; the
+# continuous linear-arbitrary-angle is the continuous realization of the LA value, in
+# the same axis, not a second axis; the controller owns the conversion, carried
+# rule-less, POL-1). Two loose families reach their second sighting and are HELD under
+# review (not graduated; the rule-of-three is not met): the RASOR polarization-analysis
+# arm binds the loose PolarizationAnalyzer (the 4-ID sighting plus this; POL-2), and
+# the i10-1 electromagnet and superconducting field-sweep magnet bind the loose Magnet
+# (one family; the fly / sweep capability is a per-Asset affordance, not a split;
+# MAG-1). Everything else reuses an existing catalog Family: the soft X-ray
+# plane-grating monochromator binds GratingMonochromator; the RASOR sample circles bind
+# Goniometer with a reciprocal-space PseudoAxis; the collimating / switching / focusing
+# mirrors bind Mirror; the slits bind Slit; the pinhole binds Aperture; the sample and
+# magnet stages bind LinearStage; the Lakeshore controllers bind TemperatureController;
+# and the scaler / current-amplifier counting chains (the incident-flux monitor, the
+# scattered-beam point detector, and the fluorescence / drain-current / total-electron-
+# yield channels) bind FluxMonitor. The machine state reuses the loose StorageRing.
+#
+# DEFERRED (absent from dodal, not invented): no area detector exists at either
+# endstation; the science detector is the current-amplifier-plus-scaler point counter,
+# bound to FluxMonitor and flagged (DET-1). The diffractometer Assembly and the
+# reciprocal-space inverse-kinematics rule are named, not built (DIFF-1, DIFF-2).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/i10/questions.md.
+
+beamline:
+  name: I10
+  facility: diamond            # Diamond Site (facility_code: diamond)
+  sector: "Sector 10"          # PV zones BL10I (spine) / ME01D (RASOR) / BL10J (i10-1); SR10I (ID servos)
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "i10 is a soft X-ray twin-APPLE-II beamline; dodal binds the two APPLE-II insertion devices (modelled below) but not their period; the undulator detail is SRC-1"
+
+# PV zones: BL10I (the shared optics spine: PGM, the collimating / switching mirrors,
+# the APPLE-II controllers), SR10I (the APPLE-II servo crates SERVC-01 / SERVC-21),
+# ME01D (the RASOR endstation), BL10J (the i10-1 / I10J magnet endstation). Whether
+# the zones are separate hutches and the PSS permit leaves are open (ENC-1, PSS-1).
+enclosures:
+  - name: i10-optics
+    role: optics-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf not in dodal; the shared soft X-ray optics zone (BL10I), hutch grouping is ENC-1 (PSS-1)"}
+  - name: i10-rasor
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf unknown; the RASOR resonant-scattering endstation (ME01D), ENC-1 (PSS-1)"}
+  - name: i10-1
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf unknown; the i10-1 / I10J magnet endstation (BL10J), ENC-1 (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state, the APPLE-II undulators, the optics, the axes
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: i10-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "dodal's Synchrotron device is the observe-only machine state, the loose StorageRing pattern reused from the Diamond siblings (MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: {confirm: "Diamond storage-ring state (current, energy, fill); observe-only, the exact PVs are MACHINE-1"}
+      new: true
+      confirm: true
+      note: "Diamond storage-ring state; observe-only (MACHINE-1)"
+
+insertion-devices:
+  stage: source
+  enclosure: i10-optics
+  intro: "The twin APPLE-II undulators, the variable-polarization soft X-ray source."
+  note: >
+    Both APPLE-II undulators bind the catalog InsertionDevice Family, the i06 (PR #378)
+    precedent: the variable-polarization phase rows (RPQ1-4), the jaw phase, the EPICS
+    energy <-> gap polynomial lookup, and the coordinating controller are per-Asset
+    settings and the bound Model, not a new Family. Both are driven sources feeding the
+    two endstations (SRC-1).
+  devices:
+    - name: UndulatorDownstream
+      family: InsertionDevice
+      pv: "SR10I-MO-SERVC-01:"
+      new: true
+      confirm: true
+      note: "the downstream (IDD) APPLE-II undulator: gap and phase rows (RPQ1-4) on SR10I-MO-SERVC-01, the energy <-> gap / phase polynomial on the I10Apple2Controller; period is SRC-1"
+    - name: UndulatorUpstream
+      family: InsertionDevice
+      pv: "SR10I-MO-SERVC-21:"
+      new: true
+      confirm: true
+      note: "the upstream (IDU) APPLE-II undulator: gap and phase rows on SR10I-MO-SERVC-21; both undulators are driven sources (SRC-1)"
+
+optics:
+  stage: source
+  enclosure: i10-optics
+  intro: "The soft X-ray plane-grating monochromator, the collimating and branch-switching mirrors, and the optics slits."
+  note: "The PGM binds GratingMonochromator (the SIX / CSX / ESM / i06 precedent); the mirrors bind Mirror; the slits bind Slit."
+  devices:
+    - name: Monochromator
+      family: GratingMonochromator
+      pv: "BL10I-OP-PGM-01:"
+      new: true
+      confirm: true
+      note: "soft X-ray plane-grating monochromator: energy on the grating + cff; the interchangeable grating line density and the fixed-focus cff are per-Asset settings (MONO-1)"
+    - name: CollimatingMirror
+      family: Mirror
+      pv: "BL10I-OP-COL-01:"
+      new: true
+      confirm: true
+      note: "the first (collimating) mirror, a piezo collimating mirror"
+    - name: SwitchingMirror
+      family: Mirror
+      pv: "BL10I-OP-SWTCH-01:"
+      new: true
+      confirm: true
+      note: "the branch-switching mirror selecting the RASOR or i10-1 branch (branch role is a setting)"
+    - name: OpticsSlit
+      family: Slit
+      pv: "BL10I-AL-SLITS-"
+      new: true
+      confirm: true
+      note: "the shared optics-spine beam-defining slits (s1 / s2 / s3); blade-axis map is ENC-1"
+
+# ===========================================================================
+# BEAM AXES: the driven source quantities, energy and polarization
+# ===========================================================================
+
+beam-axes:
+  stage: source
+  enclosure: i10-optics
+  intro: "The two driven source quantities a soft X-ray dichroism / scattering run sets: the incident energy and the X-ray polarization."
+  note: >
+    Both bind the catalog PseudoAxis Family (the 2-BM / i06 beam-energy precedent). The
+    incident energy decomposes to the PGM and the APPLE-II gap; the polarization
+    decomposes to the APPLE-II phase rows via the controller. The polarization is the
+    second-fleet variable-polarization axis, modelled exactly as i06: the Pol value set
+    is the axis domain and the linear-arbitrary-angle is the continuous realization of
+    the LA value within the same axis, carried rule-less (POL-1).
+  devices:
+    - name: BeamEnergy
+      family: PseudoAxis
+      pv: {confirm: "incident-energy virtual axis over the PGM and the APPLE-II gap (BeamEnergy = InsertionDeviceEnergy + PGM); both undulators are driven sources, so the one-vs-two energy-axis wiring is ENERGY-1"}
+      new: true
+      confirm: true
+      note: "incident-energy pseudo-axis over the PGM and the APPLE-II (the i06 beam-energy pattern); the energy range and partition rule are MONO-1, the two-source wiring is ENERGY-1"
+    - name: Polarization
+      family: PseudoAxis
+      pv: {confirm: "polarization virtual axis (InsertionDevicePolarisation + LinearArbitraryAngle); value domain LH / LV / PC / NC / LA plus third-harmonic variants, with the continuous linear-arbitrary-angle the realization of the LA value; decomposes to the APPLE-II phase rows via the controller; rule-less (POL-1)"}
+      new: true
+      confirm: true
+      note: "the polarization pseudo-axis over the APPLE-II (the i06 precedent; second variable-polarization source in the fleet); the Pol value set is the axis domain, the controller's conversion is its rule-less partition rule (POL-1, POL-2 for the analyzer)"
+
+# ===========================================================================
+# RASOR ENDSTATION (ME01D): resonant soft X-ray scattering + polarization analysis
+# ===========================================================================
+
+rasor:
+  stage: sample
+  enclosure: i10-rasor
+  intro: "The RASOR endstation: a soft X-ray scattering diffractometer with a polarization-analysis arm, a cryostat sample stage, and the counting detectors."
+  note: >
+    The sample circles bind the catalog Goniometer, with a reciprocal-space PseudoAxis
+    over them (the 4-ID / 8-ID / i06-1 diffractometer pattern; the Assembly is named,
+    not built, DIFF-1). The polarization-analysis arm binds the loose PolarizationAnalyzer
+    (the 4-ID sighting plus this is its second; HELD under review, POL-2). Detection is
+    point / current-integrating: no area detector exists, so the scattered-beam point
+    detector and the monitor / fluorescence / drain-current channels bind FluxMonitor
+    (DET-1).
+  devices:
+    - name: Diffractometer
+      family: Goniometer
+      pv: "ME01D-MO-DIFF-01:"
+      new: true
+      confirm: true
+      note: "RASOR sample diffractometer (two-theta scattering arm TWOTHETA, sample theta / chi, chamber X, alpha); the circle roles and the Assembly(Diffractometer) binding are DIFF-1"
+    - name: ReciprocalSpace
+      family: PseudoAxis
+      pv: {confirm: "reciprocal-space virtual axis over the RASOR circles; the inverse-kinematics partition rule is deferred as on 4-ID / 8-ID / i06-1 (DIFF-2)"}
+      new: true
+      confirm: true
+      note: "reciprocal-space pseudo-axis over the diffractometer (DIFF-2)"
+    - name: AnalyzerArm
+      family: PolarizationAnalyzer        # loose Family, second sighting (4-ID + i10); HELD under review (POL-2)
+      pv: "ME01D-MO-POLAN-01:"
+      new: true
+      confirm: true
+      note: "the polarization-analysis arm (POLAN: analyzer two-theta / theta, py / pz, eta) carrying the analyzer crystal; binds the loose PolarizationAnalyzer, its second sighting after 4-ID, held under review (POL-2). dodal exposes the motors only; the analyzer crystal is implicit hardware (POL-2)"
+    - name: DetectorSlit
+      family: Slit
+      pv: "ME01D-MO-APTR-0"
+      new: true
+      confirm: true
+      note: "the detector slits in front of the RASOR point detector (APTR-01 / APTR-02)"
+    - name: Pinhole
+      family: Aperture
+      pv: "ME01D-EA-PINH-01:"
+      new: true
+      confirm: true
+      note: "the endstation beam-defining pinhole on its XY stage; Aperture-vs-stage is STAGE-1"
+    - name: SampleStage
+      family: LinearStage
+      pv: "ME01D-MO-CRYO-01:"
+      new: true
+      confirm: true
+      note: "the cryostat sample-positioning stage (x / y / z); plain in-air translation, not a UHV manipulator (STAGE-1)"
+    - name: SampleTemperatureController
+      family: TemperatureController
+      pv: "ME01D-EA-TCTRL-01:"
+      new: true
+      confirm: true
+      note: "Lakeshore 340 cryostat sample temperature controller; reuses the graduated Family (presents Regulator); range is TEMP-1"
+    - name: FocusingMirror
+      family: Mirror
+      pv: "BL10I-OP-FOCS-01:"
+      new: true
+      confirm: true
+      note: "the RASOR-branch focusing mirror (piezo collimating mirror)"
+    - name: Detector
+      family: FluxMonitor
+      pv: { scaler: "ME01D-EA-SCLR-01:SCALER1", amplifiers: "ME01D-EA-IAMP-01..06:" }
+      new: true
+      confirm: true
+      note: "the RASOR counting detection: the scattered-beam point detector (current-amp + Struck scaler, channel S18), the incident-flux monitor (S17), and the fluorescence (S19) and drain-current / total-electron-yield (S20) channels, through Femto / SR570 amplifiers; no area detector exists, so the science detector binds FluxMonitor (DET-1)"
+
+# ===========================================================================
+# i10-1 ENDSTATION (BL10J): X-ray magnetic dichroism in applied magnetic fields
+# ===========================================================================
+
+magnet-endstation:
+  stage: sample
+  enclosure: i10-1
+  intro: "The i10-1 / I10J endstation: X-ray magnetic dichroism with the sample in an applied magnetic field, at low temperature."
+  note: >
+    The electromagnet and the superconducting field-sweep magnet both bind the loose
+    Magnet Family (the 4-ID sighting plus these is its second; one family, the fly /
+    sweep capability is a per-Asset affordance, not a split; HELD under review, MAG-1).
+    The magnet sample stages bind LinearStage, the Lakeshore binds TemperatureController,
+    and the counting chains (TEY / FY / diode / monitor) bind FluxMonitor (DET-1).
+  devices:
+    - name: Electromagnet
+      family: Magnet                      # loose Family, second sighting (4-ID + i10); HELD under review (MAG-1)
+      pv: "BL10J-EA-MAGC-01:"
+      new: true
+      confirm: true
+      note: "the i10-1 electromagnet (set-and-read field); binds the loose Magnet, second sighting after 4-ID, held under review (MAG-1)"
+    - name: HighFieldMagnet
+      family: Magnet                      # same loose Family; fly / sweep is a per-Asset affordance, not a split (MAG-1)
+      pv: "BL10J-EA-SMC-01:"
+      new: true
+      confirm: true
+      note: "the i10-1 superconducting high-field magnet (Flyable field-sweep); the same Magnet Family as the electromagnet, the sweep capability is a per-Asset bound-Model affordance (MAG-1)"
+    - name: HighFieldMagnetStage
+      family: LinearStage
+      pv: "BL10J-EA-MAG-01:"
+      new: true
+      confirm: true
+      note: "the high-field-magnet sample stage (x / y / pitch)"
+    - name: ElectromagnetStage
+      family: LinearStage
+      pv: "BL10J-MO-CRYO-01:"
+      new: true
+      confirm: true
+      note: "the electromagnet cryostat sample stage; cryostat motion folds into the stage Asset (MAG-1 for the low-temperature environment)"
+    - name: MagnetTemperatureController
+      family: TemperatureController
+      pv: "BL10J-EA-TCTRL-41:"
+      new: true
+      confirm: true
+      note: "Lakeshore 336 sample temperature controller at i10-1; reuses the graduated Family (presents Regulator); range is TEMP-1"
+    - name: MagnetSlit
+      family: Slit
+      pv: "BL10J-AL-SLITS-"
+      new: true
+      confirm: true
+      note: "the i10-1 branch beam-defining slits"
+    - name: MagnetFocusingMirror
+      family: Mirror
+      pv: "BL10J-OP-FOCA-01:"
+      new: true
+      confirm: true
+      note: "the i10-1-branch focusing mirror"
+    - name: MagnetDetector
+      family: FluxMonitor
+      pv: { scaler: "BL10J-EA-SCLR-01..02:", amplifiers: "BL10J-EA-IAMP-01..06: / BL10J-DI-IAMP-07..09:" }
+      new: true
+      confirm: true
+      note: "the i10-1 counting detection: the total-electron-yield (TEY), fluorescence-yield (FY), diode, and incident-monitor channels through Femto / SR570 amplifiers and the I10J scaler cards; no area detector, point / current-integrating XMCD detection (DET-1)"
+
+# Cross-cutting control. i10 runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were read
+# from dodal and carried confirm (CTRL-1).
+controls:
+  intro: >
+    i10 runs on the Diamond EPICS / ophyd-async control stack, the same floor as I22,
+    I03, I15-1, I11, I24, and I06. The device handles above are bound from the
+    DiamondLightSource/dodal beamline package (its i10 / i10_shared / i10_1 factories
+    and the device classes), carried confirm pending staff verification (CTRL-1). The
+    i10 acquisition (the coordinated energy / polarization moves over the APPLE-II
+    controller, the dichroism asymmetry sequences, the field sweeps at i10-1, the RASOR
+    reflectivity and resonant-scattering scans) runs through bluesky plans; that
+    orchestration is the seam CORA's edge replaces, driving through ophyd-async / EPICS,
+    while the live APPLE-II energy <-> gap / phase polynomial controller stays the floor
+    (CORA names the polarization and energy axes and records the moves; the controller
+    owns the kinematics, POL-1). The detector file-writing to the Diamond filestore is
+    plumbing CORA observes, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an i10 run needs. The soft X-ray beam
+    path and the endstations run under ultra-high vacuum (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the soft X-ray optics and the UHV endstations (SUP-1)"

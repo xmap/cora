@@ -20,7 +20,7 @@
 
 - **Coherence and speed.** XPCS measures intensity fluctuations of a coherent beam over time, so the detectors are fast area detectors (Eiger 4M, Lambda 2M, Rigaku 3M) gated by a softGlue FPGA timing fabric, downstream of an evacuated flight path.
 - **A second diffractometer.** 8-ID-E carries a six-circle Huber diffractometer (mu, eta, chi, phi, nu, delta). Together with 4-ID's diffractometers this confirms the `Assembly(Diffractometer)` shape.
-- **Independent reuse of 4-ID's device classes.** 8-ID has its own transfocators, LakeShore temperature controllers, and Sydor / TetrAMM beam-position monitors. Because these now appear at two independent beamlines (4-ID and 8-ID), they are held loose pending a cross-facility gate-review, recorded in the promotion register (see [Model](model.md#loose-families-held-for-gate-review)).
+- **Independent reuse of 4-ID's device classes.** 8-ID has its own transfocators, LakeShore temperature controllers, and Sydor / TetrAMM beam-position monitors. The transfocators bind the graduated `Transfocator` catalog Family (a CRL focusing optic) and the LakeShore controllers the graduated `TemperatureController` Family; the Sydor / TetrAMM beam-position monitors are still held loose pending a cross-facility gate-review (see [Model](model.md#loose-families-held-for-gate-review)).
 
 It runs across four stations: `8-ID-A` (optics), `8-ID-D` (focusing), `8-ID-E` (diffractometer endstation), `8-ID-I` (XPCS endstation).
 

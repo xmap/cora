@@ -170,12 +170,13 @@ beam-conditioning:
   enclosure: 4-ID-G
   intro: "The compound refractive lens transfocator and the per-station filters and KB mirrors shared across the experimental branches."
   note: >
-    crl is a CRL transfocator (Transfocator, a loose Family, FAM-1, OPT-2). The KB
+    crl is a CRL transfocator: it reuses the graduated catalog Transfocator
+    Family, a CRL focusing optic; its lens spec is OPT-2. The KB
     mirrors (bkb/gkb/hkb) are per-station Kirkpatrick-Baez focusing pairs bound to
     the Mirror Family; their internal axis maps are OPT-3.
   devices:
     - name: Transfocator
-      family: Transfocator           # loose Family (held; CRL-1, OPT-2)
+      family: Transfocator           # catalog Family; lens spec OPT-2
       pv: "4idPyCRL:CRL4ID:"
       new: true
       confirm: true

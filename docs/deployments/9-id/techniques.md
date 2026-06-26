@@ -11,7 +11,7 @@ The CSSI signature: a coherent beam strikes the sample surface at a shallow graz
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
 | Coherent surface scattering | `coherent_surface_scattering` | the grazing-incidence coherent measurement on the area detectors; Method not yet in catalog |
-| Surface XPCS | `xpcs` | time-correlation of the surface speckle pattern; shares the 8-ID XPCS Method |
+| Surface XPCS | [`xpcs`](../../catalog/methods.md) | time-correlation of the surface speckle pattern; shares the 8-ID `xpcs` catalog Method (its DAQ-owned high-rate-stream execution is the event-stream axis, Stage 1) |
 
 Both need the [grazing-incidence sample stack](equipment/sample.md) (the incidence rotation sets the angle) and the [coherent detectors](equipment/detector.md).
 

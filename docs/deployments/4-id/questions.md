@@ -27,7 +27,7 @@
 | SRC-2 | Nice-to-have | Should the pair be one Asset or two (one per undulator)? | Modelled as one Asset. | One-vs-two source Assets. |
 | MONO-1 | Blocks-go-live | The VDCM monochromator: energy range, crystal set behind `crystal_select`, and per-axis roles. | One `Monochromator` Asset (4idVDCM) with a crystal-select axis; range unconfirmed. | The monochromator energy model. |
 | OPT-1 | Nice-to-have | The toroidal pre-focusing mirror and the HHL bendable mirror: coatings, stripes, and the bender / piezo axis roles. | Two `Mirror` Assets; the HHL axis map is taken from the config, coatings unconfirmed. | The mirror specs. |
-| OPT-2 | Blocks-go-live | The transfocator (`4idPyCRL:CRL4ID:`): lens material, count, and which stations it focuses. | One `Transfocator` Asset (loose Family); serves 4-ID-G and 4-ID-H. | The transfocator spec. |
+| OPT-2 | Blocks-go-live | The transfocator (`4idPyCRL:CRL4ID:`): lens material, count, and which stations it focuses. | One `Transfocator` Asset (catalog Family); serves 4-ID-G and 4-ID-H. | The transfocator spec. |
 | OPT-3 | Nice-to-have | The per-station KB mirror (`bkb`/`gkb`/`hkb`) internal axis maps. | Three `Mirror` Assets; only the 4-ID-B KB carries a partial axis map. | The KB axis maps. |
 
 ## Polarization

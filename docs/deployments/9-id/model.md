@@ -9,25 +9,24 @@
 | Beamline descriptor | [`deployments/9-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/9-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `9-ID` added to its beamline list, with CSSI Practices |
 | Extraction provenance | [`research/aps-reverse-engineering/extracted/9id_bits/`](https://github.com/xmap/cora/tree/main/research/aps-reverse-engineering) | the facts report and candidate the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; 9-ID is pure reuse, plus two loose families it shares with 4-ID / 8-ID (below) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the surface-scattering / scattering / XPCS Methods are not yet coined (TECH-1) |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; 9-ID is pure reuse, including the graduated `Transfocator` Family it shares with 4-ID / 8-ID, plus one loose family still held (below) |
+| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | `xpcs` now in catalog (shared with 8-ID; the surface-XPCS Practice links); surface-scattering / grazing-incidence / WAXS Methods stay deferred (TECH-1) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 9-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## Catalog reuse (what this deployment proves)
 
-9-ID is the cleanest reuse case in the APS fleet: a coherent-scattering beamline outside the imaging and diffraction cores, and yet every optic and detector binds a Family the catalog already had. `InsertionDevice`, `Monochromator`, `Mirror` (twice: the FMBO pair and the KB pair), `Aperture`, `Filter`, `Slit`, `Hexapod`, `Camera`, `BeamStop`, `LinearStage`, `RotaryStage`, and `GenericProbe` all carry it with no new abstraction. That 9-ID needs no new Family is the evidence: the families earned on 2-BM, the diffraction beamlines, and the Diamond deployments cover a beamline none of them were derived from. So this cut adds nothing to `catalog.yaml`.
+9-ID is the cleanest reuse case in the APS fleet: a coherent-scattering beamline outside the imaging and diffraction cores, and yet every optic and detector binds a Family the catalog already had. `InsertionDevice`, `Monochromator`, `Mirror` (twice: the FMBO pair and the KB pair), `Aperture`, `Filter`, `Slit`, `Hexapod`, `Camera`, `BeamStop`, `LinearStage`, `RotaryStage`, `GenericProbe`, and the graduated `Transfocator` (the CRL focusing optic) all carry it with no new abstraction. That 9-ID needs no new Family is the evidence: the families earned on 2-BM, the diffraction beamlines, and the Diamond deployments cover a beamline none of them were derived from. So this cut adds nothing to `catalog.yaml`.
 
-## Loose families held for gate-review
+## A loose family still held for gate-review
 
-9-ID adds a further independent APS beamline to two device classes that recur widely. The CRL `Transfocator` now appears at 4-ID, 8-ID, i22, and 9-ID; the `BeamPositionMonitor` at 4-ID, 8-ID, and 9-ID. The count is well past the promotion threshold, but `main` deliberately holds both loose pending the cross-facility abstraction reviews the Diamond deployments opened: the CRL optic's catalog home (`CRL-1`) and the beam-position sensor's fold-vs-promote question against the held `Diagnostic` / `FluxMonitor` families (`DIAG-1` / `FLUX-1`). The trigger is the abstraction question, not the count, so they stay loose here too, allowlisted and recorded in the promotion-review register. Their naming-r3 review is done; the abstraction decision is gate-review's, not this PR's.
+9-ID's CRL `Transfocator` binds the graduated catalog Family (a CRL focusing optic) that 4-ID, 8-ID, and i22 also use. The cross-facility abstraction review settled the question of its catalog home: it is a CRL-specific Family, not a fold into a general focusing optic, so 9-ID's transfocator is plain catalog reuse now, like its mirrors. What graduation does not resolve is the per-Asset lens spec, the material and lenslet count of this transfocator, which stays open as `OPT-3`.
+
+One device class is still held loose: the `BeamPositionMonitor`, which appears at 4-ID, 8-ID, and 9-ID. The count is well past the promotion threshold, but `main` deliberately holds it pending the beam-position sensor's fold-vs-promote question against the held `Diagnostic` / `FluxMonitor` families (`DIAG-1` / `FLUX-1`). The trigger is the abstraction question, not the count, so it stays loose here too, allowlisted and recorded in the promotion-review register. Its naming-r3 review is done; the abstraction decision is gate-review's, not this PR's.
 
 | Loose family | Presents (when graduated) | At 9-ID | Also at |
 | --- | --- | --- | --- |
-| `Transfocator` | Positioner | JJ CRL transfocator (9-ID-D) | 4-ID, 8-ID, i22 |
 | `BeamPositionMonitor` | Sensor | TetrAMM + two XBPMs (9-ID-D) | 4-ID, 8-ID |
-
-That a fourth beamline cannot graduate the `Transfocator` on count alone is the point of the hold: the open question is what the abstraction is (a CRL-specific Family, or a more general focusing optic), and that is `CRL-1`'s to settle.
 
 ## The metadata and Data Management seam
 
@@ -39,7 +38,7 @@ The 9-ID instrument config carries a large set of metadata PVs (`experiment_name
 
 - **The diagnostic flags and the DAMM mask.** `flag1-3` and the DAMM mask carried only their insertion-motor PVs in the config; they are folded into a descriptor note pending identification, not modelled as Assets (`DIAG-1`).
 
-- **The surface-scattering / scattering / XPCS Methods.** Whether coherent surface scattering, grazing-incidence scattering, and XPCS enter CORA's catalog is an owner decision; the Practices render unlinked, pending (`TECH-1`). 9-ID's XPCS Practice shares the 8-ID XPCS Method and its WAXS Practice shares the i22 one.
+- **The remaining scattering Methods.** 9-ID's surface-XPCS Practice now links to the catalog `xpcs` Method (shared with 8-ID; its DAQ-owned high-rate-stream execution is the event-stream axis, Stage 1). Whether coherent surface scattering and grazing-incidence scattering enter the catalog stays an owner decision; those Practices render unlinked, pending (`TECH-1`), and the WAXS Practice shares the i22 one.
 
 - **The simulated devices.** The instrument config carries simulated motors and detectors (`sim_motor_cssi`, `sim_det_saxs`, and so on) for offline testing; they are excluded from the model.
 

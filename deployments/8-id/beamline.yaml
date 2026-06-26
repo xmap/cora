@@ -124,18 +124,18 @@ focusing:
   intro: "The compound refractive lens transfocators that focus the coherent beam for XPCS, and the 8-ID-D slits."
   note: >
     rl1 and rl2 are CRL transfocator lens stacks (ten lenses each on 8iddSoft:TRANS),
-    bound to a loose Transfocator Family that 4-ID also uses; held for gate-review
-    (OPT-3, CRL-1; see model.md).
+    bound to the graduated Transfocator catalog Family (a CRL focusing optic, also
+    used at 4-ID); the lens spec stays open (OPT-3; see model.md).
   devices:
     - name: Transfocator_1
-      family: Transfocator           # loose Family (held; CRL-1, OPT-3)
+      family: Transfocator           # catalog Family (lens spec OPT-3)
       pv: { x: "8iddSoft:TRANS:m2", y: "8iddSoft:TRANS:m1", pitch: "8iddSoft:TRANS:m4", yaw: "8iddSoft:TRANS:m3" }
       new: true
       confirm: true
       lens_count: 10
       note: "first CRL transfocator (rl1); ten lens actuators 8iddSoft:TRANS:m5-m14, summarized (OPT-3)"
     - name: Transfocator_2
-      family: Transfocator           # loose Family (held; CRL-1, OPT-3)
+      family: Transfocator           # catalog Family (lens spec OPT-3)
       pv: { x: "8iddSoft:TRANS:m26", y: "8iddSoft:TRANS:m25", pitch: "8iddSoft:TRANS:m28", yaw: "8iddSoft:TRANS:m27" }
       new: true
       confirm: true

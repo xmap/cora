@@ -1,0 +1,15 @@
+# Governance
+
+*Who would act at i24, and the trust shape that would gate it. Design-phase.*
+
+Governance at i24 follows the same model as the CORA pilots: people and autonomous agents are facility principals at the [Diamond Site](../diamond/index.md), and on the beamline they surface through the actions they take. Their commands are gated by a trust shape (a Zone grouping the beamline's resources, a Conduit binding the surfaces that may issue commands, and Policies that say who may do what).
+
+i24 is a further beamline at the Diamond Site, so it reuses the Diamond facility envelope rather than creating a new one: the Diamond operator pool, the safety review structure, and the safety forms are facility-wide and inherited. i24 adds only its own beamline-bound principals, carried pending on the [Diamond Site page](../diamond/index.md). The operator pool and safety-review structure are site-level and shared across the beamlines, so they are not yet instantiated per beamline (GOV-1). This is the same reuse pattern 7-BM follows at APS, the opposite of the new-Site work I22 did.
+
+Because i24 is a modelling exercise, the concrete trust shape is not instantiated. What is already settled is the boundary: clearances (the safety forms that must be active to start) are issued at the Diamond Site, not on the beamline, and the beamline links up to them. The Diamond PSS clearance is carried pending because its form names are not confirmed.
+
+The safety tier behind the beam is the personnel safety system. The hutch photon shutter is dodal's interlocked hutch shutter, which sits behind a PSS interlock; the search-and-secure permit signals are the leaves that must be satisfied before the beam can enter the enclosure. CORA reads the shutter as a `Shutter` Asset, but the PSS permit leaves are not named in the descriptor and are not invented here, so the Enclosure permit signals are carried pending (PSS-1).
+
+One hazard is sharper at i24 than at the rotation-MX siblings. The fixed-target serial collection rasters an addressable chip of thousands of static crystals across the chip stage, and the PMAC motion controller fires lasers on encoder edges during the raster. Whether those lasers are an excitation source CORA should model as a device or only a trigger setting with a Clearance hazard is deferred (LASER-1). If they are a hazard, the laser interlock would be gated by a Clearance issued after a separate safety review, the same shape the other deployments reserve for unattended or hazardous operation. None of that is built yet; the seam is reserved, not invented. Unlike the rotation-MX siblings, i24 has no sample-changing robot, so there is no autonomous-loading Clearance to model here.
+
+The off-roadmap question of whether Diamond becomes a real CORA Site is unanswered. The concrete Zone, Conduit, and Policy instances, the operator pool, and any laser Clearance would land if the beamline approaches real scope, following the [2-BM governance](../2-bm/governance.md) shape.

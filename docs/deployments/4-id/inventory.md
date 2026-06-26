@@ -4,7 +4,7 @@
 
 This cut models the 4-ID-A optics spine and the per-station optics, diffractometers, sample environment, and detectors of 4-ID-B / G / H; the Raman station and the peripheral electronics are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages. The shape is generated-honest: it is authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/4-id/beamline.yaml) descriptor that the Source page renders from.
 
-Devices bind to a catalog [Family](../../catalog/families.md) where one fits. POLAR's new device classes (`PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `Transfocator`, `Laser`, `BeamPositionMonitor`) bind to loose Family strings held for gate-review; the `TemperatureController` controllers now bind a catalog Family (graduated on the Diamond i22/i03/i11 rule-of-three, presenting the `Regulator` Role), and the diffractometer devices bind the catalog `Goniometer` Family (the graduation register is on [Model](model.md#loose-family-graduation)). Unlike the design-phase scaffolds, the control handles are filled from the beamline config; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) where one fits. POLAR's new device classes that recur but stay loose for gate-review (`PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `Laser`, `BeamPositionMonitor`) bind loose Family strings; the `Transfocator` CRL now binds the graduated catalog `Transfocator` Family (a CRL focusing optic, earned across eight deployments), the `TemperatureController` controllers bind a catalog Family (graduated on the Diamond i22/i03/i11 rule-of-three, presenting the `Regulator` Role), and the diffractometer devices bind the catalog `Goniometer` Family (the graduation register is on [Model](model.md#loose-family-graduation)). Unlike the design-phase scaffolds, the control handles are filled from the beamline config; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -19,7 +19,7 @@ Root Asset `4-ID POLAR` (`tier = Unit`, `facility_code = aps`); sub-systems nest
 | `WhiteBeamSlit` / `MonoSlit` | `Device` | Slit | 4-ID-A | VDCM-crate slits |
 | `DiamondWindow` | `Device` | Window | 4-ID-B | 2-axis diamond window |
 | `ToroidalMirror` / `HHLMirror` | `Device` | Mirror | 4-ID-B | toroidal pre-focus and HHL bendable mirror (OPT-1) |
-| `Transfocator` | `Device` | Transfocator (loose) | 4-ID-G | CRL transfocator (OPT-2) |
+| `Transfocator` | `Device` | Transfocator | 4-ID-G | CRL transfocator (OPT-2) |
 | `KBMirror_B/G/H` | `Device` | Mirror | 4-ID-B/G/H | per-station KB focusing mirrors (OPT-3) |
 | `Filter_B/G/H` | `Device` | Filter | 4-ID-B/G/H | per-station attenuator banks |
 | `Diffractometer_Euler` | `Device` | Goniometer | 4-ID-G | Huber Eulerian cradle; goniometer of the Diffractometer Assembly (DIFF-1) |
@@ -38,7 +38,7 @@ Root Asset `4-ID POLAR` (`tier = Unit`, `facility_code = aps`); sub-systems nest
 | `XBPM_G/H`, `Sydor_G/H`, `TetrAMM_B` | `Device` | BeamPositionMonitor (loose) | 4-ID-B/G/H | beam-position / intensity monitors (BPM-1) |
 | `Scaler_1/2` | `Device` | GenericProbe | 4-ID-B | CTR8 scaler channels |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Slit`, `Window`, `Mirror`, `Filter`, `Table`, `Camera`, `GenericProbe`, and `Goniometer` (the diffractometer sample circles). Bound to loose Family strings, held for gate-review: `Transfocator`, `BeamPositionMonitor` (recur across beamlines but the abstraction is open), `PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `Laser` (single beamline). `TemperatureController` recurred too and has since graduated to a catalog Family (presents `Regulator`). These are earned into the catalog only when a confirmed device registers and a naming review accepts the name; the graduation plan is on [Model](model.md#loose-family-graduation).
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Slit`, `Window`, `Mirror`, `Filter`, `Table`, `Camera`, `GenericProbe`, `Transfocator` (the CRL focusing optic), and `Goniometer` (the diffractometer sample circles). Bound to loose Family strings, held for gate-review: `BeamPositionMonitor` (recurs across beamlines but the abstraction is open), `PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `Laser` (single beamline). `Transfocator` and `TemperatureController` recurred too and have since graduated to catalog Families (`TemperatureController` presents `Regulator`). The loose ones are earned into the catalog only when a confirmed device registers and a naming review accepts the name; the graduation plan is on [Model](model.md#loose-family-graduation).
 
 ## Pending confirmations
 

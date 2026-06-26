@@ -9,20 +9,20 @@ SIX is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 | Beamline descriptor | [`deployments/six/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/six/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `SIX` added to its beamline list, with a RIXS Practice |
 | Extraction provenance | [NSLS2/six-profile-collection](https://github.com/NSLS2/six-profile-collection) | the `startup/*.py` device classes the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; three new device classes stay loose at n=1 (below) |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | GratingMonochromator + Manipulator graduated (earned by CSX + ESM); SpectrometerArm stays loose at n=1 (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the RIXS Method is not yet coined (TECH-1) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers SIX Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## New loose families
 
-SIX is CORA's first soft X-ray beamline, a new optics, detector, and sample-environment regime. It introduced three device classes no hard X-ray catalog Family covered. One has since **graduated**: `GratingMonochromator` became a catalog Family once CSX (NSLS-II 23-ID) earned the rule-of-three for the soft X-ray PGM (the Monochromator here binds it). The other two remain **loose at n=1** (SIX only) and graduate nothing until a second soft X-ray beamline earns them; their names are provisional, to be settled by the naming-r3 gate at graduation.
+SIX is CORA's first soft X-ray beamline, a new optics, detector, and sample-environment regime. It introduced three device classes no hard X-ray catalog Family covered. Two have since **graduated**: `GratingMonochromator` became a catalog Family once CSX (NSLS-II 23-ID) earned the soft X-ray PGM, and `Manipulator` once ESM (NSLS-II 21-ID) earned the UHV sample manipulator (the Monochromator and SampleManipulator here bind them). Only `SpectrometerArm` remains **loose at n=1** (SIX only) and graduates nothing until a second RIXS beamline earns it.
 
 | Family | Presents (when graduated) | What it is | Status |
 | --- | --- | --- | --- |
 | `GratingMonochromator` | Positioner | the soft X-ray plane-grating monochromator (PGM): premirror at a fixed-focus c-value plus an interchangeable grating, no Bragg crystal | graduated (SIX + CSX, `MONO-1`) |
 | `SpectrometerArm` | confirm (Sensor or Positioner) | the meters-long energy-dispersive RIXS arm (bridge truss + optics chamber + detector chamber) | loose at n=1; earns at a 2nd RIXS / dispersive-arm beamline (`RIXS-1`) |
-| `Manipulator` | Positioner | the UHV cryostat sample manipulator (x/y/z/theta) | loose at n=1; earns at a 2nd UHV-manipulator soft beamline (`SAMPLE-1`) |
+| `Manipulator` | Positioner | the UHV cryostat sample manipulator (x/y/z/theta) | graduated (SIX + ESM, `SAMPLE-1`) |
 
 The catalog `Monochromator` is deliberately not stretched to cover the PGM: its note describes a crystal / multilayer Bragg monochromator, and a plane-grating mono has no Bragg crystal, selects energy by grating pitch and translation, and takes its resolution from the exit slit, so `GratingMonochromator` is a distinct Family rather than a settings variant. Likewise `SpectrometerArm` is distinct from the catalog `EnergyDispersiveSpectrometer` (a point Sensor, not a multi-chamber dispersive arm).
 

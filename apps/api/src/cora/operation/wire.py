@@ -56,7 +56,7 @@ from uuid import UUID
 from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
-from cora.operation.acquisitions import collect, continuous, discrete
+from cora.operation.acquisitions import collect, continuous, discrete, stream
 from cora.operation.adapters.compute_port_config import build_compute_port
 from cora.operation.adapters.control_port_config import build_control_port
 from cora.operation.adapters.in_memory_recipe_expander import (
@@ -166,9 +166,9 @@ def wire_operation(
     empty routes (the default) returns `InMemoryControlPort` (legacy
     + test convenience); populated routes returns a
     `ControlPortRegistry` with the configured substrate adapters per
-    prefix. The action registry is hand-seeded with the three
+    prefix. The action registry is hand-seeded with the four
     substrate-neutral scan-acquisition primitives `collect` +
-    `discrete` + `continuous`. A sample save-and-restore is expressed in
+    `discrete` + `continuous` + `stream`. A sample save-and-restore is expressed in
     the recipe itself via a `CaptureStep` + a `CaptureRef` setpoint (see
     `conductor.py`), not as an action body. Per-deployment
     registry-from-config plumbing remains deferred.
@@ -249,7 +249,7 @@ def wire_operation(
     # no caller shares (test convenience). The Conductor never aclose's it.
     compute_port = compute_port if compute_port is not None else build_compute_port(None)
     action_registry = InMemoryActionRegistry(
-        {"collect": collect, "discrete": discrete, "continuous": continuous}
+        {"collect": collect, "discrete": discrete, "continuous": continuous, "stream": stream}
     )
     conductor = Conductor(
         control_port=control_port,
