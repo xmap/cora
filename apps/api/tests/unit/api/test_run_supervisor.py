@@ -51,7 +51,12 @@ from cora.infrastructure.ports.beam_availability_lookup import (
     BeamAvailabilityLookupResult,
 )
 from cora.infrastructure.routing import NIL_SENTINEL_ID
-from cora.run.aggregates.run import RunCannotResumeError, RunNotFoundError, RunStatus
+from cora.run.aggregates.run import (
+    RunCannotResumeError,
+    RunCannotTruncateError,
+    RunNotFoundError,
+    RunStatus,
+)
 from cora.run.errors import UnauthorizedError
 from cora.run.features.hold_run import HoldRun
 from cora.run.features.hold_run.handler import Handler as HoldRunHandler
@@ -59,6 +64,8 @@ from cora.run.features.list_runs import ListRuns, RunListPage, RunSummaryItem
 from cora.run.features.list_runs.handler import Handler as ListRunsHandler
 from cora.run.features.resume_run import ResumeRun
 from cora.run.features.resume_run.handler import Handler as ResumeRunHandler
+from cora.run.features.truncate_run import TruncateRun
+from cora.run.features.truncate_run.handler import Handler as TruncateRunHandler
 from cora.run.ports import InMemoryRunChannelLookup, RunChannelLookup
 from cora.shared.identity import ActorId
 
@@ -301,6 +308,22 @@ def _make_recording_resume() -> tuple[ResumeRunHandler, list[ResumeRun]]:
     return resume_run, calls
 
 
+def _make_recording_truncate() -> tuple[TruncateRunHandler, list[TruncateRun]]:
+    calls: list[TruncateRun] = []
+
+    async def truncate_run(
+        command: TruncateRun,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> None:
+        calls.append(command)
+
+    return truncate_run, calls
+
+
 def _rules_off() -> ObservationRuleConfig:
     """Observation rules disabled (channel names None): the default for tests
     that exercise only the beam-Hold / resume / liveness behavior."""
@@ -333,21 +356,30 @@ async def _tick(
     stall_streak: dict[UUID, int] | None = None,
     feed_dead_warned: set[UUID] | None = None,
     advise_enabled: bool = False,
+    truncate_run: TruncateRunHandler | None = None,
+    truncate_settle: dict[UUID, int] | None = None,
+    truncate_enabled: bool = False,
+    truncate_settle_ticks: int = 3,
 ) -> None:
-    """Call _supervise_tick, defaulting the resume wiring (off) for hold-only tests."""
+    """Call _supervise_tick, defaulting the resume + truncate wiring (off) for
+    hold-only tests."""
     if resume_run is None:
         resume_run, _ = _make_recording_resume()
+    if truncate_run is None:
+        truncate_run, _ = _make_recording_truncate()
     await _supervise_tick(
         deps=kernel,
         list_runs=list_runs,
         hold_run=hold_run,
         resume_run=resume_run,
+        truncate_run=truncate_run,
         beam_lookup=beam_lookup,
         channel_lookup=channel_lookup if channel_lookup is not None else InMemoryRunChannelLookup(),
         rules_config=rules_config if rules_config is not None else _rules_off(),
         memory=memory,
         settle=settle if settle is not None else {},
         liveness=liveness if liveness is not None else set(),
+        truncate_settle=truncate_settle if truncate_settle is not None else {},
         quality=quality if quality is not None else set(),
         stall=stall if stall is not None else set(),
         stall_streak=stall_streak if stall_streak is not None else {},
@@ -355,6 +387,8 @@ async def _tick(
         resume_enabled=resume_enabled,
         resume_settle_ticks=resume_settle_ticks,
         liveness_ceiling_seconds=liveness_ceiling_seconds,
+        truncate_enabled=truncate_enabled,
+        truncate_settle_ticks=truncate_settle_ticks,
         advise_enabled=advise_enabled,
     )
 
@@ -417,7 +451,11 @@ async def test_lifespan_is_noop_when_disabled() -> None:
     resume_run, _ = _make_recording_resume()
 
     async with run_supervisor_lifespan(
-        kernel, list_runs=list_runs, hold_run=hold_run, resume_run=resume_run
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        resume_run=resume_run,
+        truncate_run=_make_recording_truncate()[0],
     ):
         pass
 
@@ -545,6 +583,7 @@ async def test_lifespan_enabled_runs_the_loop_and_holds() -> None:
         list_runs=list_runs,
         hold_run=hold_run,
         resume_run=resume_run,
+        truncate_run=_make_recording_truncate()[0],
         beam_lookup=_BeamDown(),
         interval_seconds=0.01,
     ):
@@ -595,6 +634,7 @@ async def test_loop_survives_a_failing_tick() -> None:
         list_runs=_make_failing_list_runs(),
         hold_run=hold_run,
         resume_run=resume_run,
+        truncate_run=_make_recording_truncate()[0],
         beam_lookup=_BeamDown(),
         interval_seconds=0.01,
     ):
@@ -1952,6 +1992,7 @@ async def test_loop_warns_once_per_read_denial_episode_then_recovers() -> None:
             list_runs=flaky_list_runs,
             hold_run=hold_run,
             resume_run=resume_run,
+            truncate_run=_make_recording_truncate()[0],
             beam_lookup=_BeamDown(),
             interval_seconds=0.01,
         ):
@@ -1963,3 +2004,243 @@ async def test_loop_warns_once_per_read_denial_episode_then_recovers() -> None:
     assert "run_supervisor.tick_failed" not in events
     assert "run_supervisor.read_authorized_recovered" in events
     assert hold_calls == []
+
+
+# ---------- Run-liveness act rung (autonomous truncate) ----------
+
+
+_CEILING = 3600.0
+_STALE_SINCE = _NOW - timedelta(hours=2)  # 7200s past the 3600s ceiling -> stale
+
+
+def _make_raising_truncate(exc: Exception) -> TruncateRunHandler:
+    async def truncate_run(
+        command: TruncateRun,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> None:
+        raise exc
+
+    return truncate_run
+
+
+@pytest.mark.unit
+def test_run_supervisor_truncate_settle_ticks_rejects_zero() -> None:
+    with pytest.raises(ValueError, match="run_supervisor_truncate_settle_ticks"):
+        Settings(run_supervisor_truncate_settle_ticks=0)  # type: ignore[call-arg]
+
+
+@pytest.mark.unit
+def test_run_supervisor_truncate_settle_ticks_accepts_valid() -> None:
+    settings = Settings(run_supervisor_truncate_settle_ticks=5)  # type: ignore[call-arg]
+    assert settings.run_supervisor_truncate_settle_ticks == 5
+
+
+@pytest.mark.unit
+async def test_truncate_disabled_never_truncates_a_stale_run() -> None:
+    """A stale Run is flagged (shadow), but with the act rung off no command issues."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, running_since=_STALE_SINCE)])
+    truncate_run, truncate_calls = _make_recording_truncate()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=_make_recording_hold()[0],
+        beam_lookup=_BeamOpen(),
+        memory={},
+        truncate_run=truncate_run,
+        truncate_enabled=False,
+        truncate_settle_ticks=1,
+        liveness_ceiling_seconds=_CEILING,
+    )
+
+    assert truncate_calls == []
+
+
+@pytest.mark.unit
+async def test_truncate_does_not_fire_without_a_ceiling() -> None:
+    """truncate_enabled but no liveness ceiling: the liveness rule is off (even
+    with the act rung enabled), so no truncate is issued."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, running_since=_STALE_SINCE)])
+    truncate_run, truncate_calls = _make_recording_truncate()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=_make_recording_hold()[0],
+        beam_lookup=_BeamOpen(),
+        memory={},
+        truncate_run=truncate_run,
+        truncate_enabled=True,
+        truncate_settle_ticks=1,
+        liveness_ceiling_seconds=None,
+    )
+
+    assert truncate_calls == []
+
+
+@pytest.mark.unit
+async def test_truncate_fires_only_after_settle_window_and_links_decision() -> None:
+    """A stale Run is truncated only once it stays stale for the settle window; the
+    issued TruncateRun links the recorded Truncate Decision."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, running_since=_STALE_SINCE)])
+    truncate_run, truncate_calls = _make_recording_truncate()
+    liveness: set[UUID] = set()
+    truncate_settle: dict[UUID, int] = {}
+
+    async def _do_tick() -> None:
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=_make_recording_hold()[0],
+            beam_lookup=_BeamOpen(),
+            memory={},
+            liveness=liveness,
+            truncate_run=truncate_run,
+            truncate_settle=truncate_settle,
+            truncate_enabled=True,
+            truncate_settle_ticks=2,
+            liveness_ceiling_seconds=_CEILING,
+        )
+
+    # Tick 1: stale, but the settle window (2) is not met -> no truncate yet.
+    await _do_tick()
+    assert truncate_calls == []
+    assert truncate_settle[run_id] == 1
+
+    # Tick 2: still stale, settle window met -> truncate fires.
+    await _do_tick()
+    assert len(truncate_calls) == 1
+    assert truncate_calls[0].run_id == run_id
+    assert truncate_calls[0].interrupted_at is None
+    decision_id = truncate_calls[0].decided_by_decision_id
+    assert decision_id is not None
+
+    decision = await load_decision(kernel.event_store, decision_id)
+    assert decision is not None
+    assert decision.context.value == "RunSupervision"
+    assert decision.choice.value == "Truncate"
+    assert decision.decided_by == ActorId(RUN_SUPERVISOR_AGENT_ID)
+
+
+@pytest.mark.unit
+async def test_truncate_settle_clears_when_run_recovers() -> None:
+    """A Run that reads stale then recovers (not stale) clears its settle counter,
+    so a flapping Run is never truncated (fail-safe)."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    truncate_run, truncate_calls = _make_recording_truncate()
+    liveness: set[UUID] = set()
+    truncate_settle: dict[UUID, int] = {}
+
+    # Tick 1: stale -> settle counter 1.
+    await _tick(
+        kernel,
+        list_runs=_make_list_runs([_running_item(run_id, running_since=_STALE_SINCE)]),
+        hold_run=_make_recording_hold()[0],
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        truncate_run=truncate_run,
+        truncate_settle=truncate_settle,
+        truncate_enabled=True,
+        truncate_settle_ticks=2,
+        liveness_ceiling_seconds=_CEILING,
+    )
+    assert truncate_settle.get(run_id) == 1
+
+    # Tick 2: the Run is no longer stale (fresh running_since) -> counter reset.
+    await _tick(
+        kernel,
+        list_runs=_make_list_runs([_running_item(run_id, running_since=_NOW)]),
+        hold_run=_make_recording_hold()[0],
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        truncate_run=truncate_run,
+        truncate_settle=truncate_settle,
+        truncate_enabled=True,
+        truncate_settle_ticks=2,
+        liveness_ceiling_seconds=_CEILING,
+    )
+    assert run_id not in truncate_settle
+    assert truncate_calls == []
+
+
+@pytest.mark.unit
+async def test_truncate_swallows_state_race() -> None:
+    """A Run that changed under us (RunCannotTruncateError) is a benign no-op."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    truncate_run = _make_raising_truncate(
+        RunCannotTruncateError(run_id, current_status=RunStatus.COMPLETED)
+    )
+
+    await _tick(
+        kernel,
+        list_runs=_make_list_runs([_running_item(run_id, running_since=_STALE_SINCE)]),
+        hold_run=_make_recording_hold()[0],
+        beam_lookup=_BeamOpen(),
+        memory={},
+        truncate_run=truncate_run,
+        truncate_enabled=True,
+        truncate_settle_ticks=1,
+        liveness_ceiling_seconds=_CEILING,
+    )  # no raise == benign no-op
+
+
+@pytest.mark.unit
+async def test_truncate_swallows_missing_run() -> None:
+    """A Run that terminated under us (RunNotFoundError) is a benign no-op."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    truncate_run = _make_raising_truncate(RunNotFoundError(run_id))
+
+    await _tick(
+        kernel,
+        list_runs=_make_list_runs([_running_item(run_id, running_since=_STALE_SINCE)]),
+        hold_run=_make_recording_hold()[0],
+        beam_lookup=_BeamOpen(),
+        memory={},
+        truncate_run=truncate_run,
+        truncate_enabled=True,
+        truncate_settle_ticks=1,
+        liveness_ceiling_seconds=_CEILING,
+    )  # no raise == benign no-op
+
+
+@pytest.mark.unit
+async def test_truncate_swallows_unauthorized() -> None:
+    """An Authorize Deny (the supervisor principal lacks TruncateRun) is logged,
+    not raised; no autonomous crash."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    truncate_run = _make_raising_truncate(UnauthorizedError("supervisor not granted TruncateRun"))
+
+    await _tick(
+        kernel,
+        list_runs=_make_list_runs([_running_item(run_id, running_since=_STALE_SINCE)]),
+        hold_run=_make_recording_hold()[0],
+        beam_lookup=_BeamOpen(),
+        memory={},
+        truncate_run=truncate_run,
+        truncate_enabled=True,
+        truncate_settle_ticks=1,
+        liveness_ceiling_seconds=_CEILING,
+    )  # no raise

@@ -514,7 +514,6 @@ EMDASH_ALLOWLIST: frozenset[str] = frozenset(
         "tests/unit/observability/test_correlation.py",
         "tests/unit/observability/test_handler_spans_via_testclient.py",
         "tests/unit/observability/test_provider.py",
-        "tests/unit/operation/_helpers.py",
         "tests/unit/operation/test_procedure_events.py",
         "tests/unit/operation/test_procedure_evolver.py",
         "tests/unit/projection/test_registry.py",

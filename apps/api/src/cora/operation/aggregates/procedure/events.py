@@ -73,6 +73,7 @@ from uuid import UUID
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.shared.canonical_json import canonical_json_bytes
+from cora.shared.decision_signals import DecisionConfidenceSource
 from cora.shared.logbook import LogbookSchema
 
 
@@ -439,6 +440,21 @@ class ProcedureIterationEnded:
     `converged` / `reason` are stream-only for now: the convergence-rate
     projection is a deferred watch item per
     [[project_iteration_first_class_research]]. Status is NOT carried.
+
+    The steering-provenance fields are additive and stream-only: a steered
+    conduct (`conduct_until_advised`) records the per-iteration decision the
+    brain advised. `advised_stop` is the steering verdict (True advised-stop,
+    False continue, None no-verdict), kept distinct from `converged` so a
+    steering pass leaves `converged` None and the convergence streak never
+    bites. `reasoning` / `confidence` / `confidence_source` / `alternatives`
+    / `model_ref` are the advice provenance for the in-conductor audit ledger
+    (from `advice_to_audit_fields`, carrying the SAME names the mapper emits).
+    `confidence_source` is the typed `DecisionConfidenceSource`, matching the
+    Decision record so the two audit homes stay type-faithful on replay. All
+    default to absent: a convergence or manual end leaves them unset. The
+    evolver folds none of them (it still folds only `converged`);
+    `from_stored` reads them via `.get()` so pre-existing payloads deserialize
+    to the absent defaults.
     """
 
     procedure_id: UUID
@@ -446,6 +462,12 @@ class ProcedureIterationEnded:
     converged: bool | None
     reason: str | None
     occurred_at: datetime
+    advised_stop: bool | None = None
+    reasoning: str | None = None
+    confidence: float | None = None
+    confidence_source: DecisionConfidenceSource | None = None
+    alternatives: tuple[str, ...] = ()
+    model_ref: str | None = None
 
 
 @dataclass(frozen=True)
@@ -652,6 +674,12 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             converged=converged,
             reason=reason,
             occurred_at=occurred_at,
+            advised_stop=advised_stop,
+            reasoning=reasoning,
+            confidence=confidence,
+            confidence_source=confidence_source,
+            alternatives=alternatives,
+            model_ref=model_ref,
         ):
             return {
                 "procedure_id": str(procedure_id),
@@ -659,6 +687,14 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 "converged": converged,
                 "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
+                "advised_stop": advised_stop,
+                "reasoning": reasoning,
+                "confidence": confidence,
+                "confidence_source": (
+                    confidence_source.value if confidence_source is not None else None
+                ),
+                "alternatives": list(alternatives),
+                "model_ref": model_ref,
             }
         case RecipeExpansionRecorded(
             procedure_id=procedure_id,
@@ -857,6 +893,16 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     converged=payload["converged"],
                     reason=payload["reason"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    advised_stop=payload.get("advised_stop"),
+                    reasoning=payload.get("reasoning"),
+                    confidence=payload.get("confidence"),
+                    confidence_source=(
+                        DecisionConfidenceSource(payload["confidence_source"])
+                        if payload.get("confidence_source") is not None
+                        else None
+                    ),
+                    alternatives=tuple(payload.get("alternatives", ())),
+                    model_ref=payload.get("model_ref"),
                 ),
             )
         case "RecipeExpansionRecorded":

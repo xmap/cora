@@ -572,16 +572,24 @@ class RunTruncated:
 
     Stopped vs Truncated (lifecycle-layer distinction): Stopped
     is a controlled exit while the system is responsive; Truncated
-    is a cleanup mechanism for known-dead Runs. The system itself
-    does not detect de-facto-dead Runs (separate liveness concern,
-    out of scope for 6f-4); operators must invoke truncate
-    explicitly.
+    is a cleanup mechanism for known-dead Runs. Truncate is operator-
+    driven, OR autonomous: the RunSupervisor's run-liveness act rung
+    truncates a Run that has stayed implausibly long past the operator
+    ceiling (the de-facto-dead detection the original truncate left to
+    a human), attributed via the event principal and `decided_by_decision_id`.
+
+    `decided_by_decision_id` (mirrors RunHeld / RunAdjusted): optional
+    Decision-causation link, set when an agent (or a Decision-justified
+    operator action) truncated the Run; None for a bare operator truncate.
+    Forward-compat via `payload.get("decided_by_decision_id")` for legacy
+    streams.
     """
 
     run_id: UUID
     reason: str
     interrupted_at: datetime | None
     occurred_at: datetime
+    decided_by_decision_id: UUID | None = None
 
 
 # Discriminated union of every event the Run aggregate emits.
@@ -737,6 +745,7 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             reason=reason,
             interrupted_at=interrupted_at,
             occurred_at=occurred_at,
+            decided_by_decision_id=decided_by_decision_id,
         ):
             interrupted_at_iso = interrupted_at.isoformat() if interrupted_at is not None else None
             return {
@@ -744,6 +753,9 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "reason": reason,
                 "interrupted_at": interrupted_at_iso,
                 "occurred_at": occurred_at.isoformat(),
+                "decided_by_decision_id": (
+                    str(decided_by_decision_id) if decided_by_decision_id is not None else None
+                ),
             }
         case RunAdjusted(
             run_id=run_id,
@@ -962,6 +974,7 @@ def from_stored(stored: StoredEvent) -> RunEvent:
 
             def _build_run_truncated() -> RunTruncated:
                 raw_interrupted_at = payload["interrupted_at"]
+                raw_decided_by_truncated = payload.get("decided_by_decision_id")
                 return RunTruncated(
                     run_id=UUID(payload["run_id"]),
                     reason=payload["reason"],
@@ -971,6 +984,11 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                         else None
                     ),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    decided_by_decision_id=(
+                        UUID(raw_decided_by_truncated)
+                        if raw_decided_by_truncated is not None
+                        else None
+                    ),
                 )
 
             return deserialize_or_raise("RunTruncated", _build_run_truncated)

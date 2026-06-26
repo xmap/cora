@@ -62,6 +62,7 @@ from cora.agent import (
     seed_clearance_watcher_agent,
     seed_procedure_watcher_agent,
     seed_run_debriefer_agent,
+    seed_run_initiator_agent,
     seed_run_supervisor_agent,
     wire_agent,
 )
@@ -75,6 +76,7 @@ from cora.api._edge_conductor import ComputeRunDriver
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
 from cora.api._inference_recorder import DelegatingInferenceRecorder
 from cora.api._procedure_watcher import procedure_watcher_lifespan
+from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
@@ -802,6 +804,9 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_caution_drafter_agent(deps)
             # same shape for RunSupervisor (deterministic in-loop agent).
             await seed_run_supervisor_agent(deps)
+            # same shape for RunInitiator (deterministic agent that starts Runs;
+            # identity seeded now, autonomous loop lands in a later slice).
+            await seed_run_initiator_agent(deps)
             # same shape for CautionPromoter (deterministic auto-promote agent).
             await seed_caution_promoter_agent(deps)
             # same shape for ClearanceExpirer (deterministic in-loop agent).
@@ -875,6 +880,12 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         list_runs=app.state.run.list_runs,
                         hold_run=app.state.run.hold_run,
                         resume_run=app.state.run.resume_run,
+                        truncate_run=app.state.run.truncate_run,
+                    ),
+                    run_initiator_lifespan(
+                        deps,
+                        list_runs=app.state.run.list_runs,
+                        list_subjects=app.state.subject.list_subjects,
                     ),
                     clearance_expirer_lifespan(
                         deps,
