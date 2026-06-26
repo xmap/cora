@@ -2,7 +2,7 @@
 #
 # NSLS-II (National Synchrotron Light Source II, Brookhaven National Laboratory)
 # is a Site CORA models, the home of the reverse-engineered NSLS-II beamline
-# scaffolds listed in the facility.beamlines field below (FXI ... XFP). This file is
+# scaffolds listed in the facility.beamlines field below (FXI ... ISR). This file is
 # the single human-readable source for the facility's site-level instances: the
 # Facility itself, the Practices it would run, and the facility principals.
 #
@@ -25,7 +25,7 @@ facility:
   heading: "NSLS-II"
   kind: Site
   institution: Brookhaven National Laboratory
-  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, IOS, XPD, ESM, SMI, IXS, SST, ISS, FMX, CMS, XFM, LIX, HEX, AMX, XFP]
+  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, IOS, XPD, ESM, SMI, IXS, SST, ISS, FMX, CMS, XFM, LIX, HEX, AMX, XFP, ISR]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the FXI profile collection, not yet
@@ -150,6 +150,13 @@ practices:
   # footprinting) is new to the catalog; both modes share it, carried pending (TECH-1).
   - {name: XFP_footprinting_practice, method: x_ray_footprinting, pending: true, note: "X-ray footprinting of a biological macromolecule in solution: gate a timed white-beam dose onto a flowing capillary / flow-cell sample, recording exposure time x flux x attenuation as the delivered dose; the fleet's first dose-delivery Method, new to the catalog; structural readout is offline mass spec (TECH-1, READOUT-1)"}
   - {name: XFP_high_throughput_footprinting_practice, method: x_ray_footprinting, pending: true, note: "shutterless high-throughput footprinting: sweep a fly-cell row through the defining slit at a set stage velocity so the exposure (dose) is the slit gap over the velocity, across a 96-well plate; the same x_ray_footprinting Method with the HTFly stage as the dose-timing (TECH-1, HT-1)"}
+  # ISR (4-ID) in-situ / resonant hard X-ray Practices (deliberately partial first cut).
+  # Resonant elastic scattering reuses the 4-ID / CSX resonant_scattering Method; surface
+  # / interface (CTR) diffraction reuses the 4-ID / 8-ID diffraction Method. Both are
+  # DOUBLY deferred here: the Methods are pending AND the multi-circle diffractometer they
+  # run on is absent from the source (DIFF-1), so these are intent, not a wired capability.
+  - {name: ISR_resonant_scattering_practice, method: resonant_scattering, pending: true, note: "resonant hard X-ray scattering near an absorption edge; reuses the 4-ID / CSX resonant_scattering Method; the diffractometer and a wired energy axis are absent from source (TECH-1, DIFF-1, RESONANT-1)"}
+  - {name: ISR_surface_diffraction_practice, method: diffraction, pending: true, note: "surface / interface diffraction (crystal truncation rods); reuses the 4-ID / 8-ID diffraction Method; the multi-circle diffractometer is absent from source (TECH-1, DIFF-1)"}
 
 # Access BC Actors conceptually facility-wide at NSLS-II. Pending until the NSLS-II
 # operator and review structure is confirmed; the profile collection only exposes
