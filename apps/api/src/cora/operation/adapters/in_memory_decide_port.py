@@ -36,6 +36,7 @@ class InMemoryDecidePort:
 
     def __init__(self) -> None:
         self._advice: tuple[SteeringAdvice, ...] = ()
+        self._received: list[SteeringEvidence] = []
 
     def set_advice_sequence(self, advice: Sequence[SteeringAdvice]) -> None:
         """Seed the advice this fake will replay, in iteration order.
@@ -46,6 +47,17 @@ class InMemoryDecidePort:
         """
         self._advice = tuple(advice)
 
+    @property
+    def received_evidence(self) -> tuple[SteeringEvidence, ...]:
+        """The evidence handed to `advise_next`, in call order.
+
+        Test-observability hook (not on the Protocol): a test can assert what
+        the loop showed the brain, e.g. that each observation's `point` records
+        the coordinates the pass actually measured at. Recording it does not
+        affect advice selection, which stays stateless.
+        """
+        return tuple(self._received)
+
     async def advise_next(self, evidence: SteeringEvidence) -> SteeringAdvice:
         """Return the seeded advice for `evidence.iteration_index`, else `Stop`.
 
@@ -53,6 +65,7 @@ class InMemoryDecidePort:
         not an internal cursor, so a replayed earlier turn yields the same
         advice.
         """
+        self._received.append(evidence)
         if 0 <= evidence.iteration_index < len(self._advice):
             return self._advice[evidence.iteration_index]
         return SteeringAdvice(verdict=SteeringVerdict.STOP)
