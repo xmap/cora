@@ -248,7 +248,7 @@ _PENDING_METHODS = {
     "first_light": "19-BM-FACT commissioning method; design phase",
     "ioc_restart": "2-BM maintenance recovery; portable Method not yet authored",
     "mirror_recoat_return": "2-BM mirror recoat-and-return; Method not yet authored",
-    "scanning_fluorescence_microscopy": "2-ID scanning XRF microprobe; Method not yet earned",
+    "scanning_fluorescence_microscopy": "2-ID + XFM scanning XRF; 2 consumers (METHOD-1)",
     "diffraction": "4-ID POLAR single-crystal diffraction; not yet in pilot scope (TECH-1)",
     "magnetic_scattering": "4-ID POLAR magnetic scattering; not yet in pilot scope (TECH-1)",
     "resonant_scattering": "4-ID POLAR resonant scattering; not yet in pilot scope (TECH-1)",
