@@ -14,6 +14,7 @@ from cora.recipe.aggregates.recipe import (
     RecipeCheckStep,
     RecipeComputeStep,
     RecipeSetpointStep,
+    SteeringRef,
     UnboundRecipeBindingError,
     UnboundRecipeCaptureError,
     UnboundRecipeOutputError,
@@ -123,6 +124,63 @@ def test_to_dict_from_dict_roundtrip_preserves_setpoint_capture_ref() -> None:
     assert isinstance(head, RecipeSetpointStep)
     assert isinstance(head.value, CaptureRef)
     assert head.value.capture_name == "home"
+
+
+@pytest.mark.unit
+def test_steering_ref_is_a_value_object() -> None:
+    a = SteeringRef("motor")
+    b = SteeringRef("motor")
+    c = SteeringRef("energy")
+    assert a == b
+    assert a != c
+    assert hash(a) == hash(b)
+
+
+@pytest.mark.unit
+def test_recipe_setpoint_step_accepts_steering_ref_value() -> None:
+    step = RecipeSetpointStep(address="dev:sample:x", value=SteeringRef("motor"))
+    assert isinstance(step.value, SteeringRef)
+    assert step.value.steering_axis_name == "motor"
+
+
+@pytest.mark.unit
+def test_resolve_value_passes_steering_ref_through_unchanged() -> None:
+    """Expansion relies on this: a SteeringRef is NOT resolved at expansion time."""
+    ref = SteeringRef("motor")
+    assert resolve_value(ref, {"motor": 3.0}) is ref
+
+
+@pytest.mark.unit
+def test_to_dict_from_dict_roundtrip_preserves_setpoint_steering_ref() -> None:
+    steps = (RecipeSetpointStep(address="dev:sample:x", value=SteeringRef("motor")),)
+    rebuilt = steps_from_dict(steps_to_dict(steps))
+    assert rebuilt == steps
+    head = rebuilt[0]
+    assert isinstance(head, RecipeSetpointStep)
+    assert isinstance(head.value, SteeringRef)
+    assert head.value.steering_axis_name == "motor"
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_exempts_steering_ref_setpoint() -> None:
+    """A SteeringRef setpoint validates with NO producing step: the decide loop seeds it.
+
+    A bare CaptureRef here would raise UnboundRecipeCaptureError (no preceding
+    capture declares the name); a SteeringRef is loop-resolved, so it is exempt.
+    """
+    steps = (
+        RecipeComputeStep(command=("solver", "metric"), capture_name="offset"),
+        RecipeSetpointStep(address="dev:rot:val", value=SteeringRef("motor")),
+    )
+    validate_capture_refs(steps)  # does not raise
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_still_rejects_unbound_capture_ref() -> None:
+    """The SteeringRef exemption does not weaken the CaptureRef rule."""
+    steps = (RecipeSetpointStep(address="dev:rot:val", value=CaptureRef("never_declared")),)
+    with pytest.raises(UnboundRecipeCaptureError):
+        validate_capture_refs(steps)
 
 
 @pytest.mark.unit
