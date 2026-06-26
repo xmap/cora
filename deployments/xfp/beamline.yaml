@@ -1,0 +1,288 @@
+# XFP beamline descriptor (NSLS-II), reverse-engineered
+#
+# XFP (X-ray Footprinting of Biological Materials) is the NSLS-II 17-BM beamline,
+# a Case Western Reserve University partner beamline. It does synchrotron X-ray
+# footprinting: an intense white / pink beam irradiates a biological macromolecule
+# (protein or nucleic acid) in solution, generating hydroxyl radicals that
+# covalently modify the molecule at solvent-accessible sites. The structural
+# readout (which sites were modified) is done OFFLINE by mass spectrometry, not on
+# the beamline. It is bound to the NSLS-II Site (deployments/nsls2/site.yaml).
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the beamline's own bluesky profile collection, github.com/NSLS2/
+# xfp-profile-collection, its startup/*.py device definitions) or inferred, carried
+# new: true + confirm: true pending XFP staff. EPICS PVs are real and verified
+# against the profile collection; vendor part numbers, serials, dose calibrations,
+# and physical positions are not in it and are open questions. The syringe pumps
+# and the fraction collector are PV-bound fluidic actuators; the high-throughput
+# 96-well plate is addressed in pure Python (no robot, no PV) and the science
+# readout (mass spec) is entirely offline. This scaffold is descriptor + docs,
+# scenarios deferred.
+#
+# WHAT IS GENUINELY NEW: XFP is the fleet's first DOSE-DELIVERY beamline. It is not
+# a scattering, diffraction, or imaging beamline and has NO scattering / area /
+# imaging detector at all. The experiment variable is the delivered radiolytic DOSE
+# (exposure time x incident flux x attenuation); the run produces (a) a footprinted
+# SAMPLE, an irradiated aliquot captured into a tube, and (b) a DOSE RECORD
+# (exposure time, filter thickness, flux time-series, well / tube identity). The
+# structural analysis is the OFFLINE-readout seam: the mass spectrometry happens
+# downstream, off the instrument. So the novelty lands on the Method (radiolytic
+# footprinting), the Subject (a biomolecule in solution being irradiated), and the
+# offline-readout seam, NOT on device vocabulary.
+#
+# MODELLING: XFP coins NO new Family and changes nothing in the catalog. 17-BM is a
+# bending-magnet source (the 2-BM / 7-BM / CMS pattern), observed through the loose
+# StorageRing; the footprinting beam is WHITE / pink (there is NO monochromator in
+# the footprinting path, the only mono is a separate XAS endstation excluded here,
+# WHITE-1). The bendable front-end mirror binds Mirror; the white-beam and defining
+# slits bind Slit; the eight-position Al filter wheel binds Filter (it sets the dose
+# rate); the personnel and timed dose shutters bind Shutter; the delay generator
+# that fires the millisecond Uniblitz fast shutter binds TimingController (it sets
+# the dose opening-time); the QuadEM electrometers bind FluxMonitor (incident flux
+# to compute dose); the Sydor beam-position monitor binds the loose
+# BeamPositionMonitor (held under review, DIAG-1); the capillary-flow, high-
+# throughput, and HTFly sample stages bind LinearStage; the syringe / sample
+# delivery pumps bind the existing loose FlowController Family.
+#
+# THE REUSE WORTH NAMING: the sample-delivery pumps bind the loose FlowController
+# Family ("settable flow / pump actuator", FLOW-1), already bound by i22, 7-BM, and
+# LIX. XFP is its FOURTH consumer, reinforcing the rule-of-three that LIX fired; the
+# FlowController graduation stays a separate gated decision, not folded here
+# (FLOW-1, FLUID-1). The fraction collector (a PV-bound aliquot-routing actuator),
+# the 96-well plate addressing (pure Python, no PV), and the offline mass-spec
+# readout are the sample-custody and offline-readout seam, not devices (FC-1, HT-1,
+# READOUT-1).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/xfp/questions.md.
+
+beamline:
+  name: XFP
+  facility: nsls2              # NSLS-II Site (facility_code: nsls2)
+  sector: "17-BM"             # PV zones XF:17BM (beamline) / XF:17BMA (A-branch) / FE:C17B (front-end)
+  tier: Unit
+  parent: null
+  source: bending-magnet
+  source_confirm: "17-BM is a bending-magnet source (the name and the white-beam footprinting design imply it), but the profile collection exposes no source / dipole device, only the ring-current PV SR:OPS-BI{DCCT:1}I:Real-I. Source identity is SRC-1"
+
+# PV zones: FE:C17B (the front-end: the white-beam slits), XF:17BM-OP / XF:17BMA-OP
+# (the optics: the bendable mirror, the beamline slits), XF:17BMA-EPS / -PPS / -CT
+# (the shutters), XF:17BM-BI (the flux and beam-position monitors), XF:17BMA-ES:1 /
+# ES:2 (the footprinting endstations: filters, sample stages, pumps), XF:17BMA-ES:3
+# (a separate monochromatic XAS endstation, OUT OF SCOPE here, WHITE-1). Whether the
+# optics and endstation are separate hutches and the PSS permit leaves are open
+# (ENC-1, PSS-1).
+enclosures:
+  - name: xfp-optics
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf not fully in the profile collection; only the front-end photon-shutter enable status (XF:17BM-PPS{Sh:FE} enabled_status) is read; the optics zone (FE:C17B, XF:17BM-OP / XF:17BMA-OP), the hutch grouping is ENC-1 (PSS-1)"}
+  - name: xfp-endstation
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the footprinting endstations (XF:17BMA-ES:1, ES:2); the monochromatic XAS endstation ES:3 is out of scope (ENC-1, PSS-1, WHITE-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state, the white-beam optics, and the dose-delivery
+# gating (shutters + the dose timer)
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: xfp-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "Observe-only NSLS-II machine state, the loose StorageRing pattern reused from the NSLS-II siblings. 17-BM is a bending-magnet source, not an insertion device, so no InsertionDevice Asset (SRC-1, MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: "SR:OPS-BI{DCCT:1}I:Real-I"
+      new: true
+      confirm: true
+      note: "NSLS-II storage-ring current, read as a beam-present suspender input; observe-only; the rest of the ring state is MACHINE-1; the 17-BM bending-magnet source detail is SRC-1"
+
+optics:
+  stage: source
+  enclosure: xfp-optics
+  intro: "The white / pink beam optics: the bendable front-end mirror, the white-beam and beam-defining slits, and the dose-rate filter wheel. There is no monochromator in the footprinting path."
+  note: >
+    The footprinting beam is white / pink: the bendable mirror sets the cutoff and
+    binds Mirror; the slits bind Slit; the eight-position Al filter wheel binds Filter
+    (it sets the dose rate, with the pinhole apertures as a further attenuator, ATTN-1).
+    The only monochromator in the source is a separate XAS endstation (ES:3), out of
+    scope for footprinting (WHITE-1). Everything here reuses the catalog and coins nothing.
+  devices:
+    - name: FrontEndMirror
+      family: Mirror
+      pv: "XF:17BM-OP{Mir:1-Ax:P}Mtr"
+      new: true
+      confirm: true
+      note: "the bendable front-end mirror (horizontal / lift / pitch / yaw / roll plus a Bend focus axis and thermocouples) that takes the heat load and sets the high-energy cutoff of the white beam; coating and bend are OPT-1"
+    - name: WhiteBeamSlit
+      family: Slit
+      pv: "FE:C17B-OP{Slt:1-Ax:T}Mtr"
+      new: true
+      confirm: true
+      note: "the front-end white-beam slit (T / B / I / O blades with virtual size / center); defines the white-beam footprint (OPT-2)"
+    - name: DefiningSlit
+      family: Slit
+      pv: "XF:17BMA-OP{Slt:ADC-Ax:XGap}Mtr"
+      new: true
+      confirm: true
+      note: "the ADC beam-defining slit; its horizontal gap (adcslits.xgap) sets the exposure window for the shutterless high-throughput fly mode (the PB / PDS white-beam slit shares the same anatomy); OPT-2, HT-1"
+    - name: FilterWheel
+      family: Filter
+      pv: "XF:17BMA-ES:1{Fltr:1-Ax:Rot}Mtr"
+      new: true
+      confirm: true
+      note: "the eight-position rotary aluminium filter wheel (0 / 25 / 76 / 152 / 203 / 305 / 508 / 762 um Al) that attenuates the white beam to set the dose RATE; a beam-defining pinhole stage and a 0-9 mm Al z-attenuator are further, intermittently-connected attenuators (ATTN-1)"
+
+dose:
+  stage: source
+  enclosure: xfp-optics
+  intro: "The dose-delivery gating: the personnel and timed exposure shutters, and the delay generator that fires the millisecond fast shutter. Exposure time times flux times attenuation is the delivered dose."
+  note: >
+    Footprinting dose is delivered by gating the white beam onto the sample. The
+    personnel-protection and timed exposure shutters bind Shutter; the delay generator
+    that fires the millisecond Uniblitz fast shutter binds TimingController (its opening-time
+    setpoint is the dose time). Seconds-scale exposures are software-timed on the
+    pre-shutter; millisecond exposures use the delay-generator-fired Uniblitz, or in
+    the high-throughput fly mode the stage velocity through the defining slit sets the
+    exposure (DOSE-1, HT-1).
+  devices:
+    - name: PhotonShutter
+      family: Shutter
+      pv: "XF:17BM-PPS{Sh:FE}"
+      new: true
+      confirm: true
+      note: "the personnel-protection front-end photon shutter; its enabled-status leaf is interlock-gated (plans refuse to open it when disabled); the rest of the PSS search-and-secure leaves are PSS-1"
+    - name: DoseShutter
+      family: Shutter
+      pv: "XF:17BMA-EPS{Sh:1}"
+      new: true
+      confirm: true
+      note: "the equipment-protection pre-shutter, the workhorse timed-exposure shutter for seconds-scale dose (open, software-timed sleep, close); a separate inner DIODE sample shutter (XF:17BMA-CT{DIODE-Local:1}...) protects the sample (DOSE-1)"
+    - name: DoseTimer
+      family: TimingController
+      pv: "XF:17BMA-ES:2{DG:1}"
+      new: true
+      confirm: true
+      note: "the DG535 delay generator that fires the millisecond Uniblitz fast shutter: a settable opening-time (bDelaySetAO, the source's exp_time, the dose time), a trigger mode, and a single-shot fire (genSingleShotTrigBO); the Uniblitz itself has no EPICS PV and is driven downstream of this timer (DOSE-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the capillary-flow, high-throughput, and HTFly sample stages,
+# and the sample-delivery pump (the fraction collector + 96-well plate are the
+# sample-custody seam, see controls)
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: xfp-endstation
+  intro: "The capillary-flow, high-throughput plate, and shutterless HTFly sample stages, and the syringe sample-delivery pump that flows solution through the beam."
+  note: >
+    XFP runs several sample-delivery modes. The capillary-flow stage flows a solution
+    sample through the beam; the high-throughput stage positions a 96-well plate; the
+    HTFly stage sweeps a fly-cell through the beam at a set velocity so the exposure
+    (dose) is the slit width over the stage velocity (HT-1). All bind LinearStage. The
+    syringe / sample-delivery pumps bind the existing loose FlowController Family (the
+    i22 / 7-BM / LIX precedent); XFP is its fourth consumer (FLOW-1, FLUID-1). The
+    fraction collector that captures footprinted aliquots into tubes, the pure-Python
+    96-well plate addressing (no robot, no PV), and the solution Subject are the
+    sample-custody and offline-readout seam, not devices here (FC-1, HT-1, SUBJECT-1).
+  devices:
+    - name: CapillaryFlowStage
+      family: LinearStage
+      pv: "XF:17BMA-ES:1{Stg:5-Ax:X}Mtr"
+      new: true
+      confirm: true
+      note: "the capillary-flow sample stage (x / y, 100 mm travel) that places a flowing solution capillary in the beam; an ES:1 three-axis table positions auxiliary sample hardware (SAMPLE-1)"
+    - name: HighThroughputStage
+      family: LinearStage
+      pv: "XF:17BMA-ES:2{Stg:7-Ax:X}Mtr"
+      new: true
+      confirm: true
+      note: "the high-throughput sample stage (x / y, 200 mm travel) that positions a 96-well plate; the well / slot addressing is pure Python plus a coordinate table, no robot and no PV, modelled as a Procedure over the spine plus a Subject custody thread (HT-1)"
+    - name: HtFlyStage
+      family: LinearStage
+      pv: "XF:17BMA-ES:2{HTFly:1-Ax:X}Mtr"
+      new: true
+      confirm: true
+      note: "the shutterless high-throughput fly stage that sweeps a fly-cell row through the beam; the exposure (dose) is the defining-slit gap over the stage velocity, not a shutter, so the dose-timing is in the Procedure not a device (HT-1, DOSE-1)"
+    - name: DeliveryPump
+      family: FlowController            # EXISTING loose Family (settable flow / pump actuator; n=4 with i22 + 7-bm + lix; FLOW-1)
+      pv: "XF:17BMA-ES:1{Pmp:02}"
+      new: true
+      confirm: true
+      note: "the sample-delivery syringe pump (an M50 pump with velocity / volume / slew setpoints, driving the dose-response / fraction-collection mode; a second PHD2000 infusion pump at XF:17BM-ES:1{Pmp:01} drives the capillary-flow / time-resolved mode) flowing solution through the capillary or flow cell during irradiation; both bind the existing loose FlowController Family and are folded into this one Asset at this cut, XFP its fourth consumer, reinforcing the LIX-fired rule-of-three (FLOW-1, FLUID-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the flux / dose monitors. There is NO scattering / area /
+# imaging detector: the footprinting readout is offline mass spectrometry.
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: xfp-endstation
+  intro: "The incident-flux and beam-position monitors that measure the delivered dose. There is no scattering, area, or imaging detector: the footprinting structural readout is done offline by mass spectrometry."
+  note: >
+    XFP has no Detector-role imaging device. The flux it delivers is the measurement
+    that matters: the QuadEM electrometers bind FluxMonitor (incident flux plus a
+    time-series trace to compute the delivered dose, with a diode array-logger as a
+    further dose accumulator); the Sydor four-channel monitor binds the loose
+    BeamPositionMonitor (beam position plus a sum-current flux readback, held under
+    review, DIAG-1). The footprinting structural readout (which residues were modified)
+    is OFFLINE mass spectrometry, downstream of the beamline and absent from the
+    profile collection; what the beamline produces is a footprinted sample plus a dose
+    record (READOUT-1, DET-1).
+  devices:
+    - name: FluxMonitor
+      family: FluxMonitor
+      pv: "XF:17BM-BI{EM:1}EM180:"
+      new: true
+      confirm: true
+      note: "the primary QuadEM electrometer reading incident flux and a per-exposure time-series, the basis for the delivered dose; a DIODE PDM array-logger (XF:17BMA-CT{DIODE-PDM:1}) accumulates the dose array and a second electrometer (XF:17BM-BI{EM:2}) adds channels; the flux-to-absorbed-dose calibration lives in offline analysis (DET-1, DOSE-1, READOUT-1)"
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor      # loose Family, held under review (DIAG-1)
+      pv: "XF:17BM-BI{EM:BPM1}"
+      new: true
+      confirm: true
+      note: "the Sydor four-channel beam-position monitor (per-quadrant currents, beam x / y, and a sum-current total-flux readback); binds the loose BeamPositionMonitor (held under review, DIAG-1); the position-vs-intensity split is DIAG-1"
+
+# Cross-cutting control. XFP runs EPICS plus PV-bound fluidic actuators; CORA
+# observes the floor and, where it replaces bluesky-style orchestration, conducts
+# over it. The handles above were read from the profile collection and carried
+# confirm (CTRL-1).
+controls:
+  intro: >
+    XFP runs on the NSLS-II EPICS / ophyd control stack, the same floor as the rest of
+    the NSLS-II fleet. The device handles above are bound from the beamline's bluesky
+    profile collection (github.com/NSLS2/xfp-profile-collection, its startup files),
+    carried confirm (CTRL-1). The dose-delivery acquisition (open a timed shutter or
+    fire the delay-generator Uniblitz, or sweep the HTFly stage, while a pump flows the
+    sample and the QuadEM records the flux trace) runs through bluesky plans publishing
+    to Kafka with metadata in Redis (no Tiled, no queue-server in the profile
+    collection); that orchestration is the seam CORA's edge replaces, driving through
+    ophyd / EPICS. Crucially, the science readout is OFF the beamline: a footprinting
+    run produces a footprinted sample plus a dose record, and the mass-spectrometry
+    analysis is downstream (READOUT-1).
+  software_iocs_not_modeled:
+    # The sample-custody and offline-readout seam: the fraction collector, the 96-well
+    # plate addressing, and the offline mass spec. Only the delivery pump is a device
+    # (it binds FlowController). The rest is the Subject / Supply / Procedure shape.
+    - "XF:17BM-ES:1{FC:1}: the fraction collector (a PV-bound aliquot-routing actuator: a collect / waste valve, a tube index, a fill pattern, home) that captures footprinted aliquots into tubes; no existing Family fits an aliquot-router cleanly, so it is carried in the sample-custody seam (the footprinted-sample hand-off to offline MS) and not coined at n=1 (FC-1, READOUT-1)"
+    - "the 96-well high-throughput plate: addressed alpha-numerically (8 columns x 12 rows) by pure Python (locate_slot.py) plus a coordinate table, with no robot, no sample-changer, and no PV; moving to a well is a move on the HighThroughputStage; modelled as a Procedure over the spine plus a Subject custody thread (HT-1, the i03 / MX3 / LIX custody-as-Procedure precedent, here at the no-robot end of that spectrum)"
+    - "the offline mass-spectrometry readout: the footprinting structural analysis (which residues were modified) is done downstream, off the beamline, and is entirely absent from the profile collection; the beamline's run produces a footprinted sample plus a dose record (exposure time, filter thickness, flux time-series, well / tube identity), the offline-readout seam (READOUT-1)"
+    - "the SR630 thermocouple monitor (XF:17BMA-ES:2{TCM:1}) and the Sydor bias / thermocouple controller (XF:17BM-ES{PBG:1}): read-only temperature / bias diagnostics, used as alignment-flux proxies; not core footprinting devices, deferred (TEMP-1)"
+    - "the data plane is Kafka (document publishing) plus Redis (metadata), with no Tiled and no queue-server in the profile collection; CORA keeps its own data-of-record, the dose record being the system-of-record for a footprinting run (CTRL-1, READOUT-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an XFP run needs, plus the
+    footprinting consumables. The optics run under vacuum (SUP-1). A footprinting run
+    draws on buffers, radical scavengers, and the flow medium as Supply consumables,
+    distinct from the facility-wide supplies (SUP-1, SUBJECT-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the white-beam optics run under vacuum (SUP-1)"
