@@ -3,7 +3,7 @@
 
 Static rendering of the interactive scrubber over one agent-supervised
 run: a run-lifecycle / who-drove-it lane (operator vs supervisor),
-per-iteration convergence brackets colored by verdict (the rotation-axis
+per-iteration convergence bands colored by verdict (the rotation-axis
 centering search), activity swim-lanes, a shaded held band, and a fold-to-
 version cursor parked at the beam-loss instant, where the first projection is an
 open interval (in flight, no outcome yet).
@@ -20,15 +20,16 @@ import json
 import _style as s
 from matplotlib.lines import Line2D
 from matplotlib.offsetbox import AnchoredOffsetbox, TextArea, VPacker
+from matplotlib.patches import Patch, Rectangle
 
 DATA = json.loads((s.HERE.parent / "data" / "lights_out_run.json").read_text())
 
 LANE_Y = {"setpoint": 2, "action": 1, "check": 0}
 LANE_LABEL = {2: "Setpoint", 1: "Acquire", 0: "Check"}
-LANE_COLOR = {"setpoint": s.OPERATOR, "action": s.SUBINK, "check": s.STATE}
+LANE_COLOR = {"setpoint": s.INK, "action": s.SUBINK, "check": s.STATE}
 LANE_MARKER = {"setpoint": "s", "action": "^", "check": "o"}
-Y_BRACKET = 3.0
-Y_RUN = 3.9
+Y_BAND = (-0.6, 2.55)  # iteration band spans the three swim-lanes
+Y_RUN = 3.5
 
 
 def _parse(x: str) -> dt.datetime:
@@ -78,17 +79,21 @@ def main() -> None:
                     xytext=(dx, dy), ha=ha, fontsize=s.SIZE["small"], color=col,
                     linespacing=1.0)
 
-    # Convergence brackets, colored by verdict.
+    # Each iteration is one setpoint-acquire-check cycle: shade its span across
+    # the lanes, tinted by verdict, capped with a thin verdict-colored rule.
+    band_lo, band_hi = Y_BAND
     for it in iters:
         a, b = secs(it["started_at"]), secs(it["ended_at"])
-        col = s.GOOD if it["converged"] else s.WARN
-        ax.plot([a, b], [Y_BRACKET, Y_BRACKET], color=col, lw=4.5,
-                solid_capstyle="butt", alpha=0.9)
-        for x in (a, b):
-            ax.plot([x, x], [Y_BRACKET - 0.1, Y_BRACKET + 0.1], color=col, lw=1.5)
-        ax.text((a + b) / 2, Y_BRACKET + 0.17, f"i{it['iteration_index']}",
+        converged = it["converged"]
+        col = s.GOOD if converged else s.WARN
+        ax.add_patch(Rectangle((a, band_lo), b - a, band_hi - band_lo,
+                               facecolor=s.GOOD_BG if converged else s.WARN_BG,
+                               edgecolor="none", zorder=-1))
+        ax.plot([a, b], [band_hi, band_hi], color=col, lw=2.0,
+                solid_capstyle="butt", zorder=1)
+        ax.text((a + b) / 2, band_hi + 0.12, f"i{it['iteration_index']}",
                 ha="center", va="bottom", fontsize=s.SIZE["small"], color=col)
-    ax.text(secs(iters[-1]["ended_at"]) + 2.5, Y_BRACKET, "centering converged",
+    ax.text(secs(iters[-1]["ended_at"]) + 3, band_hi, "centering converged",
             fontsize=s.SIZE["small"], va="center", ha="left", color=s.GOOD)
 
     # Activity swim-lanes (alignment), plus the first science projection.
@@ -163,8 +168,8 @@ def main() -> None:
                markersize=6.5, label="operator"),
         Line2D([0], [0], marker="D", color="w", markerfacecolor=s.AGENT,
                markersize=6.5, label="supervisor"),
-        Line2D([0], [0], color=s.WARN, lw=4, label="bracket: open"),
-        Line2D([0], [0], color=s.GOOD, lw=4, label="bracket: converged"),
+        Patch(facecolor=s.WARN_BG, edgecolor=s.WARN, label="iteration: open"),
+        Patch(facecolor=s.GOOD_BG, edgecolor=s.GOOD, label="iteration: converged"),
         Line2D([0], [0], color=s.ALARM, lw=4.5, ls=(0, (0.9, 0.8)),
                dash_capstyle="butt", label="in-flight (open)"),
     ]
