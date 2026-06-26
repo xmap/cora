@@ -602,6 +602,19 @@ nav:
         - Techniques: deployments/hex/techniques.md
         - Governance: deployments/hex/governance.md
         - Model: deployments/hex/model.md
+      - CDI:
+        - deployments/cdi/index.md
+        - Open questions: deployments/cdi/questions.md
+        - The beamline:
+          - deployments/cdi/equipment/index.md
+          - Source: deployments/cdi/beamline.md
+          - Sample: deployments/cdi/equipment/sample.md
+          - Detector: deployments/cdi/equipment/detector.md
+          - Controls: deployments/cdi/equipment/controls.md
+          - Inventory: deployments/cdi/inventory.md
+        - Techniques: deployments/cdi/techniques.md
+        - Governance: deployments/cdi/governance.md
+        - Model: deployments/cdi/model.md
     - SLAC:
       - deployments/slac/index.md
       - LCLS-MFX:

@@ -65,6 +65,7 @@ The fourth Site CORA models. Like the Diamond exercise, its beamlines are revers
 | [XFM](xfm/index.md) | Reverse-engineered | scanning X-ray fluorescence microprobe (raster XRF mapping on the Xspress3 + Maia detectors, bending magnet), 4-BM; CORA's 2nd scanning-XRF after 2-ID; modelled from public beamline config |
 | [LIX](lix/index.md) | Reverse-engineered | life-science solution scattering (bio-SAXS/WAXS, in-line SEC-SAXS) and scanning-microbeam mapping, 16-ID; the fleet's first solution beamline and fluidic sample-delivery chain; modelled from public beamline config |
 | [HEX](hex/index.md) | Reverse-engineered | high-energy engineering X-ray scattering (imaging/tomography + energy-dispersive and powder diffraction on a superconducting wiggler, white 30-250 keV / mono 30-200 keV), 27-ID; the fleet's first true high-energy hard X-ray beamline; modelled from public beamline config |
+| [CDI](cdi/index.md) | Reverse-engineered | coherent diffractive imaging (forward CDI, ptychography, Bragg CDI) with a KB nanofocus and Eiger2 / Merlin photon-counting detectors, 9-ID; the fleet's first dedicated coherent-imaging beamline (distinct from APS 9-ID); modelled from public beamline config |
 
 ## [SLAC](slac/index.md)
 

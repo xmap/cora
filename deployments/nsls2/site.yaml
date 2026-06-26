@@ -25,7 +25,7 @@ facility:
   heading: "NSLS-II"
   kind: Site
   institution: Brookhaven National Laboratory
-  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, IOS, XPD, ESM, SMI, IXS, SST, ISS, FMX, CMS, XFM, LIX, HEX]
+  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, IOS, XPD, ESM, SMI, IXS, SST, ISS, FMX, CMS, XFM, LIX, HEX, CDI]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the FXI profile collection, not yet
@@ -134,6 +134,14 @@ practices:
   - {name: HEX_radiography_practice, method: radiography, pending: true, note: "time-resolved high-speed radiography on the Phantom Veo; reuses the radiography Method APS 7-BM left pending, the second consumer (TECH-1)"}
   - {name: HEX_energy_dispersive_diffraction_practice, method: energy_dispersive_diffraction, pending: true, note: "spatially-resolved energy-dispersive X-ray diffraction (EDXD) on the GeRM germanium strip detector; reuses the energy_dispersive_diffraction Method APS 7-BM left pending, the second consumer (TECH-1)"}
   - {name: HEX_powder_diffraction_practice, method: powder_diffraction, pending: true, note: "monochromatic angle-dispersive / powder diffraction (ADXD) on the PerkinElmer flat panel; reuses the powder_diffraction Method Diamond i11 left pending, the second consumer (TECH-1)"}
+  # CDI (9-ID) does coherent diffractive imaging: forward (plane-wave) CDI, ptychography,
+  # and Bragg CDI, a coherent beam focused by a KB pair onto the sample with the far-field
+  # pattern recorded on the Eiger2 / Merlin and the real-space image recovered offline by
+  # phase retrieval (a ComputePort leg, not a Method). These coherent-imaging Methods are
+  # not in the catalog; following 8-ID / CHX (coherent) and HXN (ptychography), no CDI
+  # Practice is recorded until a Method lands (TECH-1). CDI is bound via beamlines.
+  # NAME GUARD: this is NSLS-II 9-ID, not APS 9-ID (CSSI); the coherent_surface_scattering /
+  # grazing_incidence_scattering pending Methods belong to APS 9-ID and are untouched here.
 
 # Access BC Actors conceptually facility-wide at NSLS-II. Pending until the NSLS-II
 # operator and review structure is confirmed; the profile collection only exposes
