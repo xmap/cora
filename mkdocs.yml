@@ -359,6 +359,19 @@ nav:
         - Techniques: deployments/i19/techniques.md
         - Governance: deployments/i19/governance.md
         - Model: deployments/i19/model.md
+      - I13-1:
+        - deployments/i13-1/index.md
+        - Open questions: deployments/i13-1/questions.md
+        - The beamline:
+          - deployments/i13-1/equipment/index.md
+          - Source: deployments/i13-1/beamline.md
+          - Sample: deployments/i13-1/equipment/sample.md
+          - Detector: deployments/i13-1/equipment/detector.md
+          - Controls: deployments/i13-1/equipment/controls.md
+          - Inventory: deployments/i13-1/inventory.md
+        - Techniques: deployments/i13-1/techniques.md
+        - Governance: deployments/i13-1/governance.md
+        - Model: deployments/i13-1/model.md
     - NSLS-II:
       - deployments/nsls2/index.md
       - FXI:
@@ -641,6 +654,32 @@ nav:
         - Techniques: deployments/xfp/techniques.md
         - Governance: deployments/xfp/governance.md
         - Model: deployments/xfp/model.md
+      - ISR:
+        - deployments/isr/index.md
+        - Open questions: deployments/isr/questions.md
+        - The beamline:
+          - deployments/isr/equipment/index.md
+          - Source: deployments/isr/beamline.md
+          - Sample: deployments/isr/equipment/sample.md
+          - Detector: deployments/isr/equipment/detector.md
+          - Controls: deployments/isr/equipment/controls.md
+          - Inventory: deployments/isr/inventory.md
+        - Techniques: deployments/isr/techniques.md
+        - Governance: deployments/isr/governance.md
+        - Model: deployments/isr/model.md
+      - CDI:
+        - deployments/cdi/index.md
+        - Open questions: deployments/cdi/questions.md
+        - The beamline:
+          - deployments/cdi/equipment/index.md
+          - Source: deployments/cdi/beamline.md
+          - Sample: deployments/cdi/equipment/sample.md
+          - Detector: deployments/cdi/equipment/detector.md
+          - Controls: deployments/cdi/equipment/controls.md
+          - Inventory: deployments/cdi/inventory.md
+        - Techniques: deployments/cdi/techniques.md
+        - Governance: deployments/cdi/governance.md
+        - Model: deployments/cdi/model.md
       - PDF:
         - deployments/pdf/index.md
         - Open questions: deployments/pdf/questions.md

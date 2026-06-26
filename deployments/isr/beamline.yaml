@@ -1,0 +1,228 @@
+# ISR beamline descriptor (NSLS-II), reverse-engineered, deliberately partial
+#
+# ISR (In Situ and Resonant hard X-ray studies) is the NSLS-II 4-ID beamline for
+# resonant elastic / inelastic scattering near absorption edges, surface and
+# interface diffraction (crystal truncation rods), and in-situ sample environments.
+# It is bound to the NSLS-II Site (deployments/nsls2/site.yaml).
+#
+# STATUS: reverse-engineered, design-phase, and DELIBERATELY PARTIAL. Every value
+# is read from public open source (the beamline's own bluesky profile collection,
+# github.com/NSLS2/isr-profile-collection, its startup/*.py device definitions) or
+# inferred, carried new: true + confirm: true pending ISR staff. EPICS PVs are real
+# and verified against the profile collection; vendor part numbers, crystal cuts,
+# and physical positions are not in it and are open questions.
+#
+# WHY PARTIAL: the public profile collection is an early / commissioning,
+# optics-and-detectors-first scaffold. It binds the front-end and optics chain (the
+# undulator gap, the DCM, the focusing and harmonic-rejection mirrors, the front-end
+# slit, the filter bank), the Eiger 1M area detector, and the diagnostic screen
+# cameras, but the devices that make ISR's name (the multi-circle DIFFRACTOMETER for
+# resonant / surface scattering, the IN-SITU sample environment, a wired RESONANT
+# energy axis, and POLARIZATION analysis) are ABSENT or stubbed in the source. Only
+# two end-station axes (th, zeta, under the Dif:ISD diffractometer IOC) are bound,
+# the flux-monitor electrometers are commented out, and the energy axis is a
+# non-functional stub. CORA models what is PV-bound and routes the four
+# mission-critical gaps to open questions rather than inventing them, the same
+# discipline as the i20-1 (EDE) partial.
+#
+# WHAT IS (AND IS NOT) NEW: ISR coins NO new Family and changes nothing in the
+# catalog. Its science (hard X-ray resonant scattering, surface / CTR diffraction)
+# would reuse the existing pending resonant_scattering Method (APS 4-ID, CSX) and
+# diffraction Method (4-ID / 8-ID); both are deferred and doubly so here because the
+# diffractometer they run on is not yet in source (DIFF-1, TECH-1).
+#
+# MODELLING: 4-ID is an in-vacuum-undulator source (read-only gap here), observed
+# alongside the loose StorageRing; the DCM binds Monochromator; the bendable
+# focusing pair and the harmonic-rejection mirror bind Mirror; the front-end slit
+# binds Slit; the filter bank binds Filter; the single bound sample rotation binds
+# RotaryStage (NOT a full Goniometer, which is absent); the Eiger 1M and the
+# diagnostic screen cameras bind Camera; the motorized beam-position-monitor stage
+# binds the loose BeamPositionMonitor (held under review, DIAG-1).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/isr/questions.md.
+
+beamline:
+  name: ISR
+  facility: nsls2              # NSLS-II Site (facility_code: nsls2)
+  sector: "4-ID"              # PV zones XF:04IDA / B / C / D (A-D), FE:C04A front-end, SR:C04 ring
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "4-ID is an in-vacuum-undulator (IVU) beamline; the profile collection binds only a read-only gap encoder (SR:C04-ID:G1{IVU:1-LEnc}Gap), no gap-drive setpoint and no energy range. Source identity and parameters are SRC-1"
+
+# PV zones: FE:C04A (front-end slit), XF:04IDA-OP (zone A optics: DCM, focusing
+# mirrors), XF:04IDB-OP (zone B optics: harmonic-rejection mirror), XF:04IDA/B/C-BI
+# (diagnostics: screen cameras, BPM, electrometers), XF:04IDD-ES (zone D endstation:
+# the Dif:ISD sample axes, the filter bank, the Eiger). Whether the zones are
+# separate hutches and the PSS permit leaves are open (ENC-1, PSS-1). Modelled here
+# as two enclosures (optics + endstation) pending ENC-1.
+enclosures:
+  - name: isr-optics
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf not in the profile collection (no PSS / photon-shutter / hutch-interlock device is bound); the optics zones (FE:C04A, XF:04IDA-OP, XF:04IDB-OP), the hutch grouping is ENC-1 (PSS-1)"}
+  - name: isr-endstation
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the zone-D endstation (XF:04IDD-ES), ENC-1 (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state and the optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: isr-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "Observe-only NSLS-II machine state, the loose StorageRing pattern reused from the NSLS-II siblings, plus the in-vacuum undulator gap (read-only in source). SRC-1, MACHINE-1."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: "SR:OPS-BI{DCCT:1}I:Real-I"
+      new: true
+      confirm: true
+      note: "NSLS-II storage-ring current, read as a beam-present input; observe-only; the rest of the ring state is MACHINE-1"
+    - name: Undulator
+      family: InsertionDevice
+      pv: "SR:C04-ID:G1{IVU:1-LEnc}Gap"
+      new: true
+      confirm: true
+      note: "the in-vacuum undulator: only a read-only gap encoder is bound in the profile collection (no gap-drive setpoint, no energy range); the device model and parameters are SRC-1"
+
+optics:
+  stage: source
+  enclosure: isr-optics
+  intro: "The double-crystal monochromator, the bendable focusing mirrors, the harmonic-rejection mirror, the front-end slit, and the filter bank."
+  note: >
+    The DCM binds Monochromator (its Bragg axis is the physical energy selector; a
+    wired resonant energy pseudo-axis is absent in source, RESONANT-1). The focusing
+    pair and the harmonic-rejection mirror bind Mirror, the front-end slit binds Slit,
+    the filter bank binds Filter. Everything here reuses the catalog and coins nothing.
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:04IDA-OP:1{Mono:DCM-Ax:th}Mtr"
+      new: true
+      confirm: true
+      note: "the double-crystal monochromator (DCM): Bragg theta sets the energy, with crystal-bend, Z / Y2 and second-crystal pitch / roll (coarse + fine) alignment axes; the crystal cut and energy range are MONO-1; a wired energy / resonant pseudo-axis is absent in source (RESONANT-1)"
+    - name: FocusingMirror
+      family: Mirror
+      pv: "XF:04IDA-OP:1{Mir:HFM-Ax:P}Mtr"
+      new: true
+      confirm: true
+      note: "the bendable focusing mirror pair, a horizontal (HFM) and a vertical (VFM) focusing mirror each on x / pitch / y / yaw / roll plus a bender; one Asset for the pair at this cut; coatings are OPT-1"
+    - name: HarmonicRejectionMirror
+      family: Mirror
+      pv: "XF:04IDB-OP:1{Mir:DHRM-Ax:P}Mtr"
+      new: true
+      confirm: true
+      note: "the harmonic-rejection mirror (DHRM) in zone B, with fine roll / pitch axes; coating and cutoff are OPT-1"
+    - name: FrontEndSlit
+      family: Slit
+      pv: "FE:C04A-OP{Slt:12-Ax:X}center"
+      new: true
+      confirm: true
+      note: "the front-end defining slit, a virtual center / gap pseudo-positioner (no plain blade Mtr leaf; x / y center and gap over the underlying blades); blade-axis map is OPT-2; the secondary-source (SSA) slit is defined but commented out in source (OPT-2)"
+    - name: AttenuatorBank
+      family: Filter
+      pv: "XF:04IDD-ES{Fil:1}Cmd:Opn-Cmd"
+      new: true
+      confirm: true
+      note: "the four-foil pneumatic attenuator bank (Fil:1-4, each a two-button shutter with Cmd:Opn-Cmd / Cmd:Cls-Cmd), bit-encoded to a transmission level; sets the incident flux on the sample (ATTN-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the bound end-station axes (the full diffractometer is absent)
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: isr-endstation
+  intro: "The bound end-station sample axes. The full multi-circle diffractometer that ISR's resonant / surface science needs is absent from the source."
+  note: >
+    This is where ISR's partial source shows most. The profile collection binds only
+    two axes under the Dif:ISD diffractometer IOC, a sample rotation (th) and a second
+    axis (zeta), modelled here as a single RotaryStage Asset. The full multi-circle
+    diffractometer (the sample-orientation circles, the detector two-theta arm, and the
+    reciprocal-space / hkl engine) that resonant and surface-diffraction work require is
+    NOT in the source, so it is a named open question, not modelled (DIFF-1). The
+    in-situ sample environment (electrochemistry, gas, temperature, cryostat) that gives
+    the beamline its name is likewise absent and not PV-bound (INSITU-1).
+  devices:
+    - name: SampleStage
+      family: RotaryStage
+      pv: "XF:04IDD-ES:1{Dif:ISD-Ax:th}Mtr"
+      new: true
+      confirm: true
+      note: "the only two bound axes of the Dif:ISD diffractometer, a sample rotation (th, the operative scan axis) and a second axis (zeta, rotary-vs-linear unknown); modelled as one RotaryStage at this cut; the full multi-circle diffractometer + detector arm + reciprocal-space engine is absent from source and is DIFF-1"
+
+# ===========================================================================
+# DETECTION STAGE: the Eiger area detector, the diagnostic screen cameras, and
+# the motorized beam-position monitor
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: isr-endstation
+  intro: "The Eiger 1M area detector (the primary scattering detector), the diagnostic screen cameras, and the motorized beam-position monitor."
+  note: >
+    The Eiger 1M binds Camera (the only detector scanned in the profile collection's
+    plans); the diagnostic YAG-screen cameras bind Camera; the motorized
+    beam-position-monitor stage binds the loose BeamPositionMonitor (held under review,
+    DIAG-1). The QuadEM flux-monitor electrometers are defined but commented out in
+    source, so no FluxMonitor Asset is modelled (DET-1); there is no point / scaler
+    detector for diffraction counting (intensity is read from the Eiger).
+  devices:
+    - name: AreaDetector
+      family: Camera
+      pv: "XF:04IDD-ES{Det:Eig1M}"
+      new: true
+      confirm: true
+      note: "the Dectris Eiger 1M area detector, the primary scattering detector (the only detector in the profile collection's scan plans); it carries the scattering-geometry metadata (detector distance, beam center, photon energy) as detector config, not as a motorized arm; the model size and the write path (a commissioning testing/ path) are DET-1"
+    - name: DiagnosticCamera
+      family: Camera
+      pv: "XF:04IDC-BI:1{Scr:3}"
+      new: true
+      confirm: true
+      note: "the diagnostic YAG fluorescent-screen beam-viewing cameras (three Prosilica in zones A and C); beam alignment / diagnostics, not a science detector (DIAG-1)"
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor      # loose Family, held under review (DIAG-1)
+      pv: "XF:04IDB-BI:1{BPM:3-Ax:X}Mtr"
+      new: true
+      confirm: true
+      note: "the motorized beam-position-monitor stage (x / y) in zone B; only the stage motors are bound, the QuadEM electrometers that would read the flux / position are commented out in source (DIAG-1)"
+
+# Cross-cutting control. ISR runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were
+# read from the profile collection and carried confirm (CTRL-1).
+controls:
+  intro: >
+    ISR runs on the NSLS-II EPICS / ophyd control stack, the same floor as the rest of
+    the NSLS-II fleet. The device handles above are bound from the beamline's bluesky
+    profile collection (github.com/NSLS2/isr-profile-collection), carried confirm
+    (CTRL-1). The acquisition is software / EPICS-triggered step scans (no Zebra, no
+    Struck scaler, no hardware fly-trigger in source); the bluesky plans (a th rocking
+    scan, attenuated scans over zeta) are the seam CORA's edge replaces, driving through
+    ophyd / EPICS. The data plane uses bluesky-queueserver and Tiled (the databroker
+    catalog is a placeholder name in source, a commissioning signal); CORA keeps its own
+    data-of-record (CTRL-1). The profile collection is early-stage: several devices are
+    commented out (the secondary-source slit, the flux-monitor electrometers) and the
+    energy axis is a non-functional stub (RESONANT-1, DET-1).
+  software_iocs_not_modeled:
+    # The mission devices ISR's name implies are absent or stubbed in the source and
+    # are carried as open questions, not invented here.
+    - "the multi-circle DIFFRACTOMETER: the Dif:ISD IOC binds only th + zeta; the sample-orientation circles, the detector two-theta arm, and the reciprocal-space / hkl engine that resonant and surface-diffraction (CTR) work need are absent from source (DIFF-1)"
+    - "the IN-SITU sample environment: no temperature controller, electrochemistry / potentiostat, gas / flow, or cryostat is PV-bound anywhere, despite In Situ being the beamline's name (INSITU-1)"
+    - "the RESONANT energy axis and POLARIZATION analysis: the DCM Bragg is the physical energy axis but a wired energy pseudo-axis is only a non-functional stub, and no polarization analyzer or phase retarder is bound (RESONANT-1)"
+    - "the flux-monitor electrometers (QuadEM EM:1 / EM:2 / EM:3) and the secondary-source slit (SSA): defined in source but commented out, so no FluxMonitor / secondary-slit Asset is modelled (DET-1, OPT-2)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an ISR run needs. The optics run
+    under vacuum (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics run under vacuum (SUP-1)"

@@ -27,7 +27,7 @@ facility:
   heading: "Diamond Light Source"
   kind: Site
   institution: Diamond Light Source Ltd, Harwell Campus, Didcot, UK
-  beamlines: [I22, I03, I15-1, I11, I24, I06, I10, I20-1, I19]
+  beamlines: [I22, I03, I15-1, I11, I24, I06, I10, I20-1, I19, I13-1]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All
 # pending in the design phase. I22 is a scattering beamline, so its practices
@@ -68,6 +68,10 @@ practices:
   # single crystal is a Practice-level science difference. The serial / microfocus
   # fixed-target raster sub-mode is deferred (SERIAL-1), not a separate practice.
   - {name: I19_diffraction_practice, method: diffraction, pending: true, note: "small-molecule single-crystal X-ray diffraction (chemical crystallography) on the Newport kappa four-circle + Eiger; reuses the 4-ID diffraction Method, a further consumer (TECH-1)"}
+  # I13-1 (I13 coherence branch) coherent lensless imaging. Ptychography raster-scans a
+  # coherent beam and reconstructs an image from the far-field diffraction; the fleet's
+  # first coherent diffractive imaging, a new Capability not yet in the catalog (TECH-1).
+  - {name: I13-1_ptychography_practice, method: ptychography, pending: true, note: "hard X-ray ptychography / coherent diffraction imaging: raster the piezo stage, capture far-field coherent diffraction on the Merlin, reconstruct downstream; new Capability not yet in the catalog (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at Diamond. Pending until the
 # Diamond operator and review structure is confirmed.
