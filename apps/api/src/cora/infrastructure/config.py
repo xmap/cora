@@ -251,6 +251,19 @@ class Settings(BaseSettings):
     run_stall_hysteresis_ticks: int = 2
     run_feed_heartbeat_ceiling_seconds: float | None = None
 
+    # `run_initiator_enabled` gates the RunInitiator background runtime: the
+    # agent that autonomously STARTS Runs (vs the RunSupervisor, which watches
+    # in-flight ones). Default off. `run_initiator_tick_seconds` is the initiation
+    # cadence (>= 0.1s); `run_initiator_max_in_flight` caps how many Runs may be
+    # in flight at once (>= 1; one-stage CT keeps it at 1). `run_initiator_plan_id`
+    # is the recipe Plan the loop starts for each ready Subject; None disables the
+    # loop even when enabled (no recipe to run), the same opt-in shape as
+    # `trust_policy_id`.
+    run_initiator_enabled: bool = False
+    run_initiator_tick_seconds: float = 30.0
+    run_initiator_max_in_flight: int = 1
+    run_initiator_plan_id: UUID | None = None
+
     # `caution_promoter_enabled` gates the CautionPromoter subscriber (the 2nd
     # ACTIVE agent). Default off: it is operational only once the
     # operator-retirement-memory guard lands (it must not re-create a Notice an
@@ -561,6 +574,30 @@ class Settings(BaseSettings):
             msg = (
                 f"run_supervisor_resume_settle_ticks must be >= 1, got {value}; "
                 "an autonomous resume requires at least one good envelope read"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_initiator_tick_seconds")
+    @classmethod
+    def _validate_run_initiator_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight initiation loop."""
+        if value < 0.1:
+            msg = (
+                f"run_initiator_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the initiator"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_initiator_max_in_flight")
+    @classmethod
+    def _validate_run_initiator_max_in_flight(cls, value: int) -> int:
+        """Floor of 1: the initiator must be able to start at least one Run per tick."""
+        if value < 1:
+            msg = (
+                f"run_initiator_max_in_flight must be >= 1, got {value}; "
+                "the initiator must be able to start at least one Run per tick"
             )
             raise ValueError(msg)
         return value

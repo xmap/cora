@@ -100,6 +100,70 @@ def test_settings_rejects_malformed_trust_policy_id(
 
 
 @pytest.mark.unit
+def test_settings_run_initiator_enabled_defaults_to_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Default off: deployments opt the autonomous run-initiator in explicitly."""
+    monkeypatch.delenv("RUN_INITIATOR_ENABLED", raising=False)
+    settings = Settings()
+    assert settings.run_initiator_enabled is False
+
+
+@pytest.mark.unit
+def test_settings_run_initiator_tick_seconds_defaults_and_rejects_tight_loop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pydantic
+
+    monkeypatch.delenv("RUN_INITIATOR_TICK_SECONDS", raising=False)
+    assert Settings().run_initiator_tick_seconds == 30.0
+
+    monkeypatch.setenv("RUN_INITIATOR_TICK_SECONDS", "0.1")  # floor accepted
+    assert Settings().run_initiator_tick_seconds == 0.1
+
+    monkeypatch.setenv("RUN_INITIATOR_TICK_SECONDS", "0.05")  # below floor rejected
+    with pytest.raises(pydantic.ValidationError):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_run_initiator_max_in_flight_defaults_and_rejects_below_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pydantic
+
+    monkeypatch.delenv("RUN_INITIATOR_MAX_IN_FLIGHT", raising=False)
+    assert Settings().run_initiator_max_in_flight == 1
+
+    monkeypatch.setenv("RUN_INITIATOR_MAX_IN_FLIGHT", "1")  # floor accepted
+    assert Settings().run_initiator_max_in_flight == 1
+
+    monkeypatch.setenv("RUN_INITIATOR_MAX_IN_FLIGHT", "0")  # below floor rejected
+    with pytest.raises(pydantic.ValidationError):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_run_initiator_plan_id_defaults_none_and_parses_uuid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from uuid import UUID
+
+    import pydantic
+
+    monkeypatch.delenv("RUN_INITIATOR_PLAN_ID", raising=False)
+    assert Settings().run_initiator_plan_id is None
+
+    plan_id = UUID("01900000-0000-7000-8000-000000464d21")
+    monkeypatch.setenv("RUN_INITIATOR_PLAN_ID", str(plan_id))
+    assert Settings().run_initiator_plan_id == plan_id
+
+    monkeypatch.setenv("RUN_INITIATOR_PLAN_ID", "not-a-uuid")  # typo caught at startup
+    with pytest.raises(pydantic.ValidationError):
+        Settings()
+
+
+@pytest.mark.unit
 def test_settings_require_authenticated_principal_defaults_to_false(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -76,6 +76,7 @@ from cora.api._edge_conductor import ComputeRunDriver
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
 from cora.api._inference_recorder import DelegatingInferenceRecorder
 from cora.api._procedure_watcher import procedure_watcher_lifespan
+from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
@@ -879,6 +880,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         list_runs=app.state.run.list_runs,
                         hold_run=app.state.run.hold_run,
                         resume_run=app.state.run.resume_run,
+                    ),
+                    run_initiator_lifespan(
+                        deps,
+                        list_runs=app.state.run.list_runs,
+                        list_subjects=app.state.subject.list_subjects,
                     ),
                     clearance_expirer_lifespan(
                         deps,

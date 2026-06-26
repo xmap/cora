@@ -36,12 +36,14 @@ deactivating the RunInitiator Actor stands it down.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from typing import TYPE_CHECKING
 from uuid import uuid5
 
 from cora.access.aggregates.actor import load_actor
 from cora.agent.seed_run_initiator import RUN_INITIATOR_AGENT_ID
-from cora.api._flag_watcher import WatcherReadUnauthorizedError
+from cora.api._flag_watcher import WatcherReadUnauthorizedError, probe_read_grant
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_RUN_INITIATION,
     DecisionChoice,
@@ -67,6 +69,7 @@ from cora.shared.identity import ActorId
 from cora.subject.features.list_subjects import ListSubjects
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
     from typing import Any
     from uuid import UUID
 
@@ -313,7 +316,124 @@ async def initiate_tick(
     return started_run_ids
 
 
+async def _initiate_loop(
+    deps: Kernel,
+    list_runs: ListRunsHandler,
+    list_subjects: ListSubjectsHandler,
+    plan_id: UUID,
+    max_in_flight: int,
+    interval_seconds: float,
+) -> None:
+    """Periodic initiation loop. A failed tick is logged; the next tick retries.
+
+    The `started` set is per-loop in-process dedup memory (resets on restart,
+    same posture as the RunSupervisor's `memory`)."""
+    started: set[UUID] = set()
+    read_denied = False
+    while True:
+        try:
+            await initiate_tick(
+                deps=deps,
+                list_runs=list_runs,
+                list_subjects=list_subjects,
+                plan_id=plan_id,
+                max_in_flight=max_in_flight,
+                started=started,
+            )
+            if read_denied:
+                _log.info("run_initiator.read_authorized_recovered")
+                read_denied = False
+        except asyncio.CancelledError:
+            raise
+        except WatcherReadUnauthorizedError as err:
+            # A missing ListRuns / ListSubjects grant blinds the initiator; surface
+            # it loudly (edge-triggered, once per denial episode) rather than as a
+            # generic tick failure. The drain stands down for the tick.
+            if not read_denied:
+                _log.warning(
+                    "run_initiator.read_unauthorized",
+                    query_name=err.query_name,
+                    principal_id=str(err.principal_id),
+                    reason=err.reason,
+                )
+                read_denied = True
+        except Exception:
+            _log.exception("run_initiator.tick_failed")
+        await asyncio.sleep(interval_seconds)
+
+
+@contextlib.asynccontextmanager
+async def run_initiator_lifespan(
+    deps: Kernel,
+    *,
+    list_runs: ListRunsHandler,
+    list_subjects: ListSubjectsHandler,
+    interval_seconds: float | None = None,
+) -> AsyncGenerator[None]:
+    """Spawn the RunInitiator loop for the duration of the context.
+
+    No-op unless `settings.run_initiator_enabled` is True AND
+    `settings.run_initiator_plan_id` is set (the recipe Plan the loop starts for
+    each ready Subject); both default off / None so a deployment opts in
+    explicitly. Mirrors `run_supervisor_lifespan`.
+    """
+    if not deps.settings.run_initiator_enabled:
+        _log.info("run_initiator.skipped", reason="disabled")
+        yield
+        return
+
+    plan_id = deps.settings.run_initiator_plan_id
+    if plan_id is None:
+        # Enabled but no recipe configured: inert, not a crash.
+        _log.info("run_initiator.skipped", reason="no_plan_configured")
+        yield
+        return
+
+    # The tick reads both ListRuns and ListSubjects; probe each grant at boot so a
+    # missing one is surfaced loudly (or refuses boot in strict mode) rather than
+    # silently blinding the loop.
+    await probe_read_grant(
+        deps,
+        agent_id=RUN_INITIATOR_AGENT_ID,
+        read_command=_READ_RUNS,
+        log_prefix="run_initiator",
+        strict=deps.settings.watcher_authz_strict,
+    )
+    await probe_read_grant(
+        deps,
+        agent_id=RUN_INITIATOR_AGENT_ID,
+        read_command=_READ_SUBJECTS,
+        log_prefix="run_initiator",
+        strict=deps.settings.watcher_authz_strict,
+    )
+
+    interval = (
+        interval_seconds
+        if interval_seconds is not None
+        else deps.settings.run_initiator_tick_seconds
+    )
+    max_in_flight = deps.settings.run_initiator_max_in_flight
+    _log.info(
+        "run_initiator.started",
+        interval_seconds=interval,
+        max_in_flight=max_in_flight,
+        plan_id=str(plan_id),
+    )
+    task = asyncio.create_task(
+        _initiate_loop(deps, list_runs, list_subjects, plan_id, max_in_flight, interval),
+        name="run-initiator",
+    )
+    try:
+        yield
+    finally:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+        _log.info("run_initiator.stopped")
+
+
 __all__ = [
     "initiate_run",
     "initiate_tick",
+    "run_initiator_lifespan",
 ]
