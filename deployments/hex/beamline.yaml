@@ -69,17 +69,35 @@ beamline:
   source: superconducting-wiggler
   source_confirm: "superconducting wiggler (SCW), 4.3 T on-axis peak field, 70 mm period, 1.2 m device length, cell-27 low-beta straight on the 3 GeV NSLS-II ring; cryogen-free (no liquid helium); commissioned 2023. Pole count and critical photon energy are SCW-1"
 
-# Two enclosures are modelled, the two presently relevant to operations: the First
-# Optics Enclosure (hex-foe) and the operational endstation (hex-endstation), the
-# F-hutch, in a satellite building adjacent to Bldg. 742, about 100 m from the source.
-# HEX is designed for six enclosures (A = FOE, B, C, D, E, F); B is not erected and
-# C / D / E are future-upgrade shells, so they are carried as a model.md / questions.md
-# note rather than modelled as empty enclosures here (ENC-1, SAT-1, LAYOUT-1).
+# All six designed enclosures are declared, forward-looking. Two are operational and
+# carry the device walk: the First Optics Enclosure (hex-foe, the A-hutch) and the
+# F-hutch endstation (hex-endstation), in a satellite building adjacent to Bldg. 742,
+# about 100 m from the source. The intermediate hutches B, C, D, and E are declared as
+# device-free shells: B is designed but not erected, and C, D, and E are built for a
+# future upgrade but not operational. They carry no devices in this cut (the operational
+# beam path is FOE -> F-hutch); their exact positions, roles, and permit signals are
+# open (ENC-1, SAT-1, LAYOUT-1, PSS-1).
 enclosures:
   - name: hex-foe
     role: optics-hutch
     facility_code: nsls2
     permit_signal: {confirm: "PSS search-and-secure permit leaf not in the profile collection; the First Optics Enclosure (A-hutch), the filters and the monochromator (PSS-1)"}
+  - name: hex-b
+    role: future-hutch
+    facility_code: nsls2
+    note: "B-hutch: designed but not erected; beam-guiding provisions made. A device-free forward-looking shell, no devices in this cut (ENC-1, LAYOUT-1)"
+  - name: hex-c
+    role: future-hutch
+    facility_code: nsls2
+    note: "C-hutch: built for a future upgrade, not operational. A device-free forward-looking shell (ENC-1, LAYOUT-1)"
+  - name: hex-d
+    role: future-hutch
+    facility_code: nsls2
+    note: "D-hutch: built for a future upgrade, not operational. A device-free forward-looking shell (ENC-1, LAYOUT-1)"
+  - name: hex-e
+    role: future-hutch
+    facility_code: nsls2
+    note: "E-hutch: built for a future upgrade, not operational. A device-free forward-looking shell (ENC-1, LAYOUT-1)"
   - name: hex-endstation
     role: experiment-hutch
     facility_code: nsls2

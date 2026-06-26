@@ -32,7 +32,7 @@ HEX coins **no new Family**, nothing graduates, and the catalog is unchanged. Fr
 | --- | --- | --- |
 | FOE optics (`hex-foe`) | Yes | The superconducting wiggler, the low-energy filters, the bent-Laue monochromator, the incident-energy axis, and the front-end slits (`ENC-1`) |
 | Endstation (`hex-endstation`, the F-hutch) | Yes | The 500 kg sample tower, the tomographic rotation and translations, the Kinetix and Phantom cameras, the PerkinElmer flat panel, the GeRM strip detector, and the technique-switch positioning (`ENC-1`, `SAT-1`) |
-| The B / C / D / E hutches | No (not operational) | Designed for a future upgrade; B is not erected and C / D / E are shells, so they are a `model.md` note, not modelled enclosures (`ENC-1`, `LAYOUT-1`) |
+| The B / C / D / E hutches | Declared (device-free shells) | Forward-looking: all six designed enclosures are declared, but B (not erected) and C / D / E (future-upgrade shells) carry no devices; the operational beam path is FOE to F-hutch (`ENC-1`, `LAYOUT-1`) |
 | New device classes | None | Zero new Families coined; nothing graduates; the catalog is unchanged |
 | The technique switch (imaging / EDXD / ADXD) | Method + positioning leg | Multiple Methods over one endstation, with a `LinearStage` positioning the detectors and optics; no new Capability (`TECH-1`) |
 | The monochromatic focusing optic | No (being commissioned) | Listed as "being commissioned" on the beamline page; not yet a device (`FOCUS-1`) |

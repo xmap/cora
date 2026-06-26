@@ -8,7 +8,7 @@ HEX was reverse-engineered from public sources (the BNL beamline page, the [beam
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| ENC-1 | Blocks-go-live | Are the six designed enclosures A (FOE), B, C, D, E, F, with only A and F presently relevant to operations (B not erected; C / D / E future-upgrade shells)? | Two enclosures modelled: `hex-foe` (the FOE) and `hex-endstation` (the F-hutch); B to E not modelled. | The Enclosure grouping. |
+| ENC-1 | Blocks-go-live | Are the six designed enclosures A (FOE), B, C, D, E, F, with only A and F presently relevant to operations (B not erected; C / D / E future-upgrade shells)? | All six declared; `hex-foe` and `hex-endstation` carry devices, B to E are device-free forward-looking shells. | The Enclosure grouping and the future-hutch contents. |
 | SAT-1 | Nice-to-have | Is the satellite building housing the F-hutch the same as Bldg. 742 or a separate numbered structure adjacent to it? | The F-hutch is a distinct enclosure adjacent to Bldg. 742, bound to the NSLS-II Site. | The endstation Enclosure detail. |
 | LAYOUT-1 | Nice-to-have | The source-to-F-hutch distance (about 100 m) and whether an exact per-hutch z-position table exists. | About 100 m source to endstation; no per-hutch z table carried. | The beam-path geometry. |
 | BRANCH-1 | Nice-to-have | Do the inboard and outboard front-end branches carry any installed optics, or are they bare provisions for the future hutches? | Provisions only; only the center branch carries devices. | The front-end slit modelling. |
