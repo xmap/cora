@@ -109,7 +109,8 @@ def main() -> None:
                         textcoords="offset points", xytext=(0, -11), ha="center",
                         fontsize=s.SIZE["small"], color=s.STATE)
 
-    # First projection: in-flight from begin to the cursor (open), faint after resume.
+    # First projection: in-flight from begin to the cursor (open), paused through
+    # the held band, then a ghosted resume to completion after the beam returns.
     proj = {a["result"]: secs(a["sampled_at"]) for a in acts
             if a["payload"].get("action_name") == "acquire_first_projection"}
     y = LANE_Y["action"]
@@ -122,9 +123,11 @@ def main() -> None:
                 textcoords="offset points", xytext=(0, 8), ha="center",
                 fontsize=s.SIZE["small"], color=s.ALARM, fontweight="bold",
                 linespacing=1.0)
+    ax.plot([beam_back, proj["ok"]], [y, y], color=s.MUTE, lw=4.5,
+            ls=(0, (0.9, 0.8)), dash_capstyle="butt", alpha=0.55, zorder=2)
     ax.scatter([proj["ok"]], [y], marker="^", s=42, color=s.SUBINK, alpha=0.35,
                edgecolors="white", linewidths=0.5, zorder=3)
-    ax.annotate("completes\nafter resume", (proj["ok"], y),
+    ax.annotate("resumes,\ncompletes", (proj["ok"], y),
                 textcoords="offset points", xytext=(0, -17), ha="center",
                 fontsize=s.SIZE["small"], color=s.MUTE, linespacing=1.0)
 
