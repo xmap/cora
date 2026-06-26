@@ -310,6 +310,34 @@
     {
       "seq": 16,
       "iteration": null,
+      "step_kind": "setpoint",
+      "payload": {
+        "channel": "rotation_angle",
+        "target_value": -5.0,
+        "units": "deg",
+        "role": "taxi",
+        "note": "run-up to constant velocity after resume"
+      },
+      "sampled_at": "2026-05-19T01:02:10Z",
+      "result": null
+    },
+    {
+      "seq": 17,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "fly_scan_prep",
+        "params": {
+          "rearm_pso": true
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:02:14Z",
+      "result": "ok"
+    },
+    {
+      "seq": 18,
+      "iteration": null,
       "step_kind": "action",
       "payload": {
         "action_name": "acquire_first_projection",
@@ -323,7 +351,7 @@
       "result": "ok"
     },
     {
-      "seq": 17,
+      "seq": 19,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -338,7 +366,7 @@
       "result": "ok"
     },
     {
-      "seq": 18,
+      "seq": 20,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -353,7 +381,7 @@
       "result": "ok"
     },
     {
-      "seq": 19,
+      "seq": 21,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -368,7 +396,7 @@
       "result": "ok"
     },
     {
-      "seq": 20,
+      "seq": 22,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -383,7 +411,7 @@
       "result": "ok"
     },
     {
-      "seq": 21,
+      "seq": 23,
       "iteration": null,
       "step_kind": "action",
       "payload": {

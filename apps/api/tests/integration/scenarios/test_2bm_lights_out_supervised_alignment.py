@@ -20,8 +20,9 @@ replay-scrubber paper is built around:
      Decision link), leaving the acquisition mid-flight.
   5. The beam returns and the start-safety envelope is good again, so the
      supervisor AUTO-RESUMES (RunResumed carries a Resume Decision).
-  6. The interrupted projection completes, the science scan continues to the end
-     (the remaining projections acquire), the Procedure completes, the Run
+  6. The fly-scan is restarted (the rotary stage taxis back to constant velocity
+     and the PSO trigger is re-armed), the interrupted projection is re-acquired,
+     the science scan continues to the end, the Procedure completes, the Run
      completes.
 
 The supervisor loop is driven white-box via `_supervise_tick` (the same
@@ -298,6 +299,38 @@ def _fly_scan_setpoint() -> ActivityInput:
     )
 
 
+def _taxi_setpoint() -> ActivityInput:
+    """Fly-scan restart: taxi the rotary stage back to a run-up position so it is
+    at constant velocity again before re-acquiring."""
+    return ActivityInput(
+        event_id=uuid4(),
+        step_kind="setpoint",
+        payload={
+            "channel": "rotation_angle",
+            "target_value": -5.0,
+            "units": "deg",
+            "role": "taxi",
+            "note": "run-up to constant velocity after resume",
+        },
+        sampled_at=_NOW,
+    )
+
+
+def _fly_scan_prep() -> ActivityInput:
+    """Fly-scan restart: re-arm the PSO trigger and re-prepare the scan before
+    acquisition resumes."""
+    return ActivityInput(
+        event_id=uuid4(),
+        step_kind="action",
+        payload={
+            "action_name": "fly_scan_prep",
+            "params": {"rearm_pso": True},
+            "result": "ok",
+        },
+        sampled_at=_NOW,
+    )
+
+
 class _BeamDown:
     async def read(self) -> BeamAvailabilityLookupResult:
         return BeamAvailabilityLookupResult(
@@ -500,8 +533,19 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
     assert [e.event_type for e in run_events] == ["RunStarted", "RunHeld", "RunResumed"]
     await _drain_run(db_pool)
 
-    # The interrupted projection completes after resume, then the science scan
-    # continues to the end of the run: the remaining projections acquire.
+    # Fly-scan restart after resume: taxi the rotary stage back to constant
+    # velocity and re-arm the PSO trigger before acquisition resumes.
+    await bind_append_step(deps, step_store=step_store)(
+        AppendProcedureActivities(
+            procedure_id=_PROCEDURE_ID,
+            entries=(_taxi_setpoint(), _fly_scan_prep()),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # The interrupted projection is re-acquired and completes, then the science
+    # scan continues to the end of the run: the remaining projections acquire.
     await bind_append_step(deps, step_store=step_store)(
         AppendProcedureActivities(
             procedure_id=_PROCEDURE_ID,
@@ -597,8 +641,18 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
     async with db_pool.acquire() as conn:
         rot_rows = await conn.fetch(
             "SELECT payload->>'role' AS role FROM entries_operation_procedure_activities "
-            "WHERE procedure_id = $1 AND payload->>'channel' = 'rotation_angle'",
+            "WHERE procedure_id = $1 AND payload->>'channel' = 'rotation_angle' "
+            "AND payload->>'role' = 'fly_scan'",
             _PROCEDURE_ID,
         )
     assert len(rot_rows) == 1
     assert rot_rows[0]["role"] == "fly_scan"
+
+    # ----- Assert: the fly-scan was restarted (taxi + prep) before re-acquiring ---
+    async with db_pool.acquire() as conn:
+        restart_rows = await conn.fetch(
+            "SELECT 1 FROM entries_operation_procedure_activities WHERE procedure_id = $1 "
+            "AND (payload->>'role' = 'taxi' OR payload->>'action_name' = 'fly_scan_prep')",
+            _PROCEDURE_ID,
+        )
+    assert len(restart_rows) == 2

@@ -131,6 +131,21 @@ def _build() -> dict:
         "payload": {"action_name": "acquire_first_projection", "params": {"exposure_ms": 100, "angle_deg": 0.0}, "result": "in_flight"},
         "sampled_at": _at(_ACQ_BEGIN), "result": "in_flight",
     })
+    # Fly-scan restart after resume: taxi the rotary stage back to constant
+    # velocity and re-arm the PSO trigger before acquisition resumes.
+    seq += 1
+    activities.append({
+        "seq": seq, "iteration": None, "step_kind": "setpoint",
+        "payload": {"channel": "rotation_angle", "target_value": -5.0, "units": "deg",
+                    "role": "taxi", "note": "run-up to constant velocity after resume"},
+        "sampled_at": _at(130.0), "result": None,
+    })
+    seq += 1
+    activities.append({
+        "seq": seq, "iteration": None, "step_kind": "action",
+        "payload": {"action_name": "fly_scan_prep", "params": {"rearm_pso": True}, "result": "ok"},
+        "sampled_at": _at(134.0), "result": "ok",
+    })
     seq += 1
     activities.append({
         "seq": seq, "iteration": None, "step_kind": "action",

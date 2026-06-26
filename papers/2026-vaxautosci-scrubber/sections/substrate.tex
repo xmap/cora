@@ -33,8 +33,8 @@ the setpoint, check, and capture rows, are themselves events appended as the
 system acts, with the intent recorded before the effect (the open-interval mechanism of
 Section~\ref{sec:crash}).
 Concretely, the example run is a four-event run-lifecycle stream (started, held,
-resumed, completed) alongside a twelve-event procedure stream with around twenty
-activity rows; folding a prefix returns the reconstructed run and
+resumed, completed) alongside a twelve-event procedure stream with around two
+dozen activity rows; folding a prefix returns the reconstructed run and
 procedure state (status, the current iteration and its verdict, and whether each
 activity is open or closed), and the recorded hashes cover the recipe expansion,
 the resolved steps and parameter bindings, written at run start.
