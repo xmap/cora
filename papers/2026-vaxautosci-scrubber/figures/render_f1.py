@@ -64,7 +64,7 @@ def main() -> None:
             va="bottom", fontsize=s.SIZE["small"], color=s.MUTE, style="italic")
 
     # Run lifecycle / who-drove-it lane.
-    label_pos = {"RunStarted": (0, 9, "center"), "RunHeld": (7, 2, "left"),
+    label_pos = {"RunStarted": (0, 9, "center"), "RunHeld": (0, 9, "center"),
                  "RunResumed": (0, 9, "center"), "RunCompleted": (0, 9, "center")}
     for ev in run_events:
         x = secs(ev["at"])
@@ -159,7 +159,7 @@ def main() -> None:
         _row("fidelity: verified", s.INK),
     ])
     card = AnchoredOffsetbox(loc="center", child=readout, pad=0.6, borderpad=0,
-                             frameon=True, bbox_to_anchor=(0.57, 0.46),
+                             frameon=True, bbox_to_anchor=(0.45, 0.46),
                              bbox_transform=ax.transAxes)
     card.patch.set(boxstyle="round,pad=0,rounding_size=0.5", facecolor="white",
                    edgecolor=s.RULE, linewidth=1.0)

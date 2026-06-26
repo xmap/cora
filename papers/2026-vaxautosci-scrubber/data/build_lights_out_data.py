@@ -61,14 +61,14 @@ _PROCEDURE_EVENTS = [
 # Axis times are synthetic and compressed for a readable single axis; the
 # overnight wall-clock spread (the hold can last tens of minutes) lives in the
 # prose, not the axis.
-_ITER_STRIDE = 14.0
-_ACQ_BEGIN = 62.0          # first projection in-flight marker
-_BEAM_LOSS = 80.0          # RunHeld (beam dump)
-_BEAM_BACK = 150.0         # RunResumed (beam returns)
-_ACQ_END = 165.0           # first projection outcome after resume
-_SCAN_BEGIN = 172.0        # remaining science projections (sampled across the scan)
-_SCAN_STRIDE = 6.0
-_RUN_DONE = 200.0
+_ITER_STRIDE = 12.0        # one acquire every 12 s; the whole axis is a 12 s grid
+_ACQ_BEGIN = 54.0          # first projection in-flight (next acquire slot after alignment)
+_BEAM_LOSS = 66.0          # RunHeld (beam loss), one stride later
+_BEAM_BACK = 126.0         # RunResumed (beam returns) after a 5-stride hold
+_ACQ_END = 138.0           # first projection completes one stride after resume
+_SCAN_BEGIN = 150.0        # remaining science projections, on the same 12 s grid
+_SCAN_STRIDE = 12.0
+_RUN_DONE = 210.0          # one stride after the last projection
 
 
 def _build() -> dict:

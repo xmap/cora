@@ -3,9 +3,9 @@
     "source": "Values mirror the passing integration scenario apps/api/tests/integration/scenarios/test_2bm_lights_out_supervised_alignment.py, which produces these activities, iteration verdicts, run-lifecycle events, and the supervisor Resume Decision against a real Kernel + Postgres.",
     "run": "Lights-out, agent-supervised run at APS 2-BM: conducted rotation-axis centering alignment, first projection interrupted by beam loss, RunSupervisor hold + auto-resume, then the science scan continues to completion.",
     "timestamps": "sampled_at / event times staggered synthetically for a readable axis; the scenario records one logical instant. Overnight spread is illustrative.",
-    "cursor_at": "2026-05-19T01:01:20Z",
-    "beam_loss_at": "2026-05-19T01:01:20Z",
-    "beam_back_at": "2026-05-19T01:02:30Z",
+    "cursor_at": "2026-05-19T01:01:06Z",
+    "beam_loss_at": "2026-05-19T01:01:06Z",
+    "beam_back_at": "2026-05-19T01:02:06Z",
     "generated_by": "data/build_lights_out_data.py"
   },
   "run": {
@@ -20,7 +20,7 @@
       },
       {
         "type": "RunHeld",
-        "at": "2026-05-19T01:01:20Z",
+        "at": "2026-05-19T01:01:06Z",
         "by": "RunSupervisor",
         "role": "agent",
         "decision": {
@@ -30,7 +30,7 @@
       },
       {
         "type": "RunResumed",
-        "at": "2026-05-19T01:02:30Z",
+        "at": "2026-05-19T01:02:06Z",
         "by": "RunSupervisor",
         "role": "agent",
         "decision": {
@@ -40,7 +40,7 @@
       },
       {
         "type": "RunCompleted",
-        "at": "2026-05-19T01:03:20Z",
+        "at": "2026-05-19T01:03:30Z",
         "by": "operator",
         "role": "human"
       }
@@ -76,22 +76,22 @@
     },
     {
       "iteration_index": 2,
-      "started_at": "2026-05-19T01:00:14Z",
-      "ended_at": "2026-05-19T01:00:24Z",
+      "started_at": "2026-05-19T01:00:12Z",
+      "ended_at": "2026-05-19T01:00:22Z",
       "converged": false,
       "reason": "residual improving (1.05 px); minimum not yet bracketed"
     },
     {
       "iteration_index": 3,
-      "started_at": "2026-05-19T01:00:28Z",
-      "ended_at": "2026-05-19T01:00:38Z",
+      "started_at": "2026-05-19T01:00:24Z",
+      "ended_at": "2026-05-19T01:00:34Z",
       "converged": false,
       "reason": "residual rose to 1.40 px; minimum bracketed in [0.040, 0.080] mm"
     },
     {
       "iteration_index": 4,
-      "started_at": "2026-05-19T01:00:42Z",
-      "ended_at": "2026-05-19T01:00:52Z",
+      "started_at": "2026-05-19T01:00:36Z",
+      "ended_at": "2026-05-19T01:00:46Z",
       "converged": true,
       "reason": null
     }
@@ -149,7 +149,7 @@
         "units": "mm",
         "role": "step_positive"
       },
-      "sampled_at": "2026-05-19T01:00:16Z",
+      "sampled_at": "2026-05-19T01:00:14Z",
       "result": null
     },
     {
@@ -163,7 +163,7 @@
           "purpose": "alignment"
         }
       },
-      "sampled_at": "2026-05-19T01:00:20Z",
+      "sampled_at": "2026-05-19T01:00:18Z",
       "result": null
     },
     {
@@ -178,7 +178,7 @@
         "units": "px",
         "direction": "better"
       },
-      "sampled_at": "2026-05-19T01:00:23Z",
+      "sampled_at": "2026-05-19T01:00:21Z",
       "result": null
     },
     {
@@ -191,7 +191,7 @@
         "units": "mm",
         "role": "step_positive"
       },
-      "sampled_at": "2026-05-19T01:00:30Z",
+      "sampled_at": "2026-05-19T01:00:26Z",
       "result": null
     },
     {
@@ -205,7 +205,7 @@
           "purpose": "alignment"
         }
       },
-      "sampled_at": "2026-05-19T01:00:34Z",
+      "sampled_at": "2026-05-19T01:00:30Z",
       "result": null
     },
     {
@@ -220,7 +220,7 @@
         "units": "px",
         "direction": "worse"
       },
-      "sampled_at": "2026-05-19T01:00:37Z",
+      "sampled_at": "2026-05-19T01:00:33Z",
       "result": null
     },
     {
@@ -233,7 +233,7 @@
         "units": "mm",
         "role": "bisect"
       },
-      "sampled_at": "2026-05-19T01:00:44Z",
+      "sampled_at": "2026-05-19T01:00:38Z",
       "result": null
     },
     {
@@ -247,7 +247,7 @@
           "purpose": "alignment"
         }
       },
-      "sampled_at": "2026-05-19T01:00:48Z",
+      "sampled_at": "2026-05-19T01:00:42Z",
       "result": null
     },
     {
@@ -262,7 +262,7 @@
         "units": "px",
         "direction": "minimum"
       },
-      "sampled_at": "2026-05-19T01:00:51Z",
+      "sampled_at": "2026-05-19T01:00:45Z",
       "result": null
     },
     {
@@ -275,7 +275,7 @@
         "units": "mm",
         "role": "lock_at_center"
       },
-      "sampled_at": "2026-05-19T01:00:54Z",
+      "sampled_at": "2026-05-19T01:00:48Z",
       "result": null
     },
     {
@@ -290,7 +290,7 @@
         },
         "result": "in_flight"
       },
-      "sampled_at": "2026-05-19T01:01:02Z",
+      "sampled_at": "2026-05-19T01:00:54Z",
       "result": "in_flight"
     },
     {
@@ -305,7 +305,7 @@
         },
         "result": "ok"
       },
-      "sampled_at": "2026-05-19T01:02:45Z",
+      "sampled_at": "2026-05-19T01:02:18Z",
       "result": "ok"
     },
     {
@@ -320,7 +320,7 @@
         },
         "result": "ok"
       },
-      "sampled_at": "2026-05-19T01:02:52Z",
+      "sampled_at": "2026-05-19T01:02:30Z",
       "result": "ok"
     },
     {
@@ -335,7 +335,7 @@
         },
         "result": "ok"
       },
-      "sampled_at": "2026-05-19T01:02:58Z",
+      "sampled_at": "2026-05-19T01:02:42Z",
       "result": "ok"
     },
     {
@@ -350,7 +350,7 @@
         },
         "result": "ok"
       },
-      "sampled_at": "2026-05-19T01:03:04Z",
+      "sampled_at": "2026-05-19T01:02:54Z",
       "result": "ok"
     },
     {
@@ -365,7 +365,7 @@
         },
         "result": "ok"
       },
-      "sampled_at": "2026-05-19T01:03:10Z",
+      "sampled_at": "2026-05-19T01:03:06Z",
       "result": "ok"
     },
     {
@@ -380,7 +380,7 @@
         },
         "result": "ok"
       },
-      "sampled_at": "2026-05-19T01:03:16Z",
+      "sampled_at": "2026-05-19T01:03:18Z",
       "result": "ok"
     }
   ]
