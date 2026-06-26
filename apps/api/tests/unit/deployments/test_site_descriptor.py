@@ -275,6 +275,7 @@ _PENDING_METHODS = {
     "small_angle_scattering": "i22 + 8-ID SAXS; portable Method not yet earned",
     "wide_angle_scattering": "i22 + 9-ID WAXS; portable Method not yet earned",
     "ultra_small_angle_scattering": "12-ID-E Bonse-Hart USAXS; not yet earned (USAXS-1)",
+    "ptychography": "I13-1 ptychography / coherent diffraction imaging; not yet earned (TECH-1)",
     "total_scattering": "i15-1 total scattering / PDF; Method not yet earned",
     "powder_diffraction": "i11 powder diffraction; portable Method not yet earned",
     "energy_dispersive_exafs": "i20-1 EDE; dispersive devices not yet in source (POLY-1 / STRIP-1)",
