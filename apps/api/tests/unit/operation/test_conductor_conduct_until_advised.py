@@ -20,193 +20,59 @@ Asserted properties:
     the loop aborts with the brain's error_class, never an uncaught raise
 """
 
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
 from cora.infrastructure.ports.clock import FakeClock
-from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.adapters.in_memory_decide_port import InMemoryDecidePort
-from cora.operation.conductor import (
-    ComputeStep,
-    Conductor,
-    SetpointStep,
-)
-from cora.operation.features.abort_procedure.command import AbortProcedure
-from cora.operation.features.append_activities.command import AppendProcedureActivities
-from cora.operation.features.complete_procedure.command import CompleteProcedure
-from cora.operation.features.end_iteration.command import EndProcedureIteration
-from cora.operation.features.start_iteration.command import StartProcedureIteration
-from cora.operation.features.start_procedure.command import StartProcedure
+from cora.operation.conductor import Conductor
 from cora.operation.ports.decide_port import (
     DecideTimeoutError,
     SteeringAdvice,
-    SteeringAxis,
     SteeringEvidence,
-    SteeringObjective,
-    SteeringObjectiveKind,
     SteeringPoint,
-    SteeringSpace,
     SteeringVerdict,
 )
-from cora.operation.ports.measurement import Measurement
-from cora.recipe.aggregates.recipe.body import CaptureRef
 from cora.shared.decision_signals import DecisionConfidenceSource
-
-_FIXED_NOW = datetime(2026, 6, 25, 9, 0, 0, tzinfo=UTC)
-_MOTOR_ADDR = "motor"
-_OBJECTIVE_NAME = "offset"
-
-
-@dataclass
-class _FakeAppendStep:
-    calls: list[AppendProcedureActivities] = field(default_factory=list[AppendProcedureActivities])
-
-    async def __call__(
-        self,
-        command: AppendProcedureActivities,
-        *,
-        principal_id: UUID,
-        correlation_id: UUID,
-        causation_id: UUID | None = None,
-        surface_id: UUID = NIL_SENTINEL_ID,
-    ) -> int:
-        self.calls.append(command)
-        return len(command.entries)
-
-
-@dataclass
-class _Transcript:
-    """Records the FSM + iteration boundary calls in order for assertions."""
-
-    events: list[str] = field(default_factory=list[str])
-    start_iteration_indices: list[int] = field(default_factory=list[int])
-    end_iteration_converged: list[bool | None] = field(default_factory=list[bool | None])
-    end_iteration_advised_stop: list[bool | None] = field(default_factory=list[bool | None])
-    end_iteration_provenance: list[dict[str, object]] = field(
-        default_factory=list[dict[str, object]]
-    )
-
-
-def _make_handlers(transcript: _Transcript) -> dict[str, object]:
-    async def start_procedure(command: StartProcedure, **_: object) -> None:
-        transcript.events.append("start_procedure")
-
-    async def complete_procedure(command: CompleteProcedure, **_: object) -> None:
-        transcript.events.append("complete_procedure")
-
-    async def abort_procedure(command: AbortProcedure, **_: object) -> None:
-        transcript.events.append("abort_procedure")
-
-    async def start_iteration(command: StartProcedureIteration, **_: object) -> None:
-        transcript.events.append(f"start_iteration[{command.iteration_index}]")
-        transcript.start_iteration_indices.append(command.iteration_index)
-
-    async def end_iteration(command: EndProcedureIteration, **_: object) -> None:
-        transcript.events.append(
-            f"end_iteration[{command.iteration_index}"
-            f"=conv:{command.converged},stop:{command.advised_stop}]"
-        )
-        transcript.end_iteration_converged.append(command.converged)
-        transcript.end_iteration_advised_stop.append(command.advised_stop)
-        transcript.end_iteration_provenance.append(
-            {
-                "reasoning": command.reasoning,
-                "confidence": command.confidence,
-                "confidence_source": command.confidence_source,
-                "alternatives": command.alternatives,
-                "model_ref": command.model_ref,
-                "reason": command.reason,
-            }
-        )
-
-    return {
-        "start_procedure": start_procedure,
-        "complete_procedure": complete_procedure,
-        "abort_procedure": abort_procedure,
-        "start_iteration": start_iteration,
-        "end_iteration": end_iteration,
-    }
-
-
-@dataclass
-class _FakeIdGen:
-    def new_id(self) -> UUID:
-        return uuid4()
-
-
-def _conductor(
-    transcript: _Transcript,
-    *,
-    compute_port: InMemoryComputePort,
-    control_port: InMemoryControlPort,
-) -> Conductor:
-    handlers = _make_handlers(transcript)
-    return Conductor(
-        control_port=control_port,
-        append_step=_FakeAppendStep(),
-        clock=FakeClock(_FIXED_NOW),
-        id_generator=_FakeIdGen(),
-        compute_port=compute_port,
-        start_procedure=handlers["start_procedure"],  # type: ignore[arg-type]
-        complete_procedure=handlers["complete_procedure"],  # type: ignore[arg-type]
-        abort_procedure=handlers["abort_procedure"],  # type: ignore[arg-type]
-        start_iteration=handlers["start_iteration"],  # type: ignore[arg-type]
-        end_iteration=handlers["end_iteration"],  # type: ignore[arg-type]
-    )
-
-
-def _objective_measurement(value: float) -> Measurement:
-    return Measurement(
-        value=value,
-        kind="Scalar",
-        quality="Good",
-        produced_at=_FIXED_NOW,
-        name=_OBJECTIVE_NAME,
-        units="pixel",
-    )
-
-
-def _pass_block() -> tuple[object, ...]:
-    """One pass: deposit the objective metric then move the seeded axis.
-
-    The ComputeStep deposits `offset` (the objective slot the brain reads); the
-    SetpointStep consumes the `motor` axis via a CaptureRef so a brain-seeded
-    point resolves to an actual write (and satisfies the G2 coverage guard).
-    """
-    return (
-        ComputeStep(
-            command=("solver", "metric"),
-            input_uris=("file:///a.h5",),
-            output_uri=None,
-            parameters={},
-            capture_name=_OBJECTIVE_NAME,
-        ),
-        SetpointStep(
-            address=_MOTOR_ADDR,
-            value=CaptureRef(capture_name=_MOTOR_ADDR),
-        ),
-    )
-
-
-def _space() -> SteeringSpace:
-    return SteeringSpace(axes=(SteeringAxis(name=_MOTOR_ADDR, lower=0.0, upper=10.0),))
-
-
-def _objective() -> SteeringObjective:
-    return SteeringObjective(
-        kind=SteeringObjectiveKind.SATISFY,
-        target_measurement_name=_OBJECTIVE_NAME,
-        target_value=0.0,
-    )
-
-
-def _point_to_captures(point: SteeringPoint) -> dict[str, object]:
-    return {_MOTOR_ADDR: point.coordinates[_MOTOR_ADDR]}
+from tests.unit.operation._advised_harness import (
+    FIXED_NOW as _FIXED_NOW,
+)
+from tests.unit.operation._advised_harness import (
+    MOTOR_ADDR as _MOTOR_ADDR,
+)
+from tests.unit.operation._advised_harness import (
+    OBJECTIVE_NAME as _OBJECTIVE_NAME,
+)
+from tests.unit.operation._advised_harness import (
+    FakeAppendStep as _FakeAppendStep,
+)
+from tests.unit.operation._advised_harness import (
+    FakeIdGen as _FakeIdGen,
+)
+from tests.unit.operation._advised_harness import (
+    Transcript as _Transcript,
+)
+from tests.unit.operation._advised_harness import (
+    build_conductor as _conductor,
+)
+from tests.unit.operation._advised_harness import (
+    objective as _objective,
+)
+from tests.unit.operation._advised_harness import (
+    objective_measurement as _objective_measurement,
+)
+from tests.unit.operation._advised_harness import (
+    pass_block as _pass_block,
+)
+from tests.unit.operation._advised_harness import (
+    point_to_captures as _point_to_captures,
+)
+from tests.unit.operation._advised_harness import (
+    space as _space,
+)
 
 
 @pytest.mark.unit

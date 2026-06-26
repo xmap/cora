@@ -2207,7 +2207,24 @@ class Conductor:
         raised (abort), or the absolute ceiling tripped (abort). The
         observation history + the pending point are tracked locally: the loop
         owns every iteration boundary, so it reconstructs the evidence each
-        pass without re-loading aggregate state."""
+        pass without re-loading aggregate state.
+
+        REPLAY DETERMINISM: because the loop is pure in-process state from
+        iteration 0 (it never reads the event store) and the one-pass block is
+        pinned once and re-walked verbatim, re-driving it over identical inputs
+        with a brain whose advice is a pure function of the evidence reproduces
+        the run byte for byte: the same iteration boundaries, the same seeded
+        coordinates, the same advice provenance, and the same terminal. Both
+        shipped adapters are such brains, so the advised next_point is NOT
+        recorded on the iteration ledger; determinism comes from the stateless
+        brain plus the pinned block, not from a persisted coordinate. Re-seeding
+        a RECORDED next_point for already-closed passes and consulting the brain
+        only at the open frontier (so a NON-deterministic brain, a real GP /
+        gpCAM / LLM, is not re-queried on replay) is a deferred leg: it needs
+        three additive pieces together (an advised_next_point field on the
+        iteration event, a decide-loop resume entry, and a ValueCaptured
+        observation-replay channel) and is earned WITH that first
+        non-deterministic adapter."""
         assert self._complete_procedure is not None  # guarded by caller
         assert self._abort_procedure is not None
         assert self._start_iteration is not None
