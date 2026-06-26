@@ -8,58 +8,61 @@ questions. The interface is a research prototype over exported run data rather
 than a deployed beamline tool, so we make no claims about throughput, scale, or
 integration cost.
 
-\textbf{Reproducibility.} The figures derive from one passing integration
-scenario, \texttt{test\_2bm\_lights\_out\_supervised\_alignment.py}, exercised
-against a real Kernel and Postgres event store; the run data, its generator, and
-the per-figure render scripts are released with the paper. What is real, produced
-by that scenario and mirrored into the figure data: the activities, the four
-iteration verdicts (open, open, open, converged), the four run-lifecycle events,
-and the supervisor's recorded hold and resume decisions. What is synthetic: only
-the per-event timestamps, staggered for a readable axis since the scenario
-records one logical instant; the overnight wall-clock spread is illustrative,
-stated in prose, not measured. The generator is standard-library only and needs
-no database, so a reader can regenerate the figure data directly.
+The figures are not mock-ups. They derive from one passing integration
+scenario, exercised against a real Kernel and Postgres event store, and the run
+data, its generator, and the per-figure render scripts are released with the
+paper. What is real is what that scenario produced and we mirrored into the
+figure data: the activities, the four iteration verdicts (open, open, open,
+converged), the four run-lifecycle events, and the supervisor's recorded hold
+and resume decisions. What is synthetic is only the per-event timestamps,
+staggered for a readable axis because the scenario records one logical instant;
+the overnight wall-clock spread is illustrative, stated in prose rather than
+measured. The generator depends on nothing but the standard library and needs no
+database, so a reader can regenerate the figure data directly.
 
-Two scope boundaries matter for how the contribution should be read. First, the
-run is \emph{conducted} and \emph{agent-supervised}, not agent-closed: the
-system orchestrates the alignment and records every step, and a supervisor agent
-holds and resumes the run on beam conditions, but neither chooses the science.
-That supervisor is a deterministic, rule-based agent making recorded decisions;
-the figures show a genuine human-agent handoff, not a model selecting
-experiments, and we are careful not to claim the latter. Second, the fidelity
-badge attests \emph{faithfulness}, that the replayed state matches the recorded
-expansion, by recomputing content-addressed hashes against an append-only store.
-It is an integrity check, not a defense against an adversary with write access;
-authenticity guarantees would need a separate trust anchor.
+Two boundaries matter for how the contribution should be read, both about what
+the run and the badge are not. The run is
+\emph{conducted} and \emph{agent-supervised}, not agent-closed: the system
+orchestrates the alignment and records every step, and a supervisor agent holds
+and resumes the run on beam conditions, but neither chooses the science. That
+supervisor is a deterministic, rule-based agent making recorded decisions, so
+the figures show a genuine human-agent handoff rather than a model selecting
+experiments, and we are careful not to claim the latter. The fidelity badge
+likewise attests \emph{faithfulness}, that the replayed state matches the
+recorded expansion, by recomputing content-addressed hashes against an
+append-only store; it is an integrity check, not adversarial tamper resistance,
+under the conditions stated in Section~\ref{sec:substrate}.
 
 The fold-to-version helper that drives the cursor was written for this
 visualization on top of the system's existing fold-on-read path. Because that
 path keeps no snapshots, the cost of reconstructing a distant instant grows with
-the length of the stream; for the short run shown here this is imperceptible, but
-snapshotting for long campaigns is future work. Three further extensions are
-natural and named, not built: a live now-edge that subscribes to the event tail
-so the same timeline monitors a run in progress; run-to-run diffing so two
-campaigns can be compared on one axis; and a deployed read interface, of which
-the first read-only slice is on the roadmap. The closest extension is an
-agent-closed steered loop, an optimizer that decides the next action rather than
-a supervisor that recovers a conducted one; because it records its choices
-through the same decision substrate, the run-lifecycle lane and the decision
-records would carry the optimizer's next-action choices and be audited exactly as
-the supervisor's holds and resumes are here. We also expect the design to
-generalize beyond this run to other conducted procedures and other facilities:
-nothing in the scrubber is specific to this case beyond a small vocabulary it
-reads from the log, so the requirement on a host system is modest, an
-append-only, deterministically-foldable event log with a content-addressed
-expansion and a recorded actor on each event.
+the length of the stream; for the short run shown here that cost is
+imperceptible, but snapshotting for long campaigns is future work. Three further
+extensions are natural, named here rather than built: a live now-edge that
+subscribes to the event tail so the same timeline can monitor a run in progress,
+run-to-run diffing so two campaigns can be compared on one axis, and a deployed
+read interface, whose first read-only slice is already on the roadmap. The
+closest extension is an agent-closed steered loop, an optimizer that decides the
+next action rather than a supervisor that recovers a conducted one; because such
+an optimizer would record its choices through the same decision substrate, the
+run-lifecycle lane and the decision records would carry its next-action choices
+and be audited exactly as the supervisor's holds and resumes are here. We expect
+the design to generalize in the same way beyond this run, to other conducted
+procedures and other facilities, since nothing in the scrubber is specific to
+this case beyond a small vocabulary it reads from the log: the requirement on a
+host system is modest, an append-only, deterministically-foldable event log with
+a content-addressed expansion and a recorded actor on each event.
 
-\textbf{Threats to validity.} \emph{Construct:} our claim rests on T1--T4
-capturing what auditing a conducted run needs. We derived them from practice,
-not from observing auditors, so the set may be incomplete (for example causal
-blame across steps, or finer parameter provenance) or miss an encoding
-scientists would prefer. \emph{Internal:} the walkthrough is authored by us, who
-already know where each verdict, open interval, and gap lies; an independent
-auditor might read those cues differently, and we ran no such study.
-\emph{External:} the generality argument is made from the technique, not shown
-across the single beamline, run, and rule-based supervisor reported above. We
-frame these as the construct and reader questions a case-based demonstration
-leaves open.
+Three threats temper these claims. The construct question is whether T1 through
+T4 capture what auditing a conducted run actually needs; we derived them from
+practice rather than from observing auditors at work, so the set may be
+incomplete, missing for example causal blame across steps or finer parameter
+provenance, or may favor an encoding scientists would not. There is also an
+internal threat, since the walkthrough is authored by us, who already know where
+each verdict, open interval, and gap lies, and an independent auditor reading the
+same figures cold might not find them as readily; we ran no such study. Finally,
+generality is the external threat: our argument for it is made from the structure
+of the technique, not demonstrated across more than the single beamline, run, and
+rule-based supervisor reported here. These are the questions a case-based
+demonstration leaves open, and they set the agenda for the user study and
+multi-beamline deployment that should follow.

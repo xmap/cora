@@ -65,15 +65,17 @@ autonomous runs.
         reconstruct state becomes a control the auditor drags through recorded
         time, rather than a static post-hoc graph to read.
   \item \textbf{A task abstraction for auditing autonomous runs.} We
-        characterize four recurring audit tasks and map each to an event-log
-        query and a visual encoding.
+        characterize four recurring audit tasks, recover an interrupted step,
+        reproduce a decision, confirm convergence, and confirm integrity, and
+        map each to an event-log query and a visual encoding, separating the
+        audit need from the encoding we chose for it.
   \item \textbf{The replay scrubber (technique).} We design a single timeline
         that unifies a run-lifecycle lane showing who or what drove each
         transition, nested convergence brackets colored by verdict,
         open-interval markers for unfinished steps, a draggable fold-to-version
         cursor, and a content-addressed fidelity badge.
-  \item \textbf{A grounded case study.} We demonstrate the tasks on a real
+  \item \textbf{A grounded case study.} We demonstrate the four tasks on a real
         unattended, agent-supervised run on the APS 2-BM micro-CT beamline,
-        including the beam-loss instant at which the scrubber localizes the
-        interrupted projection and the agent that held the run.
+        including the beam-loss instant at which the scrubber surfaces the agent
+        that held the run and the interrupted projection it left open.
 \end{itemize}

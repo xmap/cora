@@ -15,19 +15,22 @@ an ordered, immutable event stream rather than a final-state snapshot.
 before effect, so an unfinished step appears in the log as an activity that
 was opened but never closed. The query finds the activity with no matching
 outcome; the encoding draws it as an open interval, a visible gap rather than
-a silent truncation.
+a silent truncation. The same record also tells an interrupted step apart from
+one never reached: only an interruption leaves an opened-but-unclosed marker.
 
 \textbf{T2: reproduce a decision.}
 \emph{Replay the run to the instant a choice was made, and show the state
 then.} The query folds the event stream up to the chosen position; the
 encoding is the draggable cursor together with the reconstructed state read
-out beside it.
+out beside it. This recovers the state the choice was made against, not merely
+its timestamp, which is what makes a decision reviewable after the fact.
 
 \textbf{T3: confirm convergence.}
 \emph{Did this loop converge, and on which pass?} The query reads the
 per-iteration verdict carried by each iteration-boundary event; the encoding
 colors nested brackets by that verdict, so the bracketing search is legible at
-a glance.
+a glance. For an unattended search, reading the converged verdict is the
+difference between trusting the result and re-running the alignment to check it.
 
 \textbf{T4: confirm the record is intact.}
 \emph{Can I trust that nothing was altered?} The query recomputes the
