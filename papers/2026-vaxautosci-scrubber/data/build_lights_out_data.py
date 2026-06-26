@@ -115,7 +115,15 @@ def _build() -> dict:
     activities.append({
         "seq": seq, "iteration": None, "step_kind": "setpoint",
         "payload": {"channel": "SampleTop_X", "target_value": 0.060, "units": "mm", "role": "lock_at_center"},
-        "sampled_at": _at((4 - 1) * _ITER_STRIDE + 12.0), "result": None,
+        "sampled_at": _at(46.0), "result": None,
+    })
+    # Command the science scan's continuous rotation (fly-scan, 0->180 deg).
+    seq += 1
+    activities.append({
+        "seq": seq, "iteration": None, "step_kind": "setpoint",
+        "payload": {"channel": "rotation_angle", "target_value": 180.0, "units": "deg",
+                    "role": "fly_scan", "note": "continuous 0->180 deg sweep"},
+        "sampled_at": _at(52.0), "result": None,
     })
     seq += 1
     activities.append({

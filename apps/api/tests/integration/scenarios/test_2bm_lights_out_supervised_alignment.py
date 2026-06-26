@@ -13,7 +13,9 @@ replay-scrubber paper is built around:
   2. CORA conducts the pre-scan rotation-axis centering alignment as a
      phase-of-Run Procedure (parent_run_id = the Run): a four-iteration
      peak-bracket search on SampleTop_X that converges.
-  3. The first projection acquisition begins (an in-flight activity marker).
+  3. The run locks at the centered position, commands the science scan's
+     continuous rotation (fly-scan, 0->180 deg), and the first projection
+     acquisition begins (an in-flight activity marker).
   4. The beam drops. The RunSupervisor agent HOLDS the Run (RunHeld carries the
      Decision link), leaving the acquisition mid-flight.
   5. The beam returns and the start-safety envelope is good again, so the
@@ -279,6 +281,23 @@ def _science_projection(*, angle_deg: float) -> ActivityInput:
     )
 
 
+def _fly_scan_setpoint() -> ActivityInput:
+    """Command the science scan's rotation: a continuous 0->180 deg fly-scan on
+    the rotary stage, set once before the projections are triggered."""
+    return ActivityInput(
+        event_id=uuid4(),
+        step_kind="setpoint",
+        payload={
+            "channel": "rotation_angle",
+            "target_value": 180.0,
+            "units": "deg",
+            "role": "fly_scan",
+            "note": "continuous 0->180 deg sweep",
+        },
+        sampled_at=_NOW,
+    )
+
+
 class _BeamDown:
     async def read(self) -> BeamAvailabilityLookupResult:
         return BeamAvailabilityLookupResult(
@@ -457,6 +476,7 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
             procedure_id=_PROCEDURE_ID,
             entries=(
                 _setpoint(target_mm=0.060, role="lock_at_center"),
+                _fly_scan_setpoint(),
                 _acquire_marker(result="in_flight"),
             ),
         ),
@@ -572,3 +592,13 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
         )
     assert len(scan_rows) == 5
     assert all(r["result"] == "ok" for r in scan_rows)
+
+    # ----- Assert: the science scan commanded a continuous rotation (fly-scan) ---
+    async with db_pool.acquire() as conn:
+        rot_rows = await conn.fetch(
+            "SELECT payload->>'role' AS role FROM entries_operation_procedure_activities "
+            "WHERE procedure_id = $1 AND payload->>'channel' = 'rotation_angle'",
+            _PROCEDURE_ID,
+        )
+    assert len(rot_rows) == 1
+    assert rot_rows[0]["role"] == "fly_scan"

@@ -130,16 +130,30 @@ def main() -> None:
     ax.scatter([proj["ok"]], [y], marker="^", s=42, color=s.SUBINK, alpha=0.35,
                edgecolors="white", linewidths=0.5, zorder=3)
 
-    # The science scan continues after resume: the remaining projections acquire
-    # (ghosted, since they are after the parked cursor).
+    # The science scan continues after resume: a continuous (closed) acquisition
+    # through the remaining projections, ghosted since it is past the cursor.
     scan = sorted(secs(a["sampled_at"]) for a in acts
                   if a["payload"].get("action_name") == "acquire_projection")
     if scan:
+        ax.plot([proj["ok"], scan[-1]], [y, y], color=s.MUTE, lw=4.5, alpha=0.4,
+                solid_capstyle="butt", zorder=1)
         ax.scatter(scan, [y] * len(scan), marker="^", s=34, color=s.MUTE,
-                   alpha=0.5, edgecolors="white", linewidths=0.5, zorder=3)
+                   alpha=0.55, edgecolors="white", linewidths=0.5, zorder=3)
         ax.annotate("scan resumes,\nruns to completion", (scan[len(scan) // 2], y),
                     textcoords="offset points", xytext=(0, -17), ha="center",
                     fontsize=s.SIZE["small"], color=s.MUTE, linespacing=1.0)
+
+        # The rotary stage rotates continuously (fly-scan), paused during the
+        # hold: a faint span on the setpoint lane shows the motor moving.
+        rot = [secs(a["sampled_at"]) for a in acts if a["payload"].get("role") == "fly_scan"]
+        if rot:
+            ysp = LANE_Y["setpoint"]
+            for x0, x1 in ((rot[0], beam_loss), (beam_back, scan[-1])):
+                ax.plot([x0, x1], [ysp, ysp], color=s.MUTE, lw=2.2, alpha=0.5,
+                        solid_capstyle="round", zorder=1)
+            ax.annotate("fly-scan rotation, 0-180 deg",
+                        ((beam_back + scan[-1]) / 2, ysp), textcoords="offset points",
+                        xytext=(0, 8), ha="center", fontsize=s.SIZE["small"], color=s.MUTE)
 
     # Fold-to-version cursor at the beam-loss instant.
     ax.axvline(cursor, color=s.ALARM, ls="--", lw=1.3, zorder=5)

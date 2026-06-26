@@ -275,11 +275,25 @@
         "units": "mm",
         "role": "lock_at_center"
       },
-      "sampled_at": "2026-05-19T01:00:48Z",
+      "sampled_at": "2026-05-19T01:00:46Z",
       "result": null
     },
     {
       "seq": 14,
+      "iteration": null,
+      "step_kind": "setpoint",
+      "payload": {
+        "channel": "rotation_angle",
+        "target_value": 180.0,
+        "units": "deg",
+        "role": "fly_scan",
+        "note": "continuous 0->180 deg sweep"
+      },
+      "sampled_at": "2026-05-19T01:00:52Z",
+      "result": null
+    },
+    {
+      "seq": 15,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -294,7 +308,7 @@
       "result": "in_flight"
     },
     {
-      "seq": 15,
+      "seq": 16,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -309,7 +323,7 @@
       "result": "ok"
     },
     {
-      "seq": 16,
+      "seq": 17,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -324,7 +338,7 @@
       "result": "ok"
     },
     {
-      "seq": 17,
+      "seq": 18,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -339,7 +353,7 @@
       "result": "ok"
     },
     {
-      "seq": 18,
+      "seq": 19,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -354,7 +368,7 @@
       "result": "ok"
     },
     {
-      "seq": 19,
+      "seq": 20,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -369,7 +383,7 @@
       "result": "ok"
     },
     {
-      "seq": 20,
+      "seq": 21,
       "iteration": null,
       "step_kind": "action",
       "payload": {

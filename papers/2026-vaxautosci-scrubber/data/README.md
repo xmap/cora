@@ -25,8 +25,8 @@ Regenerate with `python3 data/build_lights_out_data.py`.
   and the center-of-rotation residual falling 2.00 -> 1.05 -> 1.40 -> 0.30 px,
   bracketed in [0.040, 0.080] mm and bisected to 0.060 mm.
 - `activities`: setpoint / acquire / check per pass, the lock setpoint, the
-  first projection as an in-flight marker plus its post-resume outcome, and the
-  remaining science-scan projections acquired after resume.
+  fly-scan rotation setpoint, the first projection as an in-flight marker plus
+  its post-resume outcome, and the remaining science-scan projections.
 - `provenance.cursor_at` / `beam_loss_at` / `beam_back_at`: the audit instant and
   the hold window the figures use.
 
