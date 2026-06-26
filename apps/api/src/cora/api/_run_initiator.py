@@ -41,6 +41,7 @@ from uuid import uuid5
 
 from cora.access.aggregates.actor import load_actor
 from cora.agent.seed_run_initiator import RUN_INITIATOR_AGENT_ID
+from cora.api._flag_watcher import WatcherReadUnauthorizedError
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_RUN_INITIATION,
     DecisionChoice,
@@ -59,15 +60,21 @@ from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.errors import UnauthorizedError
+from cora.run.features.list_runs import ListRuns
 from cora.run.features.start_run import StartRun
 from cora.run.features.start_run import bind as bind_start_run
 from cora.shared.identity import ActorId
+from cora.subject.features.list_subjects import ListSubjects
 
 if TYPE_CHECKING:
     from typing import Any
     from uuid import UUID
 
     from cora.infrastructure.kernel import Kernel
+    from cora.run.features.list_runs import RunSummaryItem
+    from cora.run.features.list_runs.handler import Handler as ListRunsHandler
+    from cora.subject.features.list_subjects import SubjectSummaryItem
+    from cora.subject.features.list_subjects.handler import Handler as ListSubjectsHandler
 
 _log = get_logger(__name__)
 
@@ -81,6 +88,10 @@ _REASONING = (
     "Autonomous acquisition: started the next eligible Run for the bound Plan "
     "through the authorized start path. The start-safety envelope gated the start."
 )
+
+_PAGE_LIMIT = 100
+_READ_RUNS = "ListRuns"
+_READ_SUBJECTS = "ListSubjects"
 
 
 async def _record_initiation_decision(
@@ -197,6 +208,112 @@ async def initiate_run(
         return None
 
 
+async def _drain_running_runs(list_runs: ListRunsHandler, deps: Kernel) -> list[RunSummaryItem]:
+    """Page through list_runs for status=Running; return all rows."""
+    items: list[RunSummaryItem] = []
+    cursor: str | None = None
+    while True:
+        page = await list_runs(
+            ListRuns(status="Running", cursor=cursor, limit=_PAGE_LIMIT),
+            principal_id=RUN_INITIATOR_AGENT_ID,
+            correlation_id=deps.id_generator.new_id(),
+            surface_id=NIL_SENTINEL_ID,
+        )
+        items.extend(page.items)
+        if page.next_cursor is None:
+            return items
+        cursor = page.next_cursor
+
+
+async def _drain_mounted_subjects(
+    list_subjects: ListSubjectsHandler, deps: Kernel
+) -> list[SubjectSummaryItem]:
+    """Page through list_subjects for status=Mounted; return all rows (the
+    projection is created_at-ordered, so the result is oldest-mounted-first)."""
+    items: list[SubjectSummaryItem] = []
+    cursor: str | None = None
+    while True:
+        page = await list_subjects(
+            ListSubjects(status="Mounted", cursor=cursor, limit=_PAGE_LIMIT),
+            principal_id=RUN_INITIATOR_AGENT_ID,
+            correlation_id=deps.id_generator.new_id(),
+            surface_id=NIL_SENTINEL_ID,
+        )
+        items.extend(page.items)
+        if page.next_cursor is None:
+            return items
+        cursor = page.next_cursor
+
+
+async def initiate_tick(
+    *,
+    deps: Kernel,
+    list_runs: ListRunsHandler,
+    list_subjects: ListSubjectsHandler,
+    plan_id: UUID,
+    max_in_flight: int,
+    started: set[UUID],
+) -> list[UUID]:
+    """One selection pass: start the next ready (Mounted) Subject(s) for `plan_id`,
+    capped so at most `max_in_flight` Runs are in flight. Returns the Run ids
+    started this tick.
+
+    Serialization for one-stage hardware comes from the cap (default 1 in the
+    standing loop): a Subject already covered by a Running Run, or already started
+    this session (`started`, the in-process dedup memory mirroring RunSupervisor),
+    is skipped. The `started` set covers the projection-lag window where a
+    just-issued start is not yet visible as Running; the Running exclusion covers
+    the steady state. Each start flows through `initiate_run`, so it is authorized,
+    attributed, and Decision-linked exactly as a single agent start.
+
+    A per-Subject StartRun denial makes `initiate_run` return None (a logged
+    no-op); that Subject is not added to `started`, so a transient fault is
+    retried next tick. `max_in_flight <= 0` makes the tick inert (returns []); the
+    daemon that drives this on a cadence enforces a >= 1 floor on the setting.
+    """
+    actor = await load_actor(deps.event_store, RUN_INITIATOR_AGENT_ID)
+    if actor is None or not actor.active:
+        # Not seeded yet, or deactivated by an operator: stand down.
+        _log.info("run_initiator.stood_down", seeded=actor is not None)
+        return []
+
+    try:
+        running = await _drain_running_runs(list_runs, deps)
+    except UnauthorizedError as err:
+        raise WatcherReadUnauthorizedError(
+            query_name=_READ_RUNS, principal_id=RUN_INITIATOR_AGENT_ID, reason=str(err)
+        ) from err
+    try:
+        ready = await _drain_mounted_subjects(list_subjects, deps)
+    except UnauthorizedError as err:
+        raise WatcherReadUnauthorizedError(
+            query_name=_READ_SUBJECTS, principal_id=RUN_INITIATOR_AGENT_ID, reason=str(err)
+        ) from err
+
+    slots = max_in_flight - len(running)
+    if slots <= 0:
+        return []
+
+    running_subject_ids = {item.subject_id for item in running if item.subject_id is not None}
+    started_run_ids: list[UUID] = []
+    for subject in ready:
+        if len(started_run_ids) >= slots:
+            break
+        if subject.subject_id in running_subject_ids or subject.subject_id in started:
+            continue
+        run_id = await initiate_run(
+            deps,
+            plan_id=plan_id,
+            subject_id=subject.subject_id,
+            name=f"Autonomous scan: {subject.name}",
+        )
+        if run_id is not None:
+            started.add(subject.subject_id)
+            started_run_ids.append(run_id)
+    return started_run_ids
+
+
 __all__ = [
     "initiate_run",
+    "initiate_tick",
 ]
