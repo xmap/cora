@@ -111,7 +111,7 @@ def main() -> None:
     begin = proj["in_flight"]
     ax.plot([begin, cursor], [y, y], color=s.ALARM, lw=4.5, ls=(0, (4, 2.6)),
             alpha=0.9, zorder=2)
-    ax.scatter([begin], [y], marker="D", s=42, color=s.ALARM, edgecolors="white",
+    ax.scatter([begin], [y], marker="^", s=52, color=s.ALARM, edgecolors="white",
                linewidths=0.6, zorder=3)
     ax.annotate("first projection:\nin flight", ((begin + cursor) / 2, y),
                 textcoords="offset points", xytext=(0, 8), ha="center",

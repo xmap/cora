@@ -49,9 +49,9 @@ def main() -> None:
     def lane(ax, *, cursor, closed, run_status, tag):
         ax.axvspan(beam_loss, beam_back if closed else min(cursor, beam_back),
                    color=s.HELD, zorder=0)
-        ax.scatter([begin], [0], marker="D", s=42, color=s.OPERATOR,
-                   edgecolors="white", linewidths=0.6, zorder=3)
         accent = s.GOOD if closed else s.ALARM
+        ax.scatter([begin], [0], marker="^", s=52, color=accent,
+                   edgecolors="white", linewidths=0.6, zorder=3)
         if closed:
             ax.plot([begin, end], [0, 0], color=s.GOOD, lw=5,
                     solid_capstyle="round", alpha=0.45, zorder=1)
