@@ -18,7 +18,9 @@ replay-scrubber paper is built around:
      Decision link), leaving the acquisition mid-flight.
   5. The beam returns and the start-safety envelope is good again, so the
      supervisor AUTO-RESUMES (RunResumed carries a Resume Decision).
-  6. The acquisition completes; the Procedure completes; the Run completes.
+  6. The interrupted projection completes, the science scan continues to the end
+     (the remaining projections acquire), the Procedure completes, the Run
+     completes.
 
 The supervisor loop is driven white-box via `_supervise_tick` (the same
 pattern as `test_2bm_run_supervisor_auto_resume.py`), beam availability is the
@@ -262,6 +264,21 @@ def _acquire_marker(*, result: str) -> ActivityInput:
     )
 
 
+def _science_projection(*, angle_deg: float) -> ActivityInput:
+    """A science-scan projection acquired after the first one, once the run has
+    resumed: the scan rotates the sample and acquires the remaining projections."""
+    return ActivityInput(
+        event_id=uuid4(),
+        step_kind="action",
+        payload={
+            "action_name": "acquire_projection",
+            "params": {"exposure_ms": 100, "angle_deg": angle_deg},
+            "result": "ok",
+        },
+        sampled_at=_NOW,
+    )
+
+
 class _BeamDown:
     async def read(self) -> BeamAvailabilityLookupResult:
         return BeamAvailabilityLookupResult(
@@ -463,10 +480,15 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
     assert [e.event_type for e in run_events] == ["RunStarted", "RunHeld", "RunResumed"]
     await _drain_run(db_pool)
 
-    # The interrupted projection completes after resume.
+    # The interrupted projection completes after resume, then the science scan
+    # continues to the end of the run: the remaining projections acquire.
     await bind_append_step(deps, step_store=step_store)(
         AppendProcedureActivities(
-            procedure_id=_PROCEDURE_ID, entries=(_acquire_marker(result="ok"),)
+            procedure_id=_PROCEDURE_ID,
+            entries=(
+                _acquire_marker(result="ok"),
+                *(_science_projection(angle_deg=a) for a in (30.0, 60.0, 90.0, 120.0, 150.0)),
+            ),
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -540,3 +562,13 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
         )
     results = sorted(r["result"] for r in acq_rows)
     assert results == ["in_flight", "ok"]
+
+    # ----- Assert: the science scan continued after resume (remaining projections) ---
+    async with db_pool.acquire() as conn:
+        scan_rows = await conn.fetch(
+            "SELECT payload->>'result' AS result FROM entries_operation_procedure_activities "
+            "WHERE procedure_id = $1 AND payload->>'action_name' = 'acquire_projection'",
+            _PROCEDURE_ID,
+        )
+    assert len(scan_rows) == 5
+    assert all(r["result"] == "ok" for r in scan_rows)

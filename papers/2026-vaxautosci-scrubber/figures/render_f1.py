@@ -6,7 +6,8 @@ run: a run-lifecycle / who-drove-it lane (operator vs supervisor),
 per-iteration convergence bands colored by verdict (the rotation-axis
 centering search), activity swim-lanes, a shaded held band, and a fold-to-
 version cursor parked at the beam-loss instant, where the first projection is an
-open interval (in flight, no outcome yet).
+open interval (in flight, no outcome yet); the science scan continues after
+resume.
 
 Full-width figure: rendered at the full text width.
 Run: uv run --no-project --with matplotlib python figures/render_f1.py
@@ -96,9 +97,10 @@ def main() -> None:
     ax.text(secs(iters[-1]["ended_at"]) + 3, band_hi, "centering converged",
             fontsize=s.SIZE["small"], va="center", ha="left", color=s.GOOD)
 
-    # Activity swim-lanes (alignment), plus the first science projection.
+    # Activity swim-lanes (alignment). Science projections are drawn separately.
     for a in acts:
-        if a["payload"].get("action_name") == "acquire_first_projection":
+        if a["payload"].get("action_name") in ("acquire_first_projection",
+                                               "acquire_projection"):
             continue
         x, y = secs(a["sampled_at"]), LANE_Y[a["step_kind"]]
         ax.scatter([x], [y], marker=LANE_MARKER[a["step_kind"]], s=46,
@@ -127,9 +129,17 @@ def main() -> None:
             ls=(0, (0.9, 0.8)), dash_capstyle="butt", alpha=0.55, zorder=2)
     ax.scatter([proj["ok"]], [y], marker="^", s=42, color=s.SUBINK, alpha=0.35,
                edgecolors="white", linewidths=0.5, zorder=3)
-    ax.annotate("resumes,\ncompletes", (proj["ok"], y),
-                textcoords="offset points", xytext=(0, -17), ha="center",
-                fontsize=s.SIZE["small"], color=s.MUTE, linespacing=1.0)
+
+    # The science scan continues after resume: the remaining projections acquire
+    # (ghosted, since they are after the parked cursor).
+    scan = sorted(secs(a["sampled_at"]) for a in acts
+                  if a["payload"].get("action_name") == "acquire_projection")
+    if scan:
+        ax.scatter(scan, [y] * len(scan), marker="^", s=34, color=s.MUTE,
+                   alpha=0.5, edgecolors="white", linewidths=0.5, zorder=3)
+        ax.annotate("scan resumes,\nruns to completion", (scan[len(scan) // 2], y),
+                    textcoords="offset points", xytext=(0, -17), ha="center",
+                    fontsize=s.SIZE["small"], color=s.MUTE, linespacing=1.0)
 
     # Fold-to-version cursor at the beam-loss instant.
     ax.axvline(cursor, color=s.ALARM, ls="--", lw=1.3, zorder=5)

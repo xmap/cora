@@ -11,13 +11,14 @@
   2-BM. The top lane is the run lifecycle, colored by who drove each transition:
   the operator started and the run completes, while the supervisor agent held
   the run when the beam dropped and resumed it when the beam returned (the gray
-  band is the hold). Below it, one convergence bracket per pass of the conducted
-  rotation-axis centering search, colored by verdict (amber open, green
-  converged); then the per-step setpoint, acquire, and check swim-lanes. The
+  band is the hold). Below it, the setpoint, acquire, and check swim-lanes, with
+  one verdict-tinted band per pass of the conducted rotation-axis centering
+  search (amber open, green converged) grouping that pass's three activities. The
   fold-to-version cursor is parked at the beam-loss instant: folding the event
   stream to there reconstructs the state shown in the read-out, including the
   first projection as an open interval (its in-flight marker is recorded but its
-  outcome is not yet). Time spacing is synthetic.}
+  outcome is not yet). Past the cursor, after the run resumes, the science scan
+  continues to completion. Time spacing is synthetic.}
   \label{fig:scrubber}
 \end{figure*}
 

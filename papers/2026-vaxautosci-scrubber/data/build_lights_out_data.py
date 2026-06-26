@@ -65,7 +65,9 @@ _ITER_STRIDE = 14.0
 _ACQ_BEGIN = 62.0          # first projection in-flight marker
 _BEAM_LOSS = 80.0          # RunHeld (beam dump)
 _BEAM_BACK = 150.0         # RunResumed (beam returns)
-_ACQ_END = 165.0           # projection outcome after resume
+_ACQ_END = 165.0           # first projection outcome after resume
+_SCAN_BEGIN = 172.0        # remaining science projections (sampled across the scan)
+_SCAN_STRIDE = 6.0
 _RUN_DONE = 200.0
 
 
@@ -128,6 +130,17 @@ def _build() -> dict:
         "sampled_at": _at(_ACQ_END), "result": "ok",
     })
 
+    # The science scan continues after resume: the remaining projections acquire,
+    # sampled across the 180-degree rotation, until the run completes.
+    for k, angle in enumerate((30.0, 60.0, 90.0, 120.0, 150.0)):
+        seq += 1
+        activities.append({
+            "seq": seq, "iteration": None, "step_kind": "action",
+            "payload": {"action_name": "acquire_projection",
+                        "params": {"exposure_ms": 100, "angle_deg": angle}, "result": "ok"},
+            "sampled_at": _at(_SCAN_BEGIN + k * _SCAN_STRIDE), "result": "ok",
+        })
+
     run_events = [
         {"type": "RunStarted", "at": _at(0.0), "by": "operator", "role": "human"},
         {"type": "RunHeld", "at": _at(_BEAM_LOSS), "by": "RunSupervisor", "role": "agent",
@@ -148,8 +161,9 @@ def _build() -> dict:
             ),
             "run": (
                 "Lights-out, agent-supervised run at APS 2-BM: conducted rotation-axis "
-                "centering alignment, first projection interrupted by a beam dump, "
-                "RunSupervisor hold + auto-resume, completion."
+                "centering alignment, first projection interrupted by beam loss, "
+                "RunSupervisor hold + auto-resume, then the science scan continues to "
+                "completion."
             ),
             "timestamps": (
                 "sampled_at / event times staggered synthetically for a readable axis; "
