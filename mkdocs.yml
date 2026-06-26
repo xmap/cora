@@ -333,6 +333,19 @@ nav:
         - Techniques: deployments/i20-1/techniques.md
         - Governance: deployments/i20-1/governance.md
         - Model: deployments/i20-1/model.md
+      - I19:
+        - deployments/i19/index.md
+        - Open questions: deployments/i19/questions.md
+        - The beamline:
+          - deployments/i19/equipment/index.md
+          - Source: deployments/i19/beamline.md
+          - Sample: deployments/i19/equipment/sample.md
+          - Detector: deployments/i19/equipment/detector.md
+          - Controls: deployments/i19/equipment/controls.md
+          - Inventory: deployments/i19/inventory.md
+        - Techniques: deployments/i19/techniques.md
+        - Governance: deployments/i19/governance.md
+        - Model: deployments/i19/model.md
     - NSLS-II:
       - deployments/nsls2/index.md
       - FXI:
