@@ -602,6 +602,19 @@ nav:
         - Techniques: deployments/hex/techniques.md
         - Governance: deployments/hex/governance.md
         - Model: deployments/hex/model.md
+      - AMX:
+        - deployments/amx/index.md
+        - Open questions: deployments/amx/questions.md
+        - The beamline:
+          - deployments/amx/equipment/index.md
+          - Source: deployments/amx/beamline.md
+          - Sample: deployments/amx/equipment/sample.md
+          - Detector: deployments/amx/equipment/detector.md
+          - Controls: deployments/amx/equipment/controls.md
+          - Inventory: deployments/amx/inventory.md
+        - Techniques: deployments/amx/techniques.md
+        - Governance: deployments/amx/governance.md
+        - Model: deployments/amx/model.md
     - SLAC:
       - deployments/slac/index.md
       - LCLS-MFX:

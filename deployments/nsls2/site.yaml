@@ -25,7 +25,7 @@ facility:
   heading: "NSLS-II"
   kind: Site
   institution: Brookhaven National Laboratory
-  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, IOS, XPD, ESM, SMI, IXS, SST, ISS, FMX, CMS, XFM, LIX, HEX]
+  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, IOS, XPD, ESM, SMI, IXS, SST, ISS, FMX, CMS, XFM, LIX, HEX, AMX]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the FXI profile collection, not yet
@@ -134,6 +134,15 @@ practices:
   - {name: HEX_radiography_practice, method: radiography, pending: true, note: "time-resolved high-speed radiography on the Phantom Veo; reuses the radiography Method APS 7-BM left pending, the second consumer (TECH-1)"}
   - {name: HEX_energy_dispersive_diffraction_practice, method: energy_dispersive_diffraction, pending: true, note: "spatially-resolved energy-dispersive X-ray diffraction (EDXD) on the GeRM germanium strip detector; reuses the energy_dispersive_diffraction Method APS 7-BM left pending, the second consumer (TECH-1)"}
   - {name: HEX_powder_diffraction_practice, method: powder_diffraction, pending: true, note: "monochromatic angle-dispersive / powder diffraction (ADXD) on the PerkinElmer flat panel; reuses the powder_diffraction Method Diamond i11 left pending, the second consumer (TECH-1)"}
+  # AMX (17-ID-1) is FMX's high-throughput MX sibling on the shared 17-ID straight: rotation
+  # data collection on a single-omega goniometer + Eiger, fast grid scans, and an autonomous
+  # EMBL-robot sample-exchange loop. These reuse the three MX Methods i03 / FMX left pending;
+  # AMX is the third consumer of each. They stay pending: Methods coin on a conduct-path (an
+  # integration scenario that runs them), not a sighting count, so n=3 strengthens the case
+  # but does not coin them (the energy_scan discipline; TECH-1 / ROBOT-1).
+  - {name: AMX_mx_data_collection_practice, method: mx_data_collection, pending: true, note: "rotation / oscillation MX data collection on the single-omega goniometer + Eiger via the mxtools vector / Zebra flyer; reuses the i03 / FMX mx_data_collection Method, the third consumer (TECH-1)"}
+  - {name: AMX_grid_scan_practice, method: grid_scan, pending: true, note: "fast grid scan for sample location / centring via the Zebra-triggered goniometer raster; reuses the i03 / FMX grid_scan Method, the third consumer (TECH-1)"}
+  - {name: AMX_sample_exchange_practice, method: sample_exchange, pending: true, note: "autonomous EMBL-robot load / centre / collect / unmount loop coordinated by the LSDC Governor; reuses the i03 / FMX sample_exchange Method, the third consumer; a Procedure over the spine + a Subject custody thread (ROBOT-1)"}
 
 # Access BC Actors conceptually facility-wide at NSLS-II. Pending until the NSLS-II
 # operator and review structure is confirmed; the profile collection only exposes
