@@ -299,10 +299,12 @@ DECISION_CONTEXT_RUN_SUPERVISION = "RunSupervision"
 
 # Closed `choice` value set for `context = "RunSupervision"` Decisions.
 # Projection-validated, not domain-enforced (the open-string
-# `DecisionContext` + `DecisionChoice` shape is preserved). Ten values:
+# `DecisionContext` + `DecisionChoice` shape is preserved). Eleven values:
 # five beam-Hold/Resume + two audit-fallback + three advise-rung
-# observe->advise dispositions (Quieted / Stalled / Breached), the last
-# three Decision-only (one per breach edge, never a command).
+# observe->advise dispositions (Quieted / Stalled / Breached, Decision-only,
+# one per breach edge) + one liveness act rung (Truncate) that escalates the
+# run-liveness advise (Quieted) to a terminal command once a Run stays
+# implausibly long for the operator settle window.
 #
 #   - `Continue`              -- no wind-down trigger met; no command
 #                               issued (the NoAction-bias default).
@@ -334,6 +336,13 @@ DECISION_CONTEXT_RUN_SUPERVISION = "RunSupervision"
 #                               (Rule Q). Decision-only. (Named by naming-r3:
 #                               the limit was breached, an objective edge,
 #                               not the supervisor's epistemic state.)
+#   - `Truncate`              -- liveness act rung: issues TruncateRun (the
+#                               terminal partial-data exit) for a Run that has
+#                               stayed implausibly long past the operator
+#                               ceiling for the settle window; the escalation of
+#                               the SupervisionQuieted advise. A bare verb
+#                               mirroring the TruncateRun command, as Hold /
+#                               Resume mirror HoldRun / ResumeRun.
 RunSupervisionChoice = Literal[
     "Continue",
     "Hold",
@@ -345,6 +354,7 @@ RunSupervisionChoice = Literal[
     "SupervisionQuieted",
     "SupervisionStalled",
     "SupervisionBreached",
+    "Truncate",
 ]
 RUN_SUPERVISION_CHOICES: Final = frozenset(
     {
@@ -358,6 +368,7 @@ RUN_SUPERVISION_CHOICES: Final = frozenset(
         "SupervisionQuieted",
         "SupervisionStalled",
         "SupervisionBreached",
+        "Truncate",
     }
 )
 

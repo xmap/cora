@@ -228,6 +228,19 @@ class Settings(BaseSettings):
     # Decision and issues no command.
     run_liveness_ceiling_seconds: float | None = None
 
+    # `run_supervisor_truncate_enabled` is the ACT rung of the run-liveness rule:
+    # a SEPARATE opt-in (default off) above `run_liveness_ceiling_seconds` that
+    # lets the supervisor autonomously issue TruncateRun (the terminal,
+    # partial-data exit) for a Run that has stayed past the operator ceiling. It
+    # is inert unless the ceiling is set (the rule's own gate) AND
+    # run_supervisor_enabled is on. `run_supervisor_truncate_settle_ticks` is the
+    # anti-flap settle window: the Run must read liveness-stale for this many
+    # CONSECUTIVE ticks before the terminal truncate fires (>= 1), so a
+    # transiently-stale or recovering Run is never killed. Truncate is terminal,
+    # so the default settle is higher than the resume wind-up's.
+    run_supervisor_truncate_enabled: bool = False
+    run_supervisor_truncate_settle_ticks: int = 3
+
     # Observation-signal closed-loop rules (SHADOW, inside the RunSupervisor
     # loop; [[project_observation_signal_port_design]]). Both default OFF and
     # are a second off-gate above run_supervisor_enabled.
@@ -561,6 +574,18 @@ class Settings(BaseSettings):
             msg = (
                 f"run_supervisor_resume_settle_ticks must be >= 1, got {value}; "
                 "an autonomous resume requires at least one good envelope read"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_supervisor_truncate_settle_ticks")
+    @classmethod
+    def _validate_run_supervisor_truncate_settle_ticks(cls, value: int) -> int:
+        """Floor of 1: a terminal truncate needs at least one stale read first."""
+        if value < 1:
+            msg = (
+                f"run_supervisor_truncate_settle_ticks must be >= 1, got {value}; "
+                "an autonomous truncate requires at least one liveness-stale read"
             )
             raise ValueError(msg)
         return value

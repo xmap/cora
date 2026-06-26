@@ -875,6 +875,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         list_runs=app.state.run.list_runs,
                         hold_run=app.state.run.hold_run,
                         resume_run=app.state.run.resume_run,
+                        truncate_run=app.state.run.truncate_run,
                     ),
                     clearance_expirer_lifespan(
                         deps,

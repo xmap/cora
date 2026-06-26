@@ -223,6 +223,7 @@ async def test_truncate_run_persists_with_interrupted_at_and_round_trips_to_trun
         "reason": "weekend power loss; abandoned at projection 487 of 1500",
         "interrupted_at": _INTERRUPTED_AT.isoformat(),
         "occurred_at": _NOW.isoformat(),
+        "decided_by_decision_id": None,
     }
     # The two timestamps stay distinct through jsonb (operator-
     # supplied interrupted_at on Saturday, system-recorded

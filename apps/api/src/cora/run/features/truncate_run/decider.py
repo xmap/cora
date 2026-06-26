@@ -70,5 +70,6 @@ def decide(
             reason=reason.value,
             interrupted_at=command.interrupted_at,
             occurred_at=now,
+            decided_by_decision_id=command.decided_by_decision_id,
         )
     ]
