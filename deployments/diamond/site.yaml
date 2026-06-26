@@ -27,7 +27,7 @@ facility:
   heading: "Diamond Light Source"
   kind: Site
   institution: Diamond Light Source Ltd, Harwell Campus, Didcot, UK
-  beamlines: [I22, I03, I15-1, I11, I24, I06, I10]
+  beamlines: [I22, I03, I15-1, I11, I24, I06, I10, I20-1]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All
 # pending in the design phase. I22 is a scattering beamline, so its practices
@@ -57,6 +57,12 @@ practices:
   - {name: I10_reflectivity_practice, method: reflectivity, pending: true, note: "soft X-ray reflectivity on the RASOR diffractometer (the R in RASOR); new Capability not yet in the catalog (TECH-1)"}
   - {name: I10_xmcd_practice, method: xmcd, pending: true, note: "X-ray magnetic circular dichroism at i10-1 in an applied magnetic field; shares the 4-ID XMCD Method (TECH-1)"}
   - {name: I10_xmld_practice, method: xmld, pending: true, note: "X-ray magnetic linear dichroism at i10-1 in an applied magnetic field; shares the i06 XMLD Method (TECH-1)"}
+  # i20-1 energy-dispersive EXAFS (EDE) Practice (deliberately partial first cut). The
+  # dispersive complement to scanning XAS: a polychromator fans the energy band and a
+  # strip detector reads the spectrum in one shot. Method not in the catalog; the
+  # dispersive polychromator + strip detector are not yet in the dodal source (POLY-1 /
+  # STRIP-1), carried pending until a technique enters scope (TECH-1).
+  - {name: I20-1_ede_practice, method: energy_dispersive_exafs, pending: true, note: "energy-dispersive / time-resolved EXAFS: a bent-crystal polychromator + position-sensitive strip detector read the absorption spectrum in one shot; the dispersive complement to scanning XAS, Method not yet in the catalog (TECH-1), dispersive devices not yet in source (POLY-1 / STRIP-1)"}
 
 # Access BC Actors conceptually facility-wide at Diamond. Pending until the
 # Diamond operator and review structure is confirmed.

@@ -269,6 +269,7 @@ _PENDING_METHODS = {
     "ultra_small_angle_scattering": "12-ID-E Bonse-Hart USAXS; not yet earned (USAXS-1)",
     "total_scattering": "i15-1 total scattering / PDF; Method not yet earned",
     "powder_diffraction": "i11 powder diffraction; portable Method not yet earned",
+    "energy_dispersive_exafs": "i20-1 EDE; dispersive devices not yet in source (POLY-1 / STRIP-1)",
     "serial_crystallography": "LCLS-MFX + i24 serial crystallography; 2 consumers, not earned",
     "pump_probe": "LCLS-MFX fs optical-laser pump / X-ray probe; XFEL Method not yet earned",
     "xas_spectroscopy": "MFX + ISS emission-spectrometer XAS / XES; 2 consumers (TECH-1)",

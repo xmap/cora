@@ -36,6 +36,10 @@ The third Site CORA models, and a deliberate off-roadmap exercise: real, operati
 | [I03](i03/index.md) | Modelling exercise | macromolecular crystallography (MX); graduates the Goniometer Family and exercises autonomous sample handling |
 | [I15-1](i15-1/index.md) | Modelling exercise | X-ray total scattering / pair distribution function (XPDF); a reuse + reinforce deployment (no new vocabulary) |
 | [I11](i11/index.md) | Modelling exercise | high-resolution powder diffraction; the rule-of-three that earned the TemperatureController graduation + the Regulator Role (landed via gate-review) |
+| [I24](i24/index.md) | Modelling exercise | serial / fixed-target macromolecular crystallography (chip-coordinate single-shot); reuses the Goniometer, first synchrotron serial MX |
+| [I06](i06/index.md) | Modelling exercise | APPLE-II variable-polarization soft X-ray (XMCD/XMLD, PEEM, resonant diffraction); polarization as a controllable axis |
+| [I10](i10/index.md) | Modelling exercise | BLADE twin APPLE-II soft X-ray: RASOR resonant scattering / reflectivity + i10-1 magnet dichroism |
+| [I20-1](i20-1/index.md) | Modelling exercise | energy-dispersive / time-resolved EXAFS (EDE); a deliberately partial first cut, the dispersive polychromator + strip detector deferred (POLY-1 / STRIP-1) |
 
 ## [NSLS-II](nsls2/index.md)
 
