@@ -11,6 +11,8 @@ Priorities: `Blocks-build`, `Blocks-go-live`, `Nice-to-have`.
 | SRC-1 | Nice-to-have | IVU18 undulator period, gap range, and harmonic usage. The device (`SR:C09-ID:G1{IVU18:1}`) is confirmed. | An in-vacuum undulator, identity-only. | The InsertionDevice settings. |
 | PSS-1 | Blocks-go-live | The PSS search-and-secure permit-leaf PVs and the photon-shutter PVs. Neither is in source. | The permit signal is a confirm note, not a guessed PV. | The Enclosure permit signals. |
 | ENC-1 | Nice-to-have | Whether the 09IDB branch zone (`Slt:DM3`, the quadrant BPM) is a distinct access-gated enclosure or part of the optics hutch. | Two enclosures (9-ID-A optics, 9-ID-C endstation); 09IDB folded into the optics zone. | The Enclosure boundaries. |
+| MACHINE-1 | Nice-to-have | The storage-ring state CDI reads (current, fill, status). | Observe-only machine state, a loose `StorageRing`; the exact PVs beyond `ring_current` pending. | The machine-state observation. |
+| GOV-1 | Nice-to-have | The NSLS-II operator pool and safety-review structure (site-level, shared across the beamlines). | Carried pending on the NSLS-II Site, not instantiated per beamline. | The governance principals. |
 
 ## Optics
 
