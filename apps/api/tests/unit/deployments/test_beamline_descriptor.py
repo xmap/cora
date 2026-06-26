@@ -384,6 +384,7 @@ _ALLOWED_LOOSE_FAMILIES = {
     "FlightPath": "staged: evacuated XPCS flight path (8-ID); rule-of-three open (XPCS-2)",
     "SpectrometerArm": "staged: energy-dispersive RIXS arm (SIX); no point-Sensor fit (RIXS-1)",
     "EnergyAnalyzer": "staged: IXS diced crystal energy analyzer; n=1 (ANALYZER-1)",
+    "PressureCell": "staged: high-pressure DAC sample environment (13-id-d); n=1 (PRESSURE-1)",
 }
 
 # The subset of loose families that is conceptually a Supply observation (a
@@ -399,7 +400,7 @@ _SUPPLY_LOOSE_FAMILIES = {"Beam", "Vacuum", "StorageRing"}
 _PROMOTION_REVIEWED = {
     "Diagnostic": "hold: Sensor fold-vs-promote still open (DIAG-1)",
     "Screen": "hold: phosphor beam-viewing screen (2-BM, BMM); fold-vs-promote open (FLAG-1)",
-    "FlowController": "hold: flow/pump actuator n=3 (i22/7-bm/lix); graduation candidate (FLOW-1)",
+    "FlowController": "hold: flow/pump actuator n=4 (i22/7-bm/lix/xfp); overdue (FLOW-1)",
     "BeamPositionMonitor": "hold: fold-vs-promote across 4-id/8-id/9-id/iss/fmx/cdi (DIAG-1)",
     "Laser": "hold: pump-probe laser model-vs-hazard open (4-id + lcls-mfx; SAMPLE-1)",
     "Backlight": "hold: sample-illumination fold-vs-promote open (i03 + i24 + fmx + i19; DET-1)",

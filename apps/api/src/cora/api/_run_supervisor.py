@@ -102,6 +102,7 @@ from cora.run.aggregates.run import (
     RunBeamAvailabilityUnknownError,
     RunCannotHoldError,
     RunCannotResumeError,
+    RunCannotTruncateError,
     RunClearanceCoverageMismatchError,
     RunEnclosureCoverageMismatchError,
     RunNotFoundError,
@@ -116,6 +117,7 @@ from cora.run.errors import UnauthorizedError
 from cora.run.features.hold_run import HoldRun
 from cora.run.features.list_runs import ListRuns
 from cora.run.features.resume_run import ResumeRun
+from cora.run.features.truncate_run import TruncateRun
 from cora.run.ports import InMemoryRunChannelLookup
 from cora.shared.identity import ActorId
 
@@ -134,6 +136,7 @@ if TYPE_CHECKING:
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
     from cora.run.features.list_runs.query import RunStatusFilter
     from cora.run.features.resume_run.handler import Handler as ResumeRunHandler
+    from cora.run.features.truncate_run.handler import Handler as TruncateRunHandler
     from cora.run.ports import RunChannelLookup
 
 _log = get_logger(__name__)
@@ -365,6 +368,12 @@ def _reasoning_for(choice: str) -> str:
             "every needed supply is Available, and the shutters are open); resumed "
             "the Run the supervisor itself held."
         )
+    if choice == "Truncate":
+        return (
+            "The Run stayed Running implausibly long past the operator run-age "
+            "ceiling, without progressing, for the full settle window; truncated it "
+            "as de-facto hung to free the beamline. Partial data may be salvageable."
+        )
     return (
         "Beam still unavailable but the operator resumed the Run; deferring to "
         "the operator (no re-hold for this outage)."
@@ -493,6 +502,68 @@ async def _record_supervision_advice(
         _log.info("run_supervisor.decision_already_written", choice=choice)
 
 
+async def _record_truncate_decision(
+    deps: Kernel,
+    *,
+    decision_id: UUID,
+    run_id: UUID,
+    running_seconds: int,
+    ceiling_seconds: float,
+    settle_count: int,
+) -> None:
+    """Append one DecisionRegistered for an autonomous liveness truncate (the act
+    rung): context=RunSupervision, choice=Truncate.
+
+    Beam-free (the liveness rule runs before the beam read; the evidence is the
+    Run age vs the operator ceiling, not beam state). Accepts the decision_id so
+    the issued TruncateRun links back via decided_by_decision_id (mirroring the
+    beam-Hold path). A ConcurrencyError on a re-derived id is treated as success
+    (same posture as `_record_decision`)."""
+    now = deps.clock.now()
+    domain_event = DecisionRegistered(
+        decision_id=decision_id,
+        decided_by=ActorId(RUN_SUPERVISOR_AGENT_ID),
+        context=DecisionContext(DECISION_CONTEXT_RUN_SUPERVISION).value,
+        choice=DecisionChoice("Truncate").value,
+        parent_id=None,
+        override_kind=None,
+        rule=DecisionRule(_RULE).value,
+        reasoning=validate_reasoning(_reasoning_for("Truncate")),
+        confidence=validate_confidence(None),
+        confidence_source=DecisionConfidenceSource.SELF_REPORTED,
+        alternatives=(),
+        inputs=validate_inputs(
+            {
+                "run_id": str(run_id),
+                "running_seconds": str(running_seconds),
+                "ceiling_seconds": str(ceiling_seconds),
+                "settle_ticks": str(settle_count),
+            }
+        ),
+        reasoning_signature=None,
+        occurred_at=now,
+    )
+    new_event = to_new_event(
+        event_type=event_type_name(domain_event),
+        payload=to_payload(domain_event),
+        occurred_at=now,
+        event_id=uuid5(decision_id, "event:0"),
+        command_name=_COMMAND_NAME,
+        correlation_id=deps.id_generator.new_id(),
+        causation_id=None,
+        principal_id=RUN_SUPERVISOR_AGENT_ID,
+    )
+    try:
+        await deps.event_store.append(
+            stream_type=_STREAM_TYPE,
+            stream_id=decision_id,
+            expected_version=0,
+            events=[new_event],
+        )
+    except ConcurrencyError:
+        _log.info("run_supervisor.decision_already_written", choice="Truncate")
+
+
 async def _issue_hold(
     deps: Kernel,
     hold_run: HoldRunHandler,
@@ -541,6 +612,45 @@ async def _issue_resume(
         # Configuration fault: the supervisor principal is not granted ResumeRun.
         # Log loudly; take no autonomous action (the Run stays Held).
         _log.warning("run_supervisor.resume_unauthorized", run_id=str(run_id))
+
+
+async def _issue_truncate(
+    deps: Kernel,
+    truncate_run: TruncateRunHandler,
+    *,
+    run_id: UUID,
+    running_seconds: int,
+    ceiling_seconds: float,
+    decision_id: UUID,
+) -> None:
+    """Issue TruncateRun through the authorized handler; benign no-op on state race.
+
+    The terminal act rung of the run-liveness rule. `interrupted_at` is None: the
+    supervisor knows the Run is hung but not the exact interruption instant."""
+    try:
+        await truncate_run(
+            TruncateRun(
+                run_id=run_id,
+                reason=(
+                    f"Autonomously truncated by the RunSupervisor: the Run stayed Running "
+                    f"{running_seconds}s, past the operator run-age ceiling of "
+                    f"{int(ceiling_seconds)}s, without progressing (de-facto hung)."
+                ),
+                interrupted_at=None,
+                decided_by_decision_id=decision_id,
+            ),
+            principal_id=RUN_SUPERVISOR_AGENT_ID,
+            correlation_id=deps.id_generator.new_id(),
+            surface_id=NIL_SENTINEL_ID,
+        )
+    except (RunCannotTruncateError, RunNotFoundError) as exc:
+        # The Run changed under us between read and issue (someone else acted, or
+        # it already terminated): a benign no-op, not an error.
+        _log.info("run_supervisor.truncate_skipped", run_id=str(run_id), reason=type(exc).__name__)
+    except UnauthorizedError:
+        # Configuration fault: the supervisor principal is not granted TruncateRun.
+        # Log loudly; take no autonomous action (the Run keeps Running).
+        _log.warning("run_supervisor.truncate_unauthorized", run_id=str(run_id))
 
 
 async def _assemble_and_check_envelope(
@@ -796,12 +906,14 @@ async def _supervise_tick(
     list_runs: ListRunsHandler,
     hold_run: HoldRunHandler,
     resume_run: ResumeRunHandler,
+    truncate_run: TruncateRunHandler,
     beam_lookup: BeamAvailabilityLookup,
     channel_lookup: RunChannelLookup,
     rules_config: ObservationRuleConfig,
     memory: dict[UUID, str],
     settle: dict[UUID, int],
     liveness: set[UUID],
+    truncate_settle: dict[UUID, int],
     quality: set[UUID],
     stall: set[UUID],
     stall_streak: dict[UUID, int],
@@ -809,6 +921,8 @@ async def _supervise_tick(
     resume_enabled: bool,
     resume_settle_ticks: int,
     liveness_ceiling_seconds: float | None,
+    truncate_enabled: bool,
+    truncate_settle_ticks: int,
     advise_enabled: bool,
 ) -> None:
     """One supervision pass over all in-flight Runs (hold + gated resume +
@@ -840,6 +954,9 @@ async def _supervise_tick(
     for run_id in list(liveness):
         if run_id not in inflight_ids:
             liveness.discard(run_id)
+    for run_id in list(truncate_settle):
+        if run_id not in inflight_ids:
+            del truncate_settle[run_id]
     for run_id in list(stall_streak):
         if run_id not in inflight_ids:
             del stall_streak[run_id]
@@ -853,46 +970,79 @@ async def _supervise_tick(
         if run_id not in inflight_ids:
             feed_dead_warned.discard(run_id)
 
-    # Shadow run-liveness pass (the run-liveness rule, v1): OBSERVE-ONLY. It logs
-    # which Running Runs it WOULD flag as implausibly long (now - running_since
-    # past the operator ceiling) and records nothing, issues no command. Run
-    # before the beam read so it is independent of beam I/O. Off unless the
-    # operator set a ceiling. Edge-triggered via `liveness` (a set walled off
-    # from the beam-Hold `memory`): log once per stall episode; clearing on
-    # not-stale lets it re-log if a resumed Run goes stale again.
+    # Run-liveness pass (the run-liveness rule): flags a Running Run that has
+    # been Running implausibly long (now - running_since past the operator
+    # ceiling). Runs before the beam read so it is independent of beam I/O. Off
+    # unless the operator set a ceiling. Three rungs, each a further opt-in:
+    #   - SHADOW (always, when a ceiling is set): log `run_liveness.would_flag`
+    #     once per stall episode, edge-triggered via `liveness`.
+    #   - ADVISE (advise_enabled): record one Decision(choice=SupervisionQuieted)
+    #     on the same edge, still no command.
+    #   - ACT (truncate_enabled): count CONSECUTIVE stale ticks in
+    #     `truncate_settle`; once the settle window elapses, record one
+    #     Decision(choice=Truncate) and issue TruncateRun (terminal). The settle
+    #     window is the fail-safe: a transiently-stale or recovering Run, which
+    #     clears the counter on its first non-stale tick, is never truncated.
     if liveness_ceiling_seconds is not None:
         now = deps.clock.now()
         for item in running:
             running_since = item.running_since
-            if running_since is not None and is_run_stale(
+            if running_since is None or not is_run_stale(
                 running_since, now, liveness_ceiling_seconds
             ):
-                if item.run_id not in liveness:
-                    liveness.add(item.run_id)
-                    running_seconds = int((now - running_since).total_seconds())
-                    _log.info(
-                        "run_liveness.would_flag",
-                        run_id=str(item.run_id),
+                liveness.discard(item.run_id)
+                truncate_settle.pop(item.run_id, None)
+                continue
+            running_seconds = int((now - running_since).total_seconds())
+            if item.run_id not in liveness:
+                liveness.add(item.run_id)
+                _log.info(
+                    "run_liveness.would_flag",
+                    run_id=str(item.run_id),
+                    running_seconds=running_seconds,
+                    ceiling_seconds=liveness_ceiling_seconds,
+                )
+                if advise_enabled:
+                    await _record_supervision_advice(
+                        deps,
+                        run_id=item.run_id,
+                        choice="SupervisionQuieted",
+                        inputs={
+                            "running_seconds": str(running_seconds),
+                            "ceiling_seconds": str(liveness_ceiling_seconds),
+                        },
+                        reasoning=(
+                            "The Run has been Running far past the operator run-age "
+                            "ceiling without progressing; flagged for a human to check "
+                            "whether it is hung. No command issued (advise rung)."
+                        ),
+                    )
+            if truncate_enabled:
+                tick_count = truncate_settle.get(item.run_id, 0) + 1
+                truncate_settle[item.run_id] = tick_count
+                if tick_count >= truncate_settle_ticks:
+                    decision_id = deps.id_generator.new_id()
+                    await _record_truncate_decision(
+                        deps,
+                        decision_id=decision_id,
+                        run_id=item.run_id,
                         running_seconds=running_seconds,
                         ceiling_seconds=liveness_ceiling_seconds,
+                        settle_count=tick_count,
                     )
-                    if advise_enabled:
-                        await _record_supervision_advice(
-                            deps,
-                            run_id=item.run_id,
-                            choice="SupervisionQuieted",
-                            inputs={
-                                "running_seconds": str(running_seconds),
-                                "ceiling_seconds": str(liveness_ceiling_seconds),
-                            },
-                            reasoning=(
-                                "The Run has been Running far past the operator run-age "
-                                "ceiling without progressing; flagged for a human to check "
-                                "whether it is hung. No command issued (advise rung)."
-                            ),
-                        )
-            else:
-                liveness.discard(item.run_id)
+                    await _issue_truncate(
+                        deps,
+                        truncate_run,
+                        run_id=item.run_id,
+                        running_seconds=running_seconds,
+                        ceiling_seconds=liveness_ceiling_seconds,
+                        decision_id=decision_id,
+                    )
+                    # Leave the counter: the Run should leave `running` next tick
+                    # as Truncated; the GC drops the entry once it is no longer
+                    # in-flight. If the truncate was a benign no-op (state race),
+                    # a still-Running Run re-counts from here next tick.
+                    truncate_settle.pop(item.run_id, None)
 
     # Own-holds-only: only a Held Run the supervisor itself holds is a resume
     # candidate. Empty unless the wind-up is explicitly enabled.
@@ -979,6 +1129,7 @@ async def _supervise_loop(
     list_runs: ListRunsHandler,
     hold_run: HoldRunHandler,
     resume_run: ResumeRunHandler,
+    truncate_run: TruncateRunHandler,
     beam_lookup: BeamAvailabilityLookup,
     channel_lookup: RunChannelLookup,
     rules_config: ObservationRuleConfig,
@@ -986,12 +1137,15 @@ async def _supervise_loop(
     resume_enabled: bool,
     resume_settle_ticks: int,
     liveness_ceiling_seconds: float | None,
+    truncate_enabled: bool,
+    truncate_settle_ticks: int,
     advise_enabled: bool,
 ) -> None:
     """Periodic supervision loop. A failed tick is logged; the next tick retries."""
     memory: dict[UUID, str] = {}
     settle: dict[UUID, int] = {}
     liveness: set[UUID] = set()
+    truncate_settle: dict[UUID, int] = {}
     quality: set[UUID] = set()
     stall: set[UUID] = set()
     stall_streak: dict[UUID, int] = {}
@@ -1004,12 +1158,14 @@ async def _supervise_loop(
                 list_runs=list_runs,
                 hold_run=hold_run,
                 resume_run=resume_run,
+                truncate_run=truncate_run,
                 beam_lookup=beam_lookup,
                 channel_lookup=channel_lookup,
                 rules_config=rules_config,
                 memory=memory,
                 settle=settle,
                 liveness=liveness,
+                truncate_settle=truncate_settle,
                 quality=quality,
                 stall=stall,
                 stall_streak=stall_streak,
@@ -1017,6 +1173,8 @@ async def _supervise_loop(
                 resume_enabled=resume_enabled,
                 resume_settle_ticks=resume_settle_ticks,
                 liveness_ceiling_seconds=liveness_ceiling_seconds,
+                truncate_enabled=truncate_enabled,
+                truncate_settle_ticks=truncate_settle_ticks,
                 advise_enabled=advise_enabled,
             )
             if read_denied:
@@ -1057,6 +1215,7 @@ async def run_supervisor_lifespan(
     list_runs: ListRunsHandler,
     hold_run: HoldRunHandler,
     resume_run: ResumeRunHandler,
+    truncate_run: TruncateRunHandler,
     beam_lookup: BeamAvailabilityLookup | None = None,
     channel_lookup: RunChannelLookup | None = None,
     interval_seconds: float | None = None,
@@ -1066,8 +1225,10 @@ async def run_supervisor_lifespan(
     No-op unless `settings.run_supervisor_enabled` is True (default off, so a
     deployment opts in explicitly). The gated wind-up is a separate opt-in
     (`run_supervisor_resume_enabled`, also default off) so a deployment may
-    run auto-hold without auto-resume. The shadow observation rules are a
-    further opt-in (their channel-name settings, default None).
+    run auto-hold without auto-resume. The run-liveness act rung (autonomous
+    TruncateRun) is a further opt-in (`run_supervisor_truncate_enabled`, default
+    off, inert unless a `run_liveness_ceiling_seconds` is set). The shadow
+    observation rules are a further opt-in (their channel-name settings, None).
     """
     if not deps.settings.run_supervisor_enabled:
         _log.info("run_supervisor.skipped", reason="disabled")
@@ -1094,6 +1255,8 @@ async def run_supervisor_lifespan(
     resume_enabled = deps.settings.run_supervisor_resume_enabled
     resume_settle_ticks = deps.settings.run_supervisor_resume_settle_ticks
     liveness_ceiling_seconds = deps.settings.run_liveness_ceiling_seconds
+    truncate_enabled = deps.settings.run_supervisor_truncate_enabled
+    truncate_settle_ticks = deps.settings.run_supervisor_truncate_settle_ticks
     advise_enabled = deps.settings.run_supervisor_advise_enabled
     rules_config = ObservationRuleConfig(
         quality_channel_name=deps.settings.run_quality_channel_name,
@@ -1107,6 +1270,7 @@ async def run_supervisor_lifespan(
         interval_seconds=interval,
         resume_enabled=resume_enabled,
         liveness_ceiling_seconds=liveness_ceiling_seconds,
+        truncate_enabled=truncate_enabled,
         quality_channel=rules_config.quality_channel_name,
         stall_channel=rules_config.stall_channel_name,
         advise_enabled=advise_enabled,
@@ -1117,6 +1281,7 @@ async def run_supervisor_lifespan(
             list_runs,
             hold_run,
             resume_run,
+            truncate_run,
             lookup,
             channels,
             rules_config,
@@ -1124,6 +1289,8 @@ async def run_supervisor_lifespan(
             resume_enabled,
             resume_settle_ticks,
             liveness_ceiling_seconds,
+            truncate_enabled,
+            truncate_settle_ticks,
             advise_enabled,
         ),
         name="run-supervisor",

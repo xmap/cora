@@ -22,6 +22,7 @@ from cora.operation.aggregates.procedure import (
 )
 from cora.operation.features import end_iteration
 from cora.operation.features.end_iteration import EndProcedureIteration
+from cora.shared.decision_signals import DecisionConfidenceSource
 
 _NOW = datetime(2026, 6, 13, 12, 0, 0, tzinfo=UTC)
 
@@ -63,6 +64,56 @@ def test_decide_emits_iteration_ended_with_verdict() -> None:
     assert event.converged is True
     assert event.reason == "within tolerance"
     assert event.occurred_at == _NOW
+
+
+@pytest.mark.unit
+def test_decide_passes_steering_provenance_through_to_event() -> None:
+    proc = _procedure()  # iteration 1 open
+    events = end_iteration.decide(
+        state=proc,
+        command=EndProcedureIteration(
+            procedure_id=proc.id,
+            iteration_index=1,
+            converged=None,
+            reason=None,
+            advised_stop=False,
+            reasoning="acquisition peak",
+            confidence=0.8,
+            confidence_source=DecisionConfidenceSource.SELF_REPORTED,
+            alternatives=("energy=9.0",),
+            model_ref="grid_walk",
+        ),
+        now=_NOW,
+    )
+    event = events[0]
+    assert isinstance(event, ProcedureIterationEnded)
+    assert event.advised_stop is False
+    assert event.converged is None
+    assert event.reasoning == "acquisition peak"
+    assert event.confidence == 0.8
+    assert event.confidence_source is DecisionConfidenceSource.SELF_REPORTED
+    assert event.alternatives == ("energy=9.0",)
+    assert event.model_ref == "grid_walk"
+
+
+@pytest.mark.unit
+def test_decide_leaves_steering_provenance_absent_by_default() -> None:
+    proc = _procedure()  # iteration 1 open
+    events = end_iteration.decide(
+        state=proc,
+        command=EndProcedureIteration(
+            procedure_id=proc.id, iteration_index=1, converged=True, reason="ok"
+        ),
+        now=_NOW,
+    )
+    event = events[0]
+    assert isinstance(event, ProcedureIterationEnded)
+    assert event.advised_stop is None
+    assert event.reasoning is None
+    assert event.confidence is None
+    assert event.confidence_source is None
+    assert event.alternatives == ()
+    assert event.model_ref is None
 
 
 @pytest.mark.unit

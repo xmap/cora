@@ -50,6 +50,7 @@ from cora.run.features.list_runs import bind as bind_list_runs
 from cora.run.features.resume_run import bind as bind_resume_run
 from cora.run.features.start_run import StartRun
 from cora.run.features.start_run import bind as bind_start_run
+from cora.run.features.truncate_run import bind as bind_truncate_run
 from cora.run.ports import InMemoryRunChannelLookup
 from cora.safety._projections import register_safety_projections
 from cora.safety.adapters import PostgresClearanceLookup
@@ -369,6 +370,7 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
     list_runs = bind_list_runs(deps)
     hold_run = bind_hold_run(deps)
     resume_run = bind_resume_run(deps)
+    truncate_run = bind_truncate_run(deps)
     memory: dict[UUID, str] = {}
     settle: dict[UUID, int] = {}
 
@@ -388,6 +390,10 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         stall=set(),
         stall_streak={},
         feed_dead_warned=set(),
+        truncate_run=truncate_run,
+        truncate_settle={},
+        truncate_enabled=False,
+        truncate_settle_ticks=3,
         liveness_ceiling_seconds=None,
         advise_enabled=False,
         resume_enabled=True,
@@ -413,6 +419,10 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         stall=set(),
         stall_streak={},
         feed_dead_warned=set(),
+        truncate_run=truncate_run,
+        truncate_settle={},
+        truncate_enabled=False,
+        truncate_settle_ticks=3,
         liveness_ceiling_seconds=None,
         advise_enabled=False,
         resume_enabled=True,
@@ -447,6 +457,7 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
     list_runs = bind_list_runs(deps)
     hold_run = bind_hold_run(deps)
     resume_run = bind_resume_run(deps)
+    truncate_run = bind_truncate_run(deps)
     memory: dict[UUID, str] = {}
     settle: dict[UUID, int] = {}
 
@@ -466,6 +477,10 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         stall=set(),
         stall_streak={},
         feed_dead_warned=set(),
+        truncate_run=truncate_run,
+        truncate_settle={},
+        truncate_enabled=False,
+        truncate_settle_ticks=3,
         liveness_ceiling_seconds=None,
         advise_enabled=False,
         resume_enabled=True,
@@ -498,6 +513,10 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         stall=set(),
         stall_streak={},
         feed_dead_warned=set(),
+        truncate_run=truncate_run,
+        truncate_settle={},
+        truncate_enabled=False,
+        truncate_settle_ticks=3,
         liveness_ceiling_seconds=None,
         advise_enabled=False,
         resume_enabled=True,

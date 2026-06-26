@@ -39,6 +39,7 @@ def test_run_supervision_choices_closed_set() -> None:
                 "SupervisionQuieted",
                 "SupervisionStalled",
                 "SupervisionBreached",
+                "Truncate",
             }
         )
         == RUN_SUPERVISION_CHOICES

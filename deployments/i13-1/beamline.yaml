@@ -1,0 +1,135 @@
+# I13-1 beamline descriptor (Diamond), reverse-engineered
+#
+# I13-1 is the coherence branch of Diamond's I13 (Hard X-ray Imaging and Coherence)
+# beamline: hard X-ray ptychography and coherent diffraction imaging (CDI), a coherent
+# lensless-imaging technique that raster-scans a coherent beam across a sample and
+# reconstructs an image from the far-field diffraction it records. It is bound to the
+# Diamond Site (deployments/diamond/site.yaml), and is CORA's FIRST coherent
+# lensless-imaging deployment (the fleet has tomography, XRF microprobe, and a hard
+# X-ray nanoprobe, but no ptychography / CDI).
+#
+# STATUS: reverse-engineered, design-phase, and DELIBERATELY PARTIAL. The dodal source
+# (github.com/DiamondLightSource/dodal, src/dodal/beamlines/i13_1.py) currently exposes
+# only the coherence-branch endstation: a piezo sample-scanning stage, a side viewing
+# camera, and the Merlin coherent-diffraction area detector. The shared I13 source and
+# optics (the undulator, the monochromator, the mirrors, the slits) are NOT in dodal, so
+# they are deferred, not invented (SRC-1, OPT-1), the same partial-first-cut posture as
+# I20-1. EPICS PVs are real and read from dodal (the BL13J prefix); vendor part numbers,
+# serials, and physical positions are not in dodal and are open questions. Descriptor +
+# docs scaffold; scenarios deferred.
+#
+# WHAT IS NEW: the coherent lensless-imaging acquisition. Ptychography raster-scans a
+# coherent illumination across overlapping points on the sample and records a far-field
+# coherent-diffraction pattern at each point; the real-space image is reconstructed
+# downstream from the diffraction stack. That is a new Capability (the fleet's first
+# coherent diffractive imaging), deferred as a pending Method (TECH-1).
+#
+# MODELLING: I13-1 coins NO new Family and changes nothing in the catalog. The
+# scout-anticipated "coherent imaging" novelty is an acquisition shape (a Method), not a
+# device class: the devices are a raster sample stage and an area detector, both existing
+# families. The piezo sample-scanning stage binds the catalog LinearStage (the ptychography
+# raster is its operative motion; the fixed-angle lab-frame variant is a setting on the same
+# stage); the Merlin photon-counting detector and the side viewing camera bind the catalog
+# Camera; the machine state binds the loose StorageRing. Ptychography / CDI reuses no
+# existing technique (it is new to the fleet), so it is carried as a new pending Method
+# (TECH-1).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/i13-1/questions.md.
+
+beamline:
+  name: I13-1
+  facility: diamond            # Diamond Site (facility_code: diamond)
+  sector: "Sector 13 (I13 coherence branch)"   # PV prefix BL13J
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "I13 is an undulator beamline; dodal exposes only the I13-1 coherence-branch endstation, not the shared source, so the undulator and the shared optics are deferred (SRC-1, OPT-1)"
+
+# PV prefix: BL13J (the I13-1 coherence branch endstation). The shared I13 source and
+# optics are upstream and absent from dodal. Whether I13-1 is its own hutch and the PSS
+# permit leaves are open (ENC-1, PSS-1).
+enclosures:
+  - name: i13-1
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf not in dodal; the I13-1 coherence-branch experiment hutch (BL13J), hutch grouping is ENC-1 (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state (the shared source and optics are deferred)
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: i13-1
+  intro: "The machine-level source state, observed not driven. The shared I13 source and optics are upstream and not yet in scope (SRC-1, OPT-1)."
+  note: "dodal's Synchrotron device is the observe-only machine state, the loose StorageRing pattern reused from the Diamond siblings (MACHINE-1). The undulator, monochromator, mirrors, and slits are absent from the i13_1 dodal module and are deferred (SRC-1, OPT-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: {confirm: "Diamond storage-ring state (current, fill); observe-only, the exact PVs are MACHINE-1"}
+      new: true
+      confirm: true
+      note: "Diamond storage-ring state; observe-only; the shared I13 source / optics are deferred (SRC-1, OPT-1, MACHINE-1)"
+
+# ===========================================================================
+# ENDSTATION STAGE: the ptychography sample stage and the coherent-diffraction detector
+# ===========================================================================
+
+endstation:
+  stage: sample
+  enclosure: i13-1
+  intro: "The coherence-branch endstation: the piezo sample-scanning stage, the side viewing camera, and the Merlin coherent-diffraction area detector."
+  note: >
+    All reuse existing catalog Families. The piezo sample-scanning stage binds LinearStage
+    (the ptychography raster is its operative motion; the fixed-angle lab-frame variant is a
+    setting on the same stage, SAMPLE-1). The Merlin photon-counting detector and the side
+    viewing camera bind Camera (DET-1). The coherent lensless-imaging acquisition is a
+    Method, not a device (TECH-1).
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: "BL13J-MO-PI-02:"
+      new: true
+      confirm: true
+      note: "the PI piezo sample-scanning stage (x / y / z); the ptychography raster motion; a fixed-angle lab-frame variant is on BL13J-MO-PI-02:FIXANG: as a setting on the same stage (SAMPLE-1)"
+    - name: SideCamera
+      family: Camera
+      pv: "BL13J-OP-FLOAT-03:"
+      new: true
+      confirm: true
+      note: "the side viewing camera (an Aravis / GenICam optical camera) for sample alignment (DET-1)"
+    - name: Detector
+      family: Camera
+      pv: "BL13J-EA-DET-04:"
+      new: true
+      confirm: true
+      note: "the Merlin (Medipix3) photon-counting area detector recording the far-field coherent-diffraction pattern; the science detector for ptychography / CDI (DET-1)"
+
+# Cross-cutting control. I13-1 runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were read
+# from dodal and carried confirm (CTRL-1).
+controls:
+  intro: >
+    I13-1 runs on the Diamond EPICS / ophyd-async control stack, the same floor as the
+    other Diamond beamlines. The device handles above are bound from the
+    DiamondLightSource/dodal i13_1 module (the BL13J coherence-branch endstation), carried
+    confirm pending staff verification (CTRL-1). The shared I13 source and optics are
+    upstream and not yet in the dodal module, so they are deferred (SRC-1, OPT-1). The
+    ptychography acquisition (the raster scan of the piezo stage coupled to the Merlin
+    far-field capture, then the downstream reconstruction) runs through bluesky plans and
+    a reconstruction pipeline; that orchestration is the seam CORA's edge replaces, driving
+    through ophyd-async / EPICS, while the reconstruction is ComputePort work, not a beamline
+    device (TECH-1). The detector file-writing to the Diamond filestore is plumbing CORA
+    observes, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an I13-1 run needs. The coherent beam
+    path runs under vacuum (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the coherent-beam flight path (SUP-1)"

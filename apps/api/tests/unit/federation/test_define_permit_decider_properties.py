@@ -230,6 +230,11 @@ def test_define_permit_with_expired_at_in_past_always_raises_invalid_scope(
     backshift_seconds: int,
 ) -> None:
     """expires_at <= now -> InvalidPermitScopeError."""
+    # `now` ranges down to datetime.min (year 1); guard the past-shift so the
+    # subtraction cannot underflow below datetime.min. The discarded slice (now
+    # within backshift_seconds of datetime.min) is negligible against the full
+    # datetime range, so the property's coverage is unaffected.
+    assume(now - datetime.min.replace(tzinfo=UTC) >= timedelta(seconds=backshift_seconds))
     expires_at = now - timedelta(seconds=backshift_seconds)
     command = _command(
         peer_facility_code=peer_facility_code,

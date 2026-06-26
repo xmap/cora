@@ -62,6 +62,10 @@ from cora.agent.seed_procedure_watcher import (
     PROCEDURE_WATCHER_AGENT_ID,
     seed_procedure_watcher_agent,
 )
+from cora.agent.seed_run_initiator import (
+    RUN_INITIATOR_AGENT_ID,
+    seed_run_initiator_agent,
+)
 from cora.agent.seed_run_supervisor import (
     RUN_SUPERVISOR_AGENT_ID,
     seed_run_supervisor_agent,
@@ -76,6 +80,7 @@ __all__ = [
     "CLEARANCE_EXPIRER_AGENT_ID",
     "CLEARANCE_WATCHER_AGENT_ID",
     "PROCEDURE_WATCHER_AGENT_ID",
+    "RUN_INITIATOR_AGENT_ID",
     "RUN_SUPERVISOR_AGENT_ID",
     "AgentHandlers",
     "CautionProposalMalformedError",
@@ -96,6 +101,7 @@ __all__ = [
     "seed_clearance_watcher_agent",
     "seed_procedure_watcher_agent",
     "seed_run_debriefer_agent",
+    "seed_run_initiator_agent",
     "seed_run_supervisor_agent",
     "wire_agent",
 ]
