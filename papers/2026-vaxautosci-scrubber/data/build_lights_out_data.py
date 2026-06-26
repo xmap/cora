@@ -3,9 +3,9 @@
 
 Emits lights_out_run.json: one autonomous run combining a conducted
 rotation-axis centering alignment (a 4-iteration peak-bracket search that
-converges), a first projection acquisition that is in flight when the beam
-drops, the RunSupervisor agent's hold and auto-resume, and completion. This is
-the run the paper's figures are drawn from.
+converges), a science scan whose third projection is in flight when the beam
+drops, the RunSupervisor agent's hold, auto-resume, and fly-scan restart, and
+completion. This is the run the paper's figures are drawn from.
 
 Provenance. Values mirror the passing integration scenario
 
@@ -56,18 +56,14 @@ _PROCEDURE_EVENTS = [
     "ProcedureCompleted",
 ]
 
-# Wall-clock anchors (synthetic): alignment runs ~a minute; the first
-# projection begins; the beam drops; ~37 min later it returns; resume; finish.
+# Wall-clock anchors (synthetic): alignment runs ~a minute; the scan begins and
+# the beam drops during the third projection; later it returns; resume; restart.
 # Axis times are synthetic and compressed for a readable single axis; the
 # overnight wall-clock spread (the hold can last tens of minutes) lives in the
 # prose, not the axis.
 _ITER_STRIDE = 12.0        # one acquire every 12 s; the whole axis is a 12 s grid
-_ACQ_BEGIN = 54.0          # first projection in-flight (next acquire slot after alignment)
-_BEAM_LOSS = 66.0          # RunHeld (beam loss), one stride later
-_BEAM_BACK = 126.0         # RunResumed (beam returns) after a 5-stride hold
-_ACQ_END = 138.0           # first projection completes one stride after resume
-_SCAN_BEGIN = 150.0        # remaining science projections, on the same 12 s grid
-_SCAN_STRIDE = 12.0
+_BEAM_LOSS = 90.0          # RunHeld: the beam drops during the third projection
+_BEAM_BACK = 150.0         # RunResumed (beam returns) after a 5-stride hold
 _RUN_DONE = 210.0          # one stride after the last projection
 
 
@@ -109,60 +105,59 @@ def _build() -> dict:
                 "payload": payload, "sampled_at": _at(at), "result": None,
             })
 
-    # Lock at the converged center, then the first science projection: an
-    # in-flight marker (begin) and, after the beam-loss hold/resume, its outcome.
+    # Lock at the converged center and command the fly-scan rotation.
     seq += 1
     activities.append({
         "seq": seq, "iteration": None, "step_kind": "setpoint",
         "payload": {"channel": "SampleTop_X", "target_value": 0.060, "units": "mm", "role": "lock_at_center"},
         "sampled_at": _at(46.0), "result": None,
     })
-    # Command the science scan's continuous rotation (fly-scan, 0->180 deg).
     seq += 1
     activities.append({
         "seq": seq, "iteration": None, "step_kind": "setpoint",
         "payload": {"channel": "rotation_angle", "target_value": 180.0, "units": "deg",
                     "role": "fly_scan", "note": "continuous 0->180 deg sweep"},
-        "sampled_at": _at(52.0), "result": None,
+        "sampled_at": _at(50.0), "result": None,
     })
-    seq += 1
-    activities.append({
-        "seq": seq, "iteration": None, "step_kind": "action",
-        "payload": {"action_name": "acquire_first_projection", "params": {"exposure_ms": 100, "angle_deg": 0.0}, "result": "in_flight"},
-        "sampled_at": _at(_ACQ_BEGIN), "result": "in_flight",
-    })
-    # Fly-scan restart after resume: taxi the rotary stage back to constant
+
+    def _proj(index: int, angle: float, at: float, result: str) -> None:
+        nonlocal seq
+        seq += 1
+        activities.append({
+            "seq": seq, "iteration": None, "step_kind": "action",
+            "payload": {"action_name": "acquire_projection",
+                        "params": {"exposure_ms": 100, "angle_deg": angle, "index": index},
+                        "result": result},
+            "sampled_at": _at(at), "result": result,
+        })
+
+    # Science scan on the 12 s grid: two projections complete, the third is in
+    # flight when the beam drops at 90 s.
+    _proj(1, 0.0, 54.0, "ok")
+    _proj(2, 30.0, 66.0, "ok")
+    _proj(3, 60.0, 78.0, "in_flight")
+
+    # Fly-scan restart after the hold: taxi the rotary stage back to constant
     # velocity and re-arm the PSO trigger before acquisition resumes.
     seq += 1
     activities.append({
         "seq": seq, "iteration": None, "step_kind": "setpoint",
         "payload": {"channel": "rotation_angle", "target_value": -5.0, "units": "deg",
                     "role": "taxi", "note": "run-up to constant velocity after resume"},
-        "sampled_at": _at(130.0), "result": None,
+        "sampled_at": _at(154.0), "result": None,
     })
     seq += 1
     activities.append({
         "seq": seq, "iteration": None, "step_kind": "action",
         "payload": {"action_name": "fly_scan_prep", "params": {"rearm_pso": True}, "result": "ok"},
-        "sampled_at": _at(134.0), "result": "ok",
-    })
-    seq += 1
-    activities.append({
-        "seq": seq, "iteration": None, "step_kind": "action",
-        "payload": {"action_name": "acquire_first_projection", "params": {"exposure_ms": 100, "angle_deg": 0.0}, "result": "ok"},
-        "sampled_at": _at(_ACQ_END), "result": "ok",
+        "sampled_at": _at(158.0), "result": "ok",
     })
 
-    # The science scan continues after resume: the remaining projections acquire,
-    # sampled across the 180-degree rotation, until the run completes.
-    for k, angle in enumerate((30.0, 60.0, 90.0, 120.0, 150.0)):
-        seq += 1
-        activities.append({
-            "seq": seq, "iteration": None, "step_kind": "action",
-            "payload": {"action_name": "acquire_projection",
-                        "params": {"exposure_ms": 100, "angle_deg": angle}, "result": "ok"},
-            "sampled_at": _at(_SCAN_BEGIN + k * _SCAN_STRIDE), "result": "ok",
-        })
+    # The interrupted third projection is re-acquired, then the scan finishes.
+    _proj(3, 60.0, 162.0, "ok")
+    _proj(4, 90.0, 174.0, "ok")
+    _proj(5, 120.0, 186.0, "ok")
+    _proj(6, 150.0, 198.0, "ok")
 
     run_events = [
         {"type": "RunStarted", "at": _at(0.0), "by": "operator", "role": "human"},
@@ -184,9 +179,9 @@ def _build() -> dict:
             ),
             "run": (
                 "Lights-out, agent-supervised run at APS 2-BM: conducted rotation-axis "
-                "centering alignment, first projection interrupted by beam loss, "
-                "RunSupervisor hold + auto-resume, then the science scan continues to "
-                "completion."
+                "centering alignment, the science scan's third projection interrupted "
+                "by beam loss, RunSupervisor hold + auto-resume + fly-scan restart, "
+                "then the scan continues to completion."
             ),
             "timestamps": (
                 "sampled_at / event times staggered synthetically for a readable axis; "
@@ -198,7 +193,7 @@ def _build() -> dict:
             "generated_by": "data/build_lights_out_data.py",
         },
         "run": {
-            "name": "2-BM lights-out tomography (pre-scan align + first projection)",
+            "name": "2-BM lights-out tomography (pre-scan align + science scan)",
             "supervisor_agent": "RunSupervisor (deterministic)",
             "events": run_events,
         },

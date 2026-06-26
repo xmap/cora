@@ -44,7 +44,8 @@ deterministic-fold assumptions, not adversarial tamper resistance).
 We ground the design in a real run from an operating instrument: an unattended,
 agent-supervised run at the APS 2-BM micro-CT beamline, in which our
 event-sourced system of record, CORA, conducts a rotation-axis centering
-alignment that converges, a first projection is in flight when the beam drops,
+alignment that converges, the science scan begins and a projection is in flight
+when the beam drops,
 and a deterministic supervisor agent holds the run and auto-resumes it when the
 beam returns. We are deliberate about scope. The agent
 supervises and recovers a \emph{conducted} run, recording each hold and resume

@@ -2,7 +2,7 @@
 """Render Figure 3, interruption recovery, from data/lights_out_run.json.
 
 The same recorded run folded to two cursor positions. At the beam-loss instant
-the first projection is an open interval (in-flight marker, no outcome) and the
+the interrupted projection is an open interval (in-flight marker, no outcome) and the
 run is Held; folded to the end it is closed (outcome recorded) and the run is
 Completed. The open interval is a function of where the cursor is, not a
 permanent dangling record: that is the replay-native answer to "what was in
@@ -34,9 +34,13 @@ def main() -> None:
     def secs(x: str) -> float:
         return (_parse(x) - t0).total_seconds()
 
-    proj = {a["result"]: secs(a["sampled_at"]) for a in acts
-            if a["payload"].get("action_name") == "acquire_first_projection"}
-    begin, end = proj["in_flight"], proj["ok"]
+    # The interrupted projection carries an in-flight marker (begin) and, after
+    # recovery, its outcome (end); find it by its in-flight result.
+    projs = [a for a in acts if a["payload"].get("action_name") == "acquire_projection"]
+    idx = next(a["payload"]["params"]["index"] for a in projs if a["result"] == "in_flight")
+    times = {a["result"]: secs(a["sampled_at"]) for a in projs
+             if a["payload"]["params"]["index"] == idx}
+    begin, end = times["in_flight"], times["ok"]
     beam_loss = secs(prov["beam_loss_at"])
     beam_back = secs(prov["beam_back_at"])
     xlo, xhi = begin - 8, end + 14
@@ -74,7 +78,7 @@ def main() -> None:
         ax.text(xlo + 1, -0.7, f"run: {run_status}", fontsize=s.SIZE["small"],
                 ha="left", va="center", color=s.SUBINK)
         ax.set_yticks([0])
-        ax.set_yticklabels(["First\nprojection"], fontsize=s.SIZE["tick"])
+        ax.set_yticklabels(["Projection 3"], fontsize=s.SIZE["tick"])
         ax.set_ylim(-1.0, 1.05)
         s.despine(ax, keep=("bottom",))
 

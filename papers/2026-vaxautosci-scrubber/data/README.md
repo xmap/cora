@@ -7,9 +7,10 @@ artifact).
 
 One lights-out, agent-supervised run at APS 2-BM: the single run all the figures
 are drawn from. CORA conducts a rotation-axis centering alignment (a
-four-iteration peak-bracket search on `SampleTop_X` that converges), the first
-projection is in flight when the beam drops, the RunSupervisor agent holds the
-run and auto-resumes it when the beam returns, and the run completes.
+four-iteration peak-bracket search on `SampleTop_X` that converges), the science
+scan begins and its third projection is in flight when the beam drops, the
+RunSupervisor agent holds the run and auto-resumes it when the beam returns, the
+fly-scan is restarted, and the run completes.
 
 **Provenance.** Values mirror the passing integration scenario
 [`apps/api/tests/integration/scenarios/test_2bm_lights_out_supervised_alignment.py`](../../../apps/api/tests/integration/scenarios/test_2bm_lights_out_supervised_alignment.py),
@@ -25,9 +26,9 @@ Regenerate with `python3 data/build_lights_out_data.py`.
   and the center-of-rotation residual falling 2.00 -> 1.05 -> 1.40 -> 0.30 px,
   bracketed in [0.040, 0.080] mm and bisected to 0.060 mm.
 - `activities`: setpoint / acquire / check per pass, the lock setpoint, the
-  fly-scan rotation setpoint, the first projection as an in-flight marker, the
-  fly-scan restart after resume (taxi + PSO re-arm), the re-acquired first
-  projection, and the remaining science-scan projections.
+  fly-scan rotation setpoint, six science projections (two complete, the third
+  in flight at the beam loss), the fly-scan restart after resume (taxi + PSO
+  re-arm), and the re-acquired third projection plus the rest of the scan.
 - `provenance.cursor_at` / `beam_loss_at` / `beam_back_at`: the audit instant and
   the hold window the figures use.
 

@@ -14,16 +14,16 @@ replay-scrubber paper is built around:
      phase-of-Run Procedure (parent_run_id = the Run): a four-iteration
      peak-bracket search on SampleTop_X that converges.
   3. The run locks at the centered position, commands the science scan's
-     continuous rotation (fly-scan, 0->180 deg), and the first projection
-     acquisition begins (an in-flight activity marker).
-  4. The beam drops. The RunSupervisor agent HOLDS the Run (RunHeld carries the
-     Decision link), leaving the acquisition mid-flight.
+     continuous rotation (fly-scan, 0->180 deg), and acquisition begins: the
+     first two projections complete and the third is in flight.
+  4. The beam drops mid-scan. The RunSupervisor agent HOLDS the Run (RunHeld
+     carries the Decision link), leaving the third projection mid-flight.
   5. The beam returns and the start-safety envelope is good again, so the
      supervisor AUTO-RESUMES (RunResumed carries a Resume Decision).
   6. The fly-scan is restarted (the rotary stage taxis back to constant velocity
-     and the PSO trigger is re-armed), the interrupted projection is re-acquired,
-     the science scan continues to the end, the Procedure completes, the Run
-     completes.
+     and the PSO trigger is re-armed), the interrupted third projection is
+     re-acquired, the science scan continues to the end, the Procedure completes,
+     the Run completes.
 
 The supervisor loop is driven white-box via `_supervise_tick` (the same
 pattern as `test_2bm_run_supervisor_auto_resume.py`), beam availability is the
@@ -250,33 +250,18 @@ def _centering_check(
     return ActivityInput(event_id=uuid4(), step_kind="check", payload=payload, sampled_at=_NOW)
 
 
-def _acquire_marker(*, result: str) -> ActivityInput:
-    """First science projection: a pre-effect in-flight marker, then its outcome.
-
-    Models intent-before-effect for a side-effecting acquisition so that folding
-    the stream to the beam-loss instant shows it as an open interval."""
-    return ActivityInput(
-        event_id=uuid4(),
-        step_kind="action",
-        payload={
-            "action_name": "acquire_first_projection",
-            "params": {"exposure_ms": 100, "angle_deg": 0.0},
-            "result": result,
-        },
-        sampled_at=_NOW,
-    )
-
-
-def _science_projection(*, angle_deg: float) -> ActivityInput:
-    """A science-scan projection acquired after the first one, once the run has
-    resumed: the scan rotates the sample and acquires the remaining projections."""
+def _projection(*, index: int, angle_deg: float, result: str) -> ActivityInput:
+    """A science-scan projection. The interrupted projection records a pre-effect
+    in-flight marker (intent before effect) and, after recovery, its outcome, so
+    folding to the beam-loss instant shows it as an open interval; the others
+    record an outcome directly."""
     return ActivityInput(
         event_id=uuid4(),
         step_kind="action",
         payload={
             "action_name": "acquire_projection",
-            "params": {"exposure_ms": 100, "angle_deg": angle_deg},
-            "result": "ok",
+            "params": {"exposure_ms": 100, "angle_deg": angle_deg, "index": index},
+            "result": result,
         },
         sampled_at=_NOW,
     )
@@ -405,7 +390,7 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
     # ----- Operator starts the lights-out calibration Run and leaves -----
     await bind_start_run(deps)(
         StartRun(
-            name="2-BM lights-out tomography (pre-scan align + first projection)",
+            name="2-BM lights-out tomography (pre-scan align + science scan)",
             plan_id=_PLAN_ID,
             subject_id=None,
             override_parameters={
@@ -502,15 +487,18 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
             correlation_id=_CORRELATION_ID,
         )
 
-    # Lock at the converged center, then begin the first science projection:
-    # an in-flight marker recorded before the effect.
+    # Lock at the converged center, command the fly-scan rotation, and begin the
+    # scan: the first two projections complete and the third is in flight (an
+    # in-flight marker recorded before the effect) when the beam drops.
     await bind_append_step(deps, step_store=step_store)(
         AppendProcedureActivities(
             procedure_id=_PROCEDURE_ID,
             entries=(
                 _setpoint(target_mm=0.060, role="lock_at_center"),
                 _fly_scan_setpoint(),
-                _acquire_marker(result="in_flight"),
+                _projection(index=1, angle_deg=0.0, result="ok"),
+                _projection(index=2, angle_deg=30.0, result="ok"),
+                _projection(index=3, angle_deg=60.0, result="in_flight"),
             ),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -544,14 +532,16 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
         correlation_id=_CORRELATION_ID,
     )
 
-    # The interrupted projection is re-acquired and completes, then the science
+    # The interrupted third projection is re-acquired and completes, then the
     # scan continues to the end of the run: the remaining projections acquire.
     await bind_append_step(deps, step_store=step_store)(
         AppendProcedureActivities(
             procedure_id=_PROCEDURE_ID,
             entries=(
-                _acquire_marker(result="ok"),
-                *(_science_projection(angle_deg=a) for a in (30.0, 60.0, 90.0, 120.0, 150.0)),
+                _projection(index=3, angle_deg=60.0, result="ok"),
+                _projection(index=4, angle_deg=90.0, result="ok"),
+                _projection(index=5, angle_deg=120.0, result="ok"),
+                _projection(index=6, angle_deg=150.0, result="ok"),
             ),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -616,26 +606,20 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
     assert [i.iteration_index for i in iterations.items] == [1, 2, 3, 4]
     assert [i.converged for i in iterations.items] == [False, False, False, True]
 
-    # ----- Assert: the first projection has both an in-flight marker and an outcome ---
+    # ----- Assert: six science projections; the third was caught mid-flight -----
     async with db_pool.acquire() as conn:
-        acq_rows = await conn.fetch(
-            "SELECT payload->>'result' AS result FROM entries_operation_procedure_activities "
-            "WHERE procedure_id = $1 AND payload->>'action_name' = 'acquire_first_projection' "
-            "ORDER BY sampled_at, event_id",
+        proj_rows = await conn.fetch(
+            "SELECT payload->'params'->>'index' AS idx, payload->>'result' AS result "
+            "FROM entries_operation_procedure_activities WHERE procedure_id = $1 "
+            "AND payload->>'action_name' = 'acquire_projection'",
             _PROCEDURE_ID,
         )
-    results = sorted(r["result"] for r in acq_rows)
-    assert results == ["in_flight", "ok"]
-
-    # ----- Assert: the science scan continued after resume (remaining projections) ---
-    async with db_pool.acquire() as conn:
-        scan_rows = await conn.fetch(
-            "SELECT payload->>'result' AS result FROM entries_operation_procedure_activities "
-            "WHERE procedure_id = $1 AND payload->>'action_name' = 'acquire_projection'",
-            _PROCEDURE_ID,
-        )
-    assert len(scan_rows) == 5
-    assert all(r["result"] == "ok" for r in scan_rows)
+    by_index: dict[str, list[str]] = {}
+    for r in proj_rows:
+        by_index.setdefault(r["idx"], []).append(r["result"])
+    assert sorted(by_index) == ["1", "2", "3", "4", "5", "6"]
+    assert sorted(by_index["3"]) == ["in_flight", "ok"]
+    assert all(by_index[i] == ["ok"] for i in ("1", "2", "4", "5", "6"))
 
     # ----- Assert: the science scan commanded a continuous rotation (fly-scan) ---
     async with db_pool.acquire() as conn:

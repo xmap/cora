@@ -64,11 +64,12 @@ every repo-checkable fact exactly right.
 
 All figures come from one passing integration scenario,
 `apps/api/tests/integration/scenarios/test_2bm_lights_out_supervised_alignment.py`:
-an operator starts a lights-out calibration run; CORA conducts a rotation-axis
+an operator starts an unattended calibration run; CORA conducts a rotation-axis
 centering alignment (four-iteration peak-bracket on `SampleTop_X`, converges); the
-first projection is in flight when the beam drops; the RunSupervisor agent holds
-the run and auto-resumes it (RunResumed carries a Resume Decision); the run
-completes. Figure values mirror the scenario (`data/lights_out_run.json`).
+science scan begins and its third projection is in flight when the beam drops;
+the RunSupervisor agent holds the run and auto-resumes it (RunResumed carries a
+Resume Decision); the fly-scan is restarted and the run completes. Figure values
+mirror the scenario (`data/lights_out_run.json`).
 
 ## Layout
 

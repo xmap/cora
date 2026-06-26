@@ -5,7 +5,7 @@ Static rendering of the interactive scrubber over one agent-supervised
 run: a run-lifecycle / who-drove-it lane (operator vs supervisor),
 per-iteration convergence bands colored by verdict (the rotation-axis
 centering search), activity swim-lanes, a shaded held band, and a fold-to-
-version cursor parked at the beam-loss instant, where the first projection is an
+version cursor parked at the beam-loss instant, where the third projection is an
 open interval (in flight, no outcome yet); the science scan continues after
 resume.
 
@@ -99,8 +99,7 @@ def main() -> None:
 
     # Activity swim-lanes (alignment). Science projections are drawn separately.
     for a in acts:
-        if a["payload"].get("action_name") in ("acquire_first_projection",
-                                               "acquire_projection", "fly_scan_prep"):
+        if a["payload"].get("action_name") in ("acquire_projection", "fly_scan_prep"):
             continue
         x, y = secs(a["sampled_at"]), LANE_Y[a["step_kind"]]
         ax.scatter([x], [y], marker=LANE_MARKER[a["step_kind"]], s=46,
@@ -111,53 +110,61 @@ def main() -> None:
                         textcoords="offset points", xytext=(0, -11), ha="center",
                         fontsize=s.SIZE["small"], color=s.STATE)
 
-    # First projection: in-flight from begin to the cursor (open), paused through
-    # the held band, then a ghosted resume to completion after the beam returns.
-    proj = {a["result"]: secs(a["sampled_at"]) for a in acts
-            if a["payload"].get("action_name") == "acquire_first_projection"}
+    # Science projections (acquire_projection). The interrupted projection has an
+    # in-flight marker (before the beam loss) and an ok marker (after recovery);
+    # identify it by its in-flight result.
+    projs = [a for a in acts if a["payload"].get("action_name") == "acquire_projection"]
     y = LANE_Y["action"]
-    begin = proj["in_flight"]
-    ax.plot([begin, cursor], [y, y], color=s.ALARM, lw=4.5, ls=(0, (0.9, 0.8)),
+    inflight = next(secs(a["sampled_at"]) for a in projs if a["result"] == "in_flight")
+    ok_times = sorted(secs(a["sampled_at"]) for a in projs if a["result"] == "ok")
+    pre_ok = [t for t in ok_times if t < cursor]
+    post_ok = [t for t in ok_times if t > cursor]
+    reacq = post_ok[0]
+
+    # Before the cursor the scan was acquiring: completed projections are solid
+    # (closed); the interrupted one is an open (dashed) interval to the cursor.
+    if pre_ok:
+        ax.plot([pre_ok[0], inflight], [y, y], color=s.SUBINK, lw=4.5, alpha=0.5,
+                solid_capstyle="butt", zorder=1)
+        ax.scatter(pre_ok, [y] * len(pre_ok), marker="^", s=40, color=s.SUBINK,
+                   edgecolors="white", linewidths=0.6, zorder=3)
+    ax.plot([inflight, cursor], [y, y], color=s.ALARM, lw=4.5, ls=(0, (0.9, 0.8)),
             dash_capstyle="butt", alpha=0.9, zorder=2)
-    ax.scatter([begin], [y], marker="^", s=52, color=s.ALARM, edgecolors="white",
+    ax.scatter([inflight], [y], marker="^", s=52, color=s.ALARM, edgecolors="white",
                linewidths=0.6, zorder=3)
-    ax.annotate("first projection:\nin flight", ((begin + cursor) / 2, y),
+    ax.annotate("projection 3:\nin flight", ((inflight + cursor) / 2, y),
                 textcoords="offset points", xytext=(0, 8), ha="center",
                 fontsize=s.SIZE["small"], color=s.ALARM, fontweight="bold",
                 linespacing=1.0)
-    # Two-phase recovery: after the hold, a fly-scan restart (taxi the rotary
+
+    # Two-phase recovery: the held band, then a fly-scan restart (taxi the rotary
     # stage back to constant velocity, re-arm the PSO) before acquisition resumes.
-    ax.axvspan(beam_back, proj["ok"], facecolor="none", hatch="////",
+    ax.axvspan(beam_back, reacq, facecolor="none", hatch="////",
                edgecolor=s.MUTE, linewidth=0.0, alpha=0.6, zorder=0)
-    ax.text((beam_back + proj["ok"]) / 2, 2.75, "taxi\n+ prep", ha="center",
+    ax.text((beam_back + reacq) / 2, 2.75, "taxi\n+ prep", ha="center",
             va="center", fontsize=s.SIZE["small"], color=s.SUBINK, linespacing=0.9)
-    ax.scatter([proj["ok"]], [y], marker="^", s=42, color=s.SUBINK, alpha=0.35,
-               edgecolors="white", linewidths=0.5, zorder=3)
 
-    # The science scan continues after resume: a continuous (closed) acquisition
-    # through the remaining projections, ghosted since it is past the cursor.
-    scan = sorted(secs(a["sampled_at"]) for a in acts
-                  if a["payload"].get("action_name") == "acquire_projection")
-    if scan:
-        ax.plot([proj["ok"], scan[-1]], [y, y], color=s.MUTE, lw=4.5, alpha=0.4,
-                solid_capstyle="butt", zorder=1)
-        ax.scatter(scan, [y] * len(scan), marker="^", s=34, color=s.MUTE,
-                   alpha=0.55, edgecolors="white", linewidths=0.5, zorder=3)
-        ax.annotate("scan resumes,\nruns to completion", (scan[len(scan) // 2], y),
-                    textcoords="offset points", xytext=(0, -17), ha="center",
-                    fontsize=s.SIZE["small"], color=s.MUTE, linespacing=1.0)
+    # After recovery: the re-acquired projection and the rest of the scan,
+    # ghosted since they are past the parked cursor.
+    ax.plot([post_ok[0], post_ok[-1]], [y, y], color=s.MUTE, lw=4.5, alpha=0.4,
+            solid_capstyle="butt", zorder=1)
+    ax.scatter(post_ok, [y] * len(post_ok), marker="^", s=34, color=s.MUTE,
+               alpha=0.55, edgecolors="white", linewidths=0.5, zorder=3)
+    ax.annotate("scan resumes,\nruns to completion", (post_ok[len(post_ok) // 2], y),
+                textcoords="offset points", xytext=(0, -17), ha="center",
+                fontsize=s.SIZE["small"], color=s.MUTE, linespacing=1.0)
 
-        # The rotary stage rotates continuously (fly-scan), paused during the
-        # hold: a faint span on the setpoint lane shows the motor moving.
-        rot = [secs(a["sampled_at"]) for a in acts if a["payload"].get("role") == "fly_scan"]
-        if rot:
-            ysp = LANE_Y["setpoint"]
-            for x0, x1 in ((rot[0], beam_loss), (proj["ok"], scan[-1])):
-                ax.plot([x0, x1], [ysp, ysp], color=s.MUTE, lw=2.2, alpha=0.5,
-                        solid_capstyle="round", zorder=1)
-            ax.annotate("fly-scan rotation, 0-180 deg",
-                        ((proj["ok"] + scan[-1]) / 2, ysp), textcoords="offset points",
-                        xytext=(0, 8), ha="center", fontsize=s.SIZE["small"], color=s.MUTE)
+    # The rotary stage rotates continuously (fly-scan), paused during the hold and
+    # the restart: a faint span on the setpoint lane shows the motor moving.
+    rot = [secs(a["sampled_at"]) for a in acts if a["payload"].get("role") == "fly_scan"]
+    if rot:
+        ysp = LANE_Y["setpoint"]
+        for x0, x1 in ((rot[0], beam_loss), (reacq, post_ok[-1])):
+            ax.plot([x0, x1], [ysp, ysp], color=s.MUTE, lw=2.2, alpha=0.5,
+                    solid_capstyle="round", zorder=1)
+        ax.annotate("fly-scan rotation, 0-180 deg", ((reacq + post_ok[-1]) / 2, ysp),
+                    textcoords="offset points", xytext=(0, 8), ha="center",
+                    fontsize=s.SIZE["small"], color=s.MUTE)
 
     # Fold-to-version cursor at the beam-loss instant.
     ax.axvline(cursor, color=s.ALARM, ls="--", lw=1.3, zorder=5)
@@ -172,13 +179,13 @@ def main() -> None:
     readout = VPacker(pad=0, sep=4.5, align="left", children=[
         _row("Folded state at cursor", s.ALARM, "bold", s.SIZE["anno"]),
         _row("alignment: converged (0.30 px)", s.INK),
-        _row("first projection: in flight", s.INK),
+        _row("projections: 2 done, #3 in flight", s.INK),
         _row("run: held by supervisor", s.INK),
         _row("fidelity: verified", s.INK),
     ])
     card = AnchoredOffsetbox(loc="center", child=readout, pad=0.6, borderpad=0,
-                             frameon=True, bbox_to_anchor=(0.45, 0.46),
-                             bbox_transform=ax.transAxes)
+                             frameon=True, bbox_to_anchor=((beam_loss + beam_back) / 2, 0.46),
+                             bbox_transform=ax.get_xaxis_transform())
     card.patch.set(boxstyle="round,pad=0,rounding_size=0.5", facecolor="white",
                    edgecolor=s.RULE, linewidth=1.0)
     card.set_zorder(6)

@@ -1,15 +1,15 @@
 {
   "provenance": {
     "source": "Values mirror the passing integration scenario apps/api/tests/integration/scenarios/test_2bm_lights_out_supervised_alignment.py, which produces these activities, iteration verdicts, run-lifecycle events, and the supervisor Resume Decision against a real Kernel + Postgres.",
-    "run": "Lights-out, agent-supervised run at APS 2-BM: conducted rotation-axis centering alignment, first projection interrupted by beam loss, RunSupervisor hold + auto-resume, then the science scan continues to completion.",
+    "run": "Lights-out, agent-supervised run at APS 2-BM: conducted rotation-axis centering alignment, the science scan's third projection interrupted by beam loss, RunSupervisor hold + auto-resume + fly-scan restart, then the scan continues to completion.",
     "timestamps": "sampled_at / event times staggered synthetically for a readable axis; the scenario records one logical instant. Overnight spread is illustrative.",
-    "cursor_at": "2026-05-19T01:01:06Z",
-    "beam_loss_at": "2026-05-19T01:01:06Z",
-    "beam_back_at": "2026-05-19T01:02:06Z",
+    "cursor_at": "2026-05-19T01:01:30Z",
+    "beam_loss_at": "2026-05-19T01:01:30Z",
+    "beam_back_at": "2026-05-19T01:02:30Z",
     "generated_by": "data/build_lights_out_data.py"
   },
   "run": {
-    "name": "2-BM lights-out tomography (pre-scan align + first projection)",
+    "name": "2-BM lights-out tomography (pre-scan align + science scan)",
     "supervisor_agent": "RunSupervisor (deterministic)",
     "events": [
       {
@@ -20,7 +20,7 @@
       },
       {
         "type": "RunHeld",
-        "at": "2026-05-19T01:01:06Z",
+        "at": "2026-05-19T01:01:30Z",
         "by": "RunSupervisor",
         "role": "agent",
         "decision": {
@@ -30,7 +30,7 @@
       },
       {
         "type": "RunResumed",
-        "at": "2026-05-19T01:02:06Z",
+        "at": "2026-05-19T01:02:30Z",
         "by": "RunSupervisor",
         "role": "agent",
         "decision": {
@@ -289,7 +289,7 @@
         "role": "fly_scan",
         "note": "continuous 0->180 deg sweep"
       },
-      "sampled_at": "2026-05-19T01:00:52Z",
+      "sampled_at": "2026-05-19T01:00:50Z",
       "result": null
     },
     {
@@ -297,18 +297,51 @@
       "iteration": null,
       "step_kind": "action",
       "payload": {
-        "action_name": "acquire_first_projection",
+        "action_name": "acquire_projection",
         "params": {
           "exposure_ms": 100,
-          "angle_deg": 0.0
+          "angle_deg": 0.0,
+          "index": 1
         },
-        "result": "in_flight"
+        "result": "ok"
       },
       "sampled_at": "2026-05-19T01:00:54Z",
-      "result": "in_flight"
+      "result": "ok"
     },
     {
       "seq": 16,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_projection",
+        "params": {
+          "exposure_ms": 100,
+          "angle_deg": 30.0,
+          "index": 2
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:01:06Z",
+      "result": "ok"
+    },
+    {
+      "seq": 17,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_projection",
+        "params": {
+          "exposure_ms": 100,
+          "angle_deg": 60.0,
+          "index": 3
+        },
+        "result": "in_flight"
+      },
+      "sampled_at": "2026-05-19T01:01:18Z",
+      "result": "in_flight"
+    },
+    {
+      "seq": 18,
       "iteration": null,
       "step_kind": "setpoint",
       "payload": {
@@ -318,11 +351,11 @@
         "role": "taxi",
         "note": "run-up to constant velocity after resume"
       },
-      "sampled_at": "2026-05-19T01:02:10Z",
+      "sampled_at": "2026-05-19T01:02:34Z",
       "result": null
     },
     {
-      "seq": 17,
+      "seq": 19,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -332,37 +365,7 @@
         },
         "result": "ok"
       },
-      "sampled_at": "2026-05-19T01:02:14Z",
-      "result": "ok"
-    },
-    {
-      "seq": 18,
-      "iteration": null,
-      "step_kind": "action",
-      "payload": {
-        "action_name": "acquire_first_projection",
-        "params": {
-          "exposure_ms": 100,
-          "angle_deg": 0.0
-        },
-        "result": "ok"
-      },
-      "sampled_at": "2026-05-19T01:02:18Z",
-      "result": "ok"
-    },
-    {
-      "seq": 19,
-      "iteration": null,
-      "step_kind": "action",
-      "payload": {
-        "action_name": "acquire_projection",
-        "params": {
-          "exposure_ms": 100,
-          "angle_deg": 30.0
-        },
-        "result": "ok"
-      },
-      "sampled_at": "2026-05-19T01:02:30Z",
+      "sampled_at": "2026-05-19T01:02:38Z",
       "result": "ok"
     },
     {
@@ -373,7 +376,8 @@
         "action_name": "acquire_projection",
         "params": {
           "exposure_ms": 100,
-          "angle_deg": 60.0
+          "angle_deg": 60.0,
+          "index": 3
         },
         "result": "ok"
       },
@@ -388,7 +392,8 @@
         "action_name": "acquire_projection",
         "params": {
           "exposure_ms": 100,
-          "angle_deg": 90.0
+          "angle_deg": 90.0,
+          "index": 4
         },
         "result": "ok"
       },
@@ -403,7 +408,8 @@
         "action_name": "acquire_projection",
         "params": {
           "exposure_ms": 100,
-          "angle_deg": 120.0
+          "angle_deg": 120.0,
+          "index": 5
         },
         "result": "ok"
       },
@@ -418,7 +424,8 @@
         "action_name": "acquire_projection",
         "params": {
           "exposure_ms": 100,
-          "angle_deg": 150.0
+          "angle_deg": 150.0,
+          "index": 6
         },
         "result": "ok"
       },

@@ -16,7 +16,7 @@
   search (amber open, green converged) grouping that pass's three activities. The
   fold-to-version cursor is parked at the beam-loss instant: folding the event
   stream to there reconstructs the state shown in the read-out, including the
-  first projection as an open interval (its in-flight marker is recorded but its
+  third projection as an open interval (its in-flight marker is recorded but its
   outcome is not yet). Past the cursor, after the run resumes, the fly-scan
   rotation and its projections run to completion. Time spacing is synthetic.}
   \label{fig:scrubber}
@@ -75,18 +75,18 @@ alignment, a four-iteration peak-bracket search over the sample stage
 residual falls from $2.00$ to $1.05$\,px, rises to $1.40$\,px at $0.080$\,mm
 (bracketing the minimum in $[0.040, 0.080]$\,mm), and the fourth pass bisects to
 $0.060$\,mm at $0.30$\,px and converges; read by color, the brackets show the
-verdict sequence open, open, open, converged (T3). The first projection then
-begins, recorded as an in-flight marker, and the beam drops. The supervisor
+verdict sequence open, open, open, converged (T3). The science scan begins; two
+projections complete and the third is in flight when the beam drops. The supervisor
 agent holds the run; the beam returns and the supervisor resumes it, each
 transition recorded as the agent's decision in the lifecycle lane. With the
 cursor at the beam-loss instant (Figure~\ref{fig:scrubber}), the fold shows the
-alignment already converged, the first projection still open, and the run held
+alignment already converged, two projections done and the third still open, and the run held
 by the agent, and the fidelity badge confirms that reconstructed state is
 faithful to the record (T4).
 
 Read as a morning audit, the same run answers the auditor's questions in the
 order they arise. Dragging the cursor into the gap in the held band localizes the
-first projection as an open interval, exactly the exposure in flight when the
+third projection as an open interval, exactly the exposure in flight when the
 beam dropped, rather than guessing it (T1, developed in Section~\ref{sec:crash}).
 Dragging to the resume transition opens its decision, the supervisor resumed
 because the start-safety envelope was satisfied again, and the folded state shows

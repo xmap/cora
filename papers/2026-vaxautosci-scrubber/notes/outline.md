@@ -12,7 +12,7 @@
    band, and the fold-to-version cursor at the beam-loss instant; the fidelity
    badge.
 4. **Interruption recovery, Figure 3.** The same run folded to two cursor
-   positions: the first projection open at beam loss (run held), closed after
+   positions: the interrupted projection open at beam loss (run held), closed after
    resume (run completed). T1.
 5. **Substrate, Figure 5.** The one architecture figure; "substrate, not
    contribution."
@@ -35,8 +35,8 @@ All data figures come from one passing scenario,
 
 The scenario is a real, passing integration test: an operator starts an
 unattended calibration run; CORA conducts a rotation-axis centering alignment
-(4-iteration peak-bracket on `SampleTop_X`, converges); the first projection is
-in flight when the beam drops; the RunSupervisor agent holds the run and
+(4-iteration peak-bracket on `SampleTop_X`, converges); the science scan begins
+and its third projection is in flight when the beam drops; the RunSupervisor agent holds the run and
 auto-resumes it (RunResumed carries a Resume Decision); the run completes.
 Default deps + a subjectless calibration run keep the safety envelope satisfied
 without the full ESAF ceremony. Figure values mirror the scenario; timestamps
