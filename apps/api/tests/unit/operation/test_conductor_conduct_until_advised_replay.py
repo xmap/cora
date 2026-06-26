@@ -54,31 +54,31 @@ from cora.operation.ports.decide_port import (
     SteeringPoint,
     SteeringVerdict,
 )
-from tests.unit.operation._advised_harness import (
+from tests.unit.operation._helpers import (
     MOTOR_ADDR as _MOTOR_ADDR,
 )
-from tests.unit.operation._advised_harness import (
+from tests.unit.operation._helpers import (
     OBJECTIVE_NAME as _OBJECTIVE_NAME,
 )
-from tests.unit.operation._advised_harness import (
+from tests.unit.operation._helpers import (
     Transcript as _Transcript,
 )
-from tests.unit.operation._advised_harness import (
+from tests.unit.operation._helpers import (
     build_conductor as _conductor,
 )
-from tests.unit.operation._advised_harness import (
+from tests.unit.operation._helpers import (
     objective as _objective,
 )
-from tests.unit.operation._advised_harness import (
+from tests.unit.operation._helpers import (
     objective_measurement as _objective_measurement,
 )
-from tests.unit.operation._advised_harness import (
+from tests.unit.operation._helpers import (
     pass_block as _pass_block,
 )
-from tests.unit.operation._advised_harness import (
+from tests.unit.operation._helpers import (
     point_to_captures as _point_to_captures,
 )
-from tests.unit.operation._advised_harness import (
+from tests.unit.operation._helpers import (
     space as _space,
 )
 
