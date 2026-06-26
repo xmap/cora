@@ -8,6 +8,18 @@ questions. The interface is a research prototype over exported run data rather
 than a deployed beamline tool, so we make no claims about throughput, scale, or
 integration cost.
 
+\textbf{Reproducibility.} The figures derive from one passing integration
+scenario, \texttt{test\_2bm\_lights\_out\_supervised\_alignment.py}, exercised
+against a real Kernel and Postgres event store; the run data, its generator, and
+the per-figure render scripts are released with the paper. What is real, produced
+by that scenario and mirrored into the figure data: the activities, the four
+iteration verdicts (open, open, open, converged), the four run-lifecycle events,
+and the supervisor's recorded hold and resume decisions. What is synthetic: only
+the per-event timestamps, staggered for a readable axis since the scenario
+records one logical instant; the overnight wall-clock spread is illustrative,
+stated in prose, not measured. The generator is standard-library only and needs
+no database, so a reader can regenerate the figure data directly.
+
 Two scope boundaries matter for how the contribution should be read. First, the
 run is \emph{conducted} and \emph{agent-supervised}, not agent-closed: the
 system orchestrates the alignment and records every step, and a supervisor agent
@@ -39,3 +51,15 @@ nothing in the scrubber is specific to this case beyond a small vocabulary it
 reads from the log, so the requirement on a host system is modest, an
 append-only, deterministically-foldable event log with a content-addressed
 expansion and a recorded actor on each event.
+
+\textbf{Threats to validity.} \emph{Construct:} our claim rests on T1--T4
+capturing what auditing a conducted run needs. We derived them from practice,
+not from observing auditors, so the set may be incomplete (for example causal
+blame across steps, or finer parameter provenance) or miss an encoding
+scientists would prefer. \emph{Internal:} the walkthrough is authored by us, who
+already know where each verdict, open interval, and gap lies; an independent
+auditor might read those cues differently, and we ran no such study.
+\emph{External:} the generality argument is made from the technique, not shown
+across the single beamline, run, and rule-based supervisor reported above. We
+frame these as the construct and reader questions a case-based demonstration
+leaves open.

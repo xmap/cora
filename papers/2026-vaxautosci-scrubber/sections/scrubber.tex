@@ -94,6 +94,18 @@ over is faithful to the record (T4). In a few minutes, and without re-running
 anything, the auditor has recovered what the run did overnight, what was
 interrupted, why the agent acted, and that the account can be trusted.
 
+\textbf{Formalization.} Write $e_{1{:}t}$ for the event prefix up to cursor $t$.
+The reconstructed state is the deterministic left fold $S_t =
+\mathrm{fold}(\mathrm{evolve}, S_0, e_{1{:}t})$, using the same $\mathrm{evolve}$
+as the backend read path, so the cursor reaches every recorded instant exactly.
+At run start the system records two content-addressed hashes of the recipe
+expansion, $h^{\star}_{\mathrm{steps}}$ and $h^{\star}_{\mathrm{bind}}$. The badge
+reads verified at $t$ when both recompute to their recorded values:
+$\mathrm{hash}(\mathrm{steps}(S_t)) = h^{\star}_{\mathrm{steps}}$ and
+$\mathrm{hash}(\mathrm{bind}(S_t)) = h^{\star}_{\mathrm{bind}}$. Since
+$\mathrm{evolve}$ only folds recorded events, $S_t$ reproduces the record rather
+than re-running the alignment.
+
 \textbf{Design rationale.} Each encoding answers an audit question rather than
 decorating the timeline. We give the run lifecycle its own lane, colored by
 actor, instead of annotating events in place, so that \emph{who or what was
