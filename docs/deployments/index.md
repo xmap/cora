@@ -62,6 +62,7 @@ The fourth Site CORA models. Like the Diamond exercise, its beamlines are revers
 | [ISS](iss/index.md) | Reverse-engineered | inner-shell spectroscopy (EXAFS by trajectory energy fly-scan, plus XES / HERFD on the Johann + von Hamos crystal emission spectrometers), 8-ID; modelled from public beamline config |
 | [FMX](fmx/index.md) | Reverse-engineered | frontier microfocusing macromolecular crystallography (rotation MX on a single-omega goniometer + Eiger, autonomous robot sample exchange), 17-ID-2; CORA's 2nd MX after i03; modelled from public beamline config |
 | [XFM](xfm/index.md) | Reverse-engineered | scanning X-ray fluorescence microprobe (raster XRF mapping on the Xspress3 + Maia detectors, bending magnet), 4-BM; CORA's 2nd scanning-XRF after 2-ID; modelled from public beamline config |
+| [HEX](hex/index.md) | Reverse-engineered | high-energy engineering X-ray scattering (imaging/tomography + energy-dispersive and powder diffraction on a superconducting wiggler, white 30-250 keV / mono 30-200 keV), 27-ID; the fleet's first true high-energy hard X-ray beamline; modelled from public beamline config |
 
 ## [SLAC](slac/index.md)
 
