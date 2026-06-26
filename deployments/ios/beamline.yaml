@@ -1,0 +1,307 @@
+# IOS beamline descriptor (NSLS-II), reverse-engineered
+#
+# IOS (In situ and Operando Soft X-ray Spectroscopy) is the NSLS-II ambient-pressure
+# soft X-ray spectroscopy beamline on the outboard 23-ID-2 branch of the canted
+# 23-ID straight, the twin of CSX (23-ID-1), which shares the same two
+# elliptically-polarizing undulators. It is bound to the NSLS-II Site
+# (deployments/nsls2/site.yaml), and is CORA's soft X-ray ambient-pressure
+# photoemission + absorption deployment alongside CSX (coherent scattering), ESM
+# (ARPES), SIX (RIXS), SST (RSoXS / HAXPES), and SMI.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/ios-profile-collection, the
+# startup/*.py device classes) or inferred, carried `new: true` + `confirm: true`
+# pending IOS staff. EPICS PVs are real and read from the profile collection;
+# vendor part numbers, serials, and physical positions are not in it and are open
+# questions. Same descriptor mode as CSX / ESM / SST; this scaffold is descriptor +
+# docs, scenarios deferred.
+#
+# WHAT IS NEW: be honest, IOS is reinforcement-heavy. Its SPECS hemispherical
+# analyzer binds the catalog ElectronAnalyzer Family (the THIRD sighting after ESM
+# and SST, and the first non-Scienta and first ambient-pressure one; analyzer make
+# and pass-energy range are a per-Asset settings difference, not a Family split).
+# Its VLS-PGM reuses GratingMonochromator (a further consumer after SIX / CSX / ESM
+# / SST), its Vortex and Xspress3 silicon-drift detectors reuse
+# EnergyDispersiveSpectrometer, its AP-PES sample stage reuses Manipulator, and the
+# two canted EPUs are the same CSX twin-EPU straight (TOPO-1). IOS coins NO new
+# Family and nothing graduates. Its one genuinely distinct contribution, in-situ /
+# operando AMBIENT-PRESSURE spectroscopy, is carried as a deferral, not modelled:
+# the profile collection exposes no gas-dosing, pressure, or sample-heating PVs, so
+# the ambient-pressure reaction cell is the headline open question (INSITU-1), not
+# an invented device.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/ios/questions.md.
+
+beamline:
+  name: IOS
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 23"          # PV namespace XF:23ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "two elliptically-polarizing undulators (EPU:1, EPU:2) on the canted SR:C23-ID straight, the same straight CSX (23-ID-1) reads; modelled as one root Unit feeding the 23-ID-2 (IOS) branch (the 32-ID canted precedent, as CSX), not two roots (TOPO-1); EPU type / period / polarization / edge table are SRC-1"
+
+# PV zones: XF:23IDA (front-end optics, shared sector-A optics), XF:23ID2-OP (the
+# 23-ID-2 branch optics, the PGM and the KB system), XF:23ID2-ES (the IOS endstation
+# and the SPECS analyzer), XF:23ID2-BI (the branch beam instrumentation: the Au mesh,
+# the diagnostics, and the IOXAS / Vortex translation stages). Whether the front-end,
+# branch optics, and endstation are separate shielded hutches, and the PSS permit
+# leaves, are open (ENC-1, PSS-1).
+enclosures:
+  - name: 23-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf not in source; front-end shutter XF:23ID-PPS{Sh:FE} (PSS-1)"}
+  - name: 23-ID-2
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the 23-ID-2 (IOS) branch; whether branch optics and endstation are separate hutches is ENC-1"}
+
+# ===========================================================================
+# SOURCE STAGE: the canted EPUs, the front-end mirrors, the PGM, the KB system
+# ===========================================================================
+
+insertion-devices:
+  stage: source
+  enclosure: 23-ID-A
+  intro: "The two elliptically-polarizing undulators on the canted SR:C23-ID straight, shared with CSX."
+  note: "Two InsertionDevice Assets (the canted twin-EPU straight, the same EPUs CSX reads on the 23-ID-1 branch); each adds a polarization (phase) axis beyond gap, carried as a setting, and EPU:1 carries the energy-edge lookup-table switching seen in the profile (carried as a setting, SRC-1). Canted-vs-separate-root is TOPO-1 (32-ID precedent: one root)."
+  devices:
+    - name: Undulator_1
+      family: InsertionDevice
+      pv: "SR:C23-ID:G1A{EPU:1"
+      new: true
+      confirm: true
+      note: "first EPU (epu1, XF:23ID-ID{EPU:1); gap + polarization phase + edge lookup-table switching for the soft X-ray edge map (SRC-1)"
+    - name: Undulator_2
+      family: InsertionDevice
+      pv: "SR:C23-ID:G1A{EPU:2"
+      new: true
+      confirm: true
+      note: "second EPU (epu2, XF:23ID-ID{EPU:2); gap + polarization phase (SRC-1)"
+
+optics:
+  stage: source
+  enclosure: 23-ID-A
+  intro: "The front-end mirrors and the front-end shutter."
+  note: "m1a is the front-end mirror; m1b1 (with a feedback loop) and m1b2 are the sector-A deflecting mirrors that split the canted source toward the branches. Coatings and axis roles are OPT-1."
+  devices:
+    - name: Mirror_1
+      family: Mirror
+      pv: "XF:23IDA-OP:1{Mir:1"
+      new: true
+      confirm: true
+      note: "front-end mirror M1A (OPT-1)"
+    - name: Mirror_1b1
+      family: Mirror
+      pv: "XF:23IDA-OP:2{Mir:1A"
+      new: true
+      confirm: true
+      note: "sector-A deflecting mirror M1B1, with a beam-position feedback loop (OPT-1)"
+    - name: Mirror_1b2
+      family: Mirror
+      pv: "XF:23IDA-OP:2{Mir:1B"
+      new: true
+      confirm: true
+      note: "sector-A deflecting mirror M1B2 (OPT-1)"
+    - name: FrontEndShutter
+      family: Shutter
+      pv: "XF:23ID-PPS{Sh:FE}"
+      new: true
+      confirm: true
+      note: "front-end photon shutter, PPS-gated"
+
+monochromator:
+  stage: source
+  enclosure: 23-ID-2
+  intro: "The variable-line-spacing plane-grating monochromator that selects the soft X-ray energy, the branch mirror, the Kirkpatrick-Baez focusing pair, the slits, and the branch shutter."
+  note: >
+    pgm is the VLS-PGM (200-2200 eV): a premirror (mir_pit / mir_x) plus an
+    interchangeable grating (grt_pit / grt_x) set the energy, and the profile exposes
+    the energy fly-scan (start / stop / velocity). It binds the catalog
+    GratingMonochromator Family (a further consumer after SIX / CSX / ESM / SST;
+    grating line densities and the energy range are MONO-1). m3b is the branch mirror;
+    dm1 is a downstream deflecting mirror; the KB pair (kb_mirror_h / kb_mirror_v)
+    focuses the beam at the endstation; slt1 / slt2 are the branch slits (OPT-1, OPT-2).
+  devices:
+    - name: Monochromator
+      family: GratingMonochromator
+      pv: { energy: "XF:23ID2-OP{Mono}Enrgy-SP", mirror_pitch: "XF:23ID2-OP{Mono-Ax:MirP}Mtr", mirror_x: "XF:23ID2-OP{Mono-Ax:MirX}Mtr", grating_pitch: "XF:23ID2-OP{Mono-Ax:GrtP}Mtr", grating_x: "XF:23ID2-OP{Mono-Ax:GrtX}Mtr" }
+      new: true
+      confirm: true
+      note: "VLS-PGM, 200-2200 eV; energy fly-scan capable (Enrgy:Start / Stop / FlyVelo); grating line densities are MONO-1"
+    - name: Mirror_3b
+      family: Mirror
+      pv: "XF:23ID2-OP{Mir:3B"
+      new: true
+      confirm: true
+      note: "branch mirror M3B (OPT-1)"
+    - name: DeflectingMirror
+      family: Mirror
+      pv: { x: "XF:23ID2-OP{DM1-Ax:X}Mtr", roll: "XF:23ID2-OP{DM1-Ax:Roll}Mtr" }
+      new: true
+      confirm: true
+      note: "downstream deflecting mirror DM1, x / roll (OPT-1)"
+    - name: KBMirror_Horizontal
+      family: Mirror
+      pv: { pitch: "XF:23ID2-OP{KB:MirH-Ax:Pitch}Mtr", roll: "XF:23ID2-OP{KB:MirH-Ax:Roll}Mtr" }
+      new: true
+      confirm: true
+      note: "Kirkpatrick-Baez horizontal-focusing mirror (OPT-1)"
+    - name: KBMirror_Vertical
+      family: Mirror
+      pv: "XF:23ID2-OP{KB:MirV-Ax:Pitch}Mtr"
+      new: true
+      confirm: true
+      note: "Kirkpatrick-Baez vertical-focusing mirror (OPT-1)"
+    - name: Slit_1
+      family: Slit
+      pv: "XF:23ID2-OP{Slt:1"
+      new: true
+      confirm: true
+      note: "branch slit 1, gap / center (OPT-2)"
+    - name: Slit_2
+      family: Slit
+      pv: "XF:23ID2-OP{Slt:2-Ax:Y}Mtr"
+      new: true
+      confirm: true
+      note: "branch slit 2, vertical (OPT-2)"
+    - name: BranchShutter
+      family: Shutter
+      pv: "XF:23ID2-PPS{PSh}"
+      new: true
+      confirm: true
+      note: "branch photon shutter, PPS-gated (PSS-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the AP-PES manipulator, the XAS sample stage, surface prep
+# ===========================================================================
+
+appes-sample:
+  stage: sample
+  enclosure: 23-ID-2
+  intro: "The ambient-pressure photoemission (AP-PES) sample side: the multi-axis manipulator, the XAS sample stage, and the surface-prep ion gun."
+  note: >
+    The APPES manipulator (x / y / z / rotation) places the sample in the analyzer
+    focus; it binds the catalog Manipulator Family (a further consumer after SIX /
+    ESM / SST / I06). The IOXAS stage is the single-axis XAS-endstation translation
+    (LinearStage). The SPECS power supply drives the surface-prep sputter / ion gun
+    (a GenericProbe auxiliary). IOS's defining ambient-pressure reaction cell, the gas
+    dosing / mixing manifold, the pressure control, and the sample heating are NOT in
+    the profile collection (no gas / pressure / temperature PVs), so they are carried
+    as the headline open question and not invented here (INSITU-1). A load-lock gate
+    valve (IOXAS-GV:4) is present but no sample-transfer motor PVs are, so the transfer
+    mechanism is deferred (SAMPLE-1, SAMPLE-2).
+  devices:
+    - name: SampleManipulator
+      family: Manipulator
+      pv: { x: "XF:23ID2-ES{APPES:1-Ax:X}Mtr", y: "XF:23ID2-ES{APPES:1-Ax:Y}Mtr", z: "XF:23ID2-ES{APPES:1-Ax:Z}Mtr", rotation: "XF:23ID2-ES{APPES:1-Ax:R}Mtr" }
+      new: true
+      confirm: true
+      note: "AP-PES four-axis sample manipulator (x / y / z / rotation); reuses the Manipulator Family (SAMPLE-1)"
+    - name: XasSampleStage
+      family: LinearStage
+      pv: "XF:23ID2-BI{IOXAS:1-Ax:X}Mtr"
+      new: true
+      confirm: true
+      note: "single-axis XAS-endstation sample translation (SAMPLE-1)"
+    - name: SputterGun
+      family: GenericProbe
+      pv: "XF:23ID2-ES{SPECS-PS1}"
+      new: true
+      confirm: true
+      note: "SPECS power-supply surface-prep sputter / ion gun (mode / degas); auxiliary, not the analyzer (SAMPLE-2)"
+
+# ===========================================================================
+# DETECTION STAGE: the SPECS analyzer, the fluorescence detectors, the yield chain
+# ===========================================================================
+
+detectors:
+  stage: detection
+  enclosure: 23-ID-2
+  intro: "The SPECS hemispherical electron analyzer (the AP-PES detector), the Vortex and Xspress3 fluorescence detectors, the scaler and current amplifiers reading the electron-yield channels, the Au-mesh I0 monitor, and the exit-slit diagnostic camera."
+  note: >
+    The SPECS analyzer is the photoemission detector: it disperses photoelectrons by
+    kinetic energy over a window set by pass energy and lens mode (a photon-in /
+    electron-out instrument), and binds the catalog ElectronAnalyzer Family, the THIRD
+    sighting after ESM and SST and the first non-Scienta and first ambient-pressure one
+    (analyzer make, lens-mode set, and pass-energy range are a per-Asset settings or
+    bound-Model difference, not a Family split; DET-1). The Vortex (silicon-drift
+    detector + MCA) and the Xspress3 (four-channel silicon-drift) read the fluorescence
+    yield and bind EnergyDispersiveSpectrometer (DET-2). The scaler reads the
+    electron-yield (TEY / PEY) counting channels behind the CurrAmp:1/2/3 current
+    amplifiers (sample drain, Au-mesh reference, photodiode), and the Au mesh is the I0
+    reference; both bind FluxMonitor (DET-3). The exit-slit camera is a beam-diagnostic
+    Camera. The detection modes (TEY drain current, PEY kinetic-energy-selected
+    electrons through the analyzer, PFY region-of-interest fluorescence) are settings,
+    not separate devices.
+  devices:
+    - name: ElectronAnalyzer
+      family: ElectronAnalyzer
+      pv: "XF:23ID2-ES{SPECS}"
+      new: true
+      confirm: true
+      note: "SPECS hemispherical electron analyzer (the AP-PES detector); pass energy / lens mode / kinetic energy / acquisition mode are settings; model (Phoibos NAP?) and pass-energy range are DET-1"
+    - name: FluorescenceDetector
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:23ID2-ES{Vortex}"
+      new: true
+      confirm: true
+      note: "Vortex silicon-drift detector + MCA for partial-fluorescence-yield XAS; ROI set is a setting (DET-2)"
+    - name: FluorescenceArray
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:23ID2-ES{Xsp:1}:"
+      new: true
+      confirm: true
+      note: "Xspress3 four-channel silicon-drift fluorescence detector; channel / ROI map is DET-2"
+    - name: Scaler
+      family: FluxMonitor
+      pv: "XF:23ID2-ES{Sclr:1}"
+      new: true
+      confirm: true
+      note: "scaler counting electronics for the electron-yield (TEY / PEY) channels behind the CurrAmp:1/2/3 current amplifiers (DET-3)"
+    - name: IncidentFluxMonitor
+      family: FluxMonitor
+      pv: "XF:23ID2-BI{AuMesh:1"
+      new: true
+      confirm: true
+      note: "gold-mesh I0 reference for incident-flux normalization (DET-3)"
+    - name: DiagnosticCamera
+      family: Camera
+      pv: "XF:23ID2-BI{ExitSlt-Cam:1}"
+      new: true
+      confirm: true
+      note: "exit-slit YAG centroid diagnostic camera"
+
+# Cross-cutting control. IOS runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were
+# read from the ios-profile-collection startup files and carried confirm (CTRL-1).
+controls:
+  intro: >
+    IOS runs on the NSLS-II EPICS / ophyd control stack, the same floor as the other
+    NSLS-II beamlines. The device handles above are bound from the beamline's bluesky
+    profile collection (NSLS2/ios-profile-collection), carried confirm pending staff
+    verification (CTRL-1). The AP-PES / NEXAFS acquisition (the PGM energy fly-scans
+    with their coupled EPU edge-table switching, the SPECS spectrum acquisition, and
+    the electron- and fluorescence-yield reads) runs through bluesky plans, published
+    to Kafka and the NSLS-II document store; whether a queue server is in use is not in
+    the profile (CTRL-1). That orchestration is the seam CORA's edge replaces, driving
+    through ophyd / EPICS, while the SPECS / Xspress3 HDF5 file-writing to the NSLS-II
+    filestore is plumbing CORA observes, not data it owns (see model.md). The gate
+    valves (XF:23ID2-VA) and the storage-ring current readback (XF:23ID-SR) are vacuum
+    plumbing and facility observation, not modelled as Assets in this cut.
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an IOS run needs. The PGM, the KB
+    system, and the analyzer endstation are under UHV (SUP-1). The ambient-pressure
+    process gas the operando cell would draw on is part of the deferred ambient-pressure
+    sample environment, not in the profile collection, and is not invented here
+    (INSITU-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics, the KB system, and the analyzer endstation are UHV (SUP-1)"
