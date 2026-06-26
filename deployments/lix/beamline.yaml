@@ -1,0 +1,346 @@
+# LIX beamline descriptor (NSLS-II), reverse-engineered
+#
+# LIX (Life Science X-ray scattering) is the NSLS-II 16-ID beamline for the
+# structure of biological macromolecules in solution by small- and wide-angle
+# X-ray scattering (bio-SAXS / WAXS), including in-line size-exclusion
+# chromatography (SEC-SAXS), and a scanning-microbeam endstation for cells and
+# tissue. It is bound to the NSLS-II Site (deployments/nsls2/site.yaml).
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the beamline's own bluesky profile collection, github.com/NSLS2/
+# lix-profile-collection, its startup/components, startup/devices, and
+# startup/experiments definitions) or inferred, carried new: true + confirm: true
+# pending LIX staff. EPICS PVs are real and verified against the profile
+# collection; vendor part numbers, serials, and physical positions are not in it
+# and are open questions. The fluidic delivery chain is mostly non-EPICS
+# (raw TCP sockets to a Moxa terminal server, the Agilent OpenLAB .NET SDK, and
+# one pcaspy soft-IOC); it is modelled as the heterogeneous control plane the MX3
+# deployment established (interface-in-note, the soft-IOC PV where one exists).
+# This scaffold is descriptor + docs, scenarios deferred.
+#
+# WHAT IS (AND IS NOT) NEW: LIX's small- and wide-angle scattering shares its
+# science axis with the materials-scattering fleet (SMI, CMS, I22, 9-ID, 12-ID).
+# What is genuinely new is the SUBJECT and the SAMPLE-DELIVERY chain, not the
+# detectors: LIX is the fleet's first life-science SOLUTION-scattering beamline,
+# where the specimen is a protein in liquid (often an eluting SEC peak), delivered
+# by an HPLC fluidic chain rather than mounted as a solid. The beam path and
+# detectors reuse the catalog throughout and coin NOTHING; the novelty lands on
+# Subject (the solution sample), Supply (buffers, the SEC column, needle wash),
+# and Procedure (the SEC-SAXS flow program and the sample-loading robot), plus the
+# fluidic-delivery seam.
+#
+# MODELLING: LIX coins NO new Family and changes nothing in the catalog. 16-ID is
+# an insertion-device beamline (an in-vacuum undulator), so it carries an
+# InsertionDevice (unlike the bending-magnet CMS), observed alongside the loose
+# StorageRing. The DCM binds Monochromator; the white-beam and KB focusing mirrors
+# bind Mirror; the mono slit, secondary-source aperture, and guard slit bind Slit;
+# the compound refractive lens binds the graduated Transfocator (well established
+# across the fleet); the photon and fast shutters bind Shutter; the solution
+# positioning stack binds the graduated Manipulator; the scanning-microbeam
+# goniometer binds Goniometer; the SAXS / WAXS Pilatus detectors bind Camera; the
+# Xspress3 binds the graduated EnergyDispersiveSpectrometer; the detector
+# translations bind LinearStage; the beamstop binds BeamStop; the TetrAMM
+# electrometers bind FluxMonitor; the diamond-diode beam-position monitor binds the
+# loose BeamPositionMonitor (held under review, DIAG-1); the Zebra binds
+# TimingController.
+#
+# THE ONE REUSE WORTH NAMING: the HPLC delivery pump binds the EXISTING loose
+# FlowController Family ("settable flow / pump actuator", FLOW-1), the i22 + 7-BM
+# precedent. LIX is its THIRD consumer, which fires the rule-of-three; the
+# FlowController graduation is a separate gated decision, flagged here, not folded
+# into this scaffold (FLUID-1, FLOW-1). The selector valves (the VICI and Aurora
+# buffer / column / detector valves) have no existing Family and are carried in the
+# fluidic-delivery seam, not coined (FLUID-1).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/lix/questions.md.
+
+beamline:
+  name: LIX
+  facility: nsls2              # NSLS-II Site (facility_code: nsls2)
+  sector: "16-ID"             # PV zones XF:16IDA (optics) / XF:16IDB (transport) / XF:16IDC (endstation)
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "16-ID is an in-vacuum-undulator (IVU) beamline; the profile collection fits an empirical Keff(gap) curve (a 23 mm period implied, 3 GeV ring) but does not state the device model or length. Source identity and parameters are SRC-1"
+
+# PV zones: XF:16IDA (the optics hutch: the DCM, the white-beam and KB mirrors, the
+# mono slit, the photon shutter), XF:16IDB (the transport hutch: the secondary-source
+# aperture, the fast shutter, the upstream beam-position monitor), XF:16IDC (the
+# endstation: the compound refractive lens, the guard slit, the sample stacks, the
+# detectors, the fluidic delivery). Whether A / B / C are three separate hutches and
+# the PSS permit leaves are open (ENC-1, PSS-1). Modelled here as two enclosures
+# (optics + endstation) with the transport hutch folded into optics pending ENC-1.
+enclosures:
+  - name: lix-optics
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf not in the profile collection (the security model in the profile collection is a POSIX-ACL login, not a PSS integration); the optics and transport zones (XF:16IDA, XF:16IDB), the hutch grouping is ENC-1 (PSS-1)"}
+  - name: lix-endstation
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the solution / scanning endstation (XF:16IDC), ENC-1 (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state and the optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: lix-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "Observe-only NSLS-II machine state, the loose StorageRing pattern reused from the NSLS-II siblings. 16-ID has an in-vacuum undulator, modelled as an InsertionDevice in the optics group below (SRC-1, MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: {confirm: "NSLS-II storage-ring state (current, fill, status); observe-only; the ring-current PV SR:OPS-BI{DCCT:1}I:Real-I is read for beam suspenders, the rest is MACHINE-1"}
+      new: true
+      confirm: true
+      note: "NSLS-II storage-ring state; observe-only (MACHINE-1)"
+
+optics:
+  stage: source
+  enclosure: lix-optics
+  intro: "The in-vacuum undulator, the double-crystal monochromator and the incident-energy axis, the white-beam and KB focusing mirrors, the mono slit and secondary-source aperture, and the photon and fast shutters."
+  note: >
+    16-ID is an undulator beamline: the IVU binds InsertionDevice and the incident
+    energy is a PseudoAxis over the DCM Bragg angle coupled to the undulator gap. The
+    mirrors bind Mirror, the slits bind Slit, the shutters bind Shutter. Everything
+    here reuses the catalog and coins nothing.
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: "SR:C16-ID:G1{IVU:1-Ax:Gap}-Mtr"
+      new: true
+      confirm: true
+      note: "the in-vacuum undulator: a gap motor (plus brake-disengage interlock signals); the gap-to-energy lookup is an empirical Keff(gap) fit; the device model, period, and length are SRC-1"
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:16IDA-OP{Mono:DCM-Ax:Bragg}Mtr"
+      new: true
+      confirm: true
+      note: "the double-crystal monochromator (DCM): Bragg angle sets the energy, with second-crystal pitch / roll / offset and a fine-pitch feedback axis; a silicon crystal (lattice constant a = 5.431 angstrom, the energy law's 2/sqrt(3) factor implying the Si(111) reflection), MONO-1"
+    - name: BeamEnergy
+      family: PseudoAxis
+      pv: {confirm: "the incident-energy virtual axis over the DCM Bragg angle coupled to the undulator gap (lambda = 2 d sin(Bragg)); the partition rule and crystal cut are MONO-1"}
+      new: true
+      confirm: true
+      note: "incident-energy pseudo-axis over the DCM Bragg angle and the undulator gap (MONO-1)"
+    - name: WhiteBeamMirror
+      family: Mirror
+      pv: "XF:16IDA-OP{Mir:WBM-Ax:P}Mtr"
+      new: true
+      confirm: true
+      note: "the white-beam mirror (x / y / pitch) taking the heat load and rejecting harmonics; coating is OPT-1"
+    - name: KbMirror
+      family: Mirror
+      pv: "XF:16IDA-OP{Mir:KBH-Ax:YU}Mtr"
+      new: true
+      confirm: true
+      note: "the Kirkpatrick-Baez focusing pair (a horizontal mirror KBH and a vertical mirror KBV, each on tip / tilt / bend); one Asset for the pair at this cut; whether the mirrors are bimorph and their coatings are OPT-1"
+    - name: MonoSlit
+      family: Slit
+      pv: "XF:16IDA-OP{Slt:1-Ax:T}Mtr"
+      new: true
+      confirm: true
+      note: "the mono four-blade defining slit (T / B / O / I); blade-axis map is OPT-2"
+    - name: SecondarySourceAperture
+      family: Slit
+      pv: "XF:16IDB-OP{Slt:SSA1-Ax:T}Mtr"
+      new: true
+      confirm: true
+      note: "the secondary-source aperture in the transport zone (XF:16IDB), defining the focused source size (OPT-2)"
+    - name: PhotonShutter
+      family: Shutter
+      pv: "XF:16IDA-PPS{PSh}Enbl-Sts"
+      new: true
+      confirm: true
+      note: "the personnel-protection photon shutter; only the enable-status leaf is in the profile collection, the front-end shutter and the search-and-secure leaves are PSS-1"
+    - name: FastShutter
+      family: Shutter
+      pv: "XF:16IDB-BI{shutter:1}sts"
+      new: true
+      confirm: true
+      note: "the millisecond fast shutter on its own translation stage, gating the exposure; it is driven by a TTL pulse from the timing seam (the Zebra / XPS), the exposure-timing seam (TRIG-1)"
+
+focusing:
+  stage: source
+  enclosure: lix-endstation
+  intro: "The endstation-zone focusing and beam-defining optics: the compound refractive lens transfocator, the divergence-defining aperture, and the guard slit."
+  note: >
+    These optics sit in the endstation zone (XF:16IDC) but condition the beam, so they
+    are part of the source stage. The compound refractive lens binds the graduated
+    Transfocator Family (a well-established graduated optic across the fleet); the
+    divergence-defining aperture and the guard slit each bind Slit.
+  devices:
+    - name: Transfocator
+      family: Transfocator
+      pv: "XF:16IDC-OP{CRL-Ax:Z}Mtr"
+      new: true
+      confirm: true
+      note: "the compound refractive lens (CRL) transfocator: a z translation plus upstream / downstream x / y alignment, with nine selectable lens groups (per-group in / out and a busy flag) setting the focal length; reuses the graduated Transfocator Family (also bound by the NSLS-II siblings CHX / IXS / SMI / FMX and the APS / Diamond CRLs); the lens-group configuration is CRL-1"
+    - name: DivergenceAperture
+      family: Slit
+      pv: "XF:16IDC-OP{Slt:DDA-Ax:X}Mtr"
+      new: true
+      confirm: true
+      note: "the divergence-defining aperture (center / gap) setting the beam divergence at the endstation (OPT-2)"
+    - name: GuardSlit
+      family: Slit
+      pv: "XF:16IDC-OP{Slt:G2-Ax:X}Mtr"
+      new: true
+      confirm: true
+      note: "the endstation guard slit (center / gap) cleaning up parasitic scatter before the sample; the upstream Slt:G1 is disabled in the profile collection (OPT-2)"
+
+# ===========================================================================
+# SAMPLE STAGE: the solution and scanning sample stacks, and the fluidic
+# delivery pump (the SEC-SAXS chain; valves / column / cell / robot are the
+# fluidic-delivery seam, see controls)
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: lix-endstation
+  intro: "The solution-sample positioning stack and the scanning-microbeam goniometer, and the HPLC delivery pump that feeds the solution flow cell."
+  note: >
+    LIX runs two endstation modes, selected at startup. The solution mode positions a
+    flow cell on a translation stack (the Manipulator); the scanning-microbeam mode
+    rasters a cell or tissue sample on a SmarAct goniometer (Goniometer), with a
+    rotation axis for tomography. The fast raster axes (scan.X / scan.Y) and the tomo
+    rotation are Newport-XPS trajectory axes, the motion-controller seam (SCAN-1). The
+    HPLC delivery pump that drives the solution and SEC-SAXS flow binds the existing
+    loose FlowController Family (the i22 / 7-BM precedent); LIX is its third consumer
+    (FLUID-1, FLOW-1). The selector valves, the SEC column, the flow cell, the sample
+    robot, and the buffers are the fluidic-delivery seam and the Subject / Supply /
+    Procedure shape, not devices here (see controls, FLUID-1, SEC-1, ROBOT-1).
+  devices:
+    - name: SampleStage
+      family: Manipulator
+      pv: "XF:16IDC-ES:Scan{Ax:XC}Mtr"
+      new: true
+      confirm: true
+      note: "the solution-mode positioning stack: a coarse x and a z pusher (EPICS), plus the fast scan x / y carried as Newport-XPS trajectory axes; reuses the graduated Manipulator Family; the flow cell it positions is the fluidic seam (SAMPLE-1, FLUID-1)"
+    - name: ScanningGoniometer
+      family: Goniometer
+      pv: "XF:16IDC-ES:Scan2-Gonio{Ax:sX}Mtr"
+      new: true
+      confirm: true
+      note: "the scanning-microbeam goniometer (a SmarAct stack: sample x / z, tilt x / z, and a rotation RX), used for cell / tissue mapping and, with the XPS rot.rY trajectory axis, for micro-tomography; the raster scan x / y are XPS trajectory axes (SCAN-1)"
+    - name: DeliveryPump
+      family: FlowController            # EXISTING loose Family (settable flow / pump actuator; n=3 with i22 + 7-BM; FLOW-1)
+      pv: "XF:16IDC-ES{HPLC}REGEN:FLOWRATE"
+      new: true
+      confirm: true
+      note: "the HPLC sample-delivery pump driving the solution and SEC-SAXS flow (flowrate setpoint / readback, pressure, run / stop); the pcaspy soft-IOC XF:16IDC-ES{HPLC} fronts an Agilent quaternary pump (QUAT_PUMP:FLOWRATE, a .NET OpenLAB SDK on a Windows host) and a regeneration pump (REGEN:FLOWRATE, a raw TCP socket to a Moxa), both the same settable-flow anatomy and represented by this one Asset at this cut; reuses the existing loose FlowController Family, LIX its third consumer, the rule-of-three trigger flagged for a separate gated graduation (FLUID-1, FLOW-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the SAXS / WAXS Pilatus detectors, the fluorescence
+# spectrometer, the detector translations, the beamstop, the flux and
+# beam-position monitors, and the Zebra trigger
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: lix-endstation
+  intro: "The SAXS and WAXS Pilatus area detectors, the scanning-mode fluorescence spectrometer, the detector translations, the beamstop, the endstation flux and beam-position monitors, and the Zebra triggering."
+  note: >
+    The Pilatus area detectors bind Camera; the Xspress3 fluorescence detector binds
+    the graduated EnergyDispersiveSpectrometer; the detector translations bind
+    LinearStage; the beamstop binds BeamStop; the TetrAMM electrometers bind
+    FluxMonitor; the diamond-diode / Best beam-position monitor binds the loose
+    BeamPositionMonitor (held under review, DIAG-1); the Zebra binds TimingController.
+  devices:
+    - name: SaxsDetector
+      family: Camera
+      pv: "XF:16IDC-DT{Det:SAXS}"
+      new: true
+      confirm: true
+      note: "the Pilatus 1M small-angle (SAXS) area detector, the primary scattering detector; the model size and the detector-distance calibration are DET-1"
+    - name: WaxsDetector
+      family: Camera
+      pv: "XF:16IDC-DT{Det:WAXS2}"
+      new: true
+      confirm: true
+      note: "the Pilatus 900K wide-angle (WAXS) area detector; the third Pilatus (a 300K WAXS1) is disabled in the profile collection and not modelled (DET-1)"
+    - name: FluorescenceDetector
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:16IDC-ES{Xsp:1}:"
+      new: true
+      confirm: true
+      note: "the Xspress3 multi-channel fluorescence detector, used in the scanning-microbeam mode for element mapping; reuses the graduated Family; it is optional in the profile collection (initialized in a try / except), so per-run availability is DET-1"
+    - name: DetectorStage
+      family: LinearStage
+      pv: "XF:16IDC-ES{Stg:SAXS-Ax:X}Mtr"
+      new: true
+      confirm: true
+      note: "the SAXS / WAXS detector translations (Stg:SAXS / WAXS1 / WAXS2 x / y / z) and the sample-to-detector distance motor; detector positions are calibration (DET-1)"
+    - name: Beamstop
+      family: BeamStop
+      pv: "XF:16IDC-ES{BS:SAXS-Ax:X}Mtr"
+      new: true
+      confirm: true
+      note: "the SAXS beamstop (x / y) in front of the area detector; no separate beamstop diode is in the profile collection, the direct-beam intensity is read off the detector (DET-1)"
+    - name: EndstationFluxMonitor
+      family: FluxMonitor
+      pv: "XF:16IDC-BI{BPM:1}"
+      new: true
+      confirm: true
+      note: "the endstation TetrAMM electrometers (BPM:1 / BPM:2) and an upstream NSLS-II electrometer reading incident and transmitted flux for normalization; scalar readings, the channel map is DET-1"
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor      # loose Family, held under review (DIAG-1)
+      pv: "XF:16IDB-CT{Best}:BPM0:PosX_Mean"
+      new: true
+      confirm: true
+      note: "the Best beam-position aggregator deriving beam x / y from the TetrAMM quadrant currents; binds the loose BeamPositionMonitor (held under review, DIAG-1); the position-vs-intensity split is DIAG-1"
+    - name: Trigger
+      family: TimingController
+      pv: "XF:16IDC-ES{Zeb:1}:"
+      new: true
+      confirm: true
+      note: "the Zebra box generating detector triggers (a soft-input pulse SOFT_IN:B0 and position-capture for fly scans), gated from the Newport XPS; the exposure-timing seam (TRIG-1)"
+
+# Cross-cutting control. LIX runs EPICS plus a heterogeneous fluidic control plane;
+# CORA observes the floor and, where it replaces bluesky-style orchestration,
+# conducts over it. The handles above were read from the profile collection and
+# carried confirm (CTRL-1).
+controls:
+  intro: >
+    LIX runs on the NSLS-II EPICS / ophyd control stack, the same floor as FXI, HXN,
+    SRX, BMM, SIX, CHX, ESM, SMI, and CMS, plus a heterogeneous fluidic control plane
+    on a separate HPLC cart. The EPICS device handles above are bound from the
+    beamline's bluesky profile collection (github.com/NSLS2/lix-profile-collection,
+    its startup/components and startup/devices files), carried confirm (CTRL-1). Motion
+    is driven by a Newport XPS trajectory controller (the fast scan and tomo axes), a
+    SmarAct controller (the scanning goniometer), and Delta-Tau racks; the Zebra
+    generates detector triggers gated from the XPS (TRIG-1). The acquisition (the
+    SAXS / WAXS exposures, the scanning-microbeam raster, the SEC-SAXS flow program)
+    runs through bluesky plans publishing to Kafka with metadata in Redis; that
+    orchestration is the seam CORA's edge replaces, driving through ophyd / EPICS.
+    The area-detector file-writing to the NSLS-II filestore is plumbing CORA observes,
+    not data it owns (see model.md).
+  # The fluidic-delivery chain that makes LIX a solution beamline is a heterogeneous
+  # control plane, modelled the way MX3 modelled its non-EPICS devices: as the
+  # ControlPort seam, the interface named and no EPICS PV where there is none. Only
+  # the HPLC delivery pump is promoted to a device (it binds the existing loose
+  # FlowController Family, FLUID-1 / FLOW-1); the rest is the seam plus the Subject /
+  # Supply / Procedure shape, not devices.
+  software_iocs_not_modeled:
+    - "XF:16IDC-ES{HPLC}: the pcaspy coordination soft-IOC fronting the Agilent OpenLAB .NET SDK (the quaternary pump, the autosampler) and the regeneration pump; its run-control PVs (START_RUN, SAMPLE_NAME, HPLCRunStatus, Buffer_VALVE_POS) are the SEC-SAXS orchestration seam (FLUID-1)"
+    - "VICI selector valves (Moxa TCP sockets, no EPICS): the ten-port column-selection valve and the purge / detector valves; discrete N-position routers with no existing Family, carried in the seam, not coined (FLUID-1)"
+    - "Aurora Pro buffer valve (serial over a Moxa socket): the six-position buffer-selection valve, its chosen position mirrored into the soft-IOC (Buffer_VALVE_POS), the rest the seam (FLUID-1)"
+    - "EM_Robot (SW: method soft-IOC) and the Agilent autosampler: the sample-handling robot (task-verb-driven like the i03 / MX3 robot) and the autosampler, modelled as a Procedure over the spine and a Subject custody thread, not a device Family (ROBOT-1)"
+    - "the SEC column, buffers, needle wash, and the X-ray flow cell: the column and buffers are Supply consumables, the flow cell lives in an external library (lixtools), and the solution sample is a Subject (SEC-1, SUBJECT-1, FLUID-1)"
+    - "the FTC100D temperature controller and the SMC chiller (Moxa TCP sockets): the sample-cell temperature controllers; their module-level instances in 50-Tctrl.py are commented out, so this is a scope deferral rather than a clean absence, plus the autosampler thermostatted-tray temperature (SAMPLER:TEMP); the in-situ sample-temperature environment is TEMP-1"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a LIX run needs, plus the bio-SAXS
+    consumables. The optics and the SAXS flight path run under vacuum (SUP-1). The
+    solution chain draws on buffers, a size-exclusion column, and needle wash as
+    Supply consumables, distinct from the facility-wide supplies (SEC-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics and the SAXS flight path run under vacuum (SUP-1)"
