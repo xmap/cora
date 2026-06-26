@@ -24,7 +24,7 @@ LIX is the fleet's first **life-science solution-scattering** beamline. The spec
 - **The fluidic sample-delivery chain.** An HPLC delivery pump, selector valves, a size-exclusion column, buffers, and a flow cell move the sample into the beam in lockstep with the exposure. This is the fleet's first fluidic delivery plane, and it is heterogeneous: mostly non-EPICS (a Moxa terminal server, the Agilent OpenLAB .NET SDK, a pcaspy soft-IOC), the same shape the [MX3](../mx3/index.md) deployment established for non-EPICS hardware (`FLUID-1`).
 - **The SEC-SAXS Procedure.** Purge, equilibrate, inject, flow-during-exposure, and fraction: the run is a flow program correlated to the elution, a Procedure over the seam rather than a device (`FLUID-1`, `SEC-1`).
 
-LIX coins **no new Family**, and the one reuse worth naming is the HPLC delivery pump, which binds the existing loose `FlowController` Family (its third consumer; see below). The catalog is otherwise unchanged. Frame the rest of these docs around the Subject and the delivery chain, and read the scattering itself as the fleet shape ported once more.
+LIX coins **no new Family**, and the one reuse worth naming is the HPLC delivery pump, which binds the graduated catalog `FlowController` Family (one of the four consumers, i22 / 7-BM / LIX / XFP, that earned its graduation; see below). The catalog is otherwise unchanged. Frame the rest of these docs around the Subject and the delivery chain, and read the scattering itself as the fleet shape ported once more.
 
 ## Scope: what is and is not modelled
 
@@ -33,8 +33,8 @@ LIX coins **no new Family**, and the one reuse worth naming is the HPLC delivery
 | Optics (`XF:16IDA`, `XF:16IDB`) | Yes | The undulator, the DCM and beam-energy axis, the white-beam and KB mirrors, the mono slit and secondary-source aperture, the photon and fast shutters (`ENC-1`) |
 | Endstation optics (`XF:16IDC`) | Yes | The compound refractive lens transfocator and the guard slit |
 | Endstation (`XF:16IDC`) | Yes | The solution positioning stack, the scanning-microbeam goniometer, the HPLC delivery pump, the SAXS / WAXS detectors, the fluorescence spectrometer, the detector stage, the beamstop, the flux and beam-position monitors, the Zebra trigger (`ENC-1`) |
-| New device classes | None | Zero new Families coined; nothing graduates; the catalog is unchanged |
-| The HPLC delivery pump | Loose `FlowController` | Reuses the existing flow / pump-actuator Family (i22 / 7-BM); LIX is its third consumer, the rule-of-three trigger (`FLUID-1`, `FLOW-1`) |
+| New device classes | None | Zero new Families coined in this scaffold; the catalog is unchanged here |
+| The HPLC delivery pump | Graduated `FlowController` | Binds the graduated catalog flow / pump-actuator Family (presents Regulator; earned across i22 / 7-BM / LIX / XFP) (`FLUID-1`, `FLOW-1`) |
 | Selector valves, SEC column, flow cell, sample robot | Seam + Subject / Supply / Procedure | The fluidic-routing valves are the ControlPort seam; the column and buffers are Supply; the robot is a Procedure; the solution is a Subject. None is a device Family (`FLUID-1`, `SEC-1`, `ROBOT-1`, `SUBJECT-1`) |
 | The attenuator and the cell temperature controllers | No (disabled in source) | The attenuator and both temperature controllers are commented out in the profile collection; not invented (`ATTN-1`, `TEMP-1`) |
 | Integration scenarios + vendor Models | No | Design-phase; the descriptor and docs come first |
@@ -43,12 +43,12 @@ The deferred parts are recorded on [Model](model.md).
 
 ## Key modelling decisions
 
-- **Reuse over coin.** Every device binds an existing catalog or loose Family, and the catalog changes nothing. The novelty lands on Subject, Supply, and Procedure, not on device vocabulary.
+- **Reuse over coin.** Every device binds an existing catalog or loose Family, and this scaffold changes nothing in the catalog. The novelty lands on Subject, Supply, and Procedure, not on device vocabulary.
 - **16-ID is an undulator beamline, so it carries an `InsertionDevice`.** Unlike the bending-magnet [CMS](../cms/index.md), LIX has an in-vacuum undulator on the spine, observed alongside the loose `StorageRing`; the device model and period are carried pending (`SRC-1`, `MACHINE-1`).
-- **The HPLC delivery pump reuses the loose `FlowController` Family.** A settable flow / pump actuator presenting `Regulator`, it binds the family i22 and 7-BM already use. LIX is its **third** consumer, which fires the rule-of-three; the `FlowController` graduation is a separate gated decision, flagged here, not folded into this scaffold (`FLUID-1`, `FLOW-1`).
+- **The HPLC delivery pump reuses the graduated `FlowController` Family.** A settable flow / pump actuator presenting `Regulator`, it binds the catalog Family (the settable-actuator sibling of `TemperatureController`) that graduated on the rule-of-three across i22, 7-BM, LIX, and XFP. LIX is one of the four consumers that earned the graduation (`FLUID-1`, `FLOW-1`).
 - **The fluidic chain is the seam plus Subject / Supply / Procedure.** The selector valves (no existing Family) stay in the ControlPort seam; the SEC column and buffers are Supply consumables; the sample robot and autosampler are a Procedure over the spine with a Subject custody thread (the i03 / MX3 robot precedent); the liquid sample is a Subject. None is coined as a device Family (`FLUID-1`, `SEC-1`, `ROBOT-1`, `SUBJECT-1`).
 - **The compound refractive lens reuses the graduated `Transfocator`.** The Transfocator Family is well established across the fleet (the APS / Diamond CRLs and the NSLS-II siblings CHX / IXS / SMI / FMX); LIX adds another consumer, not a new abstraction (`CRL-1`).
-- **Zero new Families coined, nothing graduates, the catalog is unchanged.**
+- **Zero new Families coined in this scaffold; the catalog is unchanged here.**
 
 ## The beamline
 

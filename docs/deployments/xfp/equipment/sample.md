@@ -11,7 +11,7 @@ XFP's sample side delivers a biological macromolecule in solution into the white
 | `CapillaryFlowStage` | `LinearStage` | `XF:17BMA-ES:1{Stg:5-Ax:X}` | places a flowing solution capillary in the beam (x / y, 100 mm travel) (`SAMPLE-1`) |
 | `HighThroughputStage` | `LinearStage` | `XF:17BMA-ES:2{Stg:7-Ax:X}` | positions a 96-well plate (x / y, 200 mm travel); the well addressing is a Procedure, no robot (`HT-1`) |
 | `HtFlyStage` | `LinearStage` | `XF:17BMA-ES:2{HTFly:1-Ax:X}` | sweeps a fly-cell row through the beam; the velocity sets the exposure (dose) (`HT-1`, `DOSE-1`) |
-| `DeliveryPump` | `FlowController` (loose) | `XF:17BMA-ES:1{Pmp:02}` | the syringe pump flowing solution through the capillary / flow cell during irradiation (`FLOW-1`) |
+| `DeliveryPump` | `FlowController` (graduated; presents Regulator) | `XF:17BMA-ES:1{Pmp:02}` | the syringe pump flowing solution through the capillary / flow cell during irradiation (`FLOW-1`) |
 
 ## Delivering the sample to the beam
 
@@ -23,7 +23,7 @@ The **high-throughput mode** uses the `HighThroughputStage` to position a 96-wel
 
 ## The fluidic delivery: the pump
 
-The `DeliveryPump` flows the solution sample through the capillary or flow cell during irradiation. It is a settable flow / pump actuator (an M50 syringe pump with rate / volume setpoints and a run command, driving the dose-response / fraction-collection mode; a second PHD2000 infusion pump drives the capillary-flow / time-resolved mode), exactly the anatomy of the existing loose `FlowController` Family that i22, 7-BM, and LIX already use. So the pump **reuses** `FlowController`; it coins nothing. XFP is its **fourth** consumer, reinforcing the rule-of-three that [LIX](../../lix/model.md#the-flowcontroller-rule-of-three) already fired (see [Model](../model.md#the-flowcontroller-rule-of-three)).
+The `DeliveryPump` flows the solution sample through the capillary or flow cell during irradiation. It is a settable flow / pump actuator (an M50 syringe pump with rate / volume setpoints and a run command, driving the dose-response / fraction-collection mode; a second PHD2000 infusion pump drives the capillary-flow / time-resolved mode), exactly the anatomy of the catalog `FlowController` Family that i22, 7-BM, and LIX already use. So the pump **reuses** `FlowController`; it coins nothing. XFP is its **fourth** consumer, and `FlowController` graduated into the catalog on this rule-of-three (i22 / 7-BM / [LIX](../../lix/model.md#the-graduated-flowcontroller-family) / XFP), presenting the `Regulator` Role, the settable-actuator sibling of `TemperatureController` (see [Model](../model.md#the-flowcontroller-rule-of-three)).
 
 ## The Subject and the sample-custody seam
 
@@ -43,6 +43,6 @@ The only sample-environment readouts in the profile collection are temperature /
 
 ## Why no new Family here
 
-The sample stages all reuse the catalog `LinearStage`. The one fluidic device, the delivery pump, reuses the existing loose `FlowController` Family rather than coining a new one. The fraction collector, the 96-well plate, and the solution sample are deliberately not coined as device Families: they are the sample-custody and offline-readout seam, which is where a dose-delivery beamline's novelty belongs (`FC-1`, `HT-1`, `SUBJECT-1`, `READOUT-1`). Nothing here graduates and the catalog is unchanged.
+The sample stages all reuse the catalog `LinearStage`. The one fluidic device, the delivery pump, reuses the graduated catalog `FlowController` Family (presents `Regulator`) rather than coining a new one; XFP's sighting is the fourth that graduated it (i22 / 7-BM / LIX / XFP). The fraction collector, the 96-well plate, and the solution sample are deliberately not coined as device Families: they are the sample-custody and offline-readout seam, which is where a dose-delivery beamline's novelty belongs (`FC-1`, `HT-1`, `SUBJECT-1`, `READOUT-1`). The wider fluidic chain beyond the pump stays in the `ControlPort` seam (`FLUID-1`).
 
 See [Open questions](../questions.md) for the sample-side facts still to confirm, [Inventory](../inventory.md) for the Asset tree, [Model](../model.md) for the family-reuse rationale and the FlowController rule-of-three, and [the source walk](../beamline.md) for the PVs as read from the profile collection.

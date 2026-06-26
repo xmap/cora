@@ -50,7 +50,7 @@ The two magnet sample stages reuse `LinearStage`; the cryostat low-temperature e
 
 Two families on this page are loose, not catalog Families, and both are at their second sighting: `PolarizationAnalyzer` (the RASOR analysis arm, after 4-ID, POL-2) and `Magnet` (the i10-1 electromagnet and superconducting magnet, after 4-ID, MAG-1). Each was first seen at 4-ID and is carried as a loose family string here, bound to a real device so the modelling is honest about what the endstation does.
 
-Neither graduates at i10. Graduation follows a rule-of-three across deployments, and a second sighting does not meet it; the hold-versus-graduate call is human, and i10 records a hold for both (POL-2, MAG-1). This mirrors how the fleet carries `StorageRing` and `FlowController` loose at i22 until a confirmed device and a naming review settle them. The loose annotation in the tables above marks exactly these two; everything else on this page reuses a catalog Family unchanged.
+Neither graduates at i10. Graduation follows a rule-of-three across deployments, and a second sighting does not meet it; the hold-versus-graduate call is human, and i10 records a hold for both (POL-2, MAG-1). This mirrors how the fleet carries `StorageRing` loose at i22 until a confirmed device and a naming review settle it. The loose annotation in the tables above marks exactly these two; everything else on this page reuses a catalog Family unchanged.
 
 ## Why no new family here
 

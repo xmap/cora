@@ -22,12 +22,14 @@
 #   - No z positions. The 7-BM docs carry no beam-layout table, so z_span_mm and
 #     per-device z_mm are omitted rather than invented (contrast TomoWISE, whose
 #     TDR gave z values).
-#   - No new catalog Families. The genuinely-new device anatomies (the chopper, the
-#     flow controllers, the point and energy-dispersive detectors) are bound to
-#     loose design-intent family names that render as plain text, exactly as
-#     TomoWISE bound HeatAbsorber / SlipRing; each is tagged with the open question
-#     that decides whether it is earned into the catalog or folds into an existing
-#     Family plus settings.
+#   - No new catalog Families minted here. The flow controllers bind the catalog
+#     FlowController Family (graduated across i22 / 7-BM / LIX / XFP; presents the
+#     Regulator Role, the settable-actuator sibling of TemperatureController). The
+#     remaining genuinely-new device anatomies (the chopper, the point and
+#     energy-dispersive detectors) are bound to loose design-intent family names that
+#     render as plain text, exactly as TomoWISE bound HeatAbsorber / SlipRing; each is
+#     tagged with the open question that decides whether it is earned into the catalog
+#     or folds into an existing Family plus settings.
 
 beamline:
   name: "7-BM"
@@ -174,15 +176,17 @@ sample-environment:
       confirm: true
       note: "energy-dispersive-diffraction gauge-volume slits; two tungsten-carbide blocks 511 mm apart, curved for a 3 degree full scattering angle at 150 mm working distance (edd.rst)"
     - name: FlowController
-      family: FlowController
+      family: FlowController        # catalog Family (graduated; settable flow/pump actuator, presents Regulator)
       new: true
       confirm: true
       note: >
         Sierra Smart-Trak mass-flow controllers (three units; Kr / N2 ranges) metering
-        process gas to the flow and combustion experiments. A SETTABLE actuator with a
-        commanded setpoint and a flow readback, unlike any 2-BM device. Whether CORA
-        commands the setpoint (versus reading it back only), and whether a FlowController
-        Family is earned versus deferred, are open (FLOW-1).
+        process gas to the flow and combustion experiments. Binds the catalog
+        FlowController Family (graduated; presents the Regulator Role), the settable-actuator
+        sibling of TemperatureController, earned across i22 / 7-BM / LIX / XFP. A settable
+        actuator with a commanded setpoint and a flow readback, unlike any 2-BM device.
+        What stays open (FLOW-1) is whether CORA commands the setpoint versus reading it
+        back only.
 
 # ===========================================================================
 # Detection: the multiple detector modalities 7-BM runs

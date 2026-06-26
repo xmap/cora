@@ -18,7 +18,7 @@ The IOC name (`Dif:ISD`) shows a diffractometer exists on the floor, but the sou
 
 ## The in-situ environment is absent
 
-ISR's name promises in-situ studies (electrochemistry, gas, temperature, cryostat). The profile collection binds **none** of it: there is no temperature controller, no potentiostat / electrochemistry, no gas / flow controller, and no cryostat anywhere in the source. The in-situ sample environment is a stated mission with zero device representation in the public source, so it is a named open question, not modelled (`INSITU-1`). When it lands, the environments would reuse existing families and the seam (a `TemperatureController` for thermal, a loose `FlowController` for gas / flow, the LIX / XFP precedent), with the sample itself a Subject; none is invented here.
+ISR's name promises in-situ studies (electrochemistry, gas, temperature, cryostat). The profile collection binds **none** of it: there is no temperature controller, no potentiostat / electrochemistry, no gas / flow controller, and no cryostat anywhere in the source. The in-situ sample environment is a stated mission with zero device representation in the public source, so it is a named open question, not modelled (`INSITU-1`). When it lands, the environments would reuse existing families and the seam (a `TemperatureController` for thermal, the graduated `FlowController` for gas / flow, the LIX / XFP precedent), with the sample itself a Subject; none is invented here.
 
 ## Resonant and polarization, deferred
 

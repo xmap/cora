@@ -36,7 +36,7 @@ ISR's science reuses two pending Methods rather than coining: `resonant_scatteri
 ## Deliberately not here yet
 
 - **The multi-circle diffractometer (`DIFF-1`).** Only `th` + `zeta` are bound under the `Dif:ISD` IOC; the orientation circles, the detector two-theta arm, and the reciprocal-space / hkl engine are absent from source and not invented. When they land, the sample side would be a `Goniometer` plus reciprocal-space `PseudoAxis` (the IXS six-circle / CSX TARDIS precedent), with a detector-arm `RotaryStage` / `LinearStage`.
-- **The in-situ sample environment (`INSITU-1`).** No temperature / electrochemistry / gas / cryostat device is PV-bound. When it lands it reuses `TemperatureController` / the loose `FlowController` and the Subject / Supply / Procedure seam, not a new family.
+- **The in-situ sample environment (`INSITU-1`).** No temperature / electrochemistry / gas / cryostat device is PV-bound. When it lands it reuses `TemperatureController` / the graduated `FlowController` and the Subject / Supply / Procedure seam, not a new family.
 - **The resonant energy axis and polarization analysis (`RESONANT-1`).** The energy axis is a non-functional stub; no polarization analyzer or phase retarder is bound. When wired, the energy axis is a `PseudoAxis` over the DCM and polarization hardware reuses the loose `PolarizationAnalyzer` / `PhaseRetarder` (4-ID).
 - **The flux monitors (`DET-1`).** The QuadEM electrometers and the secondary-source slit are defined but commented out in source; not modelled until live.
 - **The Methods.** Whether `resonant_scattering` and `diffraction` enter CORA's catalog is an owner decision; the Practices render unlinked, pending (`TECH-1`).
