@@ -3,7 +3,7 @@
 
 A beamline increasingly runs itself overnight. An operator queues a sample,
 hands the instrument to an automated routine, and goes home; software aligns the
-sample, starts acquiring, and a supervising agent watches the beam and holds or
+sample, starts acquiring, and a supervisor agent watches the beam and holds or
 resumes the run as conditions change. When the scientist returns in the morning,
 they still have to answer for what happened while no one was watching. The first
 questions are plain: did the alignment converge, what was in flight when the
@@ -38,9 +38,8 @@ fold used by the backend read path, the displayed state is reconstructed from
 the recorded event prefix rather than re-created by a separate
 visualization-specific replay; and a content-addressed check of the recorded
 expansion lets the scrubber verify, rather than merely assert, that the state
-shown at the cursor matches the record (under the system's append-only storage
-and deterministic-fold assumptions, not against an adversary with database write
-access).
+shown at the cursor matches the record (under the system's append-only and
+deterministic-fold assumptions, not adversarial tamper resistance).
 
 We ground the design in a real run from an operating instrument: an unattended,
 agent-supervised run at the APS 2-BM micro-CT beamline, in which our
@@ -65,7 +64,7 @@ autonomous runs.
         interaction primitive for provenance: the fold the backend uses to
         reconstruct state becomes a control the auditor drags through recorded
         time, rather than a static post-hoc graph to read.
-  \item \textbf{A task abstraction for auditing closed-loop runs.} We
+  \item \textbf{A task abstraction for auditing autonomous runs.} We
         characterize four recurring audit tasks and map each to an event-log
         query and a visual encoding.
   \item \textbf{The replay scrubber (technique).} We design a single timeline

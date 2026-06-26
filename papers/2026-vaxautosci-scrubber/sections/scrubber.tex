@@ -23,17 +23,16 @@
 
 Before the mechanics, the experience. The scrubber turns a finished run into
 something a scientist can play back: drag a handle along time and the run
-re-forms at that instant, the way a video scrubber jumps to a frame, except each
-state here is reconstructed from the record on demand rather than stored as a
-frame. The rest of this section is how that is built and what it shows.
+re-forms at that instant, the way a video scrubber jumps to a frame.
 
 The scrubber presents one recorded run on a single horizontal time axis
-(Figure~\ref{fig:scrubber}). Each row is a swim-lane for one kind of activity the
-run performs, a position setpoint, an acquisition, and a check, and every
-activity is drawn at its recorded time within its lane. Above the lanes, a
-dedicated run-lifecycle lane records the autonomous arc: who or what caused each
-transition, so an auditor sees at a glance where control passed between the
-operator and the supervising agent. The iterative structure of the conducted
+(Figure~\ref{fig:scrubber}), read from the bottom up. The lower rows are
+swim-lanes, one horizontal track per kind of step the run performs, a position
+setpoint, an acquisition, and a check, with every activity drawn at its recorded
+time within its lane. Above the lanes, a dedicated run-lifecycle lane records the
+autonomous arc: who or what caused each transition, colored by actor, so an
+auditor sees at a glance where control passed between the operator and the
+supervisor agent. The iterative structure of the conducted
 alignment sits in a band of nested brackets, one per pass, each colored by that
 pass's recorded verdict. An activity that was opened but never closed, the
 record of intent before effect, is drawn as an open interval rather than a
@@ -43,8 +42,7 @@ The interaction is a single draggable cursor. Setting the cursor to a position
 $t$ folds the event stream up to $t$ and renders the reconstructed state of the
 run beside the timeline, so dragging the cursor replays the run to any recorded
 instant (T2). The fold is the system's own read path, not a separate
-reconstruction built for the figure, which is what lets every recorded instant
-be reached exactly. Where most timelines let a user read \emph{when} something
+reconstruction built for the figure. Where most timelines let a user read \emph{when} something
 happened, the scrubber lets them recover \emph{what the run knew} at that moment,
 and \emph{who or what} was driving it.
 
@@ -55,8 +53,7 @@ and \emph{who or what} was driving it.
   hashes recorded at run start, over the recipe expansion (the resolved steps and
   the parameter bindings), are recomputed from the state reconstructed by folding
   to the cursor and compared; a match reads verified, a mismatch would read
-  altered. Under the system's append-only storage assumptions, the recorded side
-  is not editable through the normal application path. The digest shown is an
+  altered. The digest shown is an
   illustrative content hash of the run data.}
   \label{fig:fidelity}
 \end{figure}
@@ -86,21 +83,18 @@ alignment already converged, the first projection still open, and the run held
 by the agent, and the fidelity badge confirms that reconstructed state is
 faithful to the record (T4).
 
-Now the morning audit. The scientist opens the run and reads the bracket band
-first: four passes, the last one green, so the centering converged overnight
-without anyone watching (T3). They drag the cursor into the gap in the held band,
-the beam-loss instant, and the first projection shows as an open interval with no
-outcome, which is exactly the exposure that was in flight when the beam dropped,
-localized rather than guessed (T1, developed in Section~\ref{sec:crash}). To
-check the recovery they drag to the resume transition and open its decision: the
-supervisor resumed because the start-safety envelope was satisfied again, and the
-folded state shows what the agent saw at that instant (T2). At every cursor
-position the fidelity badge stays verified, so the reconstruction they reason
-over is faithful to the record (T4). In a few minutes, and without re-running
+Read as a morning audit, the same run answers the auditor's questions in the
+order they arise. Dragging the cursor into the gap in the held band localizes the
+first projection as an open interval, exactly the exposure in flight when the
+beam dropped, rather than guessing it (T1, developed in Section~\ref{sec:crash}).
+Dragging to the resume transition opens its decision, the supervisor resumed
+because the start-safety envelope was satisfied again, and the folded state shows
+what the agent saw at that instant (T2). In a few minutes, and without re-running
 anything, the auditor has recovered what the run did overnight, what was
-interrupted, why the agent acted, and that the account can be trusted.
+interrupted, and why the agent acted.
 
-\textbf{Formalization.} Write $e_{1{:}t}$ for the event prefix up to cursor $t$.
+The mechanism behind that walkthrough is a single fold. \textbf{Formalization.}
+Write $e_{1{:}t}$ for the event prefix up to cursor $t$.
 The reconstructed state is the deterministic left fold $S_t =
 \mathrm{fold}(\mathrm{evolve}, S_0, e_{1{:}t})$, using the same $\mathrm{evolve}$
 as the backend read path, so the cursor reaches every recorded instant exactly.
@@ -134,10 +128,9 @@ supervisor drives is recorded with the actor that caused it and a decision the
 auditor can open: not only that the run was held and resumed, but who or what
 decided, when, and on what basis. Scrubbing to a transition reconstructs the
 state the agent saw at that instant, so ``why did it resume here'' is answered by
-replay rather than by trusting a log line. This is the capability that lets a
-human cede control to an agent overnight and still answer for the result in the
-morning: the questions an auditor asks do not change as autonomy deepens, only
-how many of the recorded decisions were the agent's rather than a person's. The
+replay rather than by trusting a log line. The questions an auditor asks do not
+change as autonomy deepens; only how many of the recorded decisions were the
+agent's rather than a person's. The
 same lane that here distinguishes operator from supervisor would, with more
 agents in the loop, separate their contributions and surface where they
 contended or handed off, which is the multi-agent orchestration view the
