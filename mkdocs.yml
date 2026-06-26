@@ -641,6 +641,19 @@ nav:
         - Techniques: deployments/xfp/techniques.md
         - Governance: deployments/xfp/governance.md
         - Model: deployments/xfp/model.md
+      - PDF:
+        - deployments/pdf/index.md
+        - Open questions: deployments/pdf/questions.md
+        - The beamline:
+          - deployments/pdf/equipment/index.md
+          - Source: deployments/pdf/beamline.md
+          - Sample: deployments/pdf/equipment/sample.md
+          - Detector: deployments/pdf/equipment/detector.md
+          - Controls: deployments/pdf/equipment/controls.md
+          - Inventory: deployments/pdf/inventory.md
+        - Techniques: deployments/pdf/techniques.md
+        - Governance: deployments/pdf/governance.md
+        - Model: deployments/pdf/model.md
     - SLAC:
       - deployments/slac/index.md
       - LCLS-MFX:

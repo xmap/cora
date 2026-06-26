@@ -68,6 +68,7 @@ The fourth Site CORA models. Like the Diamond exercise, its beamlines are revers
 | [HEX](hex/index.md) | Reverse-engineered | high-energy engineering X-ray scattering (imaging/tomography + energy-dispersive and powder diffraction on a superconducting wiggler, white 30-250 keV / mono 30-200 keV), 27-ID; the fleet's first true high-energy hard X-ray beamline; modelled from public beamline config |
 | [AMX](amx/index.md) | Reverse-engineered | highly automated macromolecular crystallography (rotation MX on a single-omega goniometer + Eiger, EMBL robot sample exchange), 17-ID-1; FMX's sibling, CORA's 3rd MX; modelled from public beamline config |
 | [XFP](xfp/index.md) | Reverse-engineered | X-ray footprinting of biological macromolecules in solution (white/pink-beam radiolytic dose delivery, offline mass-spec readout), 17-BM; the fleet's first dose-delivery beamline (no scattering detector); modelled from public beamline config |
+| [PDF](pdf/index.md) | Reverse-engineered | high-energy total scattering / pair distribution function and powder diffraction (side-bounce Laue mono, two-detector two-distance merge on PerkinElmer + Pilatus panels), 28-ID-1; XPD's dedicated PDF twin on the shared 28-ID damping wiggler; modelled from public beamline config |
 
 ## [SLAC](slac/index.md)
 
