@@ -15,7 +15,10 @@ unlike the human-authored record most tools were built for. It arrives at
 machine speed, it is dense in decisions, it is multi-pass, and control passes
 back and forth between people and agents. Post-hoc provenance graphs and flat
 logs flatten exactly the temporal and causal texture these questions depend on.
-When the beam drops, the log simply stops, leaving the auditor to guess what was
+A graph drawn after the run can tell you that steps happened and how they connect,
+but not what the run looked like at two in the morning, and it gives the auditor
+nowhere to stand inside the run and look around. When the beam drops, the log
+simply stops, leaving the auditor to guess what was
 in flight and whether it took effect; a static record offers no way to show that
 it has not been altered after the fact; and nothing says who was driving at each
 moment.
@@ -23,7 +26,10 @@ moment.
 We observe that one class of system already answers such questions internally.
 An event-sourced system of record never stores current state directly; it
 reconstructs any past state on demand by folding an immutable, ordered stream of
-events. Our central idea is to expose that fold as an interaction. The result is
+events. Folding is the everyday operation it sounds like: replay the log from the
+beginning, apply each event in turn, and the state re-forms, the way re-adding a
+ledger's entries recovers its running balance. Our central idea is to expose that
+fold as an interaction. The result is
 a \emph{replay scrubber}: a draggable time cursor that an auditor moves through a
 recorded run, with the system folding the event stream to the chosen instant and
 rendering the state as it was then, who or what caused it, and whether the

@@ -15,7 +15,10 @@
   \label{fig:substrate}
 \end{figure*}
 
-The scrubber needs nothing from the backend beyond what an event-sourced
+Event sourcing, in one line: rather than storing the current state and
+overwriting it in place, the system keeps the sequence of changes and recomputes
+state by replaying them. That choice is what the scrubber turns into something to
+see. The scrubber needs nothing from the backend beyond what an event-sourced
 system of record already keeps, which is why the design transfers to any system
 of that shape. We summarize the substrate here, and stress that it is the
 enabling condition, not the contribution (Figure~\ref{fig:substrate}).
