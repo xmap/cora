@@ -24,7 +24,7 @@ facility:
   heading: "NSLS-II"
   kind: Site
   institution: Brookhaven National Laboratory
-  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, XPD, ESM, SMI, IXS, SST, ISS, FMX, CMS, XFM]
+  beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, IOS, XPD, ESM, SMI, IXS, SST, ISS, FMX, CMS, XFM]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the FXI profile collection, not yet
@@ -100,6 +100,14 @@ practices:
   - {name: CMS_wide_angle_scattering_practice, method: wide_angle_scattering, pending: true, note: "wide- and medium-angle scattering on the Pilatus 800K detectors; shares the i22 WAXS Method (TECH-1)"}
   - {name: CMS_grazing_incidence_scattering_practice, method: grazing_incidence_scattering, pending: true, note: "grazing-incidence small- and wide-angle scattering (GISAXS / GIWAXS) on thin films; shares the 9-ID Method, SMI the NSLS-II twin (TECH-1)"}
   - {name: CMS_reflectivity_practice, method: reflectivity, pending: true, note: "specular hard X-ray reflectivity (XR): step the sample theta and track the reflected beam in a sliding region on the fixed Pilatus; second consumer of the reflectivity Method after i10 (XR-1, TECH-1)"}
+  # IOS (23-ID-2) does ambient-pressure photoemission (AP-XPS / AP-PES) and soft
+  # NEXAFS / XAS, the in-situ / operando twin of CSX on the same canted 23-ID straight.
+  # Its photoemission sits on the pending angle_resolved_photoemission Method ESM coined
+  # (AP-XPS is chemical-state, not angle-resolved, so the slug names a shape it was not
+  # coined for), and its NEXAFS sits on the deferred energy_scan Capability (ENERGY-1,
+  # the BMM question) rather than the crystal-emission-spectrometer xas_spectroscopy.
+  # Following SST, no IOS Practice is recorded until a Method lands (TECH-1); IOS is
+  # bound via beamlines.
   # XFM (4-BM) is a scanning X-ray fluorescence microprobe: raster the sample through a
   # focused bending-magnet beam, read element maps on the Xspress3 / Maia detectors. This
   # reuses the scanning_fluorescence_microscopy Method 2-ID left pending; XFM is the second

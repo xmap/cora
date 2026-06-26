@@ -433,6 +433,19 @@ nav:
         - Techniques: deployments/csx/techniques.md
         - Governance: deployments/csx/governance.md
         - Model: deployments/csx/model.md
+      - IOS:
+        - deployments/ios/index.md
+        - Open questions: deployments/ios/questions.md
+        - The beamline:
+          - deployments/ios/equipment/index.md
+          - Source: deployments/ios/beamline.md
+          - Sample: deployments/ios/equipment/sample.md
+          - Detector: deployments/ios/equipment/detector.md
+          - Controls: deployments/ios/equipment/controls.md
+          - Inventory: deployments/ios/inventory.md
+        - Techniques: deployments/ios/techniques.md
+        - Governance: deployments/ios/governance.md
+        - Model: deployments/ios/model.md
       - XPD:
         - deployments/xpd/index.md
         - Open questions: deployments/xpd/questions.md
