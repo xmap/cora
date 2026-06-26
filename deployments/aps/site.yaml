@@ -23,7 +23,7 @@ facility:
   kind: Site
   institution: Argonne
   sectors: [Sector 2, Sector 4, Sector 7, Sector 8, Sector 9, Sector 32, Sector 19]
-  beamlines: [2-BM, 2-ID, 7-BM, 32-ID, 19-BM, 4-ID, 8-ID, 9-ID, 12-ID-E]
+  beamlines: [2-BM, 2-ID, 7-BM, 32-ID, 19-BM, 4-ID, 8-ID, 9-ID, 12-ID-E, 13-ID-D]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. A method
 # that exists in the Catalog renders as a link; a method still pending in the
@@ -97,6 +97,12 @@ practices:
   - {name: 12IDE_usaxs_practice, method: ultra_small_angle_scattering, pending: true, note: "Bonse-Hart rocking-curve ultra-small-angle scattering on the autoranging photodiode; new Capability not yet in catalog (USAXS-1)"}
   - {name: 12IDE_saxs_practice, method: small_angle_scattering, pending: true, note: "pinhole small-angle scattering on the SAXS area detector; shares the i22 SAXS Method (TECH-1)"}
   - {name: 12IDE_waxs_practice, method: wide_angle_scattering, pending: true, note: "wide-angle scattering on the WAXS area detector; shares the i22 WAXS Method (TECH-1)"}
+  # 13-ID-D (GSECARS) high-pressure XRD Practices (first cut). Powder and single-crystal
+  # X-ray diffraction on a sample in a diamond anvil cell under pressure and laser
+  # heating; high pressure is a sample-environment (Plan) difference over the same
+  # Methods, the 4-ID high-pressure-diffraction precedent. Methods pending (TECH-1).
+  - {name: 13IDD_powder_diffraction_practice, method: powder_diffraction, pending: true, note: "high-pressure powder X-ray diffraction on the diamond anvil cell; shares the i11 powder_diffraction Method, high pressure a Plan setting (TECH-1)"}
+  - {name: 13IDD_diffraction_practice, method: diffraction, pending: true, note: "high-pressure single-crystal X-ray diffraction on the diamond anvil cell; shares the diffraction Method, high pressure a Plan setting (TECH-1)"}
 
 # Access BC Actors that are conceptually facility-wide at APS. Actor display
 # names live in actor_profile (the PII vault), not in event-sourced Actor state.
