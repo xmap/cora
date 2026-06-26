@@ -62,7 +62,7 @@ def main() -> None:
                         color=s.GOOD)
         else:
             ax.plot([begin, cursor], [0, 0], color=s.ALARM, lw=4.5,
-                    ls=(0, (4, 2.6)), alpha=0.9, zorder=1)
+                    ls=(0, (0.9, 0.8)), dash_capstyle="butt", alpha=0.9, zorder=1)
             ax.annotate("", xy=(cursor + 0.4, 0), xytext=(cursor - 1.6, 0),
                         arrowprops={"arrowstyle": "-|>", "color": s.ALARM, "lw": 1.2})
             ax.annotate("in flight: no outcome", (begin, 0),

@@ -109,8 +109,8 @@ def main() -> None:
             if a["payload"].get("action_name") == "acquire_first_projection"}
     y = LANE_Y["action"]
     begin = proj["in_flight"]
-    ax.plot([begin, cursor], [y, y], color=s.ALARM, lw=4.5, ls=(0, (4, 2.6)),
-            alpha=0.9, zorder=2)
+    ax.plot([begin, cursor], [y, y], color=s.ALARM, lw=4.5, ls=(0, (0.9, 0.8)),
+            dash_capstyle="butt", alpha=0.9, zorder=2)
     ax.scatter([begin], [y], marker="^", s=52, color=s.ALARM, edgecolors="white",
                linewidths=0.6, zorder=3)
     ax.annotate("first projection:\nin flight", ((begin + cursor) / 2, y),
@@ -165,7 +165,8 @@ def main() -> None:
                markersize=6.5, label="supervisor"),
         Line2D([0], [0], color=s.WARN, lw=4, label="bracket: open"),
         Line2D([0], [0], color=s.GOOD, lw=4, label="bracket: converged"),
-        Line2D([0], [0], color=s.ALARM, lw=3, ls=(0, (4, 2.6)), label="in-flight (open)"),
+        Line2D([0], [0], color=s.ALARM, lw=4.5, ls=(0, (0.9, 0.8)),
+               dash_capstyle="butt", label="in-flight (open)"),
     ]
     ax.legend(handles=legend, loc="lower left", ncol=5, fontsize=s.SIZE["legend"],
               frameon=False, bbox_to_anchor=(0.0, -0.235), handletextpad=0.5,
