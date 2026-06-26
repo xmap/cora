@@ -537,6 +537,19 @@ nav:
         - Techniques: deployments/cms/techniques.md
         - Governance: deployments/cms/governance.md
         - Model: deployments/cms/model.md
+      - LIX:
+        - deployments/lix/index.md
+        - Open questions: deployments/lix/questions.md
+        - The beamline:
+          - deployments/lix/equipment/index.md
+          - Source: deployments/lix/beamline.md
+          - Sample: deployments/lix/equipment/sample.md
+          - Detector: deployments/lix/equipment/detector.md
+          - Controls: deployments/lix/equipment/controls.md
+          - Inventory: deployments/lix/inventory.md
+        - Techniques: deployments/lix/techniques.md
+        - Governance: deployments/lix/governance.md
+        - Model: deployments/lix/model.md
     - SLAC:
       - deployments/slac/index.md
       - LCLS-MFX:
