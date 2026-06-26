@@ -498,6 +498,19 @@ nav:
         - Techniques: deployments/iss/techniques.md
         - Governance: deployments/iss/governance.md
         - Model: deployments/iss/model.md
+      - CMS:
+        - deployments/cms/index.md
+        - Open questions: deployments/cms/questions.md
+        - The beamline:
+          - deployments/cms/equipment/index.md
+          - Source: deployments/cms/beamline.md
+          - Sample: deployments/cms/equipment/sample.md
+          - Detector: deployments/cms/equipment/detector.md
+          - Controls: deployments/cms/equipment/controls.md
+          - Inventory: deployments/cms/inventory.md
+        - Techniques: deployments/cms/techniques.md
+        - Governance: deployments/cms/governance.md
+        - Model: deployments/cms/model.md
     - SLAC:
       - deployments/slac/index.md
       - LCLS-MFX:
