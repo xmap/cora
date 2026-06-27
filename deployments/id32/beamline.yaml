@@ -1,0 +1,266 @@
+# ID32 beamline descriptor (ESRF), reverse-engineered
+#
+# ID32 is the ESRF soft X-ray beamline for resonant inelastic X-ray scattering (RIXS)
+# and X-ray magnetic dichroism (XMCD): a ~5 m dispersive RIXS spectrometer arm on one
+# endstation, and a 9 Tesla XMCD high-field magnet with an X-ray emission (XES)
+# spectrometer arm on the other, both fed by twin APPLE-II undulators through a soft
+# X-ray plane-grating monochromator. It is bound to the ESRF Site
+# (deployments/esrf/site.yaml), CORA's SEVENTH Site and its FIRST ESRF deployment.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the ESRF BLISS Beacon device database, gitlab.esrf.fr/id32/beamline_configuration,
+# a direct git mirror of the live /users/blissadm/local/beamline_configuration) or
+# inferred, carried new: true + confirm: true pending ID32 staff. This is the fleet's
+# first BLISS / Tango / IcePAP controls house-style (the rest are EPICS, or Tango /
+# Sardana at MAX IV); control handles are Tango device URLs, IcePAP host+address, and
+# BLISS axis names, carried as opaque edge handles the way the MX3 heterogeneous-control
+# precedent does. Descriptor + docs scaffold; scenarios deferred.
+#
+# WHAT IS NEW: a new Site, and two loose families brought to a rule-of-three.
+#   - A wholly NEW Site (the ESRF, 7th) re-tests the Site / Federation kernel and brings
+#     the BLISS / Beacon controls house-style.
+#   - SpectrometerArm reaches a genuine rule-of-three: ID32 carries the SAME
+#     SpectrometerArmsController class instantiated TWICE (the RIXS arm + the XES arm),
+#     so with the SIX soft-RIXS arm the family is now sighted three times. Per the user
+#     decision (2026-06-27) it is HELD loose here, with the graduation deferred to a
+#     dedicated gated catalog PR (RIXS-1).
+#   - The 9 T XMCD magnet is the third Magnet consumer (4-ID + i10-1 + ID32), and the
+#     RIXS polarimeter is the third PolarizationAnalyzer consumer (4-ID + i10 + ID32);
+#     both are HELD loose, graduations deferred (MAG-1, POL-2).
+#
+# MODELLING: ID32 coins NO new Family and changes nothing in the catalog (the rule-of-three
+# graduations are deferred to separate PRs per the user decision). The twin APPLE-II
+# undulators bind InsertionDevice and the polarization is a PseudoAxis (the i06 / i10
+# precedent); the PGM binds GratingMonochromator; the RIXS and XES dispersive spectrometer
+# arms bind the loose SpectrometerArm (SIX precedent); the RIXS polarimeter binds the loose
+# PolarizationAnalyzer; the 9 T XMCD magnet binds the loose Magnet; the LakeShore VTI and
+# coil-diagnostic controllers bind TemperatureController; the Andor CCDs bind Camera; the
+# 4-circle diffractometer binds Goniometer with a reciprocal-space PseudoAxis; the XMCD
+# sample stage binds LinearStage; the machine state binds the loose StorageRing.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/id32/questions.md.
+
+beamline:
+  name: ID32
+  facility: esrf               # ESRF Site (facility_code: esrf)
+  sector: "ID32"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "ID32 is a soft X-ray APPLE-II beamline; the BLISS config binds the undulators (modelled below) but not their period; the undulator detail is SRC-1"
+
+# Control plane: BLISS / Beacon (a YAML device DB) over Tango + IcePAP, NOT EPICS. Handles
+# are Tango device URLs (id32/limaccds/andor_1), IcePAP host+address (iceid324), or BLISS
+# axis names; carried as opaque edge handles (the MX3 non-EPICS precedent). The two
+# endstations (RIXS, XMCD) share the upstream APPLE-II + PGM source. Hutch grouping and the
+# PSS permit leaves are open (ENC-1, PSS-1).
+enclosures:
+  - name: id32-optics
+    role: optics-hutch
+    facility_code: esrf
+    permit_signal: {confirm: "PSS permit leaf not in the BLISS config; the shared soft X-ray optics zone, hutch grouping is ENC-1 (PSS-1)"}
+  - name: id32-rixs
+    role: experiment-hutch
+    facility_code: esrf
+    permit_signal: {confirm: "PSS permit leaf unknown; the RIXS spectrometer endstation, ENC-1 (PSS-1)"}
+  - name: id32-xmcd
+    role: experiment-hutch
+    facility_code: esrf
+    permit_signal: {confirm: "PSS permit leaf unknown; the XMCD high-field-magnet endstation, ENC-1 (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state, the APPLE-II undulators, the PGM, the optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: id32-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "The ESRF-EBS storage-ring state, the loose StorageRing pattern reused across the fleet (MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: {confirm: "ESRF-EBS storage-ring state (current, fill); observe-only, the exact handles are MACHINE-1"}
+      new: true
+      confirm: true
+      note: "ESRF-EBS storage-ring state; observe-only (MACHINE-1)"
+
+insertion-devices:
+  stage: source
+  enclosure: id32-optics
+  intro: "The APPLE-II undulators, the variable-polarization soft X-ray source."
+  note: "The APPLE-II undulators bind the catalog InsertionDevice (the i06 / i10 precedent); gap and phase are settings, and the polarization is a PseudoAxis over the phase (POL-1)."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: "tango://acs:10000/id/master/id32 (ESRF_Undulator); gap hu70ag, phase hu70ap"
+      new: true
+      confirm: true
+      note: "the APPLE-II undulator(s): gap (hu70ag) and phase (hu70ap) on the ESRF_Undulator device server; period is SRC-1"
+    - name: Polarization
+      family: PseudoAxis
+      pv: {confirm: "polarization virtual axis over the APPLE-II phase (the i06 / i10 precedent); the value domain (linear / circular) and the phase conversion are POL-1"}
+      new: true
+      confirm: true
+      note: "the polarization pseudo-axis over the APPLE-II (the i06 / i10 precedent); rule-less, the controller owns the phase conversion (POL-1)"
+    - name: BeamEnergy
+      family: PseudoAxis
+      pv: {confirm: "incident-energy virtual axis over the PGM and the APPLE-II gap; range and partition rule are MONO-1"}
+      new: true
+      confirm: true
+      note: "incident-energy pseudo-axis over the PGM and the undulator (MONO-1)"
+
+optics:
+  stage: source
+  enclosure: id32-optics
+  intro: "The soft X-ray plane-grating monochromator, the focusing mirrors, and the beam-defining slits."
+  note: "The PGM binds GratingMonochromator (the SIX / CSX / i06 precedent); the mirrors bind Mirror; the slits bind Slit. Exact handles are MONO-1 / OPT-1 / OPT-2."
+  devices:
+    - name: Monochromator
+      family: GratingMonochromator
+      pv: {confirm: "the soft X-ray plane-grating monochromator (PGM); grating line densities and cff, and the exact handles, are MONO-1"}
+      new: true
+      confirm: true
+      note: "soft X-ray plane-grating monochromator; gratings and cff are settings (MONO-1)"
+    - name: FocusingMirror
+      family: Mirror
+      pv: {confirm: "the soft X-ray focusing / harmonic-rejection mirrors; coatings and handles are OPT-1"}
+      new: true
+      confirm: true
+      note: "the soft X-ray focusing mirrors (OPT-1)"
+    - name: BeamSlit
+      family: Slit
+      pv: {confirm: "the beam-defining slits; blade-axis map and handles are OPT-2"}
+      new: true
+      confirm: true
+      note: "the beam-defining slits (OPT-2)"
+
+# ===========================================================================
+# RIXS ENDSTATION (id32-rixs): the dispersive spectrometer arm + diffractometer
+# ===========================================================================
+
+rixs:
+  stage: detection
+  enclosure: id32-rixs
+  intro: "The RIXS endstation: a ~5 m dispersive soft X-ray spectrometer arm, a 4-circle sample diffractometer, a scattered-beam polarimeter, and the Andor CCD."
+  note: >
+    The dispersive spectrometer arm binds the loose SpectrometerArm (the SIX precedent;
+    HELD at its rule-of-three, RIXS-1). The sample circles bind Goniometer with a
+    reciprocal-space PseudoAxis (the diffractometer Assembly, named-not-built, DIFF-1 /
+    DIFF-2). The scattered-beam polarimeter binds the loose PolarizationAnalyzer (the
+    4-ID / i10 precedent; HELD, POL-2). The CCD binds Camera.
+  devices:
+    - name: Diffractometer
+      family: Goniometer
+      pv: {confirm: "the 4-circle sample diffractometer (BLISS DiffE4CH, E4CH geometry with hkl); the circle roles and exact axes are DIFF-1"}
+      new: true
+      confirm: true
+      note: "the 4-circle sample diffractometer (E4CH); the circle roles and the Assembly(Diffractometer) binding are DIFF-1"
+    - name: ReciprocalSpace
+      family: PseudoAxis
+      pv: {confirm: "reciprocal-space (hkl) virtual axis over the diffractometer; the partition rule is deferred (DIFF-2)"}
+      new: true
+      confirm: true
+      note: "reciprocal-space pseudo-axis over the diffractometer (DIFF-2)"
+    - name: RixsSpectrometerArm
+      family: SpectrometerArm           # loose Family; rule-of-three reached, HELD (graduation deferred, RIXS-1)
+      pv: "BLISS rixs_spectro (SpectrometerArmsController); IcePAP iceid324: grtx/grty/grtz, gr1roty/gr2roty, detx/detz, army, grmask"
+      new: true
+      confirm: true
+      note: "the ~5 m dispersive RIXS spectrometer arm (rixs_spectro): real axes detx/detz/grtx -> virtual arm radii r1/r2; grating modes RIXS_2500 (radius 122000, gr2roty) and RIXS_1400 (gr1roty). Binds the loose SpectrometerArm; with the XES arm and SIX this is its rule-of-three, HELD pending a dedicated graduation PR (RIXS-1)"
+    - name: Polarimeter
+      family: PolarizationAnalyzer      # loose Family; HELD (graduation deferred, POL-2)
+      pv: "IcePAP iceid324: thpol/chipol/zpol/ypol/tthpol"
+      new: true
+      confirm: true
+      note: "the scattered-beam polarimeter / polarization-analysis block on the RIXS arm; binds the loose PolarizationAnalyzer, the third consumer after 4-ID + i10, HELD (POL-2)"
+    - name: RixsDetector
+      family: Camera
+      pv: "tango://id32/limaccds/andor_1 (Lima)"
+      new: true
+      confirm: true
+      note: "the Andor deep-depletion CCD at the end of the RIXS arm; reuses Camera (DET-1)"
+
+# ===========================================================================
+# XMCD ENDSTATION (id32-xmcd): the 9 T magnet, the VTI, the XES arm
+# ===========================================================================
+
+xmcd:
+  stage: sample
+  enclosure: id32-xmcd
+  intro: "The XMCD endstation: a 9 Tesla split-coil high-field magnet with a variable-temperature insert (VTI), an X-ray emission (XES) spectrometer arm, and the Andor CCD."
+  note: >
+    The 9 T XMCD magnet binds the loose Magnet (the third consumer after 4-ID + i10-1;
+    HELD, MAG-1). The VTI sample-temperature and the coil / shield diagnostics bind
+    TemperatureController (the LakeShore precedent). The XES arm binds the loose
+    SpectrometerArm (the second arm that completes the rule-of-three, HELD, RIXS-1). The
+    CCD binds Camera; the sample stage binds LinearStage.
+  devices:
+    - name: Magnet
+      family: Magnet                    # loose Family; HELD at n=3 (graduation deferred, MAG-1)
+      pv: "tango://id32/cryogenic_magnet_ps/xmcd1 (CryogenicPSController); serial tango://id32/Serialrp_232/lid323_ttyR33"
+      new: true
+      confirm: true
+      note: "the 9 T / 4 T split-coil superconducting XMCD magnet: 9.02 T coil + 4.05 T coil, one field setpoint axis (the field reads as a settable axis, presenting the Regulator Role). Binds the loose Magnet, the third consumer after 4-ID + i10-1, HELD pending a dedicated graduation PR (MAG-1)"
+    - name: SampleTemperatureController
+      family: TemperatureController
+      pv: "tango://id32/regulation/ls336_hfm_* (LakeShore 336; GPIB gpibid32b pad 11)"
+      new: true
+      confirm: true
+      note: "the VTI sample-temperature LakeShore 336 (inputs hexapod / helium-pot / sample, two control loops); the He needle valve / VTI flow folds into this cryostat regulation (TEMP-1)"
+    - name: CryostatDiagnostics
+      family: TemperatureController
+      pv: "tango://id32/regulation/ls340_hfm_* (LakeShore 340; GPIB gpibid32b pad 12)"
+      new: true
+      confirm: true
+      note: "the magnet-cryostat diagnostic LakeShore 340 (the superconducting-coil, shield, and helium-reservoir temperatures); a second Regulator instance monitoring the magnet plant (TEMP-1)"
+    - name: XesSpectrometerArm
+      family: SpectrometerArm           # loose Family; the 2nd arm completing the rule-of-three, HELD (RIXS-1)
+      pv: "BLISS xes_spectro (SpectrometerArmsController); IcePAP iceid329: xesdetx/xesdetz, xesgrtx/xesgrty, xesgrot, xesmask"
+      new: true
+      confirm: true
+      note: "the XES (X-ray emission) Rowland-geometry spectrometer arm (xes_spectro): real axes xesdetx/xesdetz/xesgrtx -> virtual radii xesr1/xesr2; grating mode XES_1200 (radius 26055, xesgrot). The SAME SpectrometerArmsController class as the RIXS arm, the second instance that makes the rule-of-three; binds the loose SpectrometerArm, HELD (RIXS-1)"
+    - name: XesDetector
+      family: Camera
+      pv: "tango://id32/limaccds/andor_2 (Lima)"
+      new: true
+      confirm: true
+      note: "the Andor CCD at the XES / XMCD endstation; reuses Camera (DET-1)"
+    - name: SampleStage
+      family: LinearStage
+      pv: {confirm: "the XMCD sample-positioning stage inside the magnet VTI; the axis set and handles are SAMPLE-1"}
+      new: true
+      confirm: true
+      note: "the XMCD sample-positioning stage in the magnet bore (SAMPLE-1)"
+
+# Cross-cutting control. ID32 runs BLISS / Beacon over Tango + IcePAP (the floor); CORA
+# observes and, where it replaces BLISS-style orchestration, conducts over it. The handles
+# above were read from the public BLISS config and carried confirm (CTRL-1).
+controls:
+  intro: >
+    ID32 runs on the ESRF BLISS / Beacon control stack over Tango and IcePAP, the fleet's
+    first non-EPICS, non-Sardana controls house-style. The device handles above are bound
+    from the public BLISS Beacon device database
+    (gitlab.esrf.fr/id32/beamline_configuration), carried confirm pending staff
+    verification (CTRL-1); they are Tango device URLs, IcePAP host+address, and BLISS axis
+    names, modelled as opaque edge handles over the ControlPort the way the MX3
+    heterogeneous-control precedent does. The RIXS / XES / XMCD acquisition (the energy +
+    polarization moves, the spectrometer-arm Rowland trajectories, the field sweeps, the
+    diffractometer scans) runs through BLISS sequences; that orchestration is the seam
+    CORA's edge replaces, conducting over Tango / IcePAP rather than replacing BLISS. The
+    Lima detector file-writing to the ESRF data store is plumbing CORA observes, not data
+    it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an ID32 run needs. The soft X-ray beam
+    path runs under ultra-high vacuum and the 9 T magnet draws on liquid helium (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the soft X-ray optics and the UHV endstations (SUP-1)"
+    - kind: LiquidHelium
+      note: "the 9 T XMCD superconducting magnet coils and VTI cryostat (MAG-1, SUP-1)"

@@ -697,6 +697,21 @@ nav:
         - Techniques: deployments/mx3/techniques.md
         - Governance: deployments/mx3/governance.md
         - Model: deployments/mx3/model.md
+    - ESRF:
+      - deployments/esrf/index.md
+      - ID32:
+        - deployments/id32/index.md
+        - Open questions: deployments/id32/questions.md
+        - The beamline:
+          - deployments/id32/equipment/index.md
+          - Source: deployments/id32/beamline.md
+          - Sample: deployments/id32/equipment/sample.md
+          - Detector: deployments/id32/equipment/detector.md
+          - Controls: deployments/id32/equipment/controls.md
+          - Inventory: deployments/id32/inventory.md
+        - Techniques: deployments/id32/techniques.md
+        - Governance: deployments/id32/governance.md
+        - Model: deployments/id32/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
