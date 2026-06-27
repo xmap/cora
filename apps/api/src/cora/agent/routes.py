@@ -35,6 +35,7 @@ from cora.agent.aggregates.agent import (
     AgentCannotGrantToolError,
     AgentCannotResumeError,
     AgentCannotRevokeToolError,
+    AgentCannotSetTargetPlanError,
     AgentCannotSuspendError,
     AgentCannotUpdateBudgetError,
     AgentCannotVersionError,
@@ -77,6 +78,7 @@ from cora.agent.features import (
     regenerate_run_debrief,
     resume_agent,
     revoke_tool_from_agent,
+    set_agent_target_plan,
     suspend_agent,
     update_agent_budget,
     version_agent,
@@ -160,6 +162,7 @@ def register_agent_routes(app: FastAPI) -> None:
     app.include_router(grant_tool_to_agent.router)
     app.include_router(revoke_tool_from_agent.router)
     app.include_router(update_agent_budget.router)
+    app.include_router(set_agent_target_plan.router)
     app.include_router(get_agent.router)
     app.include_router(regenerate_run_debrief.router)
     app.include_router(promote_caution_proposal.router)
@@ -213,6 +216,7 @@ def register_agent_routes(app: FastAPI) -> None:
         AgentCannotGrantToolError,
         AgentCannotRevokeToolError,
         AgentCannotUpdateBudgetError,
+        AgentCannotSetTargetPlanError,
         EventAlreadyDismissedError,
     ):
         app.add_exception_handler(cannot_transition_cls, _handle_cannot_transition)

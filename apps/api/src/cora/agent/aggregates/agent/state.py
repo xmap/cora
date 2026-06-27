@@ -408,6 +408,22 @@ class AgentCannotUpdateBudgetError(Exception):
         self.current_status = current_status
 
 
+class AgentCannotSetTargetPlanError(Exception):
+    """Attempted `set_agent_target_plan` against a `Deprecated` agent.
+
+    Same source-set rule as `AgentCannotUpdateBudgetError`.
+    """
+
+    def __init__(self, agent_id: UUID, current_status: "AgentStatus") -> None:
+        super().__init__(
+            f"Agent {agent_id} cannot set target plan: currently in status "
+            f"{current_status.value}; updates are blocked in "
+            f"{AgentStatus.DEPRECATED.value}"
+        )
+        self.agent_id = agent_id
+        self.current_status = current_status
+
+
 class AgentNotSeededError(Exception):
     """Cross-aggregate load failure: the operator-triggered slice
     expected an Agent record at the supplied id but found none.
@@ -820,3 +836,9 @@ class Agent:
     # state pattern keeps legacy reconstruction paths clean.
     suspended_by: ActorId | None = None
     resumed_by: ActorId | None = None
+    # Runtime-mutable target Plan for an autonomous agent (the recipe the
+    # RunInitiator starts for each ready Subject), set by `set_agent_target_plan`
+    # and folded from `AgentTargetPlanSet`. Optional (None = unset); only the
+    # consuming agent (RunInitiator) reads it, so it stays None for every other
+    # agent kind. Additive-state default keeps legacy reconstruction clean.
+    target_plan_id: UUID | None = None

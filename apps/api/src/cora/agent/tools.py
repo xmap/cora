@@ -25,6 +25,7 @@ from cora.agent.features.regenerate_run_debrief.handler import (
 )
 from cora.agent.features.resume_agent import tool as resume_agent_tool
 from cora.agent.features.revoke_tool_from_agent import tool as revoke_tool_from_agent_tool
+from cora.agent.features.set_agent_target_plan import tool as set_agent_target_plan_tool
 from cora.agent.features.suspend_agent import tool as suspend_agent_tool
 from cora.agent.features.update_agent_budget import tool as update_agent_budget_tool
 from cora.agent.features.version_agent import tool as version_agent_tool
@@ -68,6 +69,10 @@ def register_agent_tools(
     update_agent_budget_tool.register(
         mcp,
         get_handler=lambda: get_handlers().update_agent_budget,
+    )
+    set_agent_target_plan_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().set_agent_target_plan,
     )
     get_agent_tool.register(
         mcp,

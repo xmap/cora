@@ -15,6 +15,7 @@ Status mapping per event type:
   - `AgentToolGranted`   -> status unchanged (additive set mutation)
   - `AgentToolRevoked`   -> status unchanged (subtractive set mutation)
   - `AgentBudgetUpdated` -> status unchanged (budget field replace)
+  - `AgentTargetPlanSet` -> status unchanged (target_plan_id field replace)
 
 Source-state guards live at the decider, NOT here; the evolver trusts
 the event log (folded events have already passed their decider).
@@ -38,6 +39,7 @@ from cora.agent.aggregates.agent.events import (
     AgentEvent,
     AgentResumed,
     AgentSuspended,
+    AgentTargetPlanSet,
     AgentToolGranted,
     AgentToolRevoked,
     AgentVersioned,
@@ -119,6 +121,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 suspension_reason=prior.suspension_reason,
                 suspended_by=prior.suspended_by,
                 resumed_by=prior.resumed_by,
+                target_plan_id=prior.target_plan_id,
             )
         case AgentDeprecated(reason=reason, occurred_at=_):
             prior = require_state(state, "AgentDeprecated")
@@ -145,6 +148,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 suspension_reason=prior.suspension_reason,
                 suspended_by=prior.suspended_by,
                 resumed_by=prior.resumed_by,
+                target_plan_id=prior.target_plan_id,
             )
         case AgentSuspended(reason=reason, suspended_by=suspended_by, occurred_at=occurred_at):
             prior = require_state(state, "AgentSuspended")
@@ -172,6 +176,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 suspension_reason=AgentSuspensionReason(reason),
                 suspended_by=suspended_by,
                 resumed_by=prior.resumed_by,
+                target_plan_id=prior.target_plan_id,
             )
         case AgentResumed(resumed_by=resumed_by, occurred_at=occurred_at):
             prior = require_state(state, "AgentResumed")
@@ -202,6 +207,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 suspension_reason=prior.suspension_reason,
                 suspended_by=prior.suspended_by,
                 resumed_by=resumed_by,
+                target_plan_id=prior.target_plan_id,
             )
         case AgentToolGranted(tool_name=tool_name, occurred_at=_):
             prior = require_state(state, "AgentToolGranted")
@@ -224,6 +230,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 suspension_reason=prior.suspension_reason,
                 suspended_by=prior.suspended_by,
                 resumed_by=prior.resumed_by,
+                target_plan_id=prior.target_plan_id,
             )
         case AgentToolRevoked(tool_name=tool_name, occurred_at=_):
             prior = require_state(state, "AgentToolRevoked")
@@ -246,6 +253,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 suspension_reason=prior.suspension_reason,
                 suspended_by=prior.suspended_by,
                 resumed_by=prior.resumed_by,
+                target_plan_id=prior.target_plan_id,
             )
         case AgentBudgetUpdated(
             monthly_usd_cap=monthly_usd_cap,
@@ -272,6 +280,30 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 suspension_reason=prior.suspension_reason,
                 suspended_by=prior.suspended_by,
                 resumed_by=prior.resumed_by,
+                target_plan_id=prior.target_plan_id,
+            )
+        case AgentTargetPlanSet(target_plan_id=target_plan_id, occurred_at=_):
+            prior = require_state(state, "AgentTargetPlanSet")
+            return Agent(
+                id=prior.id,
+                kind=prior.kind,
+                name=prior.name,
+                version=prior.version,
+                model_ref=prior.model_ref,
+                description=prior.description,
+                canonical_uri=prior.canonical_uri,
+                prompt_template_id=prior.prompt_template_id,
+                capabilities=prior.capabilities,
+                status=prior.status,
+                deprecation_reason=prior.deprecation_reason,
+                tools=prior.tools,
+                budget=prior.budget,
+                suspended_at=prior.suspended_at,
+                resumed_at=prior.resumed_at,
+                suspension_reason=prior.suspension_reason,
+                suspended_by=prior.suspended_by,
+                resumed_by=prior.resumed_by,
+                target_plan_id=target_plan_id,
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)

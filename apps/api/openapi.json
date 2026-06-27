@@ -13478,6 +13478,26 @@
         "title": "SealSummaryDTO",
         "type": "object"
       },
+      "SetAgentTargetPlanRequest": {
+        "description": "Body for `POST /agents/{agent_id}/target-plan`.",
+        "properties": {
+          "target_plan_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The recipe Plan this autonomous agent starts for each ready Subject. Pass null to clear the target (the agent initiates nothing until a Plan is set again).",
+            "title": "Target Plan Id"
+          }
+        },
+        "title": "SetAgentTargetPlanRequest",
+        "type": "object"
+      },
       "SignSealPointerRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /federation/seals/{facility_code}/pointer/sign`.",
@@ -17518,6 +17538,96 @@
           }
         },
         "summary": "Suspend an Agent (Versioned -> Suspended; non-terminal)",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/agents/{agent_id}/target-plan": {
+      "post": {
+        "operationId": "post_agents_set_target_plan_agents__agent_id__target_plan_post",
+        "parameters": [
+          {
+            "description": "Target agent's id.",
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "description": "Target agent's id.",
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAgentTargetPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No agent exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Agent is `Deprecated` (only blocking source state)."
+          },
+          "422": {
+            "description": "Request body or path parameter failed schema validation."
+          }
+        },
+        "summary": "Set or clear an autonomous Agent's target Plan (PUT semantics; null clears)",
         "tags": [
           "agent"
         ]
