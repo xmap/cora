@@ -85,6 +85,7 @@ from cora.operation.errors import (
     PseudoAxisConstituentUnauthorizedError,
     PseudoAxisEvaluationFailedError,
     PseudoAxisSingularityExceededError,
+    SteeringWireMismatchError,
     UnauthorizedError,
 )
 from cora.operation.features import (
@@ -92,6 +93,7 @@ from cora.operation.features import (
     append_activities,
     complete_procedure,
     conduct_procedure,
+    conduct_until_advised,
     conduct_until_converged,
     end_iteration,
     get_procedure,
@@ -251,6 +253,7 @@ def register_operation_routes(app: FastAPI) -> None:
     app.include_router(list_procedure_iterations.router)
     app.include_router(conduct_procedure.router)
     app.include_router(conduct_until_converged.router)
+    app.include_router(conduct_until_advised.router)
     app.include_router(try_conduct_procedure.router)
     for validation_cls in (
         InvalidProcedureNameError,
@@ -351,6 +354,11 @@ def register_operation_routes(app: FastAPI) -> None:
         # server), so 422 rather than the 500 the math-kernel failures
         # below land at.
         PseudoAxisCommandOutsideRangeError,
+        # Steered conduct (conduct_until_advised): the request's steering space
+        # / objective does not line up with the pinned recipe's SteeringRef
+        # setpoints (the Conductor's pre-FSM wire guard). Well-formed request,
+        # unprocessable against the recipe; operator aligns the space + retries.
+        SteeringWireMismatchError,
     ):
         app.add_exception_handler(unprocessable_cls, _handle_unprocessable)
     # Server-side determinism bugs / data corruption: HTTP 500. Distinct

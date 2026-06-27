@@ -38,6 +38,25 @@ class UnknownActionError(Exception):
         self.name = name
 
 
+class SteeringWireMismatchError(Exception):
+    """A steered conduct request's space/objective does not line up with the recipe.
+
+    Raised when `conduct_until_advised`'s pre-FSM wire guard rejects the request:
+    a `SteeringSpace` axis the brain could propose is not consumed by any
+    `SteeringRef` (or `CaptureRef`) setpoint in the pinned recipe block, or the
+    objective captures-slot collides with a seeded axis. The request is
+    well-formed (Pydantic accepted it) but cannot be processed against the
+    pinned recipe, so the route maps it to HTTP 422 (operator-correctable: align
+    the space to the recipe's steering setpoints). Fires BEFORE any FSM event,
+    so nothing was started. The handler translates the Conductor's pre-FSM
+    ValueError into this typed error so the wire surfaces a 422, not a 500.
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
 class CheckFailedError(Exception):
     """A `CheckStep` either read a non-Good quality or its criterion did not match.
 
