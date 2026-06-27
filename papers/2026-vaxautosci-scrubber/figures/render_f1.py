@@ -99,7 +99,8 @@ def main() -> None:
 
     # Activity swim-lanes (alignment). Science projections are drawn separately.
     for a in acts:
-        if a["payload"].get("action_name") in ("acquire_projection", "fly_scan_prep"):
+        if (a["payload"].get("role") == "taxi"
+                or a["payload"].get("action_name") in ("acquire_projection", "fly_scan_prep")):
             continue
         x, y = secs(a["sampled_at"]), LANE_Y[a["step_kind"]]
         ax.scatter([x], [y], marker=LANE_MARKER[a["step_kind"]], s=46,
@@ -137,12 +138,16 @@ def main() -> None:
                 fontsize=s.SIZE["small"], color=s.ALARM, fontweight="bold",
                 linespacing=1.0)
 
-    # Two-phase recovery: the held band, then a fly-scan restart (taxi the rotary
-    # stage back to constant velocity, re-arm the PSO) before acquisition resumes.
-    ax.axvspan(beam_back, reacq, facecolor="none", hatch="////",
-               edgecolor=s.MUTE, linewidth=0.0, alpha=0.6, zorder=0)
-    ax.text((beam_back + reacq) / 2, 2.75, "taxi\n+ prep", ha="center",
-            va="center", fontsize=s.SIZE["small"], color=s.SUBINK, linespacing=0.9)
+    # A fly-scan restart (taxi the rotary stage to constant velocity, re-arm the
+    # PSO) is needed both before the first frame and again after the hold; show
+    # each as a hatched band.
+    taxi_times = sorted(secs(a["sampled_at"]) for a in acts if a["payload"].get("role") == "taxi")
+    first_proj = min(pre_ok + [inflight])
+    for x0, x1 in ((taxi_times[0] - 2, first_proj), (beam_back, reacq)):
+        ax.axvspan(x0, x1, facecolor="none", hatch="////", edgecolor=s.MUTE,
+                   linewidth=0.0, alpha=0.6, zorder=0)
+        ax.text((x0 + x1) / 2, 2.75, "taxi\n+ prep", ha="center", va="center",
+                fontsize=s.SIZE["small"], color=s.SUBINK, linespacing=0.9)
 
     # After recovery: the re-acquired projection and the rest of the scan,
     # ghosted since they are past the parked cursor.
@@ -159,7 +164,7 @@ def main() -> None:
     rot = [secs(a["sampled_at"]) for a in acts if a["payload"].get("role") == "fly_scan"]
     if rot:
         ysp = LANE_Y["setpoint"]
-        for x0, x1 in ((rot[0], beam_loss), (reacq, post_ok[-1])):
+        for x0, x1 in ((first_proj, beam_loss), (reacq, post_ok[-1])):
             ax.plot([x0, x1], [ysp, ysp], color=s.MUTE, lw=2.2, alpha=0.5,
                     solid_capstyle="round", zorder=1)
         ax.annotate("fly-scan rotation, 0-180 deg", ((reacq + post_ok[-1]) / 2, ysp),

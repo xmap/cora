@@ -14,8 +14,9 @@ replay-scrubber paper is built around:
      phase-of-Run Procedure (parent_run_id = the Run): a four-iteration
      peak-bracket search on SampleTop_X that converges.
   3. The run locks at the centered position, commands the science scan's
-     continuous rotation (fly-scan, 0->180 deg), and acquisition begins: the
-     first two projections complete and the third is in flight.
+     continuous rotation (fly-scan, 0->180 deg), taxis to constant velocity and
+     arms the PSO, and acquisition begins: the first two projections complete and
+     the third is in flight.
   4. The beam drops mid-scan. The RunSupervisor agent HOLDS the Run (RunHeld
      carries the Decision link), leaving the third projection mid-flight.
   5. The beam returns and the start-safety envelope is good again, so the
@@ -285,8 +286,9 @@ def _fly_scan_setpoint() -> ActivityInput:
 
 
 def _taxi_setpoint() -> ActivityInput:
-    """Fly-scan restart: taxi the rotary stage back to a run-up position so it is
-    at constant velocity again before re-acquiring."""
+    """Fly-scan taxi: bring the rotary stage to a run-up position so it is at
+    constant velocity before acquiring. Needed both at the start of the scan and
+    again on the restart after a hold."""
     return ActivityInput(
         event_id=uuid4(),
         step_kind="setpoint",
@@ -295,7 +297,7 @@ def _taxi_setpoint() -> ActivityInput:
             "target_value": -5.0,
             "units": "deg",
             "role": "taxi",
-            "note": "run-up to constant velocity after resume",
+            "note": "run-up to constant velocity",
         },
         sampled_at=_NOW,
     )
@@ -487,15 +489,18 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
             correlation_id=_CORRELATION_ID,
         )
 
-    # Lock at the converged center, command the fly-scan rotation, and begin the
-    # scan: the first two projections complete and the third is in flight (an
-    # in-flight marker recorded before the effect) when the beam drops.
+    # Lock at the converged center, command the fly-scan rotation, taxi to
+    # constant velocity and arm the PSO, then begin the scan: the first two
+    # projections complete and the third is in flight (an in-flight marker
+    # recorded before the effect) when the beam drops.
     await bind_append_step(deps, step_store=step_store)(
         AppendProcedureActivities(
             procedure_id=_PROCEDURE_ID,
             entries=(
                 _setpoint(target_mm=0.060, role="lock_at_center"),
                 _fly_scan_setpoint(),
+                _taxi_setpoint(),
+                _fly_scan_prep(),
                 _projection(index=1, angle_deg=0.0, result="ok"),
                 _projection(index=2, angle_deg=30.0, result="ok"),
                 _projection(index=3, angle_deg=60.0, result="in_flight"),
@@ -632,11 +637,12 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
     assert len(rot_rows) == 1
     assert rot_rows[0]["role"] == "fly_scan"
 
-    # ----- Assert: the fly-scan was restarted (taxi + prep) before re-acquiring ---
+    # ----- Assert: the fly-scan was prepped at the start and restarted after the
+    # hold (a taxi + PSO re-arm each time) -----
     async with db_pool.acquire() as conn:
-        restart_rows = await conn.fetch(
+        taxi_prep_rows = await conn.fetch(
             "SELECT 1 FROM entries_operation_procedure_activities WHERE procedure_id = $1 "
             "AND (payload->>'role' = 'taxi' OR payload->>'action_name' = 'fly_scan_prep')",
             _PROCEDURE_ID,
         )
-    assert len(restart_rows) == 2
+    assert len(taxi_prep_rows) == 4

@@ -62,7 +62,7 @@ _PROCEDURE_EVENTS = [
 # overnight wall-clock spread (the hold can last tens of minutes) lives in the
 # prose, not the axis.
 _ITER_STRIDE = 12.0        # one acquire every 12 s; the whole axis is a 12 s grid
-_BEAM_LOSS = 90.0          # RunHeld: the beam drops during the third projection
+_BEAM_LOSS = 102.0         # RunHeld: the beam drops during the third projection
 _BEAM_BACK = 150.0         # RunResumed (beam returns) after a 5-stride hold
 _RUN_DONE = 210.0          # one stride after the last projection
 
@@ -131,29 +131,34 @@ def _build() -> dict:
             "sampled_at": _at(at), "result": result,
         })
 
-    # Science scan on the 12 s grid: two projections complete, the third is in
-    # flight when the beam drops at 90 s.
-    _proj(1, 0.0, 54.0, "ok")
-    _proj(2, 30.0, 66.0, "ok")
-    _proj(3, 60.0, 78.0, "in_flight")
+    def _taxi_prep(taxi_at: float, prep_at: float) -> None:
+        nonlocal seq
+        seq += 1
+        activities.append({
+            "seq": seq, "iteration": None, "step_kind": "setpoint",
+            "payload": {"channel": "rotation_angle", "target_value": -5.0, "units": "deg",
+                        "role": "taxi", "note": "run-up to constant velocity"},
+            "sampled_at": _at(taxi_at), "result": None,
+        })
+        seq += 1
+        activities.append({
+            "seq": seq, "iteration": None, "step_kind": "action",
+            "payload": {"action_name": "fly_scan_prep", "params": {"rearm_pso": True}, "result": "ok"},
+            "sampled_at": _at(prep_at), "result": "ok",
+        })
 
-    # Fly-scan restart after the hold: taxi the rotary stage back to constant
-    # velocity and re-arm the PSO trigger before acquisition resumes.
-    seq += 1
-    activities.append({
-        "seq": seq, "iteration": None, "step_kind": "setpoint",
-        "payload": {"channel": "rotation_angle", "target_value": -5.0, "units": "deg",
-                    "role": "taxi", "note": "run-up to constant velocity after resume"},
-        "sampled_at": _at(154.0), "result": None,
-    })
-    seq += 1
-    activities.append({
-        "seq": seq, "iteration": None, "step_kind": "action",
-        "payload": {"action_name": "fly_scan_prep", "params": {"rearm_pso": True}, "result": "ok"},
-        "sampled_at": _at(158.0), "result": "ok",
-    })
+    # Fly-scan taxi + PSO arm before the first frame, then the scan on the 12 s
+    # grid: two projections complete and the third is in flight when the beam
+    # drops at 102 s.
+    _taxi_prep(54.0, 58.0)
+    _proj(1, 0.0, 66.0, "ok")
+    _proj(2, 30.0, 78.0, "ok")
+    _proj(3, 60.0, 90.0, "in_flight")
 
-    # The interrupted third projection is re-acquired, then the scan finishes.
+    # After the hold the fly-scan is restarted (taxi back to constant velocity,
+    # re-arm the PSO) before the interrupted third projection is re-acquired and
+    # the scan finishes.
+    _taxi_prep(154.0, 158.0)
     _proj(3, 60.0, 162.0, "ok")
     _proj(4, 90.0, 174.0, "ok")
     _proj(5, 120.0, 186.0, "ok")

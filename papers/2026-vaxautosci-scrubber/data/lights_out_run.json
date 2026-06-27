@@ -3,8 +3,8 @@
     "source": "Values mirror the passing integration scenario apps/api/tests/integration/scenarios/test_2bm_lights_out_supervised_alignment.py, which produces these activities, iteration verdicts, run-lifecycle events, and the supervisor Resume Decision against a real Kernel + Postgres.",
     "run": "Lights-out, agent-supervised run at APS 2-BM: conducted rotation-axis centering alignment, the science scan's third projection interrupted by beam loss, RunSupervisor hold + auto-resume + fly-scan restart, then the scan continues to completion.",
     "timestamps": "sampled_at / event times staggered synthetically for a readable axis; the scenario records one logical instant. Overnight spread is illustrative.",
-    "cursor_at": "2026-05-19T01:01:30Z",
-    "beam_loss_at": "2026-05-19T01:01:30Z",
+    "cursor_at": "2026-05-19T01:01:42Z",
+    "beam_loss_at": "2026-05-19T01:01:42Z",
     "beam_back_at": "2026-05-19T01:02:30Z",
     "generated_by": "data/build_lights_out_data.py"
   },
@@ -20,7 +20,7 @@
       },
       {
         "type": "RunHeld",
-        "at": "2026-05-19T01:01:30Z",
+        "at": "2026-05-19T01:01:42Z",
         "by": "RunSupervisor",
         "role": "agent",
         "decision": {
@@ -295,6 +295,34 @@
     {
       "seq": 15,
       "iteration": null,
+      "step_kind": "setpoint",
+      "payload": {
+        "channel": "rotation_angle",
+        "target_value": -5.0,
+        "units": "deg",
+        "role": "taxi",
+        "note": "run-up to constant velocity"
+      },
+      "sampled_at": "2026-05-19T01:00:54Z",
+      "result": null
+    },
+    {
+      "seq": 16,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "fly_scan_prep",
+        "params": {
+          "rearm_pso": true
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:00:58Z",
+      "result": "ok"
+    },
+    {
+      "seq": 17,
+      "iteration": null,
       "step_kind": "action",
       "payload": {
         "action_name": "acquire_projection",
@@ -305,11 +333,11 @@
         },
         "result": "ok"
       },
-      "sampled_at": "2026-05-19T01:00:54Z",
+      "sampled_at": "2026-05-19T01:01:06Z",
       "result": "ok"
     },
     {
-      "seq": 16,
+      "seq": 18,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -321,11 +349,11 @@
         },
         "result": "ok"
       },
-      "sampled_at": "2026-05-19T01:01:06Z",
+      "sampled_at": "2026-05-19T01:01:18Z",
       "result": "ok"
     },
     {
-      "seq": 17,
+      "seq": 19,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -337,11 +365,11 @@
         },
         "result": "in_flight"
       },
-      "sampled_at": "2026-05-19T01:01:18Z",
+      "sampled_at": "2026-05-19T01:01:30Z",
       "result": "in_flight"
     },
     {
-      "seq": 18,
+      "seq": 20,
       "iteration": null,
       "step_kind": "setpoint",
       "payload": {
@@ -349,13 +377,13 @@
         "target_value": -5.0,
         "units": "deg",
         "role": "taxi",
-        "note": "run-up to constant velocity after resume"
+        "note": "run-up to constant velocity"
       },
       "sampled_at": "2026-05-19T01:02:34Z",
       "result": null
     },
     {
-      "seq": 19,
+      "seq": 21,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -369,7 +397,7 @@
       "result": "ok"
     },
     {
-      "seq": 20,
+      "seq": 22,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -385,7 +413,7 @@
       "result": "ok"
     },
     {
-      "seq": 21,
+      "seq": 23,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -401,7 +429,7 @@
       "result": "ok"
     },
     {
-      "seq": 22,
+      "seq": 24,
       "iteration": null,
       "step_kind": "action",
       "payload": {
@@ -417,7 +445,7 @@
       "result": "ok"
     },
     {
-      "seq": 23,
+      "seq": 25,
       "iteration": null,
       "step_kind": "action",
       "payload": {

@@ -26,9 +26,10 @@ Regenerate with `python3 data/build_lights_out_data.py`.
   and the center-of-rotation residual falling 2.00 -> 1.05 -> 1.40 -> 0.30 px,
   bracketed in [0.040, 0.080] mm and bisected to 0.060 mm.
 - `activities`: setpoint / acquire / check per pass, the lock setpoint, the
-  fly-scan rotation setpoint, six science projections (two complete, the third
-  in flight at the beam loss), the fly-scan restart after resume (taxi + PSO
-  re-arm), and the re-acquired third projection plus the rest of the scan.
+  fly-scan rotation setpoint, the fly-scan taxi + PSO arm (before the first frame
+  and again on the restart), six science projections (two complete, the third in
+  flight at the beam loss), and the re-acquired third projection plus the rest of
+  the scan.
 - `provenance.cursor_at` / `beam_loss_at` / `beam_back_at`: the audit instant and
   the hold window the figures use.
 
