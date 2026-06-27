@@ -17,4 +17,4 @@ The `SampleStage` reuses the `LinearStage` family (X / Y at `XF:08IDB-OP{Stage:S
 
 ## Sample environment
 
-The `SampleTemperature` Lakeshore 331 reuses the `TemperatureController` family (graduated in #350). ISS's ion chambers are filled and purged through He / N2 mass-flow controllers (`XF:08IDB-OP{IC}FLW:`), and the beamline runs a range of in-situ sample environments; the fill-gas flow fits no catalog family cleanly (the loose FlowController) and, with the broader in-situ environment, is deferred to a named question (ENV-1) rather than modelled at this design phase.
+The `SampleTemperature` Lakeshore 331 reuses the `TemperatureController` family (graduated in #350). ISS's ion chambers are filled and purged through He / N2 mass-flow controllers (`XF:08IDB-OP{IC}FLW:`), and the beamline runs a range of in-situ sample environments; the fill-gas flow would bind the graduated `FlowController` Family but, with the broader in-situ environment, is deferred to a named question (ENV-1) rather than modelled at this design phase.

@@ -1,0 +1,230 @@
+# PDF beamline descriptor (NSLS-II), reverse-engineered
+#
+# PDF (Pair Distribution Function) is the NSLS-II high-energy total-scattering and
+# powder-diffraction beamline at sector 28-ID-1. Its defining technique is the
+# rapid-acquisition pair distribution function (total scattering): a high-energy beam
+# through a powder or capillary sample onto large flat-panel area detectors, with the
+# sample-to-detector distance setting the accessible Q and a near / far detector pair
+# merged to reach the high Q a PDF needs. It is bound to the NSLS-II Site
+# (deployments/nsls2/site.yaml).
+#
+# TWIN GUARD. PDF (28-ID-1, XF:28ID1*) and XPD (28-ID-2, XF:28ID*; deployments/xpd)
+# are the two endstations on the shared 28-ID damping wiggler: same science family
+# (high-energy powder diffraction and total scattering / PDF), different branch and
+# PV namespace. PDF is the dedicated total-scattering / PDF endstation; XPD is its
+# already-modelled twin. This descriptor reuses XPD's modelling wholesale.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/pdf-profile-collection and the device
+# library NSLS2/pdftools) or inferred, carried `confirm: true` pending PDF staff.
+# EPICS PVs are real and verified against the startup scripts and the pdftools device
+# classes; vendor part numbers, serials, and physical positions are not in them and
+# are open questions. Same descriptor mode as XPD / CHX; this scaffold is descriptor
+# + docs, scenarios deferred.
+#
+# PDF is the POWDER-DIFFRACTION / PDF reinforcement, the twin of XPD and (through it)
+# of Diamond i11 (powder diffraction) and i15-1 (total scattering / PDF). It introduces
+# NO new catalog family: the flat-panel and pixel area detectors reuse Camera, the
+# photodiode flux monitor FluxMonitor, the cryostream / cryostat / furnace
+# TemperatureController (graduated #350), the side-bounce Laue monochromator
+# Monochromator, the focusing mirror Mirror, the spinner sample stage Goniometer, the
+# slits Slit, the fast shutter Shutter, the beamstops BeamStop, the detector and
+# sample-environment stages LinearStage, the master energy a PseudoAxis. Its one loose
+# family is the StorageRing supply readback (MACHINE-1). Per the i11 / i15-1 / XPD
+# precedent the powder-diffraction and total-scattering Methods are NOT coined here;
+# they are the deferred owner-scope cohort (TECH-1). The two distinctive shapes vs XPD
+# are carried by what is real, not coined: a side-bounce (single-bounce Laue)
+# monochromator instead of XPD's bent double-Laue (a Monochromator settings
+# difference), and an explicit two-detector / two-distance acquisition that merges a
+# near and a far panel for the PDF Q-range (DIST-1).
+
+beamline:
+  name: PDF
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 28"          # PV namespace XF:28ID1*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "the source is the shared 28-ID damping wiggler (the high-flux high-energy source PDF and XPD both need); no source PV or parameters are in the profile collection, so the subtype is an inference pending staff confirmation (SRC-1)"
+
+enclosures:
+  # PV zones: 28ID1A first-optics hutch (FOE: the side-bounce mono and focusing
+  # mirror), 28ID1B the experiment hutch (the PDF / total-scattering endstation, with
+  # the spinner, the detector towers, the beamstops, and the sample environment).
+  - name: 28-ID-1-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf not in source; only the fast shutter (XF:28ID1B-OP{PSh:1-Det:2}) and a photon shutter are exposed, not the front-end PPS leaves (PSS-1)"}
+  - name: 28-ID-1-B
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; 28-ID-1-B is the PDF / total-scattering endstation carrying the spinner, detector towers, and sample environment (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the damping-wiggler source and the machine readback
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 28-ID-1-A
+  intro: The shared 28-ID damping-wiggler source feeding the high-energy beam, and the storage-ring readback.
+  devices:
+    - name: Source
+      family: InsertionDevice
+      confirm: true
+      note: "28-ID insertion-device source. No source PV or parameters are in the profile collection; from facility knowledge (not the public config) it is the shared 28-ID damping wiggler, the high-flux high-energy regime PDF needs, an inference pending staff confirmation (SRC-1). The same source feeds the XPD twin."
+    - name: StorageRing
+      family: StorageRing                 # loose supply (MACHINE-1)
+      pv: "SR:OPS-BI{DCCT:1}I:Real-I"
+      confirm: true
+      note: "Storage-ring current readback (ring_current), an observe-only machine-state signal. Binds the loose StorageRing supply family (never an Asset Family, MACHINE-1)."
+
+# ===========================================================================
+# OPTICS STAGE: the side-bounce monochromator, the focusing mirror, the slits
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: 28-ID-1-A
+  intro: "Condition the high-energy beam and set its energy: the side-bounce monochromator, the vertical focusing mirror, and the white-beam slits. PVs verified against startup/12-optics.py and pdftools/motors.py."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:28ID1A-OP{Mono:SBM-Ax:"
+      confirm: true
+      note: "Side-bounce monochromator (class SideBounceMono, instance sbm): a single-bounce Laue crystal on wedge-mount X / Y, yaw / pitch / roll, and a four-corner bender (inboard / outboard, upper / lower). A high-flux high-energy mono, the PDF counterpart of XPD's bent double-Laue (a Monochromator settings difference, not a new family). The EnergyAxis below is the master energy; crystal cut and range pending (MONO-1)."
+    - name: VerticalFocusingMirror
+      family: Mirror
+      pv: "XF:28ID1A-OP{Mir:VFM-Ax:"
+      confirm: true
+      note: "Vertical focusing mirror (class Mirror, instance Mirror_VFM): upstream / downstream jacks and an upstream / downstream bender with encoders. Reuses the Mirror family."
+    - name: WhiteBeamSlit
+      family: Slit
+      pv: "XF:28ID1A-OP{Slt:0-Ax:"
+      confirm: true
+      note: "White-beam-defining slit (class Slits, instance WB_slits): top / bottom / inboard / outboard blades. A beam-defining slit (BDM_slits, Slt:1) sits on the same module. Reuses the Slit family."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "The master energy axis set by the side-bounce monochromator. PDF runs at a fixed high energy per experiment; whether energy is ever scanned as the measurement is ENERGY-1."
+
+# ===========================================================================
+# SAMPLE STAGE: the cleanup slit, the fast shutter, the spinner, the sample
+# environment stages, and the thermal environment cluster
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 28-ID-1-B
+  intro: "The endstation beam conditioning and the sample side: the cleanup slit, the fast shutter, the capillary spinner, the sample-environment stage, and the thermal-environment cluster. PVs verified against startup/12-optics.py, 11-motors.py, 14-lakeshore_cryostat.py, 15-cs800crystream.py, 17-linkam.py and pdftools/sample_environment.py."
+  note: >
+    PDF positions a powder or capillary sample in the high-energy beam and records the
+    total-scattering pattern on the area detectors. The capillary spinner averages the
+    powder texture; the rich thermal-environment cluster (cryostream, cryostat,
+    furnace) drives in-situ variable-temperature studies. A gas-handling and humidity
+    rig is present in source but carried deferred (ENV-1).
+  devices:
+    - name: CleanupSlit
+      family: Slit
+      pv: "XF:28ID1B-OP{Slt:AS-Ax:"
+      confirm: true
+      note: "Endstation cleanup / guard slit (class Slits, instance cleanup_slits) trimming parasitic scatter ahead of the sample; an optics-cabin OCM slit (OCM_slits, Slt:2) sits upstream. Reuses the Slit family."
+    - name: FastShutter
+      family: Shutter
+      pv: "XF:28ID1B-OP{PSh:1-Det:2}"
+      confirm: true
+      note: "Fast exposure shutter (class PDFFastShutter, instance fs) gating the detector exposure; a slower photon shutter (class PDFShutter) sits alongside. Reuses the Shutter family."
+    - name: SpinnerGoniohead
+      family: Goniometer
+      pv: "XF:28ID1B-ES{Stg:Smpl-Ax:"
+      confirm: true
+      note: "Capillary-spinner goniohead (class SpinnerGoniohead / XYZSpinner, instance spinner_goniohead): sample X / Y / Z plus a spin axis (Ry) that rotates the capillary to average powder texture. An analyzer goniohead (analyzer_goniohead, Spn:Anlzr) sits alongside. Reuses the Goniometer family; the full axis modelling is STAGE-1."
+    - name: SampleEnvironmentStage
+      family: LinearStage
+      pv: "XF:28ID1B-ES{Env:1-Ax:"
+      confirm: true
+      note: "Sample-environment positioning stage (Grid_X / Grid_Y / Grid_Z) presenting the sample-environment cell to the beam; reuses the LinearStage family."
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: "XF:28ID1-ES:1{Env:01}"
+      confirm: true
+      note: "Sample-environment thermal cluster: a cs800 cryostream controller (class CS800TemperatureController, XF:28ID1-ES:1{Env:01}, understood to be an Oxford Cryostream, inference, TEMP-1), a Lakeshore 336 cryostat (XF:28ID1-ES{LS336:1), and a Linkam T96 furnace (class LinkamFurnace_T96, XF:28ID1-ES{LINKAM:T96}:). Modelled as one thermal-environment Asset; reuses TemperatureController (graduated #350). Which units are live is TEMP-1."
+
+# ===========================================================================
+# DETECTION STAGE: the flat-panel and pixel detectors, the two detector towers,
+# the beamstops, and the flux monitor
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 28-ID-1-B
+  intro: "The large flat-panel and pixel area detectors for total scattering / PDF, the two detector towers that set the near and far distances, the beamstops, and the flux monitor. PVs verified against startup/80-areadetector2.py, 81-pilatus.py, 72-two-detector.py, 11-motors.py, 10-machine.py."
+  note: >
+    PDF's measurement is the total-scattering pattern on a large area detector. To
+    reach the high Q a pair distribution function needs, the detector sits close; a
+    near panel and a far panel are merged across two distances. The two detector towers
+    move the panels in and out, the explicit two-detector acquisition (DIST-1). All
+    reuse existing families. Which panels are live versus the spare set is DET-1.
+  devices:
+    - name: AreaDetector
+      family: Camera
+      pv: "XF:28ID1-ES{Det:PE1}"
+      confirm: true
+      note: "PerkinElmer flat-panel area detector (class PerkinElmerStandard, instance pe1; a second panel pe2 at Det:PE2). The primary total-scattering / powder detector; reuses Camera."
+    - name: PixelDetector
+      family: Camera
+      pv: "XF:28ID1-ES{Det:Pilatus}"
+      confirm: true
+      note: "Pilatus photon-counting pixel detector (class PilatusV33, instance pilatus-1) with an energy-thresholded readout, used alongside the flat panels for high-Q / low-background frames; reuses Camera. Which detector serves which distance is DET-1 / DIST-1."
+    - name: DetectorStage1
+      family: LinearStage
+      pv: "XF:28ID1B-ES{Det:1-Ax:"
+      confirm: true
+      note: "First detector tower (Det_1_X / Det_1_Y / Det_1_Z): the Z axis sets the sample-to-detector distance and hence the accessible Q. In the two-detector acquisition this is the static panel. Reuses LinearStage."
+    - name: DetectorStage2
+      family: LinearStage
+      pv: "XF:28ID1B-ES{Det:2-Ax:"
+      confirm: true
+      note: "Second detector tower (Det_2_X / Det_2_Y / Det_2_Z): the moving panel that steps in and out of the beam for the near / far two-distance merge (the TwoDetectors plan, 72-two-detector.py). Reuses LinearStage; the two-distance geometry is DIST-1."
+    - name: BeamStop
+      family: BeamStop
+      pv: "XF:28ID1B-ES{BS:1-Ax:"
+      confirm: true
+      note: "Direct-beam stop (class BeamStop, instance BStop1, X / Y); a second beamstop (BStop2, BS:2) and a table-mounted stop sit alongside, one per detector distance. Reuses the BeamStop family."
+    - name: FluxMonitor
+      family: FluxMonitor
+      pv: "XF:28ID1B-OP{Det:1-Det:2}Amp:bkgnd"
+      confirm: true
+      note: "Background photodiode (photodiode) reading incident-flux / background for normalization; reuses FluxMonitor (graduated #353). Channel detail pending (DIAG-1)."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    PDF acquisition is software-triggered: the flat-panel detectors run in continuous
+    or multi-trigger mode gated by the fast exposure shutter, with no separate hardware
+    timing box in the profile collection, the same shape as XPD. The two-detector
+    two-distance merge is sequenced by a bluesky plan (the TwoDetectors helper), not a
+    hardware trigger. Controller box models / firmware are not in the profile
+    collection (DRIVE-1).
+  motion_controllers:
+    - name: EndstationMotionController
+      family: MotionController
+      confirm: true
+      note: "The optics and endstation motion controllers driving the monochromator, mirror, spinner, sample-environment, and detector-tower axes; box model / protocol / IP not in the profile collection (DRIVE-1)."
+  triggering: []
+  software_iocs_not_modeled:
+    [PerkinElmer, Pilatus, Cryostream, Lakeshore, Linkam, Eurotherm, Prosilica]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen        # cryostream / cryostat
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["area detectors", "capillary samples", "sample-environment cells"]

@@ -9,7 +9,7 @@ Along the beam, in order, sit the **stations**: the [Source](../beamline.md) tha
 ## Stations
 
 - [Source](../beamline.md): the storage-ring machine state read through a loose `StorageRing` (`MACHINE-1`), the in-vacuum undulator (`SRC-1`), the double-crystal monochromator (`MONO-1`), the white-beam and KB focusing mirrors (`OPT-1`), the mono slit and secondary-source aperture (`OPT-2`), the photon and fast shutters (`PSS-1`, `TRIG-1`), and in the endstation zone the compound refractive lens transfocator (`CRL-1`) and the guard slit (`OPT-2`). The incident energy is a pseudo-axis over the DCM Bragg angle and the undulator gap (`MONO-1`).
-- [Sample](sample.md): the solution positioning stack (a `Manipulator`, `SAMPLE-1`) that places the flow cell; the scanning-microbeam goniometer (a `Goniometer`, `SCAN-1`) for cells and tissue; and the HPLC delivery pump (a loose `FlowController`, `FLUID-1`) that flows the solution and SEC peak through the cell. The selector valves, the SEC column, the flow cell, the sample robot, and the solution Subject are the fluidic-delivery seam and the Subject / Supply / Procedure shape (`FLUID-1`, `SEC-1`, `ROBOT-1`, `SUBJECT-1`).
+- [Sample](sample.md): the solution positioning stack (a `Manipulator`, `SAMPLE-1`) that places the flow cell; the scanning-microbeam goniometer (a `Goniometer`, `SCAN-1`) for cells and tissue; and the HPLC delivery pump (the graduated `FlowController`, `FLUID-1`) that flows the solution and SEC peak through the cell. The selector valves, the SEC column, the flow cell, the sample robot, and the solution Subject are the fluidic-delivery seam and the Subject / Supply / Procedure shape (`FLUID-1`, `SEC-1`, `ROBOT-1`, `SUBJECT-1`).
 - [Detector](detector.md): the SAXS and WAXS Pilatus area detectors (`DET-1`), the scanning-mode fluorescence spectrometer (`DET-1`), the detector translations (`DET-1`), the SAXS beamstop (`DET-1`), and the endstation flux and beam-position monitors (`DET-1`, `DIAG-1`). The Zebra triggers the detectors (`TRIG-1`).
 
 ## Shared
@@ -19,4 +19,4 @@ Along the beam, in order, sit the **stations**: the [Source](../beamline.md) tha
 
 ## Reference
 
-- [Inventory](../inventory.md): the full planned CORA Asset model (every device by `parent_id`, with Families and pending confirmations), including the loose families and the FlowController held at n=3.
+- [Inventory](../inventory.md): the full planned CORA Asset model (every device by `parent_id`, with Families and pending confirmations), including the loose families and the graduated FlowController.

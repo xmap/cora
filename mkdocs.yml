@@ -667,6 +667,32 @@ nav:
         - Techniques: deployments/isr/techniques.md
         - Governance: deployments/isr/governance.md
         - Model: deployments/isr/model.md
+      - CDI:
+        - deployments/cdi/index.md
+        - Open questions: deployments/cdi/questions.md
+        - The beamline:
+          - deployments/cdi/equipment/index.md
+          - Source: deployments/cdi/beamline.md
+          - Sample: deployments/cdi/equipment/sample.md
+          - Detector: deployments/cdi/equipment/detector.md
+          - Controls: deployments/cdi/equipment/controls.md
+          - Inventory: deployments/cdi/inventory.md
+        - Techniques: deployments/cdi/techniques.md
+        - Governance: deployments/cdi/governance.md
+        - Model: deployments/cdi/model.md
+      - PDF:
+        - deployments/pdf/index.md
+        - Open questions: deployments/pdf/questions.md
+        - The beamline:
+          - deployments/pdf/equipment/index.md
+          - Source: deployments/pdf/beamline.md
+          - Sample: deployments/pdf/equipment/sample.md
+          - Detector: deployments/pdf/equipment/detector.md
+          - Controls: deployments/pdf/equipment/controls.md
+          - Inventory: deployments/pdf/inventory.md
+        - Techniques: deployments/pdf/techniques.md
+        - Governance: deployments/pdf/governance.md
+        - Model: deployments/pdf/model.md
     - SLAC:
       - deployments/slac/index.md
       - LCLS-MFX:

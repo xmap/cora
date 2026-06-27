@@ -44,11 +44,11 @@
 # loose BeamPositionMonitor (held under review, DIAG-1); the Zebra binds
 # TimingController.
 #
-# THE ONE REUSE WORTH NAMING: the HPLC delivery pump binds the EXISTING loose
-# FlowController Family ("settable flow / pump actuator", FLOW-1), the i22 + 7-BM
-# precedent. LIX is its THIRD consumer, which fires the rule-of-three; the
-# FlowController graduation is a separate gated decision, flagged here, not folded
-# into this scaffold (FLUID-1, FLOW-1). The selector valves (the VICI and Aurora
+# THE ONE REUSE WORTH NAMING: the HPLC delivery pump binds the catalog
+# FlowController Family ("continuous-setpoint flow / pump actuator", presents the
+# Regulator Role, the settable-actuator sibling of TemperatureController), which
+# graduated on the rule-of-three across i22, 7-BM, LIX, and XFP. LIX simply reuses
+# the graduated Family (FLUID-1, FLOW-1). The selector valves (the VICI and Aurora
 # buffer / column / detector valves) have no existing Family and are carried in the
 # fluidic-delivery seam, not coined (FLUID-1).
 #
@@ -208,9 +208,9 @@ sample:
     rasters a cell or tissue sample on a SmarAct goniometer (Goniometer), with a
     rotation axis for tomography. The fast raster axes (scan.X / scan.Y) and the tomo
     rotation are Newport-XPS trajectory axes, the motion-controller seam (SCAN-1). The
-    HPLC delivery pump that drives the solution and SEC-SAXS flow binds the existing
-    loose FlowController Family (the i22 / 7-BM precedent); LIX is its third consumer
-    (FLUID-1, FLOW-1). The selector valves, the SEC column, the flow cell, the sample
+    HPLC delivery pump that drives the solution and SEC-SAXS flow binds the catalog
+    FlowController Family (graduated; presents Regulator, the i22 / 7-BM / LIX / XFP
+    earn) (FLUID-1, FLOW-1). The selector valves, the SEC column, the flow cell, the sample
     robot, and the buffers are the fluidic-delivery seam and the Subject / Supply /
     Procedure shape, not devices here (see controls, FLUID-1, SEC-1, ROBOT-1).
   devices:
@@ -227,11 +227,11 @@ sample:
       confirm: true
       note: "the scanning-microbeam goniometer (a SmarAct stack: sample x / z, tilt x / z, and a rotation RX), used for cell / tissue mapping and, with the XPS rot.rY trajectory axis, for micro-tomography; the raster scan x / y are XPS trajectory axes (SCAN-1)"
     - name: DeliveryPump
-      family: FlowController            # EXISTING loose Family (settable flow / pump actuator; n=3 with i22 + 7-BM; FLOW-1)
+      family: FlowController            # catalog Family (graduated; settable flow/pump actuator, presents Regulator)
       pv: "XF:16IDC-ES{HPLC}REGEN:FLOWRATE"
       new: true
       confirm: true
-      note: "the HPLC sample-delivery pump driving the solution and SEC-SAXS flow (flowrate setpoint / readback, pressure, run / stop); the pcaspy soft-IOC XF:16IDC-ES{HPLC} fronts an Agilent quaternary pump (QUAT_PUMP:FLOWRATE, a .NET OpenLAB SDK on a Windows host) and a regeneration pump (REGEN:FLOWRATE, a raw TCP socket to a Moxa), both the same settable-flow anatomy and represented by this one Asset at this cut; reuses the existing loose FlowController Family, LIX its third consumer, the rule-of-three trigger flagged for a separate gated graduation (FLUID-1, FLOW-1)"
+      note: "the HPLC sample-delivery pump driving the solution and SEC-SAXS flow (flowrate setpoint / readback, pressure, run / stop); the pcaspy soft-IOC XF:16IDC-ES{HPLC} fronts an Agilent quaternary pump (QUAT_PUMP:FLOWRATE, a .NET OpenLAB SDK on a Windows host) and a regeneration pump (REGEN:FLOWRATE, a raw TCP socket to a Moxa), both the same settable-flow anatomy and represented by this one Asset at this cut; reuses the graduated FlowController Family (presents Regulator, earned across i22 / 7-BM / LIX / XFP) (FLUID-1, FLOW-1)"
 
 # ===========================================================================
 # DETECTION STAGE: the SAXS / WAXS Pilatus detectors, the fluorescence
@@ -321,7 +321,7 @@ controls:
   # The fluidic-delivery chain that makes LIX a solution beamline is a heterogeneous
   # control plane, modelled the way MX3 modelled its non-EPICS devices: as the
   # ControlPort seam, the interface named and no EPICS PV where there is none. Only
-  # the HPLC delivery pump is promoted to a device (it binds the existing loose
+  # the HPLC delivery pump is promoted to a device (it binds the graduated catalog
   # FlowController Family, FLUID-1 / FLOW-1); the rest is the seam plus the Subject /
   # Supply / Procedure shape, not devices.
   software_iocs_not_modeled:

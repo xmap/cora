@@ -22,11 +22,11 @@ This is the 7-BM-specific axis. Flow and combustion experiments draw on a compre
 
 | Device | Family | Notes (from the 7-BM docs) |
 | --- | --- | --- |
-| `FlowController` | `FlowController` (loose) | Sierra Smart-Trak mass-flow controllers (three units, Kr and N2 ranges) metering process gas. A settable actuator with a commanded setpoint and a flow readback, unlike any 2-BM device |
+| `FlowController` | `FlowController` (graduated; presents Regulator) | Sierra Smart-Trak mass-flow controllers (three units, Kr and N2 ranges) metering process gas. Binds the graduated catalog `FlowController` Family, the settable-actuator sibling of `TemperatureController`: a settable actuator with a commanded setpoint and a flow readback, unlike any 2-BM device |
 
 Two questions shape this part of the model:
 
-- **Does CORA command the setpoints?** The flow controllers and the electronic air regulator are settable, not just readable. The settable-actuator *shape* is now settled: the `TemperatureController` graduation (the i11 rule-of-three) added the `Settable` affordance and the `Regulator` Role, which a `FlowController` would present. What stays open for 7-BM (FLOW-1) is whether CORA commands the setpoints (versus reading them back) and whether `FlowController` itself graduates: it is loose at only 7-BM and I22, short of its own rule-of-three.
+- **Does CORA command the setpoints?** The flow controllers and the electronic air regulator are settable, not just readable. The settable-actuator *shape* is settled: the `FlowController` Family has now graduated into the catalog (the settable-actuator sibling of `TemperatureController`, presenting the `Regulator` Role with the `Settable` affordance), earned on the rule-of-three across Diamond i22, APS 7-BM, NSLS-II LIX, and NSLS-II XFP. What stays open for 7-BM (FLOW-1) is whether CORA commands the setpoints versus reading them back.
 - **Is there a combustion rig?** The compressed-air, gas, and vacuum infrastructure serves flow and combustion experiments, but whether an installed combustion, spray, or fuel-injection device exists (versus combustion being an intended use of the infrastructure) is unconfirmed (ENV-1). Until it is, no combustion-rig Asset is modelled; the specimen carries the hazard on its Subject.
 
 The flammable-gas, fuel-vapor, and oxygen-deficiency hazards this environment adds are governance, handled at the [APS Site](../../aps/index.md#the-safety-envelope) by clearances and operator Cautions; whether they need a workflow beyond the standard ESAF is HAZ-1 on [Governance](../governance.md).

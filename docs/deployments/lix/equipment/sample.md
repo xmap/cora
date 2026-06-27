@@ -10,7 +10,7 @@ This is where LIX is genuinely different from the rest of the scattering fleet, 
 | --- | --- | --- | --- |
 | `SampleStage` | `Manipulator` | `XF:16IDC-ES:Scan{Ax:XC}` | the solution-mode positioning stack: a coarse x and a z pusher (EPICS) plus the fast scan x / y (XPS trajectory); it places the flow cell in the beam (`SAMPLE-1`) |
 | `ScanningGoniometer` | `Goniometer` | `XF:16IDC-ES:Scan2-Gonio{Ax:sX}` | the scanning-microbeam stack: sample x / z, tilts, a rotation, and (with the XPS rot.rY) micro-tomography of cells and tissue (`SCAN-1`) |
-| `DeliveryPump` | `FlowController` (loose) | `XF:16IDC-ES{HPLC}REGEN:FLOWRATE` | the HPLC pump that flows the solution and SEC peak through the cell (`FLUID-1`, `FLOW-1`) |
+| `DeliveryPump` | `FlowController` | `XF:16IDC-ES{HPLC}REGEN:FLOWRATE` | the HPLC pump that flows the solution and SEC peak through the cell; binds the graduated `FlowController` Family (`FLUID-1`, `FLOW-1`) |
 
 ## Placing the sample
 
@@ -24,7 +24,7 @@ The **scanning-microbeam mode** uses the `ScanningGoniometer`, a SmarAct stack w
 
 The fluidic sample-delivery chain is what makes LIX a solution beamline, and it is the one genuinely-new axis this deployment brings. CORA models it the way the [MX3](../../mx3/index.md) deployment modelled its non-EPICS hardware: as a heterogeneous control plane, with the interface named and the actuators placed where they belong, not forced into device vocabulary they do not earn.
 
-**The delivery pump is the one device.** The `DeliveryPump` drives the solution and SEC-SAXS flow: a flowrate setpoint and readback, a pressure readback, and run / stop. It is heterogeneous underneath, a pcaspy soft-IOC (`XF:16IDC-ES{HPLC}`) fronts an Agilent quaternary pump driven over the OpenLAB .NET SDK on a Windows host and a regeneration pump driven over a raw TCP socket to a Moxa terminal server, but its CORA-facing anatomy is a settable flow actuator presenting `Regulator`. That is exactly the existing loose `FlowController` Family, the one i22 and 7-BM already use. So the pump **reuses** `FlowController`; it coins nothing. LIX is its **third** consumer, which fires the rule-of-three (see [Model](../model.md#the-flowcontroller-rule-of-three)).
+**The delivery pump is the one device.** The `DeliveryPump` drives the solution and SEC-SAXS flow: a flowrate setpoint and readback, a pressure readback, and run / stop. It is heterogeneous underneath, a pcaspy soft-IOC (`XF:16IDC-ES{HPLC}`) fronts an Agilent quaternary pump driven over the OpenLAB .NET SDK on a Windows host and a regeneration pump driven over a raw TCP socket to a Moxa terminal server, but its CORA-facing anatomy is a settable flow actuator presenting `Regulator`. That is exactly the graduated catalog `FlowController` Family, the settable-actuator sibling of `TemperatureController` that i22 and 7-BM also use. So the pump **reuses** the graduated `FlowController`; it coins nothing. LIX is one of the four consumers (i22, 7-BM, LIX, XFP) that earned the graduation (see [Model](../model.md#the-graduated-flowcontroller-family)).
 
 **The rest of the chain is the seam plus Subject / Supply / Procedure**, not devices:
 
@@ -46,6 +46,6 @@ The sample-cell temperature controllers, an AccuThermo FTC100D and an SMC chille
 
 ## Why no new Family here
 
-The positioning hardware reuses the catalog throughout: `Manipulator` for the solution stack, `Goniometer` for the scanning stage. The one fluidic device, the delivery pump, reuses the existing loose `FlowController` Family rather than coining a new one. The selector valves, the column, the flow cell, the robot, and the solution sample are deliberately not coined as device Families: they are the seam plus the Subject / Supply / Procedure shape, which is where a solution beamline's novelty belongs (`FLUID-1`, `SEC-1`, `ROBOT-1`, `SUBJECT-1`). Nothing here graduates and the catalog is unchanged.
+The positioning hardware reuses the catalog throughout: `Manipulator` for the solution stack, `Goniometer` for the scanning stage. The one fluidic device, the delivery pump, reuses the graduated catalog `FlowController` Family rather than coining a new one. The selector valves, the column, the flow cell, the robot, and the solution sample are deliberately not coined as device Families: they are the seam plus the Subject / Supply / Procedure shape, which is where a solution beamline's novelty belongs (`FLUID-1`, `SEC-1`, `ROBOT-1`, `SUBJECT-1`). LIX coins no new Family here.
 
-See [Open questions](../questions.md) for the sample-side facts still to confirm, [Inventory](../inventory.md) for the Asset tree, [Model](../model.md) for the family-reuse rationale and the FlowController rule-of-three, and [the source walk](../beamline.md) for the PVs as read from the profile collection.
+See [Open questions](../questions.md) for the sample-side facts still to confirm, [Inventory](../inventory.md) for the Asset tree, [Model](../model.md) for the family-reuse rationale and the graduated FlowController Family, and [the source walk](../beamline.md) for the PVs as read from the profile collection.

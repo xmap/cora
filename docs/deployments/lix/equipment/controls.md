@@ -16,7 +16,7 @@ This is the part that sets LIX apart, and CORA models it the way the [MX3](../..
 
 | Fluidic element | Transport | How CORA models it |
 | --- | --- | --- |
-| HPLC delivery pump (Agilent quaternary + regeneration) | the Agilent OpenLAB .NET SDK (Windows host) and a raw TCP socket to the Moxa, fronted by a pcaspy soft-IOC (`XF:16IDC-ES{HPLC}`) | the `DeliveryPump` device, binding the loose `FlowController` Family; LIX is its third consumer (`FLUID-1`, `FLOW-1`) |
+| HPLC delivery pump (Agilent quaternary + regeneration) | the Agilent OpenLAB .NET SDK (Windows host) and a raw TCP socket to the Moxa, fronted by a pcaspy soft-IOC (`XF:16IDC-ES{HPLC}`) | the `DeliveryPump` device, binding the graduated catalog `FlowController` Family (presents Regulator; earned across i22 / 7-BM / LIX / XFP) (`FLUID-1`, `FLOW-1`) |
 | VICI selector valves (column / purge / detector) | Moxa TCP sockets, no EPICS | the ControlPort seam; N-position routers with no existing Family, not coined (`FLUID-1`) |
 | Aurora Pro buffer valve | serial over a Moxa socket, mirrored to the soft-IOC (`Buffer_VALVE_POS`) | the seam; the chosen position is observed via the soft-IOC (`FLUID-1`) |
 | SEC column and buffers | configuration / consumable | Supply consumables (`SEC-1`) |

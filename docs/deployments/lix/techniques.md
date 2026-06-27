@@ -22,7 +22,7 @@ The matching Site Practices (`LIX_solution_scattering_practice`, `LIX_sec_saxs_p
 
 ## SEC-SAXS is a Procedure over the fluidic seam
 
-In-line SEC-SAXS is the technique that most exercises the fluidic delivery chain, and CORA models it as a **Procedure**, not a new device. The run equilibrates the size-exclusion column, injects the sample, and reads SAXS frames continuously while the peak elutes through the [flow cell](equipment/sample.md). The actuators it drives, the [HPLC delivery pump](equipment/sample.md) (a `FlowController`) and the selector valves (the seam), are conducted over the `ControlPort`; the [column and buffers](equipment/sample.md) are Supply; the eluting peak is a Subject; the frames correlated to the elution are the Dataset. The technique's identity in CORA's record lives in the Subject, Supply, and Procedure, not in a device or a new detector (`FLUID-1`, `SEC-1`, `SUBJECT-1`).
+In-line SEC-SAXS is the technique that most exercises the fluidic delivery chain, and CORA models it as a **Procedure**, not a new device. The run equilibrates the size-exclusion column, injects the sample, and reads SAXS frames continuously while the peak elutes through the [flow cell](equipment/sample.md). The actuators it drives, the [HPLC delivery pump](equipment/sample.md) (the graduated `FlowController`) and the selector valves (the seam), are conducted over the `ControlPort`; the [column and buffers](equipment/sample.md) are Supply; the eluting peak is a Subject; the frames correlated to the elution are the Dataset. The technique's identity in CORA's record lives in the Subject, Supply, and Procedure, not in a device or a new detector (`FLUID-1`, `SEC-1`, `SUBJECT-1`).
 
 ## Not modelled yet
 

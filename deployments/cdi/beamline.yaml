@@ -1,0 +1,261 @@
+# CDI beamline descriptor (NSLS-II), reverse-engineered
+#
+# CDI (Coherent Diffraction Imaging) is the NSLS-II coherent-imaging beamline at
+# sector 9-ID. Its defining techniques are coherent diffractive imaging: forward
+# (plane-wave) CDI, ptychography, and Bragg CDI, all formed by focusing a coherent
+# beam to a small spot with a Kirkpatrick-Baez (KB) mirror pair and recording the
+# far-field diffraction pattern on a photon-counting area detector (Eiger2, Merlin).
+# The real-space image is recovered offline by phase retrieval. It is bound to the
+# NSLS-II Site (deployments/nsls2/site.yaml).
+#
+# NAME GUARD: this is NSLS-II 9-ID. CORA also models APS 9-ID (the CSSI surface-
+# scattering instrument, deployments/9-id), a different beamline at a different
+# facility with a different PV namespace. CDI lives at XF:09ID* / SR:C09-ID*.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/cdi-profile-collection and the
+# device library NSLS2/cditools) or inferred, carried `confirm: true` pending CDI
+# staff. EPICS PVs are real and verified against the startup scripts and the
+# cditools device classes; vendor part numbers, serials, and physical positions
+# are not in them and are open questions. Same descriptor mode as CHX / HXN; this
+# scaffold is descriptor + docs, scenarios deferred.
+#
+# CDI is a COHERENT-IMAGING reinforcement: it reuses the coherent-detector shape
+# CHX brought (a photon-counting area detector recording a coherent pattern) and
+# the deferred ptychography HXN brought (the reconstruction is ComputePort work,
+# not a beamline Method), at a beamline dedicated to phase-retrieval imaging. It
+# introduces NO new catalog family: the area detectors reuse Camera (the Eiger-to-
+# Camera precedent), the KB nanofocus pair and the pre-mirrors reuse Mirror (the
+# FMX / SRX KB precedent), the two monochromators reuse Monochromator (the CHX
+# Si-DCM-plus-multilayer-DMM precedent), the goniometer reuses Goniometer, the
+# foil intensity monitor reuses FluxMonitor, the slits Slit, the attenuator foils
+# Filter, the undulator InsertionDevice, the master energy a PseudoAxis, the
+# diagnostic cameras Camera. The quadrant and diamond beam-position monitors bind
+# the loose BeamPositionMonitor family (held; DIAG-1) and the machine reads a loose
+# StorageRing supply (MACHINE-1). Per the 8-ID / CHX / HXN precedent the coherent-
+# imaging Methods are NOT coined here; they are the deferred owner-scope cohort
+# (TECH-1).
+
+beamline:
+  name: CDI
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 9"           # PV namespace XF:09ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "IVU18 in-vacuum undulator (SR:C09-ID:G1{IVU18:1}), verified in source; period/gap parameters not fully in the profile collection (SRC-1)"
+
+enclosures:
+  # PV zones: 09IDA first-optics hutch (FOE), 09IDB branch (DM3 slit, quadrant BPM),
+  # 09IDC endstation (KB nanofocus, beam-conditioning unit, goniometer, towers), and
+  # the 09ID1 detector namespace. Modelled as an optics hutch plus an experiment
+  # hutch; whether the 09IDB branch is a distinct enclosure is a staff question (ENC-1).
+  - name: 9-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf not in source; no shutter PVs are in the profile collection either (PSS-1)"}
+  - name: 9-ID-C
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; 9-ID-C is the endstation carrying the KB nanofocus, the sample goniometer, and the detectors. The 09IDB branch zone may be a distinct enclosure (ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and the machine readback
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 9-ID-A
+  intro: The in-vacuum undulator source and the storage-ring readback.
+  devices:
+    - name: Source
+      family: InsertionDevice
+      pv: "SR:C09-ID:G1{IVU18:1}"
+      confirm: true
+      note: "IVU18 in-vacuum undulator (class InsertionDevice over IVUGap, instance ivu); gap-driven through the CS2:Gap motor. Period / field parameters pending (SRC-1)."
+    - name: StorageRing
+      family: StorageRing                 # loose supply (MACHINE-1)
+      pv: "SR:OPS-BI{DCCT:1}I:Real-I"
+      confirm: true
+      note: "Storage-ring current readback (ring_current), an observe-only machine-state signal. Binds the loose StorageRing supply family (never an Asset Family, MACHINE-1)."
+
+# ===========================================================================
+# OPTICS STAGE: the monochromators, the pre-mirrors, the slits and foils, the
+# master energy, and the upstream beam diagnostics
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: 9-ID-A
+  intro: "Condition the beam and set its energy: the silicon double-crystal monochromator and the double-multilayer monochromator, the vertical and horizontal pre-mirrors, the white-beam and branch slits, the attenuator foils, and the upstream beam diagnostics. PVs verified against startup/10-machine.py, 20-motors.py, 31-electrometers.py and cditools/motors.py."
+  devices:
+    - name: WhiteBeamSlit
+      family: Slit
+      pv: "XF:09IDA-OP:1{Slt:WB1"
+      confirm: true
+      note: "White-beam-defining slit on the DM1 diagnostic module (class DM1, instance dm1): inboard / outboard / top / bottom blades plus HG / HC / VG / VC gap-and-center axes. Reuses Slit."
+    - name: AttenuatorFoil
+      family: Filter
+      pv: "XF:09IDA-OP:1{Fltr:DM1"
+      confirm: true
+      note: "DM1 attenuator foil paddle (dm1.filt, a Y-translation selecting absorber thickness); reuses Filter. Foil materials / thicknesses pending (DET-1)."
+    - name: VerticalPreMirror
+      family: Mirror
+      pv: "XF:09IDA-OP:1{Mir:VPM"
+      confirm: true
+      note: "Vertical pre-mirror (class VPM, instance vpm): pitch / roll / bend plus jack and translation axes, with a fluorescent-screen diagnostic (FS:VPM) and a defining slit (Slt:VPM) on the same module. Coating / stripe pending (DCM-1)."
+    - name: HorizontalPreMirror
+      family: Mirror
+      pv: "XF:09IDA-OP:1{Mir:HPM"
+      confirm: true
+      note: "Horizontal pre-mirror (class HPM, instance hpm): the horizontal-deflection partner of the VPM, same pitch / roll / bend / jack axis set, with its own FS:HPM screen and Slt:HPM slit. Reuses Mirror."
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:09IDA-OP:1{Mono:HDCM"
+      confirm: true
+      note: "Silicon double-crystal monochromator (class DCMBase plus the Energy pseudopositioner, instances dcm_base / energy): pitch / fine-pitch / roll plus the Bragg and crystal-gap axes the energy model drives. The Si(111) reflection is read from the Energy model (d = 3.1287 A); cryo detail and full range pending (DCM-1). The EnergyAxis below is the master energy."
+    - name: MultilayerMonochromator
+      family: Monochromator
+      pv: "XF:09IDA-OP:1{Mono:DMM"
+      confirm: true
+      note: "Double-multilayer monochromator (class DMM, instance dmm): a wider-bandpass, higher-flux alternative to the Si DCM for coherent imaging, with its own Bragg / gap and two multilayer-crystal orientation groups (mlm1 roll / fine-roll, mlm2 pitch / fine-pitch). Reuses Monochromator (the CHX DCM-plus-DMM precedent). Coating and bandwidth pending (DCM-1)."
+    - name: IntensityMonitorFoil
+      family: Filter
+      pv: "XF:09IDA-OP:1{IM:DM2"
+      confirm: true
+      note: "DM2 intensity-monitor foil (dm2.foil, a Y-translation), with a fluorescent screen (FS:DM2) on the same module; reuses Filter."
+    - name: BranchSlit
+      family: Slit
+      pv: "XF:09IDB-OP:1{Slt:DM3"
+      confirm: true
+      note: "Branch-defining slit on the DM3 module (class DM3, instance dm3), in the 09IDB branch zone (ENC-1): inboard / outboard / top / bottom plus gap-and-center axes, with a co-located BPM stage and screen. Reuses Slit."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "Master energy pseudo-axis (class Energy, instance energy). Driving it sets the DCM Bragg angle and the crystal gap through a real forward / inverse model (Si(111), d = 3.1287 A, 12.3984 A.keV). The provisional 5-15 keV range is marked TODO-CHECK in source; whether energy is ever scanned as the measurement is ENERGY-1."
+    - name: FluxMonitor
+      family: FluxMonitor
+      pv: "XF:09IDA-BI{i400:1}"
+      confirm: true
+      note: "Foil intensity monitor (class I400, instance fmon) read for I0 normalization; reuses FluxMonitor. Channel map pending (DIAG-1)."
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor          # loose Family (held; DIAG-1)
+      pv: "XF:09IDB-BI{i404:1}"
+      confirm: true
+      note: "Quadrant beam-position monitor (class I404, instance qbpm) on the branch, plus the DM3 / DM4 BPM translation stages. Binds the loose BeamPositionMonitor family that 4-ID / 8-ID / iss / fmx also use (held; DIAG-1), matching the catalog note that position monitors stay loose. Channel map pending (DIAG-1)."
+
+# ===========================================================================
+# SAMPLE STAGE: the KB nanofocus, the beam-conditioning unit, the goniometer,
+# the endstation positioning towers, and the endstation diagnostics
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 9-ID-C
+  intro: "The endstation optics that form and condition the coherent nano-spot and the sample positioning around it: the KB mirror pair, the beam-conditioning unit, the sample goniometer, and the endstation towers. PVs verified against cditools/motors.py (KB / BCU / GON classes), startup/18-screens.py, 21-tdms.py, 31-electrometers.py."
+  note: >
+    CDI focuses the coherent beam to a small spot with a Kirkpatrick-Baez mirror
+    pair (the KB nanofocus) and conditions it through the beam-conditioning unit
+    just before the sample, then records the far-field diffraction pattern. The
+    sample side carries the goniometer and the endstation positioning towers; the
+    real-space image is recovered offline by phase retrieval (a ComputePort leg,
+    not modelled here).
+  devices:
+    - name: KBMirror
+      family: Mirror
+      pv: "XF:09IDC-OP:1{Mir:KBv"
+      confirm: true
+      note: "Kirkpatrick-Baez nanofocusing mirror pair (class KB: a vertical VKB at Mir:KBv and a horizontal HKB at Mir:KBh, plus an exit window Wnd:Exit), each with pitch / roll / yaw plus jack and translation axes, a defining slit, and a fluorescent screen. This is the focusing optic that forms the coherent spot; reuses Mirror (the FMX / SRX KB precedent). Focal size and coating pending (KB-1)."
+    - name: ConditioningSlit
+      family: Slit
+      pv: "XF:09IDC-OP:1{Slt:BCUU"
+      confirm: true
+      note: "Beam-conditioning-unit slits (class BCU, instance bcu): an upstream pair (Slt:BCUU) and a downstream pair (Slt:BCUD) trimming and guarding the coherent beam at the endstation, with an inline-camera stage (Qstar:1). Reuses Slit."
+    - name: InlineCamera
+      family: Camera
+      pv: "XF:09IDC-BI{BCU-Cam:9}"
+      confirm: true
+      note: "Beam-conditioning-unit inline beam-viewing camera (cam_C9, a masked Prosilica), carried on the BCU Qstar stage; reuses Camera. Live diagnostic set pending (CAM-1)."
+    - name: Goniometer
+      family: Goniometer
+      pv: "XF:09IDC-OP:1{Gon:1"
+      confirm: true
+      note: "Sample goniometer and stack (classes GON / SAM, instance gon): sample lab-frame translations and rotations (Rx / Rz / X / Y / Z, with small-sample and large-sample axis sets) plus alignment axes and a sample-viewing screen. Reuses Goniometer; the full axis modelling is STAGE-1."
+    - name: SampleTower1
+      family: LinearStage
+      pv: "XF:09IDC-ES:1{TDMS:T1"
+      confirm: true
+      note: "Endstation positioning tower 1 (class TDMSTower, instance T1): TX / TY / TZ translations plus camera and angle axes. One of the two CDI endstation towers; which tower carries the sample versus the detector, and the sample-to-detector distance that sets the q-range, are STAGE-1. Reuses LinearStage."
+    - name: SampleTower2
+      family: LinearStage
+      pv: "XF:09IDC-ES:1{TDMS:T2"
+      confirm: true
+      note: "Endstation positioning tower 2 (class TDMSTower, instance T2), the partner of SampleTower1. Reuses LinearStage; some axes are read-only pending commissioning in source (STAGE-1)."
+    - name: DiamondBeamMonitor
+      family: BeamPositionMonitor          # loose Family (held; DIAG-1)
+      pv: "XF:09IDC-BI{BPM:1}"
+      confirm: true
+      note: "Transmissive diamond beam-position monitor read through a TetrAMM electrometer (class TetrAMM, instance dbpm) just ahead of the sample; renamed in source on 2026-06-18 from ion-chamber use to the diamond BPM. Binds the loose BeamPositionMonitor family (held; DIAG-1)."
+    - name: SampleCamera
+      family: Camera
+      pv: "XF:09IDC-BI{SMPL-Cam:10}"
+      confirm: true
+      note: "Sample-viewing camera (cam_C10, a masked Prosilica); a further endstation Prosilica (cam_C15) sits alongside. Reuses Camera. Live set pending (CAM-1)."
+
+# ===========================================================================
+# DETECTION STAGE: the coherent-diffraction area detectors
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 9-ID-C
+  intro: "The photon-counting area detectors that record the coherent far-field diffraction pattern. PVs verified against startup/30-area-detectors.py and cditools/eiger_async.py / merlin_async.py."
+  note: >
+    CDI's measurement lives on its area detectors: an Eiger2 and a Merlin record
+    the far-field coherent-diffraction pattern (a single frame for forward CDI, a
+    scan of frames for ptychography, a rocking series for Bragg CDI). Both reuse
+    Camera. The hardware exposure-gating chain is not exposed in source (TIMING-1);
+    the detectors carry internal and external trigger modes in their device classes.
+  devices:
+    - name: EigerDetector
+      family: Camera
+      pv: "XF:09ID1-ES{Det:Eig1}"
+      confirm: true
+      note: "Eiger2 photon-counting area detector (class EigerDetector, instance eiger2-1), the primary coherent-diffraction / ptychography detector recording the far-field pattern; reuses Camera (the Eiger-to-Camera precedent). Module size and trigger wiring pending (DET-1 / TIMING-1)."
+    - name: MerlinDetector
+      family: Camera
+      pv: "XF:09ID1-ES{Det:Merlin1}"
+      confirm: true
+      note: "Merlin photon-counting detector (class MerlinDetector, instance merlines-1), the second coherent-diffraction detector; reuses Camera. Which detector is primary for which technique is DET-1."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    Unlike the other NSLS-II coherent beamlines, the CDI profile collection exposes
+    no hardware trigger box: there is no Zebra or PandA startup file, and no shutter
+    PVs. The Eiger2 and Merlin carry internal and external trigger modes in their
+    device classes, but how an exposure is gated on the floor is not in source
+    (TIMING-1). The motors sit on EPICS motor records whose controller boxes,
+    firmware, and IPs are likewise not exposed (DRIVE-1).
+  motion_controllers:
+    - name: EndstationMotionController
+      family: MotionController
+      confirm: true
+      note: "The motion controllers driving the optics, KB, goniometer, and tower axes; box models / protocol / IP not in the profile collection (DRIVE-1)."
+  triggering: []
+  software_iocs_not_modeled:
+    [Eiger, Merlin, Prosilica, TetrAMM, i400, i404, TDMS]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen        # DCM cryocooler
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["area detectors", "attenuator foils", "KB mirrors"]
