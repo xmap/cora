@@ -19,7 +19,7 @@ This file is read by Claude Code (and other agents that respect `CLAUDE.md`). Ke
 
 ## Memory hygiene
 
-Auto-memory grows monotonically without a forcing function. These rules curb drift between sessions. They apply to `~/.claude/projects/-Users-dgursoy-Documents-Github-cora/memory/`.
+Auto-memory grows monotonically without a forcing function. These rules curb drift between sessions. They apply to this repo's Claude auto-memory directory: `~/.claude/projects/<repo-path-slug>/memory/`, where `<repo-path-slug>` is the repository's absolute path with `/` replaced by `-` (it differs per machine).
 
 - Before creating a new memo, grep MEMORY.md for the topic; prefer edit-in-place over a new file.
 - When tagging a memo SUPERSEDED, move its index entry to `## Reference` in the same edit.
