@@ -144,7 +144,8 @@ def main() -> None:
     # Activity swim-lanes (alignment). Science projections are drawn separately.
     for a in acts:
         if (a["payload"].get("role") == "taxi"
-                or a["payload"].get("action_name") in ("acquire_projection", "fly_scan_prep")):
+                or a["payload"].get("action_name") in ("acquire_projection",
+                                                       "fly_scan_prep", "write_dataset")):
             continue
         x, y = secs(a["sampled_at"]), LANE_Y[a["step_kind"]]
         ax.scatter([x], [y], marker=LANE_MARKER[a["step_kind"]], s=46,
@@ -210,7 +211,7 @@ def main() -> None:
     if save_time is not None:
         ax.plot([post_ok[-1], save_time], [y, y], color=s.MUTE, lw=4.5, alpha=0.4,
                 solid_capstyle="butt", zorder=1)
-        ax.scatter([save_time], [y], marker="D", s=34, color=s.MUTE, alpha=0.6,
+        ax.scatter([save_time], [y], marker="p", s=46, color=s.MUTE, alpha=0.6,
                    edgecolors="white", linewidths=0.5, zorder=3)
         ax.annotate("save\n(HDF5)", (save_time, y), textcoords="offset points",
                     xytext=(0, 9), ha="center", fontsize=s.SIZE["small"],
