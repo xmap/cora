@@ -1,0 +1,87 @@
+# CORA Site descriptor: the Elettra Sincrotrone Trieste site-level surface
+#
+# Elettra Sincrotrone Trieste (operated by Elettra Sincrotrone Trieste S.C.p.A.,
+# which also runs the FERMI free-electron laser) is the eighth Site CORA models,
+# and its first Italian facility. This file is the single human-readable source
+# for the facility's site-level instances: the Facility itself, the Practices it
+# would run, and the facility principals. It is the home of the SYRMEP hard X-ray
+# microtomography beamline.
+#
+# Status: reverse-engineered from public sources. CORA has not been connected to
+# Elettra and no staff have confirmed this model. Every value below is read from
+# public material (the elettra.eu beamline pages, the ElettraSciComp / ELETTRA-
+# SincrotroneTrieste GitHub orgs, the public gitlab.elettra.eu, and ICALEPCS
+# proceedings; see research/elettra/_research_brief.md) or inferred, and is carried
+# `pending` until staff confirm it. Do not invent facility specifics here; carry
+# them as questions on the SYRMEP open-questions page.
+#
+# Source-of-truth boundary (same as the APS / MAX IV / Diamond / NSLS-II / SLAC /
+# ESRF / Australian Synchrotron sites):
+#   - the closed facility-kind / actor-kind vocabularies are validated against
+#     code-mirrored frozensets in scripts/site_descriptor.py.
+#   - the facility records the bootstrap invariants (kind=Site, display_name equals
+#     code); `heading` carries the human title used on the rendered page.
+#   - a non-pending practice method must resolve to a catalog Method; SYRMEP is
+#     design-phase, so every practice is carried pending until the deployment
+#     enters pilot scope.
+#
+# Controls house-style (the distinctive Site fact): Elettra is Tango-native across
+# both the synchrotron and the FERMI FEL (no EPICS at the facility level). The
+# device / interlock floor is Tango plus the Elettra 2.0 GeCo PLC stack (Siemens
+# S7-1500 over PROFINET), with Tango motion / detector device servers and HDB++
+# archiving. The beamline scan / orchestration layer is the in-house, trigger-
+# driven DonkiOrchestra framework (the Elettra 2.0 successor names it the abstract
+# "Executer" Tango device server); this is the seam CORA's edge would conduct over,
+# NOT EPICS and NOT Sardana. See docs/deployments/syrmep/equipment/controls.md.
+
+facility:
+  code: elettra
+  display_name: elettra
+  heading: "Elettra Sincrotrone Trieste"
+  kind: Site
+  institution: Elettra Sincrotrone Trieste S.C.p.A.
+  beamlines: [SYRMEP]
+
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. SYRMEP is a
+# hard X-ray microtomography beamline, so its imaging Practices reuse the catalog's
+# existing tomography-family Methods directly (the same Methods 2-BM / 7-BM use);
+# the alignment / field-correction Practices reuse the alignment + acquisition
+# Methods. All are carried pending because SYRMEP is design-phase, reverse-
+# engineered, and not yet in pilot scope (TECH-1). Methods not yet in the catalog
+# (phase retrieval, white-beam imaging) render unlinked and are carried pending.
+practices:
+  - {name: SYRMEP_tomography_practice, method: tomography, pending: true, note: "absorption / propagation-based phase-contrast microtomography on the rotation stage + sCMOS/CCD; reuses the 2-BM tomography Method (TECH-1)"}
+  - {name: SYRMEP_continuous_rotation_practice, method: continuous_rotation_tomography, pending: true, note: "continuous (fly) rotation tomography; reuses the catalog Method (TECH-1)"}
+  - {name: SYRMEP_mosaic_practice, method: mosaic_tomography, pending: true, note: "wide / laminar-beam tiled tomography for samples beyond the field of view; reuses the catalog Method (TECH-1)"}
+  - {name: SYRMEP_dark_field_practice, method: dark_field, pending: true, note: "dark-frame stack for reconstruction subtraction; reuses the catalog Method (TECH-1)"}
+  - {name: SYRMEP_flat_field_practice, method: flat_field, pending: true, note: "flat-field stack (beam, no sample) for reconstruction division; reuses the catalog Method (TECH-1)"}
+  - {name: SYRMEP_center_alignment_practice, method: center_alignment, pending: true, note: "rotation-axis centring; reuses the catalog alignment Method (TECH-1)"}
+  - {name: SYRMEP_helical_tomography_practice, method: helical_tomography, pending: true, note: "helical / continuous-pitch CT (the large-specimen mode, e.g. the XC Hydra photon-counting setup); Method not yet in the catalog, renders unlinked (TECH-1)"}
+  - {name: SYRMEP_white_beam_tomography_practice, method: white_beam_tomography, pending: true, note: "white / pink-beam fast tomography; Method not yet in the catalog (TECH-1)"}
+  - {name: SYRMEP_phase_retrieval_practice, method: phase_retrieval, pending: true, note: "single-distance TIE-HOM / Paganin phase retrieval (the SYRMEP Tomo Project pipeline); a compute Method not yet in the catalog (COMPUTE-1, TECH-1)"}
+
+# Access BC Actors conceptually facility-wide at Elettra. Pending until the operator
+# and review structure is confirmed; the public sources expose no human roster.
+actors:
+  - {name: Elettra beamline staff, kind: human, pending: true, note: "operator and beamline-scientist pool; structure TBD (GOV-1)"}
+  - {name: Elettra safety review, kind: human, pending: true, note: "facility safety review body; membership TBD (GOV-1)"}
+
+# Agent BC Agents seeded at this deployment. None declared: the CORA system agents
+# are not yet wired for an Elettra deployment, and SYRMEP is a modelling exercise.
+agents: []
+
+# Supply BC: facility-wide continuously-available resources. Pending in this
+# reverse-engineered model. The SYRMEP source is the storage-ring bending-magnet
+# photon beam; the optics and sample paths draw cooling water and run under vacuum.
+supplies:
+  - {name: Elettra photon beam, kind: PhotonBeam, pending: true, note: "Elettra storage-ring beam at 2.0 GeV (300 mA) / 2.4 GeV, shared across the beamlines; SYRMEP is fed by a bending-magnet source (SRC-1)"}
+  - {name: Cooling water, kind: CoolingWater, pending: true}
+  - {name: Beamline vacuum, kind: Vacuum, pending: true, note: "the white-beam optics and beam-transport path (SUP-1)"}
+
+# Safety BC: facility-issued Clearances. Elettra personnel safety is carried
+# pending; the safety-form identity is not in the public sources.
+clearances:
+  - {name: Elettra personnel safety system, kind: PSS, pending: true, note: "facility safety-form names TBD; confirm with Elettra staff (PSS-1)"}
+
+# Caution BC: operator tribal knowledge. None yet for a modelling exercise.
+cautions: []

@@ -282,6 +282,9 @@ _PENDING_METHODS = {
     "serial_crystallography": "LCLS-MFX + i24 serial crystallography; 2 consumers, not earned",
     "pump_probe": "LCLS-MFX fs optical-laser pump / X-ray probe; XFEL Method not yet earned",
     "xas_spectroscopy": "MFX + ISS emission-spectrometer XAS / XES; 2 consumers (TECH-1)",
+    "helical_tomography": "SYRMEP helical large-specimen CT; not yet earned (TECH-1)",
+    "white_beam_tomography": "SYRMEP white / pink-beam fast tomography; not yet in scope (TECH-1)",
+    "phase_retrieval": "SYRMEP TIE-HOM / Paganin phase retrieval; compute Method (COMPUTE-1)",
 }
 
 

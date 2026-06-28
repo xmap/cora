@@ -754,6 +754,21 @@ nav:
         - Techniques: deployments/mogno/techniques.md
         - Governance: deployments/mogno/governance.md
         - Model: deployments/mogno/model.md
+    - Elettra:
+      - deployments/elettra/index.md
+      - SYRMEP:
+        - deployments/syrmep/index.md
+        - Open questions: deployments/syrmep/questions.md
+        - The beamline:
+          - deployments/syrmep/equipment/index.md
+          - Source: deployments/syrmep/beamline.md
+          - Sample: deployments/syrmep/equipment/sample.md
+          - Detector: deployments/syrmep/equipment/detector.md
+          - Controls: deployments/syrmep/equipment/controls.md
+          - Inventory: deployments/syrmep/inventory.md
+        - Techniques: deployments/syrmep/techniques.md
+        - Governance: deployments/syrmep/governance.md
+        - Model: deployments/syrmep/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

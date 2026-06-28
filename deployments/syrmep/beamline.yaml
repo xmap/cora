@@ -1,0 +1,277 @@
+# SYRMEP beamline descriptor (Elettra), reverse-engineered
+#
+# SYRMEP (SYnchrotron Radiation for MEdical Physics) is Elettra's hard X-ray
+# radiology and microtomography beamline: a bending-magnet source feeding a
+# double-crystal Si(111) monochromator (or a white / pink beam), a laminar beam,
+# and a heavy-payload rotation stage with an sCMOS / CCD detector on a long
+# sample-to-detector propagation rail. It does absorption, propagation-based
+# phase-contrast, and diffraction-enhanced imaging, plus a clinical breast-CT
+# programme (SYRMA-3D). It is bound to the Elettra Site
+# (deployments/elettra/site.yaml), CORA's EIGHTH Site and its FIRST Elettra
+# deployment.
+#
+# STATUS: reverse-engineered, design-phase. Hardware facts (source, optics,
+# detectors, stages, scan modes) are read from public material (the elettra.eu
+# SYRMEP beamline pages, the EPJ Plus 2024 SYRMEP review, the J. Synchrotron Rad.
+# 2023 large-FOV paper; see research/elettra/_research_brief.md) and carried
+# new: true + confirm: true pending SYRMEP staff. UNLIKE the ID32 BLISS scaffold,
+# SYRMEP's control handles are NOT in public source: the in-house DonkiOrchestra
+# scan engine's source location is unconfirmed and the acquisition code lives in
+# the private gitlab.elettra.eu syrmep_acquisition group. So device handles are
+# carried as confirm-pending placeholders, NOT invented Tango device URLs
+# (CTRL-1). Descriptor + docs scaffold; scenarios deferred.
+#
+# WHAT IS NEW: a new Site, and a new controls house-style; NO new Family.
+#   - A wholly NEW Site (Elettra, 8th) re-tests the Site / Federation kernel.
+#   - The first Tango + DonkiOrchestra controls house-style (the rest are EPICS,
+#     Tango / Sardana at MAX IV, or Tango / BLISS / IcePAP at the ESRF). The Tango
+#     floor is shared with ID32, but the orchestration seam is the in-house,
+#     trigger-driven DonkiOrchestra (Elettra 2.0: the abstract "Executer" Tango
+#     device server), not BLISS.
+#   - SYRMEP is a tomography beamline, so it binds the SAME catalog tomography
+#     Families the 2-BM / FXI / 7-BM imaging beamlines use (RotaryStage,
+#     LinearStage, Camera, Scintillator, Slit, Filter, Monochromator); it coins
+#     no Family and changes nothing in the catalog.
+#
+# MODELLING: SYRMEP reuses the established imaging spine. The bending-magnet source
+# is a Supply (PhotonBeam), provenance only (the 2-BM precedent). The Si(111) DCM
+# binds Monochromator; the white/mono mode is a per-Asset setting on it (the 2-BM
+# DMM insert/retract precedent). The laminar-beam slits bind Slit, the filters bind
+# Filter. The heavy-payload rotation stage binds RotaryStage; the five-axis sample
+# stage binds LinearStage; the sample-to-detector propagation rail binds LinearStage
+# (the 2-BM CameraZ precedent); the scintillator binds Scintillator and the sCMOS /
+# CCD bind Camera. The incident energy is a PseudoAxis over the DCM (the 2-BM
+# energy-curve precedent).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/syrmep/questions.md.
+
+beamline:
+  name: SYRMEP
+  facility: elettra            # Elettra Site (facility_code: elettra)
+  sector: "SYRMEP"             # organizational label, not a registered asset today
+  tier: Unit
+  parent: null
+  source: bending-magnet
+  source_confirm: "first bending magnet of section 6; at 2.4 GeV critical energy 5.59 keV, field 1.45 T (SRC-1)"
+
+# Control plane: Tango (the device floor) with the in-house DonkiOrchestra scan
+# engine as the orchestration seam, NOT EPICS and NOT BLISS. Handles are NOT in
+# public source (DonkiOrchestra source location unconfirmed; acquisition code in
+# the private gitlab.elettra.eu syrmep_acquisition group), so every device below
+# carries a confirm-pending handle rather than an invented Tango URL (CTRL-1). The
+# hutch grouping and PSS permit leaves are open (ENC-1, PSS-1).
+enclosures:
+  - name: syrmep-optics
+    role: optics-hutch
+    facility_code: elettra
+    permit_signal: {confirm: "Elettra PSS permit leaf not in public source; the white-beam optics zone, hutch grouping is ENC-1 (PSS-1)"}
+  - name: syrmep-experiment
+    role: experiment-hutch
+    facility_code: elettra
+    permit_signal: {confirm: "Elettra PSS permit leaf not in public source; the imaging / tomography endstation, ENC-1 (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state, the bending-magnet beam, the DCM, the optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: syrmep-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "The Elettra storage-ring state, the loose StorageRing pattern reused across the fleet (MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: {confirm: "Elettra storage-ring state (2.0 GeV / 300 mA and 2.4 GeV modes; current, fill); observe-only, exact Tango handles are MACHINE-1"}
+      new: true
+      confirm: true
+      note: "Elettra storage-ring state; observe-only (MACHINE-1)"
+
+source:
+  stage: source
+  enclosure: syrmep-optics
+  intro: "Where the bending-magnet beam enters and first gets gated."
+  note: >
+    The source devices are a flat set on the SYRMEP Unit (the 2-BM precedent): the
+    bending-magnet beam is a Supply (PhotonBeam), provenance only; the safety
+    shutter and beam-defining mask gate it. No Conditioner Assembly earns its place
+    at this stage.
+  devices:
+    - name: source
+      family: Beam               # Supply(kind=PhotonBeam); accelerator-side, provenance only
+      new: true
+      note: "bending magnet (first BM of section 6), recorded as a Supply, not an Asset (SRC-1)"
+    - name: FrontEndShutter
+      family: Shutter
+      pv: {confirm: "the front-end / safety shutter gated by the Elettra PSS; handle not in public source (PSS-1)"}
+      new: true
+      confirm: true
+      note: "front-end safety shutter, gated by the personnel safety system (PSS-1)"
+    - name: BeamDefiningMask
+      family: Mask
+      passive: true
+      new: true
+      confirm: true
+      note: "the fixed white-beam-defining aperture upstream of the optics; dimensions and drawing not in public source (OPT-1)"
+
+conditioning-optics:
+  stage: source
+  enclosure: syrmep-optics
+  intro: "Pick the beam energy (or pass white beam), shape it, and filter it."
+  note: >
+    The double-crystal Si(111) monochromator binds Monochromator; the mono / white
+    beam choice is a per-Asset setting on it (the 2-BM DMM insert/retract
+    precedent). The incident energy is a PseudoAxis over the DCM. The laminar-beam
+    slits bind Slit and the filters bind Filter.
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: {confirm: "double-crystal Si(111) DCM, fixed-exit Bragg geometry (20 mm vertical offset); Bragg / offset handles not in public source (MONO-1)"}
+      crystal: "Si(111)"
+      energy_range_mono: "10-40 keV (EPJ Plus 2024 review; the elettra.eu spec still lists 9-40, MONO-1)"
+      beam_modes: ["monochromatic", "white"]   # the white / pink beam bypasses the DCM; modeled as a per-Asset setting (MODE-1)
+      new: true
+      confirm: true
+      note: >
+        the double-crystal Si(111) monochromator (fixed-exit, 20 mm offset). The
+        white / pink beam mode (~16-30 keV average) bypasses the crystals; modeled
+        as the Monochromator Asset beam-mode setting (the 2-BM dmm_insertion
+        precedent). Energy range 10-40 keV mono per the 2024 review; the official
+        spec page still lists 9-40 keV (MONO-1).
+    - name: BeamEnergy
+      family: PseudoAxis
+      pv: {confirm: "incident-energy pseudo-axis over the DCM Bragg arms; partition rule and handles are MONO-1"}
+      new: true
+      confirm: true
+      note: "incident-energy pseudo-axis (the 2-BM energy-curve precedent); range and rule are MONO-1"
+    - name: BeamSlit
+      family: Slit
+      pv: {confirm: "the white-beam-defining slits shaping the laminar beam (~120-160 x 4-5 mm at 20-23 m); blade-axis map and handles are OPT-2"}
+      water_cooled: true
+      white_beam: true
+      new: true
+      confirm: true
+      note: "the laminar-beam-defining slits; the 7 mrad horizontal acceptance gives a ~120-160 mm wide, ~4-5 mm tall beam (OPT-2)"
+    - name: Filter
+      family: Filter
+      pv: {confirm: "the beam-hardening / attenuation filter set; foils and handles not in public source (FOIL-1)"}
+      new: true
+      confirm: true
+      note: "the absorption / beam-hardening filters; foil materials and the selector handle are FOIL-1"
+
+# ===========================================================================
+# SAMPLE STAGE: the heavy-payload rotation stage + the five-axis sample stage
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: syrmep-experiment
+  intro: "Hold and rotate the sample: a heavy-payload rotation stage on a five-axis sample positioner."
+  note: >
+    The rotation axis binds RotaryStage (the tomographic theta, the 2-BM
+    precedent); the five-axis sample positioner binds LinearStage facets. Continuous
+    (fly) and helical scans run as the rotation stage's trigger-driven sweep under
+    DonkiOrchestra (the orchestration seam, CTRL-1).
+  devices:
+    - name: Rotary
+      family: RotaryStage          # the tomographic rotation axis (theta)
+      pv: {confirm: "the heavy-payload rotation stage; handle and trigger wiring not in public source (STAGE-1, CTRL-1)"}
+      trigger_source: {confirm: "the projection trigger for continuous / fly scans is driven by DonkiOrchestra; the hardware trigger source is CTRL-1"}
+      load_capacity: "up to 120 kg"            # the heavy-specimen rotator (J. Synchrotron Rad. 2023)
+      max_speed: "1-20 deg/s"
+      angular_precision: "0.02 deg"
+      new: true
+      confirm: true
+      note: "the heavy-payload rotator (up to 120 kg, 1-20 deg/s, 0.02 deg precision per the brief); the standard sample rotation stage range / bearing / model and the wobble spec are STAGE-1"
+    - name: SampleStage
+      family: LinearStage
+      pv: {confirm: "the five-axis sample-positioning stage; motor vendors, micro-positioning resolution, axis set, and handles are SAMPLE-1"}
+      new: true
+      confirm: true
+      note: "the five-axis sample positioner; the motor vendors, the micro-positioning resolution, and the per-axis map are SAMPLE-1"
+
+# ===========================================================================
+# DETECTION STAGE: the propagation rail, the scintillator, the sCMOS / CCD
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: syrmep-experiment
+  intro: "Convert the transmitted beam to light and record it, on a long sample-to-detector propagation rail for phase contrast."
+  note: >
+    The sample-to-detector distance binds LinearStage (the propagation rail, the
+    2-BM CameraZ precedent); the scintillator binds Scintillator and the area
+    detectors bind Camera. SYRMEP runs more than one camera (an sCMOS and a CCD,
+    plus a photon-counting detector for large-specimen CT); the default routine
+    camera is DET-1.
+  devices:
+    - name: PropagationRail
+      family: LinearStage          # sample-to-detector distance (phase-contrast propagation), not a focus stage
+      pv: {confirm: "the sample-to-detector sliding rail (3-160 cm); handle not in public source (DET-2)"}
+      range: "3-160 cm"
+      new: true
+      confirm: true
+      note: "the phase-contrast propagation rail (sample-to-detector 3-160 cm); the two-axis detector rail handles are DET-2"
+    - name: Scintillator
+      family: Scintillator
+      pv: {confirm: "the scintillator screen converting X-rays to visible light (published configs cite GGG:Eu); type, thickness, and handle are DET-3"}
+      new: true
+      confirm: true
+      note: "the scintillator (published configs cite a GGG:Eu screen); the routine screen type and thickness are DET-3"
+    - name: TomographyCamera
+      family: Camera
+      pv: {confirm: "the 16-bit sCMOS detector (2048x2048 px, effective pixel 0.9-5.7 um via selectable optics; e.g. Hamamatsu Orca Flash); handle not in public source (DET-1)"}
+      sensor: "sCMOS, 2048x2048 px, 16-bit"
+      effective_pixel: "0.9-5.7 um (selectable optics)"
+      new: true
+      confirm: true
+      note: "the 16-bit sCMOS (2048x2048; published configs name a Hamamatsu Orca Flash); whether this or the CCD is the default routine-tomography camera, with its pixel size + FOV, is DET-1"
+    - name: CCDCamera
+      family: Camera
+      pv: {confirm: "the 12/16-bit CCD (4008x2672 px, 4.5 um pixel, PSF ~13 um); handle not in public source (DET-1)"}
+      sensor: "CCD, 4008x2672 px, 12/16-bit"
+      pixel_size: "4.5 um"
+      psf: "~13 um"
+      new: true
+      confirm: true
+      note: "the 12/16-bit CCD (4008x2672, 4.5 um pixel, PSF ~13 um); the alternate area detector (DET-1)"
+    - name: PhotonCountingCamera
+      family: Camera
+      pv: {confirm: "the XC Hydra (Direct Conversion AB) photon-counting detector for large-specimen helical CT; pixel size and handle not in public source (DET-4)"}
+      sensor: "XC Hydra photon-counting (Direct Conversion AB)"
+      new: true
+      confirm: true
+      note: "the XC Hydra photon-counting detector for large-specimen / helical CT (J. Synchrotron Rad. 2023); reuses Camera, used in the large-FOV mode; pixel size is DET-4"
+
+# Cross-cutting control. SYRMEP runs on Tango (the floor) with the in-house
+# DonkiOrchestra scan engine (the orchestration seam); the handles above are
+# confirm-pending placeholders, NOT invented, because they are not in public
+# source (CTRL-1).
+controls:
+  intro: >
+    SYRMEP runs on the Elettra Tango control stack (the device floor, shared with
+    ID32) with the in-house, trigger-driven DonkiOrchestra framework as the scan /
+    acquisition engine (DonkiDirector schedules DonkiPlayers over a ZeroMQ trigger
+    train, collecting into HDF5). The Elettra 2.0 successor names this orchestration
+    an abstract "Executer" Tango device server feeding the STP3 / MAPI reconstruction
+    and the Elettra Scientific Data Lake. That orchestration is the seam CORA's edge
+    replaces, conducting over Tango rather than over BLISS or EPICS. UNLIKE the public
+    ID32 BLISS config, SYRMEP's device handles are NOT in public source (the
+    DonkiOrchestra source location is unconfirmed and the acquisition code lives in
+    the private gitlab.elettra.eu syrmep_acquisition group), so the handles above are
+    carried confirm-pending placeholders, not invented Tango device URLs (CTRL-1).
+    The reconstruction pipeline (the SYRMEP Tomo Project: phase retrieval, ring
+    removal, FBP / iterative on ASTRA + TomoPy) is post-acquisition compute CORA
+    records as Method / Compute provenance, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a SYRMEP run needs. The white-beam
+    optics path runs under vacuum and the optics are water-cooled (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the white-beam optics and beam-transport path (SUP-1)"
