@@ -40,7 +40,7 @@
       },
       {
         "type": "RunCompleted",
-        "at": "2026-05-19T01:03:30Z",
+        "at": "2026-05-19T01:03:42Z",
         "by": "operator",
         "role": "human"
       }
@@ -458,6 +458,21 @@
         "result": "ok"
       },
       "sampled_at": "2026-05-19T01:03:18Z",
+      "result": "ok"
+    },
+    {
+      "seq": 26,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "write_dataset",
+        "params": {
+          "format": "dxfile-hdf5",
+          "projections": 6
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:03:30Z",
       "result": "ok"
     }
   ]

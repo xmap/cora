@@ -8,18 +8,22 @@
   \centering
   \includegraphics[width=\textwidth]{figures/f1_scrubber}
   \caption{The replay scrubber over one agent-supervised run at APS
-  2-BM. The top lane is the run lifecycle, colored by who drove each transition:
-  the operator started and the run completes, while the supervisor agent held
-  the run when the beam dropped and resumed it when the beam returned (the gray
-  band is the hold; the two hatched bands are the fly-scan taxi and PSO arm,
-  needed before the first frame and again after the hold). Below it, the setpoint, acquire, and check swim-lanes, with
-  one verdict-tinted band per pass of the conducted rotation-axis centering
-  search (amber open, green converged) grouping that pass's three activities. The
-  fold-to-version cursor is parked at the beam-loss instant: folding the event
-  stream to there reconstructs the state shown in the read-out, including the
-  third projection as an open interval (its in-flight marker is recorded but its
-  outcome is not yet). Past the cursor, after the run resumes, the fly-scan
-  rotation and its projections run to completion. Time spacing is synthetic.}
+  2-BM. Color-coded bars across the top name the run's phases (alignment, scan,
+  save). A run-lifecycle lane records who drove each transition: the operator
+  started and the run completes, while the supervisor agent held the run when the
+  beam dropped and resumed it when the beam returned (the gray band is the hold;
+  the two hatched bands are the fly-scan setup, the rotary taxi to constant
+  velocity and trigger arm, needed before the first frame and again after the
+  hold). A beam-permit lane shows the safety envelope the supervisor gates on:
+  satisfied except across the hold, where it reads lost. Below, the setpoint,
+  acquire, and check swim-lanes, with one verdict-tinted band per pass of the
+  conducted rotation-axis centering search (amber open, green converged) grouping
+  that pass's three activities. The fold-to-version cursor is parked at the
+  beam-loss instant: folding the event stream to there reconstructs the state
+  shown in the read-out, including the third projection as an open interval (its
+  in-flight marker is recorded but its outcome is not yet). Past the cursor,
+  after the run resumes, the scan runs to completion and the dataset is written
+  to disk. Time spacing is synthetic.}
   \label{fig:scrubber}
 \end{figure*}
 
@@ -130,9 +134,14 @@ supervisor drives is recorded with the actor that caused it and a decision the
 auditor can open: not only that the run was held and resumed, but who or what
 decided, when, and on what basis. Scrubbing to a transition reconstructs the
 state the agent saw at that instant, so ``why did it resume here'' is answered by
-replay rather than by trusting a log line. The questions an auditor asks do not
-change as autonomy deepens; only how many of the recorded decisions were the
-agent's rather than a person's. The
+replay rather than by trusting a log line. Accountability is not only about the
+acquisition: the same fold reconstructs every axis the system records as events,
+so the beam-permit lane shown here, and the clearance, training, and
+authorization boundaries the system records elsewhere, are recovered at the
+cursor alongside the science, and an auditor scrubs the safety envelope that
+gated a decision as readily as the data it produced. The questions an auditor
+asks do not change as autonomy deepens; only how many of the recorded decisions
+were the agent's rather than a person's. The
 same lane that here distinguishes operator from supervisor would, with more
 agents in the loop, separate their contributions and surface where they
 contended or handed off, which is the multi-agent orchestration view the

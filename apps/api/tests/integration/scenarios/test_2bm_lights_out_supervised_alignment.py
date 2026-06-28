@@ -23,8 +23,8 @@ replay-scrubber paper is built around:
      supervisor AUTO-RESUMES (RunResumed carries a Resume Decision).
   6. The fly-scan is restarted (the rotary stage taxis back to constant velocity
      and the PSO trigger is re-armed), the interrupted third projection is
-     re-acquired, the science scan continues to the end, the Procedure completes,
-     the Run completes.
+     re-acquired, the science scan continues to the end, the collected dataset is
+     written to disk, the Procedure completes, the Run completes.
 
 The supervisor loop is driven white-box via `_supervise_tick` (the same
 pattern as `test_2bm_run_supervisor_auto_resume.py`), beam availability is the
@@ -304,14 +304,30 @@ def _taxi_setpoint() -> ActivityInput:
 
 
 def _fly_scan_prep() -> ActivityInput:
-    """Fly-scan restart: re-arm the PSO trigger and re-prepare the scan before
-    acquisition resumes."""
+    """Fly-scan setup: arm the PSO trigger and prepare the scan before
+    acquisition begins (and again before it resumes after a hold)."""
     return ActivityInput(
         event_id=uuid4(),
         step_kind="action",
         payload={
             "action_name": "fly_scan_prep",
             "params": {"rearm_pso": True},
+            "result": "ok",
+        },
+        sampled_at=_NOW,
+    )
+
+
+def _write_dataset() -> ActivityInput:
+    """Save the collected scan: write the projections to an HDF5/DXfile dataset
+    once acquisition is complete (the 2-BM data-collection run ends here; volume
+    reconstruction is a separate downstream job)."""
+    return ActivityInput(
+        event_id=uuid4(),
+        step_kind="action",
+        payload={
+            "action_name": "write_dataset",
+            "params": {"format": "dxfile-hdf5", "projections": 6},
             "result": "ok",
         },
         sampled_at=_NOW,
@@ -537,8 +553,9 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
         correlation_id=_CORRELATION_ID,
     )
 
-    # The interrupted third projection is re-acquired and completes, then the
-    # scan continues to the end of the run: the remaining projections acquire.
+    # The interrupted third projection is re-acquired and completes, the scan
+    # continues to the end, and the collected dataset is written to disk: the
+    # 2-BM data-collection run ends with the save.
     await bind_append_step(deps, step_store=step_store)(
         AppendProcedureActivities(
             procedure_id=_PROCEDURE_ID,
@@ -547,6 +564,7 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
                 _projection(index=4, angle_deg=90.0, result="ok"),
                 _projection(index=5, angle_deg=120.0, result="ok"),
                 _projection(index=6, angle_deg=150.0, result="ok"),
+                _write_dataset(),
             ),
         ),
         principal_id=_PRINCIPAL_ID,
@@ -625,6 +643,16 @@ async def test_lights_out_run_is_aligned_supervised_and_audited(db_pool: asyncpg
     assert sorted(by_index) == ["1", "2", "3", "4", "5", "6"]
     assert sorted(by_index["3"]) == ["in_flight", "ok"]
     assert all(by_index[i] == ["ok"] for i in ("1", "2", "4", "5", "6"))
+
+    # ----- Assert: the collected dataset was written to disk at the end -----
+    async with db_pool.acquire() as conn:
+        save_rows = await conn.fetch(
+            "SELECT payload->>'result' AS result FROM entries_operation_procedure_activities "
+            "WHERE procedure_id = $1 AND payload->>'action_name' = 'write_dataset'",
+            _PROCEDURE_ID,
+        )
+    assert len(save_rows) == 1
+    assert save_rows[0]["result"] == "ok"
 
     # ----- Assert: the science scan commanded a continuous rotation (fly-scan) ---
     async with db_pool.acquire() as conn:

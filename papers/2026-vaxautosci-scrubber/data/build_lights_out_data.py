@@ -64,7 +64,8 @@ _PROCEDURE_EVENTS = [
 _ITER_STRIDE = 12.0        # one acquire every 12 s; the whole axis is a 12 s grid
 _BEAM_LOSS = 102.0         # RunHeld: the beam drops during the third projection
 _BEAM_BACK = 150.0         # RunResumed (beam returns) after a 5-stride hold
-_RUN_DONE = 210.0          # one stride after the last projection
+_SAVE_AT = 210.0           # write the dataset one stride after the last projection
+_RUN_DONE = 222.0          # run completes after the save
 
 
 def _build() -> dict:
@@ -163,6 +164,15 @@ def _build() -> dict:
     _proj(4, 90.0, 174.0, "ok")
     _proj(5, 120.0, 186.0, "ok")
     _proj(6, 150.0, 198.0, "ok")
+
+    # Save the collected scan to disk: the data-collection run ends here.
+    seq += 1
+    activities.append({
+        "seq": seq, "iteration": None, "step_kind": "action",
+        "payload": {"action_name": "write_dataset",
+                    "params": {"format": "dxfile-hdf5", "projections": 6}, "result": "ok"},
+        "sampled_at": _at(_SAVE_AT), "result": "ok",
+    })
 
     run_events = [
         {"type": "RunStarted", "at": _at(0.0), "by": "operator", "role": "human"},
