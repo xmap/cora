@@ -241,6 +241,21 @@ class Settings(BaseSettings):
     run_supervisor_truncate_enabled: bool = False
     run_supervisor_truncate_settle_ticks: int = 3
 
+    # ACT rungs for the two observation rules (Rule Q quality, Rule R stall),
+    # each a SEPARATE opt-in (default off) above its rule's own channel gate and
+    # run_supervisor_enabled. When on, the supervisor escalates from advise to a
+    # terminal command after the breach persists for the settle window:
+    #   - Rule Q (data below the quality limit) -> AbortRun (data suspect).
+    #   - Rule R (data stopped arriving) -> StopRun (data to the cutoff valid).
+    # The `*_settle_ticks` are anti-flap windows: the breach must read for this
+    # many CONSECUTIVE ticks before the terminal command fires (>= 1), so a
+    # transient dip or a recovering Run is never killed. (Rule R also has its own
+    # `run_stall_hysteresis_ticks` BEFORE it flags; the act settle is on top.)
+    run_supervisor_quality_act_enabled: bool = False
+    run_supervisor_quality_settle_ticks: int = 3
+    run_supervisor_stall_act_enabled: bool = False
+    run_supervisor_stall_settle_ticks: int = 2
+
     # Observation-signal closed-loop rules (SHADOW, inside the RunSupervisor
     # loop; [[project_observation_signal_port_design]]). Both default OFF and
     # are a second off-gate above run_supervisor_enabled.
@@ -625,6 +640,30 @@ class Settings(BaseSettings):
             msg = (
                 f"run_supervisor_truncate_settle_ticks must be >= 1, got {value}; "
                 "an autonomous truncate requires at least one liveness-stale read"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_supervisor_quality_settle_ticks")
+    @classmethod
+    def _validate_run_supervisor_quality_settle_ticks(cls, value: int) -> int:
+        """Floor of 1: an autonomous abort needs at least one below-limit read first."""
+        if value < 1:
+            msg = (
+                f"run_supervisor_quality_settle_ticks must be >= 1, got {value}; "
+                "an autonomous abort requires at least one below-limit read"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("run_supervisor_stall_settle_ticks")
+    @classmethod
+    def _validate_run_supervisor_stall_settle_ticks(cls, value: int) -> int:
+        """Floor of 1: an autonomous stop needs at least one stalled read first."""
+        if value < 1:
+            msg = (
+                f"run_supervisor_stall_settle_ticks must be >= 1, got {value}; "
+                "an autonomous stop requires at least one stalled read"
             )
             raise ValueError(msg)
         return value
