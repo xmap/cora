@@ -73,6 +73,7 @@ from cora.operation.features import (
     append_activities,
     complete_procedure,
     conduct_procedure,
+    conduct_until_advised,
     conduct_until_converged,
     end_iteration,
     get_procedure,
@@ -121,6 +122,7 @@ class OperationHandlers:
     list_procedure_iterations: list_procedure_iterations.Handler
     conduct_procedure: conduct_procedure.Handler
     conduct_until_converged: conduct_until_converged.Handler
+    conduct_until_advised: conduct_until_advised.Handler
     try_conduct_procedure: try_conduct_procedure.Handler
     control_port: ControlPort
     """The ControlPort the Conductor talks to. Surfaced on the bundle
@@ -349,6 +351,11 @@ def wire_operation(
         conduct_until_converged=with_tracing(
             conduct_until_converged.bind(deps, conductor=conductor, expansion_port=recipe_expander),
             command_name="ConductUntilConverged",
+            bc=_BC,
+        ),
+        conduct_until_advised=with_tracing(
+            conduct_until_advised.bind(deps, conductor=conductor, expansion_port=recipe_expander),
+            command_name="ConductUntilAdvised",
             bc=_BC,
         ),
         try_conduct_procedure=try_conduct_handler,

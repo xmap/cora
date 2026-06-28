@@ -60,6 +60,7 @@ from cora.agent import (
     seed_caution_promoter_agent,
     seed_clearance_expirer_agent,
     seed_clearance_watcher_agent,
+    seed_experiment_steerer_agent,
     seed_procedure_watcher_agent,
     seed_run_debriefer_agent,
     seed_run_initiator_agent,
@@ -819,6 +820,9 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_procedure_watcher_agent(deps)
             # same shape for CampaignWatcher (deterministic flag-only agent).
             await seed_campaign_watcher_agent(deps)
+            # same shape for ExperimentSteerer (deterministic L3 steering agent;
+            # identity + Decision seam now, proactive driver loop in a later slice).
+            await seed_experiment_steerer_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
@@ -881,6 +885,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         hold_run=app.state.run.hold_run,
                         resume_run=app.state.run.resume_run,
                         truncate_run=app.state.run.truncate_run,
+                        abort_run=app.state.run.abort_run,
+                        stop_run=app.state.run.stop_run,
                     ),
                     run_initiator_lifespan(
                         deps,

@@ -70,7 +70,7 @@ from cora.operation.errors import (
     PartitionRuleNotFoundError,
     PseudoAxisEvaluationFailedError,
 )
-from cora.recipe.aggregates.recipe.body import CaptureRef
+from cora.recipe.aggregates.recipe.body import CaptureRef, SteeringRef
 
 if TYPE_CHECKING:
     from cora.infrastructure.ports import EventStore
@@ -206,13 +206,13 @@ async def expand_pseudoaxis_steps(
     for step in steps:
         if isinstance(step, SetpointStep) and _is_pseudoaxis_address(step.address):
             asset_id = _parse_pseudoaxis_asset_id(step.address)
-            if isinstance(step.value, CaptureRef):
+            if isinstance(step.value, (CaptureRef, SteeringRef)):
                 raise PseudoAxisEvaluationFailedError(
                     asset_id=asset_id,
                     kind=None,
                     reason=(
-                        "a CaptureRef value is not supported on a pseudo-axis "
-                        "(a capture restores a real axis, not a virtual one)"
+                        "a CaptureRef or SteeringRef value is not supported on a pseudo-axis "
+                        "(a runtime-resolved value lands on a real axis, not a virtual one)"
                     ),
                 )
             commanded = _coerce_commanded_value(asset_id, step.value)

@@ -21,9 +21,12 @@ This file is read by Claude Code (and other agents that respect `CLAUDE.md`). Ke
 
 Auto-memory grows monotonically without a forcing function. These rules curb drift between sessions. They apply to this repo's Claude auto-memory directory: `~/.claude/projects/<repo-path-slug>/memory/`, where `<repo-path-slug>` is the repository's absolute path with `/` replaced by `-` (it differs per machine).
 
-- Before creating a new memo, grep MEMORY.md for the topic; prefer edit-in-place over a new file.
-- When tagging a memo SUPERSEDED, move its index entry to `## Reference` in the same edit.
-- After a memo's content reaches SHIPPED and the work has been on main for 30+ days, demote its index entry to `## Reference`.
+The index is split across three files because the always-loaded one has a fixed budget: `MEMORY.md` (auto-loaded each session) carries only the `User`, `Feedback`, and `Durable` shelves; the work-ledger shelves live in on-demand siblings, `MEMORY_ACTIVE.md` (in-flight designs, research, BC work, pilots, watch-items) and `MEMORY_REFERENCE.md` (superseded or 30d-shipped memos, kept for provenance). Keep `MEMORY.md` under ~17KB so it never truncates on load.
+
+- A new memo's one-line pointer goes in the shelf that fits: a durable convention, principle, or pattern, a user fact, or feedback goes in `MEMORY.md`; in-flight work goes in `MEMORY_ACTIVE.md`.
+- Before creating a new memo, grep all three index files for the topic; prefer edit-in-place over a new file.
+- When tagging a memo SUPERSEDED, move its pointer from `MEMORY_ACTIVE.md` to `MEMORY_REFERENCE.md` in the same edit.
+- After a memo's content reaches SHIPPED and the work has been on main for 30+ days, demote its pointer from `MEMORY_ACTIVE.md` to `MEMORY_REFERENCE.md`.
 - Any index description containing a count, phase tag, or date older than 7 days requires a Read of the underlying file before quoting in chat.
 - Mutable phase status does not belong in index descriptions; the index carries the durable claim, the file carries the status.
 - Memo files over ~300 lines: split into 2-3 sibling files linked from the first.

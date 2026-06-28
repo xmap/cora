@@ -1,0 +1,69 @@
+# CORA Site descriptor: the Sirius site-level surface
+#
+# Sirius is a 3 GeV fourth-generation diffraction-limited storage ring at the
+# Brazilian Synchrotron Light Laboratory (LNLS), part of CNPEM, in Campinas,
+# Sao Paulo. It is the eighth Site CORA models and its first South American
+# facility, home to the MOGNO micro/nanotomography beamline scaffold.
+#
+# STATUS: MOGNO is an off-roadmap modelling exercise (like the Diamond / NSLS-II /
+# APS / SLAC / ESRF reverse-engineered beamlines), built from public Sirius
+# facility pages and the published MOGNO papers (Campoi et al. 2025 software
+# architecture; Archilha et al. 2022 beamline), not from a live connection or an
+# open controls config. Everything below is carried `pending` until Sirius staff
+# confirm it; do not invent facility specifics here, carry them as questions on
+# the MOGNO open-questions page.
+#
+# Source-of-truth boundary (same as the other sites):
+#   - the closed facility-kind / actor-kind vocabularies are validated against
+#     code-mirrored frozensets in scripts/site_descriptor.py.
+#   - the facility records the bootstrap invariants (kind=Site, display_name
+#     equals code); `heading` carries the human title used on the rendered page.
+#   - a non-pending practice method must resolve to a catalog Method; MOGNO runs
+#     tomography (a graduated Method) and so carries one tomography practice,
+#     pending until the beamline enters scope.
+#
+# The `beamlines` list is the full operating Sirius catalog for context, but only
+# MOGNO is modelled today (it is the only beamline with a beamline.yaml). The
+# docs build cross-links a site to the beamlines it actually hosts by globbing
+# deployments/*/beamline.yaml, so the un-modelled beamlines listed here are
+# catalog placeholders, not broken links.
+
+facility:
+  code: sirius
+  display_name: sirius
+  heading: "Sirius"
+  kind: Site
+  institution: Brazilian Synchrotron Light Laboratory (LNLS), CNPEM
+  beamlines: [Carnauba, Caterete, Cedro, Ema, Imbuia, Ipe, Manaca, Mogno, Paineira, Quati, Sabia, Sapucaia]
+
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. MOGNO runs
+# tomography, which is already in CORA's catalog, so its practice resolves to the
+# tomography Method and renders linked; it is carried pending until the beamline
+# enters pilot scope. The other operating beamlines coin no practice until they
+# are modelled.
+practices:
+  - {name: Mogno_tomography_practice, method: tomography, pending: true, note: "micro and nanotomography (phase-contrast, time-resolved 4D); reverse-engineered from the Sirius facility page and the MOGNO papers (TECH-1)"}
+
+# Access BC Actors conceptually facility-wide at Sirius. Pending until the LNLS
+# operator and review structure is confirmed.
+actors:
+  - {name: Sirius beamline staff, kind: human, pending: true, note: "beamline scientist and operator pool; structure TBD"}
+  - {name: Sirius safety review, kind: human, pending: true, note: "facility safety review body; membership TBD"}
+
+# Agent BC Agents seeded at this deployment. None: the CORA system agents are not
+# wired for a Sirius deployment, and MOGNO is a modelling exercise.
+agents: []
+
+# Supply BC: facility-wide continuously-available resources. Pending in design.
+supplies:
+  - {name: Storage-ring beam current, kind: PhotonBeam, pending: true, note: "Sirius 3 GeV storage-ring beam, shared across the beamlines"}
+  - {name: Cooling water, kind: CoolingWater, pending: true}
+  - {name: Beamline vacuum, kind: Vacuum, pending: true}
+
+# Safety BC: facility-issued Clearances. The Sirius personnel-safety system is
+# carried pending; the permit-leaf names are not public.
+clearances:
+  - {name: Sirius personnel safety system, kind: PSS, pending: true, note: "facility safety-form names TBD; confirm with Sirius staff (PSS-1)"}
+
+# Caution BC: operator tribal knowledge. None yet for a modelling exercise.
+cautions: []

@@ -195,7 +195,7 @@ from cora.operation.ports.decide_port import (
     SteeringVerdict,
     advice_to_audit_fields,
 )
-from cora.recipe.aggregates.recipe.body import CaptureRef, OutputRef
+from cora.recipe.aggregates.recipe.body import CaptureRef, OutputRef, SteeringRef
 from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _CONTROL_ERRORS: tuple[type[Exception], ...] = (
@@ -347,6 +347,14 @@ whose value is a `CaptureRef` serializes to `{"__capture__": name}` so it
 rides `ResolvedStepsRecorded` + the determinism hash as an opaque sentinel
 and round-trips at resume; the Conductor resolves it at execute time."""
 
+_STEERING_REF_KEY = "__steering__"
+"""Wire-format sentinel key for a `SteeringRef` value in the pinned conduct
+step payload (mirrors the Recipe BC's `__steering__` form). A `SetpointStep`
+whose value is a `SteeringRef` serializes to `{"__steering__": name}` so it
+rides `ResolvedStepsRecorded` + the determinism hash as an opaque sentinel and
+round-trips at resume; the decide loop seeds the value and the Conductor
+resolves it at execute time exactly like a `CaptureRef`."""
+
 _OUTPUT_REF_KEY = "__output__"
 """Wire-format sentinel key for an `OutputRef` element of a ComputeStep's
 `input_uris` in the pinned conduct step payload (mirrors the Recipe BC's
@@ -472,14 +480,16 @@ class SetpointStep:
 
     `value` may be a `CaptureRef`, which the Conductor resolves at execute
     time against the per-conduct `captures` dict (filled by an earlier
-    `CaptureStep`) before writing. The ref rides through recipe expansion
-    and the determinism hash as an opaque sentinel; only execution
-    resolves it. A `CaptureRef` whose name was never captured halts the
+    `CaptureStep`) before writing. It may also be a `SteeringRef`, resolved the
+    same way except the value is loop-seeded by the decide loop (the advised
+    coordinate for that steering axis). Either ref rides through recipe
+    expansion and the determinism hash as an opaque sentinel; only execution
+    resolves it. A ref whose name was never captured (or seeded) halts the
     step with a recorded failure.
     """
 
     address: str
-    value: int | float | bool | str | tuple[Any, ...] | CaptureRef
+    value: int | float | bool | str | tuple[Any, ...] | CaptureRef | SteeringRef
     verify: bool = False
 
 
@@ -2144,16 +2154,20 @@ class Conductor:
         the axis names, otherwise a seed would overwrite a measured slot or
         leave a `CaptureRef` unresolved.
         """
-        declared_capture_refs = {
-            step.value.capture_name
+        consumed_axes = {
+            (
+                step.value.capture_name
+                if isinstance(step.value, CaptureRef)
+                else step.value.steering_axis_name
+            )
             for step in steps
-            if isinstance(step, SetpointStep) and isinstance(step.value, CaptureRef)
+            if isinstance(step, SetpointStep) and isinstance(step.value, (CaptureRef, SteeringRef))
         }
         for axis in space.axes:
-            if axis.name not in declared_capture_refs:
+            if axis.name not in consumed_axes:
                 raise ValueError(
                     f"steering axis {axis.name!r} is not consumed by any SetpointStep "
-                    "CaptureRef in the static block"
+                    "CaptureRef or SteeringRef in the static block"
                 )
         probe = _steering_probe_point(space)
         seeded_keys = set(point_to_captures(probe))
@@ -2685,6 +2699,37 @@ class Conductor:
                 "address": step.address,
                 "value": resolved,
                 "capture_ref": value.capture_name,
+            }
+        elif isinstance(value, SteeringRef):
+            # Steering sibling of the CaptureRef arm: the decide loop seeds the
+            # advised coordinate into captures[steering_axis_name] before the
+            # pass runs; an unseeded ref loud-fails the same way.
+            if value.steering_axis_name not in captures:
+                msg = (
+                    f"setpoint at {step.address!r} references steering axis "
+                    f"{value.steering_axis_name!r} not seeded before this step"
+                )
+                await self._record(
+                    envelope=envelope,
+                    index=index,
+                    step_kind=_STEP_KIND_SETPOINT,
+                    body={"address": step.address, "steering_ref": value.steering_axis_name},
+                    result=_RESULT_FAILED,
+                    error_class=_ERROR_UNRESOLVED_CAPTURE,
+                    message=msg,
+                )
+                return ConductorFailure(
+                    step_index=index,
+                    source_kind=_STEP_KIND_SETPOINT,
+                    target=step.address,
+                    error_class=_ERROR_UNRESOLVED_CAPTURE,
+                    message=msg,
+                )
+            resolved = captures[value.steering_axis_name]
+            payload_body = {
+                "address": step.address,
+                "value": resolved,
+                "steering_ref": value.steering_axis_name,
             }
         else:
             resolved = value
@@ -3581,6 +3626,8 @@ def step_to_payload(step: Step) -> dict[str, Any]:
     if isinstance(step, SetpointStep):
         if isinstance(step.value, CaptureRef):
             value: Any = {_CAPTURE_REF_KEY: step.value.capture_name}
+        elif isinstance(step.value, SteeringRef):
+            value = {_STEERING_REF_KEY: step.value.steering_axis_name}
         elif isinstance(step.value, tuple):
             value = list(step.value)
         else:
@@ -3637,9 +3684,13 @@ def _step_from_payload(payload: Mapping[str, Any]) -> Step:
     kind = payload["kind"]
     if kind == "setpoint":
         raw: Any = payload["value"]
-        value: int | float | bool | str | tuple[Any, ...] | CaptureRef
+        value: int | float | bool | str | tuple[Any, ...] | CaptureRef | SteeringRef
         if isinstance(raw, dict) and set(cast("dict[str, Any]", raw)) == {_CAPTURE_REF_KEY}:
             value = CaptureRef(capture_name=str(cast("dict[str, Any]", raw)[_CAPTURE_REF_KEY]))
+        elif isinstance(raw, dict) and set(cast("dict[str, Any]", raw)) == {_STEERING_REF_KEY}:
+            value = SteeringRef(
+                steering_axis_name=str(cast("dict[str, Any]", raw)[_STEERING_REF_KEY])
+            )
         elif isinstance(raw, list):
             value = tuple(cast("list[Any]", raw))
         else:

@@ -35,7 +35,7 @@ from cora.recipe.aggregates.recipe import (
     RecipeSetpointStep,
     RecipeStep,
 )
-from cora.recipe.aggregates.recipe.body import CaptureRef, OutputRef, resolve_value
+from cora.recipe.aggregates.recipe.body import CaptureRef, OutputRef, SteeringRef, resolve_value
 from cora.shared.canonical_json import canonical_json_bytes
 
 _CAPTURE_WIRE_KEY = "__capture__"
@@ -46,6 +46,15 @@ substitutes away), so the hash serializer must encode it deterministically.
 This serializer's hash is compared only against itself (re-expand vs the
 pinned `steps_hash`), so the key need only be internally stable; it mirrors
 the Recipe BC / Conductor `__capture__` sentinel for readability."""
+
+_STEERING_WIRE_KEY = "__steering__"
+"""Stable sentinel key for a `SteeringRef` in the expanded-steps hash form.
+
+A `SteeringRef` survives `expand` (the decide loop seeds its value at execute
+time), so the hash serializer must encode it deterministically + IDENTICALLY to
+the conductor's `_STEERING_REF_KEY`. Same `canonical_json_bytes` no-`default=`
+correctness caveat as `_CAPTURE_WIRE_KEY`: a raw `SteeringRef` would crash the
+encoder."""
 
 _OUTPUT_WIRE_KEY = "__output__"
 """Stable sentinel key for an `OutputRef` `input_uris` element in the
@@ -160,11 +169,12 @@ def _criterion_to_wire(
 
 def _step_to_wire(step: Step) -> dict[str, Any]:
     if isinstance(step, SetpointStep):
-        value: Any = (
-            {_CAPTURE_WIRE_KEY: step.value.capture_name}
-            if isinstance(step.value, CaptureRef)
-            else step.value
-        )
+        if isinstance(step.value, CaptureRef):
+            value: Any = {_CAPTURE_WIRE_KEY: step.value.capture_name}
+        elif isinstance(step.value, SteeringRef):
+            value = {_STEERING_WIRE_KEY: step.value.steering_axis_name}
+        else:
+            value = step.value
         return {
             "kind": "setpoint",
             "address": step.address,

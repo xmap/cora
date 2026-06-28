@@ -98,4 +98,12 @@ CORA's eighth Site (the Paul Scherrer Institut), and its second X-ray free-elect
 | [Bernina](bernina/index.md) | Reverse-engineered (partial) | hard X-ray femtosecond pump-probe diffraction / scattering on two reconfigurable diffractometers (GPS six-circle, XRD You-geometry); the second co-equal station on the shared Aramis source, makes the shared-switched-source seam concrete, reuses the graduated Diffractometer Assembly; a deliberately partial first cut (`eco`), the live device config is externalized |
 | [Cristallina](cristallina/index.md) | Reverse-engineered | hard X-ray time-resolved diffraction / scattering on quantum materials (DM1 / DM2 diffractometers in a dilution-fridge vector superconducting magnet) plus serial crystallography; the third Aramis station, closes the shared-source triad, CORA's first deployment mined from `slic`, fourth `Magnet` consumer (held), no new Family |
 
+## [Sirius](sirius/index.md)
+
+CORA's first South American facility (the Brazilian Synchrotron Light Laboratory, LNLS, at CNPEM in Campinas). Its MOGNO beamline is reverse-engineered from two published papers and the public facility page rather than an open controls config, so it is the thinnest reverse-engineered scaffold: device families are inferred but no control handles or vendor models are public, and every value stays `confirm` until MOGNO staff verify it.
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [MOGNO](mogno/index.md) | Reverse-engineered (partial) | cone-beam X-ray micro and nanotomography (phase-contrast, time-resolved 4D) across two stations; reuses the 2-BM / FXI tomography vocabulary, novelty is the Site and the fleet's first custom-Python (non-Bluesky) orchestration layer |
+
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.
