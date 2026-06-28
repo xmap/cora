@@ -10,7 +10,7 @@
 # STATUS: off-roadmap modelling exercise, MODELLED FROM DESIGN REPORTS (the
 # TomoWISE tradition), not reverse-engineered. No public per-beamline controls
 # config exists for TOMCAT (the BEC beamline plugins live on the internal
-# gitlab.psi.ch); the public ophyd_devices examples cover sibling beamlines
+# gitea.psi.ch); the public ophyd_devices examples cover sibling beamlines
 # (cSAXS X12SA, PXIII X06DA) only. So every value here is read from PSI's public
 # TOMCAT pages or the SLS 2.0 design reports and carried new: true (not yet
 # modelled in CORA) + confirm: true (value to be verified by PSI staff). Some
@@ -239,7 +239,7 @@ controls:
     and Experiment Control, bec-project) microservice scan/orchestration layer over
     ophyd introduced for SLS 2.0. The TOMCAT EPICS PV prefix scheme is not public
     and the per-beamline BEC ophyd device manifest lives on the internal
-    gitlab.psi.ch, so the device handles above are left empty pending staff
+    gitea.psi.ch, so the device handles above are left empty pending staff
     verification (CTRL-1). The tomographic acquisition (the rotation trajectories,
     the camera streaming, the energy moves) runs through BEC; that orchestration is
     the seam CORA's edge replaces, conducting over EPICS rather than replacing it
