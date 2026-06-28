@@ -1,41 +1,51 @@
 # CORA Site descriptor: the PSI site-level surface
 #
 # The Paul Scherrer Institut (PSI, Villigen, Switzerland) is the eighth Site CORA
-# models, and its second X-ray free-electron laser after SLAC. PSI hosts two photon
-# sources: the Swiss Light Source (SLS) storage ring and SwissFEL. This Site, like
-# SLAC (the lab hosting LCLS), is the institute; SwissFEL is a source within it and
-# Alvra is one of its experimental stations. This file is the single human-readable
-# source for the facility's site-level instances: the Facility itself, the Practices
-# it would run, and the facility principals.
+# models. PSI hosts two photon sources: the Swiss Light Source (SLS / SLS 2.0)
+# storage ring and SwissFEL. This Site, like SLAC (the lab hosting LCLS), is the
+# institute; SLS and SwissFEL are sources within it, and the beamlines (I-TOMCAT on
+# SLS, the Aramis stations Alvra / Bernina / Cristallina on SwissFEL) are
+# experimental stations under it. This file is the single human-readable source for
+# the facility's site-level instances: the Facility itself, the Practices it would
+# run, and the facility principals.
 #
-# The Site hosts three Aramis-branch stations: Alvra and Bernina (mined from
-# paulscherrerinstitute/eco) and Cristallina (mined from the slic library on
-# gitea.psi.ch, eco's active successor).
+# The Aramis stations are mined from PSI's public controls libraries
+# (paulscherrerinstitute/eco for Alvra / Bernina; gitea.psi.ch slic/cristallina for
+# Cristallina). The I-TOMCAT (SLS) content is a hybrid modelled from PSI's public
+# TOMCAT pages and the SLS 2.0 design reports (the TomoWISE tradition), because no
+# public per-beamline controls config exists for TOMCAT.
 #
 # Status: reverse-engineered, an off-roadmap modelling exercise (not a CORA pilot).
 # CORA has not been connected to PSI and no staff have confirmed this model. Every
-# value below is read from PSI's public open-source controls libraries
-# (paulscherrerinstitute/eco for Alvra / Bernina; gitea.psi.ch slic/cristallina for
-# Cristallina) or inferred, and is carried as `pending` until staff confirm it. Do not
-# invent facility specifics here; carry them as questions on the per-station open-
-# questions pages.
+# value below is carried `pending` until PSI staff confirm it; do not invent facility
+# specifics here, carry them as questions on the per-beamline open-questions pages.
+#
+# Controls house-style: SLS is an EPICS facility ("control of the beamline and
+# experiment is fully implemented in EPICS"), with the BEC (Beamline and Experiment
+# Control, bec-project) scan/orchestration layer over ophyd for SLS 2.0 (EPICS is the
+# floor CORA drives through; BEC is the edge orchestration CORA's edge replaces, the
+# I-TOMCAT SEAM-1). SwissFEL is also EPICS, with the eco / slic device libraries and
+# the sf-daq per-shot event acquisition (the XFEL acquisition gaps, DAQ-1 / TIMING-1 /
+# LASER-1).
 #
 # Source-of-truth boundary (same as the APS / MAX IV / Diamond / NSLS-II / SLAC / AS sites):
 #   - the closed facility-kind / actor-kind vocabularies are validated against
 #     code-mirrored frozensets in scripts/site_descriptor.py.
 #   - the facility records the bootstrap invariants (kind=Site, display_name equals
 #     code); `heading` carries the human title used on the rendered page.
-#   - a non-pending practice method must resolve to a catalog Method; PSI / SwissFEL
-#     runs none of the catalog's tomography methods, so each practice is carried
-#     pending until its Method is earned.
+#   - a non-pending practice method must resolve to a catalog Method; I-TOMCAT runs
+#     the catalog's tomography-family Methods and the SwissFEL stations run none of
+#     them (XFEL pump-probe / diffraction), so each practice is carried pending until
+#     its Method is earned.
 #
-# Why PSI / Alvra (what it tests): Alvra is CORA's SECOND XFEL, after SLAC LCLS-MFX.
-# Its value is reinforcement from an INDEPENDENT control stack: LCLS-MFX was mined
-# from `pcdshub`, Alvra from `eco`. If the same family-fold finding and the same
-# architectural gaps (per-shot pulse-ID DAQ, beam-synchronous timing, fs pump-probe
-# synchronization, one switched source feeding co-equal stations) recur at a second
-# XFEL built by a different team, that is strong evidence the model generalizes
-# beyond one facility's house style, not just beyond storage rings.
+# Why PSI / the Aramis stations (what they test): Alvra is CORA's SECOND XFEL, after
+# SLAC LCLS-MFX. Their value is reinforcement from an INDEPENDENT control stack:
+# LCLS-MFX was mined from `pcdshub`, the Aramis stations from `eco` / `slic`. The same
+# family-fold finding and the same architectural gaps (per-shot pulse-ID DAQ,
+# beam-synchronous timing, fs pump-probe synchronization, one switched source feeding
+# co-equal stations) recurring at a second XFEL built by a different team is strong
+# evidence the model generalizes beyond one facility's house style, not just beyond
+# storage rings.
 
 facility:
   code: psi
@@ -43,14 +53,18 @@ facility:
   heading: "PSI"
   kind: Site
   institution: Paul Scherrer Institut (PSI), Switzerland
-  beamlines: [Alvra, Bernina, Cristallina]
+  beamlines: [I-TOMCAT, Alvra, Bernina, Cristallina]
 
-# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. None of CORA's
-# catalog Methods (all tomography-family today) fit an XFEL pump-probe station, so
-# every Alvra practice is pending, naming the Method it would earn. The pump-probe
-# and emission-spectroscopy practices reuse the same pending Methods SLAC LCLS-MFX
-# introduced; none is yet in the catalog. Confirm with PSI staff.
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. I-TOMCAT is a
+# tomographic-microscopy beamline on the SLS storage ring, so its practices adapt the
+# catalog's tomography-family Methods (the 2-BM / TomoWISE precedent). The SwissFEL
+# Aramis stations run none of the catalog's tomography Methods (they are XFEL pump-probe
+# / diffraction stations), so every Aramis practice is pending, naming the Method it
+# would earn (the pump-probe and serial-crystallography Methods reuse those SLAC
+# LCLS-MFX introduced). All pending until PSI staff confirm them.
 practices:
+  - {name: I-TOMCAT_microtomography_practice, method: tomography, pending: true, note: "absorption and propagation-based phase-contrast microtomography on the SLS undulator endstation; reuses the catalog tomography Method (TECH-1)"}
+  - {name: I-TOMCAT_dynamic_tomography_practice, method: streaming_tomography, pending: true, note: "fast / dynamic 4D tomography via the GigaFRoST continuous-streaming camera; reuses the catalog streaming_tomography Method (TECH-1)"}
   - {name: Alvra_pump_probe_practice, method: pump_probe, pending: true, note: "femtosecond optical-laser pump / X-ray probe; needs laser-to-X-ray timing. Reuses the LCLS-MFX pump_probe Method, not yet in the catalog (TECH-1, LASER-1)"}
   - {name: Alvra_spectroscopy_practice, method: xas_spectroscopy, pending: true, note: "time-resolved XAS / XES (transient absorption and emission) via the DCM and the von Hamos emission spectrometer. Reuses the LCLS-MFX spectroscopy Method (TECH-1)"}
   - {name: Alvra_serial_crystallography_practice, method: serial_crystallography, pending: true, note: "time-resolved serial femtosecond crystallography on the Prime endstation; reuses the LCLS-MFX Method (TECH-1, SAMPLE-1)"}
@@ -59,33 +73,35 @@ practices:
   - {name: Cristallina_quantum_materials_diffraction_practice, method: diffraction, pending: true, note: "time-resolved diffraction / scattering on the Cristallina-Q dilution-fridge (DM1) and pulsed-magnet (DM2) diffractometers, in a vector superconducting-magnet sample environment; shares the Bernina diffraction Method (TECH-1, DIFF-1, MAG-1)"}
   - {name: Cristallina_serial_crystallography_practice, method: serial_crystallography, pending: true, note: "serial femtosecond crystallography on the Cristallina-MX fast XY sample stage; shares the LCLS-MFX / Alvra Method (TECH-1, SAMPLE-1)"}
 
-# Access BC Actors conceptually facility-wide at PSI. Pending until the SwissFEL
-# operator and review structure is confirmed; the device library exposes no human roster.
+# Access BC Actors conceptually facility-wide at PSI, spanning both the SLS and
+# SwissFEL beamlines. Pending until the PSI operator and review structure is confirmed;
+# the device libraries expose no human roster.
 actors:
-  - {name: PSI beamline staff, kind: human, pending: true, note: "SwissFEL instrument-scientist and operator pool; structure TBD (GOV-1)"}
+  - {name: PSI beamline staff, kind: human, pending: true, note: "SLS and SwissFEL beamline-scientist and operator pool; structure TBD (GOV-1)"}
   - {name: PSI safety review, kind: human, pending: true, note: "facility safety review body; membership TBD"}
 
-# Agent BC Agents seeded at this deployment. None declared: the CORA system agents
-# are not wired for a PSI deployment, and Alvra is a modelling exercise.
+# Agent BC Agents seeded at this deployment. None: the CORA system agents are not
+# wired for a PSI deployment, and the PSI beamlines are modelling exercises.
 agents: []
 
-# Supply BC: facility-wide continuously-available resources. Pending in design. The
-# FEL beam is carried as a PhotonBeam supply (as at SLAC); its per-shot, pulse-ID-
-# tagged nature is an acquisition concern, recorded on the Alvra open questions
-# (DAQ-1), not a supply attribute. The Aramis source is shared across the Alvra,
-# Bernina, and Cristallina stations one at a time (TOPO-1).
+# Supply BC: facility-wide continuously-available resources. Pending in design. The two
+# sources are distinct supplies: the SLS storage-ring beam (I-TOMCAT) and the SwissFEL
+# Aramis FEL beam (the pump-probe stations, shared one at a time, TOPO-1). The FEL beam's
+# per-shot, pulse-ID-tagged nature is an acquisition concern recorded on the Aramis open
+# questions (DAQ-1), not a supply attribute.
 supplies:
+  - {name: SLS photon beam, kind: PhotonBeam, pending: true, note: "SLS 2.0 storage-ring beam, shared across the SLS beamlines (SRC-1)"}
   - {name: SwissFEL photon beam, kind: PhotonBeam, pending: true, note: "SwissFEL Aramis free-electron-laser beam, shared across the Aramis stations (TOPO-1)"}
   - {name: Cooling water, kind: CoolingWater, pending: true}
   - {name: Beamline vacuum, kind: Vacuum, pending: true}
   - {name: Cristallina dilution-fridge liquid helium, kind: LiquidHelium, pending: true, note: "cryogen for the Cristallina-Q dilution refrigerator and vector superconducting magnet (MAG-1)"}
 
-# Safety BC: facility-issued Clearances. PSI personnel safety and the pump-probe
-# optical-laser safety are both carried pending; the SwissFEL PSS form names are not
-# in the device library, and the pump-probe laser is modelled as a Clearance hazard,
-# not an Asset CORA drives (the LCLS-MFX / 32-ID precedent, LASER-1).
+# Safety BC: facility-issued Clearances. PSI personnel safety (PSS) is carried pending
+# for both sources. The SwissFEL pump-probe optical lasers and the Cristallina high-field
+# magnet are modelled as Clearance hazards on the experiment, not Assets CORA drives (the
+# LCLS-MFX / 32-ID / ID32 precedent, LASER-1 / MAG-1).
 clearances:
-  - {name: PSI personnel safety system, kind: PSS, pending: true, note: "SwissFEL safety-form and permit-leaf names TBD; confirm with staff (PSS-1)"}
+  - {name: PSI personnel safety system, kind: PSS, pending: true, note: "SLS and SwissFEL safety-form and permit-leaf names TBD; confirm with PSI staff (PSS-1)"}
   - {name: Alvra pump-probe laser clearance, kind: Clearance, pending: true, note: "class-4 optical pump-probe laser; modelled as a hazard on the experiment, not a driven Asset (LASER-1)"}
   - {name: Bernina pump-probe laser clearance, kind: Clearance, pending: true, note: "class-4 optical pump-probe laser on the diffraction endstation; modelled as a hazard, not a driven Asset (LASER-1)"}
   - {name: Cristallina high-field magnet clearance, kind: Clearance, pending: true, note: "the Cristallina-Q vector superconducting magnet (to 5.2 T) and its liquid-helium cryogens; modelled as a hazard on the experiment, not a driven Asset for safety (the ID32 9 T magnet precedent, MAG-1)"}
