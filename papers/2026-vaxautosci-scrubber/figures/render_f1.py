@@ -29,7 +29,8 @@ LANE_Y = {"setpoint": 2, "action": 1, "check": 0}
 LANE_LABEL = {2: "Setpoint", 1: "Acquire", 0: "Check"}
 LANE_COLOR = {"setpoint": s.INK, "action": s.SUBINK, "check": s.STATE}
 LANE_MARKER = {"setpoint": "s", "action": "^", "check": "o"}
-Y_BAND = (-0.6, 2.55)  # iteration band spans the three swim-lanes
+Y_OUTPUT = -1.4        # output lane (dataset written to disk), below the swim-lanes
+Y_BAND = (-0.6, 2.55)  # iteration band spans the three acquisition swim-lanes
 Y_PERMIT = 3.2         # beam-permit lane (safety envelope the supervisor gates on)
 Y_RUN = 4.0            # run-lifecycle / who-drove-it lane
 Y_PHASE = (4.95, 5.30)  # top strip of color-coded phase bars
@@ -61,7 +62,7 @@ def main() -> None:
     beam_back = secs(prov["beam_back_at"])
     xmax = max(secs(e["at"]) for e in run_events)
 
-    fig, ax = s.figure(s.FULL_WIDTH, 4.1)
+    fig, ax = s.figure(s.FULL_WIDTH, 4.4)
 
     # Faint lane baselines anchor the swim-lanes.
     for y in LANE_Y.values():
@@ -138,7 +139,7 @@ def main() -> None:
         ax.text((a + b) / 2, band_hi + 0.12, f"i{it['iteration_index']}",
                 ha="center", va="bottom", fontsize=s.SIZE["small"], color=col)
     ax.text((secs(iters[0]["started_at"]) + secs(iters[-1]["ended_at"])) / 2,
-            band_lo - 0.55, "centering converged", fontsize=s.SIZE["small"],
+            band_lo - 0.18, "centering converged", fontsize=s.SIZE["small"],
             va="top", ha="center", color=s.GOOD)
 
     # Activity swim-lanes (alignment). Science projections are drawn separately.
@@ -206,16 +207,17 @@ def main() -> None:
                 textcoords="offset points", xytext=(0, -17), ha="center",
                 fontsize=s.SIZE["small"], color=s.MUTE, linespacing=1.0)
 
-    # Data save: the collected dataset is written to disk at the end (past the
-    # cursor, so ghosted like the rest of the post-resume scan).
+    # Data save: the collected dataset is written to disk at the end, on its own
+    # output lane (an action, not an acquisition). Past the cursor, so ghosted.
     if save_time is not None:
-        ax.plot([post_ok[-1], save_time], [y, y], color=s.MUTE, lw=4.5, alpha=0.4,
-                solid_capstyle="butt", zorder=1)
-        ax.scatter([save_time], [y], marker="p", s=46, color=s.MUTE, alpha=0.6,
-                   edgecolors="white", linewidths=0.5, zorder=3)
-        ax.annotate("save\n(HDF5)", (save_time, y), textcoords="offset points",
-                    xytext=(0, 9), ha="center", fontsize=s.SIZE["small"],
-                    color=s.MUTE, linespacing=0.9)
+        ax.axhline(Y_OUTPUT, color=s.RULE, lw=0.6, zorder=0)
+        ax.plot([post_ok[-1], save_time], [y, Y_OUTPUT], color=s.MUTE, lw=1.0,
+                ls=(0, (2, 2)), alpha=0.4, zorder=1)
+        ax.scatter([save_time], [Y_OUTPUT], marker="p", s=52, color=s.MUTE,
+                   alpha=0.6, edgecolors="white", linewidths=0.5, zorder=3)
+        ax.annotate("dataset written\n(HDF5)", (save_time, Y_OUTPUT),
+                    textcoords="offset points", xytext=(0, 9), ha="center",
+                    fontsize=s.SIZE["small"], color=s.MUTE, linespacing=0.9)
 
     # The rotary stage rotates continuously (fly-scan), paused during the hold and
     # the restart: a faint span on the setpoint lane shows the motor moving.
@@ -254,11 +256,11 @@ def main() -> None:
     card.set_zorder(6)
     ax.add_artist(card)
 
-    yticks = list(LANE_LABEL) + [Y_PERMIT, Y_RUN]
-    ylabels = [LANE_LABEL[k] for k in LANE_LABEL] + ["Beam permit", "Run"]
+    yticks = [Y_OUTPUT] + list(LANE_LABEL) + [Y_PERMIT, Y_RUN]
+    ylabels = ["Output"] + [LANE_LABEL[k] for k in LANE_LABEL] + ["Beam permit", "Run"]
     ax.set_yticks(yticks)
     ax.set_yticklabels(ylabels, fontsize=s.SIZE["label"])
-    ax.set_ylim(-1.1, Y_PHASE[1] + 0.35)
+    ax.set_ylim(Y_OUTPUT - 0.7, Y_PHASE[1] + 0.35)
     ax.set_xlim(-6, xmax + 6)
     ax.set_xlabel("time (s; synthetic spacing, see data/README.md)",
                   fontsize=s.SIZE["label"])
