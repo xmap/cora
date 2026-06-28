@@ -9,7 +9,7 @@ LIX is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 | Beamline descriptor | [`deployments/lix/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/lix/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `LIX` added to its beamline list, with solution-scattering / SEC-SAXS / scanning Practices |
 | Extraction provenance | [NSLS2/lix-profile-collection](https://github.com/NSLS2/lix-profile-collection) | the `startup/` device definitions the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none coined; every device reuses an existing catalog or loose Family (below), including the now-graduated `FlowController` |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; `solution_scattering` is a new pending slug and `scanning_fluorescence_microscopy` is reused pending (`TECH-1`) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers LIX Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
@@ -32,24 +32,24 @@ LIX coins no new Family and changes nothing in the catalog.
 - **The DCM binds `Monochromator`** (a silicon double-crystal optic, the energy law implies Si(111)); the incident energy is a `PseudoAxis` over its Bragg angle and the undulator gap.
 - **The optics and detectors all reuse:** the white-beam and KB mirrors bind `Mirror`; the slits bind `Slit`; the compound refractive lens binds the graduated `Transfocator`; the shutters bind `Shutter`; the solution positioning stack binds the graduated `Manipulator`; the scanning goniometer binds `Goniometer`; the Pilatus detectors bind `Camera`; the Xspress3 binds the graduated `EnergyDispersiveSpectrometer`; the detector translations bind `LinearStage`; the beamstop binds `BeamStop`; the TetrAMM electrometers bind `FluxMonitor`; the diamond-diode / Best beam-position monitor binds the loose `BeamPositionMonitor` (held under review, `DIAG-1`); the Zebra binds `TimingController`.
 
-## The FlowController rule-of-three
+## The graduated FlowController Family
 
-The one reuse worth spelling out is the HPLC delivery pump. Its CORA-facing anatomy is a settable flow / pump actuator presenting `Regulator`: a flowrate setpoint and readback, a pressure readback, and run / stop. That is exactly the existing loose `FlowController` Family, staged at `FLOW-1` and already bound by i22 and 7-BM. So the pump **reuses** `FlowController`; it coins nothing.
+The one reuse worth spelling out is the HPLC delivery pump. Its CORA-facing anatomy is a settable flow / pump actuator presenting `Regulator`: a flowrate setpoint and readback, a pressure readback, and run / stop. That is exactly the graduated catalog `FlowController` Family, the continuous-setpoint flow / pump actuator that presents `Regulator` and is the settable-actuator sibling of `TemperatureController`. So the pump **reuses** the graduated `FlowController`; it coins nothing.
 
-LIX is `FlowController`'s **third** consumer (i22, 7-BM, LIX), which fires the rule-of-three. Per earn-the-abstraction, three independent consumers is the pressure that earns a graduation, and `FlowController` would graduate the way `TemperatureController` and `FluxMonitor` did: presenting the existing `Regulator` Role, so a YAML-and-docs change with no new Role or affordance. That graduation is a **separate gated decision**, not folded into this scaffold (it touches the i22 and 7-BM docs too, and a Family graduation gets its own gate-reviewed PR). LIX records the trigger: the `_PROMOTION_REVIEWED` note for `FlowController` is updated to n=3 / graduation-candidate, and the decision is flagged here for a follow-up (`FLUID-1`, `FLOW-1`).
+`FlowController` graduated into the catalog on the rule-of-three across Diamond i22, APS 7-BM, NSLS-II LIX, and NSLS-II XFP, the same way `TemperatureController`, `FluxMonitor`, and `EmissionSpectrometer` did: presenting the existing `Regulator` Role, so a YAML-and-docs change with no new Role or affordance. LIX is one of the four consumers that earned the graduation, and it now simply **binds the catalog `FlowController` Family (graduated; presents `Regulator`)**. The wider fluidic chain stays deferred (`FLUID-1`, `FLOW-1`).
 
 ## How the fluidic chain is modelled (mostly not a device)
 
 The fluidic delivery chain is the novel axis, and only one piece of it is a device:
 
-- the **delivery pump** is the `DeliveryPump`, binding the loose `FlowController` (above);
+- the **delivery pump** is the `DeliveryPump`, binding the graduated `FlowController` (above);
 - the **selector valves** (VICI column / purge / detector, the Aurora buffer valve) are the ControlPort **seam**: discrete N-position routers over Moxa TCP sockets, with no existing Family, conducted over the seam and not coined at n=1 (`FLUID-1`);
 - the **SEC column and buffers** are **Supply** consumables (`SEC-1`);
 - the **flow cell** is sample environment, living in an external library (lixtools), not a catalog device here (`SEC-1`, `FLUID-1`);
 - the **sample robot and autosampler** are a **Procedure** over the spine plus a **Subject** custody thread, the i03 / MX3 robot precedent, not a device Family (`ROBOT-1`);
 - the **solution sample / eluting peak** is a **Subject** (`SUBJECT-1`).
 
-This is the CORA-lens decision for a solution beamline: the experiment's identity lives in the Subject (which protein, which peak), the Supply (which column, which buffers), and the Procedure (the flow program), with the pump and valves as actuators conducted over the seam. Coining `Pump` and `Valve` device Families at n=1 would mint federation vocabulary one deployment cannot earn alone; the pump reuses an existing loose Family instead, and the valves stay in the seam pending a second fluidic beamline (`FLUID-1`).
+This is the CORA-lens decision for a solution beamline: the experiment's identity lives in the Subject (which protein, which peak), the Supply (which column, which buffers), and the Procedure (the flow program), with the pump and valves as actuators conducted over the seam. Coining `Pump` and `Valve` device Families at n=1 would mint federation vocabulary one deployment cannot earn alone; the pump reuses the graduated `FlowController` Family instead, and the valves stay in the seam pending a second fluidic beamline (`FLUID-1`).
 
 ## Deliberately not here yet
 

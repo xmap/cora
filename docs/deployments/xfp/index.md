@@ -25,7 +25,7 @@ That inverts the usual shape, and it is what makes XFP worth modelling:
 - **The structural readout is the offline-readout seam.** The mass spectrometry that turns a footprinted sample into a structural map is downstream, off the beamline, and absent from the profile collection. CORA's run is the system of record for the dose and the sample provenance; the MS analysis is a separate, later step (`READOUT-1`).
 - **The Subject is a biomolecule in solution.** Like [LIX](../lix/index.md), the specimen is a protein or nucleic acid in a buffer, delivered by a fluidic chain, not a solid mount (`SUBJECT-1`).
 
-XFP coins **no new Family** and changes nothing in the catalog. The whole device tree reuses existing vocabulary; the novelty lands on the Method (radiolytic footprinting), the Subject, and the offline-readout seam, not on device classes. The one reuse worth naming is the sample-delivery pump, which binds the existing loose `FlowController` Family (its fourth consumer; see below).
+XFP coins **no new Family**. The whole device tree reuses existing vocabulary; the novelty lands on the Method (radiolytic footprinting), the Subject, and the offline-readout seam, not on device classes. The one reuse worth naming is the sample-delivery pump, which binds the catalog `FlowController` Family (graduated; presents Regulator), with XFP its fourth consumer (see below).
 
 ## Scope: what is and is not modelled
 
@@ -34,8 +34,8 @@ XFP coins **no new Family** and changes nothing in the catalog. The whole device
 | Optics (`FE:C17B`, `XF:17BM-OP`, `XF:17BMA-OP`) | Yes | The bendable front-end mirror, the white-beam and defining slits, the Al filter wheel (`ENC-1`, `WHITE-1`) |
 | Dose-delivery gating | Yes | The personnel and timed dose shutters, the delay generator that fires the millisecond Uniblitz fast shutter (`DOSE-1`) |
 | Endstation (`XF:17BMA-ES:1`, `ES:2`) | Yes | The capillary-flow, high-throughput, and HTFly sample stages, the delivery pump, the flux and beam-position monitors (`ENC-1`) |
-| New device classes | None | Zero new Families coined; nothing graduates; the catalog is unchanged |
-| The sample-delivery pump | Loose `FlowController` | Reuses the flow / pump-actuator Family (i22 / 7-BM / LIX); XFP is its fourth consumer (`FLOW-1`) |
+| New device classes | None | Zero new Families coined by XFP; the delivery pump reuses the graduated catalog `FlowController` |
+| The sample-delivery pump | Catalog `FlowController` (graduated; presents Regulator) | Reuses the flow / pump-actuator Family (i22 / 7-BM / LIX); XFP is its fourth consumer, the rule-of-three FlowController graduated on (`FLOW-1`) |
 | Any scattering / area / imaging detector | No (does not exist) | XFP is dose-delivery; the readout is offline MS, so the detection side is flux / dose monitors only (`READOUT-1`, `DET-1`) |
 | The fraction collector + 96-well plate | Seam + Subject / Procedure | The aliquot-routing collector and the pure-Python well addressing are the sample-custody seam, not devices (`FC-1`, `HT-1`) |
 | The monochromatic XAS endstation (`ES:3`) | No (out of scope) | A separate endstation; footprinting is white / pink beam (`WHITE-1`) |
@@ -48,9 +48,9 @@ The deferred parts are recorded on [Model](model.md).
 - **XFP is a dose-delivery beamline with no Detector-role device.** The detection side models flux / dose monitors (`FluxMonitor`, loose `BeamPositionMonitor`) and the offline-readout seam, not an imaging detector (`READOUT-1`, `DET-1`).
 - **17-BM is a bending-magnet, white / pink beam source.** There is no insertion device and no monochromator in the footprinting path; machine state is observed through the loose `StorageRing`, and the white-versus-mono scope is carried pending (`SRC-1`, `WHITE-1`).
 - **The dose chain reuses the catalog.** The Al filter wheel binds `Filter` (it sets the dose rate); the timed shutters bind `Shutter`; the delay generator that fires the millisecond Uniblitz fast shutter binds `TimingController` (its opening-time setpoint is the dose time); the QuadEM electrometers bind `FluxMonitor` (incident flux to compute dose) (`DOSE-1`).
-- **The sample-delivery pump reuses the loose `FlowController`.** XFP is its **fourth** consumer (i22, 7-BM, LIX, XFP), reinforcing the rule-of-three LIX already fired; the FlowController graduation stays a separate gated decision (`FLOW-1`).
+- **The sample-delivery pump reuses the graduated catalog `FlowController`.** XFP is its **fourth** consumer (i22, 7-BM, LIX, XFP); `FlowController` graduated on this rule-of-three, presenting the `Regulator` Role (the settable-actuator sibling of `TemperatureController`). The wider fluidic chain beyond the pump stays in the `ControlPort` seam (`FLUID-1`).
 - **The fraction collector, the 96-well plate, and the offline MS are the sample-custody and offline-readout seam.** The aliquot-routing fraction collector has no clean Family at n=1 and is carried in the custody seam; the 96-well plate is addressed in pure Python (no robot, no PV) as a Procedure plus a Subject custody thread, the i03 / MX3 / LIX custody-as-Procedure precedent (XFP at the no-robot end); the mass-spec readout is downstream and off the beamline (`FC-1`, `HT-1`, `READOUT-1`, `SUBJECT-1`).
-- **Zero new Families coined, nothing graduates, the catalog is unchanged.**
+- **Zero new Families coined by XFP; its delivery-pump sighting is the fourth that graduated the catalog `FlowController` Family (presents Regulator).**
 
 ## The beamline
 

@@ -160,7 +160,7 @@ Any field-replaceable, firmware-versioned active-control-electronics box gets a 
 | `MotionController` | Stages, hexapods, sample motors | Aerotech Ensemble (`RotaryDrive`), Aerotech Hexapod drive, Aerotech 2bmbAERO drive, OMS VME58 a-station + b-station drives at 2-BM |
 | `TimingController` | Hardware timing signal generation (triggers, gates, sync pulses) | softGlueZynq FPGA (`Timing`) at 2-BM; further trigger sources to follow. Replaces the pre-rename `TriggerFPGA` candidate. Presents_as `Controller`, which carries `Pulsing`. |
 
-Plausible siblings not yet modelled: `FlowController` (Bronkhorst mass flow), `PressureController` (MKS Baratron + PID), `DAQController` (Quantum Detectors Merlin, FPGA frame grabbers), `HVPSU` / `BiasController` (CAEN HV crate). The suffix comes last, matching the Family-naming rule above. (`TemperatureController` was such a candidate but has graduated as a catalog Family presenting the `Regulator` Role, not `Controller`: it performs rather than supervises, per the Controller-versus-Regulator note in the naming reference.)
+Plausible siblings not yet modelled: `PressureController` (MKS Baratron + PID), `DAQController` (Quantum Detectors Merlin, FPGA frame grabbers), `HVPSU` / `BiasController` (CAEN HV crate). The suffix comes last, matching the Family-naming rule above. (`TemperatureController` and `FlowController` were such candidates but have graduated as catalog Families presenting the `Regulator` Role, not `Controller`: they perform rather than supervise, per the Controller-versus-Regulator note in the naming reference.)
 
 ### Function × anatomy matrix
 

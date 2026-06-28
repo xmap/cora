@@ -4,7 +4,7 @@
 
 This cut models the XF:17BM white-beam optics, the dose-delivery gating, and the XF:17BMA-ES:1 / ES:2 footprinting endstations; the fraction collector, the 96-well plate addressing, the temperature diagnostics, the intermittently-connected stages, and the monochromatic XAS endstation (ES:3) are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/xfp/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. XFP coins **no new Family and changes nothing in the catalog**: the dose-delivery and sample devices reuse the existing `Mirror` / `Slit` / `Filter` / `Shutter` / `TimingController` / `LinearStage` / `FluxMonitor` vocabulary, and the one reuse worth naming is the sample-delivery pump, which binds the existing loose `FlowController` Family (its fourth consumer; see [Model](model.md#the-flowcontroller-rule-of-three)). The genuinely-new parts, the dose-as-experiment-variable, the solution Subject, and the offline mass-spec readout, land on the Method, the Subject, and the seam, not on devices. Notably there is **no Detector-role imaging device**: the readout is offline. Control handles are filled from the profile collection; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. XFP coins **no new Family**: the dose-delivery and sample devices reuse the existing `Mirror` / `Slit` / `Filter` / `Shutter` / `TimingController` / `LinearStage` / `FluxMonitor` vocabulary, and the one reuse worth naming is the sample-delivery pump, which binds the catalog `FlowController` Family (graduated; presents Regulator), with XFP its fourth consumer (see [Model](model.md#the-flowcontroller-rule-of-three)). The genuinely-new parts, the dose-as-experiment-variable, the solution Subject, and the offline mass-spec readout, land on the Method, the Subject, and the seam, not on devices. Notably there is **no Detector-role imaging device**: the readout is offline. Control handles are filled from the profile collection; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -24,11 +24,11 @@ Root Asset `XFP` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `CapillaryFlowStage` | `Device` | LinearStage | xfp-endstation | capillary-flow sample stage (x / y), `XF:17BMA-ES:1{Stg:5}` (SAMPLE-1) |
 | `HighThroughputStage` | `Device` | LinearStage | xfp-endstation | 96-well plate stage (x / y); well addressing is a Procedure, no robot (HT-1) |
 | `HtFlyStage` | `Device` | LinearStage | xfp-endstation | shutterless HTFly stage (velocity = exposure), `XF:17BMA-ES:2{HTFly:1}` (HT-1, DOSE-1) |
-| `DeliveryPump` | `Device` | FlowController (loose) | xfp-endstation | sample-delivery syringe pump, `XF:17BMA-ES:1{Pmp:02}`; fourth FlowController consumer (FLOW-1) |
+| `DeliveryPump` | `Device` | FlowController | xfp-endstation | sample-delivery syringe pump, `XF:17BMA-ES:1{Pmp:02}`; binds the graduated `FlowController` (presents Regulator), XFP its fourth consumer (FLOW-1) |
 | `FluxMonitor` | `Device` | FluxMonitor | xfp-endstation | QuadEM electrometer, incident flux + time-series = dose, `XF:17BM-BI{EM:1}` (DET-1, DOSE-1) |
 | `BeamPositionMonitor` | `Device` | BeamPositionMonitor (loose) | xfp-endstation | Sydor 4-channel position + sum-flux monitor, `XF:17BM-BI{EM:BPM1}` (DIAG-1) |
 
-Families reused from the catalog: `Mirror`, `Slit`, `Filter`, `Shutter`, `TimingController`, `LinearStage`, `FluxMonitor`. Loose families reused from siblings: `StorageRing` (supply), `FlowController` (the delivery pump, n=4, graduation overdue), `BeamPositionMonitor` (held under review, DIAG-1). No new family is coined and nothing graduates. There is no Detector-role imaging device: the readout is offline (READOUT-1).
+Families reused from the catalog: `Mirror`, `Slit`, `Filter`, `Shutter`, `TimingController`, `LinearStage`, `FluxMonitor`, and `FlowController` (the delivery pump; graduated on the i22 / 7-BM / LIX / XFP rule-of-three, presents Regulator). Loose families reused from siblings: `StorageRing` (supply), `BeamPositionMonitor` (held under review, DIAG-1). No new family is coined here; the delivery pump reuses the graduated catalog `FlowController`. There is no Detector-role imaging device: the readout is offline (READOUT-1).
 
 ## Pending confirmations
 

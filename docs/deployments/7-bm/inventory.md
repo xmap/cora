@@ -8,7 +8,7 @@ Devices bind to catalog [Families](../../catalog/families.md) where one fits. No
 
 ## The Asset tree
 
-Root Asset `7-BM` (`tier = Unit`, `facility_code = aps`); sub-systems nest below by `parent_id`. The families in bold are loose design-intent names that are not in the catalog yet (they render as plain text); each is tagged with the open question that decides whether it is earned into the catalog or folds into an existing Family plus settings.
+Root Asset `7-BM` (`tier = Unit`, `facility_code = aps`); sub-systems nest below by `parent_id`. The families in bold are loose design-intent names that are not in the catalog yet (they render as plain text); each is tagged with the open question that decides whether it is earned into the catalog or folds into an existing Family plus settings. `FlowController` is no longer among them: it is a graduated catalog Family (presents the Regulator Role, the settable-actuator sibling of TemperatureController).
 
 | Asset | Tier | Family | Notes (from the 7-BM docs) |
 | --- | --- | --- | --- |
@@ -25,7 +25,7 @@ Root Asset `7-BM` (`tier = Unit`, `facility_code = aps`); sub-systems nest below
 | `TomographyRotation` | `Device` | RotaryStage | sample rotation; tomoScan-driven, as at 2-BM |
 | `SamplePositioning` | `Device` | LinearStage | sample centring and translation |
 | `EDDSlit` | `Device` | Slit | energy-dispersive-diffraction gauge slits |
-| `FlowController` | `Device` | **FlowController** | Sierra Smart-Trak mass-flow controllers; settable actuator |
+| `FlowController` | `Device` | FlowController | Sierra Smart-Trak mass-flow controllers; binds the graduated catalog `FlowController` Family (presents Regulator), the settable-actuator sibling of `TemperatureController` |
 | `Scintillator` | `Device` | Scintillator | for indirect x-ray imaging |
 | `TomographyCamera` | `Device` | Camera | area camera via visible optics |
 | `HighSpeedCamera` | `Device` | Camera | high-speed movie camera (Photron Nova S16) |
@@ -33,7 +33,7 @@ Root Asset `7-BM` (`tier = Unit`, `facility_code = aps`); sub-systems nest below
 | `EnergyDispersiveSpectrometer` | `Device` | EnergyDispersiveSpectrometer | germanium energy-dispersive detector; presents the Sensor Role |
 | `Timing` | `Device` | TimingController | two DG645 generators plus softGlue; ring-sync and top-up inhibit |
 
-Reused catalog Families (no new Family needed): `Beam`, `Shutter`, `Filter`, `Slit`, `Monochromator`, `Mirror`, `RotaryStage`, `LinearStage`, `Scintillator`, `Camera`, `TimingController`, and `EnergyDispersiveSpectrometer` (graduated once 2-ID and 7-BM shared it). The tomography path (scintillator plus visible optics plus area camera) is the same shape as 2-BM and could later compose the cross-facility `Microscope` Assembly. The three loose families (`Chopper`, `FlowController`, `Photodiode`) are bound by design intent and earned into the catalog only when a confirmed device and the naming review settle them; this mirrors how TomoWISE carried `HeatAbsorber` and `SlipRing`.
+Reused catalog Families (no new Family needed): `Beam`, `Shutter`, `Filter`, `Slit`, `Monochromator`, `Mirror`, `RotaryStage`, `LinearStage`, `Scintillator`, `Camera`, `TimingController`, `EnergyDispersiveSpectrometer` (graduated once 2-ID and 7-BM shared it), and `FlowController` (graduated across i22 / 7-BM / LIX / XFP; presents the Regulator Role, the settable-actuator sibling of `TemperatureController`). The tomography path (scintillator plus visible optics plus area camera) is the same shape as 2-BM and could later compose the cross-facility `Microscope` Assembly. The two loose families (`Chopper`, `Photodiode`) are bound by design intent and earned into the catalog only when a confirmed device and the naming review settle them; this mirrors how TomoWISE carried `HeatAbsorber` and `SlipRing`.
 
 ## Pending confirmations
 

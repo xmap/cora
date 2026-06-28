@@ -9,7 +9,7 @@ Unlike every other beamline in the fleet, the stations here do not end in a dete
 ## Stations
 
 - [Source](../beamline.md): the storage-ring machine state read through a loose `StorageRing` (`MACHINE-1`), the bendable front-end mirror (`OPT-1`), the white-beam and defining slits (`OPT-2`), the eight-position Al filter wheel that sets the dose rate (`ATTN-1`), and the dose-delivery gating, the personnel and timed shutters (`PSS-1`, `DOSE-1`) and the delay-generator dose timer that fires the millisecond Uniblitz fast shutter (`DOSE-1`).
-- [Sample](sample.md): the capillary-flow sample stage (`SAMPLE-1`), the high-throughput plate and shutterless HTFly stages (`HT-1`), and the sample-delivery pump (a loose `FlowController`, `FLOW-1`). The fraction collector, the pure-Python 96-well plate addressing, and the solution Subject are the sample-custody seam (`FC-1`, `HT-1`, `SUBJECT-1`).
+- [Sample](sample.md): the capillary-flow sample stage (`SAMPLE-1`), the high-throughput plate and shutterless HTFly stages (`HT-1`), and the sample-delivery pump (the graduated catalog `FlowController`, presents Regulator, `FLOW-1`). The fraction collector, the pure-Python 96-well plate addressing, and the solution Subject are the sample-custody seam (`FC-1`, `HT-1`, `SUBJECT-1`).
 - [Detector](detector.md): the QuadEM flux monitor and the Sydor beam-position monitor that measure the delivered dose (`DET-1`, `DIAG-1`). There is no scattering, area, or imaging detector: the footprinting structural readout is offline mass spectrometry (`READOUT-1`).
 
 ## Shared
@@ -19,4 +19,4 @@ Unlike every other beamline in the fleet, the stations here do not end in a dete
 
 ## Reference
 
-- [Inventory](../inventory.md): the full planned CORA Asset model (every device by `parent_id`, with Families and pending confirmations), including the loose families and the FlowController held at n=4.
+- [Inventory](../inventory.md): the full planned CORA Asset model (every device by `parent_id`, with Families and pending confirmations), including the remaining loose families and the graduated catalog `FlowController` (earned on the i22 / 7-BM / LIX / XFP rule-of-three).

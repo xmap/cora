@@ -42,13 +42,14 @@
 # to compute dose); the Sydor beam-position monitor binds the loose
 # BeamPositionMonitor (held under review, DIAG-1); the capillary-flow, high-
 # throughput, and HTFly sample stages bind LinearStage; the syringe / sample
-# delivery pumps bind the existing loose FlowController Family.
+# delivery pumps bind the graduated catalog FlowController Family.
 #
-# THE REUSE WORTH NAMING: the sample-delivery pumps bind the loose FlowController
-# Family ("settable flow / pump actuator", FLOW-1), already bound by i22, 7-BM, and
-# LIX. XFP is its FOURTH consumer, reinforcing the rule-of-three that LIX fired; the
-# FlowController graduation stays a separate gated decision, not folded here
-# (FLOW-1, FLUID-1). The fraction collector (a PV-bound aliquot-routing actuator),
+# THE REUSE WORTH NAMING: the sample-delivery pumps bind the catalog FlowController
+# Family (graduated; settable flow / pump actuator, presents the Regulator Role, the
+# settable-actuator sibling of TemperatureController), bound by i22, 7-BM, and LIX.
+# XFP is its FOURTH consumer; FlowController graduated on this rule-of-three across
+# i22 / 7-BM / LIX / XFP. The wider fluidic chain beyond the pump stays in the
+# ControlPort seam (FLUID-1). The fraction collector (a PV-bound aliquot-routing actuator),
 # the 96-well plate addressing (pure Python, no PV), and the offline mass-spec
 # readout are the sample-custody and offline-readout seam, not devices (FC-1, HT-1,
 # READOUT-1).
@@ -183,8 +184,9 @@ sample:
     sample through the beam; the high-throughput stage positions a 96-well plate; the
     HTFly stage sweeps a fly-cell through the beam at a set velocity so the exposure
     (dose) is the slit width over the stage velocity (HT-1). All bind LinearStage. The
-    syringe / sample-delivery pumps bind the existing loose FlowController Family (the
-    i22 / 7-BM / LIX precedent); XFP is its fourth consumer (FLOW-1, FLUID-1). The
+    syringe / sample-delivery pumps bind the graduated catalog FlowController Family (the
+    i22 / 7-BM / LIX precedent); XFP is its fourth consumer, and FlowController graduated
+    on this rule-of-three (i22 / 7-BM / LIX / XFP). The
     fraction collector that captures footprinted aliquots into tubes, the pure-Python
     96-well plate addressing (no robot, no PV), and the solution Subject are the
     sample-custody and offline-readout seam, not devices here (FC-1, HT-1, SUBJECT-1).
@@ -208,11 +210,11 @@ sample:
       confirm: true
       note: "the shutterless high-throughput fly stage that sweeps a fly-cell row through the beam; the exposure (dose) is the defining-slit gap over the stage velocity, not a shutter, so the dose-timing is in the Procedure not a device (HT-1, DOSE-1)"
     - name: DeliveryPump
-      family: FlowController            # EXISTING loose Family (settable flow / pump actuator; n=4 with i22 + 7-bm + lix; FLOW-1)
+      family: FlowController            # catalog Family (graduated; settable flow/pump actuator, presents Regulator)
       pv: "XF:17BMA-ES:1{Pmp:02}"
       new: true
       confirm: true
-      note: "the sample-delivery syringe pump (an M50 pump with velocity / volume / slew setpoints, driving the dose-response / fraction-collection mode; a second PHD2000 infusion pump at XF:17BM-ES:1{Pmp:01} drives the capillary-flow / time-resolved mode) flowing solution through the capillary or flow cell during irradiation; both bind the existing loose FlowController Family and are folded into this one Asset at this cut, XFP its fourth consumer, reinforcing the LIX-fired rule-of-three (FLOW-1, FLUID-1)"
+      note: "the sample-delivery syringe pump (an M50 pump with velocity / volume / slew setpoints, driving the dose-response / fraction-collection mode; a second PHD2000 infusion pump at XF:17BM-ES:1{Pmp:01} drives the capillary-flow / time-resolved mode) flowing solution through the capillary or flow cell during irradiation; both bind the graduated catalog FlowController Family (presents Regulator) and are folded into this one Asset at this cut, XFP its fourth consumer, with FlowController graduated on the i22 / 7-BM / LIX / XFP rule-of-three (FLUID-1 keeps the wider fluidic chain in the ControlPort seam)"
 
 # ===========================================================================
 # DETECTION STAGE: the flux / dose monitors. There is NO scattering / area /

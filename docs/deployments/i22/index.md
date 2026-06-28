@@ -23,7 +23,7 @@ The CORA pilots (2-BM, and the design-phase 7-BM / 19-BM / 32-ID / TomoWISE) are
 - **Quantitative flux, not just position.** Incident and transmitted ion chambers (I0 / It) read beam current for transmission and dose, presenting the Sensor Role the imaging camera path never needed.
 - **It carries real EPICS handles.** Unlike the TomoWISE scaffold (MAX IV Tango, PVs unknown), dodal records I22's real EPICS PV prefixes. So this scaffold carries `pv` on every device: the dry, correct controls fact is the whole point of the exercise.
 
-What I22 does **not** force into the model: it earns no new catalog Family. dodal's device set maps onto existing Families (Camera, Mirror, Monochromator, InsertionDevice, Slit, BeamStop, LinearStage, TimingController), plus a handful of loose design-intent families an adversarial new-kind review deferred (see [Inventory](inventory.md)).
+What I22 does **not** force into the model: it earns no new catalog Family. dodal's device set maps onto existing Families (Camera, Mirror, Monochromator, InsertionDevice, Slit, BeamStop, LinearStage, TimingController, plus the now-graduated TemperatureController, FluxMonitor, Transfocator, and FlowController), plus the loose `StorageRing` design-intent family an adversarial new-kind review deferred (see [Inventory](inventory.md)).
 
 ## The beamline
 

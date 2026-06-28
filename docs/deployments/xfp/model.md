@@ -9,7 +9,7 @@ XFP is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 | Beamline descriptor | [`deployments/xfp/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/xfp/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `XFP` added to its beamline list, with the footprinting Practices |
 | Extraction provenance | [NSLS2/xfp-profile-collection](https://github.com/NSLS2/xfp-profile-collection) | the `startup/` device definitions the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | every device reuses an existing catalog or loose Family (below); the delivery pump binds the catalog `FlowController` Family (graduated; presents Regulator) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; `x_ray_footprinting` is a new pending slug, the fleet's first dose-delivery Method (`TECH-1`) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers XFP Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
@@ -42,7 +42,7 @@ This is the deliberate inversion: where a measurement beamline's run is anchored
 
 ## The FlowController rule-of-three
 
-The one device reuse worth naming is the sample-delivery pump. Its anatomy is a settable flow / pump actuator (rate / volume setpoints, a run command), exactly the existing loose `FlowController` Family that i22, 7-BM, and LIX already use. So the pump **reuses** `FlowController`; it coins nothing. XFP is its **fourth** consumer (i22, 7-BM, LIX, XFP), past the rule-of-three that LIX already fired, so the graduation is now overdue. As with LIX, the `_PROMOTION_REVIEWED` note for `FlowController` is updated (to n=4) and the graduation itself, a YAML-and-docs change presenting the existing `Regulator` Role, like `TemperatureController` and `FluxMonitor`, re-pointing i22 / 7-BM / LIX / XFP, stays a separate gated decision, not folded into this scaffold (`FLOW-1`, `FLUID-1`).
+The one device reuse worth naming is the sample-delivery pump. Its anatomy is a settable flow / pump actuator (rate / volume setpoints, a run command), exactly the catalog `FlowController` Family that i22, 7-BM, and LIX already use. So the pump **reuses** `FlowController`; it coins nothing. XFP is its **fourth** consumer (i22, 7-BM, LIX, XFP), and `FlowController` has now **graduated** into the catalog on this rule-of-three: it presents the existing `Regulator` Role (the settable-actuator sibling of `TemperatureController`), earned across i22 / 7-BM / LIX / XFP, like `EmissionSpectrometer` and `TemperatureController` before it. The wider fluidic chain beyond the pump (selector valves, SEC columns, flow cells, fraction collectors) stays in the `ControlPort` seam pending its own rule-of-three (`FLUID-1`).
 
 ## Deliberately not here yet
 
