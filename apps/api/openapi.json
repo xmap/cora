@@ -3877,6 +3877,94 @@
         "title": "ConductRunResponse",
         "type": "object"
       },
+      "ConductUntilAdvisedRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /procedures/{procedure_id}/conduct-until-advised`.",
+        "properties": {
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SteeringBudgetRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional informational budget surfaced to the brain (not enforced here)."
+          },
+          "decide": {
+            "$ref": "#/components/schemas/DecideConfigRequest",
+            "description": "The in-CORA brain selection (substrate + grid resolution)."
+          },
+          "objective": {
+            "$ref": "#/components/schemas/SteeringObjectiveRequest",
+            "description": "What good means: the steering objective the brain weighs."
+          },
+          "objective_capture_name": {
+            "description": "Captures-slot name the per-pass deposit fills; the loop surfaces it to the brain as the objective scalar after each pass.",
+            "minLength": 1,
+            "title": "Objective Capture Name",
+            "type": "string"
+          },
+          "space": {
+            "$ref": "#/components/schemas/SteeringSpaceRequest",
+            "description": "The feasible search space (axes + bounds / choices) the brain proposes in."
+          }
+        },
+        "required": [
+          "objective",
+          "space",
+          "objective_capture_name"
+        ],
+        "title": "ConductUntilAdvisedRequest",
+        "type": "object"
+      },
+      "ConductUntilAdvisedResponse": {
+        "description": "Response body for the conduct_until_advised slice.\n\n`succeeded` is True only when the brain advised Stop and the Procedure\ncompleted; a pass / brain fault or the absolute ceiling surfaces\n`succeeded=False` with `failure` carrying the cause. `completed_count` is\nthe final pass's successful step count (informational).",
+        "properties": {
+          "actuation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actuation Kind"
+          },
+          "completed_count": {
+            "title": "Completed Count",
+            "type": "integer"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConductorFailureResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "procedure_id": {
+            "format": "uuid",
+            "title": "Procedure Id",
+            "type": "string"
+          },
+          "succeeded": {
+            "title": "Succeeded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "procedure_id",
+          "completed_count",
+          "succeeded"
+        ],
+        "title": "ConductUntilAdvisedResponse",
+        "type": "object"
+      },
       "ConductUntilConvergedRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /procedures/{procedure_id}/conduct-until-converged`.",
@@ -4547,6 +4635,31 @@
           "created_at"
         ],
         "title": "DatasetSummaryDTO",
+        "type": "object"
+      },
+      "DecideConfigRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape selecting the in-CORA brain behind the DecidePort.",
+        "properties": {
+          "points_per_axis": {
+            "default": 5,
+            "description": "Grid-walk resolution for continuous axes (ignored by in_memory and choices).",
+            "minimum": 1.0,
+            "title": "Points Per Axis",
+            "type": "integer"
+          },
+          "substrate": {
+            "default": "grid_walk",
+            "description": "Which in-CORA decider drives the loop: 'in_memory' or 'grid_walk'.",
+            "enum": [
+              "in_memory",
+              "grid_walk"
+            ],
+            "title": "Substrate",
+            "type": "string"
+          }
+        },
+        "title": "DecideConfigRequest",
         "type": "object"
       },
       "DecisionConfidenceSource": {
@@ -13907,6 +14020,155 @@
           }
         },
         "title": "StartSealRepublishingRequest",
+        "type": "object"
+      },
+      "SteeringAxisRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringAxis`.",
+        "properties": {
+          "choices": {
+            "description": "Enumerated values for a discrete/categorical axis (empty for continuous).",
+            "items": {},
+            "title": "Choices",
+            "type": "array"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lower bound for a continuous axis.",
+            "title": "Lower"
+          },
+          "name": {
+            "description": "Axis label the brain proposes coordinates for; must be consumed by a SteeringRef setpoint in the pinned recipe block.",
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Upper bound for a continuous axis.",
+            "title": "Upper"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SteeringAxisRequest",
+        "type": "object"
+      },
+      "SteeringBudgetRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringBudget` (informational for the brain).",
+        "properties": {
+          "iterations_remaining": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iterations Remaining"
+          },
+          "wall_clock_seconds_remaining": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wall Clock Seconds Remaining"
+          }
+        },
+        "title": "SteeringBudgetRequest",
+        "type": "object"
+      },
+      "SteeringObjectiveKind": {
+        "description": "The optimization SENSE of an objective, without a search strategy.\n\nThe seam tells the brain what 'better' means; the brain owns how to get\nthere. `Minimize` / `Maximize` drive a metric down / up; `Satisfy` hits\na target value; `Explore` has no scalar target (the brain just covers\nthe space, e.g. a grid). Anything richer (acquisition function, kernel,\nexploration weight) is the adapter's concern, deliberately not here.",
+        "enum": [
+          "Minimize",
+          "Maximize",
+          "Satisfy",
+          "Explore"
+        ],
+        "title": "SteeringObjectiveKind",
+        "type": "string"
+      },
+      "SteeringObjectiveRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringObjective`.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SteeringObjectiveKind",
+            "description": "What good means: Minimize / Maximize / Satisfy / Explore. The brain weighs it; a grid walker only early-stops on a met Satisfy target."
+          },
+          "target_measurement_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the objective measurement the brain reads (None for pure Explore).",
+            "title": "Target Measurement Name"
+          },
+          "target_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Setpoint the objective drives toward (used by Satisfy; None otherwise).",
+            "title": "Target Value"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "SteeringObjectiveRequest",
+        "type": "object"
+      },
+      "SteeringSpaceRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringSpace`.",
+        "properties": {
+          "axes": {
+            "description": "The feasible set the brain may propose within.",
+            "items": {
+              "$ref": "#/components/schemas/SteeringAxisRequest"
+            },
+            "minItems": 1,
+            "title": "Axes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "axes"
+        ],
+        "title": "SteeringSpaceRequest",
         "type": "object"
       },
       "StopRunRequest": {
@@ -37025,6 +37287,84 @@
           }
         },
         "summary": "Conduct a Procedure: start -> walk steps via ControlPort + actions + checks -> complete (success) or abort (failure).",
+        "tags": [
+          "operation"
+        ]
+      }
+    },
+    "/procedures/{procedure_id}/conduct-until-advised": {
+      "post": {
+        "description": "Conduct a Procedure as a steered loop. Failures land in the body.",
+        "operationId": "post_procedures_conduct_until_advised_procedures__procedure_id__conduct_until_advised_post",
+        "parameters": [
+          {
+            "description": "Target procedure's id.",
+            "in": "path",
+            "name": "procedure_id",
+            "required": true,
+            "schema": {
+              "description": "Target procedure's id.",
+              "format": "uuid",
+              "title": "Procedure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConductUntilAdvisedRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConductUntilAdvisedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "422": {
+            "description": "Request body failed schema validation: missing objective / space, empty space, unknown objective kind, invalid budget."
+          }
+        },
+        "summary": "Conduct a recipe-driven Procedure in a steered loop: measure, ask the brain where to go next, repeat until it advises Stop.",
         "tags": [
           "operation"
         ]

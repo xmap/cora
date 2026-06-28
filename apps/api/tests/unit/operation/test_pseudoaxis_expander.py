@@ -38,7 +38,7 @@ from cora.operation.conductor import (
     Step,
 )
 from cora.operation.errors import PartitionRuleNotFoundError, PseudoAxisEvaluationFailedError
-from cora.recipe.aggregates.recipe.body import CaptureRef
+from cora.recipe.aggregates.recipe.body import CaptureRef, SteeringRef
 from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 6, 5, 12, 0, 0, tzinfo=UTC)
@@ -184,6 +184,26 @@ async def test_expander_rejects_capture_ref_value_on_pseudoaxis() -> None:
         SetpointStep(address=_pseudoaxis_address(_AFFINE_ASSET_ID), value=CaptureRef("home")),
     )
     with pytest.raises(PseudoAxisEvaluationFailedError, match="CaptureRef"):
+        await expand_pseudoaxis_steps(
+            steps,
+            event_store=store,
+            correlation_id=_CORRELATION_ID,
+            constituent_resolver=lambda _aid: (_AFFINE_CONSTITUENT_ID,),
+        )
+
+
+@pytest.mark.unit
+async def test_expander_rejects_steering_ref_value_on_pseudoaxis() -> None:
+    """A loop-seeded steering value lands on a real axis, not a virtual one: a
+    SteeringRef value on a pseudo-axis address fails loud with a clear reason."""
+    store = InMemoryEventStore()
+    steps: tuple[Step, ...] = (
+        SetpointStep(
+            address=_pseudoaxis_address(_AFFINE_ASSET_ID),
+            value=SteeringRef("motor"),
+        ),
+    )
+    with pytest.raises(PseudoAxisEvaluationFailedError, match="SteeringRef"):
         await expand_pseudoaxis_steps(
             steps,
             event_store=store,

@@ -99,12 +99,16 @@ _DOMAIN_NOUN_ALLOWLIST: frozenset[str] = frozenset(
 )
 
 # Slices exempt from the subject rule by EXACT fully-qualified name (not by
-# token). The locked orchestration name names the loop's terminal condition;
-# sibling of conduct_procedure; subject is Procedure. Scoped to the one slice
-# so the guard stays tight: a hypothetical `mark_converged` in any BC still
-# fails (the `converged` token is NOT globally allowlisted).
+# token). The locked orchestration names name the loop's terminal condition;
+# both are siblings of conduct_procedure; subject is Procedure. Scoped to the
+# exact slices so the guard stays tight: a hypothetical `mark_converged` /
+# `mark_advised` in any BC still fails (the `converged` / `advised` tokens are
+# NOT globally allowlisted).
 _SUBJECT_EXEMPT_SLICES: frozenset[str] = frozenset(
-    {"cora.operation.features.conduct_until_converged"}
+    {
+        "cora.operation.features.conduct_until_converged",
+        "cora.operation.features.conduct_until_advised",
+    }
 )
 
 

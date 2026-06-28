@@ -15,6 +15,7 @@ from cora.operation.features.abort_procedure import tool as abort_procedure_tool
 from cora.operation.features.append_activities import tool as append_activities_tool
 from cora.operation.features.complete_procedure import tool as complete_procedure_tool
 from cora.operation.features.conduct_procedure import tool as conduct_procedure_tool
+from cora.operation.features.conduct_until_advised import tool as conduct_until_advised_tool
 from cora.operation.features.conduct_until_converged import tool as conduct_until_converged_tool
 from cora.operation.features.end_iteration import tool as end_iteration_tool
 from cora.operation.features.get_procedure import tool as get_procedure_tool
@@ -109,6 +110,10 @@ def register_operation_tools(
     conduct_until_converged_tool.register(
         mcp,
         get_handler=lambda: get_handlers().conduct_until_converged,
+    )
+    conduct_until_advised_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().conduct_until_advised,
     )
     try_conduct_procedure_tool.register(
         mcp,

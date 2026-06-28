@@ -93,6 +93,27 @@ class CaptureRef:
 
 
 @dataclass(frozen=True)
+class SteeringRef:
+    """Sentinel value: substitute with the LOOP-SEEDED value for `steering_axis_name`.
+
+    The steering sibling of `CaptureRef`. Where `CaptureRef` resolves a value a
+    prior step in the SAME recipe DEPOSITED (a `RecipeCaptureStep` or a value-arm
+    `RecipeComputeStep`), a `SteeringRef` resolves a value the DECIDE LOOP seeds
+    into the per-conduct `captures` dict before the pass runs (the brain-advised
+    coordinate for that steering axis). It is therefore EXEMPT from
+    `validate_capture_refs`: no recipe step declares it, the loop is the producer.
+    `expand` passes it through UNCHANGED (like `CaptureRef`), and the Conductor
+    resolves it at execute time against `captures[steering_axis_name]` exactly
+    like a `CaptureRef`. `steering_axis_name` matches a `SteeringAxis.name` in the
+    `conduct_until_advised` space; it lets a steered routine be authored as a
+    Recipe (and driven over the wire), where a bare `CaptureRef` would be
+    rejected for having no producing step.
+    """
+
+    steering_axis_name: str
+
+
+@dataclass(frozen=True)
 class OutputRef:
     """Sentinel value: substitute with the artifact produced into `output_name`.
 
@@ -113,17 +134,19 @@ class OutputRef:
 
 @dataclass(frozen=True)
 class RecipeSetpointStep:
-    """Setpoint step template: `value` is a literal, a `BindingRef`, or a `CaptureRef`.
+    """Setpoint step template: `value` is a literal or a `BindingRef`/`CaptureRef`/`SteeringRef`.
 
     `address` is hardcoded per Recipe (no parameterization at v1 per
     the v1 scope note in the module docstring); `value` is the only
     bindable position. `verify` mirrors `SetpointStep.verify` exactly.
     A `CaptureRef` value rides through expansion unresolved and is
-    resolved by the Conductor at execute time against the captured value.
+    resolved by the Conductor at execute time against the captured value;
+    a `SteeringRef` value is the same except the value is loop-seeded by the
+    decide loop (exempt from `validate_capture_refs`).
     """
 
     address: str
-    value: int | float | bool | str | tuple[Any, ...] | BindingRef | CaptureRef
+    value: int | float | bool | str | tuple[Any, ...] | BindingRef | CaptureRef | SteeringRef
     verify: bool = False
 
 
@@ -266,6 +289,12 @@ _CAPTURE_KEY = "__capture__"
 Same escape caveat as `_BINDING_KEY`: a literal `dict` value MUST NOT
 carry this key at v1."""
 
+_STEERING_KEY = "__steering__"
+"""Wire-format key distinguishing a `SteeringRef` from a literal dict value.
+
+Same escape caveat as `_BINDING_KEY` / `_CAPTURE_KEY`: a literal `dict` value
+MUST NOT carry this key at v1."""
+
 _OUTPUT_KEY = "__output__"
 """Wire-format key distinguishing an `OutputRef` input-uris element from a
 literal URI string.
@@ -299,17 +328,19 @@ def _input_uri_from_wire(value: Any) -> str | OutputRef:
     return cast("str", value)
 
 
-def _value_to_wire(value: Any | BindingRef | CaptureRef) -> Any:
-    """Serialize one value (literal, BindingRef, or CaptureRef) to JSON-friendly form."""
+def _value_to_wire(value: Any | BindingRef | CaptureRef | SteeringRef) -> Any:
+    """Serialize one value (literal/BindingRef/CaptureRef/SteeringRef) to JSON-friendly form."""
     if isinstance(value, BindingRef):
         return {_BINDING_KEY: value.name}
     if isinstance(value, CaptureRef):
         return {_CAPTURE_KEY: value.capture_name}
+    if isinstance(value, SteeringRef):
+        return {_STEERING_KEY: value.steering_axis_name}
     return value
 
 
 def _value_from_wire(value: Any) -> Any:
-    """Deserialize one wire value; reconstruct a BindingRef / CaptureRef sentinel.
+    """Deserialize one wire value; reconstruct a BindingRef / CaptureRef / SteeringRef sentinel.
 
     Returns the original value (literal) or the reconstructed sentinel VO.
     Signature widens to `Any` because callers store the result into
@@ -322,6 +353,8 @@ def _value_from_wire(value: Any) -> Any:
             return BindingRef(name=typed[_BINDING_KEY])
         if set(typed.keys()) == {_CAPTURE_KEY}:
             return CaptureRef(capture_name=typed[_CAPTURE_KEY])
+        if set(typed.keys()) == {_STEERING_KEY}:
+            return SteeringRef(steering_axis_name=typed[_STEERING_KEY])
     return cast("Any", value)
 
 
@@ -610,6 +643,7 @@ __all__ = [
     "RecipeComputeStep",
     "RecipeSetpointStep",
     "RecipeStep",
+    "SteeringRef",
     "UnboundRecipeBindingError",
     "UnboundRecipeCaptureError",
     "UnboundRecipeOutputError",
