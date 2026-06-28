@@ -8,12 +8,17 @@
 # source for the facility's site-level instances: the Facility itself, the Practices
 # it would run, and the facility principals.
 #
+# The Site hosts three Aramis-branch stations: Alvra and Bernina (mined from
+# paulscherrerinstitute/eco) and Cristallina (mined from the slic library on
+# gitea.psi.ch, eco's active successor).
+#
 # Status: reverse-engineered, an off-roadmap modelling exercise (not a CORA pilot).
 # CORA has not been connected to PSI and no staff have confirmed this model. Every
-# value below is read from PSI's public open-source controls library
-# (paulscherrerinstitute/eco, the SwissFEL device library) or inferred, and is
-# carried as `pending` until staff confirm it. Do not invent facility specifics
-# here; carry them as questions on the Alvra open-questions page.
+# value below is read from PSI's public open-source controls libraries
+# (paulscherrerinstitute/eco for Alvra / Bernina; gitea.psi.ch slic/cristallina for
+# Cristallina) or inferred, and is carried as `pending` until staff confirm it. Do not
+# invent facility specifics here; carry them as questions on the per-station open-
+# questions pages.
 #
 # Source-of-truth boundary (same as the APS / MAX IV / Diamond / NSLS-II / SLAC / AS sites):
 #   - the closed facility-kind / actor-kind vocabularies are validated against
@@ -38,7 +43,7 @@ facility:
   heading: "PSI"
   kind: Site
   institution: Paul Scherrer Institut (PSI), Switzerland
-  beamlines: [Alvra, Bernina]
+  beamlines: [Alvra, Bernina, Cristallina]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. None of CORA's
 # catalog Methods (all tomography-family today) fit an XFEL pump-probe station, so
@@ -51,6 +56,8 @@ practices:
   - {name: Alvra_serial_crystallography_practice, method: serial_crystallography, pending: true, note: "time-resolved serial femtosecond crystallography on the Prime endstation; reuses the LCLS-MFX Method (TECH-1, SAMPLE-1)"}
   - {name: Bernina_pump_probe_practice, method: pump_probe, pending: true, note: "femtosecond optical-laser pump / X-ray probe on the diffraction endstation; shares the Alvra / LCLS-MFX pump_probe Method (TECH-1, LASER-1)"}
   - {name: Bernina_time_resolved_diffraction_practice, method: diffraction, pending: true, note: "time-resolved hard X-ray diffraction / scattering on the GPS six-circle and XRD kappa diffractometers; a new pending Method, no catalog tomography Method fits an XFEL diffraction platform (TECH-1, DIFF-1)"}
+  - {name: Cristallina_quantum_materials_diffraction_practice, method: diffraction, pending: true, note: "time-resolved diffraction / scattering on the Cristallina-Q dilution-fridge (DM1) and pulsed-magnet (DM2) diffractometers, in a vector superconducting-magnet sample environment; shares the Bernina diffraction Method (TECH-1, DIFF-1, MAG-1)"}
+  - {name: Cristallina_serial_crystallography_practice, method: serial_crystallography, pending: true, note: "serial femtosecond crystallography on the Cristallina-MX fast XY sample stage; shares the LCLS-MFX / Alvra Method (TECH-1, SAMPLE-1)"}
 
 # Access BC Actors conceptually facility-wide at PSI. Pending until the SwissFEL
 # operator and review structure is confirmed; the device library exposes no human roster.
@@ -71,6 +78,7 @@ supplies:
   - {name: SwissFEL photon beam, kind: PhotonBeam, pending: true, note: "SwissFEL Aramis free-electron-laser beam, shared across the Aramis stations (TOPO-1)"}
   - {name: Cooling water, kind: CoolingWater, pending: true}
   - {name: Beamline vacuum, kind: Vacuum, pending: true}
+  - {name: Cristallina dilution-fridge liquid helium, kind: LiquidHelium, pending: true, note: "cryogen for the Cristallina-Q dilution refrigerator and vector superconducting magnet (MAG-1)"}
 
 # Safety BC: facility-issued Clearances. PSI personnel safety and the pump-probe
 # optical-laser safety are both carried pending; the SwissFEL PSS form names are not
@@ -80,6 +88,7 @@ clearances:
   - {name: PSI personnel safety system, kind: PSS, pending: true, note: "SwissFEL safety-form and permit-leaf names TBD; confirm with staff (PSS-1)"}
   - {name: Alvra pump-probe laser clearance, kind: Clearance, pending: true, note: "class-4 optical pump-probe laser; modelled as a hazard on the experiment, not a driven Asset (LASER-1)"}
   - {name: Bernina pump-probe laser clearance, kind: Clearance, pending: true, note: "class-4 optical pump-probe laser on the diffraction endstation; modelled as a hazard, not a driven Asset (LASER-1)"}
+  - {name: Cristallina high-field magnet clearance, kind: Clearance, pending: true, note: "the Cristallina-Q vector superconducting magnet (to 5.2 T) and its liquid-helium cryogens; modelled as a hazard on the experiment, not a driven Asset for safety (the ID32 9 T magnet precedent, MAG-1)"}
 
 # Caution BC: operator tribal knowledge. None yet for a modelling exercise.
 cautions: []

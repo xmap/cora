@@ -766,6 +766,19 @@ nav:
         - Techniques: deployments/bernina/techniques.md
         - Governance: deployments/bernina/governance.md
         - Model: deployments/bernina/model.md
+      - Cristallina:
+        - deployments/cristallina/index.md
+        - Open questions: deployments/cristallina/questions.md
+        - The beamline:
+          - deployments/cristallina/equipment/index.md
+          - Source: deployments/cristallina/beamline.md
+          - Endstation: deployments/cristallina/equipment/endstation.md
+          - Detector: deployments/cristallina/equipment/detector.md
+          - Controls: deployments/cristallina/equipment/controls.md
+          - Inventory: deployments/cristallina/inventory.md
+        - Techniques: deployments/cristallina/techniques.md
+        - Governance: deployments/cristallina/governance.md
+        - Model: deployments/cristallina/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

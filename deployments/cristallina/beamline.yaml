@@ -1,0 +1,396 @@
+# CORA Beamline descriptor: Cristallina (SwissFEL, PSI), modelling exercise
+#
+# Cristallina is an operating hard-X-ray pump-probe station on SwissFEL's Aramis branch
+# at PSI, the third station alongside Alvra and Bernina. It is bound to the PSI Site
+# (deployments/psi/site.yaml). It is CORA's THIRD beamline on the single shared Aramis
+# source: the undulator line feeds Alvra, Bernina, and Cristallina one at a time. Adding
+# the third co-equal station CLOSES the Aramis triad and turns the shared-switched-source
+# seam (TOPO-1) from a two-Unit case (Alvra + Bernina) into the full three-Unit routing.
+#
+# STATUS: off-roadmap modelling exercise, NOT a CORA pilot. Reverse-engineered, modelled
+# intentionally, not mirrored.
+#
+# SOURCE (the distinctive provenance fact): Cristallina is CORA's FIRST deployment mined
+# from `slic`, NOT `eco`. Cristallina has NO presence in paulscherrerinstitute/eco (no
+# eco/cristallina/, zero code hits). Its controls live in the slic library on PSI's gitea
+# (https://gitea.psi.ch/slic/cristallina, branch master), which is PUBLICLY reachable
+# without login (verified). slic is eco's active successor. The device facts are in-repo
+# Python literals (channels/pv_channels.py categorized PV lists + beamline/ driver
+# classes), so this is a FULLER cut than Bernina (whose device list was externalized to a
+# non-public JSON). Only runtime paths (CWD, data dirs, a PSSS helper script, a SECoP
+# magnet server, a pulse-tube sync HTTP service) are non-public, not device definitions.
+#
+# THE HEADLINE: Cristallina coins NO new Family, the same finding as Alvra and Bernina,
+# but it tests the model against two things the prior PSI stations did not have:
+#   (1) a DILUTION-FRIDGE + 3-AXIS VECTOR SUPERCONDUCTING MAGNET sample environment (DilSc:
+#       a LakeShore 372 thermometry/heater + an Oxford Mercury iPS vector magnet PSU, field
+#       limits X,Y = +/-0.6 T and Z = +/-5.2 T). The magnet binds the LOOSE Magnet family,
+#       which is held at the rule-of-three (4-ID + i10-1 + ESRF ID32 are the three consumers;
+#       graduation deferred to the gated MAG-1 PR). Cristallina is the FOURTH Magnet consumer,
+#       reinforcing the held graduation but NOT graduating it here. The LakeShore 372 binds
+#       the graduated TemperatureController Family (the ID32 VTI precedent).
+#   (2) NO pump-probe optical laser in the controls source. Unlike Alvra and Bernina, the
+#       slic repo has NO SLAAR / PALM / PSEN devices; the only laser is the X-ray ALIGNMENT
+#       laser (SAROP31-OLAS147). Pump-probe timing is mediated by the CTA sequencer
+#       (SAR-CCTA-ESC) and the EVR, with a server-side pulse-tube sync service. So this cut
+#       carries NO PumpProbeLaser Asset; whether one exists in another controls layer is an
+#       open question (LASER-1, reframed).
+#
+# DIFFRACTOMETERS: two platforms, DM1 (the dilution-fridge diffractometer, SARES31-GPS) and
+# DM2 (the pulsed-magnet diffractometer, SARES32-GPS), both built by the slic
+# Diffractometer driver from derived ECMC servo-motor axes (twotheta/theta + base/sample
+# translations; DM2 adds rot_x/rot_z). As at Bernina, each reuses the graduated Diffractometer
+# ASSEMBLY (Goniometer + RotaryStage detector arm + reciprocal-space PseudoAxis); the GPS/XRD
+# platforms were its 3rd/4th bindings, the Cristallina DM1/DM2 are the 5th/6th (DIFF-1). NO
+# new Family or Assembly is coined.
+#
+# Family folds (each reviewed; the Alvra / Bernina precedent): aramis_attenuator -> Filter;
+# SlitUnitCenterWidth / SlitUnitCenterWidthJJ -> Slit; OffsetMirror / KBVer / KBHor -> Mirror;
+# CristallinaMono (DCCM double channel-cut) -> Monochromator; PulsePicker -> Shutter (PULSE-1);
+# profile monitor / screen -> Scintillator + Camera; IntensityMonitorPBPS / gas monitor ->
+# FluxMonitor + Diagnostic (loose); the photon single-shot spectrometer (PSSS) -> Diagnostic
+# (loose, the spectral diagnostic); Diffractometer -> Goniometer (composed in the Diffractometer
+# Assembly, DIFF-1); the DilSc Mercury iPS magnet -> loose Magnet (4th consumer, held, MAG-1);
+# the LakeShore 372 -> TemperatureController (graduated); the alignment laser -> loose Laser;
+# the Jungfrau -> Camera; the CTA sequencer / EVR -> TimingController. The swissmx fast XY
+# stage -> LinearStage; the I0 chamber slits -> Slit.
+#
+# Every device carries `new: true` and `confirm: true`. slic carries motor units/limits only
+# for a few axes (the photon-energy 5000-13000 eV range, the magnet field limits, the LakeShore
+# PID tables); all other units/limits and the Aramis undulator source params are deferred, not
+# invented. slic-specific provenance cautions are carried as open questions: many drivers are
+# instantiated but commented out of the active channel tuples (DM2, PuMa, several SmarAct
+# stages, cameras), carried as present-hardware-not-acquired (DISABLED-1); the Jungfrau
+# human-readable labels come from a commented sf_daq_broker block (DET-1).
+#
+# DEFERRED (out of scope, noted not modelled): the sf-daq data plane (DAQ-1); the absent
+# pump-probe laser layer (LASER-1); the SECoP / Frappy magnet path and the pulse-tube sync
+# HTTP service (server-side, ENV-1); the Cristallina-MX serial-crystallography sample delivery
+# beyond the fast XY stage (SAMPLE-1); the sibling Aramis stations Alvra / Bernina sharing the
+# source (TOPO-1); the disabled stages (DISABLED-1).
+
+beamline:
+  name: Cristallina
+  facility: psi
+  tier: Unit
+  parent: null
+  source: free-electron-laser
+  source_confirm: >
+    SASE hard-X-ray FEL on the shared SwissFEL Aramis undulator line (SARUN03-15); photon
+    energy is set per-shot, the setpoint limited to 5000-13000 eV in slic, and the same source
+    feeds the Alvra, Bernina, and Cristallina stations one at a time (SRC-1 / TOPO-1). The
+    undulator period (15 mm) and the K-to-energy constants are in slic; the gap tables and
+    source size are not, and are carried confirm (SRC-1).
+
+# Two access-gated zones. The SAROP31 Aramis optics hutch conditions the beam shared with the
+# other Aramis stations; the Cristallina experiment hutch holds the diffractometers and the
+# dilution-fridge magnet. The slic PV lists separate an "optics hutch" from an "experimental
+# hutch" but do not encode the access-gated safety meaning (ENC-1). SwissFEL PPS permit and the
+# high-field-magnet hazard are carried confirm (PSS-1, MAG-1).
+enclosures:
+  - name: Aramis-Optics-SAROP31
+    role: optics-hutch
+    facility_code: psi
+    permit_signal: {confirm: "SwissFEL PPS search-and-secure signal TBD; the SAROP31 Aramis optics serve Cristallina (TOPO-1, PSS-1)"}
+  - name: Cristallina
+    role: experiment-hutch
+    facility_code: psi
+    permit_signal: {confirm: "SwissFEL PPS + high-field-magnet hazard TBD (PSS-1, MAG-1)"}
+
+# --- SOURCE STAGE: the FEL source, shared front end, and SAROP31 Aramis optics ---
+
+undulator-source:
+  stage: source
+  enclosure: Aramis-Optics-SAROP31
+  intro: "The SwissFEL Aramis free-electron-laser source, its front-end gas pulse-energy monitors, and the photon single-shot spectrometer."
+  note: >
+    SwissFEL is a linac-driven FEL, not a storage ring; machine beam is carried as a PhotonBeam
+    Supply (MACHINE-1). The Aramis undulator photon energy is set per shot; CORA has no per-shot
+    energy setpoint (SRC-1). The photon single-shot spectrometer (PSSS) measures the per-shot
+    spectrum; it presents the Sensor Role (loose Diagnostic).
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {confirm: "SwissFEL Aramis undulator line SARUN03-15-UIND030 (slic builds the per-segment K setpoints); gap tables not in slic (SRC-1)"}
+      new: true
+      confirm: true
+      note: "the FEL source; SASE mode and per-shot photon energy are a DAQ-plane datum, not a standing setpoint (SRC-1, DAQ-1)"
+    - name: GasMonitor
+      family: FluxMonitor
+      pv: "SARFE10-PBPG050"
+      new: true
+      confirm: true
+      note: "gas pulse-energy monitor (PBPG); presents the Sensor Role; loose family reused. Used as a scan beam-intensity condition (500-2000 uJ window in slic). Per-shot pulse energy is correlated in the DAQ by pulse-ID (DAQ-1)"
+    - name: FrontEndIntensityMonitor
+      family: FluxMonitor
+      pv: "SARFE10-PBPS053"
+      new: true
+      confirm: true
+      note: "intensity / position monitor after the undulator (PBPS); flux + position Sensor (DIAG-1)"
+    - name: PhotonSpectrometer
+      family: Diagnostic
+      pv: "SARFE10-PSSS059"
+      new: true
+      confirm: true
+      note: "photon single-shot spectrometer (PSSS; a grating / crystal spectrometer with a fit COM / FWHM readout, and a large-bandwidth camera variant). Presents the Sensor Role (loose Diagnostic); the per-shot spectrum is a DAQ-plane datum (DAQ-1)"
+
+front-end:
+  stage: source
+  enclosure: Aramis-Optics-SAROP31
+  intro: "The shared front-end slit, attenuator, and profile monitor that gate and condition the beam before the SAROP31 optics."
+  note: >
+    The front-end attenuator is a solid attenuator solving an energy-dependent foil combination
+    (the slic aramis_attenuator); the Filter Family covers the discrete selection, the solve is
+    the deferred Attenuable leg (ATT-1).
+  devices:
+    - name: FrontEndSlit
+      family: Slit
+      pv: "SARFE10-OAPU044"
+      new: true
+      confirm: true
+      note: "front-end 4-blade slit (slic exposes x / y / width / height motors)"
+    - name: FrontEndAttenuator
+      family: Filter
+      pv: "SARFE10-OATT053"
+      new: true
+      confirm: true
+      note: "solid front-end attenuator (aramis_attenuator); the Filter Family covers the discrete foil selection, the energy-dependent target-transmission solve is the deferred Attenuable leg (ATT-1). Transmission readbacks alias to SAROP31-OATT053 (XREF-1)"
+    - name: FrontEndScreen
+      family: Scintillator
+      pv: "SARFE10-PPRM053"
+      new: true
+      confirm: true
+      note: "front-end profile monitor (YAG screen + camera)"
+
+aramis-optics:
+  stage: source
+  enclosure: Aramis-Optics-SAROP31
+  intro: "The SAROP31 Aramis optics: the offset mirrors, the double-channel-cut monochromator, the slits, the pulse picker, the experiment attenuator, the KB focusing mirrors, the alignment laser, and the intensity / profile monitors that condition and focus the beam onto the Cristallina sample."
+  note: >
+    The offset mirrors and the KB pair fold into Mirror. The monochromator is a DOUBLE CHANNEL-CUT
+    (DCCM, ODCC110), distinct from Bernina's double-crystal mono (ODCM098); it folds into Monochromator,
+    and Cristallina also runs pink / SASE beam mono-out (the mono screen selects out / mono / pink)
+    (MONO-1). The X-ray pulse picker is a fast single-pulse gate folded into Shutter (PULSE-1). The
+    only laser in the optics is the X-ray ALIGNMENT laser (OLAS147), a loose Laser device, NOT a
+    pump-probe laser (LASER-1).
+  devices:
+    - name: HorizontalMirror1
+      family: Mirror
+      pv: "SAROP31-OOMH067"
+      new: true
+      confirm: true
+      note: "first Cristallina horizontal offset mirror (M1); OffsetMirror folds into Mirror"
+    - name: HorizontalMirror2
+      family: Mirror
+      pv: "SAROP31-OOMH084"
+      new: true
+      confirm: true
+      note: "second Cristallina horizontal offset mirror (M2)"
+    - name: OpticsSlit
+      family: Slit
+      pv: "SAROP31-OAPU107"
+      new: true
+      confirm: true
+      note: "4-blade slit (SlitUnitCenterWidth) before the mono"
+    - name: Monochromator
+      family: Monochromator
+      pv: "SAROP31-ODCC110"
+      new: true
+      confirm: true
+      note: "Cristallina DOUBLE CHANNEL-CUT monochromator (DCCM; the slic CristallinaMono driver derives the two Bragg axes, the translation, and the energy / offset axes). Distinct from Bernina's DCM. Also runs pink / SASE mono-out via the mono screen (MONO-1)"
+    - name: OpticsIntensityMonitor
+      family: FluxMonitor
+      pv: "SAROP31-PBPS113"
+      new: true
+      confirm: true
+      note: "solid-target intensity / position monitor in the optics hutch (PBPS); flux + position Sensor (DIAG-1)"
+    - name: OpticsScreen
+      family: Scintillator
+      pv: "SAROP31-PPRM113"
+      new: true
+      confirm: true
+      note: "profile monitor after the mono (Pprm)"
+    - name: ExperimentSlit
+      family: Slit
+      pv: "SAROP31-OAPU149"
+      new: true
+      confirm: true
+      note: "4-blade slit (SlitUnitCenterWidth) in the experimental hutch"
+    - name: ExperimentIntensityMonitor
+      family: FluxMonitor
+      pv: "SAROP31-PBPS149"
+      new: true
+      confirm: true
+      note: "solid-target intensity / position monitor in the experimental hutch (PBPS); flux + position Sensor (DIAG-1)"
+    - name: ExperimentAttenuator
+      family: Filter
+      pv: "SAROP31-OATA150"
+      new: true
+      confirm: true
+      note: "solid attenuator for Cristallina (aramis_attenuator); Filter covers the discrete selection, the energy-dependent solve is the deferred Attenuable leg (ATT-1)"
+    - name: PulsePicker
+      family: Shutter
+      pv: "SAROP31-OPPI151"
+      new: true
+      confirm: true
+      note: "X-ray pulse picker (slic PulsePicker, with an EVR gate); folded into the Shutter Family (a fast single-pulse gate). Shutter-vs-Chopper open (PULSE-1)"
+    - name: OffsetMirror3
+      family: Mirror
+      pv: "SAROP31-ODMV152"
+      new: true
+      confirm: true
+      note: "vertical offset mirror (M3); folds into Mirror"
+    - name: VerticalKBMirror
+      family: Mirror
+      pv: "SAROP31-OKBV153"
+      new: true
+      confirm: true
+      note: "Cristallina vertical KB focusing mirror (slic KBVer); KB folds into Mirror"
+    - name: HorizontalKBMirror
+      family: Mirror
+      pv: "SAROP31-OKBH154"
+      new: true
+      confirm: true
+      note: "Cristallina horizontal KB focusing mirror (slic KBHor); KB folds into Mirror"
+    - name: AlignmentLaser
+      family: Laser
+      pv: "SAROP31-OLAS147"
+      new: true
+      confirm: true
+      note: "X-ray alignment laser (slic AlignmentLaser, an in / out mirror); a loose Laser family device. This is NOT a pump-probe laser; no SLAAR / PALM / PSEN pump-probe laser exists in the slic source (LASER-1)"
+
+# --- SAMPLE STAGE: the Cristallina-Q and Cristallina-MX endstations ---
+
+cristallina-endstation:
+  stage: sample
+  enclosure: Cristallina
+  intro: "The Cristallina endstation: the I0 chamber, the DM1 dilution-fridge and DM2 pulsed-magnet diffractometers, the DilSc dilution refrigerator with its vector superconducting magnet, and the Cristallina-MX fast sample stage."
+  note: >
+    The defining endstation, and the most novel sample environment in the PSI set. The two
+    diffractometers DM1 (dilution-fridge) and DM2 (pulsed-magnet) reuse the graduated Diffractometer
+    ASSEMBLY (a Goniometer + RotaryStage detector arm + reciprocal-space PseudoAxis), the 5th and 6th
+    bindings after Bernina's GPS / XRD (DIFF-1); their axes are ECMC servo motors derived in the slic
+    Diffractometer driver. The DilSc sample environment is a dilution refrigerator (LakeShore 372
+    thermometry / heater, the graduated TemperatureController Family) plus an Oxford Mercury iPS 3-axis
+    VECTOR superconducting magnet (field limits X,Y = +/-0.6 T, Z = +/-5.2 T); the magnet binds the
+    LOOSE Magnet family, held at the rule-of-three. Cristallina is the FOURTH Magnet consumer (after
+    4-ID, i10-1, ESRF ID32), reinforcing the held graduation but NOT graduating it here (MAG-1). DM2 and
+    several SmarAct / Attocube / PuMa stages are instantiated in slic but commented out of the active
+    channel tuples, carried as present-hardware-not-acquired (DISABLED-1). There is NO pump-probe laser
+    in source (LASER-1).
+  devices:
+    - name: I0Chamber
+      family: Slit
+      pv: "SARES30-MCS20610"
+      new: true
+      confirm: true
+      note: "the I0 chamber: SmarAct-driven slit blades plus a foil changer and a calc slit-position / width readout (slic i0_chamber). The slit-defining function binds Slit; the foils are a setting (DIAG-1)"
+    - name: DM1_Goniometer
+      family: Goniometer
+      pv: "SARES31-GPS"
+      new: true
+      confirm: true
+      note: "DM1, the Cristallina dilution-fridge diffractometer's sample-orientation goniometer (slic Diffractometer; ECMC servo axes twotheta / theta + base / sample translations). Binds the Goniometer Family; the platform is the Diffractometer Assembly (DIFF-1)"
+    - name: DM1_DetectorArm
+      family: RotaryStage
+      pv: {confirm: "DM1 2-theta detector arm (slic SARES31-GPS:ROT2THETA); the detector_arm slot of the Diffractometer Assembly (DIFF-1)"}
+      new: true
+      confirm: true
+      note: "the DM1 detector-arm 2-theta circle; the ZeroOrMore detector_arm slot of the Diffractometer Assembly (DIFF-1)"
+    - name: DM1_ReciprocalSpace
+      family: PseudoAxis
+      pv: {confirm: "DM1 reciprocal-space pseudo-axis (slic diffractometer recspace); the partition rule is DIFF-2"}
+      new: true
+      confirm: true
+      note: "the DM1 reciprocal-space (hkl) pseudo-axis layer; the reciprocal_space slot of the Diffractometer Assembly (DIFF-1, DIFF-2)"
+    - name: DM2_Goniometer
+      family: Goniometer
+      pv: "SARES32-GPS"
+      new: true
+      confirm: true
+      note: "DM2, the Cristallina pulsed-magnet diffractometer's goniometer (slic Diffractometer; DM1 axes plus rot_x / rot_z swivels). Instantiated in slic but its PV channels are commented out of the active config (DISABLED-1). Binds the Goniometer Family (DIFF-1)"
+    - name: DilutionFridgeThermometry
+      family: TemperatureController
+      pv: "SARES31-DIL-LS1"
+      new: true
+      confirm: true
+      note: "the DilSc dilution-refrigerator thermometry and heater (a LakeShore 372 regulating the mixing-chamber channel via a PID loop, with per-band calibration curves). Binds the graduated TemperatureController Family (the ID32 VTI precedent); presents the Regulator Role"
+    - name: VectorMagnet
+      family: Magnet
+      pv: "SARES31-MAG-IPS1"
+      new: true
+      confirm: true
+      note: "the DilSc 3-axis VECTOR superconducting magnet (an Oxford Mercury iPS PSU; field limits X,Y = +/-0.6 T, Z = +/-5.2 T, ramp cap 0.5 T/min). Binds the LOOSE Magnet family, held at the rule-of-three. Cristallina is the FOURTH consumer (4-ID + i10-1 + ESRF ID32), reinforcing the held graduation; NOT graduated here (MAG-1). Modelled as a hazard via a Clearance, not a safety-driven Asset"
+    - name: SampleStageMX
+      family: LinearStage
+      pv: "SAR-EXPMX"
+      new: true
+      confirm: true
+      note: "the Cristallina-MX fast XY sample stage (slic swissmx; MOT_FX / MOT_FY). Serial-crystallography sample delivery beyond the fast stage is deferred (SAMPLE-1)"
+
+# --- DETECTION STAGE: the per-shot Jungfrau area detectors ---
+
+detector:
+  stage: detection
+  enclosure: Cristallina
+  intro: "The Cristallina Jungfrau science detectors. They reuse the Camera Family, but their acquisition mode is the headline gap."
+  note: >
+    The detectors reuse the Camera Family (Detector Role). What does NOT fold is how they are read:
+    the SwissFEL sf-daq records a free-running stream of per-shot frames tagged by pulse-ID at beam
+    rate, not a poll-Acquire-to-Done loop (DAQ-1). slic's live config binds a 1.5M Jungfrau
+    (JF16T03V02) plus a 0.5M I0 (JF20T01V01) for the Q endstation, and an 8M (JF17T16V01) for MX;
+    Cristallina shares DAQ crate 10 with Bernina (port 1). The Jungfrau human-readable labels come
+    from a commented sf_daq_broker block, carried confirm (DET-1).
+  devices:
+    - name: AreaDetectorQ
+      family: Camera
+      pv: {confirm: "Cristallina-Q Jungfrau JF16T03V02 (1.5M); sf-daq-managed, not polled (DET-1, DAQ-1)"}
+      new: true
+      confirm: true
+      note: "the Cristallina-Q science detector; per-shot frames flow through the sf-daq data plane, which CORA references as a Dataset rather than owns (DAQ-1)"
+    - name: IntensityDetectorI0
+      family: Camera
+      pv: {confirm: "Cristallina-Q I0 Jungfrau JF20T01V01 (0.5M); sf-daq-managed (DET-1, DAQ-1)"}
+      new: true
+      confirm: true
+      note: "the Cristallina-Q I0 monitor Jungfrau; a 0.5M detector reading incident intensity, read through the sf-daq plane (DAQ-1)"
+    - name: AreaDetectorMX
+      family: Camera
+      pv: {confirm: "Cristallina-MX Jungfrau JF17T16V01 (8M); sf-daq-managed (DET-1, DAQ-1)"}
+      new: true
+      confirm: true
+      note: "the Cristallina-MX science detector; an 8M Jungfrau for serial crystallography, read through the sf-daq plane (DAQ-1). Selected by the MX experiment configuration"
+
+# Cross-cutting timing + the software systems CORA does not model.
+controls:
+  intro: >
+    Cristallina runs the PSI EPICS stack plus the SwissFEL event-driven DAQ. The CTA sequencer and the
+    EVR program the beam-synchronous trigger pattern (and, in the absence of a pump-probe laser device,
+    mediate the pump-probe timing); the sf-daq, bsread streaming, and the slic acquisition suite are
+    software / floor. The live device facts are in-repo slic Python literals; only runtime paths and a
+    couple of server-side services are non-public (ENV-1).
+  triggering:
+    - name: EventTiming
+      family: TimingController
+      pv: {confirm: "SwissFEL CTA sequencer SAR-CCTA-ESC and the EVR SARES30-LTIM01-EVR0; trigger-pattern handles TBD (TIMING-1)"}
+      new: true
+      confirm: true
+      note: "the SwissFEL CTA sequencer / event-receiver timing that gates acquisition at beam rate and mediates the pump-probe delay (there is no pump-probe laser device in source, LASER-1). TimingController carries the device, but 'acquire on event-code N at rate R' has no typed parameter home (TIMING-1)"
+  software_iocs_not_modeled:
+    - sf-daq (the per-shot, pulse-ID-tagged event acquisition broker, DAQ-1)
+    - bsread / mflow (the beam-synchronous ZMQ data streaming transport, DAQ-1)
+    - the slic acquisition + scan suite on gitea.psi.ch (the Python beamline-control layer the descriptor is mined from)
+    - the DilSc SECoP / Frappy magnet server (dilsc.psi.ch:5000) and the pulse-tube synchronization service (oscillations.psi.ch:8000), both server-side (ENV-1)
+    - the SwissFEL data API / databuffer (the per-shot data-analysis plane; CORA references a Dataset, does not own per-shot data)
+
+# Continuously-available resources a run draws on (modelling exercise).
+resources:
+  intro: >
+    The continuously-available facility resources a run needs present before it can start. All pending
+    confirmation. The FEL beam is a shared, switched resource across the Aramis stations (TOPO-1). The
+    dilution fridge and vector magnet draw liquid helium (MAG-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidHelium
