@@ -65,7 +65,7 @@ _ITER_STRIDE = 12.0        # one acquire every 12 s; the whole axis is a 12 s gr
 _BEAM_LOSS = 102.0         # RunHeld: the beam drops during the third projection
 _BEAM_BACK = 150.0         # RunResumed (beam returns) after a 5-stride hold
 _SAVE_AT = 210.0           # write the dataset one stride after the last projection
-_RUN_DONE = 222.0          # run completes after the save
+_RUN_DONE = 216.0          # run completes right after the save
 
 
 def _build() -> dict:

@@ -78,7 +78,7 @@ def main() -> None:
     save_time = next((secs(a["sampled_at"]) for a in acts
                       if a["payload"].get("action_name") == "write_dataset"), None)
     align_end = secs(iters[-1]["ended_at"]) + 1.5
-    scan_start = proj_times[0] - 7
+    scan_start = align_end  # the fly-scan setup is the head of the scan; no gap
     scan_end = (save_time - 6) if save_time is not None else proj_times[-1] + 6
     run_done = max(secs(e["at"]) for e in run_events)
 
