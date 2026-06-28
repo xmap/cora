@@ -4,7 +4,7 @@
 
 A deployment is a beamline pilot: one instrument where the recipe ladder, BCs, and trust boundaries meet real users. Vertical before horizontal. CORA's domain model only contains what at least one real deployment forced into it; until a beamline demands a shape, the shape stays out.
 
-A beamline is never standalone: it sits inside a Site, a Federation `Facility` that owns the clearances, principals, practices, and facility-scope supplies the beamline inherits but does not own. The deployments below are grouped by that Site; each beamline page links up to its Site rather than restating it. CORA's operational pilot is 2-BM. Most of the rest are in the design phase, modelled from a design report ahead of construction or recommissioning. The Diamond and NSLS-II beamlines, SLAC's LCLS-MFX, and the Australian Synchrotron's MX3 are a third kind: operating beamlines reverse-engineered from public controls configuration, so their pages carry real control facts but every value stays `confirm` until the beamline team verifies it.
+A beamline is never standalone: it sits inside a Site, a Federation `Facility` that owns the clearances, principals, practices, and facility-scope supplies the beamline inherits but does not own. The deployments below are grouped by that Site; each beamline page links up to its Site rather than restating it. CORA's operational pilot is 2-BM. Most of the rest are in the design phase, modelled from a design report ahead of construction or recommissioning. The Diamond and NSLS-II beamlines, SLAC's LCLS-MFX, the Australian Synchrotron's MX3, and PSI's Alvra are a third kind: operating beamlines reverse-engineered from public controls configuration, so their pages carry real control facts but every value stays `confirm` until the beamline team verifies it.
 
 ## [APS](aps/index.md)
 
@@ -87,5 +87,13 @@ The sixth Site CORA models, and its first Australian facility (operated by ANSTO
 | Beamline | Status | What it is |
 | --- | --- | --- |
 | [MX3](mx3/index.md) | Reverse-engineered | macromolecular crystallography (rotation MX) on an MD3 microdiffractometer + DECTRIS Eiger with an ISARA robot; reuses the i03 Goniometer and MX Methods, novelty is the Site and its heterogeneous control plane |
+
+## [PSI](psi/index.md)
+
+CORA's eighth Site (the Paul Scherrer Institut), and its second X-ray free-electron laser after SLAC. Its Alvra beamline is reverse-engineered from the public `paulscherrerinstitute/eco` SwissFEL device library, chosen as the deployment that re-tests the XFEL findings against an independently-built free-electron laser: LCLS-MFX was mined from SLAC's `pcdshub`, Alvra from PSI's `eco`. If the family-fold finding and the architectural acquisition gaps recur, the model generalizes beyond one facility, not just beyond storage rings.
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [Alvra](alvra/index.md) | Reverse-engineered | hard X-ray femtosecond pump-probe (time-resolved XAS / XES / HERFD and serial crystallography) on the SwissFEL Aramis branch; CORA's second XFEL, reinforcing the LCLS-MFX family-fold and acquisition-gap findings from an independent control stack |
 
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

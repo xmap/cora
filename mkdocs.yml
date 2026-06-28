@@ -738,6 +738,21 @@ nav:
         - Techniques: deployments/id32/techniques.md
         - Governance: deployments/id32/governance.md
         - Model: deployments/id32/model.md
+    - PSI:
+      - deployments/psi/index.md
+      - Alvra:
+        - deployments/alvra/index.md
+        - Open questions: deployments/alvra/questions.md
+        - The beamline:
+          - deployments/alvra/equipment/index.md
+          - Source: deployments/alvra/beamline.md
+          - Endstation: deployments/alvra/equipment/endstation.md
+          - Detector: deployments/alvra/equipment/detector.md
+          - Controls: deployments/alvra/equipment/controls.md
+          - Inventory: deployments/alvra/inventory.md
+        - Techniques: deployments/alvra/techniques.md
+        - Governance: deployments/alvra/governance.md
+        - Model: deployments/alvra/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
