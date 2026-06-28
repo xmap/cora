@@ -94,47 +94,47 @@ insertion-devices:
   devices:
     - name: Undulator
       family: InsertionDevice
-      pv: "tango://acs:10000/id/master/id32 (ESRF_Undulator); gap hu70ag, phase hu70ap"
+      pv: "tango://acs:10000/id/master/id32 (ESRF_Undulator); upstream HU70a (gap hu70ag, phase hu70ap), downstream HU70c (gap hu70cg, phase hu70cp)"
       new: true
       confirm: true
-      note: "the APPLE-II undulator(s): gap (hu70ag) and phase (hu70ap) on the ESRF_Undulator device server; period is SRC-1"
+      note: "the two APPLE-II undulators (HU70a + HU70c) on the ESRF_Undulator device server; gap / phase per segment (hu70ag / hu70ap, hu70cg / hu70cp), tracked with the PGM energy; period is SRC-1"
     - name: Polarization
       family: PseudoAxis
-      pv: {confirm: "polarization virtual axis over the APPLE-II phase (the i06 / i10 precedent); the value domain (linear / circular) and the phase conversion are POL-1"}
+      pv: "BLISS PolarizationPolicy: polarization_horizontal / polarization_vertical / polarization_linear (over the APPLE-II phase rows)"
       new: true
       confirm: true
-      note: "the polarization pseudo-axis over the APPLE-II (the i06 / i10 precedent); rule-less, the controller owns the phase conversion (POL-1)"
+      note: "the polarization pseudo-axis over the APPLE-II (the i06 / i10 precedent): the BLISS PolarizationPolicy presets (horizontal / vertical / linear); rule-less, the controller owns the phase conversion (POL-1)"
     - name: BeamEnergy
       family: PseudoAxis
-      pv: {confirm: "incident-energy virtual axis over the PGM and the APPLE-II gap; range and partition rule are MONO-1"}
+      pv: "BLISS energy (GratingEnergyTrackerCalcMotor over energy_pgm + the hu70a/hu70c undulator gaps/phases)"
       new: true
       confirm: true
-      note: "incident-energy pseudo-axis over the PGM and the undulator (MONO-1)"
+      note: "incident-energy pseudo-axis (the BLISS energy calc motor tracking the PGM and both undulators); range and partition rule are MONO-1"
 
 optics:
   stage: source
   enclosure: id32-optics
   intro: "The soft X-ray plane-grating monochromator, the focusing mirrors, and the beam-defining slits."
-  note: "The PGM binds GratingMonochromator (the SIX / CSX / i06 precedent); the mirrors bind Mirror; the slits bind Slit. Exact handles are MONO-1 / OPT-1 / OPT-2."
+  note: "The PGM binds GratingMonochromator (the SIX / CSX / i06 precedent); the focusing mirrors bind Mirror (but are absent from the public BLISS config, OPT-1); the slits bind Slit. The PGM and slit handles are read from BLISS; the mirrors are deferred (MONO-1 / OPT-1 / OPT-2)."
   devices:
     - name: Monochromator
       family: GratingMonochromator
-      pv: {confirm: "the soft X-ray plane-grating monochromator (PGM); grating line densities and cff, and the exact handles, are MONO-1"}
+      pv: "BLISS pgm (MonochromatorGrating); gratings XMCD_300 / XMCD_900 / RIXS_800 / RIXS_1600; energy axis energy_pgm"
       new: true
       confirm: true
-      note: "soft X-ray plane-grating monochromator; gratings and cff are settings (MONO-1)"
+      note: "soft X-ray plane-grating monochromator (BLISS pgm); the interchangeable gratings (XMCD_300 / XMCD_900 / RIXS_800 / RIXS_1600) and the cff are per-Asset settings (MONO-1)"
     - name: FocusingMirror
       family: Mirror
-      pv: {confirm: "the soft X-ray focusing / harmonic-rejection mirrors; coatings and handles are OPT-1"}
+      pv: {confirm: "the soft X-ray focusing / harmonic-rejection mirrors are not exposed as named optics in the public BLISS config (only a sample-side smirotx axis appears); coatings and handles are OPT-1"}
       new: true
       confirm: true
-      note: "the soft X-ray focusing mirrors (OPT-1)"
+      note: "the soft X-ray focusing mirrors; genuinely absent from the public BLISS config, deferred not invented (OPT-1)"
     - name: BeamSlit
       family: Slit
-      pv: {confirm: "the beam-defining slits; blade-axis map and handles are OPT-2"}
+      pv: "BLISS slits (primary ps / secondary ss / mono ms, each horizontal+vertical with hgap / hoffset; blades on IcePAP iceid321)"
       new: true
       confirm: true
-      note: "the beam-defining slits (OPT-2)"
+      note: "the primary / secondary / mono beam-defining slits (BLISS slits, hgap / hoffset per slit); blade-axis map is OPT-2"
 
 # ===========================================================================
 # RIXS ENDSTATION (id32-rixs): the dispersive spectrometer arm + diffractometer

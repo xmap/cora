@@ -14,12 +14,12 @@ Root Asset `ID32` (`tier = Unit`, `facility_code = esrf`); sub-systems nest belo
 | --- | --- | --- | --- | --- |
 | `ID32` | `Unit` | (root) | - | bound to the ESRF Site |
 | `StorageRing` | `Device` | StorageRing (loose) | - | ESRF-EBS ring state, observe-only (MACHINE-1) |
-| `Undulator` | `Device` | InsertionDevice | id32-optics | APPLE-II undulator, `id/master/id32` (gap hu70ag / phase hu70ap) (SRC-1) |
-| `Polarization` | `Device` | PseudoAxis | id32-optics | polarization axis over the APPLE-II phase (POL-1) |
-| `BeamEnergy` | `Device` | PseudoAxis | id32-optics | incident-energy axis over the PGM + undulator (MONO-1) |
-| `Monochromator` | `Device` | GratingMonochromator | id32-optics | soft X-ray PGM (MONO-1) |
-| `FocusingMirror` | `Device` | Mirror | id32-optics | soft X-ray focusing mirrors (OPT-1) |
-| `BeamSlit` | `Device` | Slit | id32-optics | beam-defining slits (OPT-2) |
+| `Undulator` | `Device` | InsertionDevice | id32-optics | two APPLE-II undulators (HU70a + HU70c), `id/master/id32` (gaps hu70ag / hu70cg, phases hu70ap / hu70cp) (SRC-1) |
+| `Polarization` | `Device` | PseudoAxis | id32-optics | polarization axis over the APPLE-II phase (BLISS PolarizationPolicy: horizontal / vertical / linear) (POL-1) |
+| `BeamEnergy` | `Device` | PseudoAxis | id32-optics | incident-energy axis (BLISS `energy` calc over `energy_pgm` + both undulators) (MONO-1) |
+| `Monochromator` | `Device` | GratingMonochromator | id32-optics | soft X-ray PGM (BLISS `pgm`; gratings XMCD_300 / XMCD_900 / RIXS_800 / RIXS_1600) (MONO-1) |
+| `FocusingMirror` | `Device` | Mirror | id32-optics | soft X-ray focusing mirrors; absent from the public BLISS config, deferred (OPT-1) |
+| `BeamSlit` | `Device` | Slit | id32-optics | primary / secondary / mono beam-defining slits (BLISS `slits`, hgap / hoffset; IcePAP iceid321) (OPT-2) |
 | `Diffractometer` | `Device` | Goniometer | id32-rixs | 4-circle sample diffractometer (DiffE4CH, E4CH) (DIFF-1) |
 | `ReciprocalSpace` | `Device` | PseudoAxis | id32-rixs | reciprocal-space (hkl) axis over the diffractometer (DIFF-2) |
 | `RixsSpectrometerArm` | `Device` | SpectrometerArm (loose) | id32-rixs | ~5 m dispersive RIXS arm (rixs_spectro, IcePAP iceid324); held at rule-of-three (RIXS-1) |
