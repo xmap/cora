@@ -753,6 +753,19 @@ nav:
         - Techniques: deployments/alvra/techniques.md
         - Governance: deployments/alvra/governance.md
         - Model: deployments/alvra/model.md
+      - Bernina:
+        - deployments/bernina/index.md
+        - Open questions: deployments/bernina/questions.md
+        - The beamline:
+          - deployments/bernina/equipment/index.md
+          - Source: deployments/bernina/beamline.md
+          - Endstation: deployments/bernina/equipment/endstation.md
+          - Detector: deployments/bernina/equipment/detector.md
+          - Controls: deployments/bernina/equipment/controls.md
+          - Inventory: deployments/bernina/inventory.md
+        - Techniques: deployments/bernina/techniques.md
+        - Governance: deployments/bernina/governance.md
+        - Model: deployments/bernina/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

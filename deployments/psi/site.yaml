@@ -38,7 +38,7 @@ facility:
   heading: "PSI"
   kind: Site
   institution: Paul Scherrer Institut (PSI), Switzerland
-  beamlines: [Alvra]
+  beamlines: [Alvra, Bernina]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. None of CORA's
 # catalog Methods (all tomography-family today) fit an XFEL pump-probe station, so
@@ -49,6 +49,8 @@ practices:
   - {name: Alvra_pump_probe_practice, method: pump_probe, pending: true, note: "femtosecond optical-laser pump / X-ray probe; needs laser-to-X-ray timing. Reuses the LCLS-MFX pump_probe Method, not yet in the catalog (TECH-1, LASER-1)"}
   - {name: Alvra_spectroscopy_practice, method: xas_spectroscopy, pending: true, note: "time-resolved XAS / XES (transient absorption and emission) via the DCM and the von Hamos emission spectrometer. Reuses the LCLS-MFX spectroscopy Method (TECH-1)"}
   - {name: Alvra_serial_crystallography_practice, method: serial_crystallography, pending: true, note: "time-resolved serial femtosecond crystallography on the Prime endstation; reuses the LCLS-MFX Method (TECH-1, SAMPLE-1)"}
+  - {name: Bernina_pump_probe_practice, method: pump_probe, pending: true, note: "femtosecond optical-laser pump / X-ray probe on the diffraction endstation; shares the Alvra / LCLS-MFX pump_probe Method (TECH-1, LASER-1)"}
+  - {name: Bernina_time_resolved_diffraction_practice, method: diffraction, pending: true, note: "time-resolved hard X-ray diffraction / scattering on the GPS six-circle and XRD kappa diffractometers; a new pending Method, no catalog tomography Method fits an XFEL diffraction platform (TECH-1, DIFF-1)"}
 
 # Access BC Actors conceptually facility-wide at PSI. Pending until the SwissFEL
 # operator and review structure is confirmed; the device library exposes no human roster.
@@ -77,6 +79,7 @@ supplies:
 clearances:
   - {name: PSI personnel safety system, kind: PSS, pending: true, note: "SwissFEL safety-form and permit-leaf names TBD; confirm with staff (PSS-1)"}
   - {name: Alvra pump-probe laser clearance, kind: Clearance, pending: true, note: "class-4 optical pump-probe laser; modelled as a hazard on the experiment, not a driven Asset (LASER-1)"}
+  - {name: Bernina pump-probe laser clearance, kind: Clearance, pending: true, note: "class-4 optical pump-probe laser on the diffraction endstation; modelled as a hazard, not a driven Asset (LASER-1)"}
 
 # Caution BC: operator tribal knowledge. None yet for a modelling exercise.
 cautions: []

@@ -1,0 +1,399 @@
+# CORA Beamline descriptor: Bernina (SwissFEL, PSI), modelling exercise
+#
+# Bernina is an operating hard-X-ray diffraction / scattering pump-probe station on
+# SwissFEL's Aramis branch at PSI, the sibling of the Alvra station. It is bound to
+# the PSI Site (deployments/psi/site.yaml). It is CORA's SECOND beamline on a single
+# shared source: the Aramis undulator line feeds Alvra, Bernina, and Cristallina one
+# at a time, so Bernina is the deployment that turns the deferred shared-switched-
+# source seam (TOPO-1) from a hypothetical into a concrete two-Unit-on-one-source case.
+#
+# STATUS: off-roadmap modelling exercise, NOT a CORA pilot. Reverse-engineered from
+# PSI's open `eco` controls library (paulscherrerinstitute/eco, the SwissFEL device
+# library). It is treated as a dry, correct DATA source and modelled intentionally,
+# not mirrored.
+#
+# DELIBERATELY PARTIAL FIRST CUT (the i13-1 / i20-1 posture, but for a specific
+# reason): Bernina's eco config is PARTIALLY EXTERNALIZED. eco/bernina/config.py's
+# entire `components` device list is commented out and loaded at runtime from a NON-
+# PUBLIC path (/sf/bernina/config/eco/bernina_config_eco.json), and the live module
+# eco/bernina/bernina.py reads a second non-public config object
+# (/sf/bernina/config/eco/configuration/bernina_config.json) for which sub-assemblies
+# are mounted and which detectors attach to each diffractometer. So what is recoverable
+# from PUBLIC source is: the device list with inline PV prefixes (the
+# `namespace.append_obj(...)` calls in bernina.py) and the full diffractometer motor-
+# axis topology (axes built by literal string suffix in
+# eco/endstations/bernina_diffractometers.py). What is NOT recoverable: the
+# configuration STATE (which of base/arm/polana/kappa/heavy-load/hexapod/robot sub-
+# assemblies are active), the detector-to-diffractometer wiring, and all units/limits.
+# Those are carried unknown (CONFIG-1), not invented.
+#
+# THE HEADLINE: Bernina is materially MORE than the catalog Goniometer (i03/MX3). It is
+# a reconfigurable diffraction PLATFORM: a six-circle GPS station (SARES22-GPS) and a
+# You-geometry XRD station (SARES21-XRD) with a 2-theta detector arm, a polarization-
+# analyzer branch, a kappa goniometer (with on-the-fly kappa<->Eulerian conversion), a
+# heavy-load goniometer table, a PI hexapod sample stage, and an optional Staeubli
+# TX200 robot contributing gamma/delta. This is EXACTLY the graduated Diffractometer
+# ASSEMBLY (4-ID / 8-ID): it COMPOSES a Goniometer (the sample circles + x/y/z), zero-
+# or-more RotaryStage detector-arm circles, and a reciprocal-space PseudoAxis. So
+# Bernina coins NO new Family: each platform is modelled as a Goniometer Asset + a
+# PseudoAxis Asset reusing the catalog Diffractometer Assembly, with the composition
+# designed on model.md (DIFF-1). The Assembly is the right home, NOT a new "FEL
+# diffractometer" Family.
+#
+# Family folds (each reviewed; the LCLS-MFX / Alvra precedent): AttenuatorAramis ->
+# Filter; SlitBlades/SlitPosWidth/JJSlit/SlitBladesGeneral -> Slit; OffsetMirrorsBernina
+# / KBMirrorBernina -> Mirror; DoubleCrystalMono -> Monochromator; XrayPulsePicker ->
+# Shutter (PULSE-1); Pprm -> Scintillator + Camera; SolidTargetDetectorPBPS / GasDetector
+# -> FluxMonitor + Diagnostic (loose); SpectralEncoder (PSEN timetool) -> Diagnostic
+# (loose, the arrival-time monitor, LASER-1); GPS / XRDYou -> Goniometer (composed in the
+# Diffractometer Assembly, DIFF-1); HexapodPI / HexapodSymmetrie -> Hexapod; LaserBernina
+# -> loose Laser; the Jungfrau -> Camera; the event system / EVRs -> TimingController.
+# The Staeubli TX200 robot is a sample/detector handler over PShell (HTTP), not EPICS;
+# its modelling is deferred (ROBOT-1, the i03 / MX3 sample-exchange precedent).
+#
+# Every device carries `new: true` and `confirm: true`. eco carries no units, no motor
+# limits, and no Aramis undulator source parameters; those are deferred, not invented.
+# eco-specific ambiguities are carried as open questions: a live Bernina entry uses an
+# Alvra-line PV (SAROP11-PPRM066) (XREF-1); the eco / sf_daq_broker Jungfrau version
+# strings differ (JF07T32V01 vs V02) (DET-1).
+#
+# DEFERRED (out of scope, noted not modelled): the externalized config state (CONFIG-1);
+# the sf-daq data plane (DAQ-1); the fs pump-probe laser delay + lxt timing (the laser
+# is a loose Laser device; its fs sync has no CORA model, LASER-1); the Staeubli robot
+# (ROBOT-1); the sibling Aramis stations Alvra / Cristallina sharing the source (TOPO-1);
+# the RIXS / tape-drive / liquid-jet sample-environment variants whose appends are
+# commented out in eco (ENV-1).
+
+beamline:
+  name: Bernina
+  facility: psi
+  tier: Unit
+  parent: null
+  source: free-electron-laser
+  source_confirm: >
+    SASE hard-X-ray FEL on the shared SwissFEL Aramis undulator line; photon energy is
+    set per-shot and the same source feeds the Alvra, Bernina, and Cristallina stations
+    one at a time (SRC-1 / TOPO-1). The Aramis undulator parameters are not in the eco
+    manifest and are carried confirm.
+
+# Two access-gated zones. The Aramis optics hutch (the SAROP21 line) conditions the beam
+# shared with the other Aramis stations; the Bernina experiment hutch holds the GPS and
+# XRD diffractometers. The eco manifest records PV prefixes but not which access-gated
+# hutch a device is in or its safety meaning (ENC-1). SwissFEL PPS permit + the pump-probe
+# laser interlock are carried confirm (PSS-1, LASER-1).
+enclosures:
+  - name: Aramis-Optics-SAROP21
+    role: optics-hutch
+    facility_code: psi
+    permit_signal: {confirm: "SwissFEL PPS search-and-secure signal TBD; the SAROP21 Aramis optics serve Bernina (TOPO-1, PSS-1)"}
+  - name: Bernina
+    role: experiment-hutch
+    facility_code: psi
+    permit_signal: {confirm: "SwissFEL PPS + pump-probe laser interlock TBD (PSS-1, LASER-1)"}
+
+# --- SOURCE STAGE: the FEL source, shared front end, and SAROP21 Aramis optics ---
+
+undulator-source:
+  stage: source
+  enclosure: Aramis-Optics-SAROP21
+  intro: "The SwissFEL Aramis free-electron-laser source and its front-end pulse-intensity monitors."
+  note: >
+    SwissFEL is a linac-driven FEL, not a storage ring; machine beam is carried as a
+    PhotonBeam Supply (MACHINE-1). The Aramis undulator photon energy is set per shot;
+    CORA has no per-shot energy setpoint, and the undulator-as-driven-source is deferred
+    (SRC-1). The undulator parameters are absent from the eco manifest (SRC-1).
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {confirm: "SwissFEL Aramis undulator line; per-segment handles not in eco (SRC-1)"}
+      new: true
+      confirm: true
+      note: "the FEL source; SASE mode and per-shot photon energy are a DAQ-plane datum, not a standing setpoint (SRC-1, DAQ-1)"
+    - name: GasMonitor
+      family: FluxMonitor
+      pv: {confirm: "SwissFEL Aramis gas detector (eco mon_und_gas; no PV passed inline)"}
+      new: true
+      confirm: true
+      note: "gas intensity monitor; FEL pulse-energy diagnostic, presents the Sensor Role; loose family reused. Per-shot pulse energy is correlated in the DAQ by pulse-ID (DAQ-1)"
+    - name: FrontEndIntensityMonitor
+      family: FluxMonitor
+      pv: "SARFE10-PBPS053"
+      new: true
+      confirm: true
+      note: "solid-target intensity / position monitor after the undulator (PBPS); presents the Sensor Role for flux (FluxMonitor) and position (Diagnostic, loose)"
+
+front-end:
+  stage: source
+  enclosure: Aramis-Optics-SAROP21
+  intro: "The front-end and safety shutters, the undulator slit, and the front-end attenuator that gate and condition the beam before the SAROP21 optics."
+  note: >
+    The photon and safety shutters fold into the Shutter Family; their permit binding to
+    the PSS is not in eco (PSS-1). The front-end attenuator is a solid attenuator solving
+    an energy-dependent foil combination (AttenuatorAramis); the Filter Family covers the
+    discrete selection, the solve is the deferred Attenuable leg (ATT-1).
+  devices:
+    - name: UndulatorShutter
+      family: Shutter
+      pv: "SARFE10-OPSH044"
+      new: true
+      confirm: true
+      note: "photon shutter after the undulator (eco pshut_und); permit binding to confirm (PSS-1)"
+    - name: FrontEndShutter
+      family: Shutter
+      pv: "SARFE10-OPSH059"
+      new: true
+      confirm: true
+      note: "photon shutter at the front-end exit (eco pshut_fe); permit binding to confirm (PSS-1)"
+    - name: FrontEndAttenuator
+      family: Filter
+      pv: "SARFE10-OATT053"
+      new: true
+      confirm: true
+      note: "solid front-end attenuator (AttenuatorAramis); the Filter Family covers the discrete selection, the energy-dependent target-transmission solve is the deferred Attenuable leg (ATT-1)"
+    - name: UndulatorSlit
+      family: Slit
+      pv: {confirm: "SwissFEL front-end JJ slit (eco slit_und, JJSlitUnd; no PV passed inline)"}
+      new: true
+      confirm: true
+      note: "front-end JJ slit; the eco driver derives the blade motors"
+
+aramis-optics:
+  stage: source
+  enclosure: Aramis-Optics-SAROP21
+  intro: "The SAROP21 Aramis optics: the offset mirrors, the double-crystal monochromator, the switchyard and mono slits, the X-ray pulse picker, the attenuator, the KB focusing mirrors, the PSEN timing diagnostic, and the profile / intensity monitors that condition and focus the beam onto the Bernina sample."
+  note: >
+    The offset mirrors and the KB pair fold into Mirror. The double-crystal monochromator
+    (ODCM098) folds into Monochromator; Bernina also runs pink / SASE beam with the mono
+    out (MONO-1). The X-ray pulse picker is a fast single-pulse gate folded into Shutter
+    (PULSE-1). The PSEN spectral-encoder measures the X-ray-to-laser arrival time; it
+    presents the Sensor Role (loose Diagnostic) but exists to drift-correct the fs pump-
+    probe delay (LASER-1). One live Bernina profile monitor (prof_mirr_alv1) carries an
+    Alvra-line PV (SAROP11-PPRM066); carried confirm (XREF-1).
+  devices:
+    - name: OffsetMirrors
+      family: Mirror
+      pv: {confirm: "SAROP21 Bernina offset mirror pair (eco offset, OffsetMirrorsBernina; no base PV passed inline)"}
+      new: true
+      confirm: true
+      note: "the Bernina horizontal offset mirror pair; OffsetMirror folds into the Mirror Family"
+    - name: Monochromator
+      family: Monochromator
+      pv: "SAROP21-ODCM098"
+      new: true
+      confirm: true
+      note: "Bernina double-crystal monochromator (eco DoubleCrystalMono); Bragg / translation / gap axes derived in the driver. Bernina also runs pink / SASE beam mono-out (MONO-1)"
+    - name: SwitchyardSlit
+      family: Slit
+      pv: "SAROP21-OAPU092"
+      new: true
+      confirm: true
+      note: "4-blade slit on the SAROP21 line (eco slit_switch, SlitBlades); blade motors derived"
+    - name: MonoSlit
+      family: Slit
+      pv: "SAROP21-OAPU102"
+      new: true
+      confirm: true
+      note: "4-blade slit after the mono (eco slit_mono, SlitBlades)"
+    - name: PulsePicker
+      family: Shutter
+      pv: "SAROP21-OPPI113"
+      new: true
+      confirm: true
+      note: "X-ray pulse picker (eco xp, XrayPulsePicker, EVR-based); folded into the Shutter Family (a fast single-pulse gate). Shutter-vs-Chopper open (PULSE-1)"
+    - name: Attenuator
+      family: Filter
+      pv: "SAROP21-OATT135"
+      new: true
+      confirm: true
+      note: "solid attenuator for Bernina (eco att, AttenuatorAramis); Filter covers the discrete selection, the energy-dependent solve is the deferred Attenuable leg (ATT-1)"
+    - name: AttenuatorSlit
+      family: Slit
+      pv: "SAROP21-OAPU138"
+      new: true
+      confirm: true
+      note: "position / width slit behind the attenuator (eco slit_att, SlitPosWidth)"
+    - name: MonoIntensityMonitor
+      family: FluxMonitor
+      pv: "SAROP21-PBPS103"
+      new: true
+      confirm: true
+      note: "solid-target intensity / position monitor after the mono (eco mon_mono, PBPS); flux + position Sensor (DIAG-1)"
+    - name: OpticsIntensityMonitor
+      family: FluxMonitor
+      pv: "SAROP21-PBPS133"
+      new: true
+      confirm: true
+      note: "solid-target intensity / position monitor after the optics (eco mon_opt, PBPS); flux + position Sensor (DIAG-1)"
+    - name: MonoScreen
+      family: Scintillator
+      pv: "SAROP21-PPRM113"
+      new: true
+      confirm: true
+      note: "profile monitor after the mono (eco prof_mono, Pprm)"
+    - name: OpticsScreen
+      family: Scintillator
+      pv: "SAROP21-PPRM133"
+      new: true
+      confirm: true
+      note: "profile monitor after the optics (eco prof_opt, Pprm)"
+    - name: AttenuatorScreen
+      family: Scintillator
+      pv: "SAROP21-PPRM138"
+      new: true
+      confirm: true
+      note: "profile monitor after the attenuator (eco prof_att, Pprm)"
+    - name: ArrivalTimeMonitorPSEN
+      family: Diagnostic
+      pv: "SAROP21-PSEN135"
+      new: true
+      confirm: true
+      note: "spectral-encoding arrival-time monitor (eco tt_opt, SpectralEncoder; the Alvra PSEN / LCLS-MFX TimeTool analog). Presents the Sensor Role (loose Diagnostic); exists to correct the fs pump-probe delay jitter (LASER-1, DAQ-1)"
+    - name: ReferenceLaser
+      family: Laser
+      pv: "SAROP21-OLAS134"
+      new: true
+      confirm: true
+      note: "beamline reference / alignment laser (eco reflaser_beamline, RefLaser_Aramis); a loose Laser family device (alignment, not the pump-probe laser)"
+    - name: VerticalKBMirror
+      family: Mirror
+      pv: "SAROP21-OKBV139"
+      new: true
+      confirm: true
+      note: "Bernina vertical KB focusing mirror (eco kb, KBMirrorBernina); KB folds into Mirror"
+    - name: HorizontalKBMirror
+      family: Mirror
+      pv: "SAROP21-OKBH140"
+      new: true
+      confirm: true
+      note: "Bernina horizontal KB focusing mirror (eco kb, KBMirrorBernina); KB folds into Mirror"
+
+# --- SAMPLE STAGE: the Bernina diffraction endstation (the GPS and XRD platforms) ---
+
+bernina-endstation:
+  stage: sample
+  enclosure: Bernina
+  intro: "The Bernina diffraction endstation: the GPS six-circle diffractometer, the XRD You-geometry diffractometer, the downstream-diagnostic table, the pump-probe laser, and the sample-view cameras."
+  note: >
+    The defining endstation. GPS (SARES22-GPS, a six-circle station) and XRD (SARES21-XRD,
+    a You-geometry station with a kappa goniometer, a 2-theta detector arm, a polarization-
+    analyzer branch, a heavy-load goniometer table, and a PI hexapod) are both reconfigurable
+    diffraction PLATFORMS. Each reuses the graduated Diffractometer ASSEMBLY (4-ID / 8-ID):
+    it COMPOSES a Goniometer (the sample circles + x/y/z, one Asset), zero-or-more RotaryStage
+    detector-arm circles, and a reciprocal-space PseudoAxis. So each platform is modelled here
+    as a Goniometer Asset + a PseudoAxis Asset, with the Assembly composition designed on
+    model.md (DIFF-1); NO new Family is coined. WHICH sub-assemblies (base/arm/polana/kappa/
+    heavy-load/hexapod/robot) are actually mounted is read from the non-public bernina_config
+    JSON and is carried unknown (CONFIG-1). The Staeubli TX200 robot (over PShell HTTP, not
+    EPICS) handling samples / the detector is deferred (ROBOT-1). The fs pump-probe laser
+    folds into the loose Laser family; its fs sync (the eco lxt chain) is the cross-timing-
+    domain gap (LASER-1).
+  devices:
+    - name: GPS_Goniometer
+      family: Goniometer
+      pv: "SARES22-GPS"
+      new: true
+      confirm: true
+      note: "the GPS six-circle diffractometer's sample-orientation goniometer (eco gps, GPS; recspace SixCircleBernina). The sample-orientation circles + x/y/z bind the Goniometer Family; the full platform is the Diffractometer Assembly (DIFF-1)"
+    - name: GPS_ReciprocalSpace
+      family: PseudoAxis
+      pv: {confirm: "GPS reciprocal-space pseudo-axis (eco SixCircleBernina recspace conversion); the partition rule is DIFF-2"}
+      new: true
+      confirm: true
+      note: "the GPS six-circle reciprocal-space (hkl) pseudo-axis layer; the reciprocal_space slot of the Diffractometer Assembly (DIFF-1, DIFF-2)"
+    - name: XRD_Goniometer
+      family: Goniometer
+      pv: "SARES21-XRD"
+      new: true
+      confirm: true
+      note: "the XRD You-geometry diffractometer's sample-orientation goniometer (eco xrd, XRDYou). Recoverable axes: base (gamma/mu + translations/tilts), arm (delta/tdet), polana (pol/pthe/ptth), kappa (with kappa<->Eulerian conversion), heavy-load table, PI hexapod; WHICH are mounted is external (CONFIG-1). Binds the Goniometer Family; the platform is the Diffractometer Assembly (DIFF-1)"
+    - name: XRD_DetectorArm
+      family: RotaryStage
+      pv: {confirm: "XRD 2-theta detector arm (eco xrd delta = SARES21-XRD:MOT_DT_RX2TH); the detector_arm slot of the Diffractometer Assembly (DIFF-1)"}
+      new: true
+      confirm: true
+      note: "the XRD detector-arm 2-theta circle (delta); the ZeroOrMore detector_arm slot of the Diffractometer Assembly (DIFF-1). Axis suffix recoverable, mount state external (CONFIG-1)"
+    - name: XRD_ReciprocalSpace
+      family: PseudoAxis
+      pv: {confirm: "XRD reciprocal-space pseudo-axis (eco diffcalc, Crystals recspace; kappa<->You conversion); the partition rule is DIFF-2"}
+      new: true
+      confirm: true
+      note: "the XRD reciprocal-space (hkl) pseudo-axis layer (eco diffcalc); the reciprocal_space slot of the Diffractometer Assembly (DIFF-1, DIFF-2)"
+    - name: USDTable
+      family: Hexapod
+      pv: {confirm: "upstream-diagnostic / sample hexapod table (eco usd_table, HexapodSymmetrie; 6-axis)"}
+      new: true
+      confirm: true
+      note: "the upstream sample / diagnostic hexapod table; folds into the Hexapod Family"
+    - name: SampleCamera
+      family: Camera
+      pv: "SARES20-CAMS142-C1"
+      new: true
+      confirm: true
+      note: "below-sample view microscope (eco samplecam_below, MicroscopeMotorRecord; zoom on SARES20-MF1:MOT_14); presents the Detector Role for sample viewing / alignment, binds Camera"
+    - name: PumpProbeLaser
+      family: Laser
+      pv: "SLAAR21-LMOT"
+      new: true
+      confirm: true
+      note: "femtosecond optical pump-probe laser (eco las, LaserBernina); loose Laser family reused (the Alvra / LCLS-MFX precedent). The laser / X-ray fs synchronization (the eco lxt chain) is the cross-timing-domain gap (LASER-1)"
+    - name: LaserShutter
+      family: Shutter
+      pv: "SLAAR21-LTIM01-EVR0"
+      new: true
+      confirm: true
+      note: "pump-probe laser shutter (eco laser_shutter), driven through a SwissFEL event receiver (EVR). Folds into Shutter; the EVR is the beam-synchronous timing system (TIMING-1)"
+
+# --- DETECTION STAGE: the per-shot Jungfrau area detector ---
+
+detector:
+  stage: detection
+  enclosure: Bernina
+  intro: "The Bernina Jungfrau science detectors. They reuse the Camera Family, but their acquisition mode is the headline gap."
+  note: >
+    The detectors reuse the Camera Family (Detector Role). What does NOT fold is how they
+    are read: the SwissFEL sf-daq records a free-running stream of per-shot frames tagged by
+    pulse-ID at beam rate, not a poll-Acquire-to-Done loop (DAQ-1). eco wires a 1.5M Jungfrau
+    (JF01T03V01) inline; sf_daq_broker lists Bernina's main 16M (JF07T32V02) plus I0 / vacuum
+    / fluorescence / RIXS 0.5M variants. WHICH detector attaches to which diffractometer is
+    read from the non-public config (CONFIG-1); the eco / broker version strings differ for
+    the 16M (V01 vs V02), carried confirm (DET-1).
+  devices:
+    - name: AreaDetector
+      family: Camera
+      pv: {confirm: "Bernina 16M Jungfrau (sf_daq_broker JF07T32V02; eco wires the 1.5M JF01T03V01 inline). sf-daq-managed, not polled (DET-1, DAQ-1, CONFIG-1)"}
+      new: true
+      confirm: true
+      note: "the science detector; per-shot frames flow through the sf-daq data plane, which CORA references as a Dataset rather than owns (DAQ-1). The detector-to-diffractometer wiring is external (CONFIG-1); the eco / broker version mismatch is carried confirm (DET-1)"
+
+# Cross-cutting timing + the software systems CORA does not model.
+controls:
+  intro: >
+    Bernina runs the PSI EPICS stack plus the SwissFEL event-driven DAQ. The SwissFEL event
+    system (the master timing, the CTA sequencer, and EVR receivers) programs the beam-
+    synchronous trigger pattern; the sf-daq, bsread streaming, and the eco scan / acquisition
+    suite are software / floor. The live device list and the diffractometer configuration are
+    loaded at runtime from non-public PSI config files (CONFIG-1).
+  triggering:
+    - name: EventTiming
+      family: TimingController
+      pv: {confirm: "SwissFEL event system (eco event_system: master SIN-TIMAST-TMA, pulse-id SARES20-CVME-01-EVR0:RX-PULSEID, CTA sequencer SAR-CCTA-ESB) and per-hutch EVRs; trigger-pattern handles TBD (TIMING-1)"}
+      new: true
+      confirm: true
+      note: "the SwissFEL event-receiver / sequencer timing that gates acquisition at beam rate. TimingController carries the device, but 'acquire on event-code N at rate R' has no typed parameter home (TIMING-1). The fs laser / X-ray sync (the eco lxt chain) is a further gap (LASER-1)"
+  software_iocs_not_modeled:
+    - sf-daq (the per-shot, pulse-ID-tagged event acquisition broker, DAQ-1)
+    - bsread / mflow (the beam-synchronous ZMQ data streaming transport, DAQ-1)
+    - the eco / slic acquisition + scan suite (the Python beamline-control layer the descriptor is mined from)
+    - the non-public bernina_config JSON (the device list + diffractometer mount state + detector wiring, CONFIG-1)
+    - the Staeubli TX200 sample / detector robot over PShell HTTP (ROBOT-1)
+
+# Continuously-available resources a run draws on (modelling exercise).
+resources:
+  intro: >
+    The continuously-available facility resources a run needs present before it can start.
+    All pending confirmation. The FEL beam is a shared, switched resource across the Aramis
+    stations (TOPO-1); its per-shot character is an acquisition concern, not a supply one.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
