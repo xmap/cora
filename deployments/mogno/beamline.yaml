@@ -1,0 +1,217 @@
+# CORA Beamline descriptor: MOGNO (Sirius), reverse-engineered from papers
+#
+# MOGNO is the X-ray micro and nanotomography beamline at Sirius (LNLS / CNPEM),
+# a cone-beam, phase-contrast, time-resolved (4D) tomography instrument. It is
+# bound to the Sirius Site (deployments/sirius/site.yaml).
+#
+# STATUS: reverse-engineered, not staff-confirmed, and thinner than the other
+# reverse-engineered beamlines. Unlike FXI (built from a public bluesky profile
+# collection with real EPICS PVs), MOGNO has NO public controls config: its facts
+# come from two published papers and the facility page:
+#   - Campoi et al. 2025, "Software architecture at Sirius' MOGNO beamline, towards
+#     a web-based system", J. Phys.: Conf. Ser. 3010 012137 (the software paper).
+#   - Archilha et al. 2022, "The MOGNO beamline", J. Phys.: Conf. Ser. 2380 012123
+#     (the hardware paper).
+#   - https://lnls.cnpem.br/facilities/mogno/ (the facility page).
+# So this descriptor is design-fact mode (the TomoWISE shape): devices bind to
+# catalog Families only, every device carries `new: true` and `confirm: true`, NO
+# `pv` field is invented, and NO vendor `model` is bound. Device part-numbers the
+# facility page names are carried as model_target notes, not bindings.
+#
+# Items to verify with MOGNO staff are tagged inline with a (QUESTION-ID) answered
+# on docs/deployments/mogno/questions.md.
+#
+# The orchestration seam (see docs/deployments/mogno/equipment/controls.md): MOGNO
+# runs a beamline-owned CUSTOM EPICS stack (mgn-devices / mgn-routines /
+# mgn-control-guis over PyEpics, with a TATU FPGA trigger), NOT Bluesky/sophys.
+# That custom routine layer is the orchestration CORA's edge would conduct over
+# the EPICS floor; Bluesky is a future migration target at the beamline (ORCH-1).
+
+beamline:
+  name: MOGNO
+  facility: sirius
+  tier: Unit
+  parent: null
+  source: bending-magnet
+  source_confirm: "a 3.2 T dipole / superbend source (the hardware paper calls it a permanent-magnet dipole, the facility page a superbend); critical energy ~19 keV. Exact source type and parameters pending (SRC-1)."
+
+# Two endstations, each its own access-gated experiment area: the nanotomography
+# station (elliptical-mirror nanofocus) and the microtomography station (large
+# field of view). The optics are shared upstream. PSS permit leaves are not
+# public (PSS-1).
+enclosures:
+  - name: mogno-nano
+    role: experiment-hutch
+    facility_code: sirius
+    permit_signal: {confirm: "Sirius PSS permit signal TBD (PSS-1)"}
+  - name: mogno-micro
+    role: experiment-hutch
+    facility_code: sirius
+    permit_signal: {confirm: "Sirius PSS permit signal TBD (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the beam delivery and conditioning shared by both stations
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: mogno-nano
+  intro: "The dipole source delivering a quasi-monochromatic cone beam to the two tomography stations."
+  note: >
+    The source is a 3.2 T dipole / superbend with a critical energy near 19 keV.
+    The beam is quasi-monochromatic (dE/E ~ 1e-2) at three working energies; the
+    hardware paper gives 21.5 / 39.0 / 67.7 keV and the facility page rounds to
+    22 / 39 / 67.5 keV (SRC-2). Recorded as a Supply (PhotonBeam) at the Site,
+    identity-only here.
+  devices:
+    - name: Source
+      family: InsertionDevice
+      new: true
+      confirm: true
+      note: "Sirius dipole / superbend source feeding MOGNO. Type (permanent-magnet dipole vs superbend), field, and the energy-selection mechanism are not in public sources (SRC-1)."
+    - name: StorageRing
+      family: StorageRing
+      new: true
+      confirm: true
+      note: "Sirius 3 GeV ring state, observe-only; a loose StorageRing reused across the fleet. Exact machine-state read pending (MACHINE-1)."
+
+optics:
+  stage: source
+  enclosure: mogno-nano
+  intro: "Condition and focus the beam. A set of elliptical mirrors demagnifies the source to the nanofocus, with beam-defining slits."
+  note: >
+    The optics are carried at Family granularity only; the public sources describe
+    the focusing optics qualitatively, not by handle. The nanotomography station
+    uses a set of (reported) three elliptical mirrors demagnifying to a ~120 nm
+    focus (hardware paper) / KB-style multicoated mirrors reaching ~100 x 100 nm
+    (facility page) (OPT-1).
+  devices:
+    - name: FocusingMirror
+      family: Mirror
+      new: true
+      confirm: true
+      note: "Elliptical / KB-style focusing mirrors demagnifying the source to the nanofocus (~100-120 nm). Count, coatings, geometry, and handles pending (OPT-1)."
+    - name: BeamSlit
+      family: Slit
+      new: true
+      confirm: true
+      note: "Beam-defining slits. Blade-axis map and handles not in public sources (OPT-2)."
+
+# ===========================================================================
+# SAMPLE STAGE: the two tomography endstations
+# ===========================================================================
+
+nanotomography-endstation:
+  stage: sample
+  enclosure: mogno-nano
+  intro: "The nanotomography station: the rotation axis and a fine three-axis sample positioner at the elliptical-mirror nanofocus, for ~120 nm to micron-scale cone-beam tomography."
+  note: >
+    The software paper names device classes (a three-axis fine-movement 'tripod'
+    and motor+AsynRecord scannable stages) but no part numbers or handles. The
+    rotation stage is the master clock for hardware-triggered acquisition (STAGE-1).
+  devices:
+    - name: SampleRotary
+      family: RotaryStage
+      new: true
+      confirm: true
+      note: "The tomographic rotation axis; the scannable driven during a tomogram (projections over rotation). Model, encoder, and handle pending (STAGE-1)."
+    - name: SampleTripod
+      family: LinearStage
+      new: true
+      confirm: true
+      note: "Three-axis fine sample positioner (the piezo 'tripod' in the software paper); centring and alignment. Axis set is a per-Asset setting; model and handles pending (STAGE-2)."
+
+microtomography-endstation:
+  stage: sample
+  enclosure: mogno-micro
+  intro: "The microtomography station: a rotation axis and sample positioner for large-field-of-view cone-beam tomography (field of view to tens of millimetres), conceptually similar to the nano station at coarser resolution."
+  note: >
+    The two stations span ~120 nm to ~55 um resolution and ~150 um to ~85 mm field
+    of view (hardware paper). The micro-station device handles are not separately
+    given in the public sources; modelled at Family granularity, pending (STAGE-3).
+  devices:
+    - name: MicroSampleRotary
+      family: RotaryStage
+      new: true
+      confirm: true
+      note: "Microtomography rotation axis; the master clock for the micro-station triggered acquisition. Model and handle pending (STAGE-3)."
+    - name: MicroSampleStage
+      family: LinearStage
+      new: true
+      confirm: true
+      note: "Microtomography sample positioner. Axis set, model, and handles pending (STAGE-3)."
+
+# ===========================================================================
+# DETECTION STAGE: the detector chain serving the two stations
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: mogno-micro
+  intro: "The detectors converting and recording the transmitted cone beam: a high-Z photon-counting detector and an indirect scintillator-coupled sCMOS chain, plus the cone-beam magnification axis."
+  note: >
+    The software paper refers only to a generic AreaDetector; the facility page
+    names specific models (CAM-1). MOGNO uses a high-Z photon-counting detector
+    (Pimega, Si, in-house) and an indirect chain (a scintillator + sCMOS, e.g. a
+    PCO Edge behind a LuAG:Ce scintillator with an Optique Peter microscope), with
+    a CdTe Medipix/Mobipix option. The per-station detector pairing is uncertain
+    in public sources (CAM-1); modelled as one detector position until staff
+    confirm which detectors are installed and active, the FXI multi-camera
+    precedent.
+  devices:
+    - name: Camera
+      family: Camera
+      new: true
+      confirm: true
+      note: "The imaging detector. Roster from the facility page: Pimega (Si, photon-counting, ~1536x1536, 55 um pixel, in-house/PiTec); PCO Edge 4.2 sCMOS; Medipix/Mobipix CdTe. Which are installed per station, and their configurations, pending (CAM-1). Vendor models not bound (model_target only)."
+    - name: Scintillator
+      family: Scintillator
+      new: true
+      confirm: true
+      note: "Scintillator for the indirect detection chain (e.g. LuAG:Ce) coupled to the sCMOS via an Optique Peter microscope. Material, thickness, and the microscope objective set pending (CAM-2)."
+    - name: Magnification
+      family: PseudoAxis
+      new: true
+      confirm: true
+      note: "Cone-beam geometric magnification, set by the sample position along the diverging cone between secondary source and detector (the 'zoom' tomography axis). A virtual axis over the sample and detector distances; rule pending (MAG-1). The FXI Magnification precedent."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+# MOGNO runs a beamline-owned custom EPICS application stack, NOT Bluesky/sophys.
+# The motion controllers and detector IOCs are recorded as Families only: the
+# controller boxes and PV namespaces are not in public open source (CTRL-1).
+controls:
+  intro: >
+    The trigger hardware and the drive electronics. MOGNO's control floor is EPICS
+    IOCs plus TATU (an FPGA trigger/timer on CompactRIO, shared Sirius infra). The
+    application layer above it is the beamline's custom PyEpics stack (mgn-devices /
+    mgn-routines / mgn-control-guis), the orchestration CORA's edge would conduct
+    over (ORCH-1). PV namespaces and controller-box identities are not public (CTRL-1).
+  triggering:
+    - name: TATU
+      family: TimingController
+      new: true
+      confirm: true
+      note: "FPGA-based trigger and timer unit on CompactRIO (Piton et al., ICALEPCS 2021), exposing EPICS PVs via the LNLS Nheengatu layer; hardware-triggers the rotation-synchronised projection acquisition. The 2-BM softGlueZynq / FXI Zebra precedent. Handles pending (CTRL-1)."
+  motion_controllers:
+    - name: SampleMotionController
+      family: MotionController
+      new: true
+      confirm: true
+      note: "Drives the sample-side stages (rotation, tripod, micro-station). Box model, protocol, and PV namespace not in public sources (CTRL-1)."
+  software_iocs_not_modeled:
+    # Software processes / packages referenced by the papers, never registered as
+    # Assets: the beamline-owned custom EPICS application stack, plus the ssc-raft
+    # reconstruction library on the HPC cluster.
+    [mgn-devices, mgn-routines, mgn-control-guis, ssc-raft, TATU-IOC, areaDetector]
+
+resources:
+  intro: >
+    Continuously-available resources (the Supply BC). Facility-scope supplies live
+    in deployments/sirius/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

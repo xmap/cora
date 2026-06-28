@@ -88,4 +88,12 @@ The sixth Site CORA models, and its first Australian facility (operated by ANSTO
 | --- | --- | --- |
 | [MX3](mx3/index.md) | Reverse-engineered | macromolecular crystallography (rotation MX) on an MD3 microdiffractometer + DECTRIS Eiger with an ISARA robot; reuses the i03 Goniometer and MX Methods, novelty is the Site and its heterogeneous control plane |
 
+## [Sirius](sirius/index.md)
+
+CORA's first South American facility (the Brazilian Synchrotron Light Laboratory, LNLS, at CNPEM in Campinas). Its MOGNO beamline is reverse-engineered from two published papers and the public facility page rather than an open controls config, so it is the thinnest reverse-engineered scaffold: device families are inferred but no control handles or vendor models are public, and every value stays `confirm` until MOGNO staff verify it.
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [MOGNO](mogno/index.md) | Reverse-engineered (partial) | cone-beam X-ray micro and nanotomography (phase-contrast, time-resolved 4D) across two stations; reuses the 2-BM / FXI tomography vocabulary, novelty is the Site and the fleet's first custom-Python (non-Bluesky) orchestration layer |
+
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

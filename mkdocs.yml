@@ -738,6 +738,22 @@ nav:
         - Techniques: deployments/id32/techniques.md
         - Governance: deployments/id32/governance.md
         - Model: deployments/id32/model.md
+    - Sirius:
+      - deployments/sirius/index.md
+      - MOGNO:
+        - deployments/mogno/index.md
+        - Open questions: deployments/mogno/questions.md
+        - The beamline:
+          - deployments/mogno/equipment/index.md
+          - Source: deployments/mogno/beamline.md
+          - Nanotomography: deployments/mogno/equipment/nanotomography.md
+          - Microtomography: deployments/mogno/equipment/microtomography.md
+          - Detector: deployments/mogno/equipment/detector.md
+          - Controls: deployments/mogno/equipment/controls.md
+          - Inventory: deployments/mogno/inventory.md
+        - Techniques: deployments/mogno/techniques.md
+        - Governance: deployments/mogno/governance.md
+        - Model: deployments/mogno/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
