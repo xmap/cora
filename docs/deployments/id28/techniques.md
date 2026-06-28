@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Momentum-resolved inelastic X-ray scattering
 
-ID28 sets a meV-resolution incident energy with the high-resolution backscattering monochromator, places the multi-analyzer spectrometer arm at a scattering angle that selects the momentum transfer, and scans the incident energy against the fixed-angle analyzer crystals, counting the energy-analyzed scattered photons. The measurement is the intensity surface I(Q, energy-loss): how much energy the sample exchanges with the photon at a chosen momentum transfer, the signature of phonons and collective excitations.
+ID28 sets a meV-resolution incident energy with the high-resolution backscattering monochromator (scanned by tuning the crystal temperature, not a Bragg angle), places the multi-analyzer spectrometer arm at a scattering angle that selects the momentum transfer, and scans the incident energy against the fixed-angle analyzer crystals, counting the energy-analyzed scattered photons. The measurement is the intensity surface I(Q, energy-loss): how much energy the sample exchanges with the photon at a chosen momentum transfer, the signature of phonons and collective excitations.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
