@@ -405,6 +405,7 @@ _PROMOTION_REVIEWED = {
     "PolarizationAnalyzer": "hold: 4-id + i10 + esrf-id32 polarimeter; graduation-due (POL-2)",
     "Magnet": "hold: sample-env magnet, 4-id + i10-1 + esrf-id32; graduation-due (MAG-1)",
     "SpectrometerArm": "hold: dispersive arm, six + esrf-id32 RIXS+XES; graduation-due (RIXS-1)",
+    "SlipRing": "hold: passive feedthrough (tomowise + i-tomcat); passive-deferred, not an Asset",
 }
 
 # Catalog families bound by no deployment device. Symmetric to the orphan-model

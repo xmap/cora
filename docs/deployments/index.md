@@ -96,4 +96,12 @@ CORA's first South American facility (the Brazilian Synchrotron Light Laboratory
 | --- | --- | --- |
 | [MOGNO](mogno/index.md) | Reverse-engineered (partial) | cone-beam X-ray micro and nanotomography (phase-contrast, time-resolved 4D) across two stations; reuses the 2-BM / FXI tomography vocabulary, novelty is the Site and the fleet's first custom-Python (non-Bluesky) orchestration layer |
 
+## [PSI](psi/index.md)
+
+The Paul Scherrer Institut. Like SLAC, the Site is the institute: PSI hosts two photon sources, the Swiss Light Source (SLS / SLS 2.0) storage ring and SwissFEL, with the beamlines as stations under it. Its I-TOMCAT beamline (on SLS) is a hybrid: the tomography instrument is modelled from PSI's public beamline pages and the SLS 2.0 design reports (the TomoWise tradition), because no public per-beamline controls config exists for TOMCAT. The public `bec-project/ophyd_devices` examples show the SLS PV-prefix shape (for sibling beamlines cSAXS and PXIII), and SLS is an EPICS facility with the BEC scan layer over ophyd, which is the seam CORA's edge would replace.
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [I-TOMCAT](i-tomcat/index.md) | Reverse-engineered | insertion-device tomographic microscopy (absorption + propagation phase contrast + dynamic 4D CT on the PSI GigaFRoST camera), X02SA; the SLS 2.0 undulator half of the rebuilt TOMCAT, CORA's micro-CT analog of APS 2-BM |
+
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

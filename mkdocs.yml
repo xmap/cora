@@ -754,6 +754,21 @@ nav:
         - Techniques: deployments/mogno/techniques.md
         - Governance: deployments/mogno/governance.md
         - Model: deployments/mogno/model.md
+    - PSI:
+      - deployments/psi/index.md
+      - I-TOMCAT:
+        - deployments/i-tomcat/index.md
+        - Open questions: deployments/i-tomcat/questions.md
+        - The beamline:
+          - deployments/i-tomcat/equipment/index.md
+          - Source: deployments/i-tomcat/beamline.md
+          - Sample: deployments/i-tomcat/equipment/sample.md
+          - Detector: deployments/i-tomcat/equipment/detector.md
+          - Controls: deployments/i-tomcat/equipment/controls.md
+          - Inventory: deployments/i-tomcat/inventory.md
+        - Techniques: deployments/i-tomcat/techniques.md
+        - Governance: deployments/i-tomcat/governance.md
+        - Model: deployments/i-tomcat/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

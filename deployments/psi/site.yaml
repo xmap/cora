@@ -1,0 +1,74 @@
+# CORA Site descriptor: the PSI site-level surface
+#
+# The Paul Scherrer Institut (PSI, Villigen, Switzerland) is the eighth Site CORA
+# models. PSI hosts two photon sources: the Swiss Light Source (SLS / SLS 2.0)
+# storage ring and SwissFEL. This Site, like SLAC (the lab hosting LCLS), is the
+# institute; SLS and SwissFEL are sources within it, and the beamlines (I-TOMCAT
+# on SLS, the Aramis stations on SwissFEL) are experimental stations under it.
+# This file is the single human-readable source for the facility's site-level
+# instances: the Facility itself, the Practices it would run, and the facility
+# principals.
+#
+# Status: reverse-engineered, an off-roadmap modelling exercise (not a CORA
+# pilot). CORA has not been connected to PSI and no staff have confirmed this
+# model. The I-TOMCAT (SLS) content is a hybrid: the instrument is modelled from
+# PSI's public TOMCAT pages and the SLS 2.0 design reports (the TomoWISE
+# tradition), because no public per-beamline controls config exists for TOMCAT.
+# Every value below is carried `pending` until PSI staff confirm it; do not invent
+# facility specifics here, carry them as questions on the per-beamline
+# open-questions pages.
+#
+# Controls house-style: SLS is an EPICS facility ("control of the beamline and
+# experiment is fully implemented in EPICS", psi.ch/en/sls/optics/computingcontrols),
+# with the BEC (Beamline and Experiment Control, bec-project) scan/orchestration
+# layer over ophyd for SLS 2.0. EPICS is the floor CORA drives through; BEC is the
+# edge orchestration CORA's edge replaces (the seam, I-TOMCAT SEAM-1).
+#
+# Source-of-truth boundary (same as the APS / MAX IV / Diamond / NSLS-II / SLAC / AS sites):
+#   - the closed facility-kind / actor-kind vocabularies are validated against
+#     code-mirrored frozensets in scripts/site_descriptor.py.
+#   - the facility records the bootstrap invariants (kind=Site, display_name
+#     equals code); `heading` carries the human title used on the rendered page.
+#   - a non-pending practice method must resolve to a catalog Method; I-TOMCAT
+#     runs the catalog's tomography-family Methods, carried pending until PSI staff
+#     confirm them.
+
+facility:
+  code: psi
+  display_name: psi
+  heading: "PSI"
+  kind: Site
+  institution: Paul Scherrer Institut (PSI), Switzerland
+  beamlines: [I-TOMCAT]
+
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. I-TOMCAT is
+# a tomographic-microscopy beamline on the SLS storage ring, so its practices
+# adapt the catalog's tomography-family Methods (the 2-BM / TomoWISE precedent).
+# All pending until PSI staff confirm them (TECH-1).
+practices:
+  - {name: I-TOMCAT_microtomography_practice, method: tomography, pending: true, note: "absorption and propagation-based phase-contrast microtomography on the SLS undulator endstation; reuses the catalog tomography Method (TECH-1)"}
+  - {name: I-TOMCAT_dynamic_tomography_practice, method: streaming_tomography, pending: true, note: "fast / dynamic 4D tomography via the GigaFRoST continuous-streaming camera; reuses the catalog streaming_tomography Method (TECH-1)"}
+
+# Access BC Actors conceptually facility-wide at PSI. Pending until the PSI
+# operator and review structure is confirmed.
+actors:
+  - {name: PSI beamline staff, kind: human, pending: true, note: "beamline scientist and operator pool; structure TBD"}
+  - {name: PSI safety review, kind: human, pending: true, note: "facility safety review body; membership TBD"}
+
+# Agent BC Agents seeded at this deployment. None: the CORA system agents are not
+# wired for a PSI deployment, and I-TOMCAT is a modelling exercise.
+agents: []
+
+# Supply BC: facility-wide continuously-available resources. Pending in design.
+supplies:
+  - {name: SLS photon beam, kind: PhotonBeam, pending: true, note: "SLS 2.0 storage-ring beam, shared across the SLS beamlines (SRC-1)"}
+  - {name: Cooling water, kind: CoolingWater, pending: true}
+  - {name: Beamline vacuum, kind: Vacuum, pending: true}
+
+# Safety BC: facility-issued Clearances. PSI personnel safety (PSS) is carried
+# pending; the SLS safety-form names are not public and are confirmed by staff.
+clearances:
+  - {name: PSI personnel safety system, kind: PSS, pending: true, note: "facility safety-form and interlock names TBD; confirm with PSI staff (PSS-1)"}
+
+# Caution BC: operator tribal knowledge. None yet for a modelling exercise.
+cautions: []
