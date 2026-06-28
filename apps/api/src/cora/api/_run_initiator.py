@@ -44,6 +44,7 @@ from uuid import uuid5
 from cora.access.aggregates.actor import load_actor
 from cora.agent import load_agent
 from cora.agent.seed_run_initiator import RUN_INITIATOR_AGENT_ID
+from cora.api._agent_decision_signing import maybe_sign_agent_event
 from cora.api._flag_watcher import WatcherReadUnauthorizedError, probe_read_grant
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_RUN_INITIATION,
@@ -142,6 +143,9 @@ async def _record_initiation_decision(
         correlation_id=deps.id_generator.new_id(),
         causation_id=None,
         principal_id=RUN_INITIATOR_AGENT_ID,
+    )
+    new_event = await maybe_sign_agent_event(
+        deps.signer, new_event, actor_id=RUN_INITIATOR_AGENT_ID
     )
     try:
         await deps.event_store.append(

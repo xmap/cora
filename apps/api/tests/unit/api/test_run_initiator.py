@@ -210,6 +210,46 @@ async def test_resolve_active_plan_none_when_neither_designated_nor_fallback() -
 
 
 @pytest.mark.unit
+async def test_record_initiation_decision_signs_the_agent_decision() -> None:
+    """The initiator's agent-authored DecisionRegistered is signed at write time.
+
+    DecisionRegistered is in SIGNED_EVENT_TYPES, so an agent row must carry a
+    signature (an unsigned agent row trips the strict audit sweep). Pins the
+    signing the proactive path previously omitted.
+    """
+    import dataclasses
+
+    from cora.api._run_initiator import _record_initiation_decision
+    from cora.infrastructure.signing import verify_signature
+    from tests.unit.agent._helpers import Ed25519FakeSigner
+
+    signer = Ed25519FakeSigner(kid="kid-run-initiator")
+    kernel = dataclasses.replace(_kernel(), signer=signer)
+    decision_id = uuid4()
+    await _record_initiation_decision(
+        kernel, decision_id=decision_id, plan_id=uuid4(), subject_id=None
+    )
+
+    events, _ = await kernel.event_store.load("Decision", decision_id)
+    stored = events[0]
+    assert stored.signature is not None
+    assert stored.signature_kid == "kid-run-initiator"
+    assert signer.received_actor_ids == [RUN_INITIATOR_AGENT_ID]
+
+    async def _resolver(kid: str) -> bytes:
+        assert kid == "kid-run-initiator"
+        return signer.public_key_bytes
+
+    await verify_signature(
+        event_type=stored.event_type,
+        payload=stored.payload,
+        signature=stored.signature,
+        kid=stored.signature_kid,
+        resolve_public_key=_resolver,
+    )
+
+
+@pytest.mark.unit
 async def test_loop_survives_a_failing_tick() -> None:
     """A tick that raises is logged and the loop keeps going; the lifespan exits
     cleanly (no exception escapes the context)."""
