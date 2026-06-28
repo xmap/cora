@@ -724,6 +724,49 @@ async def test_record_decision_signs_the_agent_decision() -> None:
 
 
 @pytest.mark.unit
+async def test_record_observation_act_decision_signs_the_agent_decision() -> None:
+    """The observation act-rung (Rule Q -> Abort, Rule R -> Stop) Decision is signed.
+
+    A separate write path from _record_decision; it must sign too (an unsigned
+    agent DecisionRegistered trips the strict audit sweep)."""
+    import dataclasses
+
+    from cora.api._run_supervisor import _record_observation_act_decision
+    from cora.infrastructure.signing import verify_signature
+    from tests.unit.agent._helpers import Ed25519FakeSigner
+
+    signer = Ed25519FakeSigner(kid="kid-run-supervisor")
+    kernel = dataclasses.replace(_kernel(), signer=signer)
+    decision_id = uuid4()
+    run_id = uuid4()
+    await _record_observation_act_decision(
+        kernel,
+        decision_id=decision_id,
+        run_id=run_id,
+        choice="Abort",
+        inputs={"snr": "3.0", "snr_limit": "5.0"},
+    )
+
+    events, _ = await kernel.event_store.load("Decision", decision_id)
+    stored = events[0]
+    assert stored.signature is not None
+    assert stored.signature_kid == "kid-run-supervisor"
+    assert signer.received_actor_ids == [RUN_SUPERVISOR_AGENT_ID]
+
+    async def _resolver(kid: str) -> bytes:
+        assert kid == "kid-run-supervisor"
+        return signer.public_key_bytes
+
+    await verify_signature(
+        event_type=stored.event_type,
+        payload=stored.payload,
+        signature=stored.signature,
+        kid=stored.signature_kid,
+        resolve_public_key=_resolver,
+    )
+
+
+@pytest.mark.unit
 async def test_loop_survives_a_failing_tick() -> None:
     """A tick that raises is logged and the loop keeps going; the lifespan exits cleanly."""
     kernel = _kernel(enabled=True)

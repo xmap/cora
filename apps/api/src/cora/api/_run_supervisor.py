@@ -723,6 +723,9 @@ async def _record_observation_act_decision(
         causation_id=None,
         principal_id=RUN_SUPERVISOR_AGENT_ID,
     )
+    new_event = await maybe_sign_agent_event(
+        deps.signer, new_event, actor_id=RUN_SUPERVISOR_AGENT_ID
+    )
     try:
         await deps.event_store.append(
             stream_type=_STREAM_TYPE,
