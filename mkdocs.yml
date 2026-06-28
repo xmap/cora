@@ -764,6 +764,19 @@ nav:
         - Techniques: deployments/id16b/techniques.md
         - Governance: deployments/id16b/governance.md
         - Model: deployments/id16b/model.md
+      - ID28:
+        - deployments/id28/index.md
+        - Open questions: deployments/id28/questions.md
+        - The beamline:
+          - deployments/id28/equipment/index.md
+          - Source: deployments/id28/beamline.md
+          - Sample: deployments/id28/equipment/sample.md
+          - Detector: deployments/id28/equipment/detector.md
+          - Controls: deployments/id28/equipment/controls.md
+          - Inventory: deployments/id28/inventory.md
+        - Techniques: deployments/id28/techniques.md
+        - Governance: deployments/id28/governance.md
+        - Model: deployments/id28/model.md
     - PSI:
       - deployments/psi/index.md
       - I-TOMCAT:

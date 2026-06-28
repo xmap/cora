@@ -1,0 +1,185 @@
+# ID28 beamline descriptor (ESRF), reverse-engineered
+#
+# ID28 is the ESRF beamline for momentum-resolved inelastic X-ray scattering (IXS):
+# a high-resolution backscattering monochromator sets a meV-resolution incident energy,
+# and a multi-analyzer crystal spectrometer on a two-theta arm energy-analyzes the
+# scattered beam to map phonon and collective-excitation dispersions. It is bound to
+# the ESRF Site (deployments/esrf/site.yaml), CORA's second ESRF beamline after ID32.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the ESRF BLISS Beacon device database, gitlab.esrf.fr/id28/beamline_configuration,
+# a git mirror of the live config) or inferred, carried new: true + confirm: true pending
+# ID28 staff. The BLISS / Tango / IcePAP handles are real and read from the config (the
+# ID32 house-style precedent); control handles are BLISS axis/controller names and Tango
+# device URLs, carried as opaque edge handles (the MX3 / ID32 heterogeneous-control
+# precedent). Descriptor + docs scaffold; scenarios deferred.
+#
+# WHAT IS NEW: hard X-ray momentum-resolved IXS, and a further SpectrometerArm consumer.
+#   - IXS deepens the fleet's inelastic-scattering coverage (SIX soft RIXS, IXS 10-ID, ID32
+#     soft RIXS): ID28 is hard X-ray, meV-resolution, phonon-dispersion IXS.
+#   - The multi-analyzer crystal spectrometer is a further SpectrometerArm consumer. The
+#     family graduation is already pending from ID32's rule-of-three (RIXS-1); ID28 is a
+#     further sighting, HELD, reinforcing the deferred graduation.
+#
+# MODELLING: ID28 coins NO new Family and changes nothing in the catalog. The
+# backscattering monochromator binds Monochromator; the HFM / VFM benders bind Mirror;
+# the two-theta multi-analyzer spectrometer binds the loose SpectrometerArm (the array of
+# inclined analyzer crystals is a per-Asset setting, not a new family, the IXS-1 question);
+# the Basler / PCO detectors bind Camera; the LakeShore / Oxford / nanodac sample
+# environments bind TemperatureController; the undulators bind InsertionDevice; the
+# incident energy is a PseudoAxis; the machine state binds the loose StorageRing.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/id28/questions.md.
+
+beamline:
+  name: ID28
+  facility: esrf               # ESRF Site (facility_code: esrf)
+  sector: "ID28"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "ID28 is an undulator beamline; the BLISS config binds the undulators (modelled below) but not their period; the undulator detail is SRC-1"
+
+# Control plane: BLISS / Beacon over Tango + IcePAP (the ID32 precedent). Handles are
+# BLISS axis/controller names and Tango device URLs, carried as opaque edge handles. The
+# optics (oh2 / oh3) and the eh1 spectrometer endstation are the PV zones. Hutch grouping
+# and the PSS permit leaves are open (ENC-1, PSS-1).
+enclosures:
+  - name: id28-optics
+    role: optics-hutch
+    facility_code: esrf
+    permit_signal: {confirm: "PSS permit leaf not in the BLISS config; the oh2 / oh3 optics zone, hutch grouping is ENC-1 (PSS-1)"}
+  - name: id28-eh1
+    role: experiment-hutch
+    facility_code: esrf
+    permit_signal: {confirm: "PSS permit leaf unknown; the eh1 IXS spectrometer endstation, ENC-1 (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state, the undulators, the high-resolution mono, optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: id28-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "The ESRF-EBS storage-ring state, the loose StorageRing pattern reused across the fleet (MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: {confirm: "ESRF-EBS storage-ring state (current, fill); observe-only, the exact handles are MACHINE-1"}
+      new: true
+      confirm: true
+      note: "ESRF-EBS storage-ring state; observe-only (MACHINE-1)"
+
+source-optics:
+  stage: source
+  enclosure: id28-optics
+  intro: "The undulators, the high-resolution backscattering monochromator, and the focusing mirrors."
+  note: "The undulators bind InsertionDevice; the backscattering mono binds Monochromator (the meV-resolution backscattering crystal is a setting); the HFM / VFM benders bind Mirror."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {confirm: "the ID28 undulator(s) on the ESRF_Undulator device server (machine/undulators.yml); period and segments are SRC-1"}
+      new: true
+      confirm: true
+      note: "the ID28 undulator source; period is SRC-1"
+    - name: BeamEnergy
+      family: PseudoAxis
+      pv: {confirm: "the incident-energy virtual axis over the backscattering mono and the undulator; the meV-resolution energy scan rule is MONO-1"}
+      new: true
+      confirm: true
+      note: "incident-energy pseudo-axis over the mono and undulator; the meV energy-transfer scan is the IXS measurement (MONO-1)"
+    - name: Monochromator
+      family: Monochromator
+      pv: "BLISS PI_E518 (oh3/main_mono_pi_e518.yml; pimth / pimchi piezo on the main mono)"
+      new: true
+      confirm: true
+      note: "the high-resolution backscattering monochromator (a Si crystal on a PI E518 piezo, pimth / pimchi); the backscattering reflection sets the meV resolution, a per-Asset setting (MONO-1)"
+    - name: HorizontalFocusingMirror
+      family: Mirror
+      pv: "BLISS hfm_ctrl (oh3/hfm.yml; benders hfmb1 / hfmb2)"
+      new: true
+      confirm: true
+      note: "the horizontal focusing mirror (HFM, two-bender) (OPT-1)"
+    - name: VerticalFocusingMirror
+      family: Mirror
+      pv: "BLISS vfm_ctrl (oh3/vfm.yml; benders vfmb1 / vfmb2)"
+      new: true
+      confirm: true
+      note: "the vertical focusing mirror (VFM, two-bender) (OPT-1)"
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor      # loose Family, already held under review (DIAG-1)
+      pv: "oh2/elettra_bpm_oh2.yml"
+      new: true
+      confirm: true
+      note: "the oh2 Elettra beam-position monitor; binds the loose BeamPositionMonitor (already held, DIAG-1)"
+
+# ===========================================================================
+# EH1 ENDSTATION: the multi-analyzer IXS spectrometer arm + the sample environment
+# ===========================================================================
+
+eh1:
+  stage: detection
+  enclosure: id28-eh1
+  intro: "The IXS spectrometer endstation: a two-theta arm carrying an array of inclined analyzer crystals, the sample temperature environments, and the counting detectors."
+  note: >
+    The multi-analyzer spectrometer binds the loose SpectrometerArm (the SIX / ID32
+    precedent; a further consumer, held, reinforcing the deferred graduation, RIXS-1).
+    The array of inclined analyzer crystals (a2 / a3 / a4, each chi / th) is a per-Asset
+    setting on the one arm, not a new family (IXS-1). The detectors bind Camera; the
+    sample-temperature cryostats bind TemperatureController.
+  devices:
+    - name: SpectrometerArm
+      family: SpectrometerArm           # loose Family; further consumer, HELD (graduation deferred, RIXS-1)
+      pv: "BLISS tth_multilayer (eh1/tth_multilayer.yml; two-theta arm tth) carrying inca InclinedAnalyser crystals a2_inca / a3_inca / a4_inca (eh1/inca.yml; achi / ath per crystal)"
+      new: true
+      confirm: true
+      note: "the IXS multi-analyzer spectrometer: a two-theta arm (TwoThetaMultilayer, tth) carrying an array of inclined analyzer crystals (a2 / a3 / a4, each chi / th), energy-analyzing the scattered beam in backscattering. Binds the loose SpectrometerArm, a further consumer after SIX + ID32, HELD (the graduation is deferred, RIXS-1); the analyzer-crystal array is a per-Asset setting, not a child-Asset family (IXS-1)"
+    - name: SampleStage
+      family: LinearStage
+      pv: {confirm: "the IXS sample-positioning stage (eh1 motors); the axis set and handles are SAMPLE-1"}
+      new: true
+      confirm: true
+      note: "the sample-positioning stage at the IXS endstation (SAMPLE-1)"
+    - name: SampleTemperatureController
+      family: TemperatureController
+      pv: "BLISS lakeshore340_10k_displex (regulation/lakeshore340_10k_displex.yml)"
+      new: true
+      confirm: true
+      note: "the 10 K displex cryostat LakeShore 340 sample-temperature controller; an Oxford 700 cryostream and a nanodac gas blower are the alternative sample environments (regulation/oxford700.yml, regulation/nanodac_gasblower.yml) (TEMP-1)"
+    - name: Detector
+      family: Camera
+      pv: "BLISS lima basler / pco (lima/basler.yml, lima/pco.yml)"
+      new: true
+      confirm: true
+      note: "the counting / imaging detectors (Basler, PCO) at the spectrometer endstation; the per-analyzer IXS photon counters are DET-1"
+
+# Cross-cutting control. ID28 runs BLISS / Beacon over Tango + IcePAP (the floor); CORA
+# observes and, where it replaces BLISS-style orchestration, conducts over it. The handles
+# above were read from the public BLISS config and carried confirm (CTRL-1).
+controls:
+  intro: >
+    ID28 runs on the ESRF BLISS / Beacon control stack over Tango and IcePAP, the same
+    house-style as ID32. The device handles above are bound from the public BLISS Beacon
+    device database (gitlab.esrf.fr/id28/beamline_configuration), carried confirm pending
+    staff verification (CTRL-1); they are BLISS axis / controller names (PI_E518, hfm_ctrl,
+    tth_multilayer, a2_inca) and Tango device URLs, modelled as opaque edge handles over the
+    ControlPort. The IXS acquisition (the meV incident-energy scan against the fixed-angle
+    multi-analyzer arm, the two-theta moves that set the momentum transfer, the per-analyzer
+    counting) runs through BLISS sequences; that orchestration is the seam CORA's edge
+    replaces, conducting over Tango / IcePAP rather than replacing BLISS. The detector
+    file-writing to the ESRF data store is plumbing CORA observes, not data it owns (see
+    model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an ID28 run needs. The optics and the
+    spectrometer beam path run under vacuum, and the displex cryostat draws on cryogen
+    (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics and the spectrometer flight path (SUP-1)"
