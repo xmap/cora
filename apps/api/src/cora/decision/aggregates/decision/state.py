@@ -387,6 +387,55 @@ RunInitiationChoice = Literal["Start"]
 RUN_INITIATION_CHOICES: Final = frozenset({"Start"})
 
 
+# ExperimentSteerer agent writes one Decision per ACROSS-procedure steering
+# disposition: after one steered Procedure (the within-procedure loop, whose
+# per-iteration advice provenance already lands on `ProcedureIterationEnded`)
+# reaches its terminal, the steerer decides what the experiment does next.
+# Open-ended convention identical to RunSupervision / RunInitiation; the closed
+# choice vocabulary lives in the `ExperimentSteeringChoice` Literal below. See
+# [[project_decide_layer_stage1_design]] (the L3 ExperimentSteerer) + the seam in
+# `cora.api._experiment_steerer`.
+DECISION_CONTEXT_EXPERIMENT_STEERING = "ExperimentSteering"
+
+
+# Closed `choice` value set for `context = "ExperimentSteering"` Decisions.
+# Projection-validated, not domain-enforced (the open-string `DecisionContext` +
+# `DecisionChoice` shape is preserved). The across-procedure dispositions:
+#
+#   - `Continue`             -- the campaign objective is not yet met; steer
+#                              another Procedure (the proactive driver, a later
+#                              slice, issues the follow-on conduct).
+#   - `Conclude`             -- the campaign objective is met; stop steering (no
+#                              further Procedure). The normal terminal.
+#   - `Hold`                 -- pause the steered campaign between Procedures
+#                              (issues hold_procedure / a campaign hold), linked
+#                              via decided_by_decision_id.
+#   - `SteeringDeferred`     -- audit-fallback: the evidence was stale / absent /
+#                              unevaluable, so no across-procedure step taken.
+#                              Qualified with the agent work-noun (parallel to
+#                              DebriefDeferred / SupervisionDeferred) so it does
+#                              not collide in the shared DecisionChoice projection.
+#   - `SteeringConflicted`   -- audit-only: lost the per-campaign lease race to
+#                              another steerer evaluator (parallel to
+#                              SupervisionConflicted).
+ExperimentSteeringChoice = Literal[
+    "Continue",
+    "Conclude",
+    "Hold",
+    "SteeringDeferred",
+    "SteeringConflicted",
+]
+EXPERIMENT_STEERING_CHOICES: Final = frozenset(
+    {
+        "Continue",
+        "Conclude",
+        "Hold",
+        "SteeringDeferred",
+        "SteeringConflicted",
+    }
+)
+
+
 # CautionPromoter agent writes one Decision per CautionProposal it
 # evaluates. Open-ended convention identical to CautionProposal; the
 # closed choice vocabulary lives in the `CautionPromotionChoice` Literal
