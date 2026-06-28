@@ -45,11 +45,13 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.run._projections import register_run_projections
+from cora.run.features.abort_run import bind as bind_abort_run
 from cora.run.features.hold_run import bind as bind_hold_run
 from cora.run.features.list_runs import bind as bind_list_runs
 from cora.run.features.resume_run import bind as bind_resume_run
 from cora.run.features.start_run import StartRun
 from cora.run.features.start_run import bind as bind_start_run
+from cora.run.features.stop_run import bind as bind_stop_run
 from cora.run.features.truncate_run import bind as bind_truncate_run
 from cora.run.ports import InMemoryRunChannelLookup
 from cora.safety._projections import register_safety_projections
@@ -371,6 +373,8 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
     hold_run = bind_hold_run(deps)
     resume_run = bind_resume_run(deps)
     truncate_run = bind_truncate_run(deps)
+    abort_run = bind_abort_run(deps)
+    stop_run = bind_stop_run(deps)
     memory: dict[UUID, str] = {}
     settle: dict[UUID, int] = {}
 
@@ -394,6 +398,14 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         truncate_settle={},
         truncate_enabled=False,
         truncate_settle_ticks=3,
+        abort_run=abort_run,
+        stop_run=stop_run,
+        quality_act_settle={},
+        stall_act_settle={},
+        quality_act_enabled=False,
+        quality_settle_ticks=3,
+        stall_act_enabled=False,
+        stall_settle_ticks=2,
         liveness_ceiling_seconds=None,
         advise_enabled=False,
         resume_enabled=True,
@@ -423,6 +435,14 @@ async def test_supervisor_auto_resumes_when_envelope_safe(db_pool: asyncpg.Pool)
         truncate_settle={},
         truncate_enabled=False,
         truncate_settle_ticks=3,
+        abort_run=abort_run,
+        stop_run=stop_run,
+        quality_act_settle={},
+        stall_act_settle={},
+        quality_act_enabled=False,
+        quality_settle_ticks=3,
+        stall_act_enabled=False,
+        stall_settle_ticks=2,
         liveness_ceiling_seconds=None,
         advise_enabled=False,
         resume_enabled=True,
@@ -458,6 +478,8 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
     hold_run = bind_hold_run(deps)
     resume_run = bind_resume_run(deps)
     truncate_run = bind_truncate_run(deps)
+    abort_run = bind_abort_run(deps)
+    stop_run = bind_stop_run(deps)
     memory: dict[UUID, str] = {}
     settle: dict[UUID, int] = {}
 
@@ -481,6 +503,14 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         truncate_settle={},
         truncate_enabled=False,
         truncate_settle_ticks=3,
+        abort_run=abort_run,
+        stop_run=stop_run,
+        quality_act_settle={},
+        stall_act_settle={},
+        quality_act_enabled=False,
+        quality_settle_ticks=3,
+        stall_act_enabled=False,
+        stall_settle_ticks=2,
         liveness_ceiling_seconds=None,
         advise_enabled=False,
         resume_enabled=True,
@@ -517,6 +547,14 @@ async def test_supervisor_stays_held_when_clearance_expired(db_pool: asyncpg.Poo
         truncate_settle={},
         truncate_enabled=False,
         truncate_settle_ticks=3,
+        abort_run=abort_run,
+        stop_run=stop_run,
+        quality_act_settle={},
+        stall_act_settle={},
+        quality_act_enabled=False,
+        quality_settle_ticks=3,
+        stall_act_enabled=False,
+        stall_settle_ticks=2,
         liveness_ceiling_seconds=None,
         advise_enabled=False,
         resume_enabled=True,

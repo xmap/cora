@@ -52,18 +52,23 @@ from cora.infrastructure.ports.beam_availability_lookup import (
 )
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.aggregates.run import (
+    RunCannotAbortError,
     RunCannotResumeError,
     RunCannotTruncateError,
     RunNotFoundError,
     RunStatus,
 )
 from cora.run.errors import UnauthorizedError
+from cora.run.features.abort_run import AbortRun
+from cora.run.features.abort_run.handler import Handler as AbortRunHandler
 from cora.run.features.hold_run import HoldRun
 from cora.run.features.hold_run.handler import Handler as HoldRunHandler
 from cora.run.features.list_runs import ListRuns, RunListPage, RunSummaryItem
 from cora.run.features.list_runs.handler import Handler as ListRunsHandler
 from cora.run.features.resume_run import ResumeRun
 from cora.run.features.resume_run.handler import Handler as ResumeRunHandler
+from cora.run.features.stop_run import StopRun
+from cora.run.features.stop_run.handler import Handler as StopRunHandler
 from cora.run.features.truncate_run import TruncateRun
 from cora.run.features.truncate_run.handler import Handler as TruncateRunHandler
 from cora.run.ports import InMemoryRunChannelLookup, RunChannelLookup
@@ -324,6 +329,38 @@ def _make_recording_truncate() -> tuple[TruncateRunHandler, list[TruncateRun]]:
     return truncate_run, calls
 
 
+def _make_recording_abort() -> tuple[AbortRunHandler, list[AbortRun]]:
+    calls: list[AbortRun] = []
+
+    async def abort_run(
+        command: AbortRun,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> None:
+        calls.append(command)
+
+    return abort_run, calls
+
+
+def _make_recording_stop() -> tuple[StopRunHandler, list[StopRun]]:
+    calls: list[StopRun] = []
+
+    async def stop_run(
+        command: StopRun,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> None:
+        calls.append(command)
+
+    return stop_run, calls
+
+
 def _rules_off() -> ObservationRuleConfig:
     """Observation rules disabled (channel names None): the default for tests
     that exercise only the beam-Hold / resume / liveness behavior."""
@@ -360,19 +397,33 @@ async def _tick(
     truncate_settle: dict[UUID, int] | None = None,
     truncate_enabled: bool = False,
     truncate_settle_ticks: int = 3,
+    abort_run: AbortRunHandler | None = None,
+    stop_run: StopRunHandler | None = None,
+    quality_act_settle: dict[UUID, int] | None = None,
+    stall_act_settle: dict[UUID, int] | None = None,
+    quality_act_enabled: bool = False,
+    quality_settle_ticks: int = 3,
+    stall_act_enabled: bool = False,
+    stall_settle_ticks: int = 2,
 ) -> None:
-    """Call _supervise_tick, defaulting the resume + truncate wiring (off) for
-    hold-only tests."""
+    """Call _supervise_tick, defaulting the resume + truncate + observation-act
+    wiring (off) for hold-only tests."""
     if resume_run is None:
         resume_run, _ = _make_recording_resume()
     if truncate_run is None:
         truncate_run, _ = _make_recording_truncate()
+    if abort_run is None:
+        abort_run, _ = _make_recording_abort()
+    if stop_run is None:
+        stop_run, _ = _make_recording_stop()
     await _supervise_tick(
         deps=kernel,
         list_runs=list_runs,
         hold_run=hold_run,
         resume_run=resume_run,
         truncate_run=truncate_run,
+        abort_run=abort_run,
+        stop_run=stop_run,
         beam_lookup=beam_lookup,
         channel_lookup=channel_lookup if channel_lookup is not None else InMemoryRunChannelLookup(),
         rules_config=rules_config if rules_config is not None else _rules_off(),
@@ -384,11 +435,17 @@ async def _tick(
         stall=stall if stall is not None else set(),
         stall_streak=stall_streak if stall_streak is not None else {},
         feed_dead_warned=feed_dead_warned if feed_dead_warned is not None else set(),
+        quality_act_settle=quality_act_settle if quality_act_settle is not None else {},
+        stall_act_settle=stall_act_settle if stall_act_settle is not None else {},
         resume_enabled=resume_enabled,
         resume_settle_ticks=resume_settle_ticks,
         liveness_ceiling_seconds=liveness_ceiling_seconds,
         truncate_enabled=truncate_enabled,
         truncate_settle_ticks=truncate_settle_ticks,
+        quality_act_enabled=quality_act_enabled,
+        quality_settle_ticks=quality_settle_ticks,
+        stall_act_enabled=stall_act_enabled,
+        stall_settle_ticks=stall_settle_ticks,
         advise_enabled=advise_enabled,
     )
 
@@ -456,6 +513,8 @@ async def test_lifespan_is_noop_when_disabled() -> None:
         hold_run=hold_run,
         resume_run=resume_run,
         truncate_run=_make_recording_truncate()[0],
+        abort_run=_make_recording_abort()[0],
+        stop_run=_make_recording_stop()[0],
     ):
         pass
 
@@ -584,6 +643,8 @@ async def test_lifespan_enabled_runs_the_loop_and_holds() -> None:
         hold_run=hold_run,
         resume_run=resume_run,
         truncate_run=_make_recording_truncate()[0],
+        abort_run=_make_recording_abort()[0],
+        stop_run=_make_recording_stop()[0],
         beam_lookup=_BeamDown(),
         interval_seconds=0.01,
     ):
@@ -635,6 +696,8 @@ async def test_loop_survives_a_failing_tick() -> None:
         hold_run=hold_run,
         resume_run=resume_run,
         truncate_run=_make_recording_truncate()[0],
+        abort_run=_make_recording_abort()[0],
+        stop_run=_make_recording_stop()[0],
         beam_lookup=_BeamDown(),
         interval_seconds=0.01,
     ):
@@ -1993,6 +2056,8 @@ async def test_loop_warns_once_per_read_denial_episode_then_recovers() -> None:
             hold_run=hold_run,
             resume_run=resume_run,
             truncate_run=_make_recording_truncate()[0],
+            abort_run=_make_recording_abort()[0],
+            stop_run=_make_recording_stop()[0],
             beam_lookup=_BeamDown(),
             interval_seconds=0.01,
         ):
@@ -2243,4 +2308,346 @@ async def test_truncate_swallows_unauthorized() -> None:
         truncate_enabled=True,
         truncate_settle_ticks=1,
         liveness_ceiling_seconds=_CEILING,
+    )  # no raise
+
+
+# ---------- Rule Q act rung (quality breach -> Abort) ----------
+
+
+def _make_raising_abort(exc: Exception) -> AbortRunHandler:
+    async def abort_run(
+        command: AbortRun,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> None:
+        raise exc
+
+    return abort_run
+
+
+def _make_raising_stop(exc: Exception) -> StopRunHandler:
+    async def stop_run(
+        command: StopRun,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> None:
+        raise exc
+
+    return stop_run
+
+
+@pytest.mark.unit
+def test_run_supervisor_quality_settle_ticks_rejects_zero() -> None:
+    with pytest.raises(ValueError, match="run_supervisor_quality_settle_ticks"):
+        Settings(run_supervisor_quality_settle_ticks=0)  # type: ignore[call-arg]
+
+
+@pytest.mark.unit
+def test_run_supervisor_quality_settle_ticks_accepts_valid() -> None:
+    settings = Settings(run_supervisor_quality_settle_ticks=4)  # type: ignore[call-arg]
+    assert settings.run_supervisor_quality_settle_ticks == 4
+
+
+@pytest.mark.unit
+def test_run_supervisor_stall_settle_ticks_rejects_zero() -> None:
+    with pytest.raises(ValueError, match="run_supervisor_stall_settle_ticks"):
+        Settings(run_supervisor_stall_settle_ticks=0)  # type: ignore[call-arg]
+
+
+@pytest.mark.unit
+def test_run_supervisor_quality_and_stall_acts_default_off() -> None:
+    settings = Settings()  # type: ignore[call-arg]
+    assert settings.run_supervisor_quality_act_enabled is False
+    assert settings.run_supervisor_stall_act_enabled is False
+
+
+@pytest.mark.unit
+async def test_quality_act_disabled_never_aborts_a_breaching_run() -> None:
+    """A below-limit Run is flagged (shadow), but with the act rung off no abort issues."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    abort_run, abort_calls = _make_recording_abort()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=3.0, recorded_at=_NOW)
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=_make_recording_hold()[0],
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_quality(),
+        abort_run=abort_run,
+        quality_act_enabled=False,
+        quality_settle_ticks=1,
+    )
+
+    assert abort_calls == []
+
+
+@pytest.mark.unit
+async def test_quality_act_aborts_after_settle_window_and_links_decision() -> None:
+    """A persistently below-limit Run is aborted once it breaches for the settle
+    window; the issued AbortRun links the recorded Abort Decision."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    abort_run, abort_calls = _make_recording_abort()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=3.0, recorded_at=_NOW)
+    quality: set[UUID] = set()
+    quality_act_settle: dict[UUID, int] = {}
+
+    async def _do_tick() -> None:
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=_make_recording_hold()[0],
+            beam_lookup=_BeamOpen(),
+            memory={},
+            channel_lookup=lookup,
+            rules_config=_rules_quality(),
+            abort_run=abort_run,
+            quality=quality,
+            quality_act_settle=quality_act_settle,
+            quality_act_enabled=True,
+            quality_settle_ticks=2,
+        )
+
+    # Tick 1: below limit, settle window (2) not met -> no abort yet.
+    await _do_tick()
+    assert abort_calls == []
+    assert quality_act_settle[run_id] == 1
+
+    # Tick 2: still below, settle window met -> abort fires.
+    await _do_tick()
+    assert len(abort_calls) == 1
+    assert abort_calls[0].run_id == run_id
+    decision_id = abort_calls[0].decided_by_decision_id
+    assert decision_id is not None
+
+    decision = await load_decision(kernel.event_store, decision_id)
+    assert decision is not None
+    assert decision.context.value == "RunSupervision"
+    assert decision.choice.value == "Abort"
+    assert decision.decided_by == ActorId(RUN_SUPERVISOR_AGENT_ID)
+
+
+@pytest.mark.unit
+async def test_quality_act_settle_clears_when_value_recovers() -> None:
+    """A transient dip that recovers before the settle window never aborts: the
+    counter resets on the first within-limits tick."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    abort_run, abort_calls = _make_recording_abort()
+    lookup = InMemoryRunChannelLookup()
+    quality: set[UUID] = set()
+    quality_act_settle: dict[UUID, int] = {}
+
+    async def _do_tick() -> None:
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=_make_recording_hold()[0],
+            beam_lookup=_BeamOpen(),
+            memory={},
+            channel_lookup=lookup,
+            rules_config=_rules_quality(),
+            abort_run=abort_run,
+            quality=quality,
+            quality_act_settle=quality_act_settle,
+            quality_act_enabled=True,
+            quality_settle_ticks=2,
+        )
+
+    lookup.register(run_id=run_id, channel_name="snr", value=3.0, recorded_at=_NOW)
+    await _do_tick()
+    assert quality_act_settle[run_id] == 1
+
+    # Recovers within limits before the window elapses: counter resets, no abort.
+    # Register at a later recorded_at so it becomes the latest value (the lookup
+    # resolves latest by max recorded_at).
+    lookup.register(
+        run_id=run_id, channel_name="snr", value=9.0, recorded_at=_NOW + timedelta(seconds=1)
+    )
+    await _do_tick()
+    assert abort_calls == []
+    assert run_id not in quality_act_settle
+
+
+@pytest.mark.unit
+async def test_quality_act_swallows_state_race() -> None:
+    """A Run that left Running under us (RunCannotAbortError) is a benign no-op."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    abort_run = _make_raising_abort(RunCannotAbortError(run_id, current_status=RunStatus.COMPLETED))
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=3.0, recorded_at=_NOW)
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=_make_recording_hold()[0],
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_quality(),
+        abort_run=abort_run,
+        quality_act_enabled=True,
+        quality_settle_ticks=1,
+    )  # no raise == benign no-op
+
+
+@pytest.mark.unit
+async def test_quality_act_swallows_unauthorized() -> None:
+    """An Authorize Deny (supervisor lacks AbortRun) is logged, not raised."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, snr_limit=5.0)])
+    abort_run = _make_raising_abort(UnauthorizedError("supervisor not granted AbortRun"))
+    lookup = InMemoryRunChannelLookup()
+    lookup.register(run_id=run_id, channel_name="snr", value=3.0, recorded_at=_NOW)
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=_make_recording_hold()[0],
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_quality(),
+        abort_run=abort_run,
+        quality_act_enabled=True,
+        quality_settle_ticks=1,
+    )  # no raise
+
+
+# ---------- Rule R act rung (stall -> Stop) ----------
+
+
+@pytest.mark.unit
+async def test_stall_act_disabled_never_stops_a_stalled_run() -> None:
+    """A confirmed-stalled Run is flagged (shadow), but with the act rung off no
+    stop issues."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, expected_observation_interval_seconds=10.0)])
+    stop_run, stop_calls = _make_recording_stop()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register_heartbeat(run_id=run_id, recorded_at=_NOW)  # feeder alive, no data
+    stall: set[UUID] = set()
+    stall_streak: dict[UUID, int] = {}
+
+    async def _do_tick() -> None:
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=_make_recording_hold()[0],
+            beam_lookup=_BeamOpen(),
+            memory={},
+            channel_lookup=lookup,
+            rules_config=_rules_stall(hysteresis=1),
+            stop_run=stop_run,
+            stall=stall,
+            stall_streak=stall_streak,
+            stall_act_enabled=False,
+            stall_settle_ticks=1,
+        )
+
+    await _do_tick()
+    await _do_tick()
+    assert stop_calls == []
+
+
+@pytest.mark.unit
+async def test_stall_act_stops_after_settle_window_and_links_decision() -> None:
+    """A confirmed stall (past hysteresis) that persists for the act settle window
+    is stopped; the issued StopRun links the recorded Stop Decision. Two-stage
+    anti-flap: hysteresis to flag, then the act settle on top."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, expected_observation_interval_seconds=10.0)])
+    stop_run, stop_calls = _make_recording_stop()
+    lookup = InMemoryRunChannelLookup()
+    lookup.register_heartbeat(run_id=run_id, recorded_at=_NOW)  # feeder alive, no data
+    stall: set[UUID] = set()
+    stall_streak: dict[UUID, int] = {}
+    stall_act_settle: dict[UUID, int] = {}
+
+    async def _do_tick() -> None:
+        await _tick(
+            kernel,
+            list_runs=list_runs,
+            hold_run=_make_recording_hold()[0],
+            beam_lookup=_BeamOpen(),
+            memory={},
+            channel_lookup=lookup,
+            rules_config=_rules_stall(hysteresis=1),  # flag on the first stalled tick
+            stop_run=stop_run,
+            stall=stall,
+            stall_streak=stall_streak,
+            stall_act_settle=stall_act_settle,
+            stall_act_enabled=True,
+            stall_settle_ticks=2,
+        )
+
+    # Tick 1: confirmed stall (hysteresis 1), act settle (2) not met -> no stop.
+    await _do_tick()
+    assert stop_calls == []
+    assert stall == {run_id}
+    assert stall_act_settle[run_id] == 1
+
+    # Tick 2: still stalled, act settle met -> stop fires.
+    await _do_tick()
+    assert len(stop_calls) == 1
+    assert stop_calls[0].run_id == run_id
+    decision_id = stop_calls[0].decided_by_decision_id
+    assert decision_id is not None
+
+    decision = await load_decision(kernel.event_store, decision_id)
+    assert decision is not None
+    assert decision.context.value == "RunSupervision"
+    assert decision.choice.value == "Stop"
+    assert decision.decided_by == ActorId(RUN_SUPERVISOR_AGENT_ID)
+
+
+@pytest.mark.unit
+async def test_stall_act_swallows_unauthorized() -> None:
+    """An Authorize Deny (supervisor lacks StopRun) is logged, not raised."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, expected_observation_interval_seconds=10.0)])
+    stop_run = _make_raising_stop(UnauthorizedError("supervisor not granted StopRun"))
+    lookup = InMemoryRunChannelLookup()
+    lookup.register_heartbeat(run_id=run_id, recorded_at=_NOW)
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=_make_recording_hold()[0],
+        beam_lookup=_BeamOpen(),
+        memory={},
+        channel_lookup=lookup,
+        rules_config=_rules_stall(hysteresis=1),
+        stop_run=stop_run,
+        stall_act_enabled=True,
+        stall_settle_ticks=1,
     )  # no raise

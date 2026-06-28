@@ -881,6 +881,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         hold_run=app.state.run.hold_run,
                         resume_run=app.state.run.resume_run,
                         truncate_run=app.state.run.truncate_run,
+                        abort_run=app.state.run.abort_run,
+                        stop_run=app.state.run.stop_run,
                     ),
                     run_initiator_lifespan(
                         deps,
