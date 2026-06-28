@@ -65,7 +65,7 @@ Every value below is reverse-engineered from `eco` or inferred, awaiting the bea
 | Attenuator transmission solver (target transmission to foil set) | `FrontEndAttenuator`, `Attenuator` | `unknown-pending-confirmation` | (ATT-1) |
 | DCM internals and the pink-vs-mono mode model | `Monochromator` | `unknown-pending-confirmation` | (MONO-1) |
 | The eco SAROP11-* cross-line reference (Alvra-line profile monitor) | the optics diagnostics | `read-from-config-pending-confirmation` | (XREF-1) |
-| The `Diffractometer` Assembly composition and reciprocal-space partition rule | `GPS_Goniometer`, `XRD_Goniometer`, the PseudoAxes | `unknown-pending-confirmation` | (DIFF-1, DIFF-2) |
+| The `Diffractometer` Assembly composition and reciprocal-space partition rule | `GPS_Goniometer`, `XRD_Goniometer`, the PseudoAxes | `unknown-pending-confirmation` | (DIFF-1) (DIFF-2) |
 | Per-shot pulse-ID event DAQ representation | `AreaDetector`, `EventTiming` | `unknown-pending-confirmation` | (DAQ-1) |
 | Event-system trigger-pattern parameter model | `EventTiming`, `LaserShutter` | `unknown-pending-confirmation` | (TIMING-1) |
 | Pump-probe fs synchronization and laser model-vs-hazard | `PumpProbeLaser`, `ArrivalTimeMonitorPSEN` | `unknown-pending-confirmation` | (LASER-1) |

@@ -56,13 +56,13 @@ Every value below is reverse-engineered from `slic` or inferred, awaiting the be
 | Value to confirm | Applies to | Status | Tracking |
 | --- | --- | --- | --- |
 | Shared switched Aramis source: one-vs-many Units, three-station routing state | `Cristallina`, `Undulator` | `unknown-pending-confirmation` | (TOPO-1) |
-| SwissFEL PPS permit signals and the high-field-magnet hazard | both enclosures, `VectorMagnet` | `unknown-pending-confirmation` | (PSS-1, MAG-1) |
+| SwissFEL PPS permit signals and the high-field-magnet hazard | both enclosures, `VectorMagnet` | `unknown-pending-confirmation` | (PSS-1) (MAG-1) |
 | Which enclosure each device sits in | all devices | `unknown-pending-confirmation` | (ENC-1) |
 | Aramis undulator parameters (gap tables, source size) and the per-shot energy mechanism | `Undulator` | `unknown-pending-confirmation` | (SRC-1) |
 | Linac machine-state modelling boundary | `GasMonitor` | `unknown-pending-confirmation` | (MACHINE-1) |
 | Attenuator transmission solver and the front-end transmission cross-reference | `FrontEndAttenuator`, `ExperimentAttenuator` | `read-from-config-pending-confirmation` | (ATT-1, XREF-1) |
 | DCCM internals and the pink-vs-mono mode model | `Monochromator` | `unknown-pending-confirmation` | (MONO-1) |
-| The `Diffractometer` Assembly composition and reciprocal-space partition rule | the DM1 / DM2 goniometers, the PseudoAxis | `unknown-pending-confirmation` | (DIFF-1, DIFF-2) |
+| The `Diffractometer` Assembly composition and reciprocal-space partition rule | the DM1 / DM2 goniometers, the PseudoAxis | `unknown-pending-confirmation` | (DIFF-1) (DIFF-2) |
 | The `Magnet` graduation (4th consumer) | `VectorMagnet` | `unknown-pending-confirmation` | (MAG-1) |
 | Whether a pump-probe laser exists in another controls layer | the endstation | `unknown-pending-confirmation` | (LASER-1) |
 | Which instantiated-but-disabled stages are live hardware | `DM2_Goniometer`, the SmarAct / Attocube / PuMa stages | `read-from-config-pending-confirmation` | (DISABLED-1) |
