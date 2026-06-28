@@ -32,15 +32,18 @@ something a scientist can play back: drag a handle along time and the run
 re-forms at that instant, the way a video scrubber jumps to a frame.
 
 The scrubber presents one recorded run on a single horizontal time axis
-(Figure~\ref{fig:scrubber}), read from the bottom up. The lower rows are
-swim-lanes, one horizontal track per kind of step the run performs, a position
-setpoint, an acquisition, and a check, with every activity drawn at its recorded
-time within its lane. Above the lanes, a dedicated run-lifecycle lane records the
-autonomous arc: who or what caused each transition, colored by actor, so an
-auditor sees at a glance where control passed between the operator and the
-supervisor agent. The iterative structure of the conducted
-alignment sits in a band of nested brackets, one per pass, each colored by that
-pass's recorded verdict. An activity that was opened but never closed, the
+(Figure~\ref{fig:scrubber}), a stack of lanes that each answer a different
+question. The activity swim-lanes carry one track per kind of step the run
+performs, a position setpoint, an acquisition, a check, and the dataset write to
+disk, with every activity drawn at its recorded time within its lane. Above them
+a run-lifecycle lane records the autonomous arc, who or what caused each
+transition, colored by actor, so an auditor sees at a glance where control passed
+between the operator and the supervisor agent; and a beam-permit lane shows the
+safety envelope the supervisor gates on, satisfied except across the hold. Color-coded
+bars across the top name the run's phases (alignment, scan, save). The iterative
+structure of the conducted alignment is shown as one shaded band per pass, each
+tinted by that pass's recorded verdict and grouping the pass's setpoint, acquire,
+and check. An activity that was opened but never closed, the
 record of intent before effect, is drawn as an open interval rather than a
 filled mark, so an unfinished step reads as a visible gap.
 
@@ -79,8 +82,8 @@ alignment, a four-iteration peak-bracket search over the sample stage
 \texttt{SampleTop\_X} that minimizes the center-of-rotation residual. The
 residual falls from $2.00$ to $1.05$\,px, rises to $1.40$\,px at $0.080$\,mm
 (bracketing the minimum in $[0.040, 0.080]$\,mm), and the fourth pass bisects to
-$0.060$\,mm at $0.30$\,px and converges; read by color, the brackets show the
-verdict sequence open, open, open, converged (T3). The science scan begins; two
+$0.060$\,mm at $0.30$\,px and converges; read by color, the iteration bands show
+the verdict sequence open, open, open, converged (T3). The science scan begins; two
 projections complete and the third is in flight when the beam drops. The supervisor
 agent holds the run; the beam returns and the supervisor resumes it, each
 transition recorded as the agent's decision in the lifecycle lane. With the
@@ -116,7 +119,7 @@ than re-running the alignment.
 decorating the timeline. We give the run lifecycle its own lane, colored by
 actor, instead of annotating events in place, so that \emph{who or what was
 driving} is legible across the whole run and accountability is separated from
-activity. We draw convergence as nested brackets colored by verdict rather than
+activity. We draw convergence as verdict-colored iteration bands rather than
 a metric curve: the auditor is asking whether and on which pass the search
 decided it had converged, which is the verdict, not the residual value. We place
 the fidelity badge inline at the cursor rather than in a separate trust panel, so

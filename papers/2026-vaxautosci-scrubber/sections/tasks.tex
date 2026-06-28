@@ -28,8 +28,8 @@ its timestamp, which is what makes a decision reviewable after the fact.
 \textbf{T3: confirm convergence.}
 \emph{Did this loop converge, and on which pass?} The query reads the
 per-iteration verdict carried by each iteration-boundary event; the encoding
-colors nested brackets by that verdict, so the bracketing search is legible at
-a glance. For an unattended search, reading the converged verdict is the
+shades each iteration's band by that verdict, so the search's progress is legible
+at a glance. For an unattended search, reading the converged verdict is the
 difference between trusting the result and re-running the alignment to check it.
 
 \textbf{T4: confirm the record is intact.}
@@ -62,7 +62,7 @@ lets T4's badge verify rather than assert.
       Draggable cursor + folded state \\[0.4em]
     T3: Confirm convergence &
       Per-iteration verdict on boundary events &
-      Nested brackets colored by verdict \\[0.4em]
+      Verdict-colored iteration bands \\[0.4em]
     T4: Confirm integrity &
       Recompute and compare the recorded hash &
       Inline fidelity badge \\
