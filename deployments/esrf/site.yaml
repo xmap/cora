@@ -1,26 +1,30 @@
 # CORA Site descriptor: the ESRF site-level surface
 #
 # The ESRF (European Synchrotron Radiation Facility, Grenoble, France) is the
-# seventh Site CORA models, and the home of the ID32 beamline scaffold. This file
-# is the single human-readable source for the facility's site-level instances: the
-# Facility itself, the Practices it runs, and the facility principals.
+# seventh Site CORA models, and the home of the ID32, ID19, and ID16B beamline
+# scaffolds. This file is the single human-readable source for the facility's
+# site-level instances: the Facility itself, the Practices it runs, and the
+# facility principals.
 #
-# Status: ID32 is an off-roadmap modelling exercise (like the Diamond / NSLS-II /
-# APS / SLAC beamlines), reverse-engineered from the ESRF's open BLISS Beacon
-# `beamline_configuration` device database on gitlab.esrf.fr. It is the first ESRF
-# Site and the first BLISS / Tango / IcePAP controls house-style CORA models (the
-# rest are EPICS or, at MAX IV, Tango / Sardana). Everything below is carried
-# `pending` until ESRF staff confirm it; do not invent facility specifics here,
-# carry them as questions on the ID32 open-questions page.
+# Status: every ESRF beamline here is an off-roadmap modelling exercise (like the
+# Diamond / NSLS-II / APS / SLAC beamlines), reverse-engineered from the ESRF's
+# open BLISS Beacon `beamline_configuration` device databases on gitlab.esrf.fr.
+# The ESRF is the first BLISS / Tango / IcePAP controls house-style CORA models
+# (the rest are EPICS or, at MAX IV, Tango / Sardana), so it is the first live
+# non-EPICS control floor. Everything below is carried `pending` until ESRF staff
+# confirm it; do not invent facility specifics here, carry them as questions on
+# each beamline's open-questions page.
 #
 # Source-of-truth boundary (same as the other sites):
 #   - the closed facility-kind / actor-kind vocabularies are validated against
 #     code-mirrored frozensets in scripts/site_descriptor.py.
 #   - the facility records the bootstrap invariants (kind=Site, display_name
 #     equals code); `heading` carries the human title used on the rendered page.
-#   - a non-pending practice method must resolve to a catalog Method; ID32 runs
-#     none of the catalog's tomography methods, so each practice is carried
-#     pending until its Method is earned (registered in the methods-axis guard).
+#   - a non-pending practice method must resolve to a catalog Method; the imaging
+#     beamlines (ID19, ID16B) reuse the tomography family, the spectroscopy
+#     beamline (ID32) runs none of the catalog's tomography methods, so each
+#     practice is carried pending until its Method is earned (registered in the
+#     methods-axis guard).
 
 facility:
   code: esrf
@@ -28,19 +32,30 @@ facility:
   heading: "ESRF"
   kind: Site
   institution: European Synchrotron Radiation Facility
-  beamlines: [ID32]
+  beamlines: [ID32, ID19, ID16B]
 
-# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. None of
-# CORA's catalog Methods (all tomography-family today) fit a soft X-ray RIXS /
-# XMCD beamline, so every ID32 practice is pending, naming the Method it would
-# earn. RIXS reuses the resonant_inelastic_scattering slug SIX left pending; XMCD
-# reuses the xmcd slug 4-ID / i06 / i10 share; XES reuses the xas_spectroscopy
-# slug the emission spectrometers at ISS / LCLS-MFX left pending. Confirm with
-# ESRF staff (TECH-1).
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
+#
+# ID32 (soft X-ray RIXS / XMCD): none of CORA's catalog Methods (all
+# tomography-family today) fit, so every ID32 practice is pending, naming the
+# Method it would earn. RIXS reuses the resonant_inelastic_scattering slug SIX
+# left pending; XMCD reuses the xmcd slug 4-ID / i06 / i10 share; XES reuses the
+# xas_spectroscopy slug the emission spectrometers at ISS / LCLS-MFX left pending.
+#
+# ID19 (microtomography) and ID16B (nano-analysis) reuse the existing tomography
+# Method (the 2-BM pilot and MAX IV TomoWise carry it); ID16B nano-XRF mapping
+# reuses the pending scanning_fluorescence_microscopy Method that 2-ID / XFM / LIX
+# already carry (METHOD-1). Confirm with ESRF staff (TECH-1).
 practices:
   - {name: ID32_rixs_practice, method: resonant_inelastic_scattering, pending: true, note: "soft X-ray resonant inelastic scattering on the ~5 m dispersive spectrometer arm; reuses the SIX RIXS Method, the second consumer (TECH-1)"}
   - {name: ID32_xmcd_practice, method: xmcd, pending: true, note: "X-ray magnetic circular / linear dichroism in the 9 T XMCD high-field magnet; reuses the 4-ID / i06 / i10 dichroism Method (TECH-1)"}
   - {name: ID32_xes_practice, method: xas_spectroscopy, pending: true, note: "X-ray emission spectroscopy on the XMCD-endstation Rowland emission arm; reuses the xas_spectroscopy Method ISS / LCLS-MFX left pending for XES (TECH-1)"}
+  - {name: ID19_microtomography_practice, method: tomography, pending: true, note: "parallel-beam hard X-ray microtomography / radiography / phase-contrast imaging on the rotation stage + Lima area detector; reuses the catalog tomography Method, a further consumer (TECH-1)"}
+  # ID16B nano-analysis / nano-imaging: nano-tomography reuses the tomography Method; nano-XRF
+  # mapping reuses the pending scanning_fluorescence_microscopy Method that 2-ID / XFM / LIX
+  # already carry (METHOD-1). Both pending until ESRF staff confirm.
+  - {name: ID16B_nanotomography_practice, method: tomography, pending: true, note: "KB-focused hard X-ray nano-tomography on the sample rotation stage + PCO / Zyla area detector; reuses the catalog tomography Method, a further consumer (TECH-1)"}
+  - {name: ID16B_scanning_fluorescence_microscopy_practice, method: scanning_fluorescence_microscopy, pending: true, note: "KB-focused nano-XRF mapping (incl. fluorescence-tomography) on the piezo raster scanner + FalconX silicon-drift detector; reuses the existing pending scanning_fluorescence_microscopy Method, a further consumer (METHOD-1)"}
 
 # Access BC Actors conceptually facility-wide at the ESRF. Pending until the ESRF
 # operator and review structure is confirmed.
@@ -49,7 +64,7 @@ actors:
   - {name: ESRF safety review, kind: human, pending: true, note: "facility safety review body; membership TBD"}
 
 # Agent BC Agents seeded at this deployment. None: the CORA system agents are not
-# wired for an ESRF deployment, and ID32 is a modelling exercise.
+# wired for an ESRF deployment, and these are modelling exercises.
 agents: []
 
 # Supply BC: facility-wide continuously-available resources. Pending in design.

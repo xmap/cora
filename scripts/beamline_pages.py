@@ -228,7 +228,7 @@ def _render_page(descriptor: BeamlineDescriptor, *, slug: str, blob_url: str) ->
         "A walk along the source-stage devices; the sample and detection stages are "
         "documented as their own composed-fixture pages, the controllers that drive "
         "these devices are on the Controls page, and the supplies they draw on are in "
-        "Operations. Each device pairs its human name with the EPICS handle, its key "
+        "Operations. Each device pairs its human name with its control handle, its key "
         "specs, and whether it is field replaceable. `new` marks a device not yet "
         "modeled in CORA; `confirm` marks a value taken from the docs that staff have "
         "not yet verified."

@@ -504,7 +504,7 @@ def test_no_unexpected_orphan_catalog_families() -> None:
 
 def test_site_facility_codes_cover_known_sites() -> None:
     # Anchor so the resolution check below cannot pass vacuously on an empty set.
-    assert {"aps", "diamond", "maxiv", "nsls2", "slac"} <= _site_facility_codes()
+    assert {"aps", "diamond", "maxiv", "nsls2", "slac", "esrf"} <= _site_facility_codes()
 
 
 @pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)

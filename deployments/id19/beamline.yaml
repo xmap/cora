@@ -1,0 +1,264 @@
+# ID19 beamline descriptor (ESRF), reverse-engineered from the public BLISS config
+#
+# ID19 is the long hard X-ray imaging / microtomography beamline at the ESRF
+# (Grenoble). Its long source-to-sample distance gives the beam high spatial
+# coherence for parallel-beam and phase-contrast microtomography and radiography.
+# It is bound to the ESRF Site (deployments/esrf/site.yaml), and is CORA's FIRST
+# deployment on a non-EPICS control floor.
+#
+# STATUS: reverse-engineered from ID19's own public BLISS Beacon device database
+# (gitlab.esrf.fr/id19/beamline_configuration, commit b78389a; the live
+# /users/blissadm/local/beamline_configuration YAML tree). Device names and
+# control handles are real, read from that config; vendor part numbers, serials,
+# energy ranges, and physical positions are not in it and are open questions.
+# Every value is carried confirm until ID19 staff verify it (a config snapshot is
+# strong evidence, not a CORA-owned fact). The extraction is in
+# research/esrf-reverse-engineering/.
+#
+# WHAT IS NEW: not a device family, and not a technique. Microtomography is plain
+# `tomography` Method reuse (the same the 2-BM pilot and MAX IV TomoWise carry);
+# the rotation stages bind RotaryStage, the positioning stages bind LinearStage,
+# the detectors bind Camera, and the optics bind existing Families. ID19 coins NO
+# new Family and changes nothing in the catalog. The genuine novelty is the
+# CONTROL PLANE: ESRF runs BLISS (Tango-based), not EPICS, so ID19 is the fleet's
+# first live, non-EPICS, BLISS / Tango floor (CTRL-1). Hold the device families
+# constant, move one axis.
+#
+# CONTROL HANDLES: ESRF runs BLISS over Tango. The descriptor `pv` field is the
+# opaque control-handle slot (not EPICS-specific); for ID19 it carries the BLISS
+# object name or the Tango device name read from the config. A motion stage is a
+# BLISS axis (e.g. hrsrot); a detector is a Lima Tango device (e.g.
+# id19/limaccd/frelon1); a shutter is a TangoShutter (e.g. id19/bsh/1).
+#
+# SCOPE: this cut models the source, the optics, and the two main tomography
+# endstations, micro-resolution (MR) and high-resolution (HR). The other
+# endstations present in the config (MH, MED, laminography LATOMO, RADIO, PCOTOMO,
+# the SmarAct multi-tower stack, the fluorescence MCAs) are noted in the
+# extraction facts but not modelled here (ENDSTATION-1).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/id19/questions.md.
+
+beamline:
+  name: ID19
+  facility: esrf               # ESRF Site (facility_code: esrf)
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "ESRF_Undulator set on the ID19 straight (Tango //acs.esrf.fr:10000/ID/MASTER/ID19): undulators u13a/u32a/u17-6c/u32c and the w150b wiggler (gap + taper); which feeds which mode is SRC-1"
+
+# Two enclosures: the optics hutch carrying the shared source-conditioning optics,
+# and the experiment hutch carrying both tomography endstations. ESRF PSS permit
+# signals sit behind the frontend / bsh shutters and are not in the config (PSS-1).
+enclosures:
+  - name: id19-optics
+    role: optics-hutch
+    facility_code: esrf
+    permit_signal: {confirm: "ESRF PSS permit signal behind the frontend shutter; not in the config (PSS-1)"}
+  - name: id19-experiment
+    role: experiment-hutch
+    facility_code: esrf
+    permit_signal: {confirm: "ESRF PSS permit signal behind bsh1/bsh2; not in the config (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the insertion-device source and the conditioning optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: id19-optics
+  intro: "The ID19 straight-section insertion devices: a set of undulators plus a wiggler, selected per operation mode. The wiggler drives white-beam large-field tomography; the undulators drive higher-flux modes."
+  note: "ESRF_Undulator over Tango //acs.esrf.fr:10000/ID/MASTER/ID19; which device feeds which endstation / mode is SRC-1."
+  devices:
+    - name: InsertionDevices
+      family: InsertionDevice
+      pv: {u13a: "U13a_GAP_", u32a: "U32a_GAP_", w150b_gap: "W150B_GAP_", w150b_taper: "W150B_TAPER_", u17_6c: "U17-6c_GAP_", u32c: "U32c_GAP_"}
+      new: true
+      confirm: true
+      note: "the ID19 straight-section source set (ESRF_Undulator); undulators u13a/u32a/u17-6c/u32c and the w150b wiggler with taper; energy reach and per-mode selection are SRC-1"
+
+optics:
+  stage: source
+  enclosure: id19-optics
+  intro: "The conditioning optics that filter, monochromate, and define the beam: the white-beam attenuators and transfocator, the triple monochromator, and the primary and secondary slits. ID19 also runs white beam (mono bypassed) for high-flux tomography."
+  note: "Handles read from the config (mono/, slits/, attenuators/, transfocators/). Crystal-pair / Laue / multilayer mode mapping and lens recipes are OPT-1."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: {x2: "vmx2", y1: "vmy1", y2: "vmy2", z1: "vmz1", z2: "vmz2", thy1: "thy1", thy2: "thy2"}
+      new: true
+      confirm: true
+      note: "TripleMono (Id19Mono): triple monochromator, three crystal pairs, Bragg 17-99 keV plus Laue and multilayer modes; bypassed in white-beam tomography (OPT-1)"
+    - name: PrimarySlits
+      family: Slit
+      pv: {up: "psu", down: "psd", front: "psf", back: "psb", vgap: "psvg", voff: "psvo", hgap: "pshg", hoff: "psho"}
+      new: true
+      confirm: true
+      note: "primary white-beam slits (iceid193)"
+    - name: SecondarySlits
+      family: Slit
+      pv: {up: "ssu", down: "ssd", front: "ssf", back: "ssb"}
+      new: true
+      confirm: true
+      note: "secondary slits (iceid192)"
+    - name: Transfocator
+      family: Transfocator
+      pv: "id19wbtfctrl"
+      new: true
+      confirm: true
+      note: "white-beam transfocator (ID19Transfocator): 8 Be compound-refractive lenses + pinhole; lens recipe per energy is OPT-1"
+    - name: Attenuators
+      family: Filter           # Attenuator folds into Filter (i03 precedent), not a new Family
+      pv: {bank1: "wba1", bank2: "wba2"}
+      new: true
+      confirm: true
+      note: "white-beam attenuator banks (WhiteBeamAttenuator), Cu/Al foil MultiplePositions (att11..att25); the existing Filter Family covers it, not a new Attenuator kind (OPT-1)"
+
+safety-shutters:
+  stage: source
+  enclosure: id19-optics
+  intro: "The front-end and beam shutters gating the beam into the experiment hutch."
+  note: "TangoShutter handles read from the config; the PSS permit signals behind them are not in the config (PSS-1)."
+  devices:
+    - name: FrontEndShutter
+      family: Shutter
+      pv: "//acs.esrf.fr:10000/fe/master/id19"
+      new: true
+      confirm: true
+      note: "front-end shutter (frontend)"
+    - name: BeamShutter1
+      family: Shutter
+      pv: "id19/bsh/1"
+      new: true
+      confirm: true
+      note: "main beam shutter (bsh1, TangoShutter)"
+    - name: BeamShutter2
+      family: Shutter
+      pv: "id19/bsh/2"
+      new: true
+      confirm: true
+      note: "second beam shutter (bsh2, TangoShutter)"
+
+# ===========================================================================
+# MR ENDSTATION: micro-resolution tomography (BLISS session MRTOMO)
+# ===========================================================================
+
+mr-endstation:
+  stage: sample
+  enclosure: id19-experiment
+  intro: "The micro-resolution tomography endstation: the tomographic rotation stage and the sample positioning / centring stages. Drives large-field, high-throughput microtomography."
+  note: "Handles read from motors/elmo.yml (mrsrot) and the iceid191/192 IcePAP racks. The XYOnRotation pseudo-axis (mrxyonsrot) keeps the sample centred as it rotates (SAMPLE-1)."
+  devices:
+    - name: MR_RotationStage
+      family: RotaryStage
+      pv: "mrsrot"
+      new: true
+      confirm: true
+      note: "micro-res tomographic rotation (Elmo, rfc2217://lid192:28319); the master motion, 900 deg/s ceiling, clocks the detector triggering (SAMPLE-1)"
+    - name: MR_SampleStage
+      family: LinearStage
+      pv: {sx: "mrsx", sy: "mrsy", xc: "mrxc", yc: "mryc", yrot: "mryrot", sz: "mrsz"}
+      new: true
+      confirm: true
+      note: "sample centring + centre-of-rotation alignment (iceid191/192) and translation under rotation (Elmo); the XYOnRotation controller is mrxyonsrot (SAMPLE-1)"
+
+mr-detector:
+  stage: detection
+  enclosure: id19-experiment
+  intro: "The MR area detector and its positioning stages. Indirect detection: scintillator plus visible optics plus a Lima camera; the propagation distance sets phase contrast."
+  note: "Lima detectors are Tango device servers (id19/limaccd/*). Several cameras are interchangeable per experiment; the operative roster is DET-1."
+  devices:
+    - name: MR_Detector
+      family: Camera
+      pv: {frelon1: "id19/limaccd/frelon1", frelon2: "id19/limaccd/frelon2", pco4k: "id19/limaccd/pco4k", dimax1: "id19/limaccd/dimax_lid19det1"}
+      new: true
+      confirm: true
+      note: "indirect-detection area detector (Lima); Frelon CCDs, PCO 4k, and PCO Dimax high-speed cameras are interchangeable per experiment (DET-1); Camera presents the Detector Role"
+    - name: MR_DetectorStage
+      family: LinearStage
+      pv: {x: "hdx", y: "hdy", z: "hdz", thz: "hdthz"}
+      new: true
+      confirm: true
+      note: "detector positioning / propagation-distance stages (iceid191); the propagation distance is the phase-contrast control (DET-1)"
+
+# ===========================================================================
+# HR ENDSTATION: high-resolution tomography (BLISS session HRTOMO)
+# ===========================================================================
+
+hr-endstation:
+  stage: sample
+  enclosure: id19-experiment
+  intro: "The high-resolution tomography endstation: a more precise rotation and sample-positioning stack for small-field, high-resolution microtomography. The HRTOMO session aliases its axes srot / sz / sx / sy / yrot."
+  note: "Handles read from motors/elmo.yml (hrsrot) and the iceid191/192 IcePAP racks; the XYOnRotation controller is hrxyonsrot (SAMPLE-1)."
+  devices:
+    - name: HR_RotationStage
+      family: RotaryStage
+      pv: "hrsrot"
+      new: true
+      confirm: true
+      note: "high-res tomographic rotation (Elmo_whistle, rfc2217://lid192:28300); the master motion, 900 deg/s ceiling (SAMPLE-1)"
+    - name: HR_SampleStage
+      family: LinearStage
+      pv: {sx: "hrsx", sy: "hrsy", sz: "hrsz", z0: "hrz0", yrot: "hryrot"}
+      new: true
+      confirm: true
+      note: "sample centring + centre-of-rotation alignment (iceid191/192); HRTOMO session aliases srot/sz/sx/sy/yrot; the XYOnRotation controller is hrxyonsrot (SAMPLE-1)"
+
+hr-detector:
+  stage: detection
+  enclosure: id19-experiment
+  intro: "The HR area detector and its carriage. Indirect detection through a high-magnification microscope optic; the carriage sets the propagation distance."
+  note: "Lima Tango detectors shared with MR plus the Basler optical cameras; the operative roster per experiment is DET-1."
+  devices:
+    - name: HR_Detector
+      family: Camera
+      pv: {frelon1: "id19/limaccd/frelon1", pco4k: "id19/limaccd/pco4k", dimax2: "id19/limaccd/dimax_lid19det2", basler1: "id19/limaccds/basler1"}
+      new: true
+      confirm: true
+      note: "indirect-detection area detector (Lima); Frelon, PCO, and Basler cameras interchangeable per experiment (DET-1); Camera presents the Detector Role"
+    - name: HR_DetectorStage
+      family: LinearStage
+      pv: {xc: "hrxc", yc: "hryc", zc: "hrzc"}
+      new: true
+      confirm: true
+      note: "detector carriage / propagation-distance stages (iceid191); the propagation distance is the phase-contrast control (DET-1)"
+
+# Cross-cutting control. ID19 runs BLISS (Tango-based); this is CORA's first
+# non-EPICS deployment. Handles above are read from the public config.
+controls:
+  intro: >
+    ID19 runs on the ESRF BLISS control system, which is Tango-based, NOT EPICS.
+    This is CORA's first deployment on a non-EPICS control floor: the seam model
+    that today reads "EPICS is the floor" generalizes here to "BLISS / Tango is the
+    floor". In BLISS a motion stage is a controller class with named axes (driven
+    by Elmo serial controllers and IcePAP racks iceid191-195), and a detector is a
+    Lima device server addressed by a Tango name (id19/limaccd/<name>). The handles
+    in this descriptor are read from ID19's public Beacon config and carried confirm
+    (CTRL-1). The tomographic acquisition (the continuous rotation coupled to the
+    Lima detector frame capture, then the downstream reconstruction) runs as a BLISS
+    scan procedure; that orchestration is the seam CORA's edge would conduct over its
+    ControlPort, driving through or replacing the BLISS scan per routine, while the
+    reconstruction is ComputePort work, not a beamline device (TECH-1, CTRL-2).
+  motion_controllers:
+    - name: ElmoControllers
+      family: MotionController
+      protocol: BLISS_Elmo
+      new: true
+      confirm: true
+      note: "Elmo / Elmo_whistle serial motion controllers driving the rotation stages (mrsrot/hrsrot/mhsrot), over rfc2217 serial and Tango serialrp (CTRL-1)"
+    - name: IcePAPControllers
+      family: MotionController
+      protocol: BLISS_IcePAP
+      new: true
+      confirm: true
+      note: "IcePAP racks iceid191-195 driving the sample, detector, slit, and attenuator axes (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an ID19 run needs present before
+    it can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

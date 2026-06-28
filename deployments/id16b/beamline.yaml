@@ -1,0 +1,234 @@
+# ID16B beamline descriptor (ESRF), reverse-engineered from the public BLISS config
+#
+# ID16B is the nano-analysis / nano-imaging beamline at the ESRF (Grenoble): it
+# focuses the hard X-ray beam to a nanoprobe with Kirkpatrick-Baez mirrors and runs
+# two modes, nano-tomography and nano-XRF (X-ray fluorescence) mapping, including
+# fluorescence-tomography. It is bound to the ESRF Site (deployments/esrf/site.yaml),
+# the second ESRF deployment after ID19, and the fleet's first nanoprobe on a BLISS
+# (non-EPICS) control floor.
+#
+# STATUS: reverse-engineered from ID16B's own public BLISS Beacon device database
+# (gitlab.esrf.fr/id16b/beamline_configuration, commit 7cba4dd). Device names and
+# control handles are real, read from that config; vendor part numbers, serials,
+# energy ranges, and physical positions are not in it and are open questions. Every
+# value is carried confirm until ID16B staff verify it. The extraction is in
+# research/esrf-reverse-engineering/extracted/id16b/.
+#
+# WHAT IS NEW: nothing in the catalog. Nano-tomography is plain `tomography` Method
+# reuse (ID19, 2-BM, TomoWise); nano-XRF mapping reuses the pending
+# scanning_fluorescence_microscopy Method that 2-ID / XFM / LIX carry. The rotation
+# stage binds RotaryStage, the positioning and piezo-scanner stages bind LinearStage,
+# the KB mirrors bind Mirror, the XRF detector binds EnergyDispersiveSpectrometer
+# (the 2-ID / SRX / XFM precedent), and the area detector binds Camera. ID16B coins
+# NO new Family. It is the first nanoprobe (KB nanofocus + XRF) on the BLISS floor,
+# a second ESRF deployment deepening the non-EPICS seam evidence.
+#
+# CONTROL HANDLES: ESRF runs BLISS over Tango. The descriptor `pv` field carries the
+# BLISS object name or Tango device name read from the config (control Tango domain
+# id16b / id16na). A motion stage is a BLISS axis; a detector is a Lima or MOSCA
+# Tango device.
+#
+# SCOPE: this cut models the source, the optics (DCM, slits, KB nanofocus), the
+# sample-scanning stack, and the two detection chains (XRF spectrometers + area
+# detectors). The sample environments (cryostream, furnace, xeol) are noted in the
+# extraction facts but not modelled here (no Cryostat Family yet; ENV-1).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/id16b/questions.md.
+
+beamline:
+  name: ID16B
+  facility: esrf               # ESRF Site (facility_code: esrf)
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "U205 undulator on the ID16B straight (ESRF_Undulator); energy reach and gap mapping are SRC-1"
+
+enclosures:
+  - name: id16b-optics
+    role: optics-hutch
+    facility_code: esrf
+    permit_signal: {confirm: "ESRF PSS permit signal behind the front-end shutter; not in the config (PSS-1)"}
+  - name: id16b-experiment
+    role: experiment-hutch
+    facility_code: esrf
+    permit_signal: {confirm: "ESRF PSS permit signal behind the fast shutter; not in the config (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and the conditioning optics (DCM, slits, KB)
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: id16b-optics
+  intro: "The ID16B straight-section undulator source."
+  note: "ESRF_Undulator (U205); energy reach and per-mode gap mapping are SRC-1."
+  devices:
+    - name: InsertionDevice
+      family: InsertionDevice
+      pv: "U205"
+      new: true
+      confirm: true
+      note: "the ID16B undulator source (ESRF_Undulator); energy reach is SRC-1"
+
+optics:
+  stage: source
+  enclosure: id16b-optics
+  intro: "The conditioning optics: the Kohzu double-crystal monochromator, the primary and secondary white-beam slits, and the beam-position monitors. The KB nanofocus mirrors sit in the experiment hutch with the sample."
+  note: "Handles read from OH/motors/ (kohzu_mono.yml, slits_s1/s2). Crystal-pair selection per energy is OPT-1."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: {bragg: "mono", energy: "Edcm", energy_tracker: "Edcmund"}
+      new: true
+      confirm: true
+      note: "Kohzu double-crystal monochromator (ID16Bkohzu, iceid162); Si111 / Si333 / Si311 crystal pairs, energy + tracking (OPT-1)"
+    - name: PrimarySlits
+      family: Slit
+      pv: {fh: "s1fh", bh: "s1bh", fv: "s1fv", bv: "s1bv"}
+      new: true
+      confirm: true
+      note: "white-beam primary slits (s1h_slits / s1v_slits)"
+    - name: SecondarySlits
+      family: Slit
+      pv: {fh: "s2fh", bh: "s2bh"}
+      new: true
+      confirm: true
+      note: "secondary slits (s2_slits)"
+    - name: BeamMonitors
+      family: FluxMonitor
+      pv: {bpm2: "id16na/limaccds/bpm2", bpm3: "id16na/limaccds/bpm3", bpm5: "id16na/limaccds/bpm5"}
+      new: true
+      confirm: true
+      note: "ESRF beamviewer / beam-position monitors (EBV) with diode intensity counters; position-and-flux diagnostics (DIAG-1)"
+
+safety-shutters:
+  stage: source
+  enclosure: id16b-optics
+  intro: "The front-end and fast shutters gating the beam to the sample."
+  note: "Handles read from the config; PSS permit signals behind them are not in the config (PSS-1)."
+  devices:
+    - name: FastShutter
+      family: Shutter
+      pv: "fshut"
+      new: true
+      confirm: true
+      note: "sample-side fast shutter (iceid164 fshut_motor); the PSS permit leaves are PSS-1"
+
+# ===========================================================================
+# SAMPLE STAGE: the KB nanofocus and the sample-scanning stack
+# ===========================================================================
+
+nanofocus:
+  stage: sample
+  enclosure: id16b-experiment
+  intro: "The Kirkpatrick-Baez mirror pair that focuses the monochromatic beam to the nanoprobe, plus the sample-side defining slits."
+  note: "The KB nanofocus is what makes ID16B a nano-analysis beamline. Focal spot and working distance are OPT-1."
+  devices:
+    - name: KBMirrors
+      family: Mirror
+      pv: {kbx: "kbx", cfocus: "cfocus", cfocus2: "cfocus2"}
+      new: true
+      confirm: true
+      note: "Kirkpatrick-Baez focusing mirror pair (iceid164); the nanoprobe (OPT-1)"
+    - name: ThirdSlits
+      family: Slit
+      pv: {fh: "s3fh", bh: "s3bh", uv: "s3uv", dv: "s3dv"}
+      new: true
+      confirm: true
+      note: "sample-side defining slits (s3h_slits / s3v_slits, iceid164)"
+
+sample:
+  stage: sample
+  enclosure: id16b-experiment
+  intro: "The sample-scanning stack: the rotation stage for tomography and fluorescence-tomography, the coarse positioning stage, and the fine piezo raster scanner for XRF mapping."
+  note: "Rotation via etel Tango (id16b/dsc2p/rot16) and iceid164; the piezo scanner is a PI vscanner (SAMPLE-1)."
+  devices:
+    - name: SampleRotation
+      family: RotaryStage
+      pv: {srot: "id16b/dsc2p/rot16", srot2: "srot2"}
+      new: true
+      confirm: true
+      note: "tomographic / fluorescence-tomography sample rotation (etel Tango + iceid164); the master motion of a tomo scan (SAMPLE-1)"
+    - name: SampleStage
+      family: LinearStage
+      pv: {sx: "sx", sy: "sy", sz: "sz"}
+      new: true
+      confirm: true
+      note: "coarse sample positioning / centring (etel + iceid164, encoded) (SAMPLE-1)"
+    - name: SampleScanner
+      family: LinearStage
+      pv: {sampy: "sampy", sampz: "sampz", sypz: "sypz"}
+      new: true
+      confirm: true
+      note: "fine PI piezo raster scanner (vscanner1 / vscanner2); the operative motion of nano-XRF mapping (SAMPLE-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the XRF spectrometers and the area detectors
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: id16b-experiment
+  intro: "Two detection chains: the energy-dispersive fluorescence detectors that make the XRF maps, and the area detectors that record the projection radiographs for nano-tomography."
+  note: "The fluorescence detector reuses the EnergyDispersiveSpectrometer family (the 2-ID / SRX / XFM precedent); the area detectors bind Camera. The operative detector per mode is DET-1."
+  devices:
+    - name: FluoDetector
+      family: EnergyDispersiveSpectrometer
+      pv: {fxb: "id16b/moscav1/fxb", fx8: "tcp://wid16bfx:8000"}
+      new: true
+      confirm: true
+      note: "multi-element silicon-drift XRF detector (FalconX, MOSCA); the primary nano-XRF mapping detector; reuses the EnergyDispersiveSpectrometer family (DET-1)"
+    - name: OpticalSpectrometer
+      family: EnergyDispersiveSpectrometer
+      pv: {qepro: "id16b/moscav1/qepro", hama1: "id16b/moscav1/hama1"}
+      new: true
+      confirm: true
+      note: "optical-emission spectrometer (QEPro OceanOptics + Hamamatsu) for xeol / optical readout; a Sensor-presenting spectrometer, reuses EnergyDispersiveSpectrometer (DET-2)"
+    - name: TomoDetector
+      family: Camera
+      pv: {pco1: "id16na/limaccds/pco1", pco2: "id16na/limaccds/pco2", zyla: "id16b/limaccds/zyla"}
+      new: true
+      confirm: true
+      note: "indirect-detection area detectors for nano-tomography (PCO, Andor Zyla, Lima); Camera presents the Detector Role (DET-1)"
+    - name: DetectorStage
+      family: LinearStage
+      pv: "DETPOS"
+      new: true
+      confirm: true
+      note: "detector positioning / propagation-distance stage (DetectorPositioning); the phase-contrast control (DET-1)"
+
+# Cross-cutting control. ID16B runs BLISS (Tango-based), the same non-EPICS floor as ID19.
+controls:
+  intro: >
+    ID16B runs on the ESRF BLISS control system, Tango-based, NOT EPICS, the same floor
+    as ID19. A motion stage is a BLISS axis (driven by IcePAP racks iceid162 / iceid164,
+    PI piezo vscanners, and etel Tango motors); a fluorescence detector is a MOSCA / FalconX
+    Tango device; an area detector is a Lima device server (id16na/limaccds/<name>); the
+    monochromator is the Kohzu DCM controller. The handles here are read from ID16B's public
+    Beacon config and carried confirm (CTRL-1). Nano-tomography and nano-XRF run as BLISS scan
+    procedures (the daiquiri_tomo and daiquiri_fluo sessions); that orchestration is the seam
+    CORA's edge would conduct over its ControlPort, with the reconstruction (tomo volume) and
+    the XRF map fitting being ComputePort work, not beamline devices (TECH-1, CTRL-2).
+  motion_controllers:
+    - name: IcePAPControllers
+      family: MotionController
+      protocol: BLISS_IcePAP
+      new: true
+      confirm: true
+      note: "IcePAP racks iceid162 (mono) and iceid164 (sample / KB / slits / shutter) (CTRL-1)"
+    - name: PiezoScanners
+      family: MotionController
+      protocol: BLISS_PI
+      new: true
+      confirm: true
+      note: "PI piezo scanner controllers (vscanner1 / vscanner2, E518) driving the fine XRF raster (CTRL-1)"
+
+resources:
+  intro: >
+    The continuously-available facility resources an ID16B run needs present before it
+    can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
