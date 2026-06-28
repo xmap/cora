@@ -171,6 +171,7 @@
 | src/cora/agent/tools.py                                                                  |       36 |        1 |        2 |        1 |     94.7% |       110 |
 | src/cora/agent/wire.py                                                                   |       14 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/api/\_\_init\_\_.py                                                             |        0 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/api/\_agent\_decision\_signing.py                                               |       10 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/api/\_calibration\_watcher.py                                                   |       59 |        1 |       10 |        1 |     97.1% |       145 |
 | src/cora/api/\_campaign\_watcher.py                                                      |       61 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/api/\_clearance\_expirer.py                                                     |      109 |        1 |       14 |        0 |     99.2% |       297 |
@@ -183,9 +184,9 @@
 | src/cora/api/\_flag\_watcher.py                                                          |       69 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/api/\_inference\_recorder.py                                                    |       19 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/\_procedure\_watcher.py                                                     |       78 |        0 |       22 |        0 |    100.0% |           |
-| src/cora/api/\_run\_initiator.py                                                         |      149 |       14 |       30 |        5 |     88.3% |153-154, 183-184, 229, 249, 287, 292-293, 314-\>303, 378-379, 386-393 |
+| src/cora/api/\_run\_initiator.py                                                         |      151 |       14 |       30 |        5 |     88.4% |157-158, 187-188, 233, 253, 291, 296-297, 318-\>307, 382-383, 390-397 |
 | src/cora/api/\_run\_phase\_conduct.py                                                    |       36 |        1 |        4 |        1 |     95.0% |       188 |
-| src/cora/api/\_run\_supervisor.py                                                        |      443 |       22 |      172 |       16 |     93.5% |249, 581-582, 723-724, 774, 800, 803, 809, 811, 837-838, 1011-\>1021, 1172, 1175, 1178, 1181, 1183-1184, 1187, 1190, 1347-\>1316, 1427, 1450 |
+| src/cora/api/\_run\_supervisor.py                                                        |      448 |       22 |      172 |       16 |     93.5% |250, 591-592, 736-737, 787, 813, 816, 822, 824, 850-851, 1024-\>1034, 1185, 1188, 1191, 1194, 1196-1197, 1200, 1203, 1360-\>1329, 1440, 1463 |
 | src/cora/api/errors.py                                                                   |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/main.py                                                                     |      306 |        0 |       26 |        3 |     99.1% |339-\>338, 946-\>951, 953-\>956 |
 | src/cora/api/middleware.py                                                               |       31 |        0 |        6 |        0 |    100.0% |           |
@@ -2369,7 +2370,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **49791** | **1027** | **7132** |  **313** | **97.4%** |           |
+| **TOTAL**                                                                                | **49808** | **1027** | **7134** |  **313** | **97.4%** |           |
 
 
 ## Setup coverage badge
