@@ -269,9 +269,11 @@ class Settings(BaseSettings):
     # in-flight ones). Default off. `run_initiator_tick_seconds` is the initiation
     # cadence (>= 0.1s); `run_initiator_max_in_flight` caps how many Runs may be
     # in flight at once (>= 1; one-stage CT keeps it at 1). `run_initiator_plan_id`
-    # is the recipe Plan the loop starts for each ready Subject; None disables the
-    # loop even when enabled (no recipe to run), the same opt-in shape as
-    # `trust_policy_id`.
+    # is the BOOT-TIME FALLBACK recipe Plan: the loop prefers the runtime
+    # designation on the agent (`target_plan_id`, set by set_agent_target_plan)
+    # and falls back to this when none is designated. None here just means no
+    # fallback; the loop still runs when enabled and idles until a Plan is
+    # designated at runtime.
     run_initiator_enabled: bool = False
     run_initiator_tick_seconds: float = 30.0
     run_initiator_max_in_flight: int = 1

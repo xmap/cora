@@ -27,6 +27,7 @@ Public surface re-exported here:
 
 from cora.agent._projections import register_agent_projections
 from cora.agent._subscribers import register_agent_subscribers
+from cora.agent.aggregates.agent import load_agent
 from cora.agent.build_llm import build_llm
 from cora.agent.errors import (
     CautionProposalMalformedError,
@@ -89,6 +90,7 @@ __all__ = [
     "DecisionNotEmittedByCautionDrafterError",
     "UnauthorizedError",
     "build_llm",
+    "load_agent",
     "register_agent_projections",
     "register_agent_routes",
     "register_agent_subscribers",

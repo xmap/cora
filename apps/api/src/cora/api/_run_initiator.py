@@ -42,6 +42,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid5
 
 from cora.access.aggregates.actor import load_actor
+from cora.agent import load_agent
 from cora.agent.seed_run_initiator import RUN_INITIATOR_AGENT_ID
 from cora.api._flag_watcher import WatcherReadUnauthorizedError, probe_read_grant
 from cora.decision.aggregates.decision import (
@@ -316,22 +317,55 @@ async def initiate_tick(
     return started_run_ids
 
 
+async def _resolve_active_plan(deps: Kernel) -> UUID | None:
+    """Resolve the recipe Plan the loop should run THIS tick.
+
+    The runtime designation on the RunInitiator Agent (`target_plan_id`, set by
+    `set_agent_target_plan`) wins; the `run_initiator_plan_id` setting is the
+    boot-time fallback for a deployment that has not designated one at runtime.
+    None (no designation, no fallback, or the agent not seeded) means the loop
+    has no recipe and stands down this tick."""
+    agent = await load_agent(deps.event_store, RUN_INITIATOR_AGENT_ID)
+    if agent is not None and agent.target_plan_id is not None:
+        return agent.target_plan_id
+    return deps.settings.run_initiator_plan_id
+
+
 async def _initiate_loop(
     deps: Kernel,
     list_runs: ListRunsHandler,
     list_subjects: ListSubjectsHandler,
-    plan_id: UUID,
     max_in_flight: int,
     interval_seconds: float,
 ) -> None:
     """Periodic initiation loop. A failed tick is logged; the next tick retries.
 
+    The active Plan is resolved each tick (runtime designation over the env
+    fallback), so an operator can re-point or clear the recipe without a restart.
     The `started` set is per-loop in-process dedup memory (resets on restart,
-    same posture as the RunSupervisor's `memory`)."""
+    same posture as the RunSupervisor's `memory`); it is also cleared when the
+    active Plan CHANGES so the new recipe re-scans every mounted Subject rather
+    than skipping ones already scanned under the prior Plan."""
     started: set[UUID] = set()
     read_denied = False
+    active_plan: UUID | None = None
     while True:
         try:
+            plan_id = await _resolve_active_plan(deps)
+            if plan_id != active_plan:
+                # Designation changed (set, re-pointed, or cleared): reset the
+                # dedup memory and announce the transition for the operator.
+                _log.info(
+                    "run_initiator.active_plan_changed",
+                    previous_plan_id=str(active_plan) if active_plan is not None else None,
+                    plan_id=str(plan_id) if plan_id is not None else None,
+                )
+                active_plan = plan_id
+                started.clear()
+            if plan_id is None:
+                # No recipe designated and no fallback configured: idle this tick.
+                await asyncio.sleep(interval_seconds)
+                continue
             await initiate_tick(
                 deps=deps,
                 list_runs=list_runs,
@@ -372,20 +406,15 @@ async def run_initiator_lifespan(
 ) -> AsyncGenerator[None]:
     """Spawn the RunInitiator loop for the duration of the context.
 
-    No-op unless `settings.run_initiator_enabled` is True AND
-    `settings.run_initiator_plan_id` is set (the recipe Plan the loop starts for
-    each ready Subject); both default off / None so a deployment opts in
-    explicitly. Mirrors `run_supervisor_lifespan`.
+    No-op unless `settings.run_initiator_enabled` is True (default off, so a
+    deployment opts in explicitly). The recipe Plan is resolved per-tick by the
+    loop (the runtime designation on the Agent over the `run_initiator_plan_id`
+    fallback), so the loop spawns on `enabled` alone and idles until a Plan is
+    designated, rather than refusing to start when none is configured at boot.
+    Mirrors `run_supervisor_lifespan`.
     """
     if not deps.settings.run_initiator_enabled:
         _log.info("run_initiator.skipped", reason="disabled")
-        yield
-        return
-
-    plan_id = deps.settings.run_initiator_plan_id
-    if plan_id is None:
-        # Enabled but no recipe configured: inert, not a crash.
-        _log.info("run_initiator.skipped", reason="no_plan_configured")
         yield
         return
 
@@ -413,14 +442,15 @@ async def run_initiator_lifespan(
         else deps.settings.run_initiator_tick_seconds
     )
     max_in_flight = deps.settings.run_initiator_max_in_flight
+    fallback_plan_id = deps.settings.run_initiator_plan_id
     _log.info(
         "run_initiator.started",
         interval_seconds=interval,
         max_in_flight=max_in_flight,
-        plan_id=str(plan_id),
+        fallback_plan_id=str(fallback_plan_id) if fallback_plan_id is not None else None,
     )
     task = asyncio.create_task(
-        _initiate_loop(deps, list_runs, list_subjects, plan_id, max_in_flight, interval),
+        _initiate_loop(deps, list_runs, list_subjects, max_in_flight, interval),
         name="run-initiator",
     )
     try:

@@ -1,10 +1,12 @@
 """Tests for the RunInitiator standing daemon (cora.api._run_initiator).
 
-Covers the lifespan gate (disabled and enabled-without-plan are clean no-ops),
-the loop spawning + ticking + clean cancel when enabled with a configured Plan,
-and loop survival of a failing tick. The selection brain `initiate_tick` is
-tested end-to-end in the integration scenario; here the drains are faked so the
-loop machinery is exercised without a real start.
+Covers the lifespan gate (disabled is a clean no-op; enabled spawns the loop),
+the per-tick active-Plan resolution (runtime designation over the env fallback),
+the idle path (enabled but no Plan resolved yet), the running path (a Plan
+resolved -> the drains are exercised), and loop survival of a failing tick. The
+selection brain `initiate_tick` is tested end-to-end in the integration
+scenario; here the drains are faked so the loop machinery is exercised without a
+real start.
 """
 
 # white-box test of the runtime internals (private functions / constants)
@@ -16,8 +18,10 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.agent.seed_run_initiator import seed_run_initiator_agent
-from cora.api._run_initiator import run_initiator_lifespan
+from cora.agent.features.set_agent_target_plan import SetAgentTargetPlan
+from cora.agent.features.set_agent_target_plan import bind as bind_set_target_plan
+from cora.agent.seed_run_initiator import RUN_INITIATOR_AGENT_ID, seed_run_initiator_agent
+from cora.api._run_initiator import _resolve_active_plan, run_initiator_lifespan
 from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.kernel import Kernel
@@ -29,6 +33,8 @@ from cora.subject.features.list_subjects import ListSubjects, SubjectListPage
 from cora.subject.features.list_subjects.handler import Handler as ListSubjectsHandler
 
 _NOW = datetime(2026, 6, 20, 12, 0, 0, tzinfo=UTC)
+_CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
+_PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 
 
 def _kernel(*, enabled: bool = False, plan_id: UUID | None = None) -> Kernel:
@@ -104,22 +110,29 @@ async def test_lifespan_starts_nothing_when_disabled() -> None:
 
 
 @pytest.mark.unit
-async def test_lifespan_starts_nothing_when_enabled_without_plan() -> None:
-    """Enabled but no configured Plan: inert no-op, the loop is not spawned."""
+async def test_lifespan_idles_when_enabled_without_any_plan() -> None:
+    """Enabled but no Plan (no designation, no fallback): the loop spawns but
+    idles, never draining runs/subjects, and exits cleanly."""
     kernel = _kernel(enabled=True, plan_id=None)
+    await seed_run_initiator_agent(kernel)
     list_runs, run_calls = _make_recording_list_runs()
     list_subjects, subject_calls = _make_recording_list_subjects()
 
-    async with run_initiator_lifespan(kernel, list_runs=list_runs, list_subjects=list_subjects):
-        await asyncio.sleep(0.05)
+    async with run_initiator_lifespan(
+        kernel,
+        list_runs=list_runs,
+        list_subjects=list_subjects,
+        interval_seconds=0.01,
+    ):
+        await asyncio.sleep(0.1)
 
     assert run_calls == []
     assert subject_calls == []
 
 
 @pytest.mark.unit
-async def test_lifespan_runs_the_loop_when_enabled_with_plan() -> None:
-    """Enabled + a configured Plan: the lifespan spawns the loop, which ticks
+async def test_lifespan_with_fallback_plan_drains_each_tick() -> None:
+    """Enabled + the env fallback Plan: the lifespan spawns the loop, which ticks
     (draining runs + subjects) on the cadence, then cancels cleanly on exit."""
     kernel = _kernel(enabled=True, plan_id=uuid4())
     await seed_run_initiator_agent(kernel)
@@ -136,6 +149,64 @@ async def test_lifespan_runs_the_loop_when_enabled_with_plan() -> None:
 
     assert len(run_calls) >= 1
     assert len(subject_calls) >= 1
+
+
+@pytest.mark.unit
+async def test_lifespan_with_runtime_designation_drains_without_fallback() -> None:
+    """No env fallback, but a runtime designation on the agent: the loop resolves
+    the designated Plan each tick and drains. Proves designation drives the daemon."""
+    kernel = _kernel(enabled=True, plan_id=None)
+    await seed_run_initiator_agent(kernel)
+    await bind_set_target_plan(kernel)(
+        SetAgentTargetPlan(agent_id=RUN_INITIATOR_AGENT_ID, target_plan_id=uuid4()),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    list_runs, run_calls = _make_recording_list_runs()
+    list_subjects, subject_calls = _make_recording_list_subjects()
+
+    async with run_initiator_lifespan(
+        kernel,
+        list_runs=list_runs,
+        list_subjects=list_subjects,
+        interval_seconds=0.01,
+    ):
+        await asyncio.sleep(0.1)
+
+    assert len(run_calls) >= 1
+    assert len(subject_calls) >= 1
+
+
+@pytest.mark.unit
+async def test_resolve_active_plan_prefers_designation_over_fallback() -> None:
+    """The runtime designation on the agent wins over the env fallback."""
+    fallback = uuid4()
+    designated = uuid4()
+    kernel = _kernel(enabled=True, plan_id=fallback)
+    await seed_run_initiator_agent(kernel)
+    await bind_set_target_plan(kernel)(
+        SetAgentTargetPlan(agent_id=RUN_INITIATOR_AGENT_ID, target_plan_id=designated),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert await _resolve_active_plan(kernel) == designated
+
+
+@pytest.mark.unit
+async def test_resolve_active_plan_uses_fallback_when_no_designation() -> None:
+    """With no designation, resolution falls back to the env setting."""
+    fallback = uuid4()
+    kernel = _kernel(enabled=True, plan_id=fallback)
+    await seed_run_initiator_agent(kernel)
+    assert await _resolve_active_plan(kernel) == fallback
+
+
+@pytest.mark.unit
+async def test_resolve_active_plan_none_when_neither_designated_nor_fallback() -> None:
+    """No designation and no fallback resolves to None (loop idles)."""
+    kernel = _kernel(enabled=True, plan_id=None)
+    await seed_run_initiator_agent(kernel)
+    assert await _resolve_active_plan(kernel) is None
 
 
 @pytest.mark.unit
