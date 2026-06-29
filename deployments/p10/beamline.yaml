@@ -1,0 +1,376 @@
+# P10 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P10 "Coherence Applications" is the coherent hard X-ray beamline at PETRA III
+# (DESY, Hamburg): X-ray photon correlation spectroscopy (XPCS), coherent diffraction
+# imaging, and coherent-beam diffraction across three endstations. It is bound to the
+# PETRA III Site (deployments/petra-iii/site.yaml), the sixth PETRA III beamline.
+#
+# STATUS: reverse-engineered from P10's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p10, branch
+# debian/jessie; the online_haspp10e1.xml / e2.xml / lab.xml registries). Device
+# logical names and Tango control handles are real, read from that registry; vendor
+# part numbers, coherence lengths, energy calibration, and physical positions are not
+# in it and are open questions. Every value is carried confirm until P10 staff verify
+# it. The extraction is in research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family. P10 reuses existing Families end to end, and it
+# is the fleet's second XPCS beamline after the APS 8-ID exercise (which graduated the
+# xpcs Method). It binds a graduated XPCS Method directly (not pending), the first
+# PETRA III beamline whose primary technique is already in the catalog. Coherent
+# imaging reuses the pending ptychography / coherent_surface_scattering slugs (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML (e.g. p10/dcmmotor/opt.01). The registry exposes generically-
+# named motor banks (OPT_MOT, E1_MOT, E2_MOT) whose per-axis roles are not labelled;
+# these are grouped as the optics / endstation stages carrying the handles, every axis
+# role pending (GROUP-1). Several detectors (Lambda, Lima MAX22/MAX51) report on a bare
+# p10 host without an endstation token; per the cross-host mapping decision they are
+# homed in the endstation that operates them with the host flagged (HOST-1).
+#
+# SCOPE: this cut models the optics hutch (OPT: undulator, DCM, optics stages, the
+# beam shutter) and the three experiment areas (E1 coherent imaging, E2 XPCS /
+# diffraction, LAB) plus the LCX piezo sub-station, with their sample stages,
+# hexapods, slits, and detectors (Lambda, Eiger, Pilatus, PCO, Andor, the Lima
+# cameras). Counter / timer / ADC channels and the Sardana MeasurementGroup
+# bookkeeping rows are filtered out by the extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p10/questions.md.
+
+beamline:
+  name: P10
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P10"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P10 is an undulator beamline (coherent hard X-rays); the OnlineXML exposes the undulator (p10/undulator) and its gap (p10/attributemotor/UNDULATORGAP) but no period or parameters, carried pending (SRC-1)"
+
+# Five enclosures: the optics hutch, the three experiment areas (E1 coherent imaging,
+# E2 XPCS / diffraction, LAB), and the LCX piezo sub-station. DESY PSS permit signals
+# are not in the OnlineXML (PSS-1).
+enclosures:
+  - name: p10-opt
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P10 optics hutch; not in the OnlineXML (PSS-1)"}
+  - name: p10-e1
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for E1 (coherent imaging); not in the OnlineXML (PSS-1)"}
+  - name: p10-e2
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for E2 (XPCS / diffraction); not in the OnlineXML (PSS-1)"}
+  - name: p10-lab
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the LAB area; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and the optics hutch
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p10-opt
+  intro: "The P10 undulator source and the optics hutch: the double-crystal monochromator, the optics stages, and the beam shutter, feeding a coherent beam to the three experiment areas."
+  note: "Undulator on p10/undulator with the gap as an attributemotor; the DCM is dcmmotor / dcmener with a coupled P10ENERGY axis. The OPT_MOT bank carries the optics positioning, roles not labelled (GROUP-1)."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {undulator: "p10/undulator/1", gap: "p10/attributemotor/UNDULATORGAP"}
+      new: true
+      confirm: true
+      note: "P10 undulator; gap read from the registry, period not exposed (SRC-1)"
+    - name: Monochromator
+      family: Monochromator
+      pv: {bragg: "p10/dcmmotor/DCM_BRAGG", energy: "p10/dcmener/FMBENERGY", energy_mnchr: "p10/dcmener/MNCHRMTR", energy_all: "p10/multiplemotors/P10ENERGY"}
+      new: true
+      confirm: true
+      note: "double-crystal monochromator (DCM_BRAGG / FMBENERGY, with the coupled P10ENERGY axis); crystal cut and energy range are OPT-1"
+    - name: OpticsStages
+      family: LinearStage
+      pv: {bank: "p10/motor/OPT_MOT01"}
+      new: true
+      confirm: true
+      note: "the optics-hutch motor bank (OPT_MOT01..32 on p10/motor): mirror / slit / lens motions, per-axis roles not labelled, grouped as one stage (OPT-1, GROUP-1)"
+    - name: OpticsVirtualStages
+      family: PseudoAxis
+      pv: {bank: "p10/vmexecutor/vm_opt_01"}
+      new: true
+      confirm: true
+      note: "the optics-hutch virtual / coupled axes (vm_opt_* on vmexecutor): slit center / gap and coupled optics motions (GROUP-1)"
+    - name: BeamShutter
+      family: Shutter
+      pv: {shutter: "p10/shutter/P10SHUTTER"}
+      new: true
+      confirm: true
+      note: "the P10 beam shutter (P10SHUTTER); gates the coherent beam into the experiment areas (PSS-1)"
+
+# ===========================================================================
+# E1: coherent imaging endstation
+# ===========================================================================
+
+e1-sample:
+  stage: sample
+  enclosure: p10-e1
+  intro: "The E1 coherent-imaging endstation: a six-axis hexapod, the compound refractive lens box, the Galil-controlled guard slit, and the dense E1 sample / instrument motor bank with its virtual axes."
+  note: "The hexapod is six hexapodmotor axes; the CRL is a lensesbox (EHCRL); the E1_MOT bank (97 axes incl. the e6cctrl diffractometer controller) carries the sample positioning, roles not labelled (GROUP-1)."
+  devices:
+    - name: Hexapod
+      family: Hexapod
+      pv: {x: "p10/hexapodmotor/HEXAX", y: "p10/hexapodmotor/HEXAY", z: "p10/hexapodmotor/HEXAZ", rx: "p10/hexapodmotor/HEXARX", ry: "p10/hexapodmotor/HEXARY", rz: "p10/hexapodmotor/HEXARZ"}
+      new: true
+      confirm: true
+      note: "E1 six-axis hexapod (HEXAX-HEXARZ); coarse sample orientation"
+    - name: CompoundRefractiveLens
+      family: Transfocator
+      pv: {crl: "p10/lensesbox/EHCRL"}
+      new: true
+      confirm: true
+      note: "E1 compound refractive lens box (EHCRL, lensesbox); the CRL focusing / transfocator (OPT-1)"
+    - name: GuardSlit
+      family: Slit
+      pv: {bottom: "p10/galildmcslit/G1BOTTOM", top: "p10/galildmcslit/G1TOP", left: "p10/galildmcslit/G1LEFT", right: "p10/galildmcslit/G1RIGHT", cx: "p10/galildmcslit/G1CX", cy: "p10/galildmcslit/G1CY", dx: "p10/galildmcslit/G1DX", dy: "p10/galildmcslit/G1DY"}
+      new: true
+      confirm: true
+      note: "E1 guard slit (G1, Galil DMC slit controller: blades + center / gap virtual axes); the coherence-defining slit (OPT-1)"
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p10/motor/E1_MOT01", diffractometer: "p10/motor/e6cctrl"}
+      new: true
+      confirm: true
+      note: "the E1 sample / instrument motor bank (E1_MOT01..97 on p10/motor, including the e6cctrl six-circle diffractometer controller); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+    - name: SampleVirtualStages
+      family: PseudoAxis
+      pv: {bank: "p10/vmexecutor/vm_e1_01"}
+      new: true
+      confirm: true
+      note: "the E1 virtual / coupled axes (vm_e1_* on vmexecutor): slit and coupled sample motions (GROUP-1)"
+
+e1-detector:
+  stage: detection
+  enclosure: p10-e1
+  intro: "The E1 detection: the Quadro area detector and the MCA fluorescence detectors."
+  note: "Handles read from p10/ccdpvcam and p10/mca. The detector roster per experiment is DET-1."
+  devices:
+    - name: QuadroDetector
+      family: Camera
+      pv: {quadro: "p10/ccdpvcam/QUADRO"}
+      new: true
+      confirm: true
+      note: "E1 Quadro area detector (ADSC / Dectris Quadro, ccdpvcam); coherent-imaging detection (DET-1)"
+    - name: FluorescenceDetectors
+      family: EnergyDispersiveSpectrometer
+      pv: {mca01: "p10/mca/E1_MCA01", mca02: "p10/mca/E1_MCA02", mca03: "p10/mca/E1_MCA03", mca04: "p10/mca/E1_MCA04"}
+      new: true
+      confirm: true
+      note: "E1 MCA fluorescence detectors (DET-1)"
+
+# ===========================================================================
+# E2: XPCS / diffraction endstation
+# ===========================================================================
+
+e2-sample:
+  stage: sample
+  enclosure: p10-e2
+  intro: "The E2 XPCS / coherent-diffraction endstation: the two mirror stages, the SmarAct sample piezos, the two-theta arm, the Galil guard slit, and the dense E2 sample / instrument motor bank."
+  note: "The mirrors are spk controllers; the SmarAct piezos (SPX/SPY/SPZ) are fine sample stages; eh2tth is the two-theta detector arm. The E2_MOT bank (96 axes) carries the sample positioning, roles not labelled (GROUP-1)."
+  devices:
+    - name: Mirrors
+      family: Mirror
+      pv: {mirror1_y: "p10/spk/mirror1y", mirror1_rz: "p10/spk/mirror1rz", mirror2_y: "p10/spk/mirror2y", mirror2_rz: "p10/spk/mirror2rz", mirror_z: "p10/spk/mirrorz"}
+      new: true
+      confirm: true
+      note: "E2 mirror stages (mirror1 / mirror2 y / rz plus mirrorz, spk controllers); the E2 focusing / steering mirrors (OPT-1)"
+    - name: SamplePiezo
+      family: LinearStage
+      pv: {x: "p10/smaractmcsmotor/SPX", y: "p10/smaractmcsmotor/SPY", z: "p10/smaractmcsmotor/SPZ"}
+      new: true
+      confirm: true
+      note: "E2 SmarAct sample piezos (SPX / SPY / SPZ); fine sample positioning for XPCS (SAMPLE-1)"
+    - name: TwoThetaArm
+      family: RotaryStage
+      pv: {tth: "p10/eh2tth/eh2tthp10"}
+      new: true
+      confirm: true
+      note: "E2 two-theta detector arm (eh2tthp10); the scattering-angle axis for coherent diffraction (SAMPLE-1)"
+    - name: GuardSlit
+      family: Slit
+      pv: {bottom: "p10/galildmcslit/G2BOTTOM", top: "p10/galildmcslit/G2TOP", left: "p10/galildmcslit/G2LEFT", right: "p10/galildmcslit/G2RIGHT", cx: "p10/galildmcslit/G2CX", cy: "p10/galildmcslit/G2CY", dx: "p10/galildmcslit/G2DX", dy: "p10/galildmcslit/G2DY"}
+      new: true
+      confirm: true
+      note: "E2 guard slit (G2, Galil DMC slit controller); the coherence-defining slit (OPT-1)"
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p10/motor/E2_MOT01"}
+      new: true
+      confirm: true
+      note: "the E2 sample / instrument motor bank (E2_MOT01..96 on p10/motor); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+    - name: SampleVirtualStages
+      family: PseudoAxis
+      pv: {bank: "p10/vmexecutor/vm_e2_02"}
+      new: true
+      confirm: true
+      note: "the E2 virtual / coupled axes (vm_e2_* on vmexecutor) (GROUP-1)"
+
+e2-detector:
+  stage: detection
+  enclosure: p10-e2
+  intro: "The E2 detection: the XPCS / coherent-diffraction detector suite (Pilatus, PCO, LCX), plus the shared Lambda and Lima cameras."
+  note: "The Pilatus detectors (P100 / P1M / P300) and the PCO edge are the XPCS area detectors. The Lambda (p10/lambda) and Lima MAX22 / MAX51 cameras report on a bare p10 host (HOST-1). The operative roster per experiment is DET-1."
+  devices:
+    - name: PilatusDetectors
+      family: Camera
+      pv: {p100: "p10/pilatus/P100", p1m: "p10/pilatus/P1M", p300: "p10/pilatus/P300"}
+      new: true
+      confirm: true
+      note: "E2 Pilatus area detectors (100k / 1M / 300k); XPCS / coherent-diffraction detection (DET-1)"
+    - name: PCODetector
+      family: Camera
+      pv: {pco: "p10/pco/PCOEDGE"}
+      new: true
+      confirm: true
+      note: "E2 PCO edge sCMOS camera; fast imaging (DET-1)"
+    - name: LCXCamera
+      family: Camera
+      pv: {lcx: "p10/lcxcamera/LCX"}
+      new: true
+      confirm: true
+      note: "E2 LCX camera; beam / sample diagnostics (DET-1)"
+    - name: LambdaDetector
+      family: Camera
+      pv: {l01: "p10/lambda/l01", l02: "p10/lambda/l02", ldev: "p10/lambda/ldev"}
+      new: true
+      confirm: true
+      note: "the shared X-Spectrum Lambda detectors; report on the bare p10 host (HOST-1); the high-frame-rate XPCS detector (DET-1)"
+    - name: LimaCameras
+      family: Camera
+      pv: {max22ccd: "p10/limaccd/MAX22CCD", max51ccd: "p10/limaccd/MAX51CCD", max22dev: "p10/limampx/MAX22DEV", max51dev: "p10/limampx/MAX51DEV"}
+      new: true
+      confirm: true
+      note: "the shared Lima-controlled cameras (MAX22 / MAX51, limaccd / limampx); report on the bare p10 host (HOST-1, DET-1)"
+
+# ===========================================================================
+# LAB: laboratory / offline endstation
+# ===========================================================================
+
+lab-sample:
+  stage: sample
+  enclosure: p10-lab
+  intro: "The LAB area: a simulated six-circle diffractometer (the e6cctrl_simu and its chi / delta / gamma / mu / omega / phi simulation axes) for offline alignment and testing."
+  note: "The LAB axes are simulation / test devices (e6cctrl_simu and *_simu); modelled as a single offline diffractometer stage (LAB-1)."
+  devices:
+    - name: SimulatedDiffractometer
+      family: Goniometer
+      pv: {ctrl: "p10/motor/e6cctrl_simu", chi: "p10/motor/chi_simu", delta: "p10/motor/delta_simu", gamma: "p10/motor/gamma_simu", mu: "p10/motor/mu_simu", omega: "p10/motor/omega_simu"}
+      new: true
+      confirm: true
+      note: "LAB simulated six-circle (E6C) diffractometer (e6cctrl_simu + chi / delta / gamma / mu / omega / phi simulation axes); offline alignment / testing, bound to Goniometer (LAB-1)"
+
+lab-detector:
+  stage: detection
+  enclosure: p10-lab
+  intro: "The LAB detectors: an Eiger 4M, an Andor camera, a Mythen strip detector, and the Lima-controlled Andor CCD, for offline detector testing."
+  note: "Handles read from p10/eigerdectris, p10/andor, p10/mythen, p10/limaccds. The LAB detectors are offline / test units (LAB-1, DET-1)."
+  devices:
+    - name: EigerDetector
+      family: Camera
+      pv: {e4m: "p10/eigerdectris/E4M"}
+      new: true
+      confirm: true
+      note: "LAB DECTRIS Eiger 4M area detector (DET-1)"
+    - name: AndorCamera
+      family: Camera
+      pv: {andor: "p10/andor/ANDORDEV", andor_ccd: "p10/limaccds/ANDORCCD"}
+      new: true
+      confirm: true
+      note: "LAB Andor camera (andor / Lima-controlled andorccd) (DET-1)"
+    - name: MythenDetector
+      family: Camera
+      pv: {mythen: "p10/mythen/MYTHEN"}
+      new: true
+      confirm: true
+      note: "LAB Mythen strip detector; one-dimensional diffraction (DET-1)"
+
+# ===========================================================================
+# LCX: piezo sub-station
+# ===========================================================================
+
+lcx-sample:
+  stage: sample
+  enclosure: p10-e2
+  intro: "The LCX piezo sub-station: AttoCube and SmarAct nano-positioning piezos, a coherent-imaging sample sub-stage within the E2 area."
+  note: "AttoCube (APINY / APINZ) and SmarAct (SPX / SPY / SPZ) piezos; modelled as a nano-positioning stage in the E2 enclosure (LCX-1)."
+  devices:
+    - name: NanoPositioner
+      family: LinearStage
+      pv: {attocube_y: "p10/attocubemotor/APINY", attocube_z: "p10/attocubemotor/APINZ", smaract_x: "p10/smaractmotor/SPX", smaract_y: "p10/smaractmotor/SPY", smaract_z: "p10/smaractmotor/SPZ"}
+      new: true
+      confirm: true
+      note: "LCX nano-positioning piezos (AttoCube APINY / APINZ + SmarAct SPX / SPY / SPZ); the coherent-imaging sample sub-stage (LCX-1, SAMPLE-1)"
+
+# Cross-cutting control. P10 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P10 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as the other PETRA III beamlines. A motion axis is a
+    Tango motor device (p10/motor/...), the monochromator a dcmmotor / dcmener device,
+    the mirrors spk devices, the slits Galil DMC slit controllers (galildmcslit), the
+    fine sample stages SmarAct (smaractmcsmotor / smaractmotor) and AttoCube
+    (attocubemotor) controllers, the hexapod a hexapodmotor; the detectors are a wide
+    suite (pilatus, eigerdectris, pco, lambda, andor, mythen, ccdpvcam, lcxcamera, and
+    Lima-controlled limaccd / limampx). The handles are read from P10's public
+    OnlineXML registry and carried confirm (CTRL-1). The XPCS acquisition (the coherent
+    beam on the sample read by the high-frame-rate Lambda / Eiger, the correlation
+    computed downstream) runs as a Sardana macro; that orchestration is the seam CORA's
+    edge would conduct over its ControlPort, the same shape as the 8-ID XPCS seam
+    (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the optics and sample motor banks (CTRL-1)"
+    - name: GalilSlitControllers
+      family: MotionController
+      protocol: Tango_galildmcslit
+      new: true
+      confirm: true
+      note: "Galil DMC slit controllers (galildmcslit) driving the E1 / E2 guard slits (CTRL-1)"
+    - name: SmarActControllers
+      family: MotionController
+      protocol: Tango_smaract
+      new: true
+      confirm: true
+      note: "SmarAct controllers (smaractmcsmotor / smaractmotor) driving the E2 / LCX sample piezos (CTRL-1)"
+    - name: AttoCubeControllers
+      family: MotionController
+      protocol: Tango_attocube
+      new: true
+      confirm: true
+      note: "AttoCube controllers (attocubemotor) driving the LCX nano-positioning piezos (CTRL-1)"
+    - name: HexapodControllers
+      family: MotionController
+      protocol: Tango_hexapod
+      new: true
+      confirm: true
+      note: "hexapod controllers (hexapodmotor) driving the E1 hexapod (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango / spk / dcm) backing the mono, mirrors, and coupled axes (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P10 run needs present before it
+    can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

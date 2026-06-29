@@ -38,7 +38,7 @@ facility:
   heading: "PETRA III"
   kind: Site
   institution: DESY (Deutsches Elektronen-Synchrotron, Hamburg, Germany)
-  beamlines: [P01, P04, P06, P11, P03]
+  beamlines: [P01, P04, P06, P11, P03, P10]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
 #
@@ -74,6 +74,12 @@ practices:
   # until DESY staff confirm (TECH-1).
   - {name: P03_small_angle_scattering_practice, method: small_angle_scattering, pending: true, note: "micro- and nanofocus small-angle X-ray scattering on the sample stage + Pilatus area detector; reuses the small_angle_scattering slug, a further consumer (TECH-1)"}
   - {name: P03_wide_angle_scattering_practice, method: wide_angle_scattering, pending: true, note: "wide-angle X-ray scattering on the Pilatus 1M detector; reuses the wide_angle_scattering slug, a further consumer (TECH-1)"}
+  # P10 (Coherence Applications): XPCS + coherent imaging. XPCS binds the GRADUATED
+  # catalog xpcs Method (8-ID precedent), so this practice is NOT pending, the first
+  # PETRA III practice whose Method is already earned. Coherent imaging reuses the
+  # pending ptychography / coherent_surface_scattering slugs (TECH-1).
+  - {name: P10_xpcs_practice, method: xpcs, note: "X-ray photon correlation spectroscopy: the coherent beam on the sample read by the high-frame-rate Lambda / Eiger, the intensity correlation computed downstream; binds the graduated xpcs Method (8-ID), the second consumer"}
+  - {name: P10_ptychography_practice, method: ptychography, pending: true, note: "coherent diffraction imaging / ptychography on the E1 endstation + Quadro / Eiger detector; reuses the ptychography slug, a further consumer (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at PETRA III. Pending until the DESY
 # operator and review structure is confirmed.
