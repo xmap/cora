@@ -38,7 +38,7 @@ facility:
   heading: "PETRA III"
   kind: Site
   institution: DESY (Deutsches Elektronen-Synchrotron, Hamburg, Germany)
-  beamlines: [P01, P04, P06]
+  beamlines: [P01, P04, P06, P11]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
 #
@@ -62,6 +62,12 @@ practices:
   # pending until DESY staff confirm (TECH-1).
   - {name: P06_scanning_fluorescence_microscopy_practice, method: scanning_fluorescence_microscopy, pending: true, note: "hard X-ray scanning fluorescence / diffraction microscopy: the Aerotech raster fly-scan over the micro / nano focus reading the Maia XRF array; reuses the scanning_fluorescence_microscopy slug 2-ID / XFM / LIX / ESRF ID16B share, a further consumer (TECH-1)"}
   - {name: P06_nanotomography_practice, method: tomography, pending: true, note: "hard X-ray nano-tomography on the NC1 sample rotation (Pegasus samr) + area detector; reuses the catalog tomography Method, a further consumer (TECH-1)"}
+  # P11 (Bio-Imaging and Diffraction): high-throughput rotation macromolecular
+  # crystallography + bio-imaging. MX reuses the i03 mx_data_collection slug 7 sites
+  # share; bio-imaging reuses the tomography slug. Both pending until DESY staff
+  # confirm (TECH-1).
+  - {name: P11_mx_data_collection_practice, method: mx_data_collection, pending: true, note: "rotation / oscillation macromolecular-crystallography data collection on the goniometer + Pilatus area detector with cryostream cooling; reuses the i03 mx_data_collection slug FMX / AMX / MX3 / MANACA / TPS share, a further consumer (TECH-1)"}
+  - {name: P11_bioimaging_practice, method: tomography, pending: true, note: "full-field / coherent bio-imaging on the experiment-hutch stages + Pilatus detector; reuses the catalog tomography Method, a further consumer (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at PETRA III. Pending until the DESY
 # operator and review structure is confirmed.

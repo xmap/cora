@@ -1,0 +1,204 @@
+# P11 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P11 "Bio-Imaging and Diffraction" is the macromolecular-crystallography and
+# bio-imaging beamline at PETRA III (DESY, Hamburg): high-throughput rotation MX plus
+# coherent / full-field bio-imaging. It is bound to the PETRA III Site
+# (deployments/petra-iii/site.yaml), the fourth PETRA III beamline after P01, P04, P06,
+# and the first PETRA III macromolecular-crystallography beamline.
+#
+# STATUS: reverse-engineered from P11's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p11, branch
+# debian/jessie). Device logical names and Tango control handles are real, read from
+# that registry; vendor part numbers, the goniometer geometry, the detector model, and
+# physical positions are not in it and are open questions. The P11 registry is sparser
+# in labelling than P01 / P06: most of its devices are area-grouped motor banks
+# (oh_mot*, granite_mot*, eh1/eh2/eh3_mot*, the piezomotor bank) whose per-axis roles
+# are not exposed, so the Asset grouping leans on the area prefixes and is carried
+# confirm (GROUP-1). Every value is carried confirm until P11 staff verify it.
+#
+# WHAT IS NEW: no new device Family, and no new technique vocabulary. P11 is the
+# fourth macromolecular-crystallography beamline CORA models (after Diamond i03,
+# NSLS-II FMX / AMX, the Australian Synchrotron MX3, Sirius MANACA, NSRRC TPS 07A /
+# 05A) and PETRA III's first. It reuses the MX vocabulary: the cryostream binds the
+# graduated TemperatureController, the area detector binds Camera, the fluorescence
+# detector EnergyDispersiveSpectrometer, the optics and sample motions LinearStage /
+# Slit. The MX technique reuses the pending i03 mx_data_collection Method, and the
+# bio-imaging reuses the catalog tomography Method (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML (e.g. p11/pilatus/eh.01). The registry exposes one Tango host
+# (haspp11oh) for the whole beamline; the optics-hutch (oh) and experiment-hutch
+# (eh1/eh2/eh3) areas are inferred from the device-name prefixes, not from distinct
+# hosts, so the enclosure split is carried confirm (ENC-1).
+#
+# SCOPE: this cut models the optics hutch (the oh and granite motor banks) and the
+# experiment hutch (the eh1 / eh2 / eh3 / piezomotor banks, the servo, the cryostream,
+# the Pilatus detector, the XIA fluorescence detector). Because the registry does not
+# label the goniometer or the MX-specific instruments, they are grouped as the
+# experiment-hutch positioning stages, with the MX structure carried as a question
+# (MX-1). Counter / timer / ADC channels and the Sardana MeasurementGroup bookkeeping
+# rows are filtered out by the extractor and not modelled.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p11/questions.md.
+
+beamline:
+  name: P11
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P11"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P11 is an undulator beamline for macromolecular crystallography and bio-imaging; the OnlineXML exposes no undulator device (it sits on the single haspp11oh host with the beamline motors), so the source is carried pending (SRC-1)"
+
+# Two enclosures inferred from the device-name prefixes (the registry exposes one
+# Tango host, haspp11oh, for the whole beamline): the optics hutch (oh / granite) and
+# the experiment hutch (eh1 / eh2 / eh3). DESY PSS permit signals are not in the
+# OnlineXML (PSS-1).
+enclosures:
+  - name: p11-oh
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P11 optics hutch; not in the OnlineXML (PSS-1)"}
+  - name: p11-eh
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P11 experiment hutch; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the optics-hutch conditioning
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p11-oh
+  intro: "The P11 optics hutch: the beam-conditioning motions on the oh and granite motor banks. The monochromator, mirrors, and slits are not individually labelled in the registry, so they are grouped as the optics-hutch positioning stages."
+  note: "Handles read from p11/motor/oh.* and p11/motor/granite.*. The optics breakdown (monochromator, mirrors, slits) is OPT-1; the granite bank is the optics support / table stage."
+  devices:
+    - name: OpticsStages
+      family: LinearStage
+      pv: {bank: "p11/motor/oh.01"}
+      new: true
+      confirm: true
+      note: "the optics-hutch motor bank (oh_mot01..32 on p11/motor/oh.*): monochromator, mirror, and slit motions, per-axis roles not labelled, grouped as one stage carrying the bank prefix (OPT-1, GROUP-1)"
+    - name: GraniteStage
+      family: LinearStage
+      pv: {bank: "p11/motor/granite.01"}
+      new: true
+      confirm: true
+      note: "the granite support / table bank (granite_mot01..05 on p11/motor/granite.*); the optics or experiment granite base, role pending (GROUP-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the experiment-hutch positioning and the MX sample environment
+# ===========================================================================
+
+experiment-sample:
+  stage: sample
+  enclosure: p11-eh
+  intro: "The P11 experiment hutch: the eh1 / eh2 / eh3 motor banks and the piezomotor bank carrying the sample positioning, the goniometer, and the detector / instrument motions, plus the servo motor and the Oxford Cryostream sample cooling."
+  note: "The MX goniometer and the sample-changer robot are not individually labelled in the registry; the eh banks are grouped as the experiment-hutch positioning stages, with the MX structure carried as a question (MX-1)."
+  devices:
+    - name: ExperimentStage1
+      family: LinearStage
+      pv: {bank: "p11/motor/eh.1.06"}
+      new: true
+      confirm: true
+      note: "the eh1 motor bank (eh1_mot06..16 on p11/motor/eh.1.*): experiment-hutch positioning, roles not labelled, grouped as one stage (GROUP-1, MX-1)"
+    - name: ExperimentStage2
+      family: LinearStage
+      pv: {bank: "p11/motor/eh.2.01"}
+      new: true
+      confirm: true
+      note: "the eh2 motor bank (eh2_mot01..16 on p11/motor/eh.2.*): experiment-hutch positioning, roles not labelled (GROUP-1, MX-1)"
+    - name: ExperimentStage3
+      family: LinearStage
+      pv: {bank: "p11/motor/eh.3.01"}
+      new: true
+      confirm: true
+      note: "the eh3 motor bank (eh3_mot01..16 on p11/motor/eh.3.*): experiment-hutch positioning, roles not labelled (GROUP-1, MX-1)"
+    - name: PiezoStage
+      family: LinearStage
+      pv: {bank: "p11/piezomotor/eh.4.01"}
+      new: true
+      confirm: true
+      note: "the experiment-hutch piezo bank (ehpm3_mot01..16 on p11/piezomotor/eh.4.*): fine sample / instrument positioning, roles not labelled (GROUP-1)"
+    - name: ServoStage
+      family: LinearStage
+      pv: {servo: "p11/servomotor/eh.1.01"}
+      new: true
+      confirm: true
+      note: "the eh1 servo motor (eh1_srv01); a continuous / high-speed axis, role pending (GROUP-1)"
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: {cryo: "p11/cryo/eh.01"}
+      new: true
+      confirm: true
+      note: "the experiment-hutch sample cooling (eh_cryo01, Oxford Cryostream 700); the MX cryocooling, bound to the graduated TemperatureController (TEMP-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the area detector and the fluorescence detector
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: p11-eh
+  intro: "The P11 detection: the Pilatus area detector for diffraction, and the XIA fluorescence detector."
+  note: "Handles read from p11/pilatus and p11/xia. The detector model (Pilatus variant) and the goniometer-to-detector geometry are DET-1."
+  devices:
+    - name: AreaDetector
+      family: Camera
+      pv: {pilatus: "p11/pilatus/eh.01"}
+      new: true
+      confirm: true
+      note: "the experiment-hutch Pilatus area detector (eh_pilatus01); MX diffraction imaging, the detector variant is DET-1"
+    - name: FluorescenceDetector
+      family: EnergyDispersiveSpectrometer
+      pv: {xia: "p11/xia/oh.1"}
+      new: true
+      confirm: true
+      note: "the XIA multi-channel-analyzer fluorescence detector (eh_xia01); element identification / edge scanning (DET-1)"
+
+# Cross-cutting control. P11 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P11 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as P01, P04, and P06. The whole beamline reports on a
+    single Tango host (haspp11oh); a motion axis is a Tango motor device
+    (p11/motor/<area>.<n>), the piezo axes are piezomotor devices, the high-speed axis
+    a servomotor device, the cryostream a cryo device, and the detectors are pilatus
+    and xia device servers. The handles are read from P11's public OnlineXML registry
+    and carried confirm (CTRL-1). The rotation-MX acquisition (the goniometer
+    oscillation coupled to the Pilatus frame capture) runs as a Sardana macro; that
+    orchestration is the seam CORA's edge would conduct over its ControlPort, the same
+    shape as the MX cluster seams at i03 / MANACA / TPS 07A (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the oh, granite, and eh motor banks (CTRL-1)"
+    - name: PiezoMotorControllers
+      family: MotionController
+      protocol: Tango_piezomotor
+      new: true
+      confirm: true
+      note: "piezomotor controllers driving the experiment-hutch fine piezo bank (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango / servomotor) backing the servo and coupled axes (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P11 run needs present before it
+    can start. All pending confirmation. LiquidNitrogen is the cryostream supply for
+    the MX sample cooling.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen
