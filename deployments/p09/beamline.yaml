@@ -1,0 +1,346 @@
+# P09 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P09 "Resonant Scattering and Diffraction" is the hard X-ray resonant-scattering,
+# diffraction, and magnetism beamline at PETRA III (DESY, Hamburg). It carries three
+# areas: a resonant-scattering / HAXPES optics-and-experiment hutch (MONO), a
+# diffraction hutch (DIF), and a high-field magnetism endstation (MAG) with a 14 T
+# magnet. It is bound to the PETRA III Site (deployments/petra-iii/site.yaml), the
+# seventh PETRA III beamline.
+#
+# STATUS: reverse-engineered from P09's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p09, branch
+# debian/jessie; the online_haspp09.xml / dif.xml / mag.xml registries). Device
+# logical names and Tango control handles are real, read from that registry; vendor
+# part numbers, crystal cuts, magnet field, energy calibration, and physical positions
+# are not in it and are open questions. Every value is carried confirm until P09 staff
+# verify it. The extraction is in research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family. P09 reuses existing Families end to end, including
+# three allowlisted-loose Families the 4-ID POLAR deployment introduced: PhaseRetarder
+# (the polarization phase-retarder circles), PolarizationAnalyzer (the scattered-beam
+# analyzer), and Magnet (the 14 T sample-environment magnet). The diffractometer
+# circles bind the catalog Goniometer Family (not the composed Diffractometer
+# Assembly), the same call as P01 EH2. The techniques (resonant scattering, magnetic
+# scattering, XMCD, HAXPES) earn no catalog Method; they are carried pending on the
+# Site reusing the resonant_scattering / magnetic_scattering / xmcd slugs the 4-ID /
+# i06 / i10 beamlines already share (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML (e.g. p09/dcmmotor/exp.01). The registry exposes generically-
+# named motor banks (the MONO and DIF p09/motor banks) whose per-axis roles are not
+# labelled; grouped as the optics / endstation stages, every axis role pending
+# (GROUP-1). The SIS3302 fluorescence digitizer is exposed as many ROI sub-channels;
+# these are grouped as one EnergyDispersiveSpectrometer Asset (DET-1). Two registry
+# rows reference a p07/hexapodsmall device (a P07 device imported into the P09
+# registry); these are NOT P09 devices and are excluded (HOST-1).
+#
+# SCOPE: this cut models the MONO area (the undulator, the DCM, the mirrors, the CRL,
+# the slits, the resonant-scattering instrument with its phase retarder / analyzer /
+# diffractometer / PerkinElmer detector, the fluorescence detectors, the sample
+# environment), the DIF diffraction hutch, and the MAG high-field magnetism endstation.
+# Counter / timer / ADC channels and the Sardana MeasurementGroup bookkeeping rows are
+# filtered out by the extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p09/questions.md.
+
+beamline:
+  name: P09
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P09"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P09 is an undulator beamline (resonant scattering / diffraction / magnetism); the OnlineXML exposes the undulator (p09/undulator) and its gap (p09/attributemotor/gap) but no period or parameters, carried pending (SRC-1)"
+
+# Three enclosures: the resonant-scattering optics-and-experiment hutch (MONO), the
+# diffraction hutch (DIF), and the high-field magnetism endstation (MAG). DESY PSS
+# permit signals are not in the OnlineXML (PSS-1).
+enclosures:
+  - name: p09-mono
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P09 MONO (optics + resonant scattering) hutch; not in the OnlineXML (PSS-1)"}
+  - name: p09-dif
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the DIF diffraction hutch; not in the OnlineXML (PSS-1)"}
+  - name: p09-mag
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the MAG high-field magnetism endstation; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and the MONO-hutch optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p09-mono
+  intro: "The P09 undulator source and the MONO-hutch optics: the double-crystal monochromator, the two mirrors, the compound refractive lens, the defining slit, and the absorber."
+  note: "Undulator on p09/undulator; DCM is dcmmotor / dcmener with a coupled mnchrmtr energy axis. The MONO p09/motor bank carries the optics positioning, roles not labelled (GROUP-1)."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {undulator: "p09/undulator/1", gap: "p09/attributemotor/gap"}
+      new: true
+      confirm: true
+      note: "P09 undulator; gap read from the registry, period not exposed (SRC-1)"
+    - name: Monochromator
+      family: Monochromator
+      pv: {bragg: "p09/dcmmotor/DCM_BRAGG", energy: "p09/dcmener/energyfmb", energy_all: "p09/multiplemotors/mnchrmtr"}
+      new: true
+      confirm: true
+      note: "double-crystal monochromator (DCM_BRAGG / energyfmb, with the coupled mnchrmtr energy axis); crystal cut and energy range are OPT-1"
+    - name: Mirror1
+      family: Mirror
+      pv: {pitch: "p09/spk/m1pitch", x: "p09/spk/m1x", y: "p09/spk/m1y", yaw: "p09/spk/m1yaw"}
+      new: true
+      confirm: true
+      note: "first mirror (m1: pitch / x / y / yaw, spk controller); coating / role OPT-1"
+    - name: Mirror2
+      family: Mirror
+      pv: {bender: "p09/spk/m2bender", pitch: "p09/spk/m2pitch", x: "p09/spk/m2x", y: "p09/spk/m2y", yaw: "p09/spk/m2yaw"}
+      new: true
+      confirm: true
+      note: "second mirror (m2: bender / pitch / x / y / yaw, spk controller); coating / role OPT-1"
+    - name: CompoundRefractiveLens
+      family: Transfocator
+      pv: {crl: "p09/lensctrl/oh.01"}
+      new: true
+      confirm: true
+      note: "compound refractive lens control (crlbin, lensctrl); the CRL focusing / transfocator (OPT-1)"
+    - name: DefiningSlit
+      family: Slit
+      pv: {bottom: "p09/galildmcslit/G1Bottom", top: "p09/galildmcslit/G1Top", left: "p09/galildmcslit/G1Left", right: "p09/galildmcslit/G1Right", cx: "p09/galildmcslit/G1Cx", cy: "p09/galildmcslit/G1Cy", dx: "p09/galildmcslit/G1Dx", dy: "p09/galildmcslit/G1Dy"}
+      new: true
+      confirm: true
+      note: "MONO defining slit (G1, Galil DMC slit controller: blades + center / gap virtual axes)"
+    - name: Absorber
+      family: Filter
+      pv: {abs: "p09/absorber/01"}
+      new: true
+      confirm: true
+      note: "MONO beam absorber / attenuator (abs, absbox); folds into the Filter Family (the ID19 attenuator precedent) (OPT-1)"
+    - name: OpticsStages
+      family: LinearStage
+      pv: {bank: "p09/motor/exp.01"}
+      new: true
+      confirm: true
+      note: "the MONO optics / instrument motor bank (p09/motor/exp.*, ~98 modellable axes including the e6cctrl diffractometer controller); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+
+# ===========================================================================
+# MONO: resonant-scattering experiment (EH1)
+# ===========================================================================
+
+mono-sample:
+  stage: sample
+  enclosure: p09-mono
+  intro: "The MONO resonant-scattering experiment: the polarization phase retarder, the scattered-beam analyzer, the six-circle diffractometer goniometer, the AttoCube sample piezos, and the sample-environment temperature controllers."
+  note: "The phase retarder (two circles) and the analyzer reuse the 4-ID POLAR allowlisted-loose Families. The diffractometer goniometer is e6cctrl; the hkl pseudo-axis is a sim device (DIFF-1)."
+  devices:
+    - name: PhaseRetarder
+      family: PhaseRetarder
+      pv: {circle1: "p09/phaseretarder/phaseretardercircle1", circle2: "p09/phaseretarder/phaseretardercircle2", pchi: "p09/attocubeanc300motor/pchi", pperp: "p09/attocubeanc300motor/pperp"}
+      new: true
+      confirm: true
+      note: "the polarization phase-retarder circles (phaseretardercircle1 / 2) plus the AttoCube pchi / pperp fine axes; reuses the 4-ID POLAR allowlisted-loose PhaseRetarder Family (POL-1)"
+    - name: PolarizationAnalyzer
+      family: PolarizationAnalyzer
+      pv: {analyzer: "p09/analyzer/exp.01"}
+      new: true
+      confirm: true
+      note: "the scattered-beam polarization analyzer; reuses the 4-ID POLAR allowlisted-loose PolarizationAnalyzer Family (POL-2)"
+    - name: Goniometer
+      family: Goniometer           # catalog Family; the six-circle (E6C) sample-orientation circles, would compose a Diffractometer Assembly (DIFF-1)
+      pv: {ctrl: "p09/motor/exp.04", diffractometer: "p09/diffractometer/diffrac_eh1"}
+      new: true
+      confirm: true
+      note: "the MONO six-circle (E6C) diffractometer goniometer (e6cctrl + the diffrac_eh1 device); modelled as a Goniometer Asset, not the composed Diffractometer Assembly, until the full circle / detector-arm structure is confirmed (DIFF-1)"
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: {cryocon: "p09/cryocontempctrl/exp.01", lks336: "p09/lks336tempctrl/exp.01", lks340: "p09/lks340tempctrl/exp.01", lsci: "p09/lscitempctrl/exp.01"}
+      new: true
+      confirm: true
+      note: "the MONO sample-environment temperature controllers (CryoCon 32, Lakeshore 336 / 340, and an LSCI controller); cryogenic sample cooling (TEMP-1)"
+
+mono-detector:
+  stage: detection
+  enclosure: p09-mono
+  intro: "The MONO detection: the PerkinElmer area detector, the Pilatus 300k, the SIS3302 fluorescence digitizer, and the MCA fluorescence detectors."
+  note: "The SIS3302 is exposed as many ROI sub-channels in the registry; grouped here as one EnergyDispersiveSpectrometer Asset (DET-1)."
+  devices:
+    - name: PerkinElmerDetector
+      family: Camera
+      pv: {ctrl: "p09/pectrl/exp.01", detector: "p09/pedetector/exp.01"}
+      new: true
+      confirm: true
+      note: "the MONO PerkinElmer flat-panel area detector (pectrl / pedetector); resonant-diffraction imaging (DET-1)"
+    - name: PilatusDetector
+      family: Camera
+      pv: {p300: "p09/pilatus/300k"}
+      new: true
+      confirm: true
+      note: "the MONO Pilatus 300k area detector (DET-1)"
+    - name: FluorescenceDetector
+      family: EnergyDispersiveSpectrometer
+      pv: {sis3302_1: "p09/sis3302/exp.01", sis3302_2: "p09/sis3302/exp.02", sis3302_3: "p09/sis3302/exp.03", sis3302_4: "p09/sis3302/exp.04", mca: "p09/mca/exp.01"}
+      new: true
+      confirm: true
+      note: "the MONO SIS3302 fluorescence digitizer (exposed as many ROI sub-channels, grouped here) plus the MCA; energy-dispersive fluorescence detection (DET-1)"
+
+# ===========================================================================
+# DIF: diffraction hutch
+# ===========================================================================
+
+dif-sample:
+  stage: sample
+  enclosure: p09-dif
+  intro: "The DIF diffraction hutch: the six-circle diffractometer goniometer and the diffraction sample / instrument motor bank."
+  note: "The diffractometer goniometer is e6cctrleh1 / eh2 (OMS VME58 controlled); the DIF p09/motor bank carries the sample positioning, roles not labelled (GROUP-1)."
+  devices:
+    - name: Goniometer
+      family: Goniometer           # catalog Family; the DIF six-circle sample-orientation circles (DIFF-1)
+      pv: {ctrl_vme: "p09/omsvme58/difsimu.01", ctrl: "p09/motor/difsimu.01", diffractometer: "p09/diffractometer/difsimueh1.01"}
+      new: true
+      confirm: true
+      note: "the DIF six-circle (E6C) diffractometer goniometer (e6cctrleh1 / eh2, OMS VME58 controlled); modelled as a Goniometer Asset, not the composed Diffractometer Assembly (DIFF-1)"
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p09/motor/dif.01"}
+      new: true
+      confirm: true
+      note: "the DIF sample / instrument motor bank (p09/motor on the dif host, ~69 modellable axes); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+
+# ===========================================================================
+# MAG: high-field magnetism endstation
+# ===========================================================================
+
+mag-sample:
+  stage: sample
+  enclosure: p09-mag
+  intro: "The MAG high-field magnetism endstation: the 14 T superconducting magnet, the six-circle diffractometer goniometer, a sample hexapod, the PI sample piezos, the polarization analyzer, and the sample-environment temperature controllers."
+  note: "The 14 T magnet reuses the 4-ID POLAR allowlisted-loose Magnet Family. The hexapod is hexapodmotor; the piezos are PI E-710 (scan) and E-725 (sample)."
+  devices:
+    - name: Magnet
+      family: Magnet
+      pv: {magnet: "p09/magnet/exp.01"}
+      new: true
+      confirm: true
+      note: "the MAG 14 T superconducting sample-environment magnet (magnet14tf); reuses the 4-ID POLAR allowlisted-loose Magnet Family (MAG-1)"
+    - name: Goniometer
+      family: Goniometer           # catalog Family; the MAG six-circle sample-orientation circles (DIFF-1)
+      pv: {ctrl: "p09/diffractometer/diffrac_mag", mu: "p09/diffracmu/mu"}
+      new: true
+      confirm: true
+      note: "the MAG six-circle (E6C) diffractometer goniometer (diffrac_mag + the diffracmu mu circle); modelled as a Goniometer Asset, not the composed Diffractometer Assembly (DIFF-1)"
+    - name: SampleHexapod
+      family: Hexapod
+      pv: {u: "p09/hexapodmotor/hexa_u", v: "p09/hexapodmotor/hexa_v", w: "p09/hexapodmotor/hexa_w", x: "p09/hexapodmotor/hexa_x", y: "p09/hexapodmotor/hexa_y", z: "p09/hexapodmotor/hexa_z"}
+      new: true
+      confirm: true
+      note: "the MAG sample hexapod (hexa_*); coarse sample positioning within the magnet (SAMPLE-1)"
+    - name: SamplePiezo
+      family: LinearStage
+      pv: {scanx: "p09/piezopie710/scanx", scany: "p09/piezopie710/scany", scanz: "p09/piezopie710/scanz", piezo_x: "p09/piezopie725/piezo_x", piezo_y: "p09/piezopie725/piezo_y", piezo_z: "p09/piezopie725/piezo_z"}
+      new: true
+      confirm: true
+      note: "the MAG sample piezos (PI E-710 scan + E-725 sample); fine sample positioning (SAMPLE-1)"
+    - name: PolarizationAnalyzer
+      family: PolarizationAnalyzer
+      pv: {analyzer: "p09/analyzer/mag.01"}
+      new: true
+      confirm: true
+      note: "the MAG scattered-beam polarization analyzer; reuses the 4-ID POLAR allowlisted-loose PolarizationAnalyzer Family (POL-2)"
+    - name: Absorber
+      family: Filter
+      pv: {abs: "p09/absorbercontroller/mag.01"}
+      new: true
+      confirm: true
+      note: "the MAG beam absorber / attenuator (abs, absorbercontroller); folds into the Filter Family (OPT-1)"
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: {lks336: "p09/lks336tempctrl/mag.01", lks340: "p09/lks340tempctrl/mag.01"}
+      new: true
+      confirm: true
+      note: "the MAG sample-environment temperature controllers (Lakeshore 336 / 340) (TEMP-1)"
+
+mag-detector:
+  stage: detection
+  enclosure: p09-mag
+  intro: "The MAG detection: the Pilatus 100k area detector and the Andor (Lima-controlled) camera."
+  note: "Handles read from p09/pilatus and p09/limaccds. The detector roster per experiment is DET-1."
+  devices:
+    - name: PilatusDetector
+      family: Camera
+      pv: {p100: "p09/pilatus/p100k"}
+      new: true
+      confirm: true
+      note: "the MAG Pilatus 100k area detector (DET-1)"
+    - name: AndorCamera
+      family: Camera
+      pv: {andor: "p09/limaccds/andor.01"}
+      new: true
+      confirm: true
+      note: "the MAG Andor camera (Lima-controlled); imaging / diagnostics (DET-1)"
+
+# Cross-cutting control. P09 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P09 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as the other PETRA III beamlines. A motion axis is a
+    Tango motor device (p09/motor/...), the monochromator a dcmmotor / dcmener device,
+    the mirrors spk devices, the slits Galil DMC slit controllers (galildmcslit), the
+    diffractometer an e6cctrl / diffractometer device, the magnet a magnet device, the
+    phase retarder / analyzer their own devices; the fine sample stages are AttoCube
+    (attocubeanc300motor) and PI (piezopie710 / piezopie725) controllers, plus a
+    hexapod. The detectors are PerkinElmer (pectrl / pedetector), Pilatus, Andor
+    (Lima), the SIS3302 fluorescence digitizer, and MCAs; instruments connect over GPIB
+    (gpib / Keithley). The handles are read from P09's public OnlineXML registry and
+    carried confirm (CTRL-1). The resonant-scattering / magnetism acquisition (the
+    energy / diffractometer / field scan coupled to the detector readout) runs as a
+    Sardana macro; that orchestration is the seam CORA's edge would conduct over its
+    ControlPort, the same shape as the 4-ID POLAR seam (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 and VME58 stepper controllers (oms58 / omsvme58) driving the optics, diffractometer, and sample motor banks (CTRL-1)"
+    - name: GalilSlitControllers
+      family: MotionController
+      protocol: Tango_galildmcslit
+      new: true
+      confirm: true
+      note: "Galil DMC slit controllers (galildmcslit) driving the MONO defining slit (CTRL-1)"
+    - name: PiezoControllers
+      family: MotionController
+      protocol: Tango_piezo
+      new: true
+      confirm: true
+      note: "PI piezo controllers (piezopie710 / piezopie725) and AttoCube controllers (attocubeanc300motor) driving the fine sample / phase-retarder stages (CTRL-1)"
+    - name: HexapodControllers
+      family: MotionController
+      protocol: Tango_hexapod
+      new: true
+      confirm: true
+      note: "hexapod controllers (hexapodmotor) driving the MAG sample hexapod (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango / spk) backing the mono, mirrors, and coupled axes (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P09 run needs present before it
+    can start. All pending confirmation. LiquidHelium is the cryogen for the 14 T
+    superconducting magnet.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidHelium

@@ -38,7 +38,7 @@ facility:
   heading: "PETRA III"
   kind: Site
   institution: DESY (Deutsches Elektronen-Synchrotron, Hamburg, Germany)
-  beamlines: [P01, P04, P06, P11, P03, P10]
+  beamlines: [P01, P04, P06, P11, P03, P10, P09]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
 #
@@ -80,6 +80,14 @@ practices:
   # pending ptychography / coherent_surface_scattering slugs (TECH-1).
   - {name: P10_xpcs_practice, method: xpcs, note: "X-ray photon correlation spectroscopy: the coherent beam on the sample read by the high-frame-rate Lambda / Eiger, the intensity correlation computed downstream; binds the graduated xpcs Method (8-ID), the second consumer"}
   - {name: P10_ptychography_practice, method: ptychography, pending: true, note: "coherent diffraction imaging / ptychography on the E1 endstation + Quadro / Eiger detector; reuses the ptychography slug, a further consumer (TECH-1)"}
+  # P09 (Resonant Scattering and Diffraction): resonant scattering, magnetic
+  # scattering / XMCD, and diffraction across a resonant-scattering hutch, a diffraction
+  # hutch, and a 14 T magnetism endstation. Resonant scattering reuses the
+  # resonant_scattering slug; magnetic scattering / XMCD reuse the magnetic_scattering /
+  # xmcd slugs the 4-ID / i06 / i10 beamlines share. All pending (TECH-1).
+  - {name: P09_resonant_scattering_practice, method: resonant_scattering, pending: true, note: "resonant elastic X-ray scattering on the six-circle diffractometer + PerkinElmer / Pilatus detector, with polarization analysis; reuses the resonant_scattering slug 4-ID / i06 / i10 share, a further consumer (TECH-1)"}
+  - {name: P09_magnetic_scattering_practice, method: magnetic_scattering, pending: true, note: "magnetic scattering in the 14 T high-field magnetism endstation; reuses the magnetic_scattering slug, a further consumer (TECH-1)"}
+  - {name: P09_xmcd_practice, method: xmcd, pending: true, note: "X-ray magnetic circular / linear dichroism in the 14 T magnet, with the phase retarder setting polarization; reuses the 4-ID / i06 / i10 xmcd slug, a further consumer (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at PETRA III. Pending until the DESY
 # operator and review structure is confirmed.
