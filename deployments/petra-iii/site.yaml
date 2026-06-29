@@ -38,7 +38,7 @@ facility:
   heading: "PETRA III"
   kind: Site
   institution: DESY (Deutsches Elektronen-Synchrotron, Hamburg, Germany)
-  beamlines: [P01, P04, P06, P11, P03, P10, P09, P02, P64, P65, P07]
+  beamlines: [P01, P04, P06, P11, P03, P10, P09, P02, P64, P65, P07, P08]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
 #
@@ -105,6 +105,10 @@ practices:
   # magnetic_scattering slug. Both pending until DESY / Hereon staff confirm (TECH-1).
   - {name: P07_diffraction_practice, method: diffraction, pending: true, note: "high-energy materials-science diffraction on the four-circle diffractometer + Pilatus / PerkinElmer; reuses the diffraction slug, a further consumer (TECH-1)"}
   - {name: P07_magnetic_scattering_practice, method: magnetic_scattering, pending: true, note: "high-field materials studies in the 17 T magnet; reuses the magnetic_scattering slug P09 / 4-ID share, a further consumer (TECH-1)"}
+  # P08 (High Resolution Diffraction): surface / interface diffraction, reflectivity,
+  # and high-resolution diffraction on a six-circle Kohzu diffractometer. Reuses the
+  # diffraction slug, pending until DESY staff confirm (TECH-1).
+  - {name: P08_diffraction_practice, method: diffraction, pending: true, note: "high-resolution surface / interface diffraction and reflectivity on the six-circle Kohzu diffractometer + Eiger / Pilatus / Mythen; reuses the diffraction slug, a further consumer (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at PETRA III. Pending until the DESY
 # operator and review structure is confirmed.
