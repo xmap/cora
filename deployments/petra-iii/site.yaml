@@ -38,7 +38,7 @@ facility:
   heading: "PETRA III"
   kind: Site
   institution: DESY (Deutsches Elektronen-Synchrotron, Hamburg, Germany)
-  beamlines: [P01, P04, P06, P11]
+  beamlines: [P01, P04, P06, P11, P03]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
 #
@@ -68,6 +68,12 @@ practices:
   # confirm (TECH-1).
   - {name: P11_mx_data_collection_practice, method: mx_data_collection, pending: true, note: "rotation / oscillation macromolecular-crystallography data collection on the goniometer + Pilatus area detector with cryostream cooling; reuses the i03 mx_data_collection slug FMX / AMX / MX3 / MANACA / TPS share, a further consumer (TECH-1)"}
   - {name: P11_bioimaging_practice, method: tomography, pending: true, note: "full-field / coherent bio-imaging on the experiment-hutch stages + Pilatus detector; reuses the catalog tomography Method, a further consumer (TECH-1)"}
+  # P03 (MiNaXS): micro- and nanofocus small- and wide-angle X-ray scattering, 9-23
+  # keV, across a microfocus and a nanofocus GINIX endstation. SAXS reuses the
+  # small_angle_scattering slug, WAXS the wide_angle_scattering slug. Both pending
+  # until DESY staff confirm (TECH-1).
+  - {name: P03_small_angle_scattering_practice, method: small_angle_scattering, pending: true, note: "micro- and nanofocus small-angle X-ray scattering on the sample stage + Pilatus area detector; reuses the small_angle_scattering slug, a further consumer (TECH-1)"}
+  - {name: P03_wide_angle_scattering_practice, method: wide_angle_scattering, pending: true, note: "wide-angle X-ray scattering on the Pilatus 1M detector; reuses the wide_angle_scattering slug, a further consumer (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at PETRA III. Pending until the DESY
 # operator and review structure is confirmed.

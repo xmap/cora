@@ -1,0 +1,328 @@
+# P03 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P03 "MiNaXS" (Micro- and Nanofocus Small-Angle X-ray Scattering) is the SAXS / WAXS
+# beamline at PETRA III (DESY, Hamburg), 9-23 keV, with a microfocus endstation and a
+# nanofocus GINIX endstation. It is bound to the PETRA III Site
+# (deployments/petra-iii/site.yaml), the fifth PETRA III beamline after P01, P04, P06,
+# P11, and the fleet's entry into small-angle scattering.
+#
+# STATUS: reverse-engineered from P03's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p03, branch
+# debian/jessie; the online_haspp03.xml microfocus and online_haspp03nano.xml
+# nanofocus registries). Device logical names and Tango control handles are real, read
+# from that registry; vendor part numbers, focal sizes, energy calibration, and
+# physical positions are not in it and are open questions. Every value is carried
+# confirm until P03 staff verify it. The extraction is in research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family. P03 reuses existing Families end to end, but it is
+# the fleet's first SAXS / WAXS beamline and brings a two-endstation layout (microfocus
+# + nanofocus GINIX) and several new Tango motion-controller protocols (Galil DMC slit
+# controllers, SmarPod controllers). The technique (small-angle / wide-angle X-ray
+# scattering) earns no catalog Method; it is carried pending on the Site reusing the
+# diffraction slug (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML (e.g. p03/pilatus/300k). P03 shares the high-heatload optics with
+# P02: the first defining slit reports on the P02 optics host (haspp02oh1); per the
+# cross-host mapping decision it is homed in the P03 shared-optics enclosure with the
+# host flagged (HOST-1). The registry exposes generically-named motor banks
+# (expmi_mot01..64 at the microfocus endstation, mot01..40 at the nanofocus
+# endstation) whose per-axis roles are not labelled; these are grouped as the sample /
+# instrument stages of their endstation carrying the handles, every axis role pending
+# (GROUP-1).
+#
+# SCOPE: this cut models the shared optics (the multilayer monochromator, the two
+# mirrors, the defining slits, the CRL focusing) and the two endstations (the P03
+# microfocus and the P03-NANO GINIX nanofocus) with their sample stages, hexapods, and
+# detectors (Pilatus 300k / 1M, MCA / XIA fluorescence). Counter / timer / ADC channels
+# and the Sardana MeasurementGroup bookkeeping rows are filtered out by the extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p03/questions.md.
+
+beamline:
+  name: P03
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P03"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P03 is an undulator beamline (SAXS / WAXS, 9-23 keV); the OnlineXML exposes an undulator gap virtual axis (p03/attributemotor/gap) but no period or parameters, carried pending (SRC-1)"
+
+# Three enclosures: the shared optics (P03 shares the high-heatload optics with P02),
+# the microfocus endstation, and the nanofocus GINIX endstation. The first defining
+# slit reports on the P02 optics host (HOST-1). DESY PSS permit signals are not in the
+# OnlineXML (PSS-1).
+enclosures:
+  - name: p03-optics
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P03 (shared P02 / P03) optics; not in the OnlineXML (PSS-1)"}
+  - name: p03-microfocus
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the microfocus endstation; not in the OnlineXML (PSS-1)"}
+  - name: p03-nanofocus
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the nanofocus GINIX endstation; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and the shared conditioning optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p03-optics
+  intro: "The P03 undulator source and the shared conditioning optics: a multilayer monochromator, two mirrors, and the defining slits. P03 shares the high-heatload optics with P02."
+  note: "The undulator gap is a p03/attributemotor virtual axis. The first defining slit reports on the P02 optics host (haspp02oh1, HOST-1)."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {gap: "p03/attributemotor/gap"}
+      new: true
+      confirm: true
+      note: "P03 undulator; gap read from the registry, period not exposed (SRC-1)"
+    - name: Monochromator
+      family: Monochromator
+      pv: {pitch1: "p03/lom/exp.01", roll1: "p03/lom/exp.02", pitch2: "p03/lom/exp.03", lateral2: "p03/lom/exp.04", hub2: "p03/lom/exp.05", hub1: "p03/lom/exp.06", linear2: "p03/lom/exp.07", screen: "p03/lom/exp.08", table_height: "p03/lom/exp.09", table_pitch: "p03/lom/exp.10", table_roll: "p03/lom/exp.11", energy: "p03/lomenergy/exp.01"}
+      new: true
+      confirm: true
+      note: "multilayer monochromator (lom: two-bounce pitch / roll / hub / lateral plus the table jacks and the coupled lomenergy axis), 9-23 keV; multilayer d-spacing is OPT-1"
+    - name: Mirror1
+      family: Mirror
+      pv: {pitch: "p03/spk/exp.07", translation_x: "p03/spk/exp.08", table: "p03/spk/exp.09"}
+      new: true
+      confirm: true
+      note: "first mirror (m1: pitch / transx / table, SmarPod-style spk controller); coating / role OPT-1"
+    - name: Mirror2
+      family: Mirror
+      pv: {pitch: "p03/spk/exp.10", translation_x: "p03/spk/exp.11", table: "p03/spk/exp.12"}
+      new: true
+      confirm: true
+      note: "second mirror (m2: pitch / transx / table); coating / role OPT-1"
+    - name: DefiningSlit1
+      family: Slit
+      pv: {v_gap: "p03/slt/exp.01", v_offset: "p03/slt/exp.02"}
+      new: true
+      confirm: true
+      note: "first defining slit (slt1: vertical gap / offset); reports on the P02 optics host (haspp02oh1, HOST-1)"
+    - name: DefiningSlit2
+      family: Slit
+      pv: {left: "p03/slt/exp.03", right: "p03/slt/exp.04", offset: "p03/slt/exp.05", v_gap: "p03/slt/exp.06"}
+      new: true
+      confirm: true
+      note: "second defining slit (slt2: horizontal blades + vertical gap / offset)"
+    - name: QuadrantBPMs
+      family: FluxMonitor
+      pv: {eh1: "p03/i404/exp.01", oh1: "p03/i404/oh.01"}
+      new: true
+      confirm: true
+      note: "the optics-hutch and experiment-hutch quadrant beam-position monitors (i404 electrometers)"
+
+# ===========================================================================
+# P03 MICROFOCUS ENDSTATION
+# ===========================================================================
+
+microfocus-sample:
+  stage: sample
+  enclosure: p03-microfocus
+  intro: "The microfocus endstation: the CRL focusing hexapod and z-stage, the Galil-controlled guard slit, the slit4, and the sample / instrument motor bank."
+  note: "The CRL is positioned by a six-axis hexapod (crl1hex) plus a z-stage (CRL1_Z). The expmi_mot01..64 bank carries the sample / instrument positioning, roles not labelled (GROUP-1)."
+  devices:
+    - name: CRLHexapod
+      family: Hexapod
+      pv: {u: "p03/hexapodmotor/crl1hex_u", v: "p03/hexapodmotor/crl1hex_v", w: "p03/hexapodmotor/crl1hex_w", x: "p03/hexapodmotor/crl1hex_x", y: "p03/hexapodmotor/crl1hex_y", z: "p03/hexapodmotor/crl1hex_z"}
+      new: true
+      confirm: true
+      note: "the microfocus CRL focusing hexapod (crl1hex, six axes) plus the CRL z-stage (CRL1_Z on p03/motor); the compound-refractive-lens positioning (OPT-1)"
+    - name: GuardSlit
+      family: Slit
+      pv: {bottom: "p03/galildmcslit/G1Bottom", top: "p03/galildmcslit/G1Top", left: "p03/galildmcslit/G1Left", right: "p03/galildmcslit/G1Right", cx: "p03/galildmcslit/G1Cx", cy: "p03/galildmcslit/G1Cy", dx: "p03/galildmcslit/G1Dx", dy: "p03/galildmcslit/G1Dy"}
+      new: true
+      confirm: true
+      note: "the microfocus guard slit (G1, Galil DMC slit controller: blades + center / gap virtual axes); the SAXS beam-defining / guard slit (OPT-1)"
+    - name: BeamlineSlit4
+      family: Slit
+      pv: {x: "p03/motor/S4_X", y: "p03/motor/S4_Y", z: "p03/motor/S4_Z"}
+      new: true
+      confirm: true
+      note: "slit4 positioning (S4_X / Y / Z); a defining / scatter slit (OPT-1)"
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p03/motor/expmi_mot01"}
+      new: true
+      confirm: true
+      note: "the microfocus sample / instrument motor bank (expmi_mot01..64 on p03/motor); per-axis roles not labelled, grouped as one stage carrying the bank prefix (GROUP-1)"
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: {eurotherm: "p03/eurotherm2604/01"}
+      new: true
+      confirm: true
+      note: "the sample-environment Eurotherm 2604 temperature controller (TEMP-1)"
+
+microfocus-detector:
+  stage: detection
+  enclosure: p03-microfocus
+  intro: "The microfocus detection: the Pilatus 300k and 1M area detectors for SAXS / WAXS, plus the MCA and XIA fluorescence detectors."
+  note: "Handles read from p03/pilatus, p03/mca, p03/XIA. The SAXS-to-WAXS detector roles and the sample-to-detector distance are DET-1. The Lambda detector (petra3/lambda/01) reports on a bare petra3 host (HOST-1)."
+  devices:
+    - name: PilatusDetectors
+      family: Camera
+      pv: {pilatus_300k: "p03/pilatus/300k", pilatus_1M: "p03/pilatus/1M"}
+      new: true
+      confirm: true
+      note: "the microfocus Pilatus 300k and 1M area detectors; SAXS / WAXS scattering imaging (DET-1)"
+    - name: LambdaDetector
+      family: Camera
+      pv: {lambda: "petra3/lambda/01"}
+      new: true
+      confirm: true
+      note: "an X-Spectrum Lambda area detector; reports on the petra3 host (HOST-1, DET-1)"
+    - name: FluorescenceDetectors
+      family: EnergyDispersiveSpectrometer
+      pv: {mca01: "p03/mca/exp.01", mca02: "p03/mca/exp.02", mca03: "p03/mca/exp.03", mca04: "p03/mca/exp.04", xia01: "p03/XIA/p03.1", xia02: "p03/XIA/exp.2", xia03: "p03/XIA/exp.3", xia04: "p03/XIA/exp.4"}
+      new: true
+      confirm: true
+      note: "the microfocus MCA and XIA multi-channel-analyzer fluorescence detectors (DET-1)"
+
+# ===========================================================================
+# P03-NANO ENDSTATION: GINIX nanofocus
+# ===========================================================================
+
+nanofocus-sample:
+  stage: sample
+  enclosure: p03-nanofocus
+  intro: "The nanofocus GINIX endstation: a SmarPod hexapod and a second hexapod / cube stage for the waveguide and sample, a Smaract sample rotation, the waveguide linear stages, the Galil guard slit, and the sample motor bank, with LED illumination and a viewing camera."
+  note: "The GINIX (Goettingen Instrument for Nano-Imaging with X-rays) uses a SmarPod (hexa3) for the waveguide, a hexapod / cube (hexa2 / cube1) for the sample, and a Smaract phi / x rotation. The mot01..40 bank carries the sample positioning, roles not labelled (GROUP-1)."
+  devices:
+    - name: WaveguideSmarPod
+      family: Hexapod
+      pv: {x: "p03nano/smarpodmotor/hexa3_motX", y: "p03nano/smarpodmotor/hexa3_motY", z: "p03nano/smarpodmotor/hexa3_motZ", rx: "p03nano/smarpodmotor/hexa3_motRX", ry: "p03nano/smarpodmotor/hexa3_motRY", rz: "p03nano/smarpodmotor/hexa3_motRZ"}
+      new: true
+      confirm: true
+      note: "the GINIX waveguide SmarPod (hexa3, six axes); positions the nano-focusing waveguide (OPT-1)"
+    - name: SampleHexapod
+      family: Hexapod
+      pv: {u: "p03nano/hexapodmotor/hexa2_motU", v: "p03nano/hexapodmotor/hexa2_motV", w: "p03nano/hexapodmotor/hexa2_motW", x: "p03nano/hexapodmotor/hexa2_motX", cube_x: "p03nano/hexapodmotor/cube1_motX", cube_z: "p03nano/hexapodmotor/cube1_motZ"}
+      new: true
+      confirm: true
+      note: "the GINIX sample hexapod (hexa2) plus the cube stage (cube1); coarse sample positioning (SAMPLE-1)"
+    - name: SampleRotation
+      family: RotaryStage
+      pv: {phi: "p03nano/smaractmotor/ROT_PHI", x: "p03nano/smaractmotor/ROT_X"}
+      new: true
+      confirm: true
+      note: "the GINIX sample rotation (ROT_PHI / ROT_X, Smaract); the nano-tomography / scanning rotation (SAMPLE-1)"
+    - name: WaveguideLinearStages
+      family: LinearStage
+      pv: {lls1: "p03nano/attributemotor/LLS1", lls2: "p03nano/attributemotor/LLS2"}
+      new: true
+      confirm: true
+      note: "the GINIX waveguide linear stages (LLS1 / LLS2, attributemotor virtual axes) (OPT-1)"
+    - name: GuardSlit
+      family: Slit
+      pv: {cx: "p03nano/galildmcslit/S6_CX", cy: "p03nano/galildmcslit/S6_CY", dx: "p03nano/galildmcslit/S6_DX", dy: "p03nano/galildmcslit/S6_DY"}
+      new: true
+      confirm: true
+      note: "the nanofocus guard slit (S6, Galil DMC slit controller: center / gap virtual axes) (OPT-1)"
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p03nano/motor/mot01"}
+      new: true
+      confirm: true
+      note: "the nanofocus sample / instrument motor bank (mot01..40 on p03nano/motor); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+    - name: SampleIllumination
+      family: Camera
+      pv: {led01: "p03nano/led/exp.01", led02: "p03nano/led/exp.02", camera: "p03/pscameravhr/nano.01"}
+      new: true
+      confirm: true
+      note: "the GINIX sample LED illumination and the PS-camera-VHR viewing camera for sample centring (DET-1)"
+
+nanofocus-detector:
+  stage: detection
+  enclosure: p03-nanofocus
+  intro: "The nanofocus detection: the Pilatus area detector for the nano-imaging / scattering signal, the MCA fluorescence detectors, and the experiment shutter."
+  note: "Handles read from p03nano/pilatus, p03nano/mca. The detector roles and the GINIX imaging geometry are DET-1."
+  devices:
+    - name: PilatusDetector
+      family: Camera
+      pv: {pilatus: "p03nano/pilatus/300k"}
+      new: true
+      confirm: true
+      note: "the nanofocus Pilatus 300k area detector; nano-imaging / scattering (DET-1)"
+    - name: FluorescenceDetectors
+      family: EnergyDispersiveSpectrometer
+      pv: {mca01: "p03nano/mca/p03nano.01", mca02: "p03nano/mca/p03nano.02", mca03: "p03nano/mca/p03nano.03", mca04: "p03nano/mca/p03nano.04", mcatest: "p03nano/sis3302new/exp.01"}
+      new: true
+      confirm: true
+      note: "the nanofocus MCA fluorescence detectors (and a SIS3302 digitizer) (DET-1)"
+    - name: ExperimentShutter
+      family: Shutter
+      pv: {shutter: "p03nano/shutter/exp.01"}
+      new: true
+      confirm: true
+      note: "the nanofocus experiment / fast shutter (the GINIX exposure shutter, role pending PSS-1 / DET-1)"
+
+# Cross-cutting control. P03 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P03 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as P01, P04, P06, and P11. P03 brings two motion-
+    controller protocols new to the PETRA III set CORA models: Galil DMC slit
+    controllers (galildmcslit, the guard slits) and SmarPod controllers (smarpodmotor,
+    the GINIX waveguide), alongside the OMS steppers, hexapod, Smaract, and SmarPod-
+    style spk controllers. A motion axis is a Tango motor device
+    (p03/motor/... or p03nano/motor/...), the monochromator a lom device, the mirrors
+    spk devices, the detectors pilatus / mca / XIA / lambda device servers. The
+    handles are read from P03's public OnlineXML registry and carried confirm (CTRL-1).
+    The SAXS / WAXS acquisition (the sample scan coupled to the Pilatus frame capture)
+    runs as a Sardana macro; that orchestration is the seam CORA's edge would conduct
+    over its ControlPort (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the sample / instrument motor banks (CTRL-1)"
+    - name: GalilSlitControllers
+      family: MotionController
+      protocol: Tango_galildmcslit
+      new: true
+      confirm: true
+      note: "Galil DMC slit controllers (galildmcslit) driving the microfocus and nanofocus guard slits (CTRL-1)"
+    - name: SmarPodControllers
+      family: MotionController
+      protocol: Tango_smarpodmotor
+      new: true
+      confirm: true
+      note: "SmarPod controllers (smarpodmotor) driving the GINIX waveguide hexapod (CTRL-1)"
+    - name: HexapodControllers
+      family: MotionController
+      protocol: Tango_hexapod
+      new: true
+      confirm: true
+      note: "hexapod controllers (hexapodmotor) driving the CRL and GINIX sample hexapods (CTRL-1)"
+    - name: SmarActControllers
+      family: MotionController
+      protocol: Tango_smaract
+      new: true
+      confirm: true
+      note: "SmarAct controllers (smaractmotor) driving the GINIX sample rotation (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango / spk) backing the mono, mirrors, and coupled axes (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P03 run needs present before it
+    can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
