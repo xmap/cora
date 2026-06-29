@@ -1,0 +1,149 @@
+# CANDIDATE beamline descriptor: hand-read from NSLS2/chx-profile-collection, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions and enclosures need human curation, and any new Family needs the
+# naming-r3 gate. Do not copy into deployments/ without review. All PV prefixes verified
+# verbatim against source (startup/*.py), zero fabrications.
+
+beamline:
+  name: CHX
+  facility: nsls2
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 11-ID-A
+  facility_code: nsls2
+  confirm: optics hutch; inferred from PV prefix XF:11IDA
+- name: 11-ID-B
+  facility_code: nsls2
+  confirm: endstation hutch; inferred from XF:11IDB
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: FrontEndShutter
+    family: Shutter
+    pv: "XF:11ID-PPS{Sh:FE}"
+    new: true
+    confirm: front-end PPS shutter; family Shutter (catalog)
+  - name: PhotonShutter
+    family: Shutter
+    pv: "XF:11IDA-PPS{PSh}"
+    new: true
+    confirm: photon shutter; family Shutter (catalog)
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Monochromator
+    family: Monochromator
+    pv: "XF:11IDA-OP{Mono:DCM"
+    new: true
+    confirm: Si DCM (coherent beam); family Monochromator (catalog)
+  - name: MultilayerMono
+    family: Monochromator
+    pv: "XF:11IDA-OP{Mono:DMM"
+    new: true
+    confirm: double-multilayer mono (higher-flux mode); family Monochromator (catalog)
+  - name: HorizontalDeflectingMirror
+    family: Mirror
+    pv: "XF:11IDA-OP{Mir:HDM"
+    new: true
+    confirm: HDM mirror; family Mirror (catalog)
+  - name: Transfocator
+    family: Transfocator
+    pv: "XF:11IDA-OP{Lens:"
+    new: true
+    confirm: CRL lens stack; family Transfocator (catalog, graduated); CHX is a confirmed CRL consumer
+  - name: Filter
+    family: Filter
+    pv: "XF:11IDA-OP{Flt:1-Ax:"
+    new: true
+    confirm: filter; family Filter (catalog)
+  - name: MonoBeamSlit
+    family: Slit
+    pv: "XF:11IDA-OP{Slt:MB"
+    new: true
+    confirm: mono-beam slit; family Slit (catalog)
+  - name: PinkBeamSlit
+    family: Slit
+    pv: "XF:11IDA-OP{Slt:PB"
+    new: true
+    confirm: pink-beam slit; family Slit (catalog)
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Diffractometer
+    family: Diffractometer
+    pv: "XF:11IDB-ES{Dif"
+    new: true
+    confirm: 'Dif exposes xh/zh only (2-axis detector positioner); confirm catalog Diffractometer vs LinearStage'
+  - name: SampleBeamStop
+    family: BeamStop
+    pv: "XF:11IDB-OP{BS:Samp"
+    new: true
+    confirm: 'sample beamstop x/y; family BeamStop (catalog)'
+  - name: Linkam
+    family: TemperatureController
+    pv: "XF:11ID-ES{LINKAM}:"
+    new: true
+    confirm: 'Linkam thermal stage; TEMP + SETPOINT/RAMPRATE setpoints; family TemperatureController (catalog, presents Regulator); CHX is another consumer'
+  - name: SyringePump
+    family: FlowController
+    pv: "XF:11IDB-ES{Pmp:"
+    new: true
+    confirm: 'syringe pump (Run/Stop/Purge); LOOSE FlowController, graduation candidate (further consumer reinforcing i22/7-bm/lix/xfp)'
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: SAXSTable
+    family: Table
+    pv: "XF:11IDB-ES{Tbl:SAXS-Ax:"
+    new: true
+    confirm: 'SAXS detector table m1/m2/x1/x2; family Table (catalog)'
+  - name: SAXSBeamStop
+    family: BeamStop
+    pv: "XF:11IDB-ES{BS:SAXS"
+    new: true
+    confirm: SAXS beamstop; family BeamStop (catalog)
+  - name: Eiger1M
+    family: Camera
+    pv: "XF:11IDB-ES{Det:Eig1M}"
+    new: true
+    confirm: Eiger 1M area detector; family Camera (catalog)
+  - name: Eiger4M
+    family: Camera
+    pv: "XF:11IDB-ES{Det:Eig4M}"
+    new: true
+    confirm: Eiger 4M area detector; family Camera (catalog)
+  - name: Eiger500K
+    family: Camera
+    pv: "XF:11IDB-ES{Det:Eig500K}"
+    new: true
+    confirm: Eiger 500K (fast XPCS); family Camera (catalog)
+  - name: FluorescenceSpectrometer
+    family: EnergyDispersiveSpectrometer
+    pv: "XF:11IDB-ES{Xsp:1}:"
+    new: true
+    confirm: Xspress3; family EnergyDispersiveSpectrometer (catalog, graduated)
+  - name: ScalerCounter
+    family: GenericProbe
+    pv: "XF:11IDB-ES{Sclr:1}"
+    new: true
+    confirm: scaler; LOOSE GenericProbe
+  - name: Zebra
+    family: TimingController
+    pv: "XF:11IDB-ES{Zebra}:"
+    new: true
+    confirm: 'fly-scan / detector gating; TimingController (catalog) - confirm timing role; recurring fleet-wide graduation watch'
+  - name: BeamPositionMonitor
+    family: GenericProbe
+    pv: "XF:11IDA-BI{Bpm:1"
+    new: true
+    confirm: beam position monitor; LOOSE GenericProbe, held DIAG-1
+  - name: AH401BElectrometer
+    family: FluxMonitor
+    pv: "XF:11IDA-BI{AH401B}"
+    new: true
+    confirm: '4-channel electrometer; intensity side FluxMonitor (graduated), position side DIAG-1; split per use'
