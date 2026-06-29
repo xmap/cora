@@ -1,0 +1,62 @@
+# CANDIDATE beamline descriptor: hand-read from NSLS2/hxn-profile-collection, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions and enclosures need human curation, and any new Family needs the
+# naming-r3 gate. Do not copy into deployments/ without review. All PV prefixes verified
+# verbatim against source (startup/*.py), zero fabrications.
+
+beamline:
+  name: HXN
+  facility: nsls2
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 3-ID-A
+  facility_code: nsls2
+  confirm: optics hutch; inferred from PV prefix XF:03IDA
+- name: 3-ID-B
+  facility_code: nsls2
+  confirm: secondary-source hutch; inferred from XF:03IDB
+- name: 3-ID-C
+  facility_code: nsls2
+  confirm: nanoprobe endstation; inferred from XF:03IDC
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: PhotonShutter, family: Shutter, pv: "XF:03IDB-PPS{PSh}", new: true, confirm: PPS shutter; Shutter (catalog)}
+  - {name: Monochromator, family: Monochromator, pv: "XF:03IDA-OP{Mon:1-Ax:", new: true, confirm: "DCM bragg/p/pf; Monochromator (catalog)"}
+  - {name: HorizontalCollimatingMirror, family: Mirror, pv: "XF:03IDA-OP{HCM:1-Ax:", new: true, confirm: HCM; Mirror (catalog)}
+  - {name: HorizontalFocusingMirror, family: Mirror, pv: "XF:03IDA-OP{HFM:1-Ax:", new: true, confirm: HFM; Mirror (catalog)}
+  - {name: Mirror1, family: Mirror, pv: "XF:03IDA-OP{Mir:1-Ax:", new: true, confirm: "mirror 1 p/bend/x/y; Mirror (catalog)"}
+  - {name: Mirror2, family: Mirror, pv: "XF:03IDA-OP{Mir:2-Ax:", new: true, confirm: mirror 2; Mirror (catalog)}
+  - {name: VerticalMirrorSystem, family: Mirror, pv: "XF:03IDA-OP{VMS:1-Ax:", new: true, confirm: VMS; Mirror (catalog)}
+  - {name: Transfocator, family: Transfocator, pv: "XF:03IDA-OP{Lens:CRL", new: true, confirm: "CRL; Transfocator (catalog, graduated); HXN is a confirmed consumer"}
+  - {name: WhiteBeamSlit1, family: Slit, pv: "XF:03IDA-OP{Slt:1", new: true, confirm: slit 1; Slit (catalog)}
+  - {name: WhiteBeamSlit2, family: Slit, pv: "XF:03IDA-OP{Slt:2", new: true, confirm: slit 2; Slit (catalog)}
+  - {name: SecondarySourceAperture, family: Slit, pv: "XF:03IDB-OP{Slt:SSA1", new: true, confirm: SSA; Slit (catalog)}
+  - {name: FluorescenceScreen, family: Screen, pv: "XF:03IDA-OP{FS:1-Ax:", new: true, confirm: "fluorescence screen y; Screen (catalog)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: MLLScanStage, family: LinearStage, pv: "XF:03IDC-ES{MCS:1-Ax:", new: true, confirm: "MLL coordinate system 1 (mlldiffy + fine); LinearStage (catalog)"}
+  - {name: ZPScanStage, family: LinearStage, pv: "XF:03IDC-ES{MCS:2-Ax:", new: true, confirm: "ZP coordinate system 2 (zpx/zpy/zpz); LinearStage (catalog)"}
+  - {name: ZPPiezoSample, family: LinearStage, pv: "XF:03IDC-ES{Ppmac:1-", new: true, confirm: "PowerPMAC fine piezo zpssx/y/z; LinearStage (catalog)"}
+  - {name: ZPPiezoInterfero, family: LinearStage, pv: "XF:03IDC-ES{ZpPI:1-", new: true, confirm: "PI piezo zpsx/zpsz; LinearStage (catalog)"}
+  - {name: AttocubePositioners, family: LinearStage, pv: "XF:03IDC-ES{ANC350:", new: true, confirm: "ANC350:1-8 Attocube coarse; LinearStage (catalog)"}
+  - {name: Diffractometer, family: Diffractometer, pv: "XF:03IDC-ES{Diff", new: true, confirm: "confirm catalog Diffractometer vs sample-rotation stage (MCS:3 diffsth)"}
+  - {name: XeyeCamera, family: GenericProbe, pv: "XF:03IDB-BI{Xeye-CAM:1}", new: true, confirm: on-axis viewing camera; LOOSE GenericProbe}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Eiger1M, family: Camera, pv: "XF:03IDC-ES{Det:Eiger1M}", new: true, confirm: "Eiger 1M (ptychography); Camera (catalog)"}
+  - {name: Merlin1, family: Camera, pv: "XF:03IDC-ES{Merlin:1}", new: true, confirm: Merlin; Camera (catalog)}
+  - {name: Merlin2, family: Camera, pv: "XF:03IDC-ES{Merlin:2}", new: true, confirm: second Merlin; Camera (catalog)}
+  - {name: DexelaDetector, family: Camera, pv: "XF:03IDC-ES{Dexela:1}", new: true, confirm: Dexela flat-panel; Camera (catalog)}
+  - {name: VortexDetector, family: EnergyDispersiveSpectrometer, pv: "XF:03IDC-ES{Det:Vort", new: true, confirm: "Vortex SDD nano-XRF; EnergyDispersiveSpectrometer (catalog, graduated)"}
+  - {name: BrukerDetector, family: EnergyDispersiveSpectrometer, pv: "XF:03IDC-ES{Det:Bruk", new: true, confirm: "Bruker SDD; EnergyDispersiveSpectrometer (catalog, graduated)"}
+  - {name: DXPController, family: GenericProbe, pv: "XF:03IDC-ES{DXP:1}", new: true, confirm: DXP pulse processor (SDD front-end); LOOSE GenericProbe}
+  - {name: ScalerCounter, family: GenericProbe, pv: "XF:03IDC-ES{Sclr:1}", new: true, confirm: "scaler (Sclr:1-3); LOOSE GenericProbe"}
+  - {name: FiberPositioners, family: LinearStage, pv: "XF:03IDC-ES{FPS:1", new: true, confirm: "FPS:1-6 positioner/interferometer stages; LinearStage (catalog), confirm"}
+  - {name: BeamPositionMonitor, family: GenericProbe, pv: "XF:03ID-BI{EM:BPM1}", new: true, confirm: "EM:BPM1/BPM2 electrometer BPMs; LOOSE GenericProbe, held DIAG-1"}
