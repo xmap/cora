@@ -38,7 +38,7 @@ facility:
   heading: "PETRA III"
   kind: Site
   institution: DESY (Deutsches Elektronen-Synchrotron, Hamburg, Germany)
-  beamlines: [P01, P04]
+  beamlines: [P01, P04, P06]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
 #
@@ -56,6 +56,12 @@ practices:
   # angle_resolved_photoemission slug. Both pending until DESY staff confirm (TECH-1).
   - {name: P04_xas_practice, method: xas_spectroscopy, pending: true, note: "soft X-ray absorption spectroscopy (total electron yield via the drain-current electrometer) over the undulator + plane-grating-monochromator photon-energy scan; reuses the xas_spectroscopy slug, a further consumer (TECH-1)"}
   - {name: P04_photoemission_practice, method: angle_resolved_photoemission, pending: true, note: "soft X-ray photoemission on the EXP endstations; reuses the angle_resolved_photoemission slug, a further consumer (TECH-1)"}
+  # P06 (Micro- and Nanoprobe): hard X-ray scanning fluorescence / diffraction
+  # microscopy + nano-tomography. Scanning XRF reuses the scanning_fluorescence_
+  # microscopy slug 4 sites share; nano-tomography reuses the tomography slug. Both
+  # pending until DESY staff confirm (TECH-1).
+  - {name: P06_scanning_fluorescence_microscopy_practice, method: scanning_fluorescence_microscopy, pending: true, note: "hard X-ray scanning fluorescence / diffraction microscopy: the Aerotech raster fly-scan over the micro / nano focus reading the Maia XRF array; reuses the scanning_fluorescence_microscopy slug 2-ID / XFM / LIX / ESRF ID16B share, a further consumer (TECH-1)"}
+  - {name: P06_nanotomography_practice, method: tomography, pending: true, note: "hard X-ray nano-tomography on the NC1 sample rotation (Pegasus samr) + area detector; reuses the catalog tomography Method, a further consumer (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at PETRA III. Pending until the DESY
 # operator and review structure is confirmed.

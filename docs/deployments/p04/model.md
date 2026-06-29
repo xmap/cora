@@ -8,7 +8,7 @@ P04 is a descriptor-and-docs scaffold today, reverse-engineered from P04's publi
 | --- | --- | --- |
 | Beamline descriptor | [`deployments/p04/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p04/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
 | Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface (shared with P01); P04 adds the soft X-ray Practices |
-| Extraction provenance | the [P04 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p04) and the [research brief](https://github.com/xmap/cora/blob/main/research/petra-iii/) | the public sources the descriptor was curated from |
+| Upstream source | [P04 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p04) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P04 is the first `GratingMonochromator` deployment but it is already a Family |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; soft X-ray spectroscopy reuses the pending `xas_spectroscopy` / `angle_resolved_photoemission` slugs (`TECH-1`) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P04 Assets yet |
