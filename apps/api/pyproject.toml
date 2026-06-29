@@ -8,11 +8,11 @@ authors = [{ name = "Doga Gursoy" }]
 license = { text = "Apache-2.0" }
 
 dependencies = [
-    "fastapi>=0.138.0,<0.139",
+    "fastapi>=0.138.1,<0.139",
     "asyncpg>=0.31.0,<0.32",
     "pydantic>=2.13.4,<3",
     "pydantic-settings>=2.14.2,<3",
-    "mcp>=1.28.0,<2",
+    "mcp>=1.28.1,<2",
     "uvicorn[standard]>=0.49.0",
     "structlog>=26.1.0",
     "uuid-utils>=0.16.2",
@@ -32,13 +32,13 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.62b1,<0.63",
     "opentelemetry-instrumentation-asyncpg>=0.62b1,<0.63",
     "opentelemetry-exporter-otlp-proto-http>=1.41,<2",
-    "jsonschema-rs>=0.20,<1",
+    "jsonschema-rs>=0.46.6,<1",
     # Anthropic SDK: used by `AnthropicLLM`, the production implementor of
     # `cora.infrastructure.ports.LLM`. No other code imports this;
     # subscribers + tests use the port + `FakeLLM`. Pin <1 to flag a future
     # major SDK shift in CI
     # before it lands silently.
-    "anthropic>=0.111.0,<1",
+    "anthropic>=0.112.0,<1",
     # cryptography: explicit top-level floor pin. Previously pulled
     # transitively at 48.x via pyjwt[crypto]. Pinned explicitly to
     # >=46,<47 ahead of the federation wire-tier adapters (python-cwt
@@ -96,8 +96,8 @@ dev = [
     "pytest-cov>=7.1.0,<8",
     "coverage[toml]>=7.14.1,<8",
     "diff-cover>=10.3.0,<11",
-    "ruff>=0.15.18,<0.16",
-    "pyright>=1.1.410,<2",
+    "ruff>=0.15.20,<0.16",
+    "pyright>=1.1.411,<2",
     "httpx>=0.28.0",
     # httpx2: starlette 1.x routes its TestClient through httpx2 (it does
     # `import httpx2 as httpx` under TYPE_CHECKING), so without it pyright
@@ -105,7 +105,7 @@ dev = [
     # strict-typing gate fails across the contract suite. Runtime also warns
     # and prefers httpx2 when present. src/ keeps the httpx pin above (two
     # adapters import httpx directly).
-    "httpx2>=2.4.0,<3",
+    "httpx2>=2.5.0,<3",
     "asgi-lifespan>=2.1.0,<3",
     "pre-commit>=4.0.0,<5",
     "testcontainers[postgres]>=4.14.2,<5",
