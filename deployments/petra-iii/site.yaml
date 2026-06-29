@@ -38,7 +38,7 @@ facility:
   heading: "PETRA III"
   kind: Site
   institution: DESY (Deutsches Elektronen-Synchrotron, Hamburg, Germany)
-  beamlines: [P01, P04, P06, P11, P03, P10, P09, P02, P64, P65]
+  beamlines: [P01, P04, P06, P11, P03, P10, P09, P02, P64, P65, P07]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
 #
@@ -100,6 +100,11 @@ practices:
   # reuse the xas_spectroscopy slug BMM / ISS / i20-1 / P04 share. Pending (TECH-1).
   - {name: P64_xas_practice, method: xas_spectroscopy, pending: true, note: "advanced X-ray absorption spectroscopy (dilute high-rate fluorescence EXAFS / XANES) on the Tsai DCM + multi-element fluorescence detector; reuses the xas_spectroscopy slug, a further consumer (TECH-1)"}
   - {name: P65_xas_practice, method: xas_spectroscopy, pending: true, note: "applied / high-throughput X-ray absorption spectroscopy (transmission + fluorescence EXAFS / XANES) on the CDCM energy scan; reuses the xas_spectroscopy slug, a further consumer (TECH-1)"}
+  # P07 (HEMS, Hereon-operated): high-energy materials-science diffraction + high-field
+  # studies. Diffraction reuses the diffraction slug; the 17 T magnet work reuses the
+  # magnetic_scattering slug. Both pending until DESY / Hereon staff confirm (TECH-1).
+  - {name: P07_diffraction_practice, method: diffraction, pending: true, note: "high-energy materials-science diffraction on the four-circle diffractometer + Pilatus / PerkinElmer; reuses the diffraction slug, a further consumer (TECH-1)"}
+  - {name: P07_magnetic_scattering_practice, method: magnetic_scattering, pending: true, note: "high-field materials studies in the 17 T magnet; reuses the magnetic_scattering slug P09 / 4-ID share, a further consumer (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at PETRA III. Pending until the DESY
 # operator and review structure is confirmed.
