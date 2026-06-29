@@ -849,6 +849,21 @@ nav:
         - Techniques: deployments/syrmep/techniques.md
         - Governance: deployments/syrmep/governance.md
         - Model: deployments/syrmep/model.md
+    - ALBA:
+      - deployments/alba/index.md
+      - FAXTOR:
+        - deployments/faxtor/index.md
+        - Open questions: deployments/faxtor/questions.md
+        - The beamline:
+          - deployments/faxtor/equipment/index.md
+          - Source: deployments/faxtor/beamline.md
+          - Sample: deployments/faxtor/equipment/sample.md
+          - Detector: deployments/faxtor/equipment/detector.md
+          - Controls: deployments/faxtor/equipment/controls.md
+          - Inventory: deployments/faxtor/inventory.md
+        - Techniques: deployments/faxtor/techniques.md
+        - Governance: deployments/faxtor/governance.md
+        - Model: deployments/faxtor/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
