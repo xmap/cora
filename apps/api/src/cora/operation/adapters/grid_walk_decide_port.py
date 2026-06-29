@@ -50,12 +50,10 @@ from cora.operation.ports.decide_port import (
     SteeringAdvice,
     SteeringAxis,
     SteeringEvidence,
-    SteeringObjective,
-    SteeringObjectiveKind,
-    SteeringObservation,
     SteeringPoint,
     SteeringSpace,
     SteeringVerdict,
+    objective_is_satisfied,
 )
 
 _MODEL_REF = "grid_walk"
@@ -81,7 +79,9 @@ class GridWalkDecidePort:
         is exhausted. Raises `DecideEvidenceRejectedError` if the space has
         no axes or an axis cannot be enumerated.
         """
-        if evidence.observations and _is_satisfied(evidence.objective, evidence.observations[-1]):
+        if evidence.observations and objective_is_satisfied(
+            evidence.objective, evidence.observations[-1].measurements
+        ):
             return SteeringAdvice(
                 verdict=SteeringVerdict.STOP,
                 rationale="satisfy objective met by the latest observation",
@@ -105,19 +105,6 @@ class GridWalkDecidePort:
     async def aclose(self) -> None:
         """No-op: the decider holds no resources."""
         return None
-
-
-def _is_satisfied(objective: SteeringObjective, observation: SteeringObservation) -> bool:
-    """True when a Satisfy objective's target_value is met exactly by the
-    observation's named measurement."""
-    if objective.kind is not SteeringObjectiveKind.SATISFY:
-        return False
-    if objective.target_value is None or objective.target_measurement_name is None:
-        return False
-    return any(
-        m.name == objective.target_measurement_name and m.value == objective.target_value
-        for m in observation.measurements
-    )
 
 
 def _axis_values(axis: SteeringAxis, points_per_axis: int) -> list[Any]:

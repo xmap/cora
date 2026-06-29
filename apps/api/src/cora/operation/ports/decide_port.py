@@ -390,6 +390,32 @@ def advice_to_audit_fields(advice: SteeringAdvice) -> AdviceAuditFields:
     )
 
 
+def objective_is_satisfied(
+    objective: SteeringObjective, measurements: tuple[Measurement, ...]
+) -> bool:
+    """True when a `Satisfy` objective's target_value is met exactly by `measurements`.
+
+    The single definition of "the objective is met", shared by every consumer that
+    needs it: the within-loop brain (`GridWalkDecidePort`'s early Stop, passing its
+    latest observation's measurements) and the across-procedure driver (the
+    ExperimentSteerer's Continue-vs-Conclude rule, passing the conduct result's
+    measurements). Takes the measurement tuple directly, not a whole
+    `SteeringObservation`, so a caller that holds only a `ConductorResult` (no
+    point) does not fabricate one. Non-`Satisfy` objectives (Minimize / Maximize /
+    Explore) have no exact-met notion here and return False (a smarter brain owns
+    their stop). A tolerance band is a deferred widening; v1 is exact equality on
+    the named measurement.
+    """
+    if objective.kind is not SteeringObjectiveKind.SATISFY:
+        return False
+    if objective.target_value is None or objective.target_measurement_name is None:
+        return False
+    return any(
+        m.name == objective.target_measurement_name and m.value == objective.target_value
+        for m in measurements
+    )
+
+
 @runtime_checkable
 class DecidePort(Protocol):
     """Domain-shaped decide seam for autonomous experimentation.
@@ -449,4 +475,5 @@ __all__ = [
     "SteeringSpace",
     "SteeringVerdict",
     "advice_to_audit_fields",
+    "objective_is_satisfied",
 ]
