@@ -1,0 +1,201 @@
+# CANDIDATE beamline descriptor: hand-read from gitlab.esrf.fr/id32/beamline_configuration
+# (commit e14bef4), NOT authoritative. Every device carries new: true and a confirm note.
+# Grouping by stage and the enclosure names are inferred from the config directory layout
+# (optics / RIXS / XMCD); Family suggestions and hutch boundaries need human curation, and any
+# new Family needs the naming-r3 gate. Do not copy into deployments/ without review. ID32 is
+# already modeled, so this can be cross-checked against deployments/id32/beamline.yaml; the
+# device map agrees with it. The one cross-cut finding (ID32 grating arms = SpectrometerArm /
+# RIXS-1, vs ID28 crystal arm = EnergyAnalyzer / ANALYZER-1) is in facts.md + recurrence.md.
+
+beamline:
+  name: ID32
+  facility: esrf
+  tier: Unit
+  source: insertion-device
+enclosures:
+- name: id32-optics
+  facility_code: esrf
+  confirm: shared optics zone (PGM, undulators, slits, beamviewers); inferred from config dir layout (ENC-1, PSS-1)
+- name: id32-rixs
+  facility_code: esrf
+  confirm: RIXS endstation (4-circle diffractometer, spectrometer arm, polarimeter, Andor CCD); inferred from config dir layout (ENC-1)
+- name: id32-xmcd
+  facility_code: esrf
+  confirm: XMCD endstation (9 T magnet, XES arm, Andor CCD); inferred from config dir layout (ENC-1)
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: StorageRing
+    family: StorageRing
+    pv: "//acs:10000/fe/master/id32"
+    new: true
+    confirm: 'ESRF-EBS storage-ring state via BLISS machinfo (MachInfo); emittance counters emh/emv; observe-only; LOOSE family StorageRing (MACHINE-1)'
+  - name: FrontEndShutter
+    family: Shutter
+    pv: "acs.esrf.fr:10000/fe/master/id32"
+    new: true
+    confirm: 'BLISS fe (TangoShutter FrontEnd); family Shutter (catalog) (PSS-1)'
+  - name: BeamShutters
+    family: Shutter
+    pv: "id32/v-rv/16a"
+    new: true
+    confirm: 'BLISS sh_rv16a/16b/19a/20a/20b/21b on id32/v-rv/* (TangoShutter, EXPH/safshut.yml); one Asset row, six vacuum shutters; family Shutter (catalog)'
+  - name: Undulators
+    family: InsertionDevice
+    pv: "//acs:10000/id/master/id32"
+    new: true
+    confirm: 'BLISS ESRF_Undulator; twin APPLE-II HU70a (hu70ag/ap/apo/ano) + HU70c (hu70cg/cp/cpo/cno) + PS35B (ps35bg); period/segment SRC-1; family InsertionDevice (catalog)'
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Monochromator
+    family: GratingMonochromator
+    pv: "pgm"
+    new: true
+    confirm: 'soft X-ray PGM (MonochromatorGrating); gratings XMCD_300/XMCD_900/RIXS_800/RIXS_1600; calc reals nu=mroty/psi=groty; family GratingMonochromator (catalog, graduated)'
+    source_class: MonochromatorGrating
+  - name: BeamEnergy
+    family: PseudoAxis
+    pv: "energy_pgm"
+    new: true
+    confirm: 'incident-energy pseudo-axis (GratingEnergyCalcMotor) over nu/psi with undulator tracking (grating_tracker); family PseudoAxis (catalog)'
+  - name: Polarization
+    family: PseudoAxis
+    new: true
+    confirm: 'polarization pseudo-axis via PolarizationPolicy over APPLE-II gap/phase/offset (horizontal/vertical/linear/circular_plus/circular_minus); no standalone PV; family PseudoAxis (catalog) (POL-1)'
+  - name: CffAxis
+    family: PseudoAxis
+    pv: "rixs_cff_motor_ctrl"
+    new: true
+    confirm: 'cff fixed-focus pseudo-axis (CffMotorController) over nu=mroty/psi=groty; family PseudoAxis (catalog)'
+  - name: PrimarySlits
+    family: Slit
+    pv: "psh"
+    new: true
+    confirm: 'primary slits psh (h, real pshall/psring) + psv (v); family Slit (catalog) (OPT-2)'
+  - name: SecondarySlits
+    family: Slit
+    pv: "ssh"
+    new: true
+    confirm: 'secondary slits ssh/ssv; family Slit (catalog) (OPT-2)'
+  - name: MonoSlits
+    family: Slit
+    pv: "msh"
+    new: true
+    confirm: 'mono slits msh/msv; family Slit (catalog) (OPT-2)'
+diagnostics:
+  stage: diagnostics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: BeamViewers
+    family: Screen
+    pv: "id32/limaccds/diagon"
+    new: true
+    confirm: 'EBV / BpmController beamviewers dg1..dg7 + bva/bvb + microscope (cameras id32/limaccds/{diagon,dg2..dg7b,bva,bvb,microscope}); diodes dgN_diode; family Screen (?) confirm vs FluxMonitor diode'
+    source_class: EBV
+optics-sample-rixs:
+  stage: sample
+  intro: RIXS endstation sample stage; grouping needs confirm.
+  devices:
+  - name: RIXS_Diffractometer
+    family: Goniometer
+    pv: "fourc"
+    new: true
+    confirm: '4-circle diffractometer (DiffE4CH, E4CH geometry); real tth/omega(th)/chi/phi/energy on iceid323; pseudo H/K/L/Q; family Goniometer (catalog) (DIFF-2)'
+    source_class: DiffE4CH
+  - name: RIXS_SampleManipulator
+    family: LinearStage
+    pv: "id32/hexapode/rfo"
+    new: true
+    confirm: 'RIXS sample hexapod hexa_rfo (esrf_hexapode, rfox..rforotz) + PI_E753 piezo rfopi (e753id32-rfo:50000, closed-loop); family LinearStage (catalog) (SAMPLE-1)'
+    source_class: esrf_hexapode
+detection-rixs:
+  stage: detection
+  intro: RIXS endstation detection; grouping needs confirm.
+  devices:
+  - name: RIXS_SpectrometerArm
+    family: SpectrometerArm
+    pv: "rixs_spectro"
+    new: true
+    confirm: 'RIXS grating-dispersive Rowland arm (SpectrometerArmsController); real detx/detz/grtx on iceid324; grating modes RIXS_2500 (gr2roty)/RIXS_1400 (gr1roty), radius ~122000; LOOSE family SpectrometerArm (RIXS-1, grating lineage NOT the ID28 crystal EnergyAnalyzer); HELD, do NOT coin'
+    source_class: SpectrometerArmsController
+  - name: RIXS_Polarimeter
+    family: PolarizationAnalyzer
+    pv: "iceid324"
+    new: true
+    confirm: 'scattered-beam polarimeter block on iceid324 (thpol/chipol/zpol/ypol/tthpol); LOOSE family PolarizationAnalyzer (POL-2, third consumer after 4-ID + i10); HELD, do NOT coin'
+  - name: RIXS_Detector
+    family: Camera
+    pv: "id32/limaccds/andor_1"
+    new: true
+    confirm: 'RIXS Andor CCD (Lima andor1); temp counters id32/andor/andor_1; family Camera (catalog) (DET-1)'
+    source_class: Lima
+xmcd-sample:
+  stage: sample
+  intro: XMCD endstation sample stage + environment; grouping needs confirm.
+  devices:
+  - name: XMCD_Magnet
+    family: Magnet
+    pv: "id32/cryogenic_magnet_ps/xmcd1"
+    new: true
+    confirm: '9 T / 4 T superconducting magnet (CryogenicPSController); serial tango://id32/Serialrp_232/lid323_ttyR33; field axis magnet (9T coil 0.04909 T/A, 4T coil 0.02094 T/A); LOOSE family Magnet (MAG-1); HELD, do NOT coin'
+    source_class: CryogenicPSController
+  - name: XMCD_SampleManipulator
+    family: LinearStage
+    pv: "id32/hexapode/hrm"
+    new: true
+    confirm: 'XMCD sample hexapods hexa_hrm + hexa_vrm (esrf_hexapode) + PI_E753; hrmx..hrmrotz; family LinearStage (catalog) (SAMPLE-1)'
+    source_class: esrf_hexapode
+  - name: XMCD_HeMassFlow
+    family: FlowController
+    pv: "id32/flowbus/xmcd"
+    new: true
+    confirm: 'He mass-flow controllers mfc_xmcd / mfc_xmcd2 (Bronkhorst, tango id32/flowbus/xmcd*); family FlowController (catalog, graduated, Regulator)'
+    source_class: Bronkhorst
+  - name: XMCD_NeedleValve
+    family: FlowController
+    pv: "id32/Serialrp_232/lid323_ttyR34"
+    new: true
+    confirm: 'cryogenic needle valve nvalve_ctrl (NeedleValveController); nvalve axis + nvpress pressure; family FlowController (?) confirm settable flow/pressure setpoint vs bare position axis'
+    source_class: NeedleValveController
+  - name: XMCD_VTI_TempController
+    family: TemperatureController
+    pv: "id32/regulation/ls336_hfm_in_A"
+    new: true
+    confirm: 'VTI LakeShore 336 SoftLoop (LakeShore336TangoInput + SoftLoop P40 I10 D0); inputs A=hex/B=helium_pot/C/D=sam, out_1; family TemperatureController (catalog, Regulator) (TEMP-1)'
+    source_class: LakeShore336TangoInput
+  - name: XMCD_CoilDiag_TempController
+    family: TemperatureController
+    pv: "id32/regulation/ls340_hfm_in_A"
+    new: true
+    confirm: 'coil/shield diagnostic LakeShore 340 (TangoInput only, read-only Sensor not Regulator); C1/C2=9T coils, C3/C4=4T coils, D1/D2=shields; family TemperatureController (catalog), confirm read-only'
+    source_class: TangoInput
+detection-xmcd:
+  stage: detection
+  intro: XMCD endstation detection; grouping needs confirm.
+  devices:
+  - name: XES_SpectrometerArm
+    family: SpectrometerArm
+    pv: "xes_spectro"
+    new: true
+    confirm: 'XES grating-dispersive Rowland arm (SpectrometerArmsController); real xesdetx/xesdetz/xesgrtx on iceid329; grating modes XES_1200 (xesgrot, radius 26055)/XES_empty; LOOSE family SpectrometerArm (RIXS-1, second ID32 arm completing its rule-of-three); HELD, do NOT coin'
+    source_class: SpectrometerArmsController
+  - name: XMCD_Detector
+    family: Camera
+    pv: "id32/limaccds/andor_2"
+    new: true
+    confirm: 'XES Andor CCD (Lima andor2); temp counters id32/andor/andor_2; family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: XMCD_Electrometers
+    family: GenericProbe
+    pv: "id32/i5/0"
+    new: true
+    confirm: 'XMCD sample/drain-current chain: Keithley 2000/2450/428/6221/6487/6517A + SR830 lock-in + MCCE + VAPS; LOOSE family GenericProbe (TEY/TFY readout); pv shown is the I5 balance placeholder, electrometers are gpib/serial; confirm operative set (DET-1)'
+  - name: TimingControllers
+    family: TimingController
+    pv: "musst_mono"
+    new: true
+    confirm: 'MUSST timing masters musst_mono / musst_xmcd / musst_diff (energy-scan / fly gating); family TimingController (?) confirm vs GenericProbe'
+    source_class: musst
