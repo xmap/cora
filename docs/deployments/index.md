@@ -115,4 +115,12 @@ CORA's Site for the ALBA Synchrotron (Barcelona, Spain), and its second Tango / 
 | --- | --- | --- |
 | [FAXTOR](faxtor/index.md) | Reverse-engineered | BL31 fast X-ray micro-CT and radiography (continuous-rotation tomography up to 20 Hz) on a multipole wiggler; reuses the tomography Families and Methods, novelty is the Site and its Tango / Sardana control plane |
 
+## [NSRRC](nsrrc/index.md)
+
+CORA's first Taiwan facility (the National Synchrotron Radiation Research Center, Hsinchu, operating two rings, the Taiwan Light Source and the Taiwan Photon Source). TPS 07A is reverse-engineered from public open source (the `light911/NSRRC_TPS07A` + `light911/TPS07A-Meshbest` control trees plus JACoW proceedings), chosen because it is the only NSRRC beamline with a complete public control tree, and because its Blu-Ice/DCSS-over-EPICS seam is the 2-BM TomoScan pattern at an MX beamline. NSRRC publishes no official org code, so the corpus is scattered personal GitHub accounts; full provenance is in the [research brief](https://github.com/xmap/cora/blob/main/docs/deployments/nsrrc/_research_brief.md).
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [TPS 07A](tps-07a/index.md) | Reverse-engineered | micro-focus protein crystallography (rotation MX) on an Arinax MD3 + DECTRIS EIGER2 X 16M with an ISARA robot; reuses the i03 / MX3 Goniometer and MX Methods, novelty is the Site and its Blu-Ice/DCSS-over-EPICS orchestration seam (the 2-BM pattern, confirmed live over MXCuBE) |
+
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

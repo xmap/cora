@@ -877,6 +877,21 @@ nav:
         - Techniques: deployments/faxtor/techniques.md
         - Governance: deployments/faxtor/governance.md
         - Model: deployments/faxtor/model.md
+    - NSRRC:
+      - deployments/nsrrc/index.md
+      - TPS 07A:
+        - deployments/tps-07a/index.md
+        - Open questions: deployments/tps-07a/questions.md
+        - The beamline:
+          - deployments/tps-07a/equipment/index.md
+          - Source: deployments/tps-07a/beamline.md
+          - Sample: deployments/tps-07a/equipment/sample.md
+          - Detector: deployments/tps-07a/equipment/detector.md
+          - Controls: deployments/tps-07a/equipment/controls.md
+          - Inventory: deployments/tps-07a/inventory.md
+        - Techniques: deployments/tps-07a/techniques.md
+        - Governance: deployments/tps-07a/governance.md
+        - Model: deployments/tps-07a/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

@@ -1,0 +1,85 @@
+# CORA Site descriptor: the NSRRC site-level surface
+#
+# The National Synchrotron Radiation Research Center (NSRRC, Hsinchu, Taiwan) is the
+# Site CORA models for its Taiwan deployment. NSRRC operates two storage rings: the
+# Taiwan Light Source (TLS, 1.5 GeV, 1993) and the Taiwan Photon Source (TPS, 3 GeV,
+# 2014, users since 2016). This file is the single human-readable source for the
+# facility's site-level instances: the Facility itself, the Practices it would run,
+# and the facility principals. It is the home of the TPS 07A micro-focus
+# protein-crystallography beamline (the first NSRRC deployment).
+#
+# Status: reverse-engineered. CORA has not been connected to NSRRC and no staff have
+# confirmed this model. Every value below is read from public open source (the
+# light911/NSRRC_TPS07A + light911/TPS07A-Meshbest control trees, the SPXF facility
+# pages, and JACoW proceedings) or inferred, and is carried as `pending` until staff
+# confirm it. Do not invent facility specifics here; carry them as questions on the
+# TPS 07A open-questions page. Full provenance: docs/deployments/nsrrc/_research_brief.md.
+#
+# Source-of-truth boundary (same as the APS / MAX IV / Diamond / NSLS-II / SLAC /
+# Australian Synchrotron sites):
+#   - the closed facility-kind / actor-kind vocabularies are validated against
+#     code-mirrored frozensets in scripts/site_descriptor.py.
+#   - the facility records the bootstrap invariants (kind=Site, display_name equals
+#     code); `heading` carries the human title used on the rendered page.
+#
+# Controls house-style (the distinctive Site fact): NSRRC runs a single EPICS control
+# floor across both rings (>200 IOCs, ~10^5 PVs, EPICS 3.14.12.x as of 2017), but
+# there is NO facility-wide beamline scan framework (no Bluesky / Sardana / Tango).
+# Each beamline carries its own bespoke acquisition layer over the shared EPICS floor.
+# At the MX cluster (TPS 07A/05A, TLS 15A1) the orchestration is Blu-Ice/DCSS over an
+# EPICS Device Handler Server (the SSRL lineage), confirmed live by a 2025 J.
+# Synchrotron Rad. paper; NOT MXCuBE (NSRRC is a listed MXCuBE partner, but no
+# mxcubecore HardwareObjects deployment exists publicly). CORA's EdgeConductor would
+# replace the DCSS scan orchestration over the EPICS floor, the 2-BM TomoScan seam.
+# See docs/deployments/tps-07a/equipment/controls.md.
+
+facility:
+  code: nsrrc
+  display_name: nsrrc
+  heading: "NSRRC"
+  kind: Site
+  institution: NSRRC (National Synchrotron Radiation Research Center, Hsinchu, Taiwan)
+  beamlines: [TPS 07A]
+
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
+# because they are reverse-engineered from the NSRRC_TPS07A control trees, not yet
+# confirmed with NSRRC staff. TPS 07A's rotation-MX techniques reuse the same pending
+# cross-facility Methods Diamond i03 introduced (mx_data_collection, grid_scan,
+# sample_exchange), none yet in the catalog (TECH-1 / ROBOT-1).
+practices:
+  - {name: TPS07A_mx_data_collection_practice, method: mx_data_collection, pending: true, note: "rotation / oscillation MX data collection on the MD3 microdiffractometer goniometer + the DECTRIS EIGER2 X 16M, orchestrated through Blu-Ice/DCSS; reuses the i03 Method, not yet in the catalog (TECH-1)"}
+  - {name: TPS07A_grid_scan_practice, method: grid_scan, pending: true, note: "mesh / grid scan for crystal location and centring on the MD3 (the Meshbest mesh-scan path, Dozor spot-scoring); reuses the i03 Method (TECH-1)"}
+  - {name: TPS07A_sample_exchange_practice, method: sample_exchange, pending: true, note: "unattended ISARA robot load / centre / collect / unmount loop; a Procedure over the spine + a Subject custody thread (ROBOT-1)"}
+
+# Access BC Actors conceptually facility-wide at NSRRC. Pending until the operator and
+# review structure is confirmed; the control trees expose LDAP authentication
+# (ldap://10.7.1.1) but no human roster.
+actors:
+  - {name: NSRRC beamline staff, kind: human, pending: true, note: "operator and beamline-scientist pool, LDAP-backed; structure TBD (GOV-1)"}
+  - {name: NSRRC safety review, kind: human, pending: true, note: "facility safety review body; membership TBD"}
+
+# Agent BC Agents seeded at this deployment. None declared: the CORA system agents are
+# not yet wired for an NSRRC deployment.
+agents: []
+
+# Supply BC: facility-wide continuously-available resources. Pending in this
+# reverse-engineered model. LiquidNitrogen is the cryostream supply for MX cooling.
+supplies:
+  - {name: Storage-ring beam current, kind: PhotonBeam, pending: true}
+  - {name: Cooling water, kind: CoolingWater, pending: true}
+  - {name: Beamline vacuum, kind: Vacuum, pending: true}
+  - {name: Cryostream liquid nitrogen, kind: LiquidNitrogen, pending: true}
+
+# Safety BC: facility-issued Clearances. The NSRRC PSS form names are not in the
+# public control trees; the 07A tree exposes a detector minimum-distance interlock
+# (139 mm) and a mandatory safety-training portal (safetytraining.nsrrc.org.tw), but
+# no PSS permit-leaf signals. Carried pending rather than guessed. The mandatory
+# training portal maps to CORA's worldwide-invariant training axis (a fact on the
+# Access principals, not a separate Clearance kind); it is recorded on the governance
+# page and as an open question (GOV-1), not coined here.
+clearances:
+  - {name: NSRRC personal safety system, kind: PSS, pending: true, note: "facility safety-form and permit-leaf names not in public source; confirm with staff (PSS-1)"}
+
+# Caution BC: operator tribal knowledge. Beamline-level cautions reverse-engineered
+# for TPS 07A would live on docs/deployments/tps-07a/, not here.
+cautions: []
