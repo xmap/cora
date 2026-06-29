@@ -1,15 +1,24 @@
-"""Parse *-bits sources: Guarneri devices.yml, ophyd device classes, PV grammar.
+"""Parse beamline controls sources into candidate-device inputs.
 
 Pure functions over text; no network, no cora.* imports. Anything that cannot be
 resolved statically is recorded as a confirm reason rather than guessed, so the
 emitter can flag it. ophyd_async modules are detected and skipped (their device
 trees are not class-attribute Cpt trees, so the static oracle does not apply).
+
+Two source families are parsed here:
+
+  - EPICS *-bits: Guarneri devices.yml + ophyd device classes + PV grammar (APS).
+  - DESY OnlineXML: the online_*.xml per-endstation device registry of a PETRA III
+    beamline (Tango device name/class/address/host).
+
+Both converge on the control-system-agnostic mapping.CandidateDevice downstream.
 """
 
 from __future__ import annotations
 
 import ast
 import re
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -293,6 +302,102 @@ def infer_enclosure(prefix: str | None) -> EnclosureHint:
             return EnclosureHint(name=name, sector=f"{sector}-{branch_label}", station=station)
         return EnclosureHint(name=None, sector=f"{sector}-{branch_label}", station=None)
     return EnclosureHint(name=None, sector=None, station=None)
+
+
+@dataclass(frozen=True)
+class TangoDevice:
+    """One <device> block in a DESY OnlineXML (online_*.xml) registry.
+
+    Mirrors the registry shape: a logical name, a role type (stepping_motor,
+    counter, mca, detector, ...), the Tango device class (module), the Tango
+    device address (domain/family/member), the Tango DB host, and the control
+    protocol. Any child absent in the XML is None.
+    """
+
+    name: str
+    type: str | None
+    module: str | None
+    address: str | None
+    host: str | None
+    control: str | None
+
+
+def _child_text(device: ET.Element, tag: str) -> str | None:
+    """Return the stripped text of a direct child tag, or None if absent or empty.
+
+    The address lives in the <device> child element (a registry quirk: the row is
+    <device> and it nests its own <device> holding the Tango address). Callers ask
+    for that nested tag by name like any other child.
+    """
+    child = device.find(tag)
+    if child is None or child.text is None:
+        return None
+    text = child.text.strip()
+    if not text or text == "None":
+        return None
+    return text
+
+
+def parse_online_xml(text: str) -> list[TangoDevice]:
+    """Parse a DESY OnlineXML registry into TangoDevice rows.
+
+    The file is a flat <hw><device>...</device>...</hw> tree. Each row's Tango
+    address is the nested <device> element's text (the registry reuses the tag).
+    Malformed XML yields an empty list rather than raising, mirroring the lenient
+    contract of parse_devices_yaml.
+    """
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError:
+        return []
+
+    devices: list[TangoDevice] = []
+    for element in root.findall("device"):
+        name = _child_text(element, "name")
+        if name is None:
+            continue
+        devices.append(
+            TangoDevice(
+                name=name,
+                type=_child_text(element, "type"),
+                module=_child_text(element, "module"),
+                address=_child_text(element, "device"),
+                host=_child_text(element, "hostname"),
+                control=_child_text(element, "control"),
+            )
+        )
+    return devices
+
+
+# DESY Tango DB host grammar: an optional has[pen] facility prefix, the p<NN>
+# beamline, then an optional endstation token (eh1, ch2, dif, mag, lab, ...).
+# Examples: haspp01eh1 -> P01-EH1, haspp09dif -> P09-DIF, hasnp64 -> P64.
+_TANGO_HOST_PATTERN = re.compile(
+    r"^has[a-z]?p(?P<beamline>\d{2})(?P<station>[a-z]+\d*[a-z]*)?$",
+    re.IGNORECASE,
+)
+
+
+def infer_enclosure_tango(host: str | None) -> EnclosureHint:
+    """Infer a candidate enclosure from a Tango DB host like haspp01eh1.
+
+    Returns P<NN>-<STATION> when an endstation token is present (haspp01eh1 ->
+    P01-EH1), or sector-only P<NN> when the host names just the beamline
+    (hasnp64 -> P64). Always confirm=True; the host-to-enclosure mapping is a
+    guess until a beamline confirms it.
+    """
+    if not host:
+        return EnclosureHint(name=None, sector=None, station=None)
+    bare = host.split(":", 1)[0]
+    match = _TANGO_HOST_PATTERN.match(bare)
+    if not match:
+        return EnclosureHint(name=None, sector=None, station=None)
+    beamline = f"P{match.group('beamline')}"
+    station = match.group("station")
+    if station:
+        name = f"{beamline}-{station.upper()}"
+        return EnclosureHint(name=name, sector=beamline, station=station)
+    return EnclosureHint(name=beamline, sector=beamline, station=None)
 
 
 @dataclass(frozen=True)
