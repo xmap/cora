@@ -1,4 +1,4 @@
-# APS deployment reverse-engineering
+# APS research brief
 
 Staging notes, not published docs. These files capture what CORA can learn from the
 public APS Bluesky deployment corpus (Pete Jemian's personal repos under

@@ -1,4 +1,4 @@
-# ESRF deployment reverse-engineering
+# ESRF research brief
 
 Staging notes, not published docs. These files capture what CORA can learn about ESRF beamlines
 from their public controls configurations. They are inputs to later modeling decisions, not

@@ -41,13 +41,13 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 | NSRRC | yes | none | yes | EPICS / Blu-Ice-DCSS; scattered personal repos |
 | ALS | yes | none | none | candidate facility |
 | PETRA III | yes | none | none | candidate facility |
-| Diamond | needed | (per-beamline from `dodal` at build time) | yes | EPICS, public `dodal` controls library |
-| NSLS-II | needed | (per-beamline from profile collections) | yes | EPICS / bluesky, public profile collections |
-| SLAC | needed | (from `pcdshub` at build time) | yes | EPICS / `pcdshub` |
-| Australian Synchrotron | needed | none | yes | heterogeneous (EPICS + Exporter + REST) |
+| Diamond | yes (retrospective) | (per-beamline from `dodal` at build time) | yes | EPICS, public `dodal` controls library |
+| NSLS-II | yes (retrospective) | (per-beamline from profile collections) | yes | EPICS / bluesky, public profile collections |
+| SLAC | yes (retrospective) | (from `pcdshub` at build time) | yes | EPICS / `pcdshub` |
+| Australian Synchrotron | yes (retrospective) | none | yes | heterogeneous (EPICS + Exporter + REST + TCP) |
 | MAX IV | needed | none | yes | Tango / Sardana |
 
-"needed" marks a modeled Site that does not yet carry a Tier-1 survey. Some EPICS facilities (Diamond, NSLS-II, SLAC) are modeled by reading the public controls library per beamline at build time rather than via a pre-extracted Tier-2 pass; a thin survey still belongs here to record the roster, the modellable set, and the seam.
+"needed" marks a modeled Site that does not yet carry a Tier-1 survey (only MAX IV remains). "retrospective" marks a survey written after the fleet was already modeled: some EPICS facilities (Diamond, NSLS-II, SLAC) are modeled by reading the public controls library per beamline at build time rather than via a pre-extracted Tier-2 pass, so their survey records the roster, the modellable set, and the seam after the fact rather than ahead of it.
 
 ## APS extraction tooling (EPICS-specific)
 
