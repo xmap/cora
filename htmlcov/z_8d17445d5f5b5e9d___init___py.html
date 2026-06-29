@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_8d17445d5f5b5e9d_events_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.3">coverage.py v7.14.3</a>,
-            created at 2026-06-28 21:45 +0000
+            created at 2026-06-29 05:00 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -130,105 +130,109 @@
     <p class="run"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">recipe</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">method</span><span class="op">.</span><span class="nam">state</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t">    <span class="nam">ITERATIVE_STOPPING_KEYS</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t">    <span class="nam">METHOD_NAME_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">    <span class="nam">METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t">    <span class="nam">METHOD_VERSION_TAG_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">    <span class="nam">ROLE_NAME_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="nam">ROLE_PORT_NAME_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">    <span class="nam">ROLE_PORT_SIGNAL_TYPE_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">    <span class="nam">InvalidMethodIterativeStoppingFieldError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">    <span class="nam">InvalidMethodMonotoneQualityError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">    <span class="nam">InvalidMethodNameError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">    <span class="nam">InvalidMethodNeededSuppliesError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">    <span class="nam">InvalidMethodVersionTagError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">    <span class="nam">InvalidPortRequirementError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">    <span class="nam">InvalidRoleNameError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">    <span class="nam">InvalidRoleRequirementTargetError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">    <span class="nam">Method</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="nam">MethodAlreadyExistsError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="nam">MethodCannotDeprecateError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">    <span class="nam">MethodCannotMutateRequiredRolesError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">    <span class="nam">MethodCannotVersionError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">    <span class="nam">MethodCapabilityExecutorMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">    <span class="nam">MethodLaunchArgNotBooleanError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">    <span class="nam">MethodLaunchArgUnknownParameterError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">    <span class="nam">MethodName</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">    <span class="nam">MethodNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">    <span class="nam">MethodParametersNotSubsetError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">    <span class="nam">MethodParametersSchemaDropsLaunchArgError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">    <span class="nam">MethodRoleNameAlreadyDeclaredError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">    <span class="nam">MethodRoleNameNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">    <span class="nam">MethodStatus</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">    <span class="nam">PortRequirement</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">    <span class="nam">RoleName</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">    <span class="nam">RoleRequirement</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="nam">RoleRequirementBindingDuplicateError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">    <span class="str">"ITERATIVE_STOPPING_KEYS"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">    <span class="str">"METHOD_NAME_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">    <span class="str">"METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">    <span class="str">"METHOD_VERSION_TAG_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">    <span class="str">"ROLE_NAME_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">    <span class="str">"ROLE_PORT_NAME_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">    <span class="str">"ROLE_PORT_SIGNAL_TYPE_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">    <span class="str">"ArgStyle"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">    <span class="str">"ExecutionPattern"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">    <span class="str">"InvalidLaunchSpecError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">    <span class="str">"InvalidMethodIterativeStoppingFieldError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">    <span class="str">"InvalidMethodMonotoneQualityError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">    <span class="str">"InvalidMethodNameError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">    <span class="str">"InvalidMethodNeededSuppliesError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">    <span class="str">"InvalidMethodParametersSchemaError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">    <span class="str">"InvalidMethodVersionTagError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">    <span class="str">"InvalidPortRequirementError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">    <span class="str">"InvalidRoleNameError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">    <span class="str">"InvalidRoleRequirementTargetError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">    <span class="str">"LaunchArg"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">    <span class="str">"LaunchSpec"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">    <span class="str">"Method"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">    <span class="str">"MethodAlreadyExistsError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">    <span class="str">"MethodCannotDeprecateError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">    <span class="str">"MethodCannotMutateRequiredRolesError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">    <span class="str">"MethodCannotVersionError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">    <span class="str">"MethodCapabilityExecutorMismatchError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">    <span class="str">"MethodDefined"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">    <span class="str">"MethodDeprecated"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">    <span class="str">"MethodEvent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">    <span class="str">"MethodLaunchArgNotBooleanError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">    <span class="str">"MethodLaunchArgUnknownParameterError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">    <span class="str">"MethodLaunchSpecUpdated"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">    <span class="str">"MethodLifecycleTimestamps"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">    <span class="str">"MethodName"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">    <span class="str">"MethodNotFoundError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">    <span class="str">"MethodParametersNotSubsetError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">    <span class="str">"MethodParametersSchemaDropsLaunchArgError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">    <span class="str">"MethodParametersSchemaUpdated"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">    <span class="str">"MethodRequiredRoleAdded"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="str">"MethodRequiredRoleRemoved"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">    <span class="str">"MethodRoleNameAlreadyDeclaredError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">    <span class="str">"MethodRoleNameNotFoundError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">    <span class="str">"MethodStatus"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">    <span class="str">"MethodVersioned"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">    <span class="str">"MissingLaunchParameterError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">    <span class="str">"PortRequirement"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">    <span class="str">"RoleName"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t">    <span class="str">"RoleRequirement"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t">    <span class="str">"RoleRequirementBindingDuplicateError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t">    <span class="str">"UnsafeLaunchUriError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t135" href="#t135">135</a></span><span class="t">    <span class="str">"build_argv"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t">    <span class="str">"event_type_name"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t">    <span class="str">"evolve"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t138" href="#t138">138</a></span><span class="t">    <span class="str">"fold"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t">    <span class="str">"from_stored"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t140" href="#t140">140</a></span><span class="t">    <span class="str">"launch_spec_from_dict"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t141" href="#t141">141</a></span><span class="t">    <span class="str">"launch_spec_to_dict"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t">    <span class="str">"load_method"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t">    <span class="str">"load_method_timestamps"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">    <span class="str">"to_payload"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">    <span class="str">"validate_launch_spec"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">    <span class="str">"validate_parameters_schema"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">    <span class="nam">METHOD_NEEDED_INPUT_KIND_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t">    <span class="nam">METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t">    <span class="nam">METHOD_VERSION_TAG_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="nam">ROLE_NAME_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">    <span class="nam">ROLE_PORT_NAME_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">    <span class="nam">ROLE_PORT_SIGNAL_TYPE_MAX_LENGTH</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">    <span class="nam">InvalidMethodIterativeStoppingFieldError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">    <span class="nam">InvalidMethodMonotoneQualityError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">    <span class="nam">InvalidMethodNameError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">    <span class="nam">InvalidMethodNeededInputKindsError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">    <span class="nam">InvalidMethodNeededSuppliesError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t">    <span class="nam">InvalidMethodVersionTagError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">    <span class="nam">InvalidPortRequirementError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">    <span class="nam">InvalidRoleNameError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">    <span class="nam">InvalidRoleRequirementTargetError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="nam">Method</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">    <span class="nam">MethodAlreadyExistsError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">    <span class="nam">MethodCannotDeprecateError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">    <span class="nam">MethodCannotMutateRequiredRolesError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">    <span class="nam">MethodCannotVersionError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">    <span class="nam">MethodCapabilityExecutorMismatchError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">    <span class="nam">MethodLaunchArgNotBooleanError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">    <span class="nam">MethodLaunchArgUnknownParameterError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">    <span class="nam">MethodName</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">    <span class="nam">MethodNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">    <span class="nam">MethodParametersNotSubsetError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">    <span class="nam">MethodParametersSchemaDropsLaunchArgError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">    <span class="nam">MethodRoleNameAlreadyDeclaredError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">    <span class="nam">MethodRoleNameNotFoundError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">    <span class="nam">MethodStatus</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">    <span class="nam">PortRequirement</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="nam">RoleName</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">    <span class="nam">RoleRequirement</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">    <span class="nam">RoleRequirementBindingDuplicateError</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">    <span class="str">"ITERATIVE_STOPPING_KEYS"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">    <span class="str">"METHOD_NAME_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">    <span class="str">"METHOD_NEEDED_INPUT_KIND_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">    <span class="str">"METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">    <span class="str">"METHOD_VERSION_TAG_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">    <span class="str">"ROLE_NAME_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">    <span class="str">"ROLE_PORT_NAME_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">    <span class="str">"ROLE_PORT_SIGNAL_TYPE_MAX_LENGTH"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">    <span class="str">"ArgStyle"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">    <span class="str">"ExecutionPattern"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">    <span class="str">"InvalidLaunchSpecError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">    <span class="str">"InvalidMethodIterativeStoppingFieldError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">    <span class="str">"InvalidMethodMonotoneQualityError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">    <span class="str">"InvalidMethodNameError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">    <span class="str">"InvalidMethodNeededInputKindsError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">    <span class="str">"InvalidMethodNeededSuppliesError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">    <span class="str">"InvalidMethodParametersSchemaError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">    <span class="str">"InvalidMethodVersionTagError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">    <span class="str">"InvalidPortRequirementError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">    <span class="str">"InvalidRoleNameError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">    <span class="str">"InvalidRoleRequirementTargetError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">    <span class="str">"LaunchArg"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">    <span class="str">"LaunchSpec"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">    <span class="str">"Method"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">    <span class="str">"MethodAlreadyExistsError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">    <span class="str">"MethodCannotDeprecateError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">    <span class="str">"MethodCannotMutateRequiredRolesError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">    <span class="str">"MethodCannotVersionError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">    <span class="str">"MethodCapabilityExecutorMismatchError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">    <span class="str">"MethodDefined"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">    <span class="str">"MethodDeprecated"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t117" href="#t117">117</a></span><span class="t">    <span class="str">"MethodEvent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t118" href="#t118">118</a></span><span class="t">    <span class="str">"MethodLaunchArgNotBooleanError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t119" href="#t119">119</a></span><span class="t">    <span class="str">"MethodLaunchArgUnknownParameterError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t120" href="#t120">120</a></span><span class="t">    <span class="str">"MethodLaunchSpecUpdated"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t121" href="#t121">121</a></span><span class="t">    <span class="str">"MethodLifecycleTimestamps"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t122" href="#t122">122</a></span><span class="t">    <span class="str">"MethodName"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t123" href="#t123">123</a></span><span class="t">    <span class="str">"MethodNotFoundError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t124" href="#t124">124</a></span><span class="t">    <span class="str">"MethodParametersNotSubsetError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t125" href="#t125">125</a></span><span class="t">    <span class="str">"MethodParametersSchemaDropsLaunchArgError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">    <span class="str">"MethodParametersSchemaUpdated"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">    <span class="str">"MethodRequiredRoleAdded"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">    <span class="str">"MethodRequiredRoleRemoved"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">    <span class="str">"MethodRoleNameAlreadyDeclaredError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">    <span class="str">"MethodRoleNameNotFoundError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">    <span class="str">"MethodStatus"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t">    <span class="str">"MethodVersioned"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t">    <span class="str">"MissingLaunchParameterError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t">    <span class="str">"PortRequirement"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t135" href="#t135">135</a></span><span class="t">    <span class="str">"RoleName"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t">    <span class="str">"RoleRequirement"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t">    <span class="str">"RoleRequirementBindingDuplicateError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t138" href="#t138">138</a></span><span class="t">    <span class="str">"UnsafeLaunchUriError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t">    <span class="str">"build_argv"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t140" href="#t140">140</a></span><span class="t">    <span class="str">"event_type_name"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t141" href="#t141">141</a></span><span class="t">    <span class="str">"evolve"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t">    <span class="str">"fold"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t">    <span class="str">"from_stored"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">    <span class="str">"launch_spec_from_dict"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">    <span class="str">"launch_spec_to_dict"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">    <span class="str">"load_method"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">    <span class="str">"load_method_timestamps"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">    <span class="str">"to_payload"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">    <span class="str">"validate_launch_spec"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">    <span class="str">"validate_parameters_schema"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -238,7 +242,7 @@
             <a class="nav" href="z_8d17445d5f5b5e9d_events_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.3">coverage.py v7.14.3</a>,
-            created at 2026-06-28 21:45 +0000
+            created at 2026-06-29 05:00 +0000
         </p>
     </div>
 </footer>
