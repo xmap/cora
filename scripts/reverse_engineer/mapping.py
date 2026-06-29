@@ -11,7 +11,14 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .parse import DeviceInstance, EnclosureHint, OphydSketch, infer_enclosure
+from .parse import (
+    DeviceInstance,
+    EnclosureHint,
+    OphydSketch,
+    TangoDevice,
+    infer_enclosure,
+    infer_enclosure_tango,
+)
 
 # Confident class-or-substring to CORA Family mappings. Keys are matched against
 # the ophyd class name (case-insensitive substring). Order matters: first hit wins.
@@ -180,4 +187,115 @@ def to_candidate_device(instance: DeviceInstance, sketch: OphydSketch | None) ->
         source_class=instance.class_path,
         confirm_reasons=tuple(dict.fromkeys(reasons)),
         is_sim=instance.is_sim,
+    )
+
+
+# DESY OnlineXML mapping (PETRA III, Tango).
+#
+# Confident Tango-class/role to CORA Family rules. Matched as a case-insensitive
+# substring against the Tango module then the role type; first hit wins. Kept
+# conservative on purpose: bare motor controllers (oms58, motor_tango) cannot be
+# told linear-vs-rotary from the module alone, so they fall through to the module
+# name unconfirmed, exactly as unknown ophyd classes do on the EPICS path.
+_TANGO_FAMILY_RULES: tuple[tuple[str, str], ...] = (
+    ("pilatus", "Camera"),
+    ("lambda", "Camera"),
+    ("eiger", "Camera"),
+    ("pco", "Camera"),
+    ("perkinelmer", "Camera"),
+    ("maia", "Camera"),
+    ("lom", "Monochromator"),
+    ("mca", "GenericProbe"),
+    ("xmcd", "GenericProbe"),
+    ("e6c", "Diffractometer"),
+    ("diffractomet", "Diffractometer"),
+)
+
+# Role types worth modelling. Everything not listed is bookkeeping (counters,
+# timers, ADC/DAC, IO registers, the measurement_group summary rows) and is
+# filtered out of the candidate, though still counted by the caller.
+_TANGO_MODELLABLE_TYPES: frozenset[str] = frozenset(
+    {
+        "motor",
+        "stepping_motor",
+        "mca",
+        "detector",
+        "diffractometer",
+        "diffractometercontroller",
+        "type_tango",
+        "motosam_tiltr",
+    }
+)
+
+# Role-type and family hints that bucket a Tango device into a beam-path stage.
+_TANGO_DETECTION_TYPES: frozenset[str] = frozenset({"mca", "detector"})
+_TANGO_SAMPLE_HINTS: frozenset[str] = frozenset(
+    {"diffractometer", "diffractometercontroller", "motosam_tiltr"}
+)
+
+
+def suggest_family_tango(device: TangoDevice) -> tuple[str, bool]:
+    """Return (family, confirmed). Confirmed is False when we fall back to the module."""
+    haystack = f"{device.module or ''} {device.type or ''}".lower()
+    for needle, family in _TANGO_FAMILY_RULES:
+        if needle in haystack:
+            return family, True
+    return device.module or device.type or device.name, False
+
+
+def is_modellable_tango(device: TangoDevice) -> bool:
+    """True when the device is a modellable instrument, not bookkeeping IO."""
+    return (device.type or "").lower() in _TANGO_MODELLABLE_TYPES
+
+
+def _tango_stage(device: TangoDevice, family: str) -> str:
+    role = (device.type or "").lower()
+    if role in _TANGO_DETECTION_TYPES or "camera" in family.lower():
+        return "detection"
+    if role in _TANGO_SAMPLE_HINTS or "diffractometer" in family.lower():
+        return "sample"
+    return "source"
+
+
+def to_candidate_device_tango(device: TangoDevice) -> CandidateDevice | None:
+    """Map one OnlineXML TangoDevice to a candidate, or None if it is filtered.
+
+    Returns None for bookkeeping IO (counters, timers, registers, measurement
+    groups) so the caller can count what was dropped. The pv slot carries the
+    Tango device address (the opaque control handle); the Tango DB host is kept
+    as a confirm reason since the host-to-enclosure mapping is a guess.
+    """
+    if not is_modellable_tango(device):
+        return None
+
+    family, family_confirmed = suggest_family_tango(device)
+    enclosure_hint = infer_enclosure_tango(device.host)
+
+    reasons: list[str] = []
+    if device.address is None:
+        reasons.append("no Tango address in the registry row; control handle needs confirm")
+    if not family_confirmed:
+        reasons.append(
+            f"family is the Tango module {family!r}; linear-vs-rotary and the CORA Family need a human"
+        )
+    if device.host:
+        reasons.append(f"Tango host {device.host!r}; endstation to enclosure is a guess")
+    if enclosure_hint.name is None:
+        reasons.append("enclosure unresolved from Tango host")
+    reasons.append(
+        "axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs a human"
+    )
+
+    return CandidateDevice(
+        name=device.name,
+        family=family,
+        family_confirmed=family_confirmed,
+        pv=device.address,
+        labels=(),
+        role_hints=(),
+        enclosure=enclosure_hint.name,
+        stage=_tango_stage(device, family),
+        source_class=device.module or "unknown-tango-module",
+        confirm_reasons=tuple(dict.fromkeys(reasons)),
+        is_sim=False,
     )

@@ -338,3 +338,82 @@ def test_from_stored_rejects_malformed_campaign_run_added_payload() -> None:
 def test_from_stored_rejects_malformed_campaign_run_removed_payload() -> None:
     with pytest.raises(ValueError, match="Malformed CampaignRunRemoved payload"):
         from_stored(_stored("CampaignRunRemoved", {}))
+
+
+# ---------- CampaignSteeringDeclared round trip ----------
+
+
+@pytest.mark.unit
+def test_campaign_steering_declared_round_trips_satisfy_objective_and_multi_axis_space() -> None:
+    from cora.campaign.aggregates.campaign import CampaignSteeringDeclared
+    from cora.shared.steering import (
+        SteeringAxis,
+        SteeringObjective,
+        SteeringObjectiveKind,
+        SteeringSpace,
+    )
+
+    objective = SteeringObjective(
+        kind=SteeringObjectiveKind.SATISFY,
+        target_measurement_name="resolution",
+        target_value=1.5,
+    )
+    space = SteeringSpace(
+        axes=(
+            SteeringAxis(name="temperature", lower=300.0, upper=900.0),
+            SteeringAxis(name="atmosphere", choices=("air", "argon", "vacuum")),
+        )
+    )
+    original = CampaignSteeringDeclared(
+        campaign_id=_CAMPAIGN_ID,
+        objective=objective,
+        space=space,
+        occurred_at=_NOW,
+    )
+    payload = to_payload(original)
+    assert payload["objective"] == {
+        "kind": "Satisfy",
+        "target_measurement_name": "resolution",
+        "target_value": 1.5,
+    }
+    assert payload["space"]["axes"][1]["choices"] == ["air", "argon", "vacuum"]
+    rebuilt = from_stored(_stored(event_type_name(original), payload))
+    assert rebuilt == original
+
+
+@pytest.mark.unit
+def test_campaign_steering_declared_round_trips_explore_objective() -> None:
+    from cora.campaign.aggregates.campaign import CampaignSteeringDeclared
+    from cora.shared.steering import (
+        SteeringAxis,
+        SteeringObjective,
+        SteeringObjectiveKind,
+        SteeringSpace,
+    )
+
+    original = CampaignSteeringDeclared(
+        campaign_id=_CAMPAIGN_ID,
+        objective=SteeringObjective(kind=SteeringObjectiveKind.EXPLORE),
+        space=SteeringSpace(axes=(SteeringAxis(name="energy", lower=8.0, upper=12.0),)),
+        occurred_at=_NOW,
+    )
+    rebuilt = from_stored(_stored(event_type_name(original), to_payload(original)))
+    assert rebuilt == original
+
+
+@pytest.mark.unit
+def test_from_stored_rejects_malformed_campaign_steering_declared_payload() -> None:
+    with pytest.raises(ValueError, match="Malformed CampaignSteeringDeclared payload"):
+        from_stored(_stored("CampaignSteeringDeclared", {}))
+
+
+@pytest.mark.unit
+def test_from_stored_rejects_unknown_steering_objective_kind() -> None:
+    payload: dict[str, Any] = {
+        "campaign_id": str(_CAMPAIGN_ID),
+        "objective": {"kind": "Bogus", "target_measurement_name": None, "target_value": None},
+        "space": {"axes": [{"name": "x", "lower": None, "upper": None, "choices": []}]},
+        "occurred_at": _NOW.isoformat(),
+    }
+    with pytest.raises(ValueError, match="Malformed CampaignSteeringDeclared payload"):
+        from_stored(_stored("CampaignSteeringDeclared", payload))

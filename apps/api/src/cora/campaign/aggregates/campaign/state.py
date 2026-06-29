@@ -71,6 +71,7 @@ from uuid import UUID
 
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
 from cora.shared.identifier import Identifier
+from cora.shared.steering import SteeringObjective, SteeringSpace
 from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 CAMPAIGN_NAME_MAX_LENGTH = 200
@@ -215,6 +216,21 @@ class InvalidCampaignExternalIdError(ValueError):
         self.value = value
 
 
+class InvalidCampaignSteeringError(ValueError):
+    """The supplied steering objective or space is malformed.
+
+    Raised at the `declare_campaign_steering` decider when the search
+    space is empty (an across-Run steerer needs at least one axis to
+    derive the next Run) or the objective is internally inconsistent
+    (a Satisfy objective without a target_value + target_measurement_name
+    cannot say what it is satisfying).
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"Campaign steering intent is malformed: {reason}")
+        self.reason = reason
+
+
 # ---------------------------------------------------------------------------
 # Aggregate-level guard errors (genesis collision / not-found / cannot-transition)
 # ---------------------------------------------------------------------------
@@ -321,6 +337,25 @@ class CampaignCannotAbandonError(Exception):
             f"{current_status.value}, abandon_campaign requires one of "
             f"{CampaignStatus.PLANNED.value} | {CampaignStatus.ACTIVE.value} | "
             f"{CampaignStatus.HELD.value}"
+        )
+        self.campaign_id = campaign_id
+        self.current_status = current_status
+
+
+class CampaignCannotDeclareSteeringError(Exception):
+    """Attempted `declare_campaign_steering` from a disqualifying status.
+
+    Multi-source guard: source set is `{Planned, Active}`. Steering
+    intent declares where a future across-Run steerer may look; a Held /
+    Closed / Abandoned Campaign cannot accept a new search directive (no
+    further Runs will be derived from it).
+    """
+
+    def __init__(self, campaign_id: UUID, current_status: "CampaignStatus") -> None:
+        super().__init__(
+            f"Campaign {campaign_id} cannot declare steering: currently in status "
+            f"{current_status.value}, declare_campaign_steering requires one of "
+            f"{CampaignStatus.PLANNED.value} | {CampaignStatus.ACTIVE.value}"
         )
         self.campaign_id = campaign_id
         self.current_status = current_status
@@ -499,6 +534,13 @@ class Campaign:
     No actor field beyond `lead_actor_id`. Audit truth ("who started /
     held / closed / abandoned") lives on `StoredEvent.principal_id`
     envelope. Future projection denormalises for query-time access.
+
+    `steering_objective` / `steering_space` carry the Campaign's
+    declarative steering INTENT (what good means + where to look), set
+    once via `declare_campaign_steering` and None until declared. The
+    intent lets an across-Run steerer derive the next Run; selection
+    state (which point was chosen, what was observed) is NEVER stored
+    here, it lives in the Decision log per the Slim Aggregate posture.
     """
 
     id: UUID
@@ -513,3 +555,5 @@ class Campaign:
     run_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
     status: CampaignStatus = CampaignStatus.PLANNED
     last_status_reason: str | None = None
+    steering_objective: SteeringObjective | None = None
+    steering_space: SteeringSpace | None = None

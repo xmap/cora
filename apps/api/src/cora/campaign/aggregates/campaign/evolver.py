@@ -47,6 +47,7 @@ from cora.campaign.aggregates.campaign.events import (
     CampaignRunAdded,
     CampaignRunRemoved,
     CampaignStarted,
+    CampaignSteeringDeclared,
 )
 from cora.campaign.aggregates.campaign.state import (
     Campaign,
@@ -101,6 +102,8 @@ def evolve(state: Campaign | None, event: CampaignEvent) -> Campaign:
                 run_ids=prior.run_ids,
                 status=CampaignStatus.ACTIVE,
                 last_status_reason=prior.last_status_reason,
+                steering_objective=prior.steering_objective,
+                steering_space=prior.steering_space,
             )
         case CampaignHeld(reason=reason):
             prior = require_state(state, "CampaignHeld")
@@ -117,6 +120,8 @@ def evolve(state: Campaign | None, event: CampaignEvent) -> Campaign:
                 run_ids=prior.run_ids,
                 status=CampaignStatus.HELD,
                 last_status_reason=reason,
+                steering_objective=prior.steering_objective,
+                steering_space=prior.steering_space,
             )
         case CampaignResumed():
             prior = require_state(state, "CampaignResumed")
@@ -133,6 +138,8 @@ def evolve(state: Campaign | None, event: CampaignEvent) -> Campaign:
                 run_ids=prior.run_ids,
                 status=CampaignStatus.ACTIVE,
                 last_status_reason=prior.last_status_reason,
+                steering_objective=prior.steering_objective,
+                steering_space=prior.steering_space,
             )
         case CampaignClosed():
             prior = require_state(state, "CampaignClosed")
@@ -149,6 +156,8 @@ def evolve(state: Campaign | None, event: CampaignEvent) -> Campaign:
                 run_ids=prior.run_ids,
                 status=CampaignStatus.CLOSED,
                 last_status_reason=prior.last_status_reason,
+                steering_objective=prior.steering_objective,
+                steering_space=prior.steering_space,
             )
         case CampaignAbandoned(reason=reason):
             prior = require_state(state, "CampaignAbandoned")
@@ -165,6 +174,8 @@ def evolve(state: Campaign | None, event: CampaignEvent) -> Campaign:
                 run_ids=prior.run_ids,
                 status=CampaignStatus.ABANDONED,
                 last_status_reason=reason,
+                steering_objective=prior.steering_objective,
+                steering_space=prior.steering_space,
             )
         case CampaignRunAdded(run_id=run_id):
             # membership add. Idempotency invariant is
@@ -187,6 +198,8 @@ def evolve(state: Campaign | None, event: CampaignEvent) -> Campaign:
                 run_ids=prior.run_ids | {run_id},
                 status=prior.status,
                 last_status_reason=prior.last_status_reason,
+                steering_objective=prior.steering_objective,
+                steering_space=prior.steering_space,
             )
         case CampaignRunRemoved(run_id=run_id):
             # membership remove. Per design memo lock, the
@@ -210,6 +223,31 @@ def evolve(state: Campaign | None, event: CampaignEvent) -> Campaign:
                 run_ids=prior.run_ids - {run_id},
                 status=prior.status,
                 last_status_reason=prior.last_status_reason,
+                steering_objective=prior.steering_objective,
+                steering_space=prior.steering_space,
+            )
+        case CampaignSteeringDeclared(objective=objective, space=space):
+            # steering-intent declaration. PUT semantics: the
+            # objective + space replace any prior declared intent
+            # wholesale. Status / last_status_reason / run_ids are
+            # preserved (declaring where a future across-Run steerer may
+            # look is orthogonal to lifecycle and membership).
+            prior = require_state(state, "CampaignSteeringDeclared")
+            return Campaign(
+                id=prior.id,
+                name=prior.name,
+                intent=prior.intent,
+                lead_actor_id=prior.lead_actor_id,
+                subject_id=prior.subject_id,
+                description=prior.description,
+                tags=prior.tags,
+                external_refs=prior.external_refs,
+                external_id=prior.external_id,
+                run_ids=prior.run_ids,
+                status=prior.status,
+                last_status_reason=prior.last_status_reason,
+                steering_objective=objective,
+                steering_space=space,
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)

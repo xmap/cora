@@ -14,6 +14,7 @@ from mcp.server.fastmcp import FastMCP
 from cora.campaign.features.abandon_campaign import tool as abandon_campaign_tool
 from cora.campaign.features.add_run_to_campaign import tool as add_run_to_campaign_tool
 from cora.campaign.features.close_campaign import tool as close_campaign_tool
+from cora.campaign.features.declare_campaign_steering import tool as declare_campaign_steering_tool
 from cora.campaign.features.get_campaign import tool as get_campaign_tool
 from cora.campaign.features.hold_campaign import tool as hold_campaign_tool
 from cora.campaign.features.list_campaigns import tool as list_campaigns_tool
@@ -61,6 +62,10 @@ def register_campaign_tools(
     remove_run_from_campaign_tool.register(
         mcp,
         get_handler=lambda: get_handlers().remove_run_from_campaign,
+    )
+    declare_campaign_steering_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().declare_campaign_steering,
     )
     get_campaign_tool.register(
         mcp,

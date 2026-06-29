@@ -918,6 +918,21 @@ nav:
         - Techniques: deployments/tps-05a/techniques.md
         - Governance: deployments/tps-05a/governance.md
         - Model: deployments/tps-05a/model.md
+    - PETRA III:
+      - deployments/petra-iii/index.md
+      - P01:
+        - deployments/p01/index.md
+        - Open questions: deployments/p01/questions.md
+        - The beamline:
+          - deployments/p01/equipment/index.md
+          - Source: deployments/p01/beamline.md
+          - Sample: deployments/p01/equipment/sample.md
+          - Detector: deployments/p01/equipment/detector.md
+          - Controls: deployments/p01/equipment/controls.md
+          - Inventory: deployments/p01/inventory.md
+        - Techniques: deployments/p01/techniques.md
+        - Governance: deployments/p01/governance.md
+        - Model: deployments/p01/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

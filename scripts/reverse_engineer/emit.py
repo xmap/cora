@@ -131,8 +131,15 @@ def render_facts_md(
     facility: str,
     devices: list[CandidateDevice],
     permissions: list[PermissionGroup],
+    source_desc: str = "the repo's Guarneri `devices.yml` plus ophyd device classes",
+    skipped: int | None = None,
 ) -> str:
-    """Render the human-readable per-beamline facts report."""
+    """Render the human-readable per-beamline facts report.
+
+    source_desc names where the facts came from (EPICS *-bits or DESY OnlineXML).
+    skipped, when given, records how many source rows were filtered out as
+    bookkeeping so the count is visible rather than silently dropped.
+    """
     real = [d for d in devices if not d.is_sim]
     sims = [d for d in devices if d.is_sim]
     lines: list[str] = []
@@ -140,10 +147,15 @@ def render_facts_md(
     lines.append("")
     lines.append(
         f"Machine-extracted candidate facts for `{beamline_name}` (facility `{facility}`). "
-        "Candidates only; confirm every row before modeling. Source: the repo's Guarneri "
-        "`devices.yml` plus ophyd device classes."
+        f"Candidates only; confirm every row before modeling. Source: {source_desc}."
     )
     lines.append("")
+    if skipped is not None:
+        lines.append(
+            f"Filtered out {skipped} bookkeeping rows (counters, timers, registers, measurement "
+            "groups) not modelled as devices; the inventory below is the modellable remainder."
+        )
+        lines.append("")
 
     lines.append("## Device inventory")
     lines.append("")
