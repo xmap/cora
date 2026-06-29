@@ -42,11 +42,11 @@ it~\cite{lim2010}. Systems that visualize it, such as
 VisTrails~\cite{vistrails2006} and Loops~\cite{loops2024}, let an analyst
 navigate a version tree and compare or diff recorded versions of a workflow or
 notebook. Verdant~\cite{verdant2018, verdant2019} is the closest prior
-interaction to ours: it pairs recorded notebook history with a draggable
-timeline cursor. Its replay, however, reconstructs a past version by
-re-executing it and explicitly ignores the dependencies the older version
-originally had, so it cannot guarantee that the reconstructed state matches
-what happened, and it targets a single analyst's local notebook rather than an
+interaction to ours: it pairs recorded notebook history with interactive
+techniques for comparing and replaying many recorded versions. Its replay
+navigates and re-creates recorded versions rather than folding an immutable
+event stream, so it does not certify that a reconstructed version matches what
+happened, and it targets a single analyst's local notebook rather than an
 autonomous run. QIIME~2 Provenance Replay~\cite{qiime2replay} likewise turns a
 recorded provenance graph into regenerated code that is re-run offline, not an
 interactive view. We differ in that we reconstruct state by folding an
