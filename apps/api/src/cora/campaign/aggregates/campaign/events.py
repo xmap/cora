@@ -57,6 +57,12 @@ from uuid import UUID
 from cora.infrastructure.event_payload import deserialize_or_raise, deserialize_vo_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.shared.identifier import Identifier
+from cora.shared.steering import (
+    SteeringAxis,
+    SteeringObjective,
+    SteeringObjectiveKind,
+    SteeringSpace,
+)
 
 # ---------------------------------------------------------------------------
 # Identifier serialize / deserialize (public cross-slice helpers)
@@ -83,6 +89,59 @@ def deserialize_external_ref(payload: dict[str, Any]) -> Identifier:
 def _serialize_external_refs(refs: frozenset[Identifier]) -> list[dict[str, str]]:
     """Sort + encode a frozenset of Identifier for deterministic bytes."""
     return [serialize_external_ref(r) for r in sorted(refs, key=lambda r: (r.scheme, r.value))]
+
+
+# ---------------------------------------------------------------------------
+# Steering objective / space serialize / deserialize (private slice helpers)
+# ---------------------------------------------------------------------------
+
+
+def _serialize_objective(objective: SteeringObjective) -> dict[str, Any]:
+    """Encode a SteeringObjective to a JSON-friendly dict."""
+    return {
+        "kind": objective.kind.value,
+        "target_measurement_name": objective.target_measurement_name,
+        "target_value": objective.target_value,
+    }
+
+
+def _serialize_space(space: SteeringSpace) -> dict[str, Any]:
+    """Encode a SteeringSpace to a JSON-friendly dict (choices tuple -> list)."""
+    return {
+        "axes": [
+            {
+                "name": axis.name,
+                "lower": axis.lower,
+                "upper": axis.upper,
+                "choices": list(axis.choices),
+            }
+            for axis in space.axes
+        ]
+    }
+
+
+def _deserialize_objective(payload: dict[str, Any]) -> SteeringObjective:
+    """Decode a JSON-friendly dict to a SteeringObjective."""
+    return SteeringObjective(
+        kind=SteeringObjectiveKind(payload["kind"]),
+        target_measurement_name=payload.get("target_measurement_name"),
+        target_value=payload.get("target_value"),
+    )
+
+
+def _deserialize_space(payload: dict[str, Any]) -> SteeringSpace:
+    """Decode a JSON-friendly dict to a SteeringSpace (choices list -> tuple)."""
+    return SteeringSpace(
+        axes=tuple(
+            SteeringAxis(
+                name=axis["name"],
+                lower=axis.get("lower"),
+                upper=axis.get("upper"),
+                choices=tuple(axis.get("choices", [])),
+            )
+            for axis in payload["axes"]
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -231,6 +290,24 @@ class CampaignRunRemoved:
     occurred_at: datetime
 
 
+@dataclass(frozen=True)
+class CampaignSteeringDeclared:
+    """The Campaign's steering INTENT was declared (objective + space).
+
+    PUT semantics: a re-declare overwrites the prior intent wholesale
+    (the evolver replaces both fields). This is NOT a lifecycle
+    transition (status is untouched), mirroring the membership events:
+    declaring where a future across-Run steerer may look is orthogonal
+    to the FSM. The declaring actor's id lives ONLY on the envelope per
+    the cross-BC envelope-only-actor precedent.
+    """
+
+    campaign_id: UUID
+    objective: SteeringObjective
+    space: SteeringSpace
+    occurred_at: datetime
+
+
 # Discriminated union of every event the Campaign aggregate emits.
 CampaignEvent = (
     CampaignRegistered
@@ -241,6 +318,7 @@ CampaignEvent = (
     | CampaignAbandoned
     | CampaignRunAdded
     | CampaignRunRemoved
+    | CampaignSteeringDeclared
 )
 
 
@@ -337,6 +415,18 @@ def to_payload(event: CampaignEvent) -> dict[str, Any]:
                 "campaign_id": str(campaign_id),
                 "run_id": str(run_id),
                 "reason": reason,
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case CampaignSteeringDeclared(
+            campaign_id=campaign_id,
+            objective=objective,
+            space=space,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "campaign_id": str(campaign_id),
+                "objective": _serialize_objective(objective),
+                "space": _serialize_space(space),
                 "occurred_at": occurred_at.isoformat(),
             }
         case _:  # pragma: no cover  # exhaustiveness guard
@@ -439,6 +529,17 @@ def from_stored(stored: StoredEvent) -> CampaignEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
+        case "CampaignSteeringDeclared":
+            return deserialize_or_raise(
+                "CampaignSteeringDeclared",
+                lambda: CampaignSteeringDeclared(
+                    campaign_id=UUID(payload["campaign_id"]),
+                    objective=_deserialize_objective(payload["objective"]),
+                    space=_deserialize_space(payload["space"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+                extra=(ValueError,),
+            )
         case _:
             msg = f"Unknown CampaignEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)
@@ -454,6 +555,7 @@ __all__ = [
     "CampaignRunAdded",
     "CampaignRunRemoved",
     "CampaignStarted",
+    "CampaignSteeringDeclared",
     "deserialize_external_ref",
     "event_type_name",
     "from_stored",

@@ -3897,7 +3897,7 @@
             "description": "The in-CORA brain selection (substrate + grid resolution)."
           },
           "objective": {
-            "$ref": "#/components/schemas/SteeringObjectiveRequest",
+            "$ref": "#/components/schemas/cora__operation___advise_wire__SteeringObjectiveRequest",
             "description": "What good means: the steering objective the brain weighs."
           },
           "objective_capture_name": {
@@ -3907,7 +3907,7 @@
             "type": "string"
           },
           "space": {
-            "$ref": "#/components/schemas/SteeringSpaceRequest",
+            "$ref": "#/components/schemas/cora__operation___advise_wire__SteeringSpaceRequest",
             "description": "The feasible search space (axes + bounds / choices) the brain proposes in."
           }
         },
@@ -4947,6 +4947,26 @@
           "created_at"
         ],
         "title": "DecisionSummaryDTO",
+        "type": "object"
+      },
+      "DeclareCampaignSteeringRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /campaigns/{campaign_id}/declare-steering`.\n\nDeclares the Campaign's steering INTENT: what good means + where a\nfuture across-Run steerer may look. PUT semantics: a re-declare\noverwrites the prior intent wholesale.",
+        "properties": {
+          "objective": {
+            "$ref": "#/components/schemas/cora__campaign__features__declare_campaign_steering__route__SteeringObjectiveRequest",
+            "description": "What good means (objective sense + optional target)."
+          },
+          "space": {
+            "$ref": "#/components/schemas/cora__campaign__features__declare_campaign_steering__route__SteeringSpaceRequest",
+            "description": "The feasible search space (>= 1 axis)."
+          }
+        },
+        "required": [
+          "objective",
+          "space"
+        ],
+        "title": "DeclareCampaignSteeringRequest",
         "type": "object"
       },
       "DecommissionEnclosureRequest": {
@@ -14039,53 +14059,6 @@
         "title": "StartSealRepublishingRequest",
         "type": "object"
       },
-      "SteeringAxisRequest": {
-        "additionalProperties": false,
-        "description": "JSON wire shape for a `SteeringAxis`.",
-        "properties": {
-          "choices": {
-            "description": "Enumerated values for a discrete/categorical axis (empty for continuous).",
-            "items": {},
-            "title": "Choices",
-            "type": "array"
-          },
-          "lower": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Lower bound for a continuous axis.",
-            "title": "Lower"
-          },
-          "name": {
-            "description": "Axis label the brain proposes coordinates for; must be consumed by a SteeringRef setpoint in the pinned recipe block.",
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "upper": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Upper bound for a continuous axis.",
-            "title": "Upper"
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "title": "SteeringAxisRequest",
-        "type": "object"
-      },
       "SteeringBudgetRequest": {
         "additionalProperties": false,
         "description": "JSON wire shape for a `SteeringBudget` (informational for the brain).",
@@ -14128,65 +14101,6 @@
         ],
         "title": "SteeringObjectiveKind",
         "type": "string"
-      },
-      "SteeringObjectiveRequest": {
-        "additionalProperties": false,
-        "description": "JSON wire shape for a `SteeringObjective`.",
-        "properties": {
-          "kind": {
-            "$ref": "#/components/schemas/SteeringObjectiveKind",
-            "description": "What good means: Minimize / Maximize / Satisfy / Explore. The brain weighs it; a grid walker only early-stops on a met Satisfy target."
-          },
-          "target_measurement_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Name of the objective measurement the brain reads (None for pure Explore).",
-            "title": "Target Measurement Name"
-          },
-          "target_value": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Setpoint the objective drives toward (used by Satisfy; None otherwise).",
-            "title": "Target Value"
-          }
-        },
-        "required": [
-          "kind"
-        ],
-        "title": "SteeringObjectiveRequest",
-        "type": "object"
-      },
-      "SteeringSpaceRequest": {
-        "additionalProperties": false,
-        "description": "JSON wire shape for a `SteeringSpace`.",
-        "properties": {
-          "axes": {
-            "description": "The feasible set the brain may propose within.",
-            "items": {
-              "$ref": "#/components/schemas/SteeringAxisRequest"
-            },
-            "minItems": 1,
-            "title": "Axes",
-            "type": "array"
-          }
-        },
-        "required": [
-          "axes"
-        ],
-        "title": "SteeringSpaceRequest",
-        "type": "object"
       },
       "StopRunRequest": {
         "description": "Body for `POST /runs/{run_id}/stop`.",
@@ -16326,6 +16240,218 @@
           "tolerance"
         ],
         "title": "_WithinToleranceCriterion",
+        "type": "object"
+      },
+      "cora__campaign__features__declare_campaign_steering__route__SteeringAxisRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringAxis`.",
+        "properties": {
+          "choices": {
+            "description": "Enumerated values for a discrete/categorical axis (empty for continuous).",
+            "items": {},
+            "title": "Choices",
+            "type": "array"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lower bound for a continuous axis.",
+            "title": "Lower"
+          },
+          "name": {
+            "description": "Axis label the across-Run steerer proposes coordinates for.",
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Upper bound for a continuous axis.",
+            "title": "Upper"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SteeringAxisRequest",
+        "type": "object"
+      },
+      "cora__campaign__features__declare_campaign_steering__route__SteeringObjectiveRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringObjective`.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SteeringObjectiveKind",
+            "description": "What good means: Minimize / Maximize / Satisfy / Explore. A Satisfy objective drives toward target_value on target_measurement_name."
+          },
+          "target_measurement_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the objective measurement the steerer reads (None for pure Explore).",
+            "title": "Target Measurement Name"
+          },
+          "target_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Setpoint the objective drives toward (used by Satisfy; None otherwise).",
+            "title": "Target Value"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "SteeringObjectiveRequest",
+        "type": "object"
+      },
+      "cora__campaign__features__declare_campaign_steering__route__SteeringSpaceRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringSpace`.",
+        "properties": {
+          "axes": {
+            "description": "The feasible set the across-Run steerer may propose within.",
+            "items": {
+              "$ref": "#/components/schemas/cora__campaign__features__declare_campaign_steering__route__SteeringAxisRequest"
+            },
+            "minItems": 1,
+            "title": "Axes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "axes"
+        ],
+        "title": "SteeringSpaceRequest",
+        "type": "object"
+      },
+      "cora__operation___advise_wire__SteeringAxisRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringAxis`.",
+        "properties": {
+          "choices": {
+            "description": "Enumerated values for a discrete/categorical axis (empty for continuous).",
+            "items": {},
+            "title": "Choices",
+            "type": "array"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lower bound for a continuous axis.",
+            "title": "Lower"
+          },
+          "name": {
+            "description": "Axis label the brain proposes coordinates for; must be consumed by a SteeringRef setpoint in the pinned recipe block.",
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Upper bound for a continuous axis.",
+            "title": "Upper"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SteeringAxisRequest",
+        "type": "object"
+      },
+      "cora__operation___advise_wire__SteeringObjectiveRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringObjective`.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SteeringObjectiveKind",
+            "description": "What good means: Minimize / Maximize / Satisfy / Explore. The brain weighs it; a grid walker only early-stops on a met Satisfy target."
+          },
+          "target_measurement_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the objective measurement the brain reads (None for pure Explore).",
+            "title": "Target Measurement Name"
+          },
+          "target_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Setpoint the objective drives toward (used by Satisfy; None otherwise).",
+            "title": "Target Value"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "SteeringObjectiveRequest",
+        "type": "object"
+      },
+      "cora__operation___advise_wire__SteeringSpaceRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringSpace`.",
+        "properties": {
+          "axes": {
+            "description": "The feasible set the brain may propose within.",
+            "items": {
+              "$ref": "#/components/schemas/cora__operation___advise_wire__SteeringAxisRequest"
+            },
+            "minItems": 1,
+            "title": "Axes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "axes"
+        ],
+        "title": "SteeringSpaceRequest",
         "type": "object"
       }
     }
@@ -22714,6 +22840,106 @@
           }
         },
         "summary": "Close a Campaign (Active | Held -> Closed)",
+        "tags": [
+          "campaign"
+        ]
+      }
+    },
+    "/campaigns/{campaign_id}/declare-steering": {
+      "post": {
+        "operationId": "post_campaigns_declare_steering_campaigns__campaign_id__declare_steering_post",
+        "parameters": [
+          {
+            "description": "Target Campaign's id.",
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "description": "Target Campaign's id.",
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclareCampaignSteeringRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (empty search space, or a Satisfy objective missing its target_value / target_measurement_name)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Campaign exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Campaign is not in Planned or Active status (declare_campaign_steering requires Planned | Active)."
+          },
+          "422": {
+            "description": "Request body failed schema validation."
+          }
+        },
+        "summary": "Declare a Campaign's steering intent (objective + search space)",
         "tags": [
           "campaign"
         ]

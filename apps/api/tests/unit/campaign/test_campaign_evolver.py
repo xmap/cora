@@ -22,6 +22,12 @@ from cora.campaign.aggregates.campaign import (
     fold,
 )
 from cora.shared.identifier import Identifier
+from cora.shared.steering import (
+    SteeringAxis,
+    SteeringObjective,
+    SteeringObjectiveKind,
+    SteeringSpace,
+)
 
 _NOW = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)
 _CAMPAIGN_ID = UUID("01900000-0000-7000-8000-00000000e001")
@@ -410,3 +416,150 @@ def test_run_removed_on_empty_state_raises() -> None:
                 occurred_at=_NOW,
             ),
         )
+
+
+# ---------- CampaignSteeringDeclared arm ----------
+
+
+def _objective() -> SteeringObjective:
+    return SteeringObjective(kind=SteeringObjectiveKind.MAXIMIZE, target_measurement_name="yield")
+
+
+def _space() -> SteeringSpace:
+    return SteeringSpace(axes=(SteeringAxis(name="temperature", lower=300.0, upper=900.0),))
+
+
+@pytest.mark.unit
+def test_steering_declared_folds_objective_and_space() -> None:
+    from cora.campaign.aggregates.campaign import CampaignSteeringDeclared
+
+    state = fold(
+        [
+            _registered(),
+            CampaignSteeringDeclared(
+                campaign_id=_CAMPAIGN_ID,
+                objective=_objective(),
+                space=_space(),
+                occurred_at=_NOW,
+            ),
+        ]
+    )
+    assert state is not None
+    assert state.steering_objective == _objective()
+    assert state.steering_space == _space()
+    # Declaration is NOT a lifecycle transition; status preserved.
+    assert state.status == CampaignStatus.PLANNED
+
+
+@pytest.mark.unit
+def test_steering_declared_re_declare_overwrites_prior_intent() -> None:
+    """PUT semantics: a second declaration replaces the first."""
+    from cora.campaign.aggregates.campaign import CampaignSteeringDeclared
+
+    second_objective = SteeringObjective(
+        kind=SteeringObjectiveKind.MINIMIZE, target_measurement_name="noise"
+    )
+    second_space = SteeringSpace(axes=(SteeringAxis(name="energy", lower=8.0, upper=12.0),))
+    state = fold(
+        [
+            _registered(),
+            CampaignSteeringDeclared(
+                campaign_id=_CAMPAIGN_ID,
+                objective=_objective(),
+                space=_space(),
+                occurred_at=_NOW,
+            ),
+            CampaignSteeringDeclared(
+                campaign_id=_CAMPAIGN_ID,
+                objective=second_objective,
+                space=second_space,
+                occurred_at=_NOW,
+            ),
+        ]
+    )
+    assert state is not None
+    assert state.steering_objective == second_objective
+    assert state.steering_space == second_space
+
+
+@pytest.mark.unit
+def test_steering_declared_on_empty_state_raises() -> None:
+    from cora.campaign.aggregates.campaign import CampaignSteeringDeclared
+
+    with pytest.raises(ValueError):
+        evolve(
+            None,
+            CampaignSteeringDeclared(
+                campaign_id=_CAMPAIGN_ID,
+                objective=_objective(),
+                space=_space(),
+                occurred_at=_NOW,
+            ),
+        )
+
+
+@pytest.mark.unit
+def test_declared_steering_preserved_across_start_and_hold() -> None:
+    """Per-arm threading guard: declaring steering then transitioning the
+    campaign does NOT reset steering_objective / steering_space."""
+    from cora.campaign.aggregates.campaign import CampaignSteeringDeclared
+
+    state = fold(
+        [
+            _registered(),
+            CampaignSteeringDeclared(
+                campaign_id=_CAMPAIGN_ID,
+                objective=_objective(),
+                space=_space(),
+                occurred_at=_NOW,
+            ),
+            CampaignStarted(campaign_id=_CAMPAIGN_ID, occurred_at=_NOW),
+            CampaignHeld(campaign_id=_CAMPAIGN_ID, reason="beam interruption", occurred_at=_NOW),
+        ]
+    )
+    assert state is not None
+    assert state.status == CampaignStatus.HELD
+    assert state.steering_objective == _objective()
+    assert state.steering_space == _space()
+
+
+@pytest.mark.unit
+def test_declared_steering_preserved_across_close_and_abandon_and_membership() -> None:
+    """Full per-arm sweep: steering survives every non-genesis arm."""
+    from cora.campaign.aggregates.campaign import (
+        CampaignRunAdded,
+        CampaignRunRemoved,
+        CampaignSteeringDeclared,
+    )
+
+    run_id = UUID("01900000-0000-7000-8000-0000000000b1")
+    state = fold(
+        [
+            _registered(),
+            CampaignSteeringDeclared(
+                campaign_id=_CAMPAIGN_ID,
+                objective=_objective(),
+                space=_space(),
+                occurred_at=_NOW,
+            ),
+            CampaignStarted(campaign_id=_CAMPAIGN_ID, occurred_at=_NOW),
+            CampaignRunAdded(campaign_id=_CAMPAIGN_ID, run_id=run_id, occurred_at=_NOW),
+            CampaignRunRemoved(
+                campaign_id=_CAMPAIGN_ID, run_id=run_id, reason="reassigned", occurred_at=_NOW
+            ),
+            CampaignHeld(campaign_id=_CAMPAIGN_ID, reason="r", occurred_at=_NOW),
+            CampaignResumed(campaign_id=_CAMPAIGN_ID, occurred_at=_NOW),
+            CampaignClosed(campaign_id=_CAMPAIGN_ID, occurred_at=_NOW),
+        ]
+    )
+    assert state is not None
+    assert state.status == CampaignStatus.CLOSED
+    assert state.steering_objective == _objective()
+    assert state.steering_space == _space()
+
+
+@pytest.mark.unit
+def test_steering_defaults_none_at_genesis() -> None:
+    state = evolve(None, _registered())
+    assert state.steering_objective is None
+    assert state.steering_space is None

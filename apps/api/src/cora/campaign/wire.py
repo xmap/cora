@@ -34,6 +34,7 @@ from cora.campaign.features import (
     abandon_campaign,
     add_run_to_campaign,
     close_campaign,
+    declare_campaign_steering,
     get_campaign,
     hold_campaign,
     list_campaigns,
@@ -61,6 +62,7 @@ class CampaignHandlers:
     abandon_campaign: abandon_campaign.Handler
     add_run_to_campaign: add_run_to_campaign.Handler
     remove_run_from_campaign: remove_run_from_campaign.Handler
+    declare_campaign_steering: declare_campaign_steering.Handler
     get_campaign: get_campaign.Handler
     list_campaigns: list_campaigns.Handler
 
@@ -115,6 +117,11 @@ def wire_campaign(deps: Kernel) -> CampaignHandlers:
         remove_run_from_campaign=with_tracing(
             remove_run_from_campaign.bind(deps),
             command_name="RemoveRunFromCampaign",
+            bc=_BC,
+        ),
+        declare_campaign_steering=with_tracing(
+            declare_campaign_steering.bind(deps),
+            command_name="DeclareCampaignSteering",
             bc=_BC,
         ),
         get_campaign=with_tracing(
