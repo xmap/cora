@@ -4,25 +4,22 @@ in decisions, multi-pass, and shared between people and agents, yet largely
 invisible to the humans who must later audit it. A scientist returning to an
 unattended overnight run asks plain questions: did the alignment converge, what
 was in flight when the beam dropped, who or what decided to resume, and can I
-prove what was recorded? Conventional post-hoc provenance graphs flatten the
-temporal and causal texture those questions depend on. We observe that
-event-sourced systems of record already answer such questions internally,
-because they reconstruct any past state by folding an immutable, ordered event
-stream. We turn that fold into an interaction. Our contribution is the
-conjunction of four elements: deterministic event-stream replay, provenance
-visualization, a content-addressed fidelity check run at the cursor, and a set of audit
-tasks for autonomous runs. We realize them as a \emph{replay scrubber}, a
-draggable time cursor that replays a run to any recorded instant. The scrubber
-shows a run-lifecycle lane of who or what drove each transition, verdict-colored
-convergence bands, open-interval markers for unfinished steps, and a fidelity
-badge that verifies the replayed recipe expansion matches the content hash
-recorded at run start. We ground the prototype in an integration-tested,
-agent-supervised scenario run of an event-sourced system of record on an APS
-2-BM micro-CT configuration, executed against the real event-sourcing stack, in
-which the system conducts a rotation-axis centering alignment, a
-supervisor agent holds the run on beam loss and auto-resumes it, and the
-scrubber localizes the interrupted projection by folding to the beam-loss
-instant. The run is \emph{agent-supervised} rather than agent-closed: the agent
-recovers a conducted run, it does not select the science. We report a case-based
-walkthrough of a research prototype over exported run data, and discuss how
-event-sourced records reshape provenance visualization for autonomous science.
+prove what was recorded? Post-hoc provenance graphs flatten the temporal and
+causal texture those questions depend on. Event-sourced systems of record answer
+them internally, by folding an immutable event stream to reconstruct any past
+state; we turn that fold into an interaction. We contribute the conjunction
+of deterministic event-stream replay, provenance visualization, a
+content-addressed fidelity check run at the cursor, and a set of audit tasks for
+autonomous runs, realized as a \emph{replay scrubber}: a draggable time cursor
+that replays a run to any recorded instant. It shows who or what drove each
+transition, verdict-colored convergence bands, open-interval markers for
+unfinished steps, and a badge that verifies the replayed recipe expansion matches
+the content hash recorded at run start. We ground the prototype in an
+integration-tested, agent-supervised scenario run on an APS 2-BM micro-CT
+configuration, against the real event-sourcing stack: the system conducts a
+rotation-axis centering alignment, a supervisor agent holds the run on beam loss
+and auto-resumes it, and the scrubber localizes the interrupted projection by
+folding to the beam-loss instant. The run is agent-supervised rather than
+agent-closed: the agent recovers a conducted run, it does not select the science.
+We discuss how event-sourced records reshape provenance visualization for
+autonomous science.

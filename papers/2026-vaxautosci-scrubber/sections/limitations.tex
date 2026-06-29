@@ -40,12 +40,11 @@ single run rather than the entire event history; but because that path keeps no
 snapshots, the cost of reconstructing a distant instant still grows with the
 length of that stream. For the short run shown here it is imperceptible, and for
 long campaigns the standard remedies apply directly, periodic snapshots to fold
-from and incremental re-folding as the cursor drags rather than replaying from
-the start each time; we name these rather than build them. Three further
-extensions are natural, named here rather than built: a live now-edge that
-subscribes to the event tail so the same timeline can monitor a run in progress,
-run-to-run diffing so two campaigns can be compared on one axis, and a deployed
-read interface, whose first read-only slice is already on the roadmap. The
+from and incremental re-folding rather than replaying from the start each time;
+we name these rather than build them. Three further extensions are natural: a
+live now-edge that subscribes to the event tail so the same timeline can monitor
+a run in progress, run-to-run diffing so two campaigns share one axis, and a
+deployed read interface, whose first read-only slice is already on the roadmap. The
 closest extension is an agent-closed steered loop, an optimizer that decides the
 next action rather than a supervisor that recovers a conducted one; because such
 an optimizer would record its choices through the same decision substrate, the
@@ -63,10 +62,10 @@ practice rather than from observing auditors at work, so the set may be
 incomplete, missing for example causal blame across steps or finer parameter
 provenance, or may favor an encoding scientists would not. There is also an
 internal threat, since the walkthrough is authored by us, who already know where
-each verdict, open interval, and gap lies, and an independent auditor reading the
-same figures cold might not find them as readily; we ran no such study. Finally,
-generality is the external threat: our argument for it is made from the structure
-of the technique, not demonstrated across more than the single beamline, run, and
-rule-based supervisor reported here. These are the questions a case-based
-demonstration leaves open, and they set the agenda for the user study and
-multi-beamline deployment that should follow.
+each verdict, open interval, and gap lies; an independent auditor reading the
+same figures cold might not find them as readily, and we ran no such study.
+Finally, generality is the external threat: our argument for it is structural,
+not demonstrated beyond the single beamline, run, and rule-based supervisor
+reported here. These are the questions a case-based demonstration leaves open,
+setting the agenda for the user study and multi-beamline deployment that should
+follow.
