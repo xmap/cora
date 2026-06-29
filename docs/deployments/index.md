@@ -125,4 +125,12 @@ CORA's first Taiwan facility (the National Synchrotron Radiation Research Center
 | [TPS 07A](tps-07a/index.md) | Reverse-engineered | micro-focus protein crystallography (rotation MX) on an Arinax MD3 + DECTRIS EIGER2 X 16M with an ISARA robot; reuses the i03 / MX3 Goniometer and MX Methods, novelty is the Site and its Blu-Ice/DCSS-over-EPICS orchestration seam (the 2-BM pattern, confirmed live over MXCuBE) |
 | [TPS 05A](tps-05a/index.md) | Reverse-engineered | protein microcrystallography (rotation MX) on the same MD3 + ISARA kit with a DECTRIS EIGER2 X 9M; the MX-cluster sibling of 07A, a reuse-and-reinforce deployment coining no new vocabulary, modelled from the SPXF pages + the 2025 cluster paper (thinner source, PV namespace inferred) |
 
+## [PETRA III](petra-iii/index.md)
+
+CORA's Site for PETRA III (DESY, Hamburg), and its second Tango / Sardana control house-style after MAX IV / ALBA. P01 is reverse-engineered from P01's own public OnlineXML device registry (the `online_*.xml` Tango device list under `petra-iii-debian-packages` on gitlab.desy.de), extracted with the `scripts/reverse_engineer/` `--source onlinexml` path, chosen because the OnlineXML carries real per-device Tango handles across all 18 public PETRA III beamlines and because P01's NRS / RIXS dynamics techniques are new to CORA's technique surface. Full provenance is in the [research brief](https://github.com/xmap/cora/blob/main/research/petra-iii/survey.md).
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [P01](p01/index.md) | Reverse-engineered | nuclear resonant scattering and inelastic / resonant-inelastic scattering (2.5-80 keV) across two optics hutches and three experiment hutches (EH1 NRS high-resolution-monochromator stack, EH2 diffraction, EH3 RIXS / KB pair); reuses the optics / motion Families, novelty is the Site, its Tango / Sardana control plane read from the OnlineXML, and the NRS / RIXS technique branch (reusing the pending IXS / RIXS Methods) |
+
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

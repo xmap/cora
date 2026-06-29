@@ -1,0 +1,81 @@
+# CORA Site descriptor: the PETRA III (DESY) site-level surface
+#
+# PETRA III is the 2.3 km hard X-ray synchrotron at DESY (Deutsches
+# Elektronen-Synchrotron, Hamburg-Bahrenfeld, Germany). It is the Site CORA models
+# for its DESY deployment, and the home of the P01 beamline scaffold (the first
+# PETRA III deployment). This file is the single human-readable source for the
+# facility's site-level instances: the Facility itself, the Practices it would run,
+# and the facility principals.
+#
+# Status: reverse-engineered. CORA has not been connected to PETRA III and no staff
+# have confirmed this model. Every value below is read from public open source (the
+# gitlab.desy.de tango-ds / fsec-sardana / petra-iii-debian-packages control trees,
+# the photon-science.desy.de beamline catalog, and the deep-research survey at
+# research/petra-iii/survey.md) or inferred, and is carried as `pending` until staff
+# confirm it. Do not invent facility specifics here; carry them as questions on each
+# beamline's open-questions page.
+#
+# Source-of-truth boundary (same as the APS / ESRF / MAX IV / Diamond / NSLS-II /
+# SLAC / NSRRC / Sirius sites):
+#   - the closed facility-kind / actor-kind vocabularies are validated against
+#     code-mirrored frozensets in scripts/site_descriptor.py.
+#   - the facility records the bootstrap invariants (kind=Site, display_name equals
+#     code); `heading` carries the human title used on the rendered page.
+#
+# Controls house-style (the distinctive Site fact): PETRA III runs a Tango control
+# floor with Sardana as the scan / motion SCADA layer (Pool / MacroServer /
+# MeasurementGroup, Spock CLI, Taurus UIs), NOT EPICS. Each beamline's device tree
+# is published as an OnlineXML registry (online_*.xml: Tango device name, class,
+# address, host) under petra-iii-debian-packages on gitlab.desy.de, and the device
+# servers live in tango-ds/deviceclasses. This is the second Tango / Sardana house
+# style CORA models (after MAX IV) and a sibling of the ESRF BLISS / Tango floor.
+# DESY also runs DOOCS / TINE for the accelerator, which is out of beamline scope.
+# CORA's EdgeConductor would conduct routines over the Tango floor where Sardana's
+# MacroServer sits today. See docs/deployments/p01/equipment/controls.md.
+
+facility:
+  code: petra-iii
+  display_name: petra-iii
+  heading: "PETRA III"
+  kind: Site
+  institution: DESY (Deutsches Elektronen-Synchrotron, Hamburg, Germany)
+  beamlines: [P01]
+
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
+#
+# P01 (Dynamics): nuclear resonant scattering (NRS) and inelastic / resonant
+# inelastic X-ray scattering (IXS / RIXS). None of CORA's catalog Methods (all
+# tomography-family today) fit, so every P01 practice is pending, naming the Method
+# it would earn. RIXS reuses the resonant_inelastic_scattering slug SIX left pending
+# and ESRF ID32 shares; IXS reuses the inelastic_x_ray_scattering slug NSLS-II IXS
+# left pending and ESRF ID28 shares. Confirm with DESY staff (TECH-1).
+practices:
+  - {name: P01_nuclear_resonant_scattering_practice, method: inelastic_x_ray_scattering, pending: true, note: "nuclear resonant scattering / nuclear inelastic scattering (Moessbauer-energy-resolution time- and energy-domain) on the high-resolution monochromator stack + avalanche-photodiode detection; no catalog Method fits, reuses the inelastic_x_ray_scattering slug ID28 / NSLS-II IXS share, a further consumer (TECH-1)"}
+  - {name: P01_rixs_practice, method: resonant_inelastic_scattering, pending: true, note: "resonant inelastic X-ray scattering on the EH3 KB-focused spectrometer endstation; reuses the resonant_inelastic_scattering slug SIX / ESRF ID32 share, a further consumer (TECH-1)"}
+
+# Access BC Actors conceptually facility-wide at PETRA III. Pending until the DESY
+# operator and review structure is confirmed.
+actors:
+  - {name: DESY beamline staff, kind: human, pending: true, note: "beamline scientist and operator pool; structure TBD (GOV-1)"}
+  - {name: DESY safety review, kind: human, pending: true, note: "facility safety review body; membership TBD"}
+
+# Agent BC Agents seeded at this deployment. None: the CORA system agents are not
+# wired for a PETRA III deployment, and this is a modelling exercise.
+agents: []
+
+# Supply BC: facility-wide continuously-available resources. Pending in this
+# reverse-engineered model.
+supplies:
+  - {name: PETRA III photon beam, kind: PhotonBeam, pending: true, note: "PETRA III storage-ring beam, shared across the beamlines (SRC-1)"}
+  - {name: Cooling water, kind: CoolingWater, pending: true}
+  - {name: Beamline vacuum, kind: Vacuum, pending: true}
+
+# Safety BC: facility-issued Clearances. DESY personnel safety (PSS / interlock) is
+# carried pending; the permit-leaf signal names are not in the public OnlineXML
+# (which carries beamline devices, not the PSS interlock leaves).
+clearances:
+  - {name: DESY personnel safety system, kind: PSS, pending: true, note: "facility safety-form and permit-leaf names not in public source; confirm with DESY staff (PSS-1)"}
+
+# Caution BC: operator tribal knowledge. None yet for a modelling exercise;
+# beamline-level cautions for P01 live on docs/deployments/p01/.
+cautions: []

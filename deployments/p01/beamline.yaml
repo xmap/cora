@@ -1,0 +1,390 @@
+# P01 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P01 "Dynamics" is the hard X-ray nuclear-resonant-scattering and inelastic /
+# resonant-inelastic-scattering beamline at PETRA III (DESY, Hamburg), 2.5-80 keV.
+# It is bound to the PETRA III Site (deployments/petra-iii/site.yaml), and is CORA's
+# FIRST PETRA III deployment and second Tango / Sardana control floor (after MAX IV).
+#
+# STATUS: reverse-engineered from P01's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p01, branch
+# debian/jessie; the xml/online_haspp01eh{1,2,3}.xml per-endstation Tango device
+# registries). Device logical names and Tango control handles are real, read from
+# that registry; vendor part numbers, serials, energy ranges, crystal cuts, and
+# physical positions are not in it and are open questions. Every value is carried
+# confirm until P01 staff verify it (a registry snapshot is strong evidence, not a
+# CORA-owned fact). The extraction is in research/petra-iii/.
+#
+# WHAT IS NEW: not a device Family. P01's stages bind existing Families
+# (Monochromator, Mirror, Slit, Transfocator, LinearStage, RotaryStage, Camera,
+# Diffractometer, FluxMonitor). The genuine novelty is twofold: (1) the TECHNIQUE
+# (nuclear resonant scattering + IXS / RIXS) earns no catalog Method today, carried
+# pending on the Site reusing the inelastic_x_ray_scattering / resonant_inelastic_
+# scattering slugs (TECH-1); (2) the CONTROL PLANE: PETRA III runs Tango with Sardana
+# as the scan layer, so the seam "EPICS is the floor" generalizes to "Tango / Sardana
+# is the floor" (CTRL-1), the same shape as MAX IV and a sibling of ESRF BLISS.
+#
+# CONTROL HANDLES: the descriptor `pv` field is the opaque control-handle slot (not
+# EPICS-specific); for P01 it carries the Tango device address read from the
+# OnlineXML (domain/family/member, e.g. p01/motor/eh1.02). A logical axis maps to one
+# Tango motor device; a virtual / pseudo motor maps to a vmexecutor or attributemotor
+# device. The OnlineXML lists one device per AXIS; CORA groups axes into Assets at the
+# stage granularity (the monochromator, the mirror, the sample stage), carrying the
+# per-axis Tango handles in the `pv` map. Asset grouping is the human curation step
+# over the machine extraction and is carried confirm (GROUP-1).
+#
+# SCOPE: this cut models all five hutches present in the OnlineXML: two optics hutches
+# (OH1 carrying the DCM and the two horizontal-deflection mirrors, OH2 carrying the
+# secondary slits and the RIXS pre-optics) and three experiment hutches (EH1 nuclear
+# resonant scattering with the high-resolution monochromator stack, EH2 diffraction,
+# EH3 RIXS / KB-focused spectroscopy). Counter / timer / ADC channels and the Sardana
+# MeasurementGroup bookkeeping rows are filtered out by the extractor and not modelled
+# as devices.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p01/questions.md.
+
+beamline:
+  name: P01
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P01"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P01 is an undulator beamline (2.5-80 keV); the OnlineXML exposes undulator gap/taper virtual motors (gap_a, gap_b, taper_a, taper_b on p01/attributemotor) but no insertion-device period or parameters, carried pending (SRC-1)"
+
+# Five enclosures: two optics hutches carrying the shared source-conditioning optics,
+# and three experiment hutches, one per technique branch. DESY PSS permit signals are
+# not in the OnlineXML (which carries beamline devices, not the interlock leaves) (PSS-1).
+enclosures:
+  - name: p01-oh1
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the first optics hutch; not in the OnlineXML (PSS-1)"}
+  - name: p01-oh2
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the second optics hutch; not in the OnlineXML (PSS-1)"}
+  - name: p01-eh1
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for EH1 (nuclear resonant scattering); not in the OnlineXML (PSS-1)"}
+  - name: p01-eh2
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for EH2 (diffraction); not in the OnlineXML (PSS-1)"}
+  - name: p01-eh3
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for EH3 (RIXS); not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the insertion device and the OH1 / OH2 conditioning optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p01-oh1
+  intro: "The P01 undulator source. The OnlineXML exposes the gap and taper as virtual (attributemotor) axes rather than an insertion-device device server; the period and parameters are not published."
+  note: "Undulator gap / taper virtual motors on p01/attributemotor; which physical insertion device and its period / harmonics is SRC-1."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {gap_a: "p01/attributemotor/gap.01", gap_b: "p01/attributemotor/gap.02", taper_a: "p01/attributemotor/taper.01", taper_b: "p01/attributemotor/taper.02"}
+      new: true
+      confirm: true
+      note: "P01 undulator source; gap_a/gap_b and taper_a/taper_b are virtual axes, suggesting a two-section or canted-undulator arrangement, unconfirmed (SRC-1); energy reach 2.5-80 keV per the DESY catalog"
+
+oh1-optics:
+  stage: source
+  enclosure: p01-oh1
+  intro: "The first optics hutch: the double-crystal monochromator and the two horizontal-deflection mirrors that monochromate and steer the beam, plus the front-end definition slits."
+  note: "Handles read from the OnlineXML (p01/dcmmotor, p01/dcmener, p01/motor/oh1.*). The DCM energy / Bragg pseudo-motors are virtual; crystal cut and the mirror coatings / stripes are OPT-1."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: {bragg: "p01/dcmmotor/oh.01", energy: "p01/dcmener/oh.01", lateral: "p01/motor/oh1.08", parallel: "p01/motor/oh1.10", perpendicular: "p01/motor/oh1.09", pitch: "p01/motor/oh1.11", roll: "p01/motor/oh1.02", offset: "p01/attributemotor/fmbexitoffset.01", y: "p01/vmexecutor/dcm_z", y1: "p01/motor/oh1.03", y2: "p01/motor/oh1.04", y3: "p01/motor/oh1.07"}
+      new: true
+      confirm: true
+      note: "double-crystal monochromator (FMB-Oxford-style: dcm_bragg / dcm_ener virtual energy axis, fixed-exit offset, three y jacks); crystal cut (Si 111 / 311) and energy range are OPT-1"
+    - name: Mirror1
+      family: Mirror
+      pv: {pitch: "p01/motor/oh1.17", x: "p01/motor/oh1.18", rotation: "p01/motor/oh1.21", y: "p01/motor/oh1.22"}
+      new: true
+      confirm: true
+      note: "first OH1 deflection / harmonic-rejection mirror (oh1_m1); coating / stripe and incidence angle are OPT-1"
+    - name: Mirror2
+      family: Mirror
+      pv: {pitch: "p01/motor/oh1.25", x: "p01/motor/oh1.26", rotation: "p01/motor/oh1.29", y: "p01/motor/oh1.30"}
+      new: true
+      confirm: true
+      note: "second OH1 deflection mirror (oh1_m2); coating / stripe and incidence angle are OPT-1"
+    - name: FrontEndSlit1
+      family: Slit
+      pv: {center_y: "p01/motor/oh1.12", gap_y: "p01/motor/oh1.05"}
+      new: true
+      confirm: true
+      note: "first front-end definition slit (fe_slit1); vertical center / gap only in the registry (OPT-1)"
+    - name: FrontEndSlit2
+      family: Slit
+      pv: {center_y: "p01/motor/oh1.14", gap_y: "p01/motor/oh1.13", left: "p01/motor/oh1.15", right: "p01/motor/oh1.16"}
+      new: true
+      confirm: true
+      note: "second front-end definition slit (fe_slit2)"
+
+oh2-optics:
+  stage: source
+  enclosure: p01-oh2
+  intro: "The second optics hutch: the secondary defining slits, a diamond beam monitor, and the RIXS pre-optics translation that selects the EH3 spectroscopy branch."
+  note: "Handles read from the OnlineXML (p01/motor/oh2.*, p01/vmexecutor/slit1_*). The diamond monitor and rixs translation roles are OPT-1 / DET-1."
+  devices:
+    - name: SecondarySlit
+      family: Slit
+      pv: {bottom: "p01/motor/oh2.45", top: "p01/motor/oh2.46", left: "p01/motor/oh2.47", right: "p01/motor/oh2.48", center_x: "p01/vmexecutor/slit1_cx", center_y: "p01/vmexecutor/slit1_cy", gap_x: "p01/vmexecutor/slit1_dx", gap_y: "p01/vmexecutor/slit1_dy"}
+      new: true
+      confirm: true
+      note: "secondary defining slit (slit1: four blades + cx/cy/dx/dy virtual center/gap motors on vmexecutor)"
+    - name: DiamondMonitor
+      family: FluxMonitor
+      pv: {y: "p01/motor/oh2.28"}
+      new: true
+      confirm: true
+      note: "diamond beam-position / flux monitor insert (oh2_diam_y); a single y insertion axis, role is a candidate FluxMonitor (OPT-1)"
+    - name: RIXSPreOptic
+      family: LinearStage
+      pv: {x: "p01/motor/oh2.04"}
+      new: true
+      confirm: true
+      note: "RIXS pre-optic translation (rixs_x); selects / positions the EH3 spectroscopy branch optic, role and optic kind are OPT-1"
+
+# ===========================================================================
+# EH1: nuclear resonant scattering (high-resolution monochromator stack)
+# ===========================================================================
+
+eh1-sample:
+  stage: sample
+  enclosure: p01-eh1
+  intro: "The EH1 nuclear-resonant-scattering endstation: the high-resolution monochromator stack that carves the meV / Moessbauer-energy bandwidth, the compound refractive lens focusing, the beam-defining slit, and the sample table."
+  note: "Four high-resolution monochromators (hrm400 / hrm1064 / hrm3d / hrm3w) are the nested / sapphire backscattering analyzers; which is in beam depends on the isotope and resolution (NRS-1). Handles read from p01/motor/eh1.* and the hrm_ener / hrm_ener2 virtual energy axes."
+  devices:
+    - name: HighResMono400
+      family: Monochromator
+      pv: {theta: "p01/motor/eh1.02", tilt: "p01/motor/eh1.01", x: "p01/motor/eh1.04", y: "p01/motor/eh1.03", piezo_theta: "p01/attributemotor/pieh2.49", piezo_tilt: "p01/attributemotor/pieh2.50"}
+      new: true
+      confirm: true
+      note: "high-resolution monochromator, 400 channel-cut (hrm400: theta / tilt / x / y plus piezo fine theta / tilt); the energy-resolution element for one isotope branch (NRS-1)"
+    - name: HighResMono1064
+      family: Monochromator
+      pv: {theta: "p01/motor/eh1.34", tilt: "p01/motor/eh1.33", x: "p01/motor/eh1.36", y: "p01/motor/eh1.35", piezo_theta: "p01/attributemotor/pieh2.51", piezo_tilt: "p01/attributemotor/pieh2.52"}
+      new: true
+      confirm: true
+      note: "high-resolution monochromator, 1064 channel-cut (hrm1064: theta / tilt / x / y plus piezo fine theta / tilt); a second isotope / resolution branch (NRS-1)"
+    - name: HighResMono3D
+      family: Monochromator
+      pv: {theta: "p01/motor/eh1.47", tilt: "p01/motor/eh1.46", x: "p01/motor/eh1.42", y: "p01/motor/eh1.48"}
+      new: true
+      confirm: true
+      note: "high-resolution monochromator, 3-bounce 'd' configuration (hrm3d); selectable nested HRM branch (NRS-1)"
+    - name: HighResMono3W
+      family: Monochromator
+      pv: {theta: "p01/motor/eh1.44", tilt: "p01/motor/eh1.43", x: "p01/motor/eh1.41", y: "p01/motor/eh1.45"}
+      new: true
+      confirm: true
+      note: "high-resolution monochromator, 3-bounce 'w' configuration (hrm3w); selectable nested HRM branch (NRS-1)"
+    - name: HighResMonoEnergy
+      family: PseudoAxis
+      pv: {hrm_ener: "p01/vmexecutor/hrm_ener", hrm_ener2: "p01/vmexecutor/hrm_ener2"}
+      new: true
+      confirm: true
+      note: "virtual energy axes coupling the HRM theta motions (hrm_ener / hrm_ener2 on vmexecutor); the scanned coordinate for the NRS energy spectrum (NRS-1)"
+    - name: CompoundRefractiveLens
+      family: Transfocator
+      pv: {rotation: "p01/motor/eh1.17", theta: "p01/motor/eh1.18", x: "p01/motor/eh1.19", y: "p01/motor/eh1.20"}
+      new: true
+      confirm: true
+      note: "compound refractive lens focusing assembly (crl2: rot / th / x / y); lens count / material and whether it is a transfocator stack are OPT-1"
+    - name: BeamDefiningSlit
+      family: Slit
+      pv: {bottom: "p01/motor/eh1.05", top: "p01/motor/eh1.06", left: "p01/motor/eh1.07", right: "p01/motor/eh1.08", center_x: "p01/vmexecutor/jjslit_eh1_cx", center_y: "p01/vmexecutor/jjslit_eh1_cy", gap_x: "p01/vmexecutor/jjslit_eh1_dx", gap_y: "p01/vmexecutor/jjslit_eh1_dy"}
+      new: true
+      confirm: true
+      note: "EH1 beam-defining JJ slit (slit2: four blades + cx/cy/dx/dy virtual motors)"
+    - name: BeamPositionMonitor
+      family: FluxMonitor
+      pv: {x: "p01/motor/eh1.21", y: "p01/motor/eh1.22"}
+      new: true
+      confirm: true
+      note: "EH1 beam-position monitor stage (bpm2); a positioning stage for a BPM insert, role is a candidate FluxMonitor (DET-1)"
+    - name: IonChamber
+      family: FluxMonitor
+      pv: {x: "p01/motor/eh1.23", y: "p01/motor/eh1.24"}
+      new: true
+      confirm: true
+      note: "EH1 ion-chamber positioning stage (ic2); flux normalization monitor (DET-1)"
+    - name: SampleTable
+      family: Table
+      pv: {x: "p01/motor/eh1.31", y: "p01/motor/eh1.32"}
+      new: true
+      confirm: true
+      note: "EH1 sample / instrument table (tab1)"
+
+# ===========================================================================
+# EH2: diffraction (two-circle diffractometer + sample + detector)
+# ===========================================================================
+
+eh2-sample:
+  stage: sample
+  enclosure: p01-eh2
+  intro: "The EH2 diffraction endstation: the theta / two-theta diffractometer, the sample stage, and the beam-defining slits."
+  note: "Handles read from p01/motor/eh2.*. The diffractometer geometry (number of circles) beyond the th / tth axes in the registry is DIFF-1."
+  devices:
+    - name: Goniometer
+      family: Goniometer           # catalog Family; the sample-orientation circle, would compose a Diffractometer Assembly if a detector arm is confirmed (DIFF-1)
+      pv: {theta: "p01/motor/eh2.49", two_theta: "p01/motor/eh2.37"}
+      new: true
+      confirm: true
+      note: "EH2 sample-orientation goniometer (diff_th / diff_tth); the registry exposes theta and two-theta only. Modeled as a Goniometer Asset, not the composed Diffractometer Assembly, until the full circle count and a detector arm are confirmed (DIFF-1)"
+    - name: SampleStage
+      family: LinearStage
+      pv: {x: "p01/motor/eh2.34", y: "p01/motor/eh2.33", tilt: "p01/motor/eh2.35"}
+      new: true
+      confirm: true
+      note: "EH2 sample positioning / centring stage (sam: x / y / tilt)"
+    - name: DefiningSlit
+      family: Slit
+      pv: {bottom: "p01/motor/eh2.01", top: "p01/motor/eh2.02", left: "p01/motor/eh2.03", right: "p01/motor/eh2.04", center_x: "p01/vmexecutor/jjslit_eh2_cx", center_y: "p01/vmexecutor/jjslit_eh2_cy", gap_x: "p01/vmexecutor/jjslit_eh2_dx", gap_y: "p01/vmexecutor/jjslit_eh2_dy"}
+      new: true
+      confirm: true
+      note: "EH2 beam-defining JJ slit (slit3)"
+    - name: DetectorSlit
+      family: Slit
+      pv: {bottom: "p01/motor/eh2.27", top: "p01/motor/eh2.28", left: "p01/motor/eh2.26", right: "p01/motor/eh2.25", center_x: "p01/vmexecutor/hslit_eh2_cx", center_y: "p01/vmexecutor/hslit_eh2_cy", gap_x: "p01/vmexecutor/hslit_eh2_dx", gap_y: "p01/vmexecutor/hslit_eh2_dy"}
+      new: true
+      confirm: true
+      note: "EH2 detector / receiving slit (dslit)"
+    - name: DetectorTable
+      family: Table
+      pv: {x: "p01/motor/eh2.39", y: "p01/motor/eh2.40"}
+      new: true
+      confirm: true
+      note: "EH2 detector table (tab2)"
+
+eh2-detector:
+  stage: detection
+  enclosure: p01-eh2
+  intro: "The EH2 detector positioning stage. The OnlineXML carries the detector carriage axes; the detector device itself (an avalanche photodiode or area detector) is not a motor row and is DET-1."
+  note: "Handles read from p01/motor/eh2.* (det_x / det_y). The operative detector model is DET-1."
+  devices:
+    - name: DetectorStage
+      family: LinearStage
+      pv: {x: "p01/motor/eh2.29", y: "p01/motor/eh2.30"}
+      new: true
+      confirm: true
+      note: "EH2 detector positioning stage (det: x / y); the detector device (APD / area detector) is not in the motor registry (DET-1)"
+
+# ===========================================================================
+# EH3: RIXS / KB-focused spectroscopy (KB mirror pair + sample + detectors)
+# ===========================================================================
+
+eh3-sample:
+  stage: sample
+  enclosure: p01-eh3
+  intro: "The EH3 RIXS endstation: the Kirkpatrick-Baez mirror pair that focuses the beam to the sample, the sample stage, and the beam-defining slit. This is the resonant-inelastic-scattering branch."
+  note: "Handles read from p01/motor/eh3.*. The KB pair (kb3h horizontal, kb3v vertical) each carry bender (bu / bd), theta, and a second theta; the bend radii and focal sizes are OPT-1."
+  devices:
+    - name: KBMirrorHorizontal
+      family: Mirror
+      pv: {bend_upstream: "p01/motor/eh3.01", bend_downstream: "p01/motor/eh3.02", theta: "p01/motor/eh3.03", theta2: "p01/motor/eh3.04"}
+      new: true
+      confirm: true
+      note: "horizontal-focusing KB mirror (kb3h: upstream / downstream benders + theta / theta2); bend radius and focal size are OPT-1"
+    - name: KBMirrorVertical
+      family: Mirror
+      pv: {bend_upstream: "p01/motor/eh3.05", bend_downstream: "p01/motor/eh3.06", theta: "p01/motor/eh3.07", theta2: "p01/motor/eh3.08"}
+      new: true
+      confirm: true
+      note: "vertical-focusing KB mirror (kb3v: upstream / downstream benders + theta / theta2); bend radius and focal size are OPT-1"
+    - name: SampleStage
+      family: LinearStage
+      pv: {x: "p01/motor/eh3.31", y: "p01/motor/eh3.30", b: "p01/motor/eh3.28", rotation: "p01/motor/eh3.32", tilt: "p01/motor/eh3.29"}
+      new: true
+      confirm: true
+      note: "EH3 sample stage (samp: x / y / b / rot / tilt); the RIXS sample positioning and rotation (SAMPLE-1)"
+    - name: DetectorSlit
+      family: Slit
+      pv: {bottom: "p01/motor/eh3.47", top: "p01/motor/eh3.48", left: "p01/motor/eh3.46", right: "p01/motor/eh3.45", center_x: "p01/vmexecutor/hslit_eh3_cx", center_y: "p01/vmexecutor/hslit_eh3_cy", gap_x: "p01/vmexecutor/hslit_eh3_dx", gap_y: "p01/vmexecutor/hslit_eh3_dy"}
+      new: true
+      confirm: true
+      note: "EH3 detector / receiving slit (dslit)"
+    - name: InstrumentTable
+      family: Table
+      pv: {x: "p01/vmexecutor/eh3_tab2_x", x1: "p01/motor/eh3.37", x2: "p01/motor/eh3.38", y: "p01/vmexecutor/eh3_tab2_y", y1: "p01/motor/eh3.34", y2: "p01/motor/eh3.35", y3: "p01/motor/eh3.36"}
+      new: true
+      confirm: true
+      note: "EH3 instrument / spectrometer table (tab4: virtual x / y over x1/x2 and y1/y2/y3 jacks)"
+
+eh3-detector:
+  stage: detection
+  enclosure: p01-eh3
+  intro: "The EH3 detector positioning stages: the main RIXS detector carriage and a secondary detector arm. The detector devices themselves are not motor rows (DET-1)."
+  note: "Handles read from p01/motor/eh3.* (det / det16). The operative RIXS detector model is DET-1."
+  devices:
+    - name: DetectorStage
+      family: LinearStage
+      pv: {theta: "p01/motor/eh3.44", x: "p01/motor/eh3.42", y: "p01/motor/eh3.43"}
+      new: true
+      confirm: true
+      note: "EH3 main detector positioning stage (det: theta / x / y); the detector device is not in the motor registry (DET-1)"
+    - name: SecondaryDetectorStage
+      family: LinearStage
+      pv: {theta: "p01/motor/eh3.25", x: "p01/motor/eh3.26", y: "p01/motor/eh3.27"}
+      new: true
+      confirm: true
+      note: "EH3 secondary detector arm stage (det16: theta / x / y); role / detector is DET-1"
+
+# Cross-cutting control. P01 runs Tango with Sardana as the scan layer; this is
+# CORA's second Tango / Sardana deployment (after MAX IV) and a sibling of ESRF BLISS.
+controls:
+  intro: >
+    P01 runs on the PETRA III control system, which is Tango with Sardana as the
+    scan / motion SCADA layer, NOT EPICS. This is CORA's second Tango / Sardana
+    control floor (after MAX IV) and a sibling of the ESRF BLISS / Tango floor: the
+    seam model that today reads "EPICS is the floor" generalizes here to "Tango /
+    Sardana is the floor". In this stack a motion axis is a Tango motor device
+    addressed by domain/family/member (p01/motor/<hutch>.<n>), a virtual / coupled
+    axis is a vmexecutor or attributemotor device, and a scan is a Sardana macro run
+    by the MacroServer over a Pool of controllers, with the MeasurementGroup defining
+    the acquired channels. The handles in this descriptor are read from P01's public
+    OnlineXML registry and carried confirm (CTRL-1). The NRS / RIXS acquisition (the
+    high-resolution-monochromator energy scan or the KB-focused spectrometer scan,
+    coupled to the detector readout) runs as a Sardana macro; that orchestration is
+    the seam CORA's edge would conduct over its ControlPort, driving through or
+    replacing the Sardana macro per routine (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper motor controllers (Tango module oms58); the dominant P01 motor controller, fleet-wide the most common PETRA III motor class (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (module motor_tango) backing the dcm and virtual-axis devices (CTRL-1)"
+    - name: VirtualMotorExecutors
+      family: MotionController
+      protocol: Tango_vmexecutor
+      new: true
+      confirm: true
+      note: "Sardana virtual-motor executors (vmexecutor) computing the coupled energy / slit-center-gap pseudo axes (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P01 run needs present before it
+    can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
