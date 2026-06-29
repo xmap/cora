@@ -1,0 +1,1128 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: 4-ID
+  facility: aps
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 4-ID-A
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+- name: 4-ID-B
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+- name: 4-ID-D
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+- name: 4-ID-G
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+- name: 4-ID-H
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+- name: 4-ID-K
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: labjack_4idb
+    family: CustomLabJackT7
+    pv: '4idbSoft:LJ:'
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''CustomLabJackT7''; needs a CORA Family'
+    labels:
+    - 4idb
+    - baseline
+    source_class: id4_common.devices.labjacks.CustomLabJackT7
+  - name: bfilter
+    family: APSFilter
+    pv: '4idbSoft:filter:'
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''APSFilter''; needs a CORA Family'
+    labels:
+    - 4idb
+    - filter
+    - baseline
+    source_class: id4_common.devices.filters_device.APSFilter
+  - name: bkb
+    family: Mirror
+    pv:
+      rot: 4idbSoft:m15
+      x: 4idbSoft:m16
+    enclosure: 4-ID-B
+    new: true
+    confirm: false
+    labels:
+    - 4idb
+    - optics
+    - baseline
+    source_class: id4_common.devices.kb_mirrors.KBMirror
+  - name: emag
+    family: Magnet2T
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'no prefix and no resolvable axes; family is the ophyd class name ''Magnet2T'';
+      needs a CORA Family; sx: FormattedComponent suffix resolved at runtime; sy:
+      FormattedComponent suffix resolved at runtime; srot: FormattedComponent suffix
+      resolved at runtime; mx: FormattedComponent suffix resolved at runtime; my:
+      FormattedComponent suffix resolved at runtime; mrot: FormattedComponent suffix
+      resolved at runtime; kepco: FormattedComponent suffix resolved at runtime'
+    labels:
+    - 4idb
+    - magnet
+    - baseline
+    source_class: id4_common.devices.electromagnet.Magnet2T
+  - name: preamp_4idbI0
+    family: LocalPreAmp
+    pv: 4idbSoft:A3
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''LocalPreAmp''; needs a CORA Family'
+    labels:
+    - 4idb
+    - preamp
+    - baseline
+    source_class: id4_common.devices.preamps.LocalPreAmp
+  - name: preamp_4idbI
+    family: LocalPreAmp
+    pv: 4idbSoft:A4
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''LocalPreAmp''; needs a CORA Family'
+    labels:
+    - 4idb
+    - preamp
+    - baseline
+    source_class: id4_common.devices.preamps.LocalPreAmp
+  - name: aps_xbpm
+    family: MyXBPM
+    pv: S04
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MyXBPM''; needs a CORA Family; enclosure unresolved
+      from prefix or labels'
+    labels:
+    - core
+    - source
+    - baseline
+    source_class: id4_common.devices.aps_xbpm.MyXBPM
+  - name: undulators
+    family: InsertionDevice
+    pv: 'S04ID:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      enclosure unresolved from prefix or labels'
+    labels:
+    - core
+    - source
+    - energy device
+    - baseline
+    source_class: id4_common.devices.aps_undulator.PolarUndulatorPair
+  - name: status_aps
+    family: StatusAPS
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'StatusAPS';
+      needs a CORA Family; enclosure unresolved from prefix or labels
+    labels:
+    - core
+    - source
+    - status
+    - baseline
+    source_class: id4_common.devices.aps_status.StatusAPS
+  - name: status_polar
+    family: Status4ID
+    pv: 'S04ID-PSS:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''Status4ID''; needs a CORA Family; enclosure
+      unresolved from prefix or labels'
+    labels:
+    - core
+    - status
+    - baseline
+    source_class: id4_common.devices.polar_status.Status4ID
+  - name: qxscan_setup
+    family: QxscanParams
+    new: true
+    confirm: 'no prefix and no resolvable axes; family is the ophyd class name ''QxscanParams'';
+      needs a CORA Family; enclosure unresolved from prefix or labels; pre_edge: non-literal
+      or absent component suffix; edge: non-literal or absent component suffix; post_edge:
+      non-literal or absent component suffix; energy_list: non-literal or absent component
+      suffix; factor_list: non-literal or absent component suffix'
+    labels:
+    - core
+    - qxscan
+    - energy device
+    - baseline
+    source_class: id4_common.devices.qxscan_device.QxscanParams
+  - name: wbslt
+    family: Slit
+    pv:
+      diag: 4idVDCM:m10
+      hor: 4idVDCM:m9
+      pitch: 4idVDCM:m11
+      yaw: 4idVDCM:m12
+    new: true
+    confirm: 'enclosure unresolved from prefix or labels; horizontal: FormattedComponent
+      suffix resolved at runtime; diagonal: FormattedComponent suffix resolved at
+      runtime; pitch: FormattedComponent suffix resolved at runtime; yaw: FormattedComponent
+      suffix resolved at runtime; vcen: FormattedComponent suffix resolved at runtime;
+      vsize: FormattedComponent suffix resolved at runtime; hcen: FormattedComponent
+      suffix resolved at runtime; hsize: FormattedComponent suffix resolved at runtime'
+    labels:
+    - core
+    - slit
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: id4_common.devices.wb_slit.SlitDevice
+  - name: hhl_mirror
+    family: Mirror
+    pv:
+      curvature: 4idHHLM:pm3
+      ds_bend: 4idHHLM:m5
+      elipticity: 4idHHLM:pm4
+      pitch: 4idHHLM:pm2
+      us_bend: 4idHHLM:m4
+      x: 4idHHLM:pm1
+      x1: 4idHHLM:m2
+      x2: 4idHHLM:m3
+      y: 4idHHLM:m1
+    new: true
+    confirm: 'enclosure unresolved from prefix or labels; fine_pitch: FormattedComponent
+      suffix resolved at runtime'
+    labels:
+    - core
+    - mirror
+    - baseline
+    source_class: id4_common.devices.hhl_mirror.HHLMirror
+  - name: mono_feedback
+    family: MonoFeedback
+    pv: '4idbSoft:'
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MonoFeedback''; needs a CORA Family'
+    labels:
+    - core
+    - monochromator
+    - feedback
+    - baseline
+    source_class: id4_common.devices.mono_feedback.MonoFeedback
+  - name: mono
+    family: Monochromator
+    pv:
+      chi2: 4idVDCM:m5
+      crystal_select: 4idVDCM:m2
+      th: 4idVDCM:m1
+      thf2: 4idVDCM:m4
+      y2: 4idVDCM:m3
+    new: true
+    confirm: 'enclosure unresolved from prefix or labels; energy: pseudo axis (computed,
+      not a physical motor); energy: non-literal or absent component suffix; pzt_thf2:
+      FormattedComponent suffix resolved at runtime; pzt_chi2: FormattedComponent
+      suffix resolved at runtime'
+    labels:
+    - core
+    - monochromator
+    - energy device
+    - baseline
+    source_class: id4_common.devices.monochromator.MonoDevice
+  - name: pr1
+    family: PRDevice
+    pv:
+      th: 4idam4
+      x: 4idam1
+      y: 4idam2
+    enclosure: 4-ID-A
+    new: true
+    confirm: 'family is the ophyd class name ''PRDevice''; needs a CORA Family; pzt:
+      FormattedComponent suffix resolved at runtime; select_pr: FormattedComponent
+      suffix resolved at runtime'
+    labels:
+    - core
+    - phase retarder
+    - energy device
+    - track_energy
+    - baseline
+    source_class: id4_common.devices.phaseplates.PRDevice
+  - name: pr2
+    family: PRDevice
+    pv:
+      th: 4idam9
+      x: 4idam6
+      y: 4idam7
+    enclosure: 4-ID-A
+    new: true
+    confirm: 'family is the ophyd class name ''PRDevice''; needs a CORA Family; pzt:
+      FormattedComponent suffix resolved at runtime; select_pr: FormattedComponent
+      suffix resolved at runtime'
+    labels:
+    - core
+    - phase retarder
+    - energy device
+    - track_energy
+    - baseline
+    source_class: id4_common.devices.phaseplates.PRDevice
+  - name: pr3
+    family: PRDeviceBase
+    pv:
+      th: 4idam12
+      x: 4idam10
+      y: 4idam11
+    enclosure: 4-ID-A
+    new: true
+    confirm: 'family is the ophyd class name ''PRDeviceBase''; needs a CORA Family;
+      energy: pseudo axis (computed, not a physical motor); energy: non-literal or
+      absent component suffix; th: FormattedComponent suffix resolved at runtime;
+      x: FormattedComponent suffix resolved at runtime; y: FormattedComponent suffix
+      resolved at runtime; d_spacing: non-literal or absent component suffix; offset_degrees:
+      non-literal or absent component suffix; motor_switch: non-literal or absent
+      component suffix; tracking: non-literal or absent component suffix'
+    labels:
+    - core
+    - phase retarder
+    - energy device
+    - track_energy
+    - baseline
+    source_class: id4_common.devices.phaseplates.PRDeviceBase
+  - name: ashutter
+    family: Shutter
+    new: true
+    confirm: no prefix and no resolvable axes; enclosure unresolved from prefix or
+      labels
+    labels:
+    - core
+    - shutter
+    - baseline
+    role_hints:
+    - Controller
+    source_class: id4_common.devices.shutters.PolarShutter
+  - name: bshutter
+    family: Shutter
+    new: true
+    confirm: no prefix and no resolvable axes; enclosure unresolved from prefix or
+      labels; ophyd class 'ApsPssShutterWithStatus' not found in devices/*.py
+    labels:
+    - core
+    - shutter
+    - baseline
+    role_hints:
+    - Controller
+    source_class: apstools.devices.ApsPssShutterWithStatus
+  - name: energy
+    family: EnergySignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EnergySignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels
+    labels:
+    - core
+    - energy device
+    - baseline
+    source_class: id4_common.devices.energy_device.EnergySignal
+  - name: t_mirror
+    family: Mirror
+    pv: '4idbToro:'
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm'
+    labels:
+    - core
+    - optics
+    - mirror
+    - baseline
+    source_class: id4_common.devices.mirror_toroidal.ToroidalMirror
+  - name: diamond_window
+    family: WindowStages
+    pv:
+      x: 4idbSoft:m1
+      y: 4idbSoft:m2
+    enclosure: 4-ID-B
+    new: true
+    confirm: family is the ophyd class name 'WindowStages'; needs a CORA Family
+    labels:
+    - core
+    - baseline
+    source_class: id4_common.devices.diamond_window_table.WindowStages
+  - name: labjack_4ida
+    family: CustomLabJackT7
+    pv: '4idaSoft:LJ:'
+    enclosure: 4-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''CustomLabJackT7''; needs a CORA Family'
+    labels:
+    - core
+    - baseline
+    source_class: id4_common.devices.labjacks.CustomLabJackT7
+  - name: srs810
+    family: LockinDevice
+    pv: '4idbSoft:SRS810:1:'
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''LockinDevice''; needs a CORA Family'
+    labels:
+    - core
+    - baseline
+    source_class: id4_common.devices.srs810.LockinDevice
+  - name: monoslt
+    family: Slit
+    pv:
+      bot: 4idVDCM:m13
+      inb: 4idVDCM:m15
+      out: 4idVDCM:m16
+      top: 4idVDCM:m14
+    new: true
+    confirm: 'enclosure unresolved from prefix or labels; horizontal: FormattedComponent
+      suffix resolved at runtime; diagonal: FormattedComponent suffix resolved at
+      runtime; pitch: FormattedComponent suffix resolved at runtime; yaw: FormattedComponent
+      suffix resolved at runtime; vcen: FormattedComponent suffix resolved at runtime;
+      vsize: FormattedComponent suffix resolved at runtime; hcen: FormattedComponent
+      suffix resolved at runtime; hsize: FormattedComponent suffix resolved at runtime'
+    labels:
+    - core
+    - slit
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: id4_common.devices.jj_slits.SlitDevice
+  - name: bslt
+    family: Slit
+    pv:
+      bot: 4idbSoft:m10
+      inb: 4idbSoft:m12
+      out: 4idbSoft:m13
+      top: 4idbSoft:m11
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'horizontal: FormattedComponent suffix resolved at runtime; diagonal:
+      FormattedComponent suffix resolved at runtime; pitch: FormattedComponent suffix
+      resolved at runtime; yaw: FormattedComponent suffix resolved at runtime; vcen:
+      FormattedComponent suffix resolved at runtime; vsize: FormattedComponent suffix
+      resolved at runtime; hcen: FormattedComponent suffix resolved at runtime; hsize:
+      FormattedComponent suffix resolved at runtime'
+    labels:
+    - 4idb
+    - slit
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: id4_common.devices.jj_slits.SlitDevice
+  - name: gslt
+    family: Slit
+    pv:
+      bot: 4idgSoft:m43
+      inb: 4idgSoft:m45
+      out: 4idgSoft:m46
+      top: 4idgSoft:m44
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'horizontal: FormattedComponent suffix resolved at runtime; diagonal:
+      FormattedComponent suffix resolved at runtime; pitch: FormattedComponent suffix
+      resolved at runtime; yaw: FormattedComponent suffix resolved at runtime; vcen:
+      FormattedComponent suffix resolved at runtime; vsize: FormattedComponent suffix
+      resolved at runtime; hcen: FormattedComponent suffix resolved at runtime; hsize:
+      FormattedComponent suffix resolved at runtime'
+    labels:
+    - 4idg
+    - slit
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: id4_common.devices.jj_slits.SlitDevice
+  - name: hslt
+    family: Slit
+    pv:
+      bot: 4idhSoft:m10
+      inb: 4idhSoft:m13
+      out: 4idhSoft:m12
+      top: 4idhSoft:m11
+    enclosure: 4-ID-H
+    new: true
+    confirm: 'horizontal: FormattedComponent suffix resolved at runtime; diagonal:
+      FormattedComponent suffix resolved at runtime; pitch: FormattedComponent suffix
+      resolved at runtime; yaw: FormattedComponent suffix resolved at runtime; vcen:
+      FormattedComponent suffix resolved at runtime; vsize: FormattedComponent suffix
+      resolved at runtime; hcen: FormattedComponent suffix resolved at runtime; hsize:
+      FormattedComponent suffix resolved at runtime'
+    labels:
+    - 4idh
+    - slit
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: id4_common.devices.jj_slits.SlitDevice
+  - name: dm_workflow
+    family: DM_WorkflowConnector
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'DM_WorkflowConnector';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'DM_WorkflowConnector' not found in devices/*.py
+    labels:
+    - core
+    - dm
+    - baseline
+    source_class: apstools.devices.DM_WorkflowConnector
+  - name: dm_experiment
+    family: Signal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'Signal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'Signal' not found in devices/*.py
+    labels:
+    - core
+    - dm
+    - baseline
+    source_class: ophyd.Signal
+  - name: midtable_4idb
+    family: Table4idb
+    pv:
+      x_ds: 4idbSoft:m8
+      x_us: 4idbSoft:m5
+      y_ds_in: 4idbSoft:m7
+      y_ds_out: 4idbSoft:m6
+      y_us: 4idbSoft:m4
+    enclosure: 4-ID-B
+    new: true
+    confirm: family is the ophyd class name 'Table4idb'; needs a CORA Family
+    labels:
+    - 4idb
+    - baseline
+    source_class: id4_common.devices.table_4idb.Table4idb
+  - name: bmag
+    family: Magnet2T
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'no prefix and no resolvable axes; family is the ophyd class name ''Magnet2T'';
+      needs a CORA Family; sx: FormattedComponent suffix resolved at runtime; sy:
+      FormattedComponent suffix resolved at runtime; srot: FormattedComponent suffix
+      resolved at runtime; mx: FormattedComponent suffix resolved at runtime; my:
+      FormattedComponent suffix resolved at runtime; mrot: FormattedComponent suffix
+      resolved at runtime; kepco: FormattedComponent suffix resolved at runtime'
+    labels:
+    - 4idb
+    - magnet
+    - baseline
+    source_class: id4_common.devices.electromagnet.Magnet2T
+  - name: pol
+    family: PolAnalyzer
+    pv:
+      th: 4idbSoft:m9
+      y: 4idbSoft:m17
+    enclosure: 4-ID-B
+    new: true
+    confirm: family is the ophyd class name 'PolAnalyzer'; needs a CORA Family
+    labels:
+    - 4idb
+    - baseline
+    source_class: id4_common.devices.polarimeter.PolAnalyzer
+  - name: gxbpm
+    family: XBPM
+    pv:
+      x: 4idgSoft:m48
+      y: 4idgSoft:m47
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'family is the ophyd class name ''XBPM''; needs a CORA Family; x: FormattedComponent
+      suffix resolved at runtime; y: FormattedComponent suffix resolved at runtime'
+    labels:
+    - 4idg
+    - baseline
+    source_class: id4_common.devices.xbpm.XBPM
+  - name: hxbpm
+    family: XBPM
+    pv:
+      x: 4idhSoft:m6
+      y: 4idhSoft:m5
+    enclosure: 4-ID-H
+    new: true
+    confirm: 'family is the ophyd class name ''XBPM''; needs a CORA Family; x: FormattedComponent
+      suffix resolved at runtime; y: FormattedComponent suffix resolved at runtime'
+    labels:
+    - 4idh
+    - baseline
+    source_class: id4_common.devices.xbpm.XBPM
+  - name: crl
+    family: CRLClass
+    pv: '4idPyCRL:CRL4ID:'
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''CRLClass''; needs a CORA Family; ophyd class
+      ''CRLClass'' not found in devices/*.py'
+    labels:
+    - 4idg
+    - 4idh
+    - optics
+    - track_energy
+    - baseline
+    source_class: id4_common.devices.crl_device.CRLClass
+  - name: gfilter
+    family: APSFilter
+    pv: '4idPyFilter:FL1:'
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''APSFilter''; needs a CORA Family'
+    labels:
+    - 4idg
+    - filter
+    - baseline
+    source_class: id4_common.devices.filters_device_avs.APSFilter
+  - name: hfilter
+    family: APSFilter
+    pv: '4idPyFilter:FL2:'
+    enclosure: 4-ID-H
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''APSFilter''; needs a CORA Family'
+    labels:
+    - 4idh
+    - filter
+    - baseline
+    source_class: id4_common.devices.filters_device_avs.APSFilter
+  - name: gkb
+    family: GKBDevice
+    pv: '4idgKB:'
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''GKBDevice''; needs a CORA Family; ophyd class
+      ''GKBDevice'' not found in devices/*.py'
+    labels:
+    - 4idg
+    - optics
+    - baseline
+    - kb
+    source_class: id4_common.devices.kb_generic.GKBDevice
+  - name: temp_336_4idg
+    family: LakeShore336Device
+    pv: '4idgSoft:LS336:TC1:'
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''LakeShore336Device''; needs a CORA Family;
+      ophyd class ''LakeShore336Device'' not found in devices/*.py'
+    labels:
+    - 4idg
+    - temperature
+    - baseline
+    source_class: apstools.devices.LakeShore336Device
+  - name: temp_340_4idg
+    family: LakeShore340Device
+    pv: '4idgSoftX:LS340:TC1:'
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''LakeShore340Device''; needs a CORA Family;
+      ophyd class ''LakeShore340Device'' not found in devices/*.py'
+    labels:
+    - 4idg
+    - temperature
+    - baseline
+    source_class: apstools.devices.LakeShore340Device
+  - name: huber_euler
+    family: CradleDiffractometer
+    pv:
+      x: 4idgSoft:m40
+      y: 4idgSoft:m41
+      z: 4idgSoft:m42
+    enclosure: 4-ID-G
+    new: true
+    confirm: family is the ophyd class name 'CradleDiffractometer'; needs a CORA Family
+    labels:
+    - 4idg
+    - diffractometer
+    - baseline
+    source_class: id4_common.devices.polar_diffractometer_hklpy2.CradleDiffractometer
+  - name: huber_hp
+    family: HPDiffractometer
+    pv:
+      basex: 4idgSoft:m7
+      basey: 4idgSoft:SMBaseY
+      basey_motor: 4idgSoft:m9
+      basez: 4idgSoft:SMBaseZ
+      basez_motor: 4idgSoft:m8
+      chi: 4idgSoft:m5
+      phi: 4idgSoft:m6
+      sample_tilt: 4idgSoft:m11
+      x: 4idgSoft:m12
+      y: 4idgSoft:m14
+      z: 4idgSoft:m13
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'family is the ophyd class name ''HPDiffractometer''; needs a CORA Family;
+      nanox: FormattedComponent suffix resolved at runtime; nanoy: FormattedComponent
+      suffix resolved at runtime; nanoz: FormattedComponent suffix resolved at runtime;
+      xeryon: FormattedComponent suffix resolved at runtime'
+    labels:
+    - 4idg
+    - diffractometer
+    - baseline
+    source_class: id4_common.devices.polar_diffractometer_hklpy2.HPDiffractometer
+  - name: huber_euler_psi
+    family: CradleDiffractometerPSI
+    pv: '4idgSoft:'
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''CradleDiffractometerPSI''; needs a CORA Family;
+      ophyd class ''CradleDiffractometerPSI'' not found in devices/*.py'
+    labels:
+    - 4idg
+    - diffractometer
+    - baseline
+    source_class: id4_common.devices.polar_diffractometer_hklpy2.CradleDiffractometerPSI
+  - name: huber_hp_psi
+    family: HPDiffractometerPSI
+    pv: '4idgSoft:'
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''HPDiffractometerPSI''; needs a CORA Family;
+      ophyd class ''HPDiffractometerPSI'' not found in devices/*.py'
+    labels:
+    - 4idg
+    - diffractometer
+    - baseline
+    source_class: id4_common.devices.polar_diffractometer_hklpy2.HPDiffractometerPSI
+  - name: i0g
+    family: I04idg
+    pv:
+      x: 4idgSoft:m52
+      y: 4idgSoft:m53
+    enclosure: 4-ID-G
+    new: true
+    confirm: family is the ophyd class name 'I04idg'; needs a CORA Family
+    labels:
+    - 4idg
+    - baseline
+    source_class: id4_common.devices.gh_i0_motors.I04idg
+  - name: ringlight
+    family: Ringlight
+    pv: 'RINGLIGHT:'
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''Ringlight''; needs a CORA Family; state: FormattedComponent
+      suffix resolved at runtime'
+    labels:
+    - 4idg
+    - baseline
+    source_class: id4_common.devices.ringlight.Ringlight
+  - name: piezo_jena
+    family: PiezoJena
+    pv: 4idgSoftX:asyn_MOXA_G:2
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''PiezoJena''; needs a CORA Family'
+    labels:
+    - 4idg
+    - baseline
+    source_class: id4_common.devices.piezo_jena.PiezoJena
+  - name: table_4idh
+    family: Table4idh
+    pv:
+      x_ds: 4idhSoft:m2
+      x_us: 4idhSoft:m1
+      y_ds: 4idhSoft:m4
+      y_us: 4idhSoft:m3
+    enclosure: 4-ID-H
+    new: true
+    confirm: family is the ophyd class name 'Table4idh'; needs a CORA Family
+    labels:
+    - 4idh
+    - table
+    - baseline
+    source_class: id4_common.devices.table_4idh.Table4idh
+  - name: magnet911
+    family: Magnet911
+    pv: '4idhSoft:'
+    enclosure: 4-ID-H
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''Magnet911''; needs a CORA Family'
+    labels:
+    - 4idh
+    - magnet
+    - baseline
+    source_class: id4_common.devices.magnet_911.Magnet911
+  - name: hkb
+    family: HKBDevice
+    pv: '4idhKB:'
+    enclosure: 4-ID-H
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''HKBDevice''; needs a CORA Family; ophyd class
+      ''HKBDevice'' not found in devices/*.py'
+    labels:
+    - 4idh
+    - optics
+    - baseline
+    - kb
+    source_class: id4_common.devices.kb_generic.HKBDevice
+  - name: i0h
+    family: I04idh
+    pv:
+      x: 4idhSoft:m20
+      y: 4idhSoft:m21
+    enclosure: 4-ID-H
+    new: true
+    confirm: family is the ophyd class name 'I04idh'; needs a CORA Family
+    labels:
+    - 4idh
+    - baseline
+    source_class: id4_common.devices.gh_i0_motors.I04idh
+  - name: laser
+    family: VentusLaser
+    pv: '4idhSoft:LQE1:'
+    enclosure: 4-ID-H
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''VentusLaser''; needs a CORA Family'
+    labels:
+    - 4idh
+    - baseline
+    source_class: id4_common.devices.ventus_laser.VentusLaser
+  - name: preamp_4idgI0
+    family: LocalPreAmp
+    pv: 4idgSoftX:A1
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''LocalPreAmp''; needs a CORA Family'
+    labels:
+    - 4idg
+    - preamp
+    - baseline
+    source_class: id4_common.devices.preamps.LocalPreAmp
+  - name: preamp_4idgI
+    family: LocalPreAmp
+    pv: 4idgSoftX:A2
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''LocalPreAmp''; needs a CORA Family'
+    labels:
+    - 4idg
+    - preamp
+    - baseline
+    source_class: id4_common.devices.preamps.LocalPreAmp
+  - name: preamp_4idhI0
+    family: LocalPreAmp
+    pv: 4idhSoft:A1
+    enclosure: 4-ID-H
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''LocalPreAmp''; needs a CORA Family'
+    labels:
+    - 4idh
+    - preamp
+    - baseline
+    source_class: id4_common.devices.preamps.LocalPreAmp
+  - name: preamp_4idhI1
+    family: LocalPreAmp
+    pv: 4idhSoft:A2
+    enclosure: 4-ID-H
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''LocalPreAmp''; needs a CORA Family'
+    labels:
+    - 4idh
+    - preamp
+    - baseline
+    source_class: id4_common.devices.preamps.LocalPreAmp
+  - name: preamp_4idhI2
+    family: LocalPreAmp
+    pv: 4idhSoft:A3
+    enclosure: 4-ID-H
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''LocalPreAmp''; needs a CORA Family'
+    labels:
+    - 4idh
+    - preamp
+    - baseline
+    source_class: id4_common.devices.preamps.LocalPreAmp
+  - name: flagmotor_hhl
+    family: EpicsMotor
+    pv: 4idVDCM:m6
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - flag
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: flagmotor_mono
+    family: EpicsMotor
+    pv: 4idVDCM:m7
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - flag
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: flagmotor_toro
+    family: EpicsMotor
+    pv: 4idbSoft:m3
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; ophyd class
+      ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - motor
+    - flag
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: chopper
+    family: ChopperDevice
+    pv: '4idChopper:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''ChopperDevice''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; translation: FormattedComponent suffix resolved
+      at runtime'
+    labels:
+    - baseline
+    source_class: id4_common.devices.chopper_device.ChopperDevice
+  - name: comp
+    family: GEController
+    pv: '4idPace:PC1:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''GEController''; needs a CORA Family; enclosure
+      unresolved from prefix or labels'
+    labels:
+    - high pressure
+    - baseline
+    source_class: id4_common.devices.ge_controller.GEController
+  - name: decomp
+    family: GEController
+    pv: '4idPace:PC2:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''GEController''; needs a CORA Family; enclosure
+      unresolved from prefix or labels'
+    labels:
+    - high pressure
+    - baseline
+    source_class: id4_common.devices.ge_controller.GEController
+  - name: gmag
+    family: KepcoDevice
+    pv: '4idkepco:'
+    enclosure: 4-ID-K
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''KepcoDevice''; needs a CORA Family'
+    labels:
+    - baseline
+    source_class: id4_common.devices.magnet_kepco_4idg.KepcoDevice
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: btetramm
+    family: TetrAMMRO
+    pv: '4idbSoft:TetrAMM:'
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''TetrAMMRO''; needs a CORA Family'
+    labels:
+    - detector
+    - xbpm
+    - baseline
+    - 4idb
+    role_hints:
+    - Detector
+    source_class: id4_common.devices.quadems.TetrAMMRO
+  - name: scaler1
+    family: GenericProbe
+    pv: 4idCTR8_1:scaler1
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      preset_monitor: non-literal or absent component suffix'
+    labels:
+    - detector
+    - scaler
+    - 4idb
+    - 4idg
+    - 4idh
+    role_hints:
+    - Detector
+    source_class: id4_common.devices.scaler.LocalScalerCH
+  - name: scaler2
+    family: GenericProbe
+    pv: 4idCTR8_1:scaler2
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      preset_monitor: non-literal or absent component suffix'
+    labels:
+    - detector
+    - scaler
+    - 4idb
+    - 4idg
+    - 4idh
+    role_hints:
+    - Detector
+    source_class: id4_common.devices.scaler.LocalScalerCH
+  - name: ctr8
+    family: CustomMeasCompCtr
+    pv: '4idCTR8_1:'
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''CustomMeasCompCtr''; needs a CORA Family'
+    labels:
+    - detector
+    - 4idb
+    - 4idg
+    - 4idh
+    - baseline
+    role_hints:
+    - Detector
+    source_class: id4_common.devices.usb_ctr8.CustomMeasCompCtr
+  - name: gsydor
+    family: SydorEMRO
+    pv: '4idgSydor:T4U_BPM:'
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''SydorEMRO''; needs a CORA Family; conf: non-literal
+      or absent component suffix'
+    labels:
+    - detector
+    - xbpm
+    - baseline
+    - 4idg
+    role_hints:
+    - Detector
+    source_class: id4_common.devices.quadems.SydorEMRO
+  - name: hsydor
+    family: SydorEMRO
+    pv: '4idhSydor:T4U_BPM:'
+    enclosure: 4-ID-H
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''SydorEMRO''; needs a CORA Family; conf: non-literal
+      or absent component suffix'
+    labels:
+    - detector
+    - xbpm
+    - baseline
+    - 4idh
+    role_hints:
+    - Detector
+    source_class: id4_common.devices.quadems.SydorEMRO
+  - name: eiger
+    family: Eiger1MDetector
+    pv: '4idEiger:'
+    enclosure: 4-ID-G
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''Eiger1MDetector''; needs a CORA Family'
+    labels:
+    - 4idg
+    - detector
+    role_hints:
+    - Detector
+    source_class: id4_common.devices.ad_eiger1M.Eiger1MDetector
+  - name: flagcam_hhl
+    family: VimbaDetector
+    pv: '4idaPostMirrBeam:'
+    enclosure: 4-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''VimbaDetector''; needs a CORA Family'
+    labels:
+    - camera
+    - detector
+    - flag
+    role_hints:
+    - Detector
+    source_class: id4_common.devices.ad_vimba.VimbaDetector
+  - name: flagcam_mono
+    family: VimbaDetector
+    pv: '4idaPostMonoBeam:'
+    enclosure: 4-ID-A
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''VimbaDetector''; needs a CORA Family'
+    labels:
+    - camera
+    - detector
+    - flag
+    role_hints:
+    - Detector
+    source_class: id4_common.devices.ad_vimba.VimbaDetector
+  - name: flagcam_toro
+    family: VimbaDetector
+    pv: '4idbPostToroBeam:'
+    enclosure: 4-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''VimbaDetector''; needs a CORA Family'
+    labels:
+    - camera
+    - detector
+    - flag
+    role_hints:
+    - Detector
+    source_class: id4_common.devices.ad_vimba.VimbaDetector
+  - name: flagcam_xeye
+    family: VimbaDetector
+    pv: '4idXrayEye:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''VimbaDetector''; needs a CORA Family; enclosure
+      unresolved from prefix or labels'
+    labels:
+    - camera
+    - detector
+    - flag
+    role_hints:
+    - Detector
+    source_class: id4_common.devices.ad_vimba.VimbaDetector
+  - name: sgz_vortex
+    family: SGZVortex
+    pv: '4iddMZ0:'
+    enclosure: 4-ID-D
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''SGZVortex''; needs a CORA Family; preset_monitor:
+      non-literal or absent component suffix; clock_freq: non-literal or absent component
+      suffix'
+    labels:
+    - detector
+    role_hints:
+    - Detector
+    source_class: id4_common.devices.softgluezynq_vortex.SGZVortex

@@ -1,0 +1,11 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: python-nxstools-extras-p62
+  facility: petra-iii
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures: []

@@ -1,0 +1,446 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: usaxs-bits
+  facility: aps
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures: []
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: auto_collect
+    family: AutoCollectDataDevice
+    pv: usxLAX:AutoCollection
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''AutoCollectDataDevice''; needs a CORA Family;
+      enclosure unresolved from prefix or labels'
+    source_class: usaxs.devices.autocollect.AutoCollectDataDevice
+  - name: bss
+    family: BssDevice
+    pv: 'usxTerms:bss:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''BssDevice''; needs a CORA Family; enclosure
+      unresolved from prefix or labels'
+    labels:
+    - baseline
+    source_class: usaxs.devices.bss.BssDevice
+  - name: diagnostics
+    family: DiagnosticsParameters
+    new: true
+    confirm: 'no prefix and no resolvable axes; family is the ophyd class name ''DiagnosticsParameters'';
+      needs a CORA Family; enclosure unresolved from prefix or labels; PSS: non-literal
+      or absent component suffix'
+    labels:
+    - baseline
+    source_class: usaxs.devices.diagnostics.DiagnosticsParameters
+  - name: terms
+    family: GeneralParameters
+    new: true
+    confirm: 'no prefix and no resolvable axes; family is the ophyd class name ''GeneralParameters'';
+      needs a CORA Family; enclosure unresolved from prefix or labels; USAXS: non-literal
+      or absent component suffix; SBUSAXS: non-literal or absent component suffix;
+      SAXS: non-literal or absent component suffix; SAXS_WAXS: non-literal or absent
+      component suffix; WAXS: non-literal or absent component suffix; Radiography:
+      non-literal or absent component suffix; Imaging: non-literal or absent component
+      suffix; OutOfBeam: non-literal or absent component suffix; FlyScan: non-literal
+      or absent component suffix; preUSAXStune: non-literal or absent component suffix;
+      HeaterProcess: non-literal or absent component suffix'
+    labels:
+    - baseline
+    source_class: usaxs.devices.general_terms.GeneralParameters
+  - name: lax_autosave
+    family: Autosave
+    pv: 'usxLAX:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''Autosave''; needs a CORA Family; enclosure
+      unresolved from prefix or labels'
+    source_class: usaxs.devices.autosave.Autosave
+  - name: Filter_AlTi
+    family: FilterBank
+    pv: '12idPyFilter:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''FilterBank''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; fPos: FormattedComponent suffix resolved at
+      runtime; fPos_RBV: FormattedComponent suffix resolved at runtime; attenuation:
+      FormattedComponent suffix resolved at runtime; transmission: FormattedComponent
+      suffix resolved at runtime'
+    labels:
+    - baseline
+    source_class: usaxs.devices.filters.FilterBank
+  - name: linkam_tc1
+    family: My_Linkam_T96_Device
+    pv: 'usxLINKAM:tc1:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''My_Linkam_T96_Device''; needs a CORA Family;
+      enclosure unresolved from prefix or labels'
+    source_class: usaxs.devices.linkam.My_Linkam_T96_Device
+  - name: monochromator
+    family: Monochromator
+    new: true
+    confirm: no prefix and no resolvable axes; enclosure unresolved from prefix or
+      labels
+    labels:
+    - baseline
+    source_class: usaxs.devices.monochromator.MyMonochromator
+  - name: usaxs_q_calc
+    family: SwaitRecord
+    pv: usxLAX:USAXS:Q
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''SwaitRecord''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''SwaitRecord'' not found in devices/*.py'
+    source_class: apstools.synApps.swait.SwaitRecord
+  - name: userCalcs_lax
+    family: UserCalcsDevice
+    pv: 'usxLAX:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''UserCalcsDevice''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''UserCalcsDevice'' not found
+      in devices/*.py'
+    source_class: apstools.synApps.swait.UserCalcsDevice
+  - name: ar_start
+    family: EpicsSignal
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignal';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignal' not found in devices/*.py
+    source_class: ophyd.EpicsSignal
+  - name: usaxs_CheckBeamStandard
+    family: EpicsSignalRO
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignalRO';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignalRO' not found in devices/*.py
+    source_class: ophyd.EpicsSignalRO
+  - name: scaler2_I000_counts
+    family: EpicsSignalRO
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignalRO';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignalRO' not found in devices/*.py
+    source_class: ophyd.EpicsSignalRO
+  - name: scaler2_I000_cps
+    family: EpicsSignalRO
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignalRO';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignalRO' not found in devices/*.py
+    source_class: ophyd.EpicsSignalRO
+  - name: upd_valid
+    family: EpicsSignalRO
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'EpicsSignalRO';
+      needs a CORA Family; enclosure unresolved from prefix or labels; ophyd class
+      'EpicsSignalRO' not found in devices/*.py
+    source_class: ophyd.EpicsSignalRO
+  - name: LAXm1
+    family: EpicsMotor
+    pv: usxLAX:m58:c0:m1
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - LAXm1
+    source_class: ophyd.EpicsMotor
+  - name: LAXm2
+    family: EpicsMotor
+    pv: usxLAX:m58:c0:m2
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - LAXm2
+    source_class: ophyd.EpicsMotor
+  - name: LAXm3
+    family: EpicsMotor
+    pv: usxLAX:m58:c0:m3
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - LAXm3
+    source_class: ophyd.EpicsMotor
+  - name: LAXm4
+    family: EpicsMotor
+    pv: usxLAX:m58:c0:m4
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - LAXm4
+    source_class: ophyd.EpicsMotor
+  - name: LAXm5
+    family: EpicsMotor
+    pv: usxLAX:m58:c0:m5
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - LAXtcam
+    - baseline
+    source_class: ophyd.EpicsMotor
+  - name: LAXm6
+    family: EpicsMotor
+    pv: usxLAX:m58:c0:m6
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - LAXgsy
+    source_class: ophyd.EpicsMotor
+  - name: LAXm7
+    family: EpicsMotor
+    pv: usxLAX:m58:c0:m7
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - LAXgsx
+    source_class: ophyd.EpicsMotor
+  - name: LAXm8
+    family: EpicsMotor
+    pv: usxLAX:m58:c0:m8
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - LAXm8
+    source_class: ophyd.EpicsMotor
+  - name: waxsx
+    family: EpicsMotor
+    pv: usxAERO:m3
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - wasxs
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: waxs2x
+    family: EpicsMotor
+    pv: usxAERO:m7
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''EpicsMotor''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''EpicsMotor'' not found in devices/*.py'
+    labels:
+    - waxs2x
+    - motor
+    - baseline
+    role_hints:
+    - Positioner
+    source_class: ophyd.EpicsMotor
+  - name: ptc10
+    family: USAXS_PTC10
+    pv: 'usxTEMP:tc1:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''USAXS_PTC10''; needs a CORA Family; enclosure
+      unresolved from prefix or labels'
+    source_class: usaxs.devices.ptc10_controller.USAXS_PTC10
+  - name: sample_data
+    family: SampleDataDevice
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'SampleDataDevice';
+      needs a CORA Family; enclosure unresolved from prefix or labels
+    labels:
+    - baseline
+    source_class: usaxs.devices.sample_data.SampleDataDevice
+  - name: pi_c867
+    family: SampleRotator
+    pv: usxPI:c867:c0:m1
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''SampleRotator''; needs a CORA Family; enclosure
+      unresolved from prefix or labels'
+    source_class: usaxs.devices.sample_rotator.SampleRotator
+  - name: struck
+    family: Struck3820
+    pv: 'usxLAX:3820:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''Struck3820''; needs a CORA Family; enclosure
+      unresolved from prefix or labels; ophyd class ''Struck3820'' not found in devices/*.py'
+    source_class: apstools.devices.Struck3820
+  - name: guard_slit
+    family: Slit
+    pv:
+      x: usxLAX:m58:c0:m7
+      y: usxLAX:m58:c0:m6
+    new: true
+    confirm: enclosure unresolved from prefix or labels
+    labels:
+    - baseline
+    source_class: usaxs.devices.slits.GSlitDevice
+  - name: usaxs_slit
+    family: Slit
+    pv:
+      h_size: usxLAX:m58:c1:m8
+      v_size: usxLAX:m58:c1:m7
+      x: usxLAX:m58:c1:m6
+      y: usxLAX:m58:c1:m5
+    new: true
+    confirm: enclosure unresolved from prefix or labels
+    labels:
+    - baseline
+    source_class: usaxs.devices.slits.UsaxsSlitDevice
+  - name: flyscan_trajectories
+    family: Trajectories
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'Trajectories';
+      needs a CORA Family; enclosure unresolved from prefix or labels
+    source_class: usaxs.devices.trajectories.Trajectories
+  - name: user_data
+    family: UserDataDevice
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'UserDataDevice';
+      needs a CORA Family; enclosure unresolved from prefix or labels
+    labels:
+    - baseline
+    source_class: usaxs.devices.user_data.UserDataDevice
+  - name: white_beam_ready
+    family: WhiteBeamReadyCalc
+    pv: usxLAX:userCalc9
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''WhiteBeamReadyCalc''; needs a CORA Family;
+      enclosure unresolved from prefix or labels; available: non-literal or absent
+      component suffix'
+    source_class: usaxs.devices.white_beam_ready_calc.WhiteBeamReadyCalc
+  - name: gslit_stage
+    family: Slit
+    pv:
+      x: usxLAX:m58:c0:m7
+      y: usxLAX:m58:c0:m6
+    new: true
+    confirm: enclosure unresolved from prefix or labels
+    source_class: usaxs.devices.stages.GuardSlitsStageDevice
+  - name: s_stage
+    family: UsaxsSampleStageDevice
+    pv:
+      x: usxAERO:m8
+      y: usxAERO:m9
+    new: true
+    confirm: family is the ophyd class name 'UsaxsSampleStageDevice'; needs a CORA
+      Family; enclosure unresolved from prefix or labels
+    source_class: usaxs.devices.stages.UsaxsSampleStageDevice
+  - name: d_stage
+    family: UsaxsDetectorStageDevice
+    new: true
+    confirm: no prefix and no resolvable axes; family is the ophyd class name 'UsaxsDetectorStageDevice';
+      needs a CORA Family; enclosure unresolved from prefix or labels
+    source_class: usaxs.devices.stages.UsaxsDetectorStageDevice
+  - name: m_stage
+    family: UsaxsCollimatorStageDevice
+    pv:
+      x: usxAERO:m10
+      y: usxAERO:m11
+    new: true
+    confirm: family is the ophyd class name 'UsaxsCollimatorStageDevice'; needs a
+      CORA Family; enclosure unresolved from prefix or labels
+    source_class: usaxs.devices.stages.UsaxsCollimatorStageDevice
+  - name: a_stage
+    family: UsaxsAnalyzerStageDevice
+    pv:
+      x: usxAERO:m4
+      y: usxAERO:m5
+    new: true
+    confirm: family is the ophyd class name 'UsaxsAnalyzerStageDevice'; needs a CORA
+      Family; enclosure unresolved from prefix or labels
+    source_class: usaxs.devices.stages.UsaxsAnalyzerStageDevice
+  - name: saxs_stage
+    family: SaxsDetectorStageDevice
+    pv:
+      x: usxAERO:m13
+      y: usxAERO:m15
+      z: usxAERO:m14
+    new: true
+    confirm: family is the ophyd class name 'SaxsDetectorStageDevice'; needs a CORA
+      Family; enclosure unresolved from prefix or labels
+    source_class: usaxs.devices.stages.SaxsDetectorStageDevice
+  - name: usaxs_flyscan
+    family: UsaxsFlyScanDevice
+    new: true
+    confirm: 'no prefix and no resolvable axes; family is the ophyd class name ''UsaxsFlyScanDevice'';
+      needs a CORA Family; enclosure unresolved from prefix or labels; flying: non-literal
+      or absent component suffix'
+    source_class: usaxs.devices.usaxs_fly_scan.UsaxsFlyScanDevice
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: blackfly_det
+    family: MyPointGreyDetector
+    pv: 'usxFLY3:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MyPointGreyDetector''; needs a CORA Family;
+      enclosure unresolved from prefix or labels'
+    labels:
+    - camera
+    - area_detector
+    role_hints:
+    - Detector
+    source_class: usaxs.devices.blackfly_module.MyPointGreyDetector
+  - name: blackfly_optical
+    family: MyPointGreyDetectorJPEG
+    pv: 'usxFLY2:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MyPointGreyDetectorJPEG''; needs a CORA Family;
+      enclosure unresolved from prefix or labels'
+    labels:
+    - camera
+    - area_detector
+    role_hints:
+    - Detector
+    source_class: usaxs.devices.blackfly_module.MyPointGreyDetectorJPEG
+  - name: saxs_det
+    family: MyPilatusDetector
+    pv: 'usaxs_pilatus3:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MyPilatusDetector''; needs a CORA Family; enclosure
+      unresolved from prefix or labels'
+    labels:
+    - camera
+    - area_detector
+    role_hints:
+    - Detector
+    source_class: usaxs.devices.pilatus_module.MyPilatusDetector
+  - name: waxs_det
+    family: MyEigerDetector
+    pv: 'usaxs_eiger1:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MyEigerDetector''; needs a CORA Family; enclosure
+      unresolved from prefix or labels'
+    labels:
+    - camera
+    - area_detector
+    role_hints:
+    - Detector
+    source_class: usaxs.devices.pilatus_module.MyEigerDetector

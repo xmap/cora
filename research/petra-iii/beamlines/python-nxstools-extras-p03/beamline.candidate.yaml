@@ -1,0 +1,2580 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: python-nxstools-extras-p03
+  facility: petra-iii
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: P02-OH1
+  facility_code: petra-iii
+  confirm: enclosure inferred from PV prefix or station label
+- name: P03
+  facility_code: petra-iii
+  confirm: enclosure inferred from PV prefix or station label
+- name: P03-NANO
+  facility_code: petra-iii
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: gap
+    family: motor_tango
+    pv: p03/attributemotor/gap
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: mnchrmtr
+    family: motor_tango
+    pv: p03/lomenergy/exp.01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: lom1pitch
+    family: Monochromator
+    pv: p03/lom/exp.01
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: lom
+  - name: lom1roll
+    family: Monochromator
+    pv: p03/lom/exp.02
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: lom
+  - name: lom2pitch
+    family: Monochromator
+    pv: p03/lom/exp.03
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: lom
+  - name: lom2lat
+    family: Monochromator
+    pv: p03/lom/exp.04
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: lom
+  - name: lom2hub
+    family: Monochromator
+    pv: p03/lom/exp.05
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: lom
+  - name: lom1hub
+    family: Monochromator
+    pv: p03/lom/exp.06
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: lom
+  - name: lom2lin
+    family: Monochromator
+    pv: p03/lom/exp.07
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: lom
+  - name: lomscrn
+    family: Monochromator
+    pv: p03/lom/exp.08
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: lom
+  - name: lomtblhght
+    family: Monochromator
+    pv: p03/lom/exp.09
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: lom
+  - name: lomtblpitch
+    family: Monochromator
+    pv: p03/lom/exp.10
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: lom
+  - name: lomtblrll
+    family: Monochromator
+    pv: p03/lom/exp.11
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: lom
+  - name: slt1vgap
+    family: spk
+    pv: p02/slt/exp.07
+    enclosure: P02-OH1
+    new: true
+    confirm: 'family is the Tango module ''spk''; linear-vs-rotary and the CORA Family
+      need a human; Tango host ''haspp02oh1:10000''; endstation to enclosure is a
+      guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: spk
+  - name: slt1voffs
+    family: spk
+    pv: p02/slt/exp.08
+    enclosure: P02-OH1
+    new: true
+    confirm: 'family is the Tango module ''spk''; linear-vs-rotary and the CORA Family
+      need a human; Tango host ''haspp02oh1:10000''; endstation to enclosure is a
+      guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: spk
+  - name: slt2left
+    family: spk
+    pv: p03/slt/exp.03
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''spk''; linear-vs-rotary and the CORA Family
+      need a human; Tango host ''haspp03:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: spk
+  - name: slt2right
+    family: spk
+    pv: p03/slt/exp.04
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''spk''; linear-vs-rotary and the CORA Family
+      need a human; Tango host ''haspp03:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: spk
+  - name: slt2vgap
+    family: spk
+    pv: p03/slt/exp.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''spk''; linear-vs-rotary and the CORA Family
+      need a human; Tango host ''haspp03:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: spk
+  - name: slt2offs
+    family: spk
+    pv: p03/slt/exp.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''spk''; linear-vs-rotary and the CORA Family
+      need a human; Tango host ''haspp03:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: spk
+  - name: m1pitch
+    family: spk
+    pv: p03/spk/exp.07
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''spk''; linear-vs-rotary and the CORA Family
+      need a human; Tango host ''haspp03:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: spk
+  - name: m1transx
+    family: spk
+    pv: p03/spk/exp.08
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''spk''; linear-vs-rotary and the CORA Family
+      need a human; Tango host ''haspp03:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: spk
+  - name: m1table
+    family: spk
+    pv: p03/spk/exp.09
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''spk''; linear-vs-rotary and the CORA Family
+      need a human; Tango host ''haspp03:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: spk
+  - name: m2pitch
+    family: spk
+    pv: p03/spk/exp.10
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''spk''; linear-vs-rotary and the CORA Family
+      need a human; Tango host ''haspp03:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: spk
+  - name: m2transx
+    family: spk
+    pv: p03/spk/exp.11
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''spk''; linear-vs-rotary and the CORA Family
+      need a human; Tango host ''haspp03:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: spk
+  - name: m2table
+    family: spk
+    pv: p03/spk/exp.12
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''spk''; linear-vs-rotary and the CORA Family
+      need a human; Tango host ''haspp03:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: spk
+  - name: expmi_mot01
+    family: oms58
+    pv: p03/motor/expmi.01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot02
+    family: oms58
+    pv: p03/motor/expmi.02
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot03
+    family: oms58
+    pv: p03/motor/expmi.03
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot04
+    family: oms58
+    pv: p03/motor/expmi.04
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot05
+    family: oms58
+    pv: p03/motor/expmi.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot06
+    family: oms58
+    pv: p03/motor/expmi.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot07
+    family: oms58
+    pv: p03/motor/expmi.07
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot08
+    family: oms58
+    pv: p03/motor/expmi.08
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot09
+    family: oms58
+    pv: p03/motor/expmi.09
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot10
+    family: oms58
+    pv: p03/motor/expmi.10
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot11
+    family: oms58
+    pv: p03/motor/expmi.11
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot12
+    family: oms58
+    pv: p03/motor/expmi.12
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot13
+    family: oms58
+    pv: p03/motor/expmi.13
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot14
+    family: oms58
+    pv: p03/motor/expmi.14
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot15
+    family: oms58
+    pv: p03/motor/expmi.15
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot16
+    family: oms58
+    pv: p03/motor/expmi.16
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot17
+    family: oms58
+    pv: p03/motor/expmi.17
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot18
+    family: oms58
+    pv: p03/motor/expmi.18
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot19
+    family: oms58
+    pv: p03/motor/expmi.19
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot20
+    family: oms58
+    pv: p03/motor/expmi.20
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot21
+    family: oms58
+    pv: p03/motor/expmi.21
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot22
+    family: oms58
+    pv: p03/motor/expmi.22
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot23
+    family: oms58
+    pv: p03/motor/expmi.23
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot24
+    family: oms58
+    pv: p03/motor/expmi.24
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot25
+    family: oms58
+    pv: p03/motor/expmi.25
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot26
+    family: oms58
+    pv: p03/motor/expmi.26
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot27
+    family: oms58
+    pv: p03/motor/expmi.27
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot28
+    family: oms58
+    pv: p03/motor/expmi.28
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot29
+    family: oms58
+    pv: p03/motor/expmi.29
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot30
+    family: oms58
+    pv: p03/motor/expmi.30
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot31
+    family: oms58
+    pv: p03/motor/expmi.31
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot32
+    family: oms58
+    pv: p03/motor/expmi.32
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot33
+    family: oms58
+    pv: p03/motor/expmi.33
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot34
+    family: oms58
+    pv: p03/motor/expmi.34
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot35
+    family: oms58
+    pv: p03/motor/expmi.35
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot36
+    family: oms58
+    pv: p03/motor/expmi.36
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot37
+    family: oms58
+    pv: p03/motor/expmi.37
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot38
+    family: oms58
+    pv: p03/motor/expmi.38
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot39
+    family: oms58
+    pv: p03/motor/expmi.39
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot40
+    family: oms58
+    pv: p03/motor/expmi.40
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot41
+    family: oms58
+    pv: p03/motor/expmi.41
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot42
+    family: oms58
+    pv: p03/motor/expmi.42
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot43
+    family: oms58
+    pv: p03/motor/expmi.43
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot44
+    family: oms58
+    pv: p03/motor/expmi.44
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot45
+    family: oms58
+    pv: p03/motor/expmi.45
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot46
+    family: oms58
+    pv: p03/motor/expmi.46
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot47
+    family: oms58
+    pv: p03/motor/expmi.47
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot48
+    family: oms58
+    pv: p03/motor/expmi.48
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot49
+    family: oms58
+    pv: p03/motor/expmi.49
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot50
+    family: oms58
+    pv: p03/motor/expmi.50
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot51
+    family: oms58
+    pv: p03/motor/expmi.51
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot52
+    family: oms58
+    pv: p03/motor/expmi.52
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot53
+    family: oms58
+    pv: p03/motor/expmi.53
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot54
+    family: oms58
+    pv: p03/motor/expmi.54
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot55
+    family: oms58
+    pv: p03/motor/expmi.55
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot56
+    family: oms58
+    pv: p03/motor/expmi.56
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot57
+    family: oms58
+    pv: p03/motor/expmi.57
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot58
+    family: oms58
+    pv: p03/motor/expmi.58
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot59
+    family: oms58
+    pv: p03/motor/expmi.59
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot60
+    family: oms58
+    pv: p03/motor/expmi.60
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot61
+    family: oms58
+    pv: p03/motor/expmi.61
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot62
+    family: oms58
+    pv: p03/motor/expmi.62
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot63
+    family: oms58
+    pv: p03/motor/expmi.63
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: expmi_mot64
+    family: oms58
+    pv: p03/motor/expmi.64
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: hexa3_motX
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa3.01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_motY
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa3.02
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_motZ
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa3.03
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_motU
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa3.04
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_motV
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa3.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_motW
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa3.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_motX
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa4.01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_motY
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa4.02
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_motZ
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa4.03
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_motU
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa4.04
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_motV
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa4.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_motW
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa4.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa6_motX
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa6.01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa6_motY
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa6.02
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa6_motZ
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa6.03
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa6_motU
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa6.04
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa6_motV
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa6.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa6_motW
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa6.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa5_motX
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa5.01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa5_motY
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa5.02
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa5_motZ
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa5.03
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa5_motU
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa5.04
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa5_motV
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa5.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa5_motW
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa5.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G1Top
+    family: motor_tango
+    pv: p03/galildmcslit/slit3.01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G1Bottom
+    family: motor_tango
+    pv: p03/galildmcslit/slit3.02
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G1Left
+    family: motor_tango
+    pv: p03/galildmcslit/slit3.03
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G1Right
+    family: motor_tango
+    pv: p03/galildmcslit/slit3.04
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G1Cx
+    family: motor_tango
+    pv: p03/galildmcslit/slit3.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G1Cy
+    family: motor_tango
+    pv: p03/galildmcslit/slit3.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G1Dx
+    family: motor_tango
+    pv: p03/galildmcslit/slit3.07
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G1Dy
+    family: motor_tango
+    pv: p03/galildmcslit/slit3.08
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G2Top
+    family: motor_tango
+    pv: p03/galildmcslit/slit4.01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G2Bottom
+    family: motor_tango
+    pv: p03/galildmcslit/slit4.02
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G2Left
+    family: motor_tango
+    pv: p03/galildmcslit/slit4.03
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G2Right
+    family: motor_tango
+    pv: p03/galildmcslit/slit4.04
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G2Cx
+    family: motor_tango
+    pv: p03/galildmcslit/slit4.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G2Cy
+    family: motor_tango
+    pv: p03/galildmcslit/slit4.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G2Dx
+    family: motor_tango
+    pv: p03/galildmcslit/slit4.07
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G2Dy
+    family: motor_tango
+    pv: p03/galildmcslit/slit4.08
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G3Top
+    family: motor_tango
+    pv: p03/galildmcslit/slit5.01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G3Bottom
+    family: motor_tango
+    pv: p03/galildmcslit/slit5.02
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G3Left
+    family: motor_tango
+    pv: p03/galildmcslit/slit5.03
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G3Right
+    family: motor_tango
+    pv: p03/galildmcslit/slit5.04
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G3Cx
+    family: motor_tango
+    pv: p03/galildmcslit/slit5.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G3Cy
+    family: motor_tango
+    pv: p03/galildmcslit/slit5.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G3Dx
+    family: motor_tango
+    pv: p03/galildmcslit/slit5.07
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: G3Dy
+    family: motor_tango
+    pv: p03/galildmcslit/slit5.08
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: quadbpm_eh1
+    family: module_tango
+    pv: p03/i404/exp.01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''module_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: module_tango
+  - name: quadbpm_oh1
+    family: module_tango
+    pv: p03/i404/mono.01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''module_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: module_tango
+  - name: eurotherm
+    family: module_tango
+    pv: p03/eurotherm2604/01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''module_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: module_tango
+  - name: pscameravhr
+    family: module_tango
+    pv: p03/pscameravhr/nano.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''module_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: module_tango
+  - name: vm_dac01
+    family: motor_tango
+    pv: p03nano/vmexecutor/p03nano.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: mot01
+    family: oms58
+    pv: p03/motor/p03nano.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot02
+    family: oms58
+    pv: p03/motor/p03nano.02
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot03
+    family: oms58
+    pv: p03/motor/p03nano.03
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot04
+    family: oms58
+    pv: p03/motor/p03nano.04
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot05
+    family: oms58
+    pv: p03/motor/p03nano.05
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot06
+    family: oms58
+    pv: p03/motor/p03nano.06
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot07
+    family: oms58
+    pv: p03/motor/p03nano.07
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot08
+    family: oms58
+    pv: p03/motor/p03nano.08
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot10
+    family: oms58
+    pv: p03/motor/p03nano.10
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot11
+    family: oms58
+    pv: p03/motor/p03nano.11
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot12
+    family: oms58
+    pv: p03/motor/p03nano.12
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot13
+    family: oms58
+    pv: p03/motor/p03nano.13
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot14
+    family: oms58
+    pv: p03/motor/p03nano.14
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot15
+    family: oms58
+    pv: p03/motor/p03nano.15
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot16
+    family: oms58
+    pv: p03/motor/p03nano.16
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot17
+    family: oms58
+    pv: p03/motor/p03nano.17
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot18
+    family: oms58
+    pv: p03/motor/p03nano.18
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot19
+    family: oms58
+    pv: p03/motor/p03nano.19
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot20
+    family: oms58
+    pv: p03/motor/p03nano.20
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot21
+    family: oms58
+    pv: p03/motor/p03nano.21
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot22
+    family: oms58
+    pv: p03/motor/p03nano.22
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot23
+    family: oms58
+    pv: p03/motor/p03nano.23
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot24
+    family: oms58
+    pv: p03/motor/p03nano.24
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot25
+    family: oms58
+    pv: p03/motor/p03nano.25
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot26
+    family: oms58
+    pv: p03/motor/p03nano.26
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot27
+    family: oms58
+    pv: p03/motor/p03nano.27
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot28
+    family: oms58
+    pv: p03/motor/p03nano.28
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot29
+    family: oms58
+    pv: p03/motor/p03nano.29
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot30
+    family: oms58
+    pv: p03/motor/p03nano.30
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot31
+    family: oms58
+    pv: p03/motor/p03nano.31
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot32
+    family: oms58
+    pv: p03/motor/p03nano.32
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot33
+    family: oms58
+    pv: p03/motor/p03nano.33
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot34
+    family: oms58
+    pv: p03/motor/p03nano.34
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot35
+    family: oms58
+    pv: p03/motor/p03nano.35
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot36
+    family: oms58
+    pv: p03/motor/p03nano.36
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot37
+    family: oms58
+    pv: p03/motor/p03nano.37
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot38
+    family: oms58
+    pv: p03/motor/p03nano.38
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot39
+    family: oms58
+    pv: p03/motor/p03nano.39
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: mot40
+    family: oms58
+    pv: p03/motor/p03nano.40
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: oms58
+  - name: S4_X
+    family: oms58
+    pv: p03/motor/expmi.04
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: S4_Y
+    family: oms58
+    pv: p03/motor/expmi.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: S4_Z
+    family: oms58
+    pv: p03/motor/expmi.16
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: CRL1_Z
+    family: oms58
+    pv: p03/motor/expmi.03
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''oms58''; linear-vs-rotary and the CORA
+      Family need a human; Tango host ''haspp03:10000''; endstation to enclosure is
+      a guess; axis granularity: one OnlineXML <device> is one axis or channel; Asset
+      grouping needs a human'
+    source_class: oms58
+  - name: hexa2conf
+    family: module_tango
+    pv: p03/hexapodconfig/hexa2.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''module_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: module_tango
+  - name: hexa2_motX
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa2.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa2_motY
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa2.02
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa2_motZ
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa2.03
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa2_motU
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa2.04
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa2_motV
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa2.05
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa2_motW
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa2.06
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_motX
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_motY
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano.02
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_motZ
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano.03
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_motRX
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano.04
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_motRY
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano.05
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_motRZ
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano.06
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_pivr
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano.07
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_pivs
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano.08
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa3_pivt
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano.09
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_motX
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano_01.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_motY
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano_01.02
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_motZ
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano_01.03
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_motRX
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano_01.04
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_motRY
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano_01.05
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_motRZ
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano_01.06
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_pivr
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano_01.07
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_pivs
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano_01.08
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: hexa4_pivt
+    family: motor_tango
+    pv: p03/smarpodmotor/p03nano_01.09
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: crl1hex_x
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa4.01
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: crl1hex_y
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa4.02
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: crl1hex_z
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa4.03
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: crl1hex_u
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa4.04
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: crl1hex_v
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa4.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: crl1hex_w
+    family: motor_tango
+    pv: p03/hexapodmotor/hexa4.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: cube1_motX
+    family: motor_tango
+    pv: p03/hexapodmotor/cube1.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: cube1_motZ
+    family: motor_tango
+    pv: p03/hexapodmotor/cube1.02
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: ROT_X
+    family: motor_tango
+    pv: p03/smaractmotor/p03nano.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: ROT_PHI
+    family: motor_tango
+    pv: p03/smaractmotor/p03nano.02
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S6_CX
+    family: motor_tango
+    pv: p03nano/galildmcslit/slit.05
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S6_CY
+    family: motor_tango
+    pv: p03nano/galildmcslit/slit.06
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S6_DX
+    family: motor_tango
+    pv: p03nano/galildmcslit/slit.07
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S6_DY
+    family: motor_tango
+    pv: p03nano/galildmcslit/slit.08
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S3_CX
+    family: motor_tango
+    pv: p03/galildmcslit/slit3.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S3_CY
+    family: motor_tango
+    pv: p03/galildmcslit/slit3.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S3_DX
+    family: motor_tango
+    pv: p03/galildmcslit/slit3.07
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S3_DY
+    family: motor_tango
+    pv: p03/galildmcslit/slit3.08
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S4_CX
+    family: motor_tango
+    pv: p03/galildmcslit/slit5.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S4_CY
+    family: motor_tango
+    pv: p03/galildmcslit/slit5.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S4_DX
+    family: motor_tango
+    pv: p03/galildmcslit/slit5.07
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S4_DY
+    family: motor_tango
+    pv: p03/galildmcslit/slit5.08
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S5_CX
+    family: motor_tango
+    pv: p03/galildmcslit/slit4.05
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S5_CY
+    family: motor_tango
+    pv: p03/galildmcslit/slit4.06
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S5_DX
+    family: motor_tango
+    pv: p03/galildmcslit/slit4.07
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: S5_DY
+    family: motor_tango
+    pv: p03/galildmcslit/slit4.08
+    enclosure: P03
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: shutter
+    family: module_tango
+    pv: p03nano/shutter/nano.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''module_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: module_tango
+  - name: led_exp01
+    family: module_tango
+    pv: p03nano/led/exp.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''module_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: module_tango
+  - name: led_exp02
+    family: module_tango
+    pv: p03nano/led/exp.02
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''module_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: module_tango
+  - name: LLS1
+    family: motor_tango
+    pv: p03nano/attributemotor/lls.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+  - name: LLS2
+    family: motor_tango
+    pv: p03nano/attributemotor/lls.02
+    enclosure: P03-NANO
+    new: true
+    confirm: 'family is the Tango module ''motor_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haspp03nano:10000''; endstation to enclosure
+      is a guess; axis granularity: one OnlineXML <device> is one axis or channel;
+      Asset grouping needs a human'
+    source_class: motor_tango
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: exp_mca01
+    family: GenericProbe
+    pv: p03/mca/exp.01
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: mca_8701
+  - name: exp_mca02
+    family: GenericProbe
+    pv: p03/mca/exp.02
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: mca_8701
+  - name: exp_mca03
+    family: GenericProbe
+    pv: p03/mca/exp.03
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: mca_8701
+  - name: exp_mca04
+    family: GenericProbe
+    pv: p03/mca/exp.04
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: mca_8701
+  - name: exp_xia01
+    family: GenericProbe
+    pv: p03/XIA/p03.1
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: mca_xia
+  - name: exp_xia02
+    family: GenericProbe
+    pv: p03/XIA/exp.2
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: mca_xia
+  - name: exp_xia03
+    family: GenericProbe
+    pv: p03/XIA/exp.3
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: mca_xia
+  - name: exp_xia04
+    family: GenericProbe
+    pv: p03/XIA/exp.4
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: mca_xia
+  - name: pilatus
+    family: Camera
+    pv: p03/pilatus/300k
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: pilatus100k
+  - name: pilatus3
+    family: Camera
+    pv: p03/pilatus/1M
+    enclosure: P03
+    new: true
+    confirm: 'Tango host ''haspp03:10000''; endstation to enclosure is a guess; axis
+      granularity: one OnlineXML <device> is one axis or channel; Asset grouping needs
+      a human'
+    source_class: pilatus100k
+  - name: lmbd01
+    family: module_tango
+    pv: petra3/lambda/01
+    new: true
+    confirm: 'family is the Tango module ''module_tango''; linear-vs-rotary and the
+      CORA Family need a human; Tango host ''haslambda01:10000''; endstation to enclosure
+      is a guess; enclosure unresolved from Tango host; axis granularity: one OnlineXML
+      <device> is one axis or channel; Asset grouping needs a human'
+    source_class: module_tango
+  - name: pilatus
+    family: Camera
+    pv: p03nano/pilatus/300k
+    enclosure: P03-NANO
+    new: true
+    confirm: 'Tango host ''haspp03nano:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: pilatus100k
+  - name: mcatest
+    family: GenericProbe
+    pv: p03nano/sis3302new/exp.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'Tango host ''haspp03nano:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: mca_sis3302new
+  - name: mca01
+    family: GenericProbe
+    pv: p03nano/mca/p03nano.01
+    enclosure: P03-NANO
+    new: true
+    confirm: 'Tango host ''haspp03nano:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: mca_8701
+  - name: mca02
+    family: GenericProbe
+    pv: p03nano/mca/p03nano.02
+    enclosure: P03-NANO
+    new: true
+    confirm: 'Tango host ''haspp03nano:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: mca_8701
+  - name: mca03
+    family: GenericProbe
+    pv: p03nano/mca/p03nano.03
+    enclosure: P03-NANO
+    new: true
+    confirm: 'Tango host ''haspp03nano:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: mca_8701
+  - name: mca04
+    family: GenericProbe
+    pv: p03nano/mca/p03nano.04
+    enclosure: P03-NANO
+    new: true
+    confirm: 'Tango host ''haspp03nano:10000''; endstation to enclosure is a guess;
+      axis granularity: one OnlineXML <device> is one axis or channel; Asset grouping
+      needs a human'
+    source_class: mca_8701

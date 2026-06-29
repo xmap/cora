@@ -86,6 +86,8 @@ talks/*/*.pdf
 apps/api/mutants/
 apps/api/mutmut-stats.json
 
-# Research notes and reverse-engineering working tree: local-only scratch space
-# (extracted facts, candidate catalogs, clone caches). Never committed.
-research/
+# Research notes and reverse-engineering working tree are tracked (surveys,
+# per-beamline facts, candidate descriptors). Only the regenerable shallow-clone
+# cache the extractor writes is ignored.
+research/*/.cache/
+research/.cache/
