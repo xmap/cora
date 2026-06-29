@@ -39,7 +39,7 @@ facility:
   heading: "PETRA III"
   kind: Site
   institution: DESY (Deutsches Elektronen-Synchrotron, Hamburg, Germany)
-  beamlines: [P01]
+  beamlines: [P01, P04]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
 #
@@ -52,6 +52,11 @@ facility:
 practices:
   - {name: P01_nuclear_resonant_scattering_practice, method: inelastic_x_ray_scattering, pending: true, note: "nuclear resonant scattering / nuclear inelastic scattering (Moessbauer-energy-resolution time- and energy-domain) on the high-resolution monochromator stack + avalanche-photodiode detection; no catalog Method fits, reuses the inelastic_x_ray_scattering slug ID28 / NSLS-II IXS share, a further consumer (TECH-1)"}
   - {name: P01_rixs_practice, method: resonant_inelastic_scattering, pending: true, note: "resonant inelastic X-ray scattering on the EH3 KB-focused spectrometer endstation; reuses the resonant_inelastic_scattering slug SIX / ESRF ID32 share, a further consumer (TECH-1)"}
+  # P04 (Variable Polarization XUV): soft X-ray spectroscopy, 250-3000 eV. Soft X-ray
+  # absorption reuses the xas_spectroscopy slug 4 sites share; photoemission reuses the
+  # angle_resolved_photoemission slug. Both pending until DESY staff confirm (TECH-1).
+  - {name: P04_xas_practice, method: xas_spectroscopy, pending: true, note: "soft X-ray absorption spectroscopy (total electron yield via the drain-current electrometer) over the undulator + plane-grating-monochromator photon-energy scan; reuses the xas_spectroscopy slug, a further consumer (TECH-1)"}
+  - {name: P04_photoemission_practice, method: angle_resolved_photoemission, pending: true, note: "soft X-ray photoemission on the EXP endstations; reuses the angle_resolved_photoemission slug, a further consumer (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at PETRA III. Pending until the DESY
 # operator and review structure is confirmed.

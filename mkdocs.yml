@@ -933,6 +933,19 @@ nav:
         - Techniques: deployments/p01/techniques.md
         - Governance: deployments/p01/governance.md
         - Model: deployments/p01/model.md
+      - P04:
+        - deployments/p04/index.md
+        - Open questions: deployments/p04/questions.md
+        - The beamline:
+          - deployments/p04/equipment/index.md
+          - Source: deployments/p04/beamline.md
+          - Sample: deployments/p04/equipment/sample.md
+          - Detector: deployments/p04/equipment/detector.md
+          - Controls: deployments/p04/equipment/controls.md
+          - Inventory: deployments/p04/inventory.md
+        - Techniques: deployments/p04/techniques.md
+        - Governance: deployments/p04/governance.md
+        - Model: deployments/p04/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md
