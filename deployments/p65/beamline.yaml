@@ -1,0 +1,166 @@
+# P65 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P65 "Applied X-ray Absorption Spectroscopy" is the standard / high-throughput EXAFS
+# / XANES beamline at PETRA III (DESY, Hamburg), the applied-XAS sibling of the
+# advanced P64. It is bound to the PETRA III Site (deployments/petra-iii/site.yaml),
+# the tenth PETRA III beamline, and is scaffolded together with P64 as the PETRA III
+# XAS pair (they share the hasnp64 optics host).
+#
+# STATUS: reverse-engineered from P65's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p65, branch
+# debian/jessie; the online_hasnp65.xml registry). Device logical names and Tango
+# control handles are real, read from that registry; vendor part numbers, crystal
+# cuts, the detector roster, energy calibration, and physical positions are not in it
+# and are open questions. Every value is carried confirm until P65 staff verify it.
+# The extraction is in research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family. P65 is a thin applied-XAS station: a CDCM energy
+# axis, a small experiment sample bank, an experiment slit / table, and the undulator,
+# reusing existing Families. The technique (X-ray absorption spectroscopy) reuses the
+# pending xas_spectroscopy slug (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML. P65 shares the optics with P64: its energy / optics devices
+# report on the P64-OH Tango host (hasnp64); per the cross-host mapping decision they
+# are homed in the P65 optics enclosure with the host flagged (HOST-1). The a2 sample
+# bank carries the experiment positioning, roles not labelled (GROUP-1); the a2_dmy
+# stubs are dummy / placeholder devices (STUB-1).
+#
+# SCOPE: this cut models the optics (the undulator, the CDCM energy axis, the OH
+# bank), the experiment endstation (the a2 sample bank, the slit / table virtual
+# axes), and notes the front-end (fe) bank. Counter / timer / ADC channels and the
+# Sardana MeasurementGroup bookkeeping rows are filtered out by the extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p65/questions.md.
+
+beamline:
+  name: P65
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P65"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P65 is an undulator beamline (applied XAS); the OnlineXML exposes the undulator energy axis (p65/petra3undulator) but no period or parameters, carried pending (SRC-1)"
+
+# Two enclosures: the optics (shared with P64, on the hasnp64 host) and the experiment
+# endstation. DESY PSS permit signals are not in the OnlineXML (PSS-1).
+enclosures:
+  - name: p65-oh
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P65 optics (shared with P64 on the hasnp64 host); not in the OnlineXML (PSS-1)"}
+  - name: p65-eh
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P65 experiment endstation; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and the (P64-shared) optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p65-oh
+  intro: "The P65 undulator source and the optics: a channel-cut double-crystal monochromator energy axis and the optics-hutch positioning bank. P65 shares the optics hutch with P64."
+  note: "The energy axis is a CDCM (cdcmenergy). The OH bank and the front-end (fe) bank carry the optics positioning, roles not labelled. These optics report on the P64-OH host (hasnp64) (HOST-1, GROUP-1)."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {energy_und: "p65/petra3undulator/energy_und"}
+      new: true
+      confirm: true
+      note: "P65 undulator; the energy axis is read, period not exposed (SRC-1)"
+    - name: Monochromator
+      family: Monochromator
+      pv: {energy_dcm: "p65/cdcmenergy/energy_dcm"}
+      new: true
+      confirm: true
+      note: "channel-cut double-crystal monochromator energy axis (cdcmenergy); reports on the P64-OH host (HOST-1); crystal cut and energy range are OPT-1"
+    - name: OpticsStages
+      family: LinearStage
+      pv: {oh_bank: "p65/motor/oh_01", fe_bank: "p65/motor/fe_01"}
+      new: true
+      confirm: true
+      note: "the P65 optics-hutch (oh_*) and front-end (fe_*) motor banks; mirror / slit / front-end positioning, per-axis roles not labelled, grouped as one stage (OPT-1, GROUP-1, HOST-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the experiment endstation
+# ===========================================================================
+
+experiment-sample:
+  stage: sample
+  enclosure: p65-eh
+  intro: "The P65 experiment endstation: the a2 sample / instrument motor bank and the experiment slit / table virtual axes."
+  note: "The a2 bank carries the sample positioning, roles not labelled (GROUP-1). The a2_dmy stubs are dummy / placeholder devices (STUB-1). The slit / table are vmexecutor virtual axes."
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p65/motor/a2_mot01"}
+      new: true
+      confirm: true
+      note: "the P65 experiment sample / instrument motor bank (a2_mot01..20 on p65/motor); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+    - name: ExperimentSlit
+      family: Slit
+      pv: {center_x: "p65/vmexecutor/eh_slit_cx", center_y: "p65/vmexecutor/eh_slit_cy"}
+      new: true
+      confirm: true
+      note: "the P65 experiment slit (eh_slit center x / y, vmexecutor virtual axes)"
+    - name: ExperimentTable
+      family: Table
+      pv: {height: "p65/vmexecutor/eh_table_h", vertical: "p65/vmexecutor/eh_table_v"}
+      new: true
+      confirm: true
+      note: "the P65 experiment table (eh_table height / vertical, vmexecutor virtual axes)"
+
+# ===========================================================================
+# DETECTION STAGE
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: p65-eh
+  intro: "The P65 detection. The OnlineXML slice for P65 exposes no dedicated detector device beyond the experiment motors; the XAS detection (ion chambers / fluorescence) is carried pending."
+  note: "Standard applied-XAS detection (ion chambers for transmission, a fluorescence detector) is not exposed as a device in this registry slice; carried pending (DET-1)."
+  devices:
+    - name: AbsorptionDetectors
+      family: FluxMonitor
+      pv: {confirm: "the XAS ion chambers (I0 / I1 / I2) and any fluorescence detector are not exposed in this OnlineXML slice; carried pending (DET-1)"}
+      new: true
+      confirm: true
+      note: "the P65 absorption-spectroscopy detection (ion chambers for transmission XAS, a fluorescence detector); not in the registry slice, modelled as a pending FluxMonitor placeholder (DET-1)"
+
+# Cross-cutting control. P65 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P65 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as the other PETRA III beamlines. A motion axis is a
+    Tango motor device (p65/motor/...), the energy a cdcmenergy device, the slit /
+    table vmexecutor virtual axes; P65 shares the optics hutch with P64 (the hasnp64
+    host). The handles are read from P65's public OnlineXML registry and carried
+    confirm (CTRL-1). The XAS acquisition (the CDCM energy scan read against the
+    transmission / fluorescence signal) runs as a Sardana macro; that orchestration is
+    the seam CORA's edge would conduct over its ControlPort (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the optics and sample motor banks (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango / tangomotor) backing the CDCM energy axis and the a2 dummy stubs (CTRL-1, STUB-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P65 run needs present before it
+    can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

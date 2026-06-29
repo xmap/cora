@@ -1024,6 +1024,32 @@ nav:
         - Techniques: deployments/p02/techniques.md
         - Governance: deployments/p02/governance.md
         - Model: deployments/p02/model.md
+      - P64:
+        - deployments/p64/index.md
+        - Open questions: deployments/p64/questions.md
+        - The beamline:
+          - deployments/p64/equipment/index.md
+          - Source: deployments/p64/beamline.md
+          - Sample: deployments/p64/equipment/sample.md
+          - Detector: deployments/p64/equipment/detector.md
+          - Controls: deployments/p64/equipment/controls.md
+          - Inventory: deployments/p64/inventory.md
+        - Techniques: deployments/p64/techniques.md
+        - Governance: deployments/p64/governance.md
+        - Model: deployments/p64/model.md
+      - P65:
+        - deployments/p65/index.md
+        - Open questions: deployments/p65/questions.md
+        - The beamline:
+          - deployments/p65/equipment/index.md
+          - Source: deployments/p65/beamline.md
+          - Sample: deployments/p65/equipment/sample.md
+          - Detector: deployments/p65/equipment/detector.md
+          - Controls: deployments/p65/equipment/controls.md
+          - Inventory: deployments/p65/inventory.md
+        - Techniques: deployments/p65/techniques.md
+        - Governance: deployments/p65/governance.md
+        - Model: deployments/p65/model.md
     - ALS:
       - deployments/als/index.md
       - 8.3.2:
