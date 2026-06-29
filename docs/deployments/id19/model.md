@@ -8,7 +8,7 @@ ID19 is a descriptor-and-docs scaffold today, reverse-engineered from the beamli
 | --- | --- | --- |
 | Beamline descriptor | [`deployments/id19/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id19/beamline.yaml) | the device walk with real BLISS / Tango handles; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/esrf/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/esrf/site.yaml) | the ESRF facility surface, CORA's seventh Site; carries the microtomography Practice |
-| Extraction provenance | [`research/esrf-reverse-engineering/`](https://github.com/xmap/cora/tree/main/research/esrf-reverse-engineering) | the device facts read from [`gitlab.esrf.fr/id19/beamline_configuration`](https://gitlab.esrf.fr/id19/beamline_configuration) |
+| Upstream source | [`gitlab.esrf.fr/id19/beamline_configuration`](https://gitlab.esrf.fr/id19/beamline_configuration) | the beamline's own public BLISS Beacon device database the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog Family |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; ID19 reuses the existing `tomography` Method (TECH-1) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers ID19 Assets yet |

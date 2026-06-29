@@ -13,7 +13,7 @@
 # STATUS: reverse-engineered, design-phase. Hardware facts (source, optics,
 # detectors, stages, scan modes) are read from public material (the elettra.eu
 # SYRMEP beamline pages, the EPJ Plus 2024 SYRMEP review, the J. Synchrotron Rad.
-# 2023 large-FOV paper; see research/elettra/_research_brief.md) and carried
+# 2023 large-FOV paper) and carried
 # new: true + confirm: true pending SYRMEP staff. UNLIKE the ID32 BLISS scaffold,
 # SYRMEP's control handles are NOT in public source: the in-house DonkiOrchestra
 # scan engine's source location is unconfirmed and the acquisition code lives in

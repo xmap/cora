@@ -16,7 +16,7 @@
 # So 05A's device facts are read from the SPXF pages + the shared-cluster paper, and
 # the seam / control model is inherited from the 07A reading (light911/NSRRC_TPS07A +
 # TPS07A-Meshbest), confirmed to apply by the cluster paper. Carried `confirm: true`
-# pending NSRRC staff. Full provenance: docs/deployments/nsrrc/_research_brief.md.
+# pending NSRRC staff.
 #
 # PV HONESTY: 05A has NO public PV namespace verified (unlike 07A's 07a: / 07a-ES:,
 # which were read from the 07A tree). By cluster convention the 05A namespace is

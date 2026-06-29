@@ -12,8 +12,7 @@
 # control handles are real, read from that config; vendor part numbers, serials,
 # energy ranges, and physical positions are not in it and are open questions.
 # Every value is carried confirm until ID19 staff verify it (a config snapshot is
-# strong evidence, not a CORA-owned fact). The extraction is in
-# research/esrf-reverse-engineering/.
+# strong evidence, not a CORA-owned fact).
 #
 # WHAT IS NEW: not a device family, and not a technique. Microtomography is plain
 # `tomography` Method reuse (the same the 2-BM pilot and MAX IV TomoWise carry);

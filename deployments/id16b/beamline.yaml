@@ -11,8 +11,7 @@
 # (gitlab.esrf.fr/id16b/beamline_configuration, commit 7cba4dd). Device names and
 # control handles are real, read from that config; vendor part numbers, serials,
 # energy ranges, and physical positions are not in it and are open questions. Every
-# value is carried confirm until ID16B staff verify it. The extraction is in
-# research/esrf-reverse-engineering/extracted/id16b/.
+# value is carried confirm until ID16B staff verify it.
 #
 # WHAT IS NEW: nothing in the catalog. Nano-tomography is plain `tomography` Method
 # reuse (ID19, 2-BM, TomoWise); nano-XRF mapping reuses the pending

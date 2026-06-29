@@ -8,7 +8,7 @@ ID16B is a descriptor-and-docs scaffold today, reverse-engineered from the beaml
 | --- | --- | --- |
 | Beamline descriptor | [`deployments/id16b/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id16b/beamline.yaml) | the device walk with real BLISS / Tango handles; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/esrf/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/esrf/site.yaml) | the ESRF facility surface; `ID16B` added to its beamline list, with two pending Practices |
-| Extraction provenance | [`research/esrf-reverse-engineering/extracted/id16b/`](https://github.com/xmap/cora/tree/main/research/esrf-reverse-engineering/extracted/id16b) | the device facts read from [`gitlab.esrf.fr/id16b/beamline_configuration`](https://gitlab.esrf.fr/id16b/beamline_configuration) |
+| Upstream source | [`gitlab.esrf.fr/id16b/beamline_configuration`](https://gitlab.esrf.fr/id16b/beamline_configuration) | the beamline's own public BLISS Beacon device database the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog Family |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; `tomography` reused, `scanning_fluorescence_microscopy` pending (TECH-1, METHOD-1) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers ID16B Assets yet |

@@ -11,7 +11,7 @@
 # Elettra and no staff have confirmed this model. Every value below is read from
 # public material (the elettra.eu beamline pages, the ElettraSciComp / ELETTRA-
 # SincrotroneTrieste GitHub orgs, the public gitlab.elettra.eu, and ICALEPCS
-# proceedings; see research/elettra/_research_brief.md) or inferred, and is carried
+# proceedings) or inferred, and is carried
 # `pending` until staff confirm it. Do not invent facility specifics here; carry
 # them as questions on the SYRMEP open-questions page.
 #

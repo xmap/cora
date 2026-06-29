@@ -9,8 +9,7 @@
 # / NSLS-II / ESRF modelling exercises). ALBA is CORA's SECOND Tango / Sardana /
 # Taurus controls house-style (MAX IV is the first; the rest are EPICS, and the
 # ESRF is BLISS). Facts here are taken from ALBA's public facility pages
-# (www.cells.es) and the verified research brief
-# (research/alba/_research_brief.md), not from a live connection; concrete
+# (www.cells.es), not from a live connection; concrete
 # facility details (safety forms, supply names, the operator pool) are carried
 # pending until ALBA staff confirm them. Do not invent facility specifics here;
 # carry them as questions on the FAXTOR open-questions page.

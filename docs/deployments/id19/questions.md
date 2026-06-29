@@ -2,7 +2,7 @@
 
 *What CORA needs the ID19 team to confirm before the model can be trusted.*
 
-ID19 was reverse-engineered from the beamline's own public BLISS Beacon device database ([`gitlab.esrf.fr/id19/beamline_configuration`](https://gitlab.esrf.fr/id19/beamline_configuration)), so the control handles in the [Inventory](inventory.md) are the beamline's real BLISS object and Tango device names, read from the config rather than confirmed by staff (see [`research/esrf-reverse-engineering/`](https://github.com/xmap/cora/tree/main/research/esrf-reverse-engineering)). Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+ID19 was reverse-engineered from the beamline's own public BLISS Beacon device database ([`gitlab.esrf.fr/id19/beamline_configuration`](https://gitlab.esrf.fr/id19/beamline_configuration)), so the control handles in the [Inventory](inventory.md) are the beamline's real BLISS object and Tango device names, read from the config rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Control and the BLISS / Tango floor
 

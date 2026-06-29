@@ -12,7 +12,7 @@ Tango is the distributed device / control substrate across both the Elettra sync
 
 The beamline scan / acquisition engine is DonkiOrchestra: DonkiDirector schedules DonkiPlayers over a ZeroMQ trigger train (each trigger carries a progressive index and a priority tag), collecting data into HDF5 archives. The Elettra 2.0 successor names this orchestration an abstract **"Executer"** Tango device server, feeding the STP3 / MAPI reconstruction and the Elettra Scientific Data Lake.
 
-This orchestration is the seam CORA's edge replaces: experiment-as-sequence-of-phases maps onto CORA's run / acquisition modelling, and the ZeroMQ trigger train plus HDF5 collection is functionally the orchestration and capture legs. CORA's EdgeConductor would conduct over Tango rather than over BLISS or EPICS. Whether CORA replaces the DonkiOrchestra orchestration outright or drives through the "Executer" device server is the central seam design question (see [the research brief](https://github.com/xmap/cora/blob/main/research/elettra/_research_brief.md)).
+This orchestration is the seam CORA's edge replaces: experiment-as-sequence-of-phases maps onto CORA's run / acquisition modelling, and the ZeroMQ trigger train plus HDF5 collection is functionally the orchestration and capture legs. CORA's EdgeConductor would conduct over Tango rather than over BLISS or EPICS. Whether CORA replaces the DonkiOrchestra orchestration outright or drives through the "Executer" device server is the central seam design question.
 
 ## Handles are not in public source
 

@@ -12,8 +12,7 @@
 #
 # STATUS: first cut, reverse-engineered. Like 4-ID, this binds the real EPICS
 # control handles, read from the beamline's own Bluesky instrument repo
-# (BCDA-APS/8id-bits); the extraction is in
-# research/aps-reverse-engineering/extracted/8id-bits/. Every value is carried
+# (BCDA-APS/8id-bits). Every value is carried
 # `confirm: true` until 8-ID staff verify it, and `new: true` (not yet registered
 # in CORA). No vendor `model` is bound. Devices bind to a catalog Family where one
 # fits, or to a loose Family string where the device class is new to the catalog.

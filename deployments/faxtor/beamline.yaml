@@ -5,8 +5,8 @@
 # (deployments/alba/site.yaml), CORA's EIGHTH Site and its FIRST ALBA deployment.
 #
 # STATUS: reverse-engineered, design / commissioning phase. Every value is read
-# from ALBA's public facility pages (www.cells.es/en/beamlines/bl31-faxtor) and the
-# verified research brief (research/alba/_research_brief.md), or inferred;
+# from ALBA's public facility pages (www.cells.es/en/beamlines/bl31-faxtor),
+# or inferred;
 # each device carries new: true (not yet modelled in CORA) and confirm: true (value
 # to be verified by ALBA staff). Control handles are OMITTED on purpose: ALBA runs
 # Tango / Sardana / Taurus (not EPICS), and NO public per-beamline device manifest

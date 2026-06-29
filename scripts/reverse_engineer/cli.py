@@ -136,11 +136,11 @@ def _process_repo(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Extract candidate CORA facts from *-bits repos.")
     parser.add_argument("--repo", action="append", required=True, help="GitHub slug or local path")
-    parser.add_argument("--out", default="research/aps-reverse-engineering/extracted")
-    parser.add_argument("--cache", default="research/aps-reverse-engineering/.cache")
+    parser.add_argument("--out", default="research/aps/beamlines")
+    parser.add_argument("--cache", default="research/aps/.cache")
     parser.add_argument("--catalog", default="catalog/catalog.yaml")
     parser.add_argument(
-        "--recurrence-out", default="research/aps-reverse-engineering/recurrence.md"
+        "--recurrence-out", default="research/aps/recurrence.md"
     )
     parser.add_argument("--facility", default="aps")
     args = parser.parse_args(argv)

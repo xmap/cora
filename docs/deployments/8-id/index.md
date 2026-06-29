@@ -12,7 +12,7 @@
 | Control stack | APS EPICS (the same floor as 2-BM); device handles bound from the beamline's instrument repo, carried confirm |
 
 !!! warning "First cut, and confirm-pending by intent"
-    This scaffold was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/8id-bits](https://github.com/BCDA-APS/8id-bits)); the extraction is in [`research/aps-reverse-engineering/`](https://github.com/xmap/cora/tree/main/research/aps-reverse-engineering). Like 4-ID it binds the real EPICS control handles, because 8-ID is operational. Every value is carried as `confirm` until 8-ID staff verify it. What CORA needs the team to confirm is on [Open questions](questions.md).
+    This scaffold was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/8id-bits](https://github.com/BCDA-APS/8id-bits)). Like 4-ID it binds the real EPICS control handles, because 8-ID is operational. Every value is carried as `confirm` until 8-ID staff verify it. What CORA needs the team to confirm is on [Open questions](questions.md).
 
 ## What makes 8-ID different
 
