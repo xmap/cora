@@ -10,7 +10,7 @@
 # scaffolds, this descriptor binds the real EPICS control handles (`pv`), because
 # POLAR is operational and its handles were read from the beamline's own Bluesky
 # instrument repo (BCDA-APS/polar-bits). Provenance and the extraction are in
-# research/aps-reverse-engineering/extracted/polar-bits/. A second snapshot of the
+# research/aps/beamlines/polar-bits/. A second snapshot of the
 # same instrument (BCDA-APS/6idb-bits, a 4-ID fork carrying a grafted 6-ID-B psic
 # endstation) was cross-checked to fill a few gaps (the emag magnet axes, the Euler
 # diffractometer chi/phi circles); see docs/deployments/4-id/model.md. Every value is still

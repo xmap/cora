@@ -11,7 +11,7 @@
 # source (the light911/NSRRC_TPS07A control tree + light911/TPS07A-Meshbest
 # mesh-scan/data-collection app, the SPXF facility pages, and JACoW proceedings) or
 # inferred, carried `confirm: true` pending NSRRC staff. Full provenance and the
-# verified-vs-inferred split: docs/deployments/nsrrc/_research_brief.md.
+# verified-vs-inferred split: research/nsrrc/survey.md.
 #
 # PV HONESTY: unlike a curated device library, the 07A source is an operational
 # working tree. The EPICS PV NAMESPACE is verified (the beamline at 07a:, the

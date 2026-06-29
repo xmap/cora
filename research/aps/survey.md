@@ -29,7 +29,7 @@ root (scripts/ is not a package, so use PYTHONPATH):
 
     PYTHONPATH=scripts python3 -m reverse_engineer.cli --repo BCDA-APS/8id-bits
 
-`extracted/<repo>/` holds the per-repo `facts.md` (inventory with PV/axis maps, candidate
+`beamlines/<repo>/` holds the per-repo `facts.md` (inventory with PV/axis maps, candidate
 enclosures, Role hints, and Trust hints from the queueserver permissions) and
 `beamline.candidate.yaml` (a draft fragment that self-validates against the real
 `scripts/beamline_descriptor.py` loader). `recurrence.md` is the cross-fleet frequency report:

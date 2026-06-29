@@ -8,8 +8,8 @@ deployment documentation. Promote confirmed facts into descriptors
 
 Extractions to date:
 
-- `extracted/id19/` -- ID19, the long microtomography beamline (the first ESRF deployment).
-- `extracted/id16b/` -- ID16B, the nano-analysis / nano-imaging beamline (nano-tomography +
+- `beamlines/id19/` -- ID19, the long microtomography beamline (the first ESRF deployment).
+- `beamlines/id16b/` -- ID16B, the nano-analysis / nano-imaging beamline (nano-tomography +
   nano-XRF), the second ESRF deployment and the fleet's first nanoprobe on a BLISS floor.
 
 ESRF beamlines that publish a Beacon config (`<beamline>/beamline_configuration`, public on
@@ -90,7 +90,7 @@ There is no automated extractor for BLISS (`scripts/reverse_engineer/` reads the
 
 ## What is here
 
-- `extracted/id19/facts.md`: the device inventory for ID19, read from the public config, mapped
+- `beamlines/id19/facts.md`: the device inventory for ID19, read from the public config, mapped
   to CORA Families. Every row is `confirm`.
 
 ## Gaps neither source fills (CORA-native)

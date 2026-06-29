@@ -8,7 +8,7 @@ FAXTOR is a descriptor-and-docs scaffold today, reverse-engineered from ALBA's p
 | --- | --- | --- |
 | Beamline descriptor | [`deployments/faxtor/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/faxtor/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; control handles unbound (`CTRL-1`) |
 | Site descriptor | [`deployments/alba/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/alba/site.yaml) | the NEW ALBA facility surface; `FAXTOR` its first beamline, with the tomography Practices |
-| Research provenance | [`research/alba/_research_brief.md`](https://github.com/xmap/cora/blob/main/research/alba/_research_brief.md) | the verified online research brief the descriptor and docs were curated from |
+| Research provenance | [`research/alba/survey.md`](https://github.com/xmap/cora/blob/main/research/alba/survey.md) | the verified online research brief the descriptor and docs were curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; FAXTOR reuses the imaging Families |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; tomography reuses existing Methods, radiography is pending (`TECH-1`) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers FAXTOR Assets yet |

@@ -88,4 +88,4 @@ apps/api/mutmut-stats.json
 
 # Reverse-engineering clone cache: shallow clones of external *-bits repos
 # pulled by scripts/reverse_engineer. Regenerated on demand; never committed.
-research/aps-reverse-engineering/.cache/
+research/aps/.cache/
