@@ -1011,6 +1011,19 @@ nav:
         - Techniques: deployments/p09/techniques.md
         - Governance: deployments/p09/governance.md
         - Model: deployments/p09/model.md
+      - P02:
+        - deployments/p02/index.md
+        - Open questions: deployments/p02/questions.md
+        - The beamline:
+          - deployments/p02/equipment/index.md
+          - Source: deployments/p02/beamline.md
+          - Sample: deployments/p02/equipment/sample.md
+          - Detector: deployments/p02/equipment/detector.md
+          - Controls: deployments/p02/equipment/controls.md
+          - Inventory: deployments/p02/inventory.md
+        - Techniques: deployments/p02/techniques.md
+        - Governance: deployments/p02/governance.md
+        - Model: deployments/p02/model.md
     - ALS:
       - deployments/als/index.md
       - 8.3.2:

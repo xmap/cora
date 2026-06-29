@@ -407,6 +407,7 @@ _PROMOTION_REVIEWED = {
     "Magnet": "hold: sample-env magnet, 4-id + i10-1 + esrf-id32; graduation-due (MAG-1)",
     "SpectrometerArm": "hold: dispersive arm, six + esrf-id32 RIXS+XES; graduation-due (RIXS-1)",
     "SlipRing": "hold: passive feedthrough (tomowise + i-tomcat); passive-deferred, not an Asset",
+    "PressureCell": "hold: DAC, 13-id-d + p02; 2nd consumer, graduation-due (PRESSURE-1)",
 }
 
 # Catalog families bound by no deployment device. Symmetric to the orphan-model

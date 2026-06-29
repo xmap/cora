@@ -38,7 +38,7 @@ facility:
   heading: "PETRA III"
   kind: Site
   institution: DESY (Deutsches Elektronen-Synchrotron, Hamburg, Germany)
-  beamlines: [P01, P04, P06, P11, P03, P10, P09]
+  beamlines: [P01, P04, P06, P11, P03, P10, P09, P02]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
 #
@@ -88,6 +88,13 @@ practices:
   - {name: P09_resonant_scattering_practice, method: resonant_scattering, pending: true, note: "resonant elastic X-ray scattering on the six-circle diffractometer + PerkinElmer / Pilatus detector, with polarization analysis; reuses the resonant_scattering slug 4-ID / i06 / i10 share, a further consumer (TECH-1)"}
   - {name: P09_magnetic_scattering_practice, method: magnetic_scattering, pending: true, note: "magnetic scattering in the 14 T high-field magnetism endstation; reuses the magnetic_scattering slug, a further consumer (TECH-1)"}
   - {name: P09_xmcd_practice, method: xmcd, pending: true, note: "X-ray magnetic circular / linear dichroism in the 14 T magnet, with the phase retarder setting polarization; reuses the 4-ID / i06 / i10 xmcd slug, a further consumer (TECH-1)"}
+  # P02 (Hard X-ray Diffraction): P02.1 powder diffraction / total scattering / PDF +
+  # P02.2 extreme conditions (diamond-anvil-cell high-pressure diffraction). Powder
+  # reuses the powder_diffraction slug, total scattering the total_scattering slug.
+  # Both pending until DESY staff confirm (TECH-1).
+  - {name: P02_powder_diffraction_practice, method: powder_diffraction, pending: true, note: "high-energy powder diffraction on the P02.1 endstation + Pilatus 1M; reuses the powder_diffraction slug i11 / XPD share, a further consumer (TECH-1)"}
+  - {name: P02_total_scattering_practice, method: total_scattering, pending: true, note: "total scattering / pair-distribution-function on the P02.1 PerkinElmer flat-panel (high-Q); reuses the total_scattering slug i15-1 / XPD share, a further consumer (TECH-1)"}
+  - {name: P02_high_pressure_diffraction_practice, method: powder_diffraction, pending: true, note: "diamond-anvil-cell high-pressure diffraction on the P02.2 extreme-conditions endstation; reuses the powder_diffraction slug, a further consumer (TECH-1, PRESSURE-1)"}
 
 # Access BC Actors conceptually facility-wide at PETRA III. Pending until the DESY
 # operator and review structure is confirmed.
