@@ -39,7 +39,7 @@ facility:
   heading: "NSRRC"
   kind: Site
   institution: NSRRC (National Synchrotron Radiation Research Center, Hsinchu, Taiwan)
-  beamlines: [TPS 07A]
+  beamlines: [TPS 07A, TPS 05A]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending
 # because they are reverse-engineered from the NSRRC_TPS07A control trees, not yet
@@ -50,6 +50,11 @@ practices:
   - {name: TPS07A_mx_data_collection_practice, method: mx_data_collection, pending: true, note: "rotation / oscillation MX data collection on the MD3 microdiffractometer goniometer + the DECTRIS EIGER2 X 16M, orchestrated through Blu-Ice/DCSS; reuses the i03 Method, not yet in the catalog (TECH-1)"}
   - {name: TPS07A_grid_scan_practice, method: grid_scan, pending: true, note: "mesh / grid scan for crystal location and centring on the MD3 (the Meshbest mesh-scan path, Dozor spot-scoring); reuses the i03 Method (TECH-1)"}
   - {name: TPS07A_sample_exchange_practice, method: sample_exchange, pending: true, note: "unattended ISARA robot load / centre / collect / unmount loop; a Procedure over the spine + a Subject custody thread (ROBOT-1)"}
+  # TPS 05A reuses the same MX cluster Practices (the SPXF group runs the same Blu-Ice/DCSS
+  # stack on the same MD3 + ISARA kit, with an EIGER2 X 9M); a reuse-and-reinforce sibling.
+  - {name: TPS05A_mx_data_collection_practice, method: mx_data_collection, pending: true, note: "rotation / oscillation MX data collection on the MD3 microdiffractometer goniometer + the DECTRIS EIGER2 X 9M, orchestrated through Blu-Ice/DCSS; reuses the i03 Method, not yet in the catalog (TECH-1)"}
+  - {name: TPS05A_grid_scan_practice, method: grid_scan, pending: true, note: "mesh / grid scan for crystal location and centring on the MD3; reuses the i03 Method (TECH-1)"}
+  - {name: TPS05A_sample_exchange_practice, method: sample_exchange, pending: true, note: "unattended ISARA robot load / centre / collect / unmount loop; a Procedure over the spine + a Subject custody thread (ROBOT-1)"}
 
 # Access BC Actors conceptually facility-wide at NSRRC. Pending until the operator and
 # review structure is confirmed; the control trees expose LDAP authentication

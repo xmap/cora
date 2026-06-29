@@ -892,6 +892,19 @@ nav:
         - Techniques: deployments/tps-07a/techniques.md
         - Governance: deployments/tps-07a/governance.md
         - Model: deployments/tps-07a/model.md
+      - TPS 05A:
+        - deployments/tps-05a/index.md
+        - Open questions: deployments/tps-05a/questions.md
+        - The beamline:
+          - deployments/tps-05a/equipment/index.md
+          - Source: deployments/tps-05a/beamline.md
+          - Sample: deployments/tps-05a/equipment/sample.md
+          - Detector: deployments/tps-05a/equipment/detector.md
+          - Controls: deployments/tps-05a/equipment/controls.md
+          - Inventory: deployments/tps-05a/inventory.md
+        - Techniques: deployments/tps-05a/techniques.md
+        - Governance: deployments/tps-05a/governance.md
+        - Model: deployments/tps-05a/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

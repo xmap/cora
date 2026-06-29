@@ -1,0 +1,205 @@
+# TPS 05A beamline descriptor (NSRRC, Taiwan Photon Source), reverse-engineered
+#
+# TPS 05A is the NSRRC protein-microcrystallography beamline: rotation (oscillation)
+# MX on an Arinax MD3 microdiffractometer goniometer reading a DECTRIS EIGER2 X 9M,
+# with an ISARA robot mounting samples for unattended high-throughput collection. It
+# is bound to the NSRRC Site (deployments/nsrrc/site.yaml) and is the MX-cluster
+# sibling of TPS 07A (deployments/tps-07a/beamline.yaml): the same SPXF group runs the
+# same Blu-Ice/DCSS stack on the same MD3 + ISARA kit, the difference being the EIGER2
+# X 9M detector (vs 07A's 16M) and the microcrystallography focus.
+#
+# STATUS: reverse-engineered, design-phase, REUSE-AND-REINFORCE. TPS 05A's public
+# source is thinner than 07A's: the SPXF facility pages enumerate it (EIGER2 X 9M +
+# ISARA), and the 2025 J. Synchrotron Rad. paper (Chou et al.) covers all three NSRRC
+# MX endstations (TPS 05A, TPS 07A, TLS 15A1) as one Blu-Ice/DCSS family, but there is
+# NO dedicated 05A control tree (light911/NSRRC_TPS05A_BeamMonitor is an empty stub).
+# So 05A's device facts are read from the SPXF pages + the shared-cluster paper, and
+# the seam / control model is inherited from the 07A reading (light911/NSRRC_TPS07A +
+# TPS07A-Meshbest), confirmed to apply by the cluster paper. Carried `confirm: true`
+# pending NSRRC staff. Full provenance: docs/deployments/nsrrc/_research_brief.md.
+#
+# PV HONESTY: 05A has NO public PV namespace verified (unlike 07A's 07a: / 07a-ES:,
+# which were read from the 07A tree). By cluster convention the 05A namespace is
+# expected to be 05a: / 05a-ES:, but that is INFERRED, not read from source, so it is
+# carried as a confirm note and no PV record string is asserted as a literal. This is
+# the most conservative PV posture in the fleet, appropriate to the thin source.
+#
+# THE SEAM (inherited from 07A, the 2-BM pattern): EPICS is the control FLOOR (the MD3,
+# EIGER2, optics reachable as EPICS PVs via an EPICS Device Handler Server), and the
+# SCAN ORCHESTRATION on top is Blu-Ice/DCSS (the SSRL Distributed Control System
+# lineage; a DCSS server per beamline, reached by a DHS bridge). CORA's EdgeConductor
+# would REPLACE the DCSS scan/oscillation orchestration over the EPICS floor, the 2-BM
+# TomoScan seam. Confirmed Blu-Ice/DCSS (not MXCuBE) for the whole MX cluster by Chou
+# et al., J. Synchrotron Rad. 2025. See docs/deployments/tps-05a/equipment/controls.md.
+#
+# It introduces NO new catalog family: every device reuses an existing Family exactly
+# as TPS 07A does (the graduated Goniometer for the MD3, Camera for the EIGER2 / OAV,
+# Monochromator for the DCM, Filter for the attenuator, BeamStop, Shutter, LinearStage,
+# MotionController, TemperatureController, plus the loose StorageRing and
+# BeamPositionMonitor). The ISARA robot is a deferred sample-exchange Procedure
+# (ROBOT-1). No Capability or Method is coined; the rotation-MX techniques reuse the
+# pending i03 Methods recorded as Practices on the Site. 05A is a pure reuse deployment
+# whose value is reinforcing that one device-library + one seam generalizes across the
+# NSRRC MX cluster.
+
+beamline:
+  name: TPS 05A
+  facility: nsrrc               # NSRRC Site (facility_code: nsrrc)
+  sector: "05a"                 # EPICS PV namespace INFERRED 05a: / 05a-ES: (not read from source; 07A's was verified, 05A's is by cluster convention, PV-1)
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "TPS 05A is fed by a TPS undulator (per the SPXF spec page); the front-end / insertion-device PV is not in any public source, so the source is carried generically and the ring-current monitor stands in as the source representation (SRC-1)"
+
+enclosures:
+  # No public source exposes the 05A hutch layout. MX beamlines run an optics hutch
+  # plus an experiment hutch; the hutch names and the PSS permit leaves are a staff
+  # question (ENC-1, PSS-1).
+  - name: TPS-05A-OH
+    role: optics-hutch
+    facility_code: nsrrc
+    permit_signal: {confirm: "PSS permit leaf not in public source; the optics hutch carries the DCM and beam-conditioning optics (PSS-1, ENC-1)"}
+  - name: TPS-05A-EH
+    role: experiment-hutch
+    facility_code: nsrrc
+    permit_signal: {confirm: "PSS permit leaf not in public source; the experiment hutch carries the MD3 microdiffractometer, the EIGER2 X 9M, and the ISARA robot (PSS-1, ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the storage ring and the front-end shutter
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: TPS-05A-OH
+  intro: "The storage-ring source-current monitor and the front-end shutter. The undulator source itself is not in any public source (SRC-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing            # loose Family (facility source representation)
+      confirm: true
+      note: "TPS storage-ring beam-current monitor (the source-side representation). The undulator is not exposed publicly (SRC-1). Reuses the loose StorageRing family; PV pending (DIAG-1)."
+    - name: WhiteBeamShutter
+      family: Shutter
+      confirm: true
+      note: "Front-end photon shutter (a PSS shutter) gating the white beam into the optics hutch. PV pending; PSS permit-leaf signal not in public source (PSS-1)."
+
+# ===========================================================================
+# OPTICS STAGE: the monochromator, the energy axis, the attenuators
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: TPS-05A-OH
+  intro: "Set the energy and condition the beam: the double-crystal monochromator over the MX range (~5.7-20 keV per the SPXF page), the master energy axis, and the attenuator. The expected 05a: PV namespace is inferred (PV-1); per-record names are pending (OPT-1, DCM-1)."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      confirm: true
+      note: "Double-crystal monochromator (Si) selecting ~5.7-20 keV for MX (the SPXF page states the 05A energy range). Reuses the Monochromator family; crystal cut, range bounds, and the energy PV are pending (DCM-1)."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "The master beamline energy setpoint the monochromator tracks. Whether energy is scanned as the measurement (anomalous / MAD MX) or set fixed per dataset is ENERGY-1."
+    - name: Attenuators
+      family: Filter
+      confirm: true
+      note: "Attenuator / transmission unit (foil set) trimming the incident flux for dose control. Reuses the Filter family; foil set and PV pending (DCM-1)."
+    - name: KBMirrors
+      family: Mirror
+      confirm: true
+      note: "Focusing mirror system delivering the microcrystallography beam (a KB pair is the standard MX micro-focus optic; the focal spot is not stated in public source for 05A). Reuses the Mirror family; mirror configuration, spot size, and PVs pending (OPT-1)."
+
+# ===========================================================================
+# SAMPLE STAGE: the MD3 microdiffractometer goniometer, environment, robot
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: TPS-05A-EH
+  intro: "The Arinax MD3 microdiffractometer goniometer that holds and orients the crystal, the cryostream sample cooling, and the beamstop. As at TPS 07A, the MD3 is reached as EPICS PVs through the DCSS / DHS bridge (no separate transport)."
+  note: >
+    TPS 05A holds a cryocooled crystal on the MD3 microdiffractometer and rotates it
+    through an oscillation while the EIGER2 X 9M reads frames, the same shape as TPS
+    07A. The MD3 goniometer reuses the graduated Goniometer family (the i03 / 07A / MX3
+    MX precedent). It is reached through the EPICS Device Handler Server (the 07A
+    pattern, applied to the cluster per the J. Synchrotron Rad. 2025 paper), so it is
+    on the EPICS floor; the DCSS server orchestrates the oscillation above that floor.
+    The ISARA sample robot is modelled as a deferred Procedure (sample exchange), not a
+    device, per the i03 / i24 / 07A / MX3 ROBOT-1 precedent.
+  devices:
+    - name: Goniometer
+      family: Goniometer
+      confirm: true
+      note: "Arinax MD3 microdiffractometer goniometer with a mini-kappa: omega rotation plus kappa / phi, sample centring, and alignment. Reuses the graduated Goniometer family. Reached as EPICS PVs via the DHS bridge (the inferred 05a-ES: endstation namespace); axis PV records pending (GONIO-1, PV-1)."
+    - name: SampleTemperature
+      family: TemperatureController
+      confirm: true
+      note: "Cryostream sample cooling keeping the crystal at cryogenic temperature through the dataset. Reuses the TemperatureController family (graduated #350); PV and vendor pending (ENV-1)."
+    - name: BeamStop
+      family: BeamStop
+      confirm: true
+      note: "Beamstop blocking the direct beam at the sample. Reuses BeamStop; PV pending (DIAG-1)."
+
+# ===========================================================================
+# DETECTION STAGE: the EIGER2, the detector stage, the OAV camera, diagnostics
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: TPS-05A-EH
+  intro: "The DECTRIS EIGER2 X 9M area detector and its translation stage, the on-axis viewing camera, and the beam-position diagnostics. Acquisition is commanded through the DCSS workflow, the 07A pattern with a 9M detector."
+  note: >
+    The EIGER2 X 9M reads the rotation frames. Its acquisition is commanded through the
+    Blu-Ice/DCSS workflow (the EPICS floor), as at TPS 07A; the frame egress and any
+    spot-scoring / indexing is Observe / Compute work, off the control seam. The 05A
+    detector model (EIGER2 X 9M) is from the SPXF page; per-device PVs and the SIMPLON
+    endpoint are not in public source (DET-1).
+  devices:
+    - name: EigerDetector
+      family: Camera
+      confirm: true
+      note: "DECTRIS EIGER2 X 9M area detector reading the rotation-MX frames (the SPXF page names the 9M for 05A, vs 07A's 16M). Reuses Camera. Driven through the DCSS / DHS workflow over the EPICS floor; detector PVs / SIMPLON endpoint pending (DET-1)."
+    - name: DetectorStage
+      family: LinearStage
+      confirm: true
+      note: "Detector translation setting the sample-to-detector distance. Reuses LinearStage; PV and any minimum-distance interlock pending (DET-1)."
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      confirm: true
+      note: "Diagnostic beam-position monitor (the XBPM / DBPM diagnostics class seen across TPS front ends). Binds the loose BeamPositionMonitor family (held; DIAG-1); channel map / PV pending."
+    - name: OAVCamera
+      family: Camera
+      confirm: true
+      note: "On-axis viewing camera for sample centring on the MD3. Reuses Camera; PV pending (DIAG-1)."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    The shutters that gate the exposure and the endstation motion control, plus the
+    seam inherited from TPS 07A: an EPICS floor with a Blu-Ice/DCSS orchestration layer
+    above it, bridged by an EPICS Device Handler Server.
+  triggering:
+    - name: FastShutter
+      family: Shutter
+      confirm: true
+      note: "Fast shutter gating the per-oscillation exposure at the sample, synchronized with the omega sweep and the EIGER2 frames. PV pending; the trigger wiring is recipe-layer (deferred at this design phase)."
+  motion_controllers:
+    - name: EndstationMotionController
+      family: MotionController
+      confirm: true
+      note: "The endstation, goniometer-base, and detector stages run on EPICS motor records reached through the DHS bridge; controller box firmware / IPs not in any public source (DRIVE-1)."
+  software_iocs_not_modeled:
+    [DCSS-server, EPICS-DHS, ISARA-robot, DECTRIS-SIMPLON]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsrrc/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen        # cryostream
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["sample pucks", "EIGER2 detector", "attenuator foils"]
