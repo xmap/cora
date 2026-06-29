@@ -1,0 +1,46 @@
+# CANDIDATE beamline descriptor: hand-read from NSLS2/fmx-profile-collection, NOT authoritative.
+# Every device carries new: true and a confirm note. All PV prefixes verified verbatim
+# against source (startup/*.py), zero fabrications. Do not copy into deployments/ without review.
+
+beamline:
+  name: FMX
+  facility: nsls2
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- {name: 17-ID-A, facility_code: nsls2, confirm: optics hutch; inferred from XF:17IDA}
+- {name: 17-ID-C, facility_code: nsls2, confirm: MX endstation; inferred from XF:17IDC}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: FrontEndShutter, family: Shutter, pv: "XF:17ID-PPS:FAMX{Sh:FE}", new: true, confirm: "front-end PPS (shared FAMX); Shutter (catalog)"}
+  - {name: PhotonShutter, family: Shutter, pv: "XF:17IDA-PPS:FMX{PSh}", new: true, confirm: photon shutter; Shutter (catalog)}
+  - {name: FastShutter, family: Shutter, pv: "XF:17IDC-ES:FMX{Sht:1", new: true, confirm: endstation fast shutter; Shutter (catalog)}
+  - {name: Monochromator, family: Monochromator, pv: "XF:17IDA-OP:FMX{Mono:DCM", new: true, confirm: DCM; Monochromator (catalog)}
+  - {name: HorizontalFocusingMirror, family: Mirror, pv: "XF:17IDA-OP:FMX{Mir:HFM-PS}", new: true, confirm: "HFM bimorph (piezo segments); Mirror (catalog)"}
+  - {name: WhiteBeamSlit, family: Slit, pv: "XF:17IDA-OP:FMX{Slt:1", new: true, confirm: white-beam slit; Slit (catalog)}
+  - {name: CRLAttenuator, family: Filter, pv: "XF:17IDC-OP:FMX{Attn:BCU", new: true, confirm: "BCU attenuator (CRL transmission LUT); confirm Filter vs Transfocator"}
+  - {name: Collimator, family: Collimator, pv: "XF:17IDC-ES:FMX{Colli:1", new: true, confirm: beam-defining collimator; Collimator (catalog)}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Goniometer, family: Goniometer, pv: "XF:17IDC-ES:FMX{Gon:1", new: true, confirm: "single-omega gonio (+ Gon:1-Sht shutter, Gon:1-Vec vector); Goniometer (catalog, graduated via i03); FMX is 2nd MX consumer"}
+  - {name: GoniometerStage2, family: LinearStage, pv: "XF:17IDC-ES:FMX{Gon:2-Ax:", new: true, confirm: secondary gonio stage; LinearStage (catalog)}
+  - {name: ChipScanner, family: LinearStage, pv: "XF:17IDC-ES:FMX{Chip:1-Ax:", new: true, confirm: "fixed-target serial chip raster; LinearStage (catalog)"}
+  - {name: DropStage, family: LinearStage, pv: "XF:17IDC-ES:FMX{Drp:1-Ax:", new: true, confirm: drop/sample-delivery stage; LinearStage (catalog)}
+  - {name: SampleMicroscope, family: GenericProbe, pv: "XF:17IDC-ES:FMX{Mic:1", new: true, confirm: on-axis sample microscope; LOOSE GenericProbe}
+  - {name: SampleLight, family: GenericProbe, pv: "XF:17IDC-ES:FMX{Light:1", new: true, confirm: sample illumination; LOOSE GenericProbe}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Eiger16M, family: Camera, pv: "XF:17IDC-ES:FMX{Det:Eig16M}", new: true, confirm: "Eiger 16M (rotation MX); Camera (catalog)"}
+  - {name: MerlinDetector, family: Camera, pv: "XF:17IDC-ES:FMX{Det:Mer}", new: true, confirm: "Merlin (serial/fast); Camera (catalog)"}
+  - {name: BeamStop, family: BeamStop, pv: "XF:17IDC-ES:FMX{BS:1", new: true, confirm: beamstop; BeamStop (catalog)}
+  - {name: DXPController, family: GenericProbe, pv: "XF:17IDC-BI:FMX{Keith:1}", new: true, confirm: Keithley/DXP front-end; LOOSE GenericProbe}
+  - {name: BeamPositionMonitor, family: GenericProbe, pv: "XF:17IDA-BI:FMX{BPM:1", new: true, confirm: "BPMs (BPM:1-4); LOOSE GenericProbe, held DIAG-1"}
+  - {name: BestMonitor, family: GenericProbe, pv: "XF:17IDC-BI:FMX{Best:2}", new: true, confirm: BEST beam-stabilization monitor; LOOSE GenericProbe}
+  - {name: Zebra1, family: TimingController, pv: "XF:17IDA-ES:FMX{Zeb:1}", new: true, confirm: "Zebra gating (Zeb:1-3); TimingController (catalog), confirm timing role"}
+  - {name: MotionControllerSender, family: MotionController, pv: "XF:17ID-CT:FMX{MC17:Sender}", new: true, confirm: MC17 coordinator; MotionController (catalog), confirm}
