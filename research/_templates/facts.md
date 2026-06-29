@@ -4,11 +4,13 @@ Candidate device facts for `<beamline-id>` (facility `<facility>`). Candidates o
 
 ## Device inventory
 
-Map each device onto a CORA Family at Asset granularity (the stage, not the per-axis tuning). Carry the real control handle (EPICS PV prefix, BLISS object name, Tango device URL) in the descriptor `pv` field, the opaque control-handle slot. A suggested family ending in `(?)` is a class-name fallback, not a confident map: resolve it against `catalog/catalog.yaml` before binding.
+Map each device onto a CORA Family at **Asset granularity**: one row per stage / assembly (a Monochromator, a Mirror, an IonChambers electrometer), NOT one row per motor axis. This is what a deployment descriptor binds: one device, one `family`, one `pv` prefix. The per-axis handles are real and worth recording, but they belong as sub-detail under the Asset, not as separate devices (the failure mode is a 7-row DCM where the descriptor wants one). Carry the real control handle (EPICS PV prefix, BLISS object name, Tango device URL) in the `pv` slot. A suggested family ending in `(?)` is a class-name fallback, not a confident map: resolve it against `catalog/catalog.yaml` before binding.
 
-| Device | Suggested family | PV / axes (handle) | Enclosure | Stage | Labels | Confirm |
+The Asset row carries the device-level **PV prefix** (what the descriptor binds). Its component axes go in the **Axes** column as `name=`leaf`` pairs, read verbatim from source: this is the provenance that later justifies a Capability / Method mapping (e.g. a DCM with bragg+para+perp+energy is an energy-scanning mono, not a fixed crystal). Every handle must be a complete string read from source; if you cannot read the full handle, leave it blank and say so in confirm, never a fragment.
+
+| Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| <name> | <Family or Family (?)> | <prefix; axis=`leaf`> | <hutch> | <source/optics/sample/detection> | <labels> | yes |
+| <Asset name> | <Family or Family (?)> | <device prefix> | <axis=`leaf`; axis=`leaf`; ...> | <hutch> | <source/optics/sample/detection/diagnostics> | yes |
 
 ## Role hints
 

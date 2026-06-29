@@ -7,28 +7,30 @@ Candidate device facts for `bmm` (NSLS-II 6-BM, XAS / EXAFS). Candidates only; c
 
 ## Device inventory
 
-Map each device onto a CORA Family at Asset granularity (the stage, not the per-axis tuning). The control handle is the EPICS PV prefix read from the profile collection. A suggested family ending in `(?)` is a class-name fallback, not a confident map: resolve it against `catalog/catalog.yaml` before binding.
+Map each device onto a CORA Family at **Asset granularity**: one row per stage / assembly, with the device-level PV prefix the descriptor binds. Component axes go in the Axes column (read verbatim from source), as the provenance that justifies the mapping. A family ending in `(?)` is a name-fallback, resolve against `catalog/catalog.yaml` before binding.
 
-| Device | Suggested family | PV / axes (handle) | Enclosure | Stage | Labels | Confirm |
+| Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| FrontEndShutter | Shutter | `XF:06BM-PPS{Sh:FE}` | 6-BM-A | source | shutter | yes |
-| PhotonShutter | Shutter | `XF:06BM-PPS{Sh:A}` | 6-BM-A | source | shutter | yes |
-| CollimatingMirror | Mirror | `XF:06BM-OP{Mir:M1}` | 6-BM-A | optics | mirror | yes |
-| Monochromator | Monochromator | `XF:06BMA-OP{Mono:DCM1}` (bragg/para/perp/pitch/roll/x/y) | 6-BM-A | optics | mono | yes |
-| FocusingMirror | Mirror | `XF:06BMA-OP{Mir:M2}` | 6-BM-A | optics | mirror | yes |
-| ConditioningSlit | Slit | `XF:06BMA-OP{Slt:01}` | 6-BM-A | optics | slit | yes |
-| SampleSlit | Slit | `XF:06BM-BI{Slt:02}` | 6-BM-B | optics | slit | yes |
-| Filter | Filter | `XF:06BMA-BI{Fltr:01}` | 6-BM-A | optics | filter, attenuator | yes |
-| EnergyAxis | PseudoAxis | (pseudo; DCM energy, limits 2900-25000 eV) | 6-BM-A | optics | energy | yes |
-| DiagnosticScreen | Screen | `XF:06BMA-BI{Diag:02}` | 6-BM-A | diagnostics | screen, camera | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:06BM-BI{BPM:1}` | 6-BM-A | diagnostics | bpm | yes |
-| SampleStage | LinearStage | `XF:06BM-ES{MC:09}` (x/y/z) | 6-BM-B | sample | stage | yes |
-| SampleWheel | RotaryStage | `XF:06BMA-BI{XAFS-Ax:RotB}Mtr` | 6-BM-B | sample | stage, wheel | yes |
-| ReferenceHolder | LinearStage | `XF:06BMA-BI{XAFS-Ax:RefX}Mtr` | 6-BM-B | sample | stage, reference | yes |
-| IonChambers | FluxMonitor | `XF:06BM-BI{EM:1}EM180:` (NSLS-II QuadEM; I0/It/Ir/Iy) | 6-BM-B | detection | flux, i0 | yes |
-| FluorescenceSpectrometer | EnergyDispersiveSpectrometer | `XF:06BM-ES{Xsp:1}` (Xspress3; 1/4/7-element variants) | 6-BM-B | detection | fluorescence, mca | yes |
-| ScalerCounter | GenericProbe (?) | `XF:06BM-ES:1{Sclr:1}` | 6-BM-B | detection | scaler | yes |
-| EndstationMotionController | MotionController | `XF:06BM-ES{MC:09}` | 6-BM-B | sample | controller | yes |
+| FrontEndShutter | Shutter | `XF:06BM-PPS{Sh:FE}` | (PPS shutter, no motor axes) | 6-BM-A | source | yes |
+| PhotonShutter | Shutter | `XF:06BM-PPS{Sh:A}` | (PPS shutter) | 6-BM-A | source | yes |
+| CollimatingMirror | Mirror | `XF:06BM-OP{Mir:M1` | yu=`-Ax:YU}Mtr`; ydo=`-Ax:YDO}Mtr`; ydi=`-Ax:YDI}Mtr`; xu=`-Ax:XU}Mtr`; xd=`-Ax:XD}Mtr` | 6-BM-A | optics | yes |
+| Monochromator | Monochromator | `XF:06BMA-OP{Mono:DCM1` | bragg=`-Ax:Bragg}Mtr`; para=`-Ax:Par2}Mtr`; perp=`-Ax:Per2}Mtr`; pitch=`-Ax:P2}Mtr`; roll=`-Ax:R2}Mtr`; x=`-Ax:X}Mtr`; y=`-Ax:Y}Mtr` | 6-BM-A | optics | yes |
+| FocusingMirror | Mirror | `XF:06BMA-OP{Mir:M2` | yu=`-Ax:YU}Mtr`; ydo=`-Ax:YDO}Mtr`; ydi=`-Ax:YDI}Mtr`; xu=`-Ax:XU}Mtr`; xd=`-Ax:XD}Mtr`; bend=`-Ax:Bend}Mtr` | 6-BM-A | optics | yes |
+| ConditioningSlit | Slit | `XF:06BMA-OP{Slt:01` | top/bottom/inboard/outboard blades | 6-BM-A | optics | yes |
+| SampleSlit | Slit | `XF:06BM-BI{Slt:02` | top/bottom/inboard/outboard blades | 6-BM-B | optics | yes |
+| Filter | Filter | `XF:06BMA-BI{Fltr:01` | y1=`-Ax:Y1}Mtr`; y2=`-Ax:Y2}Mtr` | 6-BM-A | optics | yes |
+| EnergyAxis | PseudoAxis | (pseudo; no PV) | DCM energy pseudo-positioner, limits 2900-25000 eV | 6-BM-A | optics | yes |
+| DiagnosticScreen | Screen | `XF:06BMA-BI{Diag:02` | y=`-Ax:Y}Mtr` | 6-BM-A | diagnostics | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:06BM-BI{BPM:1` | y=`-Ax:Y}Mtr` | 6-BM-A | diagnostics | yes |
+| SampleStage | LinearStage | `XF:06BM-ES{MC:09` | x/y/z linked axes | 6-BM-B | sample | yes |
+| SampleWheel | RotaryStage | `XF:06BMA-BI{XAFS-Ax:RotB}Mtr` | (single rotary axis) | 6-BM-B | sample | yes |
+| ReferenceHolder | LinearStage | `XF:06BMA-BI{XAFS-Ax:RefX}Mtr` | (single linear axis) | 6-BM-B | sample | yes |
+| IonChambers | FluxMonitor | `XF:06BM-BI{EM:1}EM180:` | I0/It/Ir/Iy derived currents (QuadEM) | 6-BM-B | detection | yes |
+| FluorescenceSpectrometer | EnergyDispersiveSpectrometer | `XF:06BM-ES{Xsp:1}` | Xspress3; 1/4/7-element variants | 6-BM-B | detection | yes |
+| ScalerCounter | GenericProbe (?) | `XF:06BM-ES:1{Sclr:1}` | (scaler channels) | 6-BM-B | detection | yes |
+| EndstationMotionController | MotionController | `XF:06BM-ES{MC:09}` | (motion controller) | 6-BM-B | sample | yes |
+
+The per-axis handles above are read verbatim from `dcm.py` / `motors.py` / `instruments.py` (DCM, M1, M2, filters); the pilot adversarial-verify confirmed every one against source. Slit blades and the scaler channels are real axes recorded at the Asset level here; expand them only if a deployment binds individual blades.
 
 ## Role hints
 

@@ -42,7 +42,7 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 | ALS | yes | none | none | candidate facility |
 | PETRA III | yes | none | none | candidate facility |
 | Diamond | yes (retrospective) | (per-beamline from `dodal` at build time) | yes | EPICS, public `dodal` controls library |
-| NSLS-II | yes (retrospective) | 1 (bmm; worked example) | yes | EPICS / bluesky, public profile collections |
+| NSLS-II | yes (retrospective) | 2 (bmm, srx) | yes | EPICS / bluesky, public profile collections |
 | SLAC | yes (retrospective) | (from `pcdshub` at build time) | yes | EPICS / `pcdshub` |
 | Australian Synchrotron | yes (retrospective) | none | yes | heterogeneous (EPICS + Exporter + REST + TCP) |
 | MAX IV | needed | none | yes | Tango / Sardana |
