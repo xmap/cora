@@ -4,8 +4,9 @@
   \centering
   \caption{Where the replay scrubber sits relative to the closest prior work.
   $\bullet$ = present, $\circ$ = absent or not surfaced to the user.
-  \emph{Replay} names the reconstruction mechanism; \emph{fidelity} is a
-  per-cursor integrity check, over the replayed run state, shown to a human;
+  \emph{Replay} names the reconstruction mechanism; \emph{fidelity} is an
+  integrity check, over the replayed recipe expansion, recomputed at the cursor
+  and shown to a human;
   \emph{run-state provenance} is per-iteration verdict and in-flight semantics
   along a run; \emph{who / handoff} is a per-transition actor (human or agent)
   record; \emph{scrub} is an interactive time cursor. No prior system combines
@@ -28,88 +29,76 @@
   \end{tabular}
 \end{table*}
 
-We read the neighboring work for what it already does well and locate our
-contribution in the gap none of it fills. Our work draws on five lines of
-research, none of which composes its central primitive: a deterministic fold over
-an immutable event record, exposed as a scrub interaction, carrying a
-content-addressed fidelity check and provenance semantics for autonomous loops
-(Table~\ref{tab:compare}).
+We locate our contribution in the gap none of the neighboring work fills: a
+deterministic fold over an immutable event record, exposed as a scrub
+interaction, carrying a content-addressed fidelity check and provenance semantics
+for autonomous loops. The comparison table carries the per-system contrasts
+(Table~\ref{tab:compare}); here we name the four lines and where each stops short.
 
-\textbf{Provenance visualization and notebook time travel.}
-Retrospective provenance, the record of what an execution actually did, has
-long been distinguished from the prospective recipe that specifies
-it~\cite{lim2010}. Systems that visualize it, such as
+\textbf{Provenance visualization, replay, and time-travel.}
+Retrospective provenance has long been distinguished from the prospective recipe
+that specifies it~\cite{lim2010}, and tools that visualize it, such as
 VisTrails~\cite{vistrails2006} and Loops~\cite{loops2024}, let an analyst
-navigate a version tree and compare or diff recorded versions of a workflow or
-notebook. Verdant~\cite{verdant2018, verdant2019} is the closest prior
-interaction to ours: it pairs recorded notebook history with interactive
-techniques for comparing and replaying many recorded versions. Its replay
-navigates and re-creates recorded versions rather than folding an immutable
-event stream, so it does not certify that a reconstructed version matches what
-happened, and it targets a single analyst's local notebook rather than an
-autonomous run. QIIME~2 Provenance Replay~\cite{qiime2replay} likewise turns a
-recorded provenance graph into regenerated code that is re-run offline, not an
-interactive view. We differ in that we reconstruct state by folding an
-immutable event record and certify the match at the cursor, rather than
-navigating versions or replaying by re-execution.
+navigate and diff recorded versions. Verdant~\cite{verdant2018, verdant2019} is
+the closest prior interaction: it pairs recorded notebook history with a
+draggable timeline, but its replay re-executes recorded versions rather than
+folding an immutable stream, so it cannot certify the match, and it targets a
+local notebook. QIIME~2 Provenance Replay~\cite{qiime2replay} regenerates code to
+re-run offline rather than offering an interactive view. Omniscient debuggers
+such as Pernosco and rr~\cite{rr2017}, the Whyline~\cite{whyline2008}, and
+reducer-based state containers share our record-once, replay-later posture, but
+hold deterministic replay as an internal guarantee never rendered to the user.
+These systems replay computation; we replay recorded run state with provenance
+semantics and a visible, checkable fidelity affordance.
 
-\textbf{Record-replay and time-travel debugging.}
-Omniscient debuggers such as Pernosco and rr~\cite{rr2017}, the
-Whyline~\cite{whyline2008}, and reducer-based state containers share our
-record-once, replay-later posture and give instant access to any past instant.
-In all of them, deterministic replay is held as an internal guarantee and is
-never rendered to the user. In short, these systems replay computation, whereas
-we replay recorded run state with provenance semantics and a per-cursor,
-content-addressed integrity check that makes the faithfulness of the replay a
-visible, checkable affordance.
-
-\textbf{Tamper-evident and verifiable provenance.}
+\textbf{Tamper-evident provenance and reproducibility badges.}
 The canonical integrity structures, Crosby and Wallach's history
-tree~\cite{crosby2009} and Certificate Transparency's Merkle logs~\cite{ct2013},
-verify membership and consistency as machine-checked proofs with no user
-interface; content-addressed identifiers such as SWHID~\cite{swhid} expose the
-same recompute-and-compare primitive only as a command-line property. The
-closest human-facing analog is C2PA Content Credentials~\cite{c2pa}, which
-renders the authenticity of recorded media; content-credential provenance has
-recently been carried to machine-learning pipelines~\cite{atlas2025}, where a
-content-addressed hash-versus-reference check runs at a programmatic service
-layer over discrete artifacts, with no visualization and no notion of replayed
-state. We differ in that we render a content-addressed verification verdict to
-a human, at each scrubbed instant, over reconstructed run state.
-
-\textbf{Reproducibility records and badges.}
-Provenance-record tools such as CPR~\cite{cpr2021} and Whole Tale~\cite{wholetale},
-workflow-run provenance crates~\cite{wrroc2024}, and artifact
-badges~\cite{acmbadges} either emit static reports and immutable output
-snapshots, or certify a run through human audit with results required to agree
-only within a tolerance. None reconstructs per-instant state or renders an
-exact, content-addressed match. We differ in that our fidelity badge is an
-automated equality check recomputed as the user scrubs, not a coarse,
-evaluation-time certification.
+tree~\cite{crosby2009}, Certificate Transparency's Merkle logs~\cite{ct2013}, and
+content-addressed identifiers such as SWHID~\cite{swhid}, verify membership or
+recompute-and-compare as machine-checked properties with no user interface. The
+closest human-facing analog is C2PA Content Credentials~\cite{c2pa}, recently
+carried to machine-learning pipelines~\cite{atlas2025} as a content-addressed
+hash-versus-reference check at a programmatic service layer over discrete
+artifacts, with no visualization and no replayed state. Reproducibility-record
+tools, CPR~\cite{cpr2021}, Whole Tale~\cite{wholetale}, workflow-run provenance
+crates~\cite{wrroc2024}, and artifact badges~\cite{acmbadges}, emit static
+reports or certify a run through human audit within a tolerance. None
+reconstructs per-instant state or renders an exact, content-addressed match. We
+render a content-addressed verification verdict to a human, recomputed as the
+user scrubs, over reconstructed run state.
 
 \textbf{Conformance checking.}
-Process mining supplies the canonical quantitative verdict of whether a run
-conformed, through token-replay fitness~\cite{rozinat2008} and localized
-alignment diagnostics~\cite{berti2019, pm4py}; online variants detect
-deviations on a live stream~\cite{vanzelst2019}. These verdicts are encoded as
-static overlays on a process model, or as per-move type coloring along a
-completed trace, never as verdicts along an iteration axis with interval
-structure, and alignments computed post hoc on complete traces have no
-representation for an interrupted step. Tellingly, recent surveys of
-conformance visualization conclude that the visual encoding of conformance
-results remains an open problem~\cite{rehse2022, hagerehse2025}. We contribute
-exactly such an encoding: verdict-colored convergence bands along the iteration
-axis, with open intervals for in-flight steps.
+Process mining supplies the canonical verdict of whether a run conformed, through
+token-replay fitness~\cite{rozinat2008}, alignment diagnostics~\cite{berti2019,
+pm4py}, and online variants on a live stream~\cite{vanzelst2019}. These verdicts
+are encoded as static overlays on a process model or per-move coloring along a
+completed trace, never along an iteration axis with interval structure, and
+post-hoc alignments have no representation for an interrupted step. Recent
+surveys conclude that the visual encoding of conformance results remains an open
+problem~\cite{rehse2022, hagerehse2025}. We contribute exactly such an encoding:
+verdict-colored convergence bands along the iteration axis, with open intervals
+for in-flight steps.
 
 \textbf{Visual analytics for autonomous experimentation.}
-Self-driving-lab and autonomous-beamline systems increasingly keep complete
-operations logs and present live dashboards. VISION~\cite{vision2025} logs
-operations for backend monitoring, while optimizer and campaign tools such as
-Olympus~\cite{olympus2021}, the autonomous SAXS/WAXS framework at ALS and
-PETRA~III~\cite{alspetra2026}, Tsuchinoko~\cite{tsuchinoko},
+Self-driving-lab and autonomous-beamline systems keep operations logs and present
+live dashboards: VISION~\cite{vision2025} for backend monitoring, and optimizer
+and campaign tools such as Olympus~\cite{olympus2021}, the autonomous SAXS/WAXS
+framework at ALS and PETRA~III~\cite{alspetra2026}, Tsuchinoko~\cite{tsuchinoko},
 ChemOS~2.0~\cite{chemos2}, A-Lab~\cite{alab2023}, and Bluesky's live
-callbacks~\cite{bluesky} render score and posterior fields, convergence lines,
-and live plots. These are forward-streaming views of a run in progress; none
-offers a scrubbable, post-hoc audit of the recorded run, per-iteration
-convergence verdicts, or a fidelity check. That gap, and the audit and steering
-tasks it implies, is what our replay scrubber addresses.
+callbacks~\cite{bluesky} render score fields, convergence lines, and live plots.
+These are forward-streaming views of a run in progress; none offers a scrubbable,
+post-hoc audit of the recorded run, per-iteration convergence verdicts, or a
+fidelity check. That gap is what the replay scrubber addresses.
+
+\textbf{Questions for the VAxAutoSci community.}
+We see the scrubber less as a finished answer than as a way to open three
+questions for this community. First, what should a fidelity check cover as
+autonomy deepens: we verify the recipe expansion, but a closed-loop run invites a
+debate over which dynamic state (decisions, model inputs, next-action choices)
+should be made content-addressable and shown, and at what cost to legibility.
+Second, how should oversight scale to many agents: the lifecycle lane that here
+separates one operator from one supervisor would need encodings for contention,
+handoff, and blame across several agents acting at once. Third, what is the right
+division of labor between post-hoc audit and live steering, since the same folded
+timeline could host a now-edge for monitoring a run in progress. We offer the
+scrubber as a concrete substrate against which the community can argue these out.

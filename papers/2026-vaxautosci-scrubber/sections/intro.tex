@@ -21,7 +21,11 @@ nowhere to stand inside the run and look around. When the beam drops, the log
 simply stops, leaving the auditor to guess what was
 in flight and whether it took effect; a static record offers no way to show that
 it has not been altered after the fact; and nothing says who was driving at each
-moment.
+moment. Read this way, auditing an autonomous run is a visual analytics problem
+for autonomous science: it is about oversight, replay, audit, and human-agent
+accountability, the question of how a person reconstructs and answers for what an
+instrument and its agents did unattended. That problem, rather than any single
+encoding, is what this paper takes to the VAxAutoSci community.
 
 We observe that one class of system already answers such questions internally.
 An event-sourced system of record never stores current state directly; it
@@ -37,26 +41,37 @@ reconstruction is faithful. Because the view is driven by the same deterministic
 fold used by the backend read path, the displayed state is reconstructed from
 the recorded event prefix rather than re-created by a separate
 visualization-specific replay; and a content-addressed check of the recorded
-expansion lets the scrubber verify, rather than merely assert, that the state
-shown at the cursor matches the record (under the system's append-only and
-deterministic-fold assumptions, not adversarial tamper resistance).
+recipe expansion lets the scrubber verify, rather than merely assert, that the
+expansion shown at the cursor matches the hash recorded at run start (under the
+system's append-only and deterministic-fold assumptions, not adversarial tamper
+resistance, and covering the recipe expansion rather than the full dynamic run
+state).
 
-We ground the design in a real run from an operating instrument: an unattended,
-agent-supervised run at the APS 2-BM micro-CT beamline, in which our
-event-sourced system of record, CORA, conducts a rotation-axis centering
-alignment that converges, the science scan begins and a projection is in flight
-when the beam drops,
-and a deterministic supervisor agent holds the run and auto-resumes it when the
-beam returns. We are deliberate about scope. The agent
+We ground the design in an integration-tested, agent-supervised scenario run of
+our event-sourced system of record, CORA, on an APS 2-BM micro-CT configuration.
+The scenario exercises the real event-sourcing stack: it conducts a
+rotation-axis centering alignment that converges, the science scan begins and a
+projection is in flight when the beam drops, and a deterministic supervisor agent
+holds the run and auto-resumes it when the beam returns. The evidence chain is
+explicit: a passing integration scenario runs against the real Kernel and
+Postgres event store; its recorded activities, iteration verdicts, lifecycle
+events, and supervisor decisions are mirrored by a standalone generator into the
+run data the figures render, with only the per-event timestamps staggered
+synthetically for a readable axis. We are deliberate about scope. The agent
 supervises and recovers a \emph{conducted} run, recording each hold and resume
 as a decision; the fully agent-closed perceive-decide-act loop, in which a model
 selects the science itself, is out of scope, and the prototype is a research
-visualization over exported run data rather than a deployed interface.
+visualization over exported run data rather than a deployed interface. We treat
+that boundary as a discussion opening rather than a limitation to apologize for:
+because a closed-loop optimizer would record its next-action choices through the
+same decision substrate, the supervised case is the near end of a progression the
+VAxAutoSci community can debate, namely what oversight, replay, and accountability
+should look like as automation moves from agent-supervised toward agent-closed.
 
 The novelty is not a timeline or time travel as such, but their conjunction in
 this setting: deterministic event-stream replay, provenance visualization, a
-per-cursor content-addressed fidelity check, and a task abstraction for auditing
-autonomous runs.
+content-addressed fidelity check run at the cursor, and a task abstraction for
+auditing autonomous runs.
 
 \medskip\noindent This paper makes four contributions:
 \begin{itemize}
@@ -75,8 +90,9 @@ autonomous runs.
         transition, verdict-colored convergence bands,
         open-interval markers for unfinished steps, a draggable fold-to-version
         cursor, and a content-addressed fidelity badge.
-  \item \textbf{A grounded case study.} We demonstrate the four tasks on a real
-        unattended, agent-supervised run on the APS 2-BM micro-CT beamline,
+  \item \textbf{A grounded case study.} We demonstrate the four tasks on an
+        integration-tested, agent-supervised scenario run on an APS 2-BM micro-CT
+        configuration, exercised against the real event-sourcing stack,
         including the beam-loss instant at which the scrubber surfaces the agent
         that held the run and the interrupted projection it left open.
 \end{itemize}
