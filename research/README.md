@@ -43,7 +43,7 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 | PETRA III | yes | none | none | candidate facility |
 | SPring-8 | yes | none | none | in-house MADOCA (not EPICS); control source firewalled |
 | Diamond | yes (retrospective) | (per-beamline from `dodal` at build time) | yes | EPICS, public `dodal` controls library |
-| NSLS-II | yes (retrospective) | 6 (bmm, srx, iss, chx, fxi, pdf) | yes | EPICS / bluesky, public profile collections |
+| NSLS-II | yes (retrospective) | 11 of 24 (+ recurrence.md) | yes | EPICS / bluesky, public profile collections |
 | SLAC | yes (retrospective) | (from `pcdshub` at build time) | yes | EPICS / `pcdshub` |
 | Australian Synchrotron | yes (retrospective) | none | yes | heterogeneous (EPICS + Exporter + REST + TCP) |
 | MAX IV | needed | none | yes | Tango / Sardana |
