@@ -39,10 +39,11 @@ over eleven BCDA-APS `*-bits` repos; the labels and ophyd-class frequency tables
 `recurrence.md` carry the cleanest graduation signal, since the family table mixes confident
 suggestions with class-name fallbacks.
 
-Caveat: the recurrence counts repos, not physical beamlines, so a fork inflates the count.
-`6idb-bits` is a fork of `polar-bits` (both the 4-ID instrument), so families that look like
-they recur across "POLAR and 6-ID-B" actually rest on a single beamline. De-duplicate by
-physical beamline before treating a count as a graduation trigger; see
+Caveat: `recurrence.md` counts by beamline directory, so each directory must be one physical
+beamline. `BCDA-APS/6idb-bits` is a fork of `polar-bits` (both the 4-ID instrument) with a
+grafted Sector 6 endstation; it is split in the tree into `beamlines/4-id/` (from `polar-bits`)
+and the carved `beamlines/6-id-b/`, so the recurrence no longer double-counts 4-ID. Keep that
+invariant when adding a beamline: one directory per physical beamline; see
 `catalog-graduation-decisions.md`.
 
 This is step 1 of the roadmap in the approved plan

@@ -1,12 +1,13 @@
-# Extracted facts: 28id-bits
+# Extracted facts: 2-BM
 
-Machine-extracted candidate facts for `28id-bits` (facility `aps`). Candidates only; confirm every row before modeling. Source: the repo's Guarneri `devices.yml` plus ophyd device classes.
+Machine-extracted candidate facts for `2-BM` (facility `aps`). Candidates only; confirm every row before modeling. Source: the repo's Guarneri `devices.yml` plus ophyd device classes.
 
 ## Device inventory
 
 | Device | Suggested family | PV / axes | Enclosure | Stage | Labels | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| shutter | Shutter | - | ? | source | shutters, baseline | yes |
+| optics | MCTOptics (?) | `2bm:MCTOptics:` | ? | source | optics | yes |
+| shutter | Shutter | - | ? | source | shutters | yes |
 
 ## Candidate enclosures
 
@@ -30,6 +31,10 @@ Candidate Trust Zones / Policies, one per queueserver user group:
 
 ## Open confirms
 
+- **optics** (`tomo_instrument.devices.mct_optics.MCTOptics`)
+    - axes unresolved: pv is the device prefix, per-axis PVs need confirm
+    - family is the ophyd class name 'MCTOptics'; needs a CORA Family
+    - enclosure unresolved from prefix or labels
 - **shutter** (`apstools.devices.SimulatedApsPssShutterWithStatus`)
     - no prefix and no resolvable axes
     - enclosure unresolved from prefix or labels

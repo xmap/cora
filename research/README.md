@@ -32,7 +32,7 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 
 | Facility | Survey | Tier-2 device passes | Deployments | Control source |
 | --- | --- | --- | --- | --- |
-| APS | yes | 11 (`*-bits`) | yes | EPICS, public `*-bits` instrument repos |
+| APS | yes | 11 beamlines (from `*-bits`) | yes | EPICS, public `*-bits` instrument repos |
 | ESRF | yes | 2 (ID19, ID16B) | yes | BLISS / Tango, public Beacon config |
 | PSI | yes | none | yes | EPICS + BEC; device source on gitea (firewalled) |
 | ALBA | yes | none | yes | device source firewalled |
@@ -52,7 +52,7 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 
 ## APS extraction tooling (EPICS-specific)
 
-`scripts/reverse_engineer/` automates the APS Tier-2 pass: it reads the Guarneri `devices.yml`, AST-walks the ophyd device classes, parses `user_group_permissions.yaml`, and emits candidates to `research/aps/beamlines/<repo>/` plus a cross-fleet `research/aps/recurrence.md`. It never writes to `deployments/` or `catalog/`. This is EPICS / `*-bits`-specific and does not generalize; BLISS / Tango facilities (ESRF, Elettra) and firewalled facilities are surveyed by hand. See [`aps/survey.md`](aps/survey.md) and [`aps/catalog-graduation-decisions.md`](aps/catalog-graduation-decisions.md).
+`scripts/reverse_engineer/` automates the APS Tier-2 pass: it reads the Guarneri `devices.yml`, AST-walks the ophyd device classes, parses `user_group_permissions.yaml`, and emits candidates to `research/aps/beamlines/<beamline>/` plus a cross-fleet `research/aps/recurrence.md`. The output directory is the slugified beamline name derived from the device enclosures (e.g. `4-id`); where the enclosures do not encode a station letter, pass `--name <repo-stem>=<beamline>` (e.g. `--name usaxs-bits=12-ID-E`) so the directory is the beamline, not the repo. It never writes to `deployments/` or `catalog/`. This is EPICS / `*-bits`-specific and does not generalize; BLISS / Tango facilities (ESRF, Elettra) and firewalled facilities are surveyed by hand. See [`aps/survey.md`](aps/survey.md) and [`aps/catalog-graduation-decisions.md`](aps/catalog-graduation-decisions.md).
 
 ## The practice
 

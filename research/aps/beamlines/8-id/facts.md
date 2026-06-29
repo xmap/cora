@@ -1,4 +1,4 @@
-# Extracted facts: 8id-bits
+# Extracted facts: 8-ID
 
 Machine-extracted candidate facts for `8-ID` (facility `aps`). Candidates only; confirm every row before modeling. Source: the repo's Guarneri `devices.yml` plus ophyd device classes.
 

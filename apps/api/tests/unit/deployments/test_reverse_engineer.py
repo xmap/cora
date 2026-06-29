@@ -30,6 +30,7 @@ def _module(name: str) -> Any:
 parse = _module("reverse_engineer.parse")
 mapping = _module("reverse_engineer.mapping")
 emit = _module("reverse_engineer.emit")
+cli = _module("reverse_engineer.cli")
 
 
 def _instance(name: str, class_path: str, prefix: str, **kw: Any) -> Any:
@@ -299,3 +300,43 @@ def test_tango_candidate_yaml_self_validates_against_loader(tmp_path: Path) -> N
     path.write_text(text, encoding="utf-8")
     ok, message = emit.self_validate(path)
     assert ok, message
+
+
+# Output-directory naming: the dir is the beamline ID, never the repo stem.
+
+
+def test_slugify_lowercases_beamline_id_to_directory_slug() -> None:
+    assert cli._slugify("4-ID") == "4-id"
+    assert cli._slugify("12-ID-E") == "12-id-e"
+    assert cli._slugify("2-BM") == "2-bm"
+
+
+def test_slugify_collapses_non_alphanumeric_runs() -> None:
+    assert cli._slugify("6-ID-B") == "6-id-b"
+    assert cli._slugify("P01 EH1") == "p01-eh1"
+    assert cli._slugify("--4-ID--") == "4-id"
+
+
+def _candidate(enclosure: str | None) -> Any:
+    return mapping.CandidateDevice(
+        name="m1",
+        family="EpicsMotor",
+        family_confirmed=False,
+        pv="4idbSoft:m1",
+        labels=(),
+        role_hints=(),
+        enclosure=enclosure,
+        stage="source",
+        source_class="ophyd.EpicsMotor",
+        confirm_reasons=(),
+        is_sim=False,
+    )
+
+
+def test_beamline_name_prefers_enclosure_sector_over_repo_stem() -> None:
+    devices = [_candidate("4-ID-B"), _candidate("4-ID-B"), _candidate("4-ID-G")]
+    assert cli._beamline_name(devices, "polar-bits") == "4-ID"
+
+
+def test_beamline_name_falls_back_to_repo_stem_without_station_enclosure() -> None:
+    assert cli._beamline_name([_candidate(None)], "usaxs-bits") == "usaxs-bits"

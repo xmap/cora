@@ -4,7 +4,7 @@
 # new Family, the naming-r3 gate. Do not copy into deployments/ without review.
 
 beamline:
-  name: usaxs-bits
+  name: 12-ID-E
   facility: aps
   tier: Unit
   source: unknown-pending-confirmation

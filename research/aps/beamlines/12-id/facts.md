@@ -1,4 +1,4 @@
-# Extracted facts: 12id-bits
+# Extracted facts: 12-ID
 
 Machine-extracted candidate facts for `12-ID` (facility `aps`). Candidates only; confirm every row before modeling. Source: the repo's Guarneri `devices.yml` plus ophyd device classes.
 

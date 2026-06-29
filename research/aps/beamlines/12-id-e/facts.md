@@ -1,6 +1,6 @@
-# Extracted facts: usaxs-bits
+# Extracted facts: 12-ID-E
 
-Machine-extracted candidate facts for `usaxs-bits` (facility `aps`). Candidates only; confirm every row before modeling. Source: the repo's Guarneri `devices.yml` plus ophyd device classes.
+Machine-extracted candidate facts for `12-ID-E` (facility `aps`). Candidates only; confirm every row before modeling. Source: the repo's Guarneri `devices.yml` plus ophyd device classes.
 
 ## Device inventory
 

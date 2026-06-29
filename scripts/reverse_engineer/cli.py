@@ -135,6 +135,21 @@ def _beamline_name(devices: list[mapping.CandidateDevice], fallback: str) -> str
     return fallback
 
 
+def _slugify(name: str) -> str:
+    """Lowercase a beamline name into a directory slug, e.g. '4-ID' -> '4-id'.
+
+    Keeps the beamline-ID shape the research tree and deployments/ both use; any
+    character outside [a-z0-9-] collapses to a single dash.
+    """
+    out = []
+    for ch in name.lower():
+        out.append(ch if (ch.isalnum() or ch == "-") else "-")
+    slug = "".join(out)
+    while "--" in slug:
+        slug = slug.replace("--", "-")
+    return slug.strip("-")
+
+
 _BITS_SOURCE_DESC = "the repo's Guarneri `devices.yml` plus ophyd device classes"
 _ONLINEXML_SOURCE_DESC = "DESY OnlineXML (the beamline's online_*.xml Tango device registry)"
 
@@ -166,20 +181,26 @@ def _process_repo_onlinexml(
 
 
 def _process_repo(
-    repo: str, cache: Path, out_root: Path, facility: str, source: str
+    repo: str,
+    cache: Path,
+    out_root: Path,
+    facility: str,
+    source: str,
+    name_override: str | None = None,
 ) -> tuple[str, list[mapping.CandidateDevice]]:
     stem, repo_dir = _resolve_repo(repo, cache)
     if source == "onlinexml":
         devices, permissions, source_desc, skipped = _process_repo_onlinexml(stem, repo_dir)
     else:
         devices, permissions, source_desc, skipped = _process_repo_bits(stem, repo_dir)
-    beamline_name = _beamline_name(devices, stem)
+    beamline_name = name_override or _beamline_name(devices, stem)
+    dir_name = _slugify(beamline_name)
 
-    out_dir = out_root / stem
+    out_dir = out_root / dir_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
     facts = emit.render_facts_md(
-        stem, beamline_name, facility, devices, permissions, source_desc, skipped
+        beamline_name, beamline_name, facility, devices, permissions, source_desc, skipped
     )
     (out_dir / "facts.md").write_text(facts, encoding="utf-8")
 
@@ -191,8 +212,8 @@ def _process_repo(
     status = "valid" if ok else f"INVALID: {message}"
     real = sum(1 for d in devices if not d.is_sim)
     skip_note = f", {skipped} filtered" if skipped else ""
-    print(f"{stem}: {real} devices{skip_note}, candidate {status}")
-    return stem, devices
+    print(f"{dir_name}: {real} devices{skip_note}, candidate {status}")
+    return dir_name, devices
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -218,15 +239,36 @@ def main(argv: list[str] | None = None) -> int:
         "--recurrence-out", default="research/aps/recurrence.md"
     )
     parser.add_argument("--facility", default="aps")
+    parser.add_argument(
+        "--name",
+        action="append",
+        default=[],
+        metavar="REPO=BEAMLINE",
+        help=(
+            "Override the derived beamline name for a repo (by repo stem), e.g. "
+            "usaxs-bits=12-ID-E. Use when the enclosures do not encode a station letter."
+        ),
+    )
     args = parser.parse_args(argv)
 
     cache = Path(args.cache)
     out_root = Path(args.out)
 
+    name_overrides: dict[str, str] = {}
+    for entry in args.name:
+        key, sep, value = entry.partition("=")
+        if not sep or not value:
+            parser.error(f"--name expects REPO=BEAMLINE, got {entry!r}")
+        name_overrides[key] = value
+
     per_repo: dict[str, list[mapping.CandidateDevice]] = {}
     for repo in args.repo:
-        stem, devices = _process_repo(repo, cache, out_root, args.facility, args.source)
-        per_repo[stem] = devices
+        stem = repo.rstrip("/").split("/")[-1]
+        override = name_overrides.get(stem)
+        dir_name, devices = _process_repo(
+            repo, cache, out_root, args.facility, args.source, override
+        )
+        per_repo[dir_name] = devices
 
     graduated = emit.graduated_families(Path(args.catalog))
     recurrence = emit.render_recurrence_md(per_repo, graduated)

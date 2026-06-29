@@ -1,0 +1,69 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+#
+# CURATED: BCDA-APS/6idb-bits is a fork of polar-bits (4-ID) with a grafted 6-ID-B
+# endstation. The 4-ID devices live in research/aps/beamlines/4-id/ (from polar-bits);
+# this file keeps only the 6-ID-B-station devices so the two physical beamlines do not
+# double-count in recurrence. Source: the repo's Guarneri devices.yml plus ophyd classes.
+
+beamline:
+  name: 6-ID-B
+  facility: aps
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 6-ID-B
+  facility_code: aps
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: crl
+    family: mb_creator
+    pv: '6idbSoft:TRANS:'
+    enclosure: 6-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''mb_creator''; needs a CORA Family; factory
+      device (ad_creator): plugins and file paths need a human; ophyd class ''mb_creator''
+      not found in devices/*.py'
+    source_class: apstools.devices.mb_creator
+  - name: psic
+    family: creator
+    pv: '6idb1:'
+    enclosure: 6-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''creator''; needs a CORA Family; ophyd class
+      ''creator'' not found in devices/*.py'
+    labels:
+    - diffractometer
+    - hklpy2
+    source_class: hklpy2.creator
+  - name: psic_psi
+    family: creator
+    pv: '6idb1:'
+    enclosure: 6-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''creator''; needs a CORA Family; ophyd class
+      ''creator'' not found in devices/*.py'
+    labels:
+    - diffractometer
+    - hklpy2
+    source_class: hklpy2.creator
+  - name: psic_q
+    family: creator
+    pv: '6idb1:'
+    enclosure: 6-ID-B
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''creator''; needs a CORA Family; ophyd class
+      ''creator'' not found in devices/*.py'
+    labels:
+    - diffractometer
+    - hklpy2
+    source_class: hklpy2.creator

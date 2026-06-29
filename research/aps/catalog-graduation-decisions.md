@@ -21,8 +21,8 @@ so that commit carries no naming risk.
 
 ## Decisions
 
-Distinct physical beamlines, after the fork correction below: 4-ID (`polar-bits`,
-`6idb-bits`), 8-ID, 9-ID, 2-BM.
+Distinct physical beamlines, after the fork split below: 4-ID (`4-id`, from
+`polar-bits`), 6-ID-B (`6-id-b`, the carved graft from `6idb-bits`), 8-ID, 9-ID, 2-BM.
 
 | Candidate | independent beamlines | CORA status today | Decision | naming-r3 |
 | --- | --- | --- | --- | --- |
@@ -38,13 +38,16 @@ Excluded as non-hardware (not Families): `DM_WorkflowConnector` is the APS Data 
 handoff, which maps to the Reckoner / Porter seam, not a catalog Family; `mb_creator` and
 `ad_creator` are ophyd construction factories, not device types.
 
-## Correction: 6idb-bits is a 4-ID fork (recurrence double-counts)
+## Split: 6idb-bits was a 4-ID fork plus a 6-ID-B graft
 
-The `recurrence.md` report counts repos, not physical beamlines. `BCDA-APS/6idb-bits` is a
-fork of `polar-bits`: its devices are almost entirely the same `4id*` PVs (the extractor
-auto-labels it "4-ID"), with a grafted 6-ID-B endstation (a `psic` six-circle diffractometer
-at `6idb1:`, a CRL at `6idbSoft:TRANS:`). So `polar-bits` and `6idb-bits` are ONE physical
-beamline (4-ID). The "independent beamlines" column above is the de-duplicated count.
+`BCDA-APS/6idb-bits` is a fork of `polar-bits`: its devices are almost entirely the same
+`4id*` PVs (the extractor auto-labels it "4-ID"), with a grafted 6-ID-B endstation (a `psic`
+six-circle diffractometer at `6idb1:`, a CRL at `6idbSoft:TRANS:`). Both repos are the 4-ID
+instrument plus, in the fork, the physically separate Sector 6 endstation 6-ID-B. The research
+tree now reflects this: the 4-ID devices live in `beamlines/4-id/` (from `polar-bits`), and the
+6-ID-B-station devices are carved into `beamlines/6-id-b/`, so `recurrence.md` counts physical
+beamlines rather than repos. Before the split a single fork inflated 31 families to a spurious
+"in 2 repos" graduation-candidate count.
 
 Consequence: `Magnet` and `Preamplifier` rest on a single physical beamline (4-ID), so they do
 NOT meet the two-deployment graduation trigger yet; they are held until a genuinely independent
@@ -52,8 +55,8 @@ beamline references them (for `Magnet`, a different magnetism beamline; 8-ID XPC
 magnet). `Diffractometer`, `Transfocator`, and `BeamPositionMonitor` retain two or more
 independent beamlines (via 8-ID / 9-ID / 2-BM) and remain graduation candidates once a
 second deployment is curated; `TemperatureController` has since graduated (presents
-`Regulator`) on the Diamond i22/i03/i11 rule-of-three. `6idb-bits` itself was used only to enrich the
-4-ID POLAR descriptor, not to build a duplicate deployment.
+`Regulator`) on the Diamond i22/i03/i11 rule-of-three. The carved `6-id-b` contributes only its
+Sector 6 devices, not a duplicate 4-ID deployment.
 
 ## Detail
 

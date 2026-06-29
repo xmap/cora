@@ -4,7 +4,7 @@
 # new Family, the naming-r3 gate. Do not copy into deployments/ without review.
 
 beamline:
-  name: 28id-bits
+  name: 2-BM
   facility: aps
   tier: Unit
   source: unknown-pending-confirmation
@@ -20,5 +20,14 @@ source:
       labels; ophyd class 'SimulatedApsPssShutterWithStatus' not found in devices/*.py
     labels:
     - shutters
-    - baseline
     source_class: apstools.devices.SimulatedApsPssShutterWithStatus
+  - name: optics
+    family: MCTOptics
+    pv: '2bm:MCTOptics:'
+    new: true
+    confirm: 'axes unresolved: pv is the device prefix, per-axis PVs need confirm;
+      family is the ophyd class name ''MCTOptics''; needs a CORA Family; enclosure
+      unresolved from prefix or labels'
+    labels:
+    - optics
+    source_class: tomo_instrument.devices.mct_optics.MCTOptics

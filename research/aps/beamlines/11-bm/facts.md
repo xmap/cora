@@ -1,4 +1,4 @@
-# Extracted facts: 11bm-bits
+# Extracted facts: 11-BM
 
 Machine-extracted candidate facts for `11-BM` (facility `aps`). Candidates only; confirm every row before modeling. Source: the repo's Guarneri `devices.yml` plus ophyd device classes.
 
