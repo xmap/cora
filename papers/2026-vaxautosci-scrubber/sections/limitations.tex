@@ -34,10 +34,14 @@ append-only store; it is an integrity check, not adversarial tamper resistance,
 under the conditions stated in Section~\ref{sec:substrate}.
 
 The fold-to-version helper that drives the cursor was written for this
-visualization on top of the system's existing fold-on-read path. Because that
-path keeps no snapshots, the cost of reconstructing a distant instant grows with
-the length of the stream; for the short run shown here that cost is
-imperceptible, but snapshotting for long campaigns is future work. Three further
+visualization on top of the system's existing fold-on-read path. The fold is
+scoped to one run's stream, not the whole store, so the work is bounded by a
+single run rather than the entire event history; but because that path keeps no
+snapshots, the cost of reconstructing a distant instant still grows with the
+length of that stream. For the short run shown here it is imperceptible, and for
+long campaigns the standard remedies apply directly, periodic snapshots to fold
+from and incremental re-folding as the cursor drags rather than replaying from
+the start each time; we name these rather than build them. Three further
 extensions are natural, named here rather than built: a live now-edge that
 subscribes to the event tail so the same timeline can monitor a run in progress,
 run-to-run diffing so two campaigns can be compared on one axis, and a deployed
