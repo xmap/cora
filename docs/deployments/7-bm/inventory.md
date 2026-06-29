@@ -50,7 +50,7 @@ Every value below is taken from the 7-BM docs or inferred, awaiting the beamline
 | Energy-dispersive detector identity and camera models | `EnergyDispersiveSpectrometer`, `HighSpeedCamera`, `TomographyCamera` | `unknown-pending-confirmation` | (DET-1) |
 | Radiography point-detector chain and data unit | `Photodiode` | `unknown-pending-confirmation` | (RAD-1) |
 | High-speed acquisition unit and top-up blanking | `HighSpeedCamera` | `unknown-pending-confirmation` | (HSI-1) |
-| Settable-actuator command path for flow and air setpoints | `FlowController` | `unknown-pending-confirmation` | (FLOW-1) |
+| Continuous-regulation setpoint program (hold/ramp during a Run) + `FlowController` graduation | `FlowController` | `unknown-pending-confirmation` | (FLOW-1) |
 | Combustion / spray rig reality (installed device vs intended use) | sample environment | `unknown-pending-confirmation` | (ENV-1) |
 
 Assertion-style questions that do not leave a value blank (the technique scope TECH-1, the hazard-workflow boundary HAZ-1, the timing-subsystem shape TIMING-1, and the sector and resource-sharing question SECTOR-1) are on [Open questions](questions.md) without a placeholder here.

@@ -107,4 +107,12 @@ CORA's first South American facility (the Brazilian Synchrotron Light Laboratory
 | --- | --- | --- |
 | [MOGNO](mogno/index.md) | Reverse-engineered (partial) | cone-beam X-ray micro and nanotomography (phase-contrast, time-resolved 4D) across two stations; reuses the 2-BM / FXI tomography vocabulary, novelty is the Site and the fleet's first custom-Python (non-Bluesky) orchestration layer |
 
+## [ALBA](alba/index.md)
+
+CORA's Site for the ALBA Synchrotron (Barcelona, Spain), and its second Tango / Sardana / Taurus control house-style after MAX IV (ALBA is the originating institution of Sardana). FAXTOR is reverse-engineered from ALBA's public facility pages, chosen to port the Site / Federation kernel again and to reuse the tomography vocabulary on a new facility and control plane.
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [FAXTOR](faxtor/index.md) | Reverse-engineered | BL31 fast X-ray micro-CT and radiography (continuous-rotation tomography up to 20 Hz) on a multipole wiggler; reuses the tomography Families and Methods, novelty is the Site and its Tango / Sardana control plane |
+
 Cross-facility vocabulary (Capabilities, Methods) lives in the [Catalog](../catalog/index.md), since it is not bound to any single Site.

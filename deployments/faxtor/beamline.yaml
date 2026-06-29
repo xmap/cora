@@ -1,0 +1,189 @@
+# CORA Beamline descriptor: FAXTOR (ALBA, BL31), reverse-engineered, design phase
+#
+# FAXTOR (FAst X-ray TOmography and Radiography) is ALBA's BL31 fast micro-CT and
+# radiography beamline (Barcelona, Spain). It is bound to the ALBA Site
+# (deployments/alba/site.yaml), CORA's EIGHTH Site and its FIRST ALBA deployment.
+#
+# STATUS: reverse-engineered, design / commissioning phase. Every value is read
+# from ALBA's public facility pages (www.cells.es/en/beamlines/bl31-faxtor) and the
+# verified research brief (research/alba/_research_brief.md), or inferred;
+# each device carries new: true (not yet modelled in CORA) and confirm: true (value
+# to be verified by ALBA staff). Control handles are OMITTED on purpose: ALBA runs
+# Tango / Sardana / Taurus (not EPICS), and NO public per-beamline device manifest
+# exists (the sardana-alba repo is generic, with no bl31-* config), so no `pv` field
+# is invented. This follows the MAX IV / TomoWISE precedent (handles-omitted-pending),
+# NOT the ESRF / ID32 precedent (handles read from a public BLISS Beacon config).
+# Devices bind to catalog Families only, with no `model`, because vendor part
+# numbers are not published; the fast-camera model in particular is an open question.
+#
+# WHAT IS NEW: a new Site, no new vocabulary.
+#   - A wholly NEW Site (ALBA, the 8th) re-tests the Site / Federation kernel and
+#     brings the SECOND Tango / Sardana controls house-style (MAX IV is the first).
+#   - FAXTOR coins NO new Family and changes nothing in the catalog: it is a
+#     tomography beamline that reuses the imaging Families and Methods the fleet
+#     already carries (the 2-BM / TomoWISE precedent).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/faxtor/questions.md.
+
+beamline:
+  name: FAXTOR
+  facility: alba                 # ALBA Site (facility_code: alba)
+  sector: "BL31"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "FAXTOR is driven by a multipole wiggler; the period, pole count, and field are not published, carried pending (SRC-1)"
+
+# Two access-gated hutches. PSS permit signals are ALBA facility signals, not
+# published per beamline (PSS-1). The optics / experiment grouping is inferred from
+# the standard ALBA layout, carried pending (ENC-1).
+enclosures:
+  - name: faxtor-optics
+    role: optics-hutch
+    facility_code: alba
+    permit_signal: {confirm: "ALBA PSS permit signal not published per beamline (PSS-1)"}
+  - name: faxtor-experiment
+    role: experiment-hutch
+    facility_code: alba
+    permit_signal: {confirm: "ALBA PSS permit signal not published per beamline (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state, the wiggler, and the conditioning optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: faxtor-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "The ALBA 3 GeV storage-ring state, the loose StorageRing pattern reused across the fleet (MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      new: true
+      confirm: true
+      note: "ALBA 3 GeV storage-ring state (current, fill); observe-only, the exact handles are MACHINE-1"
+
+insertion-devices:
+  stage: source
+  enclosure: faxtor-optics
+  intro: "The multipole wiggler, the white-beam source feeding the filtered-white and monochromatic imaging modes."
+  note: "The wiggler binds the catalog InsertionDevice; its period, pole count, and field are not published, carried pending (SRC-1)."
+  devices:
+    - name: Wiggler
+      family: InsertionDevice
+      new: true
+      confirm: true
+      device_type: multipole-wiggler
+      note: "the multipole-wiggler source driving FAXTOR; segment count, period, and field pending (SRC-1)"
+
+optics:
+  stage: source
+  enclosure: faxtor-optics
+  intro: "The conditioning optics: a double multilayer monochromator for mono imaging, the filters that shape the filtered-white beam, the beam-defining slits, and the focusing / harmonic-rejection mirrors."
+  note: "The DMM binds Monochromator; the filters bind Filter; the slits bind Slit; the mirrors bind Mirror (carried pending, OPT-1). FAXTOR runs 8-50 keV monochromatic via the DMM and 30-70 keV filtered white beam (MONO-1)."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      new: true
+      confirm: true
+      mechanism: double multilayer monochromator (DMM)
+      energy_range: 8 to 50 keV (mono)
+      note: "double multilayer monochromator for mono imaging; bypassed in filtered-white mode (30-70 keV). Multilayer coating and d-spacing pending (MONO-1)"
+    - name: BeamFilter
+      family: Filter
+      new: true
+      confirm: true
+      note: "the filter set shaping the filtered-white beam (30-70 keV) and trimming heat load; materials and thicknesses pending (FILT-1)"
+    - name: BeamSlit
+      family: Slit
+      new: true
+      confirm: true
+      note: "the beam-defining slits; blade-axis map and handles pending (OPT-2)"
+    - name: FocusingMirror
+      family: Mirror
+      new: true
+      confirm: true
+      note: "the focusing / harmonic-rejection mirrors; presence, coatings, and handles not published, deferred not invented (OPT-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the experiment endstation (the rotary, positioning, shutter)
+# ===========================================================================
+
+experiment-endstation:
+  stage: sample
+  enclosure: faxtor-experiment
+  intro: "The fast-tomography experiment endstation: a sample table carrying the rotary stage, the sample positioning, and a fast shutter, supporting continuous-rotation tomography up to 20 Hz."
+  note: "Reuses the imaging Families the fleet already carries (Table, RotaryStage, LinearStage, Shutter); axis sets and handles pending (SAMPLE-1)."
+  devices:
+    - name: SampleTable
+      family: Table
+      new: true
+      confirm: true
+      note: "the sample-positioning support table at the experiment endstation; degrees of freedom pending (SAMPLE-1)"
+    - name: Rotary
+      family: RotaryStage
+      new: true
+      confirm: true
+      note: "the tomographic rotation stage; continuous-rotation tomography up to 20 Hz, the master clock for triggering (SAMPLE-1, TRIG-1)"
+    - name: SamplePositioning
+      family: LinearStage
+      new: true
+      confirm: true
+      note: "the sample centring / centre-of-rotation stage; axis set pending (SAMPLE-1)"
+    - name: FastShutter
+      family: Shutter
+      new: true
+      confirm: true
+      note: "the sample-side fast shutter limiting dose between projections; model pending (SAMPLE-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the imaging detector (scintillator + fast camera)
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: faxtor-experiment
+  intro: "The indirect imaging detector: a scintillator converting X-rays to visible light, relayed to a fast camera. FAXTOR images at 0.5-10 um pixel size with absorption, propagation-phase, and grating-based contrast."
+  note: "The scintillator binds Scintillator and the camera binds Camera; the fast-camera model is not published, carried fully pending (DET-1)."
+  devices:
+    - name: Scintillator
+      family: Scintillator
+      new: true
+      confirm: true
+      note: "the X-ray-to-visible scintillator screen; material and thickness pending (DET-1)"
+    - name: Camera
+      family: Camera
+      new: true
+      confirm: true
+      note: "the fast imaging camera supporting up to 20 Hz tomography; sensor, frame rate, and model not published, carried pending (DET-1)"
+
+# Cross-cutting control. FAXTOR runs ALBA Tango / Sardana / Taurus (the floor);
+# CORA observes and, where it replaces Sardana-style scan orchestration, conducts
+# over it. No public per-beamline handles exist, so none are invented (CTRL-1).
+controls:
+  intro: >
+    FAXTOR runs on the ALBA Tango / Sardana / Taurus control stack, CORA's second
+    Tango / Sardana controls house-style after MAX IV. Device IO is a layer of Tango
+    device servers (motors over IcePAP-class controllers, detectors via the Lima
+    framework), with Sardana (a Pool of controllers / motors / measurement groups
+    plus a MacroServer running scan macros) as the experiment-orchestration layer and
+    Taurus as the operator UI. No public per-beamline device manifest is published, so
+    the Tango / Sardana / IcePAP handles are not bound here, carried pending staff
+    verification (CTRL-1); when bound they would be modelled as opaque edge handles
+    over the ControlPort, the way the MX3 and ID32 heterogeneous-control precedents do.
+    The fast continuous-rotation tomography acquisition (the rotary trajectory, the
+    camera triggering, the flat / dark sequencing) runs through Sardana macros; that
+    orchestration is the seam CORA's edge replaces, conducting over Tango / IcePAP
+    rather than replacing Sardana. The Lima detector file-writing to the ALBA data
+    store is plumbing CORA observes, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a FAXTOR run needs present before it
+    can start. All carried pending confirmation (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

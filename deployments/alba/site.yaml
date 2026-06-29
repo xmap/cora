@@ -1,0 +1,68 @@
+# CORA Site descriptor: the ALBA site-level surface
+#
+# ALBA (Barcelona, Spain), operated by the CELLS consortium, is the eighth Site
+# CORA models, and the home of the BL31 FAXTOR fast-tomography beamline. This file
+# is the single human-readable source for the facility's site-level instances: the
+# Facility itself, the Practices it runs, and the facility principals.
+#
+# Status: FAXTOR is a reverse-engineered, design-phase first cut (like the Diamond
+# / NSLS-II / ESRF modelling exercises). ALBA is CORA's SECOND Tango / Sardana /
+# Taurus controls house-style (MAX IV is the first; the rest are EPICS, and the
+# ESRF is BLISS). Facts here are taken from ALBA's public facility pages
+# (www.cells.es) and the verified research brief
+# (research/alba/_research_brief.md), not from a live connection; concrete
+# facility details (safety forms, supply names, the operator pool) are carried
+# pending until ALBA staff confirm them. Do not invent facility specifics here;
+# carry them as questions on the FAXTOR open-questions page.
+#
+# Source-of-truth boundary (same as the other sites):
+#   - the closed facility-kind / actor-kind vocabularies are validated against
+#     code-mirrored frozensets in scripts/site_descriptor.py.
+#   - the facility records the bootstrap invariants (kind=Site, display_name
+#     equals code); `heading` carries the human title used on the rendered page.
+#   - a non-pending practice method must resolve to a catalog Method; FAXTOR's
+#     tomography practices reuse the catalog tomography Methods, so they are not
+#     pending; the radiography practice names a Method not yet in the catalog and
+#     is carried pending (TECH-1).
+
+facility:
+  code: alba
+  display_name: alba
+  heading: "ALBA"
+  kind: Site
+  institution: ALBA Synchrotron (CELLS)
+  beamlines: [FAXTOR]
+
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. FAXTOR is a
+# tomography beamline, so its imaging practices reuse the catalog tomography
+# Methods and are not pending. Radiography is named pending: it has no portable
+# catalog Method yet (the 7-BM precedent), reusing the registered radiography slug
+# (TECH-1). Confirm scope with ALBA staff before any becomes active.
+practices:
+  - {name: FAXTOR_microtomography_practice, method: tomography, note: "fast absorption / phase-contrast micro-CT on the experiment endstation"}
+  - {name: FAXTOR_continuous_tomography_practice, method: continuous_rotation_tomography, note: "fast continuous-rotation tomography, up to 20 Hz acquisition"}
+  - {name: FAXTOR_radiography_practice, method: radiography, pending: true, note: "time-resolved radiography; reuses the 7-BM radiography slug, no portable Method yet (TECH-1)"}
+
+# Access BC Actors conceptually facility-wide at ALBA. Pending until the ALBA
+# operator and review structure is confirmed.
+actors:
+  - {name: ALBA beamline staff, kind: human, pending: true, note: "operator and beamline-scientist pool; structure TBD (GOV-1)"}
+  - {name: ALBA safety review, kind: human, pending: true, note: "facility safety review body; membership TBD (GOV-1)"}
+
+# Agent BC Agents seeded at this deployment. None declared: the CORA system agents
+# are not wired for an ALBA deployment, and FAXTOR is a modelling exercise.
+agents: []
+
+# Supply BC: facility-wide continuously-available resources. Pending in design.
+supplies:
+  - {name: Storage-ring beam current, kind: PhotonBeam, pending: true, note: "ALBA 3 GeV storage-ring beam, shared across the beamlines (SUP-1)"}
+  - {name: Cooling water, kind: CoolingWater, pending: true}
+  - {name: Beamline vacuum, kind: Vacuum, pending: true}
+
+# Safety BC: facility-issued Clearances. ALBA safety-form names are not yet
+# confirmed; carried pending with a note rather than guessed.
+clearances:
+  - {name: ALBA personnel safety system, kind: PSS, pending: true, note: "facility safety-form names TBD; confirm with ALBA staff (PSS-1)"}
+
+# Caution BC: operator tribal knowledge. None yet for a modelling exercise.
+cautions: []
