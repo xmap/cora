@@ -1,0 +1,171 @@
+# CANDIDATE beamline descriptor: hand-read from NSLS2/fxi-profile-collection, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions and enclosures need human curation, and any new Family needs the
+# naming-r3 gate. Do not copy into deployments/ without review. All PV prefixes verified
+# verbatim against source. NOTE: the TXM optics classes (condenser/zoneplate/aperture/
+# phase-ring/Bertrand/sample-stage) all take the bare XF:18IDB-OP base in source and add
+# per-axis leaves internally; the distinguishing leaf per Asset is confirm-pending.
+
+beamline:
+  name: FXI
+  facility: nsls2
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 18-ID-A
+  facility_code: nsls2
+  confirm: optics hutch; inferred from PV prefix XF:18IDA
+- name: 18-ID-B
+  facility_code: nsls2
+  confirm: endstation/TXM hutch; inferred from XF:18IDB
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: PhotonShutter
+    family: Shutter
+    pv: "XF:18IDA-PPS{PSh}"
+    new: true
+    confirm: TwoButtonShutter (Opn/Cls-Cmd); family Shutter (catalog)
+  - name: MetalFoilShutter
+    family: Shutter
+    pv: "XF:18IDA-BI{MFS:1}"
+    new: true
+    confirm: 'metal-foil shutter triad MFS/PMFS/WPFS; confirm Shutter vs Filter'
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Monochromator
+    family: Monochromator
+    pv: "XF:18IDA-OP{Mono:DCM"
+    new: true
+    confirm: 'DCM; energy En + th2/chi2 with PID feedback; family Monochromator (catalog)'
+  - name: CollimatingMirror
+    family: Mirror
+    pv: "XF:18IDA-OP{Mir:CM"
+    new: true
+    confirm: collimating mirror; family Mirror (catalog)
+  - name: ToroidalMirror
+    family: Mirror
+    pv: "XF:18IDA-OP{Mir:TM"
+    new: true
+    confirm: toroidal mirror; family Mirror (catalog)
+  - name: PinkBeamSlit
+    family: Slit
+    pv: "XF:18IDA-OP{PBSL:1"
+    new: true
+    confirm: pink-beam slit; family Slit (catalog)
+  - name: Filters
+    family: Filter
+    pv: "XF:18IDB-ES{IOLOGIK5:E1211}"
+    new: true
+    confirm: 'digital filter inserts DO1-DO7 (IOLOGIK); family Filter (catalog)'
+  - name: Condenser
+    family: Condenser
+    pv: "XF:18IDB-OP"
+    new: true
+    confirm: 'TXM condenser (class Condenser); base prefix XF:18IDB-OP + internal leaves; distinguishing leaf confirm-pending'
+  - name: Zoneplate
+    family: ZonePlate
+    pv: "XF:18IDB-OP"
+    new: true
+    confirm: 'TXM zone-plate objective (class Zoneplate); leaf confirm-pending'
+  - name: Aperture
+    family: Aperture
+    pv: "XF:18IDB-OP"
+    new: true
+    confirm: 'order-sorting aperture (class Aperture); leaf confirm-pending'
+  - name: PhaseRing
+    family: PhaseRing
+    pv: "XF:18IDB-OP"
+    new: true
+    confirm: 'Zernike phase ring (class PhaseRing); leaf confirm-pending'
+  - name: BertrandLens
+    family: BetrandLens
+    pv: "XF:18IDB-OP"
+    new: true
+    confirm: 'Bertrand lens (class BetrandLens, LOOSE; source spelling); leaf confirm-pending'
+  - name: SSASlit
+    family: Slit
+    pv: "XF:18IDB-OP{SSA:1"
+    new: true
+    confirm: secondary source aperture (TXM_SSA); family Slit (catalog)
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: TXMSampleStage
+    family: LinearStage
+    pv: "XF:18IDB-OP"
+    new: true
+    confirm: 'sample stage (class TXMSampleStage, zps); base prefix XF:18IDB-OP; leaf confirm-pending'
+  - name: VisualLightMicroscope
+    family: GenericProbe
+    pv: "XF:18IDB-BI{VLM:1}"
+    new: true
+    confirm: 'on-axis visual microscope; LOOSE, likely Camera+stage not X-ray Microscope family'
+  - name: TemperatureController
+    family: TemperatureController
+    pv: "XF:18ID-ES{Env:01"
+    new: true
+    confirm: 'sample-environment temperature; confirm presents Regulator (settable setpoint) vs read-only'
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Scintillator
+    family: Scintillator
+    pv: "XF:18IDB-OP{Det:Lens"
+    new: true
+    confirm: 'scintillator + lens (class Scint); family Scintillator (catalog)'
+  - name: DetectorSupportU
+    family: LinearStage
+    pv: "XF:18IDB-OP{DetS:U"
+    new: true
+    confirm: upstream detector support; family LinearStage (catalog)
+  - name: DetectorSupportD
+    family: LinearStage
+    pv: "XF:18IDB-OP{DetS:D"
+    new: true
+    confirm: downstream detector support; family LinearStage (catalog)
+  - name: MaranaCamera
+    family: Camera
+    pv: "XF:18IDB-ES{Det:Marana1}"
+    new: true
+    confirm: Andor Marana sCMOS full-field; family Camera (catalog)
+  - name: OryxCamera
+    family: Camera
+    pv: "XF:18IDB-ES{Det:Oryx1}"
+    new: true
+    confirm: Oryx camera; family Camera (catalog)
+  - name: NeoCamera
+    family: Camera
+    pv: "XF:18IDB-BI{Det:Neo}"
+    new: true
+    confirm: Andor Neo sCMOS; family Camera (catalog)
+  - name: KinetixCamera
+    family: Camera
+    pv: "XF:18ID1-ES{Kinetix-Det:1}"
+    new: true
+    confirm: Kinetix sCMOS (async); family Camera (catalog)
+  - name: IonChamber
+    family: FluxMonitor
+    pv: "XF:18IDB-BI{i404:1}"
+    new: true
+    confirm: 'i404 4-channel ion chamber (I:R1-R4); family FluxMonitor (catalog, graduated)'
+  - name: ScalerCounter
+    family: GenericProbe
+    pv: "XF:18IDB-ES{Sclr:1}"
+    new: true
+    confirm: scaler; LOOSE GenericProbe
+  - name: Zebra1
+    family: TimingController
+    pv: "XF:18ID-ES:1{Dev:Zebra1}"
+    new: true
+    confirm: 'fly-scan tomography gating; TimingController (catalog) - confirm timing role'
+  - name: Zebra2
+    family: TimingController
+    pv: "XF:18ID-ES:1{Dev:Zebra2}"
+    new: true
+    confirm: 'second Zebra; TimingController (catalog) - confirm'
