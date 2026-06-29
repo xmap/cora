@@ -1,0 +1,212 @@
+# CANDIDATE beamline descriptor: hand-read from gitlab.esrf.fr/ID06/beamline_configuration
+# (commit 19bad8a), NOT authoritative. Every device carries new: true and a confirm note.
+# Grouping by stage and the enclosure names are inferred from the config directory layout
+# (oh / eh1 / eh2); Family suggestions and hutch boundaries need human curation, and any new
+# Family needs the naming-r3 gate. Do not copy into deployments/ without review. ID06 is NOT
+# yet a deployment: this is net-new. The headline large-volume-press technique has NO press
+# device in the public config (only generic stages + a view camera), recorded as PRESS-1 in
+# facts.md, not invented here.
+
+beamline:
+  name: ID06
+  facility: esrf
+  tier: Unit
+  source: insertion-device
+enclosures:
+- name: id06-optics
+  facility_code: esrf
+  confirm: optics zone (oh); inferred from config dir layout (ENC-1, PSS-1)
+- name: id06-eh1
+  facility_code: esrf
+  confirm: experiment hutch 1 (DFXM / dark-field / X-ray-optics microscopy); inferred from config dir layout (ENC-1)
+- name: id06-eh2
+  facility_code: esrf
+  confirm: experiment hutch 2 (large-volume press + diffraction); inferred from config dir layout (ENC-1)
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: StorageRing
+    family: StorageRing
+    pv: "//acs.esrf.fr:10000/fe/master/id06"
+    new: true
+    confirm: 'ESRF-EBS storage-ring state via BLISS machinfo (MachInfo); observe-only; LOOSE family StorageRing (MACHINE-1)'
+  - name: FrontEndShutter
+    family: Shutter
+    pv: "acs:10000/fe/master/id06"
+    new: true
+    confirm: 'BLISS fe (TangoShutter, machine/safshut.yml); family Shutter (catalog) (PSS-1)'
+  - name: EH1Shutter
+    family: Shutter
+    pv: "id06/bsh/1"
+    new: true
+    confirm: 'BLISS bsh1 (TangoShutter, eh1/bsh1.yml); family Shutter (catalog)'
+  - name: FastShutter
+    family: Shutter
+    pv: "eh1fs"
+    new: true
+    confirm: 'BLISS eh1fs fast shutter (eh1/devices/fshutter.yml); family Shutter (catalog)'
+  - name: Undulators
+    family: InsertionDevice
+    pv: "//acs.esrf.fr:10000/id/master/id06"
+    new: true
+    confirm: 'BLISS ESRF_Undulator; cpmu18a_gap=CPMU18a_GAP (5.9-201 mm) + u27c_gap=U27c_GAP (10.9-210 mm); period/segment SRC-1; family InsertionDevice (catalog)'
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Monochromator
+    family: Monochromator
+    pv: "cinel"
+    new: true
+    confirm: 'ID06mono (Cinel); crystals Si111 (dspacing 3.13299) / Si311 via mvx; reals bragg=monofe, xtal=x2z; energy calc keV; family Monochromator (catalog)'
+    source_class: ID06mono
+  - name: Transfocator
+    family: Transfocator
+    pv: "tf"
+    new: true
+    confirm: 'TransfocatorID06 (tf/tf_connector, wago wcid06f); layout PXLLLLLLLLXXXXLXLLLP; 2D+1D Be lens banks; family Transfocator (catalog, graduated)'
+    source_class: TransfocatorID06
+  - name: PrimarySlits
+    family: Slit
+    pv: "s1"
+    new: true
+    confirm: 'primary slits s1 (real s1l/s1r/s1t/s1b, calc s1hg/s1ho/s1vg/s1vo); family Slit (catalog) (OPT-2)'
+  - name: SecondarySlits
+    family: Slit
+    pv: "s2"
+    new: true
+    confirm: 'secondary slits s2; family Slit (catalog) (OPT-2)'
+  - name: EH1Slits
+    family: Slit
+    pv: "s3"
+    new: true
+    confirm: 'EH1 slits s3 + s4; family Slit (catalog) (OPT-2)'
+  - name: MonochromatorFeedback
+    family: Controller
+    pv: "pmoco"
+    new: true
+    confirm: 'MOCO beam-stabilization feedback pmoco + rmoco (Moco class); Controller is a Role not a Family; confirm Family binding (MonoFeedback fleet-wide watch); do NOT coin'
+    source_class: Moco
+diagnostics:
+  stage: diagnostics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: IntensityMonitor1
+    family: FluxMonitor
+    pv: "mon1"
+    new: true
+    confirm: 'ID06IntMon1 quadrant monitor + foil wheel (oh/mon1.yml, count card p201_060_1); family FluxMonitor (?) confirm vs composed Assembly'
+    source_class: ID06IntMon1
+  - name: IntensityMonitor2
+    family: FluxMonitor
+    pv: "mon2"
+    new: true
+    confirm: 'ID06IntMon2 quadrant monitor + foil wheel (eh1/mon2.yml); family FluxMonitor (?) confirm vs composed Assembly'
+    source_class: ID06IntMon2
+  - name: Baslers
+    family: Camera
+    pv: "id06/limaccds/eh1bpm"
+    new: true
+    confirm: 'Basler video cameras (bas13/lvp/xrayeye/hxrayeye/barrett/snigirev/xfour/wbpm/eh1bpm/eh1sample); beam/sample viewers; family Camera (catalog); confirm operative set'
+    source_class: Lima
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: DFXM_SamplePiezo
+    family: LinearStage
+    pv: "e727pitroth:50000"
+    new: true
+    confirm: 'PI_E727 DFXM fine sample pitch/orientation (e727pitrotha; pzh ch1, pzv ch2); family LinearStage (catalog) (SAMPLE-1)'
+    source_class: PI_E727
+  - name: DFXM_SampleStage
+    family: LinearStage
+    pv: "iceid061"
+    new: true
+    confirm: 'DFXM / microscopy sample + objective stages on IcePAP iceid061 / iceid062; family LinearStage (catalog) (SAMPLE-1)'
+  - name: LVP_Stage
+    family: LinearStage
+    pv: "iceid063"
+    new: true
+    confirm: 'large-volume-press station stages on IcePAP iceid063 (omega/rrot/slit_th/slit_y + sample/detector/cam translations); the PRESS mechanism itself is ABSENT from source (PRESS-1); family LinearStage (catalog) for the stages only'
+  - name: SampleTemperatureController
+    family: TemperatureController
+    pv: "nanodacid06.esrf.fr"
+    new: true
+    confirm: 'Eurotherm Nanodac loop (nanodacid06, in C / out percent 0-80) + SoftLoop over epack; family TemperatureController (catalog, Regulator) (TEMP-1)'
+    source_class: Nanodac
+  - name: DEG_BeamConditioning
+    family: GenericProbe
+    new: true
+    confirm: 'DFXM beam-conditioning unit; only a $bcdu8 reference exists (bcdu8: $bcdu8 in degdevices/xiderdet.yml), NO object definition in the public config (private deg_bliss); pv left blank deliberately, no complete handle in source; deferred DEG-1; do NOT infer family'
+  - name: DEG_FilterBox
+    family: Filter
+    pv: "degfilters"
+    new: true
+    confirm: 'FilterBoxSet attenuator (degdevices/degfilters.yml, wago wcid06d, srcur-referenced); family Filter (?) confirm contract'
+    source_class: FilterBoxSet
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Maxipix
+    family: Camera
+    pv: "id06/limaccds/mpxdp1"
+    new: true
+    confirm: 'Maxipix photon-counting pixel detector (mpxdp1, du_maxipix2); DFXM far-field; family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: Pixirad
+    family: Camera
+    pv: "id06/limaccds/pixirad"
+    new: true
+    confirm: 'Pixirad CdTe photon-counting detector (pixirad8); family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: FrelonFarField
+    family: Camera
+    pv: "id06/limaccds/frelon_farfield"
+    new: true
+    confirm: 'Frelon far-field CCD (frelon_eh1); family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: PCO
+    family: Camera
+    pv: "id06/limaccds/pco55_eh1"
+    new: true
+    confirm: 'PCO sCMOS (pco2k1, pco55_eh1); family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: Pilatus
+    family: Camera
+    pv: "id06/limaccds/pilatus-900kw"
+    new: true
+    confirm: 'Pilatus 900kw strip detector (p900kw, EH2 diffraction); family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: Smartpix
+    family: Camera
+    pv: "smpx"
+    new: true
+    confirm: 'Smartpix photon-counting detector (EH2); family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: Sphird
+    family: Camera
+    pv: "sphird0"
+    new: true
+    confirm: 'DEG Sphird area detector (SphirdBlissController, host lapsphird; controller in private deg_bliss); family Camera (?) firewalled DEG-1'
+    source_class: SphirdBlissController
+  - name: Xider
+    family: Camera
+    pv: "xider0"
+    new: true
+    confirm: 'DEG Xider area detector (XiderBlissController, host pcxider1; controller in private deg_bliss); family Camera (?) firewalled DEG-1'
+    source_class: XiderBlissController
+  - name: HighVoltageSupply
+    family: GenericProbe
+    pv: "lid063:28220"
+    new: true
+    confirm: 'iSeg NHQ HV supply (nhq, iav voltage ch A); detector/sample bias; LOOSE family GenericProbe (no catalog home)'
+    source_class: Nhq
+  - name: TimingControllers
+    family: TimingController
+    pv: "musst_eh2"
+    new: true
+    confirm: 'MUSST timing master (EH2 fly/gated scans); family TimingController (?) confirm vs GenericProbe'
+    source_class: musst

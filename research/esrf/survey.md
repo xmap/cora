@@ -17,7 +17,11 @@ Extractions to date:
 - `beamlines/id32/` -- ID32, soft X-ray RIXS / XMCD / XES, a shipped deployment given a
   retrospective Tier-2 device pass; the RIXS and XES grating arms reinforce the loose
   SpectrometerArm (RIXS-1, grating lineage), the other half of the disambiguation against ID28.
-- `recurrence.md` -- the cross-ESRF Family-frequency fold, started with ID19 / ID16B / ID28 / ID32.
+- `beamlines/id06/` -- ID06, hard X-ray / dark-field microscopy (DFXM) + X-ray optics testing +
+  large-volume press (LVP); NOT yet a deployment, a net-new device pass. The headline LVP
+  technique has NO press device in the public config (only generic stages + a view camera),
+  recorded as the open question PRESS-1, not invented.
+- `recurrence.md` -- the cross-ESRF Family-frequency fold, started with ID19 / ID16B / ID28 / ID32 / ID06.
 
 ESRF beamlines that publish a Beacon config (`<beamline>/beamline_configuration`, public on
 gitlab.esrf.fr) are the modellable set. As of 2026-06 the public ones are: ID06, ID16B, ID19,
