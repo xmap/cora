@@ -24,18 +24,33 @@ from . import emit, mapping, parse
 _GITHUB = "https://github.com"
 
 
+def _clone_url(repo: str) -> str:
+    """Resolve a --repo argument to a clone URL.
+
+    Accepts a full https:// URL, a host-qualified slug (gitlab.desy.de/group/repo,
+    recognised by a dotted first segment), or a bare GitHub slug (org/repo). The
+    shallow clone fetches each remote's default branch as HEAD, which for the DESY
+    OnlineXML packages is the deployment branch (debian/jessie etc.).
+    """
+    if repo.startswith(("https://", "http://")):
+        return repo
+    first = repo.split("/", 1)[0]
+    if "." in first:
+        return f"https://{repo}"
+    return f"{_GITHUB}/{repo}"
+
+
 def _resolve_repo(repo: str, cache: Path) -> tuple[str, Path]:
     """Return (repo_stem, local_path), shallow-cloning a slug into the cache."""
     local = Path(repo)
     if local.exists() and local.is_dir():
         return local.name, local
     stem = repo.rstrip("/").split("/")[-1]
-    dest = cache / repo.replace("/", "__")
+    dest = cache / repo.replace("/", "__").replace(":", "_")
     if not dest.exists():
         cache.mkdir(parents=True, exist_ok=True)
-        url = f"{_GITHUB}/{repo}"
         subprocess.run(
-            ["git", "clone", "--depth", "1", "--quiet", url, str(dest)],
+            ["git", "clone", "--depth", "1", "--quiet", _clone_url(repo), str(dest)],
             check=True,
         )
     return stem, dest
@@ -91,6 +106,24 @@ def _collect_permissions(repo_dir: Path) -> list[parse.PermissionGroup]:
     return []
 
 
+def _collect_online_xml(repo_dir: Path) -> list[parse.TangoDevice]:
+    """Parse every online_*.xml device registry under a DESY beamline package.
+
+    A beamline's per-endstation online files each re-list shared upstream devices,
+    so the same (name, Tango address) appears several times. Deduplicate on that
+    pair: identical re-registrations collapse, while two distinct devices that
+    happen to share a name (different addresses) are both kept.
+    """
+    by_key: dict[tuple[str, str | None], parse.TangoDevice] = {}
+    for path in sorted(repo_dir.glob("**/online_*.xml")):
+        text = _read(path)
+        if text is None:
+            continue
+        for device in parse.parse_online_xml(text):
+            by_key.setdefault((device.name, device.address), device)
+    return list(by_key.values())
+
+
 def _beamline_name(devices: list[mapping.CandidateDevice], fallback: str) -> str:
     sectors = Counter(
         d.enclosure.rsplit("-", 1)[0]
@@ -102,24 +135,52 @@ def _beamline_name(devices: list[mapping.CandidateDevice], fallback: str) -> str
     return fallback
 
 
-def _process_repo(
-    repo: str, cache: Path, out_root: Path, facility: str
-) -> tuple[str, list[mapping.CandidateDevice]]:
-    stem, repo_dir = _resolve_repo(repo, cache)
+_BITS_SOURCE_DESC = "the repo's Guarneri `devices.yml` plus ophyd device classes"
+_ONLINEXML_SOURCE_DESC = "DESY OnlineXML (the beamline's online_*.xml Tango device registry)"
+
+
+def _process_repo_bits(
+    stem: str, repo_dir: Path
+) -> tuple[list[mapping.CandidateDevice], list[parse.PermissionGroup], str, int | None]:
     instances = _collect_instances(repo_dir)
     sketches = _collect_sketches(repo_dir)
     permissions = _collect_permissions(repo_dir)
-
     devices = [
         mapping.to_candidate_device(instance, sketches.get(instance.class_name))
         for instance in instances
     ]
+    return devices, permissions, _BITS_SOURCE_DESC, None
+
+
+def _process_repo_onlinexml(
+    stem: str, repo_dir: Path
+) -> tuple[list[mapping.CandidateDevice], list[parse.PermissionGroup], str, int | None]:
+    tango_devices = _collect_online_xml(repo_dir)
+    devices = [
+        candidate
+        for device in tango_devices
+        if (candidate := mapping.to_candidate_device_tango(device)) is not None
+    ]
+    skipped = len(tango_devices) - len(devices)
+    return devices, [], _ONLINEXML_SOURCE_DESC, skipped
+
+
+def _process_repo(
+    repo: str, cache: Path, out_root: Path, facility: str, source: str
+) -> tuple[str, list[mapping.CandidateDevice]]:
+    stem, repo_dir = _resolve_repo(repo, cache)
+    if source == "onlinexml":
+        devices, permissions, source_desc, skipped = _process_repo_onlinexml(stem, repo_dir)
+    else:
+        devices, permissions, source_desc, skipped = _process_repo_bits(stem, repo_dir)
     beamline_name = _beamline_name(devices, stem)
 
     out_dir = out_root / stem
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    facts = emit.render_facts_md(stem, beamline_name, facility, devices, permissions)
+    facts = emit.render_facts_md(
+        stem, beamline_name, facility, devices, permissions, source_desc, skipped
+    )
     (out_dir / "facts.md").write_text(facts, encoding="utf-8")
 
     candidate = emit.render_candidate_yaml(beamline_name, facility, devices)
@@ -129,13 +190,27 @@ def _process_repo(
     ok, message = emit.self_validate(candidate_path)
     status = "valid" if ok else f"INVALID: {message}"
     real = sum(1 for d in devices if not d.is_sim)
-    print(f"{stem}: {real} devices, candidate {status}")
+    skip_note = f", {skipped} filtered" if skipped else ""
+    print(f"{stem}: {real} devices{skip_note}, candidate {status}")
     return stem, devices
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Extract candidate CORA facts from *-bits repos.")
-    parser.add_argument("--repo", action="append", required=True, help="GitHub slug or local path")
+    parser = argparse.ArgumentParser(
+        description="Extract candidate CORA facts from beamline controls sources."
+    )
+    parser.add_argument(
+        "--repo",
+        action="append",
+        required=True,
+        help="Repo slug (org/repo, host.tld/group/repo), full https URL, or local path",
+    )
+    parser.add_argument(
+        "--source",
+        choices=("bits", "onlinexml"),
+        default="bits",
+        help="Source format: EPICS *-bits (default) or DESY OnlineXML",
+    )
     parser.add_argument("--out", default="research/aps-reverse-engineering/extracted")
     parser.add_argument("--cache", default="research/aps-reverse-engineering/.cache")
     parser.add_argument("--catalog", default="catalog/catalog.yaml")
@@ -150,7 +225,7 @@ def main(argv: list[str] | None = None) -> int:
 
     per_repo: dict[str, list[mapping.CandidateDevice]] = {}
     for repo in args.repo:
-        stem, devices = _process_repo(repo, cache, out_root, args.facility)
+        stem, devices = _process_repo(repo, cache, out_root, args.facility, args.source)
         per_repo[stem] = devices
 
     graduated = emit.graduated_families(Path(args.catalog))

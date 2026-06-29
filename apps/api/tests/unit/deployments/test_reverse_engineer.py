@@ -195,3 +195,107 @@ def test_recurrence_marks_graduated_and_candidates() -> None:
     foo_b = mapping.to_candidate_device(_instance("u2", "p.Foo", "4idbSoft:"), None)
     rendered2 = emit.render_recurrence_md({"r1": [foo_a], "r2": [foo_b]}, graduated=set())
     assert "GRADUATION CANDIDATE" in rendered2
+
+
+# DESY OnlineXML (PETRA III, Tango) extraction path.
+
+_ONLINE_XML_TWO_DEVICES = """<?xml version="1.0"?>
+<hw>
+<device>
+   <name>eh1_mot01</name>
+   <type>stepping_motor</type>
+   <module>oms58</module>
+   <device>p01/motor/eh1.01</device>
+   <hostname>haspp01eh1:10000</hostname>
+   <control>tango</control>
+</device>
+<device>
+   <name>eh1_t01</name>
+   <type>counter</type>
+   <module>sis3820</module>
+   <device>p01/counter/eh1.01</device>
+   <hostname>haspp01eh1:10000</hostname>
+   <control>tango</control>
+</device>
+</hw>
+"""
+
+
+def test_parse_online_xml_extracts_device_fields() -> None:
+    devices = {d.name: d for d in parse.parse_online_xml(_ONLINE_XML_TWO_DEVICES)}
+    motor = devices["eh1_mot01"]
+    assert motor.type == "stepping_motor"
+    assert motor.module == "oms58"
+    assert motor.address == "p01/motor/eh1.01"
+    assert motor.host == "haspp01eh1:10000"
+    assert motor.control == "tango"
+
+
+def test_parse_online_xml_tolerates_missing_children() -> None:
+    text = """<?xml version="1.0"?>
+<hw>
+<device>
+   <name>bare</name>
+   <type>motor</type>
+   <device>None</device>
+</device>
+</hw>
+"""
+    (device,) = parse.parse_online_xml(text)
+    assert device.name == "bare"
+    assert device.type == "motor"
+    assert device.module is None
+    assert device.address is None
+    assert device.host is None
+
+
+def test_infer_enclosure_tango_endstation_and_sector_only() -> None:
+    assert parse.infer_enclosure_tango("haspp01eh1:10000").name == "P01-EH1"
+    assert parse.infer_enclosure_tango("hasep21eh3:10000").name == "P21-EH3"
+    sector_only = parse.infer_enclosure_tango("hasnp64:10000")
+    assert sector_only.name == "P64"
+    assert sector_only.station is None
+
+
+def test_suggest_family_tango_confident_vs_module_fallback() -> None:
+    pilatus = parse.TangoDevice("det", "detector", "pilatus300k", "p03/det/1", "h:10000", "tango")
+    family, confirmed = mapping.suggest_family_tango(pilatus)
+    assert family == "Camera" and confirmed
+    mono = parse.TangoDevice("mono", "motor", "lom", "p09/mono/1", "h:10000", "tango")
+    assert mapping.suggest_family_tango(mono) == ("Monochromator", True)
+    oms = parse.TangoDevice("m1", "stepping_motor", "oms58", "p01/motor/1", "h:10000", "tango")
+    family2, confirmed2 = mapping.suggest_family_tango(oms)
+    assert family2 == "oms58" and not confirmed2
+
+
+def test_to_candidate_device_tango_motor_and_filtered_counter() -> None:
+    devices = {d.name: d for d in parse.parse_online_xml(_ONLINE_XML_TWO_DEVICES)}
+    motor = mapping.to_candidate_device_tango(devices["eh1_mot01"])
+    assert motor is not None
+    assert motor.pv == "p01/motor/eh1.01"
+    assert motor.enclosure == "P01-EH1"
+    assert motor.confirm_reasons
+    assert mapping.to_candidate_device_tango(devices["eh1_t01"]) is None
+
+
+def test_to_candidate_device_tango_detector_bucketed_to_detection() -> None:
+    det = parse.TangoDevice(
+        "lambda1", "detector", "lambda", "p03/det/lambda", "haspp03:10000", "tango"
+    )
+    candidate = mapping.to_candidate_device_tango(det)
+    assert candidate is not None
+    assert candidate.stage == "detection"
+    assert candidate.family == "Camera"
+
+
+def test_tango_candidate_yaml_self_validates_against_loader(tmp_path: Path) -> None:
+    device = parse.TangoDevice(
+        "eh1_mot01", "stepping_motor", "oms58", "p01/motor/eh1.01", "haspp01eh1:10000", "tango"
+    )
+    candidate = mapping.to_candidate_device_tango(device)
+    assert candidate is not None
+    text = emit.render_candidate_yaml("P01", "petra-iii", [candidate])
+    path = tmp_path / "beamline.candidate.yaml"
+    path.write_text(text, encoding="utf-8")
+    ok, message = emit.self_validate(path)
+    assert ok, message
