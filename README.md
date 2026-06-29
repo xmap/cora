@@ -251,10 +251,10 @@
 | src/cora/campaign/\_projections.py                                                       |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/campaign/aggregates/\_\_init\_\_.py                                             |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/campaign/aggregates/campaign/\_\_init\_\_.py                                    |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/campaign/aggregates/campaign/events.py                                          |       78 |        0 |       30 |        0 |    100.0% |           |
-| src/cora/campaign/aggregates/campaign/evolver.py                                         |       36 |        0 |       16 |        0 |    100.0% |           |
+| src/cora/campaign/aggregates/campaign/events.py                                          |       93 |        0 |       34 |        0 |    100.0% |           |
+| src/cora/campaign/aggregates/campaign/evolver.py                                         |       39 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/campaign/aggregates/campaign/read.py                                            |       10 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/campaign/aggregates/campaign/state.py                                           |      125 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/campaign/aggregates/campaign/state.py                                           |      137 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/campaign/errors.py                                                              |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/campaign/features/\_\_init\_\_.py                                               |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/campaign/features/abandon\_campaign/\_\_init\_\_.py                             |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -276,6 +276,12 @@
 | src/cora/campaign/features/close\_campaign/handler.py                                    |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/campaign/features/close\_campaign/route.py                                      |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/campaign/features/close\_campaign/tool.py                                       |       17 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/campaign/features/declare\_campaign\_steering/\_\_init\_\_.py                   |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/campaign/features/declare\_campaign\_steering/command.py                        |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/campaign/features/declare\_campaign\_steering/decider.py                        |       19 |        0 |       12 |        0 |    100.0% |           |
+| src/cora/campaign/features/declare\_campaign\_steering/handler.py                        |       10 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/campaign/features/declare\_campaign\_steering/route.py                          |       32 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/campaign/features/declare\_campaign\_steering/tool.py                           |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/campaign/features/get\_campaign/\_\_init\_\_.py                                 |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/campaign/features/get\_campaign/handler.py                                      |       23 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/campaign/features/get\_campaign/query.py                                        |        4 |        0 |        0 |        0 |    100.0% |           |
@@ -319,8 +325,8 @@
 | src/cora/campaign/features/start\_campaign/tool.py                                       |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/campaign/projections/\_\_init\_\_.py                                            |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/campaign/projections/campaign.py                                                |       46 |        0 |       16 |        0 |    100.0% |           |
-| src/cora/campaign/routes.py                                                              |       41 |        0 |        8 |        0 |    100.0% |           |
-| src/cora/campaign/tools.py                                                               |       24 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/campaign/routes.py                                                              |       42 |        0 |        8 |        0 |    100.0% |           |
+| src/cora/campaign/tools.py                                                               |       26 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/campaign/wire.py                                                                |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/caution/\_\_init\_\_.py                                                         |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/caution/\_bootstrap.py                                                          |        2 |        2 |        0 |        0 |      0.0% |     14-16 |
@@ -1540,7 +1546,7 @@
 | src/cora/operation/ports/\_\_init\_\_.py                                                 |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/ports/compute\_port.py                                                |       76 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/ports/control\_port.py                                                |       41 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/ports/decide\_port.py                                                 |       93 |        4 |       12 |        0 |     96.2% |254-255, 311-312 |
+| src/cora/operation/ports/decide\_port.py                                                 |       76 |        4 |       12 |        0 |     95.5% |188-189, 245-246 |
 | src/cora/operation/ports/measurement.py                                                  |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/ports/procedure\_activity\_lookup.py                                  |       17 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/ports/recipe\_expander.py                                             |        4 |        0 |        0 |        0 |    100.0% |           |
@@ -2051,6 +2057,7 @@
 | src/cora/shared/ports/\_\_init\_\_.py                                                    |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/shared/ports/persistent\_identifier\_minter.py                                  |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/shared/scope\_markers.py                                                        |        9 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/shared/steering.py                                                              |       22 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/shared/text\_bounds.py                                                          |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/subject/\_\_init\_\_.py                                                         |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/subject/\_bootstrap.py                                                          |        2 |        2 |        0 |        0 |      0.0% |     13-15 |
@@ -2386,7 +2393,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **50458** | **1044** | **7244** |  **314** | **97.4%** |           |
+| **TOTAL**                                                                                | **50586** | **1044** | **7262** |  **314** | **97.4%** |           |
 
 
 ## Setup coverage badge
