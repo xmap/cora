@@ -181,7 +181,7 @@
 | src/cora/api/\_distribution\_materializer.py                                             |       40 |        2 |        6 |        1 |     93.5% |   170-173 |
 | src/cora/api/\_edge\_conductor.py                                                        |       85 |        7 |        6 |        1 |     91.2% |161-164, 311, 313, 319 |
 | src/cora/api/\_enclosure\_permit\_observer.py                                            |       61 |        0 |       16 |        0 |    100.0% |           |
-| src/cora/api/\_experiment\_steerer.py                                                    |       43 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/api/\_experiment\_steerer.py                                                    |       87 |        0 |       22 |        0 |    100.0% |           |
 | src/cora/api/\_flag\_watcher.py                                                          |       69 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/api/\_inference\_recorder.py                                                    |       19 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/\_procedure\_watcher.py                                                     |       78 |        0 |       22 |        0 |    100.0% |           |
@@ -1413,7 +1413,7 @@
 | src/cora/operation/adapters/fdt\_transfer\_port.py                                       |       67 |        6 |       16 |        0 |     90.4% |71-72, 86, 89-91 |
 | src/cora/operation/adapters/globus\_compute\_port.py                                     |       57 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/operation/adapters/globus\_transfer\_port.py                                    |       61 |        0 |       12 |        0 |    100.0% |           |
-| src/cora/operation/adapters/grid\_walk\_decide\_port.py                                  |       43 |        1 |       18 |        1 |     96.7% |       116 |
+| src/cora/operation/adapters/grid\_walk\_decide\_port.py                                  |       37 |        0 |       14 |        0 |    100.0% |           |
 | src/cora/operation/adapters/in\_memory\_compute\_port.py                                 |       44 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/operation/adapters/in\_memory\_control\_port.py                                 |       59 |        2 |       12 |        2 |     94.4% |  163, 234 |
 | src/cora/operation/adapters/in\_memory\_decide\_port.py                                  |       15 |        0 |        2 |        0 |    100.0% |           |
@@ -2386,7 +2386,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **50420** | **1045** | **7230** |  **315** | **97.4%** |           |
+| **TOTAL**                                                                                | **50458** | **1044** | **7244** |  **314** | **97.4%** |           |
 
 
 ## Setup coverage badge
