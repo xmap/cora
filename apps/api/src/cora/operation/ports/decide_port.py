@@ -72,10 +72,9 @@ exactly as ControlPort earned its registry from a third substrate and
 ComputePort deferred its registry to a second.
 """
 
-from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from cora.operation.ports.compute_port import ArtifactRef
@@ -83,21 +82,19 @@ from cora.operation.ports.control_port import ActuationKind
 from cora.operation.ports.measurement import Measurement
 from cora.shared.decision_signals import REASONING_MAX_LENGTH, DecisionConfidenceSource
 
-
-class SteeringObjectiveKind(StrEnum):
-    """The optimization SENSE of an objective, without a search strategy.
-
-    The seam tells the brain what 'better' means; the brain owns how to get
-    there. `Minimize` / `Maximize` drive a metric down / up; `Satisfy` hits
-    a target value; `Explore` has no scalar target (the brain just covers
-    the space, e.g. a grid). Anything richer (acquisition function, kernel,
-    exploration weight) is the adapter's concern, deliberately not here.
-    """
-
-    MINIMIZE = "Minimize"
-    MAXIMIZE = "Maximize"
-    SATISFY = "Satisfy"
-    EXPLORE = "Explore"
+# The steering INTENT value objects (objective + space + a proposed point) live
+# in cora.shared.steering because the Campaign aggregate also declares them and
+# tach forbids cora.campaign from importing cora.operation.ports. Re-exported
+# here so existing Operation-side importers stay stable, the same shape as
+# DecisionConfidenceSource / REASONING_MAX_LENGTH living in
+# cora.shared.decision_signals. The ADVICE side of the seam stays below.
+from cora.shared.steering import (
+    SteeringAxis,
+    SteeringObjective,
+    SteeringObjectiveKind,
+    SteeringPoint,
+    SteeringSpace,
+)
 
 
 class SteeringVerdict(StrEnum):
@@ -114,69 +111,6 @@ class SteeringVerdict(StrEnum):
 
     MEASURE = "Measure"
     STOP = "Stop"
-
-
-@dataclass(frozen=True)
-class SteeringPoint:
-    """A coordinate in the search space: axis name -> value.
-
-    The brain proposes it; the caller translates it into Conductor steps
-    (the port never sees a Step, a PV, or the captures bus). Values are
-    `Any` so a continuous axis carries a float, a discrete axis an int, and
-    a categorical axis a label, all keyed by the `SteeringAxis.name` that
-    is the bridge to the caller's actuation.
-    """
-
-    coordinates: Mapping[str, Any]
-
-
-@dataclass(frozen=True)
-class SteeringAxis:
-    """One dimension of the feasible set: a name plus its legal range.
-
-    `name` is the substrate-neutral axis label the caller binds to an
-    actuation slot; the brain only ever reasons about the name and its
-    range. `lower` / `upper` bound a continuous axis; `choices` enumerates a
-    discrete or categorical axis (empty for a pure continuous axis). The
-    axis declarations are supplied by the caller, never invented by the
-    brain, because the caller must translate a `next_point` back into steps.
-    """
-
-    name: str
-    lower: float | None = None
-    upper: float | None = None
-    choices: tuple[Any, ...] = ()
-
-
-@dataclass(frozen=True)
-class SteeringSpace:
-    """The feasible set the brain may propose points within.
-
-    Required whenever the brain may return `Measure`: it is load-bearing for
-    the caller's point-to-step translation (the caller cannot turn a
-    `next_point` into actuation without the axis names and ranges),
-    independent of which brain is behind the seam.
-    """
-
-    axes: tuple[SteeringAxis, ...]
-
-
-@dataclass(frozen=True)
-class SteeringObjective:
-    """What 'good' means, by a Measurement NAME, without a search strategy.
-
-    `target_measurement_name` names which `Measurement` in the observations
-    is the objective scalar, so the brain ignores the rest. It is a NAME,
-    origin-agnostic: the scalar may be a detector read (control) or a
-    compute output (a derived quality metric), which is what keeps a
-    compute-steering brain expressible with these same DTOs. `target_value`
-    is the setpoint a `Satisfy` objective aims at; it is None for
-    `Minimize` / `Maximize` / `Explore`.
-    """
-
-    kind: SteeringObjectiveKind
-    target_measurement_name: str | None = None
-    target_value: float | None = None
 
 
 @dataclass(frozen=True)
