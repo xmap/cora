@@ -42,7 +42,7 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 | ALS | yes | none | none | candidate facility |
 | PETRA III | yes | none | none | candidate facility |
 | Diamond | yes (retrospective) | (per-beamline from `dodal` at build time) | yes | EPICS, public `dodal` controls library |
-| NSLS-II | yes (retrospective) | (per-beamline from profile collections) | yes | EPICS / bluesky, public profile collections |
+| NSLS-II | yes (retrospective) | 1 (bmm; worked example) | yes | EPICS / bluesky, public profile collections |
 | SLAC | yes (retrospective) | (from `pcdshub` at build time) | yes | EPICS / `pcdshub` |
 | Australian Synchrotron | yes (retrospective) | none | yes | heterogeneous (EPICS + Exporter + REST + TCP) |
 | MAX IV | needed | none | yes | Tango / Sardana |
@@ -53,8 +53,11 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 
 `scripts/reverse_engineer/` automates the APS Tier-2 pass: it reads the Guarneri `devices.yml`, AST-walks the ophyd device classes, parses `user_group_permissions.yaml`, and emits candidates to `research/aps/beamlines/<repo>/` plus a cross-fleet `research/aps/recurrence.md`. It never writes to `deployments/` or `catalog/`. This is EPICS / `*-bits`-specific and does not generalize; BLISS / Tango facilities (ESRF, Elettra) and firewalled facilities are surveyed by hand. See [`aps/survey.md`](aps/survey.md) and [`aps/catalog-graduation-decisions.md`](aps/catalog-graduation-decisions.md).
 
-## Adding a facility
+## The practice
 
-1. Copy [`_templates/survey.md`](_templates/survey.md) to `research/<facility>/survey.md` and fill it from public sources, every claim cited and confidence-flagged.
-2. Decide from the survey whether a Tier-2 device pass is buildable (is the device source public?). If yes, copy [`_templates/facts.md`](_templates/facts.md) to `research/<facility>/beamlines/<bl>/facts.md` per beamline you model.
-3. Promote confirmed facts into a descriptor (`deployments/<id>/beamline.yaml`) and a published page (`docs/deployments/<id>/`) when a modeling decision lands. The research artifact stays as provenance.
+The full step-by-step (survey -> device pass -> candidate descriptor -> recurrence -> graduation -> promote), with the judgment calls at each step, is in [`WORKFLOW.md`](WORKFLOW.md). The short version:
+
+1. Copy [`_templates/survey.md`](_templates/survey.md) to `research/<facility>/survey.md` and fill it from public sources, every claim cited and confidence-flagged. Decide the modellable set and whether a Tier-2 pass is buildable (is the device source public?).
+2. Per beamline you model, copy [`_templates/facts.md`](_templates/facts.md) to `research/<facility>/beamlines/<bl>/facts.md` and draft `beamline.candidate.yaml`. Source-read the controls repo first; carry every value `confirm`. See [`nsls2/beamlines/bmm/`](nsls2/beamlines/bmm/) for a worked example.
+3. Fold each beamline into [`_templates/recurrence.md`](_templates/recurrence.md) (`research/<facility>/recurrence.md`); the cross-fleet device-class frequency is the catalog Family graduation signal. A class recurring across three distinct beamlines is the trigger; graduation is a separate, gate-reviewed catalog PR, never folded into a scaffold.
+4. Promote confirmed facts into a descriptor (`deployments/<id>/beamline.yaml`) and a published page (`docs/deployments/<id>/`) when a modeling decision lands. The research artifact stays as provenance; the published page cites the external upstream, not this tree.
