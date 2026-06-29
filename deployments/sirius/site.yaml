@@ -11,7 +11,7 @@
 # architecture; Archilha et al. 2022 beamline), not from a live connection or an
 # open controls config. Everything below is carried `pending` until Sirius staff
 # confirm it; do not invent facility specifics here, carry them as questions on
-# the MOGNO open-questions page.
+# the per-beamline open-questions pages (MOGNO, MANACA).
 #
 # Source-of-truth boundary (same as the other sites):
 #   - the closed facility-kind / actor-kind vocabularies are validated against
@@ -22,11 +22,11 @@
 #     tomography (a graduated Method) and so carries one tomography practice,
 #     pending until the beamline enters scope.
 #
-# The `beamlines` list is the full operating Sirius catalog for context, but only
-# MOGNO is modelled today (it is the only beamline with a beamline.yaml). The
-# docs build cross-links a site to the beamlines it actually hosts by globbing
-# deployments/*/beamline.yaml, so the un-modelled beamlines listed here are
-# catalog placeholders, not broken links.
+# The `beamlines` list is the full operating Sirius catalog for context; MOGNO
+# (tomography) and MANACA (macromolecular crystallography) are modelled today, each
+# with a beamline.yaml. The docs build cross-links a site to the beamlines it
+# actually hosts by globbing deployments/*/beamline.yaml, so the un-modelled
+# beamlines listed here are catalog placeholders, not broken links.
 
 facility:
   code: sirius
@@ -39,10 +39,15 @@ facility:
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. MOGNO runs
 # tomography, which is already in CORA's catalog, so its practice resolves to the
 # tomography Method and renders linked; it is carried pending until the beamline
-# enters pilot scope. The other operating beamlines coin no practice until they
+# enters pilot scope. MANACA runs macromolecular crystallography, reusing the
+# pending i03 MX Methods (mx_data_collection / grid_scan / sample_exchange), none
+# yet in the catalog. The other operating beamlines coin no practice until they
 # are modelled.
 practices:
   - {name: Mogno_tomography_practice, method: tomography, pending: true, note: "micro and nanotomography (phase-contrast, time-resolved 4D); reverse-engineered from the Sirius facility page and the MOGNO papers (TECH-1)"}
+  - {name: Manaca_mx_data_collection_practice, method: mx_data_collection, pending: true, note: "rotation / oscillation MX data collection on the goniometer + the area detector; reuses the i03 Method, not yet in the catalog (TECH-1)"}
+  - {name: Manaca_grid_scan_practice, method: grid_scan, pending: true, note: "fast grid scan for sample location / centring (TECH-1)"}
+  - {name: Manaca_sample_exchange_practice, method: sample_exchange, pending: true, note: "automated 48-pin sample-changer load / centre / collect / unmount loop; a Procedure over the spine + a Subject custody thread (ROBOT-1)"}
 
 # Access BC Actors conceptually facility-wide at Sirius. Pending until the LNLS
 # operator and review structure is confirmed.

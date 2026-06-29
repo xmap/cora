@@ -847,6 +847,19 @@ nav:
         - Techniques: deployments/mogno/techniques.md
         - Governance: deployments/mogno/governance.md
         - Model: deployments/mogno/model.md
+      - MANACA:
+        - deployments/manaca/index.md
+        - Open questions: deployments/manaca/questions.md
+        - The beamline:
+          - deployments/manaca/equipment/index.md
+          - Source: deployments/manaca/beamline.md
+          - Sample: deployments/manaca/equipment/sample.md
+          - Detector: deployments/manaca/equipment/detector.md
+          - Controls: deployments/manaca/equipment/controls.md
+          - Inventory: deployments/manaca/inventory.md
+        - Techniques: deployments/manaca/techniques.md
+        - Governance: deployments/manaca/governance.md
+        - Model: deployments/manaca/model.md
     - Elettra:
       - deployments/elettra/index.md
       - SYRMEP:

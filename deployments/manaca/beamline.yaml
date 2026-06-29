@@ -1,0 +1,205 @@
+# MANACA beamline descriptor (Sirius / LNLS), reverse-engineered, design phase
+#
+# MANACA is Sirius's macromolecular-crystallography beamline (Campinas, Brazil):
+# rotation (oscillation) MX on a goniometer reading an area detector, with an
+# automated 48-pin sample changer for high-throughput collection, supporting serial
+# and room-temperature MX. It is bound to the Sirius Site
+# (deployments/sirius/site.yaml); it is the SECOND Sirius beamline CORA models (after
+# the MOGNO tomography scaffold) and Sirius's FIRST macromolecular-crystallography
+# beamline.
+#
+# STATUS: reverse-engineered, design / commissioning phase. Every value is read from
+# Sirius's public facility pages (lnls.cnpem.br/facilities/manaca) and the MX device
+# anatomy shared with i03 / FMX / AMX / MX3, or inferred; each device
+# carries new: true (not yet modelled in CORA) and confirm: true (value to be
+# verified by LNLS staff). Control handles are OMITTED on purpose: Sirius is EPICS at
+# the device floor, and MANACA drives MXCuBE3 for the MX experiment, but no public
+# per-beamline PV manifest exists for MANACA, so no `pv` field is invented (the FAXTOR
+# handles-omitted-pending precedent). Vendor part numbers and the exact detector model
+# are not published, carried pending.
+#
+# WHAT IS NEW: a new beamline at an existing Site, no new vocabulary.
+#   - Sirius's FIRST macromolecular-crystallography beamline (its MOGNO sibling is
+#     tomography), re-using the MX vocabulary graduated at i03 and exercised at
+#     FMX / AMX / MX3 on a new control plane (EPICS floor + MXCuBE3).
+#   - MANACA coins NO new Family and changes nothing in the catalog: the goniometer
+#     reuses the graduated Goniometer family (the i03 MX precedent), the detector
+#     Camera, the monochromator Monochromator, the cryostream TemperatureController,
+#     the attenuator Filter, the beamstop BeamStop, the shutters Shutter; the machine
+#     state binds the supply-loose StorageRing. The 48-pin sample changer is modelled
+#     as a deferred Procedure (sample exchange), not a device family (the i03 / i24 /
+#     MX3 ROBOT-1 precedent).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/manaca/questions.md.
+
+beamline:
+  name: MANACA
+  facility: sirius              # Sirius Site (facility_code: sirius)
+  sector: "MANACA"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "MANACA is an undulator beamline (5-20 keV); the insertion-device period and parameters are not published, carried pending (SRC-1)"
+
+enclosures:
+  # The public sources expose no per-beamline hutch layout or PSS permit leaves.
+  # Modelled as the optics hutch + the experiment hutch; the hutch names and the PSS
+  # permit signals are a staff question (ENC-1, PSS-1).
+  - name: manaca-optics
+    role: optics-hutch
+    facility_code: sirius
+    permit_signal: {confirm: "Sirius PSS permit leaf not published per beamline (PSS-1, ENC-1)"}
+  - name: manaca-experiment
+    role: experiment-hutch
+    facility_code: sirius
+    permit_signal: {confirm: "Sirius PSS permit leaf not published; the experiment hutch carries the goniometer, the detector, and the sample changer (PSS-1, ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state and the front-end shutter
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: manaca-optics
+  intro: "The machine-level source state, observed not driven, and the front-end photon shutter. The insertion-device source itself is not published per beamline (SRC-1)."
+  note: "The Sirius 3 GeV storage-ring state, the loose StorageRing pattern reused across the fleet (MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing            # loose Family (machine-level observe-only source state; MACHINE-1)
+      new: true
+      confirm: true
+      note: "Sirius 3 GeV storage-ring state (current, fill); observe-only, the exact handles are MACHINE-1"
+    - name: WhiteBeamShutter
+      family: Shutter
+      new: true
+      confirm: true
+      note: "front-end photon shutter (a PSS shutter); handles not published per beamline (PSS-1)"
+
+# ===========================================================================
+# OPTICS STAGE: the monochromator, the energy axis, the attenuators
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: manaca-optics
+  intro: "Set the energy and condition the beam: the monochromator, the master energy axis, and the attenuator / transmission unit. 5-20 keV operating range. No standalone mirror or slit device is published (OPT-1)."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      new: true
+      confirm: true
+      note: "the MANACA monochromator setting the incident energy (5-20 keV); crystal / multilayer detail and handles pending (MONO-1)"
+    - name: EnergyAxis
+      family: PseudoAxis
+      new: true
+      confirm: true
+      note: "the master beamline energy axis the monochromator tracks; whether energy is scanned as the measurement (anomalous MX) is ENERGY-1"
+    - name: Attenuators
+      family: Filter
+      new: true
+      confirm: true
+      note: "the attenuator / transmission unit trimming the incident flux; foil set pending (FILT-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the goniometer, the cryostream, the backlight, the beamstop
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: manaca-experiment
+  intro: "The goniometer that holds and orients the crystal, the cryostream sample cooling, the on-axis backlight, and the beamstop. Supports serial and room-temperature MX."
+  note: >
+    MANACA holds a crystal on the goniometer and rotates it through an oscillation
+    while the area detector reads frames. The goniometer reuses the graduated
+    Goniometer family (the i03 MX precedent, exercised at FMX / AMX / MX3). The 48-pin
+    sample changer is modelled as a deferred Procedure (sample exchange), not a device
+    family, per the i03 / i24 / MX3 ROBOT-1 precedent.
+  devices:
+    - name: Goniometer
+      family: Goniometer
+      new: true
+      confirm: true
+      note: "the MANACA goniometer: omega rotation plus sample centring and alignment, supporting serial / room-temperature MX. Reuses the graduated Goniometer family; axis set and handles pending (GONIO-1)"
+    - name: SampleTemperature
+      family: TemperatureController
+      new: true
+      confirm: true
+      note: "the cryostream sample cooling. Reuses the graduated TemperatureController family; handles pending (TEMP-1)"
+    - name: Backlight
+      family: Backlight              # loose Family (i03 / i24 / fmx / mx3 precedent; held, DET-1)
+      new: true
+      confirm: true
+      note: "the on-axis sample backlight / frontlight for viewing and centring. Reuses the loose Backlight family (held; DET-1)"
+    - name: BeamStop
+      family: BeamStop
+      new: true
+      confirm: true
+      note: "the beamstop blocking the direct beam at the sample. Reuses BeamStop; handles pending (SAMPLE-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the area detector, its stage, the on-axis viewing camera, flux
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: manaca-experiment
+  intro: "The area detector and its translation stage, the on-axis viewing camera for centring, and the incident-flux monitor. The detector model is not published, carried pending (DET-1)."
+  devices:
+    - name: AreaDetector
+      family: Camera
+      new: true
+      confirm: true
+      note: "the MX area detector reading the rotation frames; sensor and vendor model not published (a Pilatus / Eiger-class photon-counting detector), carried pending (DET-1). Reuses Camera"
+    - name: DetectorStage
+      family: LinearStage
+      new: true
+      confirm: true
+      note: "the detector translation setting the sample-to-detector distance; handles pending (DET-1)"
+    - name: FluxMonitor
+      family: FluxMonitor
+      new: true
+      confirm: true
+      note: "the incident-flux monitor. Reuses the graduated FluxMonitor family; handles pending (DIAG-1)"
+    - name: OnAxisCamera
+      family: Camera
+      new: true
+      confirm: true
+      note: "the on-axis viewing camera for sample centring. Reuses Camera; handles pending (DET-1)"
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    MANACA runs on the Sirius control stack: EPICS at the device-IO floor, with MXCuBE3 /
+    MXCuBE Web as the MX experiment UI driving the goniometer, detector, and sample
+    changer. Sirius has named Bluesky / Ophyd (the LNLS "sophys" family) as a facility
+    orchestration direction (its MOGNO sibling records the same migration question), but
+    whether MANACA runs it is not public (ORCH-1). No public per-beamline PV manifest is
+    published, so the EPICS handles are not bound here, carried pending staff verification
+    (CTRL-1); when bound they would be modelled as opaque edge handles over the
+    ControlPort. The rotation-MX acquisition (the oscillation, the detector triggering, the
+    sample-changer load / centre / collect loop) runs through MXCuBE and the beamline
+    orchestration layer; that orchestration is the seam CORA's edge replaces or drives
+    through, conducting over the EPICS floor rather than owning it. The detector
+    file-writing to the Sirius data store is plumbing CORA observes, not data it owns (see
+    model.md).
+  triggering:
+    - name: MonoBeamShutter
+      family: Shutter
+      new: true
+      confirm: true
+      note: "the mono-beam shutter gating the conditioned beam into the experiment hutch, plus a fast shutter gating the per-oscillation exposure; handles pending (PSS-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a MANACA run needs present before it
+    can start. All carried pending confirmation (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen        # cryostream

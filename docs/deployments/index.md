@@ -101,11 +101,12 @@ CORA's eighth Site (the Paul Scherrer Institut). Like SLAC, the Site is the inst
 
 ## [Sirius](sirius/index.md)
 
-CORA's first South American facility (the Brazilian Synchrotron Light Laboratory, LNLS, at CNPEM in Campinas). Its MOGNO beamline is reverse-engineered from two published papers and the public facility page rather than an open controls config, so it is the thinnest reverse-engineered scaffold: device families are inferred but no control handles or vendor models are public, and every value stays `confirm` until MOGNO staff verify it.
+CORA's first South American facility (the Brazilian Synchrotron Light Laboratory, LNLS, at CNPEM in Campinas). Its beamlines are reverse-engineered from published papers and public facility pages rather than open controls configs, so they are thin scaffolds: device families are inferred but no control handles or vendor models are public, and every value stays `confirm` until staff verify it.
 
 | Beamline | Status | What it is |
 | --- | --- | --- |
 | [MOGNO](mogno/index.md) | Reverse-engineered (partial) | cone-beam X-ray micro and nanotomography (phase-contrast, time-resolved 4D) across two stations; reuses the 2-BM / FXI tomography vocabulary, novelty is the Site and the fleet's first custom-Python (non-Bluesky) orchestration layer |
+| [MANACA](manaca/index.md) | Reverse-engineered | macromolecular crystallography (rotation MX, serial and room-temperature) on a goniometer + area detector with a 48-pin sample changer; Sirius's first MX beamline, reuses the i03 / FMX / AMX / MX3 Goniometer and MX Methods on the EPICS floor + MXCuBE3, no new Family |
 
 ## [ALBA](alba/index.md)
 
