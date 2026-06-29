@@ -1,0 +1,177 @@
+# CANDIDATE beamline descriptor: hand-read from NSLS2/pdf-profile-collection, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions and enclosures need human curation, and any new Family needs the
+# naming-r3 gate. Do not copy into deployments/ without review. All PV prefixes verified
+# verbatim against source (startup/*.py), zero fabrications.
+
+beamline:
+  name: PDF
+  facility: nsls2
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 28-ID-1-A
+  facility_code: nsls2
+  confirm: optics hutch; inferred from PV prefix XF:28ID1A
+- name: 28-ID-1-B
+  facility_code: nsls2
+  confirm: endstation hutch; inferred from XF:28ID1B
+- name: 28-ID-C
+  facility_code: nsls2
+  confirm: shared 28-ID-C area (shutter + ion monitor); inferred from XF:28IDC
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: ExperimentShutter
+    family: Shutter
+    pv: "XF:28IDC-ES:1{Sh:Exp}"
+    new: true
+    confirm: exposure shutter (Cmd-Cmd); family Shutter (catalog)
+  - name: FastShutter
+    family: Shutter
+    pv: "XF:28IDC-ES:1{Sh2:Exp-Ax:"
+    new: true
+    confirm: motorized fast shutter; family Shutter (catalog)
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Monochromator
+    family: Monochromator
+    pv: "XF:28ID1A-OP{Mono:SBM-Ax:"
+    new: true
+    confirm: sagittal bent mono (SBM); family Monochromator (catalog)
+  - name: VerticalFocusingMirror
+    family: Mirror
+    pv: "XF:28ID1A-OP{Mir:VFM-Ax:"
+    new: true
+    confirm: VFM; family Mirror (catalog)
+  - name: WhiteBeamSlit0
+    family: Slit
+    pv: "XF:28ID1A-OP{Slt:0-Ax:"
+    new: true
+    confirm: white-beam slit 0; family Slit (catalog)
+  - name: WhiteBeamSlit1
+    family: Slit
+    pv: "XF:28ID1A-OP{Slt:1-Ax:"
+    new: true
+    confirm: white-beam slit 1; family Slit (catalog)
+  - name: EndstationSlit2
+    family: Slit
+    pv: "XF:28ID1B-OP{Slt:2-Ax:"
+    new: true
+    confirm: endstation slit 2; family Slit (catalog)
+  - name: AntiScatterSlit
+    family: Slit
+    pv: "XF:28ID1B-OP{Slt:AS-Ax:"
+    new: true
+    confirm: anti-scatter slit; family Slit (catalog)
+  - name: Filter
+    family: Filter
+    pv: "XF:28ID1B-OP{Fltr:"
+    new: true
+    confirm: filter/attenuator; family Filter (catalog)
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: SampleStage
+    family: LinearStage
+    pv: "XF:28ID1B-ES{Stg:Smpl-Ax:"
+    new: true
+    confirm: 'sample stage x/y/z/ry; family LinearStage (catalog)'
+  - name: SampleTable
+    family: Table
+    pv: "XF:28ID1B-ES:1{Sample:Tbl-Ax:"
+    new: true
+    confirm: sample table; family Table (catalog)
+  - name: SampleChanger
+    family: Positioner
+    pv: "XF:28ID1B-ES{Smpl:Chngr-Ax:"
+    new: true
+    confirm: 'sample changer (yrot); folds to Positioner + Clearance + Subject custody, NOT a new Family'
+  - name: SampleArray
+    family: LinearStage
+    pv: "XF:28ID1B-ES{Smpl:Array-Ax:"
+    new: true
+    confirm: multi-sample array (horiz); family LinearStage (catalog)
+  - name: LakeshoreCryostat
+    family: TemperatureController
+    pv: "XF:28ID1-ES{LS336:1"
+    new: true
+    confirm: 'Lakeshore 336 (Out:3 Man-SP setpoint); family TemperatureController (catalog, presents Regulator)'
+  - name: LinkamStage
+    family: TemperatureController
+    pv: "XF:28ID1-ES{LINKAM:T96}:"
+    new: true
+    confirm: 'Linkam T96; family TemperatureController (catalog, presents Regulator)'
+  - name: EurothermFurnace
+    family: TemperatureController
+    pv: "XF:28ID1-ES{ET:05}LOOP1:"
+    new: true
+    confirm: 'Eurotherm HAB furnace (LOOP1); family TemperatureController (catalog, presents Regulator)'
+  - name: EnvController1
+    family: TemperatureController
+    pv: "XF:28ID1-ES:1{Env:01}"
+    new: true
+    confirm: 'environment controller; confirm presents Regulator vs read-only'
+  - name: EnvController5
+    family: TemperatureController
+    pv: "XF:28ID1-ES:1{Env:05}LOOP1:"
+    new: true
+    confirm: 'environment controller LOOP1; confirm presents Regulator'
+  - name: ResidualGasAnalyzer
+    family: GenericProbe
+    pv: "XF:28ID1-ES{RGA:1}"
+    new: true
+    confirm: residual gas analyzer; LOOSE GenericProbe
+  - name: WebCam
+    family: GenericProbe
+    pv: "XF:28ID1-BI{Cam:2}"
+    new: true
+    confirm: sample-viewing camera; LOOSE GenericProbe
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: DetectorStage1
+    family: LinearStage
+    pv: "XF:28ID1B-ES{Det:1-Ax:"
+    new: true
+    confirm: detector 1 x/y stage; family LinearStage (catalog)
+  - name: DetectorStage2
+    family: LinearStage
+    pv: "XF:28ID1B-ES{Det:2-Ax:"
+    new: true
+    confirm: detector 2 x/y stage; family LinearStage (catalog)
+  - name: BeamStop1
+    family: BeamStop
+    pv: "XF:28ID1B-ES{BS:1-Ax:"
+    new: true
+    confirm: beamstop 1; family BeamStop (catalog)
+  - name: BeamStop2
+    family: BeamStop
+    pv: "XF:28ID1B-ES{BS:2-Ax:"
+    new: true
+    confirm: beamstop 2; family BeamStop (catalog)
+  - name: PerkinElmer1
+    family: Camera
+    pv: "XF:28ID1-ES{Det:PE1}"
+    new: true
+    confirm: Perkin-Elmer flat-panel (powder rings); family Camera (catalog)
+  - name: PerkinElmer2
+    family: Camera
+    pv: "XF:28ID1-ES{Det:PE2}"
+    new: true
+    confirm: second Perkin-Elmer; family Camera (catalog)
+  - name: PilatusDetector
+    family: Camera
+    pv: "XF:28ID1-ES{Det:Pilatus}"
+    new: true
+    confirm: 'Pilatus (energy/threshold settable); family Camera (catalog)'
+  - name: IonMonitor
+    family: FluxMonitor
+    pv: "XF:28IDC-BI:1{IM:1}"
+    new: true
+    confirm: 'ion monitor (C4 channels); family FluxMonitor (catalog, graduated)'
