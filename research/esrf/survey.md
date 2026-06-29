@@ -11,6 +11,10 @@ Extractions to date:
 - `beamlines/id19/` -- ID19, the long microtomography beamline (the first ESRF deployment).
 - `beamlines/id16b/` -- ID16B, the nano-analysis / nano-imaging beamline (nano-tomography +
   nano-XRF), the second ESRF deployment and the fleet's first nanoprobe on a BLISS floor.
+- `beamlines/id28/` -- ID28, momentum-resolved inelastic X-ray scattering (IXS), a shipped
+  deployment given a retrospective Tier-2 device pass; the multi-analyzer crystal arm is the
+  loose-family disambiguation case (EnergyAnalyzer vs SpectrometerArm, see its facts.md).
+- `recurrence.md` -- the cross-ESRF Family-frequency fold, started with ID19 / ID16B / ID28.
 
 ESRF beamlines that publish a Beacon config (`<beamline>/beamline_configuration`, public on
 gitlab.esrf.fr) are the modellable set. As of 2026-06 the public ones are: ID06, ID16B, ID19,

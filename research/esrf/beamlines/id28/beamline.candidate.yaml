@@ -1,0 +1,180 @@
+# CANDIDATE beamline descriptor: hand-read from gitlab.esrf.fr/id28/beamline_configuration
+# (commit 85fe3f3), NOT authoritative. Every device carries new: true and a confirm note.
+# Grouping by stage and the enclosure names are inferred from the config directory layout
+# (oh2/oh3/eh1/eh1_ss); Family suggestions and hutch boundaries need human curation, and any
+# new Family needs the naming-r3 gate. Do not copy into deployments/ without review. ID28 is
+# already modeled, so this can be cross-checked against deployments/id28/beamline.yaml; two
+# discrepancies are flagged in facts.md (the side-station devices and the analyzer Family).
+
+beamline:
+  name: ID28
+  facility: esrf
+  tier: Unit
+  source: insertion-device
+enclosures:
+- name: id28-optics
+  facility_code: esrf
+  confirm: optics zone (oh1/oh2/oh3); inferred from config dir layout; PSS permit leaf absent (ENC-1, PSS-1)
+- name: id28-eh1
+  facility_code: esrf
+  confirm: IXS spectrometer endstation (eh1 + eh1_ss side station); inferred from config dir layout (ENC-1, PSS-1)
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: StorageRing
+    family: StorageRing
+    pv: "//acs:10000/fe/master/id28"
+    new: true
+    confirm: 'ESRF-EBS storage-ring state via BLISS machinfo (MachInfo); observe-only; LOOSE family StorageRing (MACHINE-1)'
+  - name: FrontEndShutter
+    family: Shutter
+    pv: "acs.esrf.fr:10000/fe/master/id28"
+    new: true
+    confirm: 'BLISS fe (TangoShutter FrontEnd); family Shutter (catalog) (PSS-1)'
+  - name: BeamShutters
+    family: Shutter
+    pv: "id28/v-bsh/0"
+    new: true
+    confirm: 'BLISS bsh1/bsh2/bsh3 on id28/v-bsh/0..2 (TangoShutter); one Asset row, three vacuum shutters; family Shutter (catalog)'
+  - name: Undulator
+    family: InsertionDevice
+    pv: "//acs:10000/id/master/id28"
+    new: true
+    confirm: 'BLISS ESRF_Undulator; u22gap=IVU22a_GAP, u133gap=IVU13-3c_GAP (11.1-300 mm); period/segment SRC-1; family InsertionDevice (catalog)'
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Premonochromator
+    family: Monochromator
+    new: true
+    confirm: 'OH1 premono; session motors mono/pi1/pmscr only, no standalone controller yml; family Monochromator (catalog) (MONO-1)'
+  - name: Postmonochromator
+    family: Monochromator
+    new: true
+    confirm: 'OH2 postmono; session motors pmth/pmchi/pmy/pmz/pi2/pmono2/pmscr2, no standalone controller yml; family Monochromator (catalog) (MONO-1)'
+  - name: Monochromator
+    family: Monochromator
+    pv: "e518id28"
+    new: true
+    confirm: 'OH3 main backscattering mono; PI_E518 piezo (pimth ch1, pimchi ch2) on tcp e518id28; meV energy set by crystal temperature not Bragg angle; family Monochromator (catalog) (MONO-1)'
+    source_class: PI_E518
+  - name: BeamEnergy
+    family: PseudoAxis
+    pv: "enet://gpibid28c"
+    new: true
+    confirm: 'incident-energy pseudo-axis via ASL F700 crystal-temperature controller (monot setpoint 7-23 C -> deltae energy); gpib pad 3; LAMBDA 0.5226 T0 22.854; family PseudoAxis (catalog) (MONO-1)'
+    source_class: F700
+  - name: HorizontalFocusingMirror
+    family: Mirror
+    pv: "hfm_ctrl"
+    new: true
+    confirm: 'HFM two-bender calc controller; real hfmb1/hfmb2/hfmz1/hfmz2/hfmth/hfmtz; family Mirror (catalog) (OPT-1)'
+    source_class: HFM
+  - name: VerticalFocusingMirror
+    family: Mirror
+    pv: "vfm_ctrl"
+    new: true
+    confirm: 'VFM two-bender calc controller; real vfmb1/vfmb2/vfmz1/vfmz2; family Mirror (catalog) (OPT-1)'
+    source_class: VFM
+  - name: BeamPositionMonitor
+    family: BeamPositionMonitor
+    pv: "tango://id28/elettra/oh2"
+    new: true
+    confirm: 'OH2 Elettra BPM (quadrant currents ebpmc1..4, position ebpmx/ebpmy); LOOSE family BeamPositionMonitor, held pending DIAG-1; do NOT coin from ID28'
+    source_class: Elettra
+  - name: PrimarySlits
+    family: Slit
+    pv: "slits_ph"
+    new: true
+    confirm: 'primary beam-defining slits; slits_ph (h, real pr/pl) + slits_pv (v, real pu/pd) on iceid281; family Slit (catalog) (OPT-2)'
+  - name: MonoSlit
+    family: Slit
+    pv: "slits_mx"
+    new: true
+    confirm: 'main-mono slit; real mxr/mxl, calc mxgap/mxoff; family Slit (catalog) (OPT-2)'
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: SampleStage
+    family: Goniometer
+    pv: "iceid282"
+    new: true
+    confirm: 'IXS scattering-geometry stage on IcePAP iceid282 (sax addr52/say addr53/saz addr54 translations, th addr23/sphi addr26/chi addr48 rotations, ty addr22 gonio table, tthm addr24 rail); Goniometer vs LinearStage is SAMPLE-1; family Goniometer (catalog, confirm)'
+  - name: SideStationStage
+    family: LinearStage
+    pv: "iceid285"
+    new: true
+    confirm: 'side-station stage on IcePAP iceid285 (phi addr4, omega addr6, sz addr12); family LinearStage (catalog) (SAMPLE-1)'
+  - name: SmarActStage
+    family: LinearStage
+    pv: "172.29.46.81"
+    new: true
+    confirm: 'SmarAct MCS2 fine stage smaract1 (Gx ch0, Gy ch1, 1 nano-degree); tcp; family LinearStage (catalog) (SAMPLE-1)'
+  - name: SampleSlits
+    family: Slit
+    pv: "slits_sh"
+    new: true
+    confirm: 'sample-defining slits; slits_sh (h, real sr/sl) + slits_sv (v, real su/sd); session i1sh*/i1sv*; family Slit (catalog) (OPT-2)'
+  - name: Transfocator
+    family: Transfocator
+    pv: "wcid28e"
+    new: true
+    confirm: 'BLISS tf (Transfocator, controller_ip wcid28e); layout P L L L L L L L P (8 lenslets + 2 pinholes); family Transfocator (catalog); NOT in shipped descriptor'
+  - name: SampleTemperatureController
+    family: TemperatureController
+    pv: "enet://gpibid28g.esrf.fr"
+    new: true
+    confirm: 'LakeShore 340 10K displex (gpib pad 12, Tango id28/regulation/lakeshore340_*, loop ls340_loop1); alternatives Oxford 700 (rfc2217://lid281:28326) + nanodac gas blower (172.29.46.36); family TemperatureController (catalog, Regulator) (TEMP-1)'
+    source_class: LakeShore340
+diagnostics:
+  stage: diagnostics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: BeamViewer
+    family: Screen
+    pv: "wcid28f"
+    new: true
+    confirm: 'side-station beam viewer mbv (EBV, modbustcp wcid28f); diode + camera id28/limaccds/mbv; family Screen (?) confirm vs FluxMonitor diode; NOT in shipped descriptor'
+    source_class: EBV
+  - name: BPMPositioner
+    family: LinearStage
+    pv: "amc100id281"
+    new: true
+    confirm: 'attocube AMC100 BPM positioner (bpm_y ch1, bpm_z ch2, ECSx5050); family LinearStage (catalog) (DIAG-1); NOT in shipped descriptor'
+    source_class: AMC100
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: EnergyAnalyzer
+    family: EnergyAnalyzer
+    pv: "tth_multilayer"
+    new: true
+    confirm: 'IXS multi-analyzer arm: TwoThetaMultilayer (tth_multilayer, real tthm/calc tth) carrying InclinedAnalyser crystals a2_inca/a3_inca/a4_inca (achiN/athN), cylinder slits a1h..a9h/a1v..a6v (CylSlit radius 43.5); LOOSE family EnergyAnalyzer (ANALYZER-1) per catalog (IXS diced-crystal analyzer), NOT SpectrometerArm as the shipped descriptor binds it (RIXS-1); confirm which loose family ID28 reinforces; HELD, do NOT coin; nine-crystal array is per-Asset (IXS-1)'
+    source_class: TwoThetaMultilayer
+  - name: Detector
+    family: Camera
+    pv: "id28/limaccds/basler_0"
+    new: true
+    confirm: 'Basler IXS Lima camera (basler_ixs) + PCO Lima (id28/limaccds/pco); basler centroid via id28/bpm/basler_0; family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: AnalyzerCounters
+    family: GenericProbe
+    pv: "tcp://lid282:8909"
+    new: true
+    confirm: 'P201 CT2 cards P201_282_A/B/C (:8909/:8910/:8911); per-analyzer deta1..deta9, beam monitors izero/ione/imirr; LOOSE family GenericProbe'
+    source_class: CT2
+  - name: TimingController
+    family: TimingController
+    pv: "enet://gpibid28e.esrf.fr"
+    new: true
+    confirm: 'MUSST timing master musst_eh1 (gpib pad 13, adc5 channels musst_x/y/i/ref); gates the P201 chain (chain_fourc ExtGate); family TimingController (?) confirm vs GenericProbe'
+    source_class: musst
+  - name: SidePicoammeter
+    family: FluxMonitor
+    pv: "enet://gpibid28ssa.esrf.fr"
+    new: true
+    confirm: 'Keithley 6485 side-station picoammeter (gpib pad 14, pico1 addr1); family FluxMonitor (?) confirm it reads beam flux; NOT in shipped descriptor'
