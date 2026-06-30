@@ -1,0 +1,17 @@
+# CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (src/dodal/beamlines/k11.py),
+# NOT authoritative. DIAD = K11 (K-series). NEAR-STUB: only KB mirror motors in public dodal; imaging
+# camera, diffraction detector, sample stage, DCM absent (not invented). PVs verified verbatim.
+
+beamline: {name: K11, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: K11, facility_code: diamond, confirm: DIAD dual imaging and diffraction; PV root K11 (env-resolved, K-series)}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: KBMirror, family: Mirror, pv: "K11-OP-KBM-01:CS:", new: true, confirm: "KB mirror, X (CS:X) + Y (CS:Y) coordinate-system axes as one Asset; Mirror (catalog)"}
+# DEFERRED (absent from public dodal, not invented):
+#   IMG-1: full-field imaging camera (the I in DIAD)
+#   DIFF-1: diffraction detector (the D in DIAD)
+#   MONO-1/OPTICS-1: DCM, fast imaging/diffraction beam-switching optics, slits, attenuators
+#   SAMPLE-1: sample stage / environment
