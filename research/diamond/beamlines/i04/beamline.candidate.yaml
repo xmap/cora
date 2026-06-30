@@ -1,0 +1,41 @@
+# CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (src/dodal/beamlines/i04.py),
+# NOT authoritative. dodal PVs use {beamline_prefix}=BL04I (env-resolved) + literal suffix; every
+# suffix below is read verbatim from source and verified, zero fabrications.
+
+beamline: {name: I04, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: I04, facility_code: diamond, confirm: single-beamline enclosure; PV root BL04I (env-resolved)}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: DCM, family: Monochromator, pv: "BL04I-MO-DCM-01:", new: true, confirm: "DCM (i03 shared class); Monochromator (catalog)"}
+  - {name: Transfocator, family: Transfocator, pv: "BL04I-MO-FSWT-01:", new: true, confirm: "CRL transfocator; Transfocator (catalog, graduated)"}
+  - {name: Attenuator, family: Filter, pv: "BL04I-EA-ATTN-01:", new: true, confirm: "BinaryFilterAttenuator; Filter (catalog)"}
+  - {name: ApertureScatterguard, family: Aperture, pv: "BL04I-MO-MAPT-01:", new: true, confirm: "aperture MAPT + scatterguard BL04I-MO-SCAT-01:; Aperture (catalog)"}
+  - {name: SampleShutter, family: Shutter, pv: "BL04I-EA-SHTR-01:", new: true, confirm: "MXZebraShutter; Shutter (catalog)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Smargon, family: Goniometer, pv: "BL04I-MO-SGON-01:", new: true, confirm: "Smargon six-axis gonio; Goniometer (catalog, graduated via i03); I04 further MX consumer"}
+  - {name: Backlight, family: Backlight, pv: "BL04I", new: true, confirm: "Backlight (bare beamline_prefix in dodal); LOOSE Backlight"}
+  - {name: Robot, family: Positioner, pv: "BL04I-MO-ROBOT-01:", new: true, confirm: "BartRobot sample exchange; folds to Positioner + Clearance + Subject custody, not a SampleChanger family"}
+  - {name: Thawer, family: TemperatureController, pv: "BL04I-EA-THAW-01", new: true, confirm: "Thawer; confirm settable thermal setpoint (Regulator) vs momentary actuator"}
+  - {name: OAV, family: Camera, pv: "BL04I-DI-OAV-01:", new: true, confirm: "on-axis viewing camera; Camera (catalog)"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: EigerDetector, family: Camera, pv: "BL04I-EA-EIGER-01:", new: true, confirm: "Eiger (literal prefix in dodal); Camera (catalog)"}
+  - {name: DetectorMotion, family: LinearStage, pv: "BL04I-MO-DET-01:", new: true, confirm: "detector motion (+ PMAC BL04I-MO-PMAC-02:); LinearStage (catalog)"}
+  - {name: Beamstop, family: BeamStop, pv: "BL04I-MO-BS-01:", new: true, confirm: "Beamstop (config-driven); BeamStop (catalog)"}
+  - {name: Flux, family: FluxMonitor, pv: "BL04I-MO-FLUX-01:", new: true, confirm: "Flux readout; FluxMonitor (catalog, graduated)"}
+  - {name: IPin, family: FluxMonitor, pv: "BL04I-EA-PIN-01:", new: true, confirm: "IPin diode; FluxMonitor (catalog), confirm"}
+  - {name: Zebra, family: TimingController, pv: "BL04I-EA-ZEBRA-01:", new: true, confirm: "Zebra (+ fast-grid-scan on BL04I-MO-SGON-01:); TimingController (catalog), confirm timing role"}
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Undulator, family: InsertionDevice, pv: "SR04I-MO-SERVC-01:", new: true, confirm: "UndulatorInKeV (insertion_prefix=SR04I); InsertionDevice (catalog)"}
+  - {name: XBPMFeedback, family: GenericProbe, pv: "BL04I-EA-FDBK-01:", new: true, confirm: "XBPM feedback; LOOSE GenericProbe, held DIAG-1"}
