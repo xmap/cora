@@ -1,0 +1,27 @@
+# CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (b07.py/b07_1.py/b07_shared.py),
+# NOT authoritative. Two branches: B=BL07B, C=BL07C (env-resolved). PVs verified verbatim, zero fabrications.
+
+beamline: {name: B07, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: B07-B, facility_code: diamond, confirm: NAP-XPS branch B; PV root BL07B (env-resolved)}
+- {name: B07-C, facility_code: diamond, confirm: NAP-XPS branch C; PV root BL07C (env-resolved)}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: PlaneGratingMonoB, family: GratingMonochromator, pv: "BL07B-OP-PGM-01:", new: true, confirm: "branch B PGM; GratingMonochromator (catalog, graduated)"}
+  - {name: PlaneGratingMonoC, family: GratingMonochromator, pv: "BL07C-OP-PGM-01:", new: true, confirm: "branch C PGM; GratingMonochromator (catalog, graduated)"}
+  - {name: ChannelCutMono, family: Monochromator, pv: "BL07C-OP-CCM-01:", new: true, confirm: "channel-cut mono (branch C); Monochromator (catalog), confirm vs dedicated channel-cut"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SampleManipulatorB52, family: Manipulator, pv: "BL07B-EA-SM-52:", new: true, confirm: "B07SampleManipulator52B; Manipulator (catalog, graduated via esm), NOT MX Goniometer"}
+  - {name: SampleManipulatorB21, family: Manipulator, pv: "BL07B-EA-SM-21:", new: true, confirm: "XYZAzimuthStage (ROTY); Manipulator (catalog)"}
+  - {name: SampleManipulatorC, family: Manipulator, pv: "BL07C-EA-SM-01:", new: true, confirm: "XYZAzimuthPolarStage; Manipulator (catalog)"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: ElectronAnalyserB, family: ElectronAnalyzer, pv: "BL07B-EA-DET-01:CAM:", new: true, confirm: "SPECS analyser (branch B); ElectronAnalyzer (catalog, graduated)"}
+  - {name: ElectronAnalyserC, family: ElectronAnalyzer, pv: "BL07C-EA-DET-01:CAM:", new: true, confirm: "SPECS analyser (branch C); ElectronAnalyzer (catalog, graduated)"}
