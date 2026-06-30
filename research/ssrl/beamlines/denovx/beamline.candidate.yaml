@@ -1,0 +1,19 @@
+# CANDIDATE beamline descriptor: hand-read from tangkong/SSRL-DeNovX public bluesky profile, NOT
+# authoritative. Real TXRD:/DETZ: PVs (well-customized). Verified verbatim, zero fabrications.
+
+beamline: {name: denovx, facility: ssrl, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: DeNovX, facility_code: ssrl, confirm: "SSRL DeNovX transmission-XRD endstation; host beamline/sector DENOVX-1; real TXRD: PV root"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: CassetteStage, family: LinearStage, pv: "TXRD:IMS:MOTOR1", new: true, confirm: "sample cassette cx/cy = TXRD:IMS:MOTOR1/2; LinearStage (catalog); high-throughput sample delivery"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: DetectorZStage, family: LinearStage, pv: "DETZ:IMS:MOTOR1", new: true, confirm: "detector Z; LinearStage (catalog)"}
+  - {name: DexelaDetector, family: Camera, pv: "SSRL:DEX2923:", new: true, confirm: "Dexela transmission-XRD panel (shared SSRL Dexela); Camera (catalog)"}
+  - {name: RIOAnalogIO, family: GenericProbe, pv: "TXRD:RIO.AI0", new: true, confirm: "TXRD RIO crate; LOOSE GenericProbe"}
+# DEFERRED: DENOVX-1 (host beamline); MONO-1/OPTICS-1 (mono, mirrors, slits absent from endstation profile)
