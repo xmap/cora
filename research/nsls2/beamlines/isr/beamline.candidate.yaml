@@ -1,0 +1,13 @@
+# CANDIDATE: hand-read from public profile-collection source, NOT authoritative. PV prefixes verified verbatim. Do not copy into deployments/ unreviewed. Commissioning-phase / optics-first scaffold; diffractometer/in-situ/resonant deferred.
+beamline: {name: ISR, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 4-ID-A, facility_code: nsls2, confirm: optics; inferred from XF:04IDA}
+- {name: 4-ID-D, facility_code: nsls2, confirm: endstation; inferred from XF:04IDD}
+devices:
+- {name: Monochromator, family: Monochromator, pv: "XF:04IDA-OP:1{Mono:DCM", stage: optics, new: true, confirm: DCM; Monochromator (catalog)}
+- {name: HorizontalFocusingMirror, family: Mirror, pv: "XF:04IDA-OP:1{Mir:HFM", stage: optics, new: true, confirm: HFM; Mirror (catalog)}
+- {name: VerticalFocusingMirror, family: Mirror, pv: "XF:04IDA-OP:1{Mir:VFM", stage: optics, new: true, confirm: VFM; Mirror (catalog)}
+- {name: DoubleHighResMirror, family: Mirror, pv: "XF:04IDB-OP:1{Mir:DHRM", stage: optics, new: true, confirm: DHRM; Mirror (catalog)}
+- {name: Diffractometer, family: Diffractometer, pv: "XF:04IDD-ES:1{Dif:ISD-Ax:", stage: sample, new: true, confirm: "th/zeta only (partial stub); LOOSE Diffractometer, weakest contract (DIFF-1)"}
+- {name: Eiger1M, family: Camera, pv: "XF:04IDD-ES{Det:Eig1M}", stage: detection, new: true, confirm: Eiger 1M; Camera (catalog)}
+- {name: BeamPositionMonitor3, family: GenericProbe, pv: "XF:04IDB-BI:1{BPM:3-", stage: diagnostics, new: true, confirm: BPM; LOOSE GenericProbe}

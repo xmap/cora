@@ -1,0 +1,16 @@
+# CANDIDATE: hand-read from public profile-collection source, NOT authoritative. PV prefixes verified verbatim. Do not copy into deployments/ unreviewed. Devices in the smibase package.
+beamline: {name: SMI, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 12-ID-A, facility_code: nsls2, confirm: inferred from XF:12IDA}
+- {name: 12-ID-C, facility_code: nsls2, confirm: endstation; inferred from XF:12IDC}
+devices:
+- {name: PhotonShutter, family: Shutter, pv: "XF:12IDA-PPS:2{PSh}", stage: source, new: true, confirm: PPS shutter; Shutter (catalog)}
+- {name: MultilayerMono, family: Monochromator, pv: "XF:12IDA{dmm:2}", stage: optics, new: true, confirm: double-multilayer mono; Monochromator (catalog)}
+- {name: Transfocator, family: Transfocator, pv: "XF:12IDC-OP:2{Lens:CRL-Ax:", stage: optics, new: true, confirm: "CRL; Transfocator (catalog, graduated); SMI is a consumer"}
+- {name: HubStage, family: LinearStage, pv: "XF:12IDC-OP:2{HUB:Stg-Ax:", stage: optics, new: true, confirm: hub stage; LinearStage (catalog)}
+- {name: Filters, family: Filter, pv: "XF:12IDC-OP:2{Fltr:1-1}", stage: optics, new: true, confirm: "filter array (1-1..1-12); Filter (catalog)"}
+- {name: Manipulator, family: Manipulator, pv: "XF:12ID2C-ES{MCS:2-Ax:", stage: sample, new: true, confirm: "grazing-incidence sample manipulator; Manipulator (catalog, graduated)"}
+- {name: Linkam, family: TemperatureController, pv: "XF:12ID-ES{LINKAM}", stage: sample, new: true, confirm: "Linkam; TemperatureController (catalog, presents Regulator)"}
+- {name: SAXSBeamStop, family: BeamStop, pv: "XF:12IDC-ES:2{BS:SAXS-Ax:", stage: detection, new: true, confirm: SAXS beamstop; BeamStop (catalog)}
+- {name: TetrAMM, family: FluxMonitor, pv: "XF:12ID:2{EM:Tetr1}", stage: detection, new: true, confirm: "TetrAMM I0; FluxMonitor (catalog, graduated)"}
+- {name: BeamPositionMonitor1, family: GenericProbe, pv: "XF:12IDA-BI:2{EM:BPM1}", stage: diagnostics, new: true, confirm: "EM BPMs; LOOSE GenericProbe, held DIAG-1"}

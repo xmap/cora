@@ -1,0 +1,190 @@
+# P64 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P64 "Advanced X-ray Absorption Spectroscopy" is the EXAFS / XANES beamline at
+# PETRA III (DESY, Hamburg), specialising in dilute / high-rate fluorescence-detected
+# absorption spectroscopy with a large multi-element detector. It is bound to the
+# PETRA III Site (deployments/petra-iii/site.yaml), the ninth PETRA III beamline.
+#
+# STATUS: reverse-engineered from P64's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p64, branch
+# debian/jessie; the online_hasnp64.xml registry). Device logical names and Tango
+# control handles are real, read from that registry; vendor part numbers, crystal
+# cuts, the detector element count, energy calibration, and physical positions are not
+# in it and are open questions. Every value is carried confirm until P64 staff verify
+# it. The extraction is in research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family. P64 reuses existing Families end to end. It is the
+# fleet's high-rate fluorescence EXAFS beamline; its defining feature is the large
+# multi-element fluorescence detector exposed as a 104-channel SIS3302 digitizer, all
+# grouped into one EnergyDispersiveSpectrometer Asset (DET-1). The technique (X-ray
+# absorption spectroscopy) reuses the pending xas_spectroscopy slug the BMM / ISS /
+# i20-1 / P04 beamlines already share (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML (e.g. p64/dcmener/energy). The energy axis couples the DCM and
+# the undulator (coupledmonoundmove); the mono is a Tsai-geometry DCM (DcmTsai). The
+# experiment motor bank carries the sample / instrument positioning, roles not
+# labelled (GROUP-1). The OH mirror pair is exposed as labelled axes (Mirror1*,
+# Mirror2*), so the mirrors are resolved.
+#
+# SCOPE: this cut models the optics (the undulator, the Tsai DCM + coupled energy, the
+# OH mirror pair), the experiment endstation (the sample bank, the DAC sub-stage, the
+# NewFocus picomotors, the slits), and the detection (the two Lambda 750k area
+# detectors and the multi-element SIS3302 fluorescence detector). Counter / timer /
+# ADC channels and the Sardana MeasurementGroup bookkeeping rows are filtered out by
+# the extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p64/questions.md.
+
+beamline:
+  name: P64
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P64"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P64 is an undulator beamline (advanced XAS); the OnlineXML exposes the undulator energy axis (p64/petra3undulator) coupled into the mono, but no period or parameters, carried pending (SRC-1)"
+
+# Two enclosures: the optics hutch (the Tsai DCM + the mirror pair) and the experiment
+# endstation. DESY PSS permit signals are not in the OnlineXML (PSS-1).
+enclosures:
+  - name: p64-oh
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P64 optics hutch; not in the OnlineXML (PSS-1)"}
+  - name: p64-eh
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P64 experiment endstation; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and the OH optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p64-oh
+  intro: "The P64 undulator source and the optics hutch: the Tsai-geometry double-crystal monochromator with its coupled undulator energy axis, and the two harmonic-rejection / focusing mirrors."
+  note: "The energy axis couples the DCM and the undulator (coupledmonoundmove / energy_all). The mirror pair is exposed as labelled axes (Mirror1*, Mirror2*) on p64/motor."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {energy_und: "p64/petra3undulator/energy_und"}
+      new: true
+      confirm: true
+      note: "P64 undulator; the energy axis is read (coupled into the mono), period not exposed (SRC-1)"
+    - name: Monochromator
+      family: Monochromator
+      pv: {theta: "p64/DcmTsai/monotheta", energy: "p64/dcmener/energy", energy_all: "p64/coupledmonoundmove/energy_all"}
+      new: true
+      confirm: true
+      note: "Tsai-geometry double-crystal monochromator (DcmTsai monotheta + energy), with energy_all coupling the mono and undulator; crystal cut is OPT-1"
+    - name: Mirror1
+      family: Mirror
+      pv: {horizontal: "p64/motor/Mirror1Hor", vertical: "p64/motor/Mirror1Ver", tilt: "p64/motor/Mirror1Tilt", yaw: "p64/motor/Mirror1Yaw"}
+      new: true
+      confirm: true
+      note: "first OH mirror (Mirror1: hor / ver / tilt / yaw); harmonic rejection / focusing, coating OPT-1"
+    - name: Mirror2
+      family: Mirror
+      pv: {horizontal: "p64/motor/Mirror2Hor", vertical: "p64/motor/Mirror2Ver", tilt: "p64/motor/Mirror2Tilt", yaw: "p64/motor/Mirror2Yaw"}
+      new: true
+      confirm: true
+      note: "second OH mirror (Mirror2: hor / ver / tilt / yaw); harmonic rejection / focusing, coating OPT-1"
+    - name: DefiningSlits
+      family: Slit
+      pv: {s3_hgap: "p64/vmexecutor/s3hg", s3_hoff: "p64/vmexecutor/s3ho", s3_vgap: "p64/vmexecutor/s3vg", s3_voff: "p64/vmexecutor/s3vo", s4_hgap: "p64/vmexecutor/s4hg"}
+      new: true
+      confirm: true
+      note: "the beam-defining slits (s3 / s4, vmexecutor virtual gap / offset axes) (OPT-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the experiment endstation
+# ===========================================================================
+
+experiment-sample:
+  stage: sample
+  enclosure: p64-eh
+  intro: "The P64 experiment endstation: the sample / instrument motor bank, a diamond-anvil-cell sub-stage, and the NewFocus picomotor fine stages."
+  note: "The exp_mot / dac_* bank carries the sample positioning, roles not labelled (GROUP-1). The dac_* axes are a high-pressure cell sub-stage; the picomotors are NewFocus 8742 fine stages."
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p64/motor/exp_mot10", dac_phi: "p64/motor/dac_phi", dac_x: "p64/motor/dac_x", dac_y: "p64/motor/dac_y", dac_z: "p64/motor/dac_z"}
+      new: true
+      confirm: true
+      note: "the P64 sample / instrument motor bank (exp_mot* + dac_* on p64/motor); the dac_* axes are a high-pressure-cell sub-stage; per-axis roles not labelled, grouped as one stage (GROUP-1)"
+    - name: PicomotorStage
+      family: LinearStage
+      pv: {pico1: "p64/newfocuspico8742/pico_mot01", pico2: "p64/newfocuspico8742/pico_mot02", pico3: "p64/newfocuspico8742/pico_mot03", pico4: "p64/newfocuspico8742/pico_mot04"}
+      new: true
+      confirm: true
+      note: "the P64 NewFocus 8742 picomotor fine stages (pico_mot01..04); fine sample / optic alignment (GROUP-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the Lambda detectors and the multi-element fluorescence detector
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: p64-eh
+  intro: "The P64 detection: two Lambda 750k area detectors and a large multi-element fluorescence detector (a 104-channel SIS3302 digitizer) for dilute high-rate EXAFS."
+  note: "The SIS3302 is exposed as 104 ROI / channel devices in the registry; grouped here as one EnergyDispersiveSpectrometer Asset (the multi-element fluorescence detector) (DET-1)."
+  devices:
+    - name: LambdaDetectors
+      family: Camera
+      pv: {lambda1: "p64/lambda750k/01", lambda2: "p64/lambda750k/02"}
+      new: true
+      confirm: true
+      note: "the two X-Spectrum Lambda 750k area detectors; transmission / total-fluorescence imaging (DET-1)"
+    - name: FluorescenceDetector
+      family: EnergyDispersiveSpectrometer
+      pv: {sis3302: "p64/sis3302/SIS3302_1"}
+      new: true
+      confirm: true
+      note: "the P64 multi-element fluorescence detector (a 104-channel SIS3302 digitizer, exposed as many ROI channels in the registry, grouped here); dilute high-rate EXAFS detection (DET-1)"
+
+# Cross-cutting control. P64 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P64 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as the other PETRA III beamlines. A motion axis is a
+    Tango motor device (p64/motor/...), the monochromator a DcmTsai / dcmener device
+    with a coupledmonoundmove energy axis, the slits vmexecutor virtual axes, the fine
+    stages NewFocus 8742 picomotor devices; the detectors are lambda750k area detectors
+    and the SIS3302 multi-element fluorescence digitizer. The handles are read from
+    P64's public OnlineXML registry and carried confirm (CTRL-1). The XAS acquisition
+    (the coupled mono + undulator energy scan read against the transmission / multi-
+    element fluorescence signal) runs as a Sardana macro, often as a continuous energy
+    fly-scan; that orchestration is the seam CORA's edge would conduct over its
+    ControlPort, the same shape as the BMM / ISS XAS seams (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the optics and sample motor banks (CTRL-1)"
+    - name: PicomotorControllers
+      family: MotionController
+      protocol: Tango_newfocuspico8742
+      new: true
+      confirm: true
+      note: "NewFocus 8742 picomotor controllers driving the fine sample / optic stages (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango) backing the Tsai mono and the coupled energy axis (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P64 run needs present before it
+    can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

@@ -4,7 +4,7 @@
 
 8-ID has two sample-side endstations: the six-circle Huber diffractometer at `8-ID-E`, and the XPCS sample stack at `8-ID-I` (Aerotech translation, a rheometer shear-cell, and temperature-controlled holders). They are modelled as sample-stage groups in the [descriptor](../inventory.md).
 
-The diffractometer device binds the catalog `Goniometer` Family for its sample circles; the composed `Assembly(Diffractometer)` is in the catalog and materialized by the integration scenario (see [Model](../model.md#the-diffractometer-assembly-landed)). The temperature controllers and the beam-position monitor bind loose Families held for gate-review (8-ID is the second independent beamline to use them, but the abstraction is open); the rheometer binds a loose `Rheometer` Family.
+The diffractometer device binds the catalog `Goniometer` Family for its sample circles; the composed `Assembly(Diffractometer)` is in the catalog and materialized by the integration scenario (see [Model](../model.md#the-diffractometer-assembly-landed)). The beam-position monitor binds a loose Family held for gate-review (8-ID is the second independent beamline to use it, but the abstraction is open); the temperature controllers bind the now-graduated `TemperatureController` catalog Family (presents `Regulator`, #350); the rheometer binds a loose `Rheometer` Family.
 
 ## The six-circle diffractometer (8-ID-E)
 

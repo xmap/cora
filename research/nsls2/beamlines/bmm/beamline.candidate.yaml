@@ -1,0 +1,126 @@
+# CANDIDATE beamline descriptor: hand-read from NSLS2/bmm-profile-collection, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions and enclosures need human curation, and any new Family needs the
+# naming-r3 gate. Do not copy into deployments/ without review. Worked example: BMM is
+# already modeled, so this can be cross-checked against deployments/bmm/beamline.yaml.
+
+beamline:
+  name: BMM
+  facility: nsls2
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 6-BM-A
+  facility_code: nsls2
+  confirm: optics hutch; inferred from PV prefix XF:06BMA and station labels
+- name: 6-BM-B
+  facility_code: nsls2
+  confirm: endstation hutch; inferred from PV prefix XF:06BM-ES and station labels
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: FrontEndShutter
+    family: Shutter
+    pv: "XF:06BM-PPS{Sh:FE}"
+    new: true
+    confirm: front-end PPS shutter; family Shutter (catalog)
+  - name: PhotonShutter
+    family: Shutter
+    pv: "XF:06BM-PPS{Sh:A}"
+    new: true
+    confirm: photon shutter into 6-BM-A; family Shutter (catalog)
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: CollimatingMirror
+    family: Mirror
+    pv: "XF:06BM-OP{Mir:M1}"
+    new: true
+    confirm: M1 collimating mirror; family Mirror (catalog)
+  - name: Monochromator
+    family: Monochromator
+    pv: "XF:06BMA-OP{Mono:DCM1}"
+    new: true
+    confirm: 'Si DCM; axes bragg/para/perp/pitch/roll/x/y read from dcm.py; family Monochromator (catalog)'
+    source_class: BMM.dcm.DCM
+  - name: FocusingMirror
+    family: Mirror
+    pv: "XF:06BMA-OP{Mir:M2}"
+    new: true
+    confirm: M2 focusing mirror; family Mirror (catalog)
+  - name: ConditioningSlit
+    family: Slit
+    pv: "XF:06BMA-OP{Slt:01}"
+    new: true
+    confirm: optics slit; family Slit (catalog)
+  - name: SampleSlit
+    family: Slit
+    pv: "XF:06BM-BI{Slt:02}"
+    new: true
+    confirm: pre-sample slit; family Slit (catalog)
+  - name: Filter
+    family: Filter
+    pv: "XF:06BMA-BI{Fltr:01}"
+    new: true
+    confirm: attenuator filter assembly; family Filter (catalog)
+  - name: EnergyAxis
+    family: PseudoAxis
+    new: true
+    confirm: 'pseudo-positioner; DCM energy, limits 2900-25000 eV from dcm.py; no standalone PV'
+  - name: DiagnosticScreen
+    family: Screen
+    pv: "XF:06BMA-BI{Diag:02}"
+    new: true
+    confirm: diagnostic screen/camera; family Screen (catalog)
+  - name: BeamPositionMonitor
+    family: GenericProbe
+    pv: "XF:06BM-BI{BPM:1}"
+    new: true
+    confirm: 'beam-position monitor; LOOSE family GenericProbe, held pending DIAG-1; do NOT coin from BMM alone'
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: SampleStage
+    family: LinearStage
+    pv: "XF:06BM-ES{MC:09}"
+    new: true
+    confirm: 'XAFS sample stage x/y/z; family LinearStage (catalog)'
+  - name: SampleWheel
+    family: RotaryStage
+    pv: "XF:06BMA-BI{XAFS-Ax:RotB}Mtr"
+    new: true
+    confirm: rotary sample wheel; family RotaryStage (catalog)
+  - name: ReferenceHolder
+    family: LinearStage
+    pv: "XF:06BMA-BI{XAFS-Ax:RefX}Mtr"
+    new: true
+    confirm: reference-foil holder; family LinearStage (catalog)
+  - name: EndstationMotionController
+    family: MotionController
+    pv: "XF:06BM-ES{MC:09}"
+    new: true
+    confirm: endstation motion controller; family MotionController (catalog)
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: IonChambers
+    family: FluxMonitor
+    pv: "XF:06BM-BI{EM:1}EM180:"
+    new: true
+    confirm: 'NSLS-II QuadEM (BMMQuadEM); I0/It/Ir/Iy derived currents from electrometer.py; family FluxMonitor (catalog, graduated)'
+    source_class: BMM.electrometer.BMMQuadEM
+  - name: FluorescenceSpectrometer
+    family: EnergyDispersiveSpectrometer
+    pv: "XF:06BM-ES{Xsp:1}"
+    new: true
+    confirm: 'Xspress3 (1/4/7-element variants in xspress3*.py); family EnergyDispersiveSpectrometer (catalog, graduated)'
+    source_class: BMM.xspress3.BMMXspress3Detector
+  - name: ScalerCounter
+    family: GenericProbe
+    pv: "XF:06BM-ES:1{Sclr:1}"
+    new: true
+    confirm: 'scaler; LOOSE family GenericProbe; counts ion-chamber/SDD pulses'

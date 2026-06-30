@@ -244,6 +244,23 @@ class AgentBudgetUpdated:
     occurred_at: datetime
 
 
+@dataclass(frozen=True)
+class AgentTargetPlanSet:
+    """The Agent's runtime target Plan was set or cleared.
+
+    `target_plan_id` is the recipe Plan an autonomous agent (the RunInitiator)
+    starts for each ready Subject; None clears it. PUT semantics: the supplied
+    value IS the post-set target. The setting actor's identity lives on the event
+    envelope (`StoredEvent.principal_id`); no actor field on the command/event.
+    No cross-BC Plan-existence check (eventual-consistency stance, mirroring
+    StartRun.decided_by_decision_id).
+    """
+
+    agent_id: UUID
+    target_plan_id: UUID | None
+    occurred_at: datetime
+
+
 # Discriminated union of every event the Agent aggregate emits.
 AgentEvent = (
     AgentDefined
@@ -254,6 +271,7 @@ AgentEvent = (
     | AgentToolGranted
     | AgentToolRevoked
     | AgentBudgetUpdated
+    | AgentTargetPlanSet
 )
 
 
@@ -358,6 +376,16 @@ def to_payload(event: AgentEvent) -> dict[str, Any]:
                 "agent_id": str(agent_id),
                 "monthly_usd_cap": monthly_usd_cap,
                 "daily_token_cap": daily_token_cap,
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case AgentTargetPlanSet(
+            agent_id=agent_id,
+            target_plan_id=target_plan_id,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "agent_id": str(agent_id),
+                "target_plan_id": str(target_plan_id) if target_plan_id is not None else None,
                 "occurred_at": occurred_at.isoformat(),
             }
         case _:  # pragma: no cover  # exhaustiveness guard
@@ -465,6 +493,17 @@ def from_stored(stored: StoredEvent) -> AgentEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
+        case "AgentTargetPlanSet":
+            return deserialize_or_raise(
+                "AgentTargetPlanSet",
+                lambda: AgentTargetPlanSet(
+                    agent_id=UUID(payload["agent_id"]),
+                    target_plan_id=(
+                        UUID(raw) if (raw := payload.get("target_plan_id")) is not None else None
+                    ),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
         case _:
             msg = f"Unknown AgentEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)
@@ -477,6 +516,7 @@ __all__ = [
     "AgentEvent",
     "AgentResumed",
     "AgentSuspended",
+    "AgentTargetPlanSet",
     "AgentToolGranted",
     "AgentToolRevoked",
     "AgentVersioned",

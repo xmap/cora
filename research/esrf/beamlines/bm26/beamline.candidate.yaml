@@ -1,0 +1,148 @@
+# CANDIDATE beamline descriptor: hand-read from gitlab.esrf.fr/bm26/beamline_configuration
+# (commit bf4899a), NOT authoritative. Every device carries new: true and a confirm note.
+# Grouping by stage and the enclosure names are inferred from the config layout + session
+# names (oh / eh); Family suggestions and hutch boundaries need human curation, and any new
+# Family needs the naming-r3 gate. Do not copy into deployments/ without review. BM26 (DUBBLE)
+# is NOT yet a deployment: net-new. It is a bending-magnet CRG beamline (no insertion device).
+
+beamline:
+  name: BM26
+  facility: esrf
+  tier: Unit
+  source: bending-magnet
+enclosures:
+- name: bm26-optics
+  facility_code: esrf
+  confirm: optics hutch (oh); inferred from config layout + session names (ENC-1, PSS-1)
+- name: bm26-eh
+  facility_code: esrf
+  confirm: experiment hutch (eh; SAXS/WAXS + XAFS); inferred from config layout + session names (ENC-1)
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: StorageRing
+    family: StorageRing
+    pv: "//acs.esrf.fr:10000/fe/master/bm26"
+    new: true
+    confirm: 'ESRF-EBS storage-ring state via BLISS machinfo (MachInfo); observe-only; LOOSE family StorageRing (MACHINE-1)'
+  - name: FrontEndShutter
+    family: Shutter
+    pv: "//acs.esrf.fr:10000/fe/master/bm26"
+    new: true
+    confirm: 'BLISS fe (TangoShutter, equipment/devices/safshut.yml); family Shutter (catalog) (PSS-1)'
+  - name: BeamShutters
+    family: Shutter
+    pv: "bm26/bsh/1"
+    new: true
+    confirm: 'BLISS bsh1/bsh2 (bm26/bsh/1, /2) + p1m_protection (bm26/v-rv/10) detector-protection shutter; family Shutter (catalog)'
+  - name: BendingMagnetSource
+    family: null
+    new: true
+    confirm: 'BM26 is a bending-magnet beamline; NO insertion-device controller in the config; source modeled loosely (2-BM precedent), NOT InsertionDevice; pv left blank, no handle in source (SRC-1)'
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Monochromator
+    family: Monochromator
+    pv: "mono"
+    new: true
+    confirm: 'Si111 mono (Monochromator + monoxtals); real bragg on PM600 pmcontroller (tango://d26/ld263_rp1/24); energy calc keV; family Monochromator (catalog)'
+    source_class: Monochromator
+  - name: PrimarySlits
+    family: Slit
+    pv: "s1slit"
+    new: true
+    confirm: 'primary slits s1slit (real s1horr/s1horl/s1vert/s1verb, calc s1horg/s1horo/s1verg/s1vero); family Slit (catalog) (OPT-2)'
+  - name: OpticsSlits
+    family: Slit
+    pv: "slit_h1"
+    new: true
+    confirm: 'optics/experiment slits slit_h1/h3/h4/h5/h6; one Asset row, several slit blocks; family Slit (catalog) (OPT-2)'
+  - name: Mirror
+    family: Mirror
+    pv: "iced261"
+    new: true
+    confirm: 'mirror translation axes ymirror/zmirror (reals on IcePAP iced261); family Mirror (catalog) (OPT-1)'
+diagnostics:
+  stage: diagnostics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: BeamViewers
+    family: Screen
+    pv: "ohbv1"
+    new: true
+    confirm: 'EBV beam viewers ohbv1/ohbv2/ohbv3 (wago wcd26e/wcd26f); diodes ohbv1cu/ohbv2cu/ohbv3cu; family Screen (?) confirm vs FluxMonitor diode'
+    source_class: EBV
+  - name: VideoCameras
+    family: Camera
+    pv: "d26/limaccds/cam1"
+    new: true
+    confirm: 'Basler video cameras cambv1/cambv2/cambv3 (d26/limaccds/cam1..3); family Camera (catalog); confirm operative set'
+    source_class: Lima
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: SampleTable
+    family: LinearStage
+    pv: "iced262"
+    new: true
+    confirm: 'experiment-table positioning (ztable/ytable, tab2_*/tab3_* controllers on IcePAP); family LinearStage (catalog); per-host map confirm (SAMPLE-1)'
+  - name: SampleStage
+    family: LinearStage
+    pv: "iced263"
+    new: true
+    confirm: 'SAXS/XAFS sample positioning (samplex/sampley, sx/sy/sz, gonio, xcradle/ycradle on IcePAP); family LinearStage (catalog); per-host map confirm (SAMPLE-1)'
+  - name: Beamstop
+    family: LinearStage
+    pv: "iced264"
+    new: true
+    confirm: 'SAXS beamstop translation (bstopy/bstopyb on IcePAP); family LinearStage (catalog); per-host map confirm (SAMPLE-1)'
+  - name: SampleTemperatureController
+    family: TemperatureController
+    pv: "172.29.150.57"
+    new: true
+    confirm: 'Eurotherm Nanodac loop nanodac1 (input nanodac1_temp C / output nanodac1_heater percent); family TemperatureController (catalog, Regulator) (TEMP-1)'
+    source_class: Nanodac
+  - name: LinkamStage
+    family: TemperatureController
+    pv: "rfc2217://ld263:28301"
+    new: true
+    confirm: 'Linkam temperature stage linkam1 (LinkamHardwareController, bm26.linkam package); family TemperatureController (?) confirm settable setpoint loop (i22 Linkam precedent)'
+    source_class: LinkamHardwareController
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: SAXSDetector
+    family: Camera
+    pv: "d26h/limaccd/1m3s"
+    new: true
+    confirm: 'Pilatus 1M SAXS detector (p1m, Lima); family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: WAXSDetector
+    family: Camera
+    pv: "d26h/limaccd/300k"
+    new: true
+    confirm: 'Pilatus 300k WAXS detector (p300k, Lima, image rotation 90); family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: Picoammeters
+    family: FluxMonitor
+    pv: "enet://gpibd26a.esrf.fr"
+    new: true
+    confirm: 'Keithley 6485 picoammeters k_pico1/k_pico2 (pad 14, pico1); XAFS ion-chamber/diode current; family FluxMonitor (?) confirm reads beam flux'
+    source_class: Keithley
+  - name: AnalyzerCounters
+    family: GenericProbe
+    pv: "tcp://ld263.esrf.fr:8909"
+    new: true
+    confirm: 'P201 CT2 counter card p201_0; beam-monitor / counting channels; LOOSE family GenericProbe'
+    source_class: CT2
+  - name: TimingController
+    family: TimingController
+    pv: "enet://gpibd26c.esrf.fr"
+    new: true
+    confirm: 'MUSST timing master mussteh1; family TimingController (?) confirm vs GenericProbe'
+    source_class: musst

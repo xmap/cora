@@ -36,6 +36,7 @@ from cora.campaign.aggregates.campaign import (
     CampaignCannotAbandonError,
     CampaignCannotAddRunError,
     CampaignCannotCloseError,
+    CampaignCannotDeclareSteeringError,
     CampaignCannotHoldError,
     CampaignCannotRemoveRunError,
     CampaignCannotResumeError,
@@ -49,6 +50,7 @@ from cora.campaign.aggregates.campaign import (
     InvalidCampaignHoldReasonError,
     InvalidCampaignNameError,
     InvalidCampaignRunRemoveReasonError,
+    InvalidCampaignSteeringError,
     InvalidCampaignTagError,
 )
 from cora.campaign.errors import UnauthorizedError
@@ -56,6 +58,7 @@ from cora.campaign.features import (
     abandon_campaign,
     add_run_to_campaign,
     close_campaign,
+    declare_campaign_steering,
     get_campaign,
     hold_campaign,
     list_campaigns,
@@ -131,6 +134,7 @@ def register_campaign_routes(app: FastAPI) -> None:
     app.include_router(abandon_campaign.router)
     app.include_router(add_run_to_campaign.router)
     app.include_router(remove_run_from_campaign.router)
+    app.include_router(declare_campaign_steering.router)
     app.include_router(get_campaign.router)
     app.include_router(list_campaigns.router)
     for validation_cls in (
@@ -142,6 +146,8 @@ def register_campaign_routes(app: FastAPI) -> None:
         InvalidCampaignExternalIdError,
         # membership-mutation validation guard.
         InvalidCampaignRunRemoveReasonError,
+        # steering-intent declaration validation guard.
+        InvalidCampaignSteeringError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
     for not_found_cls in (CampaignNotFoundError,):
@@ -159,6 +165,8 @@ def register_campaign_routes(app: FastAPI) -> None:
         CampaignCannotRemoveRunError,
         CampaignRunAlreadyMemberError,
         CampaignRunNotMemberError,
+        # steering-intent declaration guard.
+        CampaignCannotDeclareSteeringError,
     ):
         app.add_exception_handler(cannot_transition_cls, _handle_cannot_transition)
     app.add_exception_handler(UnauthorizedError, _handle_unauthorized)

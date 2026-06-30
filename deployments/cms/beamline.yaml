@@ -1,0 +1,284 @@
+# CMS beamline descriptor (NSLS-II), reverse-engineered
+#
+# CMS (Complex Materials Scattering) is the NSLS-II 11-BM beamline for soft-matter
+# and thin-film structure by small- and wide-angle X-ray scattering (SAXS / WAXS /
+# MAXS), grazing-incidence scattering (GISAXS / GIWAXS), and specular X-ray
+# reflectivity (XR). It is bound to the NSLS-II Site (deployments/nsls2/site.yaml).
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the beamline's own bluesky profile collection, github.com/NSLS2/
+# cms-profile-collection, its startup/*.py device definitions) or inferred, carried
+# `new: true` + `confirm: true` pending CMS staff. EPICS PVs are real and verified
+# against the profile collection; vendor part numbers, serials, and physical
+# positions are not in it and are open questions. Same descriptor mode as SMI, CMS's
+# NSLS-II soft-matter-scattering twin; this scaffold is descriptor + docs, scenarios
+# deferred.
+#
+# WHAT IS (AND IS NOT) NEW: CMS's SAXS / WAXS / MAXS / GISAXS scattering overlaps the
+# fleet heavily. It is the direct NSLS-II twin of SMI (12-ID), and shares its science
+# axis with Diamond I22 and APS 9-ID / 12-ID-E. The scattering reuses the existing
+# Camera / Goniometer / Slit / BeamStop / FluxMonitor / Monochromator / Mirror
+# vocabulary and coins nothing. CMS's two genuinely distinct contributions are:
+#   1. Specular X-ray REFLECTIVITY (XR), the fleet's first hard X-ray reflectometry.
+#      It is purely a Method, not a device: there is no physical two-theta detector
+#      arm. The detector stays fixed and the "two-theta" is synthetic, a software
+#      region-of-interest that slides across the fixed Pilatus face as the sample
+#      theta (sth) is stepped. So XR reuses Goniometer (sth) + Camera (the Pilatus,
+#      read over a tracked region) + FluxMonitor (the incident-flux monitor), and
+#      coins no device. The reflectivity Method is shared with i10 (its soft X-ray
+#      sibling), CMS the second consumer (XR-1, TECH-1).
+#   2. CMS as a further NSLS-II beamline, re-testing the Site / Federation kernel;
+#      its double-multilayer monochromator reuses the same Monochromator Family as
+#      the APS 2-BM DMM.
+#
+# MODELLING: CMS coins NO new Family and changes nothing in the catalog. 11-BM is a
+# bending-magnet source (not an insertion device, the 2-BM / 7-BM pattern), observed
+# through the loose StorageRing; the DMM binds Monochromator; the toroidal and
+# elliptical mirrors bind Mirror; the slits bind Slit; the attenuator foils bind
+# Filter; the sample-orientation circles bind Goniometer (sth is the grazing /
+# specular incidence axis); the surface-leveling sub-stage binds TiltStage; the
+# SAXS / WAXS / MAXS Pilatus detectors bind Camera; the detector translations and
+# the telescoping flight path bind LinearStage; the beamstop binds BeamStop; the ion
+# chambers, electrometers, and scintillation counter bind FluxMonitor; the diamond
+# diode beam-position monitor binds the loose BeamPositionMonitor (already held under
+# review); the Linkam stage binds TemperatureController; the support table binds
+# Table. Two genuinely-new endstation devices are modelled by reuse rather than
+# coinage: the GIBar sample-exchange arm is carried as stage axes (LinearStage) at
+# n=1, no SampleExchanger Family coined (ROBOT-1); the generic analog diode box is
+# carried as flux / diagnostic channels, no Family (folded into the detection note).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/cms/questions.md.
+
+beamline:
+  name: CMS
+  facility: nsls2              # NSLS-II Site (facility_code: nsls2)
+  sector: "11-BM"             # PV zones XF:11BMA (FOE optics) / XF:11BMB (endstation)
+  tier: Unit
+  parent: null
+  source: bending-magnet
+  source_confirm: "11-BM is a bending-magnet (or three-pole-wiggler) source; the profile collection does not expose the source as a device, so the source detail is SRC-1"
+
+# PV zones: XF:11BMA (the first optics enclosure: the DMM, the toroidal mirror, the
+# FOE slit and flux monitors), XF:11BMB (the endstation: the sample chamber, the
+# detectors, the endstation slits and monitors), XF:11BM1 (the newer elliptical
+# mirror). Whether the FOE and the endstation are separate hutches and the PSS
+# permit leaves are open (ENC-1, PSS-1).
+enclosures:
+  - name: cms-optics
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf not in the profile collection; the first optics enclosure (XF:11BMA), hutch grouping is ENC-1 (PSS-1)"}
+  - name: cms-endstation
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the scattering / reflectivity endstation (XF:11BMB), ENC-1 (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state and the FOE optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: cms-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "Observe-only NSLS-II machine state, the loose StorageRing pattern reused from the NSLS-II siblings. 11-BM is a bending-magnet source, not an insertion device, so no InsertionDevice Asset (SRC-1, MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: {confirm: "NSLS-II storage-ring state (current, fill, status); observe-only, the exact PVs are MACHINE-1"}
+      new: true
+      confirm: true
+      note: "NSLS-II storage-ring state; observe-only; the 11-BM bending-magnet source detail is SRC-1 (MACHINE-1)"
+
+optics:
+  stage: source
+  enclosure: cms-optics
+  intro: "The double-multilayer monochromator, the focusing mirrors, the FOE slit and attenuator, and the incident-energy axis."
+  note: >
+    The DMM binds Monochromator (the 2-BM double-multilayer precedent, a multilayer
+    Bragg optic, not the soft X-ray GratingMonochromator). The mirrors bind Mirror,
+    the slit binds Slit, the attenuator foils bind Filter, and the incident energy is
+    a PseudoAxis over the DMM Bragg angle.
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:11BMA-OP{Mono:DMM-Ax:Bragg}Mtr"
+      new: true
+      confirm: true
+      note: "double-multilayer monochromator (DMM): Bragg angle sets the energy, with second-multilayer pitch / roll / offset (P2 / R2 / Y2) alignment sub-axes; the d-spacing and energy range are MONO-1"
+    - name: ToroidalMirror
+      family: Mirror
+      pv: "XF:11BMA-OP{Mir:Tor-Ax:UB}Mtr"
+      new: true
+      confirm: true
+      note: "FOE toroidal focusing mirror (X / Y alignment plus the UB bender setting the curvature); coating and bend are OPT-1"
+    - name: EllipticalMirror
+      family: Mirror
+      pv: "XF:11BM1-OP{MDrive:1}Mtr"
+      new: true
+      confirm: true
+      note: "the newer 1D elliptical focusing mirror on its MDrive controller (pitch / x / z); coating is OPT-1"
+    - name: FoeSlit
+      family: Slit
+      pv: "XF:11BMA-OP{Slt:0-Ax:XGap}Mtr"
+      new: true
+      confirm: true
+      note: "the FOE four-blade defining slit (T / B / O / I with virtual center / gap); blade-axis map is OPT-2"
+    - name: AttenuatorFoils
+      family: Filter
+      pv: "XF:11BMB-OP{Fltr:1}Pos-Sts"
+      new: true
+      confirm: true
+      note: "the eight pneumatic absorber foils (Fltr:1-8, in / out) that set transmission, important for the high dynamic range of reflectivity; the foil set is ATTN-1"
+    - name: BeamEnergy
+      family: PseudoAxis
+      pv: {confirm: "incident-energy virtual axis (calibrations near 13.5 keV) over the DMM Bragg angle (lambda = 2 d sin(Bragg)); the partition rule and d-spacing are MONO-1"}
+      new: true
+      confirm: true
+      note: "incident-energy pseudo-axis over the DMM (the 2-BM beam-energy pattern); MONO-1"
+    - name: FoeFluxMonitor
+      family: FluxMonitor
+      pv: {confirm: "the FOE quad electrometers (bim1 / bim2 on XF:11BMA-BI{IM:1}) reading incident flux; the channel map is DET-1"}
+      new: true
+      confirm: true
+      note: "FOE incident-flux monitors (quad electrometers); scalar current readings (DET-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the sample chamber, surface stage, exchange arm, environment
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: cms-endstation
+  intro: "The sample-orientation goniometer (whose theta is the grazing / specular incidence axis), the surface-leveling stage, the sample-exchange arm, and the in-situ temperature stage."
+  note: >
+    The sample circles bind Goniometer; the sample theta (sth) is the grazing-incidence
+    and specular-reflectivity angle (SAMPLE-1). Operational quirk: staff have at times
+    swapped sth and schi, and alternate chamber configurations rebind the logical axes
+    across physical PVs at startup; CORA models the logical Goniometer and carries the
+    binding as a setting (SAMPLE-1). The surface-leveling sub-stage binds TiltStage.
+    The GIBar sample-exchange arm is modelled by its stage axes (LinearStage) at n=1,
+    no SampleExchanger Family coined (ROBOT-1). The Linkam stage binds the graduated
+    TemperatureController.
+  devices:
+    - name: SampleGoniometer
+      family: Goniometer
+      pv: "XF:11BMB-ES{Chm:Smpl-Ax:theta}Mtr"
+      new: true
+      confirm: true
+      note: "sample-orientation circles (x / y translations, theta incidence sth, chi schi, phi sphi); sth is the grazing / specular angle; the sth-vs-schi swap and the chamber rebinding are SAMPLE-1"
+    - name: SurfaceStage
+      family: TiltStage
+      pv: "XF:11BMB-ES{SM:1-Ax:Stilt}Mtr"
+      new: true
+      confirm: true
+      note: "the surface-leveling sub-stage (Srot rotation, Strans translations, Stilt tilts) for thin-film samples; the leveling tilts bind TiltStage (SAMPLE-1)"
+    - name: SampleExchangeArm
+      family: LinearStage
+      pv: "XF:11BMB-ES{SM:1-Ax:Z}Mtr"
+      new: true
+      confirm: true
+      note: "the GIBar sample-exchange arm (x / y / z translations plus a yaw); a multi-axis sample-bar loader modelled by its stage axes at n=1, no SampleExchanger Family coined pending a second fleet sample robot (ROBOT-1)"
+    - name: TemperatureStage
+      family: TemperatureController
+      pv: {confirm: "the Linkam thermal / tensile stage; reuses the graduated Family (presents Regulator); the range and the tensile-load axis are TEMP-1"}
+      new: true
+      confirm: true
+      note: "Linkam in-situ temperature stage; reuses the graduated Family (presents Regulator); range is TEMP-1"
+
+# ===========================================================================
+# DETECTION STAGE: the SAXS / WAXS / MAXS area detectors, the reflectivity ROI,
+# the beamstop, the flux monitors, the beam-position monitor
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: cms-endstation
+  intro: "The SAXS, WAXS, and MAXS Pilatus area detectors and their translations, the beamstop, the endstation flux monitors, and the diamond-diode beam-position monitor. The specular reflectivity (XR) is read on the fixed SAXS detector over a tracked region, not a separate device."
+  note: >
+    The Pilatus area detectors bind Camera; the detector translations and the
+    telescoping flight path bind LinearStage; the beamstop binds BeamStop; the ion
+    chamber, scintillation counter, and electrometers bind FluxMonitor; the diamond
+    diode beam-position monitor binds the loose BeamPositionMonitor (already held
+    under review, DIAG-1). The reflectivity (XR) reuses the SAXS Camera read over a
+    sliding region-of-interest (the synthetic two-theta), with no two-theta arm and no
+    point detector (XR-1).
+  devices:
+    - name: SaxsDetector
+      family: Camera
+      pv: "XF:11BMB-ES{Det:PIL2M}:"
+      new: true
+      confirm: true
+      note: "the Pilatus 2M SAXS area detector; ALSO the detector for specular reflectivity (XR), read over a tracked region-of-interest as the sample theta is stepped (XR-1, DET-1)"
+    - name: WaxsDetector
+      family: Camera
+      pv: "XF:11BMB-ES{Det:PIL800K}:"
+      new: true
+      confirm: true
+      note: "the Pilatus 800K WAXS area detector (DET-1)"
+    - name: MaxsDetector
+      family: Camera
+      pv: "XF:11BMB-ES{Det:PIL800K2}:"
+      new: true
+      confirm: true
+      note: "the second Pilatus 800K at the medium-angle (MAXS) position; one 800K head is powered at a time per configuration (DET-1)"
+    - name: DetectorStage
+      family: LinearStage
+      pv: "XF:11BMB-ES{Det:SAXS-Ax:X}Mtr"
+      new: true
+      confirm: true
+      note: "the SAXS / WAXS / MAXS detector translations (SAXSx/y, WAXSx/y/z, MAXSx/y) and the telescoping flight path (fpn / fpr); detector positions are calibration (DET-1)"
+    - name: Beamstop
+      family: BeamStop
+      pv: "XF:11BMB-ES{BS:SAXS-Ax:X}Mtr"
+      new: true
+      confirm: true
+      note: "the SAXS beamstop (x / y / phi) in front of the area detector (DET-1)"
+    - name: EndstationFluxMonitor
+      family: FluxMonitor
+      pv: "XF:11BMB-BI{IM:3}"
+      new: true
+      confirm: true
+      note: "endstation flux monitors: the ion chamber (IM:3), the BIM4 scintillation counter (IM:4), and the endstation electrometer (IM:2); scalar readings, the channel map is DET-1"
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor      # loose Family, already held under review (DIAG-1)
+      pv: "XF:11BMB-BI{BPM:1}Cur:I0-I"
+      new: true
+      confirm: true
+      note: "the BIM5 four-quadrant diamond-diode beam-position monitor; binds the loose BeamPositionMonitor (already held under review, DIAG-1); position vs intensity split is DIAG-1"
+    - name: SupportTable
+      family: Table
+      pv: "XF:11BMB-ES{Tbl:Rear-Ax:Z}Mtr"
+      new: true
+      confirm: true
+      note: "the endstation modular support table on three vertical jacks (rear / near / end) for height / pitch / roll"
+
+# Cross-cutting control. CMS runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were read
+# from the profile collection and carried confirm (CTRL-1).
+controls:
+  intro: >
+    CMS runs on the NSLS-II EPICS / ophyd control stack, the same floor as FXI, HXN,
+    SRX, BMM, SIX, CHX, ESM, and SMI. The device handles above are bound from the
+    beamline's bluesky profile collection (github.com/NSLS2/cms-profile-collection,
+    its startup/*.py files), carried confirm pending staff verification (CTRL-1). The
+    CMS acquisition (the SAXS / WAXS / GISAXS exposures, the GIBar sample exchange,
+    and the reflectivity (XR) scans) runs through bluesky plans; that orchestration is
+    the seam CORA's edge replaces, driving through ophyd / EPICS. The reflectivity XR
+    scan in particular is a bluesky-orchestrated sequence (step the sample theta,
+    slide the detector region-of-interest in lockstep, integrate the specular
+    intensity); CORA conducts that over the Goniometer and the Camera region rather
+    than EPICS owning the loop (XR-1). The area-detector file-writing to the NSLS-II
+    filestore is plumbing CORA observes, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a CMS run needs. The optics and the
+    sample chamber and flight path run under vacuum (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics, the sample chamber, and the SAXS flight path run under vacuum (SUP-1)"

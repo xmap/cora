@@ -109,6 +109,15 @@ METHOD_VERSION_TAG_MAX_LENGTH = 50
 # [[project_supply_design]] §"Method.needed_supplies consumer"
 # for the design lock.
 METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH = 50
+# needed_input_kinds element bounds. The kinds/roles of input Datasets
+# a Method consumes (for example "raw-projections", "flat-field",
+# "prior-reconstruction"); free-string labels resolved to concrete
+# input Datasets at Plan-bind / start_run. 50-char ceiling matches the
+# needed_supplies kind bound so per-element validation in the Method
+# decider stays consistent across the two consumes-axis fields. Input
+# kinds are NOT SupplyKind (no DeferredVocabulary marker; see the
+# Method state field docstring).
+METHOD_NEEDED_INPUT_KIND_MAX_LENGTH = 50
 # RoleName bound. Method-local labels for positional role-tagging
 # (IEC 81346 Function aspect; see [[project-method-required-roles-design]]
 # and [[project-equipment-isa-gap-research]]). Free-string within the
@@ -258,6 +267,31 @@ class InvalidMethodNeededSuppliesError(ValueError):
     def __init__(self, value: str) -> None:
         super().__init__(
             f"Method needed_supplies kind must be 1-{METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH} "
+            f"chars after trimming (got: {value!r})"
+        )
+        self.value = value
+
+
+class InvalidMethodNeededInputKindsError(ValueError):
+    """One of the supplied needed_input_kinds strings is empty,
+    whitespace-only, or too long.
+
+    Validated at the API boundary via Pydantic per-element
+    `min_length=1, max_length=50`, AND defensively at the decider via
+    this error so direct in-process callers (sagas, tests) get the
+    same protection. The diagnostic carries the offending element.
+
+    Mirrors `InvalidMethodNeededSuppliesError` shape. needed_input_kinds
+    references the kinds/roles of input Datasets a Method consumes
+    (eventual-consistency: resolved to concrete input Datasets at
+    Plan-bind / start_run, never verified at decide time). Unlike
+    needed_supplies the element type carries no DeferredVocabulary
+    marker: input kinds are free-string labels, not SupplyKind values.
+    """
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Method needed_input_kinds kind must be 1-{METHOD_NEEDED_INPUT_KIND_MAX_LENGTH} "
             f"chars after trimming (got: {value!r})"
         )
         self.value = value
@@ -650,6 +684,16 @@ class Method:
             trigger_doc="Supply.kind Watch item 4 trigger per project-structural-scope-design",
         ),
     ] = field(default_factory=frozenset[str])
+    # needed_input_kinds names the kinds/roles of input Datasets this
+    # Method consumes (for example "raw-projections", "flat-field",
+    # "prior-reconstruction"). Eventual-consistency: NOT verified at
+    # decide time, resolved to concrete input Datasets at Plan-bind /
+    # start_run. Defaults to empty frozenset (additive-state pattern;
+    # legacy MethodDefined-only streams fold cleanly via payload.get
+    # default). A plain frozenset[str] with no DeferredVocabulary
+    # marker: input kinds are free-string labels, NOT SupplyKind, so
+    # they do not graduate in lockstep with Supply.kind.
+    needed_input_kinds: frozenset[str] = field(default_factory=frozenset[str])
     # needed_assembly_ids references Assembly aggregates (Equipment BC)
     # by UUID. Declares "this Method needs a specific composition
     # blueprint" (e.g., the Microscope fixture), not just N
@@ -724,8 +768,15 @@ class Method:
         it participates in content identity (anti-hook #10) at the same
         site as the field itself; deciders and drift-detection helpers
         call this rather than re-listing the subset.
+
+        `needed_input_kinds` is rendered CONDITIONALLY: the key appears
+        only when the frozenset is non-empty. This preserves
+        content_hash byte-stability for Methods defined before the
+        field existed (no spurious `"needed_input_kinds": []` in the
+        canonical bytes), the same conditional-render precedent
+        `_canonical_role_requirement` uses for role_kind.
         """
-        return {
+        subset: dict[str, object] = {
             "name": self.name.value,
             "parameters_schema": self.parameters_schema,
             "capability_id": str(self.capability_id) if self.capability_id is not None else None,
@@ -773,6 +824,12 @@ class Method:
                 key=lambda r: str(r["role_name"]),
             ),
         }
+        # Conditional render keeps the canonical bytes (and so the
+        # content_hash) byte-stable for Methods that predate this field:
+        # the key is inserted only when there is something to hash.
+        if self.needed_input_kinds:
+            subset["needed_input_kinds"] = sorted(self.needed_input_kinds)
+        return subset
 
 
 def _canonical_role_requirement(role: RoleRequirement) -> dict[str, object]:

@@ -178,7 +178,24 @@ from cora.operation.ports.control_port import (
     Measurement,
     NoAdapterForAddressError,
 )
-from cora.recipe.aggregates.recipe.body import CaptureRef
+from cora.operation.ports.decide_port import (
+    DecideAccessDeniedError,
+    DecideAdviceMalformedError,
+    DecideEvidenceRejectedError,
+    DecideNotAvailableError,
+    DecidePort,
+    DecideTimeoutError,
+    SteeringAdvice,
+    SteeringBudget,
+    SteeringEvidence,
+    SteeringObjective,
+    SteeringObservation,
+    SteeringPoint,
+    SteeringSpace,
+    SteeringVerdict,
+    advice_to_audit_fields,
+)
+from cora.recipe.aggregates.recipe.body import CaptureRef, OutputRef, SteeringRef
 from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 _CONTROL_ERRORS: tuple[type[Exception], ...] = (
@@ -252,6 +269,21 @@ _ERROR_DUPLICATE_CAPTURE = "DuplicateCapture"
 one conduct (an authoring error the recipe validation also rejects). Also
 used by a ComputeStep deposit (slice 6c) into an already-filled slot."""
 
+_ERROR_UNRESOLVED_OUTPUT = "UnresolvedOutputRef"
+"""error_class for a ComputeStep `OutputRef` input whose `output_name` was never
+deposited in this conduct (e.g. resumed past the producing step, or an authoring
+mismatch). The compute-branch twin of `_ERROR_UNRESOLVED_CAPTURE`. Loud-fail
+label, not an exception type: the failure is recorded + returned BEFORE any
+in-flight marker or submit, naming the unresolved element index + name + the
+deposited names so the mismatch is diagnosable from the journal."""
+
+_ERROR_DUPLICATE_OUTPUT = "DuplicateOutput"
+"""error_class for a ComputeStep `output_ref_name` deposit into an already-filled
+`outputs` slot within one conduct. The compute-branch twin of
+`_ERROR_DUPLICATE_CAPTURE` (no `Ref` suffix, like `DuplicateCapture`). Two
+file-arm steps depositing the same output name is an authoring error the recipe
+validation also rejects (`DuplicateRecipeOutputError`)."""
+
 _ERROR_MEASUREMENT_NOT_FOUND = "ComputeMeasurementNotFound"
 """error_class for a ComputeStep `capture_name` deposit (slice 6c) when no
 produced Measurement carries that name. Loud-fail label, not an exception
@@ -285,12 +317,76 @@ Distinct from `ConvergenceIterationCapReached` (the operator-set patience cap):
 this is the unconditional runaway backstop that bites even when no patience cap
 was supplied."""
 
+_DECIDE_ERRORS: tuple[type[Exception], ...] = (
+    DecideNotAvailableError,
+    DecideTimeoutError,
+    DecideEvidenceRejectedError,
+    DecideAdviceMalformedError,
+    DecideAccessDeniedError,
+)
+"""The closed set of `Decide*Error` classes `conduct_until_advised` folds into a
+recorded steering decision rather than crashing the loop. Mirrors `_CONTROL_ERRORS`
+/ `_COMPUTE_ERRORS`: a brain that is unreachable, slow, refuses the evidence,
+returns malformed advice, or denies the principal lands a closed iteration plus a
+best-effort abort carrying the brain's `error_class`, exactly as the port docstring
+promises (the caller folds a raised exception into a recorded decision). New
+DecidePort exception classes must be added here explicitly (no `Exception`
+catch-all so non-port exceptions still propagate to the caller's task)."""
+
+_SOURCE_KIND_DECIDE = "decide"
+"""Conductor-local pseudo-`source_kind` used on the `ConductorFailure` that
+`conduct_until_advised` returns when the brain raised a `Decide*Error`. Like
+`_SOURCE_KIND_LIFECYCLE` it is NOT a step kind (no step entry is recorded for a
+brain consult); it labels the failure origin as the decide seam, not a walked
+step, so a caller distinguishes a brain fault from a hardware step fault."""
+
 _CAPTURE_REF_KEY = "__capture__"
 """Wire-format sentinel key for a `CaptureRef` value in the pinned conduct
 step payload (mirrors the Recipe BC's `__capture__` form). A `SetpointStep`
 whose value is a `CaptureRef` serializes to `{"__capture__": name}` so it
 rides `ResolvedStepsRecorded` + the determinism hash as an opaque sentinel
 and round-trips at resume; the Conductor resolves it at execute time."""
+
+_STEERING_REF_KEY = "__steering__"
+"""Wire-format sentinel key for a `SteeringRef` value in the pinned conduct
+step payload (mirrors the Recipe BC's `__steering__` form). A `SetpointStep`
+whose value is a `SteeringRef` serializes to `{"__steering__": name}` so it
+rides `ResolvedStepsRecorded` + the determinism hash as an opaque sentinel and
+round-trips at resume; the decide loop seeds the value and the Conductor
+resolves it at execute time exactly like a `CaptureRef`."""
+
+_OUTPUT_REF_KEY = "__output__"
+"""Wire-format sentinel key for an `OutputRef` element of a ComputeStep's
+`input_uris` in the pinned conduct step payload (mirrors the Recipe BC's
+`__output__` form). A ComputeStep input element that is an `OutputRef`
+serializes to `{"__output__": name}` so it rides `ResolvedStepsRecorded` + the
+determinism hash as an opaque sentinel and round-trips at resume; the Conductor
+resolves it to a produced artifact's URI at execute time. The element-wise
+encoding is load-bearing for the hash: `canonical_json_bytes` has no `default=`,
+so a raw `OutputRef` in the whole-list form would crash the encoder."""
+
+
+def _input_uri_to_wire(uri: "str | OutputRef") -> Any:
+    """Serialize ONE ComputeStep `input_uris` element (URI or `OutputRef`) to wire form.
+
+    Shared across every conductor serializer so a raw `OutputRef` never reaches
+    the JSON / hash encoder. An `OutputRef` becomes `{"__output__": name}`; a
+    literal URI passes through. Mirrors the Recipe BC's `_input_uri_to_wire`."""
+    if isinstance(uri, OutputRef):
+        return {_OUTPUT_REF_KEY: uri.output_name}
+    return uri
+
+
+def _input_uri_from_wire(value: Any) -> "str | OutputRef":
+    """Deserialize ONE wire ComputeStep `input_uris` element; reconstruct an `OutputRef`.
+
+    Inverse of `_input_uri_to_wire`: a `{"__output__": name}` dict becomes an
+    `OutputRef`, any other value (a literal URI string) passes through."""
+    if isinstance(value, dict) and set(cast("dict[str, Any]", value)) == {_OUTPUT_REF_KEY}:
+        return OutputRef(output_name=str(cast("dict[str, Any]", value)[_OUTPUT_REF_KEY]))
+    return cast("str", value)
+
+
 """Closed-set step-kind discriminators from [[project_operation_design]].
 The source of truth for the value set is `STEP_KIND_VALUES` on the
 Procedure aggregate (re-imported above); the architecture fitness
@@ -384,14 +480,16 @@ class SetpointStep:
 
     `value` may be a `CaptureRef`, which the Conductor resolves at execute
     time against the per-conduct `captures` dict (filled by an earlier
-    `CaptureStep`) before writing. The ref rides through recipe expansion
-    and the determinism hash as an opaque sentinel; only execution
-    resolves it. A `CaptureRef` whose name was never captured halts the
+    `CaptureStep`) before writing. It may also be a `SteeringRef`, resolved the
+    same way except the value is loop-seeded by the decide loop (the advised
+    coordinate for that steering axis). Either ref rides through recipe
+    expansion and the determinism hash as an opaque sentinel; only execution
+    resolves it. A ref whose name was never captured (or seeded) halts the
     step with a recorded failure.
     """
 
     address: str
-    value: int | float | bool | str | tuple[Any, ...] | CaptureRef
+    value: int | float | bool | str | tuple[Any, ...] | CaptureRef | SteeringRef
     verify: bool = False
 
 
@@ -513,14 +611,31 @@ class ComputeStep:
       reconstruction writes a volume to `output_uri`.
 
     Fields mirror the output-bearing subset of `JobSpec`: `command` is the
-    argv the substrate launches; `input_uris` are AUTHORED LITERAL URIs
-    pointing at the well-known paths the acquisition action bodies wrote
-    (NO runtime stage-output-to-input binding yet; that is deferred
-    chaining); `output_uri` selects the file arm (and names where the job
-    writes); `parameters` carries the validated parameter set. `resources` /
-    `working_dir` / `env` are substrate-decides defaults. A ComputeStep is
-    side-effecting (a job submission is non-idempotent at the substrate),
-    so it records a pre-effect in-flight marker like a setpoint / action.
+    argv the substrate launches; `output_uri` selects the file arm (and names
+    where the job writes); `parameters` carries the validated parameter set.
+    `resources` / `working_dir` / `env` are substrate-decides defaults. A
+    ComputeStep is side-effecting (a job submission is non-idempotent at the
+    substrate), so it records a pre-effect in-flight marker like a setpoint /
+    action.
+
+    `input_uris` elements are each a literal URI (a well-known path an
+    acquisition action body wrote) OR an `OutputRef` naming an EARLIER file-arm
+    step's produced artifact. An `OutputRef` element rides through expansion +
+    the determinism hash as an opaque sentinel; the Conductor resolves it at
+    execute time (BEFORE building the JobSpec) to the produced artifact's URI
+    out of the per-conduct `outputs` bus, so the JobSpec + ComputePort never see
+    a ref. A tuple of independently-named `OutputRef`s IS the fan-in (a step
+    consuming several upstream outputs). An `OutputRef` whose name was never
+    deposited loud-fails (`UnresolvedOutputRef`) with NO in-flight marker and
+    nothing submitted, parity with a `SetpointStep` `CaptureRef`.
+
+    `output_ref_name` names the `outputs` slot the produced `ArtifactRef`
+    deposits into (the FILE arm), the artifact-bus chaining twin of
+    `capture_name`. When set, after the file arm fetches the `ArtifactRef` and
+    records its OK outcome the Conductor writes the full `ArtifactRef` into the
+    per-conduct `outputs` dict so a later step's `OutputRef` input resolves to
+    its URI; loud-fails (`DuplicateOutput`) on an already-filled slot. None (the
+    default): the artifact is surfaced but no slot is filled.
 
     `capture_name` names the captures slot the produced scalar deposits into
     (the VALUE arm), the chaining sibling of `CaptureStep.capture_name`. When
@@ -530,15 +645,16 @@ class ComputeStep:
     `CaptureRef` (intra-pass correction) or the convergence-loop predicate
     (`conduct_until_converged`) can read it. None (the default): measurements
     are recorded + surfaced but no slot is filled. A compute-deposited slot
-    lives only within one forward `execute()`, never across a resume (captures
-    start empty on replay).
+    (capture or output) lives only within one forward `execute()`, never across
+    a resume (both buses start empty on replay).
     """
 
     command: tuple[str, ...]
-    input_uris: tuple[str, ...] = ()
+    input_uris: tuple[str | OutputRef, ...] = ()
     output_uri: str | None = None
     parameters: Mapping[str, Any] = field(default_factory=dict[str, Any])
     capture_name: str | None = None
+    output_ref_name: str | None = None
 
 
 Step = SetpointStep | ActionStep | CheckStep | CaptureStep | ComputeStep
@@ -548,6 +664,46 @@ Mirrors the open `StepKind` Literal in the Procedure aggregate; the
 Conductor enforces tighter typing via this union so a malformed step is a
 type error, not a runtime branch. The arm count is pinned against
 `STEP_KIND_VALUES` by `test_conductor_step_kinds_match_procedure`."""
+
+
+def _steering_probe_point(space: SteeringSpace) -> SteeringPoint:
+    """The space's authored-default coordinate (lower bound, or first choice).
+
+    Used in two places that must agree: the `conduct_until_advised` wire-time
+    disjointness guard probes `point_to_captures` with it, and the steered loop
+    seeds the FIRST pass with it. Pass 1 has no brain advice yet, so it measures
+    at this authored default position; the brain's `next_point` seeds every
+    later pass. A continuous axis defaults to its `lower` bound, a discrete /
+    categorical axis to its first `choice`, and an unbounded axis to `0.0`."""
+    return SteeringPoint(
+        coordinates={
+            axis.name: (
+                axis.lower if axis.lower is not None else (axis.choices[0] if axis.choices else 0.0)
+            )
+            for axis in space.axes
+        }
+    )
+
+
+def _validate_advice_point(point: SteeringPoint | None, space: SteeringSpace) -> None:
+    """Raise `DecideAdviceMalformedError` unless a Measure advice's `next_point`
+    covers exactly the space axis names.
+
+    `SteeringAdvice.__post_init__` checks the verdict / next_point pairing but
+    cannot see the space, so a brain may return a structurally-valid Measure
+    whose `next_point` omits, misnames, or over-fills an axis. Seeding such a
+    point would `KeyError` in `point_to_captures` (a missing axis) or clobber a
+    non-axis captures slot (an extra key). The loop calls this right after
+    `advise_next`, inside the Decide-error try, so a malformed point is FOLDED
+    into a recorded steering decision rather than crashing the loop, symmetric
+    with a raised `Decide*Error`."""
+    axis_names: set[str] = {axis.name for axis in space.axes}
+    keys: set[str] = set(point.coordinates) if point is not None else set()
+    if keys != axis_names:
+        raise DecideAdviceMalformedError(
+            f"advised point keys {sorted(keys)!r} must cover exactly the steering "
+            f"axis names {sorted(axis_names)!r}"
+        )
 
 
 def _require_finite_number(value: Any, address: str) -> float:
@@ -688,6 +844,15 @@ class ConductorResult:
     re-parsing the activity log even when a later step halts. Both empty
     on a conduct with no ComputeStep. The `conduct` / `reconduct`
     `replace()` paths preserve them.
+
+    `outputs` is the per-conduct artifact bus keyed by `output_ref_name`: a
+    file-arm `ComputeStep` with an `output_ref_name` deposits its full
+    `ArtifactRef` under that name, so a caller selects the Dataset-of-record by
+    NAME (e.g. `outputs["recon"]`) rather than by document position
+    (`artifacts[-1]` would pick a stray post-terminal QC step). Empty for a
+    conduct with no depositing file-arm step. Surfaced alongside the flat
+    `artifacts` tuple (which keeps every file-arm artifact in order, named or
+    not).
     """
 
     procedure_id: UUID
@@ -697,6 +862,7 @@ class ConductorResult:
     held: bool = False
     measurements: tuple[Measurement, ...] = ()
     artifacts: tuple[ArtifactRef, ...] = ()
+    outputs: Mapping[str, ArtifactRef] = field(default_factory=dict[str, ArtifactRef])
 
     @property
     def succeeded(self) -> bool:
@@ -845,6 +1011,12 @@ class Conductor:
         behavior. `conduct_until_converged` passes a fresh dict PER PASS and
         reads the convergence value out of it after the pass (the dict is
         mutated in place, so the caller's reference sees every deposit).
+
+        The artifact bus (`outputs`, keyed by `output_ref_name`) is an internal
+        LOCAL, never a kwarg: a file-arm `ComputeStep` deposits its `ArtifactRef`
+        and a later step's `OutputRef` input reads it, both within this one
+        walk. It is surfaced on the returned `ConductorResult.outputs` so a
+        caller can select the Dataset-of-record by name.
         """
         envelope = _Envelope(
             procedure_id=procedure_id,
@@ -856,6 +1028,12 @@ class Conductor:
         observer = _ActuationObserver(self._control_port)
         if captures is None:
             captures = {}
+        # The per-conduct artifact bus, keyed by `output_ref_name`. A LOCAL (not
+        # a kwarg, per the slice-design S3 lock): producer + consumer are always
+        # in one execute() walk, so it never escapes to the convergence-loop
+        # caller (unlike `captures`, which the loop reads back per pass). A fresh
+        # dict per execute() prevents cross-pass bleed.
+        outputs: dict[str, ArtifactRef] = {}
         compute = _ComputeAccumulator()
         completed = 0
         for index, step in enumerate(steps):
@@ -871,6 +1049,7 @@ class Conductor:
                     envelope=envelope,
                     port=observer,
                     captures=captures,
+                    outputs=outputs,
                     compute=compute,
                 )
             if failure is not None:
@@ -881,6 +1060,7 @@ class Conductor:
                     actuation_kind=_fold_compute_kind(observer.actuation_kind, compute.kind),
                     measurements=tuple(compute.measurements),
                     artifacts=tuple(compute.artifacts),
+                    outputs=dict(outputs),
                 )
             completed += 1
         return ConductorResult(
@@ -889,6 +1069,7 @@ class Conductor:
             actuation_kind=_fold_compute_kind(observer.actuation_kind, compute.kind),
             measurements=tuple(compute.measurements),
             artifacts=tuple(compute.artifacts),
+            outputs=dict(outputs),
         )
 
     async def execute_from(
@@ -950,6 +1131,12 @@ class Conductor:
         # than resolving against stale data. Persisting captures across a hold
         # (seed this dict from a ValueCaptured event) is the deferred resume leg.
         captures: dict[str, Any] = {}
+        # The artifact bus is likewise empty on resume and never filled here: a
+        # ComputeStep reached during replay halts for an operator decision (it is
+        # never dispatched), so nothing deposits and no OutputRef resolves against
+        # it. It is surfaced (always empty) on the success-path ConductorResult so
+        # the resume contract stays symmetric with execute().
+        outputs: dict[str, ArtifactRef] = {}
         completed = 0
         for index in range(boundary, len(steps)):
             step = steps[index]
@@ -1018,6 +1205,7 @@ class Conductor:
             procedure_id=procedure_id,
             completed_count=completed,
             actuation_kind=observer.actuation_kind,
+            outputs=dict(outputs),
         )
 
     async def conduct(
@@ -1140,6 +1328,7 @@ class Conductor:
                     completed_count=result.completed_count,
                     measurements=result.measurements,
                     artifacts=result.artifacts,
+                    outputs=result.outputs,
                     failure=ConductorFailure(
                         step_index=None,
                         source_kind=_SOURCE_KIND_LIFECYCLE,
@@ -1275,6 +1464,7 @@ class Conductor:
                     completed_count=result.completed_count,
                     measurements=result.measurements,
                     artifacts=result.artifacts,
+                    outputs=result.outputs,
                     failure=ConductorFailure(
                         step_index=None,
                         source_kind=_SOURCE_KIND_LIFECYCLE,
@@ -1314,6 +1504,7 @@ class Conductor:
                     held=True,
                     measurements=result.measurements,
                     artifacts=result.artifacts,
+                    outputs=result.outputs,
                 )
             return result
         # Non-recoverable step failure (action): best-effort abort, exactly
@@ -1797,6 +1988,483 @@ class Conductor:
                 **envelope_kwargs,
             )
 
+    async def conduct_until_advised(
+        self,
+        *,
+        procedure_id: UUID,
+        principal_id: UUID,
+        correlation_id: UUID,
+        steps: Sequence[Step],
+        decide_port: DecidePort,
+        objective: SteeringObjective,
+        space: SteeringSpace,
+        objective_capture_name: str,
+        point_to_captures: Callable[[SteeringPoint], dict[str, Any]],
+        budget: SteeringBudget | None = None,
+        record_turn: Callable[[SteeringAdvice, SteeringObservation, int], Awaitable[None]]
+        | None = None,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ConductorResult:
+        """Drive an autonomous measure-then-advise loop steered by a `DecidePort`.
+
+        The DECIDE-axis twin of `conduct_until_converged`: where the
+        convergence loop evaluates a fixed criterion over the captures bus
+        after each pass, this hands the accumulated evidence to an external
+        brain (`decide_port.advise_next`) and lets the brain decide where to
+        measure next or whether to stop. It owns the same full FSM:
+        `start_procedure` -> { `start_iteration` -> `execute(pass)` ->
+        `advise_next` -> `end_iteration` } * -> `complete_procedure`
+        (brain advised Stop) | `abort_procedure` (a pass faulted, the brain
+        raised, or the absolute ceiling tripped).
+
+        `steps` is the per-pass block; the same authored block runs every
+        pass. The keystone is SEED-THE-CAPTURES: a brain-proposed
+        `SteeringPoint` is translated by `point_to_captures` into a captures
+        dict that is seeded into the per-pass bus BEFORE `execute`, so the
+        block's `SetpointStep` `CaptureRef`s resolve to the advised
+        coordinates. The objective scalar a brain reads is deposited by the
+        block under `objective_capture_name` (a `ComputeStep` / `CaptureStep`
+        deposit) and surfaced into the observation handed to the next call.
+
+        LOOP ORDER is measure-then-advise: pass 1 has no advice yet, so it
+        seeds the space's authored-default position (the probe: each axis at
+        its lower bound, else its first choice) and measures there; the result
+        is observed and the brain's advice seeds pass 2 onward. The brain
+        decides Stop after seeing pass 1, so a one-pass campaign is
+        expressible. Each observation records the point it measured at, so a
+        stateful brain rebuilt from the history sees real coordinates.
+
+        VERDICT mapping: every steering pass closes its iteration with
+        `converged=None` (a steering pass has no convergence verdict, so the
+        aggregate's convergence streak never bites) and `advised_stop` set to
+        whether the brain said Stop, plus the advice provenance
+        (`advice_to_audit_fields`) for the in-conductor audit ledger. A Stop
+        completes; a Measure seeds the next pass with `advice.next_point`.
+
+        FOLDING a brain fault: when `advise_next` raises a `Decide*Error` the
+        loop closes the open iteration (`converged=None`, `advised_stop=None`,
+        reason = the brain's message) then aborts, surfacing the brain's
+        `error_class` on a `decide`-source `ConductorFailure`, per the port's
+        "fold a raised exception into a recorded steering decision rather than
+        crashing the loop". A non-`Decide*Error` propagates.
+
+        `budget` is threaded informationally into the `SteeringEvidence` the
+        brain weighs; it is NOT enforced in the loop at this slice (budget
+        exhaustion is a normal non-error end the brain signals via Stop, not a
+        caller-side abort). The only loop backstop is the absolute iteration
+        ceiling (`_ABSOLUTE_MAX_ITERATIONS`), reused verbatim from the
+        convergence twin, which bounds a brain that never advises Stop.
+
+        `record_turn`, when supplied, is awaited per pass with the advice, the
+        observation, and the 0-based loop turn; the route / tool pass None (the
+        provenance already lands on the iteration ledger).
+
+        Requires start_procedure + complete_procedure + abort_procedure +
+        start_iteration + end_iteration handlers at __init__; raises
+        RuntimeError (a wiring bug) otherwise.
+        """
+        if (
+            self._start_procedure is None
+            or self._complete_procedure is None
+            or self._abort_procedure is None
+            or self._start_iteration is None
+            or self._end_iteration is None
+        ):
+            raise RuntimeError(
+                "Conductor.conduct_until_advised() requires start_procedure + "
+                "complete_procedure + abort_procedure + start_iteration + end_iteration "
+                "handlers at __init__; only execute() is available without them."
+            )
+        self._validate_steering_wire(
+            steps=steps,
+            space=space,
+            objective_capture_name=objective_capture_name,
+            point_to_captures=point_to_captures,
+        )
+        envelope_kwargs: dict[str, Any] = {
+            "principal_id": principal_id,
+            "correlation_id": correlation_id,
+            "causation_id": causation_id,
+            "surface_id": surface_id,
+        }
+        try:
+            await self._start_procedure(
+                StartProcedure(procedure_id=procedure_id), **envelope_kwargs
+            )
+        except _LIFECYCLE_RERAISE:
+            raise
+        except Exception as exc:
+            return ConductorResult(
+                procedure_id=procedure_id,
+                completed_count=0,
+                failure=ConductorFailure(
+                    step_index=None,
+                    source_kind=_SOURCE_KIND_LIFECYCLE,
+                    target=_LIFECYCLE_TARGET_START,
+                    error_class=type(exc).__name__,
+                    message=str(exc),
+                ),
+            )
+        abort_procedure = self._abort_procedure
+        async with abort_orphan_on_cancel(
+            lambda: abort_procedure(
+                AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
+                **envelope_kwargs,
+            )
+        ):
+            return await self._run_decide_loop(
+                procedure_id=procedure_id,
+                steps=steps,
+                decide_port=decide_port,
+                objective=objective,
+                space=space,
+                objective_capture_name=objective_capture_name,
+                point_to_captures=point_to_captures,
+                budget=budget,
+                record_turn=record_turn,
+                envelope_kwargs=envelope_kwargs,
+                principal_id=principal_id,
+                correlation_id=correlation_id,
+                causation_id=causation_id,
+                surface_id=surface_id,
+            )
+
+    def _validate_steering_wire(
+        self,
+        *,
+        steps: Sequence[Step],
+        space: SteeringSpace,
+        objective_capture_name: str,
+        point_to_captures: Callable[[SteeringPoint], dict[str, Any]],
+    ) -> None:
+        """Wire-time guard for `conduct_until_advised`; raises `ValueError` on a mis-wire.
+
+        These are programmer / authoring errors (the static block, the space,
+        and the caller's `point_to_captures` do not line up), so they raise
+        BEFORE any FSM event rather than folding into a recorded outcome.
+
+        COVERAGE: every `SteeringAxis.name` the brain may propose must be
+        consumed by some `SetpointStep` `CaptureRef` in the block, otherwise a
+        seeded coordinate would never reach actuation.
+
+        DISJOINTNESS: the keys `point_to_captures` seeds must not collide with
+        the objective slot or with any slot the block itself deposits (a
+        `CaptureStep` / `ComputeStep` `capture_name`), and must cover exactly
+        the axis names, otherwise a seed would overwrite a measured slot or
+        leave a `CaptureRef` unresolved.
+        """
+        consumed_axes = {
+            (
+                step.value.capture_name
+                if isinstance(step.value, CaptureRef)
+                else step.value.steering_axis_name
+            )
+            for step in steps
+            if isinstance(step, SetpointStep) and isinstance(step.value, (CaptureRef, SteeringRef))
+        }
+        for axis in space.axes:
+            if axis.name not in consumed_axes:
+                raise ValueError(
+                    f"steering axis {axis.name!r} is not consumed by any SetpointStep "
+                    "CaptureRef or SteeringRef in the static block"
+                )
+        probe = _steering_probe_point(space)
+        seeded_keys = set(point_to_captures(probe))
+        deposited = {step.capture_name for step in steps if isinstance(step, CaptureStep)} | {
+            step.capture_name
+            for step in steps
+            if isinstance(step, ComputeStep) and step.capture_name is not None
+        }
+        if objective_capture_name in seeded_keys:
+            raise ValueError(
+                f"point_to_captures seeds the objective slot {objective_capture_name!r}; "
+                "the objective is measured, not seeded"
+            )
+        overlap = seeded_keys & deposited
+        if overlap:
+            raise ValueError(
+                f"point_to_captures seeds slot(s) {sorted(overlap)!r} the static block "
+                "also deposits; a seed would overwrite a measured value"
+            )
+        axis_names = {axis.name for axis in space.axes}
+        if seeded_keys != axis_names:
+            raise ValueError(
+                f"point_to_captures keys {sorted(seeded_keys)!r} must cover exactly the "
+                f"steering axis names {sorted(axis_names)!r}"
+            )
+
+    async def _run_decide_loop(
+        self,
+        *,
+        procedure_id: UUID,
+        steps: Sequence[Step],
+        decide_port: DecidePort,
+        objective: SteeringObjective,
+        space: SteeringSpace,
+        objective_capture_name: str,
+        point_to_captures: Callable[[SteeringPoint], dict[str, Any]],
+        budget: SteeringBudget | None,
+        record_turn: Callable[[SteeringAdvice, SteeringObservation, int], Awaitable[None]] | None,
+        envelope_kwargs: dict[str, Any],
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None,
+        surface_id: UUID,
+    ) -> ConductorResult:
+        """The post-start decide loop body of `conduct_until_advised`.
+
+        Twin of `_run_convergence_loop`: extracted so the start_iteration /
+        seed / execute / advise / end_iteration sequencing is one linear read.
+        The Procedure is already Running. Returns the terminal ConductorResult
+        after the brain advised Stop (complete), a pass faulted or the brain
+        raised (abort), or the absolute ceiling tripped (abort). The
+        observation history + the pending point are tracked locally: the loop
+        owns every iteration boundary, so it reconstructs the evidence each
+        pass without re-loading aggregate state.
+
+        REPLAY DETERMINISM: because the loop is pure in-process state from
+        iteration 0 (it never reads the event store) and the one-pass block is
+        pinned once and re-walked verbatim, re-driving it over identical inputs
+        with a brain whose advice is a pure function of the evidence reproduces
+        the run byte for byte: the same iteration boundaries, the same seeded
+        coordinates, the same advice provenance, and the same terminal. Both
+        shipped adapters are such brains, so the advised next_point is NOT
+        recorded on the iteration ledger; determinism comes from the stateless
+        brain plus the pinned block, not from a persisted coordinate. Re-seeding
+        a RECORDED next_point for already-closed passes and consulting the brain
+        only at the open frontier (so a NON-deterministic brain, a real GP /
+        gpCAM / LLM, is not re-queried on replay) is a deferred leg: it needs
+        three additive pieces together (an advised_next_point field on the
+        iteration event, a decide-loop resume entry, and a ValueCaptured
+        observation-replay channel) and is earned WITH that first
+        non-deterministic adapter."""
+        assert self._complete_procedure is not None  # guarded by caller
+        assert self._abort_procedure is not None
+        assert self._start_iteration is not None
+        assert self._end_iteration is not None
+        iteration_count = 0
+        last_result: ConductorResult | None = None
+        folded_kind: str | None = None
+        observations: list[SteeringObservation] = []
+        pending_point: SteeringPoint | None = None
+        while True:
+            if iteration_count >= _ABSOLUTE_MAX_ITERATIONS:
+                return await self._abort_absolute_ceiling(
+                    procedure_id=procedure_id,
+                    iteration_count=iteration_count,
+                    folded_kind=folded_kind,
+                    last_result=last_result,
+                    envelope_kwargs=envelope_kwargs,
+                )
+            next_index = iteration_count + 1
+            await self._start_iteration(
+                StartProcedureIteration(procedure_id=procedure_id, iteration_index=next_index),
+                **envelope_kwargs,
+            )
+            iteration_count += 1
+            pass_captures: dict[str, Any] = {}
+            # SEED-THE-CAPTURES keystone: each pass seeds the point it will
+            # measure into the captures bus before execute() so the block's
+            # SetpointStep CaptureRefs resolve to those coordinates. Pass 1 has
+            # no advice yet, so it seeds the space's authored-default position
+            # (the probe); pass 2+ seed the brain's advised point. The
+            # observation then records seed_point, so every observation's
+            # coordinates are where it actually measured.
+            seed_point = (
+                pending_point if pending_point is not None else _steering_probe_point(space)
+            )
+            pass_captures.update(point_to_captures(seed_point))
+            result = await self.execute(
+                procedure_id=procedure_id,
+                principal_id=principal_id,
+                correlation_id=correlation_id,
+                steps=steps,
+                causation_id=causation_id,
+                surface_id=surface_id,
+                captures=pass_captures,
+            )
+            last_result = result
+            folded_kind = merge_actuation_kinds(
+                folded_kind,
+                result.actuation_kind.value if result.actuation_kind is not None else None,
+            )
+            if not result.succeeded:
+                await self._end_iteration(
+                    EndProcedureIteration(
+                        procedure_id=procedure_id,
+                        iteration_index=next_index,
+                        converged=None,
+                        reason=_derive_failure_reason(result.failure)
+                        if result.failure is not None
+                        else None,
+                    ),
+                    **envelope_kwargs,
+                )
+                await self._abort_after_failed_pass(
+                    procedure_id=procedure_id,
+                    failure=result.failure,
+                    folded_kind=folded_kind,
+                    envelope_kwargs=envelope_kwargs,
+                )
+                return replace(
+                    result,
+                    actuation_kind=(
+                        ActuationKind(folded_kind) if folded_kind is not None else None
+                    ),
+                )
+            if objective_capture_name not in pass_captures:
+                msg = (
+                    f"objective capture {objective_capture_name!r} was not deposited "
+                    f"by the pass block (available: {sorted(pass_captures)})"
+                )
+                await self._end_iteration(
+                    EndProcedureIteration(
+                        procedure_id=procedure_id,
+                        iteration_index=next_index,
+                        converged=None,
+                        reason=msg[:REASON_MAX_LENGTH],
+                    ),
+                    **envelope_kwargs,
+                )
+                failure = ConductorFailure(
+                    step_index=None,
+                    source_kind=_STEP_KIND_COMPUTE,
+                    target=objective_capture_name,
+                    error_class=_ERROR_MEASUREMENT_NOT_FOUND,
+                    message=msg,
+                )
+                await self._abort_after_failed_pass(
+                    procedure_id=procedure_id,
+                    failure=failure,
+                    folded_kind=folded_kind,
+                    envelope_kwargs=envelope_kwargs,
+                )
+                return ConductorResult(
+                    procedure_id=procedure_id,
+                    completed_count=result.completed_count,
+                    failure=failure,
+                    actuation_kind=(
+                        ActuationKind(folded_kind) if folded_kind is not None else None
+                    ),
+                    measurements=result.measurements,
+                )
+            observation = SteeringObservation(
+                point=seed_point,
+                measurements=result.measurements,
+                artifact_ref=None,
+                actuation_kind=result.actuation_kind,
+                succeeded=result.succeeded,
+            )
+            observations.append(observation)
+            evidence = SteeringEvidence(
+                objective=objective,
+                space=space,
+                observations=tuple(observations),
+                budget=budget if budget is not None else SteeringBudget(),
+                iteration_index=iteration_count - 1,
+                procedure_id=procedure_id,
+            )
+            try:
+                advice = await decide_port.advise_next(evidence)
+                if advice.verdict is SteeringVerdict.MEASURE:
+                    _validate_advice_point(advice.next_point, space)
+            except _DECIDE_ERRORS as exc:
+                await self._end_iteration(
+                    EndProcedureIteration(
+                        procedure_id=procedure_id,
+                        iteration_index=next_index,
+                        converged=None,
+                        reason=str(exc)[:REASON_MAX_LENGTH],
+                        advised_stop=None,
+                    ),
+                    **envelope_kwargs,
+                )
+                failure = ConductorFailure(
+                    step_index=None,
+                    source_kind=_SOURCE_KIND_DECIDE,
+                    target=objective_capture_name,
+                    error_class=type(exc).__name__,
+                    message=str(exc),
+                )
+                await self._abort_after_failed_pass(
+                    procedure_id=procedure_id,
+                    failure=failure,
+                    folded_kind=folded_kind,
+                    envelope_kwargs=envelope_kwargs,
+                )
+                return ConductorResult(
+                    procedure_id=procedure_id,
+                    completed_count=result.completed_count,
+                    failure=failure,
+                    actuation_kind=(
+                        ActuationKind(folded_kind) if folded_kind is not None else None
+                    ),
+                    measurements=result.measurements,
+                )
+            audit = advice_to_audit_fields(advice)
+            await self._end_iteration(
+                EndProcedureIteration(
+                    procedure_id=procedure_id,
+                    iteration_index=next_index,
+                    converged=None,
+                    reason=None,
+                    advised_stop=advice.verdict is SteeringVerdict.STOP,
+                    reasoning=audit.reasoning,
+                    confidence=audit.confidence,
+                    confidence_source=audit.confidence_source,
+                    alternatives=audit.alternatives,
+                    model_ref=audit.model_ref,
+                ),
+                **envelope_kwargs,
+            )
+            if record_turn is not None:
+                await record_turn(advice, observation, iteration_count - 1)
+            if advice.verdict is SteeringVerdict.STOP:
+                return await self._complete_advised(
+                    procedure_id=procedure_id,
+                    result=result,
+                    folded_kind=folded_kind,
+                    envelope_kwargs=envelope_kwargs,
+                )
+            pending_point = advice.next_point
+
+    async def _complete_advised(
+        self,
+        *,
+        procedure_id: UUID,
+        result: ConductorResult,
+        folded_kind: str | None,
+        envelope_kwargs: dict[str, Any],
+    ) -> ConductorResult:
+        """Complete a brain-advised-Stop steering loop; thin twin of `_complete_converged`."""
+        assert self._complete_procedure is not None
+        merged = replace(
+            result,
+            actuation_kind=ActuationKind(folded_kind) if folded_kind is not None else None,
+        )
+        try:
+            await self._complete_procedure(
+                CompleteProcedure(procedure_id=procedure_id, actuation_kind=folded_kind),
+                **envelope_kwargs,
+            )
+        except _LIFECYCLE_RERAISE:
+            raise
+        except Exception as exc:
+            return ConductorResult(
+                procedure_id=procedure_id,
+                completed_count=result.completed_count,
+                measurements=result.measurements,
+                failure=ConductorFailure(
+                    step_index=None,
+                    source_kind=_SOURCE_KIND_LIFECYCLE,
+                    target=_LIFECYCLE_TARGET_COMPLETE,
+                    error_class=type(exc).__name__,
+                    message=str(exc),
+                ),
+            )
+        return merged
+
     async def reconduct(
         self,
         *,
@@ -1909,6 +2577,7 @@ class Conductor:
                     completed_count=result.completed_count,
                     measurements=result.measurements,
                     artifacts=result.artifacts,
+                    outputs=result.outputs,
                     failure=ConductorFailure(
                         step_index=None,
                         source_kind=_SOURCE_KIND_LIFECYCLE,
@@ -1950,6 +2619,7 @@ class Conductor:
         envelope: "_Envelope",
         port: ControlPort,
         captures: dict[str, Any],
+        outputs: dict[str, ArtifactRef],
         compute: "_ComputeAccumulator",
     ) -> ConductorFailure | None:
         """Run one step + record outcome; return ConductorFailure on halt-condition.
@@ -1960,9 +2630,12 @@ class Conductor:
         `captures` is the per-conduct slot dict: a `CaptureStep` fills it,
         a `SetpointStep` with a `CaptureRef` value reads it, and a
         `ComputeStep` with a `capture_name` deposits its produced scalar into
-        it (slice 6c chaining). `compute` is the per-conduct accumulator a
-        `ComputeStep` appends its produced `Measurement`s + folds its
-        `ActuationKind` into (so `execute` can surface the values + the
+        it (slice 6c chaining). `outputs` is the per-conduct artifact bus: a
+        file-arm `ComputeStep` with an `output_ref_name` deposits its
+        `ArtifactRef` into it, and a later `ComputeStep` with an `OutputRef`
+        input reads it (compute-branch chaining). `compute` is the per-conduct
+        accumulator a `ComputeStep` appends its produced `Measurement`s + folds
+        its `ActuationKind` into (so `execute` can surface the values + the
         honest aggregate kind on the result).
         """
         if isinstance(step, SetpointStep):
@@ -1977,7 +2650,12 @@ class Conductor:
             )
         if isinstance(step, ComputeStep):
             return await self._run_compute(
-                step, index=index, envelope=envelope, compute=compute, captures=captures
+                step,
+                index=index,
+                envelope=envelope,
+                compute=compute,
+                captures=captures,
+                outputs=outputs,
             )
         return await self._run_check(step, index=index, envelope=envelope, port=port)
 
@@ -2021,6 +2699,37 @@ class Conductor:
                 "address": step.address,
                 "value": resolved,
                 "capture_ref": value.capture_name,
+            }
+        elif isinstance(value, SteeringRef):
+            # Steering sibling of the CaptureRef arm: the decide loop seeds the
+            # advised coordinate into captures[steering_axis_name] before the
+            # pass runs; an unseeded ref loud-fails the same way.
+            if value.steering_axis_name not in captures:
+                msg = (
+                    f"setpoint at {step.address!r} references steering axis "
+                    f"{value.steering_axis_name!r} not seeded before this step"
+                )
+                await self._record(
+                    envelope=envelope,
+                    index=index,
+                    step_kind=_STEP_KIND_SETPOINT,
+                    body={"address": step.address, "steering_ref": value.steering_axis_name},
+                    result=_RESULT_FAILED,
+                    error_class=_ERROR_UNRESOLVED_CAPTURE,
+                    message=msg,
+                )
+                return ConductorFailure(
+                    step_index=index,
+                    source_kind=_STEP_KIND_SETPOINT,
+                    target=step.address,
+                    error_class=_ERROR_UNRESOLVED_CAPTURE,
+                    message=msg,
+                )
+            resolved = captures[value.steering_axis_name]
+            payload_body = {
+                "address": step.address,
+                "value": resolved,
+                "steering_ref": value.steering_axis_name,
             }
         else:
             resolved = value
@@ -2352,6 +3061,7 @@ class Conductor:
         envelope: "_Envelope",
         compute: "_ComputeAccumulator",
         captures: dict[str, Any],
+        outputs: dict[str, ArtifactRef],
     ) -> ConductorFailure | None:
         # A ComputeStep is side-effecting (a job submission is non-idempotent
         # at the substrate), so it follows the setpoint / action in-flight-marker
@@ -2361,6 +3071,8 @@ class Conductor:
         # artifact ref. Both fold the substrate's declared kind into the conduct.
         # When `capture_name` is set (value arm only), the produced scalar is
         # then deposited into `captures` for a later CaptureRef / convergence read.
+        # When `output_ref_name` is set (file arm only), the produced ArtifactRef
+        # is deposited into `outputs` for a later OutputRef input to resolve.
         if self._compute_port is None:
             # A wiring bug, not a runtime outcome: a ComputeStep was dispatched
             # but no ComputePort was supplied. Loud, like conduct()'s missing
@@ -2371,18 +3083,63 @@ class Conductor:
             )
             raise RuntimeError(msg)
         port = self._compute_port
+        # Resolve every OutputRef input against the per-conduct `outputs` bus
+        # BEFORE any effect (parity with _run_setpoint's CaptureRef resolve): a
+        # ref to a name never deposited loud-fails with a recorded entry, NO
+        # in-flight marker, nothing submitted. The result is tuple[str, ...] so
+        # the JobSpec + payload + ComputePort never see a ref. The pre-resolution
+        # refs are recorded separately under `input_refs` for provenance.
+        resolved_input_uris: list[str] = []
+        for element_index, element in enumerate(step.input_uris):
+            if isinstance(element, OutputRef):
+                if element.output_name not in outputs:
+                    msg = (
+                        f"compute step input element {element_index} references output "
+                        f"{element.output_name!r} not produced before this step "
+                        f"(deposited: {sorted(outputs)})"
+                    )
+                    await self._record(
+                        envelope=envelope,
+                        index=index,
+                        step_kind=_STEP_KIND_COMPUTE,
+                        body={
+                            "command": list(step.command),
+                            "input_refs": [_input_uri_to_wire(u) for u in step.input_uris],
+                            "output_uri": step.output_uri,
+                            "parameters": dict(step.parameters),
+                        },
+                        result=_RESULT_FAILED,
+                        error_class=_ERROR_UNRESOLVED_OUTPUT,
+                        message=msg,
+                    )
+                    return ConductorFailure(
+                        step_index=index,
+                        source_kind=_STEP_KIND_COMPUTE,
+                        target=" ".join(step.command),
+                        error_class=_ERROR_UNRESOLVED_OUTPUT,
+                        message=msg,
+                    )
+                resolved_input_uris.append(outputs[element.output_name].uri)
+            else:
+                resolved_input_uris.append(element)
+        resolved_uris = tuple(resolved_input_uris)
         job_spec = JobSpec(
             command=step.command,
-            input_uris=step.input_uris,
+            input_uris=resolved_uris,
             output_uri=step.output_uri,
             parameters=step.parameters,
         )
         payload_body: dict[str, Any] = {
             "command": list(step.command),
-            "input_uris": list(step.input_uris),
+            "input_uris": list(resolved_uris),
             "output_uri": step.output_uri,
             "parameters": dict(step.parameters),
         }
+        # Provenance: record the pre-resolution refs (sentinel dicts for any
+        # OutputRef element) beside the resolved URIs only when the step carried
+        # a ref, mirroring _run_setpoint recording value + capture_ref.
+        if any(isinstance(element, OutputRef) for element in step.input_uris):
+            payload_body["input_refs"] = [_input_uri_to_wire(u) for u in step.input_uris]
         await self._record(
             envelope=envelope,
             index=index,
@@ -2418,6 +3175,7 @@ class Conductor:
         # artifact-only.
         if step.output_uri is not None:
             return await self._run_compute_artifact_arm(
+                step,
                 port=port,
                 job_id=job_id,
                 status=status,
@@ -2426,6 +3184,7 @@ class Conductor:
                 body_with_job=body_with_job,
                 payload_body=payload_body,
                 compute=compute,
+                outputs=outputs,
             )
         try:
             produced = await port.fetch_measurements(job_id)
@@ -2599,6 +3358,7 @@ class Conductor:
 
     async def _run_compute_artifact_arm(
         self,
+        step: ComputeStep,
         *,
         port: ComputePort,
         job_id: Any,
@@ -2608,6 +3368,7 @@ class Conductor:
         body_with_job: dict[str, Any],
         payload_body: dict[str, Any],
         compute: "_ComputeAccumulator",
+        outputs: dict[str, ArtifactRef],
     ) -> ConductorFailure | None:
         """The file output arm of a ComputeStep: fetch the artifact + record it.
 
@@ -2616,7 +3377,10 @@ class Conductor:
         adapter stamps the kind, fold that kind into the conduct, and record
         the ok outcome. The `ArtifactRef` is surfaced on
         `ConductorResult.artifacts` so the caller can register a Dataset
-        against it.
+        against it. When the step carries an `output_ref_name`, after the OK
+        record the produced `ArtifactRef` is deposited into the per-conduct
+        `outputs` bus (loud-failing on an already-filled slot) so a later
+        step's `OutputRef` input resolves to it.
         """
         try:
             artifact = await port.fetch_artifact_ref(job_id)
@@ -2631,18 +3395,87 @@ class Conductor:
         result = port.provide_result(job_id, status, artifacts=(artifact,))
         compute.artifacts.extend(result.artifacts)
         compute.kind = merge_actuation_kinds(compute.kind, result.actuation_kind.value)
+        recorded_body = {
+            **body_with_job,
+            "status": status.value,
+            "artifacts": [_compute_artifact_to_dict(a) for a in result.artifacts],
+        }
         await self._record(
             envelope=envelope,
             index=index,
             step_kind=_STEP_KIND_COMPUTE,
-            body={
-                **body_with_job,
-                "status": status.value,
-                "artifacts": [_compute_artifact_to_dict(a) for a in result.artifacts],
-            },
+            body=recorded_body,
             result=_RESULT_OK,
         )
+        if step.output_ref_name is not None:
+            duplicate = self._deposit_compute_output(
+                step.output_ref_name, artifact=artifact, outputs=outputs
+            )
+            if duplicate:
+                return await self._record_compute_output_failure(
+                    step.output_ref_name,
+                    index=index,
+                    envelope=envelope,
+                    base_body=recorded_body,
+                )
         return None
+
+    def _deposit_compute_output(
+        self,
+        output_ref_name: str,
+        *,
+        artifact: ArtifactRef,
+        outputs: dict[str, ArtifactRef],
+    ) -> bool:
+        """Deposit a file-arm `ArtifactRef` into `outputs[output_ref_name]`.
+
+        The compute-branch twin of `_deposit_compute_capture`. The file arm
+        fetches exactly ONE ArtifactRef, so the only loud-fail is a duplicate
+        slot (no absent / ambiguous / quality / finite arms the value-arm
+        deposit needs). Returns True when the slot was already filled (the
+        caller records the `DuplicateOutput` failure + halts); on success
+        writes the FULL `ArtifactRef` (keeping checksum / byte_size for a future
+        upstream-integrity check) and returns False.
+        """
+        if output_ref_name in outputs:
+            return True
+        outputs[output_ref_name] = artifact
+        return False
+
+    async def _record_compute_output_failure(
+        self,
+        output_ref_name: str,
+        *,
+        index: int,
+        envelope: "_Envelope",
+        base_body: dict[str, Any],
+    ) -> ConductorFailure:
+        """Record a failed compute-output deposit (duplicate slot) + return the failure.
+
+        The job already recorded its OK outcome; this records a SEPARATE compute
+        step entry for the deposit fault (so the journal carries both the
+        produced artifact and the duplicate-output fault) and HALTS the conduct.
+        Mirrors `_record_compute_capture_failure`."""
+        msg = (
+            f"compute output {output_ref_name!r} already produced in this conduct "
+            "(duplicate output rejected)"
+        )
+        await self._record(
+            envelope=envelope,
+            index=index,
+            step_kind=_STEP_KIND_COMPUTE,
+            body={**base_body, "output_ref_name": output_ref_name},
+            result=_RESULT_FAILED,
+            error_class=_ERROR_DUPLICATE_OUTPUT,
+            message=msg,
+        )
+        return ConductorFailure(
+            step_index=index,
+            source_kind=_STEP_KIND_COMPUTE,
+            target=output_ref_name,
+            error_class=_ERROR_DUPLICATE_OUTPUT,
+            message=msg,
+        )
 
     async def _record_compute_failure(
         self,
@@ -2793,6 +3626,8 @@ def step_to_payload(step: Step) -> dict[str, Any]:
     if isinstance(step, SetpointStep):
         if isinstance(step.value, CaptureRef):
             value: Any = {_CAPTURE_REF_KEY: step.value.capture_name}
+        elif isinstance(step.value, SteeringRef):
+            value = {_STEERING_REF_KEY: step.value.steering_axis_name}
         elif isinstance(step.value, tuple):
             value = list(step.value)
         else:
@@ -2815,10 +3650,11 @@ def step_to_payload(step: Step) -> dict[str, Any]:
         return {
             "kind": "compute",
             "command": list(step.command),
-            "input_uris": list(step.input_uris),
+            "input_uris": [_input_uri_to_wire(u) for u in step.input_uris],
             "output_uri": step.output_uri,
             "parameters": dict(step.parameters),
             "capture_name": step.capture_name,
+            "output_ref_name": step.output_ref_name,
         }
     return {
         "kind": "check",
@@ -2848,9 +3684,13 @@ def _step_from_payload(payload: Mapping[str, Any]) -> Step:
     kind = payload["kind"]
     if kind == "setpoint":
         raw: Any = payload["value"]
-        value: int | float | bool | str | tuple[Any, ...] | CaptureRef
+        value: int | float | bool | str | tuple[Any, ...] | CaptureRef | SteeringRef
         if isinstance(raw, dict) and set(cast("dict[str, Any]", raw)) == {_CAPTURE_REF_KEY}:
             value = CaptureRef(capture_name=str(cast("dict[str, Any]", raw)[_CAPTURE_REF_KEY]))
+        elif isinstance(raw, dict) and set(cast("dict[str, Any]", raw)) == {_STEERING_REF_KEY}:
+            value = SteeringRef(
+                steering_axis_name=str(cast("dict[str, Any]", raw)[_STEERING_REF_KEY])
+            )
         elif isinstance(raw, list):
             value = tuple(cast("list[Any]", raw))
         else:
@@ -2865,10 +3705,11 @@ def _step_from_payload(payload: Mapping[str, Any]) -> Step:
     if kind == "compute":
         return ComputeStep(
             command=tuple(payload["command"]),
-            input_uris=tuple(payload.get("input_uris", ())),
+            input_uris=tuple(_input_uri_from_wire(u) for u in payload.get("input_uris", ())),
             output_uri=payload.get("output_uri"),
             parameters=dict(payload.get("parameters", {})),
             capture_name=payload.get("capture_name"),
+            output_ref_name=payload.get("output_ref_name"),
         )
     if kind == "check":
         return CheckStep(

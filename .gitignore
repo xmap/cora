@@ -101,6 +101,8 @@ papers/*/_minted*/
 apps/api/mutants/
 apps/api/mutmut-stats.json
 
-# Reverse-engineering clone cache: shallow clones of external *-bits repos
-# pulled by scripts/reverse_engineer. Regenerated on demand; never committed.
-research/aps-reverse-engineering/.cache/
+# Research notes and reverse-engineering working tree are tracked (surveys,
+# per-beamline facts, candidate descriptors). Only the regenerable shallow-clone
+# cache the extractor writes is ignored.
+research/*/.cache/
+research/.cache/

@@ -1,0 +1,40 @@
+# CANDIDATE: hand-read from NSLS2/xfp-profile-collection, NOT authoritative. PV prefixes verified
+# verbatim. Footprinting beamline: NO area detector (offline mass spec readout).
+beamline: {name: XFP, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 17-BM, facility_code: nsls2, confirm: beamline; inferred from XF:17BM}
+- {name: 17-BM-A, facility_code: nsls2, confirm: endstation; inferred from XF:17BMA}
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; needs confirm.
+  devices:
+  - {name: FrontEndShutter, family: Shutter, pv: "XF:17BM-PPS{Sh:FE}", new: true, confirm: front-end PPS shutter; Shutter (catalog)}
+  - {name: EPSShutter, family: Shutter, pv: "XF:17BMA-EPS{Sh:1}", new: true, confirm: "EPS shutter (dose timing); Shutter (catalog)"}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; needs confirm.
+  devices:
+  - {name: Monochromator, family: Monochromator, pv: "XF:17BMA-OP{Mono:1-Ax:", new: true, confirm: "mono (white/pink for dose); Monochromator (catalog)"}
+  - {name: Mirror1, family: Mirror, pv: "XF:17BM-OP{Mir:1", new: true, confirm: mirror; Mirror (catalog)}
+  - {name: ADCSlit, family: Slit, pv: "XF:17BMA-OP{Slt:ADC-Ax:", new: true, confirm: ADC slit; Slit (catalog)}
+  - {name: PinkBeamSlit, family: Slit, pv: "XF:17BMA-OP{Slt:PB-Ax:", new: true, confirm: pink-beam slit; Slit (catalog)}
+  - {name: FilterStage, family: Filter, pv: "XF:17BMA-ES:1{Fltr:1-Ax:", new: true, confirm: "Al filter wheel (dose-rate); Filter (catalog)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; needs confirm.
+  devices:
+  - {name: SampleStage, family: LinearStage, pv: "XF:17BMA-ES:1{Sam:1-Ax:", new: true, confirm: sample positioning; LinearStage (catalog)}
+  - {name: SampleTable1, family: Table, pv: "XF:17BMA-ES:1{Tbl:1-Ax:", new: true, confirm: "sample table (+ Tbl:3); Table (catalog)"}
+  - {name: CVDStage, family: LinearStage, pv: "XF:17BMA-ES:1{CVD:1-Ax:", new: true, confirm: CVD window stage; LinearStage (catalog)}
+  - {name: SyringePump1, family: FlowController, pv: "XF:17BM-ES:1{Pmp:01}", new: true, confirm: "sample-delivery syringe pump (+ Pmp:02); FlowController (catalog, graduated); further consumer"}
+  - {name: FractionCollector, family: GenericProbe, pv: "XF:17BM-ES:1{FC:1}", new: true, confirm: fraction collector; LOOSE GenericProbe (custody/seam)}
+  - {name: HighThroughputFly, family: LinearStage, pv: "XF:17BMA-ES:2{HTFly:1-Ax:", new: true, confirm: high-throughput fly stage; LinearStage (catalog)}
+  - {name: SampleModules, family: LinearStage, pv: "XF:17BMA-ES:2{Mod:12-Ax:", new: true, confirm: "sample modules (Mod:12/34); LinearStage (catalog)"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; needs confirm. NO area detector (offline MS readout).
+  devices:
+  - {name: DelayGenerator, family: TimingController, pv: "XF:17BMA-ES:2{DG:1}", new: true, confirm: "delay generator (shutter timing = dose); TimingController (catalog)"}
+  - {name: TimingControlModule, family: TimingController, pv: "XF:17BMA-ES:2{TCM:1}", new: true, confirm: "timing control module; TimingController (catalog), confirm"}
+  - {name: IonChamber1, family: FluxMonitor, pv: "XF:17BM-BI{EM:1}", new: true, confirm: "ion chamber/electrometer (+ EM:2; flux=dose input); FluxMonitor (catalog, graduated)"}
+  - {name: BeamPositionMonitor, family: GenericProbe, pv: "XF:17BM-BI{EM:BPM1}", new: true, confirm: "electrometer BPM; LOOSE GenericProbe, held DIAG-1"}

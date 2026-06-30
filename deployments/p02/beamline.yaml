@@ -1,0 +1,240 @@
+# P02 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P02 "Hard X-ray Diffraction Beamline" is the high-energy diffraction beamline at
+# PETRA III (DESY, Hamburg), with two branches: P02.1 (powder diffraction / total
+# scattering / pair-distribution-function, ~60 keV) and P02.2 (extreme conditions,
+# diamond-anvil-cell high-pressure diffraction). It is bound to the PETRA III Site
+# (deployments/petra-iii/site.yaml), the eighth PETRA III beamline.
+#
+# STATUS: reverse-engineered from P02's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p02, branch
+# debian/jessie; the online_haspp02* registries). Device logical names and Tango
+# control handles are real, read from that registry; vendor part numbers, crystal
+# cuts, the pressure-cell detail, energy calibration, and physical positions are not
+# in it and are open questions. Every value is carried confirm until P02 staff verify
+# it. The extraction is in research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family. P02 reuses existing Families end to end. It is
+# the fleet's high-energy powder-diffraction / total-scattering beamline and its first
+# diamond-anvil-cell extreme-conditions endstation; the high-pressure cell reuses the
+# allowlisted-loose PressureCell Family the APS 13-id-d deployment introduced. The
+# techniques (powder diffraction, total scattering / PDF, high-pressure diffraction)
+# earn no catalog Method beyond the existing powder_diffraction / total_scattering
+# slugs, carried pending on the Site (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML (e.g. p02/dcmmotor/dcm_bragg). The registry exposes large
+# generically-named motor banks (eh1a / eh1b / eh2a / eh2b) whose per-axis roles are
+# not labelled; the eh1* banks are the P02.1 powder branch and the eh2* banks the
+# P02.2 extreme-conditions branch, grouped as the endstation stages carrying the
+# handles, every axis role pending (GROUP-1). The bendable focusing mirrors (HFM /
+# VFM) are exposed as attribute motors (curvature / ellipticity / tilt / z) plus their
+# gp variants; grouped as two Mirror Assets (OPT-1).
+#
+# SCOPE: this cut models the shared OH1 optics (the DCM, the HFM / VFM mirrors, the
+# slits, the CRL), the P02.1 powder / total-scattering endstation (eh1a / eh1b), and
+# the P02.2 extreme-conditions endstation (eh2a / eh2b) with their sample stages,
+# pressure cell, sample environment, and detectors (Pilatus 1M, PerkinElmer, MCA /
+# SIS3302). The CH1 / CH2 dummy-motor stubs are noted, not modelled (STUB-1). Counter
+# / timer / ADC channels and the Sardana MeasurementGroup bookkeeping rows are
+# filtered out by the extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p02/questions.md.
+
+beamline:
+  name: P02
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P02"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P02 is an undulator beamline (high-energy diffraction); the OnlineXML exposes the undulator gap (p02/attributemotor/gap) but no period or parameters, carried pending (SRC-1)"
+
+# Three enclosures: the shared OH1 optics, the P02.1 powder / total-scattering
+# endstation, and the P02.2 extreme-conditions endstation. The optics and both
+# endstations report on the haspp02oh1 host; the split is inferred from the device-
+# name prefixes (ENC-1). DESY PSS permit signals are not in the OnlineXML (PSS-1).
+enclosures:
+  - name: p02-oh1
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P02 OH1 optics (shared P02 / P03 high-heatload optics); not in the OnlineXML (PSS-1)"}
+  - name: p02-1-powder
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P02.1 powder / total-scattering endstation; not in the OnlineXML (PSS-1)"}
+  - name: p02-2-extreme
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P02.2 extreme-conditions endstation; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and the OH1 optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p02-oh1
+  intro: "The P02 undulator source and the OH1 optics: the double-crystal monochromator, the horizontal- and vertical-focusing bendable mirrors, the defining slits, and the CRL. P02 shares the high-heatload optics hutch with P03."
+  note: "DCM is dcmmotor (bragg / parallel / perp) + dcmener. The HFM / VFM mirrors are bendable, exposed as curvature / ellipticity / tilt / z attribute motors. The OH1 p02/motor bank carries the optics positioning, roles not labelled (GROUP-1)."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {gap: "p02/attributemotor/gap"}
+      new: true
+      confirm: true
+      note: "P02 undulator; gap read from the registry, period not exposed (SRC-1)"
+    - name: Monochromator
+      family: Monochromator
+      pv: {bragg: "p02/dcmmotor/dcm_bragg", parallel: "p02/dcmmotor/dcm_parallel", perpendicular: "p02/dcmmotor/dcm_perp", energy: "p02/dcmener/mnchrmtr", c2pitch: "p02/motor/c2pitch", c2roll: "p02/motor/c2roll"}
+      new: true
+      confirm: true
+      note: "double-crystal monochromator (dcm_bragg / parallel / perp + the c2 crystal pitch / roll); ~60 keV high-energy, crystal cut is OPT-1"
+    - name: HorizontalFocusingMirror
+      family: Mirror
+      pv: {curvature: "p02/attributemotor/hfm_curvature", ellipticity: "p02/attributemotor/hfm_ellipticity", tilt: "p02/attributemotor/hfm_tilt", z: "p02/attributemotor/hfm_z", gp_curvature: "p02/attributemotor/hfm_gp_curvature", gp_ellipticity: "p02/attributemotor/hfm_gp_ellipticity", gp_tilt: "p02/attributemotor/hfm_gp_tilt", gp_z: "p02/attributemotor/hfm_gp_z"}
+      new: true
+      confirm: true
+      note: "horizontal-focusing bendable mirror (HFM: curvature / ellipticity / tilt / z, with gp glancing-pencil variants); coating / role OPT-1"
+    - name: VerticalFocusingMirror
+      family: Mirror
+      pv: {curvature: "p02/attributemotor/vfm_curvature", ellipticity: "p02/attributemotor/vfm_ellipticity", tilt: "p02/attributemotor/vfm_tilt", z: "p02/attributemotor/vfm_z", gp_curvature: "p02/attributemotor/vfm_gp_curvature", gp_ellipticity: "p02/attributemotor/vfm_gp_ellipticity", gp_tilt: "p02/attributemotor/vfm_gp_tilt", gp_z: "p02/attributemotor/vfm_gp_z"}
+      new: true
+      confirm: true
+      note: "vertical-focusing bendable mirror (VFM: curvature / ellipticity / tilt / z, with gp variants); coating / role OPT-1"
+    - name: DefiningSlits
+      family: Slit
+      pv: {slt1_vgap: "p02/slt/slt1vgap", slt1_voffs: "p02/slt/slt1voffs", slt1_offs: "p02/slt/slt1offs", slt2_left: "p02/slt/slt2left", slt2_right: "p02/slt/slt2right", slt2_vgap: "p02/slt/slt2vgap", slt2_offs: "p02/slt/slt2offs"}
+      new: true
+      confirm: true
+      note: "the OH1 defining slits (slt1 vertical + slt2 four-blade); beam definition (OPT-1)"
+    - name: OpticsStages
+      family: LinearStage
+      pv: {bank: "p02/motor/c2pitch"}
+      new: true
+      confirm: true
+      note: "the OH1 optics / instrument motor bank (p02/motor, the c2 / mirror / slit positioning); per-axis roles not labelled, grouped as one stage (OPT-1, GROUP-1)"
+
+# ===========================================================================
+# P02.1: powder diffraction / total scattering endstation
+# ===========================================================================
+
+powder-sample:
+  stage: sample
+  enclosure: p02-1-powder
+  intro: "The P02.1 powder-diffraction / total-scattering endstation: the sample positioning and instrument motor banks (eh1a / eh1b), with the Anton-Paar and Lakeshore sample-environment controllers for in-situ temperature studies."
+  note: "The eh1a (48 axes) and eh1b (16 axes) banks carry the P02.1 sample / instrument positioning, roles not labelled (GROUP-1). The Anton-Paar (eurotherm2604) and Lakeshore 336 are the in-situ sample environment."
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: {eh1a: "p02/motor/eh1a_mot01", eh1b: "p02/motor/eh1b_mot01"}
+      new: true
+      confirm: true
+      note: "the P02.1 sample / instrument motor banks (eh1a_mot01..48, eh1b_mot01..16 on p02/motor); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+    - name: SampleEnvironment
+      family: TemperatureController
+      pv: {anton_paar: "p02/eurotherm2604/antonpaar", eurotherm: "p02/eurotherm2408/eurotherm", lakeshore: "p02/lks336tempctrl/lake336"}
+      new: true
+      confirm: true
+      note: "the P02.1 in-situ sample environment: the Anton-Paar furnace (Eurotherm 2604), a Eurotherm 2408, and a Lakeshore 336 cryo controller (TEMP-1)"
+
+powder-detector:
+  stage: detection
+  enclosure: p02-1-powder
+  intro: "The P02.1 detection: the Pilatus 1M area detector for powder / total-scattering patterns and the PerkinElmer flat-panel for high-energy PDF."
+  note: "Handles read from p02/pilatus and p02/pedetector. The detector roles (the high-Q PDF detector vs the powder ring detector) are DET-1."
+  devices:
+    - name: PilatusDetector
+      family: Camera
+      pv: {pilatus_1m: "p02/pilatus/pilatus1M"}
+      new: true
+      confirm: true
+      note: "the P02.1 Pilatus 1M area detector; powder / total-scattering patterns (DET-1)"
+    - name: PerkinElmerDetector
+      family: Camera
+      pv: {detector: "p02/pedetector/exp.01"}
+      new: true
+      confirm: true
+      note: "the P02.1 PerkinElmer flat-panel area detector; high-energy total-scattering / PDF (DET-1)"
+
+# ===========================================================================
+# P02.2: extreme-conditions (diamond-anvil-cell) endstation
+# ===========================================================================
+
+extreme-sample:
+  stage: sample
+  enclosure: p02-2-extreme
+  intro: "The P02.2 extreme-conditions endstation: the sample positioning and instrument motor banks (eh2a / eh2b), the diamond-anvil-cell high-pressure environment, and the CAEN-ELS picoammeter for beam monitoring."
+  note: "The eh2a (76 axes) and eh2b (64 axes) banks carry the P02.2 sample / instrument positioning, including the diamond-anvil-cell stages, roles not labelled (GROUP-1). The pressure cell reuses the 13-id-d allowlisted-loose PressureCell Family (PRESSURE-1)."
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: {eh2a: "p02/motor/eh2a_mot01", eh2b: "p02/motor/eh2b_mot01"}
+      new: true
+      confirm: true
+      note: "the P02.2 sample / instrument motor banks (eh2a_mot01..76, eh2b_mot01..64 on p02/motor); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+    - name: PressureCell
+      family: PressureCell
+      pv: {confirm: "diamond-anvil-cell high-pressure sample environment; the membrane / gas-loading control handles are not separately labelled in the registry (PRESSURE-1)"}
+      new: true
+      confirm: true
+      note: "the P02.2 diamond-anvil-cell high-pressure environment; reuses the 13-id-d allowlisted-loose PressureCell Family; the membrane / load control is not in the registry (PRESSURE-1)"
+    - name: BeamMonitor
+      family: FluxMonitor
+      pv: {picoammeter: "p02/caenelsah501d/a501d"}
+      new: true
+      confirm: true
+      note: "the P02.2 CAEN-ELS AH501D picoammeter; beam-intensity monitoring (DET-1)"
+
+extreme-detector:
+  stage: detection
+  enclosure: p02-2-extreme
+  intro: "The P02.2 detection: the MCA and SIS3302 fluorescence detectors for the extreme-conditions endstation."
+  note: "Handles read from p02/mca and p02/sis3302. The high-pressure diffraction area detector is shared / not separately listed in this registry slice (DET-1)."
+  devices:
+    - name: FluorescenceDetectors
+      family: EnergyDispersiveSpectrometer
+      pv: {mca01: "p02/mca/eh2a_mca01", mca02: "p02/mca/eh2a_mca02", mca03: "p02/mca/eh2a_mca03", mca04: "p02/mca/eh2a_mca04", sis3302: "p02/sis3302/SIS3302_1"}
+      new: true
+      confirm: true
+      note: "the P02.2 MCA and SIS3302 fluorescence detectors (DET-1)"
+
+# Cross-cutting control. P02 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P02 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as the other PETRA III beamlines. A motion axis is a
+    Tango motor device (p02/motor/...), the monochromator a dcmmotor / dcmener device,
+    the bendable mirrors attributemotor devices (curvature / ellipticity), the slits
+    slt devices, the detectors pilatus / pedetector / mca / sis3302 device servers, the
+    sample environment eurotherm / lks336tempctrl devices, and the beam monitor a
+    caenelsah501d picoammeter. The handles are read from P02's public OnlineXML
+    registry and carried confirm (CTRL-1). P02 shares the high-heatload optics hutch
+    with P03 (the haspp02oh1 host). The powder / total-scattering / high-pressure
+    acquisition (the sample scan coupled to the area-detector capture) runs as a
+    Sardana macro; that orchestration is the seam CORA's edge would conduct over its
+    ControlPort (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the optics and sample motor banks (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango / tangomotor) backing the mono, the bendable-mirror attribute motors, and the CH dummy stubs (CTRL-1, STUB-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P02 run needs present before it
+    can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

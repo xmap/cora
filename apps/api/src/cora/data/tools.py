@@ -14,6 +14,7 @@ from mcp.server.fastmcp import FastMCP
 from cora.data.features.add_dataset_to_edition import tool as add_dataset_to_edition_tool
 from cora.data.features.demote_dataset import tool as demote_dataset_tool
 from cora.data.features.discard_dataset import tool as discard_dataset_tool
+from cora.data.features.discard_distribution import tool as discard_distribution_tool
 from cora.data.features.get_dataset import tool as get_dataset_tool
 from cora.data.features.list_datasets import tool as list_datasets_tool
 from cora.data.features.promote_dataset import tool as promote_dataset_tool
@@ -68,6 +69,10 @@ def register_data_tools(
     register_distribution_tool.register(
         mcp,
         get_handler=lambda: get_handlers().register_distribution,
+    )
+    discard_distribution_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().discard_distribution,
     )
     register_edition_tool.register(
         mcp,

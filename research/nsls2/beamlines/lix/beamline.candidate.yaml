@@ -1,0 +1,38 @@
+# CANDIDATE: hand-read from NSLS2/lix-profile-collection (startup.obsolete/ optics PVs +
+# startup/devices/ fluidics), NOT authoritative. PV prefixes verified verbatim.
+beamline: {name: LIX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 16-ID-A, facility_code: nsls2, confirm: optics; inferred from XF:16IDA}
+- {name: 16-ID-B, facility_code: nsls2, confirm: SSA hutch; inferred from XF:16IDB}
+- {name: 16-ID-C, facility_code: nsls2, confirm: endstation; inferred from XF:16IDC}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; needs confirm.
+  devices:
+  - {name: Monochromator, family: Monochromator, pv: "XF:16IDA-OP{Mono:DCM", new: true, confirm: DCM; Monochromator (catalog)}
+  - {name: WhiteBeamMirror, family: Mirror, pv: "XF:16IDA-OP{Mir:WBM", new: true, confirm: white-beam mirror; Mirror (catalog)}
+  - {name: KBMirrorHorizontal, family: Mirror, pv: "XF:16IDA-OP{Mir:KBH", new: true, confirm: "KB horizontal (+ KB-PS); Mirror (catalog)"}
+  - {name: KBMirrorVertical, family: Mirror, pv: "XF:16IDA-OP{Mir:KBV", new: true, confirm: KB vertical; Mirror (catalog)}
+  - {name: WhiteBeamSlit1, family: Slit, pv: "XF:16IDA-OP{Slt:1", new: true, confirm: white-beam slit; Slit (catalog)}
+  - {name: Attenuator, family: Filter, pv: "XF:16IDB-OP{Fltr:Attn-Ax:", new: true, confirm: attenuator; Filter (catalog)}
+  - {name: SecondarySourceAperture, family: Slit, pv: "XF:16IDB-OP{Slt:SSA1", new: true, confirm: SSA; Slit (catalog)}
+  - {name: HighResMirror1, family: Mirror, pv: "XF:16IDC-OP{Mir:HRM1", new: true, confirm: "HRM mirror (+ HRM2); Mirror (catalog)"}
+  - {name: GuardSlit1, family: Slit, pv: "XF:16IDC-OP{Slt:G1", new: true, confirm: "guard slit (+ G2, DDA); Slit (catalog)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; needs confirm.
+  devices:
+  - {name: SolutionCell, family: LinearStage, pv: "XF:16IDC-ES:Sol{Enc-Ax:", new: true, confirm: "solution flow cell stage (+ Sol{ctrl}); LinearStage (catalog)"}
+  - {name: InAirMicroscope, family: GenericProbe, pv: "XF:16IDC-ES:InAir{Mscp:1-Ax:", new: true, confirm: in-air microscope; LOOSE GenericProbe}
+  - {name: HPLCFlow, family: FlowController, pv: "XF:16IDC-HPLC:{ES-Flow_SAXS}", new: true, confirm: "HPLC/SEC flow (+ ES-Flow_UV); FlowController (catalog, graduated); canonical liquid-flow consumer"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; needs confirm.
+  devices:
+  - {name: SAXSDetectorStage, family: LinearStage, pv: "XF:16IDC-ES{Stg:SAXS", new: true, confirm: SAXS detector stage; LinearStage (catalog)}
+  - {name: WAXSDetectorStage1, family: LinearStage, pv: "XF:16IDC-ES{Stg:WAXS1", new: true, confirm: "WAXS detector stage (+ WAXS2); LinearStage (catalog)"}
+  - {name: SAXSBeamStop, family: BeamStop, pv: "XF:16IDC-ES{BS:SAXS", new: true, confirm: SAXS beamstop; BeamStop (catalog)}
+  - {name: FluorescenceSpectrometer, family: EnergyDispersiveSpectrometer, pv: "XF:16IDC-ES{Xsp:1}", new: true, confirm: Xspress3; EnergyDispersiveSpectrometer (catalog, graduated)}
+  - {name: TetrAMM, family: FluxMonitor, pv: "XF:16IDC-ES{TETRAMM:1}", new: true, confirm: "TetrAMM 4-channel (I0); FluxMonitor (catalog, graduated)"}
+  - {name: Zebra1, family: TimingController, pv: "XF:16IDC-ES{Zeb:1}", new: true, confirm: "fly-scan gating; TimingController (catalog), confirm"}
+  - {name: BeamPositionMonitor, family: GenericProbe, pv: "XF:16IDB-BI{BPM:1", new: true, confirm: "BPMs; LOOSE GenericProbe, held DIAG-1"}

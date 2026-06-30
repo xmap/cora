@@ -64,6 +64,15 @@ class MethodDefined:
     field fold via `payload.get("needed_assembly_ids", ())`. Values are
     sorted by string form in `to_payload` for persistence determinism
     (matches needed_family_ids). Default empty tuple.
+
+    `needed_input_kinds` (additive evolution) carries the kinds/roles
+    of input Datasets the Method consumes (for example
+    "raw-projections", "flat-field", "prior-reconstruction"), NOT
+    Dataset instance ids. Eventual-consistency: resolved to concrete
+    input Datasets at Plan-bind / start_run. Older events without the
+    field fold via `payload.get("needed_input_kinds", ())`. Values are
+    sorted lexically in `to_payload` for persistence determinism
+    (matches needed_supplies). Default empty tuple.
     """
 
     method_id: UUID
@@ -71,6 +80,7 @@ class MethodDefined:
     needed_family_ids: tuple[UUID, ...]
     occurred_at: datetime
     needed_supplies: tuple[str, ...] = ()
+    needed_input_kinds: tuple[str, ...] = ()
     # additive evolution: capability_id points to the
     # universal Capability template this Method realizes. Defaults
     # None for older events without the field (additive-state pattern); current decider
@@ -274,6 +284,7 @@ def to_payload(event: MethodEvent) -> dict[str, Any]:
             name=name,
             needed_family_ids=needed_family_ids,
             needed_supplies=needed_supplies,
+            needed_input_kinds=needed_input_kinds,
             capability_id=capability_id,
             needed_assembly_ids=needed_assembly_ids,
             execution_pattern=execution_pattern,
@@ -289,6 +300,10 @@ def to_payload(event: MethodEvent) -> dict[str, Any]:
                 # deterministic payload bytes (matches needed_family_ids
                 # convention; same idempotency-hash story).
                 "needed_supplies": sorted(needed_supplies),
+                # additive: input-kind strings sorted lexically for
+                # deterministic payload bytes (matches needed_supplies
+                # convention). Always rendered in the event payload.
+                "needed_input_kinds": sorted(needed_input_kinds),
                 # additive: capability_id is None on older events
                 # without the field; the from_stored fallback to None
                 # preserves legacy stream replay.
@@ -416,6 +431,10 @@ def from_stored(stored: StoredEvent) -> MethodEvent:
                     # payloads have no needed_supplies key; default to empty
                     # tuple. Additive-evolution pattern.
                     needed_supplies=tuple(payload.get("needed_supplies", ())),
+                    # forward-compat: older MethodDefined payloads have no
+                    # needed_input_kinds key; default to empty tuple.
+                    # Additive-evolution pattern.
+                    needed_input_kinds=tuple(payload.get("needed_input_kinds", ())),
                     # forward-compat: older MethodDefined payloads
                     # have no capability_id key; default to None. Currently
                     # the decider enforces non-None at write time.

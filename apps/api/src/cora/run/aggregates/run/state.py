@@ -124,6 +124,14 @@ RUN_NAME_MAX_LENGTH = 200
 # anti-hook #3 — but unbounded set growth would still bloat events +
 # payloads with no domain justification).
 RUN_PINNED_CALIBRATIONS_MAX_ENTRIES = 64
+# cardinality cap on the input Dataset ref set
+# (Run.input_dataset_ids). Same default + same precedent justification
+# as RUN_PINNED_CALIBRATIONS_MAX_ENTRIES: per-entry existence is NOT
+# checked at the write path (the cited Datasets are cross-BC eventual-
+# consistency references, PROV `used` atomic IDs targeting the Dataset
+# not a Distribution) but unbounded set growth would still bloat events
+# + payloads with no domain justification.
+RUN_INPUT_DATASETS_MAX_ENTRIES = 64
 
 # `Identifier(scheme, value)` carries open-scheme anti-corruption refs
 # mirroring the Safety BC's ExternalBinding shape (proposal / btr /
@@ -433,6 +441,92 @@ class RunRequiresActiveClearanceError(Exception):
             f"clearance with a matching binding before starting the run."
         )
         self.run_id = run_id
+
+
+class RunInputNotVerifiedError(Exception):
+    """A reconstruction Run's input Dataset has no Verified Distribution.
+
+    Cross-BC genesis gate: when `StartRun.input_dataset_ids` is non-empty
+    the handler pre-loads each input Dataset's non-Discarded Distributions
+    via `DatasetDistributionLookup.find_by_datasets` and the decider
+    requires at least ONE of them to be in status Verified. This error
+    fires when a declared input Dataset has zero Verified Distributions,
+    either because it has no Distribution at all or because every
+    Distribution is in another status (Registered / Stale / ...).
+
+    Genesis-only: the gate runs at first start, never on resume (a Run
+    that already passed it continues without re-checking). Reachability
+    and storage-tier are deferred; the gate is present-and-Verified only
+    per [[project_run_input_dependency_design]]. Mapped to HTTP 409.
+    """
+
+    def __init__(self, run_id: UUID, dataset_id: UUID) -> None:
+        super().__init__(
+            f"Run {run_id} cannot start: input Dataset {dataset_id} has no "
+            f"Verified Distribution. Register and verify a Distribution for "
+            f"that Dataset before starting the reconstruction."
+        )
+        self.run_id = run_id
+        self.dataset_id = dataset_id
+
+
+class RunInputNotReachableError(Exception):
+    """A reconstruction Run's input Dataset has a Verified Distribution, but
+    none of its Verified copies sits on a Storage tier the chosen compute
+    resource can read.
+
+    Cross-BC genesis gate, reachability arm: when `StartRun.compute_resource_code`
+    is supplied the handler resolves it to the set of readable Storage Supply
+    ids via `ComputeReachabilityLookup` and threads it onto
+    `RunStartContext.reachable_storage_supply_ids`. The decider then requires,
+    per declared input, at least one Verified Distribution whose `supply_id`
+    is in that set. This error fires when the input clears the
+    present-and-Verified check (it HAS a Verified Distribution) yet every
+    Verified copy rests on an unreachable tier.
+
+    Distinct from `RunInputNotVerifiedError` (no Verified Distribution at
+    all, which is checked first and takes precedence) and from
+    `RunComputeResourceUnknownError` (the named compute resource is not
+    configured, a typo rather than a data problem). Mapped to HTTP 409.
+    """
+
+    def __init__(self, run_id: UUID, dataset_id: UUID) -> None:
+        super().__init__(
+            f"Run {run_id} cannot start: input Dataset {dataset_id} has a "
+            f"Verified Distribution, but no Verified copy is on a Storage tier "
+            f"the chosen compute resource can read. Stage a Verified copy on a "
+            f"reachable tier before starting the reconstruction."
+        )
+        self.run_id = run_id
+        self.dataset_id = dataset_id
+
+
+class RunComputeResourceUnknownError(Exception):
+    """StartRun named a compute_resource_code the deployment config does not
+    map to any readable-storage set.
+
+    Cross-BC genesis gate, resolution arm: when `StartRun.compute_resource_code`
+    is supplied the handler calls
+    `ComputeReachabilityLookup.reachable_storage_supply_ids(code)`; a None
+    return means the code is unknown (not configured). The handler raises
+    this rather than silently skipping the reachability check, so a typo in
+    the compute resource name surfaces as an actionable error instead of an
+    unchecked start.
+
+    Distinct from `RunInputNotReachableError` (the code IS configured but
+    no input rests on a reachable tier, a genuine data problem). This error
+    is a configuration typo. Mapped to HTTP 409.
+    """
+
+    def __init__(self, run_id: UUID, compute_resource_code: str) -> None:
+        super().__init__(
+            f"Run {run_id} cannot start: compute resource {compute_resource_code!r} "
+            f"is not configured in the deployment reachability map. Check the "
+            f"compute_resource_code for a typo, or configure the resource's "
+            f"readable Storage tiers before starting the reconstruction."
+        )
+        self.run_id = run_id
+        self.compute_resource_code = compute_resource_code
 
 
 class RunClearanceCoverageMismatchError(Exception):
@@ -1203,6 +1297,19 @@ class Run:
     # (Q5/Q6 research). Defaults to empty frozenset so legacy streams
     # without the field fold cleanly via `payload.get("pinned_calibration_ids", [])`.
     pinned_calibration_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
+    # input Dataset reference set: the Dataset id(s) a
+    # reconstruction Run consumes (PROV `used`: an Activity used an
+    # Entity; the reference targets the DATASET, not a Distribution).
+    # Each entry is a Dataset.id. NO cross-BC existence check at the
+    # write path (id-only atomic refs; cross-BC eventual-consistency
+    # stance, same as pinned_calibration_ids); only set cardinality is
+    # validated. Defaults to empty frozenset so legacy streams without
+    # the field fold cleanly via
+    # `payload.get("input_dataset_ids", [])` (additive-state pattern).
+    # The start_run gate will later read each input Dataset's Verified
+    # Distribution; that read goes through the Data BC, never a fold-
+    # time check here.
+    input_dataset_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
     # conduct-observed actuation provenance. None until a terminal
     # event sets it: only RunCompleted / RunAborted issued by the
     # compute CONDUCT runtime (`Reckoner`) carry a non-None
@@ -1354,4 +1461,46 @@ def validate_pinned_calibration_ids(value: frozenset[UUID]) -> frozenset[UUID]:
     """
     if len(value) > RUN_PINNED_CALIBRATIONS_MAX_ENTRIES:
         raise InvalidPinnedCalibrationsError(len(value))
+    return value
+
+
+class InvalidInputDatasetsError(ValueError):
+    """The supplied input_dataset_ids set has too many entries.
+
+    Per-entry validation (each is a UUID) is type-enforced; the
+    set-cardinality cap protects against accidentally massive input-
+    Dataset reference payloads on a single reconstruction Run start.
+    Mirrors `InvalidPinnedCalibrationsError` shape exactly (same
+    precedent + same default cap of 64). Validated at the decider; the
+    API boundary also enforces `max_length` via Pydantic for fast 422
+    failures on obviously-malformed input.
+
+    NO cross-BC existence check on the cited Dataset ids (PROV `used`
+    atomic-ID model targeting the Dataset, not a Distribution) +
+    canonical DDD eventual-consistency stance on cross-aggregate rules
+    (Vernon/Evans). Symmetric to the pinned_calibration_ids decider-
+    time treatment.
+
+    Mapped to HTTP 400.
+    """
+
+    def __init__(self, count: int) -> None:
+        super().__init__(
+            f"Run input_dataset_ids must have at most "
+            f"{RUN_INPUT_DATASETS_MAX_ENTRIES} entries (got: {count})"
+        )
+        self.count = count
+
+
+def validate_input_dataset_ids(value: frozenset[UUID]) -> frozenset[UUID]:
+    """Normalize / validate input_dataset_ids for the Run state and decider.
+
+    Cardinality-only check. NO per-element existence check (PROV `used`
+    atomic-ID model targeting the Dataset, not a Distribution; cross-BC
+    eventual-consistency per Vernon/Evans DDD canon). Mirrors
+    `validate_pinned_calibration_ids` exactly: same shape, same default
+    cap, same justification.
+    """
+    if len(value) > RUN_INPUT_DATASETS_MAX_ENTRIES:
+        raise InvalidInputDatasetsError(len(value))
     return value

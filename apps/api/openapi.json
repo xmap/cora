@@ -3877,6 +3877,94 @@
         "title": "ConductRunResponse",
         "type": "object"
       },
+      "ConductUntilAdvisedRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /procedures/{procedure_id}/conduct-until-advised`.",
+        "properties": {
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SteeringBudgetRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional informational budget surfaced to the brain (not enforced here)."
+          },
+          "decide": {
+            "$ref": "#/components/schemas/DecideConfigRequest",
+            "description": "The in-CORA brain selection (substrate + grid resolution)."
+          },
+          "objective": {
+            "$ref": "#/components/schemas/cora__operation___advise_wire__SteeringObjectiveRequest",
+            "description": "What good means: the steering objective the brain weighs."
+          },
+          "objective_capture_name": {
+            "description": "Captures-slot name the per-pass deposit fills; the loop surfaces it to the brain as the objective scalar after each pass.",
+            "minLength": 1,
+            "title": "Objective Capture Name",
+            "type": "string"
+          },
+          "space": {
+            "$ref": "#/components/schemas/cora__operation___advise_wire__SteeringSpaceRequest",
+            "description": "The feasible search space (axes + bounds / choices) the brain proposes in."
+          }
+        },
+        "required": [
+          "objective",
+          "space",
+          "objective_capture_name"
+        ],
+        "title": "ConductUntilAdvisedRequest",
+        "type": "object"
+      },
+      "ConductUntilAdvisedResponse": {
+        "description": "Response body for the conduct_until_advised slice.\n\n`succeeded` is True only when the brain advised Stop and the Procedure\ncompleted; a pass / brain fault or the absolute ceiling surfaces\n`succeeded=False` with `failure` carrying the cause. `completed_count` is\nthe final pass's successful step count (informational).",
+        "properties": {
+          "actuation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actuation Kind"
+          },
+          "completed_count": {
+            "title": "Completed Count",
+            "type": "integer"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConductorFailureResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "procedure_id": {
+            "format": "uuid",
+            "title": "Procedure Id",
+            "type": "string"
+          },
+          "succeeded": {
+            "title": "Succeeded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "procedure_id",
+          "completed_count",
+          "succeeded"
+        ],
+        "title": "ConductUntilAdvisedResponse",
+        "type": "object"
+      },
       "ConductUntilConvergedRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /procedures/{procedure_id}/conduct-until-converged`.",
@@ -4549,6 +4637,31 @@
         "title": "DatasetSummaryDTO",
         "type": "object"
       },
+      "DecideConfigRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape selecting the in-CORA brain behind the DecidePort.",
+        "properties": {
+          "points_per_axis": {
+            "default": 5,
+            "description": "Grid-walk resolution for continuous axes (ignored by in_memory and choices).",
+            "minimum": 1.0,
+            "title": "Points Per Axis",
+            "type": "integer"
+          },
+          "substrate": {
+            "default": "grid_walk",
+            "description": "Which in-CORA decider drives the loop: 'in_memory' or 'grid_walk'.",
+            "enum": [
+              "in_memory",
+              "grid_walk"
+            ],
+            "title": "Substrate",
+            "type": "string"
+          }
+        },
+        "title": "DecideConfigRequest",
+        "type": "object"
+      },
       "DecisionConfidenceSource": {
         "description": "How the `confidence` value was computed.\n\nISO 42001 audit asks 'how was this confidence derived?'; this\nenum is the answer. Stored alongside the float so consumers can\ndistinguish calibrated probabilistic estimates from\nself-reported model claims.\n\nValues:\n  - `self_reported`: AI decider's own confidence claim, as a\n    learned linguistic pattern. NOT a posterior probability.\n    Lowest audit weight.\n  - `logprob`: derived from token log-probabilities. Closer to\n    a calibrated estimate but still model-internal.\n  - `ensemble`: aggregated over multiple deciders / runs /\n    models. Higher audit weight; carries the implicit promise\n    of uncertainty quantification.\n  - `human`: subjective human confidence rating. Audit-weight\n    is operator-dependent; treat as direction-of-confidence,\n    not a probability.",
         "enum": [
@@ -4834,6 +4947,26 @@
           "created_at"
         ],
         "title": "DecisionSummaryDTO",
+        "type": "object"
+      },
+      "DeclareCampaignSteeringRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /campaigns/{campaign_id}/declare-steering`.\n\nDeclares the Campaign's steering INTENT: what good means + where a\nfuture across-Run steerer may look. PUT semantics: a re-declare\noverwrites the prior intent wholesale.",
+        "properties": {
+          "objective": {
+            "$ref": "#/components/schemas/cora__campaign__features__declare_campaign_steering__route__SteeringObjectiveRequest",
+            "description": "What good means (objective sense + optional target)."
+          },
+          "space": {
+            "$ref": "#/components/schemas/cora__campaign__features__declare_campaign_steering__route__SteeringSpaceRequest",
+            "description": "The feasible search space (>= 1 axis)."
+          }
+        },
+        "required": [
+          "objective",
+          "space"
+        ],
+        "title": "DeclareCampaignSteeringRequest",
         "type": "object"
       },
       "DecommissionEnclosureRequest": {
@@ -6208,6 +6341,23 @@
           "reason"
         ],
         "title": "DiscardDatasetRequest",
+        "type": "object"
+      },
+      "DiscardDistributionRequest": {
+        "description": "Body for `POST /distributions/{distribution_id}/discard`.",
+        "properties": {
+          "reason": {
+            "description": "Free-form reason for the discard (1-500 chars after trimming). Today the field is unstructured; structured taxonomy is future-additive on the same triggers as the Dataset discard reason.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DiscardDistributionRequest",
         "type": "object"
       },
       "DiscardSubjectRequest": {
@@ -13478,6 +13628,26 @@
         "title": "SealSummaryDTO",
         "type": "object"
       },
+      "SetAgentTargetPlanRequest": {
+        "description": "Body for `POST /agents/{agent_id}/target-plan`.",
+        "properties": {
+          "target_plan_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The recipe Plan this autonomous agent starts for each ready Subject. Pass null to clear the target (the agent initiates nothing until a Plan is set again).",
+            "title": "Target Plan Id"
+          }
+        },
+        "title": "SetAgentTargetPlanRequest",
+        "type": "object"
+      },
       "SignSealPointerRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /federation/seals/{facility_code}/pointer/sign`.",
@@ -13888,6 +14058,49 @@
         },
         "title": "StartSealRepublishingRequest",
         "type": "object"
+      },
+      "SteeringBudgetRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringBudget` (informational for the brain).",
+        "properties": {
+          "iterations_remaining": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iterations Remaining"
+          },
+          "wall_clock_seconds_remaining": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wall Clock Seconds Remaining"
+          }
+        },
+        "title": "SteeringBudgetRequest",
+        "type": "object"
+      },
+      "SteeringObjectiveKind": {
+        "description": "The optimization SENSE of an objective, without a search strategy.\n\nThe seam tells the brain what 'better' means; the brain owns how to get\nthere. `Minimize` / `Maximize` drive a metric down / up; `Satisfy` hits\na target value; `Explore` has no scalar target (the brain just covers\nthe space, e.g. a grid). Anything richer (acquisition function, kernel,\nexploration weight) is the adapter's concern, deliberately not here.",
+        "enum": [
+          "Minimize",
+          "Maximize",
+          "Satisfy",
+          "Explore"
+        ],
+        "title": "SteeringObjectiveKind",
+        "type": "string"
       },
       "StopRunRequest": {
         "description": "Body for `POST /runs/{run_id}/stop`.",
@@ -16028,6 +16241,218 @@
         ],
         "title": "_WithinToleranceCriterion",
         "type": "object"
+      },
+      "cora__campaign__features__declare_campaign_steering__route__SteeringAxisRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringAxis`.",
+        "properties": {
+          "choices": {
+            "description": "Enumerated values for a discrete/categorical axis (empty for continuous).",
+            "items": {},
+            "title": "Choices",
+            "type": "array"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lower bound for a continuous axis.",
+            "title": "Lower"
+          },
+          "name": {
+            "description": "Axis label the across-Run steerer proposes coordinates for.",
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Upper bound for a continuous axis.",
+            "title": "Upper"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SteeringAxisRequest",
+        "type": "object"
+      },
+      "cora__campaign__features__declare_campaign_steering__route__SteeringObjectiveRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringObjective`.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SteeringObjectiveKind",
+            "description": "What good means: Minimize / Maximize / Satisfy / Explore. A Satisfy objective drives toward target_value on target_measurement_name."
+          },
+          "target_measurement_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the objective measurement the steerer reads (None for pure Explore).",
+            "title": "Target Measurement Name"
+          },
+          "target_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Setpoint the objective drives toward (used by Satisfy; None otherwise).",
+            "title": "Target Value"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "SteeringObjectiveRequest",
+        "type": "object"
+      },
+      "cora__campaign__features__declare_campaign_steering__route__SteeringSpaceRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringSpace`.",
+        "properties": {
+          "axes": {
+            "description": "The feasible set the across-Run steerer may propose within.",
+            "items": {
+              "$ref": "#/components/schemas/cora__campaign__features__declare_campaign_steering__route__SteeringAxisRequest"
+            },
+            "minItems": 1,
+            "title": "Axes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "axes"
+        ],
+        "title": "SteeringSpaceRequest",
+        "type": "object"
+      },
+      "cora__operation___advise_wire__SteeringAxisRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringAxis`.",
+        "properties": {
+          "choices": {
+            "description": "Enumerated values for a discrete/categorical axis (empty for continuous).",
+            "items": {},
+            "title": "Choices",
+            "type": "array"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lower bound for a continuous axis.",
+            "title": "Lower"
+          },
+          "name": {
+            "description": "Axis label the brain proposes coordinates for; must be consumed by a SteeringRef setpoint in the pinned recipe block.",
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Upper bound for a continuous axis.",
+            "title": "Upper"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SteeringAxisRequest",
+        "type": "object"
+      },
+      "cora__operation___advise_wire__SteeringObjectiveRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringObjective`.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SteeringObjectiveKind",
+            "description": "What good means: Minimize / Maximize / Satisfy / Explore. The brain weighs it; a grid walker only early-stops on a met Satisfy target."
+          },
+          "target_measurement_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the objective measurement the brain reads (None for pure Explore).",
+            "title": "Target Measurement Name"
+          },
+          "target_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Setpoint the objective drives toward (used by Satisfy; None otherwise).",
+            "title": "Target Value"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "SteeringObjectiveRequest",
+        "type": "object"
+      },
+      "cora__operation___advise_wire__SteeringSpaceRequest": {
+        "additionalProperties": false,
+        "description": "JSON wire shape for a `SteeringSpace`.",
+        "properties": {
+          "axes": {
+            "description": "The feasible set the brain may propose within.",
+            "items": {
+              "$ref": "#/components/schemas/cora__operation___advise_wire__SteeringAxisRequest"
+            },
+            "minItems": 1,
+            "title": "Axes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "axes"
+        ],
+        "title": "SteeringSpaceRequest",
+        "type": "object"
       }
     }
   },
@@ -17518,6 +17943,96 @@
           }
         },
         "summary": "Suspend an Agent (Versioned -> Suspended; non-terminal)",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/agents/{agent_id}/target-plan": {
+      "post": {
+        "operationId": "post_agents_set_target_plan_agents__agent_id__target_plan_post",
+        "parameters": [
+          {
+            "description": "Target agent's id.",
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "description": "Target agent's id.",
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAgentTargetPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No agent exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Agent is `Deprecated` (only blocking source state)."
+          },
+          "422": {
+            "description": "Request body or path parameter failed schema validation."
+          }
+        },
+        "summary": "Set or clear an autonomous Agent's target Plan (PUT semantics; null clears)",
         "tags": [
           "agent"
         ]
@@ -22325,6 +22840,106 @@
           }
         },
         "summary": "Close a Campaign (Active | Held -> Closed)",
+        "tags": [
+          "campaign"
+        ]
+      }
+    },
+    "/campaigns/{campaign_id}/declare-steering": {
+      "post": {
+        "operationId": "post_campaigns_declare_steering_campaigns__campaign_id__declare_steering_post",
+        "parameters": [
+          {
+            "description": "Target Campaign's id.",
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "description": "Target Campaign's id.",
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeclareCampaignSteeringRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (empty search space, or a Satisfy objective missing its target_value / target_measurement_name)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Campaign exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Campaign is not in Planned or Active status (declare_campaign_steering requires Planned | Active)."
+          },
+          "422": {
+            "description": "Request body failed schema validation."
+          }
+        },
+        "summary": "Declare a Campaign's steering intent (objective + search space)",
         "tags": [
           "campaign"
         ]
@@ -27322,6 +27937,106 @@
           }
         },
         "summary": "Register a new Distribution",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/distributions/{distribution_id}/discard": {
+      "post": {
+        "operationId": "post_distributions_discard_distributions__distribution_id__discard_post",
+        "parameters": [
+          {
+            "description": "Target distribution's id.",
+            "in": "path",
+            "name": "distribution_id",
+            "required": true,
+            "schema": {
+              "description": "Target distribution's id.",
+              "format": "uuid",
+              "title": "Distribution Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscardDistributionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated: whitespace-only reason."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No distribution exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Discard guard violated: the copy is already Discarded (re-discarding raises), the parent Dataset is Discarded, or no sibling copy is Verified on a different storage tier (bytes-redundancy invariant); OR a concurrent write to the same Distribution stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          }
+        },
+        "summary": "Discard a Distribution copy (any status -> Discarded)",
         "tags": [
           "data"
         ]
@@ -36915,6 +37630,84 @@
           }
         },
         "summary": "Conduct a Procedure: start -> walk steps via ControlPort + actions + checks -> complete (success) or abort (failure).",
+        "tags": [
+          "operation"
+        ]
+      }
+    },
+    "/procedures/{procedure_id}/conduct-until-advised": {
+      "post": {
+        "description": "Conduct a Procedure as a steered loop. Failures land in the body.",
+        "operationId": "post_procedures_conduct_until_advised_procedures__procedure_id__conduct_until_advised_post",
+        "parameters": [
+          {
+            "description": "Target procedure's id.",
+            "in": "path",
+            "name": "procedure_id",
+            "required": true,
+            "schema": {
+              "description": "Target procedure's id.",
+              "format": "uuid",
+              "title": "Procedure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConductUntilAdvisedRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConductUntilAdvisedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "422": {
+            "description": "Request body failed schema validation: missing objective / space, empty space, unknown objective kind, invalid budget."
+          }
+        },
+        "summary": "Conduct a recipe-driven Procedure in a steered loop: measure, ask the brain where to go next, repeat until it advises Stop.",
         "tags": [
           "operation"
         ]

@@ -36,6 +36,9 @@ InvalidRunInterruptedAtError).
     RunRequiresActiveClearanceError, RunClearanceCoverageMismatchError
   - 409 (Run-start supply pre-flight gate):
     RunRequiresAvailableSupplyError, RunSupplyCoverageMismatchError
+  - 409 (Run-start input-data genesis gate):
+    RunInputNotVerifiedError, RunInputNotReachableError,
+    RunComputeResourceUnknownError
   - 409 (Run transition guards, 6f-2): RunCannotCompleteError,
     RunCannotAbortError
   - 409 (Run transition guards, 6f-3): RunCannotHoldError,
@@ -46,6 +49,7 @@ InvalidRunInterruptedAtError).
     InvalidRunAdjustSchemaError, InvalidRunAdjustReasonError
   - 409 (Run adjust transition guard, 6j): RunCannotAdjustError
   - 400 (validation, 12b-5 adds): InvalidPinnedCalibrationsError
+  - 400 (validation): InvalidInputDatasetsError
 """
 
 from fastapi import FastAPI, Request, status
@@ -53,6 +57,7 @@ from fastapi.responses import JSONResponse
 
 from cora.run.aggregates.run import (
     InvalidChannelNameError,
+    InvalidInputDatasetsError,
     InvalidObservationValueError,
     InvalidPinnedCalibrationsError,
     InvalidRunAbortReasonError,
@@ -80,7 +85,10 @@ from cora.run.aggregates.run import (
     RunCannotTruncateError,
     RunCapabilitiesNotSatisfiedError,
     RunClearanceCoverageMismatchError,
+    RunComputeResourceUnknownError,
     RunEnclosureCoverageMismatchError,
+    RunInputNotReachableError,
+    RunInputNotVerifiedError,
     RunNotFoundError,
     RunObservationLogbookClosedError,
     RunPlanAssetDecommissionedError,
@@ -196,6 +204,9 @@ def register_run_routes(app: FastAPI) -> None:
         # Pin-set cardinality cap on AsShot citation (12b-5; symmetric
         # to Data BC's InvalidUsedCalibrationsError on register_dataset).
         InvalidPinnedCalibrationsError,
+        # Input-Dataset reference set cardinality cap (PROV `used`;
+        # symmetric to the pinned_calibration_ids cap).
+        InvalidInputDatasetsError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
     for not_found_cls in (RunNotFoundError,):
@@ -223,6 +234,13 @@ def register_run_routes(app: FastAPI) -> None:
         # unknown branch when a beam PV could not be read.
         RunRequiresOpenBeamShuttersError,
         RunBeamAvailabilityUnknownError,
+        # Run-start input-data genesis gate: a declared input Dataset
+        # has no Verified Distribution; or its Verified copy is not on a
+        # Storage tier the chosen compute resource can read; or the named
+        # compute resource is not configured in the reachability map.
+        RunInputNotVerifiedError,
+        RunInputNotReachableError,
+        RunComputeResourceUnknownError,
         # Run-start campaign-membership gate (6i-c).
         RunCannotJoinCampaignError,
         # Run-side campaign-membership invariant (6i-c).

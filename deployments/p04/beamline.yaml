@@ -1,0 +1,270 @@
+# P04 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P04 "Variable Polarization XUV Beamline" is the soft X-ray spectroscopy beamline
+# at PETRA III (DESY, Hamburg), 250-3000 eV, fed by an APPLE-II-type variable-
+# polarization undulator through a plane-grating monochromator. It is bound to the
+# PETRA III Site (deployments/petra-iii/site.yaml), the second PETRA III beamline
+# after P01, and the fleet's entry into the soft X-ray / grating-monochromator regime.
+#
+# STATUS: reverse-engineered from P04's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p04, branch
+# debian/jessie; the xml/online_haspp04exp{1,2}.xml per-endstation Tango device
+# registries). Device logical names and Tango control handles are real, read from
+# that registry; vendor part numbers, grating line densities, energy calibration,
+# and physical positions are not in it and are open questions. Every value is carried
+# confirm until P04 staff verify it. The extraction is in research/petra-iii/.
+#
+# WHAT IS NEW: the soft X-ray optics regime. P04's monochromator binds the catalog
+# GratingMonochromator Family (a plane-grating monochromator, NOT the crystal
+# Monochromator P01 / the hard X-ray beamlines use), CORA's first GratingMonochromator
+# deployment. Otherwise no new Family: the undulator binds InsertionDevice, the
+# mirrors Mirror, the slits Slit, the diagnostic cameras Camera, the electrometers
+# FluxMonitor, the motorized phosphor screens the loose Screen. The technique (soft
+# X-ray spectroscopy: XPS / XAS / photoemission) earns no catalog Method and is
+# carried pending on the Site (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML (e.g. p04/monop04/exp2.01). The beamline optics (undulator,
+# PGM, mirrors, exit slits) report on the haspp04exp2 Tango host but are logically
+# the optics section; per the cross-host mapping decision they are homed in the
+# p04-optics enclosure with the host flagged (HOST-1). The registry exposes many
+# generically-named motor banks (exp1_mot01..16, ps2.01..14) whose per-axis roles
+# are not labelled; these are grouped as manipulator stages carrying the handles,
+# every axis role pending (GROUP-1).
+#
+# SCOPE: this cut models the soft X-ray optics (undulator, plane-grating
+# monochromator, the three mirrors, the exit slits) and the two experiment
+# endstations (EXP1 and EXP2) present in the OnlineXML, with their sample
+# manipulators, diagnostic cameras, electrometers, and motorized screens. Counter /
+# timer / ADC channels and the Sardana MeasurementGroup bookkeeping rows are filtered
+# out by the extractor and not modelled as devices.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p04/questions.md.
+
+beamline:
+  name: P04
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P04"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P04 is a variable-polarization (APPLE-II-type) undulator beamline, 250-3000 eV; the OnlineXML exposes the undulator and its gap (p04/undulatorp04) but no period, polarization modes, or row-phase axes, carried pending (SRC-1)"
+
+# Three enclosures: the soft X-ray optics section (the PGM and mirrors), and the two
+# experiment endstations. The optics devices report on the haspp04exp2 Tango host but
+# are logically the optics section (HOST-1). DESY PSS permit signals are not in the
+# OnlineXML (PSS-1).
+enclosures:
+  - name: p04-optics
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P04 optics section; not in the OnlineXML (PSS-1)"}
+  - name: p04-exp1
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for EXP1; not in the OnlineXML (PSS-1)"}
+  - name: p04-exp2
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for EXP2; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the variable-polarization undulator and the soft X-ray optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p04-optics
+  intro: "The P04 variable-polarization undulator. The OnlineXML exposes the undulator device and its gap; the polarization modes (horizontal / vertical / circular) and the row-phase axes that set them are not in the registry."
+  note: "Undulator on p04/undulatorp04; the APPLE-II row-phase / polarization control is SRC-1."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {undulator: "p04/undulatorp04/exp2.01", gap: "p04/undulatorp04/exp2.01/Gap"}
+      new: true
+      confirm: true
+      note: "P04 variable-polarization (APPLE-II-type) undulator, 250-3000 eV; gap read from the registry, polarization / row-phase axes not exposed (SRC-1); reports on the haspp04exp2 host (HOST-1)"
+
+optics:
+  stage: source
+  enclosure: p04-optics
+  intro: "The soft X-ray conditioning optics: the plane-grating monochromator that energy-selects the beam, the three mirrors that collimate / focus / refocus it, and the exit slit that sets the resolving power."
+  note: "Handles read from the OnlineXML (p04/monop04, p04/spk for the mirror axes, p04/slt for the exit slit). The grating line densities, mirror coatings, and exit-slit calibration are OPT-1. These optics report on the haspp04exp2 host but are the optics section (HOST-1)."
+  devices:
+    - name: PlaneGratingMonochromator
+      family: GratingMonochromator
+      pv: {mono: "p04/monop04/exp2.01"}
+      new: true
+      confirm: true
+      note: "plane-grating monochromator (MonoP04), 250-3000 eV; the grating line densities and the included-angle / c-value mode are OPT-1; CORA's first GratingMonochromator deployment"
+    - name: Mirror1
+      family: Mirror
+      pv: {rotation_y: "p04/spk/exp.01", translation_x: "p04/spk/exp.02"}
+      new: true
+      confirm: true
+      note: "first soft X-ray mirror (m1: roty / transx, SmarPod-style spk controller); coating and role (collimating / deflection) are OPT-1"
+    - name: Mirror2
+      family: Mirror
+      pv: {rotation_y: "p04/spk/exp.03", translation_x: "p04/spk/exp.04"}
+      new: true
+      confirm: true
+      note: "second soft X-ray mirror (m2: roty / transx); coating and role are OPT-1"
+    - name: Mirror3
+      family: Mirror
+      pv: {rotation_y: "p04/spk/exp.06", translation_x: "p04/spk/exp.05", translation_y: "p04/spk/exp.07"}
+      new: true
+      confirm: true
+      note: "third soft X-ray mirror (m3: roty / transx / transy, the refocusing mirror); coating and role are OPT-1"
+    - name: ExitSlitVertical
+      family: Slit
+      pv: {gap: "p04/slt/exp.01", offset: "p04/slt/exp.02"}
+      new: true
+      confirm: true
+      note: "vertical exit slit (slt1: vgap / voffs); sets the soft X-ray resolving power (OPT-1)"
+    - name: ExitSlit
+      family: Slit
+      pv: {left: "p04/slt/exp.03", right: "p04/slt/exp.04", gap: "p04/slt/exp.05", offset: "p04/slt/exp.06", virtual: "p04/vmexecutor/exitslit.01"}
+      new: true
+      confirm: true
+      note: "exit slit (slt2: horizontal blades + vertical gap / offset, plus the vmexecutor virtual exit-slit axis); OPT-1"
+
+# ===========================================================================
+# EXP1 endstation
+# ===========================================================================
+
+exp1-sample:
+  stage: sample
+  enclosure: p04-exp1
+  intro: "The EXP1 experiment endstation: a sample manipulator stack and a secondary positioner, with a viewing camera and a drain-current electrometer for absorption spectroscopy."
+  note: "The registry exposes generically-named motor banks (exp1_mot01..16, ps2.01..14) whose per-axis roles are not labelled; they are grouped as manipulator stages carrying the handles, every axis role pending (GROUP-1)."
+  devices:
+    - name: SampleManipulator
+      family: Manipulator
+      pv: {mot01: "p04/motor/exp1.01", mot02: "p04/motor/exp1.02", mot03: "p04/motor/exp1.03", mot04: "p04/motor/exp1.04", mot05: "p04/motor/exp1.05", mot06: "p04/motor/exp1.06", mot07: "p04/motor/exp1.07", mot08: "p04/motor/exp1.08", mot09: "p04/motor/exp1.09", mot10: "p04/motor/exp1.10", mot11: "p04/motor/exp1.11", mot12: "p04/motor/exp1.12", mot13: "p04/motor/exp1.13", mot14: "p04/motor/exp1.14", mot15: "p04/motor/exp1.15", mot16: "p04/motor/exp1.16"}
+      new: true
+      confirm: true
+      note: "EXP1 sample manipulator motor bank (exp1_mot01..16); the per-axis roles are not labelled in the registry, grouped as one Manipulator (GROUP-1)"
+    - name: SecondaryPositioner
+      family: Manipulator
+      pv: {ax01: "p04/motor/ps2.01", ax02: "p04/motor/ps2.02", ax03: "p04/motor/ps2.03", ax04: "p04/motor/ps2.04", ax05: "p04/motor/ps2.05", ax06: "p04/motor/ps2.06", ax07: "p04/motor/ps2.07", ax08: "p04/motor/ps2.08", ax09: "p04/motor/ps2.09", ax10: "p04/motor/ps2.10", ax11: "p04/motor/ps2.11", ax12: "p04/motor/ps2.12", ax13: "p04/motor/ps2.13", ax14: "p04/motor/ps2.14"}
+      new: true
+      confirm: true
+      note: "EXP1 secondary positioner motor bank (ps2.01..14); roles not labelled, grouped as one Manipulator (GROUP-1)"
+    - name: ViewCamera
+      family: Camera
+      pv: {prosilica: "p04/prosilica/1"}
+      new: true
+      confirm: true
+      note: "EXP1 viewing camera (Prosilica / Allied Vision); sample-viewing diagnostic (DET-1)"
+
+exp1-detector:
+  stage: detection
+  enclosure: p04-exp1
+  intro: "The EXP1 drain-current electrometer for total-electron-yield absorption spectroscopy."
+  note: "Keithley 6517A electrometer on p04/keithley6517a; the measured channel (sample drain current / I0) is DET-1."
+  devices:
+    - name: Electrometer
+      family: FluxMonitor
+      pv: {keithley: "p04/keithley6517a/exp1.01"}
+      new: true
+      confirm: true
+      note: "EXP1 Keithley 6517A electrometer; drain-current / flux measurement for XAS (total electron yield), bound to FluxMonitor (DET-1)"
+
+# ===========================================================================
+# EXP2 endstation
+# ===========================================================================
+
+exp2-sample:
+  stage: sample
+  enclosure: p04-exp2
+  intro: "The EXP2 experiment endstation: the exit-shutter unit (EXSU2) with its slit, translation, baffle, and beam-position monitor, plus a generic positioner and the virtual position axes."
+  note: "Handles read from p04/motor/exp2.*. EXSU2 is the EXP2 exit / experiment shutter-and-diagnostic unit; the individual roles (Spalt = slit, Trans = translation, bpm, baffle) are EXSU-1."
+  devices:
+    - name: ExitShutterUnit
+      family: Slit
+      pv: {slit: "p04/motor/exp2.01", translation: "p04/motor/exp2.02", bpm: "p04/motor/exp2.03", baffle: "p04/motor/exp2.04"}
+      new: true
+      confirm: true
+      note: "EXP2 exit-shutter / diagnostic unit (EXSU2: Spalt = slit, Trans = translation, bpm, baffle); modelled as a beam-defining Slit, the bpm / baffle roles are EXSU-1"
+    - name: ExperimentPositioner
+      family: Manipulator
+      pv: {mot06: "p04/motor/exp2.06", mot08: "p04/motor/exp2.08"}
+      new: true
+      confirm: true
+      note: "EXP2 generic positioner axes (exp2_mot06 / exp2_mot08); roles not labelled (GROUP-1)"
+    - name: VirtualPositioners
+      family: PseudoAxis
+      pv: {ps_position: "p04/vmexecutor/ps_position_exp2", screen_position: "p04/vmexecutor/screen_position_exp2"}
+      new: true
+      confirm: true
+      note: "EXP2 virtual position axes (vm_ps_position, vm_screen_position on vmexecutor) coupling the positioner / screen motions (GROUP-1)"
+
+exp2-screens:
+  stage: detection
+  enclosure: p04-exp2
+  intro: "The EXP2 in-line motorized phosphor screens and the beam-monitor cameras that image them, for beam-path diagnostics along the experiment section."
+  note: "Eight motorized screens (Screen_*) on p04/motor/exp2.*, imaged by Vimba cameras (p04/tangovimba). The screen positions and the camera-to-screen mapping are DIAG-1."
+  devices:
+    - name: DiagnosticScreens
+      family: Screen
+      pv: {aft_pgm2: "p04/motor/exp2.05", aft_rmu2: "p04/motor/exp2.07", aft_exp2: "p04/motor/exp2.09", aft_exsu2: "p04/motor/exp2.10", bef_pipe: "p04/motor/exp2.11", aft_pipe: "p04/motor/exp2.12"}
+      new: true
+      confirm: true
+      note: "EXP2 motorized phosphor diagnostic screens (Screen_aft_PGM2 / RMU2 / EXP2 / EXSU2 / PIPE); insert positions for beam-path diagnostics, bound to the loose Screen family (DIAG-1)"
+    - name: BeamMonitorCameras
+      family: Camera
+      pv: {aft_pgm2: "p04/tangovimba/bm_aft_pgm2", bef_pipe: "p04/tangovimba/bm_bef_pipe", aft_pipe: "p04/tangovimba/bm_aft_pipe", aft_smu1: "p04/tangovimba/cam10", cam09: "p04/tangovimba/cam09", cam11: "p04/tangovimba/cam11", exsu2: "p04/tangovimba/exsu2"}
+      new: true
+      confirm: true
+      note: "EXP2 beam-monitor cameras (Vimba / Allied Vision) imaging the diagnostic screens along the beam path (DIAG-1)"
+    - name: Electrometer
+      family: FluxMonitor
+      pv: {keithley: "p04/keithley6517a/exp2.01"}
+      new: true
+      confirm: true
+      note: "EXP2 Keithley 6517A electrometer; drain-current / flux measurement (DET-1)"
+
+# Cross-cutting control. P04 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P04 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as P01 and CORA's wider Tango / Sardana house style.
+    A motion axis is a Tango motor device (p04/motor/<host>.<n>), a mirror axis a
+    SmarPod-style spk controller device (p04/spk/exp.<n>), the monochromator a
+    MonoP04 device (p04/monop04), the undulator a UndulatorP04 device, and a coupled
+    axis a vmexecutor. The diagnostic cameras are TangoVimba devices and the
+    electrometers Keithley 6517A device servers. The handles are read from P04's
+    public OnlineXML registry and carried confirm (CTRL-1). The soft X-ray
+    spectroscopy acquisition (the photon-energy scan over the undulator + PGM coupled
+    to the electrometer / analyzer readout) runs as a Sardana macro; that
+    orchestration is the seam CORA's edge would conduct over its ControlPort (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the experiment and screen motors (CTRL-1)"
+    - name: SPKControllers
+      family: MotionController
+      protocol: Tango_spk
+      new: true
+      confirm: true
+      note: "SmarPod-style spk controllers driving the soft X-ray mirror and exit-slit axes (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango) backing the monochromator, undulator, and virtual axes (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P04 run needs present before it
+    can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

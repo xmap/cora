@@ -56,21 +56,21 @@ correct while a Run wraps one phase; cross-phase merge is a multi-phase
 from __future__ import annotations
 
 import contextlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation.features.conduct_procedure.command import ConductProcedure
+from cora.operation.ports.compute_port import ArtifactRef
 from cora.run.features.abort_run.command import AbortRun
 from cora.run.features.complete_run.command import CompleteRun
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
     from uuid import UUID
 
     from cora.operation.conductor import ConductorFailure, Step
     from cora.operation.features.conduct_procedure.handler import Handler as ConductProcedureHandler
-    from cora.operation.ports.compute_port import ArtifactRef
     from cora.run.features.abort_run.handler import Handler as AbortRunHandler
     from cora.run.features.complete_run.handler import Handler as CompleteRunHandler
 
@@ -95,6 +95,11 @@ class RunPhaseConductResult:
     ComputeSteps produced (threaded from the conduct), so the caller can
     register the volume Dataset against the file a reconstruction wrote.
     Empty for a control-only or value-arm phase.
+
+    `outputs` is the named artifact bus (keyed by `output_ref_name`, threaded
+    from the conduct), so a multi-step compute phase's caller selects the
+    Dataset-of-record by NAME (e.g. `outputs["recon"]`) rather than by document
+    position. Empty when no file-arm step declared an `output_ref_name`.
     """
 
     run_id: UUID
@@ -104,6 +109,7 @@ class RunPhaseConductResult:
     completed_count: int
     failure: ConductorFailure | None = None
     artifacts: tuple[ArtifactRef, ...] = ()
+    outputs: Mapping[str, ArtifactRef] = field(default_factory=dict[str, ArtifactRef])
 
 
 async def conduct_phase_then_complete_run(
@@ -172,6 +178,7 @@ async def conduct_phase_then_complete_run(
         completed_count=result.completed_count,
         failure=result.failure,
         artifacts=result.artifacts,
+        outputs=result.outputs,
     )
 
 

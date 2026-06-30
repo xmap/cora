@@ -1,0 +1,36 @@
+# CANDIDATE: hand-read from NSLS2/hex-profile-collection, NOT authoritative. PV prefixes verified
+# verbatim. Kinetix/PandA use runtime-templated prefixes (TEMPLATE-1), not bound to literals here.
+beamline: {name: HEX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 27-ID-A, facility_code: nsls2, confirm: optics; inferred from XF:27IDA}
+- {name: 27-ID-F, facility_code: nsls2, confirm: endstation; inferred from XF:27IDF}
+- {name: 27-ID-1, facility_code: nsls2, confirm: detector area; inferred from XF:27ID1}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; needs confirm.
+  devices:
+  - {name: FrontEndShutter, family: Shutter, pv: "XF:27IDA-PPS{Sh:FE}", new: true, confirm: "front-end PPS (+ L1-S1); Shutter (catalog)"}
+  - {name: DoubleLaueMono, family: Monochromator, pv: "XF:27IDA-OP:1{Mono:DCLM-Ax:", new: true, confirm: "double-Laue mono (high-energy); Monochromator (catalog)"}
+  - {name: Filter1, family: Filter, pv: "XF:27IDA-OP:1{Fltr:1-Ax:", new: true, confirm: "filter (+ Fltr:2/3/4); Filter (catalog)"}
+  - {name: WhiteBeamSlit, family: Slit, pv: "XF:27IDA-OP:1{Slt:1-Ax:", new: true, confirm: white-beam slit; Slit (catalog)}
+  - {name: EndstationSlit2, family: Slit, pv: "XF:27IDF-OP:1{Slt:2-Ax:", new: true, confirm: endstation slit; Slit (catalog)}
+  - {name: CMTSlit, family: Slit, pv: "XF:27IDF-OP:1{Slt:CMT-Ax:", new: true, confirm: tomography slit; Slit (catalog)}
+  - {name: OpticsStage1, family: LinearStage, pv: "XF:27IDF-OP:1{OPT:1-Ax:", new: true, confirm: "endstation optics (+ OPT:2); LinearStage (catalog)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; needs confirm.
+  devices:
+  - {name: CMTStage, family: LinearStage, pv: "XF:27IDF-OP:1{CMT:1-Ax:", new: true, confirm: computed-tomography sample motion; LinearStage (catalog)}
+  - {name: DiffractionStage, family: Diffractometer, pv: "XF:27IDF-OP:1{DIFF:1-Ax:", new: true, confirm: "diffraction motion; confirm Diffractometer vs stage (recurrence watch)"}
+  - {name: EDXDStage, family: LinearStage, pv: "XF:27IDF-OP:1{EDXD:1-Ax:", new: true, confirm: energy-dispersive diffraction motion; LinearStage (catalog)}
+  - {name: ImagingStage, family: LinearStage, pv: "XF:27IDF-OP:1{IMG:1-Ax:", new: true, confirm: imaging motion; LinearStage (catalog)}
+  - {name: SampleStage, family: LinearStage, pv: "XF:27IDF-OP:1{SMPL:1-Ax:", new: true, confirm: sample positioning; LinearStage (catalog)}
+  - {name: Shield, family: Housing, pv: "XF:27IDF-OP:1{SHLD:1-Ax:", new: true, confirm: "motorized shield; confirm Housing vs LinearStage"}
+  - {name: MotionController1, family: MotionController, pv: "XF:27IDF-OP:1{MC:1-Ax:", new: true, confirm: "motion controllers (MC:1, MC:5); MotionController (catalog)"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; needs confirm.
+  devices:
+  - {name: GeRMDetector, family: EnergyDispersiveSpectrometer, pv: "XF:27ID1-ES{GeRM-Det:1}", new: true, confirm: "germanium strip energy-dispersive detector; EnergyDispersiveSpectrometer (catalog, graduated)"}
+  - {name: PerkinElmer, family: Camera, pv: "XF:27ID1-ES{PE-Det:1}", new: true, confirm: Perkin-Elmer flat-panel (imaging); Camera (catalog)}
+  - {name: SampleAlignCam, family: GenericProbe, pv: "XF:27ID1-ES{Sample-Cam:1}", new: true, confirm: sample alignment camera; LOOSE GenericProbe}

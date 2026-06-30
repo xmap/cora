@@ -199,6 +199,32 @@ nav:
         - Techniques: deployments/9-id/techniques.md
         - Governance: deployments/9-id/governance.md
         - Model: deployments/9-id/model.md
+      - 12-ID-E:
+        - deployments/12-id-e/index.md
+        - Open questions: deployments/12-id-e/questions.md
+        - The beamline:
+          - deployments/12-id-e/equipment/index.md
+          - Source: deployments/12-id-e/beamline.md
+          - Sample: deployments/12-id-e/equipment/sample.md
+          - Detector: deployments/12-id-e/equipment/detector.md
+          - Controls: deployments/12-id-e/equipment/controls.md
+          - Inventory: deployments/12-id-e/inventory.md
+        - Techniques: deployments/12-id-e/techniques.md
+        - Governance: deployments/12-id-e/governance.md
+        - Model: deployments/12-id-e/model.md
+      - 13-ID-D:
+        - deployments/13-id-d/index.md
+        - Open questions: deployments/13-id-d/questions.md
+        - The beamline:
+          - deployments/13-id-d/equipment/index.md
+          - Source: deployments/13-id-d/beamline.md
+          - Sample: deployments/13-id-d/equipment/sample.md
+          - Detector: deployments/13-id-d/equipment/detector.md
+          - Controls: deployments/13-id-d/equipment/controls.md
+          - Inventory: deployments/13-id-d/inventory.md
+        - Techniques: deployments/13-id-d/techniques.md
+        - Governance: deployments/13-id-d/governance.md
+        - Model: deployments/13-id-d/model.md
     - MAX IV:
       - deployments/maxiv/index.md
       - TomoWise:
@@ -268,6 +294,84 @@ nav:
         - Techniques: deployments/i11/techniques.md
         - Governance: deployments/i11/governance.md
         - Model: deployments/i11/model.md
+      - I24:
+        - deployments/i24/index.md
+        - Open questions: deployments/i24/questions.md
+        - The beamline:
+          - deployments/i24/equipment/index.md
+          - Source: deployments/i24/beamline.md
+          - Sample: deployments/i24/equipment/sample.md
+          - Detector: deployments/i24/equipment/detector.md
+          - Controls: deployments/i24/equipment/controls.md
+          - Inventory: deployments/i24/inventory.md
+        - Techniques: deployments/i24/techniques.md
+        - Governance: deployments/i24/governance.md
+        - Model: deployments/i24/model.md
+      - I06:
+        - deployments/i06/index.md
+        - Open questions: deployments/i06/questions.md
+        - The beamline:
+          - deployments/i06/equipment/index.md
+          - Source: deployments/i06/beamline.md
+          - Sample: deployments/i06/equipment/sample.md
+          - Detector: deployments/i06/equipment/detector.md
+          - Controls: deployments/i06/equipment/controls.md
+          - Inventory: deployments/i06/inventory.md
+        - Techniques: deployments/i06/techniques.md
+        - Governance: deployments/i06/governance.md
+        - Model: deployments/i06/model.md
+      - I10:
+        - deployments/i10/index.md
+        - Open questions: deployments/i10/questions.md
+        - The beamline:
+          - deployments/i10/equipment/index.md
+          - Source: deployments/i10/beamline.md
+          - Sample: deployments/i10/equipment/sample.md
+          - Detector: deployments/i10/equipment/detector.md
+          - Controls: deployments/i10/equipment/controls.md
+          - Inventory: deployments/i10/inventory.md
+        - Techniques: deployments/i10/techniques.md
+        - Governance: deployments/i10/governance.md
+        - Model: deployments/i10/model.md
+      - I20-1:
+        - deployments/i20-1/index.md
+        - Open questions: deployments/i20-1/questions.md
+        - The beamline:
+          - deployments/i20-1/equipment/index.md
+          - Source: deployments/i20-1/beamline.md
+          - Sample: deployments/i20-1/equipment/sample.md
+          - Detector: deployments/i20-1/equipment/detector.md
+          - Controls: deployments/i20-1/equipment/controls.md
+          - Inventory: deployments/i20-1/inventory.md
+        - Techniques: deployments/i20-1/techniques.md
+        - Governance: deployments/i20-1/governance.md
+        - Model: deployments/i20-1/model.md
+      - I19:
+        - deployments/i19/index.md
+        - Open questions: deployments/i19/questions.md
+        - The beamline:
+          - deployments/i19/equipment/index.md
+          - Source: deployments/i19/beamline.md
+          - Sample: deployments/i19/equipment/sample.md
+          - Detector: deployments/i19/equipment/detector.md
+          - Controls: deployments/i19/equipment/controls.md
+          - Inventory: deployments/i19/inventory.md
+        - Techniques: deployments/i19/techniques.md
+        - Governance: deployments/i19/governance.md
+        - Model: deployments/i19/model.md
+      - I13-1:
+        - deployments/i13-1/index.md
+        - Open questions: deployments/i13-1/questions.md
+        - The beamline:
+          - deployments/i13-1/equipment/index.md
+          - Source: deployments/i13-1/beamline.md
+          - Sample: deployments/i13-1/equipment/sample.md
+          - Detector: deployments/i13-1/equipment/detector.md
+          - Controls: deployments/i13-1/equipment/controls.md
+          - Inventory: deployments/i13-1/inventory.md
+        - Techniques: deployments/i13-1/techniques.md
+        - Governance: deployments/i13-1/governance.md
+        - Model: deployments/i13-1/model.md
     - NSLS-II:
       - deployments/nsls2/index.md
       - FXI:
@@ -329,6 +433,690 @@ nav:
         - Techniques: deployments/srx/techniques.md
         - Governance: deployments/srx/governance.md
         - Model: deployments/srx/model.md
+      - SIX:
+        - deployments/six/index.md
+        - Open questions: deployments/six/questions.md
+        - The beamline:
+          - deployments/six/equipment/index.md
+          - Source: deployments/six/beamline.md
+          - Sample: deployments/six/equipment/sample.md
+          - Detector: deployments/six/equipment/detector.md
+          - Controls: deployments/six/equipment/controls.md
+          - Inventory: deployments/six/inventory.md
+        - Techniques: deployments/six/techniques.md
+        - Governance: deployments/six/governance.md
+        - Model: deployments/six/model.md
+      - CHX:
+        - deployments/chx/index.md
+        - Open questions: deployments/chx/questions.md
+        - The beamline:
+          - deployments/chx/equipment/index.md
+          - Source: deployments/chx/beamline.md
+          - Sample: deployments/chx/equipment/sample.md
+          - Detector: deployments/chx/equipment/detector.md
+          - Controls: deployments/chx/equipment/controls.md
+          - Inventory: deployments/chx/inventory.md
+        - Techniques: deployments/chx/techniques.md
+        - Governance: deployments/chx/governance.md
+        - Model: deployments/chx/model.md
+      - CSX:
+        - deployments/csx/index.md
+        - Open questions: deployments/csx/questions.md
+        - The beamline:
+          - deployments/csx/equipment/index.md
+          - Source: deployments/csx/beamline.md
+          - Sample: deployments/csx/equipment/sample.md
+          - Detector: deployments/csx/equipment/detector.md
+          - Controls: deployments/csx/equipment/controls.md
+          - Inventory: deployments/csx/inventory.md
+        - Techniques: deployments/csx/techniques.md
+        - Governance: deployments/csx/governance.md
+        - Model: deployments/csx/model.md
+      - IOS:
+        - deployments/ios/index.md
+        - Open questions: deployments/ios/questions.md
+        - The beamline:
+          - deployments/ios/equipment/index.md
+          - Source: deployments/ios/beamline.md
+          - Sample: deployments/ios/equipment/sample.md
+          - Detector: deployments/ios/equipment/detector.md
+          - Controls: deployments/ios/equipment/controls.md
+          - Inventory: deployments/ios/inventory.md
+        - Techniques: deployments/ios/techniques.md
+        - Governance: deployments/ios/governance.md
+        - Model: deployments/ios/model.md
+      - XPD:
+        - deployments/xpd/index.md
+        - Open questions: deployments/xpd/questions.md
+        - The beamline:
+          - deployments/xpd/equipment/index.md
+          - Source: deployments/xpd/beamline.md
+          - Sample: deployments/xpd/equipment/sample.md
+          - Detector: deployments/xpd/equipment/detector.md
+          - Controls: deployments/xpd/equipment/controls.md
+          - Inventory: deployments/xpd/inventory.md
+        - Techniques: deployments/xpd/techniques.md
+        - Governance: deployments/xpd/governance.md
+        - Model: deployments/xpd/model.md
+      - ESM:
+        - deployments/esm/index.md
+        - Open questions: deployments/esm/questions.md
+        - The beamline:
+          - deployments/esm/equipment/index.md
+          - Source: deployments/esm/beamline.md
+          - Sample: deployments/esm/equipment/sample.md
+          - Detector: deployments/esm/equipment/detector.md
+          - Controls: deployments/esm/equipment/controls.md
+          - Inventory: deployments/esm/inventory.md
+        - Techniques: deployments/esm/techniques.md
+        - Governance: deployments/esm/governance.md
+        - Model: deployments/esm/model.md
+      - SMI:
+        - deployments/smi/index.md
+        - Open questions: deployments/smi/questions.md
+        - The beamline:
+          - deployments/smi/equipment/index.md
+          - Source: deployments/smi/beamline.md
+          - Sample: deployments/smi/equipment/sample.md
+          - Detector: deployments/smi/equipment/detector.md
+          - Controls: deployments/smi/equipment/controls.md
+          - Inventory: deployments/smi/inventory.md
+        - Techniques: deployments/smi/techniques.md
+        - Governance: deployments/smi/governance.md
+        - Model: deployments/smi/model.md
+      - IXS:
+        - deployments/ixs/index.md
+        - Open questions: deployments/ixs/questions.md
+        - The beamline:
+          - deployments/ixs/equipment/index.md
+          - Source: deployments/ixs/beamline.md
+          - Sample: deployments/ixs/equipment/sample.md
+          - Detector: deployments/ixs/equipment/detector.md
+          - Controls: deployments/ixs/equipment/controls.md
+          - Inventory: deployments/ixs/inventory.md
+        - Techniques: deployments/ixs/techniques.md
+        - Governance: deployments/ixs/governance.md
+        - Model: deployments/ixs/model.md
+      - SST:
+        - deployments/sst/index.md
+        - Open questions: deployments/sst/questions.md
+        - The beamline:
+          - deployments/sst/equipment/index.md
+          - Source: deployments/sst/beamline.md
+          - Sample: deployments/sst/equipment/sample.md
+          - Detector: deployments/sst/equipment/detector.md
+          - Controls: deployments/sst/equipment/controls.md
+          - Inventory: deployments/sst/inventory.md
+        - Techniques: deployments/sst/techniques.md
+        - Governance: deployments/sst/governance.md
+        - Model: deployments/sst/model.md
+      - ISS:
+        - deployments/iss/index.md
+        - Open questions: deployments/iss/questions.md
+        - The beamline:
+          - deployments/iss/equipment/index.md
+          - Source: deployments/iss/beamline.md
+          - Sample: deployments/iss/equipment/sample.md
+          - Detector: deployments/iss/equipment/detector.md
+          - Controls: deployments/iss/equipment/controls.md
+          - Inventory: deployments/iss/inventory.md
+        - Techniques: deployments/iss/techniques.md
+        - Governance: deployments/iss/governance.md
+        - Model: deployments/iss/model.md
+      - FMX:
+        - deployments/fmx/index.md
+        - Open questions: deployments/fmx/questions.md
+        - The beamline:
+          - deployments/fmx/equipment/index.md
+          - Source: deployments/fmx/beamline.md
+          - Sample: deployments/fmx/equipment/sample.md
+          - Detector: deployments/fmx/equipment/detector.md
+          - Controls: deployments/fmx/equipment/controls.md
+          - Inventory: deployments/fmx/inventory.md
+        - Techniques: deployments/fmx/techniques.md
+        - Governance: deployments/fmx/governance.md
+        - Model: deployments/fmx/model.md
+      - CMS:
+        - deployments/cms/index.md
+        - Open questions: deployments/cms/questions.md
+        - The beamline:
+          - deployments/cms/equipment/index.md
+          - Source: deployments/cms/beamline.md
+          - Sample: deployments/cms/equipment/sample.md
+          - Detector: deployments/cms/equipment/detector.md
+          - Controls: deployments/cms/equipment/controls.md
+          - Inventory: deployments/cms/inventory.md
+        - Techniques: deployments/cms/techniques.md
+        - Governance: deployments/cms/governance.md
+        - Model: deployments/cms/model.md
+      - XFM:
+        - deployments/xfm/index.md
+        - Open questions: deployments/xfm/questions.md
+        - The beamline:
+          - deployments/xfm/equipment/index.md
+          - Source: deployments/xfm/beamline.md
+          - Sample: deployments/xfm/equipment/sample.md
+          - Detector: deployments/xfm/equipment/detector.md
+          - Controls: deployments/xfm/equipment/controls.md
+          - Inventory: deployments/xfm/inventory.md
+        - Techniques: deployments/xfm/techniques.md
+        - Governance: deployments/xfm/governance.md
+        - Model: deployments/xfm/model.md
+      - LIX:
+        - deployments/lix/index.md
+        - Open questions: deployments/lix/questions.md
+        - The beamline:
+          - deployments/lix/equipment/index.md
+          - Source: deployments/lix/beamline.md
+          - Sample: deployments/lix/equipment/sample.md
+          - Detector: deployments/lix/equipment/detector.md
+          - Controls: deployments/lix/equipment/controls.md
+          - Inventory: deployments/lix/inventory.md
+        - Techniques: deployments/lix/techniques.md
+        - Governance: deployments/lix/governance.md
+        - Model: deployments/lix/model.md
+      - HEX:
+        - deployments/hex/index.md
+        - Open questions: deployments/hex/questions.md
+        - The beamline:
+          - deployments/hex/equipment/index.md
+          - Source: deployments/hex/beamline.md
+          - Sample: deployments/hex/equipment/sample.md
+          - Detector: deployments/hex/equipment/detector.md
+          - Controls: deployments/hex/equipment/controls.md
+          - Inventory: deployments/hex/inventory.md
+        - Techniques: deployments/hex/techniques.md
+        - Governance: deployments/hex/governance.md
+        - Model: deployments/hex/model.md
+      - AMX:
+        - deployments/amx/index.md
+        - Open questions: deployments/amx/questions.md
+        - The beamline:
+          - deployments/amx/equipment/index.md
+          - Source: deployments/amx/beamline.md
+          - Sample: deployments/amx/equipment/sample.md
+          - Detector: deployments/amx/equipment/detector.md
+          - Controls: deployments/amx/equipment/controls.md
+          - Inventory: deployments/amx/inventory.md
+        - Techniques: deployments/amx/techniques.md
+        - Governance: deployments/amx/governance.md
+        - Model: deployments/amx/model.md
+      - XFP:
+        - deployments/xfp/index.md
+        - Open questions: deployments/xfp/questions.md
+        - The beamline:
+          - deployments/xfp/equipment/index.md
+          - Source: deployments/xfp/beamline.md
+          - Sample: deployments/xfp/equipment/sample.md
+          - Detector: deployments/xfp/equipment/detector.md
+          - Controls: deployments/xfp/equipment/controls.md
+          - Inventory: deployments/xfp/inventory.md
+        - Techniques: deployments/xfp/techniques.md
+        - Governance: deployments/xfp/governance.md
+        - Model: deployments/xfp/model.md
+      - ISR:
+        - deployments/isr/index.md
+        - Open questions: deployments/isr/questions.md
+        - The beamline:
+          - deployments/isr/equipment/index.md
+          - Source: deployments/isr/beamline.md
+          - Sample: deployments/isr/equipment/sample.md
+          - Detector: deployments/isr/equipment/detector.md
+          - Controls: deployments/isr/equipment/controls.md
+          - Inventory: deployments/isr/inventory.md
+        - Techniques: deployments/isr/techniques.md
+        - Governance: deployments/isr/governance.md
+        - Model: deployments/isr/model.md
+      - CDI:
+        - deployments/cdi/index.md
+        - Open questions: deployments/cdi/questions.md
+        - The beamline:
+          - deployments/cdi/equipment/index.md
+          - Source: deployments/cdi/beamline.md
+          - Sample: deployments/cdi/equipment/sample.md
+          - Detector: deployments/cdi/equipment/detector.md
+          - Controls: deployments/cdi/equipment/controls.md
+          - Inventory: deployments/cdi/inventory.md
+        - Techniques: deployments/cdi/techniques.md
+        - Governance: deployments/cdi/governance.md
+        - Model: deployments/cdi/model.md
+      - PDF:
+        - deployments/pdf/index.md
+        - Open questions: deployments/pdf/questions.md
+        - The beamline:
+          - deployments/pdf/equipment/index.md
+          - Source: deployments/pdf/beamline.md
+          - Sample: deployments/pdf/equipment/sample.md
+          - Detector: deployments/pdf/equipment/detector.md
+          - Controls: deployments/pdf/equipment/controls.md
+          - Inventory: deployments/pdf/inventory.md
+        - Techniques: deployments/pdf/techniques.md
+        - Governance: deployments/pdf/governance.md
+        - Model: deployments/pdf/model.md
+    - SLAC:
+      - deployments/slac/index.md
+      - LCLS-MFX:
+        - deployments/lcls-mfx/index.md
+        - Open questions: deployments/lcls-mfx/questions.md
+        - The beamline:
+          - deployments/lcls-mfx/equipment/index.md
+          - Source: deployments/lcls-mfx/beamline.md
+          - Optics and endstation: deployments/lcls-mfx/equipment/optics.md
+          - Detector: deployments/lcls-mfx/equipment/detector.md
+          - Controls: deployments/lcls-mfx/equipment/controls.md
+          - Inventory: deployments/lcls-mfx/inventory.md
+        - Techniques: deployments/lcls-mfx/techniques.md
+        - Governance: deployments/lcls-mfx/governance.md
+        - Model: deployments/lcls-mfx/model.md
+    - Australian Synchrotron:
+      - deployments/as/index.md
+      - MX3:
+        - deployments/mx3/index.md
+        - Open questions: deployments/mx3/questions.md
+        - The beamline:
+          - deployments/mx3/equipment/index.md
+          - Source: deployments/mx3/beamline.md
+          - Sample: deployments/mx3/equipment/sample.md
+          - Detector: deployments/mx3/equipment/detector.md
+          - Controls: deployments/mx3/equipment/controls.md
+          - Inventory: deployments/mx3/inventory.md
+        - Techniques: deployments/mx3/techniques.md
+        - Governance: deployments/mx3/governance.md
+        - Model: deployments/mx3/model.md
+    - ESRF:
+      - deployments/esrf/index.md
+      - ID32:
+        - deployments/id32/index.md
+        - Open questions: deployments/id32/questions.md
+        - The beamline:
+          - deployments/id32/equipment/index.md
+          - Source: deployments/id32/beamline.md
+          - Sample: deployments/id32/equipment/sample.md
+          - Detector: deployments/id32/equipment/detector.md
+          - Controls: deployments/id32/equipment/controls.md
+          - Inventory: deployments/id32/inventory.md
+        - Techniques: deployments/id32/techniques.md
+        - Governance: deployments/id32/governance.md
+        - Model: deployments/id32/model.md
+      - ID19:
+        - deployments/id19/index.md
+        - Open questions: deployments/id19/questions.md
+        - The beamline:
+          - deployments/id19/equipment/index.md
+          - Source: deployments/id19/beamline.md
+          - Sample: deployments/id19/equipment/sample.md
+          - Detector: deployments/id19/equipment/detector.md
+          - Controls: deployments/id19/equipment/controls.md
+          - Inventory: deployments/id19/inventory.md
+        - Techniques: deployments/id19/techniques.md
+        - Governance: deployments/id19/governance.md
+        - Model: deployments/id19/model.md
+      - ID16B:
+        - deployments/id16b/index.md
+        - Open questions: deployments/id16b/questions.md
+        - The beamline:
+          - deployments/id16b/equipment/index.md
+          - Source: deployments/id16b/beamline.md
+          - Sample: deployments/id16b/equipment/sample.md
+          - Detector: deployments/id16b/equipment/detector.md
+          - Controls: deployments/id16b/equipment/controls.md
+          - Inventory: deployments/id16b/inventory.md
+        - Techniques: deployments/id16b/techniques.md
+        - Governance: deployments/id16b/governance.md
+        - Model: deployments/id16b/model.md
+      - ID28:
+        - deployments/id28/index.md
+        - Open questions: deployments/id28/questions.md
+        - The beamline:
+          - deployments/id28/equipment/index.md
+          - Source: deployments/id28/beamline.md
+          - Sample: deployments/id28/equipment/sample.md
+          - Detector: deployments/id28/equipment/detector.md
+          - Controls: deployments/id28/equipment/controls.md
+          - Inventory: deployments/id28/inventory.md
+        - Techniques: deployments/id28/techniques.md
+        - Governance: deployments/id28/governance.md
+        - Model: deployments/id28/model.md
+    - PSI:
+      - deployments/psi/index.md
+      - I-TOMCAT:
+        - deployments/i-tomcat/index.md
+        - Open questions: deployments/i-tomcat/questions.md
+        - The beamline:
+          - deployments/i-tomcat/equipment/index.md
+          - Source: deployments/i-tomcat/beamline.md
+          - Sample: deployments/i-tomcat/equipment/sample.md
+          - Detector: deployments/i-tomcat/equipment/detector.md
+          - Controls: deployments/i-tomcat/equipment/controls.md
+          - Inventory: deployments/i-tomcat/inventory.md
+        - Techniques: deployments/i-tomcat/techniques.md
+        - Governance: deployments/i-tomcat/governance.md
+        - Model: deployments/i-tomcat/model.md
+      - Alvra:
+        - deployments/alvra/index.md
+        - Open questions: deployments/alvra/questions.md
+        - The beamline:
+          - deployments/alvra/equipment/index.md
+          - Source: deployments/alvra/beamline.md
+          - Endstation: deployments/alvra/equipment/endstation.md
+          - Detector: deployments/alvra/equipment/detector.md
+          - Controls: deployments/alvra/equipment/controls.md
+          - Inventory: deployments/alvra/inventory.md
+        - Techniques: deployments/alvra/techniques.md
+        - Governance: deployments/alvra/governance.md
+        - Model: deployments/alvra/model.md
+      - Bernina:
+        - deployments/bernina/index.md
+        - Open questions: deployments/bernina/questions.md
+        - The beamline:
+          - deployments/bernina/equipment/index.md
+          - Source: deployments/bernina/beamline.md
+          - Endstation: deployments/bernina/equipment/endstation.md
+          - Detector: deployments/bernina/equipment/detector.md
+          - Controls: deployments/bernina/equipment/controls.md
+          - Inventory: deployments/bernina/inventory.md
+        - Techniques: deployments/bernina/techniques.md
+        - Governance: deployments/bernina/governance.md
+        - Model: deployments/bernina/model.md
+      - Cristallina:
+        - deployments/cristallina/index.md
+        - Open questions: deployments/cristallina/questions.md
+        - The beamline:
+          - deployments/cristallina/equipment/index.md
+          - Source: deployments/cristallina/beamline.md
+          - Endstation: deployments/cristallina/equipment/endstation.md
+          - Detector: deployments/cristallina/equipment/detector.md
+          - Controls: deployments/cristallina/equipment/controls.md
+          - Inventory: deployments/cristallina/inventory.md
+        - Techniques: deployments/cristallina/techniques.md
+        - Governance: deployments/cristallina/governance.md
+        - Model: deployments/cristallina/model.md
+    - Sirius:
+      - deployments/sirius/index.md
+      - MOGNO:
+        - deployments/mogno/index.md
+        - Open questions: deployments/mogno/questions.md
+        - The beamline:
+          - deployments/mogno/equipment/index.md
+          - Source: deployments/mogno/beamline.md
+          - Nanotomography: deployments/mogno/equipment/nanotomography.md
+          - Microtomography: deployments/mogno/equipment/microtomography.md
+          - Detector: deployments/mogno/equipment/detector.md
+          - Controls: deployments/mogno/equipment/controls.md
+          - Inventory: deployments/mogno/inventory.md
+        - Techniques: deployments/mogno/techniques.md
+        - Governance: deployments/mogno/governance.md
+        - Model: deployments/mogno/model.md
+      - MANACA:
+        - deployments/manaca/index.md
+        - Open questions: deployments/manaca/questions.md
+        - The beamline:
+          - deployments/manaca/equipment/index.md
+          - Source: deployments/manaca/beamline.md
+          - Sample: deployments/manaca/equipment/sample.md
+          - Detector: deployments/manaca/equipment/detector.md
+          - Controls: deployments/manaca/equipment/controls.md
+          - Inventory: deployments/manaca/inventory.md
+        - Techniques: deployments/manaca/techniques.md
+        - Governance: deployments/manaca/governance.md
+        - Model: deployments/manaca/model.md
+    - Elettra:
+      - deployments/elettra/index.md
+      - SYRMEP:
+        - deployments/syrmep/index.md
+        - Open questions: deployments/syrmep/questions.md
+        - The beamline:
+          - deployments/syrmep/equipment/index.md
+          - Source: deployments/syrmep/beamline.md
+          - Sample: deployments/syrmep/equipment/sample.md
+          - Detector: deployments/syrmep/equipment/detector.md
+          - Controls: deployments/syrmep/equipment/controls.md
+          - Inventory: deployments/syrmep/inventory.md
+        - Techniques: deployments/syrmep/techniques.md
+        - Governance: deployments/syrmep/governance.md
+        - Model: deployments/syrmep/model.md
+    - ALBA:
+      - deployments/alba/index.md
+      - FAXTOR:
+        - deployments/faxtor/index.md
+        - Open questions: deployments/faxtor/questions.md
+        - The beamline:
+          - deployments/faxtor/equipment/index.md
+          - Source: deployments/faxtor/beamline.md
+          - Sample: deployments/faxtor/equipment/sample.md
+          - Detector: deployments/faxtor/equipment/detector.md
+          - Controls: deployments/faxtor/equipment/controls.md
+          - Inventory: deployments/faxtor/inventory.md
+        - Techniques: deployments/faxtor/techniques.md
+        - Governance: deployments/faxtor/governance.md
+        - Model: deployments/faxtor/model.md
+    - NSRRC:
+      - deployments/nsrrc/index.md
+      - TPS 07A:
+        - deployments/tps-07a/index.md
+        - Open questions: deployments/tps-07a/questions.md
+        - The beamline:
+          - deployments/tps-07a/equipment/index.md
+          - Source: deployments/tps-07a/beamline.md
+          - Sample: deployments/tps-07a/equipment/sample.md
+          - Detector: deployments/tps-07a/equipment/detector.md
+          - Controls: deployments/tps-07a/equipment/controls.md
+          - Inventory: deployments/tps-07a/inventory.md
+        - Techniques: deployments/tps-07a/techniques.md
+        - Governance: deployments/tps-07a/governance.md
+        - Model: deployments/tps-07a/model.md
+      - TPS 05A:
+        - deployments/tps-05a/index.md
+        - Open questions: deployments/tps-05a/questions.md
+        - The beamline:
+          - deployments/tps-05a/equipment/index.md
+          - Source: deployments/tps-05a/beamline.md
+          - Sample: deployments/tps-05a/equipment/sample.md
+          - Detector: deployments/tps-05a/equipment/detector.md
+          - Controls: deployments/tps-05a/equipment/controls.md
+          - Inventory: deployments/tps-05a/inventory.md
+        - Techniques: deployments/tps-05a/techniques.md
+        - Governance: deployments/tps-05a/governance.md
+        - Model: deployments/tps-05a/model.md
+    - PETRA III:
+      - deployments/petra-iii/index.md
+      - P01:
+        - deployments/p01/index.md
+        - Open questions: deployments/p01/questions.md
+        - The beamline:
+          - deployments/p01/equipment/index.md
+          - Source: deployments/p01/beamline.md
+          - Sample: deployments/p01/equipment/sample.md
+          - Detector: deployments/p01/equipment/detector.md
+          - Controls: deployments/p01/equipment/controls.md
+          - Inventory: deployments/p01/inventory.md
+        - Techniques: deployments/p01/techniques.md
+        - Governance: deployments/p01/governance.md
+        - Model: deployments/p01/model.md
+      - P04:
+        - deployments/p04/index.md
+        - Open questions: deployments/p04/questions.md
+        - The beamline:
+          - deployments/p04/equipment/index.md
+          - Source: deployments/p04/beamline.md
+          - Sample: deployments/p04/equipment/sample.md
+          - Detector: deployments/p04/equipment/detector.md
+          - Controls: deployments/p04/equipment/controls.md
+          - Inventory: deployments/p04/inventory.md
+        - Techniques: deployments/p04/techniques.md
+        - Governance: deployments/p04/governance.md
+        - Model: deployments/p04/model.md
+      - P06:
+        - deployments/p06/index.md
+        - Open questions: deployments/p06/questions.md
+        - The beamline:
+          - deployments/p06/equipment/index.md
+          - Source: deployments/p06/beamline.md
+          - Sample: deployments/p06/equipment/sample.md
+          - Detector: deployments/p06/equipment/detector.md
+          - Controls: deployments/p06/equipment/controls.md
+          - Inventory: deployments/p06/inventory.md
+        - Techniques: deployments/p06/techniques.md
+        - Governance: deployments/p06/governance.md
+        - Model: deployments/p06/model.md
+      - P11:
+        - deployments/p11/index.md
+        - Open questions: deployments/p11/questions.md
+        - The beamline:
+          - deployments/p11/equipment/index.md
+          - Source: deployments/p11/beamline.md
+          - Sample: deployments/p11/equipment/sample.md
+          - Detector: deployments/p11/equipment/detector.md
+          - Controls: deployments/p11/equipment/controls.md
+          - Inventory: deployments/p11/inventory.md
+        - Techniques: deployments/p11/techniques.md
+        - Governance: deployments/p11/governance.md
+        - Model: deployments/p11/model.md
+      - P03:
+        - deployments/p03/index.md
+        - Open questions: deployments/p03/questions.md
+        - The beamline:
+          - deployments/p03/equipment/index.md
+          - Source: deployments/p03/beamline.md
+          - Sample: deployments/p03/equipment/sample.md
+          - Detector: deployments/p03/equipment/detector.md
+          - Controls: deployments/p03/equipment/controls.md
+          - Inventory: deployments/p03/inventory.md
+        - Techniques: deployments/p03/techniques.md
+        - Governance: deployments/p03/governance.md
+        - Model: deployments/p03/model.md
+      - P10:
+        - deployments/p10/index.md
+        - Open questions: deployments/p10/questions.md
+        - The beamline:
+          - deployments/p10/equipment/index.md
+          - Source: deployments/p10/beamline.md
+          - Sample: deployments/p10/equipment/sample.md
+          - Detector: deployments/p10/equipment/detector.md
+          - Controls: deployments/p10/equipment/controls.md
+          - Inventory: deployments/p10/inventory.md
+        - Techniques: deployments/p10/techniques.md
+        - Governance: deployments/p10/governance.md
+        - Model: deployments/p10/model.md
+      - P09:
+        - deployments/p09/index.md
+        - Open questions: deployments/p09/questions.md
+        - The beamline:
+          - deployments/p09/equipment/index.md
+          - Source: deployments/p09/beamline.md
+          - Sample: deployments/p09/equipment/sample.md
+          - Detector: deployments/p09/equipment/detector.md
+          - Controls: deployments/p09/equipment/controls.md
+          - Inventory: deployments/p09/inventory.md
+        - Techniques: deployments/p09/techniques.md
+        - Governance: deployments/p09/governance.md
+        - Model: deployments/p09/model.md
+      - P02:
+        - deployments/p02/index.md
+        - Open questions: deployments/p02/questions.md
+        - The beamline:
+          - deployments/p02/equipment/index.md
+          - Source: deployments/p02/beamline.md
+          - Sample: deployments/p02/equipment/sample.md
+          - Detector: deployments/p02/equipment/detector.md
+          - Controls: deployments/p02/equipment/controls.md
+          - Inventory: deployments/p02/inventory.md
+        - Techniques: deployments/p02/techniques.md
+        - Governance: deployments/p02/governance.md
+        - Model: deployments/p02/model.md
+      - P64:
+        - deployments/p64/index.md
+        - Open questions: deployments/p64/questions.md
+        - The beamline:
+          - deployments/p64/equipment/index.md
+          - Source: deployments/p64/beamline.md
+          - Sample: deployments/p64/equipment/sample.md
+          - Detector: deployments/p64/equipment/detector.md
+          - Controls: deployments/p64/equipment/controls.md
+          - Inventory: deployments/p64/inventory.md
+        - Techniques: deployments/p64/techniques.md
+        - Governance: deployments/p64/governance.md
+        - Model: deployments/p64/model.md
+      - P65:
+        - deployments/p65/index.md
+        - Open questions: deployments/p65/questions.md
+        - The beamline:
+          - deployments/p65/equipment/index.md
+          - Source: deployments/p65/beamline.md
+          - Sample: deployments/p65/equipment/sample.md
+          - Detector: deployments/p65/equipment/detector.md
+          - Controls: deployments/p65/equipment/controls.md
+          - Inventory: deployments/p65/inventory.md
+        - Techniques: deployments/p65/techniques.md
+        - Governance: deployments/p65/governance.md
+        - Model: deployments/p65/model.md
+      - P07:
+        - deployments/p07/index.md
+        - Open questions: deployments/p07/questions.md
+        - The beamline:
+          - deployments/p07/equipment/index.md
+          - Source: deployments/p07/beamline.md
+          - Sample: deployments/p07/equipment/sample.md
+          - Detector: deployments/p07/equipment/detector.md
+          - Controls: deployments/p07/equipment/controls.md
+          - Inventory: deployments/p07/inventory.md
+        - Techniques: deployments/p07/techniques.md
+        - Governance: deployments/p07/governance.md
+        - Model: deployments/p07/model.md
+      - P08:
+        - deployments/p08/index.md
+        - Open questions: deployments/p08/questions.md
+        - The beamline:
+          - deployments/p08/equipment/index.md
+          - Source: deployments/p08/beamline.md
+          - Sample: deployments/p08/equipment/sample.md
+          - Detector: deployments/p08/equipment/detector.md
+          - Controls: deployments/p08/equipment/controls.md
+          - Inventory: deployments/p08/inventory.md
+        - Techniques: deployments/p08/techniques.md
+        - Governance: deployments/p08/governance.md
+        - Model: deployments/p08/model.md
+      - P21:
+        - deployments/p21/index.md
+        - Open questions: deployments/p21/questions.md
+        - The beamline:
+          - deployments/p21/equipment/index.md
+          - Source: deployments/p21/beamline.md
+          - Sample: deployments/p21/equipment/sample.md
+          - Detector: deployments/p21/equipment/detector.md
+          - Controls: deployments/p21/equipment/controls.md
+          - Inventory: deployments/p21/inventory.md
+        - Techniques: deployments/p21/techniques.md
+        - Governance: deployments/p21/governance.md
+        - Model: deployments/p21/model.md
+      - P22:
+        - deployments/p22/index.md
+        - Open questions: deployments/p22/questions.md
+        - The beamline:
+          - deployments/p22/equipment/index.md
+          - Source: deployments/p22/beamline.md
+          - Sample: deployments/p22/equipment/sample.md
+          - Detector: deployments/p22/equipment/detector.md
+          - Controls: deployments/p22/equipment/controls.md
+          - Inventory: deployments/p22/inventory.md
+        - Techniques: deployments/p22/techniques.md
+        - Governance: deployments/p22/governance.md
+        - Model: deployments/p22/model.md
+    - ALS:
+      - deployments/als/index.md
+      - 8.3.2:
+        - deployments/8-3-2/index.md
+        - Open questions: deployments/8-3-2/questions.md
+        - The beamline:
+          - deployments/8-3-2/equipment/index.md
+          - Source: deployments/8-3-2/beamline.md
+          - Sample: deployments/8-3-2/equipment/sample.md
+          - Detector: deployments/8-3-2/equipment/detector.md
+          - Controls: deployments/8-3-2/equipment/controls.md
+          - Inventory: deployments/8-3-2/inventory.md
+        - Techniques: deployments/8-3-2/techniques.md
+        - Governance: deployments/8-3-2/governance.md
+        - Model: deployments/8-3-2/model.md
   - Catalog:
     - catalog/index.md
     - Capabilities: catalog/capabilities.md

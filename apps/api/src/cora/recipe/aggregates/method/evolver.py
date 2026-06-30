@@ -49,9 +49,10 @@ cleanly with version=None (the additive-state pattern).
 
 **Critical invariant**: every transition arm MUST carry
 `needed_family_ids`, `version`, `parameters_schema`,
-`needed_supplies`, `capability_id`, `needed_assembly_ids`, AND the
-compute-classification fields (`execution_pattern`,
-`monotone_quality`, `resumable_from_checkpoint`), AND `launch_spec`
+`needed_supplies`, `needed_input_kinds`, `capability_id`,
+`needed_assembly_ids`, AND the compute-classification fields
+(`execution_pattern`, `monotone_quality`,
+`resumable_from_checkpoint`), AND `launch_spec`
 through from prior state. Constructing
 `Method(id=..., name=..., status=...)` without explicitly passing
 the additive frozenset/optional fields would silently WIPE them to
@@ -108,6 +109,7 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
             name=name,
             needed_family_ids=needed_family_ids,
             needed_supplies=needed_supplies,
+            needed_input_kinds=needed_input_kinds,
             capability_id=capability_id,
             needed_assembly_ids=needed_assembly_ids,
             execution_pattern=execution_pattern,
@@ -122,6 +124,9 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 status=MethodStatus.DEFINED,
                 # version defaults to None.
                 needed_supplies=frozenset(needed_supplies),
+                # needed_input_kinds flows through genesis. Empty for
+                # legacy streams without the field (additive-state default).
+                needed_input_kinds=frozenset(needed_input_kinds),
                 # capability_id flows through genesis. None for
                 # legacy streams without the field (additive-state default).
                 capability_id=capability_id,
@@ -151,6 +156,11 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 content_hash=content_hash,
                 parameters_schema=prior.parameters_schema,
                 needed_supplies=prior.needed_supplies,
+                # needed_input_kinds PRESERVED across every transition
+                # (part of content identity; omitting it would silently
+                # wipe the field to empty, the critical invariant the
+                # evolver docstring warns about).
+                needed_input_kinds=prior.needed_input_kinds,
                 # capability_id PRESERVED across versioning (Method
                 # operates as the same Capability executor across
                 # revisions; rebinding would mean a new Method).
@@ -188,6 +198,11 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 content_hash=prior.content_hash,
                 parameters_schema=prior.parameters_schema,
                 needed_supplies=prior.needed_supplies,
+                # needed_input_kinds PRESERVED across every transition
+                # (part of content identity; omitting it would silently
+                # wipe the field to empty, the critical invariant the
+                # evolver docstring warns about).
+                needed_input_kinds=prior.needed_input_kinds,
                 # capability_id PRESERVED across deprecation; audit-
                 # critical (the historical Capability binding stays
                 # visible).
@@ -229,6 +244,11 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                     dict(parameters_schema) if parameters_schema is not None else None
                 ),
                 needed_supplies=prior.needed_supplies,
+                # needed_input_kinds PRESERVED across every transition
+                # (part of content identity; omitting it would silently
+                # wipe the field to empty, the critical invariant the
+                # evolver docstring warns about).
+                needed_input_kinds=prior.needed_input_kinds,
                 # capability_id PRESERVED across schema updates;
                 # parameters_schema and capability binding evolve
                 # independently.
@@ -263,6 +283,11 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 content_hash=prior.content_hash,
                 parameters_schema=prior.parameters_schema,
                 needed_supplies=prior.needed_supplies,
+                # needed_input_kinds PRESERVED across every transition
+                # (part of content identity; omitting it would silently
+                # wipe the field to empty, the critical invariant the
+                # evolver docstring warns about).
+                needed_input_kinds=prior.needed_input_kinds,
                 capability_id=prior.capability_id,
                 needed_assembly_ids=prior.needed_assembly_ids,
                 execution_pattern=prior.execution_pattern,
@@ -308,6 +333,11 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 content_hash=prior.content_hash,
                 parameters_schema=prior.parameters_schema,
                 needed_supplies=prior.needed_supplies,
+                # needed_input_kinds PRESERVED across every transition
+                # (part of content identity; omitting it would silently
+                # wipe the field to empty, the critical invariant the
+                # evolver docstring warns about).
+                needed_input_kinds=prior.needed_input_kinds,
                 capability_id=prior.capability_id,
                 needed_assembly_ids=prior.needed_assembly_ids,
                 # compute classification PRESERVED across every transition
@@ -339,6 +369,11 @@ def evolve(state: Method | None, event: MethodEvent) -> Method:
                 content_hash=prior.content_hash,
                 parameters_schema=prior.parameters_schema,
                 needed_supplies=prior.needed_supplies,
+                # needed_input_kinds PRESERVED across every transition
+                # (part of content identity; omitting it would silently
+                # wipe the field to empty, the critical invariant the
+                # evolver docstring warns about).
+                needed_input_kinds=prior.needed_input_kinds,
                 capability_id=prior.capability_id,
                 needed_assembly_ids=prior.needed_assembly_ids,
                 # compute classification PRESERVED across every transition

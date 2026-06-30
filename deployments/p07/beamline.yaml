@@ -1,0 +1,250 @@
+# P07 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P07 "High Energy Materials Science (HEMS)" is the high-energy hard X-ray
+# materials-science beamline at PETRA III (DESY, Hamburg), jointly operated by
+# Helmholtz-Zentrum Hereon (2/3) and DESY (1/3). It runs high-energy diffraction and
+# imaging for engineering / materials studies, with a 17 T high-field magnet
+# endstation. It is bound to the PETRA III Site (deployments/petra-iii/site.yaml), the
+# eleventh PETRA III beamline.
+#
+# STATUS: reverse-engineered from P07's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p07, branch
+# debian/jessie; the online_haspp07eh2.xml registry). Device logical names and Tango
+# control handles are real, read from that registry; vendor part numbers, crystal
+# cuts, the magnet field, energy calibration, and physical positions are not in it and
+# are open questions. Every value is carried confirm until P07 staff verify it. The
+# extraction is in research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family. P07 reuses existing Families end to end, including
+# the allowlisted-loose Magnet Family (the 4-ID POLAR precedent, of which P07's 17 T
+# magnet is a further consumer). The four-circle Eulerian diffractometer (e4cv) and
+# the two-theta arm bind the catalog Goniometer Family (not the composed Diffractometer
+# Assembly, the P01 EH2 call). The techniques (high-energy diffraction, high-field
+# materials science) reuse the pending diffraction / magnetic_scattering slugs
+# (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML (e.g. p07/dcmmotor/dcm_1st_pitch). The registry exposes large
+# generically-named motor banks (exp* at EH2, exp01..64 at EH2B, oh* at OH2) whose
+# per-axis roles are not labelled; grouped as the optics / endstation stages carrying
+# the handles, every axis role pending (GROUP-1). The complex DCM is a multi-bounce
+# mono exposed as named 1st/2nd-crystal bend/pitch/roll/yaw axes, so it is resolved.
+#
+# SCOPE: this cut models the optics (the undulator, the multi-bounce DCM, the OH2/OH3
+# slits), the EH2 main experiment hutch (the four-circle diffractometer, the hexapod,
+# the 17 T magnet, the Linkam stage, the detectors), and the EH2B secondary hutch (a
+# sample bank). The beamline is also referenced as P07 EH1/EH3/EH4 in places; only the
+# EH2 registry slice is public here (HOST-1). Counter / timer / ADC channels and the
+# Sardana MeasurementGroup bookkeeping rows are filtered out by the extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p07/questions.md.
+
+beamline:
+  name: P07
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P07"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P07 is an undulator beamline (high-energy materials science, jointly operated by Helmholtz-Zentrum Hereon 2/3 + DESY 1/3); the OnlineXML exposes the undulator (p07/undulator) and its gap / taper (p07/attributemotor) but no period or parameters, carried pending (SRC-1, OPERATOR-1)"
+
+# Three enclosures: the optics hutch (the multi-bounce DCM + OH2/OH3 slits), the EH2
+# main experiment hutch, and the EH2B secondary hutch. DESY / Hereon PSS permit
+# signals are not in the OnlineXML (PSS-1).
+enclosures:
+  - name: p07-oh2
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY / Hereon PSS permit signal for the P07 optics hutch; not in the OnlineXML (PSS-1)"}
+  - name: p07-eh2
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY / Hereon PSS permit signal for the EH2 main experiment hutch; not in the OnlineXML (PSS-1)"}
+  - name: p07-eh2b
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY / Hereon PSS permit signal for the EH2B secondary hutch; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and the OH optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p07-oh2
+  intro: "The P07 undulator source and the optics: a multi-bounce double-crystal monochromator (two crystals, each with bend / pitch / roll / yaw) for high-energy operation, plus the OH2/OH3 defining slits."
+  note: "The DCM is exposed as named 1st / 2nd-crystal axes (dcm_1st_*, dcm_2nd_*) plus the dcmenergy coupling. The OH slits are slt + galildmcslit virtual axes. A Beckhoff z-stage (zpos_shoh1) positions the OH1 component."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {undulator: "p07/undulator/undu", gap: "p07/attributemotor/gap", taper: "p07/attributemotor/taper"}
+      new: true
+      confirm: true
+      note: "P07 undulator; gap / taper read from the registry, period not exposed (SRC-1)"
+    - name: Monochromator
+      family: Monochromator
+      pv: {first_bend: "p07/dcmmotor/dcm_1st_bend", first_pitch: "p07/dcmmotor/dcm_1st_pitch", first_roll: "p07/dcmmotor/dcm_1st_roll", first_yaw: "p07/dcmmotor/dcm_1st_yaw", second_bend: "p07/dcmmotor/dcm_2nd_bend", second_pitch: "p07/dcmmotor/dcm_2nd_pitch", energy: "p07/dcmenergy/mnchrmtr"}
+      new: true
+      confirm: true
+      note: "multi-bounce double-crystal monochromator (two crystals, each with bend / pitch / roll / yaw, plus the coupled mnchrmtr energy); high-energy operation, crystal cut is OPT-1"
+    - name: OpticsZStage
+      family: LinearStage
+      pv: {zpos: "p07/beckhoffmotor/zpos_shoh1"}
+      new: true
+      confirm: true
+      note: "the OH1 component z-positioning stage (zpos_shoh1, Beckhoff motor) (OPT-1)"
+    - name: DefiningSlits
+      family: Slit
+      pv: {slt1_vgap: "p07/slt/slt1vgap", slt1_voffs: "p07/slt/slt1voffs", slt2_hleft: "p07/slt/slt2hleft", slt2_hright: "p07/slt/slt2hright", slt2_vgap: "p07/slt/slt2vgap", oh2_cx: "p07/galildmcslit/G_oh2_Cx", oh2_cy: "p07/galildmcslit/G_oh2_Cy", oh2_dx: "p07/galildmcslit/G_oh2_Dx", oh2_dy: "p07/galildmcslit/G_oh2_Dy"}
+      new: true
+      confirm: true
+      note: "the OH2 defining slits (slt1 / slt2 + the G_oh2 Galil DMC slit center / gap axes) (OPT-1)"
+    - name: OpticsStages
+      family: LinearStage
+      pv: {bank: "p07/motor/oh01"}
+      new: true
+      confirm: true
+      note: "the OH2 optics / instrument motor bank (oh01..16 on p07/motor); per-axis roles not labelled, grouped as one stage (OPT-1, GROUP-1)"
+
+# ===========================================================================
+# EH2: main experiment hutch
+# ===========================================================================
+
+eh2-sample:
+  stage: sample
+  enclosure: p07-eh2
+  intro: "The EH2 main experiment hutch: the four-circle Eulerian diffractometer, the two-theta arm, a sample hexapod, the 17 T high-field magnet, the Linkam temperature stage, and the sample / instrument motor bank."
+  note: "The diffractometer is a four-circle Eulerian (e4cv) + the two-theta arm (twothetap07). The 17 T magnet reuses the allowlisted-loose Magnet Family. The exp* bank carries the sample positioning, roles not labelled (GROUP-1)."
+  devices:
+    - name: Goniometer
+      family: Goniometer           # catalog Family; the four-circle (E4C vertical) + two-theta circles (DIFF-1)
+      pv: {diffractometer: "p07/e4cv/dffrctmtr", two_theta: "p07/twothetap07/tth", zin: "p07/vmotor2/zin"}
+      new: true
+      confirm: true
+      note: "the EH2 four-circle Eulerian diffractometer (e4cv) + the two-theta arm (twothetap07); modelled as a Goniometer Asset, not the composed Diffractometer Assembly (DIFF-1)"
+    - name: SampleHexapod
+      family: Hexapod
+      pv: {x: "p07/hexapodmotor/hx", y: "p07/hexapodmotor/hy", z: "p07/hexapodmotor/hz", rx: "p07/hexapodmotor/hrx", ry: "p07/hexapodmotor/hry", rz: "p07/hexapodmotor/hrz"}
+      new: true
+      confirm: true
+      note: "the EH2 sample hexapod (hx-hrz); coarse sample positioning / orientation (SAMPLE-1)"
+    - name: Magnet
+      family: Magnet
+      pv: {magnet: "p07/magnet17tf/magnet17tf"}
+      new: true
+      confirm: true
+      note: "the EH2 17 T superconducting sample-environment magnet (magnet17tf); reuses the 4-ID POLAR allowlisted-loose Magnet Family, a further consumer (MAG-1)"
+    - name: SampleEnvironment
+      family: TemperatureController
+      pv: {linkam: "p07/t95tempproglinkam/linkam"}
+      new: true
+      confirm: true
+      note: "the EH2 Linkam T95 programmable temperature stage; in-situ heating / cooling (TEMP-1)"
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p07/motor/exp33"}
+      new: true
+      confirm: true
+      note: "the EH2 sample / instrument motor bank (exp33..64 on p07/motor); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+    - name: DetectorSlit
+      family: Slit
+      pv: {eh3_cx: "p07/galildmcslit/g_eh3_Cx", eh3_cy: "p07/galildmcslit/g_eh3_Cy", eh3_dx: "p07/galildmcslit/g_eh3_Dx", eh3_dy: "p07/galildmcslit/g_eh3_Dy"}
+      new: true
+      confirm: true
+      note: "the EH2/EH3 detector / receiving slit (g_eh3, Galil DMC slit center / gap axes) (OPT-1)"
+
+eh2-detector:
+  stage: detection
+  enclosure: p07-eh2
+  intro: "The EH2 detection: the Pilatus area detector, the PerkinElmer flat-panel for high-energy diffraction / imaging, and the MCA fluorescence detectors."
+  note: "Handles read from p07/pilatus, p07/pedetector_old, p07/mca. The high-energy diffraction detector roles are DET-1."
+  devices:
+    - name: PilatusDetector
+      family: Camera
+      pv: {pilatus: "p07/pilatus/pilatus"}
+      new: true
+      confirm: true
+      note: "the EH2 Pilatus area detector; diffraction imaging (DET-1)"
+    - name: PerkinElmerDetector
+      family: Camera
+      pv: {ctrl: "p07/pectrl_old/pe_ctrl", detector: "p07/pedetector_old/pe_detector"}
+      new: true
+      confirm: true
+      note: "the EH2 PerkinElmer flat-panel area detector (pectrl_old / pedetector_old); high-energy diffraction / imaging (DET-1)"
+    - name: FluorescenceDetectors
+      family: EnergyDispersiveSpectrometer
+      pv: {mca01: "p07/mca/eh2_mca01", mca02: "p07/mca/eh2_mca02", mca03: "p07/mca/eh2_mca03", mca04: "p07/mca/eh2_mca04"}
+      new: true
+      confirm: true
+      note: "the EH2 MCA fluorescence detectors (DET-1)"
+
+# ===========================================================================
+# EH2B: secondary experiment hutch
+# ===========================================================================
+
+eh2b-sample:
+  stage: sample
+  enclosure: p07-eh2b
+  intro: "The EH2B secondary experiment hutch: a sample / instrument motor bank for the second P07 experiment station."
+  note: "The exp01..64 bank carries the EH2B sample positioning, roles not labelled (GROUP-1)."
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p07/motor/exp01"}
+      new: true
+      confirm: true
+      note: "the EH2B sample / instrument motor bank (exp01..64 on p07/motor); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+
+# Cross-cutting control. P07 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P07 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as the other PETRA III beamlines (P07 is jointly
+    operated by Helmholtz-Zentrum Hereon and DESY, but the beamline controls are the
+    PETRA III Tango / Sardana stack). A motion axis is a Tango motor device
+    (p07/motor/...), the monochromator a multi-bounce dcmmotor / dcmenergy device, the
+    slits slt / galildmcslit devices, the diffractometer an e4cv / twothetap07 device,
+    the magnet a magnet17tf device, the hexapod a hexapodmotor, the Linkam a
+    t95tempproglinkam device; the detectors are pilatus / pedetector_old / mca. The
+    handles are read from P07's public OnlineXML registry and carried confirm (CTRL-1).
+    The high-energy diffraction / magnetism acquisition (the diffractometer / field
+    scan coupled to the area-detector capture) runs as a Sardana macro; that
+    orchestration is the seam CORA's edge would conduct over its ControlPort (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the optics and sample motor banks (CTRL-1)"
+    - name: GalilSlitControllers
+      family: MotionController
+      protocol: Tango_galildmcslit
+      new: true
+      confirm: true
+      note: "Galil DMC slit controllers (galildmcslit) driving the OH2 and EH detector slits (CTRL-1)"
+    - name: HexapodControllers
+      family: MotionController
+      protocol: Tango_hexapod
+      new: true
+      confirm: true
+      note: "hexapod controllers (hexapodmotor) driving the EH2 sample hexapod (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango / beckhoffmotor / vmotor2) backing the DCM, the OH z-stage, and the coupled axes (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P07 run needs present before it
+    can start. All pending confirmation. LiquidHelium is the cryogen for the 17 T
+    superconducting magnet.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidHelium

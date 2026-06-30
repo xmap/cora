@@ -32,7 +32,7 @@ jobs:
         working-directory: apps/api
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
 
@@ -85,7 +85,7 @@ jobs:
         working-directory: apps/api
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
 
@@ -122,7 +122,7 @@ jobs:
         working-directory: apps/api
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
 
@@ -164,7 +164,7 @@ jobs:
       TESTCONTAINERS_RYUK_DISABLED: "true"
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
 
@@ -217,7 +217,7 @@ jobs:
         working-directory: apps/api
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # diff-cover needs history to compute patch coverage on PRs.
           fetch-depth: 0
@@ -308,7 +308,7 @@ jobs:
         working-directory: infra/atlas
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # Need full history so we can diff the migration directory
           # against the merge base in the safety scan.

@@ -66,7 +66,7 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from cora.api._reckoner import Reckoner
+from cora.api._edge_conductor import ComputeRunDriver
 from cora.api._run_phase_conduct import conduct_phase_then_complete_run
 from cora.data.aggregates.dataset import DatasetCannotPromoteError
 from cora.data.features.promote_dataset import PromoteDataset
@@ -110,6 +110,7 @@ from cora.recipe.aggregates.method import (
     build_argv,
     load_method,
 )
+from cora.recipe.aggregates.recipe.body import OutputRef
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_method import bind as bind_define_method
 from cora.recipe.features.define_plan import DefinePlan
@@ -410,10 +411,10 @@ async def test_reconstruction_records_recipe_run_and_lineage(
 
 
 @pytest.mark.integration
-async def test_reconstruction_conducts_via_reckoner_and_gates_promotion(
+async def test_reconstruction_conducts_via_compute_run_driver_and_gates_promotion(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """End-to-end CONDUCT-the-recon: the Reckoner submits the recon
+    """End-to-end CONDUCT-the-recon: the ComputeRunDriver submits the recon
     job to a (Simulated) ComputePort, awaits its terminal state, and
     completes the Run carrying the observed actuation kind. The recon
     Dataset registered against that conducted Run inherits
@@ -434,10 +435,10 @@ async def test_reconstruction_conducts_via_reckoner_and_gates_promotion(
         correlation_id=_CORRELATION_ID,
     )
 
-    # The Reckoner drives submit -> await -> complete via the
+    # The ComputeRunDriver drives submit -> await -> complete via the
     # in-memory (Simulated) ComputePort. The default seed is Succeeded
     # with an artifact synthesised from the job spec's output_uri.
-    runtime = Reckoner(
+    runtime = ComputeRunDriver(
         compute_port=InMemoryComputePort(),
         complete_run=bind_complete_run(deps),
         abort_run=bind_abort_run(deps),
@@ -520,7 +521,7 @@ async def test_reconstruction_conducts_on_a_real_subprocess_and_is_promotable(
     tmp_path: Path,
 ) -> None:
     """End-to-end CONDUCT on the real local-process executor: the
-    Reckoner runs an actual subprocess that writes the recon output,
+    ComputeRunDriver runs an actual subprocess that writes the recon output,
     captures Physical actuation, and the resulting Dataset (lineage-linked
     and with its raw input promoted) IS promotable to Production. The
     Physical counterpart of the Simulated gate test."""
@@ -543,7 +544,7 @@ async def test_reconstruction_conducts_on_a_real_subprocess_and_is_promotable(
     # checksum + size are genuine (not synthesised). LocalProcessComputePort
     # declares Physical actuation, so the output is promotable.
     output_path = tmp_path / "recon_sirt.h5"
-    runtime = Reckoner(
+    runtime = ComputeRunDriver(
         compute_port=LocalProcessComputePort(),
         complete_run=bind_complete_run(deps),
         abort_run=bind_abort_run(deps),
@@ -610,7 +611,7 @@ async def test_reconstruction_conducts_directory_output_and_records_tree_hash(
 ) -> None:
     """End-to-end CONDUCT of a DIRECTORY output: a real subprocess writes a
     tomopy-style per-slice TIFF stack into a `{stem}_rec/` directory, the
-    Reckoner conducts it without aborting (the pre-tree-hash behavior
+    ComputeRunDriver conducts it without aborting (the pre-tree-hash behavior
     raised ArtifactNotFoundError on any non-file output), and the artifact
     carries a deterministic `sha256-tree` digest + summed byte_size + file
     count. The reconstructed Dataset registers with that tree checksum 1:1.
@@ -637,7 +638,7 @@ async def test_reconstruction_conducts_directory_output_and_records_tree_hash(
     # A real subprocess writes a directory of per-slice TIFFs (tomopy's
     # default save-format=tiff), so fetch_artifact_ref folds the tree.
     output_dir = tmp_path / "recon_sirt_rec"
-    runtime = Reckoner(
+    runtime = ComputeRunDriver(
         compute_port=LocalProcessComputePort(),
         complete_run=bind_complete_run(deps),
         abort_run=bind_abort_run(deps),
@@ -719,7 +720,7 @@ async def test_reconstruction_conducts_from_vetted_launch_spec(
     """End-to-end CONDUCT from a vetted launch_spec: the recon Method carries
     a SIRT launch_spec; the server derives the argv from that recipe plus the
     Run's effective_parameters (no caller-supplied command), and the
-    Reckoner conducts it to a completed, Simulated-provenance Run.
+    ComputeRunDriver conducts it to a completed, Simulated-provenance Run.
 
     This is the injection-safe path the conduct endpoint takes for a
     launch_spec Method: a parameter value (num_iter=200) is rendered as
@@ -780,7 +781,7 @@ async def test_reconstruction_conducts_from_vetted_launch_spec(
 
     # ----- Conduct the derived job via the (Simulated) ComputePort -----
 
-    runtime = Reckoner(
+    runtime = ComputeRunDriver(
         compute_port=InMemoryComputePort(),
         complete_run=bind_complete_run(deps),
         abort_run=bind_abort_run(deps),
@@ -836,13 +837,13 @@ async def test_reconstruction_conducts_single_stage_phase_via_merged_engine(
     (output_uri set -> fetch_artifact_ref), the conduct_phase_then_complete_run
     glue completes the parent Run carrying the folded Simulated kind, and the
     reconstructed volume Dataset registers against producing_run_id with the
-    surfaced ArtifactRef. Parity with the single-job Reckoner baseline: the Run
-    stays Running across the phase, then RunStarted -> RunCompleted, and the
-    Simulated provenance bars promotion (Simulated-blocks).
+    surfaced ArtifactRef. Parity with the single-job ComputeRunDriver baseline:
+    the Run stays Running across the phase, then RunStarted -> RunCompleted, and
+    the Simulated provenance bars promotion (Simulated-blocks).
 
-    This is the floor's proof that the Reckoner class dissolved into one
-    step-walking engine: the same recon, conducted as a Procedure PHASE of the
-    Run rather than a bespoke compute runtime."""
+    This is the floor's proof that the single-job compute-Run path folded into
+    one step-walking engine: the same recon, conducted as a Procedure PHASE of
+    the Run rather than a bespoke compute runtime."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
     fixture = await _seed_recon_recipe(deps)
 
@@ -970,3 +971,193 @@ async def test_reconstruction_conducts_single_stage_phase_via_merged_engine(
             correlation_id=_CORRELATION_ID,
         )
     assert "actuation" in str(exc_info.value)
+
+
+class _RecordingComputePort(InMemoryComputePort):
+    """`InMemoryComputePort` that records every submitted `JobSpec`.
+
+    The multi-step chain asserts that the Conductor resolved each `OutputRef`
+    BEFORE building the JobSpec: normalize's submitted `input_uris` must equal
+    phase_retrieve's `output_uri` (the fake synthesises each artifact's URI from
+    the producing job's `output_uri`, so distinct output_uris per step let the
+    resolved chain be checked end to end)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.submitted_specs: list[JobSpec] = []
+
+    async def submit(self, job_spec: JobSpec) -> Any:
+        self.submitted_specs.append(job_spec)
+        return await super().submit(job_spec)
+
+    def last_spec_for(self, output_uri: str) -> JobSpec:
+        for spec in reversed(self.submitted_specs):
+            if spec.output_uri == output_uri:
+                return spec
+        msg = f"no submitted spec with output_uri {output_uri!r}"
+        raise AssertionError(msg)
+
+
+@pytest.mark.integration
+async def test_reconstruction_conducts_multi_step_chain_via_output_refs(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """End-to-end CONDUCT of a 3-ComputeStep file-arm phase chained via OutputRef.
+
+    phase_retrieve(output_ref_name="pr") -> normalize(input=(OutputRef("pr"),),
+    output_ref_name="norm") -> reconstruct(input=(OutputRef("norm"),),
+    output_ref_name="recon"), conducted as ONE Procedure-PHASE of the parent Run
+    via conduct_phase_then_complete_run over the (recording) InMemoryComputePort.
+
+    The compute-branch twin of the 6c control-branch (captures/CaptureRef)
+    chaining: a produced ArtifactRef feeds a later step's input. Asserts:
+      - exactly ONE Dataset registers, from the NAMED sink outputs["recon"]
+        (NOT artifacts[-1]); derived_from == {raw_dataset_id}
+      - the resolved chain: normalize's submitted JobSpec.input_uris ==
+        phase_retrieve's output_uri (the OutputRef resolved before the build)
+      - a FAN-IN reconstruct consuming (OutputRef("pr"), OutputRef("norm"))
+        resolves BOTH against the bus
+      - the Run stays Running across the phase, then RunStarted -> RunCompleted
+      - all steps fold Simulated -> the Dataset is Simulated-tainted
+        (promotion barred)."""
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(80)])
+    fixture = await _seed_recon_recipe(deps)
+
+    run_id = await bind_start_run(deps)(
+        StartRun(
+            name="SIRT reconstruction (multi-step OutputRef chain)",
+            plan_id=fixture.plan_id,
+            subject_id=None,
+            override_parameters={"num_iter": 200, "tol": 0.0005},
+            trigger_source="compute-runtime; merged engine, multi-step compute phase",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    assert [e.event_type for e in run_events] == ["RunStarted"]
+
+    procedure_id = await bind_register_procedure(deps)(
+        RegisterProcedure(
+            name="SIRT reconstruct chain (compute phase of the recon Run)",
+            kind="volume_reconstruction",
+            target_asset_ids=frozenset(),
+            parent_run_id=run_id,
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Distinct output_uris per step so the resolved chain is checkable: the fake
+    # synthesises each ArtifactRef.uri from the producing job's output_uri, so a
+    # consumer's resolved input must equal the producer's output_uri.
+    pr_uri = "file:///data/2bm/2026-05/pr.h5"
+    norm_uri = "file:///data/2bm/2026-05/norm.h5"
+    recon_uri = "file:///data/2bm/2026-05/recon_sirt_chain.h5"
+
+    phase_retrieve = ComputeStep(
+        command=("tomopy", "phase", "--alpha", "1e-3"),
+        input_uris=("file:///data/2bm/2026-05/proj_raw.h5",),
+        output_uri=pr_uri,
+        output_ref_name="pr",
+    )
+    normalize = ComputeStep(
+        command=("tomopy", "normalize"),
+        input_uris=(OutputRef("pr"),),
+        output_uri=norm_uri,
+        output_ref_name="norm",
+    )
+    # FAN-IN: reconstruct consumes BOTH the phase-retrieve and the normalize
+    # outputs (a step that names each upstream output it needs).
+    reconstruct = ComputeStep(
+        command=("tomopy", "recon", "--algorithm", "sirt"),
+        input_uris=(OutputRef("pr"), OutputRef("norm")),
+        output_uri=recon_uri,
+        output_ref_name="recon",
+    )
+
+    port = _RecordingComputePort()
+    conductor = _recon_conductor(deps, port)
+    conduct = bind_conduct_procedure(
+        deps, conductor=conductor, expansion_port=InMemoryRecipeExpander()
+    )
+    result = await conduct_phase_then_complete_run(
+        run_id=run_id,
+        procedure_id=procedure_id,
+        conduct_procedure=conduct,
+        complete_run=bind_complete_run(deps),
+        abort_run=bind_abort_run(deps),
+        steps=(phase_retrieve, normalize, reconstruct),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # ----- all three steps ran + folded Simulated -----
+    assert result.succeeded is True
+    assert result.completed_count == 3
+    assert result.actuation_kind == "Simulated"
+
+    # ----- the resolved chain: each OutputRef resolved to the producer's output_uri -----
+    # normalize consumed phase_retrieve's output (single ref)
+    assert port.last_spec_for(norm_uri).input_uris == (pr_uri,)
+    # reconstruct consumed BOTH outputs (the fan-in), in order
+    assert port.last_spec_for(recon_uri).input_uris == (pr_uri, norm_uri)
+
+    # ----- the named bus carries every step; the sink is selected by NAME -----
+    assert set(result.outputs) == {"pr", "norm", "recon"}
+    sink = result.outputs["recon"]
+    assert sink.uri == recon_uri
+    # all three file-arm artifacts surface on the flat tuple (document order)
+    assert [a.uri for a in result.artifacts] == [pr_uri, norm_uri, recon_uri]
+
+    # ----- the phase Procedure ran start -> 3 ComputeSteps -> complete -----
+    proc_events, _ = await deps.event_store.load("Procedure", procedure_id)
+    proc_types = [e.event_type for e in proc_events]
+    assert proc_types[0] == "ProcedureRegistered"
+    assert "ProcedureStarted" in proc_types
+    assert proc_types[-1] == "ProcedureCompleted"
+
+    # ----- INVARIANT: the parent Run gained NO new FSM state; RunStarted -> RunCompleted -----
+    run_events, _ = await deps.event_store.load("Run", run_id)
+    assert [e.event_type for e in run_events] == ["RunStarted", "RunCompleted"]
+    assert run_events[1].payload["actuation_kind"] == "Simulated"
+
+    # ----- exactly ONE Dataset registers, from the NAMED sink (NOT artifacts[-1]) -----
+    recon_dataset_id = await bind_register_dataset(deps)(
+        RegisterDataset(
+            name="2BM_recon_2026-05-20_sirt_chain",
+            uri=sink.uri,
+            checksum_algorithm=sink.checksum_algorithm,
+            checksum_value=sink.checksum_value,
+            byte_size=96_000_000_000,
+            media_type="application/x-hdf5",
+            conforms_to=frozenset({"https://www.nexusformat.org/NXtomoproc"}),
+            producing_run_id=run_id,
+            producing_procedure_id=None,
+            subject_id=fixture.subject_id,
+            derived_from=frozenset({fixture.raw_dataset_id}),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    recon_events, _ = await deps.event_store.load("Dataset", recon_dataset_id)
+    recon_payload = recon_events[0].payload
+    assert UUID(recon_payload["producing_run_id"]) == run_id
+    assert recon_payload["producing_actuation_kind"] == "Simulated"
+    assert recon_payload["derived_from"] == [str(fixture.raw_dataset_id)]
+
+    # ----- INVARIANT: all steps Simulated -> the chained Dataset is Simulated-tainted -----
+    await bind_promote_dataset(deps)(
+        PromoteDataset(dataset_id=fixture.raw_dataset_id, reason="raw projections peer-reviewed"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    with pytest.raises(DatasetCannotPromoteError) as chain_exc:
+        await bind_promote_dataset(deps)(
+            PromoteDataset(
+                dataset_id=recon_dataset_id, reason="attempt to promote rehearsal chain recon"
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert "actuation" in str(chain_exc.value)

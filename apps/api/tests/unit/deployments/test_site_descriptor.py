@@ -89,11 +89,11 @@ def test_site_loads_and_validates() -> None:
     # lower bounds, not exact: additive edits should not break this test, except
     # agents which are drift-guarded against the code seeds below. The two
     # non-pending LLM agents are equality-checked in test_agents_match_seed_constants;
-    # RunSupervisor + CautionPromoter + ClearanceExpirer + ClearanceWatcher are
-    # authored pending (identity seeded, runtimes not yet operational).
+    # RunSupervisor + CautionPromoter + ClearanceExpirer + ClearanceWatcher +
+    # RunInitiator are authored pending (identity seeded, runtimes not yet operational).
     assert len(site.practices) >= 17
     assert len(site.actors) >= 9
-    assert len(site.agents) == 6
+    assert len(site.agents) == 7
     assert len(site.supplies) >= 1
     assert len(site.clearances) >= 1
     assert len(site.cautions) >= 1
@@ -192,9 +192,15 @@ def test_renders_single_site_narrative() -> None:
     # both active agents surfaced with their models (the gap-fix)
     assert "CautionDrafter" in page and "claude-sonnet-4-6" in page
     assert "RunDebriefer" in page and "claude-haiku-4-5" in page
-    # the three deterministic agents are seeded pending; surface them so all five
-    # are discoverable on the deployment page, not just the two live LLM ones
-    for pending_agent in ("RunSupervisor", "CautionPromoter", "ClearanceExpirer"):
+    # the deterministic agents are seeded pending; surface every one so they are
+    # discoverable on the deployment page, not just the two live LLM agents
+    for pending_agent in (
+        "RunSupervisor",
+        "CautionPromoter",
+        "ClearanceExpirer",
+        "ClearanceWatcher",
+        "RunInitiator",
+    ):
         assert pending_agent in page, f"pending agent {pending_agent} not surfaced"
     # content woven in from every folded list
     assert "[`tomography`](../../catalog/methods.md)" in page  # practice -> catalog method
@@ -248,21 +254,37 @@ _PENDING_METHODS = {
     "first_light": "19-BM-FACT commissioning method; design phase",
     "ioc_restart": "2-BM maintenance recovery; portable Method not yet authored",
     "mirror_recoat_return": "2-BM mirror recoat-and-return; Method not yet authored",
-    "scanning_fluorescence_microscopy": "2-ID scanning XRF microprobe; Method not yet earned",
-    "diffraction": "4-ID POLAR single-crystal diffraction; not yet in pilot scope (TECH-1)",
+    "scanning_fluorescence_microscopy": "2-ID + XFM scanning XRF; 2 consumers (METHOD-1)",
+    "diffraction": "single-crystal diffraction (4-ID/8-ID/CSX/i19); not yet earned (TECH-1)",
     "magnetic_scattering": "4-ID POLAR magnetic scattering; not yet in pilot scope (TECH-1)",
     "resonant_scattering": "4-ID POLAR resonant scattering; not yet in pilot scope (TECH-1)",
     "xmcd": "4-ID POLAR magnetic circular dichroism; not yet in pilot scope (TECH-1)",
-    "xpcs": "8-ID + 9-ID photon correlation spectroscopy; not yet in pilot scope (TECH-1)",
+    "xmld": "i06 magnetic linear dichroism on the APPLE-II; not yet in pilot scope (TECH-1)",
+    "photoemission_microscopy": "i06 PEEM electron-imaging microscopy; not yet earned (PEEM-1)",
+    "reflectivity": "i10 + CMS reflectivity (soft + hard X-ray); rule-of-three watch (TECH-1)",
     "coherent_surface_scattering": "9-ID CSSI surface scattering; not yet in pilot scope (TECH-1)",
     "grazing_incidence_scattering": "9-ID GISAXS / GIWAXS; not yet in pilot scope (TECH-1)",
-    "grid_scan": "i03 MX fast grid scan; portable Method not yet earned",
-    "mx_data_collection": "i03 MX rotation data collection; Method not yet earned",
-    "sample_exchange": "i03 autonomous robotic sample exchange; Method not yet earned",
+    "resonant_inelastic_scattering": "SIX RIXS; soft X-ray, not yet in pilot scope (TECH-1)",
+    "inelastic_x_ray_scattering": "IXS hard X-ray inelastic scattering; not in scope (TECH-1)",
+    "angle_resolved_photoemission": "ESM ARPES; photoemission, not yet in pilot scope (TECH-1)",
+    "grid_scan": "i03 + FMX + AMX MX fast grid scan; 3 consumers (TECH-1)",
+    "mx_data_collection": "i03 + FMX + AMX MX rotation collection; 3 consumers (TECH-1)",
+    "sample_exchange": "i03 + FMX + AMX robotic sample exchange; 3 consumers (ROBOT-1)",
+    "solution_scattering": "lix bio-SAXS / SEC-SAXS; new Method not yet earned (TECH-1)",
+    "x_ray_footprinting": "xfp dose-delivery footprinting; offline MS readout; new Method (TECH-1)",
     "small_angle_scattering": "i22 + 8-ID SAXS; portable Method not yet earned",
     "wide_angle_scattering": "i22 + 9-ID WAXS; portable Method not yet earned",
+    "ultra_small_angle_scattering": "12-ID-E Bonse-Hart USAXS; not yet earned (USAXS-1)",
+    "ptychography": "I13-1 ptychography / coherent diffraction imaging; not yet earned (TECH-1)",
     "total_scattering": "i15-1 total scattering / PDF; Method not yet earned",
     "powder_diffraction": "i11 powder diffraction; portable Method not yet earned",
+    "energy_dispersive_exafs": "i20-1 EDE; dispersive devices not yet in source (POLY-1 / STRIP-1)",
+    "serial_crystallography": "LCLS-MFX + i24 serial crystallography; 2 consumers, not earned",
+    "pump_probe": "LCLS-MFX fs optical-laser pump / X-ray probe; XFEL Method not yet earned",
+    "xas_spectroscopy": "MFX + ISS emission-spectrometer XAS / XES; 2 consumers (TECH-1)",
+    "helical_tomography": "SYRMEP helical large-specimen CT; not yet earned (TECH-1)",
+    "white_beam_tomography": "SYRMEP white / pink-beam fast tomography; not yet in scope (TECH-1)",
+    "phase_retrieval": "SYRMEP TIE-HOM / Paganin phase retrieval; compute Method (COMPUTE-1)",
 }
 
 

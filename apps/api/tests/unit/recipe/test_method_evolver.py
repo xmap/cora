@@ -22,6 +22,7 @@ from cora.recipe.aggregates.method import (
 from cora.recipe.aggregates.method.events import (
     MethodDefined,
     MethodDeprecated,
+    MethodLaunchSpecUpdated,
     MethodParametersSchemaUpdated,
     MethodRequiredRoleAdded,
     MethodRequiredRoleRemoved,
@@ -756,3 +757,108 @@ def test_evolve_method_required_role_removed_preserves_compute_classification() 
     assert without_role.execution_pattern is ExecutionPattern.ITERATIVE
     assert without_role.monotone_quality is True
     assert without_role.resumable_from_checkpoint is True
+
+
+# ---------- needed_input_kinds preservation per transition ----------
+
+
+_INPUT_KINDS = frozenset({"raw-projections", "flat-field"})
+
+
+def _defined_with_input_kinds(
+    method_id: UUID, *, status: MethodStatus, version: str | None
+) -> Method:
+    return Method(
+        id=method_id,
+        name=MethodName("Tomographic Reconstruction"),
+        needed_family_ids=frozenset(),
+        status=status,
+        version=version,
+        needed_input_kinds=_INPUT_KINDS,
+    )
+
+
+@pytest.mark.unit
+def test_evolve_method_versioned_preserves_needed_input_kinds() -> None:
+    """Critical pin: needed_input_kinds MUST carry through the version
+    transition (part of content identity; omitting it in this evolver
+    arm would silently wipe the field to empty)."""
+    method_id = uuid4()
+    prior = _defined_with_input_kinds(method_id, status=MethodStatus.DEFINED, version=None)
+    versioned = evolve(
+        prior, MethodVersioned(method_id=method_id, version_tag="v2", occurred_at=_NOW)
+    )
+    assert versioned.needed_input_kinds == _INPUT_KINDS
+
+
+@pytest.mark.unit
+def test_evolve_method_deprecated_preserves_needed_input_kinds() -> None:
+    method_id = uuid4()
+    prior = _defined_with_input_kinds(method_id, status=MethodStatus.VERSIONED, version="v1")
+    deprecated = evolve(prior, MethodDeprecated(method_id=method_id, occurred_at=_NOW))
+    assert deprecated.needed_input_kinds == _INPUT_KINDS
+
+
+@pytest.mark.unit
+def test_evolve_method_parameters_schema_updated_preserves_needed_input_kinds() -> None:
+    method_id = uuid4()
+    prior = _defined_with_input_kinds(method_id, status=MethodStatus.DEFINED, version=None)
+    updated = evolve(
+        prior,
+        MethodParametersSchemaUpdated(
+            method_id=method_id, parameters_schema=_SCHEMA_A, occurred_at=_NOW
+        ),
+    )
+    assert updated.needed_input_kinds == _INPUT_KINDS
+
+
+@pytest.mark.unit
+def test_evolve_method_launch_spec_updated_preserves_needed_input_kinds() -> None:
+    """Launch-spec update is orthogonal to the consumes axis; it must
+    carry needed_input_kinds through. None clears the spec without
+    touching the field."""
+    method_id = uuid4()
+    prior = _defined_with_input_kinds(method_id, status=MethodStatus.DEFINED, version=None)
+    updated = evolve(
+        prior,
+        MethodLaunchSpecUpdated(method_id=method_id, launch_spec=None, occurred_at=_NOW),
+    )
+    assert updated.needed_input_kinds == _INPUT_KINDS
+
+
+@pytest.mark.unit
+def test_evolve_method_required_role_added_preserves_needed_input_kinds() -> None:
+    method_id = uuid4()
+    prior = _defined_with_input_kinds(method_id, status=MethodStatus.DEFINED, version=None)
+    with_role = evolve(
+        prior,
+        MethodRequiredRoleAdded(
+            method_id=method_id,
+            role_name="detector",
+            family_id=uuid4(),
+            required_ports=(),
+            optional=False,
+            occurred_at=_NOW,
+        ),
+    )
+    assert with_role.needed_input_kinds == _INPUT_KINDS
+
+
+@pytest.mark.unit
+def test_evolve_method_required_role_removed_preserves_needed_input_kinds() -> None:
+    method_id = uuid4()
+    role = RoleRequirement(role_name=RoleName("detector"), family_id=uuid4())
+    prior = Method(
+        id=method_id,
+        name=MethodName("Tomographic Reconstruction"),
+        needed_family_ids=frozenset(),
+        status=MethodStatus.DEFINED,
+        needed_input_kinds=_INPUT_KINDS,
+        required_roles=frozenset({role}),
+    )
+    without_role = evolve(
+        prior,
+        MethodRequiredRoleRemoved(method_id=method_id, role_name="detector", occurred_at=_NOW),
+    )
+    assert without_role.required_roles == frozenset()
+    assert without_role.needed_input_kinds == _INPUT_KINDS

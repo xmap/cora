@@ -1,0 +1,223 @@
+# P08 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P08 "High Resolution Diffraction Beamline" is the hard X-ray high-resolution
+# diffraction beamline at PETRA III (DESY, Hamburg): surface / interface diffraction,
+# reflectivity, and high-resolution powder / single-crystal diffraction on a
+# six-circle diffractometer. It is bound to the PETRA III Site
+# (deployments/petra-iii/site.yaml), the twelfth PETRA III beamline.
+#
+# STATUS: reverse-engineered from P08's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p08, branch
+# debian/jessie; the online_haspp08.xml registry). Device logical names and Tango
+# control handles are real, read from that registry; vendor part numbers, crystal
+# cuts, energy calibration, and physical positions are not in it and are open
+# questions. Every value is carried confirm until P08 staff verify it. The extraction
+# is in research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family. P08 reuses existing Families end to end. Its
+# six-circle Kohzu diffractometer binds the catalog Goniometer Family (not the composed
+# Diffractometer Assembly, the P01 EH2 call); the DCM and multilayer monochromators
+# bind Monochromator; the rich detector set (Eiger / Pilatus / Mythen / PerkinElmer /
+# Vortex SDD) binds Camera / EnergyDispersiveSpectrometer. The technique (high-
+# resolution diffraction / reflectivity) reuses the pending diffraction slug (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML (e.g. p08/dcmmotor/dcm_bragg). The registry exposes a large
+# generically-named diffractometer / instrument motor bank (the diff* axes on
+# p08/motor) whose per-axis roles are not labelled; grouped as the diffractometer /
+# sample stages carrying the handles, every axis role pending (GROUP-1). The multilayer
+# mono (lom) and the DCM are exposed as labelled axes, so the optics are resolved.
+#
+# SCOPE: this cut models the optics (the undulator, the DCM, the multilayer
+# monochromator, the CRL, the absorber, the slits), the experiment endstation (the
+# six-circle diffractometer, the hexapod, the sample bank), and the detection (the
+# Eiger, Pilatus, Mythen, PerkinElmer, and Vortex SDD detectors). Counter / timer /
+# ADC channels and the Sardana MeasurementGroup bookkeeping rows are filtered out by
+# the extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p08/questions.md.
+
+beamline:
+  name: P08
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P08"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P08 is an undulator beamline (high-resolution diffraction); the OnlineXML exposes the undulator gap (p08/attributemotor/gap) but no period or parameters, carried pending (SRC-1)"
+
+# Two enclosures inferred from the device structure (the registry exposes one Tango
+# host): the optics hutch (the DCM / multilayer mono / CRL) and the experiment
+# endstation (the diffractometer). DESY PSS permit signals are not in the OnlineXML
+# (PSS-1).
+enclosures:
+  - name: p08-oh
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P08 optics hutch; not in the OnlineXML (PSS-1)"}
+  - name: p08-eh
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P08 experiment endstation; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and the optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p08-oh
+  intro: "The P08 undulator source and the optics: a double-crystal monochromator and a multilayer monochromator (selectable), a compound refractive lens, the beam absorber, and the defining slits."
+  note: "The DCM is dcmmotor / dcmener; the multilayer mono is lom (with its table) and a coupled lomenergy axis. The slits are vmexecutor virtual axes (sl3*)."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {gap: "p08/attributemotor/gap"}
+      new: true
+      confirm: true
+      note: "P08 undulator; gap read from the registry, period not exposed (SRC-1)"
+    - name: Monochromator
+      family: Monochromator
+      pv: {bragg: "p08/dcmmotor/dcm_bragg", energy: "p08/dcmener/energyfmb"}
+      new: true
+      confirm: true
+      note: "double-crystal monochromator (dcm_bragg / energyfmb); high-resolution operation, crystal cut is OPT-1"
+    - name: MultilayerMonochromator
+      family: Monochromator
+      pv: {pitch1: "p08/lom/lom1pitch", lateral1: "p08/lom/lom1lat", linear1: "p08/lom/lom1lin", table_perp: "p08/lom/lom1tblperp", table_pitch: "p08/lom/lom1tblpitch", table_roll: "p08/lom/lom1tblroll", energy: "p08/lomenergy/energylom"}
+      new: true
+      confirm: true
+      note: "multilayer monochromator (lom*, with its table jacks and the coupled lomenergy axis): higher-flux lower-resolution branch selectable against the DCM; d-spacing is OPT-1"
+    - name: CompoundRefractiveLens
+      family: Transfocator
+      pv: {lens: "p08/lensctrl/lens_oh"}
+      new: true
+      confirm: true
+      note: "compound refractive lens control (lens_oh, lensctrl); the CRL focusing / transfocator (OPT-1)"
+    - name: Absorber
+      family: Filter
+      pv: {abs: "p08/absorber/abs", atten: "p08/vmexecutor/atten"}
+      new: true
+      confirm: true
+      note: "beam absorber / attenuator (abs + the atten virtual axis); folds into the Filter Family (OPT-1)"
+    - name: DefiningSlits
+      family: Slit
+      pv: {sl3_h: "p08/vmexecutor/sl3h", sl3_hc: "p08/vmexecutor/sl3hc", sl3_mv: "p08/vmexecutor/sl3mv"}
+      new: true
+      confirm: true
+      note: "the beam-defining slits (sl3*, vmexecutor virtual axes) (OPT-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the experiment endstation (six-circle diffractometer)
+# ===========================================================================
+
+experiment-sample:
+  stage: sample
+  enclosure: p08-eh
+  intro: "The P08 experiment endstation: a six-circle Kohzu diffractometer, a sample hexapod, and the diffractometer / sample motor bank."
+  note: "The diffractometer is a Kohzu six-circle (kozhue6cctrl) driving the diff* bank. The hexapod is hexapodmotor. The diff* bank carries the diffractometer circles and sample positioning, roles not labelled (GROUP-1)."
+  devices:
+    - name: Goniometer
+      family: Goniometer           # catalog Family; the six-circle Kohzu sample-orientation circles (DIFF-1)
+      pv: {ctrl: "p08/motor/kozhue6cctrl", bank: "p08/motor/diff1"}
+      new: true
+      confirm: true
+      note: "the six-circle Kohzu diffractometer (kozhue6cctrl driving the diff1..N bank); modelled as a Goniometer Asset, not the composed Diffractometer Assembly (DIFF-1, GROUP-1)"
+    - name: SampleHexapod
+      family: Hexapod
+      pv: {x: "p08/hexapodmotor/hx", y: "p08/hexapodmotor/hy", z: "p08/hexapodmotor/hz", rx: "p08/hexapodmotor/hrx", ry: "p08/hexapodmotor/hry", rz: "p08/hexapodmotor/hrz"}
+      new: true
+      confirm: true
+      note: "the experiment sample hexapod (hx-hrz); coarse sample positioning / orientation (SAMPLE-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the rich detector set
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: p08-eh
+  intro: "The P08 detection: the Eiger 1M and Pilatus 100k / 300k area detectors, the Mythen2 strip detector, the PerkinElmer flat-panel, and the Vortex silicon-drift fluorescence detector."
+  note: "Handles read from p08/eigerdectris, p08/pilatus, p08/mythen2, p08/pedetector, p08/sis3302. The detector roster per experiment is DET-1. The Lambda (petra3/lambda/01) reports on a bare petra3 host (HOST-1)."
+  devices:
+    - name: EigerDetector
+      family: Camera
+      pv: {eiger: "p08/eigerdectris/eiger1m"}
+      new: true
+      confirm: true
+      note: "the DECTRIS Eiger 1M area detector; high-resolution diffraction imaging (DET-1)"
+    - name: PilatusDetectors
+      family: Camera
+      pv: {p100k: "p08/pilatus/p100k", p300k: "p08/pilatus/p300k"}
+      new: true
+      confirm: true
+      note: "the DECTRIS Pilatus 100k / 300k area detectors (DET-1)"
+    - name: MythenDetector
+      family: Camera
+      pv: {mythen: "p08/mythen2/mythen"}
+      new: true
+      confirm: true
+      note: "the DECTRIS Mythen2 one-dimensional strip detector; high-resolution powder / reflectivity (DET-1)"
+    - name: PerkinElmerDetector
+      family: Camera
+      pv: {detector: "p08/pedetector/pe_detector"}
+      new: true
+      confirm: true
+      note: "the PerkinElmer flat-panel area detector (DET-1)"
+    - name: VortexDetector
+      family: EnergyDispersiveSpectrometer
+      pv: {vortex: "p08/sis3302/vortex"}
+      new: true
+      confirm: true
+      note: "the Vortex silicon-drift fluorescence detector (read by a SIS3302 digitizer); energy-dispersive fluorescence (DET-1)"
+    - name: LambdaDetector
+      family: Camera
+      pv: {lambda: "petra3/lambda/01"}
+      new: true
+      confirm: true
+      note: "a shared X-Spectrum Lambda detector; reports on the bare petra3 host (HOST-1, DET-1)"
+
+# Cross-cutting control. P08 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P08 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as the other PETRA III beamlines. A motion axis is a
+    Tango motor device (p08/motor/...), the monochromators dcmmotor / dcmener and lom /
+    lomenergy devices, the CRL a lensctrl device, the diffractometer a Kohzu controller
+    (kozhue6cctrl), the hexapod a hexapodmotor, the slits / attenuator vmexecutor
+    virtual axes; the detectors are eigerdectris / pilatus / mythen2 / pedetector and
+    the sis3302-read Vortex SDD. The handles are read from P08's public OnlineXML
+    registry and carried confirm (CTRL-1). The high-resolution diffraction acquisition
+    (the diffractometer scan coupled to the area / strip detector capture) runs as a
+    Sardana macro; that orchestration is the seam CORA's edge would conduct over its
+    ControlPort (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the optics and diffractometer / sample motor banks (CTRL-1)"
+    - name: HexapodControllers
+      family: MotionController
+      protocol: Tango_hexapod
+      new: true
+      confirm: true
+      note: "hexapod controllers (hexapodmotor) driving the experiment sample hexapod (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango) backing the monochromators, the Kohzu diffractometer, and the coupled axes (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P08 run needs present before it
+    can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

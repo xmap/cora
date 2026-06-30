@@ -69,6 +69,11 @@ _ORCHESTRATION_SLICES: frozenset[str] = frozenset(
         # execute + end_iteration } * + complete/abort); no direct event
         # emission. See [[project_align_auto_6c_stage1_design]].
         "cora.operation.features.conduct_until_converged",
+        # Steered decide-loop entry: delegates Conductor.conduct_until_advised
+        # (start + { start_iteration + execute + advise_next + end_iteration } *
+        # + complete/abort); no direct event emission. The DECIDE-axis sibling
+        # of conduct_until_converged. See [[project_decide_layer_stage1_design]].
+        "cora.operation.features.conduct_until_advised",
         # Bulk-mint sweep: enumerates Assets missing a persistent id and
         # delegates each to the assign_asset_persistent_id handler; no direct
         # event emission. See [[project_asset_persistent_id_design]].

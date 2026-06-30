@@ -1,0 +1,355 @@
+# P06 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P06 "Micro- and Nanoprobe (PETRA III)" is the hard X-ray scanning micro / nano
+# fluorescence and diffraction probe at PETRA III (DESY, Hamburg). It is bound to the
+# PETRA III Site (deployments/petra-iii/site.yaml), the third PETRA III beamline
+# after P01 and P04, and the richest device tree in the public OnlineXML set.
+#
+# STATUS: reverse-engineered from P06's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p06, branch
+# debian/jessie; the xml/online_hasp* registries). Device logical names and Tango
+# control handles are real, read from that registry; vendor part numbers, focal
+# sizes, energy ranges, and physical positions are not in it and are open questions.
+# Every value is carried confirm until P06 staff verify it. The extraction is in
+# research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family. P06 binds existing Families end to end, but it is
+# the fleet's most complete scanning-probe instrument: a micro-probe endstation (MC01)
+# and a nano-probe endstation (NC1), each a dense stack of hexapods, KB lens stages,
+# and piezo scanners, reading the Maia XRF detector array plus the Eiger / Lambda /
+# Pilatus / PCO detectors. The technique (scanning X-ray fluorescence / diffraction
+# microscopy + nano-tomography) reuses the pending scanning_fluorescence_microscopy
+# and tomography slugs (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML (e.g. p06/hexapodmotor/mc01.01). The registry exposes large
+# generically-named motor banks (mi_mot01..84 at MC01, nat_mot01..32 at NC1, the
+# mono_mot bank) whose per-axis roles are not labelled; these are grouped as the
+# sample / instrument stages of their endstation carrying the handles, every axis role
+# pending (GROUP-1). Two Maia and detector devices report on a bare p06 / petra3 host
+# without an endstation token; per the cross-host mapping decision they are homed in
+# the endstation that operates them (the detection stage) with the host flagged
+# (HOST-1).
+#
+# SCOPE: this cut models the optics / monochromator hutch (MONO: undulator, DCM,
+# multilayer monochromator, optics-hutch slits) and the two scanning-probe
+# endstations (MC01 micro-probe, NC1 nano-probe) with their focusing and sample
+# stages, plus the shared detection pool (Maia, the area detectors, the XIA
+# fluorescence detectors). Counter / timer / ADC channels and the Sardana
+# MeasurementGroup bookkeeping rows are filtered out by the extractor and not modelled.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p06/questions.md.
+
+beamline:
+  name: P06
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P06"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P06 is an undulator beamline (hard X-ray micro / nano probe); the OnlineXML exposes the undulator (p06/undulator) and its gap / harmonic / taper virtual axes (p06/attributemotor) but no period or parameters, carried pending (SRC-1)"
+
+# Four enclosures: the optics / monochromator hutch and the two scanning-probe
+# endstations, plus a shared detection pool whose devices report on a bare p06 host.
+enclosures:
+  - name: p06-mono
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P06 optics / monochromator hutch; not in the OnlineXML (PSS-1)"}
+  - name: p06-mc01
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the MC01 micro-probe endstation; not in the OnlineXML (PSS-1)"}
+  - name: p06-nc1
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the NC1 nano-probe endstation; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and the MONO-hutch optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p06-mono
+  intro: "The P06 undulator source, with its gap, harmonic, and taper as virtual axes coupled into the beamline energy."
+  note: "Undulator on p06/undulator; the gap / harmonic / taper are attributemotor virtual axes coupled into energy_und. Period and parameters are SRC-1."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {undulator: "p06/undulator/1", gap: "p06/attributemotor/gap", harmonic: "p06/attributemotor/harmonic", taper: "p06/attributemotor/taper"}
+      new: true
+      confirm: true
+      note: "P06 undulator; gap / harmonic / taper read from the registry, period not exposed (SRC-1)"
+
+mono-optics:
+  stage: source
+  enclosure: p06-mono
+  intro: "The monochromator hutch: a double-crystal monochromator and a multilayer monochromator (selectable mono branches), the optics-hutch defining slits, and a quadrant beam-position monitor."
+  note: "The DCM (dcmmotor / dcmener) and the multilayer mono (lom) are selectable; energy_all couples the undulator + mono. The mono_mot bank (29 axes) carries the mono-internal and optics-hutch motions, roles not labelled (GROUP-1). The optics-hutch slits are vmexecutor virtual gap / offset axes."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: {bragg: "p06/dcmmotor/mono.01", energy: "p06/dcmener/mono.01", exit_offset: "p06/attributemotor/exitoffset", energy_all: "p06/multiplemotors/mono.01", energy_und: "p06/undulator/1", jacks: "p06/vmexecutors/hhl_jacks", mot09: "p06/motor/mono.09", mot10: "p06/motor/mono.10"}
+      new: true
+      confirm: true
+      note: "double-crystal monochromator (dcm_bragg / energy_fmb, fixed-exit offset, hhl jacks); energy_all is the coupled undulator + mono energy; crystal cut is OPT-1"
+    - name: MultilayerMonochromator
+      family: Monochromator
+      pv: {pitch1: "p06/lom/exp.01", roll1: "p06/lom/exp.02", pitch2: "p06/lom/exp.03", lateral2: "p06/lom/exp.04", hub2: "p06/lom/exp.05", hub1: "p06/lom/exp.06", linear2: "p06/lom/exp.07", lateral1: "p06/lom/exp.08"}
+      new: true
+      confirm: true
+      note: "multilayer monochromator (ML_*, the lom Tango family): higher-flux lower-resolution branch selectable against the DCM; multilayer d-spacing is OPT-1"
+    - name: MonochromatorStages
+      family: LinearStage
+      pv: {bank: "p06/motor/mono.01"}
+      new: true
+      confirm: true
+      note: "the mono-hutch motor bank (mono_mot01..48, 29 modellable axes on p06/motor/mono.*): mono-internal and optics-hutch positioning, per-axis roles not labelled, grouped as one stage carrying the bank prefix (GROUP-1)"
+    - name: OpticsHutchSlits
+      family: Slit
+      pv: {h_gap: "p06/vmexecutors/ohhorizontalgap", h_offset: "p06/vmexecutors/ohhorizontaloffset", v_gap: "p06/vmexecutors/ohverticalgap", v_offset: "p06/vmexecutors/ohverticaloffset"}
+      new: true
+      confirm: true
+      note: "optics-hutch defining slit (oh slit: virtual h/v gap and offset on vmexecutors)"
+    - name: SecondarySlit
+      family: Slit
+      pv: {h_gap: "p06/vmexecutors/ps2horizontalgap", h_offset: "p06/vmexecutors/ps2horizontaloffset"}
+      new: true
+      confirm: true
+      note: "secondary slit (ps2: virtual horizontal gap / offset)"
+    - name: QuadrantBPM
+      family: FluxMonitor
+      pv: {i404: "p06/i404/mono.01"}
+      new: true
+      confirm: true
+      note: "mono-hutch quadrant beam-position monitor (i404 electrometer)"
+
+# ===========================================================================
+# MC01: micro-probe endstation
+# ===========================================================================
+
+mc01-sample:
+  stage: sample
+  enclosure: p06-mc01
+  intro: "The MC01 micro-probe endstation: a six-axis hexapod, the dense sample-positioning stage (the mi motor bank plus piezo and hydra fine stages), the Aerotech scanning stage, and the pin-alignment piezos."
+  note: "The mi_mot bank (46 axes on p06/motor/mi.*) is the endstation positioning stack, roles not labelled, grouped as one stage (GROUP-1). The hexapod is six hexapodmotor axes; the scan stage is Aerotech (continuous fly-scan capable); the fine stages are piezopi and hydra."
+  devices:
+    - name: Hexapod
+      family: Hexapod
+      pv: {x: "p06/hexapodmotor/mc01.01", y: "p06/hexapodmotor/mc01.02", z: "p06/hexapodmotor/mc01.03", u: "p06/hexapodmotor/mc01.04", v: "p06/hexapodmotor/mc01.05", w: "p06/hexapodmotor/mc01.06"}
+      new: true
+      confirm: true
+      note: "MC01 six-axis hexapod (hexx-hexz translations, hexu-hexw rotations); coarse sample orientation"
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p06/motor/mi.01", mmcx: "p06/axis/mi.01", mmcy: "p06/axis/mi.02", piezo1: "p06/piezopi/exp.01", piezo2: "p06/piezopi/exp.02", hydra1: "p06/hydramotor/exp.01", hydra2: "p06/hydramotor/exp.02", hydra3: "p06/hydramotor/exp.03", hydra4: "p06/hydramotor/exp.04"}
+      new: true
+      confirm: true
+      note: "MC01 sample-positioning stack: the mi_mot bank (46 axes on p06/motor/mi.*, grouped, GROUP-1) plus the MMC, piezopi, and SMC-hydra fine stages; per-axis roles pending"
+    - name: ScanStage
+      family: LinearStage
+      pv: {x: "p06/aerotechmotor/exp.01", y: "p06/aerotechmotor/exp.02", z: "p06/aerotechmotor/exp.03"}
+      new: true
+      confirm: true
+      note: "MC01 Aerotech scanning stage (scanx / scany / scanz); the continuous fly-scan raster axes for scanning microscopy (SCAN-1)"
+    - name: PinAlignment
+      family: LinearStage
+      pv: {x: "p06/smaractmotor/exp.01", y: "p06/smaractmotor/exp.02", z: "p06/smaractmotor/exp.03"}
+      new: true
+      confirm: true
+      note: "MC01 pin / sample alignment SmarAct piezos (pinx / piny / pinz)"
+    - name: VirtualStages
+      family: PseudoAxis
+      pv: {csamr: "p06/vmexecutors/csamr", detx: "p06/vmexecutors/detx.01", dety: "p06/vmexecutors/dety.01", fluox: "p06/vmexecutors/fluox.01", samax: "p06/vmexecutors/samax.01", samay: "p06/vmexecutors/samay.01"}
+      new: true
+      confirm: true
+      note: "MC01 virtual coupled axes (sample rotation csamr, detector detx/dety, fluo-detector fluox, sample samax/samay on vmexecutors) (GROUP-1)"
+    - name: QuadrantBPM
+      family: FluxMonitor
+      pv: {i404: "p06/i404/micro.01"}
+      new: true
+      confirm: true
+      note: "MC01 quadrant beam-position monitor (i404 electrometer)"
+
+# ===========================================================================
+# NC1: nano-probe endstation
+# ===========================================================================
+
+nc1-sample:
+  stage: sample
+  enclosure: p06-nc1
+  intro: "The NC1 nano-probe endstation: two SmarAct hexapods (the horizontal and vertical KB-lens carriers), the KB lens fine stages, the SmarAct sample / phase piezos, the Pegasus sample rotation, the centring piezos, and the nano-positioning motor bank."
+  note: "The two hexasmarmotor controllers carry nine axes each (x/y/z translations, px/py/pz pusher, rx/ry/rz rotations); the lens fine stages are vmexecutor virtual axes; the nat_mot bank (20 axes) is the endstation positioning, roles not labelled (GROUP-1)."
+  devices:
+    - name: KBLensHexapodHorizontal
+      family: Hexapod
+      pv: {x: "p06/hexasmarmotor1/x", y: "p06/hexasmarmotor1/y", z: "p06/hexasmarmotor1/z", px: "p06/hexasmarmotor1/px", py: "p06/hexasmarmotor1/py", pz: "p06/hexasmarmotor1/pz", rx: "p06/hexasmarmotor1/rx", ry: "p06/hexasmarmotor1/ry", rz: "p06/hexasmarmotor1/rz"}
+      new: true
+      confirm: true
+      note: "NC1 horizontal KB-lens SmarAct hexapod (hhex*); positions the horizontal-focusing KB mirror / lens (OPT-1)"
+    - name: KBLensHexapodVertical
+      family: Hexapod
+      pv: {x: "p06/hexasmarmotor2/x", y: "p06/hexasmarmotor2/y", z: "p06/hexasmarmotor2/z", px: "p06/hexasmarmotor2/px", py: "p06/hexasmarmotor2/py", pz: "p06/hexasmarmotor2/pz", rx: "p06/hexasmarmotor2/rx", ry: "p06/hexasmarmotor2/ry", rz: "p06/hexasmarmotor2/rz"}
+      new: true
+      confirm: true
+      note: "NC1 vertical KB-lens SmarAct hexapod (vhex*); positions the vertical-focusing KB mirror / lens (OPT-1)"
+    - name: LensFineStages
+      family: PseudoAxis
+      pv: {hlensx: "p06/vmexecutor/hlensx", hlensy: "p06/vmexecutor/hlensy", hlensz: "p06/vmexecutor/hlensz", hlensrx: "p06/vmexecutor/hlensrx", hlensry: "p06/vmexecutor/hlensry", hlensrz: "p06/vmexecutor/hlensrz", vlensx: "p06/vmexecutor/vlensx", vlensy: "p06/vmexecutor/vlensy", vlensz: "p06/vmexecutor/vlensz", vlensrx: "p06/vmexecutor/vlensrx", vlensry: "p06/vmexecutor/vlensry", vlensrz: "p06/vmexecutor/vlensrz"}
+      new: true
+      confirm: true
+      note: "NC1 KB-lens virtual fine-positioning axes (hlens* / vlens* on vmexecutor), coupling the hexapod motions (OPT-1)"
+    - name: SamplePiezo
+      family: LinearStage
+      pv: {phasex: "p06/smaractmotor/exp.01", phasey: "p06/smaractmotor/exp.02", phasez: "p06/smaractmotor/exp.03", intsx: "p06/smaractmotor/exp.04", intsy: "p06/smaractmotor/exp.05", intsz: "p06/smaractmotor/exp.06", pinx: "p06/smaractmotor/exp.07", piny: "p06/smaractmotor/exp.08", pinz: "p06/smaractmotor/exp.09"}
+      new: true
+      confirm: true
+      note: "NC1 SmarAct sample / phase / interferometer piezos (phase*, ints*, pin* on p06/smaractmotor); fine sample positioning (SAMPLE-1)"
+    - name: SampleRotation
+      family: RotaryStage
+      pv: {samr: "p06/pegasusmotor/nc1.02"}
+      new: true
+      confirm: true
+      note: "NC1 sample rotation (samr, Pegasus motor); the nano-tomography rotation axis (SAMPLE-1)"
+    - name: CentringPiezo
+      family: LinearStage
+      pv: {cent1: "p06/piezopie871/exp.01", cent2: "p06/piezopie871/exp.02"}
+      new: true
+      confirm: true
+      note: "NC1 sample-centring piezos (cent1 / cent2, PI E-871)"
+    - name: ScanStage
+      family: LinearStage
+      pv: {u: "p06/aerotechmotor/lab.02", v: "p06/aerotechmotor/lab.01", z: "p06/aerotechmotor/lab.03", scanx: "p06/vmexecutor/scanx", scany: "p06/vmexecutor/scany"}
+      new: true
+      confirm: true
+      note: "NC1 Aerotech scanning stage (scanu / scanv / scanz) plus virtual scanx / scany; the continuous fly-scan raster axes (SCAN-1)"
+    - name: NanoPositioningStage
+      family: LinearStage
+      pv: {bank: "p06/motor/na.01", mot31: "p06/motor/na.31", mot32: "p06/motor/na.32"}
+      new: true
+      confirm: true
+      note: "NC1 nano-positioning motor bank (nat_mot01..32, 20 modellable axes on p06/motor/na.*); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+    - name: NC1Slits
+      family: Slit
+      pv: {h_gap: "p06/vmexecutor/shg", h_offset: "p06/vmexecutor/sho", v_gap: "p06/vmexecutor/svg", v_offset: "p06/vmexecutor/svo"}
+      new: true
+      confirm: true
+      note: "NC1 defining slit (virtual h/v gap and offset on vmexecutor)"
+
+# ===========================================================================
+# DETECTION: the shared detector pool (Maia, area detectors, fluorescence)
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: p06-mc01
+  intro: "The shared P06 detector pool: the Maia XRF detector array (the high-rate fluorescence-mapping detector and its sub-systems), the area detectors (Eiger, Lambda, Pilatus, PCO), and the XIA fluorescence detectors. The detectors serve both endstations per experiment."
+  note: "The Maia is a multi-element XRF detector array exposed as several Tango devices (maiadimension / maiaflux / maiasensor / maiainterlock / maialogger / maiaprocessing); modelled as one EnergyDispersiveSpectrometer Asset carrying its sub-device handles. The area detectors and XIA detectors report on a bare p06 / petra3 host (HOST-1); the operative roster per experiment is DET-1."
+  devices:
+    - name: MaiaDetector
+      family: EnergyDispersiveSpectrometer
+      pv: {dimension0: "p06/maiadimension/exp.00", dimension1: "p06/maiadimension/exp.01", dimension2: "p06/maiadimension/exp.02", flux0: "p06/maiaflux/exp.00", flux1: "p06/maiaflux/exp.01", sensor: "p06/maiasensor/exp.01", interlock: "p06/maiainterlock/exp.01", logger: "p06/maialogger/exp.01", processing: "p06/maiaprocessing/exp.01"}
+      new: true
+      confirm: true
+      note: "Maia high-rate XRF detector array (the dimension / flux / sensor / interlock / logger / processing sub-devices); the scanning-fluorescence-microscopy mapping detector, modelled as one EnergyDispersiveSpectrometer (DET-1)"
+    - name: XIAFluorescence
+      family: EnergyDispersiveSpectrometer
+      pv: {xia01: "p06/xia/p06.1", xia02: "p06/xia/p06.2", xia03: "p06/xia/p06.3", xia04: "p06/xia/p06.4", lab: "p06/xia/exp.1"}
+      new: true
+      confirm: true
+      note: "XIA multi-channel-analyzer fluorescence detectors (p06_xia01..04 plus the lab unit); energy-dispersive fluorescence detection (DET-1)"
+    - name: EigerDetector
+      family: Camera
+      pv: {eiger: "p06/eigerdectris/exp.01"}
+      new: true
+      confirm: true
+      note: "DECTRIS Eiger area detector; diffraction / scanning-diffraction imaging (DET-1)"
+    - name: LambdaDetector
+      family: Camera
+      pv: {lambda: "petra3/lambda/01"}
+      new: true
+      confirm: true
+      note: "X-Spectrum Lambda area detector; reports on the petra3 host (HOST-1); diffraction imaging (DET-1)"
+    - name: PilatusDetector
+      family: Camera
+      pv: {pilatus: "p06/pilatus/300k", pilatus2: "P06/pilatus/300k2"}
+      new: true
+      confirm: true
+      note: "DECTRIS Pilatus 300k area detectors (two units); diffraction imaging (DET-1)"
+    - name: PCODetector
+      family: Camera
+      pv: {pco4000: "p06/ccd/pco4000"}
+      new: true
+      confirm: true
+      note: "PCO 4000 CCD camera; imaging / visible-light diagnostics (DET-1)"
+    - name: XrayEyeCamera
+      family: Camera
+      pv: {xrayeye: "p06/prosilica/xrayeye.01"}
+      new: true
+      confirm: true
+      note: "X-ray-eye Prosilica viewing camera; beam / sample viewing (DET-1)"
+
+# Cross-cutting control. P06 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P06 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as P01 and P04. P06 is the most controller-diverse
+    PETRA III beamline modelled so far: alongside the OMS MAXv-58 steppers it runs
+    hexapod controllers (hexapodmotor, hexasmarmotor), SmarAct piezo controllers
+    (smaractmotor), Aerotech fly-scan controllers (aerotechmotor), PI piezo
+    controllers (piezopi, piezopie871), SMC-Hydra controllers (hydramotor), and
+    Pegasus controllers (pegasusmotor), with the Maia XRF array and the Eiger /
+    Lambda / Pilatus / PCO detectors. The handles are read from P06's public OnlineXML
+    registry and carried confirm (CTRL-1). The scanning fluorescence / diffraction
+    microscopy acquisition (the Aerotech raster fly-scan coupled to the Maia readout)
+    runs as a Sardana macro; that orchestration is the seam CORA's edge conducts over
+    its ControlPort (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the mono, mi, and nat motor banks (CTRL-1)"
+    - name: AerotechControllers
+      family: MotionController
+      protocol: Tango_aerotech
+      new: true
+      confirm: true
+      note: "Aerotech fly-scan motion controllers driving the MC01 / NC1 scanning raster stages (SCAN-1, CTRL-1)"
+    - name: SmarActControllers
+      family: MotionController
+      protocol: Tango_smaract
+      new: true
+      confirm: true
+      note: "SmarAct piezo controllers (smaractmotor, hexasmarmotor) driving the nano-probe hexapods and sample piezos (CTRL-1)"
+    - name: HexapodControllers
+      family: MotionController
+      protocol: Tango_hexapod
+      new: true
+      confirm: true
+      note: "hexapod motion controllers (hexapodmotor) driving the MC01 six-axis hexapod (CTRL-1)"
+    - name: PiezoControllers
+      family: MotionController
+      protocol: Tango_piezo
+      new: true
+      confirm: true
+      note: "PI piezo controllers (piezopi, piezopie871) and SMC-Hydra controllers (hydramotor) driving the fine sample stages (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango) backing the mono, undulator, virtual, and Pegasus axes (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P06 run needs present before it
+    can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

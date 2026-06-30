@@ -1,0 +1,179 @@
+# P22 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P22 "Hard X-ray Photoelectron Spectroscopy (HAXPES)" is the hard X-ray photoemission
+# beamline at PETRA III (DESY, Hamburg). It shares its optics chain with P09 (the two
+# beamlines are on the same straight / optics host): the undulator, the double-crystal
+# monochromator, the mirror pair, and the phase retarder are P09 optics, and P22 adds
+# the HAXPES experiment endstation. It is bound to the PETRA III Site
+# (deployments/petra-iii/site.yaml), the fourteenth PETRA III beamline.
+#
+# STATUS: reverse-engineered from P22's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p22, branch
+# debian/jessie). Device logical names and Tango control handles are real, read from
+# that registry; vendor part numbers, crystal cuts, the electron analyzer, energy
+# calibration, and physical positions are not in it and are open questions. Every value
+# is carried confirm until P22 staff verify it. The extraction is in
+# research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family. P22 reuses existing Families, including the
+# allowlisted-loose PhaseRetarder Family (the 4-ID POLAR / P09 precedent, already
+# graduation-due; P22 is a further consumer via the shared P09 optics). The electron
+# analyzer (the defining HAXPES instrument) is not exposed as a motor device in this
+# registry slice and is carried pending against the catalog ElectronAnalyzer Family
+# (DET-1). The technique (HAXPES) reuses the pending angle_resolved_photoemission slug
+# (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML. P22's optics report on the P09 hosts (p09/ addresses, P09-MONO):
+# the undulator, DCM, mirrors, phase retarder, and absorber are SHARED with P09. Per
+# the cross-host mapping decision they are homed in the p22-optics enclosure with the
+# shared-optics relationship flagged (HOST-1, SHARED-1). The HAXPS endstation bank is
+# grouped (GROUP-1); the haxps_dmy stubs are dummy / placeholder devices (STUB-1).
+#
+# SCOPE: this cut models the shared P09 / P22 optics (undulator, DCM, mirrors, phase
+# retarder, absorber) and the HAXPS experiment endstation (the sample / instrument
+# bank). The electron analyzer is carried pending (DET-1). Counter / timer / ADC
+# channels and the Sardana MeasurementGroup bookkeeping rows are filtered out by the
+# extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p22/questions.md.
+
+beamline:
+  name: P22
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P22"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P22 is an undulator beamline (HAXPES), sharing the undulator / optics with P09; the OnlineXML exposes the undulator (p09/undulator) but no period or parameters, carried pending (SRC-1, SHARED-1)"
+
+# Two enclosures: the shared P09 / P22 optics, and the HAXPS experiment endstation. The
+# optics report on the P09 host (HOST-1, SHARED-1). DESY PSS permit signals are not in
+# the OnlineXML (PSS-1).
+enclosures:
+  - name: p22-optics
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the shared P09 / P22 optics; not in the OnlineXML (PSS-1, SHARED-1)"}
+  - name: p22-haxps
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the HAXPS experiment endstation; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the shared P09 / P22 optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p22-optics
+  intro: "The P22 source and optics, shared with P09: the undulator, the double-crystal monochromator, the two mirrors, the polarization phase retarder, and the beam absorber. P22 is the HAXPES branch off the P09 optics chain."
+  note: "All these devices report on the P09 host (p09/ addresses, P09-MONO); they are shared with P09 and homed here in the p22-optics enclosure with the relationship flagged (HOST-1, SHARED-1)."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {undulator: "p09/undulator/1", gap: "p09/attributemotor/gap"}
+      new: true
+      confirm: true
+      note: "the shared P09 / P22 undulator; gap read, period not exposed (SRC-1, SHARED-1)"
+    - name: Monochromator
+      family: Monochromator
+      pv: {energy: "p09/dcmener/mono.01", energy_all: "p09/multiplemotors/mono.01"}
+      new: true
+      confirm: true
+      note: "the shared double-crystal monochromator (energyfmb / mnchrmtr on the P09 host); crystal cut is OPT-1 (SHARED-1)"
+    - name: Mirror1
+      family: Mirror
+      pv: {pitch: "p09/spk/exp.01", x: "p09/spk/exp.02", yaw: "p09/spk/exp.03", y: "p09/spk/exp.04"}
+      new: true
+      confirm: true
+      note: "the shared first mirror (m1: pitch / x / yaw / y, spk controller on the P09 host); coating / role OPT-1 (SHARED-1)"
+    - name: Mirror2
+      family: Mirror
+      pv: {pitch: "p09/spk/exp.05", x: "p09/spk/exp.06", yaw: "p09/spk/exp.07", y: "p09/spk/exp.08", bender: "p09/spk/exp.09"}
+      new: true
+      confirm: true
+      note: "the shared second mirror (m2: pitch / x / yaw / y / bender on the P09 host); coating / role OPT-1 (SHARED-1)"
+    - name: PhaseRetarder
+      family: PhaseRetarder
+      pv: {circle1: "p09/phaseretarder/exp.01", circle2: "p09/phaseretarder/exp.02"}
+      new: true
+      confirm: true
+      note: "the shared polarization phase-retarder circles (on the P09 host); reuses the allowlisted-loose PhaseRetarder Family (already graduation-due from P09 / 4-ID), a further consumer (POL-1, SHARED-1)"
+    - name: Absorber
+      family: Filter
+      pv: {abs: "p09/absorber/01"}
+      new: true
+      confirm: true
+      note: "the shared beam absorber / attenuator (on the P09 host); folds into the Filter Family (OPT-1, SHARED-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the HAXPS experiment endstation
+# ===========================================================================
+
+haxps-sample:
+  stage: sample
+  enclosure: p22-haxps
+  intro: "The HAXPS experiment endstation: the sample / instrument positioning motor bank for hard X-ray photoelectron spectroscopy."
+  note: "Handles read from the p22/motor experiment bank. The haxps_dmy stubs are dummy / placeholder devices (STUB-1). The sample bank per-axis roles are not labelled (GROUP-1)."
+  devices:
+    - name: SampleStage
+      family: Manipulator
+      pv: {bank: "p22/motor/exp01"}
+      new: true
+      confirm: true
+      note: "the HAXPS sample / instrument motor bank (the p22/motor experiment bank, ~64 axes); the photoemission sample manipulator, per-axis roles not labelled, grouped as one Manipulator (GROUP-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the electron analyzer
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: p22-haxps
+  intro: "The P22 detection: the hard X-ray electron analyzer (the defining HAXPES instrument). It is not exposed as a motor device in this registry slice and is carried pending against the catalog ElectronAnalyzer Family."
+  note: "The HAXPES electron analyzer (a hemispherical analyzer) is the defining detector; not exposed in this registry slice, carried pending (DET-1)."
+  devices:
+    - name: ElectronAnalyzer
+      family: ElectronAnalyzer
+      pv: {confirm: "the HAXPES hemispherical electron analyzer is not exposed as a device in this OnlineXML slice; carried pending against the catalog ElectronAnalyzer Family (DET-1)"}
+      new: true
+      confirm: true
+      note: "the HAXPES hard X-ray electron analyzer (hemispherical); the defining detector, bound to the catalog ElectronAnalyzer Family (graduated at NSLS-II ESM), carried pending (DET-1)"
+
+# Cross-cutting control. P22 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P22 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as the other PETRA III beamlines. P22 shares its optics
+    chain with P09: the undulator, DCM, mirrors, phase retarder, and absorber are P09
+    devices (p09/ addresses, the P09-MONO host), and P22 adds the HAXPS endstation
+    (p22/ addresses). A motion axis is a Tango motor device, the mirrors spk devices,
+    the phase retarder a phaseretarder device. The handles are read from P22's public
+    OnlineXML registry and carried confirm (CTRL-1, SHARED-1). The HAXPES acquisition
+    (the photon-energy / analyzer sweep over the sample) runs as a Sardana macro; that
+    orchestration is the seam CORA's edge would conduct over its ControlPort (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the HAXPS sample motor bank (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango / spk) backing the shared P09 optics (mono, mirrors, phase retarder) and the coupled axes (CTRL-1, SHARED-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P22 run needs present before it
+    can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

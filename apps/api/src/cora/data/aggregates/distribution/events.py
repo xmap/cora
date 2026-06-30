@@ -4,11 +4,15 @@ Mirrors the locked event-module shape: event classes, discriminated union,
 ``event_type_name``, ``to_payload``, ``from_stored``. The persistence-envelope
 construction (``NewEvent``) lives at ``cora.infrastructure.event_envelope.to_new_event``.
 
-## This module ships ONE event today
+## This module ships two events today
 
   - ``DistributionRegistered`` (genesis): identity + same-BC ref + cross-BC ref +
     integrity + size + encoding + transport + attribution. The status is implicit
     (``Registered``); the evolver sets it.
+  - ``DistributionDiscarded`` (transition, terminal): the metadata-only
+    reclaim-decision record. Bytes are reclaimed out-of-band (same shape as
+    ``DatasetDiscarded``); this event keeps the reclaim reason + attribution
+    for audit. The status is implicit (``Discarded``); the evolver sets it.
 
 ## Future events NAMED but not locked here
 
@@ -17,12 +21,11 @@ Per [[project-data-distribution-design]] L18:
   - ``DistributionVerified`` (Registered/Verified -> Verified)
   - ``DistributionMarkedStale`` ({Registered, Verified} -> Stale, per L23/L4 +
     operationally relaxed source-state set after gate review)
-  - ``DistributionDiscarded`` (Registered/Verified/Stale -> Discarded, GDPR-shaped
-    with free-form ``reason``)
 
 These will land additively in follow-on slices. The discriminated union and
-``from_stored`` switch land their cases at that time; the ``DistributionEvent``
-alias below carries only the current event for now.
+``from_stored`` switch land their cases at that time. The Verified/Stale flip
+stays projection-only today (per state.py "Verified/Stale flip is a projection")
+and is NOT retro-converted to stream events by this slice.
 
 ## Payload conventions
 
@@ -85,9 +88,37 @@ class DistributionRegistered:
     registered_by: ActorId
 
 
-#: Discriminated union over Distribution events. has one arm today;
-#: future slices extend additively (Verified / MarkedStale / Discarded).
-DistributionEvent = DistributionRegistered
+@dataclass(frozen=True)
+class DistributionDiscarded:
+    """A Distribution copy was discarded (any prior status -> Discarded terminal).
+
+    Metadata-only, same posture as ``DatasetDiscarded``: the bytes for
+    this storage-tier copy are reclaimed out-of-band (an operator
+    workflow against S3 / Globus / POSIX); this event records the
+    reclaim decision + reason for audit. ``reason`` is a free-form
+    string (1-500 chars after trimming), captured verbatim.
+
+    The guard is enforced upstream in the decider: a copy may be
+    discarded only when a sibling copy of the same Dataset is Verified
+    on a different storage tier, and the parent Dataset is not itself
+    Discarded. The event itself carries no sibling reference; the
+    redundancy invariant lives at decide-time.
+
+    Fold-symmetry attribution per [[project-fold-symmetry-design]]:
+    ``discarded_by: ActorId`` carries the envelope ``principal_id`` of
+    the discard-slice caller.
+    """
+
+    distribution_id: UUID
+    reason: str
+    occurred_at: datetime
+    discarded_by: ActorId
+
+
+#: Discriminated union over Distribution events. ``DistributionRegistered``
+#: is the genesis arm; ``DistributionDiscarded`` is the terminal transition.
+#: Future slices extend additively (Verified / MarkedStale).
+DistributionEvent = DistributionRegistered | DistributionDiscarded
 
 
 def event_type_name(event: DistributionEvent) -> str:
@@ -135,6 +166,18 @@ def to_payload(event: DistributionEvent) -> dict[str, Any]:
                 "occurred_at": occurred_at.isoformat(),
                 "registered_by": str(registered_by),
             }
+        case DistributionDiscarded(
+            distribution_id=distribution_id,
+            reason=reason,
+            occurred_at=occurred_at,
+            discarded_by=discarded_by,
+        ):
+            return {
+                "distribution_id": str(distribution_id),
+                "reason": reason,
+                "occurred_at": occurred_at.isoformat(),
+                "discarded_by": str(discarded_by),
+            }
         case _:  # pragma: no cover  # exhaustiveness guard for future arms
             assert_never(event)
 
@@ -146,7 +189,8 @@ def from_stored(stored: StoredEvent) -> DistributionEvent:
     discriminators so a stream contaminated with foreign event types fails
     loud rather than silently being dropped by the evolver. Each per-event
     builder is wrapped in ``deserialize_or_raise`` to surface malformed
-    payloads as ``MalformedDistributionRegistered`` per
+    payloads as ``MalformedDistributionRegistered`` /
+    ``MalformedDistributionDiscarded`` per
     [[project-from-stored-wrap-convention]].
     """
     payload = stored.payload
@@ -172,12 +216,23 @@ def from_stored(stored: StoredEvent) -> DistributionEvent:
                 )
 
             return deserialize_or_raise("DistributionRegistered", _build_registered)
+        case "DistributionDiscarded":
+            return deserialize_or_raise(
+                "DistributionDiscarded",
+                lambda: DistributionDiscarded(
+                    distribution_id=UUID(payload["distribution_id"]),
+                    reason=payload["reason"],
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    discarded_by=ActorId(UUID(payload["discarded_by"])),
+                ),
+            )
         case _:
             msg = f"Unknown DistributionEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)
 
 
 __all__ = [
+    "DistributionDiscarded",
     "DistributionEvent",
     "DistributionRegistered",
     "event_type_name",

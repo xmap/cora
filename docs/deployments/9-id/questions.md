@@ -2,7 +2,7 @@
 
 *What CORA needs the 9-ID team to confirm before the model can be trusted.*
 
-9-ID was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/9id_bits](https://github.com/BCDA-APS/9id_bits)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, read from a config snapshot rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet), including the metadata seam and the loose families held for gate-review). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+9-ID was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/9id_bits](https://github.com/BCDA-APS/9id_bits)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, read from a config snapshot rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet), including the metadata seam and the loose family still held for gate-review). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 
@@ -26,7 +26,7 @@
 | MONO-1 | Blocks-go-live | The Kohzu monochromator (`idt_mono`, `9ida:`): energy range, crystal set, and per-axis roles. | One `Monochromator` Asset; range unconfirmed. | The monochromator energy model. |
 | OPT-1 | Nice-to-have | The two FMBO mirrors: coatings and the bender / piezo-pitch axis roles. | Two `Mirror` Assets with the config's axis maps; coatings unconfirmed. | The mirror specs. |
 | OPT-2 | Nice-to-have | The white-beam apertures (`SL-1`, `SL-2`) and the guard slits (`Slit3/4/5`): the internal axis maps. | `Aperture` and `Slit` Assets with base PVs; per-blade axes partial. | The aperture and slit axis maps. |
-| OPT-3 | Blocks-go-live | The JJ CRL transfocator (`9idPyCRL:CRL9ID:`): lens material, count, and which stations it focuses. | One `Transfocator` Asset (loose Family). | The transfocator spec. |
+| OPT-3 | Blocks-go-live | The JJ CRL transfocator (`9idPyCRL:CRL9ID:`): lens material, count, and which stations it focuses. | One `Transfocator` Asset (the graduated catalog Family). | The transfocator spec. |
 | OPT-4 | Nice-to-have | The AVS attenuator (`9idPyFilter:FL1:`): the foil / absorber set. | One `Filter` Asset. | The attenuator model. |
 | OPT-5 | Nice-to-have | The KB focusing pair (`9idKB:`): the per-mirror bender axes and the focal geometry (capacitive-sensor suffixes resolved at runtime). | One `Mirror` Asset with four bender axes plus a granite support. | The KB axis map. |
 

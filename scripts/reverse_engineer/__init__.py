@@ -9,7 +9,7 @@ catalog Family graduation candidates.
 
 The tool stops at candidates by design. It never writes to deployments/ or
 catalog/; the modeling judgment (Family graduation, naming, what to deploy) stays
-with a person. See research/aps-reverse-engineering/ for the framing.
+with a person. See research/aps/ for the framing (local-only, gitignored).
 """
 
 from __future__ import annotations

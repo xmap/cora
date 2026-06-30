@@ -38,6 +38,14 @@ class DefineMethod:
     (sample-cleaning Methods need no supplies). Same hashability +
     `_normalize_for_hash` story as needed_family_ids.
 
+    `needed_input_kinds` is a frozenset of input-Dataset kind STRINGS
+    the Method consumes (for example "raw-projections", "flat-field",
+    "prior-reconstruction"), NOT Dataset instance UUIDs.
+    Eventual-consistency: resolved to concrete input Datasets at
+    Plan-bind / start_run. Default empty frozenset (a Method that
+    consumes no prior Datasets). Same hashability + `_normalize_for_hash`
+    story as needed_supplies.
+
     `capability_id` points to the universal
     Capability template (Recipe BC) this Method realizes as a
     Method-shaped executor. REQUIRED per Pattern P from
@@ -63,6 +71,7 @@ class DefineMethod:
     execution_pattern: ExecutionPattern
     needed_family_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
     needed_supplies: frozenset[str] = field(default_factory=frozenset[str])
+    needed_input_kinds: frozenset[str] = field(default_factory=frozenset[str])
     # needed_assembly_ids declares the Method's cross-BC dependency on
     # Equipment Assemblies (composition blueprints). Empty means "no
     # specific composition required, just N Assets satisfying

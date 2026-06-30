@@ -43,6 +43,7 @@ from cora.data.features import (
     add_dataset_to_edition,
     demote_dataset,
     discard_dataset,
+    discard_distribution,
     get_dataset,
     list_datasets,
     promote_dataset,
@@ -82,6 +83,7 @@ class DataHandlers:
     list_datasets: list_datasets.Handler
     record_acquisition: record_acquisition.IdempotentHandler
     register_distribution: register_distribution.IdempotentHandler
+    discard_distribution: discard_distribution.Handler
     register_edition: register_edition.IdempotentHandler
     add_dataset_to_edition: add_dataset_to_edition.Handler
     remove_dataset_from_edition: remove_dataset_from_edition.Handler
@@ -208,6 +210,11 @@ def wire_data(deps: Kernel) -> DataHandlers:
                 lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
             ),
             command_name="RegisterDistribution",
+            bc=_BC,
+        ),
+        discard_distribution=with_tracing(
+            discard_distribution.bind(deps),
+            command_name="DiscardDistribution",
             bc=_BC,
         ),
         register_edition=with_tracing(

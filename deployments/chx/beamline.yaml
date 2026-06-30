@@ -1,0 +1,254 @@
+# CHX beamline descriptor (NSLS-II), reverse-engineered
+#
+# CHX (Coherent Hard X-ray scattering) is the NSLS-II coherence beamline at sector
+# 11-ID. Its defining technique is X-ray photon correlation spectroscopy (XPCS):
+# it records long, fast time series of a coherent speckle pattern on an area
+# detector to measure sample dynamics, plus static small- and wide-angle scattering
+# (SAXS/WAXS) and grazing-incidence scattering (GISAXS) on the same detectors. It
+# is bound to the NSLS-II Site (deployments/nsls2/site.yaml), the sixth NSLS-II
+# beamline after FXI, HXN, BMM, SRX, and SIX.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/chx-profile-collection) or inferred,
+# carried `confirm: true` pending CHX staff. EPICS PVs are real and verified against
+# the startup scripts; vendor part numbers, serials, and physical positions are not
+# in it and are open questions. Same descriptor mode as FXI / HXN / BMM / SRX; this
+# scaffold is descriptor + docs, scenarios deferred.
+#
+# CHX is the COHERENT-SCATTERING reinforcement: it is the second coherent beamline
+# CORA models (after APS 8-ID XPCS) and the second facility for that axis, so it
+# proves the coherent-beamline families and the detector/timing seam port across
+# facilities. It introduces NO new catalog family: the area detectors reuse Camera
+# (the Eiger-to-Camera precedent), the ion-chamber/diode flux reuses FluxMonitor
+# (#353), the thermal stage TemperatureController (#350), the occasional anomalous
+# fluorescence EnergyDispersiveSpectrometer (#345), the beamstop BeamStop, the
+# mirrors Mirror, the two monochromators Monochromator. The compound-refractive-lens
+# focusing optic reuses the graduated Transfocator catalog Family (a CRL focusing
+# optic, also bound at 4-ID, 8-ID, 9-ID, and i22): the abstraction is settled, so
+# the only residual is the per-optic lens material and count for the transfocator
+# and the endstation kinoform lenses (CRL-1). Per the 8-ID precedent the
+# XPCS / small-angle-scattering Methods are NOT coined here; they are the deferred
+# owner-scope cohort (TECH-1).
+
+beamline:
+  name: CHX
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 11"          # PV namespace XF:11ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "IVU20 in-vacuum undulator (SR:C11-ID:G1{IVU20:1}), verified in source; parameters not fully in the profile collection (SRC-1)"
+
+enclosures:
+  # PV zones: 11IDA first-optics hutch (FOE), 11IDB endstation (the long coherence
+  # hutch, where the sample, flight path, and area detectors sit). Shutters span
+  # XF:11ID-PPS (front end) and XF:11IDA-PPS (FOE).
+  - name: 11-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf not in source; the shutters are XF:11ID-PPS{Sh:FE} (front end) and XF:11IDA-PPS{PSh} (FOE) (PSS-1)"}
+  - name: 11-ID-B
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; 11-ID-B is the endstation hutch carrying the sample, flight path, and detectors (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the undulator and front-end shutter
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 11-ID-A
+  intro: The in-vacuum undulator source and the front-end shutter.
+  devices:
+    - name: Source
+      family: InsertionDevice
+      pv: "SR:C11-ID:G1{IVU20:1}"
+      confirm: true
+      note: "IVU20 in-vacuum undulator (instance ivu_gap); gap-driven. Parameters pending (SRC-1)."
+    - name: FrontEndShutter
+      family: Shutter
+      pv: "XF:11ID-PPS{Sh:FE}"
+      confirm: true
+      note: "Front-end photon shutter (fe_sh); a second FOE shutter foe_sh gates 11-ID-A at XF:11IDA-PPS{PSh}."
+
+# ===========================================================================
+# OPTICS STAGE: the two monochromators, the focusing mirror and CRL, the slits
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: 11-ID-A
+  intro: "Condition the coherent beam and set its energy: the silicon double-crystal monochromator, the double-multilayer monochromator for high coherent flux, the horizontal-deflecting mirror, the compound-refractive-lens transfocator, and the pink- and mono-beam slits. PVs verified against startup/10-optics.py and 15-machines.py."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "XF:11IDA-OP{Mono:DCM-Ax:"
+      confirm: true
+      note: "Silicon double-crystal monochromator (dcm, class DCM; axes Energy/B/R/X/FP/P). The production energy routine defaults to the Si(111) crystal at harmonic 5 (move_E xtal=Si111cryo), read from source; the cryo detail and full range are pending (DCM-1). The EnergyAxis below is the master energy."
+    - name: MultilayerMonochromator
+      family: Monochromator
+      pv: "XF:11IDA-OP{Mono:DMM-Ax:"
+      confirm: true
+      note: "Double-multilayer monochromator (dmm, class DMM): a wider-bandpass alternative to the Si DCM giving higher coherent flux for XPCS. Coating and bandwidth pending (DCM-1); reuses the Monochromator family."
+    - name: HorizontalMirror
+      family: Mirror
+      pv: "XF:11IDA-OP{Mir:HDM-Ax:"
+      confirm: true
+      note: "Horizontal-deflecting focusing mirror (hdm, class HorizontalDiffractionMirror); pitch on a separate read/write PV pair."
+    - name: Transfocator
+      family: Transfocator
+      pv: "XF:11IDA-OP{Lens:"
+      confirm: true
+      note: "Compound-refractive-lens transfocator (tran, class Transfocator) focusing the coherent beam. Reuses the graduated Transfocator catalog Family (a CRL focusing optic, also bound at 4-ID/8-ID/9-ID/i22). Lens material and count pending (CRL-1)."
+    - name: PinkBeamSlit
+      family: Slit
+      pv: "XF:11IDA-OP{Slt:PB-Ax:"
+      confirm: true
+      note: "Pink-beam-defining slit (pbs, class MotorSlits)."
+    - name: MonoBeamSlit
+      family: Slit
+      pv: "XF:11IDA-OP{Slt:MB-Ax:"
+      confirm: true
+      note: "Mono-beam slit (mbs, class VirtualMotorSlits) defining the coherence-matched beam."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "The DCM energy axis (dcm.en, -Ax:Energy}Mtr), which sets the Bragg angle (dcm.b); modelled as the master energy PseudoAxis. CHX runs mostly fixed-energy; anomalous XPCS sweeps it across an edge. Whether energy is ever scanned as the measurement is ENERGY-1."
+    - name: BeamPositionMonitor
+      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      pv: "XF:11IDA-BI{Bpm:1-Ax:"
+      confirm: true
+      note: "Beam-position monitor bpm1 (XF:11IDA-BI{Bpm:1}); a second monitor bpm2 sits on the endstation branch (XF:11IDB-BI{BPM:2}, note the capitalization) and the AH401B electrometer (elm, XF:11IDA-BI{AH401B}AH401B:) reads diode currents. Binds the loose BeamPositionMonitor family that 4-ID/8-ID/9-ID also use (held; DIAG-1), matching the catalog note that position monitors stay loose. Channel map pending (DIAG-1)."
+
+# ===========================================================================
+# SAMPLE STAGE: the grazing-incidence mirror, the sample stack, the environment
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 11-ID-B
+  intro: "The endstation beam-conditioning slits that define the coherent beam at the sample, the grazing-incidence mirror for GISAXS, the sample stack, and the sample-environment thermal stage. PVs verified against startup/10-optics.py, 80-pseudomotors.py, 51_Linkam.py."
+  note: >
+    CHX positions the sample in a coherent focused spot and records speckle time
+    series (XPCS). The beam-defining and guard slits in the endstation are the
+    coherence-conditioning hardware: they trim the beam to the coherent core and
+    block parasitic scatter ahead of the sample. The grazing-incidence mirror
+    steers the beam onto a surface for GISAXS; the sample stack reuses LinearStage;
+    the Linkam stage reuses the TemperatureController family for in-situ studies.
+  devices:
+    - name: BeamDefiningSlit
+      family: Slit
+      pv: "XF:11IDB-OP{Slt:BDS-Ax:"
+      confirm: true
+      note: "Endstation beam-defining slit (s2, a SmarAct slit, class VirtualMotorSlits) trimming the beam to its coherent core at the sample; reuses the Slit family. It replaced an older large JJ slit (Slt:2). This is the coherence-defining slit for XPCS."
+    - name: GuardSlit
+      family: Slit
+      pv: "XF:11IDB-OP{Slt:Guard-Ax:"
+      confirm: true
+      note: "Guard slit (gsl, a SmarAct slit) cleaning up parasitic scatter from the beam-defining slit ahead of the sample; reuses the Slit family."
+    - name: GrazingIncidenceMirror
+      family: Mirror
+      pv: "XF:11IDB-OP{Mir:GI-Ax:"
+      confirm: true
+      note: "Grazing-incidence mirror (gi, class XYThetaMotor) steering the beam onto a surface for GISAXS; reuses the Mirror family. Whether GISAXS is a live routine is GI-1."
+    - name: SampleStage
+      family: LinearStage
+      pv: "XF:11IDB-ES{Dif-Ax:"
+      confirm: true
+      note: "Sample stack on the diffractometer base (diff, class Diffractometer at XF:11IDB-ES{Dif; physical_sample_holder XF:11IDB-ES{Dif-Ax:XH}Mtr, driven by the SamplePositioner pseudomotor). Bound to LinearStage as a design-phase placeholder; the diffractometer also carries goniometric axes, so whether its sample orientation is modelled as a Goniometer plus a Diffractometer Assembly (the 8-ID precedent) is folded into STAGE-1. Full axis set pending (STAGE-1)."
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: "XF:11ID-ES{LINKAM}:"
+      confirm: true
+      note: "Linkam thermal stage (LThermal) with a tensile variant (LTensile) for in-situ studies; reuses the TemperatureController family (graduated #350)."
+
+# ===========================================================================
+# DETECTION STAGE: the coherent area detectors, flight path, flux, fluorescence
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 11-ID-B
+  intro: "The coherent area detectors for XPCS and scattering, the SAXS detector positioner and beamstop, the flux counter, the occasional fluorescence detector, and the beam-viewing cameras. PVs verified against startup/20-area-detectors.py, 10-optics.py, 26-scalers.py, 98-xspress3.py."
+  note: >
+    CHX's measurement lives on its area detectors: the Eiger captures the coherent
+    speckle time series (XPCS) or the static scattering pattern (SAXS/WAXS). The
+    detector positioner centers the detector transversely on the scattered beam and
+    the beamstop blocks the direct beam. All reuse existing families. Which Eiger is
+    primary versus the spare set is a staff question (DET-1).
+  devices:
+    - name: Eiger4M
+      family: Camera
+      pv: "XF:11IDB-ES{Det:Eig4M}"
+      confirm: true
+      note: "Eiger 4M pixel detector (eiger4m), the primary XPCS / scattering detector; fast-trigger gated for speckle time series. Reuses Camera."
+    - name: Eiger1M
+      family: Camera
+      pv: "XF:11IDB-ES{Det:Eig1M}"
+      confirm: true
+      note: "Eiger 1M pixel detector (eiger1m); reuses Camera."
+    - name: Eiger500K
+      family: Camera
+      pv: "XF:11IDB-ES{Det:Eig500K}"
+      confirm: true
+      note: "Eiger 500K pixel detector (eiger500k); reuses Camera."
+    - name: SAXSDetectorStage
+      family: LinearStage
+      pv: "XF:11IDB-ES{Det:SAXS-Ax:"
+      confirm: true
+      note: "Detector positioner (saxs_detector, class XYMotor: X/Y only) centering the area detector transversely on the scattered beam. Whether a separate along-beam stage sets the sample-to-detector distance (and hence the q-range) is not in source; routed to DET-1."
+    - name: SAXSBeamStop
+      family: BeamStop
+      pv: "XF:11IDB-ES{BS:SAXS-Ax:"
+      confirm: true
+      note: "SAXS beamstop (saxs_bst, class SAXSBeamStop) blocking the direct beam ahead of the detector; reuses BeamStop."
+    - name: FluxCounter
+      family: FluxMonitor
+      pv: "XF:11IDB-ES{Sclr:1}"
+      confirm: true
+      note: "Scaler-counted ion-chamber / diode flux channels (I0 and others) for normalization; reuses FluxMonitor (graduated #353). Channel map pending (DIAG-1)."
+    - name: FluorescenceSpectrometer
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:11IDB-ES{Xsp:1}:"
+      confirm: true
+      note: "Xspress3 energy-dispersive detector (the mca.xs component, class CHXXspress3Detector) for occasional element-sensitive / anomalous work; reuses EnergyDispersiveSpectrometer (graduated #345). Element count pending (DET-1)."
+    - name: BeamViewingCamera
+      family: Camera
+      pv: "XF:11IDB-BI{Cam:10}"
+      confirm: true
+      note: "Prosilica on-axis beam-viewing camera (OAV); x-ray-eye Prosilicas (xray_eye1-4) and a PointGrey (BCam) serve alignment views. Reuses Camera. Live set pending (CAM-1)."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    The Zebra position / time trigger that gates the fast shutter and the detector
+    frame triggers for an XPCS time series, and the endstation motion controllers.
+    Controller box models / firmware are not in the profile collection (DRIVE-1).
+  triggering:
+    - name: Zebra
+      family: TimingController
+      pv: "XF:11IDB-ES{Zebra}:"
+      trigger_source: TTL
+      confirm: true
+      note: "Zebra FPGA box (Zebra) gating the fast shutter (OUT1_TTL / SOFT_IN) and the Eiger frame triggers for the XPCS time series; a soft-IOC delay generator (delaygen:DG0:) and a fast shutter on the Pel-IO digital-output line sit alongside. Gating chain detail and vendor identities pending (TIMING-1)."
+    - name: EndstationMotionController
+      family: MotionController
+      confirm: true
+      note: "Endstation motion controllers driving the sample and optics axes; box model/protocol/IP not in the profile collection (DRIVE-1)."
+  software_iocs_not_modeled:
+    [Eiger, Xspress3, Zebra, Prosilica, Scaler, Linkam, DelayGenerator]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen        # DCM cryocooler
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["Eiger detectors", "CRL lenses", "SAXS beamstop"]

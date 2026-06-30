@@ -1,0 +1,264 @@
+# CORA Beamline descriptor: I-TOMCAT (Swiss Light Source), modelled from design
+#
+# I-TOMCAT (X02SA) is the insertion-device tomographic-microscopy beamline of the
+# rebuilt TOMCAT at the Swiss Light Source (SLS 2.0, Paul Scherrer Institut). It
+# is bound to the PSI Site (deployments/psi/site.yaml), CORA's EIGHTH Site. Under
+# SLS 2.0 the single legacy TOMCAT beamline was split into two: I-TOMCAT (X02SA,
+# undulator, this file) and S-TOMCAT (X02DA, 5 T superbend; not modelled here).
+# I-TOMCAT is the closest analog to the APS 2-BM micro-CT pilot.
+#
+# STATUS: off-roadmap modelling exercise, MODELLED FROM DESIGN REPORTS (the
+# TomoWISE tradition), not reverse-engineered. No public per-beamline controls
+# config exists for TOMCAT (the BEC beamline plugins live on the internal
+# gitea.psi.ch); the public ophyd_devices examples cover sibling beamlines
+# (cSAXS X12SA, PXIII X06DA) only. So every value here is read from PSI's public
+# TOMCAT pages or the SLS 2.0 design reports and carried new: true (not yet
+# modelled in CORA) + confirm: true (value to be verified by PSI staff). Some
+# optics values are LEGACY TOMCAT specs whose validity for the rebuilt SLS 2.0
+# beamline is itself an open question (MONO-1 / OPT-1).
+#
+# Control handles are omitted on purpose: SLS runs EPICS at the floor, but the
+# TOMCAT EPICS PV prefix scheme is not public and the BEC ophyd device manifest
+# is internal, so no `pv` field is invented (CTRL-1). Devices bind to catalog
+# Families only, with no `model`, because the vendor part numbers read from the
+# public pages (Aerotech ABRX150, pco.edge / pco.dimax, the PSI GigaFRoST camera)
+# are not yet catalog Models; they are carried as "(target)" in the notes and as
+# open questions, not bindings.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/i-tomcat/questions.md.
+
+beamline:
+  name: I-TOMCAT
+  facility: psi                  # PSI Site (facility_code: psi)
+  sector: "X02SA"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "I-TOMCAT is the undulator branch of the rebuilt TOMCAT; the U15 undulator drives it, with a planned source upgrade to HTSU10 in 2027 (SRC-1)"
+  z_span_mm: [0, 35000]
+  z_span_confirm: true
+
+# Two access-gated hutches: the shared optics hutch and the I-TOMCAT experiment
+# hutch (endstation ES2, ~33 m from source). The PSS permit-signal handles are
+# not public (PSS-1); the exact hutch grouping and the X02SA code reassignment
+# to the rebuilt I-TOMCAT are carried confirm (ENC-1).
+enclosures:
+  - name: i-tomcat-optics
+    role: optics-hutch
+    facility_code: psi
+    permit_signal: {confirm: "SLS PSS permit signal not public; the shared TOMCAT optics zone (PSS-1, ENC-1)"}
+  - name: i-tomcat-experiment
+    role: experiment-hutch
+    facility_code: psi
+    permit_signal: {confirm: "SLS PSS permit signal not public; the I-TOMCAT (X02SA) endstation hutch (PSS-1, ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state, the U15 undulator, the optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: i-tomcat-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "The SLS 2.0 storage-ring state, the loose StorageRing pattern reused across the fleet (MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      new: true
+      confirm: true
+      note: "SLS 2.0 storage-ring state (current, fill); observe-only, the exact handles are MACHINE-1"
+
+insertion-devices:
+  stage: source
+  enclosure: i-tomcat-optics
+  intro: "The U15 undulator, the variable-gap hard X-ray source feeding the monochromatic tomography endstation."
+  note: "The U15 undulator binds the catalog InsertionDevice; gap is a setting tracked with the monochromator energy. A source upgrade to HTSU10 is planned for 2027 (SRC-1)."
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      new: true
+      confirm: true
+      device_type: undulator
+      note: "the U15 undulator (planned HTSU10 upgrade in 2027); period and gap range read confirm pending staff (SRC-1)"
+
+optics:
+  stage: source
+  enclosure: i-tomcat-optics
+  intro: "The fixed-exit double-crystal multilayer monochromator, the focusing mirrors, the diamond window, and the filter batteries that condition the beam delivered to the experiment hutch."
+  note: >
+    The DCMM binds Monochromator (the GratingMonochromator sibling is for soft
+    X-ray; this is a hard X-ray multilayer mono). The optics specs below are LEGACY
+    TOMCAT values whose validity for the rebuilt SLS 2.0 beamline is an open question
+    (MONO-1); the focusing mirrors are not exposed on the public pages and are
+    deferred not invented (OPT-1).
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      new: true
+      confirm: true
+      device_type: double-crystal-multilayer-monochromator
+      energy_range: 8 to 50 keV (8-30 keV recommended until the HTSU10 source upgrade)
+      bandwidth: "multilayer stripes 2-3%; Si(111) 0.018% (legacy spec, MONO-1)"
+      note: "fixed-exit DCMM ~7 m from source; multilayer stripes [Ru/C]x100 and [W/Si]x100 on Si(111), active area 150x50 mm2 (legacy TOMCAT spec; validity for the rebuilt beamline is MONO-1)"
+    - name: DiamondWindow
+      family: Window
+      new: true
+      confirm: true
+      material: 100 um CVD diamond
+      note: "CVD diamond vacuum window (legacy spec, MONO-1)"
+    - name: BeamFilter
+      family: Filter
+      new: true
+      confirm: true
+      note: "the filter batteries (legacy: five batteries, 10 um Cu to 400 um Al); the rebuilt-beamline filter set is MONO-1"
+    - name: FocusingMirror
+      family: Mirror
+      new: true
+      confirm: true
+      note: "the hard X-ray focusing / harmonic-rejection mirror(s); not exposed on the public TOMCAT pages for the rebuilt beamline, deferred not invented (OPT-1)"
+    - name: BeamSlit
+      family: Slit
+      new: true
+      confirm: true
+      note: "the beam-defining slits ahead of the endstation; handles and blade-axis map are OPT-2"
+
+safety-shutters:
+  stage: source
+  enclosure: i-tomcat-optics
+  intro: "The safety shutter gating the beam between the optics hutch and the I-TOMCAT experiment hutch."
+  note: "PSS permit signals are not public (PSS-1)."
+  devices:
+    - name: SafetyShutter
+      family: Shutter
+      new: true
+      confirm: true
+      note: "the optics-to-experiment safety shutter; permit interlock handle is PSS-1"
+
+# ===========================================================================
+# SAMPLE STAGE: the I-TOMCAT endstation (ES2), ~33 m from source
+# ===========================================================================
+
+sample-environment:
+  stage: sample
+  enclosure: i-tomcat-experiment
+  intro: "The I-TOMCAT endstation (ES2), about 33 m from the source: the air-bearing rotation stage, sample positioning, the continuous-rotation slip ring, and the sample-side fast shutter. The maximum field of view is about 1.5 x 1.5 mm2."
+  note: >
+    The rotation stage binds RotaryStage; the Aerotech ABRX150 read from the public
+    endstations page is carried as a (target) model pending procurement confirmation
+    (STAGE-1). The positioning stack axis set is not public and is carried confirm
+    (SAMPLE-1).
+  devices:
+    - name: Rotary
+      family: RotaryStage
+      new: true
+      confirm: true
+      max_speed: ~1500 deg/s
+      model_target: Aerotech ABRX150 (STAGE-1)
+      note: "the air-bearing tomographic rotation stage at ES2 (~33 m); the master clock for triggering (TRIG-1). The (target) ABRX150 is read from the public endstations page, carried pending confirmation (STAGE-1)"
+    - name: SamplePositioning
+      family: LinearStage
+      new: true
+      confirm: true
+      note: "the sample centring / translation stage on the rotation stage; the exact axis set and handles are SAMPLE-1"
+    - name: SlipRing
+      family: SlipRing                  # loose Family (passive continuous-rotation feedthrough; allowlisted)
+      new: true
+      confirm: true
+      note: "the continuous-rotation feedthrough for endless tomographic acquisition; channel count is SAMPLE-1"
+    - name: FastShutter
+      family: Shutter
+      new: true
+      confirm: true
+      note: "the sample-side fast shutter limiting dose between projections; model is SAMPLE-1"
+
+# ===========================================================================
+# DETECTION STAGE: the microscope + high-speed camera suite
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: i-tomcat-experiment
+  intro: "The detector suite: a visible-light microscope (interchangeable objectives over a scintillator) coupling the X-ray image to a suite of high-speed cameras, including the PSI in-house GigaFRoST continuous-streaming camera that defines I-TOMCAT's fast and dynamic tomography."
+  note: >
+    The microscope binds Housing with Objective + Scintillator constituents (the
+    2-BM / TomoWISE Microscope-assembly precedent), but no catalog Assembly or Model
+    is bound here pending confirmation of the rebuilt-beamline optics (DET-2). The
+    cameras bind Camera; their vendor models (pco.edge family, pco.dimax, the PSI
+    GigaFRoST) are carried as (target) pending confirmation (DET-1).
+  devices:
+    - name: Microscope
+      family: Housing
+      new: true
+      confirm: true
+      magnification: 1x to 40x (six optical microscopes, legacy)
+      note: "the visible-light microscope coupling the scintillator image to the cameras; optics model and the catalog-Assembly composition are deferred pending confirmation (DET-2)"
+      constituents:
+        - name: Objective
+          family: Objective
+          new: true
+          confirm: true
+          note: "the interchangeable microscope objective(s) spanning 1x to 40x; per-lens identity and selector are DET-2"
+        - name: Scintillator
+          family: Scintillator
+          new: true
+          confirm: true
+          material: LSO:Tb or LuAG:Ce
+          note: "the scintillator converting X-rays to visible light (legacy: LSO:Tb 5.9 um sub-um res; LuAG:Ce 20 um most used); the rebuilt-beamline set is DET-2"
+    - name: HighSpeedCamera
+      family: Camera
+      new: true
+      confirm: true
+      sensor: 2016x2016, 11 um pixel
+      framerate: up to 1255 fps
+      model_target: pco.dimax (DET-1)
+      note: "the high-speed CMOS camera for fast tomography; (target) pco.dimax read from the public detectors page, carried pending confirmation (DET-1)"
+    - name: StreamingCamera
+      family: Camera
+      new: true
+      confirm: true
+      sensor: 2016x2016, 11 um pixel
+      framerate: up to 1255 fps continuous (~8 GB/s streaming)
+      model_target: GigaFRoST (PSI in-house) (DET-1)
+      note: "the PSI in-house GigaFRoST continuous-streaming camera that defines I-TOMCAT's dynamic 4D tomography (up to ~33,875 Hz reduced ROI); (target) model carried pending confirmation (DET-1)"
+    - name: ScienceCamera
+      family: Camera
+      new: true
+      confirm: true
+      model_target: pco.edge family (4.2 / 5.5 / 10) (DET-1)
+      note: "the general-throughput sCMOS camera(s); (target) pco.edge family read from the public detectors page, carried pending confirmation (DET-1)"
+
+# Cross-cutting control. SLS runs EPICS at the floor with the BEC (Beamline and
+# Experiment Control) scan/orchestration layer over ophyd for SLS 2.0. The TOMCAT
+# EPICS PV handles are not public and the BEC beamline plugin is internal, so the
+# device handles above are left empty (CTRL-1).
+controls:
+  intro: >
+    I-TOMCAT runs on the SLS EPICS control stack at the floor ("control of the
+    beamline and experiment is fully implemented in EPICS"), with the BEC (Beamline
+    and Experiment Control, bec-project) microservice scan/orchestration layer over
+    ophyd introduced for SLS 2.0. The TOMCAT EPICS PV prefix scheme is not public
+    and the per-beamline BEC ophyd device manifest lives on the internal
+    gitea.psi.ch, so the device handles above are left empty pending staff
+    verification (CTRL-1). The tomographic acquisition (the rotation trajectories,
+    the camera streaming, the energy moves) runs through BEC; that orchestration is
+    the seam CORA's edge replaces, conducting over EPICS rather than replacing it
+    (the BEC replace-vs-drive-through boundary is SEAM-1). The camera file-writing
+    to the PSI data store and the Ra/SLURM reconstruction pipeline (Fiji Reco
+    Manager) are plumbing CORA observes, not data it owns (see model.md).
+  triggering:
+    - name: Triggering
+      family: TimingController
+      new: true
+      confirm: "the air-bearing Rotary is expected to be the master clock feeding the camera triggers; the exact trigger/sync hardware is not public (TRIG-1)"
+      note: "trigger / sync scheme (TRIG-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an I-TOMCAT run needs present
+    before it can start. All pending confirmation in this modelling exercise.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

@@ -27,6 +27,7 @@ Public surface re-exported here:
 
 from cora.agent._projections import register_agent_projections
 from cora.agent._subscribers import register_agent_subscribers
+from cora.agent.aggregates.agent import load_agent
 from cora.agent.build_llm import build_llm
 from cora.agent.errors import (
     CautionProposalMalformedError,
@@ -58,9 +59,17 @@ from cora.agent.seed_clearance_watcher import (
     CLEARANCE_WATCHER_AGENT_ID,
     seed_clearance_watcher_agent,
 )
+from cora.agent.seed_experiment_steerer import (
+    EXPERIMENT_STEERER_AGENT_ID,
+    seed_experiment_steerer_agent,
+)
 from cora.agent.seed_procedure_watcher import (
     PROCEDURE_WATCHER_AGENT_ID,
     seed_procedure_watcher_agent,
+)
+from cora.agent.seed_run_initiator import (
+    RUN_INITIATOR_AGENT_ID,
+    seed_run_initiator_agent,
 )
 from cora.agent.seed_run_supervisor import (
     RUN_SUPERVISOR_AGENT_ID,
@@ -75,7 +84,9 @@ __all__ = [
     "CAUTION_PROMOTER_AGENT_ID",
     "CLEARANCE_EXPIRER_AGENT_ID",
     "CLEARANCE_WATCHER_AGENT_ID",
+    "EXPERIMENT_STEERER_AGENT_ID",
     "PROCEDURE_WATCHER_AGENT_ID",
+    "RUN_INITIATOR_AGENT_ID",
     "RUN_SUPERVISOR_AGENT_ID",
     "AgentHandlers",
     "CautionProposalMalformedError",
@@ -84,6 +95,7 @@ __all__ = [
     "DecisionNotEmittedByCautionDrafterError",
     "UnauthorizedError",
     "build_llm",
+    "load_agent",
     "register_agent_projections",
     "register_agent_routes",
     "register_agent_subscribers",
@@ -94,8 +106,10 @@ __all__ = [
     "seed_caution_promoter_agent",
     "seed_clearance_expirer_agent",
     "seed_clearance_watcher_agent",
+    "seed_experiment_steerer_agent",
     "seed_procedure_watcher_agent",
     "seed_run_debriefer_agent",
+    "seed_run_initiator_agent",
     "seed_run_supervisor_agent",
     "wire_agent",
 ]

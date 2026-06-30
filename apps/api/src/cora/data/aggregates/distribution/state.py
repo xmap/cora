@@ -78,7 +78,9 @@ from cora.data.aggregates.dataset.state import (
     DatasetEncoding,
     _validate_storage_uri,  # pyright: ignore[reportPrivateUsage]
 )
+from cora.shared.bounded_text import validate_bounded_text
 from cora.shared.identity import ActorId
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 # ----------------------------------------------------------------------
 # Constants
@@ -276,6 +278,101 @@ class DistributionAlreadyExistsError(Exception):
         self.distribution_id = distribution_id
 
 
+class DistributionNotFoundError(Exception):
+    """Attempted an operation on a Distribution whose stream has no events.
+
+    Mirrors ``DatasetNotFoundError`` shape. Raised by the
+    discard_distribution decider when the target stream is empty.
+    Mapped to HTTP 404.
+    """
+
+    def __init__(self, distribution_id: UUID) -> None:
+        super().__init__(f"Distribution {distribution_id} not found")
+        self.distribution_id = distribution_id
+
+
+class InvalidDistributionDiscardReasonError(ValueError):
+    """The supplied discard reason is empty, whitespace-only, or too long.
+
+    Validated at the API boundary via Pydantic min_length / max_length,
+    AND defensively at the decider via this error. Mirrors the
+    InvalidDatasetDiscardReasonError pattern: free-form ``str``
+    (1-500 chars) with the same future-additive structured-taxonomy
+    posture.
+
+    Mapped to HTTP 400.
+    """
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Distribution discard reason must be 1-{REASON_MAX_LENGTH} chars after "
+            f"trimming (got: {value!r})"
+        )
+        self.value = value
+
+
+class DistributionCannotDiscardError(Exception):
+    """Attempted to discard a Distribution copy already in ``Discarded`` status.
+
+    Strict-not-idempotent: re-discarding an already-``Discarded`` copy
+    raises rather than no-op (matches every other terminal-transition
+    pattern in the codebase). Carries ``current_status`` for the
+    operator-facing diagnostic.
+
+    Mapped to HTTP 409.
+    """
+
+    def __init__(self, distribution_id: UUID, current_status: "DistributionStatus") -> None:
+        super().__init__(
+            f"Distribution {distribution_id} cannot be discarded: currently in status "
+            f"{current_status.value}"
+        )
+        self.distribution_id = distribution_id
+        self.current_status = current_status
+
+
+class DistributionCannotDiscardLastVerifiedError(Exception):
+    """Attempted to discard a copy with no Verified sibling on a different tier.
+
+    The redundancy invariant: a Distribution copy may be discarded only
+    when a SIBLING Distribution of the same Dataset is Verified on a
+    DIFFERENT storage tier (a different ``supply_id``). Discarding the
+    only copy whose bytes are known-good would leave the Dataset with no
+    Verified copy reachable, so the guard refuses.
+
+    Mapped to HTTP 409.
+    """
+
+    def __init__(self, distribution_id: UUID, dataset_id: UUID) -> None:
+        super().__init__(
+            f"Distribution {distribution_id} cannot be discarded: no sibling copy of "
+            f"Dataset {dataset_id} is Verified on a different storage tier "
+            f"(bytes-redundancy invariant)"
+        )
+        self.distribution_id = distribution_id
+        self.dataset_id = dataset_id
+
+
+class DistributionCannotDiscardUnderDiscardedDatasetError(Exception):
+    """Attempted to discard a copy whose parent Dataset is itself Discarded.
+
+    When the parent Dataset is Discarded the whole logical product is
+    GDPR-reclaimed; discarding individual copies under it is meaningless
+    (and the redundancy invariant cannot hold). The discard_dataset
+    workflow owns that terminal; this per-copy discard refuses.
+
+    Mapped to HTTP 409.
+    """
+
+    def __init__(self, distribution_id: UUID, dataset_id: UUID) -> None:
+        super().__init__(
+            f"Distribution {distribution_id} cannot be discarded: parent Dataset "
+            f"{dataset_id} is Discarded"
+        )
+        self.distribution_id = distribution_id
+        self.dataset_id = dataset_id
+
+
 class DistributionSupplyNotFoundError(Exception):
     """Raised when `command.supply_id` does not resolve via `SupplyLookup.lookup`.
 
@@ -436,6 +533,27 @@ def validate_distribution_byte_size(value: int) -> int:
             value, "byte_size must be >= 0 (zero is valid for empty Distributions)"
         )
     return value
+
+
+@dataclass(frozen=True)
+class DistributionDiscardReason:
+    """Free-form discard reason. Trimmed; 1-500 chars.
+
+    Mirrors DatasetDiscardReason / RunStopReason / RunTruncateReason /
+    RunAbortReason. The on-the-wire representation in
+    ``DistributionDiscarded.reason`` is ``str`` (post-trim); the VO
+    exists at decider-input time only.
+    """
+
+    value: str
+
+    def __post_init__(self) -> None:
+        trimmed = validate_bounded_text(
+            self.value,
+            max_length=REASON_MAX_LENGTH,
+            error_class=InvalidDistributionDiscardReasonError,
+        )
+        object.__setattr__(self, "value", trimmed)
 
 
 # ----------------------------------------------------------------------

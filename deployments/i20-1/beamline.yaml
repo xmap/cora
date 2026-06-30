@@ -1,0 +1,147 @@
+# I20-1 beamline descriptor (Diamond Light Source), reverse-engineered
+#
+# I20-1 is the Diamond energy-dispersive EXAFS (EDE) branch of i20: time-resolved
+# X-ray absorption spectroscopy. Where scanning XAS (e.g. NSLS-II BMM) steps a
+# monochromator through energies, EDE uses a bent-crystal polychromator to fan a band
+# of energies across the sample at once and a position-sensitive strip detector to
+# read the whole absorption spectrum in a single shot, so a spectrum is captured in
+# sub-second time. It is bound to the Diamond Site (deployments/diamond/site.yaml),
+# the eighth Diamond beamline, modelled from the dodal controls library.
+#
+# STATUS: reverse-engineered, design-phase, and DELIBERATELY PARTIAL. The dodal
+# module for i20-1 (named p51.py, its commissioning name; PV root BL51P) is a thin
+# commissioning roster: it carries the EDE PERIPHERALS (the energy-selecting turbo
+# slit, two PandA timing boxes, a trajectory PMAC, a mocked sample stage, a skipped
+# Xspress3) but NOT the two devices that define energy-dispersive EXAFS: the
+# bent-crystal polychromator and the position-sensitive strip detector. Those, and the
+# absent source / mirror / ion-chamber chain, are routed to open questions, NOT
+# fabricated (POLY-1, STRIP-1, SRC-1). Every value is read from dodal or inferred,
+# carried `confirm: true` pending Diamond staff.
+#
+# It introduces NO new catalog family: the turbo slit reuses Slit, the PMAC
+# MotionController, the PandAs TimingController, the sample stage the graduated
+# Manipulator, the Xspress3 the graduated EnergyDispersiveSpectrometer. The dispersive
+# polychromator (a genuinely new optic class, an energy-fanning bent crystal distinct
+# from a Monochromator) is NOT coined as a family here because it is not in the source
+# (POLY-1): no PV to anchor it. No Capability or Method is coined; the EDE technique is
+# a pending Practice on the Site (TECH-1).
+
+beamline:
+  name: I20-1
+  facility: diamond             # Diamond Site (facility_code: diamond)
+  sector: "i20-1 (EDE)"        # PV namespace BL51P* (dodal module p51, commissioning name)
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "i20 is an undulator beamline, but the source / insertion device / front-end is not in the dodal commissioning module (p51.py); the PV root BL51P would carry it. Source identity and parameters are an open question (SRC-1)"
+
+enclosures:
+  # The dodal commissioning module exposes no enclosure / hutch layout, only the
+  # polychromator-enclosure (PCHRO) turbo slit and the experiment devices. Modelled as
+  # the optics hutch + the experiment hutch; names and PSS permit leaves are a staff
+  # question (ENC-1, PSS-1).
+  - name: I20-1-OH
+    role: optics-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf not in the dodal module (PSS-1, ENC-1)"}
+  - name: I20-1-EH
+    role: experiment-hutch
+    facility_code: diamond
+    permit_signal: {confirm: "PSS permit leaf not in the dodal module; the experiment hutch carries the sample stage and the detectors (PSS-1, ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the insertion-device source (absent from the commissioning module)
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: I20-1-OH
+  intro: "The insertion-device source. It is not in the dodal commissioning module (SRC-1); no source, front-end, or primary-mirror device is exposed."
+  devices:
+    - name: Source
+      family: InsertionDevice
+      confirm: true
+      note: "i20 undulator source. Not in the dodal commissioning module (p51.py); no PV, front-end, or storage-ring monitor is exposed. Identity and parameters pending (SRC-1)."
+
+# ===========================================================================
+# OPTICS STAGE: the energy-dispersive polychromator and its energy-selecting turbo slit
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: I20-1-OH
+  intro: "The energy-dispersive optic chain. The bent-crystal polychromator that fans the energy band (the heart of EDE) is NOT in the dodal module (POLY-1); what is modelled is the turbo slit that selects an energy out of the dispersed fan. PVs verified against dodal src/dodal/beamlines/p51.py and devices/turbo_slit.py."
+  devices:
+    - name: TurboSlit
+      family: Slit
+      pv: "BL51P-OP-PCHRO-01:TS:"
+      confirm: true
+      note: "Energy-selecting turbo slit (turbo_slit) at the polychromator: gap (energy resolution), arc (coarse gap-centre), and xfine (the main scanning axis selecting an energy out of the polychromatic fan). Reuses the Slit family. The dispersive polychromator it sits at is not in the source (POLY-1)."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: true
+      note: "The energy selected from the dispersed fan by the turbo-slit xfine axis (BL51P-OP-PCHRO-01:TS:XFINE, also exposed standalone for the PMAC fly-scan). In full EDE the strip detector reads the whole band at once; the turbo slit picks a single energy for alignment / single-energy work. No separate PV (it is the turbo-slit axis)."
+
+# ===========================================================================
+# SAMPLE STAGE: the sample alignment stage
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: I20-1-EH
+  intro: "The sample alignment stage. PVs verified against dodal src/dodal/beamlines/p51.py."
+  devices:
+    - name: SampleStage
+      family: Manipulator
+      pv: "BL51P-MO-STAGE-01:"
+      confirm: true
+      note: "Sample alignment stage (alignment_x / alignment_y, BL51P-MO-STAGE-01:X / Y). Reuses the graduated Manipulator family. The dodal module currently constructs it as a mock device (mock=True, the comment notes the motors are being reconnected on the beamline), so the PV is real but not yet connected (STAGE-1)."
+
+# ===========================================================================
+# DETECTION STAGE: the strip detector (absent) and the Xspress3 fluorescence detector
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: I20-1-EH
+  intro: "The detectors. The position-sensitive strip detector that reads the dispersed spectrum in one shot (the EDE primary detector) is NOT in the dodal module (STRIP-1); what is present is a fluorescence Xspress3. PVs verified against dodal p51.py and devices/xspress3/xspress3.py."
+  devices:
+    - name: FluorescenceSpectrometer
+      family: EnergyDispersiveSpectrometer
+      pv: "BL51P-EA-DET-03:"
+      confirm: true
+      note: "Xspress3 16-channel energy-dispersive fluorescence detector (xspress3). Reuses the graduated EnergyDispersiveSpectrometer family. The dodal module currently constructs it with skip=True (defined but not loaded by default), so it is carried confirm (DET-1). The EDE primary detector, a position-sensitive strip detector reading the dispersed spectrum, is not in the source (STRIP-1)."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    The trajectory motion controller and the timing boxes that drive the EDE
+    fly-scan. The turbo-slit xfine axis is swept by a PMAC trajectory program; the
+    PandA boxes provide hardware triggering and position capture.
+  triggering:
+    - name: Timing
+      family: TimingController
+      pv: "BL51P-EA-PANDA-02:"
+      confirm: true
+      note: "PandA FPGA timing / sequencer + HDF writer (panda1, BL51P-EA-PANDA-02:); a second PandA (panda2, BL51P-EA-PANDA-01:) sits alongside. Hardware triggering and position capture for the fly-scan."
+  motion_controllers:
+    - name: TurboSlitController
+      family: MotionController
+      pv: "BL51P-MO-STEP-06:"
+      confirm: true
+      note: "PMAC trajectory controller (turbo_slit_pmac) running the turbo-slit xfine fly-scan over coordinate system 3. Box firmware / IP not in the dodal module (DRIVE-1)."
+  software_iocs_not_modeled:
+    [PandA, PMAC, Xspress3]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/diamond/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["polychromator crystal", "sample"]

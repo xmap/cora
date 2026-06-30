@@ -1,0 +1,404 @@
+# CORA Beamline descriptor: Alvra (SwissFEL, PSI), modelling exercise
+#
+# Alvra is an operating hard-X-ray pump-probe experimental station on SwissFEL's
+# Aramis branch at PSI. It is bound to the PSI Site (deployments/psi/site.yaml),
+# CORA's eighth Site and its SECOND XFEL after SLAC LCLS-MFX.
+#
+# STATUS: off-roadmap modelling exercise, NOT a CORA pilot. The device shape and the
+# EPICS control handles are reverse-engineered from PSI's open `eco` controls library
+# (paulscherrerinstitute/eco, the SwissFEL device library; the Alvra manifest is the
+# `aliases` dict in eco/alvra/config.py, with each device's driver class deriving its
+# motor PVs from the prefix). It is treated as a dry, correct DATA source and modelled
+# intentionally, not mirrored. Scope is the Alvra beam-path spine + the Prime endstation
+# core; peripheral/floor devices are deferred.
+#
+# WHY ALVRA (what it tests): Alvra is the SECOND XFEL CORA models, and its value is
+# REINFORCEMENT FROM AN INDEPENDENT CONTROL STACK. LCLS-MFX was mined from `pcdshub`;
+# Alvra is mined from `eco`. The two XFELs were built by different teams with different
+# house styles (PV conventions SARFE10-/SAROP11-/SARES11- here, vs LCLS's). If the same
+# family-fold finding and the same architectural gaps recur, the model generalizes
+# beyond one facility, not just beyond storage rings.
+#
+# THE HEADLINE FINDING (same as LCLS-MFX): ALVRA'S DEVICE FAMILIES FOLD. Every device
+# in the eco manifest reuses a catalog Family or an existing loose family. The von Hamos
+# emission spectrometer reuses the EmissionSpectrometer Family that LCLS-MFX introduced
+# and NSLS-II ISS GRADUATED (Alvra is a fourth sighting). The genuine gaps are the same
+# ARCHITECTURAL XFEL gaps recorded for LCLS-MFX, not taxonomic ones; they are recorded
+# as deliberate deferrals on docs/deployments/alvra/model.md (not invented here):
+#   - per-shot pulse-ID event DAQ (DAQ-1; the sf-daq / bsread data plane)
+#   - beam-synchronous event-code timing (TIMING-1; the SwissFEL event system / EVR)
+#   - femtosecond pump-probe laser/X-ray synchronization (LASER-1; the lxt timing chain)
+#   - one switched Aramis source feeding co-equal stations (TOPO-1; Alvra/Bernina/Cristallina)
+#   - attenuator transmission solver (ATT-1; the AttenuatorAramis energy-dependent solve)
+#
+# Family folds (each adversarially reviewed, the LCLS-MFX precedent): OffsetMirror /
+# KB mirror -> Mirror; AttenuatorAramis -> Filter; SlitFourBlades/SlitBlades/SlitPosWidth
+# -> Slit; X-ray pulse picker -> Shutter (fast pulse gate; Shutter-vs-Chopper open,
+# PULSE-1); Pprm profile monitor -> Scintillator + Camera; PBPS / PBIG intensity-position
+# monitor -> FluxMonitor + Diagnostic (loose, reused); Double_Crystal_Mono -> Monochromator;
+# the experiment laser -> loose Laser (the LCLS-MFX / 4-ID precedent); the von Hamos ->
+# EmissionSpectrometer (graduated catalog Family); the Jungfrau area detector -> Camera.
+# The reference / alignment laser -> loose Laser. The SwissFEL event timing -> TimingController.
+# Vacuum gate valves and the DAQ are floor and not modelled (as at LCLS-MFX / i03).
+#
+# Every device carries `new: true` (not a registered Asset) and `confirm: true` (PVs +
+# values to be verified by PSI staff). The `eco` manifest carries NO units, NO motor
+# limits, and NO Aramis undulator source parameters; those, the PSS safety structure,
+# and the Capability / Method binding are NOT invented; each gap carries a (QUESTION-ID)
+# answered on the open-questions page. Some eco entries reference SAROP21-* (a sibling
+# Aramis line) inside Alvra drivers; whether that is correct for Alvra or a copy-paste
+# artifact is carried confirm (XREF-1).
+#
+# DEFERRED (out of spine+core scope, noted not modelled): the sf-daq data plane (CORA
+# references a Dataset, does not own per-shot data, DAQ-1); the pump-probe optical-laser
+# delay chain + lxt fs timing (the laser is carried as a loose Laser device; its fs
+# X-ray/laser synchronization has no CORA model, LASER-1); the fixed-target / liquid-jet
+# sample delivery (SAMPLE-1); the sibling Aramis stations Bernina / Cristallina that
+# share the source (TOPO-1).
+
+beamline:
+  name: Alvra
+  facility: psi
+  tier: Unit
+  parent: null
+  source: free-electron-laser
+  source_confirm: >
+    SASE hard-X-ray FEL on the shared SwissFEL Aramis undulator line; photon energy is
+    set per-shot and the same source feeds the Alvra, Bernina, and Cristallina stations
+    one at a time (SRC-1 / TOPO-1). The Aramis undulator parameters are not in the eco
+    manifest and are carried confirm.
+
+# Two access-gated zones. The Aramis optics hutch conditions the beam shared with the
+# other Aramis stations; the Alvra experiment hutch holds the Prime endstation. The eco
+# manifest records z positions and PV prefixes but not which access-gated hutch a device
+# is in or its safety meaning (ENC-1). SwissFEL PPS permit + the pump-probe laser
+# interlock are carried confirm (PSS-1, LASER-1).
+enclosures:
+  - name: Aramis-Optics
+    role: optics-hutch
+    facility_code: psi
+    permit_signal: {confirm: "SwissFEL PPS search-and-secure signal TBD; the Aramis optics are shared across the Aramis stations (TOPO-1, PSS-1)"}
+  - name: Alvra
+    role: experiment-hutch
+    facility_code: psi
+    permit_signal: {confirm: "SwissFEL PPS + pump-probe laser interlock TBD (PSS-1, LASER-1)"}
+
+# --- SOURCE STAGE: the FEL source, shared front end, and Aramis optics ---
+
+undulator-source:
+  stage: source
+  enclosure: Aramis-Optics
+  intro: "The SwissFEL Aramis free-electron-laser source and its front-end pulse-intensity monitors."
+  note: >
+    SwissFEL is a linac-driven FEL, not a storage ring, so the loose StorageRing family
+    used by the synchrotron exercises does not fit; machine beam is carried as a PhotonBeam
+    Supply (MACHINE-1). The Aramis undulator photon energy is set per shot; CORA has no
+    per-shot energy setpoint, and the undulator-as-driven-source is deferred (SRC-1). The
+    undulator parameters are absent from the eco manifest (SRC-1).
+  devices:
+    - name: Undulator
+      family: InsertionDevice
+      pv: {confirm: "SwissFEL Aramis undulator line; per-segment handles not in eco (SRC-1)"}
+      new: true
+      confirm: true
+      note: "the FEL source; SASE mode and per-shot photon energy are a DAQ-plane datum, not a standing setpoint (SRC-1, DAQ-1)"
+    - name: GasMonitor
+      family: FluxMonitor
+      pv: "SARFE10-PBIG050"
+      new: true
+      confirm: true
+      note: "gas intensity monitor (PBIG); FEL pulse-energy diagnostic, presents the Sensor Role; loose family reused. Per-shot pulse energy is correlated in the DAQ by pulse-ID (DAQ-1). eco entry has no driver (catalogued, not instantiated)"
+    - name: FrontEndIntensityMonitor
+      family: FluxMonitor
+      pv: "SARFE10-PBPS053"
+      new: true
+      confirm: true
+      note: "intensity / position monitor after the undulator (PBPS); presents the Sensor Role for both flux (FluxMonitor) and beam position (Diagnostic, loose). eco entry has no driver (catalogued, not instantiated)"
+
+front-end:
+  stage: source
+  enclosure: Aramis-Optics
+  intro: "The front-end shutters, slit, attenuator, and profile monitor that gate and condition the beam before the Aramis optics."
+  note: >
+    The photon shutters fold into the Shutter Family; their permit binding to the PSS is
+    not in eco (PSS-1). The front-end attenuator is a solid attenuator solving a foil
+    combination for a requested transmission, energy-dependent (the AttenuatorAramis
+    driver); the Filter Family covers the discrete selection, and the target-transmission
+    solve is the deferred Attenuable leg (ATT-1).
+  devices:
+    - name: UndulatorShutter
+      family: Shutter
+      pv: "SARFE10-OPSH044"
+      new: true
+      confirm: true
+      note: "photon shutter after the undulator; permit binding to the PSS to confirm (PSS-1). eco entry has no driver (catalogued, not instantiated)"
+    - name: UndulatorSlit
+      family: Slit
+      pv: "SARFE10-OAPU044"
+      new: true
+      confirm: true
+      note: "4-blade slit after the undulator; the eco SlitFourBlades driver derives eight blade motors from the prefix"
+    - name: FrontEndAttenuator
+      family: Filter
+      pv: "SARFE10-OATT053"
+      new: true
+      confirm: true
+      note: "solid front-end attenuator; the existing Filter Family covers the discrete foil selection. Target-transmission solving (energy-dependent, the AttenuatorAramis solver) is the deferred Attenuable leg (ATT-1)"
+    - name: FrontEndScreen
+      family: Scintillator
+      pv: "SARFE10-PPRM053"
+      new: true
+      confirm: true
+      note: "profile monitor (Pprm; YAG screen + camera): the screen presents Scintillator, the camera presents Camera (Detector Role)"
+    - name: FrontEndShutter
+      family: Shutter
+      pv: "SARFE10-SBST060"
+      new: true
+      confirm: true
+      note: "photon shutter at the end of the front end; permit binding to the PSS to confirm (PSS-1). eco entry has no driver (catalogued, not instantiated)"
+
+aramis-optics:
+  stage: source
+  enclosure: Aramis-Optics
+  intro: "The Aramis offset mirrors, double-crystal monochromator, slits, pulse picker, attenuator, KB focusing mirrors, the timing diagnostics, and the profile / intensity monitors that condition and focus the beam onto the Alvra sample."
+  note: >
+    The offset mirrors and the KB pair fold into the Mirror Family. The double-crystal
+    monochromator (ODCM105) folds into Monochromator; Alvra also runs pink / SASE beam
+    with the mono out (MONO-1). The X-ray pulse picker is a fast single-pulse gate folded
+    into Shutter (PULSE-1). The PALM and PSEN timing diagnostics measure the X-ray-to-laser
+    arrival time; they present the Sensor Role (loose Diagnostic) but exist to drift-correct
+    the fs pump-probe delay, a cross-timing-domain relationship CORA has no model for
+    (LASER-1). Several eco entries reference SAROP21-* (a sibling Aramis line) inside Alvra
+    drivers; carried confirm (XREF-1).
+  devices:
+    - name: OpticsScreen
+      family: Scintillator
+      pv: "SARFE10-PPRM064"
+      new: true
+      confirm: true
+      note: "profile monitor after the front end (Pprm)"
+    - name: HorizontalMirror1
+      family: Mirror
+      pv: "SAROP11-OOMH064"
+      new: true
+      confirm: true
+      note: "first Alvra horizontal offset mirror; OffsetMirror folds into the Mirror Family. eco entry has no driver (catalogued, not instantiated)"
+    - name: HorizontalMirror2
+      family: Mirror
+      pv: "SAROP11-OOMH076"
+      new: true
+      confirm: true
+      note: "second Alvra horizontal offset mirror. eco entry has no driver (catalogued, not instantiated)"
+    - name: SwitchyardSlit
+      family: Slit
+      pv: "SAROP11-OAPU104"
+      new: true
+      confirm: true
+      note: "4-blade slit after the photon switchyard, before the Alvra mono; the eco SlitBlades driver derives four blade motors from the prefix"
+    - name: Monochromator
+      family: Monochromator
+      pv: "SAROP11-ODCM105"
+      new: true
+      confirm: true
+      note: "Alvra double-crystal monochromator (the eco Double_Crystal_Mono driver derives the Bragg theta, x-translation, gap, roll, and pitch axes plus an energy setpoint). Alvra also runs pink / SASE beam mono-out (MONO-1). The joint mono + FEL energy device (eco monoFEL) reads cross-system energy PVs (SRC-1, XREF-1)"
+    - name: VerticalMirror1
+      family: Mirror
+      pv: "SAROP11-OOMV108"
+      new: true
+      confirm: true
+      note: "first Alvra vertical offset mirror. eco entry has no driver (catalogued, not instantiated)"
+    - name: VerticalMirror2
+      family: Mirror
+      pv: "SAROP11-OOMV109"
+      new: true
+      confirm: true
+      note: "second Alvra vertical offset mirror. eco entry has no driver (catalogued, not instantiated)"
+    - name: VerticalMirrorScreen
+      family: Scintillator
+      pv: "SAROP11-PPRM110"
+      new: true
+      confirm: true
+      note: "profile monitor after the vertical mirrors (Pprm)"
+    - name: PulsePicker
+      family: Shutter
+      pv: "SAROP11-OPPI110"
+      new: true
+      confirm: true
+      note: "X-ray pulse picker; folded into the Shutter Family (a fast single-pulse gate). Whether a rotary pulse-picking chopper is a distinct Family is open (PULSE-1). eco entry has no driver (catalogued, not instantiated)"
+    - name: OpticsShutter
+      family: Shutter
+      pv: "SAROP11-SBST114"
+      new: true
+      confirm: true
+      note: "shutter after the optics hutch; permit binding to confirm (PSS-1). eco entry has no driver (catalogued, not instantiated)"
+    - name: OpticsIntensityMonitor
+      family: FluxMonitor
+      pv: "SAROP11-PBPS117"
+      new: true
+      confirm: true
+      note: "solid-target intensity / position monitor after the optics hutch (PBPS); presents the Sensor Role for flux (FluxMonitor) and position (Diagnostic, loose). Per-shot intensity normalization is a DAQ-plane concern (DAQ-1)"
+    - name: OpticsScreenEnd
+      family: Scintillator
+      pv: "SAROP11-PPRM117"
+      new: true
+      confirm: true
+      note: "profile monitor after the optics hutch (Pprm)"
+    - name: ArrivalTimeMonitorPALM
+      family: Diagnostic
+      pv: "SAROP11-PALM118"
+      new: true
+      confirm: true
+      note: "THz-streaking timing diagnostic (PALM); presents the Sensor Role (loose Diagnostic). It measures the X-ray / optical-laser arrival time to drift-correct the fs pump-probe delay (LASER-1). eco entry has no driver (catalogued, not instantiated)"
+    - name: ArrivalTimeMonitorPSEN
+      family: Diagnostic
+      pv: "SAROP11-PSEN119"
+      new: true
+      confirm: true
+      note: "spectral-encoding timing diagnostic (PSEN); the LCLS-MFX TimeTool analog. Presents the Sensor Role (loose Diagnostic); exists to correct the fs pump-probe delay jitter (LASER-1, DAQ-1). eco entry has no driver (catalogued, not instantiated)"
+    - name: ExperimentAttenuator
+      family: Filter
+      pv: "SAROP11-OATT120"
+      new: true
+      confirm: true
+      note: "solid attenuator for Alvra (AttenuatorAramis); the Filter Family covers the discrete foil selection, the energy-dependent target-transmission solve is the deferred Attenuable leg (ATT-1)"
+    - name: AttenuatorSlit
+      family: Slit
+      pv: "SAROP11-OAPU120"
+      new: true
+      confirm: true
+      note: "position / width slit behind the attenuator (the eco SlitPosWidth driver derives offset and gap virtual axes)"
+    - name: ReferenceLaser
+      family: Laser
+      pv: "SAROP11-OLAS120"
+      new: true
+      confirm: true
+      note: "beamline reference / alignment laser before the KB mirrors (OLAS); a loose Laser family device (alignment, not the pump-probe laser). The eco driver hardcodes an aperture PV on SAROP21-* (XREF-1)"
+    - name: AttenuatorIntensityMonitor
+      family: FluxMonitor
+      pv: "SAROP11-PBPS122"
+      new: true
+      confirm: true
+      note: "intensity / position monitor after the attenuator (PBPS); flux + position Sensor; loose families reused"
+    - name: AttenuatorScreen
+      family: Scintillator
+      pv: "SAROP11-PPRM122"
+      new: true
+      confirm: true
+      note: "profile monitor after the attenuator (Pprm)"
+    - name: VerticalKBMirror
+      family: Mirror
+      pv: "SAROP11-OKBV123"
+      new: true
+      confirm: true
+      note: "Alvra vertical KB focusing mirror (the eco KBver driver derives the three physical-y bender, pitch / roll / yaw, and bend axes plus a curvature setpoint). KB folds into Mirror"
+    - name: HorizontalKBMirror
+      family: Mirror
+      pv: "SAROP11-OKBH124"
+      new: true
+      confirm: true
+      note: "Alvra horizontal KB focusing mirror (the eco KBhor driver derives the same bender / pitch / roll / yaw / bend axes). KB folds into Mirror"
+
+# --- SAMPLE STAGE: the Alvra Prime endstation ---
+
+prime-endstation:
+  stage: sample
+  enclosure: Alvra
+  intro: "The Alvra Prime endstation: the sample manipulator, the optical table, the sample-view microscope, the pump-probe laser, and the von Hamos emission spectrometer."
+  note: >
+    The Huber sample manipulator and the optical table fold into LinearStage and Table.
+    The fixed-target / liquid-jet sample delivery for serial crystallography has no
+    storage-ring analog and is deferred (SAMPLE-1). The pump-probe laser folds into the
+    loose Laser family (the LCLS-MFX precedent); its fs laser / X-ray synchronization (the
+    eco lxt timing chain) is the cross-timing-domain gap CORA cannot express (LASER-1). The
+    von Hamos spectrometer composes its crystal-translation stage (eco vonHamosBragg) with
+    the Jungfrau detector and binds the graduated EmissionSpectrometer Family (Alvra is a
+    fourth sighting after LCLS-MFX, ISS, and the Balder near-sighting; SPEC-1).
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: "SARES11-XSAM125"
+      new: true
+      confirm: true
+      note: "Huber sample XYZ manipulator (the eco driver derives x / y / z motors). The fixed-target / liquid-jet sample delivery on it is endstation-specific and deferred, no Family coined (SAMPLE-1)"
+    - name: OpticalTable
+      family: Table
+      pv: "SARES11-XOTA125"
+      new: true
+      confirm: true
+      note: "Prime optical table (the eco driver derives six physical motors plus virtual x / y / z / pitch / yaw axes). Reuses the Table Family"
+    - name: SampleMicroscope
+      family: Camera
+      pv: "SARES11-XMI125"
+      new: true
+      confirm: true
+      note: "on-axis sample-view microscope (focus + zoom, with appended SmarAct gonio / rotation axes); presents the Detector Role for sample viewing / alignment, binds Camera (the i13-1 side-camera precedent)"
+    - name: PumpProbeLaser
+      family: Laser
+      pv: {confirm: "SLAAR11-LMOT (experiment laser motors: waveplate, pump delay, compressors); fs timing via the eco lxt chain (LASER-1)"}
+      new: true
+      confirm: true
+      note: "femtosecond optical pump-probe laser; loose Laser family reused (the LCLS-MFX / 4-ID precedent). The delay stages are LinearStages, but the laser / X-ray fs synchronization (the eco lxt timing) is a cross-timing-domain relationship CORA cannot express (LASER-1)"
+    - name: LaserShutter
+      family: Shutter
+      pv: "SLAAR11-LTIM01-EVR0"
+      new: true
+      confirm: true
+      note: "pump-probe laser shutter, driven through a SwissFEL event receiver (EVR). Folds into Shutter; the EVR is the beam-synchronous timing system (TIMING-1)"
+    - name: EmissionSpectrometer
+      family: EmissionSpectrometer
+      pv: "SARES11-XCRY125"
+      new: true
+      confirm: true
+      note: "von Hamos X-ray emission spectrometer (XES / HERFD): a crystal-analyzer dispersive spectrometer composing the analyzer-crystal translation stage (eco vonHamosBragg, two crystal axes) with the Jungfrau detector. Binds the EmissionSpectrometer Family, graduated into the catalog (Alvra is a fourth sighting; whether each analyzer crystal is a child Asset is open, SPEC-1)"
+
+# --- DETECTION STAGE: the per-shot Jungfrau area detector ---
+
+detector:
+  stage: detection
+  enclosure: Alvra
+  intro: "The Alvra Jungfrau science detector. It reuses the Camera Family, but its acquisition mode is the headline gap."
+  note: >
+    The detector reuses the Camera Family (Detector Role). What does NOT fold is how it is
+    read: the SwissFEL sf-daq records a free-running stream of per-shot frames tagged by
+    pulse-ID at beam rate, correlated downstream, not a poll-Acquire-to-Done frame loop.
+    CORA's acquisition bodies do not represent this; the per-shot event DAQ is the deepest
+    gap (DAQ-1). eco binds Alvra to a Jungfrau named JF_4.5M (the von Hamos 4.5M, serial
+    JF02T09V03 inferred via sf_daq_broker); the broker lists further Alvra Jungfrau options
+    (16M, 4M, 2M TXS, and 0.5M variants), carried confirm (DET-1).
+  devices:
+    - name: Detector
+      family: Camera
+      pv: {confirm: "Alvra Jungfrau JF_4.5M (von Hamos 4.5M; serial JF02T09V03 inferred); sf-daq-managed, not polled (DET-1, DAQ-1)"}
+      new: true
+      confirm: true
+      note: "the science detector; per-shot frames flow through the sf-daq data plane, which CORA references as a Dataset rather than owns (DAQ-1). Detector model and the further Jungfrau options are to confirm (DET-1)"
+
+# Cross-cutting timing + the software systems CORA does not model.
+controls:
+  intro: >
+    Alvra runs the PSI EPICS stack plus the SwissFEL event-driven DAQ. The SwissFEL event
+    system (EVR receivers) programs the beam-synchronous trigger pattern; the sf-daq, bsread
+    streaming, and the eco scan / acquisition suite are software / floor.
+  triggering:
+    - name: EventTiming
+      family: TimingController
+      pv: {confirm: "SwissFEL event system / EVR receivers (e.g. SLAAR11-LTIM01-EVR0); beam-synchronous trigger pattern handles TBD (TIMING-1)"}
+      new: true
+      confirm: true
+      note: "the SwissFEL event-receiver timing that gates acquisition at beam rate. TimingController carries the device, but 'acquire on event-code N at rate R' has no typed parameter home (TIMING-1). The fs laser / X-ray sync (the eco lxt chain) is a further gap (LASER-1)"
+  software_iocs_not_modeled:
+    - sf-daq (the per-shot, pulse-ID-tagged event acquisition broker, DAQ-1)
+    - bsread / mflow (the beam-synchronous ZMQ data streaming transport, DAQ-1)
+    - the eco / slic acquisition + scan suite (the Python beamline-control layer the descriptor is mined from)
+    - the SwissFEL data API / databuffer (the per-shot data-analysis plane; CORA references a Dataset, does not own per-shot data)
+
+# Continuously-available resources a run draws on (modelling exercise).
+resources:
+  intro: >
+    The continuously-available facility resources a run needs present before it can start.
+    All pending confirmation. The FEL beam is a shared, switched resource across the Aramis
+    stations (TOPO-1); its per-shot character is an acquisition concern, not a supply one.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

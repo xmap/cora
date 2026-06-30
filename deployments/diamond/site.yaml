@@ -27,7 +27,7 @@ facility:
   heading: "Diamond Light Source"
   kind: Site
   institution: Diamond Light Source Ltd, Harwell Campus, Didcot, UK
-  beamlines: [I22, I03, I15-1, I11]
+  beamlines: [I22, I03, I15-1, I11, I24, I06, I10, I20-1, I19, I13-1]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All
 # pending in the design phase. I22 is a scattering beamline, so its practices
@@ -42,6 +42,36 @@ practices:
   - {name: I03_autonomous_sample_exchange_practice, method: sample_exchange, pending: true, note: "unattended robot load/centre/collect/unmount loop; a Procedure over the spine + a Subject custody thread (ROBOT-1)"}
   - {name: I15-1_total_scattering_practice, method: total_scattering, pending: true, note: "XPDF / pair-distribution-function total scattering on the bent-Laue mono + Eiger; new Capability not yet in the catalog (TECH-1)"}
   - {name: I11_powder_diffraction_practice, method: powder_diffraction, pending: true, note: "high-resolution powder diffraction on the diffractometer + Mythen3 strip detector + spinner, often with a temperature ramp; new Capability not yet in the catalog (TECH-1)"}
+  - {name: I24_serial_crystallography_practice, method: serial_crystallography, pending: true, note: "fixed-target serial MX: raster a chip of thousands of static crystals, one snapshot per window, Zebra-gated, no rotation; the serial_crystallography Method is pending, now at i24 + LCLS-MFX (SSX-1)"}
+  # i06 nanoscience soft X-ray Practices (first cut). Magnetic / electronic
+  # structure on the APPLE-II variable-polarization source; Methods not yet in the
+  # catalog, carried pending until a technique enters scope (TECH-1).
+  - {name: I06_xmcd_practice, method: xmcd, pending: true, note: "X-ray magnetic circular dichroism on the APPLE-II polarization axis; shares the 4-ID XMCD Method (TECH-1)"}
+  - {name: I06_xmld_practice, method: xmld, pending: true, note: "X-ray magnetic linear dichroism on the APPLE-II polarization axis; new Capability not yet in the catalog (TECH-1)"}
+  - {name: I06_peem_practice, method: photoemission_microscopy, pending: true, note: "photoemission electron microscopy: a magnified electron image of the photoemitting surface; new Capability not yet in the catalog, the imaging detector is deferred (PEEM-1)"}
+  - {name: I06_resonant_diffraction_practice, method: resonant_scattering, pending: true, note: "resonant soft X-ray diffraction / dichroism on the i06-1 diffractometer; shares the 4-ID resonant-scattering Method (TECH-1)"}
+  # i10 (BLADE) magnetic-materials soft X-ray Practices (first cut). RASOR resonant
+  # scattering + reflectivity, and i10-1 dichroism in applied field; Methods not yet
+  # in the catalog, carried pending until a technique enters scope (TECH-1).
+  - {name: I10_resonant_scattering_practice, method: resonant_scattering, pending: true, note: "resonant soft X-ray scattering on the RASOR diffractometer, polarization-analyzed; shares the 4-ID resonant-scattering Method (TECH-1)"}
+  - {name: I10_reflectivity_practice, method: reflectivity, pending: true, note: "soft X-ray reflectivity on the RASOR diffractometer (the R in RASOR); new Capability not yet in the catalog (TECH-1)"}
+  - {name: I10_xmcd_practice, method: xmcd, pending: true, note: "X-ray magnetic circular dichroism at i10-1 in an applied magnetic field; shares the 4-ID XMCD Method (TECH-1)"}
+  - {name: I10_xmld_practice, method: xmld, pending: true, note: "X-ray magnetic linear dichroism at i10-1 in an applied magnetic field; shares the i06 XMLD Method (TECH-1)"}
+  # i20-1 energy-dispersive EXAFS (EDE) Practice (deliberately partial first cut). The
+  # dispersive complement to scanning XAS: a polychromator fans the energy band and a
+  # strip detector reads the spectrum in one shot. Method not in the catalog; the
+  # dispersive polychromator + strip detector are not yet in the dodal source (POLY-1 /
+  # STRIP-1), carried pending until a technique enters scope (TECH-1).
+  - {name: I20-1_ede_practice, method: energy_dispersive_exafs, pending: true, note: "energy-dispersive / time-resolved EXAFS: a bent-crystal polychromator + position-sensitive strip detector read the absorption spectrum in one shot; the dispersive complement to scanning XAS, Method not yet in the catalog (TECH-1), dispersive devices not yet in source (POLY-1 / STRIP-1)"}
+  # i19 chemical (small-molecule) single-crystal crystallography. Reuses the pending
+  # diffraction Method (4-ID / 8-ID / CSX are the prior consumers); chemical vs magnetic
+  # single crystal is a Practice-level science difference. The serial / microfocus
+  # fixed-target raster sub-mode is deferred (SERIAL-1), not a separate practice.
+  - {name: I19_diffraction_practice, method: diffraction, pending: true, note: "small-molecule single-crystal X-ray diffraction (chemical crystallography) on the Newport kappa four-circle + Eiger; reuses the 4-ID diffraction Method, a further consumer (TECH-1)"}
+  # I13-1 (I13 coherence branch) coherent lensless imaging. Ptychography raster-scans a
+  # coherent beam and reconstructs an image from the far-field diffraction; the fleet's
+  # first coherent diffractive imaging, a new Capability not yet in the catalog (TECH-1).
+  - {name: I13-1_ptychography_practice, method: ptychography, pending: true, note: "hard X-ray ptychography / coherent diffraction imaging: raster the piezo stage, capture far-field coherent diffraction on the Merlin, reconstruct downstream; new Capability not yet in the catalog (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at Diamond. Pending until the
 # Diamond operator and review structure is confirmed.

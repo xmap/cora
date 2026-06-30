@@ -16,8 +16,8 @@ Substrate-agnostic: setpoint addresses parse inside the routed
 check criteria evaluate against the read `Measurement.value`.
 """
 
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from uuid import UUID
 
 from cora.operation.conductor import ConductorFailure, Step
@@ -57,6 +57,11 @@ class ConductProcedureResult:
     `ConductorResult.artifacts`), so a caller (the Phase-of-Run glue) can
     register a volume Dataset against the file a reconstruction wrote. Both
     empty on a conduct with no ComputeStep.
+
+    `outputs` is the named artifact bus (keyed by `output_ref_name`, threaded
+    from `ConductorResult.outputs`), so a caller selects the Dataset-of-record
+    by NAME (e.g. `outputs["recon"]`) rather than by document position. Empty
+    when no file-arm ComputeStep declared an `output_ref_name`.
     """
 
     procedure_id: UUID
@@ -66,3 +71,4 @@ class ConductProcedureResult:
     actuation_kind: str | None = None
     measurements: tuple[Measurement, ...] = ()
     artifacts: tuple[ArtifactRef, ...] = ()
+    outputs: Mapping[str, ArtifactRef] = field(default_factory=dict[str, ArtifactRef])

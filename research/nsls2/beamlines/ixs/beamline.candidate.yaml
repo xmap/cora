@@ -1,0 +1,17 @@
+# CANDIDATE: hand-read from public profile-collection source, NOT authoritative. PV prefixes verified verbatim. Do not copy into deployments/ unreviewed.
+beamline: {name: IXS, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 10-ID-A, facility_code: nsls2, confirm: inferred from XF:10IDA}
+- {name: 10-ID-D, facility_code: nsls2, confirm: analyzer endstation; inferred from XF:10IDD}
+devices:
+- {name: Monochromator, family: Monochromator, pv: "XF:10IDA-OP{Mono:DCM", stage: optics, new: true, confirm: DCM; Monochromator (catalog)}
+- {name: HighResMono2, family: Monochromator, pv: "XF:10IDB-OP{Mono:HRM2", stage: optics, new: true, confirm: high-res mono; Monochromator (catalog)}
+- {name: WhiteBeamSlit, family: Slit, pv: "XF:10IDA-OP{Slt:1", stage: optics, new: true, confirm: slit; Slit (catalog)}
+- {name: SecondarySourceAperture, family: Slit, pv: "XF:10IDB-OP{SSA:1", stage: optics, new: true, confirm: SSA; Slit (catalog)}
+- {name: HorizontalFocusingMirror, family: Mirror, pv: "XF:10IDD-OP{HFM:1", stage: optics, new: true, confirm: HFM; Mirror (catalog)}
+- {name: VerticalFocusingMirror, family: Mirror, pv: "XF:10IDD-OP{VFM:1", stage: optics, new: true, confirm: VFM; Mirror (catalog)}
+- {name: MultiCrystalMono, family: Monochromator, pv: "XF:10IDD-OP{MCM:1", stage: optics, new: true, confirm: "multi-crystal mono (analyzer feed); confirm Monochromator"}
+- {name: Analyzer, family: EnergyAnalyzer, pv: "XF:10IDD-OP{Analy:1-Ax:", stage: detection, new: true, confirm: "crystal analyzer; LOOSE EnergyAnalyzer (n=1, origin)"}
+- {name: Spectrometer, family: SpectrometerArm, pv: "XF:10IDD-OP{Spec:1-Ax:", stage: detection, new: true, confirm: "spectrometer arm; LOOSE; confirm vs SIX RIXS arm family"}
+- {name: Table1, family: Table, pv: "XF:10IDC-OP{Tbl:1", stage: sample, new: true, confirm: endstation table; Table (catalog)}
+- {name: BeamPositionMonitor1, family: GenericProbe, pv: "XF:10IDA-OP{BPM:1", stage: diagnostics, new: true, confirm: BPM; LOOSE GenericProbe}

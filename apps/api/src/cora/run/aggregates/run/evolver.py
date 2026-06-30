@@ -34,7 +34,8 @@ principle, gate-review 6f-3 L9 lock).
 `name`, `plan_id`, `subject_id`, `raid`, `override_parameters`,
 `effective_parameters`, `trigger_source`, `observation_logbook_id`,
 `external_refs`, `campaign_id`, `last_adjusted_at`,
-`last_adjusted_by`, `adjustment_count`, AND `actuation_kind` through
+`last_adjusted_by`, `adjustment_count`, `pinned_calibration_ids`,
+`input_dataset_ids`, AND `actuation_kind` through
 from prior state. Constructing `Run(id=..., name=..., plan_id=...,
 subject_id=..., status=...)` without explicitly passing the additive
 fields would silently WIPE them to defaults (empty dict / None / empty
@@ -123,6 +124,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
             external_refs=external_refs,
             campaign_id=campaign_id,
             pinned_calibration_ids=pinned_calibration_ids,
+            input_dataset_ids=input_dataset_ids,
         ):
             _ = state  # RunStarted is the genesis event; prior state ignored.
             # Shallow-copy the payload dicts into state so mutating either
@@ -149,6 +151,10 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 # memory equality semantics; the event carries a tuple for
                 # deterministic wire byte ordering).
                 pinned_calibration_ids=frozenset(pinned_calibration_ids),
+                # Input Dataset refs set at genesis (frozenset for in-
+                # memory equality; the event carries a tuple for stable
+                # wire bytes).
+                input_dataset_ids=frozenset(input_dataset_ids),
                 # No conduct provenance at genesis; a terminal event sets it.
                 actuation_kind=None,
             )
@@ -172,6 +178,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Input Dataset refs preserved verbatim across this arm.
+                input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
             )
@@ -195,6 +203,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Input Dataset refs preserved verbatim across this arm.
+                input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
             )
@@ -218,6 +228,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Input Dataset refs preserved verbatim across this arm.
+                input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance: the terminal event carries the
                 # observed kind for a conducted Run; None for a normal
                 # complete issued outside a conduct.
@@ -243,6 +255,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Input Dataset refs preserved verbatim across this arm.
+                input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance: a failed conduct still taints
                 # (the kind rides the abort event); None for operator
                 # aborts.
@@ -268,6 +282,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Input Dataset refs preserved verbatim across this arm.
+                input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
             )
@@ -291,6 +307,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Input Dataset refs preserved verbatim across this arm.
+                input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
             )
@@ -328,6 +346,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 # form of the AsShot rule (even mid-flight steering can't
                 # change what calibration the Run was acquired against).
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Input Dataset refs preserved verbatim across this arm.
+                input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across mid-flight steering.
                 actuation_kind=prior.actuation_kind,
             )
@@ -354,6 +374,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Input Dataset refs preserved verbatim across this arm.
+                input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
             )
@@ -382,6 +404,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Input Dataset refs preserved verbatim across this arm.
+                input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
             )
@@ -410,6 +434,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 adjustment_count=prior.adjustment_count,
                 # AsShot invariant: never change after start.
                 pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Input Dataset refs preserved verbatim across this arm.
+                input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
             )

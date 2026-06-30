@@ -1,0 +1,64 @@
+# CORA Site descriptor: the ALS site-level surface
+#
+# The Advanced Light Source (ALS), at Lawrence Berkeley National Laboratory
+# (Berkeley, California), is CORA's first ALS Site, and the home of the 8.3.2
+# hard X-ray micro-tomography beamline. This file is the single human-readable
+# source for the facility's site-level instances: the Facility itself, the
+# Practices it runs, and the facility principals.
+#
+# Status: 8.3.2 is a reverse-engineered, design-phase first cut (like the Diamond
+# / NSLS-II / ESRF / ALBA modelling exercises). ALS is CORA's FIRST BCS
+# (Beamline Control System, a LabVIEW house-style) control plane; every prior
+# Site is EPICS, Tango / Sardana, or BLISS. Facts here are taken from ALS's
+# public facility pages (als.lbl.gov) and the public als-computing GitHub org
+# (github.com/als-computing), not from a live connection; concrete facility
+# details (safety forms, supply
+# names, the operator pool) are carried pending until ALS staff confirm them. Do
+# not invent facility specifics here; carry them as questions on the 8.3.2
+# open-questions page.
+#
+# ALS-U context: the ALS is undergoing the ALS-U storage-ring upgrade. Dark time
+# is projected to start no sooner than October 2027 and last at least two years.
+# Whether 8.3.2 goes dark, is rebuilt, or relocates is a staff question
+# (ALSU-1), not modelled here.
+#
+# Source-of-truth boundary (same as the other sites):
+#   - the closed facility-kind / actor-kind vocabularies are validated against
+#     code-mirrored frozensets in scripts/site_descriptor.py.
+#   - the facility records the bootstrap invariants (kind=Site, display_name
+#     equals code); `heading` carries the human title used on the rendered page.
+#   - a non-pending practice method must resolve to a catalog Method; 8.3.2's
+#     tomography practices reuse the catalog tomography Methods, so they are not
+#     pending.
+
+facility:
+  code: als
+  display_name: als
+  heading: "ALS"
+  kind: Site
+  institution: Lawrence Berkeley National Laboratory (ALS)
+  beamlines: ["8.3.2"]
+
+# ISA-88 Site Recipes: the facility-adapted form of a catalog Method. 8.3.2 is a
+# hard X-ray micro-tomography beamline, so its imaging practices reuse the
+# catalog tomography Methods and are not pending. Confirm scope with ALS staff
+# before any becomes active.
+practices:
+  - {name: 8.3.2_microtomography_practice, method: tomography, note: "hard X-ray absorption and propagation-phase micro-CT on the experiment endstation"}
+  - {name: 8.3.2_continuous_rotation_practice, method: continuous_rotation_tomography, note: "fast continuous-rotation fly-scan tomography"}
+
+# Access BC Actors conceptually facility-wide at ALS. Pending until the ALS
+# operator and review structure is confirmed.
+actors:
+  - {name: ALS beamline staff, kind: human, pending: true, note: "operator and beamline-scientist pool; structure TBD (GOV-1)"}
+  - {name: ALS safety review, kind: human, pending: true, note: "facility safety review body; membership TBD (GOV-1)"}
+
+# Agent BC Agents seeded at this deployment. None declared: the CORA system
+# agents are not wired for an ALS deployment, and 8.3.2 is a modelling exercise.
+agents: []
+
+# Supply BC: facility-wide continuously-available resources. Pending in design.
+supplies:
+  - {name: Storage-ring beam current, kind: PhotonBeam, pending: true, note: "ALS storage-ring beam from the 8.3.2 Superbend, shared across the facility (SUP-1)"}
+  - {name: Cooling water, kind: CoolingWater, pending: true}
+  - {name: Beamline vacuum, kind: Vacuum, pending: true}

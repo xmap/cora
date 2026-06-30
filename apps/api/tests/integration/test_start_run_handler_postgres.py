@@ -203,6 +203,9 @@ async def test_start_run_persists_event_with_full_upstream_chain_against_postgre
         # pins. Empty tuple by default; forward-compat via
         # `payload.get("pinned_calibration_ids", [])`.
         "pinned_calibration_ids": [],
+        # input Dataset refs (PROV `used`). Empty list by default;
+        # forward-compat via `payload.get("input_dataset_ids", [])`.
+        "input_dataset_ids": [],
         "occurred_at": _NOW.isoformat(),
     }
     assert stored.event_id == run_event_id

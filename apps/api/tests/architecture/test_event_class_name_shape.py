@@ -52,7 +52,7 @@ _PARTICIPLE_SUFFIXES: frozenset[str] = frozenset({"ed", "en"})
 # that genuinely end in `-ld` (Held, Sold, Told) are listed individually
 # in `_IRREGULAR_PARTICIPLES`. Extend the allowlist when a future event
 # legitimately picks up a new irregular form.
-_IRREGULAR_PARTICIPLES: frozenset[str] = frozenset({"Bound", "Held", "Unbound", "Withdrawn"})
+_IRREGULAR_PARTICIPLES: frozenset[str] = frozenset({"Bound", "Held", "Set", "Unbound", "Withdrawn"})
 
 _TOKEN_RE = re.compile(r"[A-Z][a-z]*")
 

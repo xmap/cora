@@ -1,0 +1,273 @@
+# 13-ID-D beamline descriptor (APS, GSECARS), reverse-engineered
+#
+# 13-ID-D is the GSECARS (GeoSoilEnviroCARS, sector 13) high-pressure X-ray
+# diffraction station at APS: monochromatic powder and single-crystal XRD on a sample
+# held in a diamond anvil cell (DAC) under extreme pressure and double-sided laser
+# heating. It is bound to the APS Site (deployments/aps/site.yaml), and is CORA's
+# FIRST extreme-conditions (high-pressure) sample-environment deployment, the axis the
+# EMA/Sirius scout flagged as a genuinely new device class with no fleet analog.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the GSECARS EPICS support tree, github.com/CARS-UChicago/GSECARS-EPICS: the
+# iocBoot st.cmd / .substitutions, the CARSApp/Db device templates, and the
+# CARSApp/op/adl MEDM screens that embed the device PV prefixes) or inferred, carried
+# new: true + confirm: true pending GSECARS staff. EPICS PVs are real and read from the
+# support tree; this source is EPICS-native (.db / .substitutions / .adl), not a dodal
+# or BITS Python roster, so the device-to-PV reconstruction is rougher and carried at
+# medium source-confidence. Vendor part numbers, serials, and physical positions beyond
+# what the templates name are open questions. Descriptor + docs scaffold; scenarios
+# deferred.
+#
+# WHAT IS NEW: the high-pressure sample environment. CORA has modelled thermal
+# (TemperatureController), magnetic (loose Magnet), and pump-probe (loose Laser) sample
+# environments, but never an extreme-PRESSURE one. The DAC is a diamond anvil cell
+# whose pressure is loaded by a gas membrane (a GE/Druck PACE5000 pneumatic controller
+# pressurising a bellows that squeezes the anvils) to the megabar regime, with the
+# sample heated from both sides by two IPG YLR fibre lasers to thousands of kelvin and
+# the in-situ pressure and temperature read optically (spectroradiometry of the
+# thermal-emission greybody, plus ruby fluorescence / Raman / Brillouin pressure
+# metrology). This composite is a genuinely new device class with no fleet analog.
+#
+# MODELLING: 13-ID-D coins ONE new LOOSE Family and changes nothing in the catalog.
+#   - The DAC binds the new loose PressureCell Family (user-named via naming-r3,
+#     2026-06-26; chosen over HighPressureCell / DiamondAnvilCell / AnvilCell because a
+#     bare regime-generic role-noun spans the DAC, the large-volume press, and clamp
+#     cells without forcing a near-duplicate family, the Table / InsertionDevice
+#     device-type-is-a-setting precedent). It is held at n=1 and graduates nothing; the
+#     rule-of-three triggers are APS HPCAT 16-ID, the sibling 13-BM-D large-volume
+#     press in the same source tree, and the deferred 4-ID PACE cell (HP-1, PRESSURE-1).
+#     The cell is ONE Asset presenting the Regulator Role for its membrane pressure
+#     (PACE5000 setpoint + readback); its double-sided laser heating (HEAT-1) and its
+#     in-situ pressure / temperature metrology (a Sensor capability) are capabilities of
+#     the same cell, not separate families.
+#   - The heating lasers do NOT bind the loose Laser Family: a heating laser is a
+#     power-delivery / thermal-actuation role, distinct from the pump-probe Laser
+#     (4-ID / LCLS-MFX, held). Whether the laser path is a clean TemperatureController
+#     is HEAT-1 (the live heating is open-loop on commanded power, temperature inferred
+#     from emission, so it is a power actuator, not a temperature Regulator, today).
+#   - The XRD probe spine reuses the catalog throughout: the Si DCM binds Monochromator,
+#     the K-B and carbon mirrors bind Mirror, the slits bind Slit, the clean-up pinhole
+#     binds Aperture, the attenuator binds Filter, the DAC sample stage binds Goniometer,
+#     the Eiger2 / Pilatus area detectors and the LightField metrology spectrometer bind
+#     Camera, the ion chambers and photodiode bind FluxMonitor, the Dante MCA binds
+#     EnergyDispersiveSpectrometer, the incident energy and the mirror curvature axes
+#     bind PseudoAxis, the fibre illumination binds the loose Backlight, and the machine
+#     state binds the loose StorageRing.
+#   - High-pressure XRD is NOT a new technique: it reuses the pending diffraction and
+#     powder_diffraction Methods, with high pressure a Plan / sample-environment
+#     difference (the 4-ID high-pressure-diffraction precedent, TECH-1).
+#
+# DEFERRED: the laser-safety PLC (a Koyo DL205 gating laser emission) is the laser-
+# enclosure permit / interlock axis, an Enclosure concern, not a device (PSS-1, LASER-1).
+# The detector 2theta-arm transform PV was seen only in a Galil test template, so its
+# binding is deferred (DET-1). The 13-BM stations and the large-volume press are out of
+# this station's scope (HP-1).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/13-id-d/questions.md.
+
+beamline:
+  name: 13-ID-D
+  facility: aps                # APS Site (facility_code: aps); GSECARS CAT, sector 13
+  sector: "Sector 13 (GSECARS)"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "13-ID is an undulator sector shared with 13-ID-C / 13-ID-E; the undulator is energy-tracked with the mono but not exposed as a device in the support tree read, so the source detail is SRC-1"
+
+# PV zones: 13IDA (the shared 13-ID-A first optics: Si DCM), 13IDE:En (the derived
+# beamline energy), 13IDD (the 13-ID-D endstation: DAC stage, detectors, slits, flux,
+# the high-pressure cell), 13IDD_PACE5000 (the membrane pressure controller),
+# 13IDD_Dante1 (the MCA), 13EIG2_9M / 13PIL1MCdTe / 13PIL1MSi (the area detectors),
+# 13IDDLF1 (the metrology spectrometer), 13RAMAN2 (the metrology excitation host),
+# 13IDD_laserPLC (the laser-safety PLC). Whether 13-ID-A and 13-ID-D are separate
+# hutches, and the PSS and laser-enclosure permit leaves, are open (ENC-1, PSS-1).
+enclosures:
+  - name: 13-ID-optics
+    role: optics-hutch
+    facility_code: aps
+    permit_signal: {confirm: "PSS permit leaf not in the support tree; the shared 13-ID-A first optics zone, hutch grouping is ENC-1 (PSS-1)"}
+  - name: 13-ID-D
+    role: experiment-hutch
+    facility_code: aps
+    permit_signal: {confirm: "PSS permit leaf unknown; the 13-ID-D high-pressure endstation; the Koyo laser-safety PLC adds a laser-emission enclosure permit axis (ENC-1, PSS-1, LASER-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state and the shared 13-ID-A optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: 13-ID-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "Observe-only APS machine state, the loose StorageRing pattern reused across the APS deployments (MACHINE-1). The undulator is energy-tracked with the mono but not surfaced as a device here (SRC-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: {confirm: "APS storage-ring state (current, fill, status); observe-only, the exact PVs are MACHINE-1"}
+      new: true
+      confirm: true
+      note: "APS storage-ring state; observe-only (MACHINE-1)"
+
+optics:
+  stage: source
+  enclosure: 13-ID-optics
+  intro: "The shared 13-ID-A silicon monochromator, the incident-energy axis, the K-B and carbon focusing mirrors, the slits, the clean-up pinhole, and the attenuator."
+  note: "All reuse existing catalog Families. The DCM binds Monochromator (the 2-BM precedent); the mirrors bind Mirror with their curvature / ellipticity as PseudoAxis; the slits bind Slit; the pinhole binds Aperture; the attenuator binds Filter."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: "13IDA:"
+      new: true
+      confirm: true
+      note: "the shared 13-ID-A silicon double-crystal monochromator (status 13IDA_EMONO:); undulator-tracked; crystal cut and energy range are MONO-1"
+    - name: BeamEnergy
+      family: PseudoAxis
+      pv: "13IDE:En"
+      new: true
+      confirm: true
+      note: "the derived beamline-energy virtual axis over the DCM and the tracked undulator (MONO-1)"
+    - name: FocusingMirror
+      family: Mirror
+      pv: {confirm: "the K-B focusing mirror pair (vertical / horizontal, curvature and ellipticity sum-and-difference axes) and the upstream carbon mirrors; coatings and the curvature PseudoAxis are OPT-1"}
+      new: true
+      confirm: true
+      note: "K-B focusing mirror pair plus carbon harmonic-rejection mirrors; curvature / ellipticity bind PseudoAxis (OPT-1)"
+    - name: BeamSlit
+      family: Slit
+      pv: {confirm: "the table-top DAC-defining slits (DACV / DACH) and the upstream beam-defining slits; blade-axis map is OPT-2"}
+      new: true
+      confirm: true
+      note: "the beam-defining and DAC table-top slits (DACV / DACH); blade-axis map is OPT-2"
+    - name: CleanupPinhole
+      family: Aperture
+      pv: {confirm: "the clean-up pinhole on its X / Y / Z carriers, removing the slit-scatter halo before the DAC; the carriers bind LinearStage, the opening binds Aperture (APERTURE-1)"}
+      new: true
+      confirm: true
+      note: "the clean-up pinhole before the cell (APERTURE-1)"
+    - name: Attenuator
+      family: Filter
+      pv: "13IDD:filter:"
+      new: true
+      confirm: true
+      note: "the attenuator paddle / filter set protecting the detector and trimming flux (the 2-BM C / Al precedent); foil set is ATTN-1"
+
+# ===========================================================================
+# SAMPLE STAGE: the diamond anvil cell (the new PressureCell family) + the DAC stage
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 13-ID-D
+  intro: "The diamond anvil cell (the high-pressure sample environment) and the DAC positioning stage / micro-diffractometer."
+  note: >
+    The DAC binds the new loose PressureCell Family (HP-1). It is one Asset presenting
+    the Regulator Role for its membrane pressure (the PACE5000 setpoint + readback);
+    its double-sided laser heating (HEAT-1) and its in-situ pressure / temperature
+    metrology are capabilities of the same cell. The DAC positioning stage binds the
+    catalog Goniometer (the i03 Smargon precedent; the single Omega plus the
+    Galil-versus-XPS controller are per-Asset settings, SAMPLE-1).
+  devices:
+    - name: PressureCell
+      family: PressureCell             # NEW loose Family (n=1), the high-pressure sample environment (HP-1)
+      pv: "13IDD_PACE5000:PC1:"
+      new: true
+      confirm: true
+      note: "the diamond anvil cell: membrane gas pressure set and read on the PACE5000 (PC1:Setpoint / Pressure_RBV / Control / Vent), presenting the Regulator Role; double-sided IPG YLR laser heating (13IDD:Laser1 / Laser2, power on 13IDD:US_LaserPower / DS_LaserPower) is the cell's heating capability (HEAT-1); the in-situ temperature (spectroradiometry, 13IDD:us_las_temp / ds_las_temp) and pressure (ruby / Raman / Brillouin) are its metrology Sensor capability. NEW loose Family, held at n=1, graduates at a rule-of-three (HPCAT 16-ID, the 13-BM-D large-volume press, the 4-ID cell; PRESSURE-1)"
+    - name: SampleStage
+      family: Goniometer
+      pv: {confirm: "the DAC positioning stage / micro-diffractometer (Galil m1-m4 X / Z / Y / Omega, plus the Newport XPS-16 PSO trajectory stage); single Omega and the Galil-vs-XPS controller are settings (SAMPLE-1)"}
+      new: true
+      confirm: true
+      note: "the DAC sample-positioning stage with the Omega rotation; binds Goniometer (the i03 Smargon precedent); single Omega and the Galil-vs-XPS controller are settings (SAMPLE-1)"
+    - name: SampleTable
+      family: Table
+      pv: {confirm: "the DAC lift table the cell rides on; binds Table (SAMPLE-1)"}
+      new: true
+      confirm: true
+      note: "the DAC lift table supporting the cell (SAMPLE-1)"
+    - name: MetrologySpectrometer
+      family: Camera
+      pv: "13IDDLF1:"
+      new: true
+      confirm: true
+      note: "the LightField (PIMAX / PIXIS) spectrometer reading the thermal-emission and ruby / Raman spectra for the cell's in-situ temperature and pressure metrology; reuses Camera as the metrology detector (HP-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the XRD area detectors, the detector arm, the flux, the MCA
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: 13-ID-D
+  intro: "The high-pressure XRD area detectors, the detector positioning, the incident-flux monitors, and the energy-dispersive MCA."
+  note: >
+    All reuse existing catalog Families. The Eiger2 and Pilatus area detectors bind
+    Camera; the detector table and 2theta arm bind LinearStage and TiltStage (the swing
+    transform binds PseudoAxis, binding deferred DET-1); the ion chambers and photodiode
+    bind FluxMonitor; the Dante MCA binds EnergyDispersiveSpectrometer.
+  devices:
+    - name: AreaDetector
+      family: Camera
+      pv: "13EIG2_9M:"
+      new: true
+      confirm: true
+      note: "the Eiger2 X 9M area detector for high-pressure powder and single-crystal XRD; the Pilatus 1M CdTe / Si (13PIL1MCdTe: / 13PIL1MSi:) are the alternative detectors, CdTe-vs-Si sensor a setting (DET-1)"
+    - name: DetectorStage
+      family: LinearStage
+      pv: {confirm: "the detector table radius and the 2theta / chi arm; the swing transform binds PseudoAxis but its live prefix was seen only in a Galil test template, so the binding is deferred (DET-1)"}
+      new: true
+      confirm: true
+      note: "the detector table and 2theta arm (LinearStage + TiltStage); the 2theta transform PseudoAxis binding is DET-1"
+    - name: FluxMonitor
+      family: FluxMonitor
+      pv: "13IDD:scaler1"
+      new: true
+      confirm: true
+      note: "the ion chambers (scaler1 over the USB-CTR multi-channel scaler) and the DAC photodiode (13IDD:Photodiode) for incident-flux and transmission monitoring (DET-1)"
+    - name: FluorescenceDetector
+      family: EnergyDispersiveSpectrometer
+      pv: "13IDD_Dante1:"
+      new: true
+      confirm: true
+      note: "the XGLab Dante multi-channel-analyzer for energy-dispersive fluorescence (the 2-ID / 7-BM precedent); reuse, not novelty (DET-1)"
+    - name: SampleIllumination
+      family: Backlight                # loose Family, already held under review
+      pv: "13IDD:US_IllumOnOff"
+      new: true
+      confirm: true
+      note: "the fibre sample illumination (upstream / downstream on / off + splitter) for the viewing microscope; reuses the loose Backlight Family (DET-1)"
+
+# Cross-cutting control. 13-ID-D runs EPICS (the floor); CORA observes and, where it
+# replaces SPEC / bluesky-style orchestration, conducts over it. The handles above were
+# reconstructed from the GSECARS EPICS support tree and carried confirm (CTRL-1).
+controls:
+  intro: >
+    13-ID-D runs on the APS EPICS control stack (GSECARS uses EPICS plus SPEC and Python
+    orchestration), the same floor as the other APS beamlines. The device handles above
+    were reconstructed from the public GSECARS EPICS support tree
+    (github.com/CARS-UChicago/GSECARS-EPICS: the iocBoot st.cmd / .substitutions, the
+    CARSApp/Db templates, and the CARSApp/op/adl MEDM screens), carried confirm pending
+    staff verification (CTRL-1). This is an EPICS-native source, so the reconstruction is
+    rougher than a dodal or BITS roster and carried at medium confidence. The
+    high-pressure acquisition (the coupled XRD-plus-temperature collection, the balanced
+    double-sided laser-power ramp, the membrane pressure steps, the metrology spectra)
+    runs through GSECARS SPEC / Python today; that orchestration is the seam CORA's edge
+    replaces, conducting over the cell, the sample stage, and the detectors. The
+    laser-safety PLC (a Koyo DL205, 13IDD_laserPLC: / 13IDD:LaserPLC:) enforces the
+    laser-emission enclosure permit; CORA observes that permit, it does not model the
+    interlock logic (LASER-1, PSS-1). The detector file-writing to the APS / GSECARS
+    filestore is plumbing CORA observes, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a 13-ID-D run needs. The membrane
+    pressure controller draws on a high-pressure gas supply (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics and flight paths (SUP-1)"
+    - kind: ProcessGas
+      note: "the high-pressure gas the PACE5000 uses to load the DAC membrane (SUP-1)"

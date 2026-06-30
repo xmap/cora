@@ -16,6 +16,11 @@ deferred to first concrete consumer per adapter-first discipline.
 submission (submit / await / fetch artifact), distilled from a single
 local-process adapter. A routing registry is deferred to the second
 real substrate, exactly as ControlPort earned its registry.
+
+`TransferPort` is the data-movement sibling: domain-shaped byte movement
+(begin / observe / cancel), non-blocking because a transfer can be long
+running, can suspend mid-flight, and can finish partially. It ships with
+a test double only, pending the build trigger; see its module docstring.
 """
 
 from cora.operation.ports.compute_port import (
@@ -52,6 +57,19 @@ from cora.operation.ports.procedure_activity_lookup import (
     ProcedureActivityLookup,
     ProcedureActivityRecency,
 )
+from cora.operation.ports.transfer_port import (
+    NoRouteForLocationError,
+    TransferAccessDeniedError,
+    TransferEndpointUnreachableError,
+    TransferHandle,
+    TransferIntegrityError,
+    TransferPort,
+    TransferProgress,
+    TransferRejectedError,
+    TransferRequest,
+    TransferState,
+    TransferTimeoutError,
+)
 
 __all__ = [
     "ArtifactNotFoundError",
@@ -77,7 +95,18 @@ __all__ = [
     "MeasurementKind",
     "MeasurementNotFoundError",
     "NoAdapterForAddressError",
+    "NoRouteForLocationError",
     "ProcedureActivityLookup",
     "ProcedureActivityRecency",
     "Quality",
+    "TransferAccessDeniedError",
+    "TransferEndpointUnreachableError",
+    "TransferHandle",
+    "TransferIntegrityError",
+    "TransferPort",
+    "TransferProgress",
+    "TransferRejectedError",
+    "TransferRequest",
+    "TransferState",
+    "TransferTimeoutError",
 ]

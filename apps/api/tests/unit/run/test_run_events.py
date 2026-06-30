@@ -103,6 +103,10 @@ def test_to_payload_serializes_run_started_with_subject_to_primitives() -> None:
         # StartRun.pinned_calibration_ids was empty; forward-compat via
         # `payload.get("pinned_calibration_ids", [])`.
         "pinned_calibration_ids": [],
+        # sorted list of input Dataset ids (PROV `used`). Empty when
+        # StartRun.input_dataset_ids was empty; forward-compat via
+        # `payload.get("input_dataset_ids", [])`.
+        "input_dataset_ids": [],
         "occurred_at": _NOW.isoformat(),
     }
 

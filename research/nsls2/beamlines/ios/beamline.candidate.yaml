@@ -1,0 +1,51 @@
+# CANDIDATE beamline descriptor: hand-read from NSLS2/ios-profile-collection, NOT authoritative.
+# Every device carries new: true and a confirm note. All PV prefixes verified verbatim
+# against source (startup/*.py), zero fabrications. Do not copy into deployments/ without review.
+
+beamline:
+  name: IOS
+  facility: nsls2
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- {name: 23-ID, facility_code: nsls2, confirm: shared canted straight (EPU + front end); inferred from XF:23ID}
+- {name: 23-ID-2, facility_code: nsls2, confirm: IOS branch hutch; inferred from XF:23ID2}
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: FrontEndShutter, family: Shutter, pv: "XF:23ID-PPS{Sh:FE}", new: true, confirm: front-end PPS shutter; Shutter (catalog)}
+  - {name: PhotonShutter, family: Shutter, pv: "XF:23ID2-PPS{PSh}", new: true, confirm: "photon shutter (+ PPS:2); Shutter (catalog)"}
+  - {name: InsertionDevice1, family: InsertionDevice, pv: "XF:23ID-ID{EPU:1", new: true, confirm: "EPU variable-polarization undulator 1; InsertionDevice (catalog); polarization as controllable axis"}
+  - {name: InsertionDevice2, family: InsertionDevice, pv: "XF:23ID-ID{EPU:2", new: true, confirm: "EPU undulator 2 (canted straight); InsertionDevice (catalog)"}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: GratingMonochromator, family: GratingMonochromator, pv: "XF:23ID2-OP{Mono", new: true, confirm: "soft X-ray grating mono; GratingMonochromator (catalog, graduated via CSX); IOS another consumer"}
+  - {name: Mirror3B, family: Mirror, pv: "XF:23ID2-OP{Mir:3B", new: true, confirm: mirror 3B; Mirror (catalog)}
+  - {name: KBMirrorHorizontal, family: Mirror, pv: "XF:23ID2-OP{KB:MirH-Ax:", new: true, confirm: KB horizontal refocus; Mirror (catalog)}
+  - {name: KBMirrorVertical, family: Mirror, pv: "XF:23ID2-OP{KB:MirV-Ax:", new: true, confirm: KB vertical refocus; Mirror (catalog)}
+  - {name: KBPinhole, family: Slit, pv: "XF:23ID2-OP{KB:Pnh-Ax:", new: true, confirm: "KB pinhole; confirm Slit vs Aperture"}
+  - {name: EntranceSlit1, family: Slit, pv: "XF:23ID2-OP{Slt:1", new: true, confirm: entrance slit; Slit (catalog)}
+  - {name: ExitSlit2, family: Slit, pv: "XF:23ID2-OP{Slt:2-Ax:", new: true, confirm: exit slit; Slit (catalog)}
+  - {name: DiagnosticModule1, family: LinearStage, pv: "XF:23ID2-OP{DM1-Ax:", new: true, confirm: "DM1 (+ FS, HSlt sub-stages); LinearStage (catalog)"}
+  - {name: DiagnosticModule2, family: LinearStage, pv: "XF:23ID2-OP{DM2:Slt-Ax:", new: true, confirm: "DM2 slit (+ FS, FSPhDiod); LinearStage (catalog)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: APPESCell, family: LinearStage, pv: "XF:23ID2-ES{APPES:1-Ax:", new: true, confirm: "ambient-pressure PES cell stage; LinearStage (catalog)"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SPECSAnalyzer, family: ElectronAnalyzer, pv: "XF:23ID2-ES{SPECS}", new: true, confirm: "SPECS hemispherical analyzer (+ SPECS-PS1); ElectronAnalyzer (catalog, graduated via ESM/SST); IOS another consumer (AP-XPS)"}
+  - {name: VortexDetector, family: EnergyDispersiveSpectrometer, pv: "XF:23ID2-ES{Vortex}", new: true, confirm: "Vortex SDD (+ BI Vortex:1 stage); EnergyDispersiveSpectrometer (catalog, graduated)"}
+  - {name: FluorescenceSpectrometer, family: EnergyDispersiveSpectrometer, pv: "XF:23ID2-ES{Xsp:1}", new: true, confirm: Xspress3; EnergyDispersiveSpectrometer (catalog, graduated)}
+  - {name: GoldMesh, family: FluxMonitor, pv: "XF:23ID2-BI{AuMesh:1-Ax:", new: true, confirm: "Au-mesh I0 monitor; FluxMonitor (catalog, graduated), confirm"}
+  - {name: XASIonChamber, family: FluxMonitor, pv: "XF:23ID2-BI{IOXAS:1-Ax:", new: true, confirm: "XAS I0 chamber; FluxMonitor (catalog, graduated), confirm"}
+  - {name: CurrentAmplifiers, family: GenericProbe, pv: "XF:23ID2-ES{CurrAmp:1}", new: true, confirm: "current amplifiers 1/2/3; LOOSE GenericProbe"}
+  - {name: ScalerCounter, family: GenericProbe, pv: "XF:23ID2-ES{Sclr:1}", new: true, confirm: scaler; LOOSE GenericProbe}
+  - {name: DiagnosticStages, family: LinearStage, pv: "XF:23ID2-BI{Diag:1-Ax:", new: true, confirm: "Diag:1/3/4 diagnostic stages; LinearStage (catalog)"}
+  - {name: GateValves, family: GenericProbe, pv: "XF:23ID2-VA{APPES-GV:3}", new: true, confirm: "gate valves (APPES-GV, Diag-GV); LOOSE GenericProbe"}

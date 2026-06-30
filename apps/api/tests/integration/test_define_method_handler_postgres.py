@@ -67,6 +67,8 @@ async def test_define_method_persists_event_to_postgres_with_capabilities(
         "needed_family_ids": sorted([str(cap1), str(cap2)]),
         # needed_supplies. Pinned by tests/unit/recipe/test_method_needed_supplies.py.
         "needed_supplies": [],
+        # needed_input_kinds. Pinned by tests/unit/recipe/test_method_needed_input_kinds.py.
+        "needed_input_kinds": [],
         # MethodDefined.payload carries it as a UUID string.
         "capability_id": str(capability_id),
         # needed_assembly_ids. Pinned by tests/unit/recipe/test_method_needed_assembly_ids.py.

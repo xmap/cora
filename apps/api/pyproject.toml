@@ -75,6 +75,18 @@ dependencies = [
     # ControlTimeoutError; `p4p.client.asyncio.Disconnected` ->
     # ControlNotConnectedError; `RemoteError` -> ControlWriteRejectedError.
     "p4p>=4,<5",
+    # globus-sdk (TransferPort arc): production Globus Transfer client used by
+    # `GlobusTransferPort` at `cora/operation/adapters/`, the first real
+    # `TransferPort` substrate. The adapter takes an already-authorized
+    # `TransferClient` by injection (the OAuth2 dance is a composition-root
+    # concern, not the adapter's), builds a `TransferData` payload, and maps
+    # Globus task status (ACTIVE / INACTIVE / SUCCEEDED / FAILED) into
+    # `TransferState`; INACTIVE -> Suspended (credential expiry), a FAILED task
+    # carrying subtasks_failed > 0 -> the partial signal. Error mapping:
+    # `GlobusAPIError` dispatched on `.http_status` -> Rejected / AccessDenied /
+    # EndpointUnreachable; `NetworkError` / connection / timeout -> the
+    # transport families. Pin <4 to flag a future major SDK shift in CI.
+    "globus-sdk>=3,<4",
 ]
 
 [dependency-groups]

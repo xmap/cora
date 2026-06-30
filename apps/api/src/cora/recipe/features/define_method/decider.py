@@ -30,9 +30,11 @@ from cora.recipe.aggregates.capability import (
     ExecutorShape,
 )
 from cora.recipe.aggregates.method import (
+    METHOD_NEEDED_INPUT_KIND_MAX_LENGTH,
     METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH,
     ExecutionPattern,
     InvalidMethodMonotoneQualityError,
+    InvalidMethodNeededInputKindsError,
     InvalidMethodNeededSuppliesError,
     Method,
     MethodAlreadyExistsError,
@@ -63,6 +65,8 @@ def decide(
         (via MethodName VO)
       - Each needed_supplies kind must be valid
         -> InvalidMethodNeededSuppliesError
+      - Each needed_input_kinds kind must be valid
+        -> InvalidMethodNeededInputKindsError
       - monotone_quality=True requires execution_pattern == ITERATIVE
         -> InvalidMethodMonotoneQualityError
 
@@ -102,12 +106,25 @@ def decide(
             error_class=InvalidMethodNeededSuppliesError,
         )
         trimmed_supplies.append(trimmed)
+    # defensive per-element validation for needed_input_kinds strings
+    # (mirrors the needed_supplies pass: Pydantic catches this at the
+    # API; this protects direct in-process callers AND trims each kind
+    # so persisted bytes are deterministic).
+    trimmed_input_kinds: list[str] = []
+    for kind in command.needed_input_kinds:
+        trimmed = validate_bounded_text(
+            kind,
+            max_length=METHOD_NEEDED_INPUT_KIND_MAX_LENGTH,
+            error_class=InvalidMethodNeededInputKindsError,
+        )
+        trimmed_input_kinds.append(trimmed)
     return [
         MethodDefined(
             method_id=new_id,
             name=name.value,
             needed_family_ids=tuple(command.needed_family_ids),
             needed_supplies=tuple(trimmed_supplies),
+            needed_input_kinds=tuple(trimmed_input_kinds),
             capability_id=command.capability_id,
             needed_assembly_ids=tuple(command.needed_assembly_ids),
             execution_pattern=command.execution_pattern,

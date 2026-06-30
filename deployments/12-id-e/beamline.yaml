@@ -1,0 +1,262 @@
+# 12-ID-E beamline descriptor (APS), reverse-engineered
+#
+# 12-ID-E is the APS ultra-small-angle X-ray scattering (USAXS) instrument, a
+# Bonse-Hart crystal-analyzer beamline that also runs pinhole SAXS and WAXS. It is
+# bound to the APS Site (deployments/aps/site.yaml), the ninth APS beamline after
+# 2-BM, 2-ID, 7-BM, 32-ID, 19-BM, 4-ID, 8-ID, and 9-ID, and CORA's FIRST
+# crystal-analyzer USAXS deployment.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the BCDA-APS bluesky/BITS instrument, github.com/BCDA-APS/usaxs-bits, its
+# src/usaxs/devices/*.py classes and src/usaxs/configs/*.yml device tables) or
+# inferred, carried `new: true` + `confirm: true` pending 12-ID-E staff. EPICS PVs
+# are real and verified against the instrument config; vendor part numbers, serials,
+# and physical positions are not in it and are open questions. Same descriptor mode
+# as the other APS deployments; this scaffold is descriptor + docs, scenarios
+# deferred.
+#
+# WHAT IS NEW: USAXS is a Bonse-Hart rocking-curve technique, the fleet's first.
+# A matched pair of channel-cut crystal stages, the collimator and the analyzer, is
+# rocked through the Bragg condition while a single autoranging photodiode counts
+# the transmitted intensity across several decades of gain; this reaches q far below
+# the pinhole-SAXS regime (i22 / SMI). The acquisition shape is an angular rocking
+# fly-scan with a multi-decade autoranging point detector, distinct from the
+# pixel-detector SAXS/WAXS the fleet already models. This is a new Capability,
+# deferred as a question (USAXS-1); the same instrument also runs pinhole SAXS and
+# WAXS on area detectors, which reuse the existing scattering Capabilities.
+#
+# MODELLING: every device reuses an existing catalog or loose Family. 12-ID-E coins
+# NO new Family and changes nothing in the catalog. The Bonse-Hart collimator and
+# analyzer stages reuse RotaryStage (the crystal rocking is the operative axis;
+# channel-cut is a per-Asset setting, not a new optic Family); the autoranging Femto
+# photodiode detector and the I0/I00/I000/TRD monitors and scalers reuse FluxMonitor
+# (current-integrating point detectors, the BMM quad-electrometer precedent; the
+# gain autorange is a device-state setting); the Linkam and PTC10 reuse the
+# graduated TemperatureController (Regulator); the SAXS/WAXS Pilatus detectors reuse
+# Camera. The optional in-situ load frame is in the device library but not the active
+# instrument config, so it is carried as a deferred question (LOADFRAME-1), no
+# Family coined for an un-instantiated device.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/12-id-e/questions.md.
+
+beamline:
+  name: 12-ID-E
+  facility: aps                # APS Site (facility_code: aps)
+  sector: "Sector 12"          # PV namespaces usxLAX / usxAERO / 12idPyFilter / usxRIO
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "12-ID is an undulator sector; the USAXS instrument config does not expose the insertion-device gap as a device, so the undulator detail is SRC-1"
+
+# PV namespaces: usxLAX (the LAX soft-IOC: USAXS calcs, scalers, slits, many
+# motors), usxAERO (Aerotech motors), 12idPyFilter (attenuator), usxRIO (Femto
+# amplifier RIO), usxLINKAM / usxTEMP (sample temperature), usxPI (sample rotator).
+# Whether 12-ID-E is one experiment hutch plus shared upstream optics, and the PSS
+# permit leaves, are open (ENC-1, PSS-1).
+enclosures:
+  - name: 12-ID-optics
+    role: optics-hutch
+    facility_code: aps
+    permit_signal: {confirm: "PSS permit leaf not in source; the shared 12-ID optics zone, hutch grouping is ENC-1 (PSS-1)"}
+  - name: 12-ID-E
+    role: experiment-hutch
+    facility_code: aps
+    permit_signal: {confirm: "PSS permit leaf unknown; the USAXS experiment hutch (ENC-1, PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine source state and the optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: 12-ID-optics
+  intro: "The machine-level source state, observed not driven."
+  note: "Observe-only APS machine state, the loose StorageRing pattern reused from the other APS deployments (MACHINE-1). The undulator gap is not in the USAXS instrument config (SRC-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      pv: {confirm: "APS storage-ring state (current, fill, status); observe-only, the exact PVs are MACHINE-1"}
+      new: true
+      confirm: true
+      note: "machine source state; observe-only, not photon-path flux (MACHINE-1)"
+
+optics:
+  stage: source
+  enclosure: 12-ID-optics
+  intro: "The monochromator, the attenuator filter bank, and the guard and USAXS slits."
+  note: "All reuse existing catalog Families. The attenuator reuses the Filter Family (the I03 / i15-1 precedent), not a new Attenuator kind."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      pv: {confirm: "the 12-ID monochromator (dodal MyMonochromator wraps the energy/feedback PVs); crystal cut, d-spacing, energy range are MONO-1"}
+      new: true
+      confirm: true
+      note: "the shared 12-ID monochromator; the instrument config wraps it as a soft device, the real PVs are MONO-1"
+    - name: Attenuator
+      family: Filter
+      pv: "12idPyFilter:"
+      new: true
+      confirm: true
+      note: "Al/Ti attenuator filter bank (FilterBank FL1); reuses the Filter Family, not a new Attenuator kind (ATTN-1)"
+    - name: GuardSlit
+      family: Slit
+      pv: "usxLAX:"
+      new: true
+      confirm: true
+      note: "guard slit (GSlitDevice); blade-axis map is OPT-2"
+    - name: UsaxsSlit
+      family: Slit
+      pv: "usxLAX:"
+      new: true
+      confirm: true
+      note: "USAXS-defining slit (UsaxsSlitDevice); blade-axis map is OPT-2"
+
+# ===========================================================================
+# USAXS STAGE: the Bonse-Hart collimator and analyzer crystal stages
+# ===========================================================================
+
+usaxs-optics:
+  stage: source
+  enclosure: 12-ID-E
+  intro: "The Bonse-Hart matched crystal pair: the collimator stage upstream of the sample and the analyzer stage downstream, rocked through the Bragg condition to resolve ultra-small angles."
+  note: >
+    The collimator and analyzer are channel-cut crystal stages, each carrying a
+    crystal rocking rotation plus alignment translations and a piezo fine-tilt. They
+    reuse the catalog RotaryStage (the rocking rotation is the operative axis;
+    channel-cut versus multi-bounce is a per-Asset setting, not a new optic Family).
+    The rocking-curve angular scan is the USAXS Capability, deferred (USAXS-1, BONSE-1).
+  devices:
+    - name: CollimatorStage
+      family: RotaryStage
+      pv: {confirm: "Bonse-Hart collimator stage (UsaxsCollimatorStageDevice): rocking rotation usxAERO:m12, x/y align, r2p piezo usxLAX:pi:c0:m2; axis detail is BONSE-1"}
+      new: true
+      confirm: true
+      note: "Bonse-Hart collimator crystal stage; channel-cut is a setting; the crystal cut and rocking tolerance are BONSE-1"
+    - name: AnalyzerStage
+      family: RotaryStage
+      pv: {confirm: "Bonse-Hart analyzer stage (UsaxsAnalyzerStageDevice): rocking rotation usxAERO:m6, x/y align, r2p piezo usxLAX:pi:c0:m1; axis detail is BONSE-1"}
+      new: true
+      confirm: true
+      note: "Bonse-Hart analyzer crystal stage; the rocking-curve scan against the collimator is the USAXS measurement (USAXS-1, BONSE-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the sample stage, rotator, and temperature environments
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 12-ID-E
+  intro: "The sample positioning stage, the sample rotator, and the in-situ temperature environments."
+  note: >
+    The sample stage reuses LinearStage and the sample rotator RotaryStage. The
+    Linkam T96 and the PTC10 reuse the graduated TemperatureController Family
+    (presents Regulator). An optional in-situ load frame exists in the instrument's
+    device library but is not in the active config, so it is carried as a deferred
+    question (LOADFRAME-1), not modelled as a device here.
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: {confirm: "USAXS sample stage (UsaxsSampleStageDevice); axis set is SAMPLE-1"}
+      new: true
+      confirm: true
+      note: "sample positioning stage (SAMPLE-1)"
+    - name: SampleRotator
+      family: RotaryStage
+      pv: "usxPI:c867:c0:m1"
+      new: true
+      confirm: true
+      note: "PI C-867 sample rotator (SAMPLE-1)"
+    - name: LinkamStage
+      family: TemperatureController
+      pv: "usxLINKAM:tc1:"
+      new: true
+      confirm: true
+      note: "Linkam T96 temperature stage; reuses the graduated Family (presents Regulator); range is TEMP-1"
+    - name: Ptc10Controller
+      family: TemperatureController
+      pv: "usxTEMP:tc1:"
+      new: true
+      confirm: true
+      note: "PTC10 multi-channel temperature controller; reuses the graduated Family (presents Regulator); channels are TEMP-1"
+
+# ===========================================================================
+# DETECTION STAGE: the autoranging USAXS point detector, the flux monitors, the
+# scalers, and the SAXS/WAXS area detectors
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: 12-ID-E
+  intro: "The autoranging USAXS photodiode detector, the incident and transmitted flux monitors, the counting scalers, the detector and SAXS/WAXS stages, and the pinhole SAXS and WAXS area detectors."
+  note: >
+    USAXS detection is point / current-integrating: the UPD photodiode reads the
+    rocked-analyzer intensity through an autoranging Femto transimpedance amplifier
+    across several gain decades, the science detector. It, and the I0 / I00 / I000 /
+    TRD monitor channels and the counting scalers, reuse the catalog FluxMonitor (the
+    BMM quad-electrometer-as-primary precedent; the gain autorange is a device-state
+    setting, DET-1). The same instrument runs pinhole SAXS and WAXS on Pilatus area
+    detectors, which reuse Camera.
+  devices:
+    - name: PhotodiodeDetector
+      family: FluxMonitor
+      pv: { amplifier: "usxLAX:fem09:seq02:", autorange: "usxLAX:pd01:seq02:", photocurrent: "usxLAX:USAXS:upd" }
+      new: true
+      confirm: true
+      note: "UPD photodiode, the primary USAXS detector; autoranging Femto amplifier (DDPCA300) across several gain decades; gain autorange is a device-state setting (DET-1)"
+    - name: FluxMonitors
+      family: FluxMonitor
+      pv: {confirm: "I0 / I00 / I000 / TRD photocurrent channels via Femto amplifiers (usxRIO:fem02-05:seq01:, usxLAX:USAXS:I0/I00/I000/trd); incident and transmitted flux monitors (DET-1)"}
+      new: true
+      confirm: true
+      note: "incident / transmitted flux monitor channels for normalization (DET-1)"
+    - name: Scaler
+      family: FluxMonitor
+      pv: "usxLAX:vsc:c0"
+      new: true
+      confirm: true
+      note: "counting scaler (ScalerCH usxLAX:vsc:c0/c1, Struck SIS3820 usxLAX:3820:) that counts the amplifier channels (DET-1)"
+    - name: DetectorStage
+      family: LinearStage
+      pv: {confirm: "USAXS detector stage (UsaxsDetectorStageDevice) and the SAXS stage; axes are OPT-2"}
+      new: true
+      confirm: true
+      note: "detector translation stages (USAXS + SAXS); axis roles are OPT-2"
+    - name: SaxsDetector
+      family: Camera
+      pv: {confirm: "pinhole SAXS Pilatus area detector (pilatus_module); the AD prefix is DET-1"}
+      new: true
+      confirm: true
+      note: "pinhole SAXS area detector (Detector Role); reuses Camera (DET-1)"
+    - name: WaxsDetector
+      family: Camera
+      pv: { x: "usxAERO:m3", x2: "usxAERO:m7" }
+      new: true
+      confirm: true
+      note: "WAXS area detector on its translation (waxsx / waxs2x); reuses Camera (DET-1)"
+
+# Cross-cutting control. 12-ID-E runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were
+# read from the usaxs-bits instrument config and carried confirm (CTRL-1).
+controls:
+  intro: >
+    12-ID-E runs on the APS EPICS / ophyd control stack, the same floor as the other
+    APS beamlines. The device handles above are bound from the BCDA-APS usaxs-bits
+    instrument (its src/usaxs/configs/*.yml device tables and src/usaxs/devices/*.py
+    classes), carried confirm pending staff verification (CTRL-1). The USAXS
+    acquisition (the rocking-curve fly-scan trajectory, the amplifier autoranging,
+    the scaler counting) runs through bluesky plans and the BITS instrument; that
+    orchestration is the seam CORA's edge replaces, driving through ophyd / EPICS,
+    while the area-detector file-writing to the APS filestore is plumbing CORA
+    observes, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a 12-ID-E run needs. The optics run
+    under vacuum (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics and the flight paths are under vacuum (SUP-1)"

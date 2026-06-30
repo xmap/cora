@@ -35,7 +35,7 @@ Root Asset `I15-1` (`tier = Unit`, `facility_code = diamond`). Bold families are
 | `Robot` | (Positioner, deferred) | `BL15I-MO-ROBOT-01:` | powder/capillary changer; one Positioner Asset + Subject + Clearance (I03 shape), not a new Family |
 | `Eiger` | Camera | `BL15I-EA-EIGER-01:` | Dectris Eiger area detector (Detector Role) |
 | `Detector2` | LinearStage | `BL15I-EA-DET-02:` | second detector translation |
-| `I0` | **FluxMonitor** | `BL15I-EA-JBPM-03:` | incident-flux monitor (TetrAMM); presents Sensor; catalog Family (graduated) |
+| `I0` | FluxMonitor | `BL15I-EA-JBPM-03:` | incident-flux monitor (TetrAMM); presents Sensor; catalog Family (graduated) |
 | `Zebra` | TimingController | `BL15I-EA-ZEBRA-01:` | FPGA trigger fan-out |
 
 Reused catalog Families (no new Family needed): `Monochromator`, `Mirror`, `Filter`, `LinearStage`, `Slit`, `BeamStop`, `Shutter`, `Table`, `Hexapod`, `RotaryStage`, `Camera`, `TimingController`. Loose families reused from siblings: `StorageRing` (from I22). The incident-flux monitor reuses `FluxMonitor`, since graduated to a catalog Family (presenting the Sensor Role) on the i22/i03/i15-1 rule-of-three this deployment completes. **No new family is coined by I15-1 itself** (the proposed `Rail` and `Interlock` families were both refuted: rail folds into Table, interlocks into the Enclosure permit). The robot presents the existing Positioner Role (I03 / 19-BM pattern), shape deferred.

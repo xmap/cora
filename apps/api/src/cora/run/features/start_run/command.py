@@ -90,3 +90,24 @@ class StartRun:
     # stance); a downstream consumer that needs to read the pinned
     # CalibrationRevision still goes through the Calibration BC.
     pinned_calibration_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
+    # input Dataset references (PROV `used`): the set of
+    # Dataset ids a reconstruction Run consumes. Each reference targets
+    # the Dataset, not a Distribution. Operator-supplied (or, in the
+    # autonomous-CT future, agent-supplied). IMMUTABLE on the Run
+    # aggregate after start_run, like pinned_calibration_ids. NO cross-
+    # BC existence check at the decider (cross-BC eventual-consistency
+    # stance); the start_run gate that reads each input Dataset's
+    # Verified Distribution goes through the Data BC.
+    input_dataset_ids: frozenset[UUID] = field(default_factory=frozenset[UUID])
+    # names the compute resource the reconstruction will run on
+    # (for example a remote resource like ALCF Polaris that can only read
+    # certain Storage tiers). Bare string carried verbatim. NO cross-BC
+    # existence check at the decider (same eventual-consistency stance as
+    # input_dataset_ids); the composition root resolves it against
+    # deployment config to the set of Storage tiers that resource can
+    # read, and the start_run gate then requires each input's Verified
+    # Distribution to sit on a reachable tier. None means no remote-compute
+    # target is declared, so the reachability check is skipped (the gate
+    # stays present-and-Verified only). Consumed only by the gate, not
+    # persisted on RunStarted (mirrors the beam reading).
+    compute_resource_code: str | None = None

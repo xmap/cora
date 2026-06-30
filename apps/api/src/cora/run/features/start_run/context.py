@@ -59,6 +59,9 @@ from cora.equipment.aggregates.asset import Asset
 from cora.infrastructure.ports.beam_availability_lookup import BeamAvailabilityLookupResult
 from cora.infrastructure.ports.caution_lookup import CautionLookupResult
 from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
+from cora.infrastructure.ports.dataset_distribution_lookup import (
+    DatasetDistributionLookupResult,
+)
 from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 from cora.infrastructure.ports.supply_lookup import SupplyLookupResult
 from cora.recipe.aggregates.plan import Plan
@@ -106,6 +109,40 @@ class RunStartContext:
     needed_supplies_satisfaction: Mapping[str, tuple[SupplyLookupResult, ...]] = field(
         default_factory=lambda: cast("Mapping[str, tuple[SupplyLookupResult, ...]]", {})
     )
+    input_distributions: Mapping[UUID, tuple[DatasetDistributionLookupResult, ...]] = field(
+        default_factory=lambda: cast(
+            "Mapping[UUID, tuple[DatasetDistributionLookupResult, ...]]", {}
+        )
+    )
+    """Mapping keyed by input `Dataset.id` carrying every non-Discarded
+    Distribution of that Dataset (loaded by the handler via
+    `deps.dataset_distribution_lookup.find_by_datasets` over
+    `StartRun.input_dataset_ids`). The decider's genesis-only input gate
+    requires at least one entry per declared input to be in status
+    Verified; a Dataset absent from the mapping or present with no
+    Verified entry raises `RunInputNotVerifiedError`. Empty mapping is
+    the natural state for ordinary acquisition Runs that declare no
+    inputs (the handler skips the lookup entirely)."""
+    reachable_storage_supply_ids: frozenset[UUID] | None = None
+    """The Storage Supply ids the Run's chosen compute resource can read,
+    resolved by the handler from `StartRun.compute_resource_code` via
+    `deps.compute_reachability_lookup.reachable_storage_supply_ids`.
+
+    Tri-state, and the decider's reachability gate keys on it:
+      - None: skip reachability (no remote-compute target declared, or the
+        deployment configures no reachability map). The gate stays
+        present-and-Verified only, today's behavior.
+      - empty frozenset(): the resource can read NO Storage tier, so EVERY
+        input is unreachable. Each input with a Verified Distribution still
+        FAILS the reachability check (fail-closed).
+      - non-empty frozenset: intersect. An input passes only when at least
+        one of its Verified Distributions sits on a `supply_id` in this set;
+        otherwise the decider raises `RunInputNotReachableError`.
+
+    The reachability check runs only AFTER the present-and-Verified check
+    per input (NotVerified beats NotReachable). `compute_resource_code` is
+    consumed only by this gate and is intentionally NOT persisted on
+    `RunStarted` (mirrors the beam reading)."""
     referencing_enclosures: tuple[EnclosureLookupResult, ...] = ()
     """Every Active Enclosure that any of the Run's scoped Assets (or
     their ancestors) declares as its `located_in_enclosure_id`. The

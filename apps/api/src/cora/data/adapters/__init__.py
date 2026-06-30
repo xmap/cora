@@ -8,6 +8,12 @@ Workflow Run Crate profiles.
 `DistributionLookup` adapters reading `proj_data_distribution_summary`
 or an in-process dict for the canonical Distribution row per Dataset.
 
+`PostgresDatasetDistributionLookup`: cross-BC
+`cora.infrastructure.ports.DatasetDistributionLookup` adapter reading
+`proj_data_distribution_summary` for every non-Discarded Distribution of
+a Dataset (the Run-start input gate's full-set query, distinct from the
+canonical lowest-id pick above).
+
 `HttpRangeChecksumAdapter`: implements `ChecksumVerifier` over
 HTTP / HTTPS via range-read in 1 MiB chunks.
 
@@ -31,6 +37,9 @@ from cora.data.adapters.in_memory_distribution_lookup import (
     InMemoryDistributionLookup,
 )
 from cora.data.adapters.posix_checksum import PosixChecksumAdapter
+from cora.data.adapters.postgres_dataset_distribution_lookup import (
+    PostgresDatasetDistributionLookup,
+)
 from cora.data.adapters.postgres_distribution_lookup import (
     PostgresDistributionLookup,
 )
@@ -47,6 +56,7 @@ __all__ = [
     "InMemoryDistributionLookup",
     "PerKindEditionSerializer",
     "PosixChecksumAdapter",
+    "PostgresDatasetDistributionLookup",
     "PostgresDistributionLookup",
     "RoCrate12Adapter",
     "StubEditionSerializer",

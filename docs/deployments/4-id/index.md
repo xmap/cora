@@ -12,14 +12,14 @@
 | Control stack | APS EPICS (the same floor as 2-BM); device handles bound from the beamline's instrument repo, carried confirm |
 
 !!! warning "First cut, and confirm-pending by intent"
-    This scaffold was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/polar-bits](https://github.com/BCDA-APS/polar-bits)); the extraction is in [`research/aps-reverse-engineering/`](https://github.com/xmap/cora/tree/main/research/aps-reverse-engineering). Unlike the 7-BM and 32-ID design-phase scaffolds, it binds the real EPICS control handles, because POLAR is operational. Every value is still carried as `confirm` until 4-ID staff verify it: a PV read from the operator's config is strong evidence, not a CORA-owned fact. What CORA needs the team to confirm is on [Open questions](questions.md).
+    This scaffold was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/polar-bits](https://github.com/BCDA-APS/polar-bits)). Unlike the 7-BM and 32-ID design-phase scaffolds, it binds the real EPICS control handles, because POLAR is operational. Every value is still carried as `confirm` until 4-ID staff verify it: a PV read from the operator's config is strong evidence, not a CORA-owned fact. What CORA needs the team to confirm is on [Open questions](questions.md).
 
 ## What makes 4-ID different
 
 4-ID POLAR is CORA's first non-tomography APS deployment. It is unlike the 2-BM, 7-BM, and 32-ID imaging beamlines in three ways:
 
 - **Polarization control.** Three diamond phase retarders set the X-ray polarization state, the capability POLAR is built around. CORA has no phase-retarder Family yet (a loose `PhaseRetarder`).
-- **Magnetic scattering.** Superconducting sample magnets (2 T at 4-ID-B, a high-field magnet at 4-ID-H) and low-temperature sample environments drive resonant magnetic scattering. New device classes (`Magnet`, `TemperatureController`) to CORA.
+- **Magnetic scattering.** Superconducting sample magnets (2 T at 4-ID-B, a high-field magnet at 4-ID-H) and low-temperature sample environments drive resonant magnetic scattering. New device classes to CORA: `Magnet` (loose) and `TemperatureController` (since graduated to a catalog Family presenting `Regulator`).
 - **Diffraction.** Huber diffractometers at 4-ID-G replace the tomography stage with a multi-circle goniometer and reciprocal-space (hklpy2) coordination, a shape CORA models as an Assembly, not yet built.
 
 It runs across four lead-shielded stations: `4-ID-A` (optics), and `4-ID-B`, `4-ID-G`, `4-ID-H` (experiment).

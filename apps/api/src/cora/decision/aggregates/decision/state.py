@@ -120,10 +120,11 @@ from typing import Any, Final, Literal
 from uuid import UUID
 
 from cora.shared.bounded_text import validate_bounded_text
+from cora.shared.decision_signals import REASONING_MAX_LENGTH, DecisionConfidenceSource
 from cora.shared.identity import ActorId
 
 DECISION_CHOICE_MAX_LENGTH = 500
-DECISION_REASONING_MAX_LENGTH = 5000
+DECISION_REASONING_MAX_LENGTH = REASONING_MAX_LENGTH
 DECISION_CONTEXT_MAX_LENGTH = 100
 DECISION_RULE_MAX_LENGTH = 500
 DECISION_ALTERNATIVES_MAX_ENTRIES = 32
@@ -159,6 +160,10 @@ DECISION_CONTEXT_RECIPE_APPROVAL = "RecipeApproval"
 DECISION_CONTEXT_RUN_ABORT = "RunAbort"
 DECISION_CONTEXT_RUN_STOP = "RunStop"
 DECISION_CONTEXT_RUN_TRUNCATE = "RunTruncate"
+# RunInitiator agent writes one Decision per Run it autonomously starts.
+# Open-ended convention; the closed choice vocabulary lives in the
+# `RunInitiationChoice` Literal below.
+DECISION_CONTEXT_RUN_INITIATION = "RunInitiation"
 DECISION_CONTEXT_RESOURCE_ALLOCATION = "ResourceAllocation"
 DECISION_CONTEXT_POLICY_GRANT = "PolicyGrant"
 DECISION_CONTEXT_PROCEDURE_EXECUTION = "ProcedureExecution"
@@ -299,10 +304,12 @@ DECISION_CONTEXT_RUN_SUPERVISION = "RunSupervision"
 
 # Closed `choice` value set for `context = "RunSupervision"` Decisions.
 # Projection-validated, not domain-enforced (the open-string
-# `DecisionContext` + `DecisionChoice` shape is preserved). Ten values:
+# `DecisionContext` + `DecisionChoice` shape is preserved). Eleven values:
 # five beam-Hold/Resume + two audit-fallback + three advise-rung
-# observe->advise dispositions (Quieted / Stalled / Breached), the last
-# three Decision-only (one per breach edge, never a command).
+# observe->advise dispositions (Quieted / Stalled / Breached, Decision-only,
+# one per breach edge) + one liveness act rung (Truncate) that escalates the
+# run-liveness advise (Quieted) to a terminal command once a Run stays
+# implausibly long for the operator settle window.
 #
 #   - `Continue`              -- no wind-down trigger met; no command
 #                               issued (the NoAction-bias default).
@@ -334,6 +341,13 @@ DECISION_CONTEXT_RUN_SUPERVISION = "RunSupervision"
 #                               (Rule Q). Decision-only. (Named by naming-r3:
 #                               the limit was breached, an objective edge,
 #                               not the supervisor's epistemic state.)
+#   - `Truncate`              -- liveness act rung: issues TruncateRun (the
+#                               terminal partial-data exit) for a Run that has
+#                               stayed implausibly long past the operator
+#                               ceiling for the settle window; the escalation of
+#                               the SupervisionQuieted advise. A bare verb
+#                               mirroring the TruncateRun command, as Hold /
+#                               Resume mirror HoldRun / ResumeRun.
 RunSupervisionChoice = Literal[
     "Continue",
     "Hold",
@@ -345,6 +359,7 @@ RunSupervisionChoice = Literal[
     "SupervisionQuieted",
     "SupervisionStalled",
     "SupervisionBreached",
+    "Truncate",
 ]
 RUN_SUPERVISION_CHOICES: Final = frozenset(
     {
@@ -358,6 +373,65 @@ RUN_SUPERVISION_CHOICES: Final = frozenset(
         "SupervisionQuieted",
         "SupervisionStalled",
         "SupervisionBreached",
+        "Truncate",
+    }
+)
+
+
+# RunInitiator agent: closed `choice` value set for context = "RunInitiation".
+# One value today (`Start`): the agent decided to start an eligible Run.
+# Projection-validated, not domain-enforced (same open-string shape as the
+# other agent vocabularies). `Start` mirrors the StartRun command verb, as
+# RunSupervision's Hold / Resume mirror HoldRun / ResumeRun.
+RunInitiationChoice = Literal["Start"]
+RUN_INITIATION_CHOICES: Final = frozenset({"Start"})
+
+
+# ExperimentSteerer agent writes one Decision per ACROSS-procedure steering
+# disposition: after one steered Procedure (the within-procedure loop, whose
+# per-iteration advice provenance already lands on `ProcedureIterationEnded`)
+# reaches its terminal, the steerer decides what the experiment does next.
+# Open-ended convention identical to RunSupervision / RunInitiation; the closed
+# choice vocabulary lives in the `ExperimentSteeringChoice` Literal below. See
+# [[project_decide_layer_stage1_design]] (the L3 ExperimentSteerer) + the seam in
+# `cora.api._experiment_steerer`.
+DECISION_CONTEXT_EXPERIMENT_STEERING = "ExperimentSteering"
+
+
+# Closed `choice` value set for `context = "ExperimentSteering"` Decisions.
+# Projection-validated, not domain-enforced (the open-string `DecisionContext` +
+# `DecisionChoice` shape is preserved). The across-procedure dispositions:
+#
+#   - `Continue`             -- the campaign objective is not yet met; steer
+#                              another Procedure (the proactive driver, a later
+#                              slice, issues the follow-on conduct).
+#   - `Conclude`             -- the campaign objective is met; stop steering (no
+#                              further Procedure). The normal terminal.
+#   - `Hold`                 -- pause the steered campaign between Procedures
+#                              (issues hold_procedure / a campaign hold), linked
+#                              via decided_by_decision_id.
+#   - `SteeringDeferred`     -- audit-fallback: the evidence was stale / absent /
+#                              unevaluable, so no across-procedure step taken.
+#                              Qualified with the agent work-noun (parallel to
+#                              DebriefDeferred / SupervisionDeferred) so it does
+#                              not collide in the shared DecisionChoice projection.
+#   - `SteeringConflicted`   -- audit-only: lost the per-campaign lease race to
+#                              another steerer evaluator (parallel to
+#                              SupervisionConflicted).
+ExperimentSteeringChoice = Literal[
+    "Continue",
+    "Conclude",
+    "Hold",
+    "SteeringDeferred",
+    "SteeringConflicted",
+]
+EXPERIMENT_STEERING_CHOICES: Final = frozenset(
+    {
+        "Continue",
+        "Conclude",
+        "Hold",
+        "SteeringDeferred",
+        "SteeringConflicted",
     }
 )
 
@@ -533,34 +607,6 @@ class DecisionRating(StrEnum):
 
 
 DECISION_RATING_COMMENT_MAX_LENGTH = 2000
-
-
-class DecisionConfidenceSource(StrEnum):
-    """How the `confidence` value was computed.
-
-    ISO 42001 audit asks 'how was this confidence derived?'; this
-    enum is the answer. Stored alongside the float so consumers can
-    distinguish calibrated probabilistic estimates from
-    self-reported model claims.
-
-    Values:
-      - `self_reported`: AI decider's own confidence claim, as a
-        learned linguistic pattern. NOT a posterior probability.
-        Lowest audit weight.
-      - `logprob`: derived from token log-probabilities. Closer to
-        a calibrated estimate but still model-internal.
-      - `ensemble`: aggregated over multiple deciders / runs /
-        models. Higher audit weight; carries the implicit promise
-        of uncertainty quantification.
-      - `human`: subjective human confidence rating. Audit-weight
-        is operator-dependent; treat as direction-of-confidence,
-        not a probability.
-    """
-
-    SELF_REPORTED = "self_reported"
-    LOGPROB = "logprob"
-    ENSEMBLE = "ensemble"
-    HUMAN = "human"
 
 
 class ConfidenceBand(StrEnum):

@@ -1,0 +1,230 @@
+# CORA Beamline descriptor: ALS 8.3.2 (hard X-ray micro-tomography), reverse-engineered
+#
+# 8.3.2 is the Advanced Light Source hard X-ray micro-tomography (micro-CT)
+# beamline at Lawrence Berkeley National Laboratory: a Superbend source,
+# 6,000-43,000 eV, ~1 micron resolution, non-destructive 3D imaging. It is bound
+# to the ALS Site (deployments/als/site.yaml), CORA's FIRST ALS Site and its
+# FIRST BCS (Beamline Control System, a LabVIEW house-style) control plane.
+#
+# STATUS: reverse-engineered, design-phase first cut. This is a NEW descriptor
+# posture, the "data-record" mode, distinct from the two prior modes:
+#   - 2-BM is operational and fully measured (real handles, vendor models).
+#   - FXI reads real EPICS PVs from a public bluesky profile collection.
+#   - FAXTOR has NO public device manifest at all (handles fully omitted).
+# 8.3.2 sits between them: the device STRUCTURE (the named device hierarchy and
+# its axes) is verified from the DXchange / DXfile HDF5 data-record schema that
+# the als-computing tooling reads (the SciCat ingester
+# scicat_beamline/src/scicat_beamline/ingesters/als_832_dx_4.py and the
+# reconstruction backend microct/backend/ALS_recon_functions.py), but the LIVE
+# control handles are NOT public. ALS runs BCS, a LabVIEW Beamline Control
+# System (als-computing/als.bcs, als-computing/bcs-api), NOT EPICS, so there are
+# no PVs to read; the BCS channel handles live with ALS staff. Each device
+# therefore cites its HDF5 metadata path as the existence evidence for its
+# structure, and carries the live control handle as confirm-pending (CTRL-1). No
+# `pv` field is invented and no vendor `model` is bound (detector model and specs
+# are per-dataset values in the data record, not a fixed manifest).
+#
+# WHAT IS NEW: a new Site and a new control house-style, no new vocabulary.
+#   - A wholly NEW Site (ALS, the first) re-tests the Site / Federation kernel.
+#   - The FIRST BCS / LabVIEW controls house-style in the fleet (every prior Site
+#     is EPICS, Tango / Sardana, or BLISS).
+#   - 8.3.2 coins NO new Family and changes nothing in the catalog: it is a
+#     tomography beamline reusing the imaging Families and Methods the fleet
+#     already carries (the 2-BM / FXI / FAXTOR precedent).
+#
+# ALS-U: the ALS-U upgrade dark time starts no sooner than October 2027 (>= 2
+# years). Whether 8.3.2 goes dark, is rebuilt, or relocates is a staff question
+# (ALSU-1).
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/8-3-2/questions.md.
+
+beamline:
+  name: "8.3.2"
+  facility: als                  # ALS Site (facility_code: als)
+  sector: "8.3.2"                # ALS beamline number; not a registered Asset
+  tier: Unit
+  parent: null
+  source: bending-magnet
+  source_confirm: "8.3.2 is fed by a Superbend (superconducting bending magnet); the field and critical energy are not in the public data record, carried pending (SRC-1)"
+
+# Access-gated volume. 8.3.2 is modelled as a single experiment hutch pending
+# staff confirmation of the optics / experiment grouping (ENC-1). The ALS PSS
+# permit signals are not published, carried pending (PSS-1).
+enclosures:
+  - name: 8-3-2-hutch
+    role: experiment-hutch
+    facility_code: als
+    permit_signal: {confirm: "ALS PSS permit signal not published per beamline (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the machine state, the Superbend, and the conditioning optics
+# ===========================================================================
+
+machine:
+  stage: source
+  enclosure: 8-3-2-hutch
+  intro: "The machine-level source state, observed not driven."
+  note: "The ALS storage-ring state, the loose StorageRing pattern reused across the fleet. The data record carries /measurement/instrument/source/source_name and /measurement/instrument/source/current (MACHINE-1)."
+  devices:
+    - name: StorageRing
+      family: StorageRing              # loose Family (machine-level observe-only source state; MACHINE-1)
+      new: true
+      confirm: true
+      note: "ALS storage-ring state (source_name, ring current); observe-only. Structure from /measurement/instrument/source/{source_name,current,beam_intensity_incident}; live handle pending (MACHINE-1, CTRL-1)"
+
+source-magnet:
+  stage: source
+  enclosure: 8-3-2-hutch
+  intro: "The Superbend, the superconducting bending-magnet source delivering the hard X-ray beam (6,000-43,000 eV)."
+  note: "The Superbend is recorded as a Supply (PhotonBeam) at the Site, identity-only here, the 2-BM bending-magnet precedent. Field and critical energy pending (SRC-1)."
+  devices:
+    - name: Superbend
+      family: InsertionDevice
+      new: true
+      confirm: true
+      device_type: superconducting-bending-magnet (Superbend)
+      note: "the Superbend source feeding 8.3.2 (6-43 keV); recorded as a Supply (PhotonBeam) at the Site, identity-only here. Field, critical energy, and live handle pending (SRC-1, CTRL-1)"
+
+optics:
+  stage: source
+  enclosure: 8-3-2-hutch
+  intro: "The conditioning optics: a monochromator setting the incident energy, the beam-defining slits, and the attenuating filter. 8.3.2 operates 6,000-43,000 eV."
+  note: "The monochromator binds Monochromator; the slits bind Slit; the attenuator binds Filter. Structure is read from the DXfile data record; multilayer / crystal detail and live handles pending (MONO-1, OPT-2, FILT-1, CTRL-1)."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      new: true
+      confirm: true
+      energy_range: 6,000 to 43,000 eV
+      note: >
+        the energy-setting monochromator; the data record exposes
+        /measurement/instrument/monochromator/energy as the master energy and the
+        setup channels Z2, turret1, turret2 (the multilayer / mirror turrets) plus
+        crystal-temperature monitors temperature_tc2 / temperature_tc3. The
+        mechanism (multilayer vs crystal), d-spacing, and live handles are pending
+        (MONO-1, CTRL-1)
+    - name: BeamSlit
+      family: Slit
+      new: true
+      confirm: true
+      note: >
+        the beam-defining slits; the data record exposes a horizontal slit
+        (hslits_A_Door, hslits_A_Wall, hslits_center, hslits_size) and a vertical
+        slit (vslits_Lead_Flag). The full blade-axis map and live handles are
+        pending (OPT-2, CTRL-1)
+    - name: BeamFilter
+      family: Filter
+      new: true
+      confirm: true
+      note: >
+        the attenuating filter; the data record exposes
+        /measurement/instrument/attenuator/setup/filter_y (the filter-position
+        axis). Filter materials and thicknesses are pending (FILT-1, CTRL-1)
+
+# ===========================================================================
+# SAMPLE STAGE: the tomography sample-motor stack
+# ===========================================================================
+
+sample-stack:
+  stage: sample
+  enclosure: 8-3-2-hutch
+  intro: "The tomography sample-motor stack: the rotation stage that sweeps the sample through the beam and the linear stages that centre it."
+  note: "Reuses the imaging Families the fleet already carries (RotaryStage, LinearStage). The data record exposes a sample_motor_stack with axis1pos, axis2pos, axis5pos, sample_x, sample_y; which axis is the tomographic rotation is pending (SAMPLE-1, ROT-1)."
+  devices:
+    - name: SampleRotary
+      family: RotaryStage
+      new: true
+      confirm: true
+      trigger_source: confirm
+      note: >
+        the tomographic rotation stage, the fly-scan trigger master for
+        continuous-rotation micro-CT. The data record's sample_motor_stack carries
+        axis1pos / axis2pos / axis5pos; which axis is the rotation, and the
+        triggering / synchronization scheme, are pending (SAMPLE-1, ROT-1, TRIG-1).
+        Live handle pending (CTRL-1)
+    - name: SamplePositioning
+      family: LinearStage
+      new: true
+      confirm: true
+      note: >
+        the sample centring / centre-of-rotation translation; the data record
+        exposes sample_x and sample_y. The full axis set, travel, and live handles
+        are pending (SAMPLE-1, CTRL-1)
+
+# ===========================================================================
+# DETECTION STAGE: the indirect detector and its motorized stack
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 8-3-2-hutch
+  intro: "The indirect imaging detector: a scintillator converting X-rays to visible light, a microscope objective relaying the image, and a camera, all carried on a motorized stack that sets the sample-to-detector distance."
+  note: "The scintillator binds Scintillator, the objective binds Objective, the camera binds Camera, and the detector motion binds LinearStage / TiltStage. Detector specs (model, pixel size, binning, exposure) are per-dataset values in the data record, so no fixed vendor model is bound (DET-1)."
+  devices:
+    - name: Scintillator
+      family: Scintillator
+      new: true
+      confirm: true
+      note: "the X-ray-to-visible scintillator; the data record exposes /measurement/instrument/detection_system/scintillator/scintillator_type. Material and thickness pending (DET-1)"
+    - name: CameraObjective
+      family: Objective
+      new: true
+      confirm: true
+      note: "the microscope objective relaying the scintillator image to the camera; the data record exposes /measurement/instrument/detection_system/objective/camera_objective (the selected magnification). The objective set is pending (DET-1)"
+    - name: Camera
+      family: Camera
+      new: true
+      confirm: true
+      note: >
+        the imaging camera; the data record exposes the detector parameters
+        model, pixel_size, binning_x, binning_y, exposure_time, temperature,
+        dimension_x, dimension_y, dark_field_value, delay_time. These are
+        per-dataset acquisition values, not a fixed manifest, so no vendor model is
+        bound; the installed camera roster and live handle are pending (DET-1, CTRL-1)
+    - name: DetectorStack
+      family: LinearStage
+      new: true
+      confirm: true
+      note: >
+        the motorized detector stack setting the sample-to-detector propagation
+        distance; the data record exposes a camera_motor_stack with camera_distance,
+        camera_elevation, and tilt_motor. The camera_distance is the propagation
+        distance used in phase-contrast reconstruction. Axis models and live
+        handles pending (DET-2, CTRL-1)
+
+# Cross-cutting control. 8.3.2 runs ALS BCS (a LabVIEW Beamline Control System);
+# CORA observes and, where it replaces BCS scan orchestration, conducts over it.
+# No public per-beamline control handles exist (BCS is LabVIEW, not EPICS), so
+# none are invented (CTRL-1).
+controls:
+  intro: >
+    8.3.2 runs on the ALS BCS (Beamline Control System), a LabVIEW control
+    house-style, CORA's FIRST BCS plane (every prior Site is EPICS, Tango /
+    Sardana, or BLISS). Device IO is BCS, surfaced as scan files (Time Scan,
+    Single Motor Scan, Trajectory Scan) whose headers carry the device-state data
+    record (als-computing/als.bcs). The emerging acquisition layer wraps BCS scans
+    as bluesky ophyd fly devices through the LabVIEW BCS API
+    (als-computing/bcs-api). No public per-beamline BCS channel manifest is
+    published, so the live control handles are not bound here, carried pending
+    staff verification (CTRL-1); when bound they would be modelled as opaque edge
+    handles over the ControlPort, the way the MX3 and ID32 heterogeneous-control
+    precedents do. The continuous-rotation tomography acquisition (the rotary
+    trajectory, the camera triggering, the flat / dark sequencing) runs as a BCS
+    Trajectory Scan; that orchestration is the seam CORA's edge replaces,
+    conducting over BCS rather than replacing it. The downstream data movement and
+    reconstruction (als-computing/splash_flows: Prefect + Globus to NERSC / ALCF,
+    SciCat cataloguing, TomoPy / ASTRA / SVMBIR reconstruction in
+    als-computing/microct) is plumbing CORA observes and subsumes at the debrief
+    layer, not data it owns (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources an 8.3.2 run needs present before
+    it can start. All carried pending confirmation (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: Power

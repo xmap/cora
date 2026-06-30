@@ -367,13 +367,11 @@ _ALLOWED_LOOSE_FAMILIES = {
     "SlipRing": "passive-deferred: passive rotation feedthrough (TomoWISE)",
     "Wedge": "passive-deferred: passive fixed wedge (2-BM)",
     "Diagnostic": "staged: beam-position monitor, Sensor Role; fold-vs-promote open (DIAG-1)",
-    "FlowController": "staged: settable flow/pump actuator; earn-vs-defer open (FLOW-1/ENV-1)",
     "Backlight": "staged: new illumination affordance; rule-of-three open (ROBOT-1/DET-1)",
     "BetrandLens": "staged: novel TXM optic, FXI-only; rule-of-three open (OPTIC-3)",
     "MultilayerLaueLens": "staged: novel 1D crossed-pair nano-focus optic, HXN-only (OPTIC-3)",
     "Chopper": "staged: rotary duty-cycle device; fold-vs-Family open (CHOP-1)",
     "Photodiode": "staged: PIN photodiode, Sensor Role; Family-vs-Sensor open (RAD-1)",
-    "Transfocator": "staged: compound-refractive-lens optic; no catalog home yet (CRL-1)",
     "Baffle": "staged: passive baffle inside the 2-BM SafetyStack; review name/role",
     "Screen": "staged: motorized phosphor diagnostic flag (2-BM, FLAG-1); review name-vs-behavior",
     "BeamPositionMonitor": "staged: position/intensity Sensor; fold-vs-promote open (DIAG-1)",
@@ -383,6 +381,9 @@ _ALLOWED_LOOSE_FAMILIES = {
     "Laser": "staged: pump-probe laser (4-ID POLAR); model-vs-hazard open (SAMPLE-1)",
     "Rheometer": "staged: rheometer shear-cell (8-ID); rule-of-three open (SAMPLE-1)",
     "FlightPath": "staged: evacuated XPCS flight path (8-ID); rule-of-three open (XPCS-2)",
+    "SpectrometerArm": "staged: energy-dispersive RIXS arm (SIX); no point-Sensor fit (RIXS-1)",
+    "EnergyAnalyzer": "staged: IXS diced crystal energy analyzer; n=1 (ANALYZER-1)",
+    "PressureCell": "staged: high-pressure DAC sample environment (13-id-d); n=1 (PRESSURE-1)",
 }
 
 # The subset of loose families that is conceptually a Supply observation (a
@@ -398,9 +399,15 @@ _SUPPLY_LOOSE_FAMILIES = {"Beam", "Vacuum", "StorageRing"}
 _PROMOTION_REVIEWED = {
     "Diagnostic": "hold: Sensor fold-vs-promote still open (DIAG-1)",
     "Screen": "hold: phosphor beam-viewing screen (2-BM, BMM); fold-vs-promote open (FLAG-1)",
-    "FlowController": "hold: earn-vs-defer still open (FLOW-1)",
-    "Transfocator": "hold: CRL optic abstraction still open across i22/4-id/8-id/9-id (CRL-1)",
-    "BeamPositionMonitor": "hold: Sensor fold-vs-promote across 4-id/8-id/9-id (DIAG-1/FLUX-1)",
+    "BeamPositionMonitor": "hold: fold-vs-promote across 4-id/8-id/9-id/iss/fmx/cdi (DIAG-1)",
+    "Laser": "hold: pump-probe laser model-vs-hazard open (4-id + lcls-mfx; SAMPLE-1)",
+    "Backlight": "hold: sample-illumination fold-vs-promote open (i03 + i24 + fmx + i19; DET-1)",
+    "PhaseRetarder": "hold: phase-retarder, 4-id + p09; 2nd consumer, graduation-due (POL-1)",
+    "PolarizationAnalyzer": "hold: 4-id + i10 + esrf-id32 polarimeter; graduation-due (POL-2)",
+    "Magnet": "hold: sample-env magnet, 4-id + i10-1 + esrf-id32; graduation-due (MAG-1)",
+    "SpectrometerArm": "hold: dispersive arm, six + esrf-id32 RIXS+XES; graduation-due (RIXS-1)",
+    "SlipRing": "hold: passive feedthrough (tomowise + i-tomcat); passive-deferred, not an Asset",
+    "PressureCell": "hold: DAC, 13-id-d + p02; 2nd consumer, graduation-due (PRESSURE-1)",
 }
 
 # Catalog families bound by no deployment device. Symmetric to the orphan-model
@@ -499,7 +506,7 @@ def test_no_unexpected_orphan_catalog_families() -> None:
 
 def test_site_facility_codes_cover_known_sites() -> None:
     # Anchor so the resolution check below cannot pass vacuously on an empty set.
-    assert {"aps", "diamond", "maxiv", "nsls2"} <= _site_facility_codes()
+    assert {"aps", "diamond", "maxiv", "nsls2", "slac", "esrf"} <= _site_facility_codes()
 
 
 @pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)

@@ -6,18 +6,23 @@ from cora.recipe.aggregates.recipe import (
     BindingRef,
     CaptureRef,
     DuplicateRecipeCaptureError,
+    DuplicateRecipeOutputError,
     InvalidRecipeStepShapeError,
+    OutputRef,
     RecipeActionStep,
     RecipeCaptureStep,
     RecipeCheckStep,
     RecipeComputeStep,
     RecipeSetpointStep,
+    SteeringRef,
     UnboundRecipeBindingError,
     UnboundRecipeCaptureError,
+    UnboundRecipeOutputError,
     resolve_value,
     steps_from_dict,
     steps_to_dict,
     validate_capture_refs,
+    validate_output_refs,
 )
 
 
@@ -122,6 +127,63 @@ def test_to_dict_from_dict_roundtrip_preserves_setpoint_capture_ref() -> None:
 
 
 @pytest.mark.unit
+def test_steering_ref_is_a_value_object() -> None:
+    a = SteeringRef("motor")
+    b = SteeringRef("motor")
+    c = SteeringRef("energy")
+    assert a == b
+    assert a != c
+    assert hash(a) == hash(b)
+
+
+@pytest.mark.unit
+def test_recipe_setpoint_step_accepts_steering_ref_value() -> None:
+    step = RecipeSetpointStep(address="dev:sample:x", value=SteeringRef("motor"))
+    assert isinstance(step.value, SteeringRef)
+    assert step.value.steering_axis_name == "motor"
+
+
+@pytest.mark.unit
+def test_resolve_value_passes_steering_ref_through_unchanged() -> None:
+    """Expansion relies on this: a SteeringRef is NOT resolved at expansion time."""
+    ref = SteeringRef("motor")
+    assert resolve_value(ref, {"motor": 3.0}) is ref
+
+
+@pytest.mark.unit
+def test_to_dict_from_dict_roundtrip_preserves_setpoint_steering_ref() -> None:
+    steps = (RecipeSetpointStep(address="dev:sample:x", value=SteeringRef("motor")),)
+    rebuilt = steps_from_dict(steps_to_dict(steps))
+    assert rebuilt == steps
+    head = rebuilt[0]
+    assert isinstance(head, RecipeSetpointStep)
+    assert isinstance(head.value, SteeringRef)
+    assert head.value.steering_axis_name == "motor"
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_exempts_steering_ref_setpoint() -> None:
+    """A SteeringRef setpoint validates with NO producing step: the decide loop seeds it.
+
+    A bare CaptureRef here would raise UnboundRecipeCaptureError (no preceding
+    capture declares the name); a SteeringRef is loop-resolved, so it is exempt.
+    """
+    steps = (
+        RecipeComputeStep(command=("solver", "metric"), capture_name="offset"),
+        RecipeSetpointStep(address="dev:rot:val", value=SteeringRef("motor")),
+    )
+    validate_capture_refs(steps)  # does not raise
+
+
+@pytest.mark.unit
+def test_validate_capture_refs_still_rejects_unbound_capture_ref() -> None:
+    """The SteeringRef exemption does not weaken the CaptureRef rule."""
+    steps = (RecipeSetpointStep(address="dev:rot:val", value=CaptureRef("never_declared")),)
+    with pytest.raises(UnboundRecipeCaptureError):
+        validate_capture_refs(steps)
+
+
+@pytest.mark.unit
 def test_validate_capture_refs_accepts_capture_declared_before_use() -> None:
     steps = (
         RecipeCaptureStep(address="dev:sample:x", capture_name="home"),
@@ -205,6 +267,109 @@ def test_validate_capture_refs_compute_none_capture_name_declares_nothing() -> N
         RecipeComputeStep(command=("tomopy", "find_center"), capture_name=None),
     )
     validate_capture_refs(steps)  # does not raise
+
+
+@pytest.mark.unit
+def test_validate_output_refs_accepts_clean_linear_chain() -> None:
+    """Chain pr -> norm(pr) -> recon(norm): every OutputRef references an earlier declarer."""
+    steps = (
+        RecipeComputeStep(command=("tomopy", "phase"), output_ref_name="pr"),
+        RecipeComputeStep(
+            command=("tomopy", "normalize"),
+            input_uris=(OutputRef("pr"),),
+            output_ref_name="norm",
+        ),
+        RecipeComputeStep(
+            command=("tomopy", "recon"),
+            input_uris=(OutputRef("norm"),),
+            output_ref_name="recon",
+        ),
+    )
+    validate_output_refs(steps)  # does not raise
+
+
+@pytest.mark.unit
+def test_validate_output_refs_rejects_forward_or_missing_reference() -> None:
+    """An OutputRef to a name no earlier step declared is a forward / missing ref."""
+    steps = (
+        RecipeComputeStep(
+            command=("tomopy", "normalize"),
+            input_uris=(OutputRef("pr"),),
+            output_ref_name="norm",
+        ),
+    )
+    with pytest.raises(UnboundRecipeOutputError):
+        validate_output_refs(steps)
+
+
+@pytest.mark.unit
+def test_validate_output_refs_rejects_consume_before_its_own_declare() -> None:
+    """A step's OutputRef into its OWN output_ref_name is a self-reference, not yet declared."""
+    steps = (
+        RecipeComputeStep(
+            command=("tomopy", "recon"),
+            input_uris=(OutputRef("recon"),),
+            output_ref_name="recon",
+        ),
+    )
+    with pytest.raises(UnboundRecipeOutputError):
+        validate_output_refs(steps)
+
+
+@pytest.mark.unit
+def test_validate_output_refs_rejects_duplicate_output_ref_name() -> None:
+    """Two compute steps declaring the same output_ref_name collide at the bus slot."""
+    steps = (
+        RecipeComputeStep(command=("tomopy", "phase"), output_ref_name="pr"),
+        RecipeComputeStep(command=("tomopy", "phase"), output_ref_name="pr"),
+    )
+    with pytest.raises(DuplicateRecipeOutputError):
+        validate_output_refs(steps)
+
+
+@pytest.mark.unit
+def test_validate_output_refs_accepts_fan_out_with_one_sink() -> None:
+    """A shared output feeds two steps; exactly one declared output stays unconsumed."""
+    steps = (
+        RecipeComputeStep(command=("tomopy", "phase"), output_ref_name="pr"),
+        RecipeComputeStep(
+            command=("tomopy", "normalize"),
+            input_uris=(OutputRef("pr"),),
+            output_ref_name="norm",
+        ),
+        RecipeComputeStep(
+            command=("tomopy", "recon"),
+            input_uris=(OutputRef("pr"), OutputRef("norm")),
+            output_ref_name="recon",
+        ),
+    )
+    validate_output_refs(steps)  # does not raise
+
+
+@pytest.mark.unit
+def test_validate_output_refs_rejects_stray_step_leaving_two_unconsumed_sinks() -> None:
+    """A post-terminal file-arm step leaves two unconsumed outputs; the one-sink rule fires."""
+    steps = (
+        RecipeComputeStep(command=("tomopy", "phase"), output_ref_name="pr"),
+        RecipeComputeStep(
+            command=("tomopy", "recon"),
+            input_uris=(OutputRef("pr"),),
+            output_ref_name="recon",
+        ),
+        RecipeComputeStep(command=("tomopy", "thumbnail"), output_ref_name="thumb"),
+    )
+    with pytest.raises(InvalidRecipeStepShapeError):
+        validate_output_refs(steps)
+
+
+@pytest.mark.unit
+def test_validate_output_refs_exempts_recipe_with_no_declared_outputs() -> None:
+    """A control-only / value-arm Recipe declares no output and is exempt from the one-sink rule."""
+    steps = (
+        RecipeSetpointStep(address="dev:rot:val", value=1.0),
+        RecipeComputeStep(command=("tomopy", "find_center"), capture_name="offset"),
+    )
+    validate_output_refs(steps)  # does not raise
 
 
 @pytest.mark.unit

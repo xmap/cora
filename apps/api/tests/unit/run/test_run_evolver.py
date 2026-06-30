@@ -1234,6 +1234,234 @@ def test_run_removed_from_campaign_preserves_pinned_calibration_ids() -> None:
 
 
 @pytest.mark.unit
+def test_run_started_genesis_populates_input_dataset_ids_as_frozenset() -> None:
+    """RunStarted carries the tuple-form on the event payload; the
+    evolver coerces to frozenset for in-memory equality semantics."""
+    ds_a = UUID("01900000-0000-7000-8000-0000000d5001")
+    ds_b = UUID("01900000-0000-7000-8000-0000000d5002")
+    run_id = uuid4()
+    state = fold(
+        [
+            RunStarted(
+                run_id=run_id,
+                name="Reconstruction",
+                plan_id=uuid4(),
+                subject_id=None,
+                occurred_at=_NOW,
+                input_dataset_ids=(ds_a, ds_b),
+            ),
+        ]
+    )
+    assert state is not None
+    assert state.input_dataset_ids == frozenset({ds_a, ds_b})
+
+
+@pytest.mark.unit
+def test_legacy_run_without_input_dataset_ids_folds_to_empty_frozenset() -> None:
+    """Legacy Runs have no input_dataset_ids on RunStarted. They MUST
+    fold to an empty frozenset; additive backward-compat contract."""
+    run_id = uuid4()
+    state = fold(
+        [
+            RunStarted(
+                run_id=run_id,
+                name="Legacy Run without input Datasets",
+                plan_id=uuid4(),
+                subject_id=None,
+                occurred_at=_NOW,
+            ),
+        ]
+    )
+    assert state is not None
+    assert state.input_dataset_ids == frozenset()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "terminal_factory",
+    [_make_completed, _make_aborted, _make_stopped, _make_truncated],
+)
+def test_each_terminal_preserves_input_dataset_ids(
+    terminal_factory: _TerminalFactory,
+) -> None:
+    """Critical invariant: every terminal arm preserves the
+    input_dataset_ids set verbatim. A regression that wiped them would
+    silently break the PROV `used` lineage of a reconstruction Run."""
+    ds_a = UUID("01900000-0000-7000-8000-0000000d5001")
+    ds_b = UUID("01900000-0000-7000-8000-0000000d5002")
+    run_id = uuid4()
+    state = fold(
+        [
+            RunStarted(
+                run_id=run_id,
+                name="Run",
+                plan_id=uuid4(),
+                subject_id=None,
+                occurred_at=_NOW,
+                input_dataset_ids=(ds_a, ds_b),
+            ),
+            terminal_factory(run_id),
+        ]
+    )
+    assert state is not None
+    assert state.input_dataset_ids == frozenset({ds_a, ds_b})
+
+
+@pytest.mark.unit
+def test_hold_resume_cycle_preserves_input_dataset_ids() -> None:
+    """Hold + Resume are routine mid-flight; they must NOT touch the
+    input Dataset ref set."""
+    ds_a = UUID("01900000-0000-7000-8000-0000000d5001")
+    run_id = uuid4()
+    state = fold(
+        [
+            RunStarted(
+                run_id=run_id,
+                name="Run",
+                plan_id=uuid4(),
+                subject_id=None,
+                occurred_at=_NOW,
+                input_dataset_ids=(ds_a,),
+            ),
+            RunHeld(run_id=run_id, occurred_at=_NOW),
+            RunResumed(run_id=run_id, occurred_at=_NOW),
+        ]
+    )
+    assert state is not None
+    assert state.input_dataset_ids == frozenset({ds_a})
+
+
+@pytest.mark.unit
+def test_adjust_run_preserves_input_dataset_ids() -> None:
+    """Even mid-flight parameter steering (adjust_run) MUST preserve the
+    input Dataset ref set."""
+    from cora.run.aggregates.run.events import RunAdjusted
+
+    ds_a = UUID("01900000-0000-7000-8000-0000000d5001")
+    run_id = uuid4()
+    state = fold(
+        [
+            RunStarted(
+                run_id=run_id,
+                name="Run",
+                plan_id=uuid4(),
+                subject_id=None,
+                occurred_at=_NOW,
+                input_dataset_ids=(ds_a,),
+            ),
+            RunAdjusted(
+                run_id=run_id,
+                parameters_patch={"a": 1},
+                effective_parameters={"a": 1},
+                reason="adjust",
+                adjusted_by=ActorId(uuid4()),
+                occurred_at=_NOW,
+            ),
+        ]
+    )
+    assert state is not None
+    assert state.input_dataset_ids == frozenset({ds_a})
+
+
+@pytest.mark.unit
+def test_reading_logbook_opened_preserves_input_dataset_ids() -> None:
+    """Orthogonal arm: lazy logbook open MUST preserve the input Dataset
+    ref set."""
+    ds_a = UUID("01900000-0000-7000-8000-0000000d5001")
+    ds_b = UUID("01900000-0000-7000-8000-0000000d5002")
+    run_id = uuid4()
+    state = fold(
+        [
+            RunStarted(
+                run_id=run_id,
+                name="Run",
+                plan_id=uuid4(),
+                subject_id=None,
+                occurred_at=_NOW,
+                input_dataset_ids=(ds_a, ds_b),
+            ),
+            RunObservationLogbookOpened(
+                run_id=run_id,
+                logbook_id=uuid4(),
+                kind=LOGBOOK_KIND_OBSERVATION,
+                schema=OBSERVATION_LOGBOOK_SCHEMA,
+                occurred_at=_NOW,
+            ),
+        ]
+    )
+    assert state is not None
+    assert state.input_dataset_ids == frozenset({ds_a, ds_b})
+
+
+@pytest.mark.unit
+def test_run_added_to_campaign_preserves_input_dataset_ids() -> None:
+    """Orthogonal arm: post-hoc Campaign membership assignment MUST
+    preserve the input Dataset ref set."""
+    from cora.run.aggregates.run.events import RunAddedToCampaign
+
+    ds_a = UUID("01900000-0000-7000-8000-0000000d5001")
+    run_id = uuid4()
+    state = fold(
+        [
+            RunStarted(
+                run_id=run_id,
+                name="Run",
+                plan_id=uuid4(),
+                subject_id=None,
+                occurred_at=_NOW,
+                input_dataset_ids=(ds_a,),
+            ),
+            RunAddedToCampaign(
+                run_id=run_id,
+                campaign_id=uuid4(),
+                occurred_at=_NOW,
+            ),
+        ]
+    )
+    assert state is not None
+    assert state.input_dataset_ids == frozenset({ds_a})
+
+
+@pytest.mark.unit
+def test_run_removed_from_campaign_preserves_input_dataset_ids() -> None:
+    """Orthogonal arm: post-hoc Campaign membership removal MUST
+    preserve the input Dataset ref set."""
+    from cora.run.aggregates.run.events import (
+        RunAddedToCampaign,
+        RunRemovedFromCampaign,
+    )
+
+    ds_a = UUID("01900000-0000-7000-8000-0000000d5001")
+    run_id = uuid4()
+    campaign_id = uuid4()
+    state = fold(
+        [
+            RunStarted(
+                run_id=run_id,
+                name="Run",
+                plan_id=uuid4(),
+                subject_id=None,
+                occurred_at=_NOW,
+                input_dataset_ids=(ds_a,),
+            ),
+            RunAddedToCampaign(
+                run_id=run_id,
+                campaign_id=campaign_id,
+                occurred_at=_NOW,
+            ),
+            RunRemovedFromCampaign(
+                run_id=run_id,
+                campaign_id=campaign_id,
+                reason="removed",
+                occurred_at=_NOW,
+            ),
+        ]
+    )
+    assert state is not None
+    assert state.input_dataset_ids == frozenset({ds_a})
+
+
+@pytest.mark.unit
 def test_decision_debrief_requested_is_audit_only_no_state_mutation() -> None:
     """The lease marker emitted by Agent BC subscribers is provenance-only
     on the Run aggregate. Folding it must return the prior state

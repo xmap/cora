@@ -7,25 +7,29 @@ a matching match arm here.
 
 Status mapping per event type (current):
   - ``DistributionRegistered`` -> ``REGISTERED`` (genesis)
+  - ``DistributionDiscarded``  -> ``DISCARDED``  (terminal transition)
 
 Future-slice mappings (NAMED only):
   - ``DistributionVerified`` -> ``VERIFIED``
   - ``DistributionMarkedStale`` -> ``STALE``
-  - ``DistributionDiscarded`` -> ``DISCARDED``
 
 The mapping is hardcoded per match arm; the event type IS the
 state-change indicator (no status field in event payloads). Same
 precedent as Dataset.
 
-**Critical invariant** for future-slice arms: every transition arm
+**Critical invariant** for transition arms: every transition arm
 MUST carry every Distribution field through from prior state.
 Constructing ``Distribution(id=..., dataset_id=..., ...)`` without
 explicitly passing the 9 core + 7 nullable attribution fields would
-silently WIPE them to defaults. Use ``require_state`` per the Dataset
-pattern when adding transition arms.
+silently WIPE them to defaults. The ``DistributionDiscarded`` arm uses
+``dataclasses.replace`` over the prior state so all 17 fields carry
+forward and only the four discard-related fields change. Use
+``require_state`` per the Dataset pattern to guard against a transition
+event applied to an empty stream (a malformed stream).
 """
 
 from collections.abc import Sequence
+from dataclasses import replace
 from typing import assert_never
 
 from cora.data.aggregates.dataset.state import (
@@ -33,6 +37,7 @@ from cora.data.aggregates.dataset.state import (
     DatasetEncoding,
 )
 from cora.data.aggregates.distribution.events import (
+    DistributionDiscarded,
     DistributionEvent,
     DistributionRegistered,
 )
@@ -42,6 +47,7 @@ from cora.data.aggregates.distribution.state import (
     DistributionStatus,
     DistributionUri,
 )
+from cora.infrastructure.evolver import require_state
 
 
 def evolve(state: Distribution | None, event: DistributionEvent) -> Distribution:
@@ -84,6 +90,19 @@ def evolve(state: Distribution | None, event: DistributionEvent) -> Distribution
                 discarded_at=None,
                 discarded_by=None,
                 discard_reason=None,
+            )
+        case DistributionDiscarded(
+            reason=reason,
+            occurred_at=occurred_at,
+            discarded_by=discarded_by,
+        ):
+            prior = require_state(state, "DistributionDiscarded")
+            return replace(
+                prior,
+                status=DistributionStatus.DISCARDED,
+                discarded_at=occurred_at,
+                discarded_by=discarded_by,
+                discard_reason=reason,
             )
         case _:  # pragma: no cover  # exhaustiveness guard for future arms
             assert_never(event)

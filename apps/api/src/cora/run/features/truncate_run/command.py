@@ -26,3 +26,10 @@ class TruncateRun:
     run_id: UUID
     reason: str
     interrupted_at: datetime | None
+    # Optional Decision-causation link (mirrors HoldRun / AbortRun /
+    # AdjustRun / StartRun). Lets an autonomous truncate (the RunSupervisor
+    # run-liveness act rung) point back to the Decision that justified it; an
+    # operator-driven truncate leaves it None. No cross-BC existence check at
+    # the decider, per the eventual-consistency stance. Additive default so
+    # existing callers (REST / MCP, which do not expose it) are unaffected.
+    decided_by_decision_id: UUID | None = None

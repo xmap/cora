@@ -1,0 +1,249 @@
+# CSX beamline descriptor (NSLS-II), reverse-engineered
+#
+# CSX (Coherent Soft X-ray scattering) is the NSLS-II coherent soft X-ray
+# scattering and resonant soft X-ray scattering (RSXS) beamline at sector 23-ID
+# (the inboard 23-ID-1 branch). It is bound to the NSLS-II Site
+# (deployments/nsls2/site.yaml), the sixth NSLS-II beamline after FXI, HXN, BMM,
+# SRX, and SIX, and CORA's second soft X-ray deployment.
+#
+# STATUS: reverse-engineered, design-phase. Every value is read from public open
+# source (the bluesky profile collection NSLS2/csx-profile-collection) or inferred,
+# carried `new: true` + `confirm: true` pending CSX staff. EPICS PVs are real and
+# verified against the startup/csx1 files; vendor part numbers, serials, and
+# physical positions are not in it and are open questions. Same descriptor mode as
+# FXI / HXN / BMM / SRX / SIX; this scaffold is descriptor + docs, scenarios deferred.
+#
+# CSX is the CONSOLIDATION deployment for the soft X-ray regime SIX opened: it is
+# the second soft X-ray PGM beamline, so it EARNS the GratingMonochromator Family
+# into the catalog (the rule-of-three; the Family graduates in this PR, see
+# docs/deployments/csx/model.md and the SIX model page). It also REUSES the
+# Diffractometer Assembly: its TARDIS endstation is an hkl E6C diffractometer that
+# binds the catalog Goniometer Family, a third hkl diffractometer after 4-ID / 8-ID.
+# It introduces NO new family of its own; everything reuses the catalog.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/csx/questions.md.
+
+beamline:
+  name: CSX
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 23"          # PV namespace XF:23ID*
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "two elliptically-polarizing undulators (EPU:1, EPU:2) on the canted SR:C23-ID straight, with a canting magnet / phaser at SR:C23-MG; modelled as one root Unit feeding the 23-ID-1 (CSX) branch (the 32-ID canted precedent), not two roots (TOPO-1); EPU type / period / polarization are SRC-1"
+
+# PV zones: XF:23IDA (front-end optics), XF:23ID1-OP (the 23-ID-1 branch optics,
+# the PGM), XF:23ID1-ES (the CSX endstation). Whether the front-end, branch optics,
+# and endstation are separate shielded hutches, and the PSS permit leaves, are open
+# (ENC-1, PSS-1).
+enclosures:
+  - name: 23-ID-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf not in source; front-end shutter XF:23ID1-PPS{Sh:FE} (PSS-1)"}
+  - name: 23-ID-1
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; the 23-ID-1 (CSX) branch; whether branch optics and endstation are separate hutches is ENC-1"}
+
+# ===========================================================================
+# SOURCE STAGE: the canted EPUs, the front-end mirror, the PGM, the branch optics
+# ===========================================================================
+
+insertion-devices:
+  stage: source
+  enclosure: 23-ID-A
+  intro: "The two elliptically-polarizing undulators on the canted SR:C23-ID straight."
+  note: "Two InsertionDevice Assets (the canted twin-EPU straight); each adds a polarization (phase) axis beyond gap, carried as a setting (SRC-1). Canted-vs-separate-root is TOPO-1 (32-ID precedent: one root)."
+  devices:
+    - name: Undulator_1
+      family: InsertionDevice
+      pv: "SR:C23-ID:G1A{EPU:1"
+      new: true
+      confirm: true
+      note: "first EPU (epu1, XF:23ID-ID{EPU:1); gap + polarization phase (SRC-1)"
+    - name: Undulator_2
+      family: InsertionDevice
+      pv: "SR:C23-ID:G1A{EPU:2"
+      new: true
+      confirm: true
+      note: "second EPU (epu2, XF:23ID-ID{EPU:2); gap + polarization phase (SRC-1)"
+
+optics:
+  stage: source
+  enclosure: 23-ID-A
+  intro: "The front-end hexapod mirror and the front-end shutter."
+  note: "m1a is the FMB hexapod-mounted front-end mirror; coatings and axis roles are OPT-1."
+  devices:
+    - name: Mirror_1
+      family: Mirror
+      pv: "XF:23IDA-OP:1{Mir:1"
+      new: true
+      confirm: true
+      note: "FMB hexapod-mounted front-end mirror M1A (OPT-1)"
+    - name: FrontEndShutter
+      family: Shutter
+      pv: "XF:23ID1-PPS{Sh:FE}"
+      new: true
+      confirm: true
+      note: "front-end photon shutter, PPS-gated"
+
+monochromator:
+  stage: source
+  enclosure: 23-ID-1
+  intro: "The variable-line-spacing plane-grating monochromator that selects the soft X-ray energy, the refocusing mirror, and the slits."
+  note: >
+    pgm is the VLS-PGM (200-2200 eV): a premirror (mir_pit / mir_x) plus an
+    interchangeable grating (grt_pit / grt_x) set the energy. It binds the catalog
+    GratingMonochromator Family, which graduates in this PR: CSX is the second soft
+    X-ray PGM beamline after SIX, earning the rule-of-three (MONO-1, see model.md).
+    m3a is the branch refocusing mirror; slt1/2/3 are the branch slits.
+  devices:
+    - name: Monochromator
+      family: GratingMonochromator     # catalog Family (graduated this PR: SIX + CSX rule-of-three)
+      pv: { energy: "XF:23ID1-OP{Mono}Enrgy-SP", mirror_pitch: "XF:23ID1-OP{Mono-Ax:MirP}Mtr", mirror_x: "XF:23ID1-OP{Mono-Ax:MirX}Mtr", grating_pitch: "XF:23ID1-OP{Mono-Ax:GrtP}Mtr", grating_x: "XF:23ID1-OP{Mono-Ax:GrtX}Mtr" }
+      new: true
+      confirm: true
+      note: "VLS-PGM, 200-2200 eV; energy fly-scan capable; grating line densities are MONO-1"
+    - name: Mirror_3
+      family: Mirror
+      pv: { x: "XF:23ID1-OP{Mir:3-Ax:XAvg}Mtr", pitch: "XF:23ID1-OP{Mir:3-Ax:P}Mtr", bender: "XF:23ID1-OP{Mir:3-Ax:Bdr}Mtr" }
+      new: true
+      confirm: true
+      note: "branch refocusing mirror M3A (OPT-1)"
+    - name: Slit_1
+      family: Slit
+      pv: "XF:23ID1-OP{Slt:1"
+      new: true
+      confirm: true
+      note: "branch slit 1, gap/center (OPT-2)"
+    - name: Slit_2
+      family: Slit
+      pv: "XF:23ID1-OP{Slt:2"
+      new: true
+      confirm: true
+      note: "branch slit 2, gap/center (OPT-2)"
+    - name: Slit_3
+      family: Slit
+      pv: "XF:23ID1-OP{Slt:3"
+      new: true
+      confirm: true
+      note: "branch slit 3, x/y (OPT-2)"
+
+# ===========================================================================
+# SAMPLE STAGE: the TARDIS diffractometer endstation
+# ===========================================================================
+
+rsxs-sample:
+  stage: sample
+  enclosure: 23-ID-1
+  intro: "The TARDIS soft X-ray diffractometer endstation: the scattering circles, the reciprocal-space coordination, the sample stage, and the cryostat."
+  note: >
+    TARDIS is an in-vacuum 6-circle (hkl E6C) soft X-ray diffractometer; its
+    circles bind the catalog Goniometer Family and the composed Assembly(Diffractometer),
+    a third hkl diffractometer after 4-ID and 8-ID. The reciprocal-space pseudo-axis
+    runs through hkl. sx/say/saz are the sample translations; stemp is the cryostat
+    temperature controller (DIFF-1 / SAMPLE-1).
+  devices:
+    - name: Diffractometer
+      family: Goniometer             # catalog Family; the TARDIS E6C circles, composes the Diffractometer Assembly (DIFF-1)
+      pv: { theta: "XF:23ID1-ES{Dif-Ax:Th}Mtr", delta: "XF:23ID1-ES{Dif-Ax:Del}Mtr", gamma: "XF:23ID1-ES{Dif-Ax:Gam}Mtr", mu_rotation: "XF:23ID1-ES{Dif-Ax:MuR}Mtr", mu_translation: "XF:23ID1-ES{Dif-Ax:MuT}Mtr" }
+      new: true
+      confirm: true
+      note: "TARDIS in-vacuum 6-circle (hkl E6C) diffractometer; theta / delta / gamma circles + mu (DIFF-1)"
+    - name: ReciprocalSpace
+      family: PseudoAxis
+      pv: "XF:23ID1-ES{Dif-Ax:"
+      new: true
+      confirm: true
+      note: "hkl reciprocal-space pseudo-axis over the TARDIS E6C geometry; partition rule is DIFF-2"
+    - name: SampleStage
+      family: LinearStage
+      pv: { x: "XF:23ID1-ES{Dif-Ax:X}Mtr", y: "XF:23ID1-ES{Dif-Ax:Y}Mtr", z: "XF:23ID1-ES{Dif-Ax:Z}Mtr", holography_y: "XF:23ID1-ES{Holo:Sample-Ax:Y}Mtr" }
+      new: true
+      confirm: true
+      note: "sample translation (sx / say / saz) plus the holography sample stage (SAMPLE-1)"
+    - name: SampleTemperature
+      family: TemperatureController
+      pv: "XF:23ID1-ES{TCtrl:1"
+      new: true
+      confirm: true
+      note: "Lakeshore 336 cryostat sample temperature controller (SAMPLE-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the coherent area detectors and the counters
+# ===========================================================================
+
+detectors:
+  stage: detection
+  enclosure: 23-ID-1
+  intro: "The coherent-scattering area detectors (the FastCCD and the AXIS detector), the diffractometer fast shutter and diode, and the counting electronics."
+  note: >
+    fccd is the custom FastCCD coherent-scattering detector; axis is the newer AXIS
+    area detector. Both reuse the catalog Camera Family (the soft X-ray / overscan
+    specifics are per-Asset settings). The scaler reuses FluxMonitor (DET-1).
+  devices:
+    - name: FastCCD
+      family: Camera
+      pv: "XF:23ID1-ES{FCCD}"
+      new: true
+      confirm: true
+      note: "custom FastCCD coherent-scattering detector (DET-1)"
+    - name: AxisDetector
+      family: Camera
+      pv: "XF:23ID1-ES{AXIS}"
+      new: true
+      confirm: true
+      note: "AXIS area detector (DET-1)"
+    - name: DiagnosticCamera
+      family: Camera
+      pv: "XF:23ID1-ES{Diag:5-Cam:1}"
+      new: true
+      confirm: true
+      note: "diffractometer beam-view diagnostic camera"
+    - name: Scaler
+      family: FluxMonitor
+      pv: "XF:23ID1-ES{Sclr:1}"
+      new: true
+      confirm: true
+      note: "scaler / Struck MCS counting electronics for the diode and I0 channels (DET-1)"
+    - name: DiffractometerDiode
+      family: GenericProbe
+      pv: "XF:23ID1-ES{Dif-Abs}"
+      new: true
+      confirm: true
+      note: "diffractometer absorber / diode (DET-1)"
+    - name: FastShutter
+      family: Shutter
+      pv: "XF:23ID1-ES{Dif-FS}"
+      new: true
+      confirm: true
+      note: "diffractometer fast shutter gating the exposure"
+
+# Cross-cutting control. CSX runs EPICS (the floor); CORA observes and, where it
+# replaces bluesky-style orchestration, conducts over it. The handles above were
+# read from the csx-profile-collection startup files and carried confirm (CTRL-1).
+controls:
+  intro: >
+    CSX runs on the NSLS-II EPICS / ophyd control stack, the same floor as the other
+    NSLS-II beamlines. The device handles above are bound from the beamline's bluesky
+    profile collection (NSLS2/csx-profile-collection), carried confirm pending staff
+    verification (CTRL-1). The RSXS / coherent-scattering acquisition (the energy
+    fly-scans, the TARDIS reciprocal-space moves, the coherent / holography plans)
+    runs through bluesky plans and the queue server; that orchestration is the seam
+    CORA's edge replaces, driving through ophyd / EPICS, while the FastCCD HDF5
+    file-writing to the NSLS-II filestore is plumbing CORA observes, not data it owns
+    (see model.md).
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a CSX run needs. The PGM, the
+    in-vacuum TARDIS diffractometer, and the detectors are under UHV; the cryostat
+    draws on cryogens (SUP-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+      note: "the optics and the in-vacuum TARDIS endstation are UHV (SUP-1)"

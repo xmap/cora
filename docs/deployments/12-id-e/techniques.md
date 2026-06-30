@@ -1,0 +1,27 @@
+# Techniques
+
+*What the modelled part of 12-ID-E is designed to do, as intent. First cut.*
+
+A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practice](../aps/index.md) is how a facility adapts it. 12-ID-E is CORA's first Bonse-Hart ultra-small-angle X-ray scattering (USAXS) beamline, and it also runs pinhole SAXS and WAXS on area detectors. The lead technique, USAXS, is a new Capability for the fleet, so its Method renders unlinked and is carried pending until a technique enters scope (USAXS-1); the SAXS and WAXS Methods share the [i22](../i22/techniques.md) scattering vocabulary and are pending the same owner-scope decision (TECH-1).
+
+## Bonse-Hart ultra-small-angle scattering
+
+USAXS reaches momentum transfer q far below the pinhole-SAXS regime by rocking a matched pair of channel-cut crystal stages through the Bragg condition: the collimator sits upstream of the sample, the analyzer downstream, and as the analyzer rocks against the collimator a single photodiode counts the transmitted intensity through an autoranging transimpedance amplifier across several gain decades (BONSE-1, USAXS-1). The measurement is the rocking curve, the transmitted intensity as a function of the small angular offset between the two crystals, which maps to q. This angular rocking fly-scan against a multi-decade autoranging point detector is the acquisition shape that is new for the fleet, not a new device class.
+
+| Technique | Catalog method | Notes |
+| --- | --- | --- |
+| Ultra-small-angle scattering (USAXS) | `ultra_small_angle_scattering` | the Bonse-Hart rocking curve: the [analyzer crystal stage](equipment/detector.md) rocks against the [collimator crystal stage](equipment/sample.md) through the Bragg condition while the [UPD photodiode](equipment/detector.md) point-counts the transmitted flux through an autoranging amplifier; new Capability, pending (USAXS-1, BONSE-1) |
+| Pinhole small-angle scattering (SAXS) | `small_angle_scattering` | low-q on the [SAXS Pilatus area detector](equipment/detector.md); shares the i22 SAXS Capability, pending (TECH-1) |
+| Wide-angle scattering (WAXS) | `wide_angle_scattering` | wide-q on the [WAXS Pilatus area detector](equipment/detector.md) on its translation; shares the i22 WAXS Capability, pending (TECH-1) |
+
+USAXS needs the [incident beam chain](beamline.md) (the shared 12-ID double-crystal monochromator and the attenuator filter bank), the [sample stack](equipment/sample.md) (positioning stage, rotator, and the Linkam and PTC10 temperature stages), the [Bonse-Hart crystal stages](equipment/detector.md), and the [autoranging photodiode with its flux monitors and scaler](equipment/detector.md) for normalization. The same instrument runs pinhole SAXS and WAXS on their Pilatus area detectors, which reuse the existing scattering Capabilities and the same beam.
+
+## A new operating axis for the fleet
+
+USAXS is genuinely new for the fleet. The catalog already carries pinhole and grazing-incidence scattering on area detectors (i22, SMI) and a range of imaging, microprobe, and spectroscopy methods, but no crystal-analyzer rocking-curve technique. The new axis is the acquisition shape itself: rock one optic (the analyzer crystal) against a second, fixed-geometry optic (the collimator crystal) while a current-integrating point detector autoranges across several gain decades, rather than expose an area detector at one geometry (BONSE-1, USAXS-1). Pinhole SAXS resolves the scattering pattern by where photons land on a 2D detector; USAXS resolves much smaller angles by where the analyzer crystal passes the beam, read as one transmitted current per angular step. That is a new Capability, deferred as a question (USAXS-1).
+
+The new acquisition shape forces no new device families. The Bonse-Hart crystal stages bind the catalog `RotaryStage`: the operative axis is the crystal rocking rotation, and channel-cut versus multi-bounce is a per-Asset setting, not a new optic Family (BONSE-1). The autoranging photodiode binds the catalog `FluxMonitor`: it is a current-integrating point detector read through an autoranging Femto amplifier, the same anatomy as the I0 / I00 / I000 / TRD flux monitors and the counting scaler, and the multi-decade gain autorange is a device-state setting (DET-1). The SAXS and WAXS Pilatus detectors bind the catalog `Camera`. So what is new is the science Capability and the acquisition shape, not a device class; see [Model](model.md) for why nothing graduates and the catalog is unchanged.
+
+## Not modelled yet
+
+The concrete acquisition recipes (the rocking-curve angular ranges, the gain-autorange behaviour and counting times for the photodiode, the pinhole-SAXS and WAXS camera geometries, and the temperature-ramp sequences) are not written yet; they join as the deployment approaches the point where CORA conducts over the floor. Whether USAXS enters CORA's catalog is an owner-scope decision and is deferred (USAXS-1); minting a cross-facility Method is not done from a modelling exercise until a technique enters a real scope, the same earn-the-abstraction discipline the SAXS and WAXS Methods follow (TECH-1). The Practices are carried pending on the [APS Site](../aps/index.md): `12IDE_usaxs_practice` (`ultra_small_angle_scattering`, USAXS-1), `12IDE_saxs_practice` (`small_angle_scattering`), and `12IDE_waxs_practice` (`wide_angle_scattering`). See [Open questions](questions.md) for the world-facts to confirm first.

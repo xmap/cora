@@ -46,6 +46,7 @@ from cora.recipe.aggregates.method.read import (
 from cora.recipe.aggregates.method.state import (
     ITERATIVE_STOPPING_KEYS,
     METHOD_NAME_MAX_LENGTH,
+    METHOD_NEEDED_INPUT_KIND_MAX_LENGTH,
     METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH,
     METHOD_VERSION_TAG_MAX_LENGTH,
     ROLE_NAME_MAX_LENGTH,
@@ -54,6 +55,7 @@ from cora.recipe.aggregates.method.state import (
     InvalidMethodIterativeStoppingFieldError,
     InvalidMethodMonotoneQualityError,
     InvalidMethodNameError,
+    InvalidMethodNeededInputKindsError,
     InvalidMethodNeededSuppliesError,
     InvalidMethodVersionTagError,
     InvalidPortRequirementError,
@@ -83,6 +85,7 @@ from cora.recipe.aggregates.method.state import (
 __all__ = [
     "ITERATIVE_STOPPING_KEYS",
     "METHOD_NAME_MAX_LENGTH",
+    "METHOD_NEEDED_INPUT_KIND_MAX_LENGTH",
     "METHOD_NEEDED_SUPPLY_KIND_MAX_LENGTH",
     "METHOD_VERSION_TAG_MAX_LENGTH",
     "ROLE_NAME_MAX_LENGTH",
@@ -94,6 +97,7 @@ __all__ = [
     "InvalidMethodIterativeStoppingFieldError",
     "InvalidMethodMonotoneQualityError",
     "InvalidMethodNameError",
+    "InvalidMethodNeededInputKindsError",
     "InvalidMethodNeededSuppliesError",
     "InvalidMethodParametersSchemaError",
     "InvalidMethodVersionTagError",

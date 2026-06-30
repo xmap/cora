@@ -1,0 +1,126 @@
+# CANDIDATE beamline descriptor: hand-read from NSLS2/iss-profile-collection, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions and enclosures need human curation, and any new Family needs the
+# naming-r3 gate. Do not copy into deployments/ without review. All PV prefixes verified
+# verbatim against source (startup/*.py), zero fabrications.
+
+beamline:
+  name: ISS
+  facility: nsls2
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: 8-ID-A
+  facility_code: nsls2
+  confirm: optics hutch; inferred from PV prefix XF:08IDA
+- name: 8-ID-B
+  facility_code: nsls2
+  confirm: endstation hutch; inferred from XF:08IDB
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: FrontEndShutter
+    family: Shutter
+    pv: "XF:08ID-PPS{Sh:FE}"
+    new: true
+    confirm: front-end PPS shutter; family Shutter (catalog)
+  - name: PhotonShutter
+    family: Shutter
+    pv: "XF:08IDA-PPS{PSh}"
+    new: true
+    confirm: photon shutter; family Shutter (catalog)
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Monochromator
+    family: Monochromator
+    pv: "XF:08IDA-OP{Mono:HRM"
+    new: true
+    confirm: 'HHM high-heat-load mono; energy trajectory fly-scan engine; family Monochromator (catalog)'
+    source_class: iss.hhm.HHM
+  - name: CollimatingMirror
+    family: Mirror
+    pv: "XF:08IDA-OP{Mir:CM"
+    new: true
+    confirm: 'collimating mirror with bender; family Mirror (catalog)'
+  - name: FocusingMirror
+    family: Mirror
+    pv: "XF:08IDA-OP{Mir:FM"
+    new: true
+    confirm: 'focusing mirror with bender; family Mirror (catalog)'
+  - name: FilterBox
+    family: Filter
+    pv: "XF:08IDA-OP{Fltr:FB"
+    new: true
+    confirm: filter/attenuator box; family Filter (catalog)
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Goniometer
+    family: RotaryStage
+    pv: "XF:08IDB-OP{Gon:Th:1}Mtr"
+    new: true
+    confirm: 'sample theta goniometer; family RotaryStage (catalog)'
+  - name: SampleStage
+    family: LinearStage
+    pv: "XF:08IDB-OP{Stage:Sample"
+    new: true
+    confirm: sample positioning stack; family LinearStage (catalog)
+  - name: AuxStage
+    family: LinearStage
+    pv: "XF:08IDB-OP{Stage:Aux1"
+    new: true
+    confirm: 'auxiliary x/y stage; family LinearStage (catalog)'
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: KeithleyAmplifiers
+    family: GenericProbe
+    pv: "XF:08ID-ES:{K428}:"
+    new: true
+    confirm: 'Keithley K428 current amps A/B/C/D (ICAmplifier_Keithley); LOOSE GenericProbe (analog front-end)'
+  - name: AnalogPizzaBox
+    family: FluxMonitor
+    pv: "XF:08IDB-CT{PBA:1}:"
+    new: true
+    confirm: 'APB ADC digitizing ion-chamber currents, fly-scan readout; family FluxMonitor (catalog, graduated)'
+    source_class: iss.apb.AnalogPizzaBox
+  - name: Pilatus100k_1
+    family: Camera
+    pv: "XF:08IDB-ES{Det:PIL1}"
+    new: true
+    confirm: Pilatus 100k area detector; family Camera (catalog)
+  - name: Pilatus100k_2
+    family: Camera
+    pv: "XF:08IDB-ES{Det:PIL2}"
+    new: true
+    confirm: second Pilatus 100k; family Camera (catalog)
+  - name: FluorescenceSpectrometer
+    family: EnergyDispersiveSpectrometer
+    pv: "XF:08IDB-ES{Xsp:1}"
+    new: true
+    confirm: Xspress3 SDD fluorescence; family EnergyDispersiveSpectrometer (catalog, graduated)
+  - name: EndstationBPM
+    family: GenericProbe
+    pv: "XF:08IDB-OP{BPM:ES-Ax:"
+    new: true
+    confirm: endstation beam-position monitor; LOOSE GenericProbe, held DIAG-1
+  - name: DetectorStage
+    family: LinearStage
+    pv: "XF:08IDB-OP{DetStage:2-Ax:"
+    new: true
+    confirm: 'detector x/y stage; family LinearStage (catalog)'
+  - name: JohannSpectrometer
+    family: EmissionSpectrometer
+    pv: "XF:08IDB-OP{HRS:1-"
+    new: true
+    confirm: 'Johann crystal emission spectrometer (HRS); analyzer assy + det gonios + 4 crystal stacks; LOOSE EmissionSpectrometer, graduation watch (2 consumers on this beamline)'
+  - name: VonHamosSpectrometer
+    family: EmissionSpectrometer
+    pv: "XF:08IDB-OP{FIP-VHS:Stage"
+    new: true
+    confirm: 'von Hamos crystal emission spectrometer (FIP-VHS); LOOSE EmissionSpectrometer, graduation watch; confirm Johann vs von Hamos = one Family or variant'

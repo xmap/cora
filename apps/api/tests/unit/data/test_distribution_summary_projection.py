@@ -58,14 +58,15 @@ def _registered_payload() -> dict[str, Any]:
 
 @pytest.mark.unit
 def test_projection_metadata() -> None:
-    """Subscribed to two event types today: DistributionRegistered for
-    the genesis INSERT, and AttestationRecorded for the projection-side
-    status flip (Match -> Verified, Mismatch -> Stale) per
-    project-data-attestation-design Slice C."""
+    """Subscribed to three event types: DistributionRegistered for the
+    genesis INSERT, AttestationRecorded for the projection-side
+    Verified/Stale status flip (per project-data-attestation-design
+    Slice C), and DistributionDiscarded for the terminal Discard flip
+    (the discard_distribution slice's guarded primitive)."""
     proj = DistributionSummaryProjection()
     assert proj.name == "proj_data_distribution_summary"
     assert proj.subscribed_event_types == frozenset(
-        {"DistributionRegistered", "AttestationRecorded"}
+        {"DistributionRegistered", "AttestationRecorded", "DistributionDiscarded"}
     )
 
 
@@ -127,17 +128,59 @@ async def test_unknown_event_type_falls_through() -> None:
 
 
 @pytest.mark.unit
-def test_subscribed_event_types_carries_genesis_and_attestation_only() -> None:
-    """Negative-shape pin: the Distribution Verified / MarkedStale /
-    Discarded stream events are NOT yet subscribed (they ship in
-    follow-on Distribution slices); AttestationRecorded IS subscribed
-    via the project-data-attestation-design Slice C extension."""
+def test_subscribed_event_types_carries_genesis_attestation_and_discard() -> None:
+    """Shape pin: genesis + AttestationRecorded (Verified/Stale flip) +
+    DistributionDiscarded (terminal Discard flip) are subscribed. The
+    Verified / MarkedStale STREAM events are NOT subscribed (the
+    Verified/Stale flip stays projection-only via AttestationRecorded)."""
     proj = DistributionSummaryProjection()
     assert "AttestationRecorded" in proj.subscribed_event_types
     assert "DistributionRegistered" in proj.subscribed_event_types
+    assert "DistributionDiscarded" in proj.subscribed_event_types
     assert "DistributionVerified" not in proj.subscribed_event_types
     assert "DistributionMarkedStale" not in proj.subscribed_event_types
-    assert "DistributionDiscarded" not in proj.subscribed_event_types
+
+
+# ---------- DistributionDiscarded subscription (discard_distribution slice) ----------
+
+
+def _discarded_payload() -> dict[str, Any]:
+    return {
+        "distribution_id": str(_DISTRIBUTION_ID),
+        "reason": "bytes reclaimed from cold tier",
+        "occurred_at": _NOW.isoformat(),
+        "discarded_by": str(_REGISTERED_BY),
+    }
+
+
+@pytest.mark.unit
+async def test_distribution_discarded_updates_status_to_discarded() -> None:
+    proj = DistributionSummaryProjection()
+    conn = AsyncMock()
+    conn.execute.return_value = "UPDATE 1"
+    event = _stored("DistributionDiscarded", _discarded_payload())
+    await proj.apply(event, conn)
+    args = conn.execute.await_args
+    assert args is not None
+    sql = args.args[0]
+    assert "UPDATE proj_data_distribution_summary" in sql
+    assert "'Discarded'" in sql
+    # No `status != 'Discarded'` guard on the discard UPDATE: the row
+    # must reach Discarded from any prior status.
+    assert "status != 'Discarded'" not in sql
+    assert args.args[1] == _DISTRIBUTION_ID
+
+
+@pytest.mark.unit
+async def test_distribution_discarded_rowcount_zero_logs_warning_does_not_raise() -> None:
+    """When the target row is missing (projection lag) the writer must
+    NOT raise; bookmark advances and next tick recovers."""
+    proj = DistributionSummaryProjection()
+    conn = AsyncMock()
+    conn.execute.return_value = "UPDATE 0"
+    event = _stored("DistributionDiscarded", _discarded_payload())
+    await proj.apply(event, conn)
+    conn.execute.assert_awaited()
 
 
 # ---------- AttestationRecorded subscription (Slice C extension) ----------

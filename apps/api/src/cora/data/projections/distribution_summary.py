@@ -13,12 +13,15 @@ Subscribed events:
                                        status flip: Match -> 'Verified',
                                        Mismatch -> 'Stale', Unreachable ->
                                        no-op, other kinds -> no-op).
+  - DistributionDiscarded   -> UPDATE (status='Discarded' by distribution_id;
+                                       terminal, no status guard so the row
+                                       reaches Discarded from any prior status).
 
 The Verified / Stale flip per [[project_data_attestation_design]] Slice
-C is projection-only (NO Distribution-stream event is emitted; the
-Distribution stream stays genesis-only today). The Discarded
-transition will ship in a future Distribution slice as an additive
-event subscription here.
+C is projection-only (NO Distribution-stream event is emitted). The
+Discarded transition IS a Distribution-stream event (the
+discard_distribution slice's guarded primitive); this writer folds it
+into the read model.
 
 ## ON CONFLICT semantics
 
@@ -78,6 +81,16 @@ SET status = $1, updated_at = now()
 WHERE distribution_id = $2 AND status != 'Discarded'
 """
 
+# Terminal Discard flip from DistributionDiscarded. No `status !=
+# 'Discarded'` guard here (unlike the AttestationRecorded UPDATE): the
+# row must be able to reach Discarded from ANY prior status. A
+# status-guarded WHERE could never set the row to Discarded.
+_DISCARD_DISTRIBUTION_SQL = """
+UPDATE proj_data_distribution_summary
+SET status = 'Discarded', updated_at = now()
+WHERE distribution_id = $1
+"""
+
 #: Closed mapping from (kind, outcome) -> target Distribution.status
 #: for the AttestationRecorded subscription. Only ChecksumVerified
 #: flips status today; FormatValidated / ConformsToValidated /
@@ -94,7 +107,9 @@ class DistributionSummaryProjection:
     """Maintains the ``proj_data_distribution_summary`` read model."""
 
     name = "proj_data_distribution_summary"
-    subscribed_event_types = frozenset({"DistributionRegistered", "AttestationRecorded"})
+    subscribed_event_types = frozenset(
+        {"DistributionRegistered", "AttestationRecorded", "DistributionDiscarded"}
+    )
 
     async def apply(
         self,
@@ -106,6 +121,8 @@ class DistributionSummaryProjection:
                 await self._apply_registered(event, conn)
             case "AttestationRecorded":
                 await self._apply_attestation(event, conn)
+            case "DistributionDiscarded":
+                await self._apply_discarded(event, conn)
             case _:
                 pass
 
@@ -179,6 +196,24 @@ class DistributionSummaryProjection:
                 attestation_id=str(attestation_id),
                 distribution_id=str(distribution_id),
                 intended_status=target_status,
+            )
+
+    async def _apply_discarded(self, event: StoredEvent, conn: ConnectionLike) -> None:
+        payload = event.payload
+        distribution_id = UUID(payload["distribution_id"])
+        result = await conn.execute(
+            _DISCARD_DISTRIBUTION_SQL,
+            distribution_id,
+        )
+        if _rowcount_zero(result):
+            # The Distribution projection writer hasn't materialized the
+            # genesis row yet (projection lag). Log and continue; the
+            # bookmark advances and the next tick recovers once the
+            # genesis INSERT lands. Mirrors the AttestationRecorded
+            # rowcount-zero policy.
+            _log.warning(
+                "distribution_summary.discard_update_skipped",
+                distribution_id=str(distribution_id),
             )
 
 

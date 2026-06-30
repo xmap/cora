@@ -95,14 +95,19 @@ from cora.data.aggregates.distribution import (
     DefaultStorageSupplyBootstrapError,
     DistributionAlreadyExistsError,
     DistributionByteSizeMismatchError,
+    DistributionCannotDiscardError,
+    DistributionCannotDiscardLastVerifiedError,
+    DistributionCannotDiscardUnderDiscardedDatasetError,
     DistributionCannotRegisterOnDiscardedDatasetError,
     DistributionCannotRegisterOnNonStorageSupplyError,
     DistributionChecksumAlgorithmMismatchError,
     DistributionChecksumMismatchError,
+    DistributionNotFoundError,
     DistributionSupplyNotFoundError,
     InvalidAccessProtocolError,
     InvalidDistributionByteSizeError,
     InvalidDistributionChecksumError,
+    InvalidDistributionDiscardReasonError,
     InvalidDistributionEncodingError,
     InvalidDistributionUriError,
     UnmappedDistributionUriSchemeError,
@@ -141,6 +146,7 @@ from cora.data.features import (
     add_dataset_to_edition,
     demote_dataset,
     discard_dataset,
+    discard_distribution,
     get_dataset,
     list_datasets,
     promote_dataset,
@@ -260,6 +266,7 @@ def register_data_routes(app: FastAPI) -> None:
     app.include_router(list_datasets.router)
     app.include_router(record_acquisition.router)
     app.include_router(register_distribution.router)
+    app.include_router(discard_distribution.router)
     app.include_router(register_edition.router)
     app.include_router(add_dataset_to_edition.router)
     app.include_router(remove_dataset_from_edition.router)
@@ -297,6 +304,8 @@ def register_data_routes(app: FastAPI) -> None:
         InvalidAccessProtocolError,
         UnmappedDistributionUriSchemeError,
         DefaultStorageSupplyBootstrapError,
+        # discard_distribution validation guard: free-form reason length check.
+        InvalidDistributionDiscardReasonError,
         # Edition VO validation: title, kind, license, year, withdrawal
         # reason, creators (cardinality + duplicate detection +
         # affiliation length), empty-dataset-ids-at-registration. All
@@ -339,8 +348,10 @@ def register_data_routes(app: FastAPI) -> None:
         # Acquisition cross-aggregate not-found (producing Asset / Run).
         AcquisitionAssetNotFoundError,
         AcquisitionRunNotFoundError,
-        # Distribution cross-BC not-found family.
+        # Distribution cross-BC not-found family, plus the discard_distribution
+        # target-stream-empty case.
         DistributionSupplyNotFoundError,
+        DistributionNotFoundError,
         # Attestation Distribution-binding not-found family. The Dataset
         # not-found pathway reuses DatasetNotFoundError (already
         # registered above); only the new Distribution-specific class
@@ -388,6 +399,12 @@ def register_data_routes(app: FastAPI) -> None:
         DistributionChecksumAlgorithmMismatchError,
         DistributionChecksumMismatchError,
         DistributionByteSizeMismatchError,
+        # discard_distribution guarded-primitive guards: re-discard,
+        # parent-Dataset-Discarded, and the bytes-redundancy (no Verified
+        # sibling on a different tier) invariant. All 409.
+        DistributionCannotDiscardError,
+        DistributionCannotDiscardLastVerifiedError,
+        DistributionCannotDiscardUnderDiscardedDatasetError,
         # Edition mutation / transition guards. All 409 with
         # `{"detail": str(exc)}`. Covers add / remove state guards,
         # state-FSM transition guards, license-required-for-kind,

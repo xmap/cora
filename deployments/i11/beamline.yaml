@@ -9,8 +9,8 @@
 # device classes), treated as a dry, correct DATA source and modelled
 # intentionally. Spine + core powder-diffraction path; carries the real BL11I PVs.
 #
-# WHAT I11 EARNS (and how it is handled here): i11 is the rule-of-three for the
-# loose TemperatureController family. It carries FOUR continuous-setpoint thermal
+# WHAT I11 EARNS (and how it was handled): i11 was the rule-of-three for the
+# TemperatureController family. It carries FOUR continuous-setpoint thermal
 # actuators (csb1 / csb2 = Cyberstar blowers wrapping a Eurotherm controller with
 # set(value) / setpoint / ramprate / PID / autotune; ocs1 / ocs2 = Oxford
 # cryostreams), after TemperatureController was carried loose at i22 and i03. That
@@ -20,8 +20,10 @@
 # BUT a new Role is a code change to cora.equipment.aggregates.role.SEED_ROLES
 # (drift-guarded by an exact-match test) and is core cross-facility vocabulary, so
 # it belongs in a SEPARATE gate-reviewed change, NOT in this families-only scaffold.
-# So this descriptor carries the four actuators as loose TemperatureController (as
-# i22 / i03 did) and TEMP-1 tracks the earn. No catalog change in this PR.
+# So this descriptor carried the four actuators as loose TemperatureController (as
+# i22 / i03 did); TEMP-1 tracked the earn, which has SINCE LANDED via a
+# gate-reviewed change: TemperatureController is now a catalog Family presenting
+# the Regulator Role. No catalog change was made in the i11 scaffold itself.
 #
 # OTHER intentional decisions the eval settled:
 # - The diffractometer (theta / two_theta / delta) is per-axis RotaryStage under a
@@ -144,18 +146,19 @@ sample-environment:
   enclosure: i11-experiment
   intro: "The thermal sample environment and the sample-changing robot."
   note: >
-    The four thermal actuators carry the loose TemperatureController family. i11 is
-    the rule-of-three (after i22 and i03), which genuinely earns graduating the
-    Family AND a new settable-continuous-setpoint actuator Role. That Role is a code
-    change (SEED_ROLES, drift-guarded) and core vocabulary, so it is routed to a
-    SEPARATE gate-reviewed change, not this scaffold; carried loose here (TEMP-1).
+    The four thermal actuators carry the TemperatureController family. i11 was
+    the rule-of-three (after i22 and i03) that earned graduating the Family AND a
+    new settable-continuous-setpoint actuator Role. That Role was a code change
+    (SEED_ROLES, drift-guarded) and core vocabulary, so it was routed to a SEPARATE
+    gate-reviewed change rather than this scaffold (TEMP-1); that change has since
+    landed, and TemperatureController is now a catalog Family presenting Regulator.
   devices:
     - name: CyberstarBlower1
       family: TemperatureController
       pv: "BL11I-EA-BLOW-01:"
       new: true
       confirm: true
-      note: "Cyberstar hot-air blower; Eurotherm controller with updating PID; a continuous-setpoint actuator (set/setpoint/ramprate). Loose family; the earn is TEMP-1"
+      note: "Cyberstar hot-air blower; Eurotherm controller with updating PID; a continuous-setpoint actuator (set/setpoint/ramprate). TemperatureController catalog Family (graduated, presents Regulator); the earn was TEMP-1"
     - name: CyberstarBlower2
       family: TemperatureController
       pv: "BL11I-EA-BLOW-02:LOOP1:"

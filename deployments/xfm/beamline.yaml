@@ -1,0 +1,172 @@
+# XFM beamline descriptor (NSLS-II), reverse-engineered
+#
+# XFM (X-ray Fluorescence Microprobe) is the NSLS-II scanning-XRF microprobe at sector
+# 4-BM, a BENDING-MAGNET beamline. It rasters a sample through a focused beam and reads
+# element maps on a multi-element silicon-drift detector (an Xspress3), with a Maia
+# continuous-mapping array for fast fly-scan mapping. It is bound to the NSLS-II Site
+# (deployments/nsls2/site.yaml), the fifteenth NSLS-II beamline after FXI, HXN, BMM,
+# SRX, SIX, CHX, CSX, XPD, ESM, SMI, IXS, SST, ISS, FMX.
+#
+# STATUS: reverse-engineered, design-phase. The public profile collection
+# (NSLS2/xfm-profile-collection) is MINIMAL: it exposes only the endstation, the UTS
+# raster stage, the Xspress3 fluorescence detector, and the SIS3820 scaler, plus a Maia
+# detector in a bypass file. The source, monochromator, focusing optic, and shutters are
+# NOT in the profile, so they are carried confirm-only with NO PV (the 2-ID thin-source
+# precedent; zero fabricated PVs). The endstation PVs are real and verified against the
+# startup/*.py device classes. Same descriptor mode as the other NSLS-II beamlines:
+# descriptor + docs, scenarios deferred.
+#
+# XFM is a PURE-REUSE deployment: it coins NO new Family and graduates nothing. The SDD
+# fluorescence detectors reuse EnergyDispersiveSpectrometer (the 2-ID / SRX scanning-XRF
+# vocabulary), the raster stage LinearStage, the scaler I0 channels FluxMonitor, the
+# bending-magnet source the loose Beam PhotonBeam supply (the 2-BM / BMM precedent), and
+# the DCM / focusing optic / slits the catalog Monochromator / Mirror / Slit. The
+# scanning XRF technique reuses the scanning_fluorescence_microscopy Method 2-ID left
+# pending: XFM is its SECOND consumer, which strengthens but does not coin it (Methods
+# have no mechanical promotion; the energy_scan deferral discipline; METHOD-1 / TECH-1).
+# XANES microspectroscopy leans on the deferred energy_scan Capability (ENERGY-1).
+
+beamline:
+  name: XFM
+  facility: nsls2               # NSLS-II Site (facility_code: nsls2)
+  sector: "Sector 4"           # PV namespace XF:04BM* (the endstation zone is 04BMC)
+  tier: Unit
+  parent: null
+  source: bending-magnet
+  source_confirm: "4-BM bending-magnet source; not an insertion device. The profile collection exposes only the endstation (the raster stage + detectors), not the source / optics, so those are carried confirm-only (SRC-1, PROFILE-1)."
+
+enclosures:
+  # 4-BM has an optics enclosure and the experiment endstation. The endstation PV zone is
+  # XF:04BMC (the UTS stage and Xspress3); the optics zone (XF:04BMA) is inferred, not in
+  # the profile. The hutch names / numbering and the A/B/C layout are not in source.
+  - name: 4-BM-A
+    role: optics-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS search-and-secure permit leaf and shutter PVs not in the profile collection (PSS-1, PROFILE-1)"}
+  - name: 4-BM-C
+    role: experiment-hutch
+    facility_code: nsls2
+    permit_signal: {confirm: "PSS permit leaf unknown; 4-BM-C (PV zone XF:04BMC) is the endstation carrying the raster stage and the fluorescence detectors. Hutch layout to confirm (PSS-1, ENC-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the bending-magnet source and the shutters
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: 4-BM-A
+  intro: The bending-magnet source and the front-end / photon shutters.
+  devices:
+    - name: Source
+      family: Beam
+      new: true
+      confirm: true
+      note: "4-BM bending-magnet source, recorded as a PhotonBeam Supply, not an Asset (the 2-BM / BMM precedent). Beam-parameter machine state is on SR:C04."
+    - name: FrontEndShutter
+      family: Shutter
+      confirm: "front-end safety shutter; PPS-gated. PV not in the profile collection (PSS-1, PROFILE-1)"
+      note: "Front-end photon shutter (not exposed in the profile collection)."
+    - name: PhotonShutter
+      family: Shutter
+      confirm: "photon shutter into the optics; PV not in the profile collection (PSS-1, PROFILE-1)"
+      note: "Photon shutter gating the beam into the optics (not exposed in the profile collection)."
+
+# ===========================================================================
+# OPTICS STAGE: the monochromator, the focusing optic, the slits (confirm-only)
+# ===========================================================================
+
+optics:
+  stage: source
+  enclosure: 4-BM-A
+  intro: "Condition the beam and set its energy: the double-crystal monochromator, the microfocusing optic, and the beam-defining slits. These are not exposed in the profile collection (which carries only the endstation), so they are carried confirm-only with no fabricated PV (PROFILE-1)."
+  devices:
+    - name: Monochromator
+      family: Monochromator
+      confirm: "the 4-BM double-crystal monochromator (Si(111) is the known 4-BM crystal); the energy actuator for XRF / XANES. PV and crystal set not in the profile collection (DCM-1, PROFILE-1)"
+      note: "Double-crystal monochromator selecting the incident energy. Reuses the Monochromator family. Not exposed in the profile collection (DCM-1)."
+    - name: FocusingOptic
+      family: Mirror
+      confirm: "the microfocusing optic (KB mirror pair or capillary) that forms the microprobe spot; type and PV not in the profile collection (OPT-1, PROFILE-1)"
+      note: "Beam-focusing optic forming the microprobe. Reuses the Mirror family. Not exposed in the profile collection (OPT-1)."
+    - name: BeamDefiningSlit
+      family: Slit
+      confirm: "beam-defining slit(s) ahead of the focusing optic; PV not in the profile collection (PROFILE-1)"
+      note: "Beam-defining slit. Reuses the Slit family. Not exposed in the profile collection."
+    - name: EnergyAxis
+      family: PseudoAxis
+      confirm: "the master energy axis (the DCM energy); XANES microspectroscopy sweeps it across an edge. PV not in the profile collection (ENERGY-1, PROFILE-1)"
+      note: "The master energy axis driving the monochromator. XANES microspectroscopy sweeps it; that energy sweep leans on the deferred energy_scan Capability (ENERGY-1, the BMM question)."
+
+# ===========================================================================
+# SAMPLE STAGE: the raster scanning stage
+# ===========================================================================
+
+sample:
+  stage: sample
+  enclosure: 4-BM-C
+  intro: "The raster scanning stage that moves the sample through the focused spot for XRF mapping. PV verified against the xfm-profile-collection startup files."
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: "XF:04BMC-ES:2{UTS:1-Ax:"
+      confirm: true
+      note: "The UTS X / Y / Z raster stage (XF:04BMC-ES:2{UTS:1-Ax:X / Y / Z}Mtr) that scans the sample through the microprobe spot, point-by-point (step) or continuously (Maia fly). The signature scanning device; reuses the LinearStage family. Coarse / fine piezo split, if any, to confirm."
+
+# ===========================================================================
+# DETECTION STAGE: the fluorescence detectors and the flux scaler
+# ===========================================================================
+
+detector:
+  stage: detection
+  enclosure: 4-BM-C
+  intro: "The multi-element fluorescence detectors that make the XRF maps, and the scaler-counted flux channels. PVs verified against the xfm-profile-collection startup files."
+  note: >
+    Which detector is read sets the mapping mode: the Xspress3 silicon-drift detector
+    for step / fly XRF mapping, or the Maia array for fast continuous mapping. Both bind
+    the catalog EnergyDispersiveSpectrometer. The scaler counts the I0 flux channels for
+    normalization.
+  devices:
+    - name: FluorescenceDetector
+      family: EnergyDispersiveSpectrometer
+      pv: "XF:04BMC-ES{x3m:1}:"
+      confirm: true
+      note: "Four-channel silicon-drift fluorescence detector read by an Xspress3 mini (XF:04BMC-ES{x3m:1}: channels C1-C4, per-channel ROIs, an HDF5 stream). The primary XRF-mapping detector; reuses the EnergyDispersiveSpectrometer family. Element count and ROI map to confirm (DET-1)."
+    - name: MaiaDetector
+      family: EnergyDispersiveSpectrometer
+      pv: "XFM:MAIA"
+      confirm: "the Maia continuous-mapping detector array (XFM:MAIA); read from the bypass profile (rvt/bypass40-maia.py), not the active startup. Element count and live status to confirm (MAIA-1)"
+      note: "The Maia 384-element detector array for fast continuous (fly-scan) XRF mapping, XFM's signature mapping capability. Reuses the EnergyDispersiveSpectrometer family (a large continuous-readout array variant). Carried from the bypass profile (MAIA-1)."
+    - name: FluxMonitor
+      family: FluxMonitor
+      pv: "XF:04BM-ES:2{Sclr:1}"
+      confirm: true
+      note: "The SIS3820 scaler (XF:04BM-ES:2{Sclr:1}) counting the I0 / flux channels for per-pixel normalization. Reuses the FluxMonitor family. The full channel map to confirm (DIAG-1)."
+
+# ===========================================================================
+# Cross-cutting controls
+# ===========================================================================
+
+controls:
+  intro: >
+    XFM acquires XRF maps by rastering the UTS stage while counting the detectors against
+    the SIS3820 scaler: step scans (bp.grid_scan) for point mapping, and a Maia
+    continuous fly-scan (encoder-driven) for fast mapping. There is no separate hardware
+    timing box in the profile collection; the scaler does the dwell / counting and the
+    Maia uses its own encoder feedback. Controller box models are not in source (DRIVE-1).
+  motion_controllers:
+    - name: StageMotionController
+      family: MotionController
+      confirm: "the UTS raster-stage motion controller; box model / firmware / IP not in the profile collection (DRIVE-1)"
+      note: "Drives the UTS raster stage (and the optics axes). Reuses the MotionController family. Not exposed in the profile collection (DRIVE-1)."
+  software_iocs_not_modeled:
+    [Xspress3, Maia, SIS3820, nslsii]
+
+resources:
+  intro: Continuously-available resources. Facility-scope supplies live in deployments/nsls2/site.yaml.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: Power
+  replaceable_parts:
+    swappable_with_identity: ["sample mounts", "the silicon-drift detector", "the Maia detector"]

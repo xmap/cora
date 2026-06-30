@@ -23,10 +23,13 @@
 # beam-path tier, and the technique/Capability binding. Each gap is tagged inline
 # with a (QUESTION-ID) answered on docs/deployments/i22/questions.md.
 #
-# Loose families (StorageRing, Transfocator, FluxMonitor, TemperatureController,
-# FlowController) are design-intent names not in the catalog; they render as plain
-# text. An adversarial new-kind review refuted all five as catalog Families on the
-# strength of I22 alone (rule-of-three), so each is carried loose and deferred.
+# The loose StorageRing family is a design-intent name not in the catalog; it
+# renders as plain text. An adversarial new-kind review refuted all five proposed
+# kinds on the strength of I22 alone; FluxMonitor, TemperatureController,
+# Transfocator, and FlowController have since graduated to the catalog on their
+# rule-of-three, while StorageRing stays loose and deferred. FlowController is the
+# settable flow/pump actuator catalog Family (presents Regulator), the
+# TemperatureController sibling, earned across i22 / 7-BM / LIX / XFP.
 
 beamline:
   name: I22
@@ -84,8 +87,8 @@ conditioning-optics:
   note: >
     Mirror internal axes (yaw/pitch/roll, jacks), the DCM crystal d-spacing and
     thermal reads, and the bimorph voltage channels are device internals carried
-    as notes/settings, not separate Families (OPT-1). The transfocator has no
-    clean catalog home and is loose (CRL-1).
+    as notes/settings, not separate Families (OPT-1). The transfocator binds the
+    graduated Transfocator catalog Family (a CRL focusing optic).
   devices:
     - name: DCM
       family: Monochromator
@@ -130,7 +133,7 @@ conditioning-optics:
       confirm: true
       lens_material: Beryllium
       lens_geometry: paraboloid (cylindrical)
-      note: "compound-refractive-lens transfocator; loose family, no clean catalog home yet (CRL-1)"
+      note: "compound-refractive-lens transfocator; binds the graduated Transfocator catalog Family (a CRL focusing optic); lens count is a per-Asset setting to confirm"
 
 beam-defining:
   stage: source
@@ -186,9 +189,12 @@ sample-environment:
   intro: "The sample base, the on-axis-view alignment camera, the incident and transmitted flux monitors, and the sample-environment actuators."
   note: >
     The flux monitors present the existing Sensor Role (the Role docstring names
-    ion chambers); they are carried as a loose FluxMonitor family (FLUX-1). The
-    Linkam and pump are settable actuators with no clean catalog home, the same
-    open settable-actuator shape as the 7-BM flow controllers (ENV-1).
+    ion chambers); they bind the FluxMonitor catalog Family, graduated on the
+    i22/i03/i15-1 rule-of-three (FLUX-1). The Linkam binds the graduated
+    TemperatureController Family (presents Regulator); the pump binds the catalog
+    FlowController Family (graduated; presents Regulator), the TemperatureController
+    sibling earned across i22 / 7-BM / LIX / XFP. What stays open is whether CORA
+    commands the setpoints (ENV-1).
   devices:
     - name: SampleBase
       family: LinearStage
@@ -208,25 +214,25 @@ sample-environment:
       pv: "BL22I-EA-XBPM-02:"
       new: true
       confirm: true
-      note: "incident-flux ion chamber / XBPM (Tetramm, 4-channel current); presents the Sensor Role; loose family (FLUX-1)"
+      note: "incident-flux ion chamber / XBPM (Tetramm, 4-channel current); presents the Sensor Role; FluxMonitor catalog Family (graduated) (FLUX-1)"
     - name: It
       family: FluxMonitor
       pv: "BL22I-EA-TTRM-02:"
       new: true
       confirm: true
-      note: "transmitted-flux ion chamber (Tetramm); presents the Sensor Role; loose family (FLUX-1)"
+      note: "transmitted-flux ion chamber (Tetramm); presents the Sensor Role; FluxMonitor catalog Family (graduated) (FLUX-1)"
     - name: SampleTemperature
       family: TemperatureController
       pv: "BL22I-EA-TEMPC-05:"
       new: true
       confirm: true
-      note: "sample-environment temperature controller (Linkam); a settable actuator, the FlowController sibling (ENV-1)"
+      note: "sample-environment temperature controller (Linkam); a settable actuator binding the graduated TemperatureController Family (presents Regulator); the FlowController pump is its settable-actuator sibling, also a graduated catalog Family (ENV-1)"
     - name: SamplePump
       family: FlowController
       pv: "BL22I-EA-PUMP-01:"
       new: true
       confirm: true
-      note: "sample-environment peristaltic pump (Watson-Marlow 323); a settable actuator; pump type is a setting (ENV-1)"
+      note: "sample-environment peristaltic pump (Watson-Marlow 323); a settable actuator binding the catalog FlowController Family (graduated; presents Regulator); pump type is a setting (ENV-1)"
 
 # --- DETECTION STAGE: the SAXS and WAXS detectors and their beamstops ---
 
