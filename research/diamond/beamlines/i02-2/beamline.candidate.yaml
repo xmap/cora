@@ -1,0 +1,16 @@
+# CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (src/dodal/beamlines/i02_2.py),
+# NOT authoritative. VMXi = I02I, beamline_prefix=BL02I. NEAR-STUB: only sample stage in public dodal;
+# plate handling, detector, optics absent (not invented). PV verified verbatim.
+
+beamline: {name: I02-2, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: I02-2, facility_code: diamond, confirm: VMXi in-situ plate-screening MX (I02I); PV root BL02I (env-resolved)}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SampleStage, family: LinearStage, pv: "BL02I-MO-GONIO-01:SAMPLE:", new: true, confirm: "XYStage plate positioning (GONIO namespace but plain XY); LinearStage (catalog)"}
+# DEFERRED (absent from public dodal, not invented):
+#   PLATE-1: in-situ crystallisation-plate handling (the defining VMXi system)
+#   DET-1: imaging/screening detector
+#   MONO-1/OPTICS-1: DCM, mirrors, slits, attenuators
