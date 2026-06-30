@@ -28,7 +28,12 @@ Extractions to date:
   a deployment. Its public config is a PARTIAL mirror (detectors + sample environment only; no
   optics, motion, slits, shutters, or source), so the absent halves are recorded as open
   questions (CONFIG-1 / MONO-1 / MOTION-1), not inferred.
-- `recurrence.md` -- the cross-ESRF Family-frequency fold, started with ID19 / ID16B / ID28 / ID32 / ID06 / BM26 / BM25.
+- `beamlines/bm23/` -- BM23, the bending-magnet XAS beamline (EXAFS / XANES + XES on a Si555 Johann
+  crystal-analyzer spectrometer); NOT yet a deployment. Its config is STALE (2022 snapshot, STALE-1)
+  and carries cross-beamline leftovers (BM05/BM29/ID10/ID24 devices, XBL-1) that are excluded;
+  reinforces the graduated EmissionSpectrometer family.
+- `recurrence.md` -- the cross-ESRF Family-frequency fold; COMPLETE public-config set (ID19 / ID16B /
+  ID28 / ID32 / ID06 / BM26 / BM25 / BM23, all eight). Standing verdict: ESRF earns no new catalog Family.
 
 ESRF beamlines that publish a Beacon config (`<beamline>/beamline_configuration`, public on
 gitlab.esrf.fr) are the modellable set. As of 2026-06 the public ones are: ID06, ID16B, ID19,

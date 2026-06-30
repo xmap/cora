@@ -1,0 +1,159 @@
+# CANDIDATE beamline descriptor: hand-read from gitlab.esrf.fr/bm23/beamline_configuration
+# (commit 8bf008c), NOT authoritative. Every device carries new: true and a confirm note.
+# WARNING: this config is STALE (last commit 2022-07-07); handles are a 2022 snapshot, very
+# likely changed on the live beamline (STALE-1). The config also carries cross-beamline
+# leftovers (BM05/BM29/ID10/ID24 monos + sessions, id19bcdu8) that are NOT BM23 devices and are
+# excluded (XBL-1). Grouping by stage and enclosure names are inferred from the config layout
+# (oh / eh); Family suggestions and hutch boundaries need human curation, and any new Family
+# needs the naming-r3 gate. Do not copy into deployments/ without review. BM23 is a
+# bending-magnet XAS beamline (EXAFS/XANES + XES); NOT yet a deployment.
+
+beamline:
+  name: BM23
+  facility: esrf
+  tier: Unit
+  source: bending-magnet
+enclosures:
+- name: bm23-optics
+  facility_code: esrf
+  confirm: optics hutch (oh); inferred from config layout (ENC-1, PSS-1)
+- name: bm23-eh
+  facility_code: esrf
+  confirm: experiment hutch (eh; EXAFS/XANES + XES); inferred from config layout (ENC-1)
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: StorageRing
+    family: StorageRing
+    pv: "acs:10000/fe/master/bm23"
+    new: true
+    confirm: 'ESRF storage-ring state via tango_attr_as_counter (srcur/sbcur/lifetime); observe-only; LOOSE family StorageRing (MACHINE-1); STALE-1'
+  - name: FrontEndShutter
+    family: Shutter
+    pv: "acs:10000/fe/master/bm23"
+    new: true
+    confirm: 'BLISS feshut (TangoShutter, controllers/machine.yml); family Shutter (catalog) (PSS-1)'
+  - name: BeamShutter
+    family: Shutter
+    pv: "d23/bsh/1"
+    new: true
+    confirm: 'BLISS bsh (TangoShutter) + bsh_bck BackgroundShutter; family Shutter (catalog)'
+  - name: BendingMagnetSource
+    family: null
+    new: true
+    confirm: 'BM23 is a bending-magnet beamline; NO insertion-device controller in the config; source modeled loosely (2-BM precedent), NOT InsertionDevice; pv blank, no handle in source (SRC-1)'
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Monochromator
+    family: Monochromator
+    pv: "dcm"
+    new: true
+    confirm: 'BM23Mono dcm; crystals Si111/Si333/Si311/Si511; real bragg mbragg->cbragg, change mty (iced231); energy Emono keV; family Monochromator (catalog) (STALE-1)'
+    source_class: BM23Mono
+  - name: KBMirror
+    family: Mirror
+    pv: "kb"
+    new: true
+    confirm: 'KbController kb; hfocus (kbh1/kbh2 benders) + vfocus (kbv1/kbv2) on iced232 / nf8752_kb; focus feedback diagbpm; family Mirror (catalog) (OPT-1)'
+    source_class: KbController
+  - name: PrimarySlits
+    family: Slit
+    pv: "slit_ps"
+    new: true
+    confirm: 'primary slits (slits class, motors/slit_ps.yml; real psh/psr, calc pshg/psho); family Slit (catalog) (OPT-2)'
+diagnostics:
+  stage: diagnostics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: BeamViewers
+    family: Screen
+    pv: "d23/limaccds/bas_wb"
+    new: true
+    confirm: 'EBV beam viewers wbv/mirrorbv/monobv/diagbpm (controllers/beamviewer.yml); diagbpm doubles as KB focus feedback; family Screen (?) confirm vs FluxMonitor diode'
+    source_class: EBV
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: IonChambers
+    family: FluxMonitor
+    pv: "emeter.esrf.fr"
+    new: true
+    confirm: 'EMH electrometers em1 (emeter.esrf.fr) + em2 (emeter2.esrf.fr); ch1-4 + bpmx/bpmy/bpmi; the EXAFS I0/I1/I2 transmission chain; family FluxMonitor (catalog, graduated) (DET-1)'
+    source_class: EMH
+  - name: MCCE_Electrometers
+    family: FluxMonitor
+    pv: "rfc2217://ld231-new:28214"
+    new: true
+    confirm: 'Mcce current amplifiers mcceI0..mcceI3 (controllers/mcce.yml); ion-chamber amplifier chain; family FluxMonitor (?) confirm vs bare amplifier'
+    source_class: Mcce
+  - name: FluorescenceMCA
+    family: EnergyDispersiveSpectrometer
+    pv: "tcp://wbm231:8000"
+    new: true
+    confirm: 'XIA FalconXn fluorescence MCA (fx, FalconX); family EnergyDispersiveSpectrometer (catalog, graduated) (DET-1)'
+    source_class: FalconX
+  - name: EmissionSpectrometer
+    family: EmissionSpectrometer
+    pv: "spectro"
+    new: true
+    confirm: 'Johann Rowland-circle crystal-analyzer XES spectrometer (Spectrometer, Si555, radius_meridional 250, bragg 60-88); analysers an0/anp1.. on iced23spectro; family EmissionSpectrometer (catalog, graduated, LCLS-MFX/ISS precedent); per-crystal child Asset is SPEC-1; further consumer, do NOT coin'
+    source_class: Spectrometer
+  - name: ScatteringDetector
+    family: Camera
+    pv: "bm23/limaccds/pilatus-1M"
+    new: true
+    confirm: 'Pilatus 1M area detector (pilatus, Lima); family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: HighVoltageSupply
+    family: GenericProbe
+    pv: "ld232:28202"
+    new: true
+    confirm: 'iSeg NHQ 206L HV supply (nhq, Nhq); detector/ion-chamber bias; LOOSE family GenericProbe (no catalog home)'
+    source_class: Nhq
+  - name: AnalyzerCounters
+    family: GenericProbe
+    pv: "tcp://ld232:8909"
+    new: true
+    confirm: 'P201 CT2 counter card p201; calc counters for BPM/dark/energy; LOOSE family GenericProbe'
+    source_class: CT2
+  - name: TimingController
+    family: TimingController
+    pv: "musst"
+    new: true
+    confirm: 'MUSST timing master (continuous/QEXAFS scan gating, controllers/musst.yml); family TimingController (?) confirm vs GenericProbe'
+    source_class: musst
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: SampleRobot
+    family: LinearStage
+    pv: "160.103.143.106"
+    new: true
+    confirm: 'BM23robot sample changer (robot, mrobot axis 1-100 + barcode 160.103.143.31); family LinearStage (?) by role; sample-exchange-robot family is a fleet-wide question, do NOT coin from BM23'
+    source_class: BM23robot
+  - name: SampleStage
+    family: LinearStage
+    pv: "iced231"
+    new: true
+    confirm: 'sample positioning stages on IcePAP iced231 / iced232; family LinearStage (catalog) (SAMPLE-1)'
+  - name: SampleTemperatureController
+    family: TemperatureController
+    pv: "d23-ls336-1.esrf.fr:7777"
+    new: true
+    confirm: 'LakeShore 336 (d23-ls336-1) + LakeShore 332 + Eurotherm nanodac (160.103.143.171); XAS sample-temperature environments; family TemperatureController (catalog, Regulator) (TEMP-1)'
+    source_class: LakeShore336
+  - name: GasFlowController
+    family: FlowController
+    pv: "bronkhorst"
+    new: true
+    confirm: 'Bronkhorst mass-flow (regulation/bronkhorst.yml) + PACE pressure (regulation/pace.yml) for in-situ XAS gas cells; family FlowController (catalog, graduated, Regulator); confirm handles (STALE-1)'
+    source_class: Bronkhorst
+# EXCLUDED (XBL-1): cross-beamline leftovers in the config that are NOT BM23 devices:
+#   mono/bm05mono.yml, mono/bm29mono.yml, mono/id10mono.yml, mono/id10eh2mono.yml,
+#   bistate/bm29_actuator.yml, controllers/id19bcdu8.yml, sessions/session_id24.yml,
+#   controllers/energymeter.yml (enmeterid241 / id24tektro64, ID24-hosted). Confirm none operative at BM23.
