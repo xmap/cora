@@ -1,0 +1,27 @@
+# CANDIDATE beamline descriptor: hand-read from tangkong/SSRL-2-2 public bluesky profile, NOT
+# authoritative. Real BL22: PVs (properly customized profile). Verified verbatim, zero fabrications.
+
+beamline: {name: "2-2", facility: ssrl, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: "2-2", facility_code: ssrl, confirm: "SSRL BL2-2 continuous XAS; real BL22: PV root"}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: ScanMaster, family: TimingController, pv: "BL22:SCAN:MASTER", new: true, confirm: "continuous-XAS energy-trajectory master; TimingController (catalog), confirm; drives the scanning mono (energy_scan Capability candidate)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SampleStage, family: LinearStage, pv: "BL22:IMS:MOTOR1", new: true, confirm: "HiTp stage px/py = IMS:MOTOR1/2; LinearStage (catalog)"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: DXP1, family: EnergyDispersiveSpectrometer, pv: "DXP1:DXP", new: true, confirm: "XIA DXP channel 1; EnergyDispersiveSpectrometer (catalog, graduated)"}
+  - {name: DXP2, family: EnergyDispersiveSpectrometer, pv: "DXP2:DXP", new: true, confirm: "XIA DXP channel 2; EnergyDispersiveSpectrometer (catalog, graduated)"}
+  - {name: DXP3, family: EnergyDispersiveSpectrometer, pv: "DXP3:DXP", new: true, confirm: "XIA DXP channel 3; EnergyDispersiveSpectrometer (catalog, graduated)"}
+  - {name: FluorescenceSpectrometer, family: EnergyDispersiveSpectrometer, pv: "XSPRESS3", new: true, confirm: "Xspress3 (PV root in xspress3.py); EnergyDispersiveSpectrometer (catalog, graduated)"}
+  - {name: FPGABox, family: TimingController, pv: "BL22:SCAN:MASTER", new: true, confirm: "FPGA trigger/gate box (trigger_base_rate/width); TimingController (catalog), confirm; CXAS fly-scan gating"}
+  - {name: RIOAnalogIO, family: GenericProbe, pv: "BL00:RIO.AI0", new: true, confirm: "NI RIO crate (shared BL00); LOOSE GenericProbe"}
+# DEFERRED: MONO-1 (scanning mono via SCAN:MASTER abstraction, energy_scan candidate); OPTICS-1 (mirrors/slits/ion chambers)
