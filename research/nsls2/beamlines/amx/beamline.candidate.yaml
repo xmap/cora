@@ -1,0 +1,34 @@
+# CANDIDATE: hand-read from NSLS2/amx-profile-collection, NOT authoritative. All PV prefixes
+# verified verbatim against source. new:true + confirm per device. Do not copy into deployments/ unreviewed.
+beamline: {name: AMX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 17-ID-A, facility_code: nsls2, confirm: optics hutch; inferred from XF:17IDA}
+- {name: 17-ID-B, facility_code: nsls2, confirm: MX endstation; inferred from XF:17IDB}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; needs confirm.
+  devices:
+  - {name: Monochromator, family: Monochromator, pv: "XF:17IDA-OP:AMX{Mono:DCM", new: true, confirm: "DCM (+ CorrectDCM feedback); Monochromator (catalog)"}
+  - {name: ToroidalDeflectingMirror, family: Mirror, pv: "XF:17IDA-OP:AMX{Mir:TDM", new: true, confirm: TDM; Mirror (catalog)}
+  - {name: WhiteBeamSlit0, family: Slit, pv: "XF:17IDA-OP:AMX{Slt:0", new: true, confirm: slit 0; Slit (catalog)}
+  - {name: WhiteBeamSlit1, family: Slit, pv: "XF:17IDA-OP:AMX{Slt:1", new: true, confirm: slit 1; Slit (catalog)}
+  - {name: CRLAttenuator, family: Filter, pv: "XF:17IDB-OP:AMX{Attn:BCU", new: true, confirm: "BCU attenuator; confirm Filter vs Transfocator"}
+  - {name: KBMirror, family: Mirror, pv: "XF:17IDB-ES:AMX{Mir:1", new: true, confirm: KB refocus; Mirror (catalog)}
+  - {name: Collimator, family: Collimator, pv: "XF:17IDB-ES:AMX{Colli:1", new: true, confirm: collimator; Collimator (catalog)}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; needs confirm.
+  devices:
+  - {name: Goniometer, family: Goniometer, pv: "XF:17IDB-ES:AMX{Gon:1", new: true, confirm: "single-omega gonio; Goniometer (catalog, graduated via i03); further MX consumer"}
+  - {name: SampleMicroscope, family: GenericProbe, pv: "XF:17IDB-ES:AMX{Mic:1", new: true, confirm: on-axis microscope; LOOSE GenericProbe}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; needs confirm.
+  devices:
+  - {name: FastShutter, family: Shutter, pv: "XF:17IDB-ES:AMX{Sht:1", new: true, confirm: fast shutter; Shutter (catalog)}
+  - {name: MerlinDetector, family: Camera, pv: "XF:17IDB-ES:AMX{Det:Mer}", new: true, confirm: Merlin; Camera (catalog)}
+  - {name: BeamStop, family: BeamStop, pv: "XF:17IDB-ES:AMX{BS:1", new: true, confirm: beamstop; BeamStop (catalog)}
+  - {name: EMBLDetector, family: GenericProbe, pv: "XF:17IDB-ES:AMX{EMBL}", new: true, confirm: EMBL unit; LOOSE GenericProbe}
+  - {name: DXPController, family: GenericProbe, pv: "XF:17IDB-BI:AMX{Keith:1}", new: true, confirm: Keithley/DXP; LOOSE GenericProbe}
+  - {name: BeamPositionMonitor, family: GenericProbe, pv: "XF:17IDA-BI:AMX{BPM:1", new: true, confirm: "BPMs; LOOSE GenericProbe, held DIAG-1"}
+  - {name: Zebra1, family: TimingController, pv: "XF:17IDB-ES:AMX{Zeb:1}", new: true, confirm: "Zebra gating; TimingController (catalog), confirm"}
