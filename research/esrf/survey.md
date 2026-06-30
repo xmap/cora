@@ -21,7 +21,10 @@ Extractions to date:
   large-volume press (LVP); NOT yet a deployment, a net-new device pass. The headline LVP
   technique has NO press device in the public config (only generic stages + a view camera),
   recorded as the open question PRESS-1, not invented.
-- `recurrence.md` -- the cross-ESRF Family-frequency fold, started with ID19 / ID16B / ID28 / ID32 / ID06.
+- `beamlines/bm26/` -- BM26 (DUBBLE), the Dutch-Belgian CRG bending-magnet beamline (SAXS / WAXS
+  + XAFS); NOT yet a deployment, a net-new device pass. First bending-magnet beamline in the ESRF
+  set (no insertion device); the CRG partner-operated model is a Federation / Trust seam note.
+- `recurrence.md` -- the cross-ESRF Family-frequency fold, started with ID19 / ID16B / ID28 / ID32 / ID06 / BM26.
 
 ESRF beamlines that publish a Beacon config (`<beamline>/beamline_configuration`, public on
 gitlab.esrf.fr) are the modellable set. As of 2026-06 the public ones are: ID06, ID16B, ID19,
