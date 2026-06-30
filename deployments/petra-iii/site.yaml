@@ -38,7 +38,7 @@ facility:
   heading: "PETRA III"
   kind: Site
   institution: DESY (Deutsches Elektronen-Synchrotron, Hamburg, Germany)
-  beamlines: [P01, P04, P06, P11, P03, P10, P09, P02, P64, P65, P07, P08, P21]
+  beamlines: [P01, P04, P06, P11, P03, P10, P09, P02, P64, P65, P07, P08, P21, P22]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
 #
@@ -114,6 +114,10 @@ practices:
   # staff confirm (TECH-1).
   - {name: P21_diffraction_practice, method: diffraction, pending: true, note: "high-energy materials-science diffraction on the P21.2 / EH3 endstations; reuses the diffraction slug, a further consumer (TECH-1)"}
   - {name: P21_total_scattering_practice, method: total_scattering, pending: true, note: "high-energy total scattering / pair-distribution-function on the P21.1 branch; reuses the total_scattering slug i15-1 / XPD / P02 share, a further consumer (TECH-1)"}
+  # P22 (HAXPES): hard X-ray photoelectron spectroscopy, sharing the P09 optics chain.
+  # Reuses the angle_resolved_photoemission slug P04 shares, pending until DESY staff
+  # confirm (TECH-1).
+  - {name: P22_haxpes_practice, method: angle_resolved_photoemission, pending: true, note: "hard X-ray photoelectron spectroscopy on the shared P09 optics + the HAXPS electron analyzer; reuses the angle_resolved_photoemission slug P04 shares, a further consumer (TECH-1)"}
 
 # Access BC Actors conceptually facility-wide at PETRA III. Pending until the DESY
 # operator and review structure is confirmed.
