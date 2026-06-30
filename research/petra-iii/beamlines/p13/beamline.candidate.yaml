@@ -1,0 +1,349 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: P13
+  facility: petra-iii
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: P13
+  facility_code: petra-iii
+  confirm: enclosure inferred from PV prefix or station label
+- name: P13-EH1
+  facility_code: petra-iii
+  confirm: enclosure inferred from PV prefix or station label
+- name: P13-OH1
+  facility_code: petra-iii
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: beam-centring
+    family: EMBLBeamCentring
+    pv: /P13/BCUIntensity/Device0
+    enclosure: P13
+    new: true
+    confirm: family is the MXCuBE class 'EMBLBeamCentring'; the CORA Family needs
+      a human; MXCuBE object at 'beam-centring'; endstation to enclosure is a guess
+    source_class: EMBLBeamCentring
+  - name: beam-info
+    family: EMBLBeamInfo
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13
+    new: true
+    confirm: family is the MXCuBE class 'EMBLBeamInfo'; the CORA Family needs a human;
+      MXCuBE object at 'beam-info'; endstation to enclosure is a guess
+    source_class: EMBLBeamInfo
+  - name: beam
+    family: EMBLBeam
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13
+    new: true
+    confirm: family is the MXCuBE class 'EMBLBeam'; the CORA Family needs a human;
+      MXCuBE object at 'beam'; endstation to enclosure is a guess
+    source_class: EMBLBeam
+  - name: detector-distance
+    family: TINEMotor
+    pv: /P13/collection/distance
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'TINEMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/detector-distance'; endstation to enclosure is a guess
+    source_class: TINEMotor
+  - name: diff-aperture
+    family: Aperture
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: MXCuBE object at 'eh1/diff-aperture'; endstation to enclosure is a guess
+    source_class: EMBLAperture
+  - name: diff-centring-vert
+    family: TINEMotor
+    pv: /P13/MD/MD_0
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'TINEMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/diff-centring-vert'; endstation to enclosure is a guess
+    source_class: TINEMotor
+  - name: diff-focus
+    family: ExporterMotor
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'ExporterMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/diff-focus'; endstation to enclosure is a guess
+    source_class: ExporterMotor
+  - name: diff-holder-length
+    family: ExporterMotor
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'ExporterMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/diff-holder-length'; endstation to enclosure is a guess
+    source_class: ExporterMotor
+  - name: diff-kappa
+    family: ExporterMotor
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'ExporterMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/diff-kappa'; endstation to enclosure is a guess
+    source_class: ExporterMotor
+  - name: diff-kappaphi
+    family: ExporterMotor
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'ExporterMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/diff-kappaphi'; endstation to enclosure is a guess
+    source_class: ExporterMotor
+  - name: diff-omega
+    family: ExporterMotor
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'ExporterMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/diff-omega'; endstation to enclosure is a guess
+    source_class: ExporterMotor
+  - name: diff-phiy
+    family: ExporterMotor
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'ExporterMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/diff-phiy'; endstation to enclosure is a guess
+    source_class: ExporterMotor
+  - name: diff-phiz
+    family: ExporterMotor
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'ExporterMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/diff-phiz'; endstation to enclosure is a guess
+    source_class: ExporterMotor
+  - name: diff-sampx
+    family: ExporterMotor
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'ExporterMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/diff-sampx'; endstation to enclosure is a guess
+    source_class: ExporterMotor
+  - name: diff-sampy
+    family: ExporterMotor
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'ExporterMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/diff-sampy'; endstation to enclosure is a guess
+    source_class: ExporterMotor
+  - name: energy-motor
+    family: TINEMotor
+    pv: /P13/collection/wavelength
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'TINEMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/energy-motor'; endstation to enclosure is a guess
+    source_class: TINEMotor
+  - name: energy
+    family: TINEEnergy
+    pv: /P13/Energy/P13Energy
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'TINEEnergy'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/energy'; endstation to enclosure is a guess
+    source_class: TINEEnergy
+  - name: resolution
+    family: TINEMotor
+    pv: /P13/collection/resolution
+    enclosure: P13-EH1
+    new: true
+    confirm: family is the MXCuBE class 'TINEMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh1/resolution'; endstation to enclosure is a guess
+    source_class: TINEMotor
+  - name: energy
+    family: EMBLEnergy
+    pv: /P13/Energy/P13Energy
+    enclosure: P13
+    new: true
+    confirm: family is the MXCuBE class 'EMBLEnergy'; the CORA Family needs a human;
+      MXCuBE object at 'energy'; endstation to enclosure is a guess
+    source_class: EMBLEnergy
+  - name: fast-shutter
+    family: Shutter
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13
+    new: true
+    confirm: MXCuBE object at 'fast-shutter'; endstation to enclosure is a guess
+    source_class: MDFastShutter
+  - name: motor-pitch-hfm
+    family: TINEMotor
+    pv: /P13/P13Kb.CDI/HFMTgtPos
+    enclosure: P13-OH1
+    new: true
+    confirm: family is the MXCuBE class 'TINEMotor'; the CORA Family needs a human;
+      MXCuBE object at 'oh1/motor-pitch-hfm'; endstation to enclosure is a guess
+    source_class: TINEMotor
+  - name: motor-pitch-second
+    family: TINEMotor
+    pv: Pitch 2nd
+    enclosure: P13-OH1
+    new: true
+    confirm: family is the MXCuBE class 'TINEMotor'; the CORA Family needs a human;
+      MXCuBE object at 'oh1/motor-pitch-second'; endstation to enclosure is a guess
+    source_class: TINEMotor
+  - name: motor-pitch-vfm
+    family: TINEMotor
+    pv: /P13/P13Kb.CDI/VFMTgtPos
+    enclosure: P13-OH1
+    new: true
+    confirm: family is the MXCuBE class 'TINEMotor'; the CORA Family needs a human;
+      MXCuBE object at 'oh1/motor-pitch-vfm'; endstation to enclosure is a guess
+    source_class: TINEMotor
+  - name: motor-pitch-vhm
+    family: TINEMotor
+    pv: VHM Pitch
+    enclosure: P13-OH1
+    new: true
+    confirm: family is the MXCuBE class 'TINEMotor'; the CORA Family needs a human;
+      MXCuBE object at 'oh1/motor-pitch-vhm'; endstation to enclosure is a guess
+    source_class: TINEMotor
+  - name: motor-roll-second
+    family: TINEMotor
+    pv: Roll 2nd
+    enclosure: P13-OH1
+    new: true
+    confirm: family is the MXCuBE class 'TINEMotor'; the CORA Family needs a human;
+      MXCuBE object at 'oh1/motor-roll-second'; endstation to enclosure is a guess
+    source_class: TINEMotor
+  - name: resolution
+    family: TINEMotor
+    pv: /P13/collection/resolution
+    enclosure: P13
+    new: true
+    confirm: family is the MXCuBE class 'TINEMotor'; the CORA Family needs a human;
+      MXCuBE object at 'resolution'; endstation to enclosure is a guess
+    source_class: TINEMotor
+  - name: safety-shutter
+    family: Shutter
+    pv: /P13/collection/mx-standard
+    enclosure: P13
+    new: true
+    confirm: MXCuBE object at 'safety-shutter'; endstation to enclosure is a guess
+    source_class: EMBLSafetyShutter
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: diffractometer
+    family: Goniometer
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13
+    new: true
+    confirm: MXCuBE object at 'diffractometer'; endstation to enclosure is a guess
+    source_class: EMBLMiniDiff
+  - name: diff-back-light
+    family: Backlight
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: MXCuBE object at 'eh1/diff-back-light'; endstation to enclosure is a
+      guess
+    source_class: MicrodiffLight
+  - name: diff-backLight
+    family: Backlight
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: MXCuBE object at 'eh1/diff-backLight'; endstation to enclosure is a guess
+    source_class: MicrodiffLight
+  - name: diff-beamstop
+    family: BeamStop
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: MXCuBE object at 'eh1/diff-beamstop'; endstation to enclosure is a guess
+    source_class: EMBLBeamstop
+  - name: diff-front-light
+    family: Backlight
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: MXCuBE object at 'eh1/diff-front-light'; endstation to enclosure is a
+      guess
+    source_class: MicrodiffLight
+  - name: diff-frontLight
+    family: Backlight
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: MXCuBE object at 'eh1/diff-frontLight'; endstation to enclosure is a
+      guess
+    source_class: MicrodiffLight
+  - name: diff-zoom
+    family: Objective
+    pv: p13md201.embl-hamburg.de:9001
+    enclosure: P13-EH1
+    new: true
+    confirm: MXCuBE object at 'eh1/diff-zoom'; endstation to enclosure is a guess
+    source_class: MicrodiffZoom
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: axis-camera
+    family: Camera
+    enclosure: P13
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; MXCuBE object at 'axis-camera'; endstation to enclosure is a guess
+    source_class: QtAxisCamera
+  - name: detector-eiger16m
+    family: Camera
+    pv: /P13/detector/eiger16m
+    enclosure: P13-EH1
+    new: true
+    confirm: MXCuBE object at 'eh1/detector-eiger16m'; endstation to enclosure is
+      a guess; vendor model '16M' read from the config; confirm against the floor
+    source_class: EMBLDetector
+  - name: detector-pilatus6m
+    family: Camera
+    pv: /P13/detector/pilatus6m
+    enclosure: P13-EH1
+    new: true
+    confirm: MXCuBE object at 'eh1/detector-pilatus6m'; endstation to enclosure is
+      a guess; vendor model '6M_F' read from the config; confirm against the floor
+    source_class: EMBLDetector
+  - name: flux
+    family: FluxMonitor
+    pv: /P13/PinDiode/Device0
+    enclosure: P13
+    new: true
+    confirm: MXCuBE object at 'flux'; endstation to enclosure is a guess
+    source_class: EMBLFlux
+  - name: oav-camera
+    family: Camera
+    enclosure: P13
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; MXCuBE object at 'oav-camera'; endstation to enclosure is a guess
+    source_class: VimbaVideo
+  - name: sample-changer-camera
+    family: Camera
+    enclosure: P13
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; MXCuBE object at 'sample-changer-camera'; endstation to enclosure is
+      a guess
+    source_class: QtAxisCamera
+  - name: xrf-spectrum
+    family: EnergyDispersiveSpectrometer
+    pv: /P13/fluorescence-scan/fls-scan
+    enclosure: P13
+    new: true
+    confirm: MXCuBE object at 'xrf-spectrum'; endstation to enclosure is a guess
+    source_class: EMBLXRFSpectrum

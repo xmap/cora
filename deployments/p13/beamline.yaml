@@ -1,0 +1,241 @@
+# P13 beamline descriptor (PETRA III, EMBL Hamburg), reverse-engineered from MXCuBE
+#
+# P13 is the EMBL Hamburg macromolecular-crystallography (MX) beamline on the PETRA III
+# ring at DESY, Hamburg. It is operated by EMBL Hamburg, not by DESY, and it is the
+# first EMBL Hamburg beamline CORA models. It is bound to the PETRA III Site
+# (deployments/petra-iii/site.yaml) by facility_code, the eighteenth PETRA III beamline
+# scaffold and the third PETRA III MX-family beamline after P11 (DESY) and, on the same
+# EMBL endstation cluster, its sibling P14.
+#
+# STATUS: reverse-engineered from EMBL Hamburg's own public MXCuBE HardwareObjects
+# configuration (github.com/mxcube/mxcubecore, configuration/embl_hh_p13), the device
+# topology MXCuBE drives at the beamline. Device logical names and control handles are
+# real, read from that config; vendor part numbers beyond the detector models, the
+# goniometer geometry details, the optics layout, and physical positions are not fully
+# in it and are open questions. Every value is carried confirm until EMBL Hamburg staff
+# verify it.
+#
+# SUB-OPERATOR SEAM (the distinctive Site fact): P13 sits on the PETRA III ring but does
+# NOT run DESY's Tango / Sardana / OnlineXML house style (the floor P01 / P06 / P11 bind
+# to). EMBL Hamburg runs its OWN control domain: MXCuBE as the experiment-orchestration
+# layer over the Exporter protocol (the microdiff / MD2-style host, e.g.
+# p13md201.embl-hamburg.de:9001) and TINE channels (/P13/...) for the detector, energy,
+# and beam services. So P13 is modelled as a sub-operator control-domain WITHIN the
+# PETRA III Site: same ring and Facility, distinct operator and control floor. The
+# PETRA III site.yaml carries an EMBL-Hamburg house-style section recording this; see
+# docs/deployments/p13/equipment/controls.md (SEAM-1).
+#
+# WHAT IS NEW: no new device Family and no new technique vocabulary. P13 is the seventh
+# MX beamline CORA models (after Diamond i03, NSLS-II FMX / AMX, the Australian
+# Synchrotron MX3, Sirius MANACA, NSRRC TPS 07A / 05A, and DESY P11) and EMBL Hamburg's
+# first. It reuses the MX vocabulary: the EMBLMiniDiff binds the graduated Goniometer,
+# the Eiger / Pilatus area detectors bind Camera, the XRF detector
+# EnergyDispersiveSpectrometer, the apertures / beamstop / objective / lights / shutters
+# the matching catalog Families, and the MX technique reuses the pending i03
+# mx_data_collection Method (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the real control handle read from
+# the MXCuBE config: an Exporter address (host:port) for the microdiff-hosted motions,
+# or a TINE channel path (/P13/...) for the detector / energy / beam services. The
+# handle protocol is itself a fact about the EMBL floor (Exporter vs TINE), recorded per
+# device.
+#
+# SCOPE: this cut models the optics hutch (the KB mirror pitch / roll motions) and the
+# experiment hutch (the EMBLMiniDiff diffractometer and its centring / kappa axes, the
+# apertures / beamstop / sample lights / objective, the Eiger and Pilatus detectors, the
+# flux and XRF detectors, the energy and resolution pseudo-axes, the shutters). The
+# MXCuBE bookkeeping objects (session, queue, data-analysis, ISPyB, sample-changer
+# logic) are filtered out by the extractor and not modelled as devices.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p13/questions.md.
+
+beamline:
+  name: P13
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P13"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P13 is an undulator MX beamline; the MXCuBE config exposes the photon-energy service (TINEEnergy on /P13/Energy/P13Energy) but not the undulator device itself, so the source is carried pending (SRC-1)"
+
+# Two enclosures inferred from the device prefixes and the EMBL MX layout: the optics
+# hutch (the KB mirror pitch / roll motions on /P13/P13Kb.*) and the experiment hutch
+# (the microdiff-hosted diffractometer and the TINE detector services). EMBL / DESY PSS
+# permit signals are not in the MXCuBE config (PSS-1).
+enclosures:
+  - name: p13-oh
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY / EMBL PSS permit signal for the P13 optics hutch; not in the MXCuBE config (PSS-1)"}
+  - name: p13-eh
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY / EMBL PSS permit signal for the P13 experiment hutch; not in the MXCuBE config (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the optics-hutch KB mirror conditioning and the beam services
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p13-oh
+  intro: "The P13 optics conditioning: the Kirkpatrick-Baez (KB) mirror pitch / roll motions that focus the MX beam, plus the photon-energy and beam-diagnostic services. The monochromator and the KB mirror Assets themselves are not individually labelled in the MXCuBE config (which sees the motions, not the optic), so the mirror motions are grouped and the optic structure is carried as a question (OPT-1)."
+  note: "Handles read from the MXCuBE TINE channels (/P13/P13Kb.CDI/* for the KB target positions, /P13/Energy/* for the energy service) and the microdiff Exporter host. The KB mirror / monochromator breakdown is OPT-1."
+  devices:
+    - name: KBMirrorStage
+      family: LinearStage
+      pv: {tine: "/P13/P13Kb.CDI/HFMTgtPos"}
+      new: true
+      confirm: true
+      note: "the KB focusing-mirror pitch / roll motions (horizontal + vertical focusing mirror pitch on /P13/P13Kb.CDI/HFMTgtPos and /P13/P13Kb.CDI/VFMTgtPos, plus the second-crystal and VHM pitch / roll trims); per-mirror Assets not labelled in the config, grouped as the optics-hutch focusing stage (OPT-1, GROUP-1)"
+    - name: BeamEnergy
+      family: PseudoAxis
+      pv: {tine: "/P13/Energy/P13Energy"}
+      new: true
+      confirm: true
+      note: "the photon-energy virtual axis (TINEEnergy / EMBLEnergy on /P13/Energy/P13Energy, coupled to the wavelength service on /P13/collection/wavelength); the monochromator motions it drives are not individually labelled (ENERGY-1, OPT-1)"
+    - name: BeamDiagnostics
+      family: FluxMonitor
+      pv: {tine: "/P13/BCUIntensity/Device0"}
+      new: true
+      confirm: true
+      note: "the beam-conditioning-unit intensity / centring diagnostics (EMBLBeam / EMBLBeamInfo / EMBLBeamCentring; intensity read on /P13/BCUIntensity/Device0), grouped as the beam-position / flux diagnostic; the per-service split is DIAG-1"
+
+# ===========================================================================
+# SAMPLE STAGE: the EMBLMiniDiff diffractometer and the MX sample environment
+# ===========================================================================
+
+experiment-sample:
+  stage: sample
+  enclosure: p13-eh
+  intro: "The P13 experiment hutch: the EMBLMiniDiff diffractometer (the MX sample-orientation and centring instrument), its kappa goniometry and sample-centring axes, the beam-defining aperture and beamstop, the sample-viewing objective and illumination, all hosted on the microdiff Exporter server."
+  note: "Handles read from the microdiff Exporter host (p13md201.embl-hamburg.de:9001) for the diffractometer and its axes, and the TINE detector-distance / resolution services. The diffractometer's omega / kappa / sample-translation axes are EMBLMiniDiff roles; they are grouped under the Goniometer as the MD axis bank (MX-1)."
+  devices:
+    - name: Diffractometer
+      family: Goniometer
+      pv: {exporter: "p13md201.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the EMBLMiniDiff microdiffractometer (the MX sample-orientation instrument: omega rotation, kappa / kappa-phi mini-kappa, sample x / y / z centring, and the focus / holder-length axes, all Exporter motors on the microdiff host); the goniometer geometry is carried confirm (MX-1)"
+    - name: MDCentringStage
+      family: LinearStage
+      pv: {tine: "/P13/MD/MD_0"}
+      new: true
+      confirm: true
+      note: "the diffractometer vertical centring axis (TINEMotor on /P13/MD/MD_0) and the coupled microdiff centring motions; grouped with the goniometer as the sample-centring stage (MX-1)"
+    - name: BeamAperture
+      family: Aperture
+      pv: {exporter: "p13md201.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the beam-defining aperture on the microdiff (EMBLAperture, Exporter-hosted); the aperture-size table is carried confirm (OPT-1)"
+    - name: Beamstop
+      family: BeamStop
+      pv: {exporter: "p13md201.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the microdiff beamstop (EMBLBeamstop, Exporter-hosted); the direct-beam stop in front of the sample"
+    - name: SampleObjective
+      family: Objective
+      pv: {exporter: "p13md201.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the on-axis sample-viewing zoom objective (MicrodiffZoom, Exporter-hosted); the OAV magnification path (OAV-1)"
+    - name: SampleIllumination
+      family: Backlight
+      pv: {exporter: "p13md201.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the microdiff sample illumination (MicrodiffLight back / front lights, Exporter-hosted); the on-axis viewing illumination, the Backlight affordance shared with i03 / i24 / FMX / i19 (DET-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the area detectors, the flux monitor, and the XRF detector
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: p13-eh
+  intro: "The P13 detection: the Eiger 16M and Pilatus 6M area detectors for MX diffraction, the photodiode flux monitor, the on-axis and sample-changer cameras, and the XRF fluorescence detector for element identification."
+  note: "Handles read from the TINE detector channels (/P13/detector/eiger16m, /P13/detector/pilatus6m), the pin-diode flux service, and the fluorescence-scan service. The detector distance / resolution are pseudo-axes on the TINE collection service (DET-1)."
+  devices:
+    - name: EigerDetector
+      family: Camera
+      pv: {tine: "/P13/detector/eiger16m"}
+      new: true
+      confirm: true
+      note: "the Dectris Eiger 16M area detector (EMBLDetector, model read '16M' from the config); the primary MX diffraction detector (DET-1)"
+    - name: PilatusDetector
+      family: Camera
+      pv: {tine: "/P13/detector/pilatus6m"}
+      new: true
+      confirm: true
+      note: "the Dectris Pilatus 6M area detector (EMBLDetector, model read '6M_F' from the config); the alternative MX diffraction detector (DET-1)"
+    - name: DetectorDistance
+      family: PseudoAxis
+      pv: {tine: "/P13/collection/distance"}
+      new: true
+      confirm: true
+      note: "the detector-distance virtual axis (TINEMotor on /P13/collection/distance) and the coupled resolution axis (/P13/collection/resolution); the sample-to-detector geometry as a derived axis (DET-1)"
+    - name: FluxMonitor
+      family: FluxMonitor
+      pv: {tine: "/P13/PinDiode/Device0"}
+      new: true
+      confirm: true
+      note: "the pin-diode flux monitor (EMBLFlux on /P13/PinDiode/Device0); incident-flux normalization for MX data collection (DIAG-1)"
+    - name: OnAxisCamera
+      family: Camera
+      pv: {confirm: "the on-axis sample-viewing camera (VimbaVideo / QtAxisCamera); no Exporter / TINE handle in the config object, the video source is carried confirm (OAV-1)"}
+      new: true
+      confirm: true
+      note: "the on-axis sample-viewing video camera and the sample-changer camera (VimbaVideo / QtAxisCamera); the MX centring / loop-inspection video, control handle pending (OAV-1)"
+    - name: FluorescenceDetector
+      family: EnergyDispersiveSpectrometer
+      pv: {tine: "/P13/fluorescence-scan/fls-scan"}
+      new: true
+      confirm: true
+      note: "the energy-dispersive XRF detector (EMBLXRFSpectrum on /P13/fluorescence-scan/fls-scan); element identification / edge scanning for anomalous MX (DET-1)"
+
+# Cross-cutting control. P13 runs MXCuBE over EMBL Hamburg's Exporter + TINE floor, NOT
+# DESY's Tango / Sardana. See the sub-operator seam note at the head of this file.
+controls:
+  intro: >
+    P13 runs on EMBL Hamburg's own control domain, distinct from the DESY Tango /
+    Sardana floor the other PETRA III beamlines (P01 / P06 / P11) bind to. The
+    experiment-orchestration layer is MXCuBE (the macromolecular-crystallography
+    beamline-control application, shared with i03 / FMX / MANACA / TPS), and the device
+    floor underneath it is two protocols: the Exporter protocol on the microdiff host
+    (p13md201.embl-hamburg.de:9001) for the diffractometer and its motions, and TINE
+    channels (/P13/...) for the detector, energy, flux, and beam services. The handles
+    are read from EMBL's public MXCuBE HardwareObjects configuration and carried confirm
+    (CTRL-1). The rotation-MX acquisition (the goniometer oscillation coupled to the
+    Eiger frame capture) runs as an MXCuBE data-collection routine; that orchestration
+    is the seam CORA's edge would conduct over its ControlPort, the same shape as the MX
+    cluster seams at i03 / MANACA / TPS 07A, here landing on the Exporter / TINE floor
+    rather than Sardana (CTRL-2, SEAM-1).
+  motion_controllers:
+    - name: ExporterMotionController
+      family: MotionController
+      protocol: Exporter_microdiff
+      new: true
+      confirm: true
+      note: "the microdiff Exporter motion controller (p13md201.embl-hamburg.de:9001) driving the EMBLMiniDiff omega / kappa / centring axes and the aperture / beamstop / objective / light motions (CTRL-1)"
+    - name: TINEMotionController
+      family: MotionController
+      protocol: TINE_embl
+      new: true
+      confirm: true
+      note: "the TINE device floor (/P13/...) backing the KB mirror motions, the energy / wavelength service, the detector distance / resolution, and the flux / XRF services (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P13 run needs present before it can
+    start. All pending confirmation. LiquidNitrogen is the cryostream supply for the MX
+    sample cooling (the cryostream itself is not labelled in the MXCuBE config and is
+    carried as a question, CRYO-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen
