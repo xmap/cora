@@ -1,0 +1,20 @@
+# CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (src/dodal/beamlines/b16.py),
+# NOT authoritative. Test beamline: generic positioners + area detector. PVs verified verbatim.
+
+beamline: {name: B16, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: B16, facility_code: diamond, confirm: test beamline (optics/detector/metrology); PV root BL16B (env-resolved)}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: AttocubeLinear1, family: LinearStage, pv: "BL16B-EA-ECC-03:ACT0", new: true, confirm: "Attocube ECC piezo linear; LinearStage (catalog)"}
+  - {name: AttocubeLinear2, family: LinearStage, pv: "BL16B-EA-ECC-03:ACT1", new: true, confirm: "Attocube ECC piezo linear; LinearStage (catalog)"}
+  - {name: AttocubeLinear3, family: LinearStage, pv: "BL16B-EA-ECC-03:ACT2", new: true, confirm: "Attocube ECC piezo linear; LinearStage (catalog)"}
+  - {name: AttocubeRotation1, family: RotaryStage, pv: "BL16B-EA-ECC-02:ACT2", new: true, confirm: "Attocube ECC piezo rotation; RotaryStage (catalog)"}
+  - {name: SimStage, family: LinearStage, pv: "BL16B-MO-SIM-01:", new: true, confirm: "XYZStage simulation stage; LinearStage (catalog)"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: AreaDetector, family: Camera, pv: "BL16B-EA-FDS-02:", new: true, confirm: "software-triggered TIFF area detector; Camera (catalog)"}
