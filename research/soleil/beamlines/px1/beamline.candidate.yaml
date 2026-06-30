@@ -1,0 +1,386 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: PX1
+  facility: soleil
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: PX1
+  facility_code: soleil
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Qt4_graphics-manager
+    family: Qt4_GraphicsManager
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'Qt4_GraphicsManager'; the CORA Family needs
+      a human; MXCuBE object at 'Qt4_graphics-manager'; endstation to enclosure is
+      a guess
+    source_class: Qt4_GraphicsManager
+  - name: attenuators_filters
+    family: PX1Attenuator
+    pv: Filters
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'PX1Attenuator'; the CORA Family needs a human;
+      MXCuBE object at 'attenuators_filters'; endstation to enclosure is a guess
+    source_class: PX1Attenuator
+  - name: attenuators_pslits
+    family: PX1Attenuator
+    pv: Attenuators by Primary Slits
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'PX1Attenuator'; the CORA Family needs a human;
+      MXCuBE object at 'attenuators_pslits'; endstation to enclosure is a guess
+    source_class: PX1Attenuator
+  - name: beam-info
+    family: PX1BeamInfo
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'PX1BeamInfo'; the CORA Family needs a human;
+      MXCuBE object at 'beam-info'; endstation to enclosure is a guess
+    source_class: PX1BeamInfo
+  - name: catsmaint
+    family: PX1CatsMaint
+    pv: CatsMaint
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'PX1CatsMaint'; the CORA Family needs a human;
+      MXCuBE object at 'catsmaint'; endstation to enclosure is a guess
+    source_class: PX1CatsMaint
+  - name: chi
+    family: SmargonAxis
+    pv: chi
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'SmargonAxis'; the CORA Family needs a human;
+      MXCuBE object at 'chi'; endstation to enclosure is a guess
+    source_class: SmargonAxis
+  - name: countdown
+    family: ChannelObject
+    pv: Cryotong Countdown
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'ChannelObject'; the CORA Family needs a human;
+      MXCuBE object at 'countdown'; endstation to enclosure is a guess
+    source_class: ChannelObject
+  - name: cryospy
+    family: TangoCryo
+    pv: Cryo
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'TangoCryo'; the CORA Family needs a human;
+      MXCuBE object at 'cryospy'; endstation to enclosure is a guess
+    source_class: TangoCryo
+  - name: cryotong
+    family: PX1Cryotong
+    pv: CryoTong
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'PX1Cryotong'; the CORA Family needs a human;
+      MXCuBE object at 'cryotong'; endstation to enclosure is a guess
+    source_class: PX1Cryotong
+  - name: dbconnection
+    family: SOLEILISPyBClient
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'SOLEILISPyBClient'; the CORA Family needs
+      a human; MXCuBE object at 'dbconnection'; endstation to enclosure is a guess
+    source_class: SOLEILISPyBClient
+  - name: ednaparams
+    family: EdnaWorkflow
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'EdnaWorkflow'; the CORA Family needs a
+      human; MXCuBE object at 'ednaparams'; endstation to enclosure is a guess
+    source_class: EdnaWorkflow
+  - name: energy
+    family: PX1Energy
+    pv: Energy
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'PX1Energy'; the CORA Family needs a human;
+      MXCuBE object at 'energy'; endstation to enclosure is a guess
+    source_class: PX1Energy
+  - name: energyscan
+    family: PX1EnergyScan
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'PX1EnergyScan'; the CORA Family needs a
+      human; MXCuBE object at 'energyscan'; endstation to enclosure is a guess
+    source_class: PX1EnergyScan
+  - name: fastshut
+    family: SOLEILShutter
+    pv: FastShutter
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'SOLEILShutter'; the CORA Family needs a human;
+      MXCuBE object at 'fastshut'; endstation to enclosure is a guess
+    source_class: SOLEILShutter
+  - name: flux
+    family: ChannelObject
+    pv: flux
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'ChannelObject'; the CORA Family needs a human;
+      MXCuBE object at 'flux'; endstation to enclosure is a guess
+    source_class: ChannelObject
+  - name: focus
+    family: TangoDCMotor
+    pv: FocusMotor
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'TangoDCMotor'; the CORA Family needs a human;
+      MXCuBE object at 'focus'; endstation to enclosure is a guess
+    source_class: TangoDCMotor
+  - name: frontend
+    family: SOLEILShutter
+    pv: FrontEnd
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'SOLEILShutter'; the CORA Family needs a human;
+      MXCuBE object at 'frontend'; endstation to enclosure is a guess
+    source_class: SOLEILShutter
+  - name: ge1350c
+    family: Qt4_TangoLimaVideo
+    pv: Prosilica Lima
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'Qt4_TangoLimaVideo'; the CORA Family needs
+      a human; MXCuBE object at 'ge1350c'; endstation to enclosure is a guess
+    source_class: Qt4_TangoLimaVideo
+  - name: hu_640
+    family: SOLEILUndulator
+    pv: HU 460
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'SOLEILUndulator'; the CORA Family needs a
+      human; MXCuBE object at 'hu_640'; endstation to enclosure is a guess
+    source_class: SOLEILUndulator
+  - name: ketek
+    family: Ketek
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'Ketek'; the CORA Family needs a human;
+      MXCuBE object at 'ketek'; endstation to enclosure is a guess
+    source_class: Ketek
+  - name: light
+    family: TangoDCMotor
+    pv: BackLight
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'TangoDCMotor'; the CORA Family needs a human;
+      MXCuBE object at 'light'; endstation to enclosure is a guess
+    source_class: TangoDCMotor
+  - name: lightarm
+    family: PX1TangoLight
+    pv: Light Arm
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'PX1TangoLight'; the CORA Family needs a human;
+      MXCuBE object at 'lightarm'; endstation to enclosure is a guess
+    source_class: PX1TangoLight
+  - name: ln2regul
+    family: ChannelObject
+    pv: Cryotong Countdown
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'ChannelObject'; the CORA Family needs a human;
+      MXCuBE object at 'ln2regul'; endstation to enclosure is a guess
+    source_class: ChannelObject
+  - name: mach
+    family: TangoMachCurrent
+    pv: Mach
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'TangoMachCurrent'; the CORA Family needs
+      a human; MXCuBE object at 'mach'; endstation to enclosure is a guess
+    source_class: TangoMachCurrent
+  - name: mxcollect
+    family: PX1Collect
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'PX1Collect'; the CORA Family needs a human;
+      MXCuBE object at 'mxcollect'; endstation to enclosure is a guess
+    source_class: PX1Collect
+  - name: obx
+    family: SOLEILShutter
+    pv: OBX
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'SOLEILShutter'; the CORA Family needs a human;
+      MXCuBE object at 'obx'; endstation to enclosure is a guess
+    source_class: SOLEILShutter
+  - name: omega
+    family: SmargonAxis
+    pv: omega
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'SmargonAxis'; the CORA Family needs a human;
+      MXCuBE object at 'omega'; endstation to enclosure is a guess
+    source_class: SmargonAxis
+  - name: phi
+    family: SmargonAxis
+    pv: phi
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'SmargonAxis'; the CORA Family needs a human;
+      MXCuBE object at 'phi'; endstation to enclosure is a guess
+    source_class: SmargonAxis
+  - name: phiz
+    family: SmargonAxis
+    pv: zOffset
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'SmargonAxis'; the CORA Family needs a human;
+      MXCuBE object at 'phiz'; endstation to enclosure is a guess
+    source_class: SmargonAxis
+  - name: pilatus
+    family: PX1Pilatus
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'PX1Pilatus'; the CORA Family needs a human;
+      MXCuBE object at 'pilatus'; endstation to enclosure is a guess; vendor model
+      '6M_F' read from the config; confirm against the floor
+    source_class: PX1Pilatus
+  - name: pss-exp
+    family: PX1Pss
+    pv: expPss
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'PX1Pss'; the CORA Family needs a human; MXCuBE
+      object at 'pss-exp'; endstation to enclosure is a guess
+    source_class: PX1Pss
+  - name: pss-opt
+    family: PX1Pss
+    pv: optPss
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'PX1Pss'; the CORA Family needs a human; MXCuBE
+      object at 'pss-opt'; endstation to enclosure is a guess
+    source_class: PX1Pss
+  - name: px1configuration
+    family: PX1Configuration
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'PX1Configuration'; the CORA Family needs
+      a human; MXCuBE object at 'px1configuration'; endstation to enclosure is a guess
+    source_class: PX1Configuration
+  - name: px1environment
+    family: PX1Environment
+    pv: PX1Environment
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'PX1Environment'; the CORA Family needs a
+      human; MXCuBE object at 'px1environment'; endstation to enclosure is a guess
+    source_class: PX1Environment
+  - name: resolution
+    family: PX1Resolution
+    pv: Resolution
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'PX1Resolution'; the CORA Family needs a human;
+      MXCuBE object at 'resolution'; endstation to enclosure is a guess
+    source_class: PX1Resolution
+  - name: ruche
+    family: SOLEILRuche
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'SOLEILRuche'; the CORA Family needs a human;
+      MXCuBE object at 'ruche'; endstation to enclosure is a guess
+    source_class: SOLEILRuche
+  - name: session
+    family: SOLEILSession
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'SOLEILSession'; the CORA Family needs a
+      human; MXCuBE object at 'session'; endstation to enclosure is a guess
+    source_class: SOLEILSession
+  - name: shape-history
+    family: Shapes
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'Shapes'; the CORA Family needs a human;
+      MXCuBE object at 'shape-history'; endstation to enclosure is a guess
+    source_class: Shapes
+  - name: smargon
+    family: Smargon
+    enclosure: PX1
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'Smargon'; the CORA Family needs a human;
+      MXCuBE object at 'smargon'; endstation to enclosure is a guess
+    source_class: Smargon
+  - name: uglidex
+    family: SmargonAxis
+    pv: xOffset
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'SmargonAxis'; the CORA Family needs a human;
+      MXCuBE object at 'uglidex'; endstation to enclosure is a guess
+    source_class: SmargonAxis
+  - name: uglidey
+    family: SmargonAxis
+    pv: yOffset
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'SmargonAxis'; the CORA Family needs a human;
+      MXCuBE object at 'uglidey'; endstation to enclosure is a guess
+    source_class: SmargonAxis
+  - name: uglidez
+    family: SmargonAxis
+    pv: zOffset
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'SmargonAxis'; the CORA Family needs a human;
+      MXCuBE object at 'uglidez'; endstation to enclosure is a guess
+    source_class: SmargonAxis
+  - name: zoom
+    family: TangoDCMotorWPositions
+    pv: Zoom
+    enclosure: PX1
+    new: true
+    confirm: family is the MXCuBE class 'TangoDCMotorWPositions'; the CORA Family
+      needs a human; MXCuBE object at 'zoom'; endstation to enclosure is a guess
+    source_class: TangoDCMotorWPositions
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: minidiff
+    family: Goniometer
+    pv: Minidiff
+    enclosure: PX1
+    new: true
+    confirm: MXCuBE object at 'minidiff'; endstation to enclosure is a guess
+    source_class: PX1MiniDiff
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: detectordistance
+    family: Camera
+    pv: Detector Distance
+    enclosure: PX1
+    new: true
+    confirm: MXCuBE object at 'detectordistance'; endstation to enclosure is a guess
+    source_class: PX1DetectorDistance
