@@ -39,6 +39,14 @@ over eleven BCDA-APS `*-bits` repos; the labels and ophyd-class frequency tables
 `recurrence.md` carry the cleanest graduation signal, since the family table mixes confident
 suggestions with class-name fallbacks.
 
+A twelfth `*-bits` repo exists but is **not modellable yet**: `BCDA-APS/31ide-lynx-bits`
+(31-ID-E LYNX) is a fresh BITS scaffold whose `devices.yml` carries only simulated devices
+(`ophyd.sim.motor`, `ophyd.sim.noisy_det`) plus commented-out examples, and whose `devices/`
+package is empty; the only real device is the generic `aps` machine-parameters object. It has
+no real 31-ID-E PVs in public source (scouted 2026-07), so the extractor returns zero devices.
+Re-run when the instrument is populated. This keeps the modellable BCDA-APS set at eleven
+beamlines.
+
 Caveat: `recurrence.md` counts by beamline directory, so each directory must be one physical
 beamline. `BCDA-APS/6idb-bits` is a fork of `polar-bits` (both the 4-ID instrument) with a
 grafted Sector 6 endstation; it is split in the tree into `beamlines/4-id/` (from `polar-bits`)
