@@ -36,6 +36,8 @@ The modellable set (public bluesky profiles, read 2026-06):
 
 A fifth repo, `tangkong/SSRL-X-X`, is a beamline-profile **template** (the shared skeleton the four real profiles were cloned from), not a beamline; it is the structural reference, not a modelling target. Technique labels above are inferred from the device set + repo descriptions and need staff confirmation (TECH-1). **[partly verified]**
 
+**Coverage checked, deliberately excluded (not overlooked).** A deep scout (2026-06) across `slaclab` (594 repos, LCLS-II / facility EPICS infrastructure, no per-beamline device manifest), `ssrl-px` (SSRL macromolecular crystallography, 7 repos of serial-crystallography software only, the MX beamlines run Blu-Ice/DCSS not bluesky), template/profile forks (none), GitLab, and code search (no `profile_bluesky` / SSRL EPICS-PV hits outside `tangkong`) found no further public device topology. Other SSRL beamlines surface only as **data-analysis scripts** on staff personal accounts, confirming they are active but exposing no controls/device source: BL7-2 (`khstone/BL72-Pilatus`, powder diffraction), BL15-2 (`yangha7/HERFD_15-2_Agent`, HERFD), BL17-2 (`anjanikmaurya/BL17-2_WAXS_Linkam`, WAXS in-situ). These, and the ~21 other SSRL beamlines, are out of scope until staff provide device facts; the four bluesky profiles above are the complete publicly-modellable set.
+
 **Identifier scheme:** SSRL uses `N-M` beamline IDs (sector-station, e.g. 2-1, 2-2, 1-5). EPICS PV roots seen in source are `BL22:...` (beamline 2-2), `BL00:RIO.*` (a shared/utility crate), and per-device IMS motor records (`BL22:IMS:MOTOR1`). This is closer to the NSLS-II / APS EPICS idiom than to Diamond's `dodal` env-resolved prefixes. **[verified]**
 
 ---
@@ -98,7 +100,7 @@ These could not be settled from public sources and need operator confirmation be
 2. **PV namespace:** confirm the per-beamline EPICS prefixes (e.g. is 2-1 `BL21:`?); only 2-2 (`BL22:`) and the shared `BL00:RIO` crate were read verbatim.
 3. **Fast-path substrate (FLY-1):** is the 2-2 FPGA flyer pure EPICS or a direct-socket / hardware-trigger path? This bounds the ControlPort surface.
 4. **Data catalog (DATA-1):** what is SSRL's data-policy / catalog / archive chain, and does it overlap CORA's system-of-record claim?
-5. **Coverage:** do beamlines beyond the four published profiles have a controls manifest CORA could read, or is the rest staff-only?
+5. **Coverage:** a deep scout (see section 2) found no public device source beyond the four bluesky profiles; other active beamlines (BL7-2, BL15-2, BL17-2, the MX cluster) expose only data-analysis scripts or run Blu-Ice/DCSS. Confirm whether any of these have a controls manifest CORA could read, or whether the rest is genuinely staff-only.
 6. **Provenance:** are the `tangkong` profiles the authoritative beamline config, or a personal snapshot of it?
 
 ---
