@@ -1,0 +1,28 @@
+# CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (src/dodal/beamlines/i21.py),
+# NOT authoritative. PARTIAL: dodal carries front end + sample env but NOT the RIXS spectrometer arm
+# (SPEC-1), not invented. PVs verified verbatim, zero fabrications.
+
+beamline: {name: I21, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: I21, facility_code: diamond, confirm: single-beamline enclosure; PV root BL21I (env-resolved)}
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Undulator, family: InsertionDevice, pv: "SR21I-MO-SERVC-01:", new: true, confirm: "EPU gap + phase (variable polarization) + energy lookup; InsertionDevice (catalog)"}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: PlaneGratingMono, family: GratingMonochromator, pv: "BL21I-OP-PGM-01:", new: true, confirm: "PGM; GratingMonochromator (catalog, graduated via csx); Diamond consumer (i05/i09/i21)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SampleManipulator, family: Manipulator, pv: "BL21I-EA-SMPL-01:", new: true, confirm: "I21SampleManipulatorStage + ToolPointMotion kinematics; Manipulator (catalog, graduated via esm)"}
+  - {name: SampleTemperatureController, family: TemperatureController, pv: "BL21I-EA-TCTRL-01:", new: true, confirm: "Lakeshore336 (low-T RIXS); TemperatureController (catalog, presents Regulator)"}
+# DEFERRED (absent from public dodal, not invented):
+#   SPEC-1: RIXS spectrometer arm (rotatable grating spectrometer + CCD) - the defining instrument.
+#           Would be the 3rd SpectrometerArm consumer (with NSLS-II six + ixs) -> rule-of-three trigger,
+#           but absent from source so SpectrometerArm STAYS a watch at n=2.
+#   DET-1: RIXS CCD detector
