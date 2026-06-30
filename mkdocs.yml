@@ -1154,7 +1154,9 @@ nav:
   - Blog:
     - blog/index.md
   - Talks: talks.md
-  - Papers: papers.md
+  - Papers:
+    - papers.md
+    - Replay scrubber: scrubber.md
   - Reference:
     - reference/index.md
     - Workflow: reference/workflow.md
@@ -1203,6 +1205,7 @@ extra_javascript:
   - javascripts/section-reveal.js
   - javascripts/nav-theme.js
   - javascripts/toc-active.js
+  - javascripts/scrubber-demo.js
 
 plugins:
   - search

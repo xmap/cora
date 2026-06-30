@@ -1,0 +1,479 @@
+{
+  "provenance": {
+    "source": "Values mirror the passing integration scenario apps/api/tests/integration/scenarios/test_2bm_lights_out_supervised_alignment.py, which produces these activities, iteration verdicts, run-lifecycle events, and the supervisor Resume Decision against a real Kernel + Postgres.",
+    "run": "Lights-out, agent-supervised run at APS 2-BM: conducted rotation-axis centering alignment, the science scan's third projection interrupted by beam loss, RunSupervisor hold + auto-resume + fly-scan restart, then the scan continues to completion.",
+    "timestamps": "sampled_at / event times staggered synthetically for a readable axis; the scenario records one logical instant. Overnight spread is illustrative.",
+    "cursor_at": "2026-05-19T01:01:42Z",
+    "beam_loss_at": "2026-05-19T01:01:42Z",
+    "beam_back_at": "2026-05-19T01:02:30Z",
+    "generated_by": "data/build_lights_out_data.py"
+  },
+  "run": {
+    "name": "2-BM lights-out tomography (pre-scan align + science scan)",
+    "supervisor_agent": "RunSupervisor (deterministic)",
+    "events": [
+      {
+        "type": "RunStarted",
+        "at": "2026-05-19T01:00:00Z",
+        "by": "operator",
+        "role": "human"
+      },
+      {
+        "type": "RunHeld",
+        "at": "2026-05-19T01:01:42Z",
+        "by": "RunSupervisor",
+        "role": "agent",
+        "decision": {
+          "context": "RunSupervision",
+          "choice": "Hold"
+        }
+      },
+      {
+        "type": "RunResumed",
+        "at": "2026-05-19T01:02:30Z",
+        "by": "RunSupervisor",
+        "role": "agent",
+        "decision": {
+          "context": "RunSupervision",
+          "choice": "Resume"
+        }
+      },
+      {
+        "type": "RunCompleted",
+        "at": "2026-05-19T01:03:36Z",
+        "by": "operator",
+        "role": "human"
+      }
+    ]
+  },
+  "procedure": {
+    "name": "2-BM rotation-axis centering (pre-scan alignment)",
+    "kind": "alignment",
+    "phase_of_run": true,
+    "events": [
+      "ProcedureRegistered",
+      "ProcedureStarted",
+      "ProcedureIterationStarted",
+      "ProcedureActivitiesLogbookOpened",
+      "ProcedureIterationEnded",
+      "ProcedureIterationStarted",
+      "ProcedureIterationEnded",
+      "ProcedureIterationStarted",
+      "ProcedureIterationEnded",
+      "ProcedureIterationStarted",
+      "ProcedureIterationEnded",
+      "ProcedureCompleted"
+    ],
+    "iteration_count": 4
+  },
+  "iterations": [
+    {
+      "iteration_index": 1,
+      "started_at": "2026-05-19T01:00:00Z",
+      "ended_at": "2026-05-19T01:00:10Z",
+      "converged": false,
+      "reason": "initial residual 2.00 px; minimum not yet bracketed"
+    },
+    {
+      "iteration_index": 2,
+      "started_at": "2026-05-19T01:00:12Z",
+      "ended_at": "2026-05-19T01:00:22Z",
+      "converged": false,
+      "reason": "residual improving (1.05 px); minimum not yet bracketed"
+    },
+    {
+      "iteration_index": 3,
+      "started_at": "2026-05-19T01:00:24Z",
+      "ended_at": "2026-05-19T01:00:34Z",
+      "converged": false,
+      "reason": "residual rose to 1.40 px; minimum bracketed in [0.040, 0.080] mm"
+    },
+    {
+      "iteration_index": 4,
+      "started_at": "2026-05-19T01:00:36Z",
+      "ended_at": "2026-05-19T01:00:46Z",
+      "converged": true,
+      "reason": null
+    }
+  ],
+  "activities": [
+    {
+      "seq": 1,
+      "iteration": 1,
+      "step_kind": "setpoint",
+      "payload": {
+        "channel": "SampleTop_X",
+        "target_value": 0.0,
+        "units": "mm",
+        "role": "initial",
+        "note": "user-supplied start"
+      },
+      "sampled_at": "2026-05-19T01:00:02Z",
+      "result": null
+    },
+    {
+      "seq": 2,
+      "iteration": 1,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_frame",
+        "params": {
+          "exposure_ms": 100,
+          "purpose": "alignment"
+        }
+      },
+      "sampled_at": "2026-05-19T01:00:06Z",
+      "result": null
+    },
+    {
+      "seq": 3,
+      "iteration": 1,
+      "step_kind": "check",
+      "payload": {
+        "channel": "cor_residual",
+        "passed": false,
+        "source": "tomopy.recon.rotation",
+        "actual": 2.0,
+        "units": "px"
+      },
+      "sampled_at": "2026-05-19T01:00:09Z",
+      "result": null
+    },
+    {
+      "seq": 4,
+      "iteration": 2,
+      "step_kind": "setpoint",
+      "payload": {
+        "channel": "SampleTop_X",
+        "target_value": 0.04,
+        "units": "mm",
+        "role": "step_positive"
+      },
+      "sampled_at": "2026-05-19T01:00:14Z",
+      "result": null
+    },
+    {
+      "seq": 5,
+      "iteration": 2,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_frame",
+        "params": {
+          "exposure_ms": 100,
+          "purpose": "alignment"
+        }
+      },
+      "sampled_at": "2026-05-19T01:00:18Z",
+      "result": null
+    },
+    {
+      "seq": 6,
+      "iteration": 2,
+      "step_kind": "check",
+      "payload": {
+        "channel": "cor_residual",
+        "passed": false,
+        "source": "tomopy.recon.rotation",
+        "actual": 1.05,
+        "units": "px",
+        "direction": "better"
+      },
+      "sampled_at": "2026-05-19T01:00:21Z",
+      "result": null
+    },
+    {
+      "seq": 7,
+      "iteration": 3,
+      "step_kind": "setpoint",
+      "payload": {
+        "channel": "SampleTop_X",
+        "target_value": 0.08,
+        "units": "mm",
+        "role": "step_positive"
+      },
+      "sampled_at": "2026-05-19T01:00:26Z",
+      "result": null
+    },
+    {
+      "seq": 8,
+      "iteration": 3,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_frame",
+        "params": {
+          "exposure_ms": 100,
+          "purpose": "alignment"
+        }
+      },
+      "sampled_at": "2026-05-19T01:00:30Z",
+      "result": null
+    },
+    {
+      "seq": 9,
+      "iteration": 3,
+      "step_kind": "check",
+      "payload": {
+        "channel": "cor_residual",
+        "passed": false,
+        "source": "tomopy.recon.rotation",
+        "actual": 1.4,
+        "units": "px",
+        "direction": "worse"
+      },
+      "sampled_at": "2026-05-19T01:00:33Z",
+      "result": null
+    },
+    {
+      "seq": 10,
+      "iteration": 4,
+      "step_kind": "setpoint",
+      "payload": {
+        "channel": "SampleTop_X",
+        "target_value": 0.06,
+        "units": "mm",
+        "role": "bisect"
+      },
+      "sampled_at": "2026-05-19T01:00:38Z",
+      "result": null
+    },
+    {
+      "seq": 11,
+      "iteration": 4,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_frame",
+        "params": {
+          "exposure_ms": 100,
+          "purpose": "alignment"
+        }
+      },
+      "sampled_at": "2026-05-19T01:00:42Z",
+      "result": null
+    },
+    {
+      "seq": 12,
+      "iteration": 4,
+      "step_kind": "check",
+      "payload": {
+        "channel": "cor_residual",
+        "passed": true,
+        "source": "tomopy.recon.rotation",
+        "actual": 0.3,
+        "units": "px",
+        "direction": "minimum"
+      },
+      "sampled_at": "2026-05-19T01:00:45Z",
+      "result": null
+    },
+    {
+      "seq": 13,
+      "iteration": null,
+      "step_kind": "setpoint",
+      "payload": {
+        "channel": "SampleTop_X",
+        "target_value": 0.06,
+        "units": "mm",
+        "role": "lock_at_center"
+      },
+      "sampled_at": "2026-05-19T01:00:46Z",
+      "result": null
+    },
+    {
+      "seq": 14,
+      "iteration": null,
+      "step_kind": "setpoint",
+      "payload": {
+        "channel": "rotation_angle",
+        "target_value": 180.0,
+        "units": "deg",
+        "role": "fly_scan",
+        "note": "continuous 0->180 deg sweep"
+      },
+      "sampled_at": "2026-05-19T01:00:50Z",
+      "result": null
+    },
+    {
+      "seq": 15,
+      "iteration": null,
+      "step_kind": "setpoint",
+      "payload": {
+        "channel": "rotation_angle",
+        "target_value": -5.0,
+        "units": "deg",
+        "role": "taxi",
+        "note": "run-up to constant velocity"
+      },
+      "sampled_at": "2026-05-19T01:00:54Z",
+      "result": null
+    },
+    {
+      "seq": 16,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "fly_scan_prep",
+        "params": {
+          "rearm_pso": true
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:00:58Z",
+      "result": "ok"
+    },
+    {
+      "seq": 17,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_projection",
+        "params": {
+          "exposure_ms": 100,
+          "angle_deg": 0.0,
+          "index": 1
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:01:06Z",
+      "result": "ok"
+    },
+    {
+      "seq": 18,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_projection",
+        "params": {
+          "exposure_ms": 100,
+          "angle_deg": 30.0,
+          "index": 2
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:01:18Z",
+      "result": "ok"
+    },
+    {
+      "seq": 19,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_projection",
+        "params": {
+          "exposure_ms": 100,
+          "angle_deg": 60.0,
+          "index": 3
+        },
+        "result": "in_flight"
+      },
+      "sampled_at": "2026-05-19T01:01:30Z",
+      "result": "in_flight"
+    },
+    {
+      "seq": 20,
+      "iteration": null,
+      "step_kind": "setpoint",
+      "payload": {
+        "channel": "rotation_angle",
+        "target_value": -5.0,
+        "units": "deg",
+        "role": "taxi",
+        "note": "run-up to constant velocity"
+      },
+      "sampled_at": "2026-05-19T01:02:34Z",
+      "result": null
+    },
+    {
+      "seq": 21,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "fly_scan_prep",
+        "params": {
+          "rearm_pso": true
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:02:38Z",
+      "result": "ok"
+    },
+    {
+      "seq": 22,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_projection",
+        "params": {
+          "exposure_ms": 100,
+          "angle_deg": 60.0,
+          "index": 3
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:02:42Z",
+      "result": "ok"
+    },
+    {
+      "seq": 23,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_projection",
+        "params": {
+          "exposure_ms": 100,
+          "angle_deg": 90.0,
+          "index": 4
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:02:54Z",
+      "result": "ok"
+    },
+    {
+      "seq": 24,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_projection",
+        "params": {
+          "exposure_ms": 100,
+          "angle_deg": 120.0,
+          "index": 5
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:03:06Z",
+      "result": "ok"
+    },
+    {
+      "seq": 25,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "acquire_projection",
+        "params": {
+          "exposure_ms": 100,
+          "angle_deg": 150.0,
+          "index": 6
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:03:18Z",
+      "result": "ok"
+    },
+    {
+      "seq": 26,
+      "iteration": null,
+      "step_kind": "action",
+      "payload": {
+        "action_name": "write_dataset",
+        "params": {
+          "format": "dxfile-hdf5",
+          "projections": 6
+        },
+        "result": "ok"
+      },
+      "sampled_at": "2026-05-19T01:03:30Z",
+      "result": "ok"
+    }
+  ]
+}
