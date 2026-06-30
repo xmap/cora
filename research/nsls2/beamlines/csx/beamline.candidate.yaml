@@ -1,0 +1,7 @@
+# CANDIDATE: hand-read from public profile-collection source, NOT authoritative. PV prefixes verified verbatim. Do not copy into deployments/ unreviewed. Thin public source (02-nanops.py only); deployment is richer (COVERAGE-1).
+beamline: {name: CSX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 23-ID-1, facility_code: nsls2, confirm: CSX branch; inferred from XF:23ID1}
+devices:
+- {name: Diffractometer, family: Diffractometer, pv: "XF:23ID1-ES{Dif:Nano-Ax:", stage: sample, new: true, confirm: "TARDIS multi-circle soft X-ray diffractometer; LOOSE Diffractometer (recurrence watch, strong contract)"}
+- {name: NanoPositioner, family: LinearStage, pv: "XF:23ID1-ES{PA-Ax:", stage: sample, new: true, confirm: piezo nanopositioner; LinearStage (catalog)}

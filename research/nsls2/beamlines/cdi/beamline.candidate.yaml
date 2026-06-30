@@ -1,0 +1,14 @@
+# CANDIDATE: hand-read from public profile-collection source, NOT authoritative. PV prefixes verified verbatim. Do not copy into deployments/ unreviewed.
+beamline: {name: CDI, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 9-ID-A, facility_code: nsls2, confirm: optics; inferred from XF:09IDA}
+- {name: 9-ID-C, facility_code: nsls2, confirm: endstation; inferred from XF:09IDC}
+devices:
+- {name: KBMirrorHorizontal, family: Mirror, pv: "XF:09IDC-OP:1{Mir:KBh-Ax:", stage: optics, new: true, confirm: KB horizontal; Mirror (catalog)}
+- {name: KBMirrorVertical, family: Mirror, pv: "XF:09IDC-OP:1{Mir:KBv-Ax:", stage: optics, new: true, confirm: KB vertical; Mirror (catalog)}
+- {name: PhotonMirrorScreens, family: Screen, pv: "XF:09IDA-OP:1{FS:VPM-Ax:", stage: diagnostics, new: true, confirm: "VPM/HPM/DM2 fluorescent screens; Screen (loose)"}
+- {name: Eiger1, family: Camera, pv: "XF:09ID1-ES{Det:Eig1}", stage: detection, new: true, confirm: Eiger; Camera (catalog)}
+- {name: Merlin1, family: Camera, pv: "XF:09ID1-ES{Det:Merlin1}", stage: detection, new: true, confirm: Merlin; Camera (catalog)}
+- {name: Electrometer400, family: FluxMonitor, pv: "XF:09IDA-BI{i400:1}", stage: detection, new: true, confirm: "i400 I0 electrometer; FluxMonitor (graduated), confirm"}
+- {name: Electrometer404, family: FluxMonitor, pv: "XF:09IDB-BI{i404:1}", stage: detection, new: true, confirm: "i404 electrometer; FluxMonitor (graduated), confirm"}
+- {name: BeamPositionMonitor1, family: GenericProbe, pv: "XF:09IDC-BI{BPM:1}", stage: diagnostics, new: true, confirm: BPM; LOOSE GenericProbe}
