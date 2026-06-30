@@ -24,7 +24,11 @@ Extractions to date:
 - `beamlines/bm26/` -- BM26 (DUBBLE), the Dutch-Belgian CRG bending-magnet beamline (SAXS / WAXS
   + XAFS); NOT yet a deployment, a net-new device pass. First bending-magnet beamline in the ESRF
   set (no insertion device); the CRG partner-operated model is a Federation / Trust seam note.
-- `recurrence.md` -- the cross-ESRF Family-frequency fold, started with ID19 / ID16B / ID28 / ID32 / ID06 / BM26.
+- `beamlines/bm25/` -- BM25 (SpLine), the Spanish CRG bending-magnet beamline (XRD / XAS); NOT yet
+  a deployment. Its public config is a PARTIAL mirror (detectors + sample environment only; no
+  optics, motion, slits, shutters, or source), so the absent halves are recorded as open
+  questions (CONFIG-1 / MONO-1 / MOTION-1), not inferred.
+- `recurrence.md` -- the cross-ESRF Family-frequency fold, started with ID19 / ID16B / ID28 / ID32 / ID06 / BM26 / BM25.
 
 ESRF beamlines that publish a Beacon config (`<beamline>/beamline_configuration`, public on
 gitlab.esrf.fr) are the modellable set. As of 2026-06 the public ones are: ID06, ID16B, ID19,

@@ -1,0 +1,68 @@
+# CANDIDATE beamline descriptor: hand-read from gitlab.esrf.fr/bm25/beamline_configuration
+# (commit 81da855), NOT authoritative. Every device carries new: true and a confirm note.
+# WARNING: BM25's public config is a partial mirror, carrying ONLY detectors + sample
+# environment + counters. There is NO monochromator, NO motors / stages / slits, NO shutters,
+# and NO source device in public source, and the mcl session is empty. This candidate is the
+# public-config subset only; the optics / motion / source half is absent (CONFIG-1, MONO-1,
+# MOTION-1, SRC-1) and is NOT inferred. Do not copy into deployments/ without the full config.
+# SpLine (BM25) is a Spanish CRG bending-magnet beamline (XRD / XAS).
+
+beamline:
+  name: BM25
+  facility: esrf
+  tier: Unit
+  source: bending-magnet
+enclosures:
+- name: bm25-eh
+  facility_code: esrf
+  confirm: experiment hutch (eh); the only zone inferable from the public config; optics-hutch devices absent from source (ENC-1, CONFIG-1)
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; the public config carries only detection + sample environment.
+  devices:
+  - name: AreaDetector4c
+    family: Camera
+    pv: "d25/limaccds/eiger2_4c"
+    new: true
+    confirm: 'Eiger2 4c photon-counting area detector (eiger4c, Lima); family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: AreaDetector6c
+    family: Camera
+    pv: "d25/limaccds/eiger2_6c"
+    new: true
+    confirm: 'Eiger2 6c photon-counting area detector (eiger6c, Lima); family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: AreaDetectorS2D2
+    family: Camera
+    pv: "d25/limaccds/eiger2_s2d2"
+    new: true
+    confirm: 'Eiger2 S2D2 photon-counting area detector (eigers2d2, Lima); family Camera (catalog) (DET-1)'
+    source_class: Lima
+  - name: FluorescenceMCA
+    family: EnergyDispersiveSpectrometer
+    pv: "tcp://lap2bm25:8000"
+    new: true
+    confirm: 'XIA FalconXn fluorescence MCA (fxbm25, FalconX); family EnergyDispersiveSpectrometer (catalog, graduated) (DET-1)'
+    source_class: FalconX
+  - name: AnalyzerCounters
+    family: GenericProbe
+    pv: "tcp://ld254:8909"
+    new: true
+    confirm: 'P201 CT2 counter cards (p201_ld254_0/_1 on ld254:8909/8910, p201_ld255 on ld255:8909, p201_d25lab on 0.0.0.0:8909 lab/template addr); LOOSE family GenericProbe'
+    source_class: CT2
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: SampleTemperatureController
+    family: TemperatureController
+    pv: "bm25gasblower.esrf.fr"
+    new: true
+    confirm: 'Eurotherm 3500 gas blower (euro3500, Eurotherm2000 model 3500); loop euro_loop (input euro_in C / output euro_out percent), Tango loop d25/regulation/euro_loop; family TemperatureController (catalog, Regulator) (TEMP-1)'
+    source_class: Eurotherm2000
+# NOTE: the following are PRESENT in the science but ABSENT from the public config, recorded
+# here as open questions, NOT modeled (do not infer):
+#   - Monochromator (XRD/XAS energy selection)            -> MONO-1
+#   - Motion / stages / diffractometer / slits            -> MOTION-1
+#   - Shutters + bending-magnet source                    -> PSS-1, SRC-1
+#   - Full production config location (this is a partial mirror) -> CONFIG-1
