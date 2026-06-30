@@ -89,6 +89,22 @@ dependencies = [
     "globus-sdk>=4.8.1,<5",
 ]
 
+[project.optional-dependencies]
+# bo (Decide-axis GP/BO arm): the optional dependency group for the
+# Bayesian-optimization deciders behind `DecidePort` (`SobolDecidePort` +
+# `BoTorchDecidePort` at `cora/operation/adapters/`). BoTorch pulls torch +
+# gpytorch transitively; the whole stack is heavy (hundreds of MB) and only
+# deployments that run GP-steered autonomous experiments need it, so it is
+# kept OUT of the base install. The adapters import torch/botorch lazily and
+# probe importability at construction (`_optional_torch.py`), so selecting a
+# torch substrate without this group installed fails as a `ValueError` at
+# handler time (mapped to 422), never as an uncaught `ImportError` mid-loop.
+# MIT (botorch) + BSD-3 (torch, gpytorch): no copyleft, unlike the rejected
+# gpCAM/Tsuchinoko GPL-3.0 stack. Pin <1 to flag a future major SDK shift.
+bo = [
+    "botorch>=0.16,<1",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=9.1.1,<10",

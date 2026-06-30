@@ -15,7 +15,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from cora.operation.adapters.decide_port_config import DecidePortConfig, DecideSubstrate
+from cora.operation.adapters.decide_port_config import DecidePortConfig, WireDecideSubstrate
 from cora.operation.ports.decide_port import (
     SteeringAxis,
     SteeringBudget,
@@ -92,7 +92,7 @@ class SteeringBudgetRequest(BaseModel):
 class DecideConfigRequest(BaseModel):
     """JSON wire shape selecting the in-CORA brain behind the DecidePort."""
 
-    substrate: DecideSubstrate = Field(
+    substrate: WireDecideSubstrate = Field(
         default="grid_walk",
         description="Which in-CORA decider drives the loop: 'in_memory' or 'grid_walk'.",
     )
