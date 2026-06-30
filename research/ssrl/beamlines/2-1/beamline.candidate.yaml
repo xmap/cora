@@ -1,0 +1,23 @@
+# CANDIDATE beamline descriptor: hand-read from tangkong/SSRL-2-1 public bluesky profile, NOT
+# authoritative. PV-1: motor PVs are BL00: (placeholder/shared) and the Xspress3 root is an example
+# string; PVs recorded exactly as in source, every one flagged confirm. Verified verbatim, zero fabrications.
+
+beamline: {name: "2-1", facility: ssrl, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: "2-1", facility_code: ssrl, confirm: "SSRL BL2-1 diffraction; PV namespace PV-1 (profile uses BL00: placeholders)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SampleStage, family: LinearStage, pv: "BL00:IMS:MOTOR1", new: true, confirm: "HiTp stage px/py/pz=IMS:MOTOR3/4/2, th=IMS:MOTOR1; LinearStage (catalog); PV-1 BL00 placeholder"}
+  - {name: ViewerStage, family: LinearStage, pv: "BL00:PICOD1:MOTOR2", new: true, confirm: "viewer vx/vy=PICOD1:MOTOR3/2; LinearStage (catalog); PV-1"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: PilatusDetector, family: Camera, pv: "BL15:PILATUS300K:", new: true, confirm: "Pilatus 300K; Camera (catalog); BL15 root, confirm vs BL2-1"}
+  - {name: MarCCDDetector, family: Camera, pv: "BL15:MARCCD:", new: true, confirm: "MarCCD; Camera (catalog); BL15 root, confirm"}
+  - {name: DexelaDetector, family: Camera, pv: "SSRL:DEX2923:", new: true, confirm: "Dexela flat panel; Camera (catalog)"}
+  - {name: FluorescenceSpectrometer, family: EnergyDispersiveSpectrometer, pv: "XSPRESS3-EXAMPLE:", new: true, confirm: "Xspress3; EnergyDispersiveSpectrometer (catalog, graduated); PV-1 example root"}
+  - {name: RIOAnalogIO, family: GenericProbe, pv: "BL00:RIO.AI0", new: true, confirm: "NI RIO crate analog/digital IO; LOOSE GenericProbe; PV-1"}
+# DEFERRED: MONO-1/OPTICS-1 (mono, mirrors, slits absent from endstation profile)
