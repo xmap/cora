@@ -2,70 +2,69 @@
 
 Cross-fleet device-class frequency across the beamlines surveyed under `research/nsls2/beamlines/`. The point of this report is the **catalog Family graduation signal**: a device class that recurs across two or more *physically distinct* beamlines is a graduation candidate (rule-of-three is the firm trigger; two is a watch). `graduated` marks classes already in `catalog/catalog.yaml`.
 
-Hand-compiled from the per-beamline `facts.md` device tables (the "Suggested family" column, deduplicated within each beamline). Covers the **11 beamlines surveyed so far**: bmm, srx, iss, chx, fxi, pdf, hxn, cms, xpd, ios, fmx. The remaining 13 NSLS-II beamlines (amx, cdi, csx, esm, hex, isr, ixs, lix, six, smi, sst, xfm) are not yet device-passed; re-run this report when they land.
+Hand-compiled from the per-beamline `facts.md` device tables (the "Suggested family" column, deduplicated within each beamline). **Covers all 24 NSLS-II beamlines:** amx, bmm, cdi, chx, cms, csx, esm, fmx, fxi, hex, hxn, ios, isr, iss, ixs, lix, pdf, six, smi, srx, sst, xfm, xfp, xpd. Every PV in every pass was verified verbatim against the beamline's public controls source.
 
 !!! warning "Count physical beamlines, not repos"
-    Counts here are distinct physical beamlines. ESM and SST (multi-branch, not yet passed) will each count once when added, not once per branch.
+    Counts are distinct physical beamlines. ESM (arpes+xpeem) and SST (rsoxs+nexafs+haxpes+vppem) are multi-branch but each counts once.
 
 ## Suggested families by beamline count
 
 | Family | Beamlines | Status |
 | --- | --- | --- |
-| Shutter | 11 | graduated |
-| Mirror | 11 | graduated |
-| GenericProbe | 11 | graduated |
-| Slit | 10 | graduated |
-| Monochromator | 10 | graduated |
-| LinearStage | 10 | graduated |
-| FluxMonitor | 9 | graduated |
-| Camera | 9 | graduated |
-| Filter | 8 | graduated |
-| EnergyDispersiveSpectrometer | 7 | graduated |
-| TemperatureController | 5 | graduated |
-| TimingController | 4 | graduated |
-| BeamStop | 4 | graduated |
-| MotionController | 3 | graduated |
-| Diffractometer | 3 | LOOSE -- GRADUATION WATCH (see below) |
-| Transfocator | 2 | graduated |
-| Table | 2 | graduated |
+| GenericProbe | 23 | graduated |
+| Mirror | 20 | graduated |
+| LinearStage | 19 | graduated |
+| Slit | 17 | graduated |
+| Shutter | 17 | graduated |
+| Monochromator | 17 | graduated |
+| FluxMonitor | 16 | graduated |
+| Camera | 14 | graduated |
+| Filter | 13 | graduated |
+| EnergyDispersiveSpectrometer | 11 | graduated |
+| TemperatureController | 9 | graduated |
+| TimingController | 7 | graduated |
+| BeamStop | 7 | graduated |
+| Diffractometer | 6 | LOOSE -- GRADUATION WATCH (contested contract, see below) |
+| Table | 4 | graduated |
+| Screen | 4 | LOOSE -- GRADUATION CANDIDATE (rule-of-three met, see below) |
+| MotionController | 4 | graduated |
+| GratingMonochromator | 4 | graduated |
+| FlowController | 4 | graduated |
+| Transfocator | 3 | graduated |
+| ElectronAnalyzer | 3 | graduated |
+| SpectrometerArm | 2 | LOOSE -- WATCH (see below) |
 | RotaryStage | 2 | graduated |
-| FlowController | 2 | graduated |
-| Screen | 2 | LOOSE |
-| Aperture | 1 | graduated |
-| Collimator | 1 | graduated |
-| Condenser | 1 | graduated |
-| ElectronAnalyzer | 1 | graduated |
-| EmissionSpectrometer | 1 | graduated |
-| Goniometer | 1 | graduated |
-| GratingMonochromator | 1 | graduated |
-| InsertionDevice | 1 | graduated |
-| PhaseRing | 1 | graduated |
-| PseudoAxis | 1 | graduated |
-| Scintillator | 1 | graduated |
-| ZonePlate | 1 | graduated |
-| Positioner | 1 | graduated (role-as-family fallback; SampleChanger folds here) |
-| Microscope | 1 | LOOSE (srx VLM; likely Camera+stage, not the X-ray Microscope family) |
-| BetrandLens | 1 | LOOSE (fxi; source spelling; single use) |
+| Manipulator | 2 | graduated |
+| InsertionDevice | 2 | graduated |
+| Goniometer | 2 | graduated |
+| Collimator | 2 | graduated |
+| Aperture / Condenser / PhaseRing / PseudoAxis / Scintillator / ZonePlate | 1 each | graduated |
+| EmissionSpectrometer | 1 (iss) | graduated |
+| EnergyAnalyzer | 1 (ixs) | LOOSE |
+| Housing | 1 (hex) | graduated |
+| BetrandLens / Microscope / Positioner | 1 each | LOOSE (single-use) |
 
 ## Graduation shortlist (the actionable output)
 
-Almost every recurring class is already a graduated catalog Family: the NSLS-II fleet overwhelmingly **reuses** existing vocabulary rather than demanding new. The genuine signals:
+The full 24-beamline fleet overwhelmingly **reuses** graduated catalog Families. Three loose families now carry real signal, and one is a genuine new graduation candidate:
 
-| Candidate / family | Distinct beamlines | Discriminator | Blocker / note |
+| Candidate / family | Distinct beamlines | Discriminator | Verdict |
 | --- | --- | --- | --- |
-| Diffractometer | 3 (chx, hxn, xpd) | a sample/detector rotation stage presented as a diffractometer | LOOSE and rule-of-three is MET, BUT each facts.md flagged "confirm Diffractometer vs a plain rotation/linear stage" -- the three may not be the same contract (chx Dif = xh/zh 2-axis; xpd Dif:1/Dif:2; hxn Diff). RESOLVE the contract before graduating: if they are genuine multi-circle diffractometers, graduate; if they are detector-arm stages, fold to RotaryStage/LinearStage. Gate-review + naming-r3. |
-| TemperatureController | 5 (chx, cms, fxi, pdf, xpd) | settable-setpoint thermal actuator (presents Regulator) | ALREADY graduated. NSLS-II massively reinforces it: pdf + xpd each bind 3+ distinct mechanisms (Lakeshore, Linkam, Eurotherm, CS800, Env). No action; strongest confirmation in the fleet. |
-| FlowController | 2 (chx, xpd) | flow actuator (syringe pumps; presents Regulator) | ALREADY graduated. chx + xpd syringe pumps add to the cross-facility consumers (Diamond memo: i22/7-bm/lix/xfp). Reinforces, no action. |
-| TimingController | 4 (chx, fmx, fxi, srx) | fly-scan pulse/gate generator (Zebra) | ALREADY graduated. Every Zebra was tagged `(?)` "confirm timing role" in the passes -- a cross-fleet confirmation task, not a graduation: verify the Zebra binds TimingController vs a bare probe. |
-| EmissionSpectrometer | 1 here (iss: Johann + von Hamos) | crystal emission spectrometer (XES/HERFD) | ALREADY graduated. ISS gives it 2 device consumers on ONE beamline; clarify vs the loose SpectrometerArm (RIXS arm) when a 2nd RIXS lands. |
+| Screen | 4 (bmm, cdi, hxn, sst) | fluorescent / YAG diagnostic screen viewed by a camera | **GRADUATION CANDIDATE, rule-of-three met.** This signal only emerged at full-fleet scale (n=2 at 11 beamlines). A diagnostic screen is a distinct, recurring anatomy (not a Camera, not a Slit). Gate-review + naming-r3 to graduate Screen into the catalog. The cleanest new-family signal the NSLS-II fleet produced. |
+| Diffractometer | 6 (chx, csx, hex, hxn, isr, xpd) | sample/detector rotation presented as a diffractometer | **WATCH, do NOT graduate yet, contested contract.** The six range from 2-axis detector-arm stubs (isr Dif:ISD = th/zeta; chx Dif = xh/zh) to a genuine multi-circle instrument (csx TARDIS). They are not one contract. RESOLVE first: graduate only the true multi-circle diffractometers; fold the 2-axis stubs to RotaryStage/LinearStage. Gate-review item. |
+| SpectrometerArm | 2 (ixs, six) | grazing-incidence / arm-mounted spectrometer | **WATCH, approaching rule-of-three.** SIX (soft RIXS arm) + IXS (hard-IXS spectrometer arm). One more arm-spectrometer consumer triggers graduation. Clarify the relationship to EmissionSpectrometer (iss crystal XES) and EnergyAnalyzer (ixs crystal analyzer) at that point: three "analyze the scattered/emitted beam" families that may consolidate. |
+| ElectronAnalyzer | 3 (esm, ios, sst) | hemispherical photoelectron analyzer | ALREADY graduated; full fleet confirms it cleanly (ARPES at esm, AP-XPS at ios, HAXPES at sst). No action. |
+| TemperatureController | 9 | settable-setpoint thermal actuator | ALREADY graduated; the most reinforced family (pdf/xpd multi-mechanism). No action. |
+| FlowController | 4 (chx, lix, xfp, xpd) | flow actuator (syringe/HPLC pumps) | ALREADY graduated; NSLS-II adds 4 consumers to the cross-facility set. No action. |
 
-**Net:** no new Family is earned by the 11-beamline NSLS-II pass. The one open graduation-shaped question is **Diffractometer** (loose, n=3 but contested contract) -- a gate-review item, NOT to be coined from a deployment scaffold. Everything else is reuse or reinforcement of already-graduated families, which is the intended outcome: the fleet stresses the existing vocabulary and it holds.
+**Net over all 24:** one genuine new graduation candidate (**Screen**, rule-of-three cleanly met), one contested watch (**Diffractometer**, resolve the contract before graduating), one approaching watch (**SpectrometerArm**, n=2). Everything else is reuse or reinforcement of already-graduated families. The fleet stressed the existing vocabulary across the full technique span (MX, scattering, spectroscopy, imaging, photoemission, footprinting, RIXS, IXS) and it held, earning exactly one new family.
 
 ## Recurring loose-family / DIAG notes
 
-- **GenericProbe (11/11)** absorbs the fleet-wide unresolved sensors: BPMs, scalers, current preamps, electrometers, gas analyzers, viewing cameras. This is the `DIAG-1` cluster (beam-position fragmentation across BeamPositionMonitor / Diagnostic / GenericProbe) plus scalers/preamps. Held by design pending the cross-facility DIAG abstraction review; do not graduate piecemeal.
-- **Microscope / BetrandLens / Screen** are single-use loose bindings; no signal.
+- **GenericProbe (23/24)** absorbs the fleet-wide unresolved sensors: BPMs, scalers, current preamps (SR570/Keithley), electrometers, gas analyzers, viewing cameras, gate valves. This is the `DIAG-1` cluster, held by design pending the cross-facility DIAG abstraction review; do not graduate piecemeal.
+- **EnergyAnalyzer (ixs) / EmissionSpectrometer (iss) / SpectrometerArm (six+ixs)** are three loose/graduated "analyze the outgoing beam" families. When SpectrometerArm hits rule-of-three, review all three together for possible consolidation vs deliberate distinction (electron vs photon, crystal vs grating, dispersive vs scanning).
+- **BetrandLens / Microscope / Positioner** are single-use loose bindings; no signal.
 
 ## Provenance
 
-Compiled from the device tables of the 11 passes listed above (all PVs verified verbatim against each `NSLS2/<bl>-profile-collection` at pass time). Method: per-beamline distinct "Suggested family" values, `(?)` suffixes stripped, counted across beamlines. Re-generate when the remaining 13 beamlines are passed; the Diffractometer count in particular may shift (e.g. ixs, six diffractometers).
+Compiled from the device tables of all 24 passes (every PV verified verbatim against each `NSLS2/<bl>-profile-collection` at pass time; thin-source beamlines csx/xfm and the partial-scaffold isr flagged COVERAGE-1 in their facts). Method: per-beamline distinct "Suggested family" values, `(?)` suffixes stripped, counted across beamlines. This supersedes the 11-beamline interim report. The **Screen** graduation candidate and the **SpectrometerArm** n=2 watch are the two signals that only became visible at full-fleet scale.
