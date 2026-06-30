@@ -1,0 +1,22 @@
+# CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (src/dodal/beamlines/i16.py),
+# NOT authoritative. DELIBERATELY PARTIAL: dodal carries only undulator + 2 Lakeshores; the six-circle
+# diffractometer + DCM + detectors are absent (DIFF-1), not invented. PVs verified verbatim.
+
+beamline: {name: I16, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: I16, facility_code: diamond, confirm: single-beamline enclosure; PV root BL16I (env-resolved)}
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Undulator, family: InsertionDevice, pv: "SR16I-MO-SERVC-01:", new: true, confirm: "UndulatorInMm + harmonic order; InsertionDevice (catalog)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SampleTemperatureController336, family: TemperatureController, pv: "BL16I-EA-LS336-01:", new: true, confirm: "Lakeshore336; TemperatureController (catalog, presents Regulator)"}
+  - {name: SampleTemperatureController340, family: TemperatureController, pv: "BL16I-EA-LS340-01:", new: true, confirm: "Lakeshore340 (second model); TemperatureController (catalog, presents Regulator)"}
+# DEFERRED (absent from public dodal, not invented):
+#   DIFF-1: six-circle/kappa diffractometer (the defining resonant-scattering instrument)
+#   MONO-1/OPTICS-1: DCM, mirrors, slits, attenuators
+#   DET-1: area/point detectors (Pilatus/APD)
