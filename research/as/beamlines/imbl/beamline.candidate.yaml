@@ -1,0 +1,37 @@
+# CANDIDATE beamline descriptor: hand-read from AustralianSynchrotron/imbl (C++ Qt control app),
+# NOT authoritative. PVs are {subsystem pvBaseName} + literal suffix, read verbatim from *.cpp.
+# Facility prefix SR08ID01 (storage ring sector 08, ID beamline 01). Verified verbatim, zero fabrications.
+
+beamline: {name: IMBL, facility: as, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: IMBL, facility_code: as, confirm: "Imaging & Medical Beam Line; multi-hutch (1A/2A/2B/3A/3B) ~140m, HUTCH-1; PV root SR08ID01"}
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: InsertionDevice, family: InsertionDevice, pv: "SR08ID01:GAP_MONITOR", new: true, confirm: "superconducting wiggler (gap monitor); InsertionDevice (catalog)"}
+  - {name: MRTShutter, family: Shutter, pv: "SR08ID01MRT01:", new: true, confirm: "Microbeam Radiation Therapy fast shutter (CYCLEPERIOD/EXPOSUREPERIOD); Shutter (catalog), confirm Shutter vs TimingController (it gates exposure in timed cycles)"}
+  - {name: FrontEndShutter, family: Shutter, pv: "SR08ID01PSS01:FES", new: true, confirm: "front-end shutter via PSS/EPS; Shutter (catalog), confirm exact handle"}
+  - {name: Shutter1A, family: Shutter, pv: "SR08ID01PSS01:", new: true, confirm: "1A photon shutter (shutter1A subsystem); Shutter (catalog), confirm exact handle"}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Monochromator, family: Monochromator, pv: "SR08ID01DCM01:", new: true, confirm: "bent-Laue DCM; BRAGG1/2, X, Z1/Z2, TILT1/2, BENDER1IB/OB, BENDER2IB/OB (bender axes are components of the one mono Asset); Monochromator (catalog)"}
+  - {name: Filters, family: Filter, pv: "SR08ID01FR01:", new: true, confirm: "filter paddles (PDL0...); Filter (catalog)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices: []
+  # DEFERRED: SAMPLE-1 (CT rotation / medical-imaging sample stage not in this controls repo)
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices: []
+  # DEFERRED: DET-1 (large-area imaging detectors / CT not in this optics-front-end repo)
+utility:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Valves, family: GenericProbe, pv: "SR08ID01EPS01:IGV", new: true, confirm: "EPS isolation/gate valves (IGV%1_OpenCloseCmd/_STS); LOOSE GenericProbe (vacuum utility)"}
+  - {name: PSS, family: SafetyStack, pv: "SR08ID01PSS01:", new: true, confirm: "personnel safety system (BL_ENABLE/DISABLE, FES_EPS); maps to CORA safety-BC Enclosure-permit seam, not a device Family"}

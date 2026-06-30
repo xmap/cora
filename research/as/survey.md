@@ -28,7 +28,9 @@ The `mx3-beamline-library` exposes MX3's device topology and, distinctively, fou
 
 **The novelty modeled:** the heterogeneous control plane (below). MX3 graduates nothing new in the Family vocabulary (it reuses the i03 Goniometer and the MX Methods); it earns the multi-plane ControlPort shape.
 
-**Remaining picks:** other AS beamlines (IMBL, XFM, etc.) are not covered by a public device library; modeling them would need a fresh survey or staff contact.
+**Modellable (2026-07 update):** beyond MX3, **IMBL** (Imaging and Medical Beam Line) does publish a public device source, the `AustralianSynchrotron/imbl` C++ Qt control application, mined into a device pass (`beamlines/imbl/`). It carries real EPICS PVs under the `SR08ID01` prefix (storage ring sector 08, ID beamline 01): the wiggler source, a bent-Laue DCM (`SR08ID01DCM01:`), filters, the MRT (Microbeam Radiation Therapy) fast shutter (`SR08ID01MRT01:`), EPS valves, and the PSS. It is the optics/shutter/safety front end only; the imaging detectors and CT sample stage are not in this repo (DET-1 / SAMPLE-1, staff questions). See `recurrence.md`.
+
+**Remaining picks:** other AS beamlines (XFM, SAXS/WAXS, etc.) are not covered by a public per-beamline device library (the `saxs_beamline_library` is a thin `ophyd_api` wrapper, not a device topology); modeling them would need a fresh survey or staff contact.
 
 ---
 
