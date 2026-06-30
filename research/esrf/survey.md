@@ -34,6 +34,7 @@ Extractions to date:
   reinforces the graduated EmissionSpectrometer family.
 - `recurrence.md` -- the cross-ESRF Family-frequency fold; COMPLETE public-config set (ID19 / ID16B /
   ID28 / ID32 / ID06 / BM26 / BM25 / BM23, all eight). Standing verdict: ESRF earns no new catalog Family.
+- `graduation.md` -- the step-2 graduate / Assembly / fold / leave-loose decisions, including the ID28-vs-ID32 loose-family disambiguation (EnergyAnalyzer vs SpectrometerArm).
 
 ESRF beamlines that publish a Beacon config (`<beamline>/beamline_configuration`, public on
 gitlab.esrf.fr) are the modellable set. As of 2026-06 the public ones are: ID06, ID16B, ID19,

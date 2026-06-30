@@ -26,7 +26,7 @@ NSLS-II publishes per-beamline bluesky profile collections (`NSLS2/<beamline>-pr
 
 **Modeled so far:** read `deployments/nsls2/site.yaml`. The fleet spans hard and soft X-ray and most technique classes (TXM, nanoprobe, XAS / EXAFS, XRF, RIXS, coherent / XPCS, soft scattering, powder / PDF, ARPES, SAXS / WAXS, hard IXS, multi-endstation soft-and-tender, inner-shell spectroscopy, MX, complex-materials scattering, solution scattering, footprinting, and more).
 
-**Graduations earned here:** Manipulator (ESM), GratingMonochromator (CSX), Transfocator / CRL (rule-of-three across the fleet), ElectronAnalyzer (esm + sst), EnergyAnalyzer (IXS, loose). FlowController reached rule-of-three (i22 + 7-bm + lix + xfp) and is a graduation candidate. SpectrometerArm stays loose at n=1, needs a second RIXS.
+**Graduations earned here:** Manipulator (ESM), GratingMonochromator (CSX), ElectronAnalyzer (esm + sst), and EmissionSpectrometer (ISS), with Transfocator / TemperatureController / FlowController / TimingController reinforced. EnergyAnalyzer and SpectrometerArm stay loose pending a second RIXS. The step-2 decision table lives in [`graduation.md`](graduation.md).
 
 **Remaining picks:** the live site list is the source of truth; re-verify before picking, parallel sessions ship beamlines faster than this page updates.
 
