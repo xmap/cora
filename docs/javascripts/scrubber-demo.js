@@ -386,12 +386,25 @@
     projs.forEach((a) => {
       if (a.result !== "ok") return;
       const x = X(parseT(a.sampled_at) - run.t0);
+      const tt = parseT(a.sampled_at) - run.t0;
       const tri = svg("polygon", {
         points: `${x},${yA - 5} ${x - 5},${yA + 4} ${x + 5},${yA + 4}`,
         class: "cs-mark cs-mark--projection",
       });
       g.appendChild(tri);
-      timed.push({ el: tri, t: parseT(a.sampled_at) - run.t0 });
+      timed.push({ el: tri, t: tt });
+      // Index label under each projection: the count makes the interrupted #3
+      // legible as a retry (its number reappears after the hold), mirroring the
+      // i# caps on the iteration bands above.
+      const lab = svg("text", {
+        x,
+        y: yA + 16,
+        class: "cs-projlabel",
+        "text-anchor": "middle",
+      });
+      lab.textContent = String(a.payload.params.index);
+      g.appendChild(lab);
+      timed.push({ el: lab, t: tt });
     });
 
     // Open interval for the in-flight projection (drawn dynamically on fold).
@@ -479,12 +492,18 @@
       el.classList.toggle("cs-future", et > t + 1e-6);
     }
 
-    // The in-flight open interval: visible only while #3 is open at the cursor.
-    const open = folded.inflightIdx !== null && t >= scene.inflightT && t < scene.reacq;
+    // The in-flight open interval: the dashed line and label appear only while
+    // #3 is open at the cursor. The triangle itself stays on the lane as a
+    // future-faded mark before the cursor reaches it (like every other
+    // projection), and is hidden only after re-acquire, when the solid #3 takes
+    // over. Toggling it via cs-hidden for the whole pre-flight span was the bug:
+    // it vanished instead of dimming for earlier cursor positions.
     const showOpen = t >= scene.inflightT && t < scene.reacq;
-    [scene.openLine, scene.openTip, scene.openLab].forEach((el) =>
+    [scene.openLine, scene.openLab].forEach((el) =>
       el.classList.toggle("cs-hidden", !showOpen),
     );
+    scene.openTip.classList.toggle("cs-hidden", t >= scene.reacq);
+    scene.openTip.classList.toggle("cs-future", t < scene.inflightT - 1e-6);
     if (showOpen) {
       scene.openLine.setAttribute("x2", X(t));
       scene.openLab.setAttribute("x", (X(scene.inflightT) + X(t)) / 2);

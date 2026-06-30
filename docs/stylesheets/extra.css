@@ -1028,6 +1028,12 @@ body::before {
 .cs-mark--check { fill: var(--cs-state); }
 .cs-mark--projection { fill: var(--cs-sub); }
 .cs-mark--inflight { fill: var(--cs-alarm); }
+.cs-projlabel {
+  fill: var(--cs-sub);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9.5px;
+  text-anchor: middle;
+}
 .cs-mark--save { fill: var(--cs-mute); }
 
 .cs-future { opacity: 0.22; }
