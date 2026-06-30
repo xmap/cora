@@ -1,0 +1,28 @@
+# CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (src/dodal/beamlines/b21.py),
+# NOT authoritative. PVs use {beamline_prefix}=BL21B (env-resolved) + literal suffix, verified verbatim.
+
+beamline: {name: B21, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: B21, facility_code: diamond, confirm: bio-SAXS solution scattering; PV root BL21B (env-resolved)}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Mirror, family: Mirror, pv: "BL21B-OP-MR-01:", new: true, confirm: "SimpleMirror; Mirror (catalog)"}
+  - {name: Slits, family: Slit, pv: "BL21B-AL-SLITS-01:", new: true, confirm: "alignment slits SLITS-01/02/03/05/06/07; Slit (catalog)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Table, family: Table, pv: "BL21B-MO-TABLE-04:", new: true, confirm: "XYStage table; Table (catalog)"}
+  - {name: Linkam, family: TemperatureController, pv: "BL21B-EA-HPLC-01:", new: true, confirm: "Linkam3 thermal stage (on HPLC prefix); TemperatureController (catalog, presents Regulator)"}
+  - {name: ViciValves, family: FlowController, pv: "BL21B-EA-VICI-01:", new: true, confirm: "Vici rotary valves (SEC-SAXS switching; + BL21B-EA-GIR-01:); FlowController (catalog), confirm; would be first Diamond consumer"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SAXSDetector, family: Camera, pv: "BL21B-EA-EIGER-01:", new: true, confirm: "Eiger SAXS; Camera (catalog)"}
+  - {name: WAXSDetector, family: Camera, pv: "BL21B-EA-EIGER-02:", new: true, confirm: "Eiger WAXS; Camera (catalog)"}
+  - {name: BeamStopCamera, family: Camera, pv: "BL21B-RS-ABSB-02:CAM:", new: true, confirm: "Aravis beam-stop camera; Camera (catalog)"}
+  - {name: IntensityMonitor, family: FluxMonitor, pv: "BL21B-DI-PHDGN-07:PHD1:", new: true, confirm: "QDV2F quadrant diode (I_t); FluxMonitor (catalog), confirm intensity vs position"}
+  - {name: Panda, family: TimingController, pv: "BL21B-MO-PANDA-01:", new: true, confirm: "HDFPanda fast gating; TimingController (catalog), confirm timing role"}
