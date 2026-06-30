@@ -1,0 +1,325 @@
+# P14 beamline descriptor (PETRA III, EMBL Hamburg), reverse-engineered from MXCuBE
+#
+# P14 is the EMBL Hamburg high-end macromolecular-crystallography (MX) beamline on the
+# PETRA III ring at DESY, Hamburg. It is operated by EMBL Hamburg, not by DESY, and it
+# is the sibling of P13 on the same EMBL endstation cluster. It is bound to the PETRA III
+# Site (deployments/petra-iii/site.yaml) by facility_code, and it is CORA's second EMBL
+# Hamburg beamline after P13.
+#
+# TWO ENDSTATIONS (the distinctive P14 fact): unlike P13 (one experiment hutch), P14
+# feeds TWO experiment hutches from one source / optics chain. EH1 is the main MX
+# endstation (the EMBLMiniDiff microdiff on hosts p14md301 / p14md302, the Eiger
+# detectors, the CRL transfocator, the beam-defining slits); EH2 is a second endstation
+# (the EMBLBSD diffractometer on host pe2bsd01, a Pilatus 2M) fed by the SAME P14 energy
+# and primary CRL (its energy / CRL handles point back to /P14/...). EMBL publishes EH1
+# and EH2 as two MXCuBE configs (embl_hh_p14 and embl_hh_pe2); this descriptor models
+# both, with three enclosures: one optics hutch and two experiment hutches (EH-1).
+#
+# STATUS: reverse-engineered from EMBL Hamburg's own public MXCuBE HardwareObjects
+# configuration (github.com/mxcube/mxcubecore, configuration/embl_hh_p14 for EH1 and
+# configuration/embl_hh_pe2 for EH2), the device topology MXCuBE drives at the beamline.
+# Device logical names and control handles are real, read from those configs; vendor part
+# numbers beyond the detector models, the goniometer geometry details, the optics layout,
+# and physical positions are not fully in them and are open questions. Every value is
+# carried confirm until EMBL Hamburg staff verify it. NOTE: some EH2 axes are published
+# as MotorMockup in the config (a simulation placeholder), so the EH2 motions are carried
+# with extra caution (MOCK-1).
+#
+# SUB-OPERATOR SEAM (shared with P13): P14 sits on the PETRA III ring but does NOT run
+# DESY's Tango / Sardana / OnlineXML house style. EMBL Hamburg runs its OWN control
+# domain: MXCuBE as the experiment-orchestration layer over the Exporter protocol (the
+# microdiff / MD2-style hosts p14md301 / p14md302 for EH1, the EMBLBSD host pe2bsd01 for
+# EH2) and TINE channels (/P14/..., /PE2/...) for the detector, energy, and beam
+# services. So P14 is modelled as a sub-operator control-domain WITHIN the PETRA III
+# Site: same ring and Facility, distinct operator and control floor. The PETRA III
+# site.yaml carries the EMBL-Hamburg house-style section (added with P13); see
+# docs/deployments/p14/equipment/controls.md (SEAM-1).
+#
+# WHAT IS NEW: no new device Family and no new technique vocabulary. P14 is the eighth MX
+# beamline CORA models (after Diamond i03, NSLS-II FMX / AMX, the Australian Synchrotron
+# MX3, Sirius MANACA, NSRRC TPS 07A / 05A, DESY P11, and EMBL P13) and EMBL Hamburg's
+# second. It reuses the MX vocabulary: the EMBLMiniDiff / EMBLBSD bind the graduated
+# Goniometer, the Eiger / Pilatus area detectors bind Camera, the XRF detector
+# EnergyDispersiveSpectrometer, the CRL binds Transfocator, the slits bind Slit, the
+# focusing mirror binds Mirror, and the MX technique reuses the pending i03
+# mx_data_collection Method (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the real control handle read from
+# the MXCuBE config: an Exporter address (host:port) for the microdiff-hosted motions, or
+# a TINE channel path (/P14/..., /PE2/...) for the detector / energy / beam services.
+#
+# SCOPE: this cut models the optics hutch (the KB mirror pitch / roll motions, the CRL
+# transfocator, the beam-defining slits), EH1 (the EMBLMiniDiff diffractometer and its
+# centring / kappa axes, the aperture / beamstop / sample lights / objective, the three
+# Eiger detector variants, the flux / XRF detectors, the X-ray imaging camera, the energy
+# and resolution pseudo-axes), and EH2 (the EMBLBSD diffractometer, the Pilatus 2M, the
+# EH2 table and beam-defining optics). The MXCuBE bookkeeping objects (session, queue,
+# data-analysis, ISPyB, sample-changer logic) are filtered out by the extractor and not
+# modelled as devices.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p14/questions.md.
+
+beamline:
+  name: P14
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P14"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P14 is an undulator MX beamline; the MXCuBE config exposes the photon-energy service (TINEEnergy on /P14/Energy/P14Energy) but not the undulator device itself, so the source is carried pending (SRC-1)"
+
+# Three enclosures: one optics hutch (the KB mirror pitch / roll motions on /P14/...,
+# the CRL transfocator, the beam-defining slits) feeding two experiment hutches, EH1
+# (the microdiff-hosted EMBLMiniDiff and the TINE detector services) and EH2 (the
+# EMBLBSD diffractometer on pe2bsd01 and the Pilatus 2M). EMBL / DESY PSS permit signals
+# are not in the MXCuBE config (PSS-1, EH-1).
+enclosures:
+  - name: p14-oh
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY / EMBL PSS permit signal for the P14 optics hutch; not in the MXCuBE config (PSS-1)"}
+  - name: p14-eh1
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY / EMBL PSS permit signal for the P14 experiment hutch 1; not in the MXCuBE config (PSS-1)"}
+  - name: p14-eh2
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY / EMBL PSS permit signal for the P14 experiment hutch 2; not in the MXCuBE config (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the shared optics-hutch conditioning feeding both endstations
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p14-oh
+  intro: "The P14 optics conditioning, shared by both experiment hutches: the Kirkpatrick-Baez (KB) mirror pitch / roll motions that focus the MX beam, the compound refractive lens (CRL) transfocator, the beam-defining slits, plus the photon-energy and beam-diagnostic services. The monochromator and the KB mirror Assets themselves are not individually labelled in the MXCuBE config, so the mirror motions are grouped and the optic structure is carried as a question (OPT-1)."
+  note: "Handles read from the MXCuBE TINE channels (/P14/... for the KB target positions, the CRL lens bank, and the energy service) and the microdiff Exporter host. The KB mirror / monochromator breakdown is OPT-1."
+  devices:
+    - name: KBMirrorStage
+      family: LinearStage
+      pv: {tine: "/P14/P14KB"}
+      new: true
+      confirm: true
+      note: "the KB focusing-mirror pitch / roll motions (the horizontal + vertical focusing mirror pitch HFMpitch / VFMpitch, the second-mirror roll, the perpendicular piezo trim, grouped under the P14KB motor group); per-mirror Assets not labelled in the config, grouped as the optics-hutch focusing stage (OPT-1, GROUP-1)"
+    - name: FocusingMirror
+      family: Mirror
+      pv: {tine: "/P14/collection/distance"}
+      new: true
+      confirm: true
+      note: "the KB beam-focusing optic (EMBLBeamFocusing) coupling the mirror motions to the focal-distance setting; the mirror coating / substrate are not in the config (OPT-1)"
+    - name: CompoundRefractiveLens
+      family: Transfocator
+      pv: {tine: "/P14/p14CRLs.CDI/LensOut"}
+      new: true
+      confirm: true
+      note: "the compound refractive lens transfocator (EMBLCRL on /P14/p14CRLs.CDI); the primary CRL focusing stack, shared with EH2; the lens count / material are not in the config (OPT-1)"
+    - name: BeamDefiningSlits
+      family: Slit
+      pv: {tine: "/P14/P14Atto"}
+      new: true
+      confirm: true
+      note: "the beam-defining slit boxes (EMBLSlitBox / BeamSlitBox on the P14Atto attocube group); the secondary-source and beam-defining slits, grouped (OPT-1, GROUP-1)"
+    - name: BeamEnergy
+      family: PseudoAxis
+      pv: {tine: "/P14/Energy/P14Energy"}
+      new: true
+      confirm: true
+      note: "the photon-energy virtual axis (TINEEnergy / EMBLEnergy on /P14/Energy/P14Energy, coupled to the wavelength service on /P14/collection/wavelength), shared by both endstations; the monochromator motions it drives are not individually labelled (ENERGY-1, OPT-1)"
+    - name: BeamDiagnostics
+      family: FluxMonitor
+      pv: {exporter: "p14md302.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the beam intensity / centring diagnostics (EMBLBeam / EMBLBeamCentring; centring read on the microdiff host, intensity on the pin-diode), grouped as the beam-position / flux diagnostic; the per-service split is DIAG-1"
+
+# ===========================================================================
+# SAMPLE STAGE: the two endstation diffractometers and their sample environments
+# ===========================================================================
+
+experiment-sample:
+  stage: sample
+  enclosure: p14-eh1
+  intro: "The P14 experiment hutches: EH1 carries the EMBLMiniDiff microdiffractometer (the main MX instrument, on hosts p14md301 / p14md302) with its kappa goniometry and sample-centring axes, the beam-defining aperture and beamstop, the sample-viewing objective and illumination; EH2 carries a second diffractometer (the EMBLBSD on pe2bsd01) with its own beamstop, objective, illumination, and positioning table."
+  note: "EH1 handles read from the microdiff Exporter hosts (p14md301 / p14md302); EH2 handles from the EMBLBSD host (pe2bsd01). The diffractometer omega / kappa / sample-translation axes are EMBLMiniDiff / EMBLBSD roles, grouped under the Goniometer (MX-1). Some EH2 axes are published as MotorMockup, carried with caution (MOCK-1)."
+  devices:
+    - name: DiffractometerEH1
+      family: Goniometer
+      pv: {exporter: "p14md302.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the EH1 EMBLMiniDiff microdiffractometer (the main MX instrument: omega rotation, kappa / kappa-phi mini-kappa, sample x / y / z centring via phix / phiy / phiz / sampx / sampy, and the focus / holder-length axes, all Exporter motors on the microdiff host); the goniometer geometry is carried confirm (MX-1)"
+    - name: BeamApertureEH1
+      family: Aperture
+      pv: {exporter: "p14md302.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the EH1 beam-defining aperture on the microdiff (EMBLAperture, Exporter-hosted); the aperture-size table is carried confirm (OPT-1)"
+    - name: BeamstopEH1
+      family: BeamStop
+      pv: {exporter: "p14md302.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the EH1 microdiff beamstop (EMBLBeamstop, Exporter-hosted); the direct-beam stop in front of the sample"
+    - name: SampleObjectiveEH1
+      family: Objective
+      pv: {exporter: "p14md302.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the EH1 on-axis sample-viewing zoom objective (MicrodiffZoom, Exporter-hosted); the OAV magnification path (OAV-1)"
+    - name: SampleIlluminationEH1
+      family: Backlight
+      pv: {exporter: "p14md302.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the EH1 microdiff sample illumination (MicrodiffLight back / front lights, Exporter-hosted); the on-axis viewing illumination, the Backlight affordance shared with i03 / i24 / FMX / i19 / P13 (DET-1)"
+    - name: DiffractometerEH2
+      family: Goniometer
+      pv: {exporter: "pe2bsd01.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the EH2 diffractometer (EMBLBSD on pe2bsd01); the second-endstation MX instrument with its own omega / kappa / centring axes; some axes published as MotorMockup, carried with caution (MX-1, MOCK-1)"
+    - name: BeamApertureEH2
+      family: Aperture
+      pv: {exporter: "pe2bsd01.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the EH2 beam-defining aperture (EMBLAperture on pe2bsd01); the aperture-size table is carried confirm (OPT-1)"
+    - name: BeamstopEH2
+      family: BeamStop
+      pv: {exporter: "pe2bsd01.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the EH2 beamstop (EMBLBeamstop on pe2bsd01); the direct-beam stop in front of the EH2 sample"
+    - name: SampleObjectiveEH2
+      family: Objective
+      pv: {exporter: "pe2bsd01.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the EH2 on-axis sample-viewing zoom objective (ExporterZoom on pe2bsd01); the EH2 OAV magnification path (OAV-1)"
+    - name: SampleIlluminationEH2
+      family: Backlight
+      pv: {exporter: "pe2bsd01.embl-hamburg.de:9001"}
+      new: true
+      confirm: true
+      note: "the EH2 sample illumination (MicrodiffLight back / front lights on pe2bsd01); the EH2 on-axis viewing illumination, the Backlight affordance (DET-1)"
+    - name: ExperimentTableEH2
+      family: LinearStage
+      pv: {confirm: "the EH2 positioning table (EMBLTableMotor table_hor / table_ver); no Exporter / TINE handle in the config object, the table motions are carried confirm (TABLE-1, MOCK-1)"}
+      new: true
+      confirm: true
+      note: "the EH2 experiment-table horizontal / vertical positioning (EMBLTableMotor table_hor / table_ver); the endstation table carrying the EH2 diffractometer, control handle pending (TABLE-1)"
+
+# ===========================================================================
+# DETECTION STAGE: the EH1 Eiger detectors and the EH2 Pilatus, plus flux / XRF
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: p14-eh1
+  intro: "The P14 detection: EH1 carries three Dectris Eiger area detectors (a 16M silicon and two CdTe variants, 16M and 4M) for MX diffraction across energy ranges, plus the flux monitor, the on-axis and X-ray-imaging cameras, and the XRF fluorescence detector; EH2 carries a Dectris Pilatus 2M area detector."
+  note: "EH1 handles read from the TINE detector channels (/P14/detector/*); EH2 from /PE2/detector/pilatus2m. The detector distance / resolution are pseudo-axes on the TINE collection service (DET-1)."
+  devices:
+    - name: EigerDetector
+      family: Camera
+      pv: {tine: "/P14/detector/eiger16m"}
+      new: true
+      confirm: true
+      note: "the EH1 Dectris Eiger 16M silicon area detector (EMBLDetector, model read '16M' from the config); the primary MX diffraction detector (DET-1)"
+    - name: EigerCdTe16MDetector
+      family: Camera
+      pv: {tine: "/P14/detector/eiger16m-cdte"}
+      new: true
+      confirm: true
+      note: "the EH1 Dectris Eiger 16M CdTe area detector (EMBLDetector, model read '16M' from the config); the high-energy CdTe-sensor MX detector variant (DET-1)"
+    - name: EigerCdTe4MDetector
+      family: Camera
+      pv: {tine: "/P14/detector/eiger4m-cdte"}
+      new: true
+      confirm: true
+      note: "the EH1 Dectris Eiger 4M CdTe area detector (EMBLDetector, model read '4M' from the config); the smaller high-energy CdTe MX detector variant (DET-1)"
+    - name: PilatusDetectorEH2
+      family: Camera
+      pv: {tine: "/PE2/detector/pilatus2m"}
+      new: true
+      confirm: true
+      note: "the EH2 Dectris Pilatus 2M area detector (EMBLDetector, model read '2M' from the config); the EH2 MX diffraction detector (DET-1)"
+    - name: DetectorDistance
+      family: PseudoAxis
+      pv: {tine: "/P14/collection/distance"}
+      new: true
+      confirm: true
+      note: "the EH1 detector-distance virtual axis (TINEMotor on /P14/collection/distance) and the coupled resolution axis (/P14/collection/resolution); the sample-to-detector geometry as a derived axis; EH2 carries its own /PE2/collection/* pair (DET-1)"
+    - name: FluxMonitor
+      family: FluxMonitor
+      pv: {tine: "/P14/PinDiode/Device0"}
+      new: true
+      confirm: true
+      note: "the pin-diode flux monitor (EMBLFlux on /P14/PinDiode/Device0); incident-flux normalization for MX data collection (DIAG-1)"
+    - name: OnAxisCamera
+      family: Camera
+      pv: {confirm: "the on-axis sample-viewing camera (VimbaVideo / QtAxisCamera); no Exporter / TINE handle in the config object, the video source is carried confirm (OAV-1)"}
+      new: true
+      confirm: true
+      note: "the EH1 on-axis sample-viewing video camera and the sample-changer camera (VimbaVideo / QtAxisCamera); the MX centring / loop-inspection video, control handle pending (OAV-1)"
+    - name: XrayImagingCamera
+      family: Camera
+      pv: {confirm: "the X-ray imaging camera (EMBLXrayImaging); no Exporter / TINE handle in the config object, the video source is carried confirm (IMG-1)"}
+      new: true
+      confirm: true
+      note: "the EH1 X-ray imaging camera (EMBLXrayImaging); in-situ sample / loop X-ray imaging for centring, control handle pending (IMG-1)"
+    - name: FluorescenceDetector
+      family: EnergyDispersiveSpectrometer
+      pv: {tine: "/P14/fluorescence-scan/fls-scan"}
+      new: true
+      confirm: true
+      note: "the energy-dispersive XRF detector (EMBLXRFSpectrum on /P14/fluorescence-scan/fls-scan); element identification / edge scanning for anomalous MX (DET-1)"
+
+# Cross-cutting control. P14 runs MXCuBE over EMBL Hamburg's Exporter + TINE floor, NOT
+# DESY's Tango / Sardana. See the sub-operator seam note at the head of this file.
+controls:
+  intro: >
+    P14 runs on EMBL Hamburg's own control domain, distinct from the DESY Tango /
+    Sardana floor the other PETRA III beamlines (P01 / P06 / P11) bind to, and shared in
+    style with its sibling P13. The experiment-orchestration layer is MXCuBE (the
+    macromolecular-crystallography beamline-control application, shared with i03 / FMX /
+    MANACA / TPS), and the device floor underneath it is two protocols: the Exporter
+    protocol on the microdiff hosts (p14md301 / p14md302 for EH1, pe2bsd01 for EH2) for
+    the diffractometers and their motions, and TINE channels (/P14/..., /PE2/...) for the
+    detector, energy, flux, and beam services. The handles are read from EMBL's public
+    MXCuBE HardwareObjects configuration and carried confirm (CTRL-1). Two experiment
+    hutches share one source / optics chain, so the energy and CRL services are common to
+    both endstations while each hutch carries its own diffractometer host (EH-1). The
+    rotation-MX acquisition (the goniometer oscillation coupled to the Eiger / Pilatus
+    frame capture) runs as an MXCuBE data-collection routine; that orchestration is the
+    seam CORA's edge would conduct over its ControlPort, the same shape as the MX cluster
+    seams at i03 / MANACA / TPS 07A, here landing on the Exporter / TINE floor rather
+    than Sardana (CTRL-2, SEAM-1).
+  motion_controllers:
+    - name: ExporterMotionController
+      family: MotionController
+      protocol: Exporter_microdiff
+      new: true
+      confirm: true
+      note: "the microdiff Exporter motion controllers (p14md301 / p14md302 for EH1, pe2bsd01 for EH2) driving the EMBLMiniDiff / EMBLBSD omega / kappa / centring axes and the aperture / beamstop / objective / light motions (CTRL-1)"
+    - name: TINEMotionController
+      family: MotionController
+      protocol: TINE_embl
+      new: true
+      confirm: true
+      note: "the TINE device floor (/P14/..., /PE2/...) backing the KB mirror motions, the CRL transfocator, the energy / wavelength service, the detector distance / resolution, and the flux / XRF services (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P14 run needs present before it can
+    start. All pending confirmation. LiquidNitrogen is the cryostream supply for the MX
+    sample cooling (the cryostream itself is not labelled in the MXCuBE config and is
+    carried as a question, CRYO-1).
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
+    - kind: LiquidNitrogen

@@ -51,7 +51,7 @@ facility:
   heading: "PETRA III"
   kind: Site
   institution: DESY (Deutsches Elektronen-Synchrotron, Hamburg, Germany)
-  beamlines: [P01, P04, P06, P11, P03, P10, P09, P02, P64, P65, P07, P08, P21, P22, P23, P24, P61, P13]
+  beamlines: [P01, P04, P06, P11, P03, P10, P09, P02, P64, P65, P07, P08, P21, P22, P23, P24, P61, P13, P14]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method.
 #
@@ -86,6 +86,11 @@ practices:
   # over Exporter + TINE, NOT the DESY Tango / Sardana floor. MX reuses the i03
   # mx_data_collection slug 7 sites share. Pending until EMBL staff confirm (TECH-1).
   - {name: P13_mx_data_collection_practice, method: mx_data_collection, pending: true, note: "rotation / oscillation macromolecular-crystallography data collection on the EMBLMiniDiff microdiffractometer + Eiger 16M / Pilatus 6M area detector with cryostream cooling, orchestrated by EMBL's MXCuBE over Exporter + TINE; reuses the i03 mx_data_collection slug FMX / AMX / MX3 / MANACA / TPS / P11 share, a further consumer (TECH-1, SEAM-1)"}
+  # P14 (EMBL Hamburg, sub-operator): high-end rotation macromolecular crystallography
+  # across TWO experiment hutches (EH1 EMBLMiniDiff + Eiger variants, EH2 EMBLBSD +
+  # Pilatus 2M) fed by one source / optics chain, run through EMBL's MXCuBE over
+  # Exporter + TINE. MX reuses the i03 mx_data_collection slug. Pending (TECH-1).
+  - {name: P14_mx_data_collection_practice, method: mx_data_collection, pending: true, note: "rotation / oscillation macromolecular-crystallography data collection across two endstations (EH1 EMBLMiniDiff + Eiger 16M silicon / 16M / 4M CdTe, EH2 EMBLBSD + Pilatus 2M) fed by one shared source / optics chain with cryostream cooling, orchestrated by EMBL's MXCuBE over Exporter + TINE; reuses the i03 mx_data_collection slug FMX / AMX / MX3 / MANACA / TPS / P11 / P13 share, a further consumer (TECH-1, SEAM-1, EH-1)"}
   # P03 (MiNaXS): micro- and nanofocus small- and wide-angle X-ray scattering, 9-23
   # keV, across a microfocus and a nanofocus GINIX endstation. SAXS reuses the
   # small_angle_scattering slug, WAXS the wide_angle_scattering slug. Both pending

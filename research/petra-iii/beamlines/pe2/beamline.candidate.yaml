@@ -1,0 +1,155 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: PE2
+  facility: petra-iii
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: PE2
+  facility_code: petra-iii
+  confirm: enclosure inferred from PV prefix or station label
+- name: PE2-EH2
+  facility_code: petra-iii
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: attenuators
+    family: Attenuators
+    pv: /P14/transmission/attenuator
+    enclosure: PE2
+    new: true
+    confirm: family is the MXCuBE class 'Attenuators'; the CORA Family needs a human;
+      MXCuBE object at 'attenuators'; endstation to enclosure is a guess
+    source_class: Attenuators
+  - name: beam-info
+    family: EMBLBeamInfo
+    pv: pe2bsd01.embl-hamburg.de:9001
+    enclosure: PE2
+    new: true
+    confirm: family is the MXCuBE class 'EMBLBeamInfo'; the CORA Family needs a human;
+      MXCuBE object at 'beam-info'; endstation to enclosure is a guess
+    source_class: EMBLBeamInfo
+  - name: detector-distance
+    family: TINEMotor
+    pv: /PE2/collection/distance
+    enclosure: PE2-EH2
+    new: true
+    confirm: family is the MXCuBE class 'TINEMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh2/detector-distance'; endstation to enclosure is a guess
+    source_class: TINEMotor
+  - name: diff-aperture
+    family: Aperture
+    pv: pe2bsd01.embl-hamburg.de:9001
+    enclosure: PE2-EH2
+    new: true
+    confirm: MXCuBE object at 'eh2/diff-aperture'; endstation to enclosure is a guess
+    source_class: EMBLAperture
+  - name: resolution
+    family: TINEMotor
+    pv: /PE2/collection/resolution
+    enclosure: PE2-EH2
+    new: true
+    confirm: family is the MXCuBE class 'TINEMotor'; the CORA Family needs a human;
+      MXCuBE object at 'eh2/resolution'; endstation to enclosure is a guess
+    source_class: TINEMotor
+  - name: table_hor
+    family: LinearStage
+    enclosure: PE2-EH2
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; MXCuBE object at 'eh2/table_hor'; endstation to enclosure is a guess
+    source_class: EMBLTableMotor
+  - name: table_ver
+    family: LinearStage
+    enclosure: PE2-EH2
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; MXCuBE object at 'eh2/table_ver'; endstation to enclosure is a guess
+    source_class: EMBLTableMotor
+  - name: energy
+    family: EMBLEnergy
+    pv: /P14/Energy/P14Energy
+    enclosure: PE2
+    new: true
+    confirm: family is the MXCuBE class 'EMBLEnergy'; the CORA Family needs a human;
+      MXCuBE object at 'energy'; endstation to enclosure is a guess
+    source_class: EMBLEnergy
+  - name: fast-shut
+    family: Shutter
+    pv: p14md301.embl-hamburg.de:9001
+    enclosure: PE2
+    new: true
+    confirm: MXCuBE object at 'fast-shut'; endstation to enclosure is a guess
+    source_class: MDFastShutter
+  - name: primary-crl
+    family: Transfocator
+    pv: /P14/p14CRLs.CDI/LensOut
+    enclosure: PE2
+    new: true
+    confirm: MXCuBE object at 'primary-crl'; endstation to enclosure is a guess
+    source_class: EMBLCRL
+  - name: safshut
+    family: Shutter
+    pv: /PE2/collection/mx-standard
+    enclosure: PE2
+    new: true
+    confirm: MXCuBE object at 'safshut'; endstation to enclosure is a guess
+    source_class: EMBLSafetyShutter
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: diff-backLight
+    family: Backlight
+    pv: pe2bsd01.embl-hamburg.de:9001
+    enclosure: PE2-EH2
+    new: true
+    confirm: MXCuBE object at 'eh2/diff-backLight'; endstation to enclosure is a guess
+    source_class: MicrodiffLight
+  - name: diff-beamstop
+    family: BeamStop
+    pv: pe2bsd01.embl-hamburg.de:9001
+    enclosure: PE2-EH2
+    new: true
+    confirm: MXCuBE object at 'eh2/diff-beamstop'; endstation to enclosure is a guess
+    source_class: EMBLBeamstop
+  - name: diff-frontLight
+    family: Backlight
+    pv: pe2bsd01.embl-hamburg.de:9001
+    enclosure: PE2-EH2
+    new: true
+    confirm: MXCuBE object at 'eh2/diff-frontLight'; endstation to enclosure is a
+      guess
+    source_class: MicrodiffLight
+  - name: diff-zoom
+    family: Objective
+    pv: pe2bsd01.embl-hamburg.de:9001
+    enclosure: PE2-EH2
+    new: true
+    confirm: MXCuBE object at 'eh2/diff-zoom'; endstation to enclosure is a guess
+    source_class: ExporterZoom
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: camera
+    family: Camera
+    enclosure: PE2
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; MXCuBE object at 'camera'; endstation to enclosure is a guess
+    source_class: VimbaVideo
+  - name: detector
+    family: Camera
+    pv: /PE2/detector/pilatus2m
+    enclosure: PE2-EH2
+    new: true
+    confirm: MXCuBE object at 'eh2/detector'; endstation to enclosure is a guess;
+      vendor model '2M' read from the config; confirm against the floor
+    source_class: EMBLDetector
