@@ -144,13 +144,15 @@ This is name -> Tango class -> Tango address -> host -> protocol for every motor
 
 ### Extraction note
 
-There is no automated extractor for OnlineXML yet (`scripts/reverse_engineer/` targets EPICS ophyd ASTs and BLISS YAML). The pull is a plain unauthenticated GitLab API call:
+`scripts/reverse_engineer/` has an OnlineXML path (`--source onlinexml`) that pulls each `python-nxstools-extras-pNN` package's `xml/online_*.xml` from `gitlab.desy.de` and emits per-beamline `facts.md` + `beamline.candidate.yaml`. The underlying pull is a plain unauthenticated GitLab API call:
 
 ```
 GET https://gitlab.desy.de/api/v4/projects/<url-encoded path>/repository/files/<url-encoded xml/online_*.xml>/raw?ref=<default_branch>
 ```
 
 The parse maps each `<device>` to a CORA Family at Asset granularity (the stage, not the per-axis tuning), carrying the Tango address / logical name in the descriptor `pv` field (the opaque control-handle slot), every value `confirm` until DESY staff verify it. A config snapshot is strong evidence, not a CORA-owned fact.
+
+Beamline directories under `beamlines/` are named by beamline ID (`p01`, `p10`, the EMBL MX beamlines `p13` / `p14` / `pe2`), not by source-package name; the OnlineXML enclosures do not encode the beamline, so the extractor is run with `--name python-nxstools-extras-pNN=PNN` to set the directory. Multi-endstation beamlines (p04 = EXP1/EXP2, p10 = E1/E2/LAB/...) are one directory per beamline with the endstations as enclosure rows inside, the same convention the EMBL beamlines use (p13 holds P13-EH1 + P13-OH1). The cross-beamline Family-frequency fold is in [`recurrence.md`](recurrence.md); its standing verdict is that PETRA III earns no new catalog Family (all recurring Families are already graduated, and the OnlineXML / MXCuBE class-name fallbacks are a curation backlog, not graduation signal).
 
 ---
 
