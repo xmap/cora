@@ -58,9 +58,9 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 | NSLS-II | yes (retrospective) | 28 beamlines (+ recurrence.md); 24 deployed + 4 research-only (qas, tes, nyx, opls) | yes | EPICS / bluesky, public profile collections |
 | SLAC | yes (retrospective) | (from `pcdshub` at build time) | yes | EPICS / `pcdshub` |
 | Australian Synchrotron | yes (retrospective) | none | yes | heterogeneous (EPICS + Exporter + REST + TCP) |
-| MAX IV | needed | none | yes | Tango / Sardana |
+| MAX IV | yes | none (partially buildable: 4 beamlines) | yes | Tango / Sardana; canonical config firewalled (gitlab.maxiv.lu.se), real handles public for NanoMAX/CoSAXS/SoftiMAX (contrast) + BioMAX (sardana-biomax) |
 
-"needed" marks a modeled Site that does not yet carry a Tier-1 survey (only MAX IV remains). "retrospective" marks a survey written after the fleet was already modeled: some EPICS facilities (Diamond, NSLS-II, SLAC) are modeled by reading the public controls library per beamline at build time rather than via a pre-extracted Tier-2 pass, so their survey records the roster, the modellable set, and the seam after the fact rather than ahead of it.
+"retrospective" marks a survey written after the fleet was already modeled: some EPICS facilities (Diamond, NSLS-II, SLAC) are modeled by reading the public controls library per beamline at build time rather than via a pre-extracted Tier-2 pass, so their survey records the roster, the modellable set, and the seam after the fact rather than ahead of it. MAX IV's canonical per-beamline device config is on a firewalled internal GitLab, but real Tango handles are public for four beamlines (NanoMAX / CoSAXS / SoftiMAX via the `contrast` DAQ framework, BioMAX via the archived `sardana-biomax`), so a partial Tier-2 pass is buildable there; ForMAX and TomoWISE (the CORA-relevant tomography lines) have no public device source and are staff-question deployments.
 
 ## APS extraction tooling (EPICS-specific)
 
