@@ -1,0 +1,29 @@
+# CANDIDATE beamline descriptor: hand-read from NSLS2/opls-profile-collection, NOT authoritative.
+# All PV prefixes verified verbatim against source. COVERAGE-1: thin public profile; the
+# shared 12-ID mono/optics chain is deferred, not invented (OPLS shares the straight with SMI).
+
+beamline: {name: OPLS, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 12-ID-A, facility_code: nsls2, confirm: shared 12-ID optics; inferred from XF:12IDA}
+- {name: 12-ID-1, facility_code: nsls2, confirm: OPLS SAXS endstation; inferred from XF:12ID1}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: PhotonShutter, family: Shutter, pv: "XF:12IDA-PPS:2{PSh}", new: true, confirm: "PPS shutter (12-ID branch 2); Shutter (catalog)"}
+  - {name: Transfocator, family: Transfocator, pv: "XF:12ID1-OP{CRL-Ax:", new: true, confirm: "CRL lens stack; Transfocator (catalog, graduated); OPLS another consumer"}
+  - {name: SharedOpticsMotors, family: LinearStage, pv: "XF:12ID:m65", new: true, confirm: "shared 12-ID motors m65-m68; confirm role (shared with SMI)"}
+  - {name: CrystalDeflector, family: Mirror, pv: "XF:12ID1-ES{XtalDfl-Ax:", new: true, confirm: "crystal deflector; confirm Mirror vs dedicated deflector (single use)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SampleStage, family: LinearStage, pv: "XF:12ID1-ES{Smpl-Ax:", new: true, confirm: sample positioning; LinearStage (catalog)}
+  - {name: Chiller, family: TemperatureController, pv: "XF:12ID1-ES{Chiller}", new: true, confirm: "sample/detector chiller; confirm presents Regulator (settable) vs read-only utility"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SAXSStage, family: LinearStage, pv: "XF:12ID1-ES{SAXS-Ax:", new: true, confirm: "SAXS flight-path/stage; LinearStage (catalog)"}
+  - {name: SAXSDetectorStage, family: LinearStage, pv: "XF:12ID1-ES{DetSAXS-Ax:", new: true, confirm: "SAXS detector positioning; LinearStage (catalog); detector camera PV deferred DET-1"}
+  - {name: BeamPositionMonitor, family: GenericProbe, pv: "XF:12IDA-BI:2{EM:BPM1}", new: true, confirm: "EM BPMs (BPM1/2 12-IDA, BPM3 12-IDB); LOOSE GenericProbe, held DIAG-1"}

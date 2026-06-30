@@ -1,0 +1,39 @@
+# CANDIDATE beamline descriptor: hand-read from NSLS2/qas-profile-collection, NOT authoritative.
+# All PV prefixes verified verbatim against source (startup/*.py), zero fabrications.
+
+beamline: {name: QAS, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 7-BM-A, facility_code: nsls2, confirm: optics hutch; inferred from XF:07BMA}
+- {name: 7-BM-B, facility_code: nsls2, confirm: endstation hutch; inferred from XF:07BMB}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: FrontEndShutter, family: Shutter, pv: "XF:07BM-PPS{Sh:FE}", new: true, confirm: front-end PPS shutter; Shutter (catalog)}
+  - {name: PhotonShutter, family: Shutter, pv: "XF:07BMA-PPS{Sh:A}", new: true, confirm: photon shutter; Shutter (catalog)}
+  - {name: Monochromator, family: Monochromator, pv: "XF:07BMA-BI{Mono:1}", new: true, confirm: quick-EXAFS scanning mono; Monochromator (catalog)}
+  - {name: CollimatingMirror, family: Mirror, pv: "XF:07BM-BI{Mir:Col}", new: true, confirm: collimating mirror; Mirror (catalog)}
+  - {name: FocusingMirror, family: Mirror, pv: "XF:07BMA-OP{Mir:FM", new: true, confirm: focusing mirror; Mirror (catalog)}
+  - {name: WhiteBeamSlit, family: Slit, pv: "XF:07BMA-OP{Slt:1", new: true, confirm: white-beam slit; Slit (catalog)}
+  - {name: EndstationSlit, family: Slit, pv: "XF:07BMB-OP{Slt:1", new: true, confirm: endstation slit; Slit (catalog)}
+  - {name: InclinedBeamPipe, family: LinearStage, pv: "XF:07BMB-OP{IBP:1-Ax:", new: true, confirm: inclined beam-pipe positioning; LinearStage (catalog)}
+  - {name: FoilWheel, family: Filter, pv: "XF:07BMB-OP{FoilWheel:1", new: true, confirm: "reference foil wheels 1/2/3; confirm Filter vs reference family"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: AssemblyStage1, family: LinearStage, pv: "XF:07BMB-OP{Asm:1", new: true, confirm: detector/sample assembly stage; LinearStage (catalog)}
+  - {name: AssemblyStage2, family: LinearStage, pv: "XF:07BMB-ES{Asm:2", new: true, confirm: second assembly stage; LinearStage (catalog)}
+  - {name: SampleStage, family: LinearStage, pv: "XF:07BMB-ES{Stg:1", new: true, confirm: sample stage; LinearStage (catalog)}
+  - {name: Linkam, family: TemperatureController, pv: "XF:07BM-B{Linkam:1}", new: true, confirm: "Linkam (+ LS:01 lakeshore); TemperatureController (catalog, presents Regulator)"}
+  - {name: MassFlowController, family: FlowController, pv: "XF:07BMA-CT{MFC", new: true, confirm: "gas mass-flow controller; FlowController (catalog), confirm"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: AnalogPizzaBox, family: FluxMonitor, pv: "XF:07BMB-CT{PBA:1}", new: true, confirm: "APB digitizing ion-chamber currents (quick-EXAFS); FluxMonitor (catalog, graduated)"}
+  - {name: KeithleyAmplifiers, family: GenericProbe, pv: "XF:07BM:K428:A:", new: true, confirm: "Keithley K428 current amps A-G; LOOSE GenericProbe"}
+  - {name: FluorescenceSpectrometer, family: EnergyDispersiveSpectrometer, pv: "XF:07BMB-ES{Xsp:1}", new: true, confirm: Xspress3 SDD; EnergyDispersiveSpectrometer (catalog, graduated)}
+  - {name: PilatusDetector, family: Camera, pv: "XF:07BMB-ES{PIL:3", new: true, confirm: Pilatus area detector; Camera (catalog)}
+  - {name: FluorescenceScreen, family: Screen, pv: "XF:07BM-BI{FS:1}", new: true, confirm: diagnostic screen; LOOSE Screen}
+  - {name: Diagnostic, family: GenericProbe, pv: "XF:07BMB-BI{Diag:1}", new: true, confirm: endstation diagnostic; LOOSE GenericProbe}

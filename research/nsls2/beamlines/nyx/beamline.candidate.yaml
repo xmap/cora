@@ -1,0 +1,38 @@
+# CANDIDATE beamline descriptor: hand-read from NSLS2/nyx-profile-collection, NOT authoritative.
+# All PV prefixes verified verbatim against source (startup/*.py), zero fabrications.
+
+beamline: {name: NYX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 19-ID-C, facility_code: nsls2, confirm: MX endstation; inferred from XF:19IDC}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Monochromator, family: Monochromator, pv: "XF:19IDC-OP{Mono:DCM", new: true, confirm: DCM; Monochromator (catalog)}
+  - {name: Mirror1, family: Mirror, pv: "XF:19IDC-OP{Mir:1", new: true, confirm: mirror; Mirror (catalog)}
+  - {name: WhiteBeamSlit, family: Slit, pv: "XF:19IDC-OP{Slt:WB", new: true, confirm: white-beam slit; Slit (catalog)}
+  - {name: MonoBeamSlit, family: Slit, pv: "XF:19IDC-OP{Slt:MB", new: true, confirm: mono-beam slit; Slit (catalog)}
+  - {name: BeamDefiningSlit, family: Slit, pv: "XF:19IDC-ES{Slt:BD", new: true, confirm: beam-defining slit; Slit (catalog)}
+  - {name: Collimator, family: Collimator, pv: "XF:19IDC-ES{Gbl:1", new: true, confirm: "beam-defining collimator/guard; confirm Collimator vs guard slit"}
+  - {name: BeamShaping, family: LinearStage, pv: "XF:19IDC-ES{Opt:1", new: true, confirm: endstation optic stage; LinearStage (catalog)}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Goniometer, family: Goniometer, pv: "XF:19IDC-ES{Gon:1", new: true, confirm: "single-axis gonio (+ Gon:1-Vec); Goniometer (catalog, graduated via i03); NYX further MX consumer"}
+  - {name: Robot, family: Positioner, pv: "XF:19IDC-ES{Rbt:1}", new: true, confirm: "sample-exchange robot; folds to Positioner + Clearance + Subject custody, not a SampleChanger family"}
+  - {name: Backlight, family: GenericProbe, pv: "XF:19IDC-ES{BP:1", new: true, confirm: backlight/pin; LOOSE GenericProbe}
+  - {name: HighMagCamera, family: Camera, pv: "XF:19IDC-ES{Cam:HiMag", new: true, confirm: high-mag on-axis view; Camera (catalog)}
+  - {name: LowMagCamera, family: Camera, pv: "XF:19IDC-ES{Cam:LoMag", new: true, confirm: low-mag on-axis view; Camera (catalog)}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: DetectorStage, family: LinearStage, pv: "XF:19IDC-ES{Det:1", new: true, confirm: "detector positioning (area detector for MX); LinearStage (catalog)"}
+  - {name: DetectorTable, family: Table, pv: "XF:19IDC-ES{Tbl:1", new: true, confirm: detector table; Table (catalog)}
+  - {name: BeamStop, family: BeamStop, pv: "XF:19IDC-ES{BS:1", new: true, confirm: beamstop; BeamStop (catalog)}
+  - {name: Zebra, family: TimingController, pv: "XF:19IDC-ES{Zeb:1}", new: true, confirm: "data-collection gating; TimingController (catalog), confirm timing role"}
+  - {name: BeamMonitor, family: GenericProbe, pv: "XF:19IDC-OP{BM:1", new: true, confirm: beam monitor; LOOSE GenericProbe}
+  - {name: BeamPositionMonitor, family: GenericProbe, pv: "XF:19IDC-OP{BPM:1", new: true, confirm: "BPM 1/2/3; LOOSE GenericProbe, held DIAG-1"}
+  - {name: KeithleyAmplifier, family: GenericProbe, pv: "XF:19ID1-BI:NYX{Keith:1}", new: true, confirm: Keithley current amp; LOOSE GenericProbe}
+  - {name: VacuumGauges, family: GenericProbe, pv: "XF:19IDD-CT{Ion:1-Gauge:1}", new: true, confirm: "ion-gauge vacuum (Ion:1/2); LOOSE GenericProbe"}

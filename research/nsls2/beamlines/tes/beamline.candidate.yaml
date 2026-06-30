@@ -1,0 +1,37 @@
+# CANDIDATE beamline descriptor: hand-read from NSLS2/tes-profile-collection, NOT authoritative.
+# All PV prefixes verified verbatim against source (startup/*.py), zero fabrications.
+
+beamline: {name: TES, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 8-BM-A, facility_code: nsls2, confirm: optics hutch; inferred from XF:08BMA}
+- {name: 8-BM-ES, facility_code: nsls2, confirm: KB/endstation optics; inferred from XF:08BMES}
+- {name: 8-BM-C, facility_code: nsls2, confirm: sample-environment hutch; inferred from XF:08BMC}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: PhotonShutter, family: Shutter, pv: "XF:08BMES-PPS{PSh}", new: true, confirm: PPS shutter; Shutter (catalog)}
+  - {name: Monochromator, family: Monochromator, pv: "XF:08BMA-OP{Mono:1-Ax:", new: true, confirm: tender-energy scanning mono; Monochromator (catalog)}
+  - {name: FocusingMirror, family: Mirror, pv: "XF:08BMA-OP{Mir:FM-Ax:", new: true, confirm: FM mirror; Mirror (catalog)}
+  - {name: KBMirrorHorizontal, family: Mirror, pv: "XF:08BMES-OP{Mir:KBH-Ax:", new: true, confirm: KB horizontal; Mirror (catalog)}
+  - {name: KBMirrorVertical, family: Mirror, pv: "XF:08BMES-OP{Mir:KBV-Ax:", new: true, confirm: KB vertical; Mirror (catalog)}
+  - {name: SecondarySourceAperture, family: Slit, pv: "XF:08BMES-OP{SSA:1-Ax:", new: true, confirm: SSA; Slit (catalog)}
+  - {name: SlitModule, family: Slit, pv: "XF:08BMES-OP{SM:1-Ax:", new: true, confirm: slit module; Slit (catalog)}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SampleStage, family: LinearStage, pv: "XF:08BMC-ES:SE{Smpl:1-Ax:", new: true, confirm: sample positioning; LinearStage (catalog)}
+  - {name: SampleMotionStage, family: LinearStage, pv: "XF:08BMC-ES:SE{SmplM:1-Ax:", new: true, confirm: sample fly-scan motion; LinearStage (catalog)}
+  - {name: EndstationMotionController, family: MotionController, pv: "XF:08BM-CT{MC:06}", new: true, confirm: motion controller; MotionController (catalog)}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: DetectorStage, family: LinearStage, pv: "XF:08BMC-ES:SE{Det:1-Ax:", new: true, confirm: detector positioning; LinearStage (catalog)}
+  - {name: FluorescenceSpectrometer, family: EnergyDispersiveSpectrometer, pv: "XF:08BM-ES{Xsp:2}", new: true, confirm: "Xspress3 SDD (+ XS3:Det-3); EnergyDispersiveSpectrometer (catalog, graduated)"}
+  - {name: PICAMDetector, family: Camera, pv: "XF:08BM-ES{Det:PICAM1}", new: true, confirm: Teledyne PICAM; Camera (catalog)}
+  - {name: IonChamber, family: FluxMonitor, pv: "XF:08BM-ES{IO:2}", new: true, confirm: "I0 ion chamber; FluxMonitor (catalog, graduated), confirm"}
+  - {name: ScalerCounter, family: GenericProbe, pv: "XF:08BM-ES:1{Sclr:1}", new: true, confirm: scaler; LOOSE GenericProbe}
+  - {name: BeamPositionMonitor, family: GenericProbe, pv: "XF:08BMES-BI{PSh:1-BPM:3}", new: true, confirm: "BPM 3/4; LOOSE GenericProbe, held DIAG-1"}
+  - {name: AxisCamera, family: GenericProbe, pv: "XF:08BM-BI{Axis-Cam:1}", new: true, confirm: "viewing cameras; LOOSE GenericProbe"}
