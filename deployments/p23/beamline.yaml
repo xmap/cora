@@ -1,0 +1,122 @@
+# P23 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P23 "In-situ X-ray Diffraction and Imaging" is the hard X-ray in-situ / operando
+# diffraction beamline at PETRA III (DESY, Hamburg): diffraction and imaging of samples
+# under in-situ conditions (electrochemistry, thin-film growth, sample environments).
+# It is bound to the PETRA III Site (deployments/petra-iii/site.yaml), the fifteenth
+# PETRA III beamline.
+#
+# STATUS: reverse-engineered from P23's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p23, branch
+# debian/jessie; the online_hasep23oh.xml / hasep23dev.xml registries). Device logical
+# names and Tango control handles are real, read from that registry; vendor part
+# numbers, crystal cuts, energy calibration, detectors, and physical positions are not
+# in it and are open questions. The P23 registry is thin: it exposes one large
+# generically-named motor bank (eh_mot* on the hasep23oh host) whose per-axis roles are
+# not labelled, so the Asset grouping leans on the bank prefix and is carried confirm
+# (GROUP-1). Every value is carried confirm until P23 staff verify it. The extraction is
+# in research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family, and no new technique vocabulary. P23 is a thin
+# in-situ diffraction beamline; it reuses LinearStage and the pending diffraction slug
+# (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read from
+# the OnlineXML. The eh_mot* bank reports on the hasep23oh host; a single dev stub
+# reports on hasep23dev (STUB-1). The bank is grouped, every axis role pending
+# (GROUP-1).
+#
+# SCOPE: this cut models the P23 experiment / optics motor bank (the eh_mot* bank). The
+# monochromator, mirrors, diffractometer, and detectors are not individually labelled
+# in this registry slice and are carried grouped / pending (OPT-1, DIFF-1, DET-1).
+# Counter / timer / ADC channels and the Sardana MeasurementGroup bookkeeping rows are
+# filtered out by the extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p23/questions.md.
+
+beamline:
+  name: P23
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P23"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P23 is an undulator beamline (in-situ diffraction); the OnlineXML exposes no undulator device in this slice, so the source is carried pending (SRC-1)"
+
+# One enclosure inferred from the OnlineXML host (the registry exposes the eh_mot bank
+# on a single hasep23oh host): the experiment hutch carrying the optics and the
+# experiment instrument. DESY PSS permit signals are not in the OnlineXML (PSS-1).
+enclosures:
+  - name: p23-eh
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P23 experiment hutch; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SAMPLE STAGE: the experiment / instrument motor bank
+# ===========================================================================
+
+experiment-sample:
+  stage: sample
+  enclosure: p23-eh
+  intro: "The P23 experiment / instrument motor bank: the in-situ diffraction sample positioning, diffractometer, and optics motions. The monochromator, mirrors, and diffractometer are not individually labelled in this registry slice, so they are grouped as the experiment positioning stage."
+  note: "Handles read from the eh_mot* bank (~79 axes) on the hasep23oh host. Per-axis roles not labelled, grouped as one stage (GROUP-1). The optics / diffractometer breakdown is OPT-1 / DIFF-1."
+  devices:
+    - name: ExperimentStage
+      family: LinearStage
+      pv: {bank: "p23/motor/eh_mot01"}
+      new: true
+      confirm: true
+      note: "the P23 experiment / instrument motor bank (eh_mot01..79 on p23/motor, hasep23oh host): the in-situ diffraction sample positioning, diffractometer, and optics motions, per-axis roles not labelled, grouped as one stage (GROUP-1, OPT-1, DIFF-1)"
+    - name: DevStage
+      family: LinearStage
+      pv: {dev: "p23/omsvme58/dev.01"}
+      new: true
+      confirm: true
+      note: "a single device-development / test axis on the hasep23dev host (omsvme58); a dev / commissioning stage (STUB-1)"
+
+# ===========================================================================
+# DETECTION STAGE
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: p23-eh
+  intro: "The P23 detection. The OnlineXML slice for P23 exposes no dedicated detector device beyond the motors; the in-situ diffraction detectors (area detectors) are carried pending."
+  note: "In-situ diffraction area detection is not exposed as a device in this registry slice; carried pending (DET-1)."
+  devices:
+    - name: AreaDetectors
+      family: Camera
+      pv: {confirm: "the in-situ diffraction area detectors are not exposed in this OnlineXML slice; carried pending (DET-1)"}
+      new: true
+      confirm: true
+      note: "the P23 in-situ diffraction area detectors; not in the registry slice, modelled as a pending Camera placeholder (DET-1)"
+
+# Cross-cutting control. P23 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P23 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as the other PETRA III beamlines. A motion axis is a
+    Tango motor device (p23/motor/...), with a single dev / commissioning axis on the
+    omsvme58 dev host. The handles are read from P23's public OnlineXML registry and
+    carried confirm (CTRL-1). The in-situ diffraction acquisition runs as a Sardana
+    macro; that orchestration is the seam CORA's edge would conduct over its
+    ControlPort (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 and VME58 stepper controllers (oms58 / omsvme58) driving the experiment motor bank (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P23 run needs present before it can
+    start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

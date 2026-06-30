@@ -145,6 +145,7 @@ CORA's Site for PETRA III (DESY, Hamburg), and its second Tango / Sardana contro
 | [P08](p08/index.md) | Reverse-engineered | high-resolution diffraction (surface / interface, reflectivity, powder / single-crystal) on a six-circle Kohzu diffractometer with a rich detector set (Eiger / Pilatus / Mythen / PerkinElmer / Vortex); coins no new Family, reusing the pending `diffraction` Method |
 | [P21](p21/index.md) | Reverse-engineered | Swedish Materials Science high-energy diffraction (P21.2) and total scattering / PDF (P21.1) across an optics hutch, an EH3 endstation, and a LAB station; a thin reuse-and-reinforce scaffold (grouped motor banks, detectors carried pending), reusing the pending `diffraction` / `total_scattering` Methods |
 | [P22](p22/index.md) | Reverse-engineered | hard X-ray photoelectron spectroscopy (HAXPES) on a `Manipulator` sample stage + `ElectronAnalyzer`, sharing the P09 optics chain (undulator / DCM / mirrors / phase retarder); coins no new Family, reusing the pending `angle_resolved_photoemission` Method; the fleet's first shared-optics beamline pair |
+| [P23](p23/index.md) | Reverse-engineered | in-situ / operando X-ray diffraction and imaging; a thin reuse-and-reinforce scaffold (one grouped motor bank, optics / diffractometer / detectors carried grouped / pending), reusing the pending `diffraction` Method |
 
 ## [ALS](als/index.md)
 
