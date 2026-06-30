@@ -1,0 +1,25 @@
+# CANDIDATE beamline descriptor: hand-read from SESAME-Synchrotron/XAFSScanTool + xafs-dt8824-daq, NOT
+# authoritative. EPICS P prefix XAFS:. Literal PVs verified verbatim; dynamic-built PVs flagged confirm.
+
+beamline: {name: xafs, facility: sesame, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: BM08, facility_code: sesame, confirm: "XAFS/XRF spectroscopy, bending magnet; EPICS prefix XAFS:"}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Monochromator, family: Monochromator, pv: "BLSetup:Crystal", new: true, confirm: "DCM crystal selection (Mono.py); Monochromator (catalog); physical angle motors OPTICS-1"}
+  - {name: EnergyCalibration, family: PseudoAxis, pv: "ENGCAL:RealFoilEng", new: true, confirm: "energy-to-foil-edge calibration (ENGCAL:FoilElement/RealFoilEng); PseudoAxis (catalog), confirm"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SampleStage, family: LinearStage, pv: "SMP:X", new: true, confirm: "sample X/Y (SMP:X, SMP:Y); LinearStage (catalog)"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: FicusDetector, family: EnergyDispersiveSpectrometer, pv: "Ficus:", new: true, confirm: "FICUS SDD fluorescence (Erase/Start/ROIs); EnergyDispersiveSpectrometer (catalog, graduated)"}
+  - {name: SDDDetector, family: EnergyDispersiveSpectrometer, pv: "SDD2:", new: true, confirm: "second SDD; EnergyDispersiveSpectrometer (catalog, graduated)"}
+  - {name: IonChamber, family: FluxMonitor, pv: "XAFS:IC", new: true, confirm: "ion chamber via DT8824 DAQ (ic.py, dynamic PVs); FluxMonitor (catalog, graduated); literal handle PV-dynamic, confirm"}
+# DEFERRED: OPTICS-1 (DCM angle motors, mirrors, slits); PV-dynamic (IC + scan-control PVs built at runtime)
