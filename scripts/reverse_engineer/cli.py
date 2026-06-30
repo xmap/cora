@@ -124,6 +124,43 @@ def _collect_online_xml(repo_dir: Path) -> list[parse.TangoDevice]:
     return list(by_key.values())
 
 
+def _collect_mxcube(repo_dir: Path, subdir: str) -> list[parse.MxcubeDevice]:
+    """Parse every HardwareObjects *.xml under a beamline's MXCuBE config dir.
+
+    `subdir` is the path of the beamline config within the repo, e.g.
+    mxcubecore/configuration/embl_hh_p14. Each .xml file is one device object;
+    rel_path is the file path relative to that config dir (suffix stripped), so
+    eh1/detector-eiger16m.xml becomes eh1/detector-eiger16m. Files whose root is
+    not an <object> are skipped by the lenient parser.
+    """
+    base = repo_dir / subdir
+    devices: list[parse.MxcubeDevice] = []
+    for path in sorted(base.glob("**/*.xml")):
+        text = _read(path)
+        if text is None:
+            continue
+        rel_path = path.relative_to(base).with_suffix("").as_posix()
+        device = parse.parse_mxcube_object(text, rel_path)
+        if device is not None:
+            devices.append(device)
+    return devices
+
+
+def _mxcube_beamline_label(subdir: str, override: str | None) -> str:
+    """Derive the beamline label (e.g. P14) from an MXCuBE config subdir.
+
+    An override (from --name) wins. Otherwise the last underscore-separated token
+    of the subdir's leaf is upper-cased as the beamline ID: embl_hh_p14 -> P14,
+    desy_p11 -> P11, alba_xaloc13 -> XALOC13. Pass --name when the token does not
+    match the beamline's canonical ID.
+    """
+    if override:
+        return override
+    leaf = subdir.rstrip("/").split("/")[-1]
+    token = leaf.split("_")[-1]
+    return token.upper()
+
+
 def _beamline_name(devices: list[mapping.CandidateDevice], fallback: str) -> str:
     sectors = Counter(
         d.enclosure.rsplit("-", 1)[0]
@@ -151,7 +188,12 @@ def _slugify(name: str) -> str:
 
 
 _BITS_SOURCE_DESC = "the repo's Guarneri `devices.yml` plus ophyd device classes"
-_ONLINEXML_SOURCE_DESC = "DESY OnlineXML (the beamline's online_*.xml Tango device registry)"
+_ONLINEXML_SOURCE_DESC = (
+    "DESY OnlineXML (the beamline's online_*.xml Tango device registry)"
+)
+_MXCUBE_SOURCE_DESC = (
+    "MXCuBE HardwareObjects (the beamline's configuration/*.xml device objects)"
+)
 
 
 def _process_repo_bits(
@@ -180,6 +222,28 @@ def _process_repo_onlinexml(
     return devices, [], _ONLINEXML_SOURCE_DESC, skipped
 
 
+def _process_repo_mxcube(
+    repo_dir: Path, subdir: str, name_override: str | None
+) -> tuple[
+    list[mapping.CandidateDevice], list[parse.PermissionGroup], str, int | None, str
+]:
+    """Process one MXCuBE beamline config dir; returns the usual tuple plus the label.
+
+    Unlike the other sources, the MXCuBE mapper needs the beamline label up front
+    (to build per-device enclosure names from the endstation subdir), so the label
+    is derived here and returned for the caller to reuse as the beamline name.
+    """
+    label = _mxcube_beamline_label(subdir, name_override)
+    mxcube_devices = _collect_mxcube(repo_dir, subdir)
+    devices = [
+        candidate
+        for device in mxcube_devices
+        if (candidate := mapping.to_candidate_device_mxcube(device, label)) is not None
+    ]
+    skipped = len(mxcube_devices) - len(devices)
+    return devices, [], _MXCUBE_SOURCE_DESC, skipped, label
+
+
 def _process_repo(
     repo: str,
     cache: Path,
@@ -187,20 +251,38 @@ def _process_repo(
     facility: str,
     source: str,
     name_override: str | None = None,
+    subdir: str | None = None,
 ) -> tuple[str, list[mapping.CandidateDevice]]:
     stem, repo_dir = _resolve_repo(repo, cache)
-    if source == "onlinexml":
-        devices, permissions, source_desc, skipped = _process_repo_onlinexml(stem, repo_dir)
+    mxcube_label: str | None = None
+    if source == "mxcube":
+        if not subdir:
+            raise SystemExit(
+                "--source mxcube requires --subdir <configuration/beamline-dir>"
+            )
+        devices, permissions, source_desc, skipped, mxcube_label = _process_repo_mxcube(
+            repo_dir, subdir, name_override
+        )
+    elif source == "onlinexml":
+        devices, permissions, source_desc, skipped = _process_repo_onlinexml(
+            stem, repo_dir
+        )
     else:
         devices, permissions, source_desc, skipped = _process_repo_bits(stem, repo_dir)
-    beamline_name = name_override or _beamline_name(devices, stem)
+    beamline_name = mxcube_label or name_override or _beamline_name(devices, stem)
     dir_name = _slugify(beamline_name)
 
     out_dir = out_root / dir_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
     facts = emit.render_facts_md(
-        beamline_name, beamline_name, facility, devices, permissions, source_desc, skipped
+        beamline_name,
+        beamline_name,
+        facility,
+        devices,
+        permissions,
+        source_desc,
+        skipped,
     )
     (out_dir / "facts.md").write_text(facts, encoding="utf-8")
 
@@ -228,16 +310,25 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--source",
-        choices=("bits", "onlinexml"),
+        choices=("bits", "onlinexml", "mxcube"),
         default="bits",
-        help="Source format: EPICS *-bits (default) or DESY OnlineXML",
+        help="Source format: EPICS *-bits (default), DESY OnlineXML, or MXCuBE HardwareObjects",
+    )
+    parser.add_argument(
+        "--subdir",
+        action="append",
+        default=[],
+        metavar="REPO=SUBDIR",
+        help=(
+            "For --source mxcube: the per-beamline config dir within a repo (by repo "
+            "stem), e.g. mxcubecore=mxcubecore/configuration/embl_hh_p14. One per --repo "
+            "occurrence; combine with --name to set the beamline label."
+        ),
     )
     parser.add_argument("--out", default="research/aps/beamlines")
     parser.add_argument("--cache", default="research/aps/.cache")
     parser.add_argument("--catalog", default="catalog/catalog.yaml")
-    parser.add_argument(
-        "--recurrence-out", default="research/aps/recurrence.md"
-    )
+    parser.add_argument("--recurrence-out", default="research/aps/recurrence.md")
     parser.add_argument("--facility", default="aps")
     parser.add_argument(
         "--name",
@@ -261,14 +352,33 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(f"--name expects REPO=BEAMLINE, got {entry!r}")
         name_overrides[key] = value
 
+    subdirs_by_stem: dict[str, list[str]] = {}
+    for entry in args.subdir:
+        key, sep, value = entry.partition("=")
+        if not sep or not value:
+            parser.error(f"--subdir expects REPO=SUBDIR, got {entry!r}")
+        subdirs_by_stem.setdefault(key, []).append(value)
+
     per_repo: dict[str, list[mapping.CandidateDevice]] = {}
     for repo in args.repo:
         stem = repo.rstrip("/").split("/")[-1]
         override = name_overrides.get(stem)
-        dir_name, devices = _process_repo(
-            repo, cache, out_root, args.facility, args.source, override
-        )
-        per_repo[dir_name] = devices
+        if args.source == "mxcube":
+            subdirs = subdirs_by_stem.get(stem)
+            if not subdirs:
+                parser.error(
+                    f"--source mxcube requires --subdir {stem}=<config-dir> for repo {repo!r}"
+                )
+            for subdir in subdirs:
+                dir_name, devices = _process_repo(
+                    repo, cache, out_root, args.facility, args.source, override, subdir
+                )
+                per_repo[dir_name] = devices
+        else:
+            dir_name, devices = _process_repo(
+                repo, cache, out_root, args.facility, args.source, override
+            )
+            per_repo[dir_name] = devices
 
     graduated = emit.graduated_families(Path(args.catalog))
     recurrence = emit.render_recurrence_md(per_repo, graduated)

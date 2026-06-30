@@ -5,13 +5,16 @@ resolved statically is recorded as a confirm reason rather than guessed, so the
 emitter can flag it. ophyd_async modules are detected and skipped (their device
 trees are not class-attribute Cpt trees, so the static oracle does not apply).
 
-Two source families are parsed here:
+Three source families are parsed here:
 
   - EPICS *-bits: Guarneri devices.yml + ophyd device classes + PV grammar (APS).
   - DESY OnlineXML: the online_*.xml per-endstation device registry of a PETRA III
     beamline (Tango device name/class/address/host).
+  - MXCuBE HardwareObjects: the per-beamline configuration/<beamline>/*.xml device
+    objects of an MXCuBE deployment (EMBL Hamburg, ALBA, SOLEIL), each file an
+    <object class="..."> with an Exporter / TINE control handle.
 
-Both converge on the control-system-agnostic mapping.CandidateDevice downstream.
+All converge on the control-system-agnostic mapping.CandidateDevice downstream.
 """
 
 from __future__ import annotations
@@ -64,7 +67,9 @@ def _construct_unknown(loader: Any, tag_suffix: str, node: Any) -> Any:
     return loader.construct_scalar(node)
 
 
-_LenientLoader.add_multi_constructor("tag:yaml.org,2002:python/name:", _construct_python_name)
+_LenientLoader.add_multi_constructor(
+    "tag:yaml.org,2002:python/name:", _construct_python_name
+)
 _LenientLoader.add_multi_constructor("", _construct_unknown)
 
 
@@ -217,10 +222,15 @@ def parse_ophyd_module(source: str) -> dict[str, OphydSketch]:
     for node in tree.body:
         if not isinstance(node, ast.ClassDef):
             continue
-        bases = tuple(name for name in (_call_name(base) for base in node.bases) if name)
+        bases = tuple(
+            name for name in (_call_name(base) for base in node.bases) if name
+        )
         axes, reasons = _class_axes(node)
         if module_async:
-            reasons = (*reasons, "ophyd_async module: device tree not statically parseable")
+            reasons = (
+                *reasons,
+                "ophyd_async module: device tree not statically parseable",
+            )
         sketches[node.name] = OphydSketch(
             class_name=node.name,
             bases=bases,
@@ -233,7 +243,9 @@ def parse_ophyd_module(source: str) -> dict[str, OphydSketch]:
 
 def _imports_ophyd_async(tree: ast.Module) -> bool:
     for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("ophyd_async"):
+        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
+            "ophyd_async"
+        ):
             return True
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -261,7 +273,9 @@ def _class_axes(node: ast.ClassDef) -> tuple[tuple[Axis, ...], tuple[str, ...]]:
             reasons.append(f"{target.id}: pseudo axis (computed, not a physical motor)")
         if call_name in _FORMATTED_COMPONENT_CALLS:
             axes.append(Axis(name=target.id, suffix="", kind=kind, resolved=False))
-            reasons.append(f"{target.id}: FormattedComponent suffix resolved at runtime")
+            reasons.append(
+                f"{target.id}: FormattedComponent suffix resolved at runtime"
+            )
             continue
         suffix = _literal_suffix(call)
         if suffix is None:
@@ -299,7 +313,9 @@ def infer_enclosure(prefix: str | None) -> EnclosureHint:
         branch_label = "BM" if branch == "bm" else "ID"
         if station:
             name = f"{sector}-{branch_label}-{station.upper()}"
-            return EnclosureHint(name=name, sector=f"{sector}-{branch_label}", station=station)
+            return EnclosureHint(
+                name=name, sector=f"{sector}-{branch_label}", station=station
+            )
         return EnclosureHint(name=None, sector=f"{sector}-{branch_label}", station=None)
     return EnclosureHint(name=None, sector=None, station=None)
 
@@ -442,3 +458,114 @@ def parse_permissions(text: str) -> list[PermissionGroup]:
             )
         )
     return groups
+
+
+@dataclass(frozen=True)
+class MxcubeDevice:
+    """One MXCuBE HardwareObjects config file (configuration/<beamline>/.../<name>.xml).
+
+    Each file is an <object class="..."> describing one beamline device. The
+    class is the mapping key (ExporterMotor, EMBLDetector, EMBLMiniDiff, ...).
+    The control handle is whichever address the object carries: an Exporter
+    address (host:port), a TINE name, an actuator name, or a server address.
+    `rel_path` is the file path relative to the beamline config dir (e.g.
+    eh1/detector-eiger16m), which carries the logical name and the endstation
+    token. `model` and `device_type` are the vendor model when stated (a
+    detector's <type>/<model>). Any field absent in the XML is None.
+    """
+
+    name: str
+    obj_class: str
+    rel_path: str
+    handle: str | None
+    device_type: str | None
+    model: str | None
+    is_mockup: bool
+
+
+# MXCuBE control-handle child tags, in priority order. The first present one is
+# the opaque control handle (the pv slot). exporter_address is host:port for the
+# Exporter protocol; tinename is a TINE device address; actuator_name names an
+# Exporter actuator; serverAddr is an EMBLMotorsGroup server path.
+_MXCUBE_HANDLE_TAGS: tuple[str, ...] = (
+    "exporter_address",
+    "tinename",
+    "actuator_name",
+    "serverAddr",
+    "username",
+)
+
+
+def _mxcube_handle(root: ET.Element) -> str | None:
+    """Return the device's control handle from the first present handle tag.
+
+    Looks at direct-child elements first (the common case: <exporter_address>,
+    <actuator_name>, <serverAddr>), then falls back to a tinename= attribute on
+    any descendant <channel>/<command> (the TINE detectors address their device
+    that way rather than with a child tag).
+    """
+    for tag in _MXCUBE_HANDLE_TAGS:
+        child = root.find(tag)
+        if child is not None and child.text and child.text.strip():
+            return child.text.strip()
+    for element in root.iter():
+        tinename = element.get("tinename")
+        if tinename and tinename.strip():
+            return tinename.strip()
+    return None
+
+
+def parse_mxcube_object(text: str, rel_path: str) -> MxcubeDevice | None:
+    """Parse one MXCuBE HardwareObjects XML file into an MxcubeDevice.
+
+    `rel_path` is the file path relative to the beamline config directory, with
+    the .xml suffix already stripped (e.g. "eh1/detector-eiger16m"); its last
+    segment is the logical name and its leading segment, when an endstation
+    token, the enclosure. Returns None when the root is not an <object> or the
+    XML is malformed, mirroring the lenient contract of the other parsers.
+    """
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError:
+        return None
+    if root.tag != "object":
+        return None
+    obj_class = (root.get("class") or "").strip()
+    if not obj_class:
+        return None
+
+    name = rel_path.rsplit("/", 1)[-1]
+    device_type = _child_text(root, "type")
+    model = _child_text(root, "model")
+    is_mockup = "mockup" in obj_class.lower()
+
+    return MxcubeDevice(
+        name=name,
+        obj_class=obj_class,
+        rel_path=rel_path,
+        handle=_mxcube_handle(root),
+        device_type=device_type,
+        model=model,
+        is_mockup=is_mockup,
+    )
+
+
+# MXCuBE endstation tokens that appear as the leading path segment of a device's
+# rel_path (eh1/detector.xml -> EH1). Anything else (a device at the beamline
+# root, or under beamFocusingMotors/) has no endstation token.
+_MXCUBE_ENDSTATION = re.compile(r"^(eh\d+|exp\d+|oh\d+)$", re.IGNORECASE)
+
+
+def infer_enclosure_mxcube(rel_path: str, beamline: str) -> EnclosureHint:
+    """Infer a candidate enclosure from an MXCuBE device's rel_path + beamline.
+
+    A device under an endstation subdir (eh1/diff-omega) maps to
+    <BEAMLINE>-<STATION> (P14-EH1); a device at the config root maps to the bare
+    beamline (P14). Always confirm=True; the mapping is a guess until staff
+    confirm it. `beamline` is the already-normalised beamline label (e.g. P14).
+    """
+    head = rel_path.split("/", 1)[0] if "/" in rel_path else ""
+    if _MXCUBE_ENDSTATION.match(head):
+        name = f"{beamline}-{head.upper()}"
+        return EnclosureHint(name=name, sector=beamline, station=head)
+    return EnclosureHint(name=beamline, sector=beamline, station=None)

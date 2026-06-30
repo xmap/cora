@@ -14,9 +14,11 @@ from dataclasses import dataclass
 from .parse import (
     DeviceInstance,
     EnclosureHint,
+    MxcubeDevice,
     OphydSketch,
     TangoDevice,
     infer_enclosure,
+    infer_enclosure_mxcube,
     infer_enclosure_tango,
 )
 
@@ -105,7 +107,9 @@ def _axis_map_from_kwargs(instance: DeviceInstance) -> dict[str, str]:
     return axes
 
 
-def _axis_map_from_sketch(instance: DeviceInstance, sketch: OphydSketch) -> dict[str, str]:
+def _axis_map_from_sketch(
+    instance: DeviceInstance, sketch: OphydSketch
+) -> dict[str, str]:
     prefix = instance.prefix or ""
     return {
         axis.name: f"{prefix}{axis.suffix}"
@@ -126,7 +130,9 @@ def _build_pv(
             return next(iter(axes.values())), reasons
         return dict(sorted(axes.items())), reasons
     if instance.prefix:
-        reasons.append("axes unresolved: pv is the device prefix, per-axis PVs need confirm")
+        reasons.append(
+            "axes unresolved: pv is the device prefix, per-axis PVs need confirm"
+        )
         return instance.prefix, reasons
     reasons.append("no prefix and no resolvable axes")
     return None, reasons
@@ -155,7 +161,9 @@ def _role_hints(instance: DeviceInstance) -> tuple[str, ...]:
     return tuple(sorted(hints))
 
 
-def to_candidate_device(instance: DeviceInstance, sketch: OphydSketch | None) -> CandidateDevice:
+def to_candidate_device(
+    instance: DeviceInstance, sketch: OphydSketch | None
+) -> CandidateDevice:
     """Join one devices.yml instance with its ophyd class sketch into a candidate."""
     family, family_confirmed = suggest_family(instance)
     pv, pv_reasons = _build_pv(instance, sketch)
@@ -169,7 +177,9 @@ def to_candidate_device(instance: DeviceInstance, sketch: OphydSketch | None) ->
     if enclosure_hint.name is None:
         reasons.append("enclosure unresolved from prefix or labels")
     if instance.is_factory:
-        reasons.append("factory device (ad_creator): plugins and file paths need a human")
+        reasons.append(
+            "factory device (ad_creator): plugins and file paths need a human"
+        )
     if sketch is not None:
         reasons.extend(sketch.confirm_reasons)
     elif not instance.is_sim:
@@ -273,13 +283,17 @@ def to_candidate_device_tango(device: TangoDevice) -> CandidateDevice | None:
 
     reasons: list[str] = []
     if device.address is None:
-        reasons.append("no Tango address in the registry row; control handle needs confirm")
+        reasons.append(
+            "no Tango address in the registry row; control handle needs confirm"
+        )
     if not family_confirmed:
         reasons.append(
             f"family is the Tango module {family!r}; linear-vs-rotary and the CORA Family need a human"
         )
     if device.host:
-        reasons.append(f"Tango host {device.host!r}; endstation to enclosure is a guess")
+        reasons.append(
+            f"Tango host {device.host!r}; endstation to enclosure is a guess"
+        )
     if enclosure_hint.name is None:
         reasons.append("enclosure unresolved from Tango host")
     reasons.append(
@@ -298,4 +312,168 @@ def to_candidate_device_tango(device: TangoDevice) -> CandidateDevice | None:
         source_class=device.module or "unknown-tango-module",
         confirm_reasons=tuple(dict.fromkeys(reasons)),
         is_sim=False,
+    )
+
+
+# Confident MXCuBE-class to CORA Family mappings. Keys are matched against the
+# <object class="..."> name (case-insensitive substring); first hit wins. The
+# MX device anatomy graduated at Diamond i03 (Goniometer / Camera) and exercised
+# across the MX fleet drives these: the microdiffractometer is the Goniometer,
+# the detector is a Camera, the transfocator / CRL / KB-group are optics. A motor
+# (ExporterMotor / TINEMotor) cannot be told linear-vs-rotary from the class, so
+# it falls through to the class name unconfirmed, like an unknown ophyd class.
+_MXCUBE_FAMILY_RULES: tuple[tuple[str, str], ...] = (
+    ("minidiff", "Goniometer"),
+    ("microdiffmotor", "LinearStage"),
+    ("microdifflight", "Backlight"),
+    ("microdiffzoom", "Objective"),
+    ("exporterzoom", "Objective"),
+    ("detector", "Camera"),
+    ("aperture", "Aperture"),
+    ("beamstop", "BeamStop"),
+    ("slitbox", "Slit"),
+    ("slit", "Slit"),
+    ("transfocator", "Transfocator"),
+    ("crl", "Transfocator"),
+    ("beamfocusing", "Mirror"),
+    ("motorsgroup", "LinearStage"),
+    ("tablemotor", "LinearStage"),
+    ("safetyshutter", "Shutter"),
+    ("fastshutter", "Shutter"),
+    ("flux", "FluxMonitor"),
+    ("xrfspectrum", "EnergyDispersiveSpectrometer"),
+    ("axiscamera", "Camera"),
+    ("vimbavideo", "Camera"),
+    ("xrayimaging", "Camera"),
+)
+
+# MXCuBE classes that are software services, UI, or workflow plumbing, not
+# beamline devices: the queue / ISPyB / Redis clients, the centring math, the
+# EDNA / Dozor processing, the GPhL workflow connectors, the beamline-test and
+# image-tracking helpers. These are filtered out of the candidate (still counted
+# by the caller), the MXCuBE analogue of the OnlineXML bookkeeping rows.
+_MXCUBE_SOFTWARE_CLASSES: frozenset[str] = frozenset(
+    {
+        "queuemodel",
+        "queuemanager",
+        "ispybclient",
+        "redisclient",
+        "centringmath",
+        "minikappacorrection",
+        "ednacharacterisation",
+        "dozorparallelprocessing",
+        "emblonlineprocessing",
+        "emblofflineprocessing",
+        "emblautoprocessing",
+        "gphlworkflow",
+        "gphlworkflowconnection",
+        "emblbeamlinetest",
+        "beamlinetools",
+        "beamtesttool",
+        "beamlinesetup",
+        "emblimagetracking",
+        "emblppucontrol",
+        "qtgraphicsmanager",
+        "emblmachineinfo",
+        "emblbsd",
+        "embldoorinterlock",
+        "emblcollect",
+        "emblsession",
+        "embltransmission",
+        "emblenergyscan",
+        "energyscan",
+        "xmlrpcserver",
+        "platemanipulator",
+        "marvin",
+        "emblflexhcd",
+        "emblflexharvester",
+        "gphlworkflow-breakme",
+    }
+)
+
+# MXCuBE-class and name hints that bucket a device into a beam-path stage.
+_MXCUBE_DETECTION_HINTS: frozenset[str] = frozenset(
+    {"camera", "energydispersivespectrometer", "fluxmonitor"}
+)
+_MXCUBE_SAMPLE_HINTS: frozenset[str] = frozenset(
+    {"goniometer", "backlight", "objective", "beamstop"}
+)
+
+
+def suggest_family_mxcube(device: MxcubeDevice) -> tuple[str, bool]:
+    """Return (family, confirmed). Confirmed is False when we fall back to the class."""
+    haystack = device.obj_class.lower()
+    for needle, family in _MXCUBE_FAMILY_RULES:
+        if needle in haystack:
+            return family, True
+    return device.obj_class, False
+
+
+def is_modellable_mxcube(device: MxcubeDevice) -> bool:
+    """True when the object is a beamline device, not an MXCuBE software service.
+
+    Mockup objects (MotorMockup, FluxMockup) are simulation placeholders and are
+    not modellable devices; they are excluded here and reported as sim by the
+    caller via is_sim on the candidate.
+    """
+    if device.is_mockup:
+        return False
+    return device.obj_class.lower() not in _MXCUBE_SOFTWARE_CLASSES
+
+
+def _mxcube_stage(family: str) -> str:
+    fam = family.lower()
+    if fam in _MXCUBE_DETECTION_HINTS:
+        return "detection"
+    if fam in _MXCUBE_SAMPLE_HINTS:
+        return "sample"
+    return "source"
+
+
+def to_candidate_device_mxcube(
+    device: MxcubeDevice, beamline: str
+) -> CandidateDevice | None:
+    """Map one MXCuBE HardwareObjects object to a candidate, or None if filtered.
+
+    Returns None for MXCuBE software services (queue / ISPyB / processing /
+    workflow) so the caller can count what was dropped. The pv slot carries the
+    Exporter / TINE control handle; the object class is the source_class; the
+    enclosure is inferred from the file's endstation subdir. `beamline` is the
+    normalised beamline label (e.g. P14) used to build the enclosure name.
+    """
+    if not is_modellable_mxcube(device):
+        return None
+
+    family, family_confirmed = suggest_family_mxcube(device)
+    enclosure_hint = infer_enclosure_mxcube(device.rel_path, beamline)
+
+    reasons: list[str] = []
+    if device.handle is None:
+        reasons.append(
+            "no Exporter / TINE handle in the config object; control handle needs confirm"
+        )
+    if not family_confirmed:
+        reasons.append(
+            f"family is the MXCuBE class {family!r}; the CORA Family needs a human"
+        )
+    reasons.append(
+        f"MXCuBE object at {device.rel_path!r}; endstation to enclosure is a guess"
+    )
+    if device.model:
+        reasons.append(
+            f"vendor model {device.model!r} read from the config; confirm against the floor"
+        )
+
+    return CandidateDevice(
+        name=device.name,
+        family=family,
+        family_confirmed=family_confirmed,
+        pv=device.handle,
+        labels=(),
+        role_hints=(),
+        enclosure=enclosure_hint.name,
+        stage=_mxcube_stage(family),
+        source_class=device.obj_class,
+        confirm_reasons=tuple(dict.fromkeys(reasons)),
+        is_sim=device.is_mockup,
     )

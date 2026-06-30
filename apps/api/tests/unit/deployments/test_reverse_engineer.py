@@ -340,3 +340,101 @@ def test_beamline_name_prefers_enclosure_sector_over_repo_stem() -> None:
 
 def test_beamline_name_falls_back_to_repo_stem_without_station_enclosure() -> None:
     assert cli._beamline_name([_candidate(None)], "usaxs-bits") == "usaxs-bits"
+
+
+# MXCuBE HardwareObjects (EMBL Hamburg, ALBA, SOLEIL) extraction path.
+
+_MXCUBE_DETECTOR = """<object class="EMBLDetector">
+  <channel type="tine" name="chanStatus" tinename="/P13/detector/eiger16m">status</channel>
+  <type>Eiger</type>
+  <model>16M</model>
+</object>
+"""
+
+_MXCUBE_MOTOR = """<object class="ExporterMotor">
+  <exporter_address>p14md302.embl-hamburg.de:9001</exporter_address>
+  <actuator_name>Omega</actuator_name>
+</object>
+"""
+
+_MXCUBE_SOFTWARE = """<object class="ISPyBClient">
+  <ldap_server>ldap.embl-hamburg.de</ldap_server>
+</object>
+"""
+
+
+def test_parse_mxcube_object_reads_class_handle_model() -> None:
+    det = parse.parse_mxcube_object(_MXCUBE_DETECTOR, "eh1/detector-eiger16m")
+    assert det is not None
+    assert det.obj_class == "EMBLDetector"
+    assert det.name == "detector-eiger16m"
+    assert det.rel_path == "eh1/detector-eiger16m"
+    assert det.handle == "/P13/detector/eiger16m"
+    assert det.model == "16M"
+    assert not det.is_mockup
+    motor = parse.parse_mxcube_object(_MXCUBE_MOTOR, "eh1/diff-omega")
+    assert motor is not None
+    assert motor.handle == "p14md302.embl-hamburg.de:9001"
+
+
+def test_parse_mxcube_object_rejects_non_object_and_malformed() -> None:
+    assert parse.parse_mxcube_object("<procedure/>", "x") is None
+    assert parse.parse_mxcube_object("<object>no class</object>", "x") is None
+    assert parse.parse_mxcube_object("<object class=", "x") is None
+
+
+def test_infer_enclosure_mxcube_endstation_and_root() -> None:
+    assert parse.infer_enclosure_mxcube("eh1/detector-eiger16m", "P14").name == "P14-EH1"
+    assert parse.infer_enclosure_mxcube("eh2/diff-omega", "PE2").name == "PE2-EH2"
+    root = parse.infer_enclosure_mxcube("diffractometer", "P14")
+    assert root.name == "P14"
+    assert root.station is None
+
+
+def test_suggest_family_mxcube_confident_vs_class_fallback() -> None:
+    diff = parse.MxcubeDevice(
+        "diffractometer", "EMBLMiniDiff", "diffractometer", "h:9001", None, None, False
+    )
+    assert mapping.suggest_family_mxcube(diff) == ("Goniometer", True)
+    det = parse.MxcubeDevice("d", "EMBLDetector", "eh1/d", "/P13/det", "Eiger", "16M", False)
+    assert mapping.suggest_family_mxcube(det) == ("Camera", True)
+    motor = parse.MxcubeDevice(
+        "diff-omega", "ExporterMotor", "eh1/diff-omega", "h:9001", None, None, False
+    )
+    family, confirmed = mapping.suggest_family_mxcube(motor)
+    assert family == "ExporterMotor" and not confirmed
+
+
+def test_to_candidate_device_mxcube_device_vs_filtered_software_and_mockup() -> None:
+    det = parse.parse_mxcube_object(_MXCUBE_DETECTOR, "eh1/detector-eiger16m")
+    assert det is not None
+    cand = mapping.to_candidate_device_mxcube(det, "P13")
+    assert cand is not None
+    assert cand.family == "Camera"
+    assert cand.stage == "detection"
+    assert cand.enclosure == "P13-EH1"
+    assert cand.pv == "/P13/detector/eiger16m"
+    software = parse.parse_mxcube_object(_MXCUBE_SOFTWARE, "data-collection")
+    assert software is not None
+    assert mapping.to_candidate_device_mxcube(software, "P13") is None
+    mockup = parse.MxcubeDevice("m", "MotorMockup", "m", None, None, None, True)
+    assert mapping.to_candidate_device_mxcube(mockup, "P13") is None
+
+
+def test_mxcube_candidate_yaml_self_validates_against_loader(tmp_path: Path) -> None:
+    diff = parse.MxcubeDevice(
+        "diffractometer", "EMBLMiniDiff", "diffractometer", "p14md302:9001", None, None, False
+    )
+    candidate = mapping.to_candidate_device_mxcube(diff, "P14")
+    assert candidate is not None
+    text = emit.render_candidate_yaml("P14", "petra-iii", [candidate])
+    path = tmp_path / "beamline.candidate.yaml"
+    path.write_text(text, encoding="utf-8")
+    ok, message = emit.self_validate(path)
+    assert ok, message
+
+
+def test_mxcube_beamline_label_derivation() -> None:
+    assert cli._mxcube_beamline_label("mxcubecore/configuration/embl_hh_p14", None) == "P14"
+    assert cli._mxcube_beamline_label("configuration/desy_p11", None) == "P11"
+    assert cli._mxcube_beamline_label("configuration/embl_hh_p13", "P13") == "P13"

@@ -118,10 +118,14 @@ def _candidate_device_dict(device: CandidateDevice) -> dict[str, Any]:
     return entry
 
 
-def render_candidate_yaml(beamline_name: str, facility: str, devices: list[CandidateDevice]) -> str:
+def render_candidate_yaml(
+    beamline_name: str, facility: str, devices: list[CandidateDevice]
+) -> str:
     """Render the candidate beamline.yaml text (header comment + YAML body)."""
     data = build_candidate_dict(beamline_name, facility, devices)
-    body = yaml.safe_dump(data, sort_keys=False, default_flow_style=False, allow_unicode=True)
+    body = yaml.safe_dump(
+        data, sort_keys=False, default_flow_style=False, allow_unicode=True
+    )
     return _CANDIDATE_HEADER + "\n" + body
 
 
@@ -159,7 +163,9 @@ def render_facts_md(
 
     lines.append("## Device inventory")
     lines.append("")
-    lines.append("| Device | Suggested family | PV / axes | Enclosure | Stage | Labels | Confirm |")
+    lines.append(
+        "| Device | Suggested family | PV / axes | Enclosure | Stage | Labels | Confirm |"
+    )
     lines.append("| --- | --- | --- | --- | --- | --- | --- |")
     for d in sorted(real, key=lambda d: (d.stage, d.name)):
         family = d.family if d.family_confirmed else f"{d.family} (?)"
@@ -173,7 +179,9 @@ def render_facts_md(
     lines.append("## Candidate enclosures")
     lines.append("")
     if enclosures:
-        lines.append(", ".join(f"`{e}`" for e in enclosures) + " (all inferred, confirm).")
+        lines.append(
+            ", ".join(f"`{e}`" for e in enclosures) + " (all inferred, confirm)."
+        )
     else:
         lines.append("None inferred from prefixes or labels.")
     lines.append("")
@@ -187,12 +195,16 @@ def render_facts_md(
     lines.append("## Trust hints (from user_group_permissions.yaml)")
     lines.append("")
     if permissions:
-        lines.append("Candidate Trust Zones / Policies, one per queueserver user group:")
+        lines.append(
+            "Candidate Trust Zones / Policies, one per queueserver user group:"
+        )
         lines.append("")
         for group in permissions:
             plans = ", ".join(group.allowed_plans) or "(none)"
             devs = ", ".join(group.allowed_devices) or "(none)"
-            lines.append(f"- `{group.name}`: allowed plans `{plans}`; allowed devices `{devs}`")
+            lines.append(
+                f"- `{group.name}`: allowed plans `{plans}`; allowed devices `{devs}`"
+            )
     else:
         lines.append("No user_group_permissions.yaml found.")
     lines.append("")
@@ -226,7 +238,9 @@ def _fmt_pv(pv: str | dict[str, str] | None) -> str:
     return "; ".join(f"{k}=`{v}`" for k, v in pv.items())
 
 
-def render_recurrence_md(per_repo: dict[str, list[CandidateDevice]], graduated: set[str]) -> str:
+def render_recurrence_md(
+    per_repo: dict[str, list[CandidateDevice]], graduated: set[str]
+) -> str:
     """Render the cross-fleet recurrence report ranking Family graduation candidates."""
     family_repos: dict[str, set[str]] = {}
     class_repos: dict[str, set[str]] = {}
@@ -255,7 +269,9 @@ def render_recurrence_md(per_repo: dict[str, list[CandidateDevice]], graduated: 
     lines.append("")
     lines.append("| Family | Repos | Status |")
     lines.append("| --- | --- | --- |")
-    for family, repos in sorted(family_repos.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+    for family, repos in sorted(
+        family_repos.items(), key=lambda kv: (-len(kv[1]), kv[0])
+    ):
         if family in graduated:
             status = "graduated"
         elif len(repos) >= 2:
@@ -269,7 +285,9 @@ def render_recurrence_md(per_repo: dict[str, list[CandidateDevice]], graduated: 
     lines.append("")
     lines.append("| ophyd class path | Repos |")
     lines.append("| --- | --- |")
-    for class_path, repos in sorted(class_repos.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+    for class_path, repos in sorted(
+        class_repos.items(), key=lambda kv: (-len(kv[1]), kv[0])
+    ):
         if len(repos) >= 2:
             lines.append(f"| `{class_path}` | {len(repos)} |")
     lines.append("")
@@ -278,7 +296,9 @@ def render_recurrence_md(per_repo: dict[str, list[CandidateDevice]], graduated: 
     lines.append("")
     lines.append("| label | Repos |")
     lines.append("| --- | --- |")
-    for label, repos in sorted(label_repos.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+    for label, repos in sorted(
+        label_repos.items(), key=lambda kv: (-len(kv[1]), kv[0])
+    ):
         if len(repos) >= 2:
             lines.append(f"| `{label}` | {len(repos)} |")
     lines.append("")
