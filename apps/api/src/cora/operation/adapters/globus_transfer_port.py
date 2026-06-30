@@ -55,7 +55,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
-from globus_sdk import GlobusAPIError, NetworkError, TransferData
+from globus_sdk import MISSING, GlobusAPIError, NetworkError, TransferData
 
 from cora.operation.ports.transfer_port import (
     TransferAccessDeniedError,
@@ -111,6 +111,7 @@ if TYPE_CHECKING:
     from typing import cast
 
     import globus_sdk
+    from globus_sdk import MissingType
 
     # Static-only conformance: pyright fails here if the real Globus
     # TransferClient ever drifts from the GlobusTransferClient seam.
@@ -190,14 +191,16 @@ class GlobusTransferPort:
     async def begin(self, request: TransferRequest) -> TransferHandle:
         source_endpoint, source_path = _split_location(request.source)
         destination_endpoint, destination_path = _split_location(request.destination)
-        sync_level: SyncLevel | None = (
-            self._skip_unchanged_sync_level if request.skip_unchanged else None
+        sync_level: SyncLevel | MissingType = (
+            self._skip_unchanged_sync_level if request.skip_unchanged else MISSING
         )
         data = TransferData(
             source_endpoint=source_endpoint,
             destination_endpoint=destination_endpoint,
-            label=request.label,
-            submission_id=request.idempotency_key,
+            label=request.label if request.label is not None else MISSING,
+            submission_id=request.idempotency_key
+            if request.idempotency_key is not None
+            else MISSING,
             sync_level=sync_level,
             verify_checksum=request.verify_on_arrival,
         )

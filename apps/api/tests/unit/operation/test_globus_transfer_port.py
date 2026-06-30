@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 import requests
-from globus_sdk import NetworkError, TransferAPIError, TransferData
+from globus_sdk import MISSING, NetworkError, TransferAPIError, TransferData
 from requests.structures import CaseInsensitiveDict
 
 from cora.operation.adapters.globus_transfer_port import GlobusTransferPort
@@ -135,7 +135,9 @@ async def test_begin_without_skip_unchanged_leaves_sync_level_unset() -> None:
     client = _FakeTransferClient()
     port = GlobusTransferPort(client)
     await port.begin(_RAW_SYNC)
-    assert client.submitted[0].get("sync_level") is None
+    # globus-sdk v4 leaves an unset payload field as MISSING (stripped before
+    # the wire) rather than None.
+    assert client.submitted[0].get("sync_level") is MISSING
 
 
 @pytest.mark.unit
