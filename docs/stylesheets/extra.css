@@ -940,8 +940,16 @@ body::before {
   border-color: var(--cs-alarm);
 }
 
-.cs-btn:focus-visible,
+.cs-btn:focus-visible {
+  outline: 2px solid var(--cs-amber);
+  outline-offset: 2px;
+}
+
 .cs-slider:focus-visible {
+  outline: none;
+}
+
+.cs-slider:focus-visible .cs-slider-thumb {
   outline: 2px solid var(--cs-amber);
   outline-offset: 2px;
 }
@@ -1053,12 +1061,15 @@ body::before {
   stroke-width: 1.2;
 }
 
-/* Slider: a draggable scrub bar under the timeline. The thumb tracks the fold
-   cursor; dragging it works without scrolling the timeline horizontally. */
+/* Slider: a draggable scrub bar under the timeline. The track is inset to the
+   same span as the timeline's x-axis (viewBox PAD_L 84 / PAD_R 24 over width
+   920, so 9.13% left and 2.61% right), so the thumb sits directly under the
+   fold cursor and the two stack vertically. The thumb tracks the cursor;
+   dragging works without scrolling the timeline horizontally. */
 .cs-slider {
   position: relative;
   height: 22px;
-  margin: 0.6rem 0.2rem 0.2rem;
+  margin: 0.4rem 0 0.2rem;
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -1067,12 +1078,13 @@ body::before {
 
 .cs-slider-track {
   position: relative;
-  width: 100%;
+  width: auto;
+  flex: 1;
+  margin: 0 2.61% 0 9.13%;
   height: 5px;
   border-radius: 3px;
   background: var(--cs-panel-2);
   border: 1px solid var(--cs-line);
-  overflow: hidden;
 }
 
 .cs-slider-fill {

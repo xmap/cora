@@ -630,8 +630,9 @@
     // The slider proxy under the timeline is itself draggable: map the pointer
     // across the slider's own width to a time, so it works without scrolling
     // the timeline. Pointer capture keeps the drag alive past the thumb edge.
+    const track = slider.querySelector(".cs-slider-track");
     const secsFromSlider = (clientX) => {
-      const rect = slider.getBoundingClientRect();
+      const rect = track.getBoundingClientRect();
       const f = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
       return f * run.xmax;
     };
@@ -721,8 +722,10 @@
         <div class="cs-slider" tabindex="0" role="slider"
              aria-label="Fold cursor: time within the run"
              aria-valuemin="0" aria-valuenow="0">
-          <div class="cs-slider-track"><div class="cs-slider-fill"></div></div>
-          <div class="cs-slider-thumb"></div>
+          <div class="cs-slider-track">
+            <div class="cs-slider-fill"></div>
+            <div class="cs-slider-thumb"></div>
+          </div>
         </div>
         <div class="cs-panels">
           <div class="cs-readout">
