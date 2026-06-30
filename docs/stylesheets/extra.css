@@ -467,17 +467,11 @@ body::before {
   grid-template-columns: 1fr;
 }
 
-/* Papers page: same single-column card list as talks. Material's grid-cards
-   behavior stretches the card's last link into a full-card click overlay
-   (::after, inset 0). These cards carry two distinct links (interactive demo
-   and source), so the overlay would swallow every click into the last one.
-   Drop the overlay so both links are independently clickable. */
+/* Papers page: same single-column clickable-card list as talks. The card body
+   click goes to the interactive demo (the stretched-link rule above), with the
+   PDF download as a top-right icon that sits above the overlay. */
 .md-typeset .grid.cards.papers-list {
   grid-template-columns: 1fr;
-}
-
-.md-typeset .grid.cards.papers-list > ul > li > :last-child a::after {
-  display: none;
 }
 
 /* ---- Labelled aside ----
