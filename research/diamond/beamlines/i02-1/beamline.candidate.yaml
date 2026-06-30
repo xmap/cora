@@ -1,0 +1,29 @@
+# CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (src/dodal/beamlines/i02_1.py),
+# NOT authoritative. VMXm = I02J, beamline_prefix=BL02J (env-resolved). PVs verified verbatim.
+
+beamline: {name: I02-1, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: I02-1, facility_code: diamond, confirm: VMXm microfocus MX (I02J); PV root BL02J (env-resolved)}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: DCM, family: Monochromator, pv: "BL02J-MO-DCM-01:", new: true, confirm: "DoubleCrystalMonochromatorBase; Monochromator (catalog)"}
+  - {name: Attenuator, family: Filter, pv: "BL02J-OP-ATTN-01:", new: true, confirm: "EnumFilterAttenuator; Filter (catalog)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Goniometer, family: Goniometer, pv: "BL02J-MO-", new: true, confirm: "XYZWrappedOmegaStage (x=SAMP-01:X, y=GONJK-01:HEIGHT, z=SAMP-01:Z, omega=SAMP-01:OMEGA); confirm Goniometer family vs LinearStage+RotaryStage (constrained-omega, not full Smargon)"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: EigerDetector, family: Camera, pv: "BL02J-EA-EIGER-01:", new: true, confirm: "Eiger; Camera (catalog)"}
+  - {name: Flux, family: FluxMonitor, pv: "BL02J-EA-FLUX-01:", new: true, confirm: "Flux readout; FluxMonitor (catalog, graduated)"}
+  - {name: Zebra, family: TimingController, pv: "BL02J-EA-ZEBRA-01:", new: true, confirm: "Zebra + 2D fast grid scan (motion ctrl BL02J-MO-STEP-11:); TimingController (catalog), confirm"}
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Undulator, family: InsertionDevice, pv: "SR02J-MO-SERVC-01:", new: true, confirm: "UndulatorInKeV; InsertionDevice (catalog)"}
