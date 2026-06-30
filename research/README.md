@@ -58,6 +58,7 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 | NSLS-II | yes (retrospective) | 28 beamlines (+ recurrence.md); 24 deployed + 4 research-only (qas, tes, nyx, opls) | yes | EPICS / bluesky, public profile collections |
 | SLAC | yes (retrospective) | (from `pcdshub` at build time) | yes | EPICS / `pcdshub` |
 | SSRL | yes | 4 (2-1, 2-2, 1-5, DeNovX) + recurrence.md | none | EPICS / bluesky; per-beamline profiles on a SLAC staff account |
+| SESAME | yes | none yet (4 public EPICS DAQ repos modellable) | none | EPICS; per-beamline DAQ/ScanTool + IOC configs on the facility org |
 | Australian Synchrotron | yes (retrospective) | none | yes | heterogeneous (EPICS + Exporter + REST + TCP) |
 | MAX IV | yes | none (partially buildable: 2 beamlines) | yes | Tango / Sardana; canonical config firewalled (gitlab.maxiv.lu.se), full per-Asset topology public for NanoMAX + CoSAXS (contrast DAQ framework) |
 
