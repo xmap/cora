@@ -45,7 +45,7 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 | Facility | Survey | Tier-2 device passes | Deployments | Control source |
 | --- | --- | --- | --- | --- |
 | APS | yes | 11 beamlines (from `*-bits`) | yes | EPICS, public `*-bits` instrument repos |
-| ESRF | yes | 2 (ID19, ID16B) | yes | BLISS / Tango, public Beacon config |
+| ESRF | yes | 8 of 8 (+ recurrence.md) | yes | BLISS / Tango, public Beacon config |
 | PSI | yes | none | yes | EPICS + BEC; device source on gitea (firewalled) |
 | ALBA | yes | none | yes | device source firewalled |
 | Sirius | yes | none | yes | device source firewalled |
