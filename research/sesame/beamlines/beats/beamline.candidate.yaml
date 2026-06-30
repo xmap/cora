@@ -1,0 +1,27 @@
+# CANDIDATE beamline descriptor: hand-read from SESAME-Synchrotron/BEATS_tomoscan IOC substitutions, NOT
+# authoritative. PV roots use the SESAME I10 (ID10) scheme; tomoscan prefix tomoscanBEATS:. Verified verbatim.
+
+beamline: {name: beats, facility: sesame, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: ID10, facility_code: sesame, confirm: "BEATS tomography (BEAmline for Tomography at SESAME); PV roots I10R*/I10EH/I10OH"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: RotationStage, family: RotaryStage, pv: "I10R3-MO-ACS:EH-TMO-SRV-ROT:m1", new: true, confirm: "ACS servo tomography rotation (air-bearing); RotaryStage (catalog)"}
+  - {name: SampleStageX, family: LinearStage, pv: "I10R2-MO-MC2:EH-TMO-STP-TRSX1", new: true, confirm: "MC2 stepper translation X; LinearStage (catalog)"}
+  - {name: SampleStageY, family: LinearStage, pv: "I10R2-MO-MC2:EH-TMO-STP-TRSY1", new: true, confirm: "MC2 stepper translation Y; LinearStage (catalog)"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: FLIRCamera, family: Camera, pv: "FLIR:HDF1:", new: true, confirm: "FLIR tomography camera + HDF writer; Camera (catalog)"}
+  - {name: PCOCamera, family: Camera, pv: "PCO:HDF1:", new: true, confirm: "PCO tomography camera + HDF writer; Camera (catalog)"}
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: CombinedStopperShutter, family: Shutter, pv: "I10OH-VA-COMB:setClose", new: true, confirm: "optics-hutch combined stopper+shutter (setClose/setOpen/getStatus); Shutter (catalog), confirm dual stopper+shutter modeling"}
+  - {name: BeamReadyPermit, family: GenericProbe, pv: "BEAMREADY:ShutterPermit", new: true, confirm: "beam-ready shutter permit; LOOSE GenericProbe"}
+  - {name: AirBearingInterlocks, family: GenericProbe, pv: "I10EH-ES-ACS-PRESSURE-R:isOn", new: true, confirm: "ACS air-bearing pressure interlocks/valves/enables/emergency; LOOSE GenericProbe safety cluster"}
+# DEFERRED: OPTICS-1 (white/pink-beam filters, source, any mono); BEATS_recon is compute (JobRunner port, not Asset)
