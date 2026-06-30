@@ -1,0 +1,363 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: XALOC
+  facility: alba
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: XALOC
+  facility_code: alba
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: Qt4_graphics-manager
+    family: Qt4_GraphicsManager
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'Qt4_GraphicsManager'; the CORA Family needs
+      a human; MXCuBE object at 'Qt4_graphics-manager'; endstation to enclosure is
+      a guess
+    source_class: Qt4_GraphicsManager
+  - name: Qt4_testvideo
+    family: Qt4_GraphicsManager
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'Qt4_GraphicsManager'; the CORA Family needs
+      a human; MXCuBE object at 'Qt4_testvideo'; endstation to enclosure is a guess
+    source_class: Qt4_GraphicsManager
+  - name: auto-processing
+    family: ALBAAutoProcessing
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'ALBAAutoProcessing'; the CORA Family needs
+      a human; MXCuBE object at 'auto-processing'; endstation to enclosure is a guess
+    source_class: ALBAAutoProcessing
+  - name: backlight
+    family: ALBABackLight
+    pv: Back
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBABackLight'; the CORA Family needs a human;
+      MXCuBE object at 'backlight'; endstation to enclosure is a guess
+    source_class: ALBABackLight
+  - name: beam-info
+    family: ALBABeamInfo
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'ALBABeamInfo'; the CORA Family needs a
+      human; MXCuBE object at 'beam-info'; endstation to enclosure is a guess
+    source_class: ALBABeamInfo
+  - name: blight
+    family: ALBAZoomMotor
+    pv: blight
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBAZoomMotor'; the CORA Family needs a human;
+      MXCuBE object at 'blight'; endstation to enclosure is a guess
+    source_class: ALBAZoomMotor
+  - name: bstopz
+    family: SardanaMotor
+    pv: bstopz
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'bstopz'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: calibration
+    family: ALBACalibration
+    pv: Calibration
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBACalibration'; the CORA Family needs a
+      human; MXCuBE object at 'calibration'; endstation to enclosure is a guess
+    source_class: ALBACalibration
+  - name: cats
+    family: ALBACats
+    pv: Cats
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBACats'; the CORA Family needs a human;
+      MXCuBE object at 'cats'; endstation to enclosure is a guess
+    source_class: ALBACats
+  - name: catsmaint
+    family: ALBACatsMaint
+    pv: CatsMaint
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBACatsMaint'; the CORA Family needs a human;
+      MXCuBE object at 'catsmaint'; endstation to enclosure is a guess
+    source_class: ALBACatsMaint
+  - name: centx
+    family: SardanaMotor
+    pv: CentX
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'centx'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: centy
+    family: SardanaMotor
+    pv: CentY
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'centy'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: data-analysis
+    family: ALBADataAnalysis
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'ALBADataAnalysis'; the CORA Family needs
+      a human; MXCuBE object at 'data-analysis'; endstation to enclosure is a guess
+    source_class: ALBADataAnalysis
+  - name: dbconnection
+    family: ALBAISPyBClient
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'ALBAISPyBClient'; the CORA Family needs
+      a human; MXCuBE object at 'dbconnection'; endstation to enclosure is a guess
+    source_class: ALBAISPyBClient
+  - name: detector-distance
+    family: SardanaMotor
+    pv: Detector Distance
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'detector-distance'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: energy
+    family: ALBAEnergy
+    pv: Energy
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBAEnergy'; the CORA Family needs a human;
+      MXCuBE object at 'energy'; endstation to enclosure is a guess
+    source_class: ALBAEnergy
+  - name: energy_motor
+    family: SardanaMotor
+    pv: energy
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'energy_motor'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: fastshut
+    family: Shutter
+    pv: Fast Shutter
+    enclosure: XALOC
+    new: true
+    confirm: MXCuBE object at 'fastshut'; endstation to enclosure is a guess
+    source_class: ALBAFastShutter
+  - name: frontend
+    family: ALBAFrontEnd
+    pv: Front End
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBAFrontEnd'; the CORA Family needs a human;
+      MXCuBE object at 'frontend'; endstation to enclosure is a guess
+    source_class: ALBAFrontEnd
+  - name: frontlight
+    family: ALBAFrontLight
+    pv: Front
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBAFrontLight'; the CORA Family needs a
+      human; MXCuBE object at 'frontlight'; endstation to enclosure is a guess
+    source_class: ALBAFrontLight
+  - name: kappa
+    family: SardanaMotor
+    pv: Kappa
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'kappa'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: kappaphi
+    family: SardanaMotor
+    pv: KappaPhi
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'kappaphi'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: limavideo
+    family: Qt4_TangoLimaVideo
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'Qt4_TangoLimaVideo'; the CORA Family needs
+      a human; MXCuBE object at 'limavideo'; endstation to enclosure is a guess
+    source_class: Qt4_TangoLimaVideo
+  - name: mach-info
+    family: ALBAMachineInfo
+    pv: Mach
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBAMachineInfo'; the CORA Family needs a
+      human; MXCuBE object at 'mach-info'; endstation to enclosure is a guess
+    source_class: ALBAMachineInfo
+  - name: mxcollect
+    family: ALBACollect
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'ALBACollect'; the CORA Family needs a human;
+      MXCuBE object at 'mxcollect'; endstation to enclosure is a guess
+    source_class: ALBACollect
+  - name: omega
+    family: SardanaMotor
+    pv: Omega
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'omega'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: omegax
+    family: SardanaMotor
+    pv: OmegaX
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'omegax'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: omegay
+    family: SardanaMotor
+    pv: OmegaY
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'omegay'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: omegaz
+    family: SardanaMotor
+    pv: OmegaZ
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'omegaz'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: parallel-processing
+    family: ParallelProcessing
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'ParallelProcessing'; the CORA Family needs
+      a human; MXCuBE object at 'parallel-processing'; endstation to enclosure is
+      a guess
+    source_class: ParallelProcessing
+  - name: photonshut
+    family: ALBAEpsActuator
+    pv: Photon Shutter
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBAEpsActuator'; the CORA Family needs a
+      human; MXCuBE object at 'photonshut'; endstation to enclosure is a guess
+    source_class: ALBAEpsActuator
+  - name: pilatus
+    family: ALBAPilatus
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'ALBAPilatus'; the CORA Family needs a human;
+      MXCuBE object at 'pilatus'; endstation to enclosure is a guess; vendor model
+      '6M_F' read from the config; confirm against the floor
+    source_class: ALBAPilatus
+  - name: resolution
+    family: SardanaMotor
+    pv: Resolution
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'resolution'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: session
+    family: ALBASession
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'ALBASession'; the CORA Family needs a human;
+      MXCuBE object at 'session'; endstation to enclosure is a guess
+    source_class: ALBASession
+  - name: slowshut
+    family: ALBAEpsActuator
+    pv: Slow Shutter
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBAEpsActuator'; the CORA Family needs a
+      human; MXCuBE object at 'slowshut'; endstation to enclosure is a guess
+    source_class: ALBAEpsActuator
+  - name: supervisor
+    family: ALBASupervisor
+    pv: Beamline Supervisor
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBASupervisor'; the CORA Family needs a
+      human; MXCuBE object at 'supervisor'; endstation to enclosure is a guess
+    source_class: ALBASupervisor
+  - name: transmission
+    family: ALBATransmission
+    pv: Transmission
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBATransmission'; the CORA Family needs
+      a human; MXCuBE object at 'transmission'; endstation to enclosure is a guess
+    source_class: ALBATransmission
+  - name: wavelength_motor
+    family: SardanaMotor
+    pv: wavelength
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'SardanaMotor'; the CORA Family needs a human;
+      MXCuBE object at 'wavelength_motor'; endstation to enclosure is a guess
+    source_class: SardanaMotor
+  - name: zoom-auto-brightness
+    family: ALBAZoomMotorAutoBrightness
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'ALBAZoomMotorAutoBrightness'; the CORA
+      Family needs a human; MXCuBE object at 'zoom-auto-brightness'; endstation to
+      enclosure is a guess
+    source_class: ALBAZoomMotorAutoBrightness
+  - name: zoom
+    family: ALBAZoomMotor
+    pv: Zoom
+    enclosure: XALOC
+    new: true
+    confirm: family is the MXCuBE class 'ALBAZoomMotor'; the CORA Family needs a human;
+      MXCuBE object at 'zoom'; endstation to enclosure is a guess
+    source_class: ALBAZoomMotor
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: mini-diff
+    family: Goniometer
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; MXCuBE object at 'mini-diff'; endstation to enclosure is a guess
+    source_class: ALBAMiniDiff
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: flux
+    family: FluxMonitor
+    enclosure: XALOC
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; MXCuBE object at 'flux'; endstation to enclosure is a guess
+    source_class: ALBAFlux

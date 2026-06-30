@@ -47,7 +47,7 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 | APS | yes | 11 beamlines (from `*-bits`) | yes | EPICS, public `*-bits` instrument repos |
 | ESRF | yes | 8 of 8 (+ recurrence.md) | yes | BLISS / Tango, public Beacon config |
 | PSI | yes | none | yes | EPICS + BEC; device source on gitea (firewalled) |
-| ALBA | yes | none | yes | device source firewalled |
+| ALBA | yes | 1 (XALOC, via MXCuBE) + recurrence.md | yes | Tango/Sardana firewalled; XALOC MX topology public via MXCuBE config |
 | Sirius | yes | none | yes | device source firewalled |
 | Elettra | yes | none | yes | Tango / DonkiOrchestra; acquisition source private |
 | NSRRC | yes | none | yes | EPICS / Blu-Ice-DCSS; scattered personal repos |
