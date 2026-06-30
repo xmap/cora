@@ -1,0 +1,122 @@
+# P61 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P61 "High Energy Wiggler Beamline" is the high-energy white-beam beamline at PETRA
+# III (DESY, Hamburg), fed by a damping-wiggler source. It runs P61A (Large Volume
+# Press, high-pressure / high-temperature in-situ studies) and P61B (high-energy
+# white-beam / engineering diffraction). It is bound to the PETRA III Site
+# (deployments/petra-iii/site.yaml), the seventeenth PETRA III beamline and the
+# eighteenth (and final) PETRA III beamline with a public OnlineXML registry.
+#
+# STATUS: reverse-engineered from P61's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p61, branch
+# debian/stretch; the online_hasnp61ch1.xml registry, the only PETRA III extras
+# package on the stretch branch). Device logical names and Tango control handles are
+# real, read from that registry; vendor part numbers, the press, the source, energy
+# calibration, detectors, and physical positions are not in it and are open questions.
+# The P61 registry is thin: it exposes one large generically-named motor bank (eh_mot*
+# on the hasnp61eh2 host) whose per-axis roles are not labelled, so the Asset grouping
+# leans on the bank prefix and is carried confirm (GROUP-1). Every value is carried
+# confirm until P61 staff verify it. The extraction is in research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family, and no new technique vocabulary. P61 is a thin
+# high-energy white-beam beamline; the experiment positioning reuses LinearStage, and
+# the technique reuses the pending energy_dispersive_diffraction / powder_diffraction
+# slugs (TECH-1). The Large Volume Press, if exposed, would reuse the allowlisted-loose
+# PressureCell Family (the 13-id-d / P02 precedent); it is not in this registry slice
+# and is carried pending (PRESS-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read from
+# the OnlineXML. The eh_mot* bank reports on the hasnp61eh2 host. The bank is grouped,
+# every axis role pending (GROUP-1). Note this is the only PETRA III extras package on
+# the debian/stretch branch (the others are debian/jessie), so the snapshot vintage may
+# differ (CTRL-1).
+#
+# SCOPE: this cut models the P61 experiment / instrument motor bank. The source
+# (damping wiggler), the Large Volume Press, the energy-dispersive / area detectors,
+# and the optics are not exposed in this registry slice and are carried pending
+# (SRC-1, PRESS-1, DET-1). Counter / timer / ADC channels and the Sardana
+# MeasurementGroup bookkeeping rows are filtered out by the extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p61/questions.md.
+
+beamline:
+  name: P61
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P61"
+  tier: Unit
+  parent: null
+  source: superconducting-wiggler
+  source_confirm: "P61 is fed by a PETRA III damping wiggler (high-energy white beam); the OnlineXML exposes no source device in this slice, so the wiggler parameters are carried pending (SRC-1)"
+
+# One enclosure inferred from the OnlineXML host (the registry exposes the eh_mot bank
+# on a single hasnp61eh2 host): the experiment hutch. DESY PSS permit signals are not
+# in the OnlineXML (PSS-1).
+enclosures:
+  - name: p61-eh2
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P61 experiment hutch; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SAMPLE STAGE: the experiment / instrument motor bank
+# ===========================================================================
+
+experiment-sample:
+  stage: sample
+  enclosure: p61-eh2
+  intro: "The P61 experiment / instrument motor bank: the high-energy white-beam sample positioning and diffractometer motions. The Large Volume Press, the source, and the optics are not exposed in this registry slice, so the modelled devices are the experiment positioning stage."
+  note: "Handles read from the eh_mot* bank (~64 axes) on the hasnp61eh2 host. Per-axis roles not labelled, grouped as one stage (GROUP-1). The Large Volume Press (P61A) is PRESS-1."
+  devices:
+    - name: ExperimentStage
+      family: LinearStage
+      pv: {bank: "p61/motor/eh_mot01"}
+      new: true
+      confirm: true
+      note: "the P61 experiment / instrument motor bank (eh_mot01..64 on p61/motor, hasnp61eh2 host): the high-energy white-beam sample positioning and diffractometer motions, per-axis roles not labelled, grouped as one stage (GROUP-1)"
+
+# ===========================================================================
+# DETECTION STAGE
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: p61-eh2
+  intro: "The P61 detection. The OnlineXML slice exposes no dedicated detector device beyond the motors; the energy-dispersive / area detectors typical of a high-energy white-beam / LVP beamline are carried pending."
+  note: "Energy-dispersive (Ge solid-state) and area detectors are not exposed as devices in this registry slice; carried pending (DET-1)."
+  devices:
+    - name: EnergyDispersiveDetector
+      family: EnergyDispersiveSpectrometer
+      pv: {confirm: "the energy-dispersive (Ge solid-state) detector typical of a white-beam / LVP beamline is not exposed in this OnlineXML slice; carried pending (DET-1)"}
+      new: true
+      confirm: true
+      note: "the P61 energy-dispersive detector (Ge solid-state) for energy-dispersive diffraction; not in the registry slice, modelled as a pending EnergyDispersiveSpectrometer placeholder (DET-1)"
+
+# Cross-cutting control. P61 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P61 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as the other PETRA III beamlines. A motion axis is a
+    Tango motor device (p61/motor/...). The handles are read from P61's public OnlineXML
+    registry and carried confirm (CTRL-1). Note P61 is the only PETRA III extras package
+    published on the debian/stretch branch (the others are debian/jessie), so its
+    snapshot vintage may differ. The high-energy white-beam / energy-dispersive
+    diffraction acquisition runs as a Sardana macro; that orchestration is the seam
+    CORA's edge would conduct over its ControlPort (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the experiment motor bank (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P61 run needs present before it can
+    start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

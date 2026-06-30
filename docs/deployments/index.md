@@ -147,6 +147,7 @@ CORA's Site for PETRA III (DESY, Hamburg), and its second Tango / Sardana contro
 | [P22](p22/index.md) | Reverse-engineered | hard X-ray photoelectron spectroscopy (HAXPES) on a `Manipulator` sample stage + `ElectronAnalyzer`, sharing the P09 optics chain (undulator / DCM / mirrors / phase retarder); coins no new Family, reusing the pending `angle_resolved_photoemission` Method; the fleet's first shared-optics beamline pair |
 | [P23](p23/index.md) | Reverse-engineered | in-situ / operando X-ray diffraction and imaging; a thin reuse-and-reinforce scaffold (one grouped motor bank, optics / diffractometer / detectors carried grouped / pending), reusing the pending `diffraction` Method |
 | [P24](p24/index.md) | Reverse-engineered | single-crystal / small-molecule chemical crystallography across an optics hutch and two experiment hutches (EH1 / EH2); coins no new Family (the small-molecule diffractometer reuses `LinearStage`, area detector pending), reusing the pending `diffraction` Method |
+| [P61](p61/index.md) | Reverse-engineered | high-energy white-beam wiggler beamline (P61A Large Volume Press + P61B energy-dispersive diffraction); a thin reuse-and-reinforce scaffold (one grouped motor bank, source / press / detectors pending), reusing the pending `energy_dispersive_diffraction` Method; the last PETRA III beamline with a public OnlineXML registry |
 
 ## [ALS](als/index.md)
 
