@@ -143,6 +143,7 @@ CORA's Site for PETRA III (DESY, Hamburg), and its second Tango / Sardana contro
 | [P65](p65/index.md) | Reverse-engineered | applied / high-throughput X-ray absorption spectroscopy (transmission + fluorescence EXAFS / XANES) on a channel-cut DCM, sharing the P64 optics host; the applied half of the XAS pair, a thin reuse-and-reinforce scaffold (detection carried pending), reusing the pending `xas_spectroscopy` Method |
 | [P07](p07/index.md) | Reverse-engineered | high-energy materials-science diffraction (HEMS) on a multi-bounce DCM + four-circle diffractometer, with a 17 T high-field magnet endstation; jointly operated by Helmholtz-Zentrum Hereon + DESY, coins no new Family (a further consumer of the loose `Magnet`), reusing the pending `diffraction` / `magnetic_scattering` Methods |
 | [P08](p08/index.md) | Reverse-engineered | high-resolution diffraction (surface / interface, reflectivity, powder / single-crystal) on a six-circle Kohzu diffractometer with a rich detector set (Eiger / Pilatus / Mythen / PerkinElmer / Vortex); coins no new Family, reusing the pending `diffraction` Method |
+| [P21](p21/index.md) | Reverse-engineered | Swedish Materials Science high-energy diffraction (P21.2) and total scattering / PDF (P21.1) across an optics hutch, an EH3 endstation, and a LAB station; a thin reuse-and-reinforce scaffold (grouped motor banks, detectors carried pending), reusing the pending `diffraction` / `total_scattering` Methods |
 
 ## [ALS](als/index.md)
 

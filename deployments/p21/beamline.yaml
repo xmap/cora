@@ -1,0 +1,170 @@
+# P21 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P21 "Swedish Materials Science" is the high-energy hard X-ray materials-science
+# beamline at PETRA III (DESY, Hamburg), a Swedish-collaboration beamline with two
+# branches: P21.1 (high-energy diffraction / total scattering / PDF) and P21.2 (high-
+# energy diffraction / imaging). It is bound to the PETRA III Site
+# (deployments/petra-iii/site.yaml), the thirteenth PETRA III beamline.
+#
+# STATUS: reverse-engineered from P21's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p21, branch
+# debian/jessie; the online_hasep211eh.xml / 212oh.xml / eh3.xml / haspp21lab.xml
+# registries). Device logical names and Tango control handles are real, read from that
+# registry; vendor part numbers, crystal cuts, energy calibration, detectors, and
+# physical positions are not in it and are open questions. The P21 registry is thin:
+# most devices are area-grouped generic motor banks (oh_u*, eh3_u*, lab*) whose per-
+# axis roles are not labelled, so the Asset grouping leans on the host / bank prefixes
+# and is carried confirm (GROUP-1). Every value is carried confirm until P21 staff
+# verify it. The extraction is in research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family, and no new technique vocabulary. P21 is a thin
+# high-energy materials beamline; it reuses LinearStage / Slit and the pending
+# diffraction / total_scattering slugs (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read
+# from the OnlineXML. The P21.2 optics report on the hasep212oh host, the EH3
+# endstation on hasep21eh3, and a lab station on haspp21lab; the P21.1 station
+# (hasep211eh) exposed only bookkeeping devices in this slice and is noted, not
+# modelled (HOST-1). The motor banks are grouped, every axis role pending (GROUP-1).
+#
+# SCOPE: this cut models the P21.2 optics (the oh bank), the EH3 experiment endstation
+# (the eh3 bank), and the LAB station (the lab bank + the slit virtual axes). The
+# detectors are not exposed as devices in this registry slice and are carried pending
+# (DET-1). Counter / timer / ADC channels and the Sardana MeasurementGroup bookkeeping
+# rows are filtered out by the extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p21/questions.md.
+
+beamline:
+  name: P21
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P21"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P21 is an undulator beamline (Swedish Materials Science, high-energy diffraction); the OnlineXML exposes no undulator device in this slice, so the source is carried pending (SRC-1)"
+
+# Three enclosures inferred from the OnlineXML host names: the P21.2 optics, the EH3
+# experiment endstation, and the LAB station. The P21.1 station (hasep211eh) exposed
+# only bookkeeping devices and is noted, not modelled (HOST-1). DESY PSS permit signals
+# are not in the OnlineXML (PSS-1).
+enclosures:
+  - name: p21-oh
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P21.2 optics hutch; not in the OnlineXML (PSS-1)"}
+  - name: p21-eh3
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the EH3 experiment endstation; not in the OnlineXML (PSS-1)"}
+  - name: p21-lab
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the LAB station; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the P21.2 optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p21-oh
+  intro: "The P21.2 optics: the high-energy conditioning optics motor bank. The monochromator, mirrors, and slits are not individually labelled in this registry slice, so they are grouped as the optics-hutch positioning stages."
+  note: "Handles read from the oh_u* bank on the hasep212oh host. The optics breakdown (monochromator, mirrors, slits) is OPT-1."
+  devices:
+    - name: OpticsStages
+      family: LinearStage
+      pv: {bank: "p21/motor/oh_u01"}
+      new: true
+      confirm: true
+      note: "the P21.2 optics motor bank (oh_u* on p21/motor, hasep212oh host, ~32 axes): monochromator / mirror / slit motions, per-axis roles not labelled, grouped as one stage (OPT-1, GROUP-1)"
+
+# ===========================================================================
+# SAMPLE STAGE: the EH3 and LAB endstations
+# ===========================================================================
+
+eh3-sample:
+  stage: sample
+  enclosure: p21-eh3
+  intro: "The EH3 experiment endstation: the sample / instrument positioning motor bank for high-energy diffraction."
+  note: "Handles read from the eh3_u* bank on the hasep21eh3 host. Per-axis roles not labelled (GROUP-1)."
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p21/motor/eh3_u01"}
+      new: true
+      confirm: true
+      note: "the EH3 sample / instrument motor bank (eh3_u* on p21/motor, hasep21eh3 host, ~16 axes); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+
+lab-sample:
+  stage: sample
+  enclosure: p21-lab
+  intro: "The LAB station: a sample / instrument motor bank and the beam-defining slit virtual axes."
+  note: "Handles read from the lab* bank on the haspp21lab host plus the vm_s* slit virtual axes (GROUP-1)."
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p21/motor/lab01"}
+      new: true
+      confirm: true
+      note: "the LAB sample / instrument motor bank (lab* on p21/motor, haspp21lab host, ~7 axes); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+    - name: DefiningSlits
+      family: Slit
+      pv: {s1_vgap: "p21/vmexecutor/vm_s1vg", s1_voffs: "p21/vmexecutor/vm_s1vo", s2_hgap: "p21/vmexecutor/vm_s2hg", s2_hoffs: "p21/vmexecutor/vm_s2ho", s2_vgap: "p21/vmexecutor/vm_s2vg", s2_voffs: "p21/vmexecutor/vm_s2vo"}
+      new: true
+      confirm: true
+      note: "the LAB beam-defining slits (s1 / s2, vmexecutor virtual gap / offset axes) (OPT-1)"
+
+# ===========================================================================
+# DETECTION STAGE
+# ===========================================================================
+
+detection:
+  stage: detection
+  enclosure: p21-eh3
+  intro: "The P21 detection. The OnlineXML slice for P21 exposes no dedicated detector device beyond the motors; the high-energy diffraction detectors (area detectors, the PerkinElmer / Varex flat-panels typical of high-energy beamlines) are carried pending."
+  note: "High-energy diffraction area detection is not exposed as a device in this registry slice; carried pending (DET-1)."
+  devices:
+    - name: AreaDetectors
+      family: Camera
+      pv: {confirm: "the high-energy diffraction area detectors (PerkinElmer / Varex flat-panels typical of high-energy beamlines) are not exposed in this OnlineXML slice; carried pending (DET-1)"}
+      new: true
+      confirm: true
+      note: "the P21 high-energy diffraction area detectors; not in the registry slice, modelled as a pending Camera placeholder (DET-1)"
+
+# Cross-cutting control. P21 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P21 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as the other PETRA III beamlines (P21 is a Swedish-
+    collaboration beamline, but the beamline controls are the PETRA III Tango / Sardana
+    stack). A motion axis is a Tango motor device (p21/motor/...), the slits vmexecutor
+    virtual axes; the beamline is split across the hasep212oh (optics), hasep21eh3
+    (EH3), and haspp21lab (LAB) Tango hosts. The handles are read from P21's public
+    OnlineXML registry and carried confirm (CTRL-1). The high-energy diffraction
+    acquisition runs as a Sardana macro; that orchestration is the seam CORA's edge
+    would conduct over its ControlPort (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the optics and sample motor banks (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango) backing the coupled / virtual axes (CTRL-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P21 run needs present before it
+    can start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum
