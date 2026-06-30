@@ -1,0 +1,21 @@
+# CANDIDATE: hand-read from public multi-branch profile collections, NOT authoritative. PV prefixes verified verbatim. Do not copy into deployments/ unreviewed. SST = rsoxs + nexafs + haxpes + vppem branches, one beamline; PVs from device_config.yaml/devices.toml.
+beamline: {name: SST, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 7-ID-A, facility_code: nsls2, confirm: optics; inferred from XF:07IDA}
+- {name: 7-ID-1, facility_code: nsls2, confirm: branch 1 endstations; inferred from XF:07ID1}
+- {name: 7-ID-2, facility_code: nsls2, confirm: branch 2 endstations; inferred from XF:07ID2}
+devices:
+- {name: FrontEndShutter, family: Shutter, pv: "XF:07ID-PPS{Sh:FE}", stage: source, new: true, confirm: front-end PPS; Shutter (catalog)}
+- {name: PhotonShutters, family: Shutter, pv: "XF:07IDA-PPS{PSh:4}", stage: source, new: true, confirm: "photon shutters (PSh:4/7/10); Shutter (catalog)"}
+- {name: Mirror1, family: Mirror, pv: "XF:07IDA-OP{Mir:M1", stage: optics, new: true, confirm: M1; Mirror (catalog)}
+- {name: GratingMonochromator, family: GratingMonochromator, pv: "XF:07ID1-OP{Mono:PGM1-Ax:", stage: optics, new: true, confirm: "PGM mono; GratingMonochromator (catalog, graduated)"}
+- {name: Mirror3, family: Mirror, pv: "XF:07ID1-OP{Mir:M3ABC", stage: optics, new: true, confirm: "M3 branch mirror (A/B/C); Mirror (catalog)"}
+- {name: Mirror4, family: Mirror, pv: "XF:07ID2-OP{Mir:M4CD", stage: optics, new: true, confirm: "M4 branch mirror (C/D); Mirror (catalog)"}
+- {name: EndstationSlit11, family: Slit, pv: "XF:07ID2-BI{Slt:11-Ax:", stage: optics, new: true, confirm: endstation slit; Slit (catalog)}
+- {name: RSoXSSampleStage, family: LinearStage, pv: "XF:07ID1-ES:1{Smpl-Ax:", stage: sample, new: true, confirm: "RSoXS sample stage; LinearStage (catalog)"}
+- {name: RSoXSScreens, family: Screen, pv: "XF:07ID1-ES:1{Scr:1}", stage: diagnostics, new: true, confirm: "RSoXS screens (Scr:1-5); Screen (loose)"}
+- {name: SESAnalyzer, family: ElectronAnalyzer, pv: "XF:07ID-ES-SES", stage: detection, new: true, confirm: "SES hemispherical analyzer (HAXPES); ElectronAnalyzer (catalog, graduated, SST is 2nd consumer)"}
+- {name: NEXAFSPreamps, family: GenericProbe, pv: "XF:07ID-ES{SR570:01}", stage: detection, new: true, confirm: "SR570 drain-current preamps (NEXAFS, 01-05); LOOSE GenericProbe"}
+- {name: I400Electrometers, family: FluxMonitor, pv: "XF:07ID-BI{DM7:I400-1}", stage: detection, new: true, confirm: "I400 electrometers; FluxMonitor (graduated), confirm"}
+- {name: GERMDetector, family: EnergyDispersiveSpectrometer, pv: "XF:07ID1-ES:1{GE:2}", stage: detection, new: true, confirm: "germanium energy-dispersive detector; confirm EnergyDispersiveSpectrometer"}
+- {name: BeamPositionMonitors, family: GenericProbe, pv: "XF:07ID-BI{BPM:8}", stage: diagnostics, new: true, confirm: "BPMs (many); LOOSE GenericProbe, held DIAG-1"}

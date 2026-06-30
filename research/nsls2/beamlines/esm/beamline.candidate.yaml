@@ -1,0 +1,23 @@
+# CANDIDATE: hand-read from public multi-branch profile collections, NOT authoritative. PV prefixes verified verbatim. Do not copy into deployments/ unreviewed. ESM = arpes + xpeem branches, one beamline.
+beamline: {name: ESM, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: 21-ID-A, facility_code: nsls2, confirm: optics; inferred from XF:21IDA}
+- {name: 21-ID-B, facility_code: nsls2, confirm: mono; inferred from XF:21IDB}
+- {name: 21-ID-C, facility_code: nsls2, confirm: branch split; inferred from XF:21IDC}
+- {name: 21-ID-1, facility_code: nsls2, confirm: ARPES endstation; inferred from XF:21ID1}
+- {name: 21-ID-2, facility_code: nsls2, confirm: XPEEM/LEEM endstation; inferred from XF:21ID2}
+devices:
+- {name: FrontEndShutter, family: Shutter, pv: "XF:21ID-PPS{Sh:FE}", stage: source, new: true, confirm: front-end PPS; Shutter (catalog)}
+- {name: PhotonShutter, family: Shutter, pv: "XF:21IDA-PPS{PSh}", stage: source, new: true, confirm: photon shutter; Shutter (catalog)}
+- {name: Mirror1, family: Mirror, pv: "XF:21IDA-OP{Mir:1-Ax:", stage: optics, new: true, confirm: mirror 1; Mirror (catalog)}
+- {name: GratingMonochromator, family: GratingMonochromator, pv: "XF:21IDB-OP{Mono:1", stage: optics, new: true, confirm: "grating mono; GratingMonochromator (catalog, graduated)"}
+- {name: Mirror3, family: Mirror, pv: "XF:21IDB-OP{Mir:3-Ax:", stage: optics, new: true, confirm: mirror 3; Mirror (catalog)}
+- {name: Mirror4A, family: Mirror, pv: "XF:21IDC-OP{Mir:4A-", stage: optics, new: true, confirm: branch mirror A (ARPES); Mirror (catalog)}
+- {name: Mirror4B, family: Mirror, pv: "XF:21IDC-OP{Mir:4B-Ax:", stage: optics, new: true, confirm: branch mirror B (XPEEM); Mirror (catalog)}
+- {name: MBSAnalyzer, family: ElectronAnalyzer, pv: "XF:21ID1-ES{A1Soft}", stage: detection, new: true, confirm: "MBS hemispherical analyzer (ARPES); ElectronAnalyzer (catalog, graduated, ESM origin)"}
+- {name: LEEM, family: ElectronAnalyzer, pv: "XF:21ID2{LEEM}", stage: detection, new: true, confirm: "low-energy electron microscope (XPEEM); confirm ElectronAnalyzer vs distinct, single use"}
+- {name: SampleManipulatorLT, family: Manipulator, pv: "XF:21IDD-ES{LT:1-Manip:EA5_1", stage: sample, new: true, confirm: "low-temp manipulator; Manipulator (catalog, graduated, ESM origin)"}
+- {name: SampleManipulatorSP, family: Manipulator, pv: "XF:21IDD-ES{SP:1-Manip:EA2_1", stage: sample, new: true, confirm: sample-prep manipulator; Manipulator (catalog, graduated)}
+- {name: TemperatureControllers, family: TemperatureController, pv: "XF:21ID1-ES{TCtrl:1", stage: sample, new: true, confirm: "Lakeshore TCtrl:1-3; TemperatureController (catalog, presents Regulator)"}
+- {name: Electrometers, family: FluxMonitor, pv: "XF:21IDA-BI{EM:1}", stage: detection, new: true, confirm: "EM:1-5; FluxMonitor (graduated), confirm"}
+- {name: BeamPositionMonitor, family: GenericProbe, pv: "XF:21IDA-BI{EM:BPM01}", stage: diagnostics, new: true, confirm: BPM; LOOSE GenericProbe}
