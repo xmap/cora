@@ -1,0 +1,278 @@
+# CANDIDATE beamline descriptor: hand-read from maxiv-science/contrast
+# (beamlines/nanomax/diffraction.py + imaging.py, commit 8e787ac), NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage and the enclosure
+# names are inferred from the Tango device domains (b303a-o = optics, b303a-e01 = imaging
+# endstation, b303a-e02 = diffraction endstation, b303a-eh = experiment hutch optics);
+# Family suggestions and hutch boundaries need human curation, and any new Family needs the
+# naming-r3 gate. Do not copy into deployments/ without review. NanoMAX is NOT yet a deployment.
+# Only ACTIVE (uncommented) device handles are included; the shared optics block is declared
+# in diffraction.py and commented out in imaging.py (same hardware, two endstations).
+
+beamline:
+  name: NanoMAX
+  facility: maxiv
+  sector: "B303A"
+  tier: Unit
+  source: insertion-device
+enclosures:
+- name: nanomax-optics
+  facility_code: maxiv
+  confirm: optics zone (b303a-o + front end + b303a-eh hutch optics); inferred from Tango domains; PSS leaves named in commented MaxivScheduler (ENC-1, PSS-1)
+- name: nanomax-diffraction
+  facility_code: maxiv
+  confirm: diffraction endstation (b303a-e02); goniometer + KB-focus + nPoint sample piezos; inferred from Tango domains (ENC-1)
+- name: nanomax-imaging
+  facility_code: maxiv
+  confirm: imaging endstation (b303a-e01); zone-plate / coarse+fine sample stack; inferred from Tango domains (ENC-1)
+source:
+  stage: source
+  intro: Shared source + optics train (both endstations); active in diffraction.py, commented in imaging.py.
+  devices:
+  - name: Undulator
+    family: InsertionDevice
+    pv: "motor/ivu_gap_ctrl/1"
+    new: true
+    confirm: 'in-vacuum undulator via pool proxy; ivu_gap (4.5-25) + ivu_taper (motor/ivu_taper_ctrl/1); family InsertionDevice (catalog) (SRC-1)'
+    source_class: TangoMotor
+  - name: BeamlineFilters
+    family: Filter
+    pv: "b303a-o/opt/flt-01-yml"
+    new: true
+    confirm: 'diamond filters in diagnostics module 1; bl_filter_1 (flt-01-yml) + bl_filter_2 (b303a-o/opt/flt-02-yml); family Filter (catalog)'
+    source_class: TangoMotor
+optics:
+  stage: optics
+  intro: Shared optics; grouping/enclosure need confirm.
+  devices:
+  - name: VerticalFocusingMirror
+    family: Mirror
+    pv: "b303a-o/opt/mir-01-xml"
+    new: true
+    confirm: 'VFM; x/y/pit/yaw = mir-01-{xml,yml,pitml,yawml}; family Mirror (catalog) (OPT-1)'
+    source_class: TangoMotor
+  - name: HorizontalFocusingMirror
+    family: Mirror
+    pv: "b303a-o/opt/mir-02-xml"
+    new: true
+    confirm: 'HFM; x/y/pit/bend = mir-02-{xml,yml,pitml,bendml}; family Mirror (catalog) (OPT-1)'
+    source_class: TangoMotor
+  - name: Monochromator
+    family: Monochromator
+    pv: "b303a-o/opt/mono-xml"
+    new: true
+    confirm: 'Si DCM; x/bragg(MONO-BRAGML,4-27.46)/x2per/x2pit/x2rol + fine x2fpit(B303A-O/CTL/PZCU-01)/x2frol(PZCU-02); family Monochromator (catalog) (MONO-1)'
+    source_class: TangoMotor
+  - name: SecondarySourceAperture
+    family: Slit
+    pv: "B303A-O/opt/SLIT-01-GAPXPM"
+    new: true
+    confirm: 'SSA pool pseudo-motors; gapx/gapy/posx/posy = SLIT-01-{GAPXPM,GAPYPM,POSXPM,POSYPM}; family Slit (catalog) (OPT-2)'
+    source_class: TangoMotor
+  - name: BeamEnergy
+    family: PseudoAxis
+    pv: "pseudomotor/nanomaxenergy_corr_ctrl/1"
+    new: true
+    confirm: 'Sardana energy pseudo; energy (corrected, nanomaxenergy_corr_ctrl/1) over energy_raw (nanomaxenergy_ctrl/1); family PseudoAxis (catalog)'
+    source_class: TangoMotor
+diagnostics:
+  stage: diagnostics
+  intro: Shared diagnostics; grouping need confirm.
+  devices:
+  - name: NanoBPM
+    family: BeamPositionMonitor
+    pv: "b303a-o/dia/bpx-01"
+    new: true
+    confirm: 'nano beam-position monitor vertical stage; LOOSE family BeamPositionMonitor (DIAG-1); do NOT coin'
+    source_class: TangoMotor
+diffraction-optics:
+  stage: optics
+  intro: Diffraction endstation hutch optics (b303a-eh); grouping need confirm.
+  devices:
+  - name: DiagnosticsSlitAttenuatorStack
+    family: Slit
+    pv: "B303A-EH/CTL/PZCU-04"
+    new: true
+    confirm: 'Smaract MCS 15-axis: SEH slit (seh_top/bottom/left/right axis2-5)+gap/pos pseudos, attenuator1-4_x (axis6-9), polarizer pol_x/y/rot (axis12-14), dbpm2_x/y (axis0-1), diode1_x (11); the SEH slit is the primary Slit Asset, attenuators/polarizer/dbpm are co-hosted (SAMPLE-1/OPT-2)'
+    source_class: SmaractLinearMotor
+  - name: FastShutterDBPM1Stack
+    family: LinearStage
+    pv: "B303A-EH/CTL/PZCU-07"
+    new: true
+    confirm: 'Smaract 3-axis OH2: fastshutter_y (axis0), dbpm1_x (1), dbpm1_y (2); fast shutter + first diamond BPM; family LinearStage (PSS-1 for the shutter)'
+    source_class: SmaractLinearMotor
+  - name: SampleKBSlit
+    family: Slit
+    pv: "B303A-EH/CTL/PZCU-03"
+    new: true
+    confirm: 'Smaract: SKB slit skb_top/bottom/left/right (axis0-3)+gap/pos pseudos, pinhole_x/y/z (axis6-8); family Slit (catalog) (OPT-2)'
+    source_class: SmaractLinearMotor
+  - name: KBMirrorPiezo
+    family: Mirror
+    pv: "B303A-EH/CTL/PZCU-01"
+    new: true
+    confirm: 'PI E727 KB fine pitch/roll piezos; m1froll (axis1), m1fpitch (axis2), m2fpitch (axis3); the KB pair fine-motion, binds Mirror (catalog) (OPT-1)'
+    source_class: E727Motor
+diffraction-sample:
+  stage: sample
+  intro: Diffraction endstation sample (b303a-e02); grouping need confirm.
+  devices:
+  - name: SampleStage
+    family: LinearStage
+    pv: "B303A/CTL/PZCU-LC400B"
+    new: true
+    confirm: 'nPoint LC400 sample scanning piezos; sx (axis2)/sy (axis3)/sz (axis1), +/-50 um; family LinearStage (catalog) (SAMPLE-1)'
+    source_class: LC400Motor
+  - name: SampleBaseStage
+    family: LinearStage
+    pv: "B303A-EH/CTL/PZCU-08"
+    new: true
+    confirm: 'PiezoLegs coarse sample positioning; basex/basey/basez (axis0-2); family LinearStage (catalog) (SAMPLE-1)'
+    source_class: PiezoLegsMotor
+  - name: Goniometer
+    family: Goniometer
+    pv: "b303a-e02/dia/gon-01-theta"
+    new: true
+    confirm: 'goniometer; theta/phi + x1/x2/x3 + y1/y2 + z = gon-01-{theta,phi,x1,x2,x3,y1,y2,z}; family Goniometer (catalog) (DIFF-1)'
+    source_class: TangoMotor
+  - name: OpticalMicroscopes
+    family: Camera
+    pv: "b303a-e02/dia/om-01-x"
+    new: true
+    confirm: 'on-axis (om-01) + top (om-02) sample-viewing microscopes; x/y/z/zoom each; family Camera (?) confirm vs Microscope (this is a viewing camera+stage, NOT the scintillator-relay X-ray Microscope)'
+    source_class: TangoMotor
+detection-diffraction:
+  stage: detection
+  intro: Diffraction endstation detection (b303a-e02); grouping need confirm.
+  devices:
+  - name: Beamstop
+    family: LinearStage
+    pv: "B303A-E02/DIA/SAMS-01-X"
+    new: true
+    confirm: 'beamstop x (SAMS-01-X) + y (SAMS-01-Y); family LinearStage (catalog)'
+    source_class: TangoMotor
+  - name: DetectorTable
+    family: LinearStage
+    pv: "b303a-e02/dia/tab-01-x1"
+    new: true
+    confirm: 'detector table; front/back x+y = tab-01-{x1,x2,y1,y2}; family LinearStage (catalog)'
+    source_class: TangoMotor
+  - name: AreaDetectorPilatus
+    family: Camera
+    pv: "b303a/dia/pilatus"
+    new: true
+    confirm: 'Pilatus3 area detector (hw_trig); family Camera (catalog) (DET-1)'
+    source_class: Pilatus3
+  - name: AreaDetectorEiger1M
+    family: Camera
+    pv: "b303a/dia/eiger-1m"
+    new: true
+    confirm: 'Eiger 1M area detector (EigerTango); family Camera (catalog) (DET-1)'
+    source_class: EigerTango
+  - name: AreaDetectorEiger500k
+    family: Camera
+    pv: "b303a/dia/eiger-500k"
+    new: true
+    confirm: 'Eiger 500k area detector (EigerTango); family Camera (catalog) (DET-1)'
+    source_class: EigerTango
+  - name: FluorescenceSpectrometer
+    family: EnergyDispersiveSpectrometer
+    pv: "xspress3ds/xspress3/mini-temp"
+    new: true
+    confirm: 'Xspress3 SDD fluorescence MCA (x3mini); family EnergyDispersiveSpectrometer (catalog, graduated) (DET-1)'
+    source_class: Xspress3
+  - name: IonChamberElectrometer
+    family: FluxMonitor
+    pv: "b-nanomax-em2-2"
+    new: true
+    confirm: 'AlbaEM electrometer (host, not Tango d/f/m); ion chamber at KB + PIN diodes; family FluxMonitor (catalog, graduated)'
+    source_class: AlbaEM
+  - name: TimingController
+    family: TimingController
+    pv: "b-nanomax-pandabox-0"
+    new: true
+    confirm: 'PandaBox (host); encoder capture + fast-scan trigger distribution (NpointFlyscan); family TimingController (?) confirm vs GenericProbe'
+    source_class: PandaBox
+  - name: EnergyScanTiming
+    family: TimingController
+    pv: "b303a-a100380cab03/dia/panda-01"
+    new: true
+    confirm: 'PandaBoxPCAP; continuous energy-scan PCAP capture (EnergyFlyscan); family TimingController (?) confirm vs GenericProbe'
+    source_class: PandaBoxPCAP
+imaging-optics:
+  stage: optics
+  intro: Imaging endstation optics (b303a-e01); grouping need confirm.
+  devices:
+  - name: KBMirrorPiezo
+    family: Mirror
+    pv: "B303A-E01/CTL/PZCU-04"
+    new: true
+    confirm: 'PI E727 imaging KB fine pitch/roll; m1pitch (axis1), m2pitch (axis2), m1roll (axis3); binds Mirror (catalog) (OPT-1)'
+    source_class: E727Motor
+imaging-sample:
+  stage: sample
+  intro: Imaging endstation sample (b303a-e01); grouping need confirm.
+  devices:
+  - name: SampleStage
+    family: LinearStage
+    pv: "B303A/CTL/IMG-02"
+    new: true
+    confirm: 'NI-DAC sample scanning piezos; sx/sy/sz (axis0-2), +/-50 um; family LinearStage (catalog) (SAMPLE-1)'
+    source_class: DacMotor
+  - name: SampleBaseStage
+    family: LinearStage
+    pv: "B303A-E01/CTL/PZCU-02"
+    new: true
+    confirm: 'PiezoLegs ImgSampleStage coarse sample positioning; basex/basey/basez; family LinearStage (catalog) (SAMPLE-1)'
+    source_class: PiezoLegsMotor
+  - name: SampleOpticsStage
+    family: LinearStage
+    pv: "B303A-E01/CTL/MCS2-01"
+    new: true
+    confirm: 'Smaract MCS2 11-axis: sample tilt slt/slr/sll/slb (axis0-3), zone-plate/grating grx/gry/grz/grip (axis4-7), sr rotation (axis8), aperture apx/apy (axis9-10); the zone-plate-region stage (ZP-1, no live ZonePlate Asset); family LinearStage (SAMPLE-1)'
+    source_class: SmaractLinearMotor_MCS2
+  - name: OpticalScreenMicroscope
+    family: Camera
+    pv: "B303A-E01/DIA/OPT-SCR"
+    new: true
+    confirm: 'optical screen (OPT-SCR) + microscope (OPT-MIC); family Camera (?) confirm vs Microscope'
+    source_class: TangoMotor
+detection-imaging:
+  stage: detection
+  intro: Imaging endstation detection (b303a-e01); grouping need confirm.
+  devices:
+  - name: XRFDetectorStage
+    family: LinearStage
+    pv: "B303A-E01/DIA/XRF-01-X"
+    new: true
+    confirm: 'XRF detector linear stages xrf1_x (XRF-01-X) + xrf2_x (XRF-02-X); family LinearStage (catalog)'
+    source_class: TangoMotor
+  - name: PixelDetectorStage
+    family: LinearStage
+    pv: "B303A-E01/DIA/PIXDET-X"
+    new: true
+    confirm: 'pixel detector stage pixdet_x (PIXDET-X) + pixdet_y (PIXDET-Y); family LinearStage (catalog)'
+    source_class: TangoMotor
+  - name: AreaDetectorEiger4M
+    family: Camera
+    pv: "b303a/dia/eiger-4m"
+    new: true
+    confirm: 'Eiger 4M area detector (EigerTango); family Camera (catalog) (DET-1)'
+    source_class: EigerTango
+  - name: FluorescenceSpectrometer
+    family: EnergyDispersiveSpectrometer
+    pv: "staff/alebjo/xspress3mini"
+    new: true
+    confirm: 'Xspress3 SDD fluorescence MCA (x3mini; staff dev device name, confirm production address); family EnergyDispersiveSpectrometer (catalog, graduated) (DET-1)'
+    source_class: Xspress3
+  - name: IonChamberElectrometer
+    family: FluxMonitor
+    pv: "b-nanomax-em2-1"
+    new: true
+    confirm: 'AlbaEM electrometer (host); DBPM in DM4; family FluxMonitor (catalog, graduated)'
+    source_class: AlbaEM
+  - name: TimingController
+    family: TimingController
+    pv: "b-nanomax-pandabox-2"
+    new: true
+    confirm: 'PandaBox (host); LC400 encoder capture + fast-shutter control (WFtrigscan); family TimingController (?) confirm vs GenericProbe'
+    source_class: PandaBox
