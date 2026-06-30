@@ -44,7 +44,7 @@ beamline. `BCDA-APS/6idb-bits` is a fork of `polar-bits` (both the 4-ID instrume
 grafted Sector 6 endstation; it is split in the tree into `beamlines/4-id/` (from `polar-bits`)
 and the carved `beamlines/6-id-b/`, so the recurrence no longer double-counts 4-ID. Keep that
 invariant when adding a beamline: one directory per physical beamline; see
-`catalog-graduation-decisions.md`.
+`graduation.md`.
 
 This is step 1 of the roadmap in the approved plan
 (`~/.claude/plans/iridescent-gathering-elephant.md`): extraction, then catalog graduation,
@@ -52,18 +52,22 @@ then per-beamline curation. Candidates are inputs to that human-gated modeling, 
 
 ## What is here
 
-- `apsbss-to-external-refs-adapter.md` (a): the field-level shapes of the `BCDA-APS/apsbss`
-  data model (the ESAF leg), read from source, as input to the already-locked BSS-subscriber
-  design. It does not propose a new adapter; it feeds one. See the caveat below.
-- `tomo-bits-fidelity-diff.md` (b): a PV-by-PV cross-check of CORA's 2-BM `Microscope`
+The spine artifacts (`survey.md`, `recurrence.md`, `graduation.md`) sit at the facility root;
+`beamlines/` holds the per-beamline device passes; `reports/` holds the off-pattern derived
+analyses (validation diffs, integration field-references) that do not fit the spine.
+
+- `graduation.md`: step 2 of the roadmap. The intentional graduate / Assembly / fold /
+  leave-loose decision per recurring candidate from `recurrence.md`, with the naming-r3 gate
+  applied to every proposed name. Net result: no speculative catalog edits; Diffractometer is
+  an Assembly (not a Family), and the genuine new Families graduate coupled to the first
+  deployment that references them (step 3).
+- `reports/apsbss-to-external-refs-adapter.md` (a): the field-level shapes of the
+  `BCDA-APS/apsbss` data model (the ESAF leg), read from source, as input to the already-locked
+  BSS-subscriber design. It does not propose a new adapter; it feeds one. See the caveat below.
+- `reports/tomo-bits-fidelity-diff.md` (b): a PV-by-PV cross-check of CORA's 2-BM `Microscope`
   model against the working tomography instrument `BCDA-APS/tomo-bits`
   (`devices/mct_optics.py`). CORA is a strict superset; the diff surfaces a short list of
   genuine enrichment questions for 2-BM staff.
-- `catalog-graduation-decisions.md`: step 2 of the roadmap. The intentional
-  graduate / Assembly / fold / leave-loose decision per recurring candidate from
-  `recurrence.md`, with the naming-r3 gate applied to every proposed name. Net result: no
-  speculative catalog edits; Diffractometer is an Assembly (not a Family), and the genuine new
-  Families graduate coupled to the first deployment that references them (step 3).
 
 ## Relation to existing CORA designs (important)
 

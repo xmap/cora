@@ -11,10 +11,22 @@ Research happens in two passes, and the layout mirrors them:
 ```
 research/<facility>/
   survey.md                       # Tier 1: facility survey
+  recurrence.md                   # cross-fleet device-class frequency (graduation signal)
+  graduation.md                   # the graduate / Assembly / fold / leave-loose decisions
   beamlines/<beamline>/
     facts.md                      # Tier 2: per-beamline device topology
     beamline.candidate.yaml       # draft descriptor (where a device source exists)
+  reports/                        # off-pattern derived analyses (optional, see below)
+    <name>.md
 ```
+
+The first three files are the **facility spine** (`survey.md`, then `recurrence.md` and
+`graduation.md` once a Tier-2 corpus exists); `beamlines/` is the Tier-2 device passes. Anything
+else a facility accrues that is neither the spine nor a device pass lives under `reports/`: a
+validation diff of a shipped descriptor against its real instrument, a field-level reference for
+an integration, or any one-off analysis derived from the passes. A facility has a `reports/`
+folder only if it has produced such an artifact (today, only APS), so the absence of `reports/`
+elsewhere is expected, not missing work.
 
 **Tier 1, the facility survey (`survey.md`).** The first pass over a facility: the beamline roster, techniques and trends, the control-system stack, the data-management stack, an initial read of the CORA seam, and the questions for staff. Its job is to decide *which beamlines are even modellable from public source* and *which are the strongest next picks*. Written to the deployment-page lens but with uncertainty flags and speculative seam reads that do not belong on a staff-facing page. Template: [`_templates/survey.md`](_templates/survey.md).
 
@@ -52,7 +64,7 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 
 ## APS extraction tooling (EPICS-specific)
 
-`scripts/reverse_engineer/` automates the APS Tier-2 pass: it reads the Guarneri `devices.yml`, AST-walks the ophyd device classes, parses `user_group_permissions.yaml`, and emits candidates to `research/aps/beamlines/<beamline>/` plus a cross-fleet `research/aps/recurrence.md`. The output directory is the slugified beamline name derived from the device enclosures (e.g. `4-id`); where the enclosures do not encode a station letter, pass `--name <repo-stem>=<beamline>` (e.g. `--name usaxs-bits=12-ID-E`) so the directory is the beamline, not the repo. It never writes to `deployments/` or `catalog/`. This is EPICS / `*-bits`-specific and does not generalize; BLISS / Tango facilities (ESRF, Elettra) and firewalled facilities are surveyed by hand. See [`aps/survey.md`](aps/survey.md) and [`aps/catalog-graduation-decisions.md`](aps/catalog-graduation-decisions.md).
+`scripts/reverse_engineer/` automates the APS Tier-2 pass: it reads the Guarneri `devices.yml`, AST-walks the ophyd device classes, parses `user_group_permissions.yaml`, and emits candidates to `research/aps/beamlines/<beamline>/` plus a cross-fleet `research/aps/recurrence.md`. The output directory is the slugified beamline name derived from the device enclosures (e.g. `4-id`); where the enclosures do not encode a station letter, pass `--name <repo-stem>=<beamline>` (e.g. `--name usaxs-bits=12-ID-E`) so the directory is the beamline, not the repo. It never writes to `deployments/` or `catalog/`. This is EPICS / `*-bits`-specific and does not generalize; BLISS / Tango facilities (ESRF, Elettra) and firewalled facilities are surveyed by hand. See [`aps/survey.md`](aps/survey.md) and [`aps/graduation.md`](aps/graduation.md).
 
 ## The practice
 
