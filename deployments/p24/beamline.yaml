@@ -1,0 +1,180 @@
+# P24 beamline descriptor (PETRA III, DESY), reverse-engineered from the OnlineXML
+#
+# P24 "Chemical Crystallography" is the hard X-ray single-crystal / chemical
+# crystallography beamline at PETRA III (DESY, Hamburg): small-molecule and chemical
+# crystallography on a diffractometer with area detection, across two experiment
+# hutches (EH1, EH2). It is bound to the PETRA III Site
+# (deployments/petra-iii/site.yaml), the sixteenth PETRA III beamline.
+#
+# STATUS: reverse-engineered from P24's own public OnlineXML device registry
+# (gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p24, branch
+# debian/jessie). Device logical names and Tango control handles are real, read from
+# that registry; vendor part numbers, crystal cuts, the diffractometer geometry, the
+# detectors, energy calibration, and physical positions are not in it and are open
+# questions. The P24 registry exposes generically-named motor banks (oh_mot*, mot*)
+# whose per-axis roles are not labelled, so the Asset grouping leans on the bank
+# prefixes and is carried confirm (GROUP-1). Every value is carried confirm until P24
+# staff verify it. The extraction is in research/petra-iii/.
+#
+# WHAT IS NEW: no new device Family, and no new technique vocabulary. P24 is a chemical
+# crystallography beamline; the diffractometer / sample positioning reuses LinearStage
+# (the registry does not label a goniometer), the slits Slit, the fluorescence MCA
+# EnergyDispersiveSpectrometer, and the technique reuses the pending diffraction slug
+# (TECH-1).
+#
+# CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read from
+# the OnlineXML. The oh_mot* bank is the optics, the mot* bank the EH2 experiment, and
+# a separate EH1 bank the second hutch. The dmy stubs are dummy / placeholder devices
+# (STUB-1); the banks are grouped, every axis role pending (GROUP-1).
+#
+# SCOPE: this cut models the optics (the oh_mot bank, the ps1 / ps2 slits), the EH2
+# main experiment hutch (the mot bank, the MCA, the coupled axes), and the EH1 hutch
+# (its bank). The diffractometer and area detector are not individually labelled in
+# this registry slice and are carried grouped / pending (DIFF-1, DET-1). Counter /
+# timer / ADC channels and the Sardana MeasurementGroup bookkeeping rows are filtered
+# out by the extractor.
+#
+# Items left open are tagged inline with a (QUESTION-ID) answered on
+# docs/deployments/p24/questions.md.
+
+beamline:
+  name: P24
+  facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
+  sector: "P24"
+  tier: Unit
+  parent: null
+  source: insertion-device
+  source_confirm: "P24 is an undulator beamline (chemical crystallography); the OnlineXML exposes no undulator device in this slice, so the source is carried pending (SRC-1)"
+
+# Three enclosures: the optics hutch (the oh_mot bank + slits) and two experiment
+# hutches (EH2 main, EH1). DESY PSS permit signals are not in the OnlineXML (PSS-1).
+enclosures:
+  - name: p24-oh
+    role: optics-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the P24 optics hutch; not in the OnlineXML (PSS-1)"}
+  - name: p24-eh2
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the EH2 main experiment hutch; not in the OnlineXML (PSS-1)"}
+  - name: p24-eh1
+    role: experiment-hutch
+    facility_code: petra-iii
+    permit_signal: {confirm: "DESY PSS permit signal for the EH1 experiment hutch; not in the OnlineXML (PSS-1)"}
+
+# ===========================================================================
+# SOURCE STAGE: the optics
+# ===========================================================================
+
+source:
+  stage: source
+  enclosure: p24-oh
+  intro: "The P24 optics: the conditioning optics motor bank and the primary / secondary defining slits. The monochromator and mirrors are not individually labelled in this registry slice, so they are grouped as the optics-hutch positioning stage."
+  note: "Handles read from the oh_mot* bank and the ps1 / ps2 slit axes. The optics breakdown (monochromator, mirrors) is OPT-1."
+  devices:
+    - name: OpticsStages
+      family: LinearStage
+      pv: {bank: "p24/motor/oh_mot01"}
+      new: true
+      confirm: true
+      note: "the P24 optics motor bank (oh_mot01..20 on p24/motor): monochromator / mirror motions, per-axis roles not labelled, grouped as one stage (OPT-1, GROUP-1)"
+    - name: DefiningSlits
+      family: Slit
+      pv: {ps1_vgap: "p24/motor/ps1vgap", ps1_vcen: "p24/motor/ps1vcen", ps2_vgap: "p24/motor/ps2vgap", ps2_vcen: "p24/motor/ps2vcen", ps2_hleft: "p24/motor/ps2hleft", ps2_hright: "p24/motor/ps2hright"}
+      new: true
+      confirm: true
+      note: "the primary / secondary defining slits (ps1 / ps2 gap / center / blades) (OPT-1)"
+
+# ===========================================================================
+# EH2: main experiment hutch (diffractometer)
+# ===========================================================================
+
+eh2-sample:
+  stage: sample
+  enclosure: p24-eh2
+  intro: "The EH2 main experiment hutch: the chemical-crystallography diffractometer and sample positioning. The diffractometer geometry is not individually labelled in this registry slice, so the sample / instrument motions are grouped."
+  note: "Handles read from the mot* bank and the eh2 coupled axes (vmexecutor). The dmy stubs are dummy / placeholder devices (STUB-1). The diffractometer geometry is DIFF-1."
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p24/motor/mot01"}
+      new: true
+      confirm: true
+      note: "the EH2 diffractometer / sample motor bank (mot01..40 on p24/motor): the chemical-crystallography diffractometer and sample positioning, per-axis roles not labelled, grouped as one stage (GROUP-1, DIFF-1)"
+    - name: CoupledAxes
+      family: PseudoAxis
+      pv: {vm01: "p24/vmexecutor/eh2.01", vm02: "p24/vmexecutor/eh2.02", vm03: "p24/vmexecutor/eh2.03"}
+      new: true
+      confirm: true
+      note: "the EH2 coupled / virtual axes (eh2_vm* on vmexecutor) (GROUP-1)"
+
+eh2-detector:
+  stage: detection
+  enclosure: p24-eh2
+  intro: "The EH2 detection: the MCA fluorescence detectors and the chemical-crystallography area detector (the latter not exposed as a device in this registry slice)."
+  note: "Handles read from p24/mca. The area detector (a Pilatus / Eiger-class photon-counting detector typical of chemical crystallography) is not exposed and is carried pending (DET-1)."
+  devices:
+    - name: FluorescenceDetectors
+      family: EnergyDispersiveSpectrometer
+      pv: {mca01: "p24/mca/eh2.01", mca02: "p24/mca/eh2.02", mca03: "p24/mca/eh2.03", mca04: "p24/mca/eh2.04"}
+      new: true
+      confirm: true
+      note: "the EH2 MCA fluorescence detectors (DET-1)"
+    - name: AreaDetector
+      family: Camera
+      pv: {confirm: "the chemical-crystallography area detector (a Pilatus / Eiger-class photon-counting detector) is not exposed in this OnlineXML slice; carried pending (DET-1)"}
+      new: true
+      confirm: true
+      note: "the EH2 area detector for single-crystal diffraction; not in the registry slice, modelled as a pending Camera placeholder (DET-1)"
+
+# ===========================================================================
+# EH1: experiment hutch
+# ===========================================================================
+
+eh1-sample:
+  stage: sample
+  enclosure: p24-eh1
+  intro: "The EH1 experiment hutch: a sample / instrument motor bank for the second P24 experiment station."
+  note: "Handles read from the EH1 motor bank. Per-axis roles not labelled (GROUP-1)."
+  devices:
+    - name: SampleStage
+      family: LinearStage
+      pv: {bank: "p24/motor/eh1.01"}
+      new: true
+      confirm: true
+      note: "the EH1 sample / instrument motor bank (~16 axes on p24/motor); per-axis roles not labelled, grouped as one stage (GROUP-1)"
+
+# Cross-cutting control. P24 runs Tango with Sardana, the PETRA III house style.
+controls:
+  intro: >
+    P24 runs on the PETRA III control system, Tango with Sardana as the scan / motion
+    SCADA layer, the same floor as the other PETRA III beamlines. A motion axis is a
+    Tango motor device (p24/motor/...), the coupled axes vmexecutor virtual axes; the
+    fluorescence detectors are mca devices. The handles are read from P24's public
+    OnlineXML registry and carried confirm (CTRL-1). The chemical-crystallography
+    acquisition (the diffractometer scan coupled to the area-detector frame capture)
+    runs as a Sardana macro; that orchestration is the seam CORA's edge would conduct
+    over its ControlPort (CTRL-2).
+  motion_controllers:
+    - name: OMS58Controllers
+      family: MotionController
+      protocol: Tango_oms58
+      new: true
+      confirm: true
+      note: "OMS MAXv-58 stepper controllers (oms58) driving the optics and experiment motor banks (CTRL-1)"
+    - name: TangoMotorControllers
+      family: MotionController
+      protocol: Tango_motor_tango
+      new: true
+      confirm: true
+      note: "generic Tango motor controllers (motor_tango) backing the coupled / virtual axes and the dummy stubs (CTRL-1, STUB-1)"
+
+# Continuously-available resources a run draws on.
+resources:
+  intro: >
+    The continuously-available facility resources a P24 run needs present before it can
+    start. All pending confirmation.
+  supplies:
+    - kind: PhotonBeam
+    - kind: CoolingWater
+    - kind: Vacuum

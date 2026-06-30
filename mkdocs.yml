@@ -1115,6 +1115,19 @@ nav:
         - Techniques: deployments/p23/techniques.md
         - Governance: deployments/p23/governance.md
         - Model: deployments/p23/model.md
+      - P24:
+        - deployments/p24/index.md
+        - Open questions: deployments/p24/questions.md
+        - The beamline:
+          - deployments/p24/equipment/index.md
+          - Source: deployments/p24/beamline.md
+          - Sample: deployments/p24/equipment/sample.md
+          - Detector: deployments/p24/equipment/detector.md
+          - Controls: deployments/p24/equipment/controls.md
+          - Inventory: deployments/p24/inventory.md
+        - Techniques: deployments/p24/techniques.md
+        - Governance: deployments/p24/governance.md
+        - Model: deployments/p24/model.md
     - ALS:
       - deployments/als/index.md
       - 8.3.2:
