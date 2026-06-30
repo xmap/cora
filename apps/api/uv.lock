@@ -371,7 +371,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.31.0,<0.32" },
     { name = "cryptography", specifier = ">=49.0.0,<50" },
     { name = "fastapi", specifier = ">=0.138.1,<0.139" },
-    { name = "globus-sdk", specifier = ">=3,<4" },
+    { name = "globus-sdk", specifier = ">=4.8.1,<5" },
     { name = "jsonschema-rs", specifier = ">=0.46.6,<1" },
     { name = "mcp", specifier = ">=1.28.1,<2" },
     { name = "opentelemetry-api", specifier = ">=1.41,<2" },
@@ -661,16 +661,16 @@ wheels = [
 
 [[package]]
 name = "globus-sdk"
-version = "3.65.0"
+version = "4.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "pyjwt", extra = ["crypto"] },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/49/93/a6f6686bb2beb038047abe203b48c7f995f6a96884679eedf7e9aa34300b/globus_sdk-3.65.0.tar.gz", hash = "sha256:a4b350b980809e86d768c8e327de9ddee4405b60cfb83429cdf831ac0c63d763", size = 275365, upload-time = "2025-10-03T01:56:45.402Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4d/5e/0624d1361b3f9685a97c0123d8bb94f2038441f09fa40c87719789947728/globus_sdk-4.8.1.tar.gz", hash = "sha256:564b168e6fdcac2fe96b1e9a76ebd05666be84d34748315b579b0ecf9956e21a", size = 284145, upload-time = "2026-06-16T16:42:17.836Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/cd/f89c1d66a678d456887d305669ad929cb3ea742be1f563899a9949bcb41f/globus_sdk-3.65.0-py3-none-any.whl", hash = "sha256:d14154c3a40bb6c4d6a77e7200234d43358bd1daca9224841d4297f0edea80e6", size = 418025, upload-time = "2025-10-03T01:56:43.495Z" },
+    { url = "https://files.pythonhosted.org/packages/30/bb/2b865d79c5bdc574b428e5502a24e7517cdaeca2569f6baa051106f9fa7e/globus_sdk-4.8.1-py3-none-any.whl", hash = "sha256:48b57862902a26d8606e73374c354415724cfa9d99301af7e9e406659dafe78d", size = 442599, upload-time = "2026-06-16T16:42:16.226Z" },
 ]
 
 [[package]]

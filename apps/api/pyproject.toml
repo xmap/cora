@@ -86,7 +86,7 @@ dependencies = [
     # `GlobusAPIError` dispatched on `.http_status` -> Rejected / AccessDenied /
     # EndpointUnreachable; `NetworkError` / connection / timeout -> the
     # transport families. Pin <4 to flag a future major SDK shift in CI.
-    "globus-sdk>=3,<4",
+    "globus-sdk>=4.8.1,<5",
 ]
 
 [dependency-groups]
