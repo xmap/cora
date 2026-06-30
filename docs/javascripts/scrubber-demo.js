@@ -161,8 +161,11 @@
   }
 
   function buildScale(run) {
-    const dmin = -8;
-    const dmax = run.xmax + 8;
+    // The axis runs a true 0 to xmax: 0s maps to PAD_L (the slider's left edge)
+    // and xmax maps to VW - PAD_R, so the slider and the timeline share the
+    // same 0-origin. PAD_L / PAD_R supply the visual margin, not negative time.
+    const dmin = 0;
+    const dmax = run.xmax;
     const k = (VW - PAD_L - PAD_R) / (dmax - dmin);
     return { dmin, dmax, k };
   }
@@ -196,7 +199,7 @@
     const saveAct = run.activities.find((a) => a.payload.action_name === "write_dataset");
     const saveT = saveAct ? parseT(saveAct.sampled_at) - run.t0 : run.xmax;
     const phases = [
-      ["Alignment", -6, alignEnd, "align"],
+      ["Alignment", 0, alignEnd, "align"],
       ["Scan", alignEnd, saveT - 6, "scan"],
       ["Save", saveT - 6, saveT + 6, "save"],
     ];
@@ -291,7 +294,7 @@
         y2: LANE.permit,
         class: `cs-permit ${lost ? "cs-permit--lost" : "cs-permit--ok"}`,
       });
-    g.appendChild(permitSeg(-6, run.beamLoss, false));
+    g.appendChild(permitSeg(0, run.beamLoss, false));
     g.appendChild(permitSeg(run.beamLoss, run.beamBack, true));
     g.appendChild(permitSeg(run.beamBack, run.xmax, false));
 
