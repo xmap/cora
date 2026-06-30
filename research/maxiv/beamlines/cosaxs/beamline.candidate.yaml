@@ -1,0 +1,146 @@
+# CANDIDATE beamline descriptor: hand-read from maxiv-science/contrast
+# (beamlines/cosaxs/cosaxs.py, commit 8e787ac), NOT authoritative. Every device carries
+# new: true and a confirm note. Grouping by stage and the enclosure names are inferred from
+# the Tango device domains (b310a-o02 = optics, b310a-e01 = experiment station, b310a-e02 =
+# detector/flight tube); Family suggestions and hutch boundaries need human curation, and any
+# new Family needs the naming-r3 gate. Do not copy into deployments/ without review. CoSAXS is
+# NOT yet a deployment. Only ACTIVE (uncommented) device handles are included. Handles carry
+# the verbatim Tango-host prefix b-v-cosaxs-csdb-0:10000/ where the source does.
+
+beamline:
+  name: CoSAXS
+  facility: maxiv
+  sector: "B310A"
+  tier: Unit
+  source: insertion-device
+enclosures:
+- name: cosaxs-optics
+  facility_code: maxiv
+  confirm: optics zone (b310a-o02 + front end); inferred from Tango domains; PSS leaves named in commented MaxivScheduler (ENC-1, PSS-1)
+- name: cosaxs-station
+  facility_code: maxiv
+  confirm: experiment station (b310a-e01) + detector flight tube (b310a-e02); inferred from Tango domains (ENC-1)
+source:
+  stage: source
+  intro: Source + energy; grouping/enclosure need confirm.
+  devices:
+  - name: Undulator
+    family: InsertionDevice
+    pv: "b-v-cosaxs-csdb-0:10000/motor/gap_ctrl/1"
+    new: true
+    confirm: 'in-vacuum undulator via csdb proxy; ivu_gap (4.599-49.9); family InsertionDevice (catalog) (SRC-1)'
+    source_class: TangoMotor
+  - name: BeamEnergy
+    family: PseudoAxis
+    pv: "b-v-cosaxs-csdb-0:10000/pm/mono_bragg_ctrl/1"
+    new: true
+    confirm: 'mono bragg energy pseudo (5000-32000 eV); family PseudoAxis (catalog); the Si mono itself is not separately instantiated in contrast (MONO-1)'
+    source_class: TangoMotor
+optics:
+  stage: optics
+  intro: Optics; grouping/enclosure need confirm.
+  devices:
+  - name: VerticalFocusingMirror1
+    family: Mirror
+    pv: "b-v-cosaxs-csdb-0:10000/b310a-o02/opt/mir-01-bend01"
+    new: true
+    confirm: 'VFM two-bender (first); bend01 (mir-01-bend01), pit (mir-01-pit), row x/y (mrch-01-x/y); family Mirror (catalog) (OPT-1, MIR-1 bend02 dup)'
+    source_class: TangoMotor
+  - name: VerticalFocusingMirror2
+    family: Mirror
+    pv: "b-v-cosaxs-csdb-0:10000/b310a-o02/opt/mir-02-bend01"
+    new: true
+    confirm: 'VFM two-bender (second); bend01 (mir-02-bend01), pit (mir-02-pit), y (mir-02-y); family Mirror (catalog) (OPT-1, MIR-1 bend02 dup)'
+    source_class: TangoMotor
+  - name: HorizontalFocusingMirror1
+    family: Mirror
+    pv: "b-v-cosaxs-csdb-0:10000/b310a-o02/opt/mir-03-bend01"
+    new: true
+    confirm: 'HFM two-bender (first); bend01/bend02 (mir-03-bend01/02), pit (mir-03-pit); family Mirror (catalog) (OPT-1)'
+    source_class: TangoMotor
+  - name: HorizontalFocusingMirror2
+    family: Mirror
+    pv: "b-v-cosaxs-csdb-0:10000/b310a-o02/opt/mir-04-bend01"
+    new: true
+    confirm: 'HFM two-bender (second); bend01/bend02 (mir-04-bend01/02), pit (mir-04-pit), x (mir-04-x), row y (mrch-02-y); family Mirror (catalog) (OPT-1)'
+    source_class: TangoMotor
+  - name: CoherenceSlit
+    family: Slit
+    pv: "b-v-cosaxs-csdb-0:10000/b310a-o02/opt/slit-01-xl"
+    new: true
+    confirm: 'coherence-setting slit; blades slit-01-{xl,xr,yb,yt} + gap/pos pseudos pm/o02_v_slit1_ctrl/{1,2} + pm/o02_h_slit1_ctrl/{1,2}; family Slit (catalog) (OPT-2)'
+    source_class: TangoMotor
+station:
+  stage: sample
+  intro: Experiment station; grouping/enclosure need confirm.
+  devices:
+  - name: UHVSlit1
+    family: Slit
+    pv: "b-v-cosaxs-csdb-0:10000/b310a-e01/opt/slit-01-xr"
+    new: true
+    confirm: 'UHV slit 1; blades slit-01-{xr,xl,yt,yb}; family Slit (catalog) (OPT-2)'
+    source_class: TangoMotor
+  - name: UHVSlit2
+    family: Slit
+    pv: "b-v-cosaxs-csdb-0:10000/b310a-e01/opt/slit-02-xr"
+    new: true
+    confirm: 'UHV slit 2; blades slit-02-{xr,xl,yt,yb}; family Slit (catalog) (OPT-2)'
+    source_class: TangoMotor
+  - name: LastSlit
+    family: Slit
+    pv: "b-v-cosaxs-csdb-0:10000/b310a-e01/opt/slit-03-xr"
+    new: true
+    confirm: 'last slit before lens array / pinhole / sample; blades slit-03-{xr,xl,yt,yb}; family Slit (catalog) (OPT-2)'
+    source_class: TangoMotor
+  - name: AttenuatorBeamstopUnit
+    family: Filter
+    pv: "b-v-cosaxs-csdb-0:10000/b310a-e01/dia/bcu01-x1pz"
+    new: true
+    confirm: 'BCU01 beam-conditioning unit; absorber foil ladders bcu01-x1pz..x4pz (Al/Ti) + beamstop bcu01-bsxpz/bsypz; family Filter (catalog) with beamstop co-hosted; confirm beamstop as separate Asset (BCU-1)'
+    source_class: TangoMotor
+  - name: GraniteTable
+    family: LinearStage
+    pv: "b-v-cosaxs-csdb-0:10000/b310a-e01/dia/tab-01-x"
+    new: true
+    confirm: 'granite table x/y (tab-01-x/y); family LinearStage (catalog)'
+    source_class: TangoMotor
+  - name: SampleStage
+    family: LinearStage
+    pv: "b-v-cosaxs-csdb-0:10000/b310a-e01/dia/sams-04-x"
+    new: true
+    confirm: 'Huber sample stages sample_x (sams-04-x, 10-290) + sample_y (sams-04-y, 10-80); family LinearStage (catalog) (SAMPLE-1)'
+    source_class: TangoMotor
+  - name: SampleTiltStack
+    family: LinearStage
+    pv: "b310a-e01/ctl/pzsscu-02"
+    new: true
+    confirm: 'Smaract MCS2 6-axis sample stack; sz(0)/sx(1)/sy(2) tilt stack, pinx(3)/piny(4), sr(5) rotation; family LinearStage (catalog) (SAMPLE-1)'
+    source_class: SmaractLinearMotor_MCS2
+detection:
+  stage: detection
+  intro: Detection + flight tube; grouping/enclosure need confirm.
+  devices:
+  - name: DetectorTable
+    family: LinearStage
+    pv: "b-v-cosaxs-csdb-0:10000/b310a-e02/dia/tab-02-x"
+    new: true
+    confirm: 'detector table in flight tube; det_x (tab-02-x, 42-200), det_y (tab-02-y, 36-199), det_z (motor/cosaxs_flight_ctrl/26, flight-tube translation -569.65-13865); family LinearStage (catalog)'
+    source_class: TangoMotor
+  - name: AreaDetectorEiger4M
+    family: Camera
+    pv: "B310A-E/DIA/det-01"
+    new: true
+    confirm: 'Eiger 4M SAXS area detector (EigerTango, hdf entry/instrument/eiger/data); family Camera (catalog) (DET-1)'
+    source_class: EigerTango
+  - name: IonChamberElectrometer
+    family: FluxMonitor
+    pv: "172.16.198.48"
+    new: true
+    confirm: 'AlbaEM electrometer (host IP, not Tango d/f/m); I0/It/diode SAXS flux chain; family FluxMonitor (catalog, graduated)'
+    source_class: AlbaEM
+  - name: TimingController
+    family: TimingController
+    pv: "b-cosaxs-pandabox-0"
+    new: true
+    confirm: 'PandaBox (host); FMC-ADC capture (I0_m/It_m) + fast-scan trigger; family TimingController (?) confirm vs GenericProbe (sighted at NanoMAX too)'
+    source_class: PandaBox
