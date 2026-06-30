@@ -9,8 +9,10 @@
   and shown to a human;
   \emph{run-state provenance} is per-iteration verdict and in-flight semantics
   along a run; \emph{who / handoff} is a per-transition actor (human or agent)
-  record; \emph{scrub} is an interactive time cursor. No prior system combines
-  all five.}
+  record; \emph{scrub} is an interactive time cursor. C2PA/Atlas read $\circ$ on
+  fidelity because their check is over static artifacts, not replayed run state;
+  the distinction is the per-cursor reconstruction, not the hash. No prior system
+  combines all five columns.}
   \label{tab:compare}
   \footnotesize
   \begin{tabular}{@{}llcccc@{}}
@@ -33,7 +35,8 @@ We locate our contribution in the gap none of the neighboring work fills: a
 deterministic fold over an immutable event record, exposed as a scrub
 interaction, carrying a content-addressed fidelity check and provenance semantics
 for autonomous loops. The comparison table carries the per-system contrasts
-(Table~\ref{tab:compare}); here we name the four lines and where each stops short.
+(Table~\ref{tab:compare}); here we walk the four lines of related work and where
+each stops short.
 
 \textbf{Provenance visualization, replay, and time-travel.}
 Retrospective provenance has long been distinguished from the prospective recipe
@@ -92,13 +95,13 @@ fidelity check. That gap is what the replay scrubber addresses.
 
 \textbf{Open questions.}
 We see the scrubber less as a finished answer than as a way to open three
-questions. First, what should a fidelity check cover as
-autonomy deepens: we verify the recipe expansion, but a closed-loop run invites a
-debate over which dynamic state (decisions, model inputs, next-action choices)
-should be made content-addressable and shown, and at what cost to legibility.
-Second, how should oversight scale to many agents: the lifecycle lane that here
-separates one operator from one supervisor would need encodings for contention,
-handoff, and blame across several agents acting at once. Third, what is the right
-division of labor between post-hoc audit and live steering, since the same folded
-timeline could host a now-edge for monitoring a run in progress. We offer the
+questions. First, what should a fidelity check cover as autonomy deepens: we
+verify the recipe expansion, but a closed-loop run invites debate over which
+dynamic state (decisions, model inputs, next-action choices) should be made
+content-addressable, and at what cost to legibility. Second, how should oversight
+scale to many agents: the lifecycle lane that here separates one operator from one
+supervisor would need encodings for contention, handoff, and blame across several
+agents at once. Third, what is the right division of labor between post-hoc audit
+and live steering, since the same folded timeline could host a now-edge for
+monitoring a run in progress. We offer the
 scrubber as a concrete substrate against which these can be argued out.
