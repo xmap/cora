@@ -1,0 +1,36 @@
+# CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (i05.py, i05_1.py, i05_shared.py),
+# NOT authoritative. PVs use {beamline_prefix}=BL05I (env-resolved) + literal suffix, verified verbatim.
+
+beamline: {name: I05, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: I05, facility_code: diamond, confirm: ARPES main branch; PV root BL05I (env-resolved)}
+- {name: I05-1, facility_code: diamond, confirm: nano-ARPES branch; shares optics}
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: HutchShutter, family: Shutter, pv: "BL05I", new: true, confirm: "HutchShutter (prefix constructed in class); Shutter (catalog)"}
+  - {name: UndulatorGap, family: InsertionDevice, pv: "SR05I-MO-SERVC-01:", new: true, confirm: "EPU gap; InsertionDevice (catalog)"}
+  - {name: UndulatorPhase, family: InsertionDevice, pv: "SR05I-MO-SERVC-01:", new: true, confirm: "EPU locked-phase (variable polarization); InsertionDevice (catalog)"}
+optics:
+  stage: optics
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: PlaneGratingMono, family: GratingMonochromator, pv: "BL05I-OP-PGM-01:", new: true, confirm: "PGM; GratingMonochromator (catalog, graduated via csx); first Diamond consumer"}
+  - {name: M1CollimatingMirror, family: Mirror, pv: "BL05I-OP-COL-01:", new: true, confirm: "M1 collimating (XYZPitchYawRollStage); Mirror (catalog)"}
+  - {name: M3M6SwitchingMirror, family: Mirror, pv: "BL05I-OP-SWTCH-01:", new: true, confirm: "switching mirror; Mirror (catalog)"}
+  - {name: M4M5SwitchingMirror, family: Mirror, pv: "BL05I-OP-RFM-01:", new: true, confirm: "switching mirror (main branch); Mirror (catalog)"}
+  - {name: AnalyserSlits, family: Slit, pv: "BL05I", new: true, confirm: "EntranceSlitInformationDevice (prefix in class); Slit (catalog)"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: SampleGoniometer, family: Manipulator, pv: "BL05I", new: true, confirm: "I05Goniometer ARPES manipulator (prefix in class, MANIP-1); Manipulator (catalog, graduated via esm), NOT MX Goniometer"}
+  - {name: NanoSampleManipulator, family: Manipulator, pv: "BL05I-EA-SM-01:", new: true, confirm: "nano-ARPES XYZAzimuthPolarDefocus manipulator; Manipulator (catalog)"}
+  - {name: SampleTemperatureController, family: TemperatureController, pv: "BL05I-EA-TCTRL-02:", new: true, confirm: "Lakeshore336 cryo-ARPES; TemperatureController (catalog, presents Regulator)"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: ElectronAnalyserMain, family: ElectronAnalyzer, pv: "BL05I-EA-DET-02:CAM:", new: true, confirm: "MbsDetector hemispherical analyser (main ARPES); ElectronAnalyzer (catalog, graduated via esm/ios/sst); first Diamond consumer"}
+  - {name: ElectronAnalyserNano, family: ElectronAnalyzer, pv: "BL05I-EA-DET-04:CAM:", new: true, confirm: "MbsDetector hemispherical analyser (nano-ARPES); ElectronAnalyzer (catalog, graduated)"}
