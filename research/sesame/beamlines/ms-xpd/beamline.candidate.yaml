@@ -1,0 +1,26 @@
+# CANDIDATE beamline descriptor: hand-read from SESAME-Synchrotron/MS-XPD-ScanTool, NOT authoritative.
+# EPICS P prefix MS:. PVs verified verbatim, zero fabrications.
+
+beamline: {name: ms-xpd, facility: sesame, tier: Unit, source: unknown-pending-confirmation}
+enclosures:
+- {name: ID09, facility_code: sesame, confirm: "MS/XPD powder diffraction, insertion device; EPICS prefix MS:"}
+sample:
+  stage: sample
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: Diffractometer, family: Diffractometer, pv: "MC1:ES-DIFF-STP-ROTX1", new: true, confirm: "theta/2theta/arm rotations MC1:ES-DIFF-STP-ROTX1/2/3; Diffractometer (loose/Assembly, fleet-wide question); confirm true-diffractometer vs RotaryStage composition"}
+  - {name: DiffractometerAux, family: RotaryStage, pv: "MC3:ES-DIFF-STP-ROTX2", new: true, confirm: "MC3 auxiliary rotation (+.VELO); RotaryStage (catalog)"}
+detection:
+  stage: detection
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: AreaDetector, family: Camera, pv: "CAM1:", new: true, confirm: "powder-diffraction area detector (acquire/setExpTime/setNImages); Camera (catalog)"}
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - {name: FrontEndShutter, family: Shutter, pv: "SHUTTER1:Status", new: true, confirm: "shutters SHUTTER1/2:Status; Shutter (catalog)"}
+  - {name: BeamStopper, family: Shutter, pv: "STOPPER:Status", new: true, confirm: "beam stopper; confirm Shutter vs BeamStop"}
+  - {name: RingCurrent, family: GenericProbe, pv: "DCCT1:getDcctCurrent", new: true, confirm: "ring current DCCT; LOOSE GenericProbe (machine diagnostic)"}
+  - {name: BeamEnergy, family: GenericProbe, pv: "DI:getBeamEnergy", new: true, confirm: "beam-energy diagnostic; LOOSE GenericProbe"}
+# DEFERRED: OPTICS-1 (mono, mirrors, slit blades); TEMP-1 (2theta-temp.py sample temperature device)
