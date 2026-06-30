@@ -11,6 +11,9 @@ decider substrate:
     initial-design seeder; needs the optional `bo` dependency group)
   - `BoTorchDecidePort` (`botorch` substrate; a Gaussian-process Bayesian-
     optimization brain; forward-runs-only, needs the optional `bo` group)
+  - `StagedDecidePort` (`staged` substrate; a two-phase composite that seeds
+    with `sobol` then hands off to `botorch` on a successful-observation
+    count; needs the optional `bo` group)
 
 These arms mirror `build_compute_port`, and a routing registry is earned only
 when the substrate count makes the if-chain unwieldy, exactly as ControlPort
@@ -46,18 +49,20 @@ from cora.operation.adapters.botorch_decide_port import BoTorchDecidePort
 from cora.operation.adapters.grid_walk_decide_port import GridWalkDecidePort
 from cora.operation.adapters.in_memory_decide_port import InMemoryDecidePort
 from cora.operation.adapters.sobol_decide_port import SobolDecidePort
+from cora.operation.adapters.staged_decide_port import StagedDecidePort
 
 if TYPE_CHECKING:
     from cora.operation.ports.decide_port import DecidePort
 
-DecideSubstrate = Literal["in_memory", "grid_walk", "sobol", "botorch"]
+DecideSubstrate = Literal["in_memory", "grid_walk", "sobol", "botorch", "staged"]
 """The full set of decider substrates `build_decide_port` can materialise.
 
 `in_memory` is the deterministic fake; `grid_walk` is the in-CORA grid/sweep
 decider; `sobol` is the Sobol initial-design seeder; `botorch` is the GP
-Bayesian-optimization brain (both need the optional `bo` group). Adding an arm
-here makes it factory-buildable for in-process composition + deployment
-config; promoting it to the wire is a separate, deliberate step (see
+Bayesian-optimization brain; `staged` is the two-phase sobol-then-botorch
+composite (the last three need the optional `bo` group). Adding an arm here
+makes it factory-buildable for in-process composition + deployment config;
+promoting it to the wire is a separate, deliberate step (see
 `WireDecideSubstrate`).
 """
 
@@ -77,9 +82,12 @@ class DecidePortConfig:
     """Deployment config for the DecidePort substrate.
 
     `substrate` selects the adapter. `points_per_axis` is the grid-walk
-    resolution for continuous axes (ignored by the in-memory fake, by the
-    Sobol seeder, and by axes that carry explicit choices). A full route
-    table is deferred, mirroring `ComputePortConfig`.
+    resolution for continuous axes. `min_observations` / `num_restarts` /
+    `raw_samples` / `seed` tune the BoTorch brain (the `botorch` substrate,
+    and the brain child of the `staged` substrate). `staged_threshold` is the
+    successful-observation count at which the `staged` composite hands off
+    from the Sobol seeder to the brain; it must be >= `min_observations`. A
+    full route table is deferred, mirroring `ComputePortConfig`.
     """
 
     substrate: DecideSubstrate = "in_memory"
@@ -88,6 +96,7 @@ class DecidePortConfig:
     num_restarts: int = 10
     raw_samples: int = 256
     seed: int = 0
+    staged_threshold: int = 5
 
 
 def build_decide_port(config: DecidePortConfig | None = None) -> DecidePort:
@@ -95,10 +104,12 @@ def build_decide_port(config: DecidePortConfig | None = None) -> DecidePort:
 
     None or the `in_memory` substrate returns an `InMemoryDecidePort` (the
     default + test convenience). `grid_walk` returns a `GridWalkDecidePort`
-    at the configured resolution. `sobol` returns a `SobolDecidePort` (which
-    probes the optional `bo` dependency at construction, raising `ValueError`
-    if it is missing). New arms are added here as they are earned, exactly as
-    `build_compute_port` grew its `local_process` arm.
+    at the configured resolution. `sobol` / `botorch` return the seeder /
+    GP brain (both probe the optional `bo` dependency at construction, raising
+    `ValueError` if it is missing). `staged` composes a Sobol seeder + a
+    BoTorch brain into the two-phase composite. New arms are added here as
+    they are earned, exactly as `build_compute_port` grew its `local_process`
+    arm.
     """
     resolved = config if config is not None else DecidePortConfig()
     if resolved.substrate == "in_memory":
@@ -108,14 +119,26 @@ def build_decide_port(config: DecidePortConfig | None = None) -> DecidePort:
     if resolved.substrate == "sobol":
         return SobolDecidePort()
     if resolved.substrate == "botorch":
-        return BoTorchDecidePort(
-            min_observations=resolved.min_observations,
-            num_restarts=resolved.num_restarts,
-            raw_samples=resolved.raw_samples,
-            seed=resolved.seed,
+        return _build_botorch(resolved)
+    if resolved.substrate == "staged":
+        return StagedDecidePort(
+            seeder=SobolDecidePort(),
+            brain=_build_botorch(resolved),
+            threshold=resolved.staged_threshold,
+            brain_min_observations=resolved.min_observations,
         )
     raise ValueError(  # pragma: no cover
         f"unsupported decide substrate: {resolved.substrate!r}"
+    )
+
+
+def _build_botorch(config: DecidePortConfig) -> BoTorchDecidePort:
+    """Construct the BoTorch brain from config (shared by the botorch + staged arms)."""
+    return BoTorchDecidePort(
+        min_observations=config.min_observations,
+        num_restarts=config.num_restarts,
+        raw_samples=config.raw_samples,
+        seed=config.seed,
     )
 
 
