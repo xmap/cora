@@ -17,7 +17,7 @@ P22 was reverse-engineered from P22's own public OnlineXML device registry ([git
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| OPT-1 | Blocks-go-live | The shared DCM crystal cut, the mirror coatings, and the phase-retarder geometry. | A DCM `Monochromator`, two `Mirror`s, and a loose `PhaseRetarder`; physical detail pending. | The optics modelling. |
+| OPT-1 | Blocks-go-live | The shared DCM crystal cut, the mirror coatings, and the phase-retarder geometry. | A DCM `Monochromator`, two `Mirror`s, and a catalog `PhaseRetarder`; physical detail pending. | The optics modelling. |
 
 ## The detector
 

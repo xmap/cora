@@ -22,7 +22,7 @@ ISR's name promises in-situ studies (electrochemistry, gas, temperature, cryosta
 
 ## Resonant and polarization, deferred
 
-Resonant scattering needs a tunable energy axis near absorption edges, and often polarization analysis. The DCM Bragg (see [Source](../beamline.md)) is the physical energy axis, but a wired energy pseudo-axis is only a non-functional stub in source, and no polarization analyzer or phase retarder is bound. So the resonant energy axis and polarization analysis are carried as an open question, not modelled (`RESONANT-1`). When wired, the energy axis would be a `PseudoAxis` over the DCM (the 2-BM beam-energy precedent) and any polarization hardware would reuse the loose `PolarizationAnalyzer` / `PhaseRetarder` families that APS 4-ID holds.
+Resonant scattering needs a tunable energy axis near absorption edges, and often polarization analysis. The DCM Bragg (see [Source](../beamline.md)) is the physical energy axis, but a wired energy pseudo-axis is only a non-functional stub in source, and no polarization analyzer or phase retarder is bound. So the resonant energy axis and polarization analysis are carried as an open question, not modelled (`RESONANT-1`). When wired, the energy axis would be a `PseudoAxis` over the DCM (the 2-BM beam-energy precedent) and any polarization hardware would reuse the catalog `PhaseRetarder` Family and the loose `PolarizationAnalyzer` Family that APS 4-ID holds.
 
 ## Why no new Family here
 

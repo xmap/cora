@@ -15,10 +15,11 @@
 # are not in it and are open questions. Every value is carried confirm until P09 staff
 # verify it. The extraction is in research/petra-iii/.
 #
-# WHAT IS NEW: no new device Family. P09 reuses existing Families end to end, including
-# three allowlisted-loose Families the 4-ID deployment introduced: PhaseRetarder
-# (the polarization phase-retarder circles), PolarizationAnalyzer (the scattered-beam
-# analyzer), and Magnet (the 14 T sample-environment magnet). The diffractometer
+# WHAT IS NEW: no new device Family. P09 reuses existing Families end to end. It binds
+# the catalog PhaseRetarder Family (the polarization phase-retarder circles), the second
+# consumer that graduated it out of loose alongside 4-ID (P22 is the third), and two
+# Families still allowlisted-loose from 4-ID: PolarizationAnalyzer (the scattered-beam
+# analyzer) and Magnet (the 14 T sample-environment magnet). The diffractometer
 # circles bind the catalog Goniometer Family (not the composed Diffractometer
 # Assembly), the same call as P01 EH2. The techniques (resonant scattering, magnetic
 # scattering, XMCD, HAXPES) earn no catalog Method; they are carried pending on the
@@ -137,14 +138,14 @@ mono-sample:
   stage: sample
   enclosure: p09-mono
   intro: "The MONO resonant-scattering experiment: the polarization phase retarder, the scattered-beam analyzer, the six-circle diffractometer goniometer, the AttoCube sample piezos, and the sample-environment temperature controllers."
-  note: "The phase retarder (two circles) and the analyzer reuse the 4-ID allowlisted-loose Families. The diffractometer goniometer is e6cctrl; the hkl pseudo-axis is a sim device (DIFF-1)."
+  note: "The phase retarder (two circles) binds the catalog PhaseRetarder Family; the analyzer reuses the 4-ID allowlisted-loose PolarizationAnalyzer Family. The diffractometer goniometer is e6cctrl; the hkl pseudo-axis is a sim device (DIFF-1)."
   devices:
     - name: PhaseRetarder
       family: PhaseRetarder
       pv: {circle1: "p09/phaseretarder/phaseretardercircle1", circle2: "p09/phaseretarder/phaseretardercircle2", pchi: "p09/attocubeanc300motor/pchi", pperp: "p09/attocubeanc300motor/pperp"}
       new: true
       confirm: true
-      note: "the polarization phase-retarder circles (phaseretardercircle1 / 2) plus the AttoCube pchi / pperp fine axes; reuses the 4-ID allowlisted-loose PhaseRetarder Family (POL-1)"
+      note: "the polarization phase-retarder circles (phaseretardercircle1 / 2) plus the AttoCube pchi / pperp fine axes; binds the catalog PhaseRetarder Family (second consumer, graduated alongside 4-ID)"
     - name: PolarizationAnalyzer
       family: PolarizationAnalyzer
       pv: {analyzer: "p09/analyzer/exp.01"}

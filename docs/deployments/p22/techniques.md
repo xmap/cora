@@ -14,7 +14,7 @@ P22 illuminates the sample with a monochromatic hard X-ray beam (the shared P09 
 
 ## A photoemission beamline on familiar vocabulary
 
-P22 is the fleet's hard X-ray photoemission beamline. Its technique reuses the `angle_resolved_photoemission` slug already carried pending (P04, NSLS-II ESM), so it forces no new Method. The instrument anatomy reuses existing Families: the shared optics bind `Monochromator` / `Mirror` / the loose `PhaseRetarder`, the sample stage `Manipulator`, and the electron analyzer the catalog `ElectronAnalyzer` (graduated at NSLS-II ESM, carried pending here since not exposed in the registry). The HAXPES depth sensitivity is a physics consequence of the hard X-ray energy, not a new device.
+P22 is the fleet's hard X-ray photoemission beamline. Its technique reuses the `angle_resolved_photoemission` slug already carried pending (P04, NSLS-II ESM), so it forces no new Method. The instrument anatomy reuses existing Families: the shared optics bind `Monochromator` / `Mirror` / the catalog `PhaseRetarder`, the sample stage `Manipulator`, and the electron analyzer the catalog `ElectronAnalyzer` (graduated at NSLS-II ESM, carried pending here since not exposed in the registry). The HAXPES depth sensitivity is a physics consequence of the hard X-ray energy, not a new device.
 
 ## Not modelled yet
 

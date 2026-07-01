@@ -4,7 +4,7 @@
 
 This cut models the MONO hutch (the undulator, the DCM, the mirrors, the CRL, the slit, the absorber, the resonant-scattering instrument, the fluorescence detectors), the DIF diffraction hutch, and the MAG high-field magnetism endstation. It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p09/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P09 **coins no new Family**: it is the second consumer of the allowlisted-loose `PhaseRetarder`, `PolarizationAnalyzer`, and `Magnet` Families the APS 4-ID deployment introduced, and reuses the optics / motion / detector Families otherwise. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P09 **coins no new Family**: it is the second consumer of the catalog `PhaseRetarder` Family plus the allowlisted-loose `PolarizationAnalyzer` and `Magnet` Families the APS 4-ID deployment introduced, and reuses the optics / motion / detector Families otherwise. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -21,7 +21,7 @@ Root Asset `P09` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `DefiningSlit` | `Device` | Slit | p09-mono | MONO defining slit (G1, Galil) |
 | `Absorber` | `Device` | Filter | p09-mono | MONO beam absorber (absbox -> Filter) (OPT-1) |
 | `OpticsStages` | `Device` | LinearStage | p09-mono | MONO optics / instrument bank (p09/motor/exp, ~98 axes); grouped (GROUP-1) |
-| `PhaseRetarder` | `Device` | PhaseRetarder (loose) | p09-mono | polarization phase-retarder circles + AttoCube fine axes (POL-1) |
+| `PhaseRetarder` | `Device` | PhaseRetarder (catalog) | p09-mono | polarization phase-retarder circles + AttoCube fine axes (POL-1) |
 | `PolarizationAnalyzer` (MONO) | `Device` | PolarizationAnalyzer (loose) | p09-mono | scattered-beam analyzer (POL-2) |
 | `Goniometer` (MONO) | `Device` | Goniometer | p09-mono | MONO six-circle (E6C) diffractometer; not the Diffractometer Assembly (DIFF-1) |
 | `SampleTemperature` (MONO) | `Device` | TemperatureController | p09-mono | CryoCon 32 + Lakeshore 336 / 340 + LSCI (TEMP-1) |
@@ -40,7 +40,7 @@ Root Asset `P09` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `PilatusDetector` (MAG) | `Device` | Camera | p09-mag | MAG Pilatus 100k (DET-1) |
 | `AndorCamera` | `Device` | Camera | p09-mag | MAG Andor camera (Lima) (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Transfocator`, `Slit`, `Filter`, `LinearStage`, `Goniometer`, `TemperatureController`, `Hexapod`, `Camera`, `EnergyDispersiveSpectrometer`. Allowlisted-loose Families reused (the 4-ID precedent): `PhaseRetarder` (`POL-1`), `PolarizationAnalyzer` (`POL-2`), `Magnet` (`MAG-1`). No new family is coined and nothing graduates.
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Transfocator`, `Slit`, `Filter`, `LinearStage`, `Goniometer`, `TemperatureController`, `Hexapod`, `Camera`, `EnergyDispersiveSpectrometer`, `PhaseRetarder` (the 4-ID precedent, P09 is the second consumer of the 4-ID / P09 / P22 rule-of-three, `POL-1`). Allowlisted-loose Families reused (the 4-ID precedent): `PolarizationAnalyzer` (`POL-2`), `Magnet` (`MAG-1`). No new family is coined and nothing graduates.
 
 ## Cross-cutting controllers
 

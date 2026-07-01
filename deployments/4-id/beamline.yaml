@@ -91,28 +91,28 @@ polarization-optics:
   enclosure: 4-ID-A
   intro: "The phase retarders that set the X-ray polarization state: 4-ID's defining capability. Three diamond phase-retarder stages, energy-tracking, on the 4idam motor crate."
   note: >
-    pr1, pr2, pr3 are PRDevice / PRDeviceBase stages (each th/x/y). PhaseRetarder
-    is a loose Family: the polarization-control device class is genuinely new to
-    CORA and not yet earned into the catalog (POL-1, FAM-1).
+    pr1, pr2, pr3 are PRDevice / PRDeviceBase stages (each th/x/y). They bind the
+    catalog PhaseRetarder Family (graduated on the rule-of-three across 4-ID, P09,
+    and P22).
   devices:
     - name: PhaseRetarder_1
-      family: PhaseRetarder          # loose Family (POL-1)
+      family: PhaseRetarder
       pv: { th: "4idam4", x: "4idam1", y: "4idam2" }
       new: true
       confirm: true
-      note: "diamond phase retarder, energy-tracking (PRDevice); polarization control (POL-1)"
+      note: "diamond phase retarder, energy-tracking (PRDevice); polarization control"
     - name: PhaseRetarder_2
-      family: PhaseRetarder          # loose Family (POL-1)
+      family: PhaseRetarder
       pv: { th: "4idam9", x: "4idam6", y: "4idam7" }
       new: true
       confirm: true
-      note: "second phase retarder (PRDevice); polarization control (POL-1)"
+      note: "second phase retarder (PRDevice); polarization control"
     - name: PhaseRetarder_3
-      family: PhaseRetarder          # loose Family (POL-1)
+      family: PhaseRetarder
       pv: { th: "4idam12", x: "4idam10", y: "4idam11" }
       new: true
       confirm: true
-      note: "third phase retarder (PRDeviceBase); polarization control (POL-1)"
+      note: "third phase retarder (PRDeviceBase); polarization control"
 
 monochromator:
   stage: source

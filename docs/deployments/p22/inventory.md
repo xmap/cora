@@ -4,7 +4,7 @@
 
 This cut models the shared P09 / P22 optics (the undulator, the DCM, the mirrors, the phase retarder, the absorber) and the HAXPS experiment endstation (the sample manipulator, the electron analyzer). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p22/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P22 **coins no new Family**: it reuses the optics Families, the allowlisted-loose `PhaseRetarder`, the `Manipulator` sample stage, and the `ElectronAnalyzer` detector Family. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P22 **coins no new Family**: it reuses the optics Families, the catalog `PhaseRetarder`, the `Manipulator` sample stage, and the `ElectronAnalyzer` detector Family. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -17,12 +17,12 @@ Root Asset `P22` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `Monochromator` | `Device` | Monochromator | p22-optics | shared P09 DCM (energyfmb / mnchrmtr); cut pending (OPT-1, SHARED-1) |
 | `Mirror1` | `Device` | Mirror | p22-optics | shared P09 first mirror (spk); coating pending (OPT-1, SHARED-1) |
 | `Mirror2` | `Device` | Mirror | p22-optics | shared P09 second mirror (spk + bender); coating pending (OPT-1, SHARED-1) |
-| `PhaseRetarder` | `Device` | PhaseRetarder (loose) | p22-optics | shared P09 phase-retarder circles; graduation-due (POL-1, SHARED-1) |
+| `PhaseRetarder` | `Device` | PhaseRetarder | p22-optics | shared P09 phase-retarder circles; catalog Family (OPT-1, SHARED-1) |
 | `Absorber` | `Device` | Filter | p22-optics | shared P09 beam absorber (OPT-1, SHARED-1) |
 | `SampleStage` | `Device` | Manipulator | p22-haxps | HAXPS sample manipulator bank (p22/motor, ~64 axes); grouped (GROUP-1) |
 | `ElectronAnalyzer` | `Device` | ElectronAnalyzer | p22-haxps | HAXPES hemispherical analyzer; not in the registry slice, pending (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Filter`, `Manipulator`, `ElectronAnalyzer`. Allowlisted-loose Family reused: `PhaseRetarder` (the 4-ID / P09 precedent, graduation-due, a further consumer via the shared optics, `POL-1`). No new family is coined and nothing graduates.
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Filter`, `Manipulator`, `ElectronAnalyzer`, `PhaseRetarder` (the 4-ID / P09 precedent, P22 is the third consumer via the shared optics that completed the 4-ID / P09 / P22 rule-of-three). No new family is coined and nothing graduates.
 
 ## Cross-cutting controllers
 

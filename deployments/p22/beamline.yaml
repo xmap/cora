@@ -16,8 +16,8 @@
 # research/petra-iii/.
 #
 # WHAT IS NEW: no new device Family. P22 reuses existing Families, including the
-# allowlisted-loose PhaseRetarder Family (the 4-ID / P09 precedent, already
-# graduation-due; P22 is a further consumer via the shared P09 optics). The electron
+# catalog PhaseRetarder Family (P22 is the third consumer, via the shared P09 optics,
+# that graduated it out of loose alongside 4-ID and P09). The electron
 # analyzer (the defining HAXPES instrument) is not exposed as a motor device in this
 # registry slice and is carried pending against the catalog ElectronAnalyzer Family
 # (DET-1). The technique (HAXPES) reuses the pending angle_resolved_photoemission slug
@@ -100,7 +100,7 @@ source:
       pv: {circle1: "p09/phaseretarder/exp.01", circle2: "p09/phaseretarder/exp.02"}
       new: true
       confirm: true
-      note: "the shared polarization phase-retarder circles (on the P09 host); reuses the allowlisted-loose PhaseRetarder Family (already graduation-due from P09 / 4-ID), a further consumer (POL-1, SHARED-1)"
+      note: "the shared polarization phase-retarder circles (on the P09 host); binds the catalog PhaseRetarder Family as its third consumer, alongside 4-ID and P09 (SHARED-1)"
     - name: Absorber
       family: Filter
       pv: {abs: "p09/absorber/01"}

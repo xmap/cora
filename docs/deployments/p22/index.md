@@ -18,7 +18,7 @@
 
 P22 "Hard X-ray Photoelectron Spectroscopy (HAXPES)" is **CORA's fourteenth PETRA III beamline** and the facility's hard X-ray photoemission beamline. Its defining structural fact is that it **shares its optics chain with P09**: the undulator, the double-crystal monochromator, the mirror pair, the phase retarder, and the absorber are P09 devices (on `p09/` addresses), and P22 is the HAXPES branch off that chain (`SHARED-1`).
 
-P22 coins **no new Family**. It reuses the allowlisted-loose `PhaseRetarder` Family (already graduation-due from P09 / 4-ID; P22 is a further consumer via the shared optics). The HAXPS sample stage binds `Manipulator`; the electron analyzer (the defining HAXPES instrument, not exposed in this registry slice) is carried pending against the catalog `ElectronAnalyzer` Family (graduated at NSLS-II ESM). The technique (HAXPES) reuses the pending `angle_resolved_photoemission` slug (`TECH-1`).
+P22 coins **no new Family**. It reuses the catalog `PhaseRetarder` Family (P22 is the third consumer via the shared optics, completing the 4-ID/P09/P22 rule-of-three). The HAXPS sample stage binds `Manipulator`; the electron analyzer (the defining HAXPES instrument, not exposed in this registry slice) is carried pending against the catalog `ElectronAnalyzer` Family (graduated at NSLS-II ESM). The technique (HAXPES) reuses the pending `angle_resolved_photoemission` slug (`TECH-1`).
 
 ## Scope: what is and is not modelled
 
@@ -36,7 +36,7 @@ The deferred parts are recorded on [Model](model.md#deliberately-not-here-yet).
 ## Key modelling decisions
 
 - **A fourteenth beamline at an existing Site, sharing P09's optics.** PETRA III is already modelled; P22 adds the HAXPES beamline. Its optics are P09 devices, homed in the `p22-optics` enclosure with the shared-optics relationship flagged (`SHARED-1`, `HOST-1`).
-- **No new Family.** The phase retarder reuses the allowlisted-loose `PhaseRetarder`; the sample stage binds `Manipulator`; the electron analyzer binds the catalog `ElectronAnalyzer` (carried pending, `DET-1`).
+- **No new Family.** The phase retarder reuses the catalog `PhaseRetarder`; the sample stage binds `Manipulator`; the electron analyzer binds the catalog `ElectronAnalyzer` (carried pending, `DET-1`).
 - **The electron analyzer is named, not bound.** The defining HAXPES detector is not a motor row in the registry; it is carried pending against the catalog `ElectronAnalyzer` Family so the [Detector](equipment/detector.md) page is real.
 
 ## The beamline

@@ -34,7 +34,7 @@
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| POL-1 | Blocks-go-live | The three phase retarders (`pr1`/`pr2`/`pr3`): diamond crystal type, thickness, and how they coordinate to set a polarization state. | Three `PhaseRetarder` Assets (loose Family), each th/x/y, energy-tracking. | The phase-retarder specs and the polarization-state model. |
+| POL-1 | Blocks-go-live | The three phase retarders (`pr1`/`pr2`/`pr3`): diamond crystal type, thickness, and how they coordinate to set a polarization state. | Three `PhaseRetarder` Assets (catalog Family), each th/x/y, energy-tracking. | The phase-retarder specs and the polarization-state model. |
 | POL-2 | Blocks-go-live | The polarization analyzer (`pol`, th/y): analyzer crystal and the scattered-beam polarization it resolves. | One `PolarizationAnalyzer` Asset (loose Family) at 4-ID-B. | The analyzer spec. |
 
 ## Diffractometer
