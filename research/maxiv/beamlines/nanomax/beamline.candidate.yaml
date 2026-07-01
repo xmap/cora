@@ -41,7 +41,7 @@ source:
     confirm: 'diamond filters in diagnostics module 1; bl_filter_1 (flt-01-yml) + bl_filter_2 (b303a-o/opt/flt-02-yml); family Filter (catalog)'
     source_class: TangoMotor
 optics:
-  stage: optics
+  stage: source
   intro: Shared optics; grouping/enclosure need confirm.
   devices:
   - name: VerticalFocusingMirror
@@ -75,7 +75,7 @@ optics:
     confirm: 'Sardana energy pseudo; energy (corrected, nanomaxenergy_corr_ctrl/1) over energy_raw (nanomaxenergy_ctrl/1); family PseudoAxis (catalog)'
     source_class: TangoMotor
 diagnostics:
-  stage: diagnostics
+  stage: source
   intro: Shared diagnostics; grouping need confirm.
   devices:
   - name: NanoBPM
@@ -85,7 +85,7 @@ diagnostics:
     confirm: 'nano beam-position monitor vertical stage; LOOSE family BeamPositionMonitor (DIAG-1); do NOT coin'
     source_class: TangoMotor
 diffraction-optics:
-  stage: optics
+  stage: source
   intro: Diffraction endstation hutch optics (b303a-eh); grouping need confirm.
   devices:
   - name: DiagnosticsSlitAttenuatorStack
@@ -199,7 +199,7 @@ detection-diffraction:
     confirm: 'PandaBoxPCAP; continuous energy-scan PCAP capture (EnergyFlyscan); family TimingController (?) confirm vs GenericProbe'
     source_class: PandaBoxPCAP
 imaging-optics:
-  stage: optics
+  stage: source
   intro: Imaging endstation optics (b303a-e01); grouping need confirm.
   devices:
   - name: KBMirrorPiezo

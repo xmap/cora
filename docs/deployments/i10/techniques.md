@@ -47,13 +47,13 @@ So far this is i06's primitive expressed by reuse: the polarization axis is a `P
 
 RASOR does not only set the incident polarization; it can resolve the polarization of the scattered beam. The motorized analyzer arm (the PaStage / POLAN arm, with its analyzer two-theta and theta, py and pz, and eta motors) selects a scattered-polarization channel, which is what lets resonant scattering separate the magnetic and charge contributions to a peak rather than read only its total intensity. This is the analysis half of polarization: i06 turns it, i10 also reads it back.
 
-CORA models that arm as the loose `PolarizationAnalyzer` family. This is a deliberate modelling choice: dodal exposes only the arm's motors, and the analyzer crystal is implicit hardware, but RASOR's defining polarization-analysis role lives on that real motorized arm, so CORA models the arm rather than hiding the role. The analyzer crystal specifics are not invented (POL-2). This is the family's second sighting, after 4-ID, and it is held under review rather than graduated; the rule-of-three is not met, so i10 records HOLD and the graduate-or-hold call stays human (POL-2).
+CORA models that arm as the catalog `PolarizationAnalyzer` Family. This is a deliberate modelling choice: dodal exposes only the arm's motors, and the analyzer crystal is implicit hardware, but RASOR's defining polarization-analysis role lives on that real motorized arm, so CORA models the arm rather than hiding the role. The analyzer crystal specifics are not invented (POL-2). The Family has graduated across 4-ID / i10 / ID32 / P09, presenting Positioner; the analyzer-crystal spec stays a per-Asset detail to confirm (POL-2).
 
 ### What i10 adds: applied-field dichroism
 
 The i10-1 / I10J endstation makes the dichroic contrast under an applied magnetic field, with the sample held at low temperature. Two magnet devices serve it: a set-and-read electromagnet and a superconducting magnet whose field can be swept (a Flyable affordance). CORA models both as the single loose `Magnet` family: they are one family, and the field sweep is a per-Asset affordance, not a split (MAG-1). This is the `Magnet` family's second sighting, after 4-ID, also held under review (MAG-1). The field values and the sweep specifics are not invented (MAG-1).
 
-The applied field is what makes i10's XMCD / XMLD different from i06's: i06 reads dichroism from the polarization alone, while i10 reads it with a field applied and the sample cold. The cryostat low-temperature stage folds into the catalog `LinearStage`, and the magnet temperature is held by a catalog `TemperatureController` (TEMP-1). As with the polarization axis, no new device Family is coined for either addition: the analyzer is the loose `PolarizationAnalyzer`, the magnets are the loose `Magnet` family, and both are reuse held under review.
+The applied field is what makes i10's XMCD / XMLD different from i06's: i06 reads dichroism from the polarization alone, while i10 reads it with a field applied and the sample cold. The cryostat low-temperature stage folds into the catalog `LinearStage`, and the magnet temperature is held by a catalog `TemperatureController` (TEMP-1). As with the polarization axis, no new device Family is coined for either addition: the analyzer binds the graduated catalog `PolarizationAnalyzer`, and the magnets are the loose `Magnet` family, reuse held under review.
 
 ## Not modelled yet
 
@@ -63,7 +63,7 @@ The intent above is the function view. The concrete recipes that turn it into ru
 
 - **Whether each Method enters the catalog.** Minting a Method is owner-scope. Resonant scattering and XMCD reuse 4-ID Methods, XMLD reuses the i06 slug, and reflectivity is a new slug, but all four render pending until the owner decides (TECH-1). The decision is recorded on the [Model](model.md) page, not made here.
 
-- **Whether the PolarizationAnalyzer and Magnet families graduate.** Both are loose families on their second sighting and held under review (POL-2, MAG-1). i10 records HOLD; the graduate-or-hold call is human and is not made here. The analyzer crystal and the magnet field values stay uninvented behind that hold.
+- **Whether the Magnet family graduates.** `PolarizationAnalyzer` has graduated to a catalog Family across 4-ID / i10 / ID32 / P09 (POL-2), so i10's analyzer arm binds the catalog Family; the analyzer-crystal spec stays uninvented as a per-Asset detail. `Magnet` is a loose family on its second sighting and held under review (MAG-1). i10 records HOLD; the graduate-or-hold call is human and is not made here. The magnet field values stay uninvented behind that hold.
 
 - **The science detectors.** Neither endstation has an area detector. The RASOR and i10-1 point and current-integrating channels bind the catalog `FluxMonitor` through their current amplifiers (DET-1); no detector Family is invented in the meantime.
 

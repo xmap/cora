@@ -91,6 +91,7 @@ from cora.operation.errors import (
 from cora.operation.features import (
     abort_procedure,
     append_activities,
+    append_diagnostics,
     complete_procedure,
     conduct_procedure,
     conduct_until_advised,
@@ -248,6 +249,7 @@ def register_operation_routes(app: FastAPI) -> None:
     app.include_router(start_iteration.router)
     app.include_router(end_iteration.router)
     app.include_router(append_activities.router)
+    app.include_router(append_diagnostics.router)
     app.include_router(get_procedure.router)
     app.include_router(list_procedures.router)
     app.include_router(list_procedure_iterations.router)

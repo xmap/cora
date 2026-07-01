@@ -45,6 +45,7 @@ _ENTRY_APPEND_SLICES: frozenset[str] = frozenset(
         "cora.decision.features.append_inferences",
         "cora.run.features.append_observations",
         "cora.operation.features.append_activities",
+        "cora.operation.features.append_diagnostics",
     }
 )
 # Orchestration slices: command-shaped but no decider; the handler

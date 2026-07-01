@@ -18,10 +18,10 @@
 
 P09 "Resonant Scattering and Diffraction" is **CORA's seventh PETRA III beamline** and the richest of the PETRA III set in technique breadth: resonant elastic X-ray scattering and HAXPES in the MONO hutch, diffraction in the DIF hutch, and high-field magnetism (XMCD, magnetic scattering) in the MAG endstation with a 14 T superconducting magnet.
 
-For the modelling, P09 coins **no new Family** but exercises the polarization / magnetism vocabulary the APS 4-ID deployment introduced. It reuses the catalog `PhaseRetarder` Family (P09 is the second consumer, part of the 4-ID / P09 / P22 rule-of-three) and two allowlisted-loose Families:
+For the modelling, P09 coins **no new Family** but exercises the polarization / magnetism vocabulary the APS 4-ID deployment introduced. It binds two catalog Families, `PhaseRetarder` (P09 is a consumer in the 4-ID / P09 / P22 rule-of-three) and `PolarizationAnalyzer` (the scattered-beam analyzer, earned across 4-ID / i10 / ID32 / P09, presenting Positioner), and one allowlisted-loose Family:
 
 - `PhaseRetarder` (the polarization phase-retarder circles, a catalog Family, `POL-1`),
-- `PolarizationAnalyzer` (the scattered-beam analyzer, allowlisted-loose, `POL-2`),
+- `PolarizationAnalyzer` (the scattered-beam analyzer, a catalog Family, `POL-2`),
 - `Magnet` (the 14 T sample-environment magnet, allowlisted-loose, `MAG-1`).
 
 The diffractometer circles bind the catalog `Goniometer` Family (not the composed `Diffractometer` Assembly, the same call as P01 EH2, `DIFF-1`). The techniques (resonant scattering, magnetic scattering, XMCD) earn no catalog Method; they reuse the pending `resonant_scattering` / `magnetic_scattering` / `xmcd` slugs the 4-ID / i06 / i10 beamlines already share (`TECH-1`).
@@ -42,7 +42,7 @@ The deferred parts are recorded on [Model](model.md#deliberately-not-here-yet).
 ## Key modelling decisions
 
 - **A seventh beamline at an existing Site.** PETRA III is already modelled; P09 adds the resonant-scattering / magnetism beamline and its practices.
-- **The 4-ID vocabulary ports cleanly.** P09 reuses the catalog `PhaseRetarder` Family (the second consumer, part of the 4-ID / P09 / P22 rule-of-three) plus the allowlisted-loose `PolarizationAnalyzer` and `Magnet` Families that the APS 4-ID deployment introduced, the second consumer of each. No new Family is coined.
+- **The 4-ID vocabulary ports cleanly.** P09 binds the catalog `PhaseRetarder` Family (a consumer in the 4-ID / P09 / P22 rule-of-three) and the graduated catalog `PolarizationAnalyzer` Family (earned across 4-ID / i10 / ID32 / P09), and reuses the allowlisted-loose `Magnet` Family that the APS 4-ID deployment introduced, a further consumer. No new Family is coined.
 - **The diffractometer circles bind Goniometer.** The MONO / DIF / MAG six-circle (E6C) diffractometers bind the catalog `Goniometer` Family, not the composed `Diffractometer` Assembly, until the full circle / detector-arm structure is confirmed (`DIFF-1`).
 - **The SIS3302 ROI explosion is grouped.** The SIS3302 fluorescence digitizer is exposed as many ROI sub-channels in the registry; grouped here as one `EnergyDispersiveSpectrometer` Asset (`DET-1`). A stray `p07/hexapodsmall` row (a P07 device imported into the P09 registry) is excluded (`HOST-1`).
 

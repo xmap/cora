@@ -42,6 +42,7 @@ Read side:
 from cora.operation.features import (
     abort_procedure,
     append_activities,
+    append_diagnostics,
     complete_procedure,
     get_procedure,
     hold_procedure,
@@ -56,6 +57,7 @@ from cora.operation.features import (
 __all__ = [
     "abort_procedure",
     "append_activities",
+    "append_diagnostics",
     "complete_procedure",
     "get_procedure",
     "hold_procedure",

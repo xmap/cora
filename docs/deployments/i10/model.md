@@ -30,14 +30,14 @@ i10 coins no new Family and changes nothing in the catalog.
 
 ## Loose families at a second sighting
 
-Two loose families that were used only at 4-ID reach their second sighting at i10. The promotion guard (`PROMOTION_THRESHOLD = 2`) makes a loose family used by two or more deployments require a recorded hold-or-graduate decision: the signal is mechanical, the decision stays human. i10 records both as **hold**, not graduate, because the rule-of-three (a genuine third, independent sighting that confirms the abstraction across facilities) is not yet met and graduation is a catalog-scope change.
+Two families that were used only at 4-ID reach a further sighting at i10. The promotion guard (`PROMOTION_THRESHOLD = 2`) makes a loose family used by two or more deployments require a recorded hold-or-graduate decision: the signal is mechanical, the decision stays human. `PolarizationAnalyzer` has since graduated to a catalog Family (earned across 4-ID / i10 / ID32 / P09, presenting Positioner), so i10's RASOR arm now binds the catalog Family. `Magnet` stays loose: i10 records it as **hold**, not graduate, because the rule-of-three (a genuine third, independent sighting that confirms the abstraction across facilities) is not yet met and graduation is a catalog-scope change.
 
 | Loose family | Sightings | i10 binding | Decision |
 | --- | --- | --- | --- |
-| `PolarizationAnalyzer` | 4-ID, i10 (RASOR PaStage) | the RASOR polarization-analysis arm (the POLAN stage) | **hold** (`POL-2`): a genuine second sighting of a polarization analyzer; dodal exposes the analyzer arm's motors only (the analyzer crystal is implicit hardware), so CORA models the role on the real motorized arm and tees up the rule-of-three rather than graduating at n=2 |
+| `PolarizationAnalyzer` | 4-ID, i10, ID32, P09 | the RASOR polarization-analysis arm (the POLAN stage) | **graduated** (`POL-2`): catalog Family across 4-ID / i10 / ID32 / P09, presents Positioner; dodal exposes the analyzer arm's motors only (the analyzer crystal is implicit hardware), so CORA models the role on the real motorized arm and binds the catalog Family |
 | `Magnet` | 4-ID, i10 (i10-1) | the i10-1 electromagnet and the superconducting field-sweep magnet | **hold** (`MAG-1`): both magnet devices are one Family, the field-sweep capability is a per-Asset bound-Model affordance, not a split (the `InsertionDevice` / `TemperatureController` precedent); held pending a third independent magnet deployment |
 
-The decision to bind the RASOR PaStage to `PolarizationAnalyzer` (rather than to a plain detector-arm `RotaryStage` with the analyzer as a setting) is a deliberate one: RASOR's defining role is polarization analysis (the PV root is `POLAN`), and CORA models that role on the real arm rather than hiding it in a note. The absence of an analyzer-crystal signal in dodal is an absence in the data, not proof the role is absent; if staff confirm the analyzer operation, `POL-2` is the trigger for the third-sighting graduation decision.
+The decision to bind the RASOR PaStage to the catalog `PolarizationAnalyzer` Family (rather than to a plain detector-arm `RotaryStage` with the analyzer as a setting) is a deliberate one: RASOR's defining role is polarization analysis (the PV root is `POLAN`), and CORA models that role on the real arm rather than hiding it in a note. The absence of an analyzer-crystal signal in dodal is an absence in the data, not proof the role is absent; the analyzer-crystal spec stays a per-Asset detail to confirm (`POL-2`).
 
 ## Deliberately not here yet
 

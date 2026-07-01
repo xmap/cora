@@ -24,7 +24,7 @@ P09 was reverse-engineered from P09's own public OnlineXML device registry ([git
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DIFF-1 | Blocks-build | The diffractometer circle counts (MONO / DIF / MAG) and whether each composes a Diffractometer Assembly with a detector arm. | A `Goniometer` Asset per area (six-circle E6C), not the composed Diffractometer Assembly, until detector arms are confirmed. | The diffractometer modelling. |
-| POL-1 | Nice-to-have | The phase-retarder geometry (circles + AttoCube fine axes) and the polarization-analyzer detail. | The catalog `PhaseRetarder` Family and the allowlisted-loose `PolarizationAnalyzer` Family (the 4-ID precedent); detail pending. | The polarization-instrument modelling. |
+| POL-1 | Nice-to-have | The phase-retarder geometry (circles + AttoCube fine axes) and the polarization-analyzer detail. | The catalog `PhaseRetarder` Family and the catalog `PolarizationAnalyzer` Family (graduated across 4-ID / i10 / ID32 / P09); detail pending. | The polarization-instrument modelling. |
 | MAG-1 | Blocks-go-live | The MAG magnet field (14 T assumed), its cryogen, and its control / ramp interface. | A 14 T superconducting `Magnet` (the 4-ID loose Family); field and control pending. | The magnet modelling. |
 | SAMPLE-1 | Nice-to-have | The MAG sample-hexapod and PI-piezo geometry. | A `Hexapod` + `LinearStage` piezos; geometry pending. | The MAG sample modelling. |
 | TEMP-1 | Nice-to-have | The CryoCon / Lakeshore / LSCI sensor / setpoint handles. | `TemperatureController` controllers; cryogenic cooling. | The temperature-control modelling. |

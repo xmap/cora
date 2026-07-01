@@ -26,7 +26,7 @@ The acquisition has three moving parts:
 
 Almost every device reuses an existing catalog or loose Family. IXS introduces **one** device class new to the catalog, the crystal energy analyzer, modelled as a loose family at n=1 (nothing graduated):
 
-- **A diced crystal energy analyzer.** The signature instrument is a diced multi-crystal Bragg analyzer (six diced crystals, each with orientation and PID temperature stabilization) that selects a fixed final photon energy of the scattered beam and focuses energy-selected photons onto the point detectors. No catalog Family fits this anatomy, so it binds a loose `EnergyAnalyzer` Family, the `<Quantity>Analyzer` sibling of 4-ID's loose `PolarizationAnalyzer` (see [Model](model.md#new-loose-families)).
+- **A diced crystal energy analyzer.** The signature instrument is a diced multi-crystal Bragg analyzer (six diced crystals, each with orientation and PID temperature stabilization) that selects a fixed final photon energy of the scattered beam and focuses energy-selected photons onto the point detectors. No catalog Family fits this anatomy, so it binds a loose `EnergyAnalyzer` Family, the `<Quantity>Analyzer` sibling of the catalog `PolarizationAnalyzer` (see [Model](model.md#new-loose-families)).
 
 Everything else (the undulator, the DCM and HRM2 crystal monochromators, the mirrors, the slits, the transfocator, the six-circle arm, the temperature controller, the electrometers) reuses an existing catalog or loose Family.
 

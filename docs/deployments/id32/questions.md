@@ -28,7 +28,7 @@ ID32 was reverse-engineered from the ESRF's open BLISS Beacon device database ([
 | DIFF-1 | Blocks-go-live | The 4-circle diffractometer (BLISS `DiffE4CH`, E4CH) circle roles and axes. | A `Goniometer`; the `Assembly(Diffractometer)` is named, not built. | The diffractometer geometry; the CORA structural modelling is on [Model](model.md#deliberately-not-here-yet). |
 | DIFF-2 | Nice-to-have | The reciprocal-space (hkl) coordination over the diffractometer. | A reciprocal-space `PseudoAxis`, the rule deferred. | The reciprocal-space Asset. |
 | RIXS-1 | Blocks-go-live | The RIXS and XES dispersive spectrometer arms (the `SpectrometerArmsController` geometry, the Rowland radii, the grating modes). | Both bind the loose `SpectrometerArm`; with SIX this reaches the rule-of-three, held pending a dedicated graduation PR. | The spectrometer-arm modelling; the CORA graduation decision is on [Model](model.md#loose-families-held-at-the-rule-of-three). |
-| POL-2 | Nice-to-have | The RIXS scattered-beam polarimeter (the `thpol` / `chipol` / `tthpol` block). | Binds the loose `PolarizationAnalyzer`, the third consumer after 4-ID + i10, held. | The polarimeter modelling. |
+| POL-2 | Nice-to-have | The RIXS scattered-beam polarimeter (the `thpol` / `chipol` / `tthpol` block). | Binds the catalog `PolarizationAnalyzer`, graduated across 4-ID / i10 / ID32 / P09. | The polarimeter modelling. |
 | DET-1 | Blocks-go-live | The Andor CCD configurations (RIXS `andor_1`, XES `andor_2`). | Both bind `Camera`. | The detector modelling. |
 
 ## XMCD endstation

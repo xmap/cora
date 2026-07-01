@@ -72,6 +72,7 @@ exactly as ControlPort earned its registry from a third substrate and
 ComputePort deferred its registry to a second.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Protocol, runtime_checkable
@@ -278,6 +279,16 @@ class SteeringAdvice:
     shared `DecisionConfidenceSource` so a recorded confidence carries the
     same ISO-42001 derivation label whatever the home.
 
+    `diagnostics` is an OPAQUE, adapter-supplied map of named scalar
+    breadcrumbs the caller may record for audit ("why did this brain advise
+    that point") but never interprets or branches on. It is the numeric
+    analogue of `Measurement.quality_detail`: the port defines the channel,
+    the adapter owns the contents, and their meaning stays caged in the
+    adapter. A learning brain populates it with the fitted model's summary
+    scalars (the keys are the adapter's private vocabulary); a static brain
+    leaves it None. Kept deliberately generic so the port surface names no
+    optimizer internals: it is a `Mapping[str, float]`, nothing more.
+
     Self-validating at construction (raising `DecideAdviceMalformedError`)
     so a malformed brain answer cannot enter the loop: confidence stays in
     [0.0, 1.0] (NaN rejected), the rationale fits `REASONING_MAX_LENGTH`,
@@ -291,6 +302,7 @@ class SteeringAdvice:
     confidence_source: DecisionConfidenceSource | None = None
     alternatives: tuple[str, ...] = ()
     model_ref: str | None = None
+    diagnostics: Mapping[str, float] | None = None
 
     def __post_init__(self) -> None:
         if self.verdict is SteeringVerdict.MEASURE and self.next_point is None:

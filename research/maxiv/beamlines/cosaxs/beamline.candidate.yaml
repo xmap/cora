@@ -37,7 +37,7 @@ source:
     confirm: 'mono bragg energy pseudo (5000-32000 eV); family PseudoAxis (catalog); the Si mono itself is not separately instantiated in contrast (MONO-1)'
     source_class: TangoMotor
 optics:
-  stage: optics
+  stage: source
   intro: Optics; grouping/enclosure need confirm.
   devices:
   - name: VerticalFocusingMirror1

@@ -301,6 +301,7 @@ def build_conductor(
     *,
     compute_port: InMemoryComputePort,
     control_port: InMemoryControlPort,
+    append_diagnostics: object | None = None,
 ) -> Conductor:
     handlers = _make_handlers(transcript)
     return Conductor(
@@ -314,6 +315,7 @@ def build_conductor(
         abort_procedure=handlers["abort_procedure"],  # type: ignore[arg-type]
         start_iteration=handlers["start_iteration"],  # type: ignore[arg-type]
         end_iteration=handlers["end_iteration"],  # type: ignore[arg-type]
+        append_diagnostics=append_diagnostics,  # type: ignore[arg-type]
     )
 
 

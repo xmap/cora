@@ -211,9 +211,130 @@ class InMemoryActivityStore:
         return list(self._rows.values())
 
 
+@dataclass(frozen=True)
+class Diagnostic:
+    """One row in the per-Procedure GP-steering diagnostics logbook.
+
+    Fifth concrete entry kind (after `Verdict`, `Inference`, `Observation`,
+    `Activity`), and the second on the Procedure aggregate. It records, per
+    steered-conduct iteration decided by a learning brain, the fitted model's
+    summary scalars (per-axis lengthscales, observation noise, acquisition
+    value) so a reviewer can answer "why did the brain advise that point"
+    after the run. Path C (polymorphic JSON payload): the scalar set diverges
+    by brain / model, per-row volume is low (one row per steered iteration),
+    and no per-kind read-side projection is planned, so a single `payload`
+    jsonb column beats typed sibling columns. Mirrors the `Activity` skeleton
+    in this same aggregate.
+
+    `iteration_index` links the row to the steered pass it explains (the same
+    `iteration_index` carried on `ProcedureIterationEnded`), so an auditor can
+    join a diagnostic row to the decision it justified. `model_ref` is the
+    deciding brain's ref (`botorch`), mirroring the iteration event. The
+    optimizer-specific scalar names live only as keys inside `payload`, never
+    as columns or identifiers, keeping optimizer vocabulary out of the schema.
+
+    `event_id` is the producer-assigned UUIDv7 identity, the dedup key under
+    at-least-once delivery (table PRIMARY KEY). `correlation_id` /
+    `causation_id` thread from the originating command's envelope.
+    """
+
+    event_id: UUID
+    procedure_id: UUID
+    logbook_id: UUID
+    iteration_index: int
+    model_ref: str
+    payload: dict[str, Any]
+    sampled_at: datetime
+    occurred_at: datetime
+    correlation_id: UUID
+    causation_id: UUID | None
+
+
+class DiagnosticStore(Protocol):
+    """Per-category port for Diagnostic entry writes.
+
+    The `append_diagnostics` handler takes a `DiagnosticStore` and calls
+    `append(...)` per batch. Two implementations: `PostgresDiagnosticStore`
+    (production) and `InMemoryDiagnosticStore` (tests / `app_env=test`). Both
+    honor at-least-once: callers may retry the same `event_id`; the store
+    dedups via the table PK (Postgres) or the in-memory dict (InMemory).
+    """
+
+    async def append(self, rows: list[Diagnostic]) -> None: ...
+
+
+_APPEND_DIAGNOSTICS_SQL = """
+INSERT INTO entries_operation_procedure_diagnostics (
+    event_id, procedure_id, logbook_id, iteration_index, model_ref,
+    payload, sampled_at, occurred_at, correlation_id, causation_id
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+ON CONFLICT (event_id) DO NOTHING
+"""
+
+
+class PostgresDiagnosticStore:
+    """asyncpg-backed `DiagnosticStore` implementation.
+
+    `ON CONFLICT (event_id) DO NOTHING` for idempotent retries, matching
+    `PostgresActivityStore` / `PostgresInferenceStore`. `payload` is passed
+    as a dict; the pool's jsonb codec (`pool.py` set_type_codec
+    encoder=json.dumps) serializes it once into a real jsonb OBJECT, exactly
+    like `PostgresActivityStore` (NO extra json.dumps, which would double-
+    encode into a jsonb scalar string).
+    """
+
+    def __init__(self, pool: asyncpg.Pool) -> None:
+        self._pool = pool
+
+    async def append(self, rows: list[Diagnostic]) -> None:
+        if not rows:
+            return
+        async with self._pool.acquire() as conn:
+            await conn.executemany(
+                _APPEND_DIAGNOSTICS_SQL,
+                [
+                    (
+                        row.event_id,
+                        row.procedure_id,
+                        row.logbook_id,
+                        row.iteration_index,
+                        row.model_ref,
+                        row.payload,
+                        row.sampled_at,
+                        row.occurred_at,
+                        row.correlation_id,
+                        row.causation_id,
+                    )
+                    for row in rows
+                ],
+            )
+
+
+class InMemoryDiagnosticStore:
+    """Test / `app_env=test` adapter for `DiagnosticStore`.
+
+    Dict keyed by `event_id` for trivial dedup. Exposes `all()` so tests can
+    assert what was emitted without going through Postgres.
+    """
+
+    def __init__(self) -> None:
+        self._rows: dict[UUID, Diagnostic] = {}
+
+    async def append(self, rows: list[Diagnostic]) -> None:
+        for row in rows:
+            self._rows.setdefault(row.event_id, row)
+
+    def all(self) -> list[Diagnostic]:
+        return list(self._rows.values())
+
+
 __all__ = [
     "Activity",
     "ActivityStore",
+    "Diagnostic",
+    "DiagnosticStore",
     "InMemoryActivityStore",
+    "InMemoryDiagnosticStore",
     "PostgresActivityStore",
+    "PostgresDiagnosticStore",
 ]

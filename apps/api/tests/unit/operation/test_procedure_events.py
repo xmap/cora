@@ -7,10 +7,12 @@ import pytest
 
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.operation.aggregates.procedure import (
+    DIAGNOSTIC_LOGBOOK_SCHEMA,
     STEPS_LOGBOOK_SCHEMA,
     ProcedureAborted,
     ProcedureActivitiesLogbookOpened,
     ProcedureCompleted,
+    ProcedureDiagnosticLogbookOpened,
     ProcedureHeld,
     ProcedureIterationEnded,
     ProcedureIterationStarted,
@@ -489,6 +491,57 @@ def test_procedure_steps_logbook_opened_round_trips() -> None:
         occurred_at=_NOW,
     )
     stored = _stored("ProcedureActivitiesLogbookOpened", to_payload(original))
+    rebuilt = from_stored(stored)
+    assert rebuilt == original
+
+
+# --- ProcedureDiagnosticLogbookOpened (lazy-open envelope) ---
+
+
+@pytest.mark.unit
+def test_event_type_name_for_procedure_diagnostic_logbook_opened() -> None:
+    event = ProcedureDiagnosticLogbookOpened(
+        procedure_id=uuid4(),
+        logbook_id=uuid4(),
+        kind="diagnostic",
+        schema=DIAGNOSTIC_LOGBOOK_SCHEMA,
+        occurred_at=_NOW,
+    )
+    assert event_type_name(event) == "ProcedureDiagnosticLogbookOpened"
+
+
+@pytest.mark.unit
+def test_from_stored_rebuilds_procedure_diagnostic_logbook_opened() -> None:
+    procedure_id = uuid4()
+    logbook_id = uuid4()
+    stored = _stored(
+        "ProcedureDiagnosticLogbookOpened",
+        {
+            "procedure_id": str(procedure_id),
+            "logbook_id": str(logbook_id),
+            "kind": "diagnostic",
+            "schema": DIAGNOSTIC_LOGBOOK_SCHEMA.to_dict(),
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, ProcedureDiagnosticLogbookOpened)
+    assert rebuilt.procedure_id == procedure_id
+    assert rebuilt.logbook_id == logbook_id
+    assert rebuilt.kind == "diagnostic"
+    assert rebuilt.schema == DIAGNOSTIC_LOGBOOK_SCHEMA
+
+
+@pytest.mark.unit
+def test_procedure_diagnostic_logbook_opened_round_trips() -> None:
+    original = ProcedureDiagnosticLogbookOpened(
+        procedure_id=uuid4(),
+        logbook_id=uuid4(),
+        kind="diagnostic",
+        schema=DIAGNOSTIC_LOGBOOK_SCHEMA,
+        occurred_at=_NOW,
+    )
+    stored = _stored("ProcedureDiagnosticLogbookOpened", to_payload(original))
     rebuilt = from_stored(stored)
     assert rebuilt == original
 
