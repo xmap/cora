@@ -1,26 +1,26 @@
 # Model
 
-*The developer's index into where 13-ID-D content lives, the one new loose family this first extreme-conditions deployment introduces, and the record of what is deliberately deferred. First cut.*
+*The developer's index into where 13-ID content lives, the one new loose family this first extreme-conditions deployment introduces, and the record of what is deliberately deferred. First cut.*
 
-13-ID-D is a descriptor-and-docs scaffold today, reverse-engineered from the GSECARS EPICS support tree: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+13-ID is a descriptor-and-docs scaffold today, reverse-engineered from the GSECARS EPICS support tree: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/13-id-d/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/13-id-d/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `13-ID-D` added to its beamline list, with high-pressure powder / single-crystal diffraction Practices |
+| Beamline descriptor | [`deployments/13-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/13-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `13-ID` added to its beamline list, with high-pressure powder / single-crystal diffraction Practices |
 | Extraction provenance | [CARS-UChicago/GSECARS-EPICS](https://github.com/CARS-UChicago/GSECARS-EPICS) | the `iocBoot` startup scripts, `CARSApp/Db` templates, and `CARSApp/op/adl` screens the descriptor was reconstructed from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; one new device class stays loose at n=1 (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the diffraction Methods are pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 13-ID-D Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 13-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
-## What makes 13-ID-D new
+## What makes 13-ID new
 
-13-ID-D is CORA's first extreme-conditions deployment. The fleet has modelled thermal sample environments (the graduated `TemperatureController`), magnetic ones (the loose `Magnet`), and pump-probe lasers (the loose `Laser`), but never a high-pressure one. 13-ID-D holds the sample in a diamond anvil cell (DAC): the anvils are squeezed by a gas membrane (a PACE5000 pneumatic controller) to the megabar regime, the sample is heated from both sides by two fibre lasers to thousands of kelvin, and the pressure and temperature are read optically in situ (thermal-emission spectroradiometry for temperature; ruby fluorescence, Raman, and Brillouin for pressure). The X-ray probe is otherwise familiar powder and single-crystal diffraction; the novelty is entirely the sample environment.
+13-ID is CORA's first extreme-conditions deployment. The fleet has modelled thermal sample environments (the graduated `TemperatureController`), magnetic ones (the loose `Magnet`), and pump-probe lasers (the loose `Laser`), but never a high-pressure one. 13-ID holds the sample in a diamond anvil cell (DAC): the anvils are squeezed by a gas membrane (a PACE5000 pneumatic controller) to the megabar regime, the sample is heated from both sides by two fibre lasers to thousands of kelvin, and the pressure and temperature are read optically in situ (thermal-emission spectroradiometry for temperature; ruby fluorescence, Raman, and Brillouin for pressure). The X-ray probe is otherwise familiar powder and single-crystal diffraction; the novelty is entirely the sample environment.
 
 ## New loose family: the PressureCell
 
-13-ID-D introduces one device class no existing catalog Family covers: the high-pressure sample cell. Per earn-the-abstraction it is held **loose at n=1** and graduates nothing. The name was chosen via the naming-r3 gate.
+13-ID introduces one device class no existing catalog Family covers: the high-pressure sample cell. Per earn-the-abstraction it is held **loose at n=1** and graduates nothing. The name was chosen via the naming-r3 gate.
 
 | Loose family | Presents | What it is | Earns when |
 | --- | --- | --- | --- |

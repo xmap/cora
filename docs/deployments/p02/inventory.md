@@ -4,7 +4,7 @@
 
 This cut models the shared OH1 optics (the undulator, the DCM, the bendable HFM / VFM mirrors, the slits) and the two endstations (P02.1 powder / total scattering, P02.2 extreme conditions) with their sample stages, pressure cell, sample environment, and detectors. It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p02/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P02 **coins no new Family**: it reuses the optics / motion / detector Families and the allowlisted-loose `PressureCell` Family (the 13-id-d precedent, now at its second consumer). The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P02 **coins no new Family**: it reuses the optics / motion / detector Families and the allowlisted-loose `PressureCell` Family (the 13-id precedent, now at its second consumer). The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -28,7 +28,7 @@ Root Asset `P02` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `BeamMonitor` | `Device` | FluxMonitor | p02-2-extreme | CAEN-ELS AH501D picoammeter (DET-1) |
 | `FluorescenceDetectors` | `Device` | EnergyDispersiveSpectrometer | p02-2-extreme | P02.2 MCA + SIS3302 fluorescence (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Slit`, `LinearStage`, `TemperatureController`, `Camera`, `FluxMonitor`, `EnergyDispersiveSpectrometer`. Allowlisted-loose Family reused: `PressureCell` (the 13-id-d precedent, now at its second consumer, `PRESSURE-1`). No new family is coined and nothing graduates. The CH1 / CH2 dummy stubs are noted, not modelled (`STUB-1`).
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Slit`, `LinearStage`, `TemperatureController`, `Camera`, `FluxMonitor`, `EnergyDispersiveSpectrometer`. Allowlisted-loose Family reused: `PressureCell` (the 13-id precedent, now at its second consumer, `PRESSURE-1`). No new family is coined and nothing graduates. The CH1 / CH2 dummy stubs are noted, not modelled (`STUB-1`).
 
 ## Cross-cutting controllers
 

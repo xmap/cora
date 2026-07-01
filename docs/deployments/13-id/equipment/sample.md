@@ -2,9 +2,9 @@
 
 *The sample side, and the home of the new `PressureCell` family. The diamond anvil cell sits in the beam under extreme pressure and double-sided laser heating, a sample environment with no fleet analog. Scaffold; devices reverse-engineered from the GSECARS EPICS support tree (iocBoot startup scripts, CARSApp Db templates, the adl MEDM screens), so the device-to-PV reconstruction is rougher than a dodal/BITS roster and carried at medium confidence (CTRL-1).*
 
-The 13-ID-D sample side is the one place in this deployment where CORA coins a new device class. The diffraction spine, the optics, the detectors, all of it reuses existing catalog and loose [Families](../../../catalog/families.md). What forces a new Family is the high-pressure sample environment itself: a diamond anvil cell (DAC) holding the specimen under extreme pressure while two fibre lasers heat it from both sides and in-situ spectroscopy reads back its pressure and temperature. The fleet has nothing like it, so it earns one new loose Family, `PressureCell`, held at a single sighting (HP-1, PRESSURE-1).
+The 13-ID sample side is the one place in this deployment where CORA coins a new device class. The diffraction spine, the optics, the detectors, all of it reuses existing catalog and loose [Families](../../../catalog/families.md). What forces a new Family is the high-pressure sample environment itself: a diamond anvil cell (DAC) holding the specimen under extreme pressure while two fibre lasers heat it from both sides and in-situ spectroscopy reads back its pressure and temperature. The fleet has nothing like it, so it earns one new loose Family, `PressureCell`, held at a single sighting (HP-1, PRESSURE-1).
 
-## The sample stack (13-ID-D)
+## The sample stack (13-ID)
 
 | Device | Family | PV / controller | Design note |
 | --- | --- | --- | --- |
@@ -29,7 +29,7 @@ The naming-r3 choice is deliberate. The bare regime-generic role-noun `PressureC
 - **not `HighPressureCell`**, because that qualifier names the regime (high pressure) rather than the thing, and the regime belongs at the Plan level, not in the device class name; and
 - **not `DiamondAnvilCell`**, because that qualifier names the mechanism (the diamond anvils) and so over-specifies. The bare role-noun spans the diamond anvil cell here, large-volume presses, and clamp cells alike.
 
-The Family is held at **n=1**, a single sighting at 13-ID-D, and graduates into the catalog only at a rule-of-three: the HPCAT 16-ID cells, the 13-BM-D large-volume press, and the 4-ID cell are the candidate second and third sightings (HP-1, PRESSURE-1).
+The Family is held at **n=1**, a single sighting at 13-ID, and graduates into the catalog only at a rule-of-three: the HPCAT 16-ID cells, the 13-BM-D large-volume press, and the 4-ID cell are the candidate second and third sightings (HP-1, PRESSURE-1).
 
 ## Why the heating lasers do not bind the loose `Laser` family
 

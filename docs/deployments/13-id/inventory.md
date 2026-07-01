@@ -1,18 +1,18 @@
 # Inventory
 
-*The CORA Asset model for the operational core of 13-ID-D modelled today: the planned device tree and what still needs confirming.*
+*The CORA Asset model for the operational core of 13-ID modelled today: the planned device tree and what still needs confirming.*
 
-This cut models the shared 13-ID-A optics, the 13-ID-D high-pressure endstation, and the diamond anvil cell. The 13-BM stations and the large-volume press are out of this station's scope (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/13-id-d/beamline.yaml) descriptor.
+This cut models the shared 13-ID-A optics, the 13-ID-D high-pressure endstation hutch, and the diamond anvil cell. The 13-BM stations and the large-volume press are out of this station's scope (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/13-id/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. 13-ID-D, CORA's first extreme-conditions deployment, coins **one new loose Family**, `PressureCell`, for the diamond anvil cell (no fleet analog for a high-pressure sample environment); everything else reuses the catalog (see [Model](model.md#new-loose-family-the-pressurecell)). The control handles are reconstructed from the GSECARS EPICS support tree at medium confidence; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. 13-ID, CORA's first extreme-conditions deployment, coins **one new loose Family**, `PressureCell`, for the diamond anvil cell (no fleet analog for a high-pressure sample environment); everything else reuses the catalog (see [Model](model.md#new-loose-family-the-pressurecell)). The control handles are reconstructed from the GSECARS EPICS support tree at medium confidence; no vendor Models are bound.
 
 ## The Asset tree
 
-Root Asset `13-ID-D` (`tier = Unit`, `facility_code = aps`); sub-systems nest below by `parent_id`.
+Root Asset `13-ID` (`tier = Unit`, `facility_code = aps`); sub-systems nest below by `parent_id`.
 
 | Asset | Tier | Family | Enclosure | Design spec / note |
 | --- | --- | --- | --- | --- |
-| `13-ID-D` | `Unit` | (root) | - | bound to the APS Site; sector 13 (GSECARS) |
+| `13-ID` | `Unit` | (root) | - | bound to the APS Site; sector 13 (GSECARS) |
 | `StorageRing` | `Device` | StorageRing (loose) | - | machine-level ring state, observe-only (MACHINE-1) |
 | `Monochromator` | `Device` | Monochromator | 13-ID-optics | shared 13-ID-A Si double-crystal mono, `13IDA:` (MONO-1) |
 | `BeamEnergy` | `Device` | PseudoAxis | 13-ID-optics | derived beamline-energy axis, `13IDE:En` (MONO-1) |

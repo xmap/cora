@@ -12,7 +12,7 @@ P02 has two endstations sharing the OH1 optics: P02.1 (powder / total scattering
 ## P02.2: extreme conditions (diamond-anvil cell)
 
 - `SampleStage` binds `LinearStage`: the P02.2 sample / instrument motor banks (`eh2a_mot01..76`, `eh2b_mot01..64`), including the diamond-anvil-cell positioning stages; per-axis roles grouped (`GROUP-1`).
-- `PressureCell` binds the allowlisted-loose `PressureCell` Family: the P02.2 diamond-anvil-cell high-pressure environment. The membrane / gas-loading control is not separately labelled in the registry. This is the second consumer of the `PressureCell` Family (the 13-id-d precedent), crossing the rule-of-three promotion threshold (`PRESSURE-1`).
+- `PressureCell` binds the allowlisted-loose `PressureCell` Family: the P02.2 diamond-anvil-cell high-pressure environment. The membrane / gas-loading control is not separately labelled in the registry. This is the second consumer of the `PressureCell` Family (the 13-id precedent), crossing the rule-of-three promotion threshold (`PRESSURE-1`).
 - `BeamMonitor` binds `FluxMonitor`: the P02.2 CAEN-ELS AH501D picoammeter; beam-intensity monitoring (`DET-1`).
 
 ## Families and confirmations

@@ -1,10 +1,10 @@
-# 13-ID-D
+# 13-ID
 
-*The GSECARS high-pressure X-ray diffraction beamline at APS Sector 13, and CORA's first extreme-conditions sample environment: monochromatic powder and single-crystal diffraction on a sample held in a diamond anvil cell under extreme pressure and double-sided laser heating. This page walks the operational core CORA models today. It is a reverse-engineered first cut, not yet a running model.*
+*The GSECARS high-pressure X-ray diffraction beamline at APS Sector 13, and CORA's first extreme-conditions sample environment: monochromatic powder and single-crystal diffraction on a sample held in a diamond anvil cell under extreme pressure and double-sided laser heating. This page walks the operational core CORA models today. It is a reverse-engineered first cut, not yet a running model. The beamline id is `13-ID`; its high-pressure experiment hutch `13-ID-D` is modelled as an [Enclosure](enclosures.md), not part of the beamline name.*
 
 | Property | Value |
 | --- | --- |
-| Asset | `13-ID-D` (root Asset, `tier = Unit`, `parent_id = None`) |
+| Asset | `13-ID` (root Asset, `tier = Unit`, `parent_id = None`) |
 | Facility | [APS](../aps/index.md) (bound via `facility_code = "aps"`, `FacilityKind = Site`) |
 | Sector | `Sector 13` (GSECARS / GeoSoilEnviroCARS; not a registered Asset) |
 | Status | First cut, reverse-engineered, design-phase (descriptor + docs; scenarios deferred) |
@@ -12,15 +12,15 @@
 | Control stack | APS EPICS (GSECARS runs EPICS plus SPEC plus Python orchestration; the same floor as the other APS beamlines); handles bound from the support tree, carried confirm (`CTRL-1`) |
 
 !!! warning "First cut, and confirm-pending by intent"
-    This scaffold was reverse-engineered from the GSECARS EPICS support tree ([CARS-UChicago/GSECARS-EPICS](https://github.com/CARS-UChicago/GSECARS-EPICS)): the `iocBoot` startup scripts, the `CARSApp/Db` device templates, and the `CARSApp/op/adl` MEDM screens. This is an EPICS-native source, not a dodal or BITS Python device roster, so the device-to-PV reconstruction is rougher and is carried at **medium confidence** until 13-ID-D staff verify it. EPICS PVs read from the support tree are real; vendor part numbers, serials, physical positions, and pressure / temperature regimes are not in the tree and are open questions. What CORA needs the team to confirm is on [Open questions](questions.md).
+    This scaffold was reverse-engineered from the GSECARS EPICS support tree ([CARS-UChicago/GSECARS-EPICS](https://github.com/CARS-UChicago/GSECARS-EPICS)): the `iocBoot` startup scripts, the `CARSApp/Db` device templates, and the `CARSApp/op/adl` MEDM screens. This is an EPICS-native source, not a dodal or BITS Python device roster, so the device-to-PV reconstruction is rougher and is carried at **medium confidence** until 13-ID staff verify it. EPICS PVs read from the support tree are real; vendor part numbers, serials, physical positions, and pressure / temperature regimes are not in the tree and are open questions. What CORA needs the team to confirm is on [Open questions](questions.md).
 
-## What makes 13-ID-D different
+## What makes 13-ID different
 
-13-ID-D is **CORA's first extreme-conditions deployment**, the first instrument in the fleet whose sample sits in a high-pressure environment. The fleet has modelled thermal sample environments (the graduated `TemperatureController`), magnetic ones (the loose `Magnet`), and pump-probe lasers (the loose `Laser`), but never a high-pressure one. This is the axis the EMA scout flagged the fleet lacked.
+13-ID is **CORA's first extreme-conditions deployment**, the first instrument in the fleet whose sample sits in a high-pressure environment. The fleet has modelled thermal sample environments (the graduated `TemperatureController`), magnetic ones (the loose `Magnet`), and pump-probe lasers (the loose `Laser`), but never a high-pressure one. This is the axis the EMA scout flagged the fleet lacked.
 
 The sample lives in a diamond anvil cell (DAC). The anvils are squeezed by a gas membrane driven by a GE/Druck PACE5000 pneumatic controller (`13IDD_PACE5000:PC1:Setpoint` / `Pressure_RBV`); the sample is heated from both sides by two IPG YLR fibre lasers (`13IDD:Laser1` / `Laser2`, power `13IDD:US_LaserPower` / `DS_LaserPower`); and the pressure and temperature are read optically in situ (thermal-emission spectroradiometry for temperature, `13IDD:us_las_temp` / `ds_las_temp`; ruby fluorescence, Raman, and Brillouin for pressure). The X-ray probe is otherwise familiar: monochromatic powder and single-crystal diffraction read on an area detector. The novelty is entirely the sample environment.
 
-13-ID-D **coins one new loose family**, `PressureCell`, for that high-pressure sample environment. No existing catalog Family covers it. The cell is modelled as **one Asset** presenting the `Regulator` Role for its membrane pressure (the PACE5000 setpoint settling to a target); its double-sided laser heating (`HEAT-1`) and its in-situ pressure / temperature metrology (`PRESSURE-1`) are capabilities of the same cell, not separate families. Everything else on the diffraction spine reuses the catalog.
+13-ID **coins one new loose family**, `PressureCell`, for that high-pressure sample environment. No existing catalog Family covers it. The cell is modelled as **one Asset** presenting the `Regulator` Role for its membrane pressure (the PACE5000 setpoint settling to a target); its double-sided laser heating (`HEAT-1`) and its in-situ pressure / temperature metrology (`PRESSURE-1`) are capabilities of the same cell, not separate families. Everything else on the diffraction spine reuses the catalog.
 
 ## Scope: what is and is not modelled
 
@@ -55,20 +55,20 @@ Cutting across them:
 
 - [Controls](equipment/controls.md): the APS EPICS control stack and the SPEC / Python orchestration seam; the Galil and Newport XPS stage controllers; handles bound from the support tree and carried confirm at medium confidence (`CTRL-1`).
 
-The cross-cutting reference view is the [Inventory](inventory.md). The [Source](beamline.md) page is generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/13-id-d/beamline.yaml) descriptor.
+The cross-cutting reference view is the [Inventory](inventory.md). The [Source](beamline.md) page is generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/13-id/beamline.yaml) descriptor.
 
 ## Techniques
 
-[Techniques](techniques.md): what the modelled part of 13-ID-D is designed to do, as intent. High-pressure powder diffraction reuses the `powder_diffraction` Method (shares i11) and high-pressure single-crystal diffraction reuses the `diffraction` Method (shares 4-ID / 8-ID / CSX / i19); high pressure is a Plan-level sample-environment difference, not a new slug. The `13IDD_powder_diffraction_practice` and `13IDD_diffraction_practice` Practices render unlinked, carried pending (`TECH-1`).
+[Techniques](techniques.md): what the modelled part of 13-ID is designed to do, as intent. High-pressure powder diffraction reuses the `powder_diffraction` Method (shares i11) and high-pressure single-crystal diffraction reuses the `diffraction` Method (shares 4-ID / 8-ID / CSX / i19); high pressure is a Plan-level sample-environment difference, not a new slug. The `13ID_powder_diffraction_practice` and `13ID_diffraction_practice` Practices render unlinked, carried pending (`TECH-1`).
 
 ## Governance
 
-[Governance](governance.md): who will act at 13-ID-D and the trust shape that gates their commands. People and autonomous agents are facility principals at the [APS Site](../aps/index.md); on the beamline they surface through the actions they take, gated by a trust shape (Zone, Conduit, Policy). The APS / GSECARS operator pool and review structure are carried pending at the APS Site, shared across the beamlines (`GOV-1`). The PSS search-and-secure permit signals are carried pending (`PSS-1`), plus a laser-safety enclosure permit (the Koyo PLC gating laser emission), carried pending and not invented (`LASER-1`). This is a hard X-ray beamline plus class-4 heating lasers plus a pressurized gas membrane system; CORA follows the 2-BM governance shape. Clearances are issued at the [APS Site](../aps/index.md), not on the beamline.
+[Governance](governance.md): who will act at 13-ID and the trust shape that gates their commands. People and autonomous agents are facility principals at the [APS Site](../aps/index.md); on the beamline they surface through the actions they take, gated by a trust shape (Zone, Conduit, Policy). The APS / GSECARS operator pool and review structure are carried pending at the APS Site, shared across the beamlines (`GOV-1`). The PSS search-and-secure permit signals are carried pending (`PSS-1`), plus a laser-safety enclosure permit (the Koyo PLC gating laser emission), carried pending and not invented (`LASER-1`). This is a hard X-ray beamline plus class-4 heating lasers plus a pressurized gas membrane system; CORA follows the 2-BM governance shape. Clearances are issued at the [APS Site](../aps/index.md), not on the beamline.
 
 ## Model
 
-[Model](model.md): the developer's by-kind index and the record of what is deliberately deferred. 13-ID-D coins one new loose Family, `PressureCell`, held at n=1; the catalog is otherwise unchanged (see [Families](../../catalog/families.md)).
+[Model](model.md): the developer's by-kind index and the record of what is deliberately deferred. 13-ID coins one new loose Family, `PressureCell`, held at n=1; the catalog is otherwise unchanged (see [Families](../../catalog/families.md)).
 
 ## Not yet documented
 
-13-ID-D is not yet driven by CORA, so the operations runbook and the live experiment view are deliberately not written yet. They join as the deployment firms up. The [2-BM deployment](../2-bm/index.md) shows the shape they will take. The detector 2theta-arm transform is named but its live prefix was seen only in a Galil test template, so its `PseudoAxis` binding is deferred rather than invented (`DET-1`). The PSS search-and-secure permit signals and the Koyo laser-emission permit logic are carried pending, not invented here (`PSS-1`, `LASER-1`).
+13-ID is not yet driven by CORA, so the operations runbook and the live experiment view are deliberately not written yet. They join as the deployment firms up. The [2-BM deployment](../2-bm/index.md) shows the shape they will take. The detector 2theta-arm transform is named but its live prefix was seen only in a Galil test template, so its `PseudoAxis` binding is deferred rather than invented (`DET-1`). The PSS search-and-secure permit signals and the Koyo laser-emission permit logic are carried pending, not invented here (`PSS-1`, `LASER-1`).

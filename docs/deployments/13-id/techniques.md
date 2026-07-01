@@ -1,8 +1,8 @@
 # Techniques
 
-*What the modelled part of 13-ID-D is designed to do, as intent. First cut.*
+*What the modelled part of 13-ID is designed to do, as intent. First cut.*
 
-A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practice](../aps/index.md#the-techniques-adapted-here) is how a facility adapts it. 13-ID-D runs monochromatic X-ray diffraction on a sample held in a diamond anvil cell under extreme pressure and double-sided laser heating: high-pressure powder diffraction and high-pressure single-crystal diffraction. Both reuse Methods that the fleet already carries (or has pending), so the slugs below render unlinked and are carried pending until one enters scope (TECH-1). Nothing here coins a new technique. The novelty at 13-ID-D is the sample environment, not the measurement.
+A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practice](../aps/index.md#the-techniques-adapted-here) is how a facility adapts it. 13-ID runs monochromatic X-ray diffraction on a sample held in a diamond anvil cell under extreme pressure and double-sided laser heating: high-pressure powder diffraction and high-pressure single-crystal diffraction. Both reuse Methods that the fleet already carries (or has pending), so the slugs below render unlinked and are carried pending until one enters scope (TECH-1). Nothing here coins a new technique. The novelty at 13-ID is the sample environment, not the measurement.
 
 ## High pressure is a sample environment, not a technique
 
@@ -19,7 +19,7 @@ Both techniques need the [incident beam chain](beamline.md) (the shared 13-ID-A 
 
 ## What the cell lets the science do
 
-The diamond anvil cell is what makes 13-ID-D distinct. It lets the experiment probe matter at extreme pressure and temperature, conditions that reach toward planetary interiors and that no other deployment in the fleet has reached. The science is to watch how a material's structure responds as it is squeezed and heated: phase transitions, equations of state, and structural changes under pressure and temperature that do not appear at ambient conditions.
+The diamond anvil cell is what makes 13-ID distinct. It lets the experiment probe matter at extreme pressure and temperature, conditions that reach toward planetary interiors and that no other deployment in the fleet has reached. The science is to watch how a material's structure responds as it is squeezed and heated: phase transitions, equations of state, and structural changes under pressure and temperature that do not appear at ambient conditions.
 
 Two cell capabilities do the work, and both are modelled as capabilities of the single [PressureCell](equipment/sample.md) Asset rather than as separate families:
 
@@ -41,6 +41,6 @@ This metrology is not a separate Method. It is how the cell knows the conditions
 
 The concrete acquisition recipes are not written yet: the powder and single-crystal scan sequences, the laser-power ramp and balancing during heating, the ruby / Raman / Brillouin pressure-calibration steps, and how a Plan threads the pressure and temperature setpoints through a diffraction run. They join as the deployment approaches the point where CORA conducts over the floor.
 
-Whether `powder_diffraction` and `diffraction` enter CORA's catalog, and who owns them across the facilities that share them, is an owner-scope decision and is deferred (TECH-1); minting a cross-facility Method is not done from a modelling exercise until a technique enters a real scope. The Practices are carried pending on the [APS Site](../aps/index.md#the-techniques-adapted-here): `13IDD_powder_diffraction_practice` (`powder_diffraction`) and `13IDD_diffraction_practice` (`diffraction`), both pending TECH-1.
+Whether `powder_diffraction` and `diffraction` enter CORA's catalog, and who owns them across the facilities that share them, is an owner-scope decision and is deferred (TECH-1); minting a cross-facility Method is not done from a modelling exercise until a technique enters a real scope. The Practices are carried pending on the [APS Site](../aps/index.md#the-techniques-adapted-here): `13ID_powder_diffraction_practice` (`powder_diffraction`) and `13ID_diffraction_practice` (`diffraction`), both pending TECH-1.
 
 The 2theta swing transform that would bind a `PseudoAxis` on the [detector arm](equipment/detector.md) is deferred, not invented: the arm's prefix was seen only in a controller test template, so the binding is left open (DET-1). A closed-loop temperature Regulator for the heating is likewise not modelled, because today's heating is open-loop on commanded power (HEAT-1). See [Open questions](questions.md) for the world-facts to confirm first, and [Model](model.md) for why the PressureCell family is held at one Asset until a rule-of-three graduates it (HP-1).

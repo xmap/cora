@@ -1,6 +1,6 @@
-# 13-ID-D beamline descriptor (APS, GSECARS), reverse-engineered
+# 13-ID beamline descriptor (APS, GSECARS), reverse-engineered
 #
-# 13-ID-D is the GSECARS (GeoSoilEnviroCARS, sector 13) high-pressure X-ray
+# 13-ID is the GSECARS (GeoSoilEnviroCARS, sector 13) high-pressure X-ray
 # diffraction station at APS: monochromatic powder and single-crystal XRD on a sample
 # held in a diamond anvil cell (DAC) under extreme pressure and double-sided laser
 # heating. It is bound to the APS Site (deployments/aps/site.yaml), and is CORA's
@@ -28,7 +28,7 @@
 # thermal-emission greybody, plus ruby fluorescence / Raman / Brillouin pressure
 # metrology). This composite is a genuinely new device class with no fleet analog.
 #
-# MODELLING: 13-ID-D coins ONE new LOOSE Family and changes nothing in the catalog.
+# MODELLING: 13-ID coins ONE new LOOSE Family and changes nothing in the catalog.
 #   - The DAC binds the new loose PressureCell Family (user-named via naming-r3,
 #     2026-06-26; chosen over HighPressureCell / DiamondAnvilCell / AnvilCell because a
 #     bare regime-generic role-noun spans the DAC, the large-volume press, and clamp
@@ -64,10 +64,10 @@
 # this station's scope (HP-1).
 #
 # Items left open are tagged inline with a (QUESTION-ID) answered on
-# docs/deployments/13-id-d/questions.md.
+# docs/deployments/13-id/questions.md.
 
 beamline:
-  name: 13-ID-D
+  name: 13-ID
   facility: aps                # APS Site (facility_code: aps); GSECARS CAT, sector 13
   sector: "Sector 13 (GSECARS)"
   tier: Unit
@@ -238,12 +238,12 @@ detection:
       confirm: true
       note: "the fibre sample illumination (upstream / downstream on / off + splitter) for the viewing microscope; reuses the loose Backlight Family (DET-1)"
 
-# Cross-cutting control. 13-ID-D runs EPICS (the floor); CORA observes and, where it
+# Cross-cutting control. 13-ID runs EPICS (the floor); CORA observes and, where it
 # replaces SPEC / bluesky-style orchestration, conducts over it. The handles above were
 # reconstructed from the GSECARS EPICS support tree and carried confirm (CTRL-1).
 controls:
   intro: >
-    13-ID-D runs on the APS EPICS control stack (GSECARS uses EPICS plus SPEC and Python
+    13-ID runs on the APS EPICS control stack (GSECARS uses EPICS plus SPEC and Python
     orchestration), the same floor as the other APS beamlines. The device handles above
     were reconstructed from the public GSECARS EPICS support tree
     (github.com/CARS-UChicago/GSECARS-EPICS: the iocBoot st.cmd / .substitutions, the
@@ -262,7 +262,7 @@ controls:
 # Continuously-available resources a run draws on.
 resources:
   intro: >
-    The continuously-available facility resources a 13-ID-D run needs. The membrane
+    The continuously-available facility resources a 13-ID run needs. The membrane
     pressure controller draws on a high-pressure gas supply (SUP-1).
   supplies:
     - kind: PhotonBeam

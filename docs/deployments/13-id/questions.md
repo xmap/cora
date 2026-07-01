@@ -1,8 +1,8 @@
 # Open questions
 
-*What CORA needs the GSECARS 13-ID-D team to confirm before the model can be trusted.*
+*What CORA needs the GSECARS 13-ID team to confirm before the model can be trusted.*
 
-13-ID-D was reverse-engineered from the GSECARS EPICS support tree ([CARS-UChicago/GSECARS-EPICS](https://github.com/CARS-UChicago/GSECARS-EPICS)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, reconstructed from the `iocBoot` startup scripts, the `CARSApp/Db` device templates, and the `CARSApp/op/adl` screens rather than confirmed by staff. This is an EPICS-native source (not a dodal or BITS Python roster), so the device-to-PV reconstruction is rougher and carried at medium confidence. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+13-ID was reverse-engineered from the GSECARS EPICS support tree ([CARS-UChicago/GSECARS-EPICS](https://github.com/CARS-UChicago/GSECARS-EPICS)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, reconstructed from the `iocBoot` startup scripts, the `CARSApp/Db` device templates, and the `CARSApp/op/adl` screens rather than confirmed by staff. This is an EPICS-native source (not a dodal or BITS Python roster), so the device-to-PV reconstruction is rougher and carried at medium confidence. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 
@@ -15,7 +15,7 @@
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| MACHINE-1 | Nice-to-have | The storage-ring state 13-ID-D reads. | Observe-only machine state, a loose `StorageRing`; PVs pending. | The machine-state observation. |
+| MACHINE-1 | Nice-to-have | The storage-ring state 13-ID reads. | Observe-only machine state, a loose `StorageRing`; PVs pending. | The machine-state observation. |
 | MONO-1 | Blocks-go-live | The 13-ID-A Si monochromator crystal cut, the energy range, and the energy partition rule. | A silicon double-crystal `Monochromator`; the energy is a `PseudoAxis` (`13IDE:En`). | The monochromator and incident-energy Assets. |
 | OPT-1 | Nice-to-have | The K-B and carbon mirror coatings, the curvature / ellipticity axes. | Focusing mirrors bound to `Mirror`; curvature / ellipticity a `PseudoAxis`. | The mirror Asset detail. |
 | OPT-2 | Nice-to-have | The blade-axis roles of the beam-defining and DAC table-top slits (DACV / DACH). | Slits bound to `Slit`. | The slit Asset detail. |

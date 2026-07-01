@@ -1,8 +1,8 @@
 # Detector
 
-*The Eiger2 area detector and its table plus 2theta arm, the ion chambers and the DAC photodiode, the XGLab Dante MCA, and the fibre sample illumination at 13-ID-D. Scaffold; device-to-PV reconstruction from the GSECARS EPICS support tree, carried at medium confidence.*
+*The Eiger2 area detector and its table plus 2theta arm, the ion chambers and the DAC photodiode, the XGLab Dante MCA, and the fibre sample illumination at 13-ID. Scaffold; device-to-PV reconstruction from the GSECARS EPICS support tree, carried at medium confidence.*
 
-13-ID-D measures monochromatic powder and single-crystal X-ray diffraction off a sample held in a diamond anvil cell. The detection side reads the scattered beam on an area detector, monitors the incident and transmitted flux through ion chambers and a photodiode, and carries a fluorescence MCA alongside. Every device here reuses a catalog [Family](../../../catalog/families.md): the novelty of this beamline is the high-pressure sample environment (the new loose `PressureCell` family, see [Sample](sample.md)), not anything on the detection axis. The cell's in-situ pressure and temperature metrology detector, the LightField spectrometer, is a [Sample](sample.md)-side device, not a detection-chain detector; it reads the cell, not the diffracted beam.
+13-ID measures monochromatic powder and single-crystal X-ray diffraction off a sample held in a diamond anvil cell. The detection side reads the scattered beam on an area detector, monitors the incident and transmitted flux through ion chambers and a photodiode, and carries a fluorescence MCA alongside. Every device here reuses a catalog [Family](../../../catalog/families.md): the novelty of this beamline is the high-pressure sample environment (the new loose `PressureCell` family, see [Sample](sample.md)), not anything on the detection axis. The cell's in-situ pressure and temperature metrology detector, the LightField spectrometer, is a [Sample](sample.md)-side device, not a detection-chain detector; it reads the cell, not the diffracted beam.
 
 ## Detection chain
 

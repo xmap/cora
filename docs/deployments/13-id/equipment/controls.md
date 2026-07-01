@@ -2,7 +2,7 @@
 
 *The control stack and the orchestration seam. Handles reconstructed from the GSECARS EPICS support tree, carried confirm at medium confidence.*
 
-13-ID-D runs on APS EPICS, the same floor as the other APS beamlines. GSECARS layers SPEC and Python orchestration on top of that floor. CORA observes the floor and, where it replaces the SPEC / Python orchestration of the high-pressure acquisition, conducts over it through the `ControlPort`; it does not replace EPICS itself.
+13-ID runs on APS EPICS, the same floor as the other APS beamlines. GSECARS layers SPEC and Python orchestration on top of that floor. CORA observes the floor and, where it replaces the SPEC / Python orchestration of the high-pressure acquisition, conducts over it through the `ControlPort`; it does not replace EPICS itself.
 
 ## Device handles
 

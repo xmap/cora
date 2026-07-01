@@ -97,12 +97,12 @@ practices:
   - {name: 12ID_usaxs_practice, method: ultra_small_angle_scattering, pending: true, note: "Bonse-Hart rocking-curve ultra-small-angle scattering on the autoranging photodiode; new Capability not yet in catalog (USAXS-1)"}
   - {name: 12ID_saxs_practice, method: small_angle_scattering, pending: true, note: "pinhole small-angle scattering on the SAXS area detector; shares the i22 SAXS Method (TECH-1)"}
   - {name: 12ID_waxs_practice, method: wide_angle_scattering, pending: true, note: "wide-angle scattering on the WAXS area detector; shares the i22 WAXS Method (TECH-1)"}
-  # 13-ID-D (GSECARS) high-pressure XRD Practices (first cut). Powder and single-crystal
+  # 13-ID (GSECARS) high-pressure XRD Practices (first cut). Powder and single-crystal
   # X-ray diffraction on a sample in a diamond anvil cell under pressure and laser
   # heating; high pressure is a sample-environment (Plan) difference over the same
   # Methods, the 4-ID high-pressure-diffraction precedent. Methods pending (TECH-1).
-  - {name: 13IDD_powder_diffraction_practice, method: powder_diffraction, pending: true, note: "high-pressure powder X-ray diffraction on the diamond anvil cell; shares the i11 powder_diffraction Method, high pressure a Plan setting (TECH-1)"}
-  - {name: 13IDD_diffraction_practice, method: diffraction, pending: true, note: "high-pressure single-crystal X-ray diffraction on the diamond anvil cell; shares the diffraction Method, high pressure a Plan setting (TECH-1)"}
+  - {name: 13ID_powder_diffraction_practice, method: powder_diffraction, pending: true, note: "high-pressure powder X-ray diffraction on the diamond anvil cell; shares the i11 powder_diffraction Method, high pressure a Plan setting (TECH-1)"}
+  - {name: 13ID_diffraction_practice, method: diffraction, pending: true, note: "high-pressure single-crystal X-ray diffraction on the diamond anvil cell; shares the diffraction Method, high pressure a Plan setting (TECH-1)"}
 
 # Access BC Actors that are conceptually facility-wide at APS. Actor display
 # names live in actor_profile (the PII vault), not in event-sourced Actor state.
