@@ -1,8 +1,13 @@
 # CANDIDATE: hand-read from public profile-collection source, NOT authoritative. PV prefixes verified verbatim. Do not copy into deployments/ unreviewed. Thin public source; deployment is richer (COVERAGE-1).
-beamline: {name: XFM, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: XFM, facility: nsls2, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: 4-BM-C, facility_code: nsls2, confirm: endstation; inferred from XF:04BMC}
-devices:
-- {name: SampleScanStage, family: LinearStage, pv: "XF:04BMC-ES:2", stage: sample, new: true, confirm: raster XRF sample stages; LinearStage (catalog)}
-- {name: ScalerCounter, family: GenericProbe, pv: "XF:04BM-ES:2{Sclr:1}", stage: detection, new: true, confirm: scaler; LOOSE GenericProbe}
-- {name: FluorescenceSpectrometer, family: EnergyDispersiveSpectrometer, pv: "XF:04BMC-ES{x3m:1}", stage: detection, new: true, confirm: "Xspress3 mini SDD; EnergyDispersiveSpectrometer (catalog, graduated)"}
+sample:
+  stage: sample
+  devices:
+  - {name: SampleScanStage, family: LinearStage, pv: 'XF:04BMC-ES:2', stage: sample, new: true, confirm: raster XRF sample stages; LinearStage (catalog)}
+detection:
+  stage: detection
+  devices:
+  - {name: ScalerCounter, family: GenericProbe, pv: 'XF:04BM-ES:2{Sclr:1}', stage: detection, new: true, confirm: scaler; LOOSE GenericProbe}
+  - {name: FluorescenceSpectrometer, family: EnergyDispersiveSpectrometer, pv: 'XF:04BMC-ES{x3m:1}', stage: detection, new: true, confirm: 'Xspress3 mini SDD; EnergyDispersiveSpectrometer (catalog, graduated)'}

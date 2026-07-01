@@ -12,7 +12,7 @@ CDI focuses the coherent beam to a small spot with a Kirkpatrick-Baez mirror pai
 | `Goniometer` | Goniometer | `XF:09IDC-OP:1{Gon:1}` | sample goniometer and stack |
 | `SampleTower1` | LinearStage | `XF:09IDC-ES:1{TDMS:T1}` | endstation positioning tower 1 |
 | `SampleTower2` | LinearStage | `XF:09IDC-ES:1{TDMS:T2}` | endstation positioning tower 2 |
-| `DiamondBeamMonitor` | BeamPositionMonitor (loose) | `XF:09IDC-BI{BPM:1}` | transmissive diamond BPM ahead of the sample |
+| `DiamondBeamMonitor` | BeamPositionMonitor | `XF:09IDC-BI{BPM:1}` | transmissive diamond BPM ahead of the sample |
 | `SampleCamera` | Camera | `XF:09IDC-BI{SMPL-Cam:10}` | sample-viewing camera |
 
 ## Forming and conditioning the coherent spot
@@ -29,4 +29,4 @@ The `SampleTower1` and `SampleTower2` are the two endstation positioning towers 
 
 ## Endstation diagnostics
 
-The `DiamondBeamMonitor` is a transmissive diamond beam-position monitor read through a TetrAMM electrometer, just ahead of the sample; in source it was repurposed from ion-chamber use to the diamond BPM. It binds the loose `BeamPositionMonitor` family (held; DIAG-1). The `SampleCamera` views the sample on-axis (a further endstation Prosilica sits alongside); it reuses `Camera`, and the live diagnostic set is CAM-1.
+The `DiamondBeamMonitor` is a transmissive diamond beam-position monitor read through a TetrAMM electrometer, just ahead of the sample; in source it was repurposed from ion-chamber use to the diamond BPM. It binds the graduated catalog `BeamPositionMonitor` Family (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux), with only the per-Asset channel map still pending (DIAG-1). The `SampleCamera` views the sample on-axis (a further endstation Prosilica sits alongside); it reuses `Camera`, and the live diagnostic set is CAM-1.

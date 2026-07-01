@@ -1,11 +1,11 @@
 # CANDIDATE beamline descriptor: hand-read from SESAME-Synchrotron/HESEBScanTool + heseb-pico-6487, NOT
 # authoritative. EPICS P prefix HESEB:. Literal PVs verified verbatim; indirect/dynamic PVs flagged confirm.
 
-beamline: {name: heseb, facility: sesame, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: heseb, facility: sesame, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: ID11L, facility_code: sesame, confirm: "Helmholtz-SESAME soft X-ray beamline; EPICS prefix HESEB:"}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: PlaneGratingMono, family: GratingMonochromator, pv: "PGM:getEnergy", new: true, confirm: "soft X-ray PGM (+ MonoName/MonoDSpacing); GratingMonochromator (catalog, graduated)"}

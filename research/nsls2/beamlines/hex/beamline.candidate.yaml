@@ -1,12 +1,12 @@
 # CANDIDATE: hand-read from NSLS2/hex-profile-collection, NOT authoritative. PV prefixes verified
 # verbatim. Kinetix/PandA use runtime-templated prefixes (TEMPLATE-1), not bound to literals here.
-beamline: {name: HEX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: HEX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: 27-ID-A, facility_code: nsls2, confirm: optics; inferred from XF:27IDA}
 - {name: 27-ID-F, facility_code: nsls2, confirm: endstation; inferred from XF:27IDF}
 - {name: 27-ID-1, facility_code: nsls2, confirm: detector area; inferred from XF:27ID1}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; needs confirm.
   devices:
   - {name: FrontEndShutter, family: Shutter, pv: "XF:27IDA-PPS{Sh:FE}", new: true, confirm: "front-end PPS (+ L1-S1); Shutter (catalog)"}

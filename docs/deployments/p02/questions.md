@@ -23,7 +23,7 @@ P02 was reverse-engineered from P02's own public OnlineXML device registry ([git
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| PRESSURE-1 | Blocks-go-live | The P02.2 diamond-anvil-cell control: the membrane / gas-loading / pressure-ramp interface, and the cell's positioning stages. | A `PressureCell` Asset (the allowlisted-loose 13-id Family); membrane / load control pending. | The pressure-cell modelling. |
+| PRESSURE-1 | Blocks-go-live | The P02.2 diamond-anvil-cell control: the membrane / gas-loading / pressure-ramp interface, and the cell's positioning stages. | A `PressureCell` Asset (the catalog Family, graduated across 13-id and P02); membrane / load control pending. | The pressure-cell modelling. |
 | TEMP-1 | Nice-to-have | The P02.1 sample-environment sensor / setpoint handles (Anton-Paar, Eurotherm, Lakeshore). | `TemperatureController` controllers; in-situ furnace / cryo. | The sample-environment modelling. |
 
 ## The detectors

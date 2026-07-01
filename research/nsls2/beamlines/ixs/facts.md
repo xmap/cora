@@ -11,21 +11,21 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| Monochromator | Monochromator | `XF:10IDA-OP{Mono:DCM` | DCM axes | 10-ID-A | optics | yes |
-| HighResMono2 | Monochromator | `XF:10IDB-OP{Mono:HRM2` | high-resolution mono | 10-ID-B | optics | yes |
-| WhiteBeamSlit | Slit | `XF:10IDA-OP{Slt:1` | blade axes | 10-ID-A | optics | yes |
-| SecondarySourceAperture | Slit | `XF:10IDB-OP{SSA:1` | SSA blades | 10-ID-B | optics | yes |
-| HorizontalFocusingMirror | Mirror | `XF:10IDD-OP{HFM:1` | HFM | 10-ID-D | optics | yes |
-| VerticalFocusingMirror | Mirror | `XF:10IDD-OP{VFM:1` | VFM | 10-ID-D | optics | yes |
-| MultiCrystalMono | Monochromator (?) | `XF:10IDD-OP{MCM:1` | multi-crystal monochromator (analyzer feed) | 10-ID-D | optics | yes |
+| Monochromator | Monochromator | `XF:10IDA-OP{Mono:DCM` | DCM axes | 10-ID-A | source | yes |
+| HighResMono2 | Monochromator | `XF:10IDB-OP{Mono:HRM2` | high-resolution mono | 10-ID-B | source | yes |
+| WhiteBeamSlit | Slit | `XF:10IDA-OP{Slt:1` | blade axes | 10-ID-A | source | yes |
+| SecondarySourceAperture | Slit | `XF:10IDB-OP{SSA:1` | SSA blades | 10-ID-B | source | yes |
+| HorizontalFocusingMirror | Mirror | `XF:10IDD-OP{HFM:1` | HFM | 10-ID-D | source | yes |
+| VerticalFocusingMirror | Mirror | `XF:10IDD-OP{VFM:1` | VFM | 10-ID-D | source | yes |
+| MultiCrystalMono | Monochromator (?) | `XF:10IDD-OP{MCM:1` | multi-crystal monochromator (analyzer feed) | 10-ID-D | source | yes |
 | Analyzer | EnergyAnalyzer (?) | `XF:10IDD-OP{Analy:1-Ax:` | crystal analyzer axes | 10-ID-D | detection | yes |
 | Spectrometer | SpectrometerArm (?) | `XF:10IDD-OP{Spec:1-Ax:` | spectrometer arm axes | 10-ID-D | detection | yes |
-| Pinhole | Slit (?) | `XF:10IDD-OP{Pinh:1` | pinhole | 10-ID-D | optics | yes |
-| EndstationSlit5 | Slit | `XF:10IDD-OP{Slt:5` | endstation slit | 10-ID-D | optics | yes |
-| EndstationSlit4 | Slit | `XF:10IDC-OP{Slt:4` | slit | 10-ID-C | optics | yes |
+| Pinhole | Slit (?) | `XF:10IDD-OP{Pinh:1` | pinhole | 10-ID-D | source | yes |
+| EndstationSlit5 | Slit | `XF:10IDD-OP{Slt:5` | endstation slit | 10-ID-D | source | yes |
+| EndstationSlit4 | Slit | `XF:10IDC-OP{Slt:4` | slit | 10-ID-C | source | yes |
 | Table1 | Table | `XF:10IDC-OP{Tbl:1` | endstation table | 10-ID-C | sample | yes |
 | SampleEnvironment | TemperatureController (?) | `XF:10IDD-OP{Env:1-Ax:` | sample environment axes | 10-ID-D | sample | yes |
-| BeamPositionMonitor1 | GenericProbe (?) | `XF:10IDA-OP{BPM:1` | BPMs (BPM:1/2 + cams) | 10-ID-A | diagnostics | yes |
+| BeamPositionMonitor1 | GenericProbe (?) | `XF:10IDA-OP{BPM:1` | BPMs (BPM:1/2 + cams) | 10-ID-A | source | yes |
 
 Device-level prefixes read verbatim from source: `Mono:DCM`, `Mono:HRM2`, `HFM:1`/`VFM:1`, `MCM:1`, `Analy:1`, `Spec:1`, `SSA:1`, the BPMs and table.
 

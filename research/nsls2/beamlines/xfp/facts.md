@@ -13,13 +13,13 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | --- | --- | --- | --- | --- | --- | --- |
 | FrontEndShutter | Shutter | `XF:17BM-PPS{Sh:FE}` | (PPS shutter) | 17-BM | source | yes |
 | EPSShutter | Shutter | `XF:17BMA-EPS{Sh:1}` | EPS-controlled shutter (dose timing) | 17-BM-A | source | yes |
-| Monochromator | Monochromator | `XF:17BMA-OP{Mono:1-Ax:` | mono axes (mono mode; white/pink for dose) | 17-BM-A | optics | yes |
-| Mirror1 | Mirror | `XF:17BM-OP{Mir:1` | mirror axes | 17-BM | optics | yes |
-| ADCSlit | Slit | `XF:17BMA-OP{Slt:ADC-Ax:` | ADC slit | 17-BM-A | optics | yes |
-| PinkBeamSlit | Slit | `XF:17BMA-OP{Slt:PB-Ax:` | pink-beam slit | 17-BM-A | optics | yes |
-| FilterStage | Filter | `XF:17BMA-ES:1{Fltr:1-Ax:` | Al filter wheel (dose-rate attenuation) | 17-BM-A | optics | yes |
-| OpticsStage2 | LinearStage | `XF:17BMA-OP{Stg:2-Ax:` | optics stage | 17-BM-A | optics | yes |
-| BeamPositionMonitorOptics | GenericProbe (?) | `XF:17BMA-OP{Bpm:1-Ax:` | optics BPM | 17-BM-A | diagnostics | yes |
+| Monochromator | Monochromator | `XF:17BMA-OP{Mono:1-Ax:` | mono axes (mono mode; white/pink for dose) | 17-BM-A | source | yes |
+| Mirror1 | Mirror | `XF:17BM-OP{Mir:1` | mirror axes | 17-BM | source | yes |
+| ADCSlit | Slit | `XF:17BMA-OP{Slt:ADC-Ax:` | ADC slit | 17-BM-A | source | yes |
+| PinkBeamSlit | Slit | `XF:17BMA-OP{Slt:PB-Ax:` | pink-beam slit | 17-BM-A | source | yes |
+| FilterStage | Filter | `XF:17BMA-ES:1{Fltr:1-Ax:` | Al filter wheel (dose-rate attenuation) | 17-BM-A | source | yes |
+| OpticsStage2 | LinearStage | `XF:17BMA-OP{Stg:2-Ax:` | optics stage | 17-BM-A | source | yes |
+| BeamPositionMonitorOptics | GenericProbe (?) | `XF:17BMA-OP{Bpm:1-Ax:` | optics BPM | 17-BM-A | source | yes |
 | SampleStage | LinearStage | `XF:17BMA-ES:1{Sam:1-Ax:` | sample positioning | 17-BM-A | sample | yes |
 | SampleTable1 | Table | `XF:17BMA-ES:1{Tbl:1-Ax:` | sample table (+ Tbl:3) | 17-BM-A | sample | yes |
 | CVDStage | LinearStage | `XF:17BMA-ES:1{CVD:1-Ax:` | CVD diamond / window stage | 17-BM-A | sample | yes |
@@ -31,7 +31,7 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | DelayGenerator | TimingController | `XF:17BMA-ES:2{DG:1}` | delay generator (shutter timing = dose) | 17-BM-A | detection | yes |
 | TimingControlModule | TimingController (?) | `XF:17BMA-ES:2{TCM:1}` | timing control module | 17-BM-A | detection | yes |
 | IonChamber1 | FluxMonitor | `XF:17BM-BI{EM:1}` | ion chamber / electrometer (+ EM:2; flux for dose) | 17-BM | detection | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:17BM-BI{EM:BPM1}` | electrometer BPM | 17-BM | diagnostics | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:17BM-BI{EM:BPM1}` | electrometer BPM | 17-BM | source | yes |
 | PinkBeamGuard | GenericProbe (?) | `XF:17BM-ES{PBG:1}` | pink-beam guard | 17-BM | source | yes |
 | DiodeLocal | GenericProbe (?) | `XF:17BMA-CT{DIODE-Local:` | local diode (+ DIODE-PDM:1) | 17-BM-A | detection | yes |
 

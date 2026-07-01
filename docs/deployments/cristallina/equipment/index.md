@@ -22,4 +22,4 @@ The stages are containment trees of apparatus (`Asset.parent_id`); controls rela
 The cross-cutting view that spans every area:
 
 - [Inventory](../inventory.md): the full planned CORA Asset model (every device by `parent_id`, with Families, the `slic` control handles, and pending confirmations).
-- [Model](../model.md): the `Diffractometer` Assembly design (DIFF-1), the `Magnet` rule-of-three (MAG-1), the `slic` provenance boundary, and the architectural gap register.
+- [Model](../model.md): the `Diffractometer` Assembly design (DIFF-1), the graduated `Magnet` Family and its further Cristallina consumer (MAG-1), the `slic` provenance boundary, and the architectural gap register.

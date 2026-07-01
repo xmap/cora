@@ -6,7 +6,7 @@ Machine-extracted candidate facts for `2-BM` (facility `aps`). Candidates only; 
 
 | Device | Suggested family | PV / axes | Enclosure | Stage | Labels | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| optics | MCTOptics (?) | `2bm:MCTOptics:` | ? | source | optics | yes |
+| source | MCTOptics (?) | `2bm:MCTOptics:` | ? | source | source | yes |
 | shutter | Shutter | - | ? | source | shutters | yes |
 
 ## Candidate enclosures

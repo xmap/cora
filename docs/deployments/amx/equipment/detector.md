@@ -9,7 +9,7 @@ AMX's science detector is the Eiger, reading the rotation diffraction; a Mercury
 | `AreaDetector` | Camera | (not in profile) | rotation diffraction (the MX data, DET-1) |
 | `FluorescenceDetector` | EnergyDispersiveSpectrometer | `XF:17IDB-ES:AMX{Det:Mer}` | XRF edge selection (anomalous MX) |
 | `BeamStop` | BeamStop | `XF:17IDB-ES:AMX{BS:1}` | blocks the direct beam ahead of the Eiger |
-| `BeamPositionMonitor` | BeamPositionMonitor (loose) | `XF:17IDA-BI:AMX{BPM:1}` | beam-position diagnostics |
+| `BeamPositionMonitor` | BeamPositionMonitor | `XF:17IDA-BI:AMX{BPM:1}` | beam-position diagnostics |
 | `FluxMonitor` | FluxMonitor | `XF:17IDB-BI:AMX{Keith:1}` | beam-intensity photocurrent (I0) |
 
 ## The Eiger
@@ -22,4 +22,4 @@ The `FluorescenceDetector` is a Mercury multi-element detector (`XF:17IDB-ES:AMX
 
 ## Beam monitors
 
-The `BeamStop` reuses `BeamStop`. The `BeamPositionMonitor` binds the loose `BeamPositionMonitor` family (the four-quadrant BPMs `XF:17IDA-BI:AMX{BPM:1}`, `XF:17IDB-BI:AMX{BPM:2 / BPM:3}`; held, DIAG-1). The `FluxMonitor` is a Keithley picoammeter reading the I0 photocurrent, reusing `FluxMonitor`.
+The `BeamStop` reuses `BeamStop`. The `BeamPositionMonitor` binds the graduated catalog `BeamPositionMonitor` Family (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux; the four-quadrant BPMs `XF:17IDA-BI:AMX{BPM:1}`, `XF:17IDB-BI:AMX{BPM:2 / BPM:3}`), with only the per-Asset channel map still pending (DIAG-1). The `FluxMonitor` is a Keithley picoammeter reading the I0 photocurrent, reusing `FluxMonitor`.

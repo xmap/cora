@@ -5,6 +5,9 @@
 # verified verbatim against source (startup/*.py), zero fabrications.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: SRX
   facility: nsls2
   tier: Unit
@@ -44,7 +47,7 @@ source:
     new: true
     confirm: endstation fast shutter (Open/Close-Cmd); family Shutter (catalog)
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: WhiteBeamSlit

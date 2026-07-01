@@ -2,7 +2,7 @@
 
 *The Eiger2 area detector and its table plus 2theta arm, the ion chambers and the DAC photodiode, the XGLab Dante MCA, and the fibre sample illumination at 13-ID. Scaffold; device-to-PV reconstruction from the GSECARS EPICS support tree, carried at medium confidence.*
 
-13-ID measures monochromatic powder and single-crystal X-ray diffraction off a sample held in a diamond anvil cell. The detection side reads the scattered beam on an area detector, monitors the incident and transmitted flux through ion chambers and a photodiode, and carries a fluorescence MCA alongside. Every device here reuses a catalog [Family](../../../catalog/families.md): the novelty of this beamline is the high-pressure sample environment (the new loose `PressureCell` family, see [Sample](sample.md)), not anything on the detection axis. The cell's in-situ pressure and temperature metrology detector, the LightField spectrometer, is a [Sample](sample.md)-side device, not a detection-chain detector; it reads the cell, not the diffracted beam.
+13-ID measures monochromatic powder and single-crystal X-ray diffraction off a sample held in a diamond anvil cell. The detection side reads the scattered beam on an area detector, monitors the incident and transmitted flux through ion chambers and a photodiode, and carries a fluorescence MCA alongside. Every device here reuses a catalog [Family](../../../catalog/families.md): the novelty of this beamline is the high-pressure sample environment (the `PressureCell` family introduced here, since graduated to the catalog, see [Sample](sample.md)), not anything on the detection axis. The cell's in-situ pressure and temperature metrology detector, the LightField spectrometer, is a [Sample](sample.md)-side device, not a detection-chain detector; it reads the cell, not the diffracted beam.
 
 ## Detection chain
 
@@ -26,7 +26,7 @@ The fluorescence MCA is the one device that could read as a candidate for a coin
 
 The detector table and 2theta arm decompose into ordinary translation and tilt axes (`LinearStage`, `TiltStage`); the 2theta swing as a derived angle is a `PseudoAxis` transform held back rather than invented, because the only prefix seen for it was a Galil test template (`DET-1`). The fibre illumination is a plain loose `Backlight`. None of these is a new device class.
 
-The net result is zero new families on the detection axis. The one new family this deployment coins, the loose `PressureCell`, sits on the [Sample](sample.md) side for the high-pressure cell, and the entire diffraction spine, detection included, is catalog reuse (see [Model](../model.md)).
+The net result is zero new families on the detection axis. The family this deployment introduced, `PressureCell` (since graduated to the catalog, earned across 13-ID and P02), sits on the [Sample](sample.md) side for the high-pressure cell, and the entire diffraction spine, detection included, is catalog reuse (see [Model](../model.md)).
 
 ## Families
 

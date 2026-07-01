@@ -18,15 +18,15 @@
 
 ID28 is CORA's second ESRF beamline (after ID32), and it deepens the fleet's inelastic-scattering coverage with a distinct flavor: **momentum-resolved hard X-ray inelastic scattering (IXS)**. A high-resolution backscattering monochromator sets a meV-resolution incident energy, scanned by tuning the crystal temperature rather than a Bragg angle; the sample scatters; and a multi-analyzer crystal spectrometer on a two-theta arm energy-analyzes the scattered beam in backscattering, mapping phonon and collective-excitation dispersions across momentum transfer. The fleet has soft RIXS (SIX, ID32) and the NSLS-II IXS beamline; ID28 is the ESRF hard X-ray IXS instrument.
 
-For the modelling, ID28 adds a **further `SpectrometerArm` consumer**: its multi-analyzer arm binds the loose family SIX coined and ID32 brought to a rule-of-three. The graduation is already pending from ID32 (`RIXS-1`) and deferred to a dedicated catalog PR; ID28 reinforces it and stays held, coining no new family and changing nothing in the catalog.
+For the modelling, ID28 adds a **further `SpectrometerArm` consumer**: its multi-analyzer arm binds the family SIX coined and ID32 brought to a rule-of-three. That sighting reinforced the graduation (`RIXS-1`), which has since landed as a catalog Family; ID28's arm binds it like any catalog Family, coining no new family of its own.
 
 ## Scope: what is and is not modelled
 
 | Part | In this cut | Why |
 | --- | --- | --- |
 | Optics (`id28-optics`) | Yes | The two in-vacuum undulators, the high-resolution backscattering monochromator, the incident-energy pseudo-axis (over the F700 crystal-temperature controller), the HFM / VFM focusing mirrors, the primary / mono slits, the oh2 beam-position monitor, the front-end shutter |
-| IXS endstation (`id28-eh1`) | Yes | The multi-analyzer spectrometer arm (loose `SpectrometerArm`), the scattering-geometry sample stage, the sample slits, the sample-temperature cryostats, the detectors |
-| The SpectrometerArm graduation | Named, not built | A further consumer after SIX + ID32; the graduation is the dedicated PR already pending (`RIXS-1`) |
+| IXS endstation (`id28-eh1`) | Yes | The multi-analyzer spectrometer arm (catalog `SpectrometerArm`), the scattering-geometry sample stage, the sample slits, the sample-temperature cryostats, the detectors |
+| The SpectrometerArm graduation | Landed | A further consumer after SIX + ID32; the graduation has landed as a catalog Family (`RIXS-1`) |
 | The analyzer-crystal array identity | Named, not built | The inclined analyzer crystals are a per-Asset setting; promoting them to child Assets is the nested-component question (`IXS-1`) |
 | Exact sample-stage / per-analyzer-detector handles | No | Carried confirm-pending (`SAMPLE-1`, `DET-1`); the arm, mono, mirrors, and cryostats carry real BLISS handles |
 | PSS permit signals and vacuum extent | No | The shutters are modelled (front-end + `bsh*`); the permit leaves behind them and the vacuum extent are absent from the config, carried pending, not invented (`PSS-1`, `SUP-1`) |
@@ -36,7 +36,7 @@ The deferred parts are recorded on [Model](model.md#deliberately-not-here-yet).
 ## Key modelling decisions
 
 - **A second ESRF beamline on the BLISS control plane.** ID28 re-tests the ESRF Site kernel and the Tango / IcePAP house-style established at ID32; handles are opaque edge strings over the `ControlPort` (`CTRL-1`).
-- **The multi-analyzer arm binds the loose `SpectrometerArm`, held (`RIXS-1`).** A further consumer after SIX + ID32; the graduation is the dedicated PR already pending. The analyzer-crystal array (a2 / a3 / a4) is a per-Asset setting, not a new family (`IXS-1`).
+- **The multi-analyzer arm binds the catalog `SpectrometerArm` (graduated, `RIXS-1`).** A further consumer after SIX + ID32; that sighting reinforced the graduation, which has since landed. The analyzer-crystal array (a2 / a3 / a4) is a per-Asset setting, not a new family (`IXS-1`).
 - **IXS reuses the pending `inelastic_x_ray_scattering` Method.** The second consumer after the NSLS-II IXS beamline; no new slug (`TECH-1`).
 - **The incident energy is temperature-scanned, not angle-scanned.** The backscattering crystal's energy is tuned via the ASL F700 temperature controller (`monot` / `deltae`); CORA realizes the `BeamEnergy` `PseudoAxis` over it, decoupled from the `Monochromator` orientation (`MONO-1`).
 - **No new family, nothing graduates here.** The backscattering mono binds `Monochromator`, the benders `Mirror`, the slits `Slit`, the detectors `Camera`, the cryostats `TemperatureController`, the front-end shutter `Shutter`; the catalog is unchanged.

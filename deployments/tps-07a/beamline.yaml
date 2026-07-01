@@ -171,9 +171,9 @@ detector:
       confirm: true
       note: "Detector translation setting the sample-to-detector distance, with a hard minimum-distance interlock at 139 mm read from the control tree. Reuses LinearStage; PV pending (DET-1)."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       confirm: true
-      note: "Diagnostic beam-position monitor (the XBPM / DBPM diagnostics class seen across TPS front ends). Binds the loose BeamPositionMonitor family (held; DIAG-1); channel map / PV pending."
+      note: "Diagnostic beam-position monitor (the XBPM / DBPM diagnostics class seen across TPS front ends). Binds the graduated BeamPositionMonitor Family (DIAG-1); channel map / PV pending."
     - name: OAVCamera
       family: Camera
       confirm: true

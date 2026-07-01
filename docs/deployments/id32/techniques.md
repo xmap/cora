@@ -18,7 +18,7 @@ RIXS needs the [incident-energy and polarization axes](beamline.md), the [RIXS d
 
 ## A new operating axis for the fleet, on familiar vocabulary
 
-RIXS at ID32 is the fleet's second soft X-ray RIXS after SIX, and the dispersive spectrometer arm is the device that ties them together: the same `SpectrometerArmsController` anatomy that SIX coined loose, now sighted three times across two sites (the ID32 RIXS arm, the ID32 XES arm, and SIX). That rule-of-three is the trigger for graduating the loose `SpectrometerArm`, an owner decision held here and deferred to a dedicated PR (see [Model](model.md#loose-families-held-at-the-rule-of-three)). XMCD and XES likewise reuse the dichroism and emission Methods the fleet already carries pending; none forces a new device family.
+RIXS at ID32 is the fleet's second soft X-ray RIXS after SIX, and the dispersive spectrometer arm is the device that ties them together: the same `SpectrometerArmsController` anatomy that SIX coined loose, sighted three times across two sites (the ID32 RIXS arm, the ID32 XES arm, and SIX). That rule-of-three earned the graduation of the `SpectrometerArm` Family, which has since landed as a catalog Family (SIX + ID32 RIXS/XES + ID28; see [Model](model.md#loose-families-held-at-the-rule-of-three)). XMCD and XES likewise reuse the dichroism and emission Methods the fleet already carries pending; none forces a new device family.
 
 ## Not modelled yet
 

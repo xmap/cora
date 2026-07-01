@@ -16,7 +16,7 @@ It needs the [incident-energy chain](beamline.md) (the backscattering mono for t
 
 ## The same inelastic axis, in the hard X-ray regime
 
-ID28 is the fleet's hard X-ray IXS instrument. The catalog already anticipates inelastic scattering (the SIX soft RIXS arm, the NSLS-II IXS beamline, the ID32 soft RIXS / XES arms), and ID28 reuses the `inelastic_x_ray_scattering` Method the NSLS-II IXS beamline left pending as the second consumer, deepening the case for that Capability without coining anything. The device that ties the inelastic beamlines together is the dispersive spectrometer arm: ID28's multi-analyzer crystal arm is a further consumer of the loose `SpectrometerArm` family, reinforcing the graduation already pending from ID32 (see [Model](model.md#a-further-spectrometerarm-consumer-held)).
+ID28 is the fleet's hard X-ray IXS instrument. The catalog already anticipates inelastic scattering (the SIX soft RIXS arm, the NSLS-II IXS beamline, the ID32 soft RIXS / XES arms), and ID28 reuses the `inelastic_x_ray_scattering` Method the NSLS-II IXS beamline left pending as the second consumer, deepening the case for that Capability without coining anything. The device that ties the inelastic beamlines together is the dispersive spectrometer arm: ID28's multi-analyzer crystal arm is a further consumer of the `SpectrometerArm` family, the sighting that reinforced the graduation earned at ID32, now landed as a catalog Family (see [Model](model.md#a-further-spectrometerarm-consumer-held)).
 
 ## Not modelled yet
 

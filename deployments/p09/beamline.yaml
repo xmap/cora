@@ -17,10 +17,11 @@
 #
 # WHAT IS NEW: no new device Family. P09 reuses existing Families end to end. It binds
 # the catalog PhaseRetarder Family (the polarization phase-retarder circles), the second
-# consumer that graduated it out of loose alongside 4-ID (P22 is the third), and the
-# catalog PolarizationAnalyzer Family (the scattered-beam analyzer; graduated on the
-# rule-of-three across 4-ID, i10, ID32, P09; POL-2). The 14 T sample-environment magnet
-# binds the Family still allowlisted-loose from 4-ID: Magnet. The diffractometer
+# consumer that graduated it out of loose alongside 4-ID (P22 is the third), the catalog
+# PolarizationAnalyzer Family (the scattered-beam analyzer; graduated on the rule-of-three
+# across 4-ID, i10, ID32, P09; POL-2), and the catalog Magnet Family (the 14 T
+# sample-environment magnet, graduated; a consumer that reinforced the graduation, MAG-1).
+# The diffractometer
 # circles bind the catalog Goniometer Family (not the composed Diffractometer
 # Assembly), the same call as P01 EH2. The techniques (resonant scattering, magnetic
 # scattering, XMCD, HAXPES) earn no catalog Method; they are carried pending on the
@@ -225,14 +226,14 @@ mag-sample:
   stage: sample
   enclosure: p09-mag
   intro: "The MAG high-field magnetism endstation: the 14 T superconducting magnet, the six-circle diffractometer goniometer, a sample hexapod, the PI sample piezos, the polarization analyzer, and the sample-environment temperature controllers."
-  note: "The 14 T magnet reuses the 4-ID allowlisted-loose Magnet Family. The hexapod is hexapodmotor; the piezos are PI E-710 (scan) and E-725 (sample)."
+  note: "The 14 T magnet binds the graduated catalog Magnet Family (presents Regulator). The hexapod is hexapodmotor; the piezos are PI E-710 (scan) and E-725 (sample)."
   devices:
     - name: Magnet
       family: Magnet
       pv: {magnet: "p09/magnet/exp.01"}
       new: true
       confirm: true
-      note: "the MAG 14 T superconducting sample-environment magnet (magnet14tf); reuses the 4-ID allowlisted-loose Magnet Family (MAG-1)"
+      note: "the MAG 14 T superconducting sample-environment magnet (magnet14tf); binds the graduated catalog Magnet Family (presents Regulator, MAG-1)"
     - name: Goniometer
       family: Goniometer           # catalog Family; the MAG six-circle sample-orientation circles (DIFF-1)
       pv: {ctrl: "p09/diffractometer/diffrac_mag", mu: "p09/diffracmu/mu"}

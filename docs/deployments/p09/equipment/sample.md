@@ -18,7 +18,7 @@ P09 carries three sample areas: the MONO resonant-scattering experiment, the DIF
 
 ## MAG: high-field magnetism
 
-- `Magnet` binds the allowlisted-loose `Magnet` Family: the 14 T superconducting sample-environment magnet (`magnet14tf`) (`MAG-1`).
+- `Magnet` binds the graduated catalog `Magnet` Family (a further consumer): the 14 T superconducting sample-environment magnet (`magnet14tf`) (`MAG-1`).
 - `Goniometer` binds the catalog `Goniometer` Family: the MAG six-circle diffractometer (`diffrac_mag` + the `diffracmu` mu circle) (`DIFF-1`).
 - `SampleHexapod` binds `Hexapod`: the MAG sample hexapod (`hexa_*`); coarse sample positioning within the magnet (`SAMPLE-1`).
 - `SamplePiezo` binds `LinearStage`: the MAG sample piezos (PI E-710 scan + E-725 sample); fine positioning (`SAMPLE-1`).
@@ -28,4 +28,4 @@ P09 carries three sample areas: the MONO resonant-scattering experiment, the DIF
 
 ## Families and confirmations
 
-The polarization instruments bind the catalog `PhaseRetarder` and `PolarizationAnalyzer` Families (the analyzer graduated across 4-ID / i10 / ID32 / P09); the 14 T magnet binds the allowlisted-loose `Magnet` Family (the 4-ID precedent); the diffractometers bind the catalog `Goniometer`; the hexapod `Hexapod`, the piezos `LinearStage`, the cooling `TemperatureController`, the absorber `Filter`. P09 coins no new Family; it is a further consumer of the 4-ID vocabulary. The axis maps are read from the OnlineXML and carried confirm; the diffractometer circle counts, the magnet field, and the per-axis bank roles are pending. See [Open questions](../questions.md) and the [Inventory](../inventory.md).
+The polarization instruments bind the catalog `PhaseRetarder` and `PolarizationAnalyzer` Families (the analyzer graduated across 4-ID / i10 / ID32 / P09); the 14 T magnet binds the graduated catalog `Magnet` Family (a further consumer); the diffractometers bind the catalog `Goniometer`; the hexapod `Hexapod`, the piezos `LinearStage`, the cooling `TemperatureController`, the absorber `Filter`. P09 coins no new Family; it is a further consumer of the 4-ID vocabulary. The axis maps are read from the OnlineXML and carried confirm; the diffractometer circle counts, the magnet field, and the per-axis bank roles are pending. See [Open questions](../questions.md) and the [Inventory](../inventory.md).

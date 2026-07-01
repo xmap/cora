@@ -11,8 +11,8 @@ Asset granularity: one row per stage / assembly, device-level PV (verbatim from 
 
 | Device | Suggested family | PV (verbatim) | source/class | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- |
-| Monochromator | Monochromator | `BLSetup:Crystal` (crystal selection) | Mono.py | optics | yes |
-| EnergyCalibration | PseudoAxis (?) | `ENGCAL:FoilElement`, `ENGCAL:RealFoilEng` | Mono.py (energy-to-foil calibration) | optics | yes |
+| Monochromator | Monochromator | `BLSetup:Crystal` (crystal selection) | Mono.py | source | yes |
+| EnergyCalibration | PseudoAxis (?) | `ENGCAL:FoilElement`, `ENGCAL:RealFoilEng` | Mono.py (energy-to-foil calibration) | source | yes |
 | SampleStage | LinearStage | `SMP:X`, `SMP:Y` | common.py | sample | yes |
 | FicusDetector | EnergyDispersiveSpectrometer | `Ficus:` (Erase/Start/ROIs/FrameDuration/DetectorTemp...) | detectors/ficus.py (FICUS SDD) | detection | yes |
 | SDDDetector | EnergyDispersiveSpectrometer | `SDD2:` (getFrameDuration) | detectors | detection | yes |

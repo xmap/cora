@@ -1,12 +1,12 @@
 # CANDIDATE: hand-read from NSLS2/lix-profile-collection (startup.obsolete/ optics PVs +
 # startup/devices/ fluidics), NOT authoritative. PV prefixes verified verbatim.
-beamline: {name: LIX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: LIX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: 16-ID-A, facility_code: nsls2, confirm: optics; inferred from XF:16IDA}
 - {name: 16-ID-B, facility_code: nsls2, confirm: SSA hutch; inferred from XF:16IDB}
 - {name: 16-ID-C, facility_code: nsls2, confirm: endstation; inferred from XF:16IDC}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; needs confirm.
   devices:
   - {name: Monochromator, family: Monochromator, pv: "XF:16IDA-OP{Mono:DCM", new: true, confirm: DCM; Monochromator (catalog)}

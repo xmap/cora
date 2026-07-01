@@ -24,7 +24,7 @@ Machine-extracted candidate facts for `12-ID-E` (facility `aps`). Candidates onl
 | auto_collect | AutoCollectDataDevice (?) | `usxLAX:AutoCollection` | ? | source | - | yes |
 | bss | BssDevice (?) | `usxTerms:bss:` | ? | source | baseline | yes |
 | d_stage | UsaxsDetectorStageDevice (?) | - | ? | source | - | yes |
-| diagnostics | DiagnosticsParameters (?) | - | ? | source | baseline | yes |
+| source | DiagnosticsParameters (?) | - | ? | source | baseline | yes |
 | flyscan_trajectories | Trajectories (?) | - | ? | source | - | yes |
 | gslit_stage | Slit | x=`usxLAX:m58:c0:m7`; y=`usxLAX:m58:c0:m6` | ? | source | - | yes |
 | guard_slit | Slit | x=`usxLAX:m58:c0:m7`; y=`usxLAX:m58:c0:m6` | ? | source | baseline | yes |

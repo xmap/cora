@@ -13,15 +13,15 @@ Map each device onto a CORA Family at **Asset granularity**: one row per stage /
 | --- | --- | --- | --- | --- | --- | --- |
 | FrontEndShutter | Shutter | `XF:06BM-PPS{Sh:FE}` | (PPS shutter, no motor axes) | 6-BM-A | source | yes |
 | PhotonShutter | Shutter | `XF:06BM-PPS{Sh:A}` | (PPS shutter) | 6-BM-A | source | yes |
-| CollimatingMirror | Mirror | `XF:06BM-OP{Mir:M1` | yu=`-Ax:YU}Mtr`; ydo=`-Ax:YDO}Mtr`; ydi=`-Ax:YDI}Mtr`; xu=`-Ax:XU}Mtr`; xd=`-Ax:XD}Mtr` | 6-BM-A | optics | yes |
-| Monochromator | Monochromator | `XF:06BMA-OP{Mono:DCM1` | bragg=`-Ax:Bragg}Mtr`; para=`-Ax:Par2}Mtr`; perp=`-Ax:Per2}Mtr`; pitch=`-Ax:P2}Mtr`; roll=`-Ax:R2}Mtr`; x=`-Ax:X}Mtr`; y=`-Ax:Y}Mtr` | 6-BM-A | optics | yes |
-| FocusingMirror | Mirror | `XF:06BMA-OP{Mir:M2` | yu=`-Ax:YU}Mtr`; ydo=`-Ax:YDO}Mtr`; ydi=`-Ax:YDI}Mtr`; xu=`-Ax:XU}Mtr`; xd=`-Ax:XD}Mtr`; bend=`-Ax:Bend}Mtr` | 6-BM-A | optics | yes |
-| ConditioningSlit | Slit | `XF:06BMA-OP{Slt:01` | top/bottom/inboard/outboard blades | 6-BM-A | optics | yes |
-| SampleSlit | Slit | `XF:06BM-BI{Slt:02` | top/bottom/inboard/outboard blades | 6-BM-B | optics | yes |
-| Filter | Filter | `XF:06BMA-BI{Fltr:01` | y1=`-Ax:Y1}Mtr`; y2=`-Ax:Y2}Mtr` | 6-BM-A | optics | yes |
-| EnergyAxis | PseudoAxis | (pseudo; no PV) | DCM energy pseudo-positioner, limits 2900-25000 eV | 6-BM-A | optics | yes |
-| DiagnosticScreen | Screen | `XF:06BMA-BI{Diag:02` | y=`-Ax:Y}Mtr` | 6-BM-A | diagnostics | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:06BM-BI{BPM:1` | y=`-Ax:Y}Mtr` | 6-BM-A | diagnostics | yes |
+| CollimatingMirror | Mirror | `XF:06BM-OP{Mir:M1` | yu=`-Ax:YU}Mtr`; ydo=`-Ax:YDO}Mtr`; ydi=`-Ax:YDI}Mtr`; xu=`-Ax:XU}Mtr`; xd=`-Ax:XD}Mtr` | 6-BM-A | source | yes |
+| Monochromator | Monochromator | `XF:06BMA-OP{Mono:DCM1` | bragg=`-Ax:Bragg}Mtr`; para=`-Ax:Par2}Mtr`; perp=`-Ax:Per2}Mtr`; pitch=`-Ax:P2}Mtr`; roll=`-Ax:R2}Mtr`; x=`-Ax:X}Mtr`; y=`-Ax:Y}Mtr` | 6-BM-A | source | yes |
+| FocusingMirror | Mirror | `XF:06BMA-OP{Mir:M2` | yu=`-Ax:YU}Mtr`; ydo=`-Ax:YDO}Mtr`; ydi=`-Ax:YDI}Mtr`; xu=`-Ax:XU}Mtr`; xd=`-Ax:XD}Mtr`; bend=`-Ax:Bend}Mtr` | 6-BM-A | source | yes |
+| ConditioningSlit | Slit | `XF:06BMA-OP{Slt:01` | top/bottom/inboard/outboard blades | 6-BM-A | source | yes |
+| SampleSlit | Slit | `XF:06BM-BI{Slt:02` | top/bottom/inboard/outboard blades | 6-BM-B | source | yes |
+| Filter | Filter | `XF:06BMA-BI{Fltr:01` | y1=`-Ax:Y1}Mtr`; y2=`-Ax:Y2}Mtr` | 6-BM-A | source | yes |
+| EnergyAxis | PseudoAxis | (pseudo; no PV) | DCM energy pseudo-positioner, limits 2900-25000 eV | 6-BM-A | source | yes |
+| DiagnosticScreen | Screen | `XF:06BMA-BI{Diag:02` | y=`-Ax:Y}Mtr` | 6-BM-A | source | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:06BM-BI{BPM:1` | y=`-Ax:Y}Mtr` | 6-BM-A | source | yes |
 | SampleStage | LinearStage | `XF:06BM-ES{MC:09` | x/y/z linked axes | 6-BM-B | sample | yes |
 | SampleWheel | RotaryStage | `XF:06BMA-BI{XAFS-Ax:RotB}Mtr` | (single rotary axis) | 6-BM-B | sample | yes |
 | ReferenceHolder | LinearStage | `XF:06BMA-BI{XAFS-Ax:RefX}Mtr` | (single linear axis) | 6-BM-B | sample | yes |

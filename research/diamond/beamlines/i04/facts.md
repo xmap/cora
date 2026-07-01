@@ -14,11 +14,11 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | Smargon | Goniometer | `BL04I-MO-SGON-01:` | Smargon | sample | yes |
 | GonioPositioner | LinearStage | (XYZStage; gonio xyz) | XYZStage | sample | yes |
 | SampleDeliverySystem | LinearStage | (XYZStage) | XYZStage | sample | yes |
-| DCM | Monochromator | `BL04I-MO-DCM-01:` | DCM (i03 shared) | optics | yes |
-| Transfocator | Transfocator | `BL04I-MO-FSWT-01:` | Transfocator (i04) | optics | yes |
-| Attenuator | Filter | `BL04I-EA-ATTN-01:` | BinaryFilterAttenuator | optics | yes |
-| DiamondFilter | Filter | (DiamondFilter[I04Filters]) | DiamondFilter | optics | yes |
-| ApertureScatterguard | Aperture | aperture `BL04I-MO-MAPT-01:`; scatterguard `BL04I-MO-SCAT-01:` | ApertureScatterguard | optics | yes |
+| DCM | Monochromator | `BL04I-MO-DCM-01:` | DCM (i03 shared) | source | yes |
+| Transfocator | Transfocator | `BL04I-MO-FSWT-01:` | Transfocator (i04) | source | yes |
+| Attenuator | Filter | `BL04I-EA-ATTN-01:` | BinaryFilterAttenuator | source | yes |
+| DiamondFilter | Filter | (DiamondFilter[I04Filters]) | DiamondFilter | source | yes |
+| ApertureScatterguard | Aperture | aperture `BL04I-MO-MAPT-01:`; scatterguard `BL04I-MO-SCAT-01:` | ApertureScatterguard | source | yes |
 | Backlight | Backlight | `BL04I` (bare beamline_prefix) | Backlight | sample | yes |
 | Thawer | TemperatureController (?) | `BL04I-EA-THAW-01` | Thawer | sample | yes |
 | SampleShutter | Shutter | `BL04I-EA-SHTR-01:` | MXZebraShutter | source | yes |
@@ -33,7 +33,7 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | OAV | Camera | `BL04I-DI-OAV-01:` | OAV (on-axis view) | sample | yes |
 | Undulator | InsertionDevice | `SR04I-MO-SERVC-01:` | UndulatorInKeV | source | yes |
 | Synchrotron | GenericProbe (?) | (Synchrotron machine status) | Synchrotron | source | yes |
-| XBPMFeedback | GenericProbe (?) | `BL04I-EA-FDBK-01:` | XBPMFeedback | diagnostics | yes |
+| XBPMFeedback | GenericProbe (?) | `BL04I-EA-FDBK-01:` | XBPMFeedback | source | yes |
 | PinTipDetection | GenericProbe (?) | (vision pin-tip find) | PinTipDetection | sample | yes |
 
 Device-level prefixes read verbatim from source: `smargon = Smargon("{beamline_prefix}-MO-SGON-01:")`, `dcm = DCM("...-MO-DCM-01:")`, `transfocator = Transfocator("...-MO-FSWT-01:")`, the literal `EigerDetector(prefix="BL04I-EA-EIGER-01:")`, the aperture/scatterguard MAPT/SCAT prefixes, `Zebra("...-EA-ZEBRA-01:")`, `UndulatorInKeV(prefix="{insertion_prefix}-MO-SERVC-01:")`.

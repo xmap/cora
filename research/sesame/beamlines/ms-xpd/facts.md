@@ -17,7 +17,7 @@ Asset granularity: one row per stage / assembly, device-level PV (verbatim from 
 | FrontEndShutter | Shutter | `SHUTTER1:Status`, `SHUTTER2:Status` | common | source | yes |
 | BeamStopper | Shutter (?) | `STOPPER:Status` | common | source | yes |
 | RingCurrent | GenericProbe (?) | `DCCT1:getDcctCurrent` | diagnostics (machine) | source | yes |
-| BeamEnergy | GenericProbe (?) | `DI:getBeamEnergy` | diagnostics | source | yes |
+| BeamEnergy | GenericProbe (?) | `DI:getBeamEnergy` | source | source | yes |
 | PhotonShutterStatus | Shutter (?) | `PSH:getStatus`, `PHST:getStatus` | common | source | yes |
 
 Device-level handles read verbatim from source: the `MC1:ES-DIFF-STP-ROTX1/2/3` + `MC3:ES-DIFF-STP-ROTX2` diffractometer rotation axes, `CAM1:` area-detector control block, `SHUTTER1/2:Status`, `STOPPER:Status`, `DCCT1:getDcctCurrent`, `DI:getBeamEnergy`.

@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/chx/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/chx-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection. CHX introduces **no new catalog family**: every device reuses an existing Family, including the ones recently graduated from earlier reverse-engineered deployments (`Camera` for the Eiger detectors, `FluxMonitor` for the flux counter, `TemperatureController` for the thermal stage, `EnergyDispersiveSpectrometer` for the occasional fluorescence detector, and the graduated `Transfocator` Family (a CRL focusing optic, also bound at 4-ID, 8-ID, 9-ID, i22) for the compound-refractive-lens optic). One device binds a loose family shared across deployments and held for gate-review: the `BeamPositionMonitor` (4-ID, 8-ID, 9-ID), recorded in the promotion-review register (see [Model](model.md#deliberately-not-here-yet)).
+Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/chx-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection. CHX introduces **no new catalog family**: every device reuses an existing Family, including the ones recently graduated from earlier reverse-engineered deployments (`Camera` for the Eiger detectors, `FluxMonitor` for the flux counter, `TemperatureController` for the thermal stage, `EnergyDispersiveSpectrometer` for the occasional fluorescence detector, and the graduated `Transfocator` Family (a CRL focusing optic, also bound at 4-ID, 8-ID, 9-ID, i22) for the compound-refractive-lens optic). The `BeamPositionMonitor` (4-ID, 8-ID, 9-ID) is a graduated catalog Family, presenting the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux (see [Model](model.md#deliberately-not-here-yet)).
 
 ## The Asset tree
 
@@ -22,7 +22,7 @@ Root Asset `CHX` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `PinkBeamSlit` | Slit | `XF:11IDA-OP{Slt:PB}` | pink-beam-defining slit |
 | `MonoBeamSlit` | Slit | `XF:11IDA-OP{Slt:MB}` | coherence-matched mono-beam slit |
 | `EnergyAxis` | PseudoAxis | (computed) | master energy (DCM energy axis) |
-| `BeamPositionMonitor` | BeamPositionMonitor (loose) | `XF:11IDA-BI{Bpm:1}` | beam-position monitor and electrometer |
+| `BeamPositionMonitor` | BeamPositionMonitor | `XF:11IDA-BI{Bpm:1}` | beam-position monitor and electrometer |
 | `BeamDefiningSlit` | Slit | `XF:11IDB-OP{Slt:BDS}` | endstation coherence-defining slit |
 | `GuardSlit` | Slit | `XF:11IDB-OP{Slt:Guard}` | guard slit (parasitic-scatter clean-up) |
 | `GrazingIncidenceMirror` | Mirror | `XF:11IDB-OP{Mir:GI}` | grazing-incidence mirror (GISAXS) |
@@ -39,7 +39,7 @@ Root Asset `CHX` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `Zebra` | TimingController | `XF:11IDB-ES{Zebra}` | fast-shutter / frame trigger box |
 | `EndstationMotionController` | MotionController | (pending) | sample / optics motion controllers |
 
-Every family is in the catalog except the loose `BeamPositionMonitor` (shared and held); CHX coins none. Notably the area detectors reuse `Camera` (the Diamond Eiger-to-Camera precedent), the flux counter reuses `FluxMonitor` (graduated in #353), the thermal stage reuses `TemperatureController` (graduated in #350), the fluorescence detector reuses `EnergyDispersiveSpectrometer` (graduated in #345), and the compound-refractive-lens optic reuses the graduated `Transfocator` Family, so CHX is a clean reuse-and-reinforce deployment.
+Every family is in the catalog, including the graduated `BeamPositionMonitor` (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux); CHX coins none. Notably the area detectors reuse `Camera` (the Diamond Eiger-to-Camera precedent), the flux counter reuses `FluxMonitor` (graduated in #353), the thermal stage reuses `TemperatureController` (graduated in #350), the fluorescence detector reuses `EnergyDispersiveSpectrometer` (graduated in #345), and the compound-refractive-lens optic reuses the graduated `Transfocator` Family, so CHX is a clean reuse-and-reinforce deployment.
 
 ## Pending confirmations
 

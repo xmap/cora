@@ -1,17 +1,22 @@
 # CANDIDATE: hand-read from public profile-collection source, NOT authoritative. PV prefixes verified verbatim. Do not copy into deployments/ unreviewed.
-beamline: {name: SIX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: SIX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: 2-ID-A, facility_code: nsls2, confirm: inferred from XF:02IDA}
 - {name: 2-ID-D, facility_code: nsls2, confirm: RIXS endstation; inferred from XF:02IDD}
-devices:
-- {name: InsertionDevice, family: InsertionDevice, pv: "XF:02ID-ID{EPU:1}", stage: source, new: true, confirm: EPU variable-polarization; InsertionDevice (catalog)}
-- {name: Mirror1, family: Mirror, pv: "XF:02IDA-OP{Mir:1-Ax:", stage: optics, new: true, confirm: mirror 1; Mirror (catalog)}
-- {name: GratingMonochromator, family: GratingMonochromator, pv: "XF:02IDB-OP{Mono:1-Slt:8_U_1", stage: optics, new: true, confirm: "grating mono; GratingMonochromator (catalog, graduated)"}
-- {name: Mirror3, family: Mirror, pv: "XF:02IDC-OP{Mir:3-Ax:", stage: optics, new: true, confirm: mirror 3; Mirror (catalog)}
-- {name: Mirror4, family: Mirror, pv: "XF:02IDC-OP{Mir:4-Ax:", stage: optics, new: true, confirm: mirror 4; Mirror (catalog)}
-- {name: ExitSlit, family: Slit, pv: "XF:02IDC-OP{Slt:1-Ax:", stage: optics, new: true, confirm: exit slit; Slit (catalog)}
-- {name: SpectrometerMirror5, family: SpectrometerArm, pv: "XF:02IDD-ES{Mir:5-Ax:", stage: detection, new: true, confirm: "RIXS arm mirror 5; LOOSE SpectrometerArm (n=1, origin), do not graduate"}
-- {name: SpectrometerMirror6, family: SpectrometerArm, pv: "XF:02IDD-ES{Mir:6-Ax:", stage: detection, new: true, confirm: RIXS arm mirror 6; LOOSE SpectrometerArm}
-- {name: RIXSCam, family: Camera, pv: "XF:02ID1-ES{RIXSCam}", stage: detection, new: true, confirm: RIXS CCD; Camera (catalog)}
-- {name: ScalerCounter, family: GenericProbe, pv: "XF:02ID1-ES:1{Sclr:1}", stage: detection, new: true, confirm: scaler; LOOSE GenericProbe}
-- {name: Electrometers, family: FluxMonitor, pv: "XF:02IDA-BI{EM:1}", stage: detection, new: true, confirm: "EM:1-10 electrometers; FluxMonitor (graduated), confirm"}
+source:
+  stage: source
+  devices:
+  - {name: InsertionDevice, family: InsertionDevice, pv: 'XF:02ID-ID{EPU:1}', stage: source, new: true, confirm: EPU variable-polarization; InsertionDevice (catalog)}
+  - {name: Mirror1, family: Mirror, pv: 'XF:02IDA-OP{Mir:1-Ax:', stage: source, new: true, confirm: mirror 1; Mirror (catalog)}
+  - {name: GratingMonochromator, family: GratingMonochromator, pv: 'XF:02IDB-OP{Mono:1-Slt:8_U_1', stage: source, new: true, confirm: 'grating mono; GratingMonochromator (catalog, graduated)'}
+  - {name: Mirror3, family: Mirror, pv: 'XF:02IDC-OP{Mir:3-Ax:', stage: source, new: true, confirm: mirror 3; Mirror (catalog)}
+  - {name: Mirror4, family: Mirror, pv: 'XF:02IDC-OP{Mir:4-Ax:', stage: source, new: true, confirm: mirror 4; Mirror (catalog)}
+  - {name: ExitSlit, family: Slit, pv: 'XF:02IDC-OP{Slt:1-Ax:', stage: source, new: true, confirm: exit slit; Slit (catalog)}
+detection:
+  stage: detection
+  devices:
+  - {name: SpectrometerMirror5, family: SpectrometerArm, pv: 'XF:02IDD-ES{Mir:5-Ax:', stage: detection, new: true, confirm: 'RIXS arm mirror 5; LOOSE SpectrometerArm (n=1, origin), do not graduate'}
+  - {name: SpectrometerMirror6, family: SpectrometerArm, pv: 'XF:02IDD-ES{Mir:6-Ax:', stage: detection, new: true, confirm: RIXS arm mirror 6; LOOSE SpectrometerArm}
+  - {name: RIXSCam, family: Camera, pv: 'XF:02ID1-ES{RIXSCam}', stage: detection, new: true, confirm: RIXS CCD; Camera (catalog)}
+  - {name: ScalerCounter, family: GenericProbe, pv: 'XF:02ID1-ES:1{Sclr:1}', stage: detection, new: true, confirm: scaler; LOOSE GenericProbe}
+  - {name: Electrometers, family: FluxMonitor, pv: 'XF:02IDA-BI{EM:1}', stage: detection, new: true, confirm: 'EM:1-10 electrometers; FluxMonitor (graduated), confirm'}

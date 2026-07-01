@@ -11,7 +11,7 @@ Asset granularity: one row per stage / assembly, device-level PV prefix, dodal c
 
 | Device | Suggested family | PV prefix | dodal class | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- |
-| PlaneGratingMono | GratingMonochromator | `BL21I-OP-PGM-01:` | PlaneGratingMonochromator | optics | yes |
+| PlaneGratingMono | GratingMonochromator | `BL21I-OP-PGM-01:` | PlaneGratingMonochromator | source | yes |
 | Undulator | InsertionDevice | `SR21I-MO-SERVC-01:` | UndulatorGap + UndulatorPhaseAxes (variable polarization) | source | yes |
 | SampleManipulator | Manipulator | `BL21I-EA-SMPL-01:` | I21SampleManipulatorStage (+ ToolPointMotion uvw) | sample | yes |
 | SampleTemperatureController | TemperatureController | `BL21I-EA-TCTRL-01:` | Lakeshore336 | sample | yes |

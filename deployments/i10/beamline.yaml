@@ -19,8 +19,9 @@
 # fleet, after i06 (PR #378), and it adds two device families that were loose at one
 # beamline (4-ID) to a second sighting: the polarization analyzer (the RASOR PaStage)
 # and the sample-environment magnet (the i10-1 electromagnet and superconducting
-# field-sweep magnet). The polarization analyzer graduates on the rule-of-three
-# (4-ID, i10, ID32, P09; POL-2); the magnet stays held under review (MAG-1).
+# field-sweep magnet). Both have since graduated into the catalog: PolarizationAnalyzer
+# on the rule-of-three (4-ID, i10, ID32, P09; POL-2) and Magnet (MAG-1), so i10's
+# analyzer arm and magnets bind their catalog Families.
 #
 # MODELLING: i10 coins NO new Family and changes nothing in the catalog. The
 # polarization decisions follow the merged i06 precedent: the two APPLE-II undulators
@@ -33,9 +34,9 @@
 # rule-less, POL-1). The RASOR polarization-analysis arm binds the catalog
 # PolarizationAnalyzer (graduated on the rule-of-three across 4-ID, i10, ID32, P09;
 # POL-2). The i10-1 electromagnet and superconducting field-sweep magnet bind the
-# loose Magnet, its second sighting, HELD under review (one family; the fly / sweep
-# capability is a per-Asset affordance, not a split; MAG-1). Everything else reuses
-# an existing catalog Family: the soft X-ray
+# catalog Magnet Family (graduated; one family, the fly / sweep capability is a
+# per-Asset affordance, not a split; MAG-1). Everything else reuses an existing
+# catalog Family: the soft X-ray
 # plane-grating monochromator binds GratingMonochromator; the RASOR sample circles bind
 # Goniometer with a reciprocal-space PseudoAxis; the collimating / switching / focusing
 # mirrors bind Mirror; the slits bind Slit; the pinhole binds Aperture; the sample and
@@ -264,24 +265,24 @@ magnet-endstation:
   enclosure: i10-1
   intro: "The i10-1 / I10J endstation: X-ray magnetic dichroism with the sample in an applied magnetic field, at low temperature."
   note: >
-    The electromagnet and the superconducting field-sweep magnet both bind the loose
-    Magnet Family (the 4-ID sighting plus these is its second; one family, the fly /
-    sweep capability is a per-Asset affordance, not a split; HELD under review, MAG-1).
+    The electromagnet and the superconducting field-sweep magnet both bind the catalog
+    Magnet Family (graduated; presents Regulator; one family, the fly /
+    sweep capability is a per-Asset affordance, not a split; MAG-1).
     The magnet sample stages bind LinearStage, the Lakeshore binds TemperatureController,
     and the counting chains (TEY / FY / diode / monitor) bind FluxMonitor (DET-1).
   devices:
     - name: Electromagnet
-      family: Magnet                      # loose Family, second sighting (4-ID + i10); HELD under review (MAG-1)
+      family: Magnet                      # catalog Family (graduated; presents Regulator, MAG-1)
       pv: "BL10J-EA-MAGC-01:"
       new: true
       confirm: true
-      note: "the i10-1 electromagnet (set-and-read field); binds the loose Magnet, second sighting after 4-ID, held under review (MAG-1)"
+      note: "the i10-1 electromagnet (set-and-read field); binds the catalog Magnet Family (graduated; a consumer after 4-ID, MAG-1)"
     - name: HighFieldMagnet
-      family: Magnet                      # same loose Family; fly / sweep is a per-Asset affordance, not a split (MAG-1)
+      family: Magnet                      # same catalog Family; fly / sweep is a per-Asset affordance, not a split (MAG-1)
       pv: "BL10J-EA-SMC-01:"
       new: true
       confirm: true
-      note: "the i10-1 superconducting high-field magnet (Flyable field-sweep); the same Magnet Family as the electromagnet, the sweep capability is a per-Asset bound-Model affordance (MAG-1)"
+      note: "the i10-1 superconducting high-field magnet (Flyable field-sweep); the same catalog Magnet Family as the electromagnet, the sweep capability is a per-Asset bound-Model affordance (MAG-1)"
     - name: HighFieldMagnetStage
       family: LinearStage
       pv: "BL10J-EA-MAG-01:"

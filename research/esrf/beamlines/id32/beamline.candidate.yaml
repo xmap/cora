@@ -8,6 +8,9 @@
 # RIXS-1, vs ID28 crystal arm = EnergyAnalyzer / ANALYZER-1) is in facts.md + recurrence.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: ID32
   facility: esrf
   tier: Unit
@@ -47,7 +50,7 @@ source:
     new: true
     confirm: 'BLISS ESRF_Undulator; twin APPLE-II HU70a (hu70ag/ap/apo/ano) + HU70c (hu70cg/cp/cpo/cno) + PS35B (ps35bg); period/segment SRC-1; family InsertionDevice (catalog)'
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: Monochromator
@@ -86,7 +89,7 @@ optics:
     new: true
     confirm: 'mono slits msh/msv; family Slit (catalog) (OPT-2)'
 diagnostics:
-  stage: diagnostics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: BeamViewers

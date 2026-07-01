@@ -191,7 +191,7 @@ diffractometer:
       confirm: true
       note: "second LakeShore 336 controller (TEMP-1)"
     - name: BeamPositionMonitor_E
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "8ideBPM:T4U_BPM:"
       new: true
       confirm: true
@@ -287,7 +287,7 @@ xpcs-detectors:
       confirm: true
       note: "flight-tube beam stop"
     - name: TetrAMM_QUAD1
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "8idTetra:QUAD1:"
       new: true
       confirm: true

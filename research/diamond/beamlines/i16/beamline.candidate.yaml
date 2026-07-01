@@ -2,7 +2,7 @@
 # NOT authoritative. DELIBERATELY PARTIAL: dodal carries only undulator + 2 Lakeshores; the six-circle
 # diffractometer + DCM + detectors are absent (DIFF-1), not invented. PVs verified verbatim.
 
-beamline: {name: I16, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: I16, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: I16, facility_code: diamond, confirm: single-beamline enclosure; PV root BL16I (env-resolved)}
 source:

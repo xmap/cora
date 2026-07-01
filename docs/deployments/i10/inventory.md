@@ -4,7 +4,7 @@
 
 This cut models the shared soft X-ray optics spine (the PGM and the twin APPLE-II undulators) and both endstations: the RASOR resonant-scattering endstation and the i10-1 magnet endstation. The simulated devices and the upstream diagnostic screens are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i10/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. i10, the second APPLE-II source in the fleet (after i06), coins **no new Family**: the APPLE-II undulators reuse `InsertionDevice` and the polarization is a `PseudoAxis`, exactly as i06. The RASOR polarization-analysis arm binds the graduated catalog `PolarizationAnalyzer` Family (earned across 4-ID / i10 / ID32 / P09, presenting Positioner, POL-2). The i10-1 magnets bind the loose `Magnet` (MAG-1), a second sighting held under review, not graduated. See [Model](model.md#loose-families-at-a-second-sighting). Control handles are filled from dodal; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. i10, the second APPLE-II source in the fleet (after i06), coins **no new Family**: the APPLE-II undulators reuse `InsertionDevice` and the polarization is a `PseudoAxis`, exactly as i06. The RASOR polarization-analysis arm binds the graduated catalog `PolarizationAnalyzer` Family (earned across 4-ID / i10 / ID32 / P09, presenting Positioner, POL-2). The i10-1 magnets bind the graduated catalog `Magnet` Family (MAG-1): i10-1 was one of the three consumers (4-ID + i10-1 + ID32) whose rule-of-three earned it, and it presents the `Regulator` Role. See [Model](model.md#loose-families-at-a-second-sighting). Control handles are filled from dodal; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -31,8 +31,8 @@ Root Asset `I10` (`tier = Unit`, `facility_code = diamond`); sub-systems nest be
 | `SampleTemperatureController` | `Device` | TemperatureController | i10-rasor | Lakeshore 340 cryostat temperature, `ME01D-EA-TCTRL-01` (TEMP-1) |
 | `FocusingMirror` | `Device` | Mirror | i10-rasor | RASOR-branch focusing mirror, `BL10I-OP-FOCS-01` |
 | `Detector` | `Device` | FluxMonitor | i10-rasor | RASOR point detection: scattered-beam point detector + I0 / fluorescence / drain-current channels, `ME01D-EA-SCLR-01` (DET-1) |
-| `Electromagnet` | `Device` | Magnet (loose) | i10-1 | i10-1 electromagnet (set-and-read field), `BL10J-EA-MAGC-01`; second sighting, held (MAG-1) |
-| `HighFieldMagnet` | `Device` | Magnet (loose) | i10-1 | superconducting field-sweep magnet, `BL10J-EA-SMC-01`; same Family, sweep is an affordance (MAG-1) |
+| `Electromagnet` | `Device` | Magnet | i10-1 | i10-1 electromagnet (set-and-read field), `BL10J-EA-MAGC-01`; graduated Family, a consumer of the 4-ID + i10-1 + ID32 rule-of-three (MAG-1) |
+| `HighFieldMagnet` | `Device` | Magnet | i10-1 | superconducting field-sweep magnet, `BL10J-EA-SMC-01`; same Family, sweep is an affordance (MAG-1) |
 | `HighFieldMagnetStage` | `Device` | LinearStage | i10-1 | high-field-magnet sample stage, `BL10J-EA-MAG-01` |
 | `ElectromagnetStage` | `Device` | LinearStage | i10-1 | electromagnet cryostat sample stage, `BL10J-MO-CRYO-01` (MAG-1) |
 | `MagnetTemperatureController` | `Device` | TemperatureController | i10-1 | Lakeshore 336 sample temperature, `BL10J-EA-TCTRL-41` (TEMP-1) |
@@ -40,7 +40,7 @@ Root Asset `I10` (`tier = Unit`, `facility_code = diamond`); sub-systems nest be
 | `MagnetFocusingMirror` | `Device` | Mirror | i10-1 | i10-1-branch focusing mirror, `BL10J-OP-FOCA-01` |
 | `MagnetDetector` | `Device` | FluxMonitor | i10-1 | i10-1 point detection: TEY / FY / diode / monitor channels, `BL10J-EA-SCLR-01..02` (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `GratingMonochromator`, `Mirror`, `Slit`, `PseudoAxis`, `Goniometer`, `Aperture`, `LinearStage`, `TemperatureController`, `FluxMonitor`, `PolarizationAnalyzer` (graduated across 4-ID / i10 / ID32 / P09, POL-2). Loose families reused from siblings: `StorageRing` (supply), `Magnet` (4-ID; second sighting, held MAG-1). No new family is coined here.
+Families reused from the catalog: `InsertionDevice`, `GratingMonochromator`, `Mirror`, `Slit`, `PseudoAxis`, `Goniometer`, `Aperture`, `LinearStage`, `TemperatureController`, `FluxMonitor`, `PolarizationAnalyzer` (graduated across 4-ID / i10 / ID32 / P09, POL-2), `Magnet` (graduated across 4-ID + i10-1 + ID32; presents `Regulator`, MAG-1). Loose families reused from siblings: `StorageRing` (supply). No new family is coined here; both `PolarizationAnalyzer` and `Magnet` have since graduated (i10 and i10-1 were among their consumers).
 
 ## Pending confirmations
 
@@ -60,5 +60,5 @@ Families reused from the catalog: `InsertionDevice`, `GratingMonochromator`, `Mi
 | Sample-stage and pinhole Families | `SampleStage`, `Pinhole` | `unknown-pending-confirmation` | (STAGE-1) |
 | Lakeshore cooling / heating ranges | `SampleTemperatureController`, `MagnetTemperatureController` | `unknown-pending-confirmation` | (TEMP-1) |
 | Point-detector vs Sensor Family; channel map | `Detector`, `MagnetDetector` | `unknown-pending-confirmation` | (DET-1) |
-| Magnet Family at n=2; fields, sweep, cryostat | `Electromagnet`, `HighFieldMagnet`, `ElectromagnetStage` | `unknown-pending-confirmation` | (MAG-1) |
+| Magnet fields, sweep, cryostat (Family graduated) | `Electromagnet`, `HighFieldMagnet`, `ElectromagnetStage` | `unknown-pending-confirmation` | (MAG-1) |
 | Vacuum extent and cooling supply | `resources` | `unknown-pending-confirmation` | (SUP-1) |

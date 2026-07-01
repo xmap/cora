@@ -41,7 +41,7 @@
 # Xspress3 binds the graduated EnergyDispersiveSpectrometer; the detector
 # translations bind LinearStage; the beamstop binds BeamStop; the TetrAMM
 # electrometers bind FluxMonitor; the diamond-diode beam-position monitor binds the
-# loose BeamPositionMonitor (held under review, DIAG-1); the Zebra binds
+# graduated BeamPositionMonitor Family (DIAG-1); the Zebra binds
 # TimingController.
 #
 # THE ONE REUSE WORTH NAMING: the HPLC delivery pump binds the catalog
@@ -250,8 +250,8 @@ detection:
     The Pilatus area detectors bind Camera; the Xspress3 fluorescence detector binds
     the graduated EnergyDispersiveSpectrometer; the detector translations bind
     LinearStage; the beamstop binds BeamStop; the TetrAMM electrometers bind
-    FluxMonitor; the diamond-diode / Best beam-position monitor binds the loose
-    BeamPositionMonitor (held under review, DIAG-1); the Zebra binds TimingController.
+    FluxMonitor; the diamond-diode / Best beam-position monitor binds the graduated
+    BeamPositionMonitor Family (DIAG-1); the Zebra binds TimingController.
   devices:
     - name: SaxsDetector
       family: Camera
@@ -290,11 +290,11 @@ detection:
       confirm: true
       note: "the endstation TetrAMM electrometers (BPM:1 / BPM:2) and an upstream NSLS-II electrometer reading incident and transmitted flux for normalization; scalar readings, the channel map is DET-1"
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor      # loose Family, held under review (DIAG-1)
+      family: BeamPositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:16IDB-CT{Best}:BPM0:PosX_Mean"
       new: true
       confirm: true
-      note: "the Best beam-position aggregator deriving beam x / y from the TetrAMM quadrant currents; binds the loose BeamPositionMonitor (held under review, DIAG-1); the position-vs-intensity split is DIAG-1"
+      note: "the Best beam-position aggregator deriving beam x / y from the TetrAMM quadrant currents; binds the graduated BeamPositionMonitor Family (DIAG-1); the position-vs-intensity split is DIAG-1"
     - name: Trigger
       family: TimingController
       pv: "XF:16IDC-ES{Zeb:1}:"

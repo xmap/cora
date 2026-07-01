@@ -35,10 +35,10 @@ Root Asset `LIX` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `DetectorStage` | `Device` | LinearStage | lix-endstation | SAXS / WAXS detector translations + distance, `XF:16IDC-ES{Stg:SAXS}` (DET-1) |
 | `Beamstop` | `Device` | BeamStop | lix-endstation | SAXS beamstop (x / y), `XF:16IDC-ES{BS:SAXS}` (DET-1) |
 | `EndstationFluxMonitor` | `Device` | FluxMonitor | lix-endstation | TetrAMM electrometers, `XF:16IDC-BI{BPM:1-2}` (DET-1) |
-| `BeamPositionMonitor` | `Device` | BeamPositionMonitor (loose) | lix-endstation | Best aggregator over the TetrAMM quadrants, `XF:16IDB-CT{Best}` (DIAG-1) |
+| `BeamPositionMonitor` | `Device` | BeamPositionMonitor | lix-endstation | Best aggregator over the TetrAMM quadrants, `XF:16IDB-CT{Best}`; graduated catalog Family presenting `Sensor`, position-measuring (DIAG-1) |
 | `Trigger` | `Device` | TimingController | lix-endstation | Zebra trigger / position capture, `XF:16IDC-ES{Zeb:1}` (TRIG-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `PseudoAxis`, `Mirror`, `Slit`, `Shutter`, `Transfocator`, `Manipulator`, `Goniometer`, `Camera`, `EnergyDispersiveSpectrometer`, `LinearStage`, `BeamStop`, `FluxMonitor`, `TimingController`, `FlowController` (the HPLC pump, graduated; presents Regulator). Loose families reused from siblings: `StorageRing` (supply), `BeamPositionMonitor` (held under review, DIAG-1). No new family is coined here.
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `PseudoAxis`, `Mirror`, `Slit`, `Shutter`, `Transfocator`, `Manipulator`, `Goniometer`, `Camera`, `EnergyDispersiveSpectrometer`, `LinearStage`, `BeamStop`, `FluxMonitor`, `TimingController`, `FlowController` (the HPLC pump, graduated; presents Regulator), `BeamPositionMonitor` (graduated catalog Family presenting `Sensor`, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux, DIAG-1). Loose families reused from siblings: `StorageRing` (supply). No new family is coined here.
 
 ## Pending confirmations
 

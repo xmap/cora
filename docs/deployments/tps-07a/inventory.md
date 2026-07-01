@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/tps-07a/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md). Every device is on the EPICS floor (the `07a:` / `07a-ES:` namespace) reached through the EPICS Device Handler Server; the EPICS PV *namespace* is verified against the [`light911/NSRRC_TPS07A`](https://github.com/light911/NSRRC_TPS07A) control tree, but per-device PV *record* strings are not, so they are carried pending (a deliberate contrast with [MX3](../mx3/inventory.md), whose literal PVs were file-verified against a device library). No vendor Model is bound. TPS 07A introduces **no new catalog family**: every device reuses an existing Family, notably the graduated `Goniometer` (the i03 / MX3 MX precedent). Two devices bind loose families, both allowlisted: `StorageRing` (the ring-current monitor) and `BeamPositionMonitor`; see [Model](model.md#deliberately-not-here-yet).
+Devices bind to catalog [Families](../../catalog/families.md). Every device is on the EPICS floor (the `07a:` / `07a-ES:` namespace) reached through the EPICS Device Handler Server; the EPICS PV *namespace* is verified against the [`light911/NSRRC_TPS07A`](https://github.com/light911/NSRRC_TPS07A) control tree, but per-device PV *record* strings are not, so they are carried pending (a deliberate contrast with [MX3](../mx3/inventory.md), whose literal PVs were file-verified against a device library). No vendor Model is bound. TPS 07A introduces **no new catalog family**: every device reuses an existing Family, notably the graduated `Goniometer` (the i03 / MX3 MX precedent) and the graduated `BeamPositionMonitor` (a catalog Family presenting `Sensor`, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux). One device binds a loose family, allowlisted: `StorageRing` (the ring-current monitor); see [Model](model.md#deliberately-not-here-yet).
 
 ## The Asset tree
 
@@ -24,12 +24,12 @@ Root Asset `TPS 07A` (`tier = Unit`, `facility_code = nsrrc`); sub-systems nest 
 | `BeamStop` | BeamStop | EPICS (PV pending) | beamstop at the sample |
 | `EigerDetector` | Camera | DCSS workflow over EPICS; ZMQ egress | DECTRIS EIGER2 X 16M (~130 Hz) |
 | `DetectorStage` | LinearStage | EPICS (PV pending) | detector translation (139 mm min-distance interlock) |
-| `BeamPositionMonitor` | BeamPositionMonitor (loose) | EPICS (PV pending) | beam-position diagnostic |
+| `BeamPositionMonitor` | BeamPositionMonitor | EPICS (PV pending) | beam-position diagnostic |
 | `OAVCamera` | Camera | EPICS (PV pending) | on-axis viewing camera |
 | `FastShutter` | Shutter | EPICS (PV pending) | per-oscillation exposure shutter |
 | `EndstationMotionController` | MotionController | EPICS via DHS | stage motion controllers |
 
-Every family is in the catalog except the loose `StorageRing` and `BeamPositionMonitor` (both shared and allowlisted); TPS 07A coins none. Notably the MD3 goniometer reuses the graduated `Goniometer` family (the i03 Smargon / MX3 MD3 precedent), the cryostream reuses `TemperatureController` (graduated in #350), and the detectors reuse `Camera`, so TPS 07A is a clean reuse deployment whose novelty is the Site and the DCSS-over-EPICS seam, not its device vocabulary. The ISARA sample robot is not a device here: it is a deferred autonomous-exchange Procedure (ROBOT-1).
+Every family is in the catalog except the loose `StorageRing` (shared and allowlisted); the `BeamPositionMonitor` binds the graduated catalog Family (presents `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux), and TPS 07A coins none. Notably the MD3 goniometer reuses the graduated `Goniometer` family (the i03 Smargon / MX3 MD3 precedent), the cryostream reuses `TemperatureController` (graduated in #350), and the detectors reuse `Camera`, so TPS 07A is a clean reuse deployment whose novelty is the Site and the DCSS-over-EPICS seam, not its device vocabulary. The ISARA sample robot is not a device here: it is a deferred autonomous-exchange Procedure (ROBOT-1).
 
 ## Pending confirmations
 

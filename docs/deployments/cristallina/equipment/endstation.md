@@ -2,7 +2,7 @@
 
 *The Cristallina endstation: the I0 chamber, the DM1 and DM2 diffractometers, the DilSc dilution-fridge vector magnet, and the Cristallina-MX sample stage. Design-phase, with the `slic`-derived handles recorded.*
 
-The Cristallina experiment hutch is where the focused beam meets the sample and the time-resolved diffraction happens, in a low-temperature, high-magnetic-field environment. It is the most novel sample environment in the PSI set, and every part of it folds into an existing CORA shape: the diffractometers into a graduated Assembly, the magnet into a held loose family, the thermometry into a graduated Family.
+The Cristallina experiment hutch is where the focused beam meets the sample and the time-resolved diffraction happens, in a low-temperature, high-magnetic-field environment. It is the most novel sample environment in the PSI set, and every part of it folds into an existing CORA shape: the diffractometers into a graduated Assembly, the magnet into the graduated `Magnet` Family, the thermometry into a graduated Family.
 
 ## The diffractometers
 
@@ -18,7 +18,7 @@ Each is the graduated [`Diffractometer` Assembly](../../../catalog/assemblies.md
 The defining sample environment, the "DilSc". It is a dilution refrigerator with a 3-axis vector superconducting magnet, and it folds into two existing CORA shapes:
 
 - **Thermometry** (`SARES31-DIL-LS1`): a LakeShore 372 regulating the mixing-chamber temperature through a PID loop, with per-band calibration curves. It binds the **graduated `TemperatureController`** Family (presents the Regulator Role), the [ESRF ID32](../../id32/equipment/sample.md) VTI precedent.
-- **The magnet** (`SARES31-MAG-IPS1`): an Oxford Mercury iPS power supply driving three field axes (X, Y to ±0.6 T; Z to ±5.2 T; ramp capped at 0.5 T/min). It binds the **loose `Magnet`** family, which is held at the rule-of-three. Its three consumers are 4-ID, i10-1, and the ID32 9 T XMCD magnet; Cristallina is the **fourth**. That reinforces the case for graduating `Magnet`, but the graduation stays deferred to its dedicated gated PR rather than being slipped in here (MAG-1). The vector geometry (three independently-ramped axes) is a per-Asset setting, not a Family split, the same way axis counts are for diffractometers.
+- **The magnet** (`SARES31-MAG-IPS1`): an Oxford Mercury iPS power supply driving three field axes (X, Y to ±0.6 T; Z to ±5.2 T; ramp capped at 0.5 T/min). It binds the **graduated `Magnet`** Family, whose rule-of-three was earned across 4-ID, i10-1, and the ID32 9 T XMCD magnet; Cristallina is a **further consumer**. The `Magnet` Family presents the `Regulator` Role, the field a settable process variable; only the per-Asset field ranges and control handles stay pending here (MAG-1). The vector geometry (three independently-ramped axes) is a per-Asset setting, not a Family split, the same way axis counts are for diffractometers.
 
 The magnet and its liquid-helium cryogens are a personnel- and quench-safety hazard, gated by a Clearance (see [Governance](../governance.md)). An alternative SECoP / Frappy magnet driver (`dilsc.psi.ch:5000`) and the pulsed-magnet's server-side pulse-tube synchronization service are not in the operational EPICS path modelled here (ENV-1).
 

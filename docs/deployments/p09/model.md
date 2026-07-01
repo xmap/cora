@@ -9,7 +9,7 @@ P09 is a descriptor-and-docs scaffold today, reverse-engineered from P09's publi
 | Beamline descriptor | [`deployments/p09/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p09/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
 | Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface (shared with P01, P04, P06, P11, P03, P10); P09 adds the resonant / magnetic Practices |
 | Upstream source | [P09 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p09) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed here; P09 reuses the catalog `PhaseRetarder` and `PolarizationAnalyzer` Families plus the allowlisted-loose `Magnet` Family and the other catalog Families |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P09 reuses the graduated catalog `PhaseRetarder` / `PolarizationAnalyzer` Families, the graduated catalog `Magnet` Family, and the other catalog Families |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; resonant / magnetic scattering + XMCD reuse the pending `resonant_scattering` / `magnetic_scattering` / `xmcd` slugs (`TECH-1`) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P09 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
@@ -20,7 +20,7 @@ P09 is a seventh beamline at an existing Site, and the richest of the PETRA III 
 
 ## No new families (the 4-ID vocabulary ports cleanly)
 
-P09 coins no new Family. It binds the catalog `PhaseRetarder` Family (P09 was the second consumer, the rule-of-three signal with P22 that earned it into the catalog) and the graduated catalog `PolarizationAnalyzer` Family (earned across 4-ID / i10 / ID32 / P09, presenting Positioner) for its analyzer, and reuses one allowlisted-loose Family from 4-ID (`Magnet`), becoming a further consumer, the rule-of-three signal toward its eventual graduation (a catalog-owner decision, not coined here). The diffractometers bind the catalog `Goniometer` Family (not the composed `Diffractometer` Assembly, the same call as P01 EH2); the optics bind `Monochromator` / `Mirror` / `Transfocator` / `Slit` / `Filter`; the sample environment binds `TemperatureController` / `Hexapod` / `LinearStage`; the detectors bind `Camera` / `EnergyDispersiveSpectrometer`. P09 itself changes nothing in the catalog.
+P09 coins no new Family. It binds the catalog `PhaseRetarder` Family (P09 was the second consumer, the rule-of-three signal with P22 that earned it into the catalog) and the graduated catalog `PolarizationAnalyzer` Family (earned across 4-ID / i10 / ID32 / P09, presenting Positioner) for its analyzer. Its 14 T magnet binds the graduated catalog `Magnet` Family (earned across 4-ID + i10-1 + ID32; presents `Regulator`), a further consumer. The diffractometers bind the catalog `Goniometer` Family (not the composed `Diffractometer` Assembly, the same call as P01 EH2); the optics bind `Monochromator` / `Mirror` / `Transfocator` / `Slit` / `Filter`; the sample environment binds `TemperatureController` / `Hexapod` / `LinearStage`; the detectors bind `Camera` / `EnergyDispersiveSpectrometer`. Nothing in the catalog changes.
 
 ## The control plane
 
@@ -32,7 +32,7 @@ P09 sits on the PETRA III Tango device floor with Sardana as the scan layer, the
 - **The optics detail (`OPT-1`).** The DCM crystal cut, the mirror coatings, and the CRL detail are carried confirm-pending.
 - **The diffractometer structure (`DIFF-1`).** The MONO / DIF / MAG six-circle counts and detector arms are pending; modelled as `Goniometer` Assets, not `Diffractometer` Assemblies.
 - **The motor-bank axis roles (`GROUP-1`).** The MONO / DIF `p09/motor` banks carry no per-axis role; grouped as stage Assets.
-- **The polarization / magnet detail (`POL-1`, `MAG-1`).** The phase-retarder / analyzer geometry and the 14 T magnet field / control are pending; the Families are the allowlisted-loose 4-ID ones.
+- **The polarization / magnet detail (`POL-1`, `MAG-1`).** The phase-retarder / analyzer geometry and the 14 T magnet field / control are pending; the polarization Families are the graduated catalog `PhaseRetarder` / `PolarizationAnalyzer`, and the magnet binds the graduated catalog `Magnet` Family (its per-Asset field / control detail pending).
 - **The detector roster (`DET-1`).** The detector models and the SIS3302 channel count (collapsed from the registry's ROI explosion) are named, not fully bound.
 - **The host mapping (`HOST-1`).** A shared Lambda reports on the bare `petra3` host; a stray `p07/hexapodsmall` row (a P07 device) is excluded from P09.
 - **The handle freshness (`CTRL-1`).** The OnlineXML branch is `debian/jessie`; some handles may lag the live Tango database.

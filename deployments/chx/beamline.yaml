@@ -119,10 +119,10 @@ optics:
       confirm: true
       note: "The DCM energy axis (dcm.en, -Ax:Energy}Mtr), which sets the Bragg angle (dcm.b); modelled as the master energy PseudoAxis. CHX runs mostly fixed-energy; anomalous XPCS sweeps it across an edge. Whether energy is ever scanned as the measurement is ENERGY-1."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:11IDA-BI{Bpm:1-Ax:"
       confirm: true
-      note: "Beam-position monitor bpm1 (XF:11IDA-BI{Bpm:1}); a second monitor bpm2 sits on the endstation branch (XF:11IDB-BI{BPM:2}, note the capitalization) and the AH401B electrometer (elm, XF:11IDA-BI{AH401B}AH401B:) reads diode currents. Binds the loose BeamPositionMonitor family that 4-ID/8-ID/9-ID also use (held; DIAG-1), matching the catalog note that position monitors stay loose. Channel map pending (DIAG-1)."
+      note: "Beam-position monitor bpm1 (XF:11IDA-BI{Bpm:1}); a second monitor bpm2 sits on the endstation branch (XF:11IDB-BI{BPM:2}, note the capitalization) and the AH401B electrometer (elm, XF:11IDA-BI{AH401B}AH401B:) reads diode currents. Binds the graduated BeamPositionMonitor Family (a consumer alongside 4-ID/8-ID/9-ID; DIAG-1), matching the catalog note that position monitors stay loose. Channel map pending (DIAG-1)."
 
 # ===========================================================================
 # SAMPLE STAGE: the grazing-incidence mirror, the sample stack, the environment

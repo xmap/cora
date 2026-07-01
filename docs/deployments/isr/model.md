@@ -27,7 +27,7 @@ ISR coins no new Family and changes nothing in the catalog.
 - **4-ID is an undulator beamline** (read-only gap in source); machine state is observed through the loose `StorageRing`, and the undulator detail is `SRC-1`.
 - **The optics reuse the catalog:** the DCM binds `Monochromator`; the bendable focusing pair and the harmonic-rejection mirror bind `Mirror`; the front-end slit binds `Slit`; the attenuator bank binds `Filter`.
 - **The one bound sample rotation binds `RotaryStage`, not `Goniometer`.** With only `th` + `zeta` bound and no detector arm or reciprocal-space engine, there is no basis for a multi-circle `Goniometer`; it is one `RotaryStage` Asset with the full diffractometer deferred (`DIFF-1`).
-- **The Eiger 1M and the screen cameras bind `Camera`; the motorized BPM stage binds the loose `BeamPositionMonitor`** (held under review, `DIAG-1`). The flux-monitor electrometers are commented out, so no `FluxMonitor` Asset is modelled (`DET-1`).
+- **The Eiger 1M and the screen cameras bind `Camera`; the motorized BPM stage binds the graduated catalog `BeamPositionMonitor`** (presents `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux; the per-Asset channel map stays open, `DIAG-1`). The flux-monitor electrometers are commented out, so no `FluxMonitor` Asset is modelled (`DET-1`).
 
 ## No new Methods
 

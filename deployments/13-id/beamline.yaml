@@ -28,14 +28,15 @@
 # thermal-emission greybody, plus ruby fluorescence / Raman / Brillouin pressure
 # metrology). This composite is a genuinely new device class with no fleet analog.
 #
-# MODELLING: 13-ID coins ONE new LOOSE Family and changes nothing in the catalog.
-#   - The DAC binds the new loose PressureCell Family (user-named via naming-r3,
+# MODELLING: 13-ID introduced the PressureCell Family (now a catalog Family).
+#   - The DAC binds the catalog PressureCell Family (user-named via naming-r3,
 #     2026-06-26; chosen over HighPressureCell / DiamondAnvilCell / AnvilCell because a
 #     bare regime-generic role-noun spans the DAC, the large-volume press, and clamp
 #     cells without forcing a near-duplicate family, the Table / InsertionDevice
-#     device-type-is-a-setting precedent). It is held at n=1 and graduates nothing; the
-#     rule-of-three triggers are APS HPCAT 16-ID, the sibling 13-BM-D large-volume
-#     press in the same source tree, and the deferred 4-ID PACE cell (HP-1, PRESSURE-1).
+#     device-type-is-a-setting precedent). It graduated on the rule-of-three across
+#     APS 13-ID and PETRA III P02 (the P02.2 diamond-anvil-cell environment); further
+#     consumers (HPCAT 16-ID, the 13-BM-D large-volume press, the 4-ID PACE cell) reuse
+#     it like any catalog Family (HP-1, PRESSURE-1).
 #     The cell is ONE Asset presenting the Regulator Role for its membrane pressure
 #     (PACE5000 setpoint + readback); its double-sided laser heating (HEAT-1) and its
 #     in-situ pressure / temperature metrology (a Sensor capability) are capabilities of
@@ -156,7 +157,7 @@ optics:
       note: "the attenuator paddle / filter set protecting the detector and trimming flux (the 2-BM C / Al precedent); foil set is ATTN-1"
 
 # ===========================================================================
-# SAMPLE STAGE: the diamond anvil cell (the new PressureCell family) + the DAC stage
+# SAMPLE STAGE: the diamond anvil cell (the catalog PressureCell family) + the DAC stage
 # ===========================================================================
 
 sample:
@@ -164,7 +165,7 @@ sample:
   enclosure: 13-ID-D
   intro: "The diamond anvil cell (the high-pressure sample environment) and the DAC positioning stage / micro-diffractometer."
   note: >
-    The DAC binds the new loose PressureCell Family (HP-1). It is one Asset presenting
+    The DAC binds the catalog PressureCell Family (HP-1). It is one Asset presenting
     the Regulator Role for its membrane pressure (the PACE5000 setpoint + readback);
     its double-sided laser heating (HEAT-1) and its in-situ pressure / temperature
     metrology are capabilities of the same cell. The DAC positioning stage binds the
@@ -172,11 +173,11 @@ sample:
     Galil-versus-XPS controller are per-Asset settings, SAMPLE-1).
   devices:
     - name: PressureCell
-      family: PressureCell             # NEW loose Family (n=1), the high-pressure sample environment (HP-1)
+      family: PressureCell             # catalog Family, the high-pressure sample environment (HP-1)
       pv: "13IDD_PACE5000:PC1:"
       new: true
       confirm: true
-      note: "the diamond anvil cell: membrane gas pressure set and read on the PACE5000 (PC1:Setpoint / Pressure_RBV / Control / Vent), presenting the Regulator Role; double-sided IPG YLR laser heating (13IDD:Laser1 / Laser2, power on 13IDD:US_LaserPower / DS_LaserPower) is the cell's heating capability (HEAT-1); the in-situ temperature (spectroradiometry, 13IDD:us_las_temp / ds_las_temp) and pressure (ruby / Raman / Brillouin) are its metrology Sensor capability. NEW loose Family, held at n=1, graduates at a rule-of-three (HPCAT 16-ID, the 13-BM-D large-volume press, the 4-ID cell; PRESSURE-1)"
+      note: "the diamond anvil cell: membrane gas pressure set and read on the PACE5000 (PC1:Setpoint / Pressure_RBV / Control / Vent), presenting the Regulator Role; double-sided IPG YLR laser heating (13IDD:Laser1 / Laser2, power on 13IDD:US_LaserPower / DS_LaserPower) is the cell's heating capability (HEAT-1); the in-situ temperature (spectroradiometry, 13IDD:us_las_temp / ds_las_temp) and pressure (ruby / Raman / Brillouin) are its metrology Sensor capability. catalog Family, graduated on the rule-of-three across 13-ID and PETRA III P02 (PRESSURE-1)"
     - name: SampleStage
       family: Goniometer
       pv: {confirm: "the DAC positioning stage / micro-diffractometer (Galil m1-m4 X / Z / Y / Omega, plus the Newport XPS-16 PSO trajectory stage); single Omega and the Galil-vs-XPS controller are settings (SAMPLE-1)"}

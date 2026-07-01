@@ -2,7 +2,7 @@
 # NOT authoritative. VMXi = I02I, beamline_prefix=BL02I. NEAR-STUB: only sample stage in public dodal;
 # plate handling, detector, optics absent (not invented). PV verified verbatim.
 
-beamline: {name: I02-2, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: I02-2, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: I02-2, facility_code: diamond, confirm: VMXi in-situ plate-screening MX (I02I); PV root BL02I (env-resolved)}
 sample:

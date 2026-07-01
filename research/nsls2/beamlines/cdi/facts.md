@@ -11,15 +11,15 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| KBMirrorHorizontal | Mirror | `XF:09IDC-OP:1{Mir:KBh-Ax:` | KB horizontal refocus | 9-ID-C | optics | yes |
-| KBMirrorVertical | Mirror | `XF:09IDC-OP:1{Mir:KBv-Ax:` | KB vertical refocus | 9-ID-C | optics | yes |
-| PhotonMirrorScreens | Screen | `XF:09IDA-OP:1{FS:VPM-Ax:` | fluorescent screens on VPM/HPM/DM2 mirror train | 9-ID-A | diagnostics | yes |
+| KBMirrorHorizontal | Mirror | `XF:09IDC-OP:1{Mir:KBh-Ax:` | KB horizontal refocus | 9-ID-C | source | yes |
+| KBMirrorVertical | Mirror | `XF:09IDC-OP:1{Mir:KBv-Ax:` | KB vertical refocus | 9-ID-C | source | yes |
+| PhotonMirrorScreens | Screen | `XF:09IDA-OP:1{FS:VPM-Ax:` | fluorescent screens on VPM/HPM/DM2 mirror train | 9-ID-A | source | yes |
 | Eiger1 | Camera | `XF:09ID1-ES{Det:Eig1}` | Eiger photon-counting detector | 9-ID-1 | detection | yes |
 | Merlin1 | Camera | `XF:09ID1-ES{Det:Merlin1}` | Merlin photon-counting detector | 9-ID-1 | detection | yes |
 | Electrometer400 | FluxMonitor (?) | `XF:09IDA-BI{i400:1}` | i400 electrometer (optics I0) | 9-ID-A | detection | yes |
 | Electrometer404 | FluxMonitor (?) | `XF:09IDB-BI{i404:1}` | i404 electrometer (endstation) | 9-ID-B | detection | yes |
-| BeamPositionMonitor1 | GenericProbe (?) | `XF:09IDC-BI{BPM:1}` | beam position monitor | 9-ID-C | diagnostics | yes |
-| KBScreens | Screen | `XF:09IDC-BI{FS:KBh-Cam:8}` | KB-mirror fluorescent screens (KBh/KBv) | 9-ID-C | diagnostics | yes |
+| BeamPositionMonitor1 | GenericProbe (?) | `XF:09IDC-BI{BPM:1}` | beam position monitor | 9-ID-C | source | yes |
+| KBScreens | Screen | `XF:09IDC-BI{FS:KBh-Cam:8}` | KB-mirror fluorescent screens (KBh/KBv) | 9-ID-C | source | yes |
 | SampleViewCamera | GenericProbe (?) | `XF:09IDC-BI{SMPL-Cam:10}` | sample viewing camera | 9-ID-C | sample | yes |
 
 Device-level prefixes read verbatim from source: `Mir:KBh/KBv`, the `FS:VPM/HPM/DM2/KBh/KBv` screens, `Det:Eig1`/`Det:Merlin1`, `i400:1`/`i404:1` electrometers.

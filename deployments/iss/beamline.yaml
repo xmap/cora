@@ -145,10 +145,10 @@ optics:
       confirm: true
       note: "The master energy axis: a pseudopositioner mapping photon energy to the HHM Bragg angle (and the coupled undulator gap), realized as the trajectory fly-scan. The energy sweep is the EXAFS measurement, which strengthens but does not coin the deferred energy_scan Capability (ENERGY-1, the BMM question); the technique scope is TECH-1."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:08IDA-BI{BPM:FM}"
       confirm: true
-      note: "Beam-position monitors along the optics (Prosilica cameras XF:08IDA-BI{BPM:FM / CM / 1-BT / 2-BT}) and sample-positioning cameras downstream (XF:08IDB-BI{BPM:SP-n}, XF:08IDB-BI{BPM:ES}). Binds the loose BeamPositionMonitor family that 4-ID / 8-ID / 9-ID also use (held; DIAG-1)."
+      note: "Beam-position monitors along the optics (Prosilica cameras XF:08IDA-BI{BPM:FM / CM / 1-BT / 2-BT}) and sample-positioning cameras downstream (XF:08IDB-BI{BPM:SP-n}, XF:08IDB-BI{BPM:ES}). Binds the graduated BeamPositionMonitor Family (a consumer alongside 4-ID / 8-ID / 9-ID; DIAG-1)."
 
 # ===========================================================================
 # SAMPLE STAGE: the sample stages, the reference foil wheel, the thermal control

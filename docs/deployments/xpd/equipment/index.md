@@ -16,4 +16,4 @@ XPD runs from a high-flux insertion-device source through a first-optics hutch i
 - [Detector](detector.md) (`28-ID-C`): the large flat-panel area detectors, the distance stage that sets the accessible Q, the flux counters, and the exposure shutter.
 - [Controls](controls.md): the software-triggered acquisition gated by the exposure shutter, and the motion controllers.
 
-Each device binds a catalog [Family](../../../catalog/families.md) and a verified EPICS PV (the insertion-device source has no PV in the public config); none binds a vendor Model (part numbers are not in the public config). The one loose family is the `BeamPositionMonitor`, shared with other deployments and held for gate-review.
+Each device binds a catalog [Family](../../../catalog/families.md) and a verified EPICS PV (the insertion-device source has no PV in the public config); none binds a vendor Model (part numbers are not in the public config). The `BeamPositionMonitor` is a graduated catalog Family, shared with other deployments: it presents the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux.

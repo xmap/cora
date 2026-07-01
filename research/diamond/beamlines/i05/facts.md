@@ -11,16 +11,16 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 
 | Device | Suggested family | PV prefix | dodal class | Branch | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| PlaneGratingMono | GratingMonochromator | `BL05I-OP-PGM-01:` | PlaneGratingMonochromator | shared | optics | yes |
-| M1CollimatingMirror | Mirror | `BL05I-OP-COL-01:` | XYZPitchYawRollStage | shared | optics | yes |
-| M3M6SwitchingMirror | Mirror | `BL05I-OP-SWTCH-01:` | XYZPiezoSwitchingMirror | shared | optics | yes |
-| M4M5SwitchingMirror | Mirror | `BL05I-OP-RFM-01:` | XYZSwitchingMirror | main | optics | yes |
+| PlaneGratingMono | GratingMonochromator | `BL05I-OP-PGM-01:` | PlaneGratingMonochromator | shared | source | yes |
+| M1CollimatingMirror | Mirror | `BL05I-OP-COL-01:` | XYZPitchYawRollStage | shared | source | yes |
+| M3M6SwitchingMirror | Mirror | `BL05I-OP-SWTCH-01:` | XYZPiezoSwitchingMirror | shared | source | yes |
+| M4M5SwitchingMirror | Mirror | `BL05I-OP-RFM-01:` | XYZSwitchingMirror | main | source | yes |
 | UndulatorGap | InsertionDevice | `SR05I-MO-SERVC-01:` | UndulatorGap | shared | source | yes |
 | UndulatorPhase | InsertionDevice | `SR05I-MO-SERVC-01:` | UndulatorLockedPhaseAxes (variable polarization) | shared | source | yes |
 | SampleGoniometer | Manipulator | (I05Goniometer; ARPES sample manipulator) | I05Goniometer | main | sample | yes |
 | NanoSampleManipulator | Manipulator | `BL05I-EA-SM-01:` | XYZAzimuthPolarDefocusStage | nano | sample | yes |
 | SampleTemperatureController | TemperatureController | `BL05I-EA-TCTRL-02:` | Lakeshore336 | main | sample | yes |
-| AnalyserSlits | Slit | (EntranceSlitInformationDevice) | EntranceSlitInformationDevice | both | optics | yes |
+| AnalyserSlits | Slit | (EntranceSlitInformationDevice) | EntranceSlitInformationDevice | both | source | yes |
 | ElectronAnalyserMain | ElectronAnalyzer | `BL05I-EA-DET-02:CAM:` | MbsDetector[LensMode, PassEnergy] | main | detection | yes |
 | ElectronAnalyserNano | ElectronAnalyzer | `BL05I-EA-DET-04:CAM:` | MbsDetector[LensMode, PassEnergy] | nano | detection | yes |
 | HutchShutter | Shutter | (HutchShutter) | HutchShutter | both | source | yes |

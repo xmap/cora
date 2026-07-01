@@ -18,4 +18,4 @@ ISS is a single hard-X-ray branch at sector 8: an undulator source, an optics en
 - [Detector](detector.md): the transmission / fluorescence ion chambers, the silicon-drift fluorescence detector, the area detector, and the Johann and von Hamos crystal emission spectrometers.
 - [Controls](controls.md): the trajectory fly-scan, the analog pizza box readout, and the motion controllers.
 
-Each device binds a catalog [Family](../../../catalog/families.md) and a verified EPICS PV; none binds a vendor Model (part numbers are not in the public config). The crystal `EmissionSpectrometer` graduated this PR (its second sighting, after LCLS-MFX); the one loose family is the `BeamPositionMonitor`, held for gate-review.
+Each device binds a catalog [Family](../../../catalog/families.md) and a verified EPICS PV; none binds a vendor Model (part numbers are not in the public config). The crystal `EmissionSpectrometer` graduated this PR (its second sighting, after LCLS-MFX); the beam-position diagnostics bind the graduated catalog `BeamPositionMonitor`, presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux.

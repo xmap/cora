@@ -20,7 +20,7 @@ The quantitative-flux axis is what the imaging-camera pilots never needed. Two i
 | `I0` | `FluxMonitor` | `BL22I-EA-XBPM-02:` | incident-flux ion chamber / XBPM (Tetramm 4-channel current); transmission and dose normalization |
 | `It` | `FluxMonitor` | `BL22I-EA-TTRM-02:` | transmitted-flux ion chamber (Tetramm) |
 
-The flux monitors bind the `FluxMonitor` catalog Family, which presents the existing Sensor Role (the Role docstring names ion chambers explicitly). An adversarial new-kind review deferred minting a Family on the strength of I22 alone; it has since graduated, having reached the rule-of-three across I22, I03, and I15-1 (FLUX-1). It earned its place by what it measures (beam flux, a scalar Reading), the way `EnergyDispersiveSpectrometer` did, and stays distinct from the position-measuring Sensor families still held loose (7-BM's `Photodiode`, 2-BM's `BeamPositionMonitor`).
+The flux monitors bind the `FluxMonitor` catalog Family, which presents the existing Sensor Role (the Role docstring names ion chambers explicitly). An adversarial new-kind review deferred minting a Family on the strength of I22 alone; it has since graduated, having reached the rule-of-three across I22, I03, and I15-1 (FLUX-1). It earned its place by what it measures (beam flux, a scalar Reading), the way `EnergyDispersiveSpectrometer` did, and stays distinct from the graduated catalog `BeamPositionMonitor` Family (which presents the `Sensor` Role, earned across the wide fleet that shares it, and measures beam position rather than flux) and from the position-measuring Sensor families still held loose (7-BM's `Photodiode`).
 
 ## The sample environment
 

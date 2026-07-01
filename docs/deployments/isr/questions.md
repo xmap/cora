@@ -34,7 +34,7 @@ ISR was reverse-engineered from the beamline's own bluesky profile collection ([
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DET-1 | Blocks-go-live | The Eiger 1M model and the write path (a commissioning `testing/` path in source), and the flux monitors (the QuadEM electrometers are defined but commented out; there is no point / scaler detector for diffraction counting). | One `Camera` Asset (Eiger 1M); no `FluxMonitor` Asset modelled until the electrometers are live. | The detector and flux-monitor modelling. |
-| DIAG-1 | Nice-to-have | The diagnostic screen cameras and the motorized beam-position monitor (only its stage motors are bound; the electrometers are commented out), and the position-versus-intensity split (the fleet-wide question). | `Camera` for the screens; a loose `BeamPositionMonitor` for the BPM stage (held under review). | The diagnostic modelling. |
+| DIAG-1 | Nice-to-have | The diagnostic screen cameras and the motorized beam-position monitor (only its stage motors are bound; the electrometers are commented out), and the position-versus-intensity split (the fleet-wide question). | `Camera` for the screens; the graduated catalog `BeamPositionMonitor` for the BPM stage (presents Sensor, distinct from `FluxMonitor` by measuring beam position). | The diagnostic modelling. |
 
 ## Control and safety
 

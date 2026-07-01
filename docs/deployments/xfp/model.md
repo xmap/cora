@@ -28,13 +28,13 @@ XFP is the most structurally distinct deployment in the fleet. Every other beaml
 XFP coins no new Family and changes nothing in the catalog. The whole device tree reuses existing vocabulary; the novelty is in the Method, the Subject, and the seam, not in device classes.
 
 - **17-BM is a bending-magnet, white / pink beam source** (no insertion device, no monochromator in the footprinting path); machine state is observed through the loose `StorageRing`, and the white-versus-mono scope is `SRC-1` / `WHITE-1`.
-- **The dose chain reuses the catalog:** the bendable mirror binds `Mirror`; the slits bind `Slit`; the Al filter wheel binds `Filter` (it sets the dose rate); the timed shutters bind `Shutter`; the delay generator that fires the millisecond Uniblitz fast shutter binds `TimingController` (its opening-time setpoint is the dose time); the QuadEM electrometers bind `FluxMonitor`; the Sydor beam-position monitor binds the loose `BeamPositionMonitor` (held under review, `DIAG-1`); the sample stages bind `LinearStage`.
+- **The dose chain reuses the catalog:** the bendable mirror binds `Mirror`; the slits bind `Slit`; the Al filter wheel binds `Filter` (it sets the dose rate); the timed shutters bind `Shutter`; the delay generator that fires the millisecond Uniblitz fast shutter binds `TimingController` (its opening-time setpoint is the dose time); the QuadEM electrometers bind `FluxMonitor`; the Sydor beam-position monitor binds the graduated catalog `BeamPositionMonitor` (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux; per-Asset channel map open, `DIAG-1`); the sample stages bind `LinearStage`.
 
 ## How a beamline with no detector is modelled
 
 XFP has no Detector-role imaging device, and CORA models that honestly rather than inventing one:
 
-- the detection side holds **flux / dose monitors** (`FluxMonitor`, the loose `BeamPositionMonitor`), which measure the delivered dose, not a sample signal;
+- the detection side holds **flux / dose monitors** (`FluxMonitor`, the graduated catalog `BeamPositionMonitor`), which measure the delivered dose, not a sample signal;
 - the dose-delivery role is expressed by the **Source gating** (Shutter + `TimingController` + `Filter`) plus those flux monitors, not by a detector;
 - the structural readout is the **offline-readout seam**: the run's product is a footprinted sample plus a dose record, and the mass-spec analysis happens downstream, off the beamline (`READOUT-1`).
 

@@ -12,14 +12,14 @@ Asset granularity: one row per stage / assembly, device-level PV (verbatim from 
 | Device | Suggested family | PV (verbatim) | ophyd class | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- |
 | SampleStage | LinearStage | `BL22:IMS:MOTOR1` (px), `BL22:IMS:MOTOR2` (py) | HiTpStage(MotorBundle) of EpicsMotor | sample | yes |
-| ScanMaster | TimingController (?) | `BL22:SCAN:MASTER` | EpicsSignal (CXAS energy-trajectory master) | optics | yes |
+| ScanMaster | TimingController (?) | `BL22:SCAN:MASTER` | EpicsSignal (CXAS energy-trajectory master) | source | yes |
 | FPGABox | TimingController (?) | (FPGABox; trigger_base_rate, trigger_width, dout1_width) | FPGABox / FPGABoxMotors | detection | yes |
 | DXP1 | EnergyDispersiveSpectrometer | `DXP1:DXP` | Dxp (XIA DXP) | detection | yes |
 | DXP2 | EnergyDispersiveSpectrometer | `DXP2:DXP` | Dxp | detection | yes |
 | DXP3 | EnergyDispersiveSpectrometer | `DXP3:DXP` | Dxp | detection | yes |
 | FluorescenceSpectrometer | EnergyDispersiveSpectrometer | (Xspress3) | Xspress3 | detection | yes |
 | ContinuousFlyer | TimingController (?) | (CXASFlyer / CXAS100EFlyer / DXP_100E) | CXASFlyer | detection | yes |
-| RIOAnalogIO | GenericProbe (?) | `BL00:RIO.AI0-3`, `BL00:RIO.AO1-4`, `BL00:RIO.DO00-01` | EpicsSignal (NI RIO crate) | diagnostics | yes (BL00 shared crate) |
+| RIOAnalogIO | GenericProbe (?) | `BL00:RIO.AI0-3`, `BL00:RIO.AO1-4`, `BL00:RIO.DO00-01` | EpicsSignal (NI RIO crate) | source | yes (BL00 shared crate) |
 
 Device-level handles read verbatim from source: `HiTpStage` (`BL22:IMS:MOTOR1/2`), `BL22:SCAN:MASTER` (the continuous-scan master), `DXP1/2/3:DXP` (three XIA DXP spectroscopy channels), the FPGA box (`FPGABox` with trigger-rate/width signals), the `CXASFlyer` / `CXAS100EFlyer` continuous-acquisition flyers. A `BL93:SCAN:MASTER` also appears (a second/shared scan master, confirm).
 

@@ -11,7 +11,7 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 
 | Device | Suggested family | PV prefix | dodal class | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- |
-| DCM | Monochromator | motion `BL07I-MO-DCM-01:`; diagnostic `BL07I-DI-DCM-01:` | DCM (i07-specific, two PV bases) | optics | yes |
+| DCM | Monochromator | motion `BL07I-MO-DCM-01:`; diagnostic `BL07I-DI-DCM-01:` | DCM (i07-specific, two PV bases) | source | yes |
 | Undulator | InsertionDevice | `SR07I-MO-SERVC-01:` | InsertionDevice (i07, with harmonic-order + gap lookup) | source | yes |
 
 Device-level prefixes read verbatim from source: `DCM("{beamline_prefix}-MO-DCM-01:", "{beamline_prefix}-DI-DCM-01:")` (the i07 DCM takes two PV bases, motion + diagnostic), `InsertionDevice("{insertion_prefix}-MO-SERVC-01:", harmonic, ...)` with a gap-calibration lookup table.

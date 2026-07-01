@@ -13,18 +13,18 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | --- | --- | --- | --- | --- | --- | --- |
 | FrontEndShutter | Shutter | `XF:07ID-PPS{Sh:FE}` | (PPS shutter) | shared / 7-ID | source | yes |
 | PhotonShutters | Shutter | `XF:07IDA-PPS{PSh:4}` | photon shutters (PSh:4/7/10) | shared / 7-ID-A | source | yes |
-| Mirror1 | Mirror | `XF:07IDA-OP{Mir:M1` | M1 first mirror | shared / 7-ID-A | optics | yes |
-| GratingMonochromator | GratingMonochromator | `XF:07ID1-OP{Mono:PGM1-Ax:` | PGM plane-grating mono | shared / 7-ID-1 | optics | yes |
-| Mirror3 | Mirror | `XF:07ID1-OP{Mir:M3ABC` | M3 branch mirror (A/B/C) | shared / 7-ID-1 | optics | yes |
-| Mirror4 | Mirror | `XF:07ID2-OP{Mir:M4CD` | M4 branch mirror (C/D) | shared / 7-ID-2 | optics | yes |
-| EndstationSlit11 | Slit | `XF:07ID2-BI{Slt:11-Ax:` | endstation slit | shared / 7-ID-2 | optics | yes |
+| Mirror1 | Mirror | `XF:07IDA-OP{Mir:M1` | M1 first mirror | shared / 7-ID-A | source | yes |
+| GratingMonochromator | GratingMonochromator | `XF:07ID1-OP{Mono:PGM1-Ax:` | PGM plane-grating mono | shared / 7-ID-1 | source | yes |
+| Mirror3 | Mirror | `XF:07ID1-OP{Mir:M3ABC` | M3 branch mirror (A/B/C) | shared / 7-ID-1 | source | yes |
+| Mirror4 | Mirror | `XF:07ID2-OP{Mir:M4CD` | M4 branch mirror (C/D) | shared / 7-ID-2 | source | yes |
+| EndstationSlit11 | Slit | `XF:07ID2-BI{Slt:11-Ax:` | endstation slit | shared / 7-ID-2 | source | yes |
 | RSoXSSampleStage | LinearStage | `XF:07ID1-ES:1{Smpl-Ax:` | RSoXS sample stage | rsoxs / 7-ID-1 | sample | yes |
-| RSoXSScreens | Screen | `XF:07ID1-ES:1{Scr:1}` | RSoXS screens (Scr:1-5) | rsoxs / 7-ID-1 | diagnostics | yes |
+| RSoXSScreens | Screen | `XF:07ID1-ES:1{Scr:1}` | RSoXS screens (Scr:1-5) | rsoxs / 7-ID-1 | source | yes |
 | SESAnalyzer | ElectronAnalyzer | `XF:07ID-ES-SES` | SES hemispherical analyzer (HAXPES) | haxpes | detection | yes |
 | NEXAFSPreamps | GenericProbe (?) | `XF:07ID-ES{SR570:01}` | SR570 drain-current preamps (NEXAFS, 01-05) | nexafs | detection | yes |
 | I400Electrometers | FluxMonitor (?) | `XF:07ID-BI{DM7:I400-1}` | I400 electrometers (DM7, DMR, Slt1) | shared | detection | yes |
-| BeamPositionMonitors | GenericProbe (?) | `XF:07ID-BI{BPM:8}` | BPMs (many: 1/4/6/7/8/13/14/16/20/22) | shared | diagnostics | yes |
-| Diagnostics | LinearStage | `XF:07ID2-BI{Diag:07-Ax:` | diagnostic stages (Diag:07/08) | shared / 7-ID-2 | diagnostics | yes |
+| BeamPositionMonitors | GenericProbe (?) | `XF:07ID-BI{BPM:8}` | BPMs (many: 1/4/6/7/8/13/14/16/20/22) | shared | source | yes |
+| Diagnostics | LinearStage | `XF:07ID2-BI{Diag:07-Ax:` | diagnostic stages (Diag:07/08) | shared / 7-ID-2 | source | yes |
 | BeamlineController | GenericProbe (?) | `XF:07ID1-CT{Bl-Ctrl}` | beamline controller | shared | source | yes |
 | GERMDetector | EnergyDispersiveSpectrometer (?) | `XF:07ID1-ES:1{GE:2}` | germanium detector (energy-dispersive) | nexafs/haxpes | detection | yes |
 

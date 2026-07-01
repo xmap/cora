@@ -26,9 +26,9 @@ Root Asset `XFP` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `HtFlyStage` | `Device` | LinearStage | xfp-endstation | shutterless HTFly stage (velocity = exposure), `XF:17BMA-ES:2{HTFly:1}` (HT-1, DOSE-1) |
 | `DeliveryPump` | `Device` | FlowController | xfp-endstation | sample-delivery syringe pump, `XF:17BMA-ES:1{Pmp:02}`; binds the graduated `FlowController` (presents Regulator), XFP its fourth consumer (FLOW-1) |
 | `FluxMonitor` | `Device` | FluxMonitor | xfp-endstation | QuadEM electrometer, incident flux + time-series = dose, `XF:17BM-BI{EM:1}` (DET-1, DOSE-1) |
-| `BeamPositionMonitor` | `Device` | BeamPositionMonitor (loose) | xfp-endstation | Sydor 4-channel position + sum-flux monitor, `XF:17BM-BI{EM:BPM1}` (DIAG-1) |
+| `BeamPositionMonitor` | `Device` | BeamPositionMonitor | xfp-endstation | Sydor 4-channel position + sum-flux monitor, `XF:17BM-BI{EM:BPM1}` (DIAG-1) |
 
-Families reused from the catalog: `Mirror`, `Slit`, `Filter`, `Shutter`, `TimingController`, `LinearStage`, `FluxMonitor`, and `FlowController` (the delivery pump; graduated on the i22 / 7-BM / LIX / XFP rule-of-three, presents Regulator). Loose families reused from siblings: `StorageRing` (supply), `BeamPositionMonitor` (held under review, DIAG-1). No new family is coined here; the delivery pump reuses the graduated catalog `FlowController`. There is no Detector-role imaging device: the readout is offline (READOUT-1).
+Families reused from the catalog: `Mirror`, `Slit`, `Filter`, `Shutter`, `TimingController`, `LinearStage`, `FluxMonitor`, `BeamPositionMonitor` (the graduated `Sensor`-presenting Family, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux; per-Asset channel map open, DIAG-1), and `FlowController` (the delivery pump; graduated on the i22 / 7-BM / LIX / XFP rule-of-three, presents Regulator). Loose families reused from siblings: `StorageRing` (supply). No new family is coined here; the delivery pump reuses the graduated catalog `FlowController`. There is no Detector-role imaging device: the readout is offline (READOUT-1).
 
 ## Pending confirmations
 

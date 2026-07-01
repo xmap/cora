@@ -101,10 +101,10 @@ optics:
       confirm: true
       note: "The master energy axis set by the double-Laue monochromator. XPD runs at a fixed high energy per experiment; whether energy is ever scanned as the measurement is ENERGY-1."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:28IDA-BI:0{BPM:1-Ax:"
       confirm: true
-      note: "Beam-position monitor (bpm1) in the optics hutch. Binds the loose BeamPositionMonitor family that 4-ID/8-ID/9-ID also use (held; DIAG-1), matching the catalog note that position monitors stay loose."
+      note: "Beam-position monitor (bpm1) in the optics hutch. Binds the graduated BeamPositionMonitor Family (a consumer alongside 4-ID/8-ID/9-ID; DIAG-1), matching the catalog note that position monitors stay loose."
 
 # ===========================================================================
 # SAMPLE STAGE: the diffractometer, sample stages, pinhole, sample environment

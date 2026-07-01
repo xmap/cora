@@ -1,11 +1,11 @@
 # CANDIDATE beamline descriptor: hand-read from SESAME-Synchrotron/XAFSScanTool + xafs-dt8824-daq, NOT
 # authoritative. EPICS P prefix XAFS:. Literal PVs verified verbatim; dynamic-built PVs flagged confirm.
 
-beamline: {name: xafs, facility: sesame, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: xafs, facility: sesame, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: BM08, facility_code: sesame, confirm: "XAFS/XRF spectroscopy, bending magnet; EPICS prefix XAFS:"}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: Monochromator, family: Monochromator, pv: "BLSetup:Crystal", new: true, confirm: "DCM crystal selection (Mono.py); Monochromator (catalog); physical angle motors OPTICS-1"}

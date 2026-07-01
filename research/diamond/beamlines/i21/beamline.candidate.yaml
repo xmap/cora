@@ -2,7 +2,7 @@
 # NOT authoritative. PARTIAL: dodal carries front end + sample env but NOT the RIXS spectrometer arm
 # (SPEC-1), not invented. PVs verified verbatim, zero fabrications.
 
-beamline: {name: I21, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: I21, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: I21, facility_code: diamond, confirm: single-beamline enclosure; PV root BL21I (env-resolved)}
 source:
@@ -11,7 +11,7 @@ source:
   devices:
   - {name: Undulator, family: InsertionDevice, pv: "SR21I-MO-SERVC-01:", new: true, confirm: "EPU gap + phase (variable polarization) + energy lookup; InsertionDevice (catalog)"}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: PlaneGratingMono, family: GratingMonochromator, pv: "BL21I-OP-PGM-01:", new: true, confirm: "PGM; GratingMonochromator (catalog, graduated via csx); Diamond consumer (i05/i09/i21)"}

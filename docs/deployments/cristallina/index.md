@@ -31,7 +31,7 @@ Alvra and Bernina were mined from `eco`. Cristallina is **CORA's first deploymen
 
 Cristallina's quantum-materials endstation carries a **dilution refrigerator with a 3-axis vector superconducting magnet** (the "DilSc": a LakeShore 372 thermometry / heater and an Oxford Mercury iPS vector magnet, to 5.2 Tesla on the z-axis). This is the most novel sample environment in the PSI set. It still coins no new Family:
 
-- the **magnet** binds the **loose `Magnet`** family, which is held at the rule-of-three (its three consumers are [4-ID](../4-id/index.md), [i10-1](../i10/index.md), and [ESRF ID32](../id32/index.md)). Cristallina is the **fourth consumer**, reinforcing the held graduation, but the graduation stays deferred to its dedicated gated PR (MAG-1).
+- the **magnet** binds the **graduated `Magnet`** Family, whose rule-of-three was earned across [4-ID](../4-id/index.md), [i10-1](../i10/index.md), and [ESRF ID32](../id32/index.md). Cristallina is a **further consumer**, binding the catalog Family; only the per-Asset field ranges and control handles stay pending (MAG-1).
 - the **LakeShore 372** binds the **graduated `TemperatureController`** Family (the ID32 VTI precedent).
 
 ### No pump-probe laser in source

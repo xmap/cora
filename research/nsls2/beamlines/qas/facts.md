@@ -13,14 +13,14 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | --- | --- | --- | --- | --- | --- | --- |
 | FrontEndShutter | Shutter | `XF:07BM-PPS{Sh:FE}` | (PPS shutter) | 7-BM | source | yes |
 | PhotonShutter | Shutter | `XF:07BMA-PPS{Sh:A}` | (PPS shutter) | 7-BM-A | source | yes |
-| FluorescenceScreen | Screen | `XF:07BM-BI{FS:1}` | diagnostic screen | 7-BM | diagnostics | yes |
-| Monochromator | Monochromator | `XF:07BMA-BI{Mono:1}` | quick-EXAFS scanning mono | 7-BM-A | optics | yes |
-| CollimatingMirror | Mirror | `XF:07BM-BI{Mir:Col}` | collimating mirror | 7-BM | optics | yes |
-| FocusingMirror | Mirror | `XF:07BMA-OP{Mir:FM` | focusing mirror axes | 7-BM-A | optics | yes |
-| WhiteBeamSlit | Slit | `XF:07BMA-OP{Slt:1` | blade axes | 7-BM-A | optics | yes |
-| EndstationSlit | Slit | `XF:07BMB-OP{Slt:1` | blade axes | 7-BM-B | optics | yes |
-| InclinedBeamPipe | LinearStage | `XF:07BMB-OP{IBP:1-Ax:` | inclined beam-pipe positioning | 7-BM-B | optics | yes |
-| FoilWheel | Filter (?) | `XF:07BMB-OP{FoilWheel:1` | reference foil wheels 1/2/3 | 7-BM-B | optics | yes |
+| FluorescenceScreen | Screen | `XF:07BM-BI{FS:1}` | diagnostic screen | 7-BM | source | yes |
+| Monochromator | Monochromator | `XF:07BMA-BI{Mono:1}` | quick-EXAFS scanning mono | 7-BM-A | source | yes |
+| CollimatingMirror | Mirror | `XF:07BM-BI{Mir:Col}` | collimating mirror | 7-BM | source | yes |
+| FocusingMirror | Mirror | `XF:07BMA-OP{Mir:FM` | focusing mirror axes | 7-BM-A | source | yes |
+| WhiteBeamSlit | Slit | `XF:07BMA-OP{Slt:1` | blade axes | 7-BM-A | source | yes |
+| EndstationSlit | Slit | `XF:07BMB-OP{Slt:1` | blade axes | 7-BM-B | source | yes |
+| InclinedBeamPipe | LinearStage | `XF:07BMB-OP{IBP:1-Ax:` | inclined beam-pipe positioning | 7-BM-B | source | yes |
+| FoilWheel | Filter (?) | `XF:07BMB-OP{FoilWheel:1` | reference foil wheels 1/2/3 | 7-BM-B | source | yes |
 | AssemblyStage1 | LinearStage | `XF:07BMB-OP{Asm:1` | detector/sample assembly stage | 7-BM-B | sample | yes |
 | AssemblyStage2 | LinearStage | `XF:07BMB-ES{Asm:2` | second assembly stage | 7-BM-B | sample | yes |
 | SampleStage | LinearStage | `XF:07BMB-ES{Stg:1` | sample stage | 7-BM-B | sample | yes |
@@ -30,7 +30,7 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | KeithleyAmplifiers | GenericProbe (?) | `XF:07BM:K428:A:` | Keithley K428 current amps (A-G) | 7-BM | detection | yes |
 | FluorescenceSpectrometer | EnergyDispersiveSpectrometer | `XF:07BMB-ES{Xsp:1}` | Xspress3 SDD | 7-BM-B | detection | yes |
 | PilatusDetector | Camera | `XF:07BMB-ES{PIL:3` | Pilatus area detector | 7-BM-B | detection | yes |
-| Diagnostic | GenericProbe (?) | `XF:07BMB-BI{Diag:1}` | endstation diagnostic | 7-BM-B | diagnostics | yes |
+| Diagnostic | GenericProbe (?) | `XF:07BMB-BI{Diag:1}` | endstation diagnostic | 7-BM-B | source | yes |
 
 Device-level prefixes read verbatim from source: `Mono:1`, the `Mir:Col`/`Mir:FM` mirrors, `PBA:1` APB, `K428:A-G` Keithley amps, `Xsp:1`, `FoilWheel:1-3`, the `Linkam:1` + `LS:01` thermal devices, the `MFC` mass-flow controller.
 

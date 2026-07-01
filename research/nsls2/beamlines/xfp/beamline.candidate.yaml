@@ -1,6 +1,6 @@
 # CANDIDATE: hand-read from NSLS2/xfp-profile-collection, NOT authoritative. PV prefixes verified
 # verbatim. Footprinting beamline: NO area detector (offline mass spec readout).
-beamline: {name: XFP, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: XFP, facility: nsls2, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: 17-BM, facility_code: nsls2, confirm: beamline; inferred from XF:17BM}
 - {name: 17-BM-A, facility_code: nsls2, confirm: endstation; inferred from XF:17BMA}
@@ -11,7 +11,7 @@ source:
   - {name: FrontEndShutter, family: Shutter, pv: "XF:17BM-PPS{Sh:FE}", new: true, confirm: front-end PPS shutter; Shutter (catalog)}
   - {name: EPSShutter, family: Shutter, pv: "XF:17BMA-EPS{Sh:1}", new: true, confirm: "EPS shutter (dose timing); Shutter (catalog)"}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; needs confirm.
   devices:
   - {name: Monochromator, family: Monochromator, pv: "XF:17BMA-OP{Mono:1-Ax:", new: true, confirm: "mono (white/pink for dose); Monochromator (catalog)"}

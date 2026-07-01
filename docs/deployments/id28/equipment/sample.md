@@ -16,6 +16,6 @@ The sample stage binds the catalog `LinearStage` Family, the positioning anatomy
 
 ## Why no new family here
 
-The sample side coins no new Family. The positioning stage is an ordinary `LinearStage`, the sample slits are catalog `Slit` Assets, and the three temperature environments are settable thermal regulators (`TemperatureController`), the same shapes the fleet already carries. The genuinely distinct instrument at ID28, the multi-analyzer spectrometer arm, is a detection device on the [Detector](detector.md) side, where it binds the loose `SpectrometerArm` family.
+The sample side coins no new Family. The positioning stage is an ordinary `LinearStage`, the sample slits are catalog `Slit` Assets, and the three temperature environments are settable thermal regulators (`TemperatureController`), the same shapes the fleet already carries. The genuinely distinct instrument at ID28, the multi-analyzer spectrometer arm, is a detection device on the [Detector](detector.md) side, where it binds the catalog `SpectrometerArm` family (graduated).
 
 See [Open questions](../questions.md) for the sample-side facts still to confirm, [Inventory](../inventory.md) for the Asset tree, and [Model](../model.md) for the modelling decisions.

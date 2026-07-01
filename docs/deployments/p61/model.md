@@ -20,7 +20,7 @@ P61 is a seventeenth beamline at an existing Site, the facility's high-energy wh
 
 ## No new families (a thin, honest model)
 
-P61 coins no new Family. The motor bank binds `LinearStage`; the energy-dispersive detector is a pending `EnergyDispersiveSpectrometer` placeholder. Nothing in the catalog changes. The Large Volume Press (P61A), when exposed, would reuse the allowlisted-loose `PressureCell` Family (the P02 / 13-id precedent); it is carried pending (`PRESS-1`). The P61 registry slice exposes little beyond the grouped motor bank, so the source, the press, and the detectors are carried pending rather than invented, the model-what-the-source-supports posture as P11 / P21 / P23.
+P61 coins no new Family. The motor bank binds `LinearStage`; the energy-dispersive detector is a pending `EnergyDispersiveSpectrometer` placeholder. Nothing in the catalog changes. The Large Volume Press (P61A), when exposed, would reuse the catalog `PressureCell` Family (graduated across 13-id and P02); it is carried pending (`PRESS-1`). The P61 registry slice exposes little beyond the grouped motor bank, so the source, the press, and the detectors are carried pending rather than invented, the model-what-the-source-supports posture as P11 / P21 / P23.
 
 ## The control plane
 
@@ -29,7 +29,7 @@ P61 sits on the PETRA III Tango device floor with Sardana as the scan layer, the
 ## Deliberately not here yet
 
 - **The source (`SRC-1`).** P61 is a damping-wiggler beamline (`source: superconducting-wiggler`); the wiggler parameters are not exposed in this registry slice.
-- **The Large Volume Press (`PRESS-1`).** P61A's press is not in the registry slice; would reuse the allowlisted-loose `PressureCell` Family when exposed.
+- **The Large Volume Press (`PRESS-1`).** P61A's press is not in the registry slice; would reuse the catalog `PressureCell` Family when exposed.
 - **The motor-bank axis roles (`GROUP-1`).** The `eh_mot*` bank carries no per-axis role; grouped as one stage.
 - **The detectors (`DET-1`).** The Ge energy-dispersive detector and any area detector are not in the registry slice; carried as a pending placeholder.
 - **The handle freshness (`CTRL-1`).** The OnlineXML branch is `debian/stretch` (unusual for the set); some handles may lag the live Tango database.

@@ -22,7 +22,7 @@ P07's EH2 endstation carries a 17 T high-field magnet for studies under applied 
 
 ## A high-energy materials beamline on familiar vocabulary
 
-P07 is the fleet's high-energy materials-science beamline. Its techniques reuse the `diffraction` and `magnetic_scattering` slugs already carried across the fleet, so none forces a new Method now. The instrument anatomy reuses existing Families: the multi-bounce mono binds `Monochromator`, the four-circle diffractometer `Goniometer`, the 17 T magnet the allowlisted-loose `Magnet`, the Linkam stage `TemperatureController`, the detectors `Camera`. The in-situ sample environment (the Linkam heating / cooling, the magnet) suits operando materials studies but coins no new Family.
+P07 is the fleet's high-energy materials-science beamline. Its techniques reuse the `diffraction` and `magnetic_scattering` slugs already carried across the fleet, so none forces a new Method now. The instrument anatomy reuses existing Families: the multi-bounce mono binds `Monochromator`, the four-circle diffractometer `Goniometer`, the 17 T magnet the graduated catalog `Magnet` Family, the Linkam stage `TemperatureController`, the detectors `Camera`. The in-situ sample environment (the Linkam heating / cooling, the magnet) suits operando materials studies but coins no new Family.
 
 ## Not modelled yet
 

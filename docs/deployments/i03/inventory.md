@@ -24,7 +24,7 @@ Root Asset `I03` (`tier = Unit`, `facility_code = diamond`); sub-systems nest be
 | `ApertureScatterguard` | Aperture | `BL03I-MO-MAPT-01:` / `BL03I-MO-SCAT-01:` | coordinated aperture + scatterguard; Aperture Family |
 | `HutchShutter` | Shutter | `BL03I` (PSS-interlocked) | hutch safety shutter |
 | `SampleShutter` | Shutter | `BL03I-EA-SHTR-01:` | fast sample shutter (Zebra-driven) |
-| `QBPM` | **Diagnostic** | `BL03I-DI-QBPM-01:` | quadrant BPM; presents Sensor; loose, reuses 2-BM's Diagnostic family |
+| `QBPM` | BeamPositionMonitor | `BL03I-DI-QBPM-01:` | quadrant BPM; presents Sensor; catalog Family, distinct from FluxMonitor by measuring beam position |
 | `Flux` | FluxMonitor | `BL03I-MO-FLUX-01:` | flux readout; presents Sensor; catalog Family (graduated) |
 | `IPin` | FluxMonitor | `BL03I-EA-PIN-01:` | ion-chamber pin diode; presents Sensor; catalog Family (graduated) |
 | `XBPMFeedback` | (deferred) | `BL03I-EA-FDBK-01:` | beam-position feedback loop; modelling deferred |
@@ -40,7 +40,7 @@ Root Asset `I03` (`tier = Unit`, `facility_code = diamond`); sub-systems nest be
 | `Zebra` | TimingController | `BL03I-EA-ZEBRA-01:` | FPGA trigger fan-out |
 | `Panda` | TimingController | `BL03I-EA-PANDA-01:` | PandABox timing + HDF capture |
 
-Reused catalog Families (no new Family needed): `InsertionDevice`, `Monochromator`, `Mirror`, `Filter`, `Table`, `BeamStop`, `Aperture`, `Shutter`, `Camera`, `LinearStage`, `TimingController`. **One new catalog Family graduated:** `Goniometer` (the Smargon, the first canonical goniometer). Loose families reused from siblings: `StorageRing` and `Diagnostic` (from 2-BM, the family behind its BeamPositionMonitor device). `TemperatureController` (the cryostream and thawer) was loose here too but has since graduated to a catalog Family (presenting the `Regulator` Role) on the i11 rule-of-three; `FluxMonitor` (the Flux / IPin readouts, reused from I22) likewise graduated, presenting the Sensor Role, on the i22/i03/i15-1 rule-of-three. Only `Backlight` is genuinely new and loose (an illumination affordance no Family carries). The robot and the fluorescence detector present existing Roles (Positioner, Sensor) and are carried with their shape deferred rather than minting a Family, mirroring how 19-BM and 32-ID handle the sample-exchange arm.
+Reused catalog Families (no new Family needed): `InsertionDevice`, `Monochromator`, `Mirror`, `Filter`, `Table`, `BeamStop`, `Aperture`, `Shutter`, `Camera`, `LinearStage`, `TimingController`. **One new catalog Family graduated:** `Goniometer` (the Smargon, the first canonical goniometer). Loose families reused from siblings: `StorageRing` (from 2-BM). `TemperatureController` (the cryostream and thawer) was loose here too but has since graduated to a catalog Family (presenting the `Regulator` Role) on the i11 rule-of-three; `FluxMonitor` (the Flux / IPin readouts, reused from I22) likewise graduated, presenting the Sensor Role, on the i22/i03/i15-1 rule-of-three; the `QBPM` binds the graduated `BeamPositionMonitor` catalog Family (presents Sensor, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux). Only `Backlight` is genuinely new and loose (an illumination affordance no Family carries). The robot and the fluorescence detector present existing Roles (Positioner, Sensor) and are carried with their shape deferred rather than minting a Family, mirroring how 19-BM and 32-ID handle the sample-exchange arm.
 
 ## Pending confirmations
 
@@ -53,7 +53,7 @@ Every value below is reverse-engineered from dodal or inferred, awaiting the bea
 | Undulator energy range and gap-to-energy curve | `Undulator` | `unknown-pending-confirmation` | (SRC-1) |
 | Optic internal settings (coatings, bimorph, d-spacing, thermal) | `DCM`, `VFM` | `unknown-pending-confirmation` | (OPT-1) |
 | Storage-ring state modelling boundary | `StorageRing` | `unknown-pending-confirmation` | (MACHINE-1) |
-| Diagnostics Sensor modelling and beam-center | `QBPM`, `Flux`, `IPin` | `unknown-pending-confirmation` | (DIAG-1) |
+| Beam-center calibration for the diagnostics (Families settled: `BeamPositionMonitor` and `FluxMonitor`) | `QBPM`, `Flux`, `IPin` | `unknown-pending-confirmation` | (DIAG-1) |
 | XBPM feedback loop: modelled construct vs floor | `XBPMFeedback` | `unknown-pending-confirmation` | (FEEDBACK-1) |
 | Goniometer per-axis decomposition and centre-of-rotation calibration | `Goniometer` | `unknown-pending-confirmation` | (GONIO-1) |
 | Robot Asset, Clearance gate, and Subject custody lifecycle | `Robot` | `unknown-pending-confirmation` | (ROBOT-1) |

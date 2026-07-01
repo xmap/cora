@@ -12,13 +12,13 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
 | ExperimentShutter | Shutter | `XF:28IDC-ES:1{Sh2:Exp-Ax:` | motorized exposure shutter | 28-ID-C | source | yes |
-| DoubleLaueMono | Monochromator | `XF:28IDA-OP:1{Mono:DLM-C:1-Ax:` | crystal 1 + crystal 2 (`DLM-C:2`); high-energy total scattering | 28-ID-A | optics | yes |
-| HighResMono | Monochromator | `XF:28IDC-OP:1{Mono:HRM-Ax:` | HRM mono axes | 28-ID-C | optics | yes |
-| VerticalFocusingMirror | Mirror | `XF:28IDA-OP:1{Mir:VFM-Ax:` | VFM axes | 28-ID-A | optics | yes |
-| MonoBeamSlit1 | Slit | `XF:28IDA-OP:1{Slt:MB1` | blade axes | 28-ID-A | optics | yes |
-| MonoBeamSlit2 | Slit | `XF:28IDC-OP:1{Slt:MB2` | blade axes | 28-ID-C | optics | yes |
-| Filter1 | Filter | `XF:28IDA-OP:2{Fltr:1-Ax:` | filter axes (+ Fltr:6, Fltr) | 28-ID-A | optics | yes |
-| Pinhole | Slit (?) | `XF:28IDC-ES:1{PinHole:XRD-Ax:` | XRD pinhole positioning | 28-ID-C | optics | yes |
+| DoubleLaueMono | Monochromator | `XF:28IDA-OP:1{Mono:DLM-C:1-Ax:` | crystal 1 + crystal 2 (`DLM-C:2`); high-energy total scattering | 28-ID-A | source | yes |
+| HighResMono | Monochromator | `XF:28IDC-OP:1{Mono:HRM-Ax:` | HRM mono axes | 28-ID-C | source | yes |
+| VerticalFocusingMirror | Mirror | `XF:28IDA-OP:1{Mir:VFM-Ax:` | VFM axes | 28-ID-A | source | yes |
+| MonoBeamSlit1 | Slit | `XF:28IDA-OP:1{Slt:MB1` | blade axes | 28-ID-A | source | yes |
+| MonoBeamSlit2 | Slit | `XF:28IDC-OP:1{Slt:MB2` | blade axes | 28-ID-C | source | yes |
+| Filter1 | Filter | `XF:28IDA-OP:2{Fltr:1-Ax:` | filter axes (+ Fltr:6, Fltr) | 28-ID-A | source | yes |
+| Pinhole | Slit (?) | `XF:28IDC-ES:1{PinHole:XRD-Ax:` | XRD pinhole positioning | 28-ID-C | source | yes |
 | SampleStage | LinearStage | `XF:28IDC-ES:1{Stg:Smpl2-Ax:` | sample stage axes | 28-ID-C | sample | yes |
 | SampleArray | LinearStage | `XF:28IDC-ES:1{SampArray-Ax:` | multi-sample array | 28-ID-C | sample | yes |
 | MADStage | LinearStage | `XF:28IDC-ES:1{MAD:DMS-Ax:` | MAD detector-motion stage | 28-ID-C | sample | yes |
@@ -38,7 +38,7 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | QEProSpectrometer | GenericProbe (?) | `XF:28ID2-ES{QEPro:Spec-1}` | Ocean Optics QEPro (optical spectrometer) | 28-ID-2 | detection | yes |
 | ResidualGasAnalyzer | GenericProbe (?) | `XF:28IDC-VA{RGA:2}` | residual gas analyzer | 28-ID-C | sample | yes |
 | SampleLights | GenericProbe (?) | `XF:28IDC-ES:1{Light:Abs-Hal:1}` | halogen/LED illumination (Light:Abs/Flu) | 28-ID-C | sample | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:28IDA-BI:0{BPM:1-Ax:` | beam position monitors | 28-ID-A | diagnostics | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:28IDA-BI:0{BPM:1-Ax:` | beam position monitors | 28-ID-A | source | yes |
 
 Device-level prefixes read verbatim from source: the `Mono:DLM-C:1/C:2` double-Laue + `Mono:HRM`, `Mir:VFM`, the `LS335`/`CS:800`/`LINKAM`/`Env` controllers, `Pump:Syrng-Ultra:1/2`, `Det:PE1`, `IC101`/`IM:02` ion chambers.
 

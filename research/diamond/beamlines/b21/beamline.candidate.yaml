@@ -1,11 +1,11 @@
 # CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (src/dodal/beamlines/b21.py),
 # NOT authoritative. PVs use {beamline_prefix}=BL21B (env-resolved) + literal suffix, verified verbatim.
 
-beamline: {name: B21, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: B21, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: B21, facility_code: diamond, confirm: bio-SAXS solution scattering; PV root BL21B (env-resolved)}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: Mirror, family: Mirror, pv: "BL21B-OP-MR-01:", new: true, confirm: "SimpleMirror; Mirror (catalog)"}

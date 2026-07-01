@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/iss/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against the `NSLS2/iss-profile-collection` `startup/*.py` device classes). No vendor Model is bound: part numbers are not in the profile collection. ISS introduces no new loose family, and it brings the crystal `EmissionSpectrometer` family to its **second** sighting (after LCLS-MFX), which GRADUATED it into the catalog (SPEC-1); the one loose family it reuses is the `BeamPositionMonitor` (held, DIAG-1); see [Model](model.md#deliberately-not-here-yet).
+Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against the `NSLS2/iss-profile-collection` `startup/*.py` device classes). No vendor Model is bound: part numbers are not in the profile collection. ISS introduces no new loose family, and it brings the crystal `EmissionSpectrometer` family to its **second** sighting (after LCLS-MFX), which GRADUATED it into the catalog (SPEC-1); the beam-position diagnostics reuse the graduated catalog `BeamPositionMonitor` (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux, DIAG-1); see [Model](model.md#deliberately-not-here-yet).
 
 ## The Asset tree
 
@@ -26,7 +26,7 @@ Root Asset `ISS` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `FilterBox` | Filter | `XF:08IDA-OP{Fltr:FB}` | five-filter attenuator box |
 | `HutchSlit` | Slit | `XF:08IDB-OP{Slt}` | experiment-hutch beam-defining slit |
 | `EnergyAxis` | PseudoAxis | (computed) | master energy axis (trajectory) |
-| `BeamPositionMonitor` | BeamPositionMonitor (loose) | `XF:08IDA-BI{BPM:FM}` | beam-position diagnostics |
+| `BeamPositionMonitor` | BeamPositionMonitor | `XF:08IDA-BI{BPM:FM}` | beam-position diagnostics |
 | `SampleStage` | LinearStage | `XF:08IDB-OP{Stage:Sample}` | X/Y/Z sample translation |
 | `SampleGoniometer` | Goniometer | `XF:08IDB-OP{Gon:Th}` | sample rotation |
 | `ReferenceFoilWheel` | RotaryStage | `XF:08IDB-OP{FoilWheel1:Rot}` | energy-calibration foil wheel |
@@ -39,7 +39,7 @@ Root Asset `ISS` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `TrajectoryMotionController` | MotionController | `XF:08IDA-OP{MC:06}` | Delta-Tau HHM trajectory controller |
 | `AnalogPizzaBox` | TimingController | `XF:08IDB-CT{PBA:1}:` | synchronized ADC + trigger (fly-scan) |
 
-Every family is in the catalog except the loose `BeamPositionMonitor` (held); the crystal `EmissionSpectrometer` GRADUATED this PR (its second sighting, after LCLS-MFX's von Hamos); ISS coins no new loose family. The two crystal emission spectrometers (`JohannSpectrometer`, `VonHamosSpectrometer`) are the signature ISS instruments and the reuse-and-graduate point.
+Every family is in the catalog, including the graduated `BeamPositionMonitor` (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux); the crystal `EmissionSpectrometer` GRADUATED this PR (its second sighting, after LCLS-MFX's von Hamos); ISS coins no new loose family. The two crystal emission spectrometers (`JohannSpectrometer`, `VonHamosSpectrometer`) are the signature ISS instruments and the reuse-and-graduate point.
 
 ## Pending confirmations
 
@@ -54,5 +54,5 @@ Every value below is read from the profile collection or inferred, awaiting the 
 | Ion-chamber channel map, Xspress3 element count, Pilatus per-spectrometer roster | `IonChambers` / `FluorescenceDetector` / `AreaDetector` | `unknown-pending-confirmation` | (DET-1) |
 | Sample-environment units (Lakeshore, cryostat / furnace) | `SampleTemperature` | `unknown-pending-confirmation` | (TEMP-1) |
 | Ion-chamber fill-gas flow and the in-situ environment | `IonChambers` | `unknown-pending-confirmation` | (ENV-1) |
-| Beam-position channel map and fold-vs-promote hold | `BeamPositionMonitor` | `unknown-pending-confirmation` | (DIAG-1) |
+| Beam-position channel map (Family graduated) | `BeamPositionMonitor` | `unknown-pending-confirmation` | (DIAG-1) |
 | Motion-controller box models / firmware / IP | `TrajectoryMotionController` | `unknown-pending-confirmation` | (DRIVE-1) |

@@ -1,12 +1,12 @@
 # CANDIDATE beamline descriptor: hand-read from NSLS2/qas-profile-collection, NOT authoritative.
 # All PV prefixes verified verbatim against source (startup/*.py), zero fabrications.
 
-beamline: {name: QAS, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: QAS, facility: nsls2, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: 7-BM-A, facility_code: nsls2, confirm: optics hutch; inferred from XF:07BMA}
 - {name: 7-BM-B, facility_code: nsls2, confirm: endstation hutch; inferred from XF:07BMB}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: FrontEndShutter, family: Shutter, pv: "XF:07BM-PPS{Sh:FE}", new: true, confirm: front-end PPS shutter; Shutter (catalog)}

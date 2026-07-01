@@ -25,7 +25,7 @@
 # attenuators), the BeamStop, the FluxMonitor, the EnergyDispersiveSpectrometer (the
 # Mercury fluorescence detector, modelled here rather than deferred as at i03), and the
 # loose Backlight (the on-axis illumination; FMX is the third sighting after i03 / i24,
-# still held, fold-vs-promote open DET-1) and BeamPositionMonitor (DIAG-1). The robotic
+# still held, fold-vs-promote open DET-1) and the graduated BeamPositionMonitor Family (DIAG-1). The robotic
 # sample changer is one Positioner-presenting Asset (NO new SampleChanger Family), the
 # i03 / 19-BM precedent (ROBOT-1). The MX Methods (mx_data_collection, grid_scan,
 # sample_exchange) stay PENDING: FMX is their second consumer (after i03), which
@@ -209,10 +209,10 @@ detector:
       confirm: true
       note: "On-axis motorized beamstop blocking the direct beam ahead of the Eiger. Reuses the BeamStop family."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor      # loose Family (held; DIAG-1)
+      family: BeamPositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:17IDA-BI:FMX{BPM:1}"
       confirm: true
-      note: "Beam-position monitors along the beam (Prosilica BPM cameras XF:17IDA-BI:FMX{BPM:1}, XF:17IDC-BI:FMX{BPM:n}, plus the sector XBPM SR:C17-BI{XBPM:2} for photon local feedback). Binds the loose BeamPositionMonitor family that the other NSLS-II beamlines also use (held; DIAG-1)."
+      note: "Beam-position monitors along the beam (Prosilica BPM cameras XF:17IDA-BI:FMX{BPM:1}, XF:17IDC-BI:FMX{BPM:n}, plus the sector XBPM SR:C17-BI{XBPM:2} for photon local feedback). Binds the graduated BeamPositionMonitor Family (a consumer alongside the other NSLS-II beamlines; DIAG-1)."
     - name: FluxMonitor
       family: FluxMonitor
       pv: "XF:17IDC-BI:FMX{Keith:1}readFloat"

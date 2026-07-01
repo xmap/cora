@@ -9,7 +9,7 @@ ID32 is a descriptor-and-docs scaffold today, reverse-engineered from the ESRF's
 | Beamline descriptor | [`deployments/id32/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id32/beamline.yaml) | the device walk with bound handles; source of the generated [Source](beamline.md) page |
 | Site descriptor | [`deployments/esrf/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/esrf/site.yaml) | the NEW ESRF facility surface; `ID32` its first beamline, with RIXS / XMCD / XES Practices |
 | Extraction provenance | [gitlab.esrf.fr/id32/beamline_configuration](https://gitlab.esrf.fr/id32/beamline_configuration) | the public BLISS Beacon device database (a git mirror of the live config) the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; three loose families reach a rule-of-three and are held (below) |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | SpectrometerArm graduated (earned across SIX + ID32 RIXS/XES + ID28), Magnet graduated (earned across 4-ID + i10-1 + ID32; presents Regulator), and PolarizationAnalyzer graduated (earned across 4-ID + i10 + ID32 + P09; presents Positioner) (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the RIXS / XMCD / XES Methods are pending (TECH-1) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers ID32 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
@@ -24,15 +24,15 @@ ID32 coins no new Family. The twin APPLE-II undulators bind the catalog `Inserti
 
 ## Loose families held at the rule-of-three
 
-ID32 pushes three loose families to a genuine rule-of-three. `PolarizationAnalyzer` has since graduated to a catalog Family (earned across 4-ID / i10 / ID32 / P09, presenting Positioner), so the RIXS polarimeter binds the catalog Family. The two remaining, `SpectrometerArm` and `Magnet`, are **held loose here**, with their graduations deferred to dedicated, gated catalog PRs rather than bundled into this scaffold:
+ID32 pushed three loose families to a genuine rule-of-three. Per the owner decision (2026-06-27) each graduation is a dedicated, gated catalog PR rather than bundled into this scaffold. `SpectrometerArm`, `Magnet`, and `PolarizationAnalyzer` have all since **graduated** (their PRs landed): the RIXS polarimeter binds the catalog `PolarizationAnalyzer` Family (earned across 4-ID / i10 / ID32 / P09, presenting Positioner):
 
-| Loose family | Sightings with ID32 | ID32 binding | Decision |
+| Loose family | Sightings with ID32 | ID32 binding | Status |
 | --- | --- | --- | --- |
-| `SpectrometerArm` | SIX + ID32 RIXS arm + ID32 XES arm | the two dispersive spectrometer arms (the same `SpectrometerArmsController` class instantiated twice) | **hold** (`RIXS-1`): the rule-of-three is met in-source (one controller class, two geometries, a third site), so it is graduation-ready; the graduation is a separate gated PR |
-| `Magnet` | 4-ID + i10-1 + ID32 | the 9 T / 4 T XMCD split-coil magnet | **hold** (`MAG-1`): a third consumer; graduation deferred to a dedicated PR |
+| `SpectrometerArm` | SIX + ID32 RIXS arm + ID32 XES arm + ID28 | the two dispersive spectrometer arms (the same `SpectrometerArmsController` class instantiated twice) | **graduated**: earned across SIX + ID32 RIXS/XES + ID28; presents the `Positioner` Role |
+| `Magnet` | 4-ID + i10-1 + ID32 | the 9 T / 4 T XMCD split-coil magnet | **graduated**: earned across 4-ID + i10-1 + ID32; presents the `Regulator` Role, the field a settable process variable (`MAG-1` now covers only the per-Asset field detail) |
 | `PolarizationAnalyzer` | 4-ID + i10 + ID32 + P09 | the RIXS scattered-beam polarimeter | **graduated** (`POL-2`): catalog Family across 4-ID / i10 / ID32 / P09, presents Positioner |
 
-Holding rather than graduating kept this PR a clean scaffold (no catalog.yaml or Role change) for the two families still loose, and lets each graduation get its own naming-r3 and gate-review; `PolarizationAnalyzer` has since graduated in its own dedicated PR. The `_PROMOTION_REVIEWED` notes record the two remaining as graduation-due. The clearest is `SpectrometerArm`: it presents the `Positioner` Role (an arm that positions a grating and carries a `Camera` at its focus), which is exactly why it never fit the point-Sensor families (`FluxMonitor` / `EnergyDispersiveSpectrometer`) and was coined loose at SIX.
+Keeping each graduation as its own PR keeps the scaffold clean and lets each get its own naming-r3 and gate-review. `SpectrometerArm` was the clearest: it presents the `Positioner` Role (an arm that positions a grating and carries a `Camera` at its focus), which is exactly why it never fit the point-Sensor families (`FluxMonitor` / `EnergyDispersiveSpectrometer`) and was coined loose at SIX.
 
 ## The BLISS / Tango control plane
 
@@ -40,7 +40,7 @@ ID32 is the first non-EPICS, non-Sardana controls house-style in the fleet: BLIS
 
 ## Deliberately not here yet
 
-- **The three graduations (`RIXS-1`, `MAG-1`, `POL-2`).** Held loose; each graduation (catalog.yaml family + Role + naming-r3 + gate-review) is a dedicated follow-on PR. `SpectrometerArm` is the readiest.
+- **The graduations (`RIXS-1`, `MAG-1`, `POL-2`).** All three families ID32 brought to a rule-of-three, `SpectrometerArm`, `Magnet`, and `PolarizationAnalyzer`, have since graduated into the catalog via their dedicated gated PRs.
 - **The exact optics handles (`MONO-1`, `OPT-1`, `OPT-2`, `DIFF-1`, `SAMPLE-1`).** The PGM, mirrors, slits, diffractometer axes, and XMCD sample stage are carried confirm-pending; the decision-critical devices (the arms, the magnet, the LakeShores, the CCDs, the undulator) carry their real BLISS addresses.
 - **The Assembly(Diffractometer) and the reciprocal-space rule (`DIFF-1`, `DIFF-2`).** Named, not built, as the other diffractometer beamlines deferred theirs.
 - **The RIXS / XMCD / XES Methods.** Whether they enter CORA's catalog is an owner decision; the Practices render unlinked, pending, reusing the SIX RIXS, the 4-ID / i06 / i10 XMCD, and the xas_spectroscopy XES slugs (`TECH-1`).

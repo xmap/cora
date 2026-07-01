@@ -9,6 +9,9 @@
 # double-count in recurrence. Source: the repo's Guarneri devices.yml plus ophyd classes.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: 6-ID-B
   facility: aps
   tier: Unit

@@ -2,7 +2,7 @@
 # NOT authoritative. STUB module: only the shared Synchrotron status device, no beamline PVs. The whole
 # device set (DCM, ion chambers, fluorescence, optics, sample env) is absent from public dodal, not invented.
 
-beamline: {name: B18, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: B18, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: B18, facility_code: diamond, confirm: XAS/EXAFS beamline; PV root BL18B (env-resolved); no devices in public dodal}
 source:

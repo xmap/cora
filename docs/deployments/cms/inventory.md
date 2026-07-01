@@ -31,10 +31,10 @@ Root Asset `CMS` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `DetectorStage` | `Device` | LinearStage | cms-endstation | SAXS / WAXS / MAXS detector translations + the telescoping flight path (DET-1) |
 | `Beamstop` | `Device` | BeamStop | cms-endstation | SAXS beamstop (x / y / phi), `XF:11BMB-ES{BS:SAXS}` (DET-1) |
 | `EndstationFluxMonitor` | `Device` | FluxMonitor | cms-endstation | ion chamber + scintillation counter + electrometer, `XF:11BMB-BI{IM:2-4}` (DET-1) |
-| `BeamPositionMonitor` | `Device` | BeamPositionMonitor (loose) | cms-endstation | BIM5 four-quadrant diamond-diode BPM, `XF:11BMB-BI{BPM:1}` (DIAG-1) |
+| `BeamPositionMonitor` | `Device` | BeamPositionMonitor | cms-endstation | BIM5 four-quadrant diamond-diode BPM, `XF:11BMB-BI{BPM:1}` (DIAG-1) |
 | `SupportTable` | `Device` | Table | cms-endstation | endstation modular support table on three jacks, `XF:11BMB-ES{Tbl}` |
 
-Families reused from the catalog: `Monochromator`, `Mirror`, `Slit`, `Filter`, `PseudoAxis`, `Goniometer`, `TiltStage`, `LinearStage`, `TemperatureController`, `Camera`, `BeamStop`, `FluxMonitor`, `Table`. Loose families reused from siblings: `StorageRing` (supply), `BeamPositionMonitor` (already held under review, DIAG-1). No new family is coined and nothing graduates.
+Families reused from the catalog: `Monochromator`, `Mirror`, `Slit`, `Filter`, `PseudoAxis`, `Goniometer`, `TiltStage`, `LinearStage`, `TemperatureController`, `Camera`, `BeamStop`, `FluxMonitor`, `Table`, and the graduated `BeamPositionMonitor` (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux; the per-Asset channel map stays DIAG-1). Loose families reused from siblings: `StorageRing` (supply). No new family is coined and nothing graduates.
 
 ## Pending confirmations
 

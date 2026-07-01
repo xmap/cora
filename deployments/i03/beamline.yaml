@@ -181,11 +181,11 @@ diagnostics:
     since graduated). The XBPM feedback loop is carried with its modelling deferred (FEEDBACK-1).
   devices:
     - name: QBPM
-      family: Diagnostic
+      family: BeamPositionMonitor
       pv: "BL03I-DI-QBPM-01:"
       new: true
       confirm: true
-      note: "quadrant beam-position monitor; presents the Sensor Role; loose family reused from 2-BM (DIAG-1)"
+      note: "quadrant beam-position monitor; presents the Sensor Role; binds the graduated BeamPositionMonitor Family (DIAG-1)"
     - name: Flux
       family: FluxMonitor
       pv: "BL03I-MO-FLUX-01:"

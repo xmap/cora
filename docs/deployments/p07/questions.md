@@ -25,7 +25,7 @@ P07 was reverse-engineered from P07's own public OnlineXML device registry ([git
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DIFF-1 | Blocks-build | The four-circle Eulerian diffractometer geometry and whether it composes a Diffractometer Assembly with a detector arm. | A `Goniometer` Asset (e4cv + two-theta), not the composed Diffractometer Assembly. | The diffractometer modelling. |
-| MAG-1 | Blocks-go-live | The 17 T magnet field, cryogen, and control / ramp interface. | A 17 T superconducting `Magnet` (the allowlisted-loose Family); field and control pending. | The magnet modelling. |
+| MAG-1 | Blocks-go-live | The 17 T magnet field, cryogen, and control / ramp interface. | A 17 T superconducting `Magnet` (the graduated catalog Family, a further consumer); field and control pending. | The per-Asset magnet field / control detail. |
 | SAMPLE-1 | Nice-to-have | The EH2 sample-hexapod geometry and the Linkam stage handles. | A `Hexapod` + a `TemperatureController`; geometry pending. | The sample modelling. |
 
 ## The detectors

@@ -272,33 +272,33 @@ sample-environment:
   enclosure: 4-ID-B
   intro: "The sample-environment apparatus: superconducting magnets, temperature controllers, and the sample positioning tables. 4-ID's magnetic-scattering signature."
   note: >
-    Magnets (bmag/emag 2 T, magnet911, the Kepco-driven gmag) bind a loose Magnet
-    Family (MAG-1, FAM-1); the LakeShore 336/340 controllers bind the catalog
+    Magnets (bmag/emag 2 T, magnet911, the Kepco-driven gmag) bind the catalog Magnet
+    Family (graduated; presents Regulator; MAG-1, FAM-1); the LakeShore 336/340 controllers bind the catalog
     TemperatureController Family (presents Regulator; TEMP-1). Tables bind the catalog Table
     Family. gmag was misinferred as a "4-ID-K" enclosure from the Kepco vendor
     prefix; it is placed at 4-ID-G pending confirmation (TOPO-3).
   devices:
     - name: Magnet_2T_B
-      family: Magnet                 # loose Family (MAG-1)
+      family: Magnet                 # catalog Family (graduated; presents Regulator, MAG-1)
       pv: {confirm: "Magnet2T (bmag); control PV not in the extracted config (MAG-1)"}
       new: true
       confirm: true
       note: "2 T sample magnet at 4-ID-B (MAG-1)"
     - name: Magnet_2T_E
-      family: Magnet                 # loose Family (MAG-1)
+      family: Magnet                 # catalog Family (graduated; presents Regulator, MAG-1)
       pv: { mrot: "4idb:m20", mx: "4idb:m22", my: "4idb:m21", srot: "4idb:m19", sx: "4idb:m18", sy: "4idb:m17" }
       new: true
       confirm: true
       note: "second 2 T sample magnet at 4-ID-B (emag), with magnet rotate/translate and sample rotate/translate axes from the 6idb-bits snapshot; the field-control PV is still pending (MAG-1)"
     - name: Magnet_9T_H
-      family: Magnet                 # loose Family (MAG-1)
+      family: Magnet                 # catalog Family (graduated; presents Regulator, MAG-1)
       pv: "4idhSoft:"
       new: true
       confirm: true
       enclosure: 4-ID-H
       note: "high-field magnet at 4-ID-H (Magnet911); field range unconfirmed (MAG-1)"
     - name: Magnet_Kepco_G
-      family: Magnet                 # loose Family (MAG-1)
+      family: Magnet                 # catalog Family (graduated; presents Regulator, MAG-1)
       pv: "4idkepco:"
       new: true
       confirm: "station is a guess: the 4idkepco prefix is a Kepco power-supply vendor name, not a station (TOPO-3, MAG-1)"
@@ -397,7 +397,7 @@ area-detectors:
       enclosure: 4-ID-A
       note: "post-mono beam-view flag camera (Vimba)"
     - name: VortexFluorescence
-      family: BeamPositionMonitor     # loose Family, held; placeholder classification for a fluorescence point detector pending DET-2 (not the graduated EnergyDispersiveSpectrometer)
+      family: BeamPositionMonitor     # catalog Family (graduated); placeholder classification for a fluorescence point detector pending reclassification (DET-2; not the EnergyDispersiveSpectrometer)
       pv: "4iddMZ0:"
       new: true
       confirm: "station is a guess: the 4iddMZ0 prefix was misread as a 4-ID-D enclosure (TOPO-3, DET-2)"
@@ -408,38 +408,38 @@ beam-position-monitors:
   enclosure: 4-ID-G
   intro: "The beam-position and intensity monitors (XBPMs, Sydor electrometers, TetrAMM, I0 chambers) that diagnose beam position and normalize intensity."
   note: >
-    These bind a loose BeamPositionMonitor Family (already loose at 2-BM, so this
-    is the second deployment that references it; BPM-1, FAM-1). They present the
-    Sensor Role when graduated.
+    These bind the graduated BeamPositionMonitor Family (presenting the Sensor Role),
+    a consumer alongside the wide fleet that earned it; the per-Asset beam-center
+    calibration and channel map stay pending (BPM-1, FAM-1).
   devices:
     - name: XBPM_G
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: { x: "4idgSoft:m48", y: "4idgSoft:m47" }
       new: true
       confirm: true
       note: "4-ID-G X-ray beam-position monitor"
     - name: XBPM_H
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: { x: "4idhSoft:m6", y: "4idhSoft:m5" }
       new: true
       confirm: true
       enclosure: 4-ID-H
       note: "4-ID-H X-ray beam-position monitor"
     - name: Sydor_G
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "4idgSydor:T4U_BPM:"
       new: true
       confirm: true
       note: "4-ID-G Sydor electrometer beam-position monitor"
     - name: Sydor_H
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "4idhSydor:T4U_BPM:"
       new: true
       confirm: true
       enclosure: 4-ID-H
       note: "4-ID-H Sydor electrometer beam-position monitor"
     - name: TetrAMM_B
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1, BPM-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "4idbSoft:TetrAMM:"
       new: true
       confirm: true

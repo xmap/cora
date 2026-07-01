@@ -2,7 +2,7 @@
 # NOT authoritative. PVs are {subsystem pvBaseName} + literal suffix, read verbatim from *.cpp.
 # Facility prefix SR08ID01 (storage ring sector 08, ID beamline 01). Verified verbatim, zero fabrications.
 
-beamline: {name: IMBL, facility: as, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: IMBL, facility: as, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: IMBL, facility_code: as, confirm: "Imaging & Medical Beam Line; multi-hutch (1A/2A/2B/3A/3B) ~140m, HUTCH-1; PV root SR08ID01"}
 source:
@@ -14,7 +14,7 @@ source:
   - {name: FrontEndShutter, family: Shutter, pv: "SR08ID01PSS01:FES", new: true, confirm: "front-end shutter via PSS/EPS; Shutter (catalog), confirm exact handle"}
   - {name: Shutter1A, family: Shutter, pv: "SR08ID01PSS01:", new: true, confirm: "1A photon shutter (shutter1A subsystem); Shutter (catalog), confirm exact handle"}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: Monochromator, family: Monochromator, pv: "SR08ID01DCM01:", new: true, confirm: "bent-Laue DCM; BRAGG1/2, X, Z1/Z2, TILT1/2, BENDER1IB/OB, BENDER2IB/OB (bender axes are components of the one mono Asset); Monochromator (catalog)"}

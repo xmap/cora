@@ -8,6 +8,9 @@
 # facts.md, not invented here.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: ID06
   facility: esrf
   tier: Unit
@@ -52,7 +55,7 @@ source:
     new: true
     confirm: 'BLISS ESRF_Undulator; cpmu18a_gap=CPMU18a_GAP (5.9-201 mm) + u27c_gap=U27c_GAP (10.9-210 mm); period/segment SRC-1; family InsertionDevice (catalog)'
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: Monochromator
@@ -89,7 +92,7 @@ optics:
     confirm: 'MOCO beam-stabilization feedback pmoco + rmoco (Moco class); Controller is a Role not a Family; confirm Family binding (MonoFeedback fleet-wide watch); do NOT coin'
     source_class: Moco
 diagnostics:
-  stage: diagnostics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: IntensityMonitor1

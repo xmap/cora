@@ -1,11 +1,11 @@
 # CANDIDATE beamline descriptor: hand-read from NSLS2/nyx-profile-collection, NOT authoritative.
 # All PV prefixes verified verbatim against source (startup/*.py), zero fabrications.
 
-beamline: {name: NYX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: NYX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: 19-ID-C, facility_code: nsls2, confirm: MX endstation; inferred from XF:19IDC}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: Monochromator, family: Monochromator, pv: "XF:19IDC-OP{Mono:DCM", new: true, confirm: DCM; Monochromator (catalog)}

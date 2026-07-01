@@ -12,8 +12,8 @@ Asset granularity: one row per stage / assembly, device-level PV prefix (verbati
 | Device | Suggested family | PV prefix (verbatim) | Axes / detail | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- |
 | InsertionDevice | InsertionDevice | `SR08ID01:GAP_MONITOR` | superconducting wiggler gap | source | yes |
-| Monochromator | Monochromator | `SR08ID01DCM01:` | bent-Laue DCM: BRAGG1/2, X, Z1/Z2, TILT1/2, BENDER1IB/OB, BENDER2IB/OB; encoders BRAGG1/2:ENCODER, X:ENCODER | optics | yes |
-| Filters | Filter | `SR08ID01FR01:` | filter paddles (PDL0...) | optics | yes |
+| Monochromator | Monochromator | `SR08ID01DCM01:` | bent-Laue DCM: BRAGG1/2, X, Z1/Z2, TILT1/2, BENDER1IB/OB, BENDER2IB/OB; encoders BRAGG1/2:ENCODER, X:ENCODER | source | yes |
+| Filters | Filter | `SR08ID01FR01:` | filter paddles (PDL0...) | source | yes |
 | MRTShutter | Shutter | `SR08ID01MRT01:` | Microbeam Radiation Therapy fast shutter: CYCLEPERIOD, EXPOSUREPERIOD, EXPOSUREINPROGRESS, PSSENABLE | source | yes |
 | FrontEndShutter | Shutter | `SR08ID01PSS01:FES...` (FES_EPS, via PSS) | front-end shutter (PSS-interlocked) | source | yes |
 | Shutter1A | Shutter (?) | (shutter1A subsystem; base via PSS/EPS) | 1A photon shutter | source | yes |

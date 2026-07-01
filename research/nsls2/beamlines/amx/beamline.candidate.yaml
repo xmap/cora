@@ -1,11 +1,11 @@
 # CANDIDATE: hand-read from NSLS2/amx-profile-collection, NOT authoritative. All PV prefixes
 # verified verbatim against source. new:true + confirm per device. Do not copy into deployments/ unreviewed.
-beamline: {name: AMX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: AMX, facility: nsls2, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: 17-ID-A, facility_code: nsls2, confirm: optics hutch; inferred from XF:17IDA}
 - {name: 17-ID-B, facility_code: nsls2, confirm: MX endstation; inferred from XF:17IDB}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; needs confirm.
   devices:
   - {name: Monochromator, family: Monochromator, pv: "XF:17IDA-OP:AMX{Mono:DCM", new: true, confirm: "DCM (+ CorrectDCM feedback); Monochromator (catalog)"}

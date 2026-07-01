@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/cdi/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/cdi-profile-collection` and `NSLS2/cditools`). No vendor Model is bound: part numbers are not in the profile collection. CDI introduces **no new catalog family**: every device reuses an existing Family, including the ones graduated from earlier reverse-engineered deployments (`Camera` for the Eiger2 and Merlin detectors and the diagnostic cameras, `FluxMonitor` for the foil intensity monitor, `Monochromator` for both monochromators, `Mirror` for the pre-mirrors and the KB pair, `Goniometer` for the sample stack). Two loose families are bound: the `BeamPositionMonitor` (shared with 4-ID, 8-ID, ISS, FMX, held for gate-review) and the `StorageRing` supply observation (machine state, never an Asset Family).
+Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/cdi-profile-collection` and `NSLS2/cditools`). No vendor Model is bound: part numbers are not in the profile collection. CDI introduces **no new catalog family**: every device reuses an existing Family, including the ones graduated from earlier reverse-engineered deployments (`Camera` for the Eiger2 and Merlin detectors and the diagnostic cameras, `FluxMonitor` for the foil intensity monitor, `Monochromator` for both monochromators, `Mirror` for the pre-mirrors and the KB pair, `Goniometer` for the sample stack, and the graduated catalog `BeamPositionMonitor` presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux, for the quadrant and diamond monitors). One loose family is bound: the `StorageRing` supply observation (machine state, never an Asset Family).
 
 ## The Asset tree
 
@@ -25,20 +25,20 @@ Root Asset `CDI` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `BranchSlit` | Slit | `XF:09IDB-OP:1{Slt:DM3}` | DM3 branch-defining slit (09IDB zone) |
 | `EnergyAxis` | PseudoAxis | (computed) | master energy (Si(111) Bragg + gap model) |
 | `FluxMonitor` | FluxMonitor | `XF:09IDA-BI{i400:1}` | foil intensity monitor (I0) |
-| `BeamPositionMonitor` | BeamPositionMonitor (loose) | `XF:09IDB-BI{i404:1}` | quadrant beam-position monitor |
+| `BeamPositionMonitor` | BeamPositionMonitor | `XF:09IDB-BI{i404:1}` | quadrant beam-position monitor |
 | `KBMirror` | Mirror | `XF:09IDC-OP:1{Mir:KBv}` | KB nanofocusing mirror pair (VKB + HKB) |
 | `ConditioningSlit` | Slit | `XF:09IDC-OP:1{Slt:BCUU}` | beam-conditioning-unit slits |
 | `InlineCamera` | Camera | `XF:09IDC-BI{BCU-Cam:9}` | BCU inline beam-viewing camera |
 | `Goniometer` | Goniometer | `XF:09IDC-OP:1{Gon:1}` | sample goniometer and stack |
 | `SampleTower1` | LinearStage | `XF:09IDC-ES:1{TDMS:T1}` | endstation positioning tower 1 |
 | `SampleTower2` | LinearStage | `XF:09IDC-ES:1{TDMS:T2}` | endstation positioning tower 2 |
-| `DiamondBeamMonitor` | BeamPositionMonitor (loose) | `XF:09IDC-BI{BPM:1}` | transmissive diamond BPM (TetrAMM) |
+| `DiamondBeamMonitor` | BeamPositionMonitor | `XF:09IDC-BI{BPM:1}` | transmissive diamond BPM (TetrAMM) |
 | `SampleCamera` | Camera | `XF:09IDC-BI{SMPL-Cam:10}` | sample-viewing camera |
 | `EigerDetector` | Camera | `XF:09ID1-ES{Det:Eig1}` | Eiger2, primary coherent-diffraction detector |
 | `MerlinDetector` | Camera | `XF:09ID1-ES{Det:Merlin1}` | Merlin, second coherent-diffraction detector |
 | `EndstationMotionController` | MotionController | (pending) | optics / KB / goniometer / tower motion |
 
-Every family is in the catalog except the loose `BeamPositionMonitor` (shared and held) and the loose `StorageRing` supply; CDI coins none. Notably the area detectors reuse `Camera` (the Eiger-to-Camera precedent, also used at [CHX](../chx/equipment/detector.md) and [HXN](../hxn/equipment/detector.md)), the KB pair reuses `Mirror` (the [FMX](../fmx/equipment/sample.md) / SRX KB precedent), both monochromators reuse `Monochromator` (the CHX Si-DCM-plus-multilayer-DMM precedent), and the foil intensity monitor reuses `FluxMonitor`, so CDI is a clean reuse-and-reinforce deployment.
+Every family is in the catalog, including the graduated `BeamPositionMonitor` (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux), except the loose `StorageRing` supply; CDI coins none. Notably the area detectors reuse `Camera` (the Eiger-to-Camera precedent, also used at [CHX](../chx/equipment/detector.md) and [HXN](../hxn/equipment/detector.md)), the KB pair reuses `Mirror` (the [FMX](../fmx/equipment/sample.md) / SRX KB precedent), both monochromators reuse `Monochromator` (the CHX Si-DCM-plus-multilayer-DMM precedent), and the foil intensity monitor reuses `FluxMonitor`, so CDI is a clean reuse-and-reinforce deployment.
 
 ## Pending confirmations
 

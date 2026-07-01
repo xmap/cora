@@ -11,15 +11,15 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| Monochromator | Monochromator | `XF:16IDA-OP{Mono:DCM` | DCM axes | 16-ID-A | optics | yes |
-| WhiteBeamMirror | Mirror | `XF:16IDA-OP{Mir:WBM` | white-beam mirror | 16-ID-A | optics | yes |
-| KBMirrorHorizontal | Mirror | `XF:16IDA-OP{Mir:KBH` | KB horizontal (+ KB-PS) | 16-ID-A | optics | yes |
-| KBMirrorVertical | Mirror | `XF:16IDA-OP{Mir:KBV` | KB vertical | 16-ID-A | optics | yes |
-| WhiteBeamSlit1 | Slit | `XF:16IDA-OP{Slt:1` | blade axes | 16-ID-A | optics | yes |
-| Attenuator | Filter | `XF:16IDB-OP{Fltr:Attn-Ax:` | attenuator | 16-ID-B | optics | yes |
-| SecondarySourceAperture | Slit | `XF:16IDB-OP{Slt:SSA1` | SSA blades | 16-ID-B | optics | yes |
-| HighResMirror1 | Mirror | `XF:16IDC-OP{Mir:HRM1` | HRM mirror (+ HRM2) | 16-ID-C | optics | yes |
-| GuardSlit1 | Slit | `XF:16IDC-OP{Slt:G1` | guard slit (+ G2, DDA) | 16-ID-C | optics | yes |
+| Monochromator | Monochromator | `XF:16IDA-OP{Mono:DCM` | DCM axes | 16-ID-A | source | yes |
+| WhiteBeamMirror | Mirror | `XF:16IDA-OP{Mir:WBM` | white-beam mirror | 16-ID-A | source | yes |
+| KBMirrorHorizontal | Mirror | `XF:16IDA-OP{Mir:KBH` | KB horizontal (+ KB-PS) | 16-ID-A | source | yes |
+| KBMirrorVertical | Mirror | `XF:16IDA-OP{Mir:KBV` | KB vertical | 16-ID-A | source | yes |
+| WhiteBeamSlit1 | Slit | `XF:16IDA-OP{Slt:1` | blade axes | 16-ID-A | source | yes |
+| Attenuator | Filter | `XF:16IDB-OP{Fltr:Attn-Ax:` | attenuator | 16-ID-B | source | yes |
+| SecondarySourceAperture | Slit | `XF:16IDB-OP{Slt:SSA1` | SSA blades | 16-ID-B | source | yes |
+| HighResMirror1 | Mirror | `XF:16IDC-OP{Mir:HRM1` | HRM mirror (+ HRM2) | 16-ID-C | source | yes |
+| GuardSlit1 | Slit | `XF:16IDC-OP{Slt:G1` | guard slit (+ G2, DDA) | 16-ID-C | source | yes |
 | SAXSDetectorStage | LinearStage | `XF:16IDC-ES{Stg:SAXS` | SAXS detector positioning | 16-ID-C | detection | yes |
 | WAXSDetectorStage1 | LinearStage | `XF:16IDC-ES{Stg:WAXS1` | WAXS detector 1 (+ WAXS2) | 16-ID-C | detection | yes |
 | SAXSBeamStop | BeamStop | `XF:16IDC-ES{BS:SAXS` | SAXS beamstop | 16-ID-C | detection | yes |
@@ -30,8 +30,8 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | SolutionCell | LinearStage | `XF:16IDC-ES:Sol{Enc-Ax:` | solution flow cell stage (+ Sol{ctrl}) | 16-ID-C | sample | yes |
 | InAirMicroscope | GenericProbe (?) | `XF:16IDC-ES:InAir{Mscp:1-Ax:` | in-air sample microscope | 16-ID-C | sample | yes |
 | HPLCFlow | FlowController | `XF:16IDC-HPLC:{ES-Flow_SAXS}` | HPLC/SEC flow (+ ES-Flow_UV) | 16-ID-C | sample | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:16IDB-BI{BPM:1` | BPMs (IDB/IDC) | 16-ID-B | diagnostics | yes |
-| BestMonitor | GenericProbe (?) | `XF:16IDB-CT{Best}` | BEST beam-stabilization monitor | 16-ID-B | diagnostics | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:16IDB-BI{BPM:1` | BPMs (IDB/IDC) | 16-ID-B | source | yes |
+| BestMonitor | GenericProbe (?) | `XF:16IDB-CT{Best}` | BEST beam-stabilization monitor | 16-ID-B | source | yes |
 
 Device-level prefixes read verbatim from source: `Mono:DCM`, `Mir:WBM/KBH/KBV/HRM1`, the SAXS/WAXS detector stages, `Xsp:1`, `TETRAMM:1`, the `Sol{}` solution cell, and the `HPLC:{ES-Flow_*}` delivery chain.
 

@@ -1,7 +1,7 @@
 # CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (i09.py/i09_1.py/i09_2.py + _shared),
 # NOT authoritative. Dual-source: hard BL09I/SR09I + soft BL09J/SR09J. PVs verified verbatim, zero fabrications.
 
-beamline: {name: I09, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: I09, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: I09, facility_code: diamond, confirm: dual-source beamline; hard BL09I + soft BL09J (env-resolved)}
 source:
@@ -14,7 +14,7 @@ source:
   - {name: DualFastShutter, family: Shutter, pv: "BL09I", new: true, confirm: "DualFastShutter (prefix in class); Shutter (catalog)"}
   - {name: HutchShutter, family: Shutter, pv: "BL09I", new: true, confirm: "HutchShutter (prefix in class); Shutter (catalog)"}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: DCM, family: Monochromator, pv: "BL09I-MO-DCM-01:", new: true, confirm: "hard-branch DCM (DoubleCrystalMonochromatorWithDSpacing); Monochromator (catalog)"}

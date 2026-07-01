@@ -11,8 +11,8 @@ Asset granularity: one row per stage / assembly, device-level PV prefix, dodal c
 
 | Device | Suggested family | PV prefix | dodal class | Branch | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| DCM | Monochromator | `BL09I-MO-DCM-01:` | DoubleCrystalMonochromatorWithDSpacing | hard | optics | yes |
-| PGM | GratingMonochromator | `BL09J-MO-PGM-01:` | PlaneGratingMonochromator | soft | optics | yes |
+| DCM | Monochromator | `BL09I-MO-DCM-01:` | DoubleCrystalMonochromatorWithDSpacing | hard | source | yes |
+| PGM | GratingMonochromator | `BL09J-MO-PGM-01:` | PlaneGratingMonochromator | soft | source | yes |
 | HardUndulator | InsertionDevice | `SR09I-MO-SERVC-01:` | UndulatorInMm | hard | source | yes |
 | SoftUndulator | InsertionDevice | `SR09J-MO-SERVC-01:` | UndulatorInMm | soft | source | yes |
 | DualEnergySource | GenericProbe (?) | (DualEnergySource + SourceSelector) | DualEnergySource | both | source | yes |
@@ -23,7 +23,7 @@ Asset granularity: one row per stage / assembly, device-level PV prefix, dodal c
 | SampleTemperatureController | TemperatureController | `BL09L-VA-LAKE-01:` (+ `-EA-TCTRL-01:`) | Lakeshore336 | shared | sample | yes |
 | DualFastShutter | Shutter | (DualFastShutter) | DualFastShutter | both | source | yes |
 | HutchShutter | Shutter | (HutchShutter) | HutchShutter | both | source | yes |
-| IntensityProtection | GenericProbe (?) | (IntensityProtection signal) | SignalRW[IntensityProtection] | both | diagnostics | yes |
+| IntensityProtection | GenericProbe (?) | (IntensityProtection signal) | SignalRW[IntensityProtection] | both | source | yes |
 | Synchrotron | GenericProbe (?) | (Synchrotron machine status) | Synchrotron | both | source | yes |
 
 Device-level prefixes read verbatim from source: `DCM("{I_PREFIX.beamline_prefix}-MO-DCM-01:")`, `PlaneGratingMonochromator(prefix="{J_PREFIX.beamline_prefix}-MO-PGM-01:")`, `SpecsDetector(prefix="{beamline_prefix}-EA-DET-02:CAM:")`, `VGScientaDetector(prefix="{I_PREFIX.beamline_prefix}-EA-DET-01:CAM:")`, the SMPM/HSMPM manipulators, `Lakeshore336(prefix="BL09L-VA-LAKE-01:")`, the two `UndulatorInMm(prefix="{insertion_prefix}-MO-SERVC-01:")`.

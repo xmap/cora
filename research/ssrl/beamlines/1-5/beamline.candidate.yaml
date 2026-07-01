@@ -1,7 +1,7 @@
 # CANDIDATE beamline descriptor: hand-read from tangkong/SSRL-1-5 public bluesky profile, NOT
 # authoritative. PV-1: motors BL00: placeholder, detectors BL15: roots; recorded as in source, verified verbatim.
 
-beamline: {name: "1-5", facility: ssrl, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: "1-5", facility: ssrl, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: "1-5", facility_code: ssrl, confirm: "SSRL BL1-5 scattering; PV namespace PV-1 (BL00 placeholders, BL15 detector roots)"}
 sample:

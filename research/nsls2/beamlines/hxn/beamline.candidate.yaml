@@ -5,6 +5,9 @@
 # verbatim against source (startup/*.py), zero fabrications.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: HXN
   facility: nsls2
   tier: Unit
@@ -20,7 +23,7 @@ enclosures:
   facility_code: nsls2
   confirm: nanoprobe endstation; inferred from XF:03IDC
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: PhotonShutter, family: Shutter, pv: "XF:03IDB-PPS{PSh}", new: true, confirm: PPS shutter; Shutter (catalog)}

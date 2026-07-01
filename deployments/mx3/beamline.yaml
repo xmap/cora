@@ -168,10 +168,10 @@ detector:
       confirm: true
       note: "Incident-flux monitor (flux). Reuses FluxMonitor (graduated #353)."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "MX3DAQIOC04:"
       confirm: true
-      note: "Beam-position monitor and closed-loop steering (BPM0 PosX / PosY / Int readbacks plus a PID steering DAC). Binds the loose BeamPositionMonitor family (held; DIAG-1). The PID beam-steering controller half has no clean existing family and is a deferred new-device question (STEER-1)."
+      note: "Beam-position monitor and closed-loop steering (BPM0 PosX / PosY / Int readbacks plus a PID steering DAC). Binds the graduated BeamPositionMonitor Family (DIAG-1). The PID beam-steering controller half has no clean existing family and is a deferred new-device question (STEER-1)."
     - name: OAVCamera
       family: Camera
       pv: "MX3MD3ZOOM0"

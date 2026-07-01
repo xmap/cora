@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/amx/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against the `NSLS2/amx-profile-collection` `startup/*.py` device classes; the real MX acquisition logic lives in the `lsdc` / `mxtools` libraries, referenced not modelled). No vendor Model is bound: part numbers are not in the profile collection. AMX introduces **no new Family and graduates nothing**: as FMX's sibling it reuses the same MX vocabulary, including the graduated `Goniometer` and `Camera`. The robotic sample changer is one Positioner-presenting Asset (not a new Family, the i03 / 19-BM / FMX precedent, ROBOT-1); the beam-position monitors bind the loose, held `BeamPositionMonitor` family (DIAG-1); see [Model](model.md#deliberately-not-here-yet).
+Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against the `NSLS2/amx-profile-collection` `startup/*.py` device classes; the real MX acquisition logic lives in the `lsdc` / `mxtools` libraries, referenced not modelled). No vendor Model is bound: part numbers are not in the profile collection. AMX introduces **no new Family and graduates nothing**: as FMX's sibling it reuses the same MX vocabulary, including the graduated `Goniometer` and `Camera`. The robotic sample changer is one Positioner-presenting Asset (not a new Family, the i03 / 19-BM / FMX precedent, ROBOT-1); the beam-position monitors bind the graduated catalog `BeamPositionMonitor` Family (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux), with only the per-Asset channel map still pending (DIAG-1); see [Model](model.md#deliberately-not-here-yet).
 
 ## The Asset tree
 
@@ -30,12 +30,12 @@ Root Asset `AMX` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `AreaDetector` | Camera | (not in profile) | Eiger pixel detector (DET-1) |
 | `FluorescenceDetector` | EnergyDispersiveSpectrometer | `XF:17IDB-ES:AMX{Det:Mer}` | Mercury XRF (edge selection) |
 | `BeamStop` | BeamStop | `XF:17IDB-ES:AMX{BS:1}` | on-axis direct-beam stop |
-| `BeamPositionMonitor` | BeamPositionMonitor (loose) | `XF:17IDA-BI:AMX{BPM:1}` | beam-position diagnostics |
+| `BeamPositionMonitor` | BeamPositionMonitor | `XF:17IDA-BI:AMX{BPM:1}` | beam-position diagnostics |
 | `FluxMonitor` | FluxMonitor | `XF:17IDB-BI:AMX{Keith:1}` | Keithley photocurrent monitor |
 | `MotionController` | MotionController | (not in profile) | goniometer / optics controllers (DRIVE-1) |
 | `Zebra` | TimingController | `XF:17IDB-ES:AMX{Zeb:1}` | FPGA trigger / position capture |
 
-Every family is in the catalog except the loose `BeamPositionMonitor` (held), and the `Robot`, a Positioner-presenting Asset with no Family (the i03 / 19-BM / FMX precedent). AMX graduates nothing: as FMX's sibling it reuses the MX vocabulary wholesale, completing the 17-ID MX pair.
+Every family is in the catalog, including the graduated `BeamPositionMonitor` (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux); the `Robot` is a Positioner-presenting Asset with no Family (the i03 / 19-BM / FMX precedent). AMX graduates nothing: as FMX's sibling it reuses the MX vocabulary wholesale, completing the 17-ID MX pair.
 
 ## Pending confirmations
 
@@ -50,6 +50,6 @@ Every value below is read from the profile collection or inferred, awaiting the 
 | Goniometer axis decomposition + centre-of-rotation calibration | `Goniometer` | `unknown-pending-confirmation` | (GONIO-1) |
 | Robot model, the exchange workflow, the Subject custody lifecycle | `Robot` | `unknown-pending-confirmation` | (ROBOT-1) |
 | Eiger model + beam centre (not in profile); fluorescence ROI map | `AreaDetector` / `FluorescenceDetector` | `unknown-pending-confirmation` | (DET-1) |
-| Beam-position channel map and fold-vs-promote hold | `BeamPositionMonitor` | `unknown-pending-confirmation` | (DIAG-1) |
+| Beam-position channel map | `BeamPositionMonitor` | `unknown-pending-confirmation` | (DIAG-1) |
 | Sample cryo-cooling (cryostream) modelling | `Goniometer` | `unknown-pending-confirmation` | (CRYO-1) |
 | Motion-controller box models / firmware / IP | `MotionController` | `unknown-pending-confirmation` | (DRIVE-1) |

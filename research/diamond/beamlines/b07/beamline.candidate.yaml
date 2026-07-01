@@ -1,12 +1,12 @@
 # CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (b07.py/b07_1.py/b07_shared.py),
 # NOT authoritative. Two branches: B=BL07B, C=BL07C (env-resolved). PVs verified verbatim, zero fabrications.
 
-beamline: {name: B07, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: B07, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: B07-B, facility_code: diamond, confirm: NAP-XPS branch B; PV root BL07B (env-resolved)}
 - {name: B07-C, facility_code: diamond, confirm: NAP-XPS branch C; PV root BL07C (env-resolved)}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: PlaneGratingMonoB, family: GratingMonochromator, pv: "BL07B-OP-PGM-01:", new: true, confirm: "branch B PGM; GratingMonochromator (catalog, graduated)"}

@@ -2,7 +2,7 @@
 
 *The coherent-scattering area detectors, the flight path, and the beam-position monitors. First cut; PVs read from the beamline config, carried confirm.*
 
-XPCS detection is three fast area detectors on a translation stage, downstream of an evacuated flight path with a beam stop, plus the beam-position monitors that normalize intensity. They are modelled in the detection stage of the [descriptor](../inventory.md). The detectors reuse the `Camera` Family and the beam stop the `BeamStop` Family; the flight path binds a loose `FlightPath` Family; the beam-position monitors bind a loose `BeamPositionMonitor` Family, held for gate-review.
+XPCS detection is three fast area detectors on a translation stage, downstream of an evacuated flight path with a beam stop, plus the beam-position monitors that normalize intensity. They are modelled in the detection stage of the [descriptor](../inventory.md). The detectors reuse the `Camera` Family and the beam stop the `BeamStop` Family; the flight path binds a loose `FlightPath` Family; the beam-position monitors bind the graduated catalog `BeamPositionMonitor` Family (presents the `Sensor` Role, distinct from `FluxMonitor` by measuring beam position rather than flux).
 
 ## Detector chain
 
@@ -18,4 +18,4 @@ XPCS detection is three fast area detectors on a translation stage, downstream o
 
 ## Families
 
-Reused from the catalog: `Camera` (the three detectors), `LinearStage` (the detector stage), and `BeamStop`. The beam-position monitors bind a loose `BeamPositionMonitor` Family, held for gate-review even though 8-ID is the second independent beamline to use it (see [Model](../model.md#loose-families-held-for-gate-review)). The flight path stays a loose `FlightPath` Family (single beamline). The detector models are `DET-1`; the flight-path geometry is `XPCS-2`. See [Inventory](../inventory.md) for the Asset tree.
+Reused from the catalog: `Camera` (the three detectors), `LinearStage` (the detector stage), `BeamStop`, and `BeamPositionMonitor` (the beam-position monitors, a catalog Family presenting the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux; see [Model](../model.md#loose-families-held-for-gate-review)). The flight path stays a loose `FlightPath` Family (single beamline). The detector models are `DET-1`; the flight-path geometry is `XPCS-2`. See [Inventory](../inventory.md) for the Asset tree.

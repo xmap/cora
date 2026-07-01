@@ -15,15 +15,15 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | PhotonShutter | Shutter | `XF:23ID2-PPS{PSh}` | (PPS shutter; + PPS:2) | 23-ID-2 | source | yes |
 | InsertionDevice1 | InsertionDevice | `XF:23ID-ID{EPU:1` | EPU variable-polarization undulator 1 | 23-ID | source | yes |
 | InsertionDevice2 | InsertionDevice | `XF:23ID-ID{EPU:2` | EPU undulator 2 (canted straight) | 23-ID | source | yes |
-| GratingMonochromator | GratingMonochromator | `XF:23ID2-OP{Mono` | soft X-ray grating mono | 23-ID-2 | optics | yes |
-| Mirror3B | Mirror | `XF:23ID2-OP{Mir:3B` | mirror 3B axes | 23-ID-2 | optics | yes |
-| KBMirrorHorizontal | Mirror | `XF:23ID2-OP{KB:MirH-Ax:` | KB horizontal refocus | 23-ID-2 | optics | yes |
-| KBMirrorVertical | Mirror | `XF:23ID2-OP{KB:MirV-Ax:` | KB vertical refocus | 23-ID-2 | optics | yes |
-| KBPinhole | Slit (?) | `XF:23ID2-OP{KB:Pnh-Ax:` | KB pinhole | 23-ID-2 | optics | yes |
-| EntranceSlit1 | Slit | `XF:23ID2-OP{Slt:1` | entrance slit | 23-ID-2 | optics | yes |
-| ExitSlit2 | Slit | `XF:23ID2-OP{Slt:2-Ax:` | exit slit | 23-ID-2 | optics | yes |
-| DiagnosticModule1 | LinearStage | `XF:23ID2-OP{DM1-Ax:` | DM1 (+ FS, HSlt sub-stages) | 23-ID-2 | diagnostics | yes |
-| DiagnosticModule2 | LinearStage | `XF:23ID2-OP{DM2:Slt-Ax:` | DM2 slit (+ FS, FSPhDiod) | 23-ID-2 | diagnostics | yes |
+| GratingMonochromator | GratingMonochromator | `XF:23ID2-OP{Mono` | soft X-ray grating mono | 23-ID-2 | source | yes |
+| Mirror3B | Mirror | `XF:23ID2-OP{Mir:3B` | mirror 3B axes | 23-ID-2 | source | yes |
+| KBMirrorHorizontal | Mirror | `XF:23ID2-OP{KB:MirH-Ax:` | KB horizontal refocus | 23-ID-2 | source | yes |
+| KBMirrorVertical | Mirror | `XF:23ID2-OP{KB:MirV-Ax:` | KB vertical refocus | 23-ID-2 | source | yes |
+| KBPinhole | Slit (?) | `XF:23ID2-OP{KB:Pnh-Ax:` | KB pinhole | 23-ID-2 | source | yes |
+| EntranceSlit1 | Slit | `XF:23ID2-OP{Slt:1` | entrance slit | 23-ID-2 | source | yes |
+| ExitSlit2 | Slit | `XF:23ID2-OP{Slt:2-Ax:` | exit slit | 23-ID-2 | source | yes |
+| DiagnosticModule1 | LinearStage | `XF:23ID2-OP{DM1-Ax:` | DM1 (+ FS, HSlt sub-stages) | 23-ID-2 | source | yes |
+| DiagnosticModule2 | LinearStage | `XF:23ID2-OP{DM2:Slt-Ax:` | DM2 slit (+ FS, FSPhDiod) | 23-ID-2 | source | yes |
 | SPECSAnalyzer | ElectronAnalyzer | `XF:23ID2-ES{SPECS}` | SPECS hemispherical analyzer (+ SPECS-PS1 power supply) | 23-ID-2 | detection | yes |
 | APPESCell | LinearStage | `XF:23ID2-ES{APPES:1-Ax:` | ambient-pressure PES cell stage | 23-ID-2 | sample | yes |
 | VortexDetector | EnergyDispersiveSpectrometer | `XF:23ID2-ES{Vortex}` | Vortex SDD (+ BI Vortex:1 stage) | 23-ID-2 | detection | yes |
@@ -32,7 +32,7 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | ScalerCounter | GenericProbe (?) | `XF:23ID2-ES{Sclr:1}` | scaler channels | 23-ID-2 | detection | yes |
 | GoldMesh | FluxMonitor (?) | `XF:23ID2-BI{AuMesh:1-Ax:` | Au-mesh I0 monitor | 23-ID-2 | detection | yes |
 | XASIonChamber | FluxMonitor (?) | `XF:23ID2-BI{IOXAS:1-Ax:` | XAS I0 chamber | 23-ID-2 | detection | yes |
-| DiagnosticStages | LinearStage | `XF:23ID2-BI{Diag:1-Ax:` | Diag:1/3/4 diagnostic stages | 23-ID-2 | diagnostics | yes |
+| DiagnosticStages | LinearStage | `XF:23ID2-BI{Diag:1-Ax:` | Diag:1/3/4 diagnostic stages | 23-ID-2 | source | yes |
 | GateValves | GenericProbe (?) | `XF:23ID2-VA{APPES-GV:3}` | gate valves (APPES-GV, Diag-GV) | 23-ID-2 | vacuum | yes |
 
 Device-level prefixes read verbatim from source: the `EPU:1/EPU:2` insertion devices, `Mono` grating, `KB:MirH/MirV/Pnh`, `SPECS` + `SPECS-PS1`, `APPES:1`, `Vortex`/`Xsp:1`, `AuMesh:1`/`IOXAS:1` I0 monitors.

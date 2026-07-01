@@ -11,23 +11,23 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| Monochromator | Monochromator | `XF:19IDC-OP{Mono:DCM` | DCM axes | 19-ID-C | optics | yes |
-| Mirror1 | Mirror | `XF:19IDC-OP{Mir:1` | mirror axes | 19-ID-C | optics | yes |
-| WhiteBeamSlit | Slit | `XF:19IDC-OP{Slt:WB` | blade axes | 19-ID-C | optics | yes |
-| MonoBeamSlit | Slit | `XF:19IDC-OP{Slt:MB` | blade axes | 19-ID-C | optics | yes |
-| BeamMonitor | GenericProbe (?) | `XF:19IDC-OP{BM:1` | beam monitor | 19-ID-C | diagnostics | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:19IDC-OP{BPM:1` | BPM 1/2/3 | 19-ID-C | diagnostics | yes |
+| Monochromator | Monochromator | `XF:19IDC-OP{Mono:DCM` | DCM axes | 19-ID-C | source | yes |
+| Mirror1 | Mirror | `XF:19IDC-OP{Mir:1` | mirror axes | 19-ID-C | source | yes |
+| WhiteBeamSlit | Slit | `XF:19IDC-OP{Slt:WB` | blade axes | 19-ID-C | source | yes |
+| MonoBeamSlit | Slit | `XF:19IDC-OP{Slt:MB` | blade axes | 19-ID-C | source | yes |
+| BeamMonitor | GenericProbe (?) | `XF:19IDC-OP{BM:1` | beam monitor | 19-ID-C | source | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:19IDC-OP{BPM:1` | BPM 1/2/3 | 19-ID-C | source | yes |
 | Goniometer | Goniometer | `XF:19IDC-ES{Gon:1` | single-axis gonio (+ `Gon:1-Vec` vector) | 19-ID-C | sample | yes |
 | Robot | Positioner | `XF:19IDC-ES{Rbt:1}` | sample-exchange robot | 19-ID-C | sample | yes |
-| Collimator | Collimator (?) | `XF:19IDC-ES{Gbl:1` | beam-defining collimator / guard | 19-ID-C | optics | yes |
-| BeamShaping | LinearStage (?) | `XF:19IDC-ES{Opt:1` | endstation optic stage | 19-ID-C | optics | yes |
+| Collimator | Collimator (?) | `XF:19IDC-ES{Gbl:1` | beam-defining collimator / guard | 19-ID-C | source | yes |
+| BeamShaping | LinearStage (?) | `XF:19IDC-ES{Opt:1` | endstation optic stage | 19-ID-C | source | yes |
 | BeamStop | BeamStop | `XF:19IDC-ES{BS:1` | beamstop axes | 19-ID-C | detection | yes |
 | Backlight | GenericProbe (?) | `XF:19IDC-ES{BP:1` | backlight/pin | 19-ID-C | sample | yes |
 | DetectorStage | LinearStage | `XF:19IDC-ES{Det:1` | detector positioning | 19-ID-C | detection | yes |
 | DetectorTable | Table | `XF:19IDC-ES{Tbl:1` | detector table | 19-ID-C | detection | yes |
 | HighMagCamera | Camera | `XF:19IDC-ES{Cam:HiMag` | high-magnification on-axis view | 19-ID-C | sample | yes |
 | LowMagCamera | Camera | `XF:19IDC-ES{Cam:LoMag` | low-magnification on-axis view | 19-ID-C | sample | yes |
-| BeamDefiningSlit | Slit | `XF:19IDC-ES{Slt:BD` | beam-defining slit | 19-ID-C | optics | yes |
+| BeamDefiningSlit | Slit | `XF:19IDC-ES{Slt:BD` | beam-defining slit | 19-ID-C | source | yes |
 | Zebra | TimingController (?) | `XF:19IDC-ES{Zeb:1}` | data-collection gating | 19-ID-C | detection | yes |
 | KeithleyAmplifier | GenericProbe (?) | `XF:19ID1-BI:NYX{Keith:1}` | Keithley current amp | 19-ID | detection | yes |
 | VacuumGauges | GenericProbe (?) | `XF:19IDD-CT{Ion:1-Gauge:1}` | ion-gauge vacuum (Ion:1/2) | 19-ID-D | vacuum | yes |

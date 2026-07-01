@@ -23,12 +23,12 @@
 #     swings to a scattering angle and disperses the emitted soft X-rays onto a
 #     photon-counting camera.
 #   - the sample sits on a UHV cryostat MANIPULATOR (x/y/z/theta).
-# None of these fit a hard X-ray catalog Family. Two have since GRADUATED into the
-# catalog: GratingMonochromator (CSX, NSLS-II 23-ID, earned the soft X-ray PGM) and
-# Manipulator (ESM, NSLS-II 21-ID, earned the UHV sample manipulator), so the
-# Monochromator and SampleManipulator below bind catalog Families. Only SpectrometerArm
-# remains LOOSE at n=1 (SIX only); a second RIXS beamline must earn it. Everything else
-# reuses an existing catalog Family.
+# None of these fit a hard X-ray catalog Family. Three have since GRADUATED into the
+# catalog: GratingMonochromator (CSX, NSLS-II 23-ID, earned the soft X-ray PGM),
+# Manipulator (ESM, NSLS-II 21-ID, earned the UHV sample manipulator), and
+# SpectrometerArm (the dispersive arm SIX coined, earned across SIX + ESRF ID32 RIXS/XES
+# + ESRF ID28), so the Monochromator, SampleManipulator, and RIXSSpectrometer below all
+# bind catalog Families. Everything else reuses an existing catalog Family.
 #
 # Items left open are tagged inline with a (QUESTION-ID) answered on
 # docs/deployments/six/questions.md.
@@ -256,15 +256,16 @@ rixs-spectrometer:
   intro: "The energy-dispersive RIXS spectrometer arm, the photon-counting camera at its end, and the counting electronics."
   note: >
     The RIXS spectrometer is a meters-long energy-dispersive arm modelled as one
-    loose SpectrometerArm Asset (no catalog Family fits a multi-chamber dispersive
-    collection arm; the catalog EnergyDispersiveSpectrometer presents a point Sensor
-    Role, not this). It is three coupled chambers: the bridge truss (br), the in-arm
+    SpectrometerArm Asset, binding the catalog SpectrometerArm Family (a dispersive
+    positioning arm presenting the Positioner Role; the catalog
+    EnergyDispersiveSpectrometer presents a point Sensor Role, not this). It is three
+    coupled chambers: the bridge truss (br), the in-arm
     optics chamber (oc) that disperses, and the detector chamber (dc). The camera is
     a photon-counting / centroiding RIXSCam; whether that warrants its own Family or
     binds the catalog Camera with settings is RIXS-2 (modelled as Camera here).
   devices:
     - name: RIXSSpectrometer
-      family: SpectrometerArm          # loose Family (n=1; multi-chamber energy-dispersive RIXS arm; RIXS-1)
+      family: SpectrometerArm          # catalog Family (graduated; multi-chamber energy-dispersive RIXS arm)
       pv: { bridge_pitch: "XF:02IDD-ES{BT:1-Ax:Pch}Mtr", bridge_roll: "XF:02IDD-ES{BT:1-Ax:Roll}Mtr", bridge_y: "XF:02IDD-ES{BT:1-Ax:Y}Mtr", optics_two_theta: "XF:02IDD-ES{3AA:1-Ax:2T}Mtr", optics_roll: "XF:02IDD-ES{3AA:1-Ax:Roll}Mtr", detector_two_theta: "XF:02IDD-ES{DC:1-Ax:2T}Mtr", detector_z: "XF:02IDD-ES{DC:1-Ax:Z}Mtr" }
       new: true
       confirm: true

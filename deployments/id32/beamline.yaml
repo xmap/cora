@@ -16,24 +16,23 @@
 # BLISS axis names, carried as opaque edge handles the way the MX3 heterogeneous-control
 # precedent does. Descriptor + docs scaffold; scenarios deferred.
 #
-# WHAT IS NEW: a new Site, and two loose families brought to a rule-of-three.
+# WHAT IS NEW: a new Site, and the loose families it brings to a rule-of-three.
 #   - A wholly NEW Site (the ESRF, 7th) re-tests the Site / Federation kernel and brings
 #     the BLISS / Beacon controls house-style.
-#   - SpectrometerArm reaches a genuine rule-of-three: ID32 carries the SAME
+#   - SpectrometerArm reached a genuine rule-of-three here: ID32 carries the SAME
 #     SpectrometerArmsController class instantiated TWICE (the RIXS arm + the XES arm),
-#     so with the SIX soft-RIXS arm the family is now sighted three times. Per the user
-#     decision (2026-06-27) it is HELD loose here, with the graduation deferred to a
-#     dedicated gated catalog PR (RIXS-1).
-#   - The 9 T XMCD magnet is the third Magnet consumer (4-ID + i10-1 + ID32), HELD
-#     loose, graduation deferred (MAG-1). The RIXS polarimeter binds the catalog
-#     PolarizationAnalyzer, graduated on the rule-of-three (4-ID + i10 + ID32 + P09; POL-2).
+#     so with the SIX soft-RIXS arm the family was sighted three times. It has since
+#     GRADUATED into the catalog (SIX + ID32 RIXS/XES + ID28), so both arms below bind
+#     the catalog SpectrometerArm Family.
+#   - The 9 T XMCD magnet is the third Magnet consumer (4-ID + i10-1 + ID32): Magnet has
+#     since GRADUATED into the catalog (MAG-1). The RIXS polarimeter binds the catalog
+#     PolarizationAnalyzer Family, graduated on the rule-of-three (4-ID + i10 + ID32 + P09; POL-2).
 #
-# MODELLING: ID32 coins NO new Family and changes nothing in the catalog (the rule-of-three
-# graduations are deferred to separate PRs per the user decision). The twin APPLE-II
+# MODELLING: ID32 coins NO new Family. The twin APPLE-II
 # undulators bind InsertionDevice and the polarization is a PseudoAxis (the i06 / i10
 # precedent); the PGM binds GratingMonochromator; the RIXS and XES dispersive spectrometer
-# arms bind the loose SpectrometerArm (SIX precedent); the RIXS polarimeter binds the catalog
-# PolarizationAnalyzer (POL-2); the 9 T XMCD magnet binds the loose Magnet; the LakeShore VTI and
+# arms bind the catalog SpectrometerArm (graduated); the RIXS polarimeter binds the catalog
+# PolarizationAnalyzer (graduated, POL-2); the 9 T XMCD magnet binds the catalog Magnet (graduated); the LakeShore VTI and
 # coil-diagnostic controllers bind TemperatureController; the Andor CCDs bind Camera; the
 # 4-circle diffractometer binds Goniometer with a reciprocal-space PseudoAxis; the XMCD
 # sample stage binds LinearStage; the machine state binds the loose StorageRing.
@@ -148,8 +147,8 @@ rixs:
   enclosure: id32-rixs
   intro: "The RIXS endstation: a ~5 m dispersive soft X-ray spectrometer arm, a 4-circle sample diffractometer, a scattered-beam polarimeter, and the Andor CCD."
   note: >
-    The dispersive spectrometer arm binds the loose SpectrometerArm (the SIX precedent;
-    HELD at its rule-of-three, RIXS-1). The sample circles bind Goniometer with a
+    The dispersive spectrometer arm binds the catalog SpectrometerArm Family (graduated
+    across SIX + ID32 RIXS/XES + ID28). The sample circles bind Goniometer with a
     reciprocal-space PseudoAxis (the diffractometer Assembly, named-not-built, DIFF-1 /
     DIFF-2). The scattered-beam polarimeter binds the catalog PolarizationAnalyzer (the
     4-ID / i10 / P09 rule-of-three; POL-2). The CCD binds Camera.
@@ -167,11 +166,11 @@ rixs:
       confirm: true
       note: "reciprocal-space pseudo-axis over the diffractometer (DIFF-2)"
     - name: RixsSpectrometerArm
-      family: SpectrometerArm           # loose Family; rule-of-three reached, HELD (graduation deferred, RIXS-1)
+      family: SpectrometerArm           # catalog Family (graduated across SIX + ID32 RIXS/XES + ID28)
       pv: "BLISS rixs_spectro (SpectrometerArmsController); IcePAP iceid324: grtx/grty/grtz, gr1roty/gr2roty, detx/detz, army, grmask"
       new: true
       confirm: true
-      note: "the ~5 m dispersive RIXS spectrometer arm (rixs_spectro): real axes detx/detz/grtx -> virtual arm radii r1/r2; grating modes RIXS_2500 (radius 122000, gr2roty) and RIXS_1400 (gr1roty). Binds the loose SpectrometerArm; with the XES arm and SIX this is its rule-of-three, HELD pending a dedicated graduation PR (RIXS-1)"
+      note: "the ~5 m dispersive RIXS spectrometer arm (rixs_spectro): real axes detx/detz/grtx -> virtual arm radii r1/r2; grating modes RIXS_2500 (radius 122000, gr2roty) and RIXS_1400 (gr1roty). Binds the graduated catalog SpectrometerArm Family; the RIXS arm plus the XES arm below plus SIX + ID28 earned it"
     - name: Polarimeter
       family: PolarizationAnalyzer
       pv: "IcePAP iceid324: thpol/chipol/zpol/ypol/tthpol"
@@ -194,18 +193,18 @@ xmcd:
   enclosure: id32-xmcd
   intro: "The XMCD endstation: a 9 Tesla split-coil high-field magnet with a variable-temperature insert (VTI), an X-ray emission (XES) spectrometer arm, and the Andor CCD."
   note: >
-    The 9 T XMCD magnet binds the loose Magnet (the third consumer after 4-ID + i10-1;
-    HELD, MAG-1). The VTI sample-temperature and the coil / shield diagnostics bind
-    TemperatureController (the LakeShore precedent). The XES arm binds the loose
-    SpectrometerArm (the second arm that completes the rule-of-three, HELD, RIXS-1). The
+    The 9 T XMCD magnet binds the catalog Magnet Family (graduated; the third consumer
+    after 4-ID + i10-1, MAG-1). The VTI sample-temperature and the coil / shield diagnostics bind
+    TemperatureController (the LakeShore precedent). The XES arm binds the catalog
+    SpectrometerArm Family (the second arm that completed the rule-of-three; graduated). The
     CCD binds Camera; the sample stage binds LinearStage.
   devices:
     - name: Magnet
-      family: Magnet                    # loose Family; HELD at n=3 (graduation deferred, MAG-1)
+      family: Magnet                    # catalog Family (graduated; presents Regulator, MAG-1)
       pv: "tango://id32/cryogenic_magnet_ps/xmcd1 (CryogenicPSController); serial tango://id32/Serialrp_232/lid323_ttyR33"
       new: true
       confirm: true
-      note: "the 9 T / 4 T split-coil superconducting XMCD magnet: 9.02 T coil + 4.05 T coil, one field setpoint axis (the field reads as a settable axis, presenting the Regulator Role). Binds the loose Magnet, the third consumer after 4-ID + i10-1, HELD pending a dedicated graduation PR (MAG-1)"
+      note: "the 9 T / 4 T split-coil superconducting XMCD magnet: 9.02 T coil + 4.05 T coil, one field setpoint axis (the field reads as a settable axis, presenting the Regulator Role). Binds the catalog Magnet Family (graduated; the third consumer after 4-ID + i10-1, MAG-1)"
     - name: SampleTemperatureController
       family: TemperatureController
       pv: "tango://id32/regulation/ls336_hfm_* (LakeShore 336; GPIB gpibid32b pad 11)"
@@ -219,11 +218,11 @@ xmcd:
       confirm: true
       note: "the magnet-cryostat diagnostic LakeShore 340 (the superconducting-coil, shield, and helium-reservoir temperatures); a second Regulator instance monitoring the magnet plant (TEMP-1)"
     - name: XesSpectrometerArm
-      family: SpectrometerArm           # loose Family; the 2nd arm completing the rule-of-three, HELD (RIXS-1)
+      family: SpectrometerArm           # catalog Family (graduated; the 2nd arm that completed the rule-of-three)
       pv: "BLISS xes_spectro (SpectrometerArmsController); IcePAP iceid329: xesdetx/xesdetz, xesgrtx/xesgrty, xesgrot, xesmask"
       new: true
       confirm: true
-      note: "the XES (X-ray emission) Rowland-geometry spectrometer arm (xes_spectro): real axes xesdetx/xesdetz/xesgrtx -> virtual radii xesr1/xesr2; grating mode XES_1200 (radius 26055, xesgrot). The SAME SpectrometerArmsController class as the RIXS arm, the second instance that makes the rule-of-three; binds the loose SpectrometerArm, HELD (RIXS-1)"
+      note: "the XES (X-ray emission) Rowland-geometry spectrometer arm (xes_spectro): real axes xesdetx/xesdetz/xesgrtx -> virtual radii xesr1/xesr2; grating mode XES_1200 (radius 26055, xesgrot). The SAME SpectrometerArmsController class as the RIXS arm, the second instance that made the rule-of-three; binds the graduated catalog SpectrometerArm Family"
     - name: XesDetector
       family: Camera
       pv: "tango://id32/limaccds/andor_2 (Lima)"

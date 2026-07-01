@@ -33,7 +33,7 @@ CMS was reverse-engineered from the beamline's own bluesky profile collection ([
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| DET-1 | Blocks-go-live | The SAXS / WAXS / MAXS Pilatus detector assignment (which 800K head is powered per configuration), the detector-distance calibrations, and the flux / beam-position channel map. | Three `Camera` Assets (Pilatus 2M SAXS, two 800K WAXS / MAXS); the monitors bind `FluxMonitor` and the diode beam-position monitor the loose `BeamPositionMonitor`. | The detector modelling. |
+| DET-1 | Blocks-go-live | The SAXS / WAXS / MAXS Pilatus detector assignment (which 800K head is powered per configuration), the detector-distance calibrations, and the flux / beam-position channel map. | Three `Camera` Assets (Pilatus 2M SAXS, two 800K WAXS / MAXS); the monitors bind `FluxMonitor` and the diode beam-position monitor the graduated catalog `BeamPositionMonitor`. | The detector modelling. |
 | XR-1 | Blocks-go-live | The specular reflectivity (XR) realization: a fixed area detector read over a software region-of-interest tracking the reflected beam as the sample theta is stepped, with no physical two-theta arm. | XR is a Method over `Goniometer` (sth) + `Camera` (the Pilatus region) + `FluxMonitor`; no device coined; the reflectivity Method is shared with i10. | The reflectivity modelling; the CORA decision is on [Model](model.md#deliberately-not-here-yet). |
 
 ## Control and safety

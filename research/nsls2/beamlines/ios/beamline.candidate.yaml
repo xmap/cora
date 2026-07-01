@@ -3,6 +3,9 @@
 # against source (startup/*.py), zero fabrications. Do not copy into deployments/ without review.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: IOS
   facility: nsls2
   tier: Unit
@@ -19,7 +22,7 @@ source:
   - {name: InsertionDevice1, family: InsertionDevice, pv: "XF:23ID-ID{EPU:1", new: true, confirm: "EPU variable-polarization undulator 1; InsertionDevice (catalog); polarization as controllable axis"}
   - {name: InsertionDevice2, family: InsertionDevice, pv: "XF:23ID-ID{EPU:2", new: true, confirm: "EPU undulator 2 (canted straight); InsertionDevice (catalog)"}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: GratingMonochromator, family: GratingMonochromator, pv: "XF:23ID2-OP{Mono", new: true, confirm: "soft X-ray grating mono; GratingMonochromator (catalog, graduated via CSX); IOS another consumer"}

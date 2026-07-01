@@ -9,6 +9,9 @@
 # in diffraction.py and commented out in imaging.py (same hardware, two endstations).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: NanoMAX
   facility: maxiv
   sector: "B303A"

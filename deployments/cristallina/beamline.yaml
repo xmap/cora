@@ -24,10 +24,10 @@
 # but it tests the model against two things the prior PSI stations did not have:
 #   (1) a DILUTION-FRIDGE + 3-AXIS VECTOR SUPERCONDUCTING MAGNET sample environment (DilSc:
 #       a LakeShore 372 thermometry/heater + an Oxford Mercury iPS vector magnet PSU, field
-#       limits X,Y = +/-0.6 T and Z = +/-5.2 T). The magnet binds the LOOSE Magnet family,
-#       which is held at the rule-of-three (4-ID + i10-1 + ESRF ID32 are the three consumers;
-#       graduation deferred to the gated MAG-1 PR). Cristallina is the FOURTH Magnet consumer,
-#       reinforcing the held graduation but NOT graduating it here. The LakeShore 372 binds
+#       limits X,Y = +/-0.6 T and Z = +/-5.2 T). The magnet binds the catalog Magnet family,
+#       which has GRADUATED (4-ID + i10-1 + ESRF ID32 earned the rule-of-three; MAG-1 PR
+#       landed). Cristallina is a FURTHER Magnet consumer that reinforced the graduation.
+#       The LakeShore 372 binds
 #       the graduated TemperatureController Family (the ID32 VTI precedent).
 #   (2) NO pump-probe optical laser in the controls source. Unlike Alvra and Bernina, the
 #       slic repo has NO SLAAR / PALM / PSEN devices; the only laser is the X-ray ALIGNMENT
@@ -50,7 +50,7 @@
 # profile monitor / screen -> Scintillator + Camera; IntensityMonitorPBPS / gas monitor ->
 # FluxMonitor + Diagnostic (loose); the photon single-shot spectrometer (PSSS) -> Diagnostic
 # (loose, the spectral diagnostic); Diffractometer -> Goniometer (composed in the Diffractometer
-# Assembly, DIFF-1); the DilSc Mercury iPS magnet -> loose Magnet (4th consumer, held, MAG-1);
+# Assembly, DIFF-1); the DilSc Mercury iPS magnet -> catalog Magnet (graduated, further consumer, MAG-1);
 # the LakeShore 372 -> TemperatureController (graduated); the alignment laser -> loose Laser;
 # the Jungfrau -> Camera; the CTA sequencer / EVR -> TimingController. The swissmx fast XY
 # stage -> LinearStage; the I0 chamber slits -> Slit.
@@ -276,8 +276,8 @@ cristallina-endstation:
     Diffractometer driver. The DilSc sample environment is a dilution refrigerator (LakeShore 372
     thermometry / heater, the graduated TemperatureController Family) plus an Oxford Mercury iPS 3-axis
     VECTOR superconducting magnet (field limits X,Y = +/-0.6 T, Z = +/-5.2 T); the magnet binds the
-    LOOSE Magnet family, held at the rule-of-three. Cristallina is the FOURTH Magnet consumer (after
-    4-ID, i10-1, ESRF ID32), reinforcing the held graduation but NOT graduating it here (MAG-1). DM2 and
+    catalog Magnet family, which has graduated. Cristallina is a FURTHER Magnet consumer (after
+    4-ID, i10-1, ESRF ID32) that reinforced the graduation (MAG-1). DM2 and
     several SmarAct / Attocube / PuMa stages are instantiated in slic but commented out of the active
     channel tuples, carried as present-hardware-not-acquired (DISABLED-1). There is NO pump-probe laser
     in source (LASER-1).
@@ -323,7 +323,7 @@ cristallina-endstation:
       pv: "SARES31-MAG-IPS1"
       new: true
       confirm: true
-      note: "the DilSc 3-axis VECTOR superconducting magnet (an Oxford Mercury iPS PSU; field limits X,Y = +/-0.6 T, Z = +/-5.2 T, ramp cap 0.5 T/min). Binds the LOOSE Magnet family, held at the rule-of-three. Cristallina is the FOURTH consumer (4-ID + i10-1 + ESRF ID32), reinforcing the held graduation; NOT graduated here (MAG-1). Modelled as a hazard via a Clearance, not a safety-driven Asset"
+      note: "the DilSc 3-axis VECTOR superconducting magnet (an Oxford Mercury iPS PSU; field limits X,Y = +/-0.6 T, Z = +/-5.2 T, ramp cap 0.5 T/min). Binds the graduated catalog Magnet family (presents Regulator). Cristallina is a FURTHER consumer (4-ID + i10-1 + ESRF ID32 earned it) that reinforced the graduation (MAG-1). Modelled as a hazard via a Clearance, not a safety-driven Asset"
     - name: SampleStageMX
       family: LinearStage
       pv: "SAR-EXPMX"

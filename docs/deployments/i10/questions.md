@@ -40,7 +40,7 @@ i10 was reverse-engineered from the beamline's own bluesky device layer ([Diamon
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| MAG-1 | Blocks-go-live | The i10-1 electromagnet and superconducting field-sweep magnet (field ranges, the sweep mode), and the low-temperature environment; and whether the loose `Magnet` Family is the right home at its second sighting. | The two magnets bind the loose `Magnet` (one Family, the sweep is a per-Asset affordance); held under review after 4-ID; the cryostat folds into the stage. | The magnet modelling; the CORA promotion decision is on [Model](model.md#loose-families-at-a-second-sighting). |
+| MAG-1 | Blocks-go-live | The i10-1 electromagnet and superconducting field-sweep magnet (field ranges, the sweep mode), and the low-temperature environment. | The two magnets bind the graduated catalog `Magnet` Family (one Family, the sweep is a per-Asset affordance); i10-1 was one of its three consumers with 4-ID and ID32; the cryostat folds into the stage. | The per-Asset magnet field / control detail; the family graduation is settled (see [Model](model.md#loose-families-at-a-second-sighting)). |
 
 ## Control and safety
 

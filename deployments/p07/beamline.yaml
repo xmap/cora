@@ -16,8 +16,8 @@
 # extraction is in research/petra-iii/.
 #
 # WHAT IS NEW: no new device Family. P07 reuses existing Families end to end, including
-# the allowlisted-loose Magnet Family (the 4-ID precedent, of which P07's 17 T
-# magnet is a further consumer). The four-circle Eulerian diffractometer (e4cv) and
+# the graduated catalog Magnet Family (of which P07's 17 T magnet is a further
+# consumer that reinforced the graduation). The four-circle Eulerian diffractometer (e4cv) and
 # the two-theta arm bind the catalog Goniometer Family (not the composed Diffractometer
 # Assembly, the P01 EH2 call). The techniques (high-energy diffraction, high-field
 # materials science) reuse the pending diffraction / magnetic_scattering slugs
@@ -118,7 +118,7 @@ eh2-sample:
   stage: sample
   enclosure: p07-eh2
   intro: "The EH2 main experiment hutch: the four-circle Eulerian diffractometer, the two-theta arm, a sample hexapod, the 17 T high-field magnet, the Linkam temperature stage, and the sample / instrument motor bank."
-  note: "The diffractometer is a four-circle Eulerian (e4cv) + the two-theta arm (twothetap07). The 17 T magnet reuses the allowlisted-loose Magnet Family. The exp* bank carries the sample positioning, roles not labelled (GROUP-1)."
+  note: "The diffractometer is a four-circle Eulerian (e4cv) + the two-theta arm (twothetap07). The 17 T magnet binds the graduated catalog Magnet Family (presents Regulator). The exp* bank carries the sample positioning, roles not labelled (GROUP-1)."
   devices:
     - name: Goniometer
       family: Goniometer           # catalog Family; the four-circle (E4C vertical) + two-theta circles (DIFF-1)
@@ -137,7 +137,7 @@ eh2-sample:
       pv: {magnet: "p07/magnet17tf/magnet17tf"}
       new: true
       confirm: true
-      note: "the EH2 17 T superconducting sample-environment magnet (magnet17tf); reuses the 4-ID allowlisted-loose Magnet Family, a further consumer (MAG-1)"
+      note: "the EH2 17 T superconducting sample-environment magnet (magnet17tf); binds the graduated catalog Magnet Family, a further consumer (presents Regulator, MAG-1)"
     - name: SampleEnvironment
       family: TemperatureController
       pv: {linkam: "p07/t95tempproglinkam/linkam"}

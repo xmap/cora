@@ -8,7 +8,7 @@ TPS 07A's measurement is the rotation series of diffraction frames the EIGER2 re
 | --- | --- | --- | --- |
 | `EigerDetector` | Camera | DCSS workflow over EPICS; ZMQ frame egress (PV pending) | the rotation-MX area detector |
 | `DetectorStage` | LinearStage | EPICS (PV pending); 139 mm min-distance interlock | sets the sample-to-detector distance |
-| `BeamPositionMonitor` | BeamPositionMonitor (loose) | EPICS (PV pending) | beam-position diagnostic |
+| `BeamPositionMonitor` | BeamPositionMonitor | EPICS (PV pending) | beam-position diagnostic |
 | `OAVCamera` | Camera | EPICS (PV pending) | on-axis viewing for centring |
 
 ## The EIGER2 over the DCSS workflow
@@ -19,7 +19,7 @@ This is the clearest place the 07A seam differs from MX3's. MX3's EIGER is a `Co
 
 ## Diagnostics and the distance interlock
 
-The `DetectorStage` sets the sample-to-detector distance and carries a **hard minimum-distance interlock at 139 mm**, a safety limit read directly from the control tree (it bounds how close the detector may approach the sample). The `BeamPositionMonitor` binds the loose `BeamPositionMonitor` family (held, DIAG-1); the `OAVCamera` serves sample centring on the MD3 and reuses `Camera`.
+The `DetectorStage` sets the sample-to-detector distance and carries a **hard minimum-distance interlock at 139 mm**, a safety limit read directly from the control tree (it bounds how close the detector may approach the sample). The `BeamPositionMonitor` binds the graduated catalog `BeamPositionMonitor` Family (presents `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux; the per-Asset channel map stays open, DIAG-1); the `OAVCamera` serves sample centring on the MD3 and reuses `Camera`.
 
 ## Reuse, not new vocabulary
 

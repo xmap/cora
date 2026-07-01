@@ -12,17 +12,17 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
 | FrontEndShutter | Shutter | `XF:27IDA-PPS{Sh:FE}` | (+ L1-S1 PPS) | 27-ID-A | source | yes |
-| DoubleLaueMono | Monochromator | `XF:27IDA-OP:1{Mono:DCLM-Ax:` | double-Laue mono (high-energy) | 27-ID-A | optics | yes |
-| Filter1 | Filter | `XF:27IDA-OP:1{Fltr:1-Ax:` | filter (+ Fltr:2/3/4 across OP:1/2/3) | 27-ID-A | optics | yes |
-| WhiteBeamSlit | Slit | `XF:27IDA-OP:1{Slt:1-Ax:` | blade axes | 27-ID-A | optics | yes |
-| EndstationSlit2 | Slit | `XF:27IDF-OP:1{Slt:2-Ax:` | blade axes | 27-ID-F | optics | yes |
-| CMTSlit | Slit | `XF:27IDF-OP:1{Slt:CMT-Ax:` | tomography slit | 27-ID-F | optics | yes |
+| DoubleLaueMono | Monochromator | `XF:27IDA-OP:1{Mono:DCLM-Ax:` | double-Laue mono (high-energy) | 27-ID-A | source | yes |
+| Filter1 | Filter | `XF:27IDA-OP:1{Fltr:1-Ax:` | filter (+ Fltr:2/3/4 across OP:1/2/3) | 27-ID-A | source | yes |
+| WhiteBeamSlit | Slit | `XF:27IDA-OP:1{Slt:1-Ax:` | blade axes | 27-ID-A | source | yes |
+| EndstationSlit2 | Slit | `XF:27IDF-OP:1{Slt:2-Ax:` | blade axes | 27-ID-F | source | yes |
+| CMTSlit | Slit | `XF:27IDF-OP:1{Slt:CMT-Ax:` | tomography slit | 27-ID-F | source | yes |
 | CMTStage | LinearStage | `XF:27IDF-OP:1{CMT:1-Ax:` | computed-tomography sample motion | 27-ID-F | sample | yes |
 | DiffractionStage | Diffractometer (?) | `XF:27IDF-OP:1{DIFF:1-Ax:` | diffraction motion group | 27-ID-F | sample | yes |
 | EDXDStage | LinearStage | `XF:27IDF-OP:1{EDXD:1-Ax:` | energy-dispersive diffraction motion | 27-ID-F | sample | yes |
 | ImagingStage | LinearStage | `XF:27IDF-OP:1{IMG:1-Ax:` | radiography/imaging motion | 27-ID-F | sample | yes |
 | SampleStage | LinearStage | `XF:27IDF-OP:1{SMPL:1-Ax:` | sample positioning | 27-ID-F | sample | yes |
-| OpticsStage1 | LinearStage | `XF:27IDF-OP:1{OPT:1-Ax:` | endstation optics (+ OPT:2) | 27-ID-F | optics | yes |
+| OpticsStage1 | LinearStage | `XF:27IDF-OP:1{OPT:1-Ax:` | endstation optics (+ OPT:2) | 27-ID-F | source | yes |
 | Shield | Housing (?) | `XF:27IDF-OP:1{SHLD:1-Ax:` | motorized shield/enclosure | 27-ID-F | sample | yes |
 | MotionController1 | MotionController | `XF:27IDF-OP:1{MC:1-Ax:` | motion controllers (MC:1, MC:5) | 27-ID-F | sample | yes |
 | GeRMDetector | EnergyDispersiveSpectrometer | `XF:27ID1-ES{GeRM-Det:1}` | germanium strip detector (energy-dispersive) | 27-ID-1 | detection | yes |

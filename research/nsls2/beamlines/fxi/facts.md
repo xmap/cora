@@ -12,18 +12,18 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
 | PhotonShutter | Shutter | `XF:18IDA-PPS{PSh}` | Opn/Cls-Cmd, Pos-Sts (TwoButtonShutter) | 18-ID-A | source | yes |
-| Monochromator | Monochromator | `XF:18IDA-OP{Mono:DCM` | energy=`-Ax:En}Mtr`; th2=`-Ax:Th2}Mtr` (+PID); chi2=`-Ax:Chi2}Mtr` (+PID) | 18-ID-A | optics | yes |
-| CollimatingMirror | Mirror | `XF:18IDA-OP{Mir:CM` | jacks (Mir:CM) | 18-ID-A | optics | yes |
-| ToroidalMirror | Mirror | `XF:18IDA-OP{Mir:TM` | jacks (Mir:TM) | 18-ID-A | optics | yes |
-| PinkBeamSlit | Slit | `XF:18IDA-OP{PBSL:1` | blade axes | 18-ID-A | optics | yes |
-| Filters | Filter | `XF:18IDB-ES{IOLOGIK5:E1211}` | DO1-DO7 digital filter inserts (filter1-7) | 18-ID-B | optics | yes |
-| Condenser | Condenser | `XF:18IDB-OP` | condenser optic (class Condenser) | 18-ID-B | optics | yes |
-| Zoneplate | ZonePlate | `XF:18IDB-OP` | zone-plate objective (class Zoneplate) | 18-ID-B | optics | yes |
-| Aperture | Aperture | `XF:18IDB-OP` | order-sorting aperture (class Aperture) | 18-ID-B | optics | yes |
-| PhaseRing | PhaseRing | `XF:18IDB-OP` | Zernike phase ring (class PhaseRing) | 18-ID-B | optics | yes |
-| BertrandLens | BetrandLens | `XF:18IDB-OP` | Bertrand lens (class BetrandLens, loose) | 18-ID-B | optics | yes |
+| Monochromator | Monochromator | `XF:18IDA-OP{Mono:DCM` | energy=`-Ax:En}Mtr`; th2=`-Ax:Th2}Mtr` (+PID); chi2=`-Ax:Chi2}Mtr` (+PID) | 18-ID-A | source | yes |
+| CollimatingMirror | Mirror | `XF:18IDA-OP{Mir:CM` | jacks (Mir:CM) | 18-ID-A | source | yes |
+| ToroidalMirror | Mirror | `XF:18IDA-OP{Mir:TM` | jacks (Mir:TM) | 18-ID-A | source | yes |
+| PinkBeamSlit | Slit | `XF:18IDA-OP{PBSL:1` | blade axes | 18-ID-A | source | yes |
+| Filters | Filter | `XF:18IDB-ES{IOLOGIK5:E1211}` | DO1-DO7 digital filter inserts (filter1-7) | 18-ID-B | source | yes |
+| Condenser | Condenser | `XF:18IDB-OP` | condenser optic (class Condenser) | 18-ID-B | source | yes |
+| Zoneplate | ZonePlate | `XF:18IDB-OP` | zone-plate objective (class Zoneplate) | 18-ID-B | source | yes |
+| Aperture | Aperture | `XF:18IDB-OP` | order-sorting aperture (class Aperture) | 18-ID-B | source | yes |
+| PhaseRing | PhaseRing | `XF:18IDB-OP` | Zernike phase ring (class PhaseRing) | 18-ID-B | source | yes |
+| BertrandLens | BetrandLens | `XF:18IDB-OP` | Bertrand lens (class BetrandLens, loose) | 18-ID-B | source | yes |
 | Scintillator | Scintillator | `XF:18IDB-OP{Det:Lens` | scintillator + lens (class Scint) | 18-ID-B | detection | yes |
-| SSASlit | Slit | `XF:18IDB-OP{SSA:1` | secondary source aperture (TXM_SSA) | 18-ID-B | optics | yes |
+| SSASlit | Slit | `XF:18IDB-OP{SSA:1` | secondary source aperture (TXM_SSA) | 18-ID-B | source | yes |
 | TXMSampleStage | LinearStage | `XF:18IDB-OP` | sample positioning (class TXMSampleStage, zps) | 18-ID-B | sample | yes |
 | DetectorSupportU | LinearStage | `XF:18IDB-OP{DetS:U` | upstream detector support (DetSupport) | 18-ID-B | detection | yes |
 | DetectorSupportD | LinearStage | `XF:18IDB-OP{DetS:D` | downstream detector support (DetSupport) | 18-ID-B | detection | yes |

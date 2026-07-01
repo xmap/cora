@@ -1,14 +1,14 @@
 # Sample
 
-*The sample side, and the home of the new `PressureCell` family. The diamond anvil cell sits in the beam under extreme pressure and double-sided laser heating, a sample environment with no fleet analog. Scaffold; devices reverse-engineered from the GSECARS EPICS support tree (iocBoot startup scripts, CARSApp Db templates, the adl MEDM screens), so the device-to-PV reconstruction is rougher than a dodal/BITS roster and carried at medium confidence (CTRL-1).*
+*The sample side, and the home of the `PressureCell` family this deployment introduced. The diamond anvil cell sits in the beam under extreme pressure and double-sided laser heating, a sample environment with no fleet analog at the time. Scaffold; devices reverse-engineered from the GSECARS EPICS support tree (iocBoot startup scripts, CARSApp Db templates, the adl MEDM screens), so the device-to-PV reconstruction is rougher than a dodal/BITS roster and carried at medium confidence (CTRL-1).*
 
-The 13-ID sample side is the one place in this deployment where CORA coins a new device class. The diffraction spine, the optics, the detectors, all of it reuses existing catalog and loose [Families](../../../catalog/families.md). What forces a new Family is the high-pressure sample environment itself: a diamond anvil cell (DAC) holding the specimen under extreme pressure while two fibre lasers heat it from both sides and in-situ spectroscopy reads back its pressure and temperature. The fleet has nothing like it, so it earns one new loose Family, `PressureCell`, held at a single sighting (HP-1, PRESSURE-1).
+The 13-ID sample side is the one place in this deployment where CORA introduced a new device class. The diffraction spine, the optics, the detectors, all of it reuses existing catalog and loose [Families](../../../catalog/families.md). What forced a new Family is the high-pressure sample environment itself: a diamond anvil cell (DAC) holding the specimen under extreme pressure while two fibre lasers heat it from both sides and in-situ spectroscopy reads back its pressure and temperature. The fleet had nothing like it at the time, so it earned the `PressureCell` Family, which has since graduated to the catalog, earned across 13-ID and PETRA III P02 (HP-1, PRESSURE-1).
 
 ## The sample stack (13-ID)
 
 | Device | Family | PV / controller | Design note |
 | --- | --- | --- | --- |
-| `PressureCell` | `PressureCell` (loose, new) | GE/Druck PACE5000 on `13IDD_PACE5000:PC1:Setpoint` / `Pressure_RBV` | the diamond anvil cell; one Asset presenting the `Regulator` Role for its membrane gas pressure, with heating and metrology as capabilities (HP-1, PRESSURE-1) |
+| `PressureCell` | `PressureCell` (catalog) | GE/Druck PACE5000 on `13IDD_PACE5000:PC1:Setpoint` / `Pressure_RBV` | the diamond anvil cell; one Asset presenting the `Regulator` Role for its membrane gas pressure, with heating and metrology as capabilities (HP-1, PRESSURE-1) |
 | `SampleStage` | `Goniometer` | Galil `m1`-`m4` (X / Z / Y / Omega) + Newport XPS-16 trajectory | DAC positioning stage / micro-diffractometer; single Omega, the Galil-vs-XPS choice a setting (SAMPLE-1) |
 | `SampleTable` | `Table` | (DAC lift table) | the table the cell sits on (SAMPLE-1) |
 | `MetrologySpectrometer` | `Camera` | LightField PIMAX / PIXIS on `13IDDLF1:` | the cell's pressure / temperature metrology detector (HP-1) |
@@ -29,7 +29,7 @@ The naming-r3 choice is deliberate. The bare regime-generic role-noun `PressureC
 - **not `HighPressureCell`**, because that qualifier names the regime (high pressure) rather than the thing, and the regime belongs at the Plan level, not in the device class name; and
 - **not `DiamondAnvilCell`**, because that qualifier names the mechanism (the diamond anvils) and so over-specifies. The bare role-noun spans the diamond anvil cell here, large-volume presses, and clamp cells alike.
 
-The Family is held at **n=1**, a single sighting at 13-ID, and graduates into the catalog only at a rule-of-three: the HPCAT 16-ID cells, the 13-BM-D large-volume press, and the 4-ID cell are the candidate second and third sightings (HP-1, PRESSURE-1).
+The Family, introduced at 13-ID, has since graduated into the catalog, earned across 13-ID and PETRA III P02; further high-pressure environments (the HPCAT 16-ID cells, the 13-BM-D large-volume press, the 4-ID cell) now bind the graduated Family (HP-1, PRESSURE-1).
 
 ## Why the heating lasers do not bind the loose `Laser` family
 
@@ -43,6 +43,6 @@ The two IPG YLR fibre lasers heat the sample, and there is already a loose `Lase
 
 ## Why a new family here, but only one
 
-The high-pressure sample environment has no fleet analog, so it earns the one new loose Family, `PressureCell`. Everything around it reuses what the catalog already carries: the XRD spine (source, monochromator, mirrors, slits, aperture, attenuator) all binds existing Families, the area detectors and flux monitors and the Dante MCA are the established detection shapes, and the positioning stage and metrology camera reuse `Goniometer` and `Camera`. The novelty is localised entirely to the sample environment, and even there it is one Asset with capabilities, not a sprawl of new classes. The Koyo laser-safety PLC that gates emission is modelled as an Enclosure permit axis on the [governance](../../aps/index.md#the-safety-envelope) side, not as a device (LASER-1, PSS-1).
+The high-pressure sample environment had no fleet analog at the time, so it earned the `PressureCell` Family this deployment introduced (since graduated to the catalog, earned across 13-ID and P02). Everything around it reuses what the catalog already carries: the XRD spine (source, monochromator, mirrors, slits, aperture, attenuator) all binds existing Families, the area detectors and flux monitors and the Dante MCA are the established detection shapes, and the positioning stage and metrology camera reuse `Goniometer` and `Camera`. The novelty is localised entirely to the sample environment, and even there it is one Asset with capabilities, not a sprawl of new classes. The Koyo laser-safety PLC that gates emission is modelled as an Enclosure permit axis on the [governance](../../aps/index.md#the-safety-envelope) side, not as a device (LASER-1, PSS-1).
 
-See [Open questions](../questions.md) for the sample-side facts still to confirm, [Inventory](../inventory.md) for the Asset tree, [Model](../model.md) for the loose-Family graduation plan, and [the source walk](../beamline.md) for the device-to-PV reconstruction.
+See [Open questions](../questions.md) for the sample-side facts still to confirm, [Inventory](../inventory.md) for the Asset tree, [Model](../model.md) for the Family's graduation to the catalog, and [the source walk](../beamline.md) for the device-to-PV reconstruction.

@@ -51,9 +51,9 @@ CORA models that arm as the catalog `PolarizationAnalyzer` Family. This is a del
 
 ### What i10 adds: applied-field dichroism
 
-The i10-1 / I10J endstation makes the dichroic contrast under an applied magnetic field, with the sample held at low temperature. Two magnet devices serve it: a set-and-read electromagnet and a superconducting magnet whose field can be swept (a Flyable affordance). CORA models both as the single loose `Magnet` family: they are one family, and the field sweep is a per-Asset affordance, not a split (MAG-1). This is the `Magnet` family's second sighting, after 4-ID, also held under review (MAG-1). The field values and the sweep specifics are not invented (MAG-1).
+The i10-1 / I10J endstation makes the dichroic contrast under an applied magnetic field, with the sample held at low temperature. Two magnet devices serve it: a set-and-read electromagnet and a superconducting magnet whose field can be swept (a Flyable affordance). CORA models both as the single graduated `Magnet` family: they are one family, and the field sweep is a per-Asset affordance, not a split (MAG-1). i10-1 was the `Magnet` family's second sighting after 4-ID, and with the later ESRF ID32 magnet it reached a rule-of-three and graduated into the catalog (MAG-1). The field values and the sweep specifics are not invented (MAG-1).
 
-The applied field is what makes i10's XMCD / XMLD different from i06's: i06 reads dichroism from the polarization alone, while i10 reads it with a field applied and the sample cold. The cryostat low-temperature stage folds into the catalog `LinearStage`, and the magnet temperature is held by a catalog `TemperatureController` (TEMP-1). As with the polarization axis, no new device Family is coined for either addition: the analyzer binds the graduated catalog `PolarizationAnalyzer`, and the magnets are the loose `Magnet` family, reuse held under review.
+The applied field is what makes i10's XMCD / XMLD different from i06's: i06 reads dichroism from the polarization alone, while i10 reads it with a field applied and the sample cold. The cryostat low-temperature stage folds into the catalog `LinearStage`, and the magnet temperature is held by a catalog `TemperatureController` (TEMP-1). As with the polarization axis, no new device Family is coined for either addition: the analyzer binds the graduated catalog `PolarizationAnalyzer`, and the magnets are the graduated `Magnet` family, whose rule-of-three i10-1 helped complete.
 
 ## Not modelled yet
 
@@ -63,7 +63,7 @@ The intent above is the function view. The concrete recipes that turn it into ru
 
 - **Whether each Method enters the catalog.** Minting a Method is owner-scope. Resonant scattering and XMCD reuse 4-ID Methods, XMLD reuses the i06 slug, and reflectivity is a new slug, but all four render pending until the owner decides (TECH-1). The decision is recorded on the [Model](model.md) page, not made here.
 
-- **Whether the Magnet family graduates.** `PolarizationAnalyzer` has graduated to a catalog Family across 4-ID / i10 / ID32 / P09 (POL-2), so i10's analyzer arm binds the catalog Family; the analyzer-crystal spec stays uninvented as a per-Asset detail. `Magnet` is a loose family on its second sighting and held under review (MAG-1). i10 records HOLD; the graduate-or-hold call is human and is not made here. The magnet field values stay uninvented behind that hold.
+- **The graduated analyzer and magnet families.** `PolarizationAnalyzer` has graduated to a catalog Family across 4-ID / i10 / ID32 / P09 (POL-2), so i10's analyzer arm binds the catalog Family; the analyzer-crystal spec stays uninvented as a per-Asset detail. The `Magnet` family has also graduated (i10-1 was one of its three consumers with 4-ID and ID32), so i10's magnets bind the catalog Family; only the per-Asset magnet field values stay uninvented (MAG-1).
 
 - **The science detectors.** Neither endstation has an area detector. The RASOR and i10-1 point and current-integrating channels bind the catalog `FluxMonitor` through their current amplifiers (DET-1); no detector Family is invented in the meantime.
 

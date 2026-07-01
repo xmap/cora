@@ -18,8 +18,8 @@
 
 4-ID is CORA's first polarization and magnetic-scattering deployment. It is unlike the 2-BM, 7-BM, and 32-ID imaging beamlines in three ways:
 
-- **Polarization control.** Three diamond phase retarders set the X-ray polarization state, the capability 4-ID is built around. They bind the catalog `PhaseRetarder` Family (earned across 4-ID / P09 / P22).
-- **Magnetic scattering.** Superconducting sample magnets (2 T at 4-ID-B, a high-field magnet at 4-ID-H) and low-temperature sample environments drive resonant magnetic scattering. New device classes to CORA: `Magnet` (loose) and `TemperatureController` (since graduated to a catalog Family presenting `Regulator`).
+- **Polarization control.** Three diamond phase retarders set the X-ray polarization state, the capability 4-ID is built around. They bind the graduated catalog `PhaseRetarder` Family (earned across 4-ID / P09 / P22, presents the `Positioner` Role).
+- **Magnetic scattering.** Superconducting sample magnets (2 T at 4-ID-B, a high-field magnet at 4-ID-H) and low-temperature sample environments drive resonant magnetic scattering. These bind two catalog Families that both present `Regulator`: `Magnet` (graduated across 4-ID + i10-1 + ID32) and `TemperatureController` (graduated on the Diamond i22/i03/i11 rule-of-three).
 - **Diffraction.** Huber diffractometers at 4-ID-G replace the tomography stage with a multi-circle goniometer and reciprocal-space (hklpy2) coordination, a shape CORA models as an Assembly, not yet built.
 
 It runs across four lead-shielded stations: `4-ID-A` (optics), and `4-ID-B`, `4-ID-G`, `4-ID-H` (experiment).
@@ -33,7 +33,7 @@ This cut earns its abstractions. It models the operational core read from the be
 | Optics spine (`4-ID-A`) | Yes | Undulators, phase retarders, VDCM monochromator, white-beam and mono slits |
 | Per-station optics (`4-ID-B/G/H`) | Yes | KB mirrors, filters, transfocator, beam-position monitors |
 | Diffractometers (`4-ID-G`) | Yes, as plain devices | Modelled with their circle axis maps; the reusable `Assembly(Diffractometer)` is designed but deferred (`DIFF-1`, see [Model](model.md#deliberately-not-here-yet)) |
-| Sample environment | Yes | Magnets, temperature controllers, sample tables, pump-probe laser, bound to loose Families |
+| Sample environment | Yes | Magnets and temperature controllers (graduated catalog Families presenting `Regulator`), sample tables, pump-probe laser (loose) |
 | Raman station (`4-ID-Raman`) | No | Its device config did not extract (a broken symlink in the source clone); scope and devices are `TOPO-2` |
 | Preamps / lock-in / high-pressure cell | No | Present in the config; deferred as peripheral (`SAMPLE-2`) |
 

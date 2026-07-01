@@ -4,7 +4,7 @@
 
 This cut models the shared optics (the high-resolution backscattering monochromator, the focusing mirrors, the beam-defining slits) and the eh1 IXS spectrometer endstation (the sample stage, its temperature environments, and the multi-analyzer spectrometer arm). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id28/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. ID28, CORA's second ESRF beamline, **coins no new Family and changes nothing in the catalog**: the multi-analyzer spectrometer arm binds the loose `SpectrometerArm` (a further consumer after SIX + ID32, held, its graduation already deferred), and everything else reuses an existing catalog or loose Family (see [Model](model.md#a-further-spectrometerarm-consumer-held)). Control handles are filled from the BLISS Beacon config (BLISS / Tango / IcePAP addresses); no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. ID28, CORA's second ESRF beamline, **coins no new Family**: the multi-analyzer spectrometer arm binds the catalog `SpectrometerArm` (a further consumer after SIX + ID32 that reinforced the now-landed graduation), and everything else reuses an existing catalog or loose Family (see [Model](model.md#a-further-spectrometerarm-consumer-held)). Control handles are filled from the BLISS Beacon config (BLISS / Tango / IcePAP addresses); no vendor Models are bound.
 
 ## The Asset tree
 
@@ -20,16 +20,16 @@ Root Asset `ID28` (`tier = Unit`, `facility_code = esrf`); sub-systems nest belo
 | `BeamEnergy` | `Device` | PseudoAxis | id28-optics | incident-energy axis via the ASL F700 crystal-temperature controller (monot / deltae), not an angular mono; the meV scan is the IXS measurement (MONO-1) |
 | `HorizontalFocusingMirror` | `Device` | Mirror | id28-optics | HFM two-bender mirror (BLISS hfm_ctrl) (OPT-1) |
 | `VerticalFocusingMirror` | `Device` | Mirror | id28-optics | VFM two-bender mirror (BLISS vfm_ctrl) (OPT-1) |
-| `BeamPositionMonitor` | `Device` | BeamPositionMonitor (loose) | id28-optics | the oh2 Elettra BPM; already held (DIAG-1) |
+| `BeamPositionMonitor` | `Device` | BeamPositionMonitor | id28-optics | the oh2 Elettra BPM; graduated catalog Family presenting `Sensor`, position-measuring (DIAG-1) |
 | `PrimarySlit` | `Device` | Slit | id28-optics | the primary beam-defining slits (BLISS slits_ph / slits_pv) (OPT-2) |
 | `MonoSlit` | `Device` | Slit | id28-optics | the main-mono slit (BLISS slits_mx) (OPT-2) |
 | `SampleStage` | `Device` | LinearStage | id28-eh1 | the IXS scattering-geometry sample stage (sax / say / saz, th / sphi / chi, eh1_ss iceid285, SmarAct) (SAMPLE-1) |
 | `SampleSlit` | `Device` | Slit | id28-eh1 | the sample-defining slits (BLISS slits_sh / slits_sv) (OPT-2) |
 | `SampleTemperatureController` | `Device` | TemperatureController | id28-eh1 | the 10 K displex LakeShore 340 (Oxford 700 + nanodac gas blower as alternatives) (TEMP-1) |
-| `SpectrometerArm` | `Device` | SpectrometerArm (loose) | id28-eh1 | the IXS multi-analyzer spectrometer (BLISS tth_multilayer two-theta arm + a1..a9 inclined analyzer crystals); further consumer, held (RIXS-1, IXS-1) |
+| `SpectrometerArm` | `Device` | SpectrometerArm | id28-eh1 | the IXS multi-analyzer spectrometer (BLISS tth_multilayer two-theta arm + a1..a9 inclined analyzer crystals); further consumer, graduated Family (RIXS-1, IXS-1) |
 | `Detector` | `Device` | Camera | id28-eh1 | the Basler / PCO detectors plus the per-analyzer deta1..deta9 counters (DET-1) |
 
-Families reused from the catalog: `Shutter`, `InsertionDevice`, `Monochromator`, `PseudoAxis`, `Mirror`, `Slit`, `LinearStage`, `TemperatureController`, `Camera`. Loose families reused from siblings: `StorageRing` (supply), `BeamPositionMonitor` (already held, DIAG-1), `SpectrometerArm` (SIX / ID32; a further consumer, held, RIXS-1). No new family is coined and nothing graduates (the SpectrometerArm graduation is deferred to a dedicated PR).
+Families reused from the catalog: `Shutter`, `InsertionDevice`, `Monochromator`, `PseudoAxis`, `Mirror`, `Slit`, `LinearStage`, `TemperatureController`, `Camera`, `SpectrometerArm` (graduated across SIX + ID32 RIXS/XES + ID28; ID28 is a further consumer that reinforced it, RIXS-1), `BeamPositionMonitor` (graduated catalog Family presenting `Sensor`, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux, DIAG-1). Loose families reused from siblings: `StorageRing` (supply). No new family is coined; ID28's SpectrometerArm sighting reinforced the graduation that has since landed.
 
 ## Pending confirmations
 
@@ -44,7 +44,7 @@ Families reused from the catalog: `Shutter`, `InsertionDevice`, `Monochromator`,
 | Mirror coatings and bender mechanics | the focusing mirrors | `unknown-pending-confirmation` | (OPT-1) |
 | Slit blade-axis map | `PrimarySlit`, `MonoSlit`, `SampleSlit` | `unknown-pending-confirmation` | (OPT-2) |
 | BPM position-vs-flux | `BeamPositionMonitor` | `unknown-pending-confirmation` | (DIAG-1) |
-| SpectrometerArm geometry and graduation | `SpectrometerArm` | `unknown-pending-confirmation` | (RIXS-1) |
+| SpectrometerArm geometry (Family graduated) | `SpectrometerArm` | `unknown-pending-confirmation` | (RIXS-1) |
 | Analyzer-crystal array count and child-Asset identity | `SpectrometerArm` | `unknown-pending-confirmation` | (IXS-1) |
 | Sample-stage axes | `SampleStage` | `unknown-pending-confirmation` | (SAMPLE-1) |
 | Sample-temperature environments | `SampleTemperatureController` | `unknown-pending-confirmation` | (TEMP-1) |

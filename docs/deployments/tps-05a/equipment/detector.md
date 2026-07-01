@@ -8,7 +8,7 @@ TPS 05A's measurement is the rotation series of diffraction frames the EIGER2 re
 | --- | --- | --- | --- |
 | `EigerDetector` | Camera | DCSS workflow over EPICS (PV pending) | the rotation-MX area detector |
 | `DetectorStage` | LinearStage | EPICS (PV pending) | sets the sample-to-detector distance |
-| `BeamPositionMonitor` | BeamPositionMonitor (loose) | EPICS (PV pending) | beam-position diagnostic |
+| `BeamPositionMonitor` | BeamPositionMonitor | EPICS (PV pending) | beam-position diagnostic |
 | `OAVCamera` | Camera | EPICS (PV pending) | on-axis viewing for centring |
 
 ## The EIGER2 X 9M over the DCSS workflow
@@ -17,7 +17,7 @@ The `EigerDetector` is a DECTRIS **EIGER2 X 9M** (the [SPXF page](https://nsrrcs
 
 ## Diagnostics
 
-The `DetectorStage` sets the sample-to-detector distance (any minimum-distance interlock like 07A's 139 mm is pending, DET-1). The `BeamPositionMonitor` binds the loose `BeamPositionMonitor` family (held, DIAG-1); the `OAVCamera` serves sample centring on the MD3 and reuses `Camera`.
+The `DetectorStage` sets the sample-to-detector distance (any minimum-distance interlock like 07A's 139 mm is pending, DET-1). The `BeamPositionMonitor` binds the graduated catalog `BeamPositionMonitor` Family (presents `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux; the per-Asset channel map stays open, DIAG-1); the `OAVCamera` serves sample centring on the MD3 and reuses `Camera`.
 
 ## Reuse, not new vocabulary
 

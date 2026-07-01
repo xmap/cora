@@ -19,9 +19,9 @@
 I10 is the fleet's second APPLE-II source after I06, and it is I06's soft X-ray twin: the same twin-APPLE-II plus plane-grating-monochromator spine, here feeding the RASOR and i10-1 branch endstations. The novelty is not a new source primitive but what happens to two families that have now been sighted twice.
 
 - **The polarization axis is reused, not re-coined.** I06 established that an APPLE-II drives incident X-ray polarization as a first-class experiment axis, expressed entirely through existing Families. I10 inherits that precedent directly: the twin APPLE-II binds the catalog `InsertionDevice` and the polarization handle binds the catalog `PseudoAxis`, with the same value domain (LH / LV / PC / NC / LA plus third-harmonic variants). The continuous linear-arbitrary-angle is the continuous realization of the LA value WITHIN that same polarization axis, not a second axis and not a new family (`POL-1`).
-- **RASOR's analyzer arm binds the graduated `PolarizationAnalyzer`, and the i10-1 magnets stay held.** RASOR's motorized polarization-analysis arm binds the catalog `PolarizationAnalyzer` Family, which has graduated across 4-ID / i10 / ID32 / P09 (`POL-2`), presenting Positioner. The i10-1 magnet devices bind the loose `Magnet` family, first seen at 4-ID; this is its second sighting (`MAG-1`). A second sighting is not the rule-of-three, so `Magnet` stays HELD under review rather than graduating. The hold-versus-graduate call stays human, and I10 records HOLD for the magnets.
+- **Two families i10-1 helped graduate.** RASOR's motorized polarization-analysis arm binds the catalog `PolarizationAnalyzer` Family, which has graduated across 4-ID / i10 / ID32 / P09 (`POL-2`), presenting Positioner. The i10-1 magnet devices bind the `Magnet` family, also first seen at 4-ID: i10-1 was its second sighting, and with the later ESRF ID32 magnet the family reached a rule-of-three and **graduated** into the catalog, so i10's magnets now bind the graduated `Magnet` Family (`MAG-1` now covers only the per-Asset field detail).
 
-The net: I10 coins no new Family, nothing graduates, and the catalog is unchanged. The deployment's contribution is the second data point on two loose families and the reuse of the polarization axis on a twin source.
+The net: I10 coins no new Family. Its contribution is the second data point on two families that have since graduated into the catalog (`PolarizationAnalyzer` and `Magnet`, both completing their rule-of-three at later deployments) and the reuse of the polarization axis on a twin source.
 
 ## Scope: what is and is not modelled
 
@@ -29,7 +29,7 @@ The net: I10 coins no new Family, nothing graduates, and the catalog is unchange
 | --- | --- | --- |
 | Optics spine (`BL10I` / `SR10I`) | Yes | The twin APPLE-II undulators, the plane-grating monochromator, the collimating / switching / focusing mirrors, the optics slits, and the incident-energy and polarization pseudo-axes |
 | RASOR endstation (`ME01D`) | Yes | The diffractometer arm and reciprocal-space pseudo-axis, the catalog `PolarizationAnalyzer` arm (`POL-2`), the cryostat sample stage, the pinhole, and the Lakeshore 340 temperature controller |
-| i10-1 / I10J magnet endstation (`BL10J`) | Yes | The loose `Magnet` family (electromagnet plus the superconducting field-sweep magnet, `MAG-1`), the magnet stages, the focusing mirror and slits, and the Lakeshore 336 temperature controller |
+| i10-1 / I10J magnet endstation (`BL10J`) | Yes | The graduated `Magnet` family (electromagnet plus the superconducting field-sweep magnet, `MAG-1`), the magnet stages, the focusing mirror and slits, and the Lakeshore 336 temperature controller |
 | The RASOR and i10-1 point / current-integrating detectors | No | Modelled as `FluxMonitor` where bound; no area detector exists, deferred not invented (`DET-1`) |
 | The upstream diagnostics | No | Carried pending, not invented (`SUP-1`) |
 | PSS permit signals and the photon / front-end shutters | No | Absent from dodal; carried pending, not invented (`PSS-1`) |
@@ -40,9 +40,9 @@ The deferred parts are recorded on [Model](model.md#deliberately-not-here-yet).
 
 - **APPLE-II binds the catalog `InsertionDevice`, polarization binds the catalog `PseudoAxis` (reuse, the merged I06 precedent).** The polarization phase rows, the energy-to-gap polynomial, and the controller are per-Asset settings on the bound Model (`SRC-1`). The polarization value set (LH / LV / PC / NC / LA plus third-harmonic variants) is the axis domain; the continuous linear-arbitrary-angle is the continuous realization of the LA value within that same axis, not a new axis or family, and the live controller owns the conversion rule-less (`POL-1`).
 - **The PaStage / POLAN arm binds the catalog `PolarizationAnalyzer` Family, GRADUATED (`POL-2`).** This is a CORA modelling CHOICE: model RASOR's defining polarization-analysis role on the real motorized arm rather than hide it, even though dodal exposes the arm's motors only and the analyzer crystal is implicit hardware. The Family has graduated across 4-ID / i10 / ID32 / P09, presenting Positioner; the analyzer-crystal spec stays a per-Asset detail to confirm.
-- **Both magnet devices bind the loose `Magnet` family, HELD under review (`MAG-1`).** The set-and-read electromagnet and the superconducting field-sweep magnet are ONE family; the field-sweep is a per-Asset affordance, not a split. This is the family's second sighting after 4-ID; I10 records HOLD.
+- **Both magnet devices bind the graduated `Magnet` family (`MAG-1`).** The set-and-read electromagnet and the superconducting field-sweep magnet are ONE family; the field-sweep is a per-Asset affordance, not a split. i10-1 was the family's second sighting after 4-ID, and with the later ESRF ID32 magnet it reached a rule-of-three and graduated into the catalog (it presents the `Regulator` Role).
 - **No area detector at either endstation; point and current-integrating detection binds `FluxMonitor` (`DET-1`).** RASOR's scaler-channel point, incident-flux, fluorescence, and drain-current / total-electron-yield channels (through Femto / SR570 current amplifiers) and the i10-1 point channels are the science detectors, so they bind `FluxMonitor`.
-- **Zero new families coined, nothing graduates, the catalog is unchanged.**
+- **Zero new families coined here.** The two families i10 recorded as second sightings (`PolarizationAnalyzer`, `Magnet`) have since graduated into the catalog on their rule-of-three.
 
 ## The beamline
 
@@ -68,7 +68,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Model
 
-[Model](model.md): the developer's by-kind index into where each CORA aggregate's I10 content lives, why this second APPLE-II deployment coins no new vocabulary, and the record of what is deliberately deferred, including the graduated catalog `PolarizationAnalyzer` (`POL-2`, earned across 4-ID / i10 / ID32 / P09) and the loose `Magnet` (`MAG-1`) held at its second sighting.
+[Model](model.md): the developer's by-kind index into where each CORA aggregate's I10 content lives, why this second APPLE-II deployment coins no new vocabulary, and the record of what is deliberately deferred, including the graduated catalog `PolarizationAnalyzer` (`POL-2`, earned across 4-ID / i10 / ID32 / P09) and the `Magnet` family (`MAG-1`) whose rule-of-three i10-1 helped complete, since graduated into the catalog.
 
 ## Not yet documented
 

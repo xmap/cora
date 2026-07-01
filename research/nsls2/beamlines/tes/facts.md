@@ -12,12 +12,12 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
 | PhotonShutter | Shutter | `XF:08BMES-PPS{PSh}` | (PPS shutter) | 8-BM-ES | source | yes |
-| Monochromator | Monochromator | `XF:08BMA-OP{Mono:1-Ax:` | scanning mono axes | 8-BM-A | optics | yes |
-| FocusingMirror | Mirror | `XF:08BMA-OP{Mir:FM-Ax:` | FM mirror axes | 8-BM-A | optics | yes |
-| KBMirrorHorizontal | Mirror | `XF:08BMES-OP{Mir:KBH-Ax:` | KB horizontal refocus | 8-BM-ES | optics | yes |
-| KBMirrorVertical | Mirror | `XF:08BMES-OP{Mir:KBV-Ax:` | KB vertical refocus | 8-BM-ES | optics | yes |
-| SecondarySourceAperture | Slit | `XF:08BMES-OP{SSA:1-Ax:` | SSA blade axes | 8-BM-ES | optics | yes |
-| SlitModule | Slit | `XF:08BMES-OP{SM:1-Ax:` | slit module axes | 8-BM-ES | optics | yes |
+| Monochromator | Monochromator | `XF:08BMA-OP{Mono:1-Ax:` | scanning mono axes | 8-BM-A | source | yes |
+| FocusingMirror | Mirror | `XF:08BMA-OP{Mir:FM-Ax:` | FM mirror axes | 8-BM-A | source | yes |
+| KBMirrorHorizontal | Mirror | `XF:08BMES-OP{Mir:KBH-Ax:` | KB horizontal refocus | 8-BM-ES | source | yes |
+| KBMirrorVertical | Mirror | `XF:08BMES-OP{Mir:KBV-Ax:` | KB vertical refocus | 8-BM-ES | source | yes |
+| SecondarySourceAperture | Slit | `XF:08BMES-OP{SSA:1-Ax:` | SSA blade axes | 8-BM-ES | source | yes |
+| SlitModule | Slit | `XF:08BMES-OP{SM:1-Ax:` | slit module axes | 8-BM-ES | source | yes |
 | SampleStage | LinearStage | `XF:08BMC-ES:SE{Smpl:1-Ax:` | sample positioning | 8-BM-C | sample | yes |
 | SampleMotionStage | LinearStage | `XF:08BMC-ES:SE{SmplM:1-Ax:` | sample fly-scan motion | 8-BM-C | sample | yes |
 | DetectorStage | LinearStage | `XF:08BMC-ES:SE{Det:1-Ax:` | detector positioning | 8-BM-C | detection | yes |
@@ -25,7 +25,7 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | PICAMDetector | Camera | `XF:08BM-ES{Det:PICAM1}` | Teledyne PICAM detector | 8-BM | detection | yes |
 | ScalerCounter | GenericProbe (?) | `XF:08BM-ES:1{Sclr:1}` | scaler channels | 8-BM | detection | yes |
 | IonChamber | FluxMonitor (?) | `XF:08BM-ES{IO:2}` | I0 ion chamber | 8-BM | detection | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:08BMES-BI{PSh:1-BPM:3}` | BPM 3/4 | 8-BM-ES | diagnostics | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:08BMES-BI{PSh:1-BPM:3}` | BPM 3/4 | 8-BM-ES | source | yes |
 | AxisCamera | GenericProbe (?) | `XF:08BM-BI{Axis-Cam:1}` | viewing cameras (1/2, Cam:6/7) | 8-BM | sample | yes |
 | EndstationMotionController | MotionController | `XF:08BM-CT{MC:06}` | motion controller | 8-BM | sample | yes |
 

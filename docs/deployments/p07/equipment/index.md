@@ -11,7 +11,7 @@ Three enclosures carry the beamline (`ENC-1`): the optics hutch (`p07-oh2`) and 
 ## Stations
 
 - [Source](../beamline.md): the P07 undulator (`SRC-1`); the multi-bounce DCM bound to `Monochromator` (`OPT-1`), the OH z-stage bound to `LinearStage`, the slits bound to `Slit`. This page is generated from the descriptor.
-- [Sample](sample.md): the EH2 four-circle diffractometer bound to `Goniometer` (`DIFF-1`), the hexapod bound to `Hexapod`, the 17 T magnet bound to the allowlisted-loose `Magnet` (`MAG-1`), the Linkam bound to `TemperatureController`; the EH2B sample bank bound to `LinearStage` (`GROUP-1`).
+- [Sample](sample.md): the EH2 four-circle diffractometer bound to `Goniometer` (`DIFF-1`), the hexapod bound to `Hexapod`, the 17 T magnet bound to the graduated catalog `Magnet` (`MAG-1`), the Linkam bound to `TemperatureController`; the EH2B sample bank bound to `LinearStage` (`GROUP-1`).
 - [Detector](detector.md): the Pilatus and PerkinElmer area detectors bound to `Camera`, and the MCA fluorescence detectors bound to `EnergyDispersiveSpectrometer` (`DET-1`).
 
 ## Shared

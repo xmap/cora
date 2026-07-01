@@ -18,12 +18,12 @@
 #   - IXS deepens the fleet's inelastic-scattering coverage (SIX soft RIXS, IXS 10-ID, ID32
 #     soft RIXS): ID28 is hard X-ray, meV-resolution, phonon-dispersion IXS.
 #   - The multi-analyzer crystal spectrometer is a further SpectrometerArm consumer. The
-#     family graduation is already pending from ID32's rule-of-three (RIXS-1); ID28 is a
-#     further sighting, HELD, reinforcing the deferred graduation.
+#     family completed its rule-of-three at ID32 and has since GRADUATED into the catalog
+#     (SIX + ID32 RIXS/XES + ID28); ID28 is a further sighting that reinforced it.
 #
-# MODELLING: ID28 coins NO new Family and changes nothing in the catalog. The
+# MODELLING: ID28 coins NO new Family. The
 # backscattering monochromator binds Monochromator; the HFM / VFM benders bind Mirror;
-# the two-theta multi-analyzer spectrometer binds the loose SpectrometerArm (the array of
+# the two-theta multi-analyzer spectrometer binds the catalog SpectrometerArm (the array of
 # inclined analyzer crystals is a per-Asset setting, not a new family, the IXS-1 question);
 # the Basler / PCO detectors bind Camera; the LakeShore / Oxford / nanodac sample
 # environments bind TemperatureController; the in-vacuum undulators bind InsertionDevice;
@@ -113,7 +113,7 @@ optics:
     (the ASL F700 monot / deltae axis), carried as the BeamEnergy PseudoAxis. The config also
     shows a premono (OH1) and a postmono (OH2) ahead of the main mono (OH3); they fold into
     the same monochromation chain (MONO-1). The HFM / VFM benders bind Mirror; the oh2
-    Elettra monitor binds the loose BeamPositionMonitor; the primary and mono slits bind Slit.
+    Elettra monitor binds the graduated BeamPositionMonitor Family; the primary and mono slits bind Slit.
   devices:
     - name: Monochromator
       family: Monochromator
@@ -140,11 +140,11 @@ optics:
       confirm: true
       note: "the vertical focusing mirror (VFM, two-bender on the dedicated VFM calc controller) (OPT-1)"
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor      # loose Family, already held under review (DIAG-1)
+      family: BeamPositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "BLISS elettra_bpm_oh2 (oh2/elettra_bpm_oh2.yml; Elettra on tango://id28/elettra/oh2; quadrant currents ebpmc1..4, total ebpmct, position ebpmx / ebpmy)"
       new: true
       confirm: true
-      note: "the oh2 Elettra beam-position monitor; binds the loose BeamPositionMonitor (already held, DIAG-1)"
+      note: "the oh2 Elettra beam-position monitor; binds the graduated BeamPositionMonitor Family (DIAG-1)"
     - name: PrimarySlit
       family: Slit
       pv: "BLISS slits_ph / slits_pv (slits/slit_phg.yml, slits/slit_pvg.yml; horizontal phg / pho on pr / pl, vertical pvg / pvo on pu / pd)"
@@ -200,18 +200,18 @@ eh1-detection:
   enclosure: id28-eh1
   intro: "The IXS spectrometer endstation: a two-theta arm carrying an array of inclined analyzer crystals, and the counting detectors."
   note: >
-    The multi-analyzer spectrometer binds the loose SpectrometerArm (the SIX / ID32
-    precedent; a further consumer, held, reinforcing the deferred graduation, RIXS-1).
+    The multi-analyzer spectrometer binds the catalog SpectrometerArm Family (graduated
+    across SIX + ID32 RIXS/XES + ID28; ID28 is a further consumer that reinforced it).
     The array of inclined analyzer crystals (a1..a9, each with chi / th and its own cylinder
     slit) is a per-Asset setting on the one arm, not a new family (IXS-1). The Basler / PCO
     detectors bind Camera; the per-analyzer counting is on the P201 cards.
   devices:
     - name: SpectrometerArm
-      family: SpectrometerArm           # loose Family; further consumer, HELD (graduation deferred, RIXS-1)
+      family: SpectrometerArm           # catalog Family (graduated; further consumer after SIX + ID32)
       pv: "BLISS tth_multilayer (eh1/tth_multilayer.yml; TwoThetaMultilayer two-theta arm tth over real tthm rail) carrying the inca InclinedAnalyser crystals a2_inca / a3_inca / a4_inca (eh1/inca.yml; achi / ath per crystal), with analyzer cylinder slits a1h..a9h / a1v..a9v (slits/cylslits.yml, CylSlit radius 43.5)"
       new: true
       confirm: true
-      note: "the IXS multi-analyzer spectrometer: a two-theta arm (TwoThetaMultilayer, tth on the tthm rail) carrying an array of inclined analyzer crystals (a1..a9, each with chi / th and a cylinder slit), energy-analyzing the scattered beam in backscattering. Binds the loose SpectrometerArm, a further consumer after SIX + ID32, HELD (the graduation is deferred, RIXS-1); the nine-crystal array is a per-Asset setting, not a child-Asset family (IXS-1)"
+      note: "the IXS multi-analyzer spectrometer: a two-theta arm (TwoThetaMultilayer, tth on the tthm rail) carrying an array of inclined analyzer crystals (a1..a9, each with chi / th and a cylinder slit), energy-analyzing the scattered beam in backscattering. Binds the graduated catalog SpectrometerArm Family, a further consumer after SIX + ID32; the nine-crystal array is a per-Asset setting, not a child-Asset family (IXS-1)"
     - name: Detector
       family: Camera
       pv: "BLISS lima basler_ixs / pco (lima/basler.yml id28/limaccds/basler_0, lima/pco.yml id28/limaccds/pco); per-analyzer counters deta1..deta9 and the izero / ione beam monitors on the P201 CT2 cards (eh1/counters/p201-lid282.yml)"

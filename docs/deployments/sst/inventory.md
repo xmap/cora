@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/sst/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against the `NSLS2/sst-*-profile-collection` TOML manifests and the `NSLS-II-SST/sst-base` device classes). No vendor Model is bound: part numbers are not in the profile collection. SST introduces **no new catalog family**: every device reuses an existing Family, including the recently-graduated soft-X-ray ones (`GratingMonochromator` for the soft PGM, `Manipulator` for the sample stages, `EnergyDispersiveSpectrometer` for the microcalorimeter). The hemispherical `ElectronAnalyzer` (a second sighting after ESM) GRADUATED into the catalog (ARPES-1); one loose family remains, the `BeamPositionMonitor` (DIAG-1); see [Model](model.md#deliberately-not-here-yet).
+Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against the `NSLS2/sst-*-profile-collection` TOML manifests and the `NSLS-II-SST/sst-base` device classes). No vendor Model is bound: part numbers are not in the profile collection. SST introduces **no new catalog family**: every device reuses an existing Family, including the recently-graduated soft-X-ray ones (`GratingMonochromator` for the soft PGM, `Manipulator` for the sample stages, `EnergyDispersiveSpectrometer` for the microcalorimeter). The hemispherical `ElectronAnalyzer` (a second sighting after ESM) GRADUATED into the catalog (ARPES-1); the `BeamPositionMonitor` is a graduated catalog Family too, presenting the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux, with only the per-Asset channel map open (DIAG-1); see [Model](model.md#deliberately-not-here-yet).
 
 ## The Asset tree
 
@@ -25,7 +25,7 @@ Root Asset `SST` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `ExitSlit` | Slit | `XF:07ID2-BI{Slt:11}` | soft mono exit slit (resolution) |
 | `HAXPESSlit` | Slit | `XF:07ID2-OP{Slt:12}` | tender HAXPES beam-defining slit |
 | `EnergyAxis` | PseudoAxis | (computed) | master energy (per-branch coupled) |
-| `BeamPositionMonitor` | BeamPositionMonitor (loose) | `XF:07ID-BI{BPM:4}` | beam-position diagnostics |
+| `BeamPositionMonitor` | BeamPositionMonitor | `XF:07ID-BI{BPM:4}` | beam-position diagnostics |
 | `RSoXSManipulator` | Manipulator | `XF:07ID2-ES1{Stg-Ax:}` | soft-scattering sample stage |
 | `HAXPESManipulator` | Manipulator | `XF:07ID1-BI{HAX-Ax:}` | photoemission sample stage |
 | `SampleTemperature` | TemperatureController | `XF:07ID2-ES1{TCtrl:1}LS336:` | Lakeshore thermal control |
@@ -38,7 +38,7 @@ Root Asset `SST` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `FastShutter` | Shutter | `XF:07ID2-ES1{FSh-Ax:1}` | endstation exposure shutter |
 | `EndstationMotionController` | MotionController | (pending) | branch / endstation controllers |
 
-Every family is in the catalog except the loose `BeamPositionMonitor` (held); the `ElectronAnalyzer` graduated this PR (2nd sighting after ESM); SST coins none. Notably the soft PGM reuses `GratingMonochromator` (graduated across SIX / CSX / ESM, a fourth sighting), the sample manipulators reuse `Manipulator` (graduated by ESM), and the microcalorimeter reuses `EnergyDispersiveSpectrometer` (graduated in #345), so SST is a clean reuse-and-reinforce deployment that exercises the soft-X-ray vocabulary at Site scale.
+Every family is in the catalog, including the graduated `BeamPositionMonitor` (a `Sensor`-presenting Family earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux); the `ElectronAnalyzer` graduated this PR (2nd sighting after ESM); SST coins none. Notably the soft PGM reuses `GratingMonochromator` (graduated across SIX / CSX / ESM, a fourth sighting), the sample manipulators reuse `Manipulator` (graduated by ESM), and the microcalorimeter reuses `EnergyDispersiveSpectrometer` (graduated in #345), so SST is a clean reuse-and-reinforce deployment that exercises the soft-X-ray vocabulary at Site scale.
 
 ## Pending confirmations
 

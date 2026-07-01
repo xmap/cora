@@ -19,7 +19,7 @@
 
 P07 "High Energy Materials Science (HEMS)" is **CORA's eleventh PETRA III beamline** and the facility's high-energy hard X-ray materials-science beamline, **jointly operated by Helmholtz-Zentrum Hereon (2/3) and DESY (1/3)** (`OPERATOR-1`). Its science is high-energy diffraction and imaging for engineering / materials studies, including a 17 T high-field magnet endstation.
 
-P07 coins **no new Family**. It reuses the allowlisted-loose `Magnet` Family (the 4-ID precedent, of which P07's 17 T magnet is a further consumer). The four-circle Eulerian diffractometer and two-theta arm bind the catalog `Goniometer` Family (not the composed `Diffractometer` Assembly, the P01 EH2 call); the multi-bounce DCM binds `Monochromator`; the hexapod `Hexapod`; the Linkam stage `TemperatureController`; the detectors `Camera` / `EnergyDispersiveSpectrometer`. The techniques (high-energy diffraction, high-field materials science) reuse the pending `diffraction` / `magnetic_scattering` slugs (`TECH-1`).
+P07 coins **no new Family**. It reuses the graduated catalog `Magnet` Family (earned across 4-ID + i10-1 + ID32, of which P07's 17 T magnet is a further consumer). The four-circle Eulerian diffractometer and two-theta arm bind the catalog `Goniometer` Family (not the composed `Diffractometer` Assembly, the P01 EH2 call); the multi-bounce DCM binds `Monochromator`; the hexapod `Hexapod`; the Linkam stage `TemperatureController`; the detectors `Camera` / `EnergyDispersiveSpectrometer`. The techniques (high-energy diffraction, high-field materials science) reuse the pending `diffraction` / `magnetic_scattering` slugs (`TECH-1`).
 
 ## Scope: what is and is not modelled
 
@@ -38,7 +38,7 @@ The deferred parts are recorded on [Model](model.md#deliberately-not-here-yet).
 ## Key modelling decisions
 
 - **An eleventh beamline at an existing Site, jointly operated.** PETRA III is already modelled; P07 adds the HEMS beamline. The Hereon / DESY joint operation is a facility-governance fact carried as a question (`OPERATOR-1`); the beamline controls are the PETRA III Tango / Sardana stack regardless.
-- **No new Family.** The 17 T magnet is a further consumer of the allowlisted-loose `Magnet` Family; everything else binds existing catalog Families.
+- **No new Family.** The 17 T magnet is a further consumer of the graduated catalog `Magnet` Family; everything else binds existing catalog Families.
 - **The diffractometer binds Goniometer.** The four-circle Eulerian (e4cv) + two-theta arm bind the catalog `Goniometer`, not the composed `Diffractometer` Assembly (`DIFF-1`).
 - **The DCM is resolved.** Unlike most PETRA III banks, P07's multi-bounce DCM axes are named (`dcm_1st_*`, `dcm_2nd_*`), so the monochromator is modelled with resolved axes.
 

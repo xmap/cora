@@ -2,7 +2,7 @@
 
 *What CORA needs the 9-ID team to confirm before the model can be trusted.*
 
-9-ID was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/9id_bits](https://github.com/BCDA-APS/9id_bits)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, read from a config snapshot rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet), including the metadata seam and the loose family still held for gate-review). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+9-ID was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/9id_bits](https://github.com/BCDA-APS/9id_bits)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, read from a config snapshot rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet), including the metadata seam and the graduated `BeamPositionMonitor` catalog Family). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 
@@ -43,7 +43,7 @@
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DET-1 | Blocks-go-live | The area detectors: the Pilatus 1M (`PILATUS_1MF:`), the Eiger (prefix a guess), and the WAXS / GIWAXS detector on its pedestal: models, sensors, frame rates. | `Camera` Assets; models unconfirmed. | The detector Model bindings. |
-| BPM-1 | Nice-to-have | The TetrAMM (`9idTetra:QUAD1:`) and the two XBPMs (`xpbm1`, `xpbm2`): which are position monitors versus intensity (I0) normalizers? | Bound to a loose `BeamPositionMonitor` Family presenting the Sensor Role. | The monitor classification. |
+| BPM-1 | Nice-to-have | The TetrAMM (`9idTetra:QUAD1:`) and the two XBPMs (`xpbm1`, `xpbm2`): which are position monitors versus intensity (I0) normalizers? | Bound to the graduated catalog `BeamPositionMonitor` Family presenting the Sensor Role. | The monitor classification. |
 | DIAG-1 | Nice-to-have | The diagnostic flag cameras (`flag1-3`) and the DAMM mask (`9ida:CR9A1`): what each is, and whether the flags carry cameras CORA should model. | Folded into a descriptor note; not modelled as Assets (only insertion motors extracted). | The diagnostic identification. |
 
 ## Supplies

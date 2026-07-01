@@ -4,7 +4,7 @@
 
 This cut models the optics (the undulator, the multi-bounce DCM, the slits) and the two experiment hutches (EH2 main with the diffractometer / magnet / detectors, EH2B secondary). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p07/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P07 **coins no new Family**: it reuses the optics / motion / detector Families and the allowlisted-loose `Magnet` Family. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P07 **coins no new Family**: it reuses the optics / motion / detector Families and is a further consumer of the graduated catalog `Magnet` Family. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -20,7 +20,7 @@ Root Asset `P07` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `OpticsStages` | `Device` | LinearStage | p07-oh2 | OH2 optics bank (oh01..16); grouped (OPT-1, GROUP-1) |
 | `Goniometer` | `Device` | Goniometer | p07-eh2 | four-circle Eulerian (e4cv) + two-theta arm; not the Diffractometer Assembly (DIFF-1) |
 | `SampleHexapod` | `Device` | Hexapod | p07-eh2 | EH2 sample hexapod (hx-hrz) (SAMPLE-1) |
-| `Magnet` | `Device` | Magnet (loose) | p07-eh2 | 17 T superconducting sample-environment magnet (MAG-1) |
+| `Magnet` | `Device` | Magnet | p07-eh2 | 17 T superconducting sample-environment magnet; graduated Family, a further consumer (MAG-1) |
 | `SampleEnvironment` | `Device` | TemperatureController | p07-eh2 | Linkam T95 programmable temperature stage (TEMP-1) |
 | `SampleStage` (EH2) | `Device` | LinearStage | p07-eh2 | EH2 sample bank (exp33..64); grouped (GROUP-1) |
 | `DetectorSlit` | `Device` | Slit | p07-eh2 | EH2/EH3 detector slit (g_eh3, Galil) (OPT-1) |
@@ -29,7 +29,7 @@ Root Asset `P07` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `FluorescenceDetectors` | `Device` | EnergyDispersiveSpectrometer | p07-eh2 | EH2 MCA fluorescence (DET-1) |
 | `SampleStage` (EH2B) | `Device` | LinearStage | p07-eh2b | EH2B sample bank (exp01..64); grouped (GROUP-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `LinearStage`, `Slit`, `Goniometer`, `Hexapod`, `TemperatureController`, `Camera`, `EnergyDispersiveSpectrometer`. Allowlisted-loose Family reused: `Magnet` (the 4-ID precedent, a further consumer, `MAG-1`). No new family is coined and nothing graduates.
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `LinearStage`, `Slit`, `Goniometer`, `Hexapod`, `TemperatureController`, `Camera`, `EnergyDispersiveSpectrometer`, `Magnet` (graduated across 4-ID + i10-1 + ID32; presents `Regulator`, a further consumer here, `MAG-1`). No new family is coined here.
 
 ## Cross-cutting controllers
 

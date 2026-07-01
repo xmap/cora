@@ -9,7 +9,7 @@ P07 is a descriptor-and-docs scaffold today, reverse-engineered from P07's publi
 | Beamline descriptor | [`deployments/p07/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p07/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
 | Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface; P07 adds the diffraction / magnetic Practices |
 | Upstream source | [P07 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p07) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P07 reuses the optics / motion / detector Families + the allowlisted-loose `Magnet` |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P07 reuses the optics / motion / detector Families + the graduated catalog `Magnet` Family (a further consumer) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; diffraction / high-field reuse the pending `diffraction` / `magnetic_scattering` slugs (`TECH-1`) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P07 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
@@ -20,7 +20,7 @@ P07 is an eleventh beamline at an existing Site, and the facility's high-energy 
 
 ## No new families
 
-P07 coins no new Family. The multi-bounce mono binds `Monochromator`; the four-circle diffractometer `Goniometer`; the hexapod `Hexapod`; the 17 T magnet the allowlisted-loose `Magnet` (a further consumer, after P09 / 4-ID); the Linkam stage `TemperatureController`; the slits `Slit`; the stages `LinearStage`; the detectors `Camera` / `EnergyDispersiveSpectrometer`. Nothing in the catalog changes.
+P07 coins no new Family. The multi-bounce mono binds `Monochromator`; the four-circle diffractometer `Goniometer`; the hexapod `Hexapod`; the 17 T magnet the graduated catalog `Magnet` Family (a further consumer, after 4-ID / i10-1 / ID32 / P09); the Linkam stage `TemperatureController`; the slits `Slit`; the stages `LinearStage`; the detectors `Camera` / `EnergyDispersiveSpectrometer`. Nothing in the catalog changes.
 
 ## The control plane
 
@@ -33,7 +33,7 @@ P07 sits on the PETRA III Tango device floor with Sardana as the scan layer, the
 - **The optics detail (`OPT-1`).** The multi-bounce DCM crystal cut and the OH optics are carried confirm-pending.
 - **The diffractometer structure (`DIFF-1`).** The four-circle count and the detector arm are pending; modelled as a `Goniometer` Asset.
 - **The motor-bank axis roles (`GROUP-1`).** The `exp*` / `oh*` banks carry no per-axis role; grouped as stage Assets.
-- **The magnet detail (`MAG-1`).** The 17 T field and control are pending; the Family is the allowlisted-loose `Magnet`.
+- **The magnet detail (`MAG-1`).** The 17 T field and control are pending; the Family is the graduated catalog `Magnet` (a further consumer, its per-Asset field detail pending).
 - **The detector roster (`DET-1`).** The models and the EH2B detection are named, not fully bound.
 - **The other hutches (`HOST-1`).** Only the EH2 slice is public; EH1 / EH3 / EH4 are noted, not modelled.
 - **The handle freshness (`CTRL-1`).** The OnlineXML branch is `debian/jessie`; some handles may lag the live Tango database.

@@ -144,10 +144,10 @@ optics:
       confirm: true
       note: "The master energy axis: a coupled pseudopositioner per branch. The soft branch co-moves the EPU60 gap / phase with the PGM (range about 71-2250 eV); the tender branch co-moves the U42 gap with the DCM. The active branch is selected by the endstation in control. Whether energy is scanned as the measurement is the NEXAFS / spectroscopy question (ENERGY-1)."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # loose Family (held; DIAG-1)
+      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:07ID-BI{BPM:4}"
       confirm: true
-      note: "Beam-position monitors and fluorescent-screen / diode diagnostics along the branches (BPM:4 centroid, plus FS / SlitC screen cameras). Binds the loose BeamPositionMonitor family that 4-ID / 8-ID / 9-ID also use (held; DIAG-1)."
+      note: "Beam-position monitors and fluorescent-screen / diode diagnostics along the branches (BPM:4 centroid, plus FS / SlitC screen cameras). Binds the graduated BeamPositionMonitor Family (a consumer alongside 4-ID / 8-ID / 9-ID; DIAG-1)."
 
 # ===========================================================================
 # SAMPLE STAGE: the soft (RSoXS) and tender (HAXPES) sample manipulators

@@ -4,7 +4,7 @@
 
 This cut models the `XF:02IDA/B/C` optics and the `XF:02IDD-ES` RIXS endstation; the legacy end-station PGM and the simulated devices are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/six/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. SIX, as the first soft X-ray beamline, introduces three device classes no existing Family covers: they bind loose families held at n=1 and graduate nothing (see [Model](model.md#new-loose-families)). Control handles are filled from the profile collection; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. SIX, as the first soft X-ray beamline, introduced three device classes no existing Family then covered; all three (`GratingMonochromator`, `Manipulator`, `SpectrometerArm`) have since graduated into the catalog, earned by later soft X-ray and inelastic-scattering beamlines (see [Model](model.md#new-loose-families)). Control handles are filled from the profile collection; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -29,12 +29,12 @@ Root Asset `SIX` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `Mirror_5` / `Mirror_6` | `Device` | Mirror | 2-ID-D | endstation mirrors (OPT-1) |
 | `MirrorMask_5` | `Device` | Aperture | 2-ID-D | single-axis mask at M5 (OPT-2) |
 | `SampleTemperature` | `Device` | TemperatureController | 2-ID-D | Lakeshore 336 (SAMPLE-1) |
-| `RIXSSpectrometer` | `Device` | SpectrometerArm (loose) | 2-ID-D | energy-dispersive RIXS arm, 3 chambers (RIXS-1) |
+| `RIXSSpectrometer` | `Device` | SpectrometerArm | 2-ID-D | energy-dispersive RIXS arm, 3 chambers (RIXS-1) |
 | `RIXSCamera` | `Device` | Camera | 2-ID-D | photon-counting RIXS camera (RIXS-2, DET-1) |
 | `DetectorSlit` | `Device` | Slit | 2-ID-D | detector-chamber slit (OPT-2) |
 | `Scaler` / `Electrometer` | `Device` | FluxMonitor | 2-ID-D | counting scaler + Femto electrometer (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Mirror`, `Slit`, `Shutter`, `GenericProbe`, `Aperture`, `LinearStage`, `TemperatureController`, `Camera`, `FluxMonitor`, `GratingMonochromator` (graduated once CSX earned the soft X-ray PGM), and `Manipulator` (graduated once ESM earned the UHV sample manipulator). Held loose at n=1 (SIX only, graduate nothing): `SpectrometerArm`.
+Families reused from the catalog: `InsertionDevice`, `Mirror`, `Slit`, `Shutter`, `GenericProbe`, `Aperture`, `LinearStage`, `TemperatureController`, `Camera`, `FluxMonitor`, `GratingMonochromator` (graduated once CSX earned the soft X-ray PGM), `Manipulator` (graduated once ESM earned the UHV sample manipulator), and `SpectrometerArm` (graduated once ESRF ID32 + ID28 earned the dispersive spectrometer arm SIX coined). SIX now binds no loose family that remains at n=1.
 
 ## Pending confirmations
 
