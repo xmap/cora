@@ -15,6 +15,7 @@ type-checker's path.
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -677,6 +678,74 @@ def test_badge_axes_are_not_vacuous() -> None:
     assert len(beamlines) >= 50
     assert len({b.evidence for b in beamlines}) >= 3
     assert any(b.coverage == "partial" for b in beamlines)
+
+
+# ---------------------------------------------------------------------------
+# Deployments index drift guard.
+#
+# docs/deployments/index.md is the hand-authored hub: it groups every beamline
+# by Site and carries the three badge cells per row. Hand-authored means it can
+# go stale (81 deployments exist, an earlier index listed only 67) and its badge
+# cells can disagree with the descriptor. These guards make the index self-police
+# without a generator: every deployment appears as a row, and each row's three
+# badge cells equal the beamline's descriptor. They mirror the doc-drift guard
+# test_modeled_devices_are_documented above (the descriptor is the source of
+# truth, the docs must not drift from it).
+# ---------------------------------------------------------------------------
+
+_INDEX = _DOCS_DEPLOYMENTS / "index.md"
+
+# descriptor enum value -> the display word used in the index table cell.
+_MATURITY_CELL = {"pilot": "Pilot", "design": "Design", "model": "Model"}
+_EVIDENCE_CELL = {
+    "live": "Live",
+    "design_report": "Design report",
+    "controls_config": "Controls config",
+    "narrative": "Narrative",
+}
+_COVERAGE_CELL = {"full": "Full", "partial": "Partial"}
+
+
+def _index_rows() -> dict[str, tuple[str, str, str]]:
+    # slug -> (maturity, evidence, coverage) cells parsed from each table row
+    # `| [Label](slug/index.md) | Maturity | Evidence | Coverage | What it is |`.
+    pattern = re.compile(
+        r"\|\s*\[[^\]]+\]\(([^/]+)/index\.md\)\s*\|"
+        r"\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|"
+    )
+    rows: dict[str, tuple[str, str, str]] = {}
+    for line in _INDEX.read_text(encoding="utf-8").splitlines():
+        match = pattern.match(line.strip())
+        if match:
+            rows[match.group(1)] = (match.group(2), match.group(3), match.group(4))
+    return rows
+
+
+def test_every_deployment_is_listed_in_index() -> None:
+    listed = set(_index_rows())
+    deployments = {p.parent.name for p in _beamline_descriptors()}
+    missing = sorted(deployments - listed)
+    stale = sorted(listed - deployments)
+    assert not missing, f"deployments absent from docs/deployments/index.md: {missing}"
+    assert not stale, f"index rows with no deployment directory: {stale}"
+
+
+def test_index_badge_cells_match_descriptor() -> None:
+    rows = _index_rows()
+    mismatched: list[str] = []
+    for path in _beamline_descriptors():
+        slug = path.parent.name
+        beamline = bd.load(path).beamline
+        expected = (
+            _MATURITY_CELL[beamline.maturity],
+            _EVIDENCE_CELL[beamline.evidence],
+            _COVERAGE_CELL[beamline.coverage],
+        )
+        if rows.get(slug) != expected:
+            mismatched.append(f"{slug}: index {rows.get(slug)} != descriptor {expected}")
+    assert not mismatched, (
+        f"index badge cells disagree with the descriptor (regenerate the row): {mismatched}"
+    )
 
 
 def test_malformed_descriptor_raises(tmp_path: Path) -> None:
