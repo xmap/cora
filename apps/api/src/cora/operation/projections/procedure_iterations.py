@@ -6,15 +6,27 @@ Subscribed events:
   - ProcedureIterationStarted -> INSERT (procedure_id, iteration_index,
                                  started_at) ON CONFLICT DO NOTHING
   - ProcedureIterationEnded   -> UPDATE ended_at / converged / reason
+                                 + the steering decision trail
+                                 (advised_stop / model_ref / advised_next_point)
                                  WHERE (procedure_id, iteration_index)
 
 This is the per-occurrence drill-down companion to the single-row
 `proj_operation_procedure_summary.iteration_count` denorm: the summary
 answers "how many iterations", this table answers "which iterations
-converged / time per iteration / convergence rate". The convergence
-verdict (converged/reason) is already durable on the Procedure event
-stream, so this is a derived, rebuildable projection, not a
-system-of-record entries table.
+converged / time per iteration / convergence rate" and, for a steered
+conduct, "what the brain advised each pass". The verdict + steering trail
+are already durable on the Procedure event stream, so this is a derived,
+rebuildable projection, not a system-of-record entries table.
+
+## Steering trail (TIER-1 replay)
+
+The steering columns surface the recorded decision trail so a finished
+GP-steered run is reconstructable by READING this read model (a non-
+deterministic brain cannot be reconstructed by re-asking). `advised_stop`
+/ `model_ref` / `advised_next_point` are read via `.get()` (absent on
+pre-TIER-1 events + on plain convergence iterations, which leave them NULL).
+`advised_next_point` is a jsonb coordinate map, encoded explicitly with a
+`::jsonb` cast (same posture as the Calibration operating_point projection).
 
 Both arms are replay-safe under ordered per-stream delivery:
 ProcedureIterationStarted is INSERT-ON-CONFLICT-DO-NOTHING (re-delivery
@@ -29,6 +41,7 @@ shift with no event-shape change.
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
+import json
 from datetime import datetime
 from uuid import UUID
 
@@ -47,6 +60,9 @@ UPDATE proj_operation_procedure_iterations
 SET ended_at = $3,
     converged = $4,
     reason = $5,
+    advised_stop = $6,
+    model_ref = $7,
+    advised_next_point = $8::jsonb,
     updated_at = now()
 WHERE procedure_id = $1 AND iteration_index = $2
 """
@@ -78,6 +94,7 @@ class ProcedureIterationsProjection:
             return
 
         if event.event_type == "ProcedureIterationEnded":
+            advised_next_point = event.payload.get("advised_next_point")
             await conn.execute(
                 _UPDATE_ITERATION_ENDED_SQL,
                 UUID(event.payload["procedure_id"]),
@@ -85,6 +102,9 @@ class ProcedureIterationsProjection:
                 datetime.fromisoformat(event.payload["occurred_at"]),
                 event.payload["converged"],
                 event.payload["reason"],
+                event.payload.get("advised_stop"),
+                event.payload.get("model_ref"),
+                json.dumps(advised_next_point) if advised_next_point is not None else None,
             )
             return
 

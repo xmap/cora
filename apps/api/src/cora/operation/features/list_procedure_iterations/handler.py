@@ -12,6 +12,8 @@ scoping deferred until ReBAC, same posture as `list_procedures`.
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
+import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Protocol
@@ -27,7 +29,8 @@ from cora.operation.features.list_procedure_iterations.query import ListProcedur
 _log = get_logger("list_procedure_iterations")
 
 _SELECT_SQL = """
-SELECT procedure_id, iteration_index, started_at, ended_at, converged, reason
+SELECT procedure_id, iteration_index, started_at, ended_at, converged, reason,
+       advised_stop, model_ref, advised_next_point
 FROM proj_operation_procedure_iterations
 WHERE procedure_id = $1
 ORDER BY iteration_index ASC
@@ -36,7 +39,12 @@ ORDER BY iteration_index ASC
 
 @dataclass(frozen=True)
 class ProcedureIterationItem:
-    """One iteration row from the per-iteration projection."""
+    """One iteration row from the per-iteration projection.
+
+    `advised_stop` / `model_ref` / `advised_next_point` are the steering
+    decision trail for a steered conduct (NULL on a plain convergence
+    iteration); `advised_next_point` is the coordinate map the brain advised.
+    """
 
     procedure_id: UUID
     iteration_index: int
@@ -44,6 +52,9 @@ class ProcedureIterationItem:
     ended_at: datetime | None
     converged: bool | None
     reason: str | None
+    advised_stop: bool | None
+    model_ref: str | None
+    advised_next_point: Mapping[str, Any] | None
 
 
 @dataclass(frozen=True)
@@ -67,6 +78,9 @@ class Handler(Protocol):
 
 
 def _row_to_item(row: Any) -> ProcedureIterationItem:
+    raw_point = row["advised_next_point"]
+    # asyncpg returns a jsonb column as a JSON string on a plain SELECT.
+    advised_next_point = json.loads(raw_point) if isinstance(raw_point, str) else raw_point
     return ProcedureIterationItem(
         procedure_id=row["procedure_id"],
         iteration_index=int(row["iteration_index"]),
@@ -74,6 +88,9 @@ def _row_to_item(row: Any) -> ProcedureIterationItem:
         ended_at=row["ended_at"],
         converged=row["converged"],
         reason=str(row["reason"]) if row["reason"] is not None else None,
+        advised_stop=row["advised_stop"],
+        model_ref=str(row["model_ref"]) if row["model_ref"] is not None else None,
+        advised_next_point=advised_next_point,
     )
 
 

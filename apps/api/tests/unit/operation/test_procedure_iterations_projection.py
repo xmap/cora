@@ -5,6 +5,7 @@ subscribed iteration boundary events. Postgres-side behavior is in the
 integration suite.
 """
 
+import json
 from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock
@@ -112,6 +113,37 @@ async def test_iteration_ended_passes_null_verdict_and_reason() -> None:
     args = conn.execute.call_args.args
     assert args[4] is None
     assert args[5] is None
+    # A plain convergence / pre-TIER-1 event carries no steering trail: the
+    # advised_stop / model_ref / advised_next_point args project as None.
+    assert args[6] is None  # advised_stop
+    assert args[7] is None  # model_ref
+    assert args[8] is None  # advised_next_point
+
+
+@pytest.mark.unit
+async def test_iteration_ended_projects_steering_trail() -> None:
+    """A steered iteration's advised_stop / model_ref / advised_next_point land."""
+    proj = ProcedureIterationsProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "ProcedureIterationEnded",
+        {
+            "procedure_id": str(_PROCEDURE_ID),
+            "iteration_index": 2,
+            "converged": None,
+            "reason": None,
+            "occurred_at": _NOW.isoformat(),
+            "advised_stop": False,
+            "model_ref": "botorch",
+            "advised_next_point": {"energy": 7.2, "gap": 3.1},
+        },
+    )
+    await proj.apply(event, conn)
+    args = conn.execute.call_args.args
+    assert args[6] is False  # advised_stop
+    assert args[7] == "botorch"  # model_ref
+    # advised_next_point is json.dumps-encoded for the $8::jsonb cast.
+    assert json.loads(args[8]) == {"energy": 7.2, "gap": 3.1}
 
 
 @pytest.mark.unit

@@ -9821,8 +9821,31 @@
         "type": "object"
       },
       "ProcedureIterationDTO": {
-        "description": "One convergence-loop iteration of a Procedure.",
+        "description": "One convergence-loop iteration of a Procedure.\n\n`advised_stop` / `model_ref` / `advised_next_point` are the steering\ndecision trail for a steered conduct (null on a plain convergence pass);\n`advised_next_point` is the coordinate map the brain advised for the next\npass, letting a reader reconstruct a GP-steered run's decisions.",
         "properties": {
+          "advised_next_point": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advised Next Point"
+          },
+          "advised_stop": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advised Stop"
+          },
           "converged": {
             "anyOf": [
               {
@@ -9849,6 +9872,17 @@
           "iteration_index": {
             "title": "Iteration Index",
             "type": "integer"
+          },
+          "model_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Ref"
           },
           "reason": {
             "anyOf": [

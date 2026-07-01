@@ -113,6 +113,58 @@ async def test_per_iteration_rows_capture_verdict_and_timing(db_pool: asyncpg.Po
 
 
 @pytest.mark.integration
+async def test_steering_trail_is_projected_and_read_back(db_pool: asyncpg.Pool) -> None:
+    """TIER-1 replay: a steered iteration's advised trail projects + reads back.
+
+    Ends an iteration carrying advised_stop / model_ref / advised_next_point
+    (as the conductor does for a GP-steered pass) and asserts the trail is
+    reconstructable by READING the list handler -- the core replay property.
+    """
+    proc_id = uuid4()
+    deps = _build_deps(db_pool, [proc_id, *[uuid4() for _ in range(6)]])
+    await bind_register(deps)(
+        RegisterProcedure(name="rotation-center steer", kind="characterization"),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_start(deps)(
+        StartProcedure(procedure_id=proc_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_start_iteration(deps)(
+        StartProcedureIteration(procedure_id=proc_id, iteration_index=1),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await bind_end_iteration(deps)(
+        EndProcedureIteration(
+            procedure_id=proc_id,
+            iteration_index=1,
+            converged=None,
+            reason=None,
+            advised_stop=False,
+            model_ref="botorch",
+            advised_next_point={"energy": 7.2, "gap": 3.1},
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain(db_pool)
+
+    page = await bind_list_iterations(deps)(
+        ListProcedureIterations(procedure_id=proc_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert len(page.items) == 1
+    item = page.items[0]
+    assert item.advised_stop is False
+    assert item.model_ref == "botorch"
+    assert item.advised_next_point == {"energy": 7.2, "gap": 3.1}
+
+
+@pytest.mark.integration
 async def test_open_iteration_row_has_null_ended_at(db_pool: asyncpg.Pool) -> None:
     proc_id = uuid4()
     deps = _build_deps(db_pool, [proc_id, *[uuid4() for _ in range(6)]])

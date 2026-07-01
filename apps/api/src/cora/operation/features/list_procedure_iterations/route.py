@@ -9,7 +9,7 @@ not a single-resource fetch.
 """
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Request, status
@@ -26,13 +26,22 @@ from cora.operation.features.list_procedure_iterations.query import ListProcedur
 
 
 class ProcedureIterationDTO(BaseModel):
-    """One convergence-loop iteration of a Procedure."""
+    """One convergence-loop iteration of a Procedure.
+
+    `advised_stop` / `model_ref` / `advised_next_point` are the steering
+    decision trail for a steered conduct (null on a plain convergence pass);
+    `advised_next_point` is the coordinate map the brain advised for the next
+    pass, letting a reader reconstruct a GP-steered run's decisions.
+    """
 
     iteration_index: int
     started_at: datetime
     ended_at: datetime | None = None
     converged: bool | None = None
     reason: str | None = None
+    advised_stop: bool | None = None
+    model_ref: str | None = None
+    advised_next_point: dict[str, Any] | None = None
 
 
 class ProcedureIterationsResponse(BaseModel):
@@ -85,6 +94,11 @@ async def list_procedure_iterations(
                 ended_at=item.ended_at,
                 converged=item.converged,
                 reason=item.reason,
+                advised_stop=item.advised_stop,
+                model_ref=item.model_ref,
+                advised_next_point=(
+                    dict(item.advised_next_point) if item.advised_next_point is not None else None
+                ),
             )
             for item in result.items
         ]

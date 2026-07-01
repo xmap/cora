@@ -23,6 +23,9 @@ class _ProcedureIterationDTO(BaseModel):
     ended_at: datetime | None = None
     converged: bool | None = None
     reason: str | None = None
+    advised_stop: bool | None = None
+    model_ref: str | None = None
+    advised_next_point: dict[str, Any] | None = None
 
 
 class _ListProcedureIterationsOutput(BaseModel):
@@ -64,6 +67,13 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                     ended_at=item.ended_at,
                     converged=item.converged,
                     reason=item.reason,
+                    advised_stop=item.advised_stop,
+                    model_ref=item.model_ref,
+                    advised_next_point=(
+                        dict(item.advised_next_point)
+                        if item.advised_next_point is not None
+                        else None
+                    ),
                 )
                 for item in result.items
             ]
