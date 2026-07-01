@@ -9,7 +9,7 @@ MX3's measurement is the rotation series of diffraction frames the Eiger reads a
 | `EigerDetector` | Camera | SIMPLON REST (no PV) | the rotation-MX area detector |
 | `DetectorStage` | LinearStage | `MX3STG03MOT04` | sets the sample-to-detector distance |
 | `FluxMonitor` | FluxMonitor | `MX3FLUXIOC:FLUX` | incident-flux normalization |
-| `BeamPositionMonitor` | BeamPositionMonitor | `MX3DAQIOC04:` | beam position + closed-loop steering |
+| `BeamPositionMonitor` | PositionMonitor | `MX3DAQIOC04:` | beam position + closed-loop steering |
 | `OAVCamera` | Camera | `MX3MD3ZOOM0` | on-axis viewing for centring |
 
 ## The Eiger over SIMPLON REST
@@ -18,7 +18,7 @@ The `EigerDetector` is a DECTRIS Eiger (16M / 4M). Unlike every prior deployment
 
 ## Diagnostics
 
-The `FluxMonitor` reads incident flux for normalization (reuses `FluxMonitor`, graduated in #353). The `BeamPositionMonitor` pairs a beam-position monitor with a closed-loop PID steering DAC; the position-monitor half binds the graduated catalog `BeamPositionMonitor` family (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux, DIAG-1), while the PID beam-steering controller fits no existing family cleanly and is a deferred new-device question (STEER-1). The `OAVCamera` (an EPICS BlackFly at the MD3 zoom optic) serves sample centring; an MD3 coaxial camera also streams over Redis.
+The `FluxMonitor` reads incident flux for normalization (reuses `FluxMonitor`, graduated in #353). The `BeamPositionMonitor` pairs a beam-position monitor with a closed-loop PID steering DAC; the position-monitor half binds the graduated catalog `PositionMonitor` family (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux, DIAG-1), while the PID beam-steering controller fits no existing family cleanly and is a deferred new-device question (STEER-1). The `OAVCamera` (an EPICS BlackFly at the MD3 zoom optic) serves sample centring; an MD3 coaxial camera also streams over Redis.
 
 ## Reuse, not new vocabulary
 

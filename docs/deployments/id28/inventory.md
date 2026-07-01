@@ -20,7 +20,7 @@ Root Asset `ID28` (`tier = Unit`, `facility_code = esrf`); sub-systems nest belo
 | `BeamEnergy` | `Device` | PseudoAxis | id28-optics | incident-energy axis via the ASL F700 crystal-temperature controller (monot / deltae), not an angular mono; the meV scan is the IXS measurement (MONO-1) |
 | `HorizontalFocusingMirror` | `Device` | Mirror | id28-optics | HFM two-bender mirror (BLISS hfm_ctrl) (OPT-1) |
 | `VerticalFocusingMirror` | `Device` | Mirror | id28-optics | VFM two-bender mirror (BLISS vfm_ctrl) (OPT-1) |
-| `BeamPositionMonitor` | `Device` | BeamPositionMonitor | id28-optics | the oh2 Elettra BPM; graduated catalog Family presenting `Sensor`, position-measuring (DIAG-1) |
+| `BeamPositionMonitor` | `Device` | PositionMonitor | id28-optics | the oh2 Elettra BPM; graduated catalog Family presenting `Sensor`, position-measuring (DIAG-1) |
 | `PrimarySlit` | `Device` | Slit | id28-optics | the primary beam-defining slits (BLISS slits_ph / slits_pv) (OPT-2) |
 | `MonoSlit` | `Device` | Slit | id28-optics | the main-mono slit (BLISS slits_mx) (OPT-2) |
 | `SampleStage` | `Device` | LinearStage | id28-eh1 | the IXS scattering-geometry sample stage (sax / say / saz, th / sphi / chi, eh1_ss iceid285, SmarAct) (SAMPLE-1) |
@@ -29,7 +29,7 @@ Root Asset `ID28` (`tier = Unit`, `facility_code = esrf`); sub-systems nest belo
 | `SpectrometerArm` | `Device` | SpectrometerArm | id28-eh1 | the IXS multi-analyzer spectrometer (BLISS tth_multilayer two-theta arm + a1..a9 inclined analyzer crystals); further consumer, graduated Family (RIXS-1, IXS-1) |
 | `Detector` | `Device` | Camera | id28-eh1 | the Basler / PCO detectors plus the per-analyzer deta1..deta9 counters (DET-1) |
 
-Families reused from the catalog: `Shutter`, `InsertionDevice`, `Monochromator`, `PseudoAxis`, `Mirror`, `Slit`, `LinearStage`, `TemperatureController`, `Camera`, `SpectrometerArm` (graduated across SIX + ID32 RIXS/XES + ID28; ID28 is a further consumer that reinforced it, RIXS-1), `BeamPositionMonitor` (graduated catalog Family presenting `Sensor`, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux, DIAG-1). Loose families reused from siblings: `StorageRing` (supply). No new family is coined; ID28's SpectrometerArm sighting reinforced the graduation that has since landed.
+Families reused from the catalog: `Shutter`, `InsertionDevice`, `Monochromator`, `PseudoAxis`, `Mirror`, `Slit`, `LinearStage`, `TemperatureController`, `Camera`, `SpectrometerArm` (graduated across SIX + ID32 RIXS/XES + ID28; ID28 is a further consumer that reinforced it, RIXS-1), `PositionMonitor` (graduated catalog Family presenting `Sensor`, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux, DIAG-1). Loose families reused from siblings: `StorageRing` (supply). No new family is coined; ID28's SpectrometerArm sighting reinforced the graduation that has since landed.
 
 ## Pending confirmations
 

@@ -10,7 +10,7 @@
 # It is almost entirely catalog REUSE: every optic and detector binds a catalog
 # Family (InsertionDevice, Monochromator, Mirror, Aperture, Filter, Slit, Camera,
 # BeamStop, Hexapod, plus the graduated CRL Transfocator), so it adds no new
-# catalog Family. Its beam-position monitors bind the graduated BeamPositionMonitor
+# catalog Family. Its beam-position monitors bind the graduated PositionMonitor
 # Family, the same catalog Family 4-ID and 8-ID use (earned across the wide fleet).
 #
 # STATUS: first cut, reverse-engineered. Like 4-ID and 8-ID, this binds the real
@@ -227,7 +227,7 @@ detectors:
     Pilatus and Eiger record the small-angle coherent pattern; the WAXS detector on
     its pedestal records the wide-angle signal for GIWAXS. The beam stop and its
     carriage block the direct beam. The TetrAMM and the two XBPMs bind the graduated
-    BeamPositionMonitor Family (a consumer alongside 4-ID and 8-ID; DIAG-1 / FLUX-1, BPM-1).
+    PositionMonitor Family (a consumer alongside 4-ID and 8-ID; DIAG-1 / FLUX-1, BPM-1).
   devices:
     - name: Pilatus1M
       family: Camera
@@ -260,19 +260,19 @@ detectors:
       confirm: true
       note: "direct-beam stop and its carriage"
     - name: TetrAMM
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "9idTetra:QUAD1:"
       new: true
       confirm: true
       note: "TetrAMM picoammeter / position monitor, four channels (BPM-1)"
     - name: XBPM_1
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "9idd:"
       new: true
       confirm: "device prefix inferred from the 9-ID-D station; the xpbm1 sum/x/y signals carried no device prefix in the config (CTRL-1)"
       note: "X-ray beam-position monitor (xpbm1 sum/x/y signals, lifted from the config's metadata bucket as a genuine diagnostic); position-vs-intensity role is BPM-1"
     - name: XBPM_2
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "9idd:"
       new: true
       confirm: "device prefix inferred from the 9-ID-D station; the xpbm2 sum/x/y signals carried no device prefix in the config (CTRL-1)"

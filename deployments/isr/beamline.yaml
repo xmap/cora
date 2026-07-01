@@ -37,7 +37,7 @@
 # binds Slit; the filter bank binds Filter; the single bound sample rotation binds
 # RotaryStage (NOT a full Goniometer, which is absent); the Eiger 1M and the
 # diagnostic screen cameras bind Camera; the motorized beam-position-monitor stage
-# binds the graduated BeamPositionMonitor Family (DIAG-1).
+# binds the graduated PositionMonitor Family (DIAG-1).
 #
 # Items left open are tagged inline with a (QUESTION-ID) answered on
 # docs/deployments/isr/questions.md.
@@ -172,7 +172,7 @@ detection:
   note: >
     The Eiger 1M binds Camera (the only detector scanned in the profile collection's
     plans); the diagnostic YAG-screen cameras bind Camera; the motorized
-    beam-position-monitor stage binds the graduated BeamPositionMonitor Family
+    beam-position-monitor stage binds the graduated PositionMonitor Family
     (DIAG-1). The QuadEM flux-monitor electrometers are defined but commented out in
     source, so no FluxMonitor Asset is modelled (DET-1); there is no point / scaler
     detector for diffraction counting (intensity is read from the Eiger).
@@ -190,7 +190,7 @@ detection:
       confirm: true
       note: "the diagnostic YAG fluorescent-screen beam-viewing cameras (three Prosilica in zones A and C); beam alignment / diagnostics, not a science detector (DIAG-1)"
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:04IDB-BI:1{BPM:3-Ax:X}Mtr"
       new: true
       confirm: true

@@ -17,7 +17,7 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 ## What this deployment graduates: nothing (and that is the finding)
 
-AMX is a clean **pure-reuse** deployment, completing the NSLS-II MX pair as FMX's sibling. Its finding is that the MX vocabulary generalizes across a third independent beamline with no new modelling: the graduated `Goniometer` (single-omega micro-goniometer), the `Camera` (Eiger), the `Monochromator` (here vertical), the `Mirror` (tandem-deflection + KB), the `Filter` (BCU attenuator), the `BeamStop`, the `EnergyDispersiveSpectrometer` (Mercury), the `FluxMonitor` (Keithley), the `TimingController` (Zebra), and the graduated catalog `BeamPositionMonitor` (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux) all bind unchanged. The robot is one Positioner-presenting Asset, not a new Family (the i03 / 19-BM / FMX precedent).
+AMX is a clean **pure-reuse** deployment, completing the NSLS-II MX pair as FMX's sibling. Its finding is that the MX vocabulary generalizes across a third independent beamline with no new modelling: the graduated `Goniometer` (single-omega micro-goniometer), the `Camera` (Eiger), the `Monochromator` (here vertical), the `Mirror` (tandem-deflection + KB), the `Filter` (BCU attenuator), the `BeamStop`, the `EnergyDispersiveSpectrometer` (Mercury), the `FluxMonitor` (Keithley), the `TimingController` (Zebra), and the graduated catalog `PositionMonitor` (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux) all bind unchanged. The robot is one Positioner-presenting Asset, not a new Family (the i03 / 19-BM / FMX precedent).
 
 ### FMX-vs-AMX differences
 

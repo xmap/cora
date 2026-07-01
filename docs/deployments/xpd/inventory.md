@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/xpd/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/xpd-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection. XPD introduces **no new catalog family**: every device reuses an existing Family, including the ones graduated from earlier deployments (`Camera` for the flat panels, `FluxMonitor` for the ion chamber and electrometer, `TemperatureController` for the sample environment, which Diamond i11 graduated). The `BeamPositionMonitor` is a graduated catalog Family too, shared across several APS and NSLS-II deployments: it presents the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux (see [Model](model.md#deliberately-not-here-yet)).
+Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/xpd-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection. XPD introduces **no new catalog family**: every device reuses an existing Family, including the ones graduated from earlier deployments (`Camera` for the flat panels, `FluxMonitor` for the ion chamber and electrometer, `TemperatureController` for the sample environment, which Diamond i11 graduated). The `PositionMonitor` is a graduated catalog Family too, shared across several APS and NSLS-II deployments: it presents the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux (see [Model](model.md#deliberately-not-here-yet)).
 
 ## The Asset tree
 
@@ -19,7 +19,7 @@ Root Asset `XPD` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `WhiteBeamSlit` | Slit | `XF:28IDA-OP:2{Slt:H}` | horizontal beam-defining slit |
 | `Filters` | Filter | `XF:28IDA-OP:2{Fltr:1}` | attenuator filters |
 | `EnergyAxis` | PseudoAxis | (computed) | master energy (double-Laue mono) |
-| `BeamPositionMonitor` | BeamPositionMonitor | `XF:28IDA-BI:0{BPM:1}` | optics-hutch beam-position monitor |
+| `BeamPositionMonitor` | PositionMonitor | `XF:28IDA-BI:0{BPM:1}` | optics-hutch beam-position monitor |
 | `SampleStage` | LinearStage | `XF:28IDC-ES:1{Dif:1}` | sample / detector-arm diffractometer |
 | `SampleArrayStage` | LinearStage | `XF:28IDC-ES:1{SampArray}` | multi-sample array stage |
 | `Pinhole` | Aperture | `XF:28IDC-ES:1{PinHole:XRD}` | beam-defining pinhole |
@@ -32,7 +32,7 @@ Root Asset `XPD` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `ExposureShutter` | Shutter | `XF:28IDC-ES:1{Sh:Exp}` | endstation exposure shutter |
 | `EndstationMotionController` | MotionController | (pending) | diffractometer / stage controllers |
 
-Every family is in the catalog, including the graduated `BeamPositionMonitor` (a `Sensor`-presenting Family earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux); XPD coins none. Notably the flat panels reuse `Camera`, the flux counters reuse `FluxMonitor` (graduated in #353), and the sample-environment stages reuse `TemperatureController` (graduated by Diamond i11, #350), so XPD is a clean reuse-and-reinforce deployment, the NSLS-II twin of i11 and i15-1.
+Every family is in the catalog, including the graduated `PositionMonitor` (a `Sensor`-presenting Family earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux); XPD coins none. Notably the flat panels reuse `Camera`, the flux counters reuse `FluxMonitor` (graduated in #353), and the sample-environment stages reuse `TemperatureController` (graduated by Diamond i11, #350), so XPD is a clean reuse-and-reinforce deployment, the NSLS-II twin of i11 and i15-1.
 
 ## Pending confirmations
 

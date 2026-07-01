@@ -336,10 +336,10 @@ beam-defining-and-safety:
         PHYSICAL convention (positive X outboard), NOT the on-screen label.
         Reference drawing L3200000-03.
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor
+      family: PositionMonitor
       new: true
       confirm: true
-      note: mono-mode only, held out of beam in pink mode; binds the graduated BeamPositionMonitor Family (presents Sensor, DIAG-1)
+      note: mono-mode only, held out of beam in pink mode; binds the graduated PositionMonitor Family (presents Sensor, DIAG-1)
     - name: Aperture
       family: Aperture
       controller: ApertureFineDrive

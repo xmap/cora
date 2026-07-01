@@ -36,7 +36,7 @@
 # as TPS 07A does (the graduated Goniometer for the MD3, Camera for the EIGER2 / OAV,
 # Monochromator for the DCM, Filter for the attenuator, BeamStop, Shutter, LinearStage,
 # MotionController, TemperatureController, plus the loose StorageRing and
-# BeamPositionMonitor). The ISARA robot is a deferred sample-exchange Procedure
+# PositionMonitor). The ISARA robot is a deferred sample-exchange Procedure
 # (ROBOT-1). No Capability or Method is coined; the rotation-MX techniques reuse the
 # pending i03 Methods recorded as Practices on the Site. 05A is a pure reuse deployment
 # whose value is reinforcing that one device-library + one seam generalizes across the
@@ -167,9 +167,9 @@ detector:
       confirm: true
       note: "Detector translation setting the sample-to-detector distance. Reuses LinearStage; PV and any minimum-distance interlock pending (DET-1)."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       confirm: true
-      note: "Diagnostic beam-position monitor (the XBPM / DBPM diagnostics class seen across TPS front ends). Binds the graduated BeamPositionMonitor Family (DIAG-1); channel map / PV pending."
+      note: "Diagnostic beam-position monitor (the XBPM / DBPM diagnostics class seen across TPS front ends). Binds the graduated PositionMonitor Family (DIAG-1); channel map / PV pending."
     - name: OAVCamera
       family: Camera
       confirm: true

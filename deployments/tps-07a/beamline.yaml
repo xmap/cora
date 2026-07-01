@@ -39,7 +39,7 @@
 # the DCM Monochromator, the cryostream TemperatureController, the attenuator Filter,
 # the beamstop BeamStop, the shutters Shutter, the stages LinearStage / MotionController.
 # Two loose families are reused (both allowlisted): StorageRing (the ring-current
-# monitor) and BeamPositionMonitor (the diagnostic BPM / XBPM). The ISARA robot is
+# monitor) and PositionMonitor (the diagnostic BPM / XBPM). The ISARA robot is
 # modelled as a deferred Procedure (sample exchange), not a device family (the i03 /
 # i24 / MX3 ROBOT-1 precedent). No Capability or Method is coined; the rotation-MX
 # techniques reuse the pending i03 Methods (mx_data_collection / grid_scan /
@@ -172,9 +172,9 @@ detector:
       confirm: true
       note: "Detector translation setting the sample-to-detector distance, with a hard minimum-distance interlock at 139 mm read from the control tree. Reuses LinearStage; PV pending (DET-1)."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       confirm: true
-      note: "Diagnostic beam-position monitor (the XBPM / DBPM diagnostics class seen across TPS front ends). Binds the graduated BeamPositionMonitor Family (DIAG-1); channel map / PV pending."
+      note: "Diagnostic beam-position monitor (the XBPM / DBPM diagnostics class seen across TPS front ends). Binds the graduated PositionMonitor Family (DIAG-1); channel map / PV pending."
     - name: OAVCamera
       family: Camera
       confirm: true

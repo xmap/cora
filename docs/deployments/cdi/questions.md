@@ -29,7 +29,7 @@ Priorities: `Blocks-build`, `Blocks-go-live`, `Nice-to-have`.
 | STAGE-1 | Blocks-go-live | Which endstation tower (`TDMS:T1` / `TDMS:T2`) carries the sample versus the detector, the sample-to-detector distance that sets the q-range, and the full `Gon:1` goniometer axis set. Some tower axes are read-only pending commissioning in source. | Two `LinearStage` towers and a `Goniometer`; roles and distance deferred. | The endstation geometry. |
 | DET-1 | Blocks-go-live | Which detector (Eiger2 / Merlin) is primary for which technique, the foil materials / thicknesses, and whether a direct-beam beamstop is installed (none is in source). | Both Cameras; Eiger2 primary; no beamstop modelled. | The detector roster and beamstop. |
 | CAM-1 | Nice-to-have | Which diagnostic cameras (the BCU inline camera, the sample camera, the optics-module Prosilicas) are live. | The inline and sample cameras modelled; others noted. | The diagnostic-camera set. |
-| DIAG-1 | Nice-to-have | The foil-monitor channel map and the quadrant / diamond BPM channels (the diamond BPM was repurposed from ion-chamber use in source). | Read-only flux and beam-position probes; channel maps blank. | The `FluxMonitor` and `BeamPositionMonitor` bindings. |
+| DIAG-1 | Nice-to-have | The foil-monitor channel map and the quadrant / diamond BPM channels (the diamond BPM was repurposed from ion-chamber use in source). | Read-only flux and beam-position probes; channel maps blank. | The `FluxMonitor` and `PositionMonitor` bindings. |
 
 ## Controls and technique scope
 

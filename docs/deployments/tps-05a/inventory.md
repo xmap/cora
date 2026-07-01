@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/tps-05a/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md), the same set as TPS 07A. Every device is on the EPICS floor reached through the EPICS Device Handler Server. Unlike 07A, the 05A PV namespace is **inferred (`05a:` / `05a-ES:`), not verified against a control tree** (PV-1), so no PV record is asserted, this is the fleet's most conservative PV posture, set by the thin source. No vendor Model is bound. TPS 05A introduces **no new catalog family**: every device reuses an existing Family, including the graduated `BeamPositionMonitor` (a catalog Family presenting `Sensor`, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux). One device binds a loose family, allowlisted: `StorageRing`; see [Model](model.md#deliberately-not-here-yet).
+Devices bind to catalog [Families](../../catalog/families.md), the same set as TPS 07A. Every device is on the EPICS floor reached through the EPICS Device Handler Server. Unlike 07A, the 05A PV namespace is **inferred (`05a:` / `05a-ES:`), not verified against a control tree** (PV-1), so no PV record is asserted, this is the fleet's most conservative PV posture, set by the thin source. No vendor Model is bound. TPS 05A introduces **no new catalog family**: every device reuses an existing Family, including the graduated `PositionMonitor` (a catalog Family presenting `Sensor`, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux). One device binds a loose family, allowlisted: `StorageRing`; see [Model](model.md#deliberately-not-here-yet).
 
 ## The Asset tree
 
@@ -24,7 +24,7 @@ Root Asset `TPS 05A` (`tier = Unit`, `facility_code = nsrrc`); sub-systems nest 
 | `BeamStop` | BeamStop | EPICS (PV pending) | beamstop at the sample |
 | `EigerDetector` | Camera | DCSS workflow over EPICS | DECTRIS EIGER2 X 9M |
 | `DetectorStage` | LinearStage | EPICS (PV pending) | detector translation |
-| `BeamPositionMonitor` | BeamPositionMonitor | EPICS (PV pending) | beam-position diagnostic |
+| `BeamPositionMonitor` | PositionMonitor | EPICS (PV pending) | beam-position diagnostic |
 | `OAVCamera` | Camera | EPICS (PV pending) | on-axis viewing camera |
 | `FastShutter` | Shutter | EPICS (PV pending) | per-oscillation exposure shutter |
 | `EndstationMotionController` | MotionController | EPICS via DHS | stage motion controllers |

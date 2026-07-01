@@ -4,7 +4,7 @@
 
 This cut models the XF:04ID optics chain and the partial XF:04IDD-ES endstation; the multi-circle diffractometer, the in-situ sample environment, the resonant energy axis, the polarization analysis, and the commented-out flux monitors are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/isr/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. ISR coins **no new Family and changes nothing in the catalog**: the optics reuse the existing `InsertionDevice` / `Monochromator` / `Mirror` / `Slit` / `Filter` vocabulary, the endstation reuses `RotaryStage` / `Camera`, and the beam-position monitor reuses the graduated catalog `BeamPositionMonitor` Family (presents the `Sensor` Role, distinct from `FluxMonitor` by measuring beam position rather than flux). The devices ISR's mission implies are absent from the source and are open questions, not Assets. Control handles are filled from the profile collection; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. ISR coins **no new Family and changes nothing in the catalog**: the optics reuse the existing `InsertionDevice` / `Monochromator` / `Mirror` / `Slit` / `Filter` vocabulary, the endstation reuses `RotaryStage` / `Camera`, and the beam-position monitor reuses the graduated catalog `PositionMonitor` Family (presents the `Sensor` Role, distinct from `FluxMonitor` by measuring beam position rather than flux). The devices ISR's mission implies are absent from the source and are open questions, not Assets. Control handles are filled from the profile collection; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -23,9 +23,9 @@ Root Asset `ISR` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `SampleStage` | `Device` | RotaryStage | isr-endstation | the two bound Dif:ISD axes (`th` + `zeta`); the full diffractometer is absent (DIFF-1) |
 | `AreaDetector` | `Device` | Camera | isr-endstation | Eiger 1M, the primary scattering detector, `XF:04IDD-ES{Det:Eig1M}` (DET-1) |
 | `DiagnosticCamera` | `Device` | Camera | isr-endstation | Prosilica YAG-screen beam-viewing cameras, `XF:04IDC-BI:1{Scr:3}` (DIAG-1) |
-| `BeamPositionMonitor` | `Device` | BeamPositionMonitor | isr-optics | motorized BPM stage (electrometers commented out), `XF:04IDB-BI:1{BPM:3}` (DIAG-1) |
+| `BeamPositionMonitor` | `Device` | PositionMonitor | isr-optics | motorized BPM stage (electrometers commented out), `XF:04IDB-BI:1{BPM:3}` (DIAG-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Slit`, `Filter`, `RotaryStage`, `Camera`, and `BeamPositionMonitor` (the motorized BPM stage, a catalog Family presenting the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux, DIAG-1). Loose families reused from siblings: `StorageRing` (supply). No new family is coined and ISR graduates nothing itself.
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Slit`, `Filter`, `RotaryStage`, `Camera`, and `PositionMonitor` (the motorized BPM stage, a catalog Family presenting the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux, DIAG-1). Loose families reused from siblings: `StorageRing` (supply). No new family is coined and ISR graduates nothing itself.
 
 ## Deliberately absent from this cut
 

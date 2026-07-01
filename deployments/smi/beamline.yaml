@@ -24,7 +24,7 @@
 # the DCM Monochromator, and the compound-refractive-lens Transfocator (now a
 # graduated CRL focusing-optic Family, bound at 4-ID / 8-ID / 9-ID / i22 / CHX too;
 # the residual lens material / count fact is CRL-1). One loose family is still bound:
-# the BeamPositionMonitor (4-ID / 8-ID / 9-ID; DIAG-1). Per the
+# the PositionMonitor (4-ID / 8-ID / 9-ID; DIAG-1). Per the
 # i22 precedent the SAXS / WAXS / GISAXS Capabilities are NOT coined here; they are
 # the deferred owner-scope cohort (TECH-1), simultaneous SAXS+WAXS is coordinated
 # Runs not a new technique, and the in-situ cells are deferred (INSITU-1).
@@ -125,10 +125,10 @@ optics:
       confirm: true
       note: "The master energy axis: a coupled pseudopositioner moving the undulator gap, the DCM Bragg angle, and the DCM gap together (with a built-in energy-to-gap polynomial and DCM pitch / roll feedback toggled around shutter moves). Working gap range about 6200-15100. Whether energy is scanned as a measurement is ENERGY-1."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:12IDA-BI:2{EM:BPM1}"
       confirm: true
-      note: "Beam-position monitors (xbpm1 / xbpm2 in the FOE, xbpm3 at the secondary source XF:12IDB-BI:2{EM:BPM3}, the latter feeding the DCM pitch / roll feedback). Binds the graduated BeamPositionMonitor Family (a consumer alongside 4-ID / 8-ID / 9-ID; DIAG-1), matching the catalog note that position monitors stay loose."
+      note: "Beam-position monitors (xbpm1 / xbpm2 in the FOE, xbpm3 at the secondary source XF:12IDB-BI:2{EM:BPM3}, the latter feeding the DCM pitch / roll feedback). Binds the graduated PositionMonitor Family (a consumer alongside 4-ID / 8-ID / 9-ID; DIAG-1), matching the catalog note that position monitors stay loose."
 
 # ===========================================================================
 # SAMPLE STAGE: the grazing-incidence sample stack and the in-situ environment

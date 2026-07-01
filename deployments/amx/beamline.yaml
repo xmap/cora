@@ -24,7 +24,7 @@
 # Mirror (the tandem-deflection + KB mirrors), the Filter (the BCU attenuator), the
 # BeamStop, the EnergyDispersiveSpectrometer (the Mercury fluorescence detector), the
 # FluxMonitor (the Keithley), the TimingController (the Zebra), and the graduated
-# BeamPositionMonitor Family (DIAG-1). The robotic sample changer is one Positioner-presenting
+# PositionMonitor Family (DIAG-1). The robotic sample changer is one Positioner-presenting
 # Asset (NO new SampleChanger Family), the i03 / 19-BM / FMX precedent (ROBOT-1). The MX
 # Methods (mx_data_collection, grid_scan, sample_exchange) stay PENDING: AMX is their THIRD
 # consumer (after i03, FMX), which strengthens but does not coin them (Methods coin on a
@@ -192,10 +192,10 @@ detector:
       confirm: true
       note: "On-axis motorized beamstop (XF:17IDB-ES:AMX{BS:1-Ax:FX / FY}Mtr) blocking the direct beam ahead of the Eiger. Reuses the BeamStop family."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:17IDA-BI:AMX{BPM:1}"
       confirm: true
-      note: "Beam-position monitors along the beam (XF:17IDA-BI:AMX{BPM:1}, XF:17IDB-BI:AMX{BPM:2 / BPM:3} four-quadrant monitors). Binds the graduated BeamPositionMonitor Family (a consumer alongside the other NSLS-II beamlines; DIAG-1)."
+      note: "Beam-position monitors along the beam (XF:17IDA-BI:AMX{BPM:1}, XF:17IDB-BI:AMX{BPM:2 / BPM:3} four-quadrant monitors). Binds the graduated PositionMonitor Family (a consumer alongside the other NSLS-II beamlines; DIAG-1)."
     - name: FluxMonitor
       family: FluxMonitor
       pv: "XF:17IDB-BI:AMX{Keith:1}readFloat"

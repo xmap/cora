@@ -40,7 +40,7 @@
 # that fires the millisecond Uniblitz fast shutter binds TimingController (it sets
 # the dose opening-time); the QuadEM electrometers bind FluxMonitor (incident flux
 # to compute dose); the Sydor beam-position monitor binds the graduated
-# BeamPositionMonitor Family (DIAG-1); the capillary-flow, high-
+# PositionMonitor Family (DIAG-1); the capillary-flow, high-
 # throughput, and HTFly sample stages bind LinearStage; the syringe / sample
 # delivery pumps bind the graduated catalog FlowController Family.
 #
@@ -234,7 +234,7 @@ detection:
     that matters: the QuadEM electrometers bind FluxMonitor (incident flux plus a
     time-series trace to compute the delivered dose, with a diode array-logger as a
     further dose accumulator); the Sydor four-channel monitor binds the graduated
-    BeamPositionMonitor Family (beam position plus a sum-current flux readback,
+    PositionMonitor Family (beam position plus a sum-current flux readback,
     DIAG-1). The footprinting structural readout (which residues were modified)
     is OFFLINE mass spectrometry, downstream of the beamline and absent from the
     profile collection; what the beamline produces is a footprinted sample plus a dose
@@ -247,11 +247,11 @@ detection:
       confirm: true
       note: "the primary QuadEM electrometer reading incident flux and a per-exposure time-series, the basis for the delivered dose; a DIODE PDM array-logger (XF:17BMA-CT{DIODE-PDM:1}) accumulates the dose array and a second electrometer (XF:17BM-BI{EM:2}) adds channels; the flux-to-absorbed-dose calibration lives in offline analysis (DET-1, DOSE-1, READOUT-1)"
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:17BM-BI{EM:BPM1}"
       new: true
       confirm: true
-      note: "the Sydor four-channel beam-position monitor (per-quadrant currents, beam x / y, and a sum-current total-flux readback); binds the graduated BeamPositionMonitor Family (DIAG-1); the position-vs-intensity split is DIAG-1"
+      note: "the Sydor four-channel beam-position monitor (per-quadrant currents, beam x / y, and a sum-current total-flux readback); binds the graduated PositionMonitor Family (DIAG-1); the position-vs-intensity split is DIAG-1"
 
 # Cross-cutting control. XFP runs EPICS plus PV-bound fluidic actuators; CORA
 # observes the floor and, where it replaces bluesky-style orchestration, conducts

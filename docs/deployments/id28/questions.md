@@ -19,7 +19,7 @@ ID28 was reverse-engineered from the ESRF's open BLISS Beacon device database ([
 | MONO-1 | Blocks-go-live | The backscattering crystal / reflection, the meV energy resolution, the energy-scan partition rule, and the premono (OH1) / postmono (OH2) roles ahead of the main mono (OH3). | A `Monochromator` on the PI E518 piezo (`pimth` / `pimchi`); the meV energy is scanned by the ASL F700 crystal-temperature axis (`monot` / `deltae`), not a Bragg angle; energy is a `PseudoAxis` over the F700. | The monochromator and incident-energy Assets. |
 | OPT-1 | Nice-to-have | The HFM / VFM mirror coatings and bender mechanics. | Two-bender focusing mirrors bound to `Mirror`. | The mirror Asset detail. |
 | OPT-2 | Nice-to-have | The blade-axis map of the primary, mono, and sample slits. | Beam-defining `Slit` Assets (BLISS `slits_ph` / `slits_pv` / `slits_mx` / `slits_sh` / `slits_sv`); each with horizontal / vertical gap and offset. | The slit Asset detail. |
-| DIAG-1 | Nice-to-have | The oh2 Elettra beam-position monitor channel map: it binds the graduated catalog `BeamPositionMonitor` (position-measuring), distinct from `FluxMonitor`; the per-Asset position-vs-flux channel detail is the residual. | The graduated catalog `BeamPositionMonitor` (presenting `Sensor`); channel map pending. | The beam-position channel map. |
+| DIAG-1 | Nice-to-have | The oh2 Elettra beam-position monitor channel map: it binds the graduated catalog `PositionMonitor` (position-measuring), distinct from `FluxMonitor`; the per-Asset position-vs-flux channel detail is the residual. | The graduated catalog `PositionMonitor` (presenting `Sensor`); channel map pending. | The beam-position channel map. |
 
 ## The IXS spectrometer endstation
 

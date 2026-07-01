@@ -25,7 +25,7 @@
 # channels FluxMonitor, the thermal stage TemperatureController, the NEXAFS
 # microcalorimeter EnergyDispersiveSpectrometer. The hemispherical ElectronAnalyzer
 # (the HAXPES Scienta SES) GRADUATED into the catalog: SST-HAXPES is the SECOND sighting
-# after ESM, earning the rule-of-three. One loose family remains: the BeamPositionMonitor
+# after ESM, earning the rule-of-three. One loose family remains: the PositionMonitor
 # (DIAG-1). Per the multi-
 # technique discipline no Capability or Method is coined; the soft-scattering,
 # absorption, and photoemission techniques sit on deferred / pending Methods and SST
@@ -145,10 +145,10 @@ optics:
       confirm: true
       note: "The master energy axis: a coupled pseudopositioner per branch. The soft branch co-moves the EPU60 gap / phase with the PGM (range about 71-2250 eV); the tender branch co-moves the U42 gap with the DCM. The active branch is selected by the endstation in control. Whether energy is scanned as the measurement is the NEXAFS / spectroscopy question (ENERGY-1)."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:07ID-BI{BPM:4}"
       confirm: true
-      note: "Beam-position monitors and fluorescent-screen / diode diagnostics along the branches (BPM:4 centroid, plus FS / SlitC screen cameras). Binds the graduated BeamPositionMonitor Family (a consumer alongside 4-ID / 8-ID / 9-ID; DIAG-1)."
+      note: "Beam-position monitors and fluorescent-screen / diode diagnostics along the branches (BPM:4 centroid, plus FS / SlitC screen cameras). Binds the graduated PositionMonitor Family (a consumer alongside 4-ID / 8-ID / 9-ID; DIAG-1)."
 
 # ===========================================================================
 # SAMPLE STAGE: the soft (RSoXS) and tender (HAXPES) sample manipulators

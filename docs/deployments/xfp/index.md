@@ -45,7 +45,7 @@ The deferred parts are recorded on [Model](model.md).
 
 ## Key modelling decisions
 
-- **XFP is a dose-delivery beamline with no Detector-role device.** The detection side models flux / dose monitors (`FluxMonitor`, the graduated catalog `BeamPositionMonitor`) and the offline-readout seam, not an imaging detector (`READOUT-1`, `DET-1`).
+- **XFP is a dose-delivery beamline with no Detector-role device.** The detection side models flux / dose monitors (`FluxMonitor`, the graduated catalog `PositionMonitor`) and the offline-readout seam, not an imaging detector (`READOUT-1`, `DET-1`).
 - **17-BM is a bending-magnet, white / pink beam source.** There is no insertion device and no monochromator in the footprinting path; machine state is observed through the loose `StorageRing`, and the white-versus-mono scope is carried pending (`SRC-1`, `WHITE-1`).
 - **The dose chain reuses the catalog.** The Al filter wheel binds `Filter` (it sets the dose rate); the timed shutters bind `Shutter`; the delay generator that fires the millisecond Uniblitz fast shutter binds `TimingController` (its opening-time setpoint is the dose time); the QuadEM electrometers bind `FluxMonitor` (incident flux to compute dose) (`DOSE-1`).
 - **The sample-delivery pump reuses the graduated catalog `FlowController`.** XFP is its **fourth** consumer (i22, 7-BM, LIX, XFP); `FlowController` graduated on this rule-of-three, presenting the `Regulator` Role (the settable-actuator sibling of `TemperatureController`). The wider fluidic chain beyond the pump stays in the `ControlPort` seam (`FLUID-1`).

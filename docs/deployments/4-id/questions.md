@@ -58,11 +58,11 @@
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DET-1 | Blocks-go-live | The Eiger area detector model, sensor, and frame rate. | One `Camera` Asset (`4idEiger:`); model unconfirmed. | The detector Model binding. |
-| DET-2 | Nice-to-have | The SGZ Vortex (`4iddMZ0:`): is it a fluorescence / energy-dispersive point detector, and what Family fits? | Bound to the catalog `BeamPositionMonitor` Family as a placeholder; classification unconfirmed (see `TOPO-3`). | The Vortex classification and Family. |
+| DET-2 | Nice-to-have | The SGZ Vortex (`4iddMZ0:`): is it a fluorescence / energy-dispersive point detector, and what Family fits? | Bound to the catalog `PositionMonitor` Family as a placeholder; classification unconfirmed (see `TOPO-3`). | The Vortex classification and Family. |
 
 ## Beam-position monitors and supplies
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| BPM-1 | Nice-to-have | The XBPMs, Sydor electrometers, and TetrAMM: which are true beam-position monitors versus intensity (I0) normalizers? | All bound to the graduated catalog `BeamPositionMonitor` Family presenting the Sensor Role. | The monitor classification. |
+| BPM-1 | Nice-to-have | The XBPMs, Sydor electrometers, and TetrAMM: which are true beam-position monitors versus intensity (I0) normalizers? | All bound to the graduated catalog `PositionMonitor` Family presenting the Sensor Role. | The monitor classification. |
 | SUP-1 | Nice-to-have | The cryogen and process-gas supplies the magnet and low-temperature environments draw on. | Liquid helium and liquid nitrogen carried pending in the descriptor. | The Supply records. |

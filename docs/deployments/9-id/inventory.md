@@ -4,7 +4,7 @@
 
 This cut models the 9-ID-A optics, the 9-ID-D focusing and guard slits, the grazing-incidence CSSI sample stack, and the detectors; the metadata / Data Management PVs and the simulated devices are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/9-id/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits, and for 9-ID one always does. The CRL `Transfocator` binds the graduated catalog Family (a CRL focusing optic), the same Family 4-ID and 8-ID use; the `BeamPositionMonitor` monitors bind the graduated catalog `BeamPositionMonitor` Family (presents the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux; see [Model](model.md#a-loose-family-still-held-for-gate-review)). Control handles are filled from the beamline config; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits, and for 9-ID one always does. The CRL `Transfocator` binds the graduated catalog Family (a CRL focusing optic), the same Family 4-ID and 8-ID use; the `PositionMonitor` monitors bind the graduated catalog `PositionMonitor` Family (presents the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux; see [Model](model.md#a-loose-family-still-held-for-gate-review)). Control handles are filled from the beamline config; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -30,11 +30,11 @@ Root Asset `9-ID` (`tier = Unit`, `facility_code = aps`); sub-systems nest below
 | `DetectorStage` | `Device` | LinearStage | 9-ID-D | Eiger positioning stage |
 | `WAXSDetector` | `Device` | Camera | 9-ID-D | GIWAXS detector on its pedestal (DET-1) |
 | `BeamStop` | `Device` | BeamStop | 9-ID-D | direct-beam stop and carriage |
-| `TetrAMM` | `Device` | BeamPositionMonitor | 9-ID-D | TetrAMM picoammeter (BPM-1) |
-| `XBPM_1/2` | `Device` | BeamPositionMonitor | 9-ID-D | X-ray beam-position monitors (BPM-1) |
+| `TetrAMM` | `Device` | PositionMonitor | 9-ID-D | TetrAMM picoammeter (BPM-1) |
+| `XBPM_1/2` | `Device` | PositionMonitor | 9-ID-D | X-ray beam-position monitors (BPM-1) |
 | `FlyScanScaler` | `Device` | GenericProbe | 9-ID-D | multi-channel scaler gating the fly scans (CTRL-2) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Aperture`, `Filter`, `Slit`, `LinearStage`, `RotaryStage`, `Hexapod`, `Camera`, `BeamStop`, `GenericProbe`, the graduated `Transfocator`, and the graduated `BeamPositionMonitor` (presents the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux). 9-ID adds **no new loose family of its own**.
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Aperture`, `Filter`, `Slit`, `LinearStage`, `RotaryStage`, `Hexapod`, `Camera`, `BeamStop`, `GenericProbe`, the graduated `Transfocator`, and the graduated `PositionMonitor` (presents the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux). 9-ID adds **no new loose family of its own**.
 
 ## Pending confirmations
 

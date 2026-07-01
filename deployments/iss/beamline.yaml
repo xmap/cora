@@ -28,7 +28,7 @@
 # PseudoAxis. The Johann and von Hamos crystal emission spectrometers bind the
 # EmissionSpectrometer family that LCLS-MFX introduced (its von Hamos XES spectrometer):
 # ISS is the SECOND sighting, earning the rule-of-three, so EmissionSpectrometer
-# GRADUATED into the catalog (SPEC-1). One loose family remains: BeamPositionMonitor
+# GRADUATED into the catalog (SPEC-1). One loose family remains: PositionMonitor
 # (DIAG-1). No Capability or Method is coined: the energy sweep strengthens the deferred
 # energy_scan case but a descriptor scaffold does not force it (ENERGY-1 stays deferred,
 # the BMM question), and the XAS / XES techniques sit on pending Methods (TECH-1). The
@@ -146,10 +146,10 @@ optics:
       confirm: true
       note: "The master energy axis: a pseudopositioner mapping photon energy to the HHM Bragg angle (and the coupled undulator gap), realized as the trajectory fly-scan. The energy sweep is the EXAFS measurement, which strengthens but does not coin the deferred energy_scan Capability (ENERGY-1, the BMM question); the technique scope is TECH-1."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:08IDA-BI{BPM:FM}"
       confirm: true
-      note: "Beam-position monitors along the optics (Prosilica cameras XF:08IDA-BI{BPM:FM / CM / 1-BT / 2-BT}) and sample-positioning cameras downstream (XF:08IDB-BI{BPM:SP-n}, XF:08IDB-BI{BPM:ES}). Binds the graduated BeamPositionMonitor Family (a consumer alongside 4-ID / 8-ID / 9-ID; DIAG-1)."
+      note: "Beam-position monitors along the optics (Prosilica cameras XF:08IDA-BI{BPM:FM / CM / 1-BT / 2-BT}) and sample-positioning cameras downstream (XF:08IDB-BI{BPM:SP-n}, XF:08IDB-BI{BPM:ES}). Binds the graduated PositionMonitor Family (a consumer alongside 4-ID / 8-ID / 9-ID; DIAG-1)."
 
 # ===========================================================================
 # SAMPLE STAGE: the sample stages, the reference foil wheel, the thermal control

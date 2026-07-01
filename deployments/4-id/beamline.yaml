@@ -398,7 +398,7 @@ area-detectors:
       enclosure: 4-ID-A
       note: "post-mono beam-view flag camera (Vimba)"
     - name: VortexFluorescence
-      family: BeamPositionMonitor     # catalog Family (graduated); placeholder classification for a fluorescence point detector pending reclassification (DET-2; not the EnergyDispersiveSpectrometer)
+      family: PositionMonitor     # catalog Family (graduated); placeholder classification for a fluorescence point detector pending reclassification (DET-2; not the EnergyDispersiveSpectrometer)
       pv: "4iddMZ0:"
       new: true
       confirm: "station is a guess: the 4iddMZ0 prefix was misread as a 4-ID-D enclosure (TOPO-3, DET-2)"
@@ -409,38 +409,38 @@ beam-position-monitors:
   enclosure: 4-ID-G
   intro: "The beam-position and intensity monitors (XBPMs, Sydor electrometers, TetrAMM, I0 chambers) that diagnose beam position and normalize intensity."
   note: >
-    These bind the graduated BeamPositionMonitor Family (presenting the Sensor Role),
+    These bind the graduated PositionMonitor Family (presenting the Sensor Role),
     a consumer alongside the wide fleet that earned it; the per-Asset beam-center
     calibration and channel map stay pending (BPM-1, FAM-1).
   devices:
     - name: XBPM_G
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: { x: "4idgSoft:m48", y: "4idgSoft:m47" }
       new: true
       confirm: true
       note: "4-ID-G X-ray beam-position monitor"
     - name: XBPM_H
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: { x: "4idhSoft:m6", y: "4idhSoft:m5" }
       new: true
       confirm: true
       enclosure: 4-ID-H
       note: "4-ID-H X-ray beam-position monitor"
     - name: Sydor_G
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "4idgSydor:T4U_BPM:"
       new: true
       confirm: true
       note: "4-ID-G Sydor electrometer beam-position monitor"
     - name: Sydor_H
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "4idhSydor:T4U_BPM:"
       new: true
       confirm: true
       enclosure: 4-ID-H
       note: "4-ID-H Sydor electrometer beam-position monitor"
     - name: TetrAMM_B
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "4idbSoft:TetrAMM:"
       new: true
       confirm: true

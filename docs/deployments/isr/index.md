@@ -50,7 +50,7 @@ The deferred parts are recorded on [Model](model.md).
 - **The single bound sample rotation binds `RotaryStage`, not `Goniometer`.** Only `th` + `zeta` are bound under the `Dif:ISD` IOC; with no detector arm and no reciprocal-space engine there is no basis to scaffold a multi-circle `Goniometer`, so it is one `RotaryStage` Asset with the full diffractometer deferred (`DIFF-1`).
 - **4-ID is an undulator beamline.** The in-vacuum undulator is observed (read-only gap in source) alongside the loose `StorageRing`; the device detail is `SRC-1`.
 - **The optics reuse the catalog.** The DCM binds `Monochromator`; the bendable focusing pair and the harmonic-rejection mirror bind `Mirror`; the front-end slit binds `Slit`; the filter bank binds `Filter`.
-- **The Eiger and screen cameras bind `Camera`; the motorized BPM stage binds the graduated catalog `BeamPositionMonitor`.** It presents the `Sensor` Role, distinct from `FluxMonitor` by measuring beam position rather than flux. The flux-monitor electrometers are commented out in source, so no `FluxMonitor` Asset is modelled (`DET-1`, `DIAG-1`).
+- **The Eiger and screen cameras bind `Camera`; the motorized BPM stage binds the graduated catalog `PositionMonitor`.** It presents the `Sensor` Role, distinct from `FluxMonitor` by measuring beam position rather than flux. The flux-monitor electrometers are commented out in source, so no `FluxMonitor` Asset is modelled (`DET-1`, `DIAG-1`).
 - **Zero new Families coined, no new Method slugs, nothing graduates, the catalog is unchanged.**
 
 ## The beamline

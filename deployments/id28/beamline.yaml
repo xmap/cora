@@ -114,7 +114,7 @@ optics:
     (the ASL F700 monot / deltae axis), carried as the BeamEnergy PseudoAxis. The config also
     shows a premono (OH1) and a postmono (OH2) ahead of the main mono (OH3); they fold into
     the same monochromation chain (MONO-1). The HFM / VFM benders bind Mirror; the oh2
-    Elettra monitor binds the graduated BeamPositionMonitor Family; the primary and mono slits bind Slit.
+    Elettra monitor binds the graduated PositionMonitor Family; the primary and mono slits bind Slit.
   devices:
     - name: Monochromator
       family: Monochromator
@@ -141,11 +141,11 @@ optics:
       confirm: true
       note: "the vertical focusing mirror (VFM, two-bender on the dedicated VFM calc controller) (OPT-1)"
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "BLISS elettra_bpm_oh2 (oh2/elettra_bpm_oh2.yml; Elettra on tango://id28/elettra/oh2; quadrant currents ebpmc1..4, total ebpmct, position ebpmx / ebpmy)"
       new: true
       confirm: true
-      note: "the oh2 Elettra beam-position monitor; binds the graduated BeamPositionMonitor Family (DIAG-1)"
+      note: "the oh2 Elettra beam-position monitor; binds the graduated PositionMonitor Family (DIAG-1)"
     - name: PrimarySlit
       family: Slit
       pv: "BLISS slits_ph / slits_pv (slits/slit_phg.yml, slits/slit_pvg.yml; horizontal phg / pho on pr / pl, vertical pvg / pvo on pu / pd)"

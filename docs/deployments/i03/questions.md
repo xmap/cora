@@ -27,7 +27,7 @@ As at I22, the EPICS PV prefix for every device is already recorded in the descr
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| DIAG-1 | Blocks-go-live | The beam-position (QBPM) and flux (Flux, IPin) monitors bind the graduated Sensor Families; what beam-center calibration do they need? | The existing Sensor Role: beam position via the graduated `BeamPositionMonitor` catalog Family (distinct from `FluxMonitor` by measuring position rather than flux), flux via the graduated `FluxMonitor` catalog Family (rule-of-three i22/i03/i15-1); beam-center is calibration to supply. | The beam-center calibration for the diagnostics. |
+| DIAG-1 | Blocks-go-live | The beam-position (QBPM) and flux (Flux, IPin) monitors bind the graduated Sensor Families; what beam-center calibration do they need? | The existing Sensor Role: beam position via the graduated `PositionMonitor` catalog Family (distinct from `FluxMonitor` by measuring position rather than flux), flux via the graduated `FluxMonitor` catalog Family (rule-of-three i22/i03/i15-1); beam-center is calibration to supply. | The beam-center calibration for the diagnostics. |
 | FEEDBACK-1 | Nice-to-have | Is the XBPM feedback loop a modelled CORA construct, or floor (an EPICS control loop CORA observes but does not own)? | Floor: the feedback loop is not a CORA Asset; carried with its modelling deferred. | Whether the feedback loop is modelled or stays on the floor. |
 
 ## Sample and the autonomous loop

@@ -9,7 +9,7 @@ FMX's science detector is the Eiger, reading the rotation diffraction; a Mercury
 | `AreaDetector` | Camera | `XF:17IDC-ES:FMX{Det:Eig16M}` | rotation diffraction (the MX data) |
 | `FluorescenceDetector` | EnergyDispersiveSpectrometer | `XF:17IDC-ES:FMX{Det:Mer}` | XRF edge selection (anomalous MX) |
 | `BeamStop` | BeamStop | `XF:17IDC-ES:FMX{BS:1}` | blocks the direct beam ahead of the Eiger |
-| `BeamPositionMonitor` | BeamPositionMonitor | `XF:17IDA-BI:FMX{BPM:1}` | beam-position diagnostics |
+| `BeamPositionMonitor` | PositionMonitor | `XF:17IDA-BI:FMX{BPM:1}` | beam-position diagnostics |
 | `FluxMonitor` | FluxMonitor | `XF:17IDC-BI:FMX{Keith:1}` | beam-intensity photocurrent (I0) |
 
 ## The Eiger
@@ -22,4 +22,4 @@ The `FluorescenceDetector` is a Mercury multi-element detector (`XF:17IDC-ES:FMX
 
 ## Beam monitors
 
-The `BeamStop` reuses `BeamStop`. The `BeamPositionMonitor` binds the graduated catalog `BeamPositionMonitor` Family (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux; the Prosilica BPM cameras and the sector XBPM `SR:C17-BI{XBPM:2}` for photon local feedback), with only the per-Asset channel map still pending (DIAG-1). The `FluxMonitor` is a Keithley picoammeter reading the I0 photocurrent, reusing `FluxMonitor`.
+The `BeamStop` reuses `BeamStop`. The `BeamPositionMonitor` binds the graduated catalog `PositionMonitor` Family (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux; the Prosilica BPM cameras and the sector XBPM `SR:C17-BI{XBPM:2}` for photon local feedback), with only the per-Asset channel map still pending (DIAG-1). The `FluxMonitor` is a Keithley picoammeter reading the I0 photocurrent, reusing `FluxMonitor`.

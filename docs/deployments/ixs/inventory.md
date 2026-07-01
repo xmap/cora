@@ -21,13 +21,13 @@ Root Asset `IXS` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `Monochromator` | `Device` | Monochromator | 10-ID-A | Si(111) double-crystal mono (MONO-1) |
 | `IncidentEnergy` | `Device` | PseudoAxis | 10-ID-A | incident-energy axis, DCM + undulator gap (MONO-1) |
 | `MonoSlit` | `Device` | Slit | 10-ID-A | post-DCM beam-defining slit (OPT-2) |
-| `BeamPositionMonitor_A` | `Device` | BeamPositionMonitor | 10-ID-A | beam-position monitor + diagnostic foil (DIAG-1) |
+| `BeamPositionMonitor_A` | `Device` | PositionMonitor | 10-ID-A | beam-position monitor + diagnostic foil (DIAG-1) |
 | `HighResolutionMonochromator` | `Device` | Monochromator | 10-ID-B | HRM2 high-resolution crystal mono (HRM-1) |
 | `HighResolutionEnergy` | `Device` | PseudoAxis | 10-ID-B | meV energy-transfer scan axis (HRM-1) |
 | `SecondarySourceAperture` | `Device` | Slit | 10-ID-B | secondary source aperture, driven blades (OPT-2) |
 | `TransportSlit` | `Device` | Slit | 10-ID-C | transport beam-defining slit (OPT-2) |
 | `Table` | `Device` | Table | 10-ID-C | support / positioning table |
-| `BeamPositionMonitor_C` | `Device` | BeamPositionMonitor | 10-ID-C | beam-position monitor + diagnostic foil (DIAG-1) |
+| `BeamPositionMonitor_C` | `Device` | PositionMonitor | 10-ID-C | beam-position monitor + diagnostic foil (DIAG-1) |
 | `VerticalFocusingMirror` / `HorizontalFocusingMirror` | `Device` | Mirror | 10-ID-D | KB focusing mirrors (OPT-1) |
 | `EndstationSlit` | `Device` | Slit | 10-ID-D | endstation beam-defining slit (OPT-2) |
 | `Pinhole` | `Device` | Aperture | 10-ID-D | positioned focusing pinhole (PH-1) |
@@ -41,7 +41,7 @@ Root Asset `IXS` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `AnalyzerThermalControl` | `Device` | TemperatureController | 10-ID-D | per-crystal PID thermal stabilization (TEMP-1) |
 | `AnalyzerElectrometers` / `IncidentScaler` | `Device` | FluxMonitor | 10-ID-D | quad electrometers + I0 scaler (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Slit`, `Monochromator`, `PseudoAxis`, `Mirror`, `Aperture`, `Filter`, `Hexapod`, `Table`, `LinearStage`, `Goniometer`, `Transfocator`, `TemperatureController`, `FluxMonitor`, `BeamPositionMonitor` (a catalog Family presenting `Sensor`, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux). Loose families reused from siblings: `StorageRing`. Coined loose at n=1 (new to the catalog, graduates nothing): `EnergyAnalyzer`.
+Families reused from the catalog: `InsertionDevice`, `Slit`, `Monochromator`, `PseudoAxis`, `Mirror`, `Aperture`, `Filter`, `Hexapod`, `Table`, `LinearStage`, `Goniometer`, `Transfocator`, `TemperatureController`, `FluxMonitor`, `PositionMonitor` (a catalog Family presenting `Sensor`, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux). Loose families reused from siblings: `StorageRing`. Coined loose at n=1 (new to the catalog, graduates nothing): `EnergyAnalyzer`.
 
 ## Pending confirmations
 

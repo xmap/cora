@@ -31,7 +31,7 @@
 # foil intensity monitor reuses FluxMonitor, the slits Slit, the attenuator foils
 # Filter, the undulator InsertionDevice, the master energy a PseudoAxis, the
 # diagnostic cameras Camera. The quadrant and diamond beam-position monitors bind
-# the graduated BeamPositionMonitor Family (DIAG-1) and the machine reads a loose
+# the graduated PositionMonitor Family (DIAG-1) and the machine reads a loose
 # StorageRing supply (MACHINE-1). Per the 8-ID / CHX / HXN precedent the coherent-
 # imaging Methods are NOT coined here; they are the deferred owner-scope cohort
 # (TECH-1).
@@ -143,10 +143,10 @@ optics:
       confirm: true
       note: "Foil intensity monitor (class I400, instance fmon) read for I0 normalization; reuses FluxMonitor. Channel map pending (DIAG-1)."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor          # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor          # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:09IDB-BI{i404:1}"
       confirm: true
-      note: "Quadrant beam-position monitor (class I404, instance qbpm) on the branch, plus the DM3 / DM4 BPM translation stages. Binds the graduated BeamPositionMonitor Family (a consumer alongside 4-ID / 8-ID / iss / fmx; DIAG-1), matching the catalog note that position monitors stay loose. Channel map pending (DIAG-1)."
+      note: "Quadrant beam-position monitor (class I404, instance qbpm) on the branch, plus the DM3 / DM4 BPM translation stages. Binds the graduated PositionMonitor Family (a consumer alongside 4-ID / 8-ID / iss / fmx; DIAG-1), matching the catalog note that position monitors stay loose. Channel map pending (DIAG-1)."
 
 # ===========================================================================
 # SAMPLE STAGE: the KB nanofocus, the beam-conditioning unit, the goniometer,
@@ -196,10 +196,10 @@ sample:
       confirm: true
       note: "Endstation positioning tower 2 (class TDMSTower, instance T2), the partner of SampleTower1. Reuses LinearStage; some axes are read-only pending commissioning in source (STAGE-1)."
     - name: DiamondBeamMonitor
-      family: BeamPositionMonitor          # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor          # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:09IDC-BI{BPM:1}"
       confirm: true
-      note: "Transmissive diamond beam-position monitor read through a TetrAMM electrometer (class TetrAMM, instance dbpm) just ahead of the sample; renamed in source on 2026-06-18 from ion-chamber use to the diamond BPM. Binds the graduated BeamPositionMonitor Family (DIAG-1)."
+      note: "Transmissive diamond beam-position monitor read through a TetrAMM electrometer (class TetrAMM, instance dbpm) just ahead of the sample; renamed in source on 2026-06-18 from ion-chamber use to the diamond BPM. Binds the graduated PositionMonitor Family (DIAG-1)."
     - name: SampleCamera
       family: Camera
       pv: "XF:09IDC-BI{SMPL-Cam:10}"

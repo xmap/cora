@@ -48,7 +48,7 @@
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DET-1 | Blocks-go-live | The three area detectors (Eiger 4M, Lambda 2M, Rigaku 3M): models, sensors, and frame rates. | Three `Camera` Assets; models unconfirmed. | The detector Model bindings. |
-| BPM-1 | Nice-to-have | The Sydor beam-position monitor and the four TetrAMM channels: which are position monitors versus intensity (I0) normalizers? | Bound to the graduated catalog `BeamPositionMonitor` Family presenting the Sensor Role. | The monitor classification. |
+| BPM-1 | Nice-to-have | The Sydor beam-position monitor and the four TetrAMM channels: which are position monitors versus intensity (I0) normalizers? | Bound to the graduated catalog `PositionMonitor` Family presenting the Sensor Role. | The monitor classification. |
 | XPCS-1 | Nice-to-have | The fast shutter timing and its role in the XPCS exposure sequence. | One `Shutter` Asset (8ideSoft:fastshutter). | The fast-shutter model. |
 | XPCS-2 | Nice-to-have | The flight-path geometry (length, swing) and the beam-stop relationship. | One `FlightPath` Asset (loose Family) plus a `BeamStop`. | The flight-path model. |
 | XPCS-3 | Nice-to-have | The softGlue FPGA timing graph (8idMZ1): the signal routing for detector gating. | One `TimingController` Asset; the signal graph is not modelled. | The timing model. |

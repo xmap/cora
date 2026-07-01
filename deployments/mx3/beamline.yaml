@@ -29,7 +29,7 @@
 # the DMM Monochromator, the cryojet TemperatureController, the attenuator Filter, the
 # flux monitor FluxMonitor, the beamstop BeamStop, the shutters Shutter. Two loose
 # families are reused (all allowlisted): StorageRing (the ring-current monitor) and
-# BeamPositionMonitor (the beam-steering BPM). The MD3 backlight binds the catalog
+# PositionMonitor (the beam-steering BPM). The MD3 backlight binds the catalog
 # Backlight Family (graduated across the MX / imaging fleet, DET-1). The
 # ISARA robot is modelled as a deferred Procedure (sample exchange), not a device family
 # (the i03 / i24 ROBOT-1 precedent). No Capability or Method is coined; the rotation-MX
@@ -170,10 +170,10 @@ detector:
       confirm: true
       note: "Incident-flux monitor (flux). Reuses FluxMonitor (graduated #353)."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "MX3DAQIOC04:"
       confirm: true
-      note: "Beam-position monitor and closed-loop steering (BPM0 PosX / PosY / Int readbacks plus a PID steering DAC). Binds the graduated BeamPositionMonitor Family (DIAG-1). The PID beam-steering controller half has no clean existing family and is a deferred new-device question (STEER-1)."
+      note: "Beam-position monitor and closed-loop steering (BPM0 PosX / PosY / Int readbacks plus a PID steering DAC). Binds the graduated PositionMonitor Family (DIAG-1). The PID beam-steering controller half has no clean existing family and is a deferred new-device question (STEER-1)."
     - name: OAVCamera
       family: Camera
       pv: "MX3MD3ZOOM0"

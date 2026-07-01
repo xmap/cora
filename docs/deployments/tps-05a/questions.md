@@ -34,7 +34,7 @@ Priorities: `Blocks-build`, `Blocks-go-live`, `Nice-to-have`.
 | DET-1 | Blocks-go-live | The EIGER2 X 9M detector PV records, its SIMPLON REST endpoint, and any detector minimum-distance interlock (07A has one at 139 mm; 05A's is unknown). | An EIGER2 X 9M `Camera` commanded through the DCSS workflow; endpoint and interlock deployment config. | The detector interface and safety limit. |
 | ENV-1 | Nice-to-have | The cryostream sample-cooling vendor and PV. | A `TemperatureController` Asset, settings blank. | The cryostream Model and PV. |
 | ROBOT-1 | Nice-to-have | The ISARA sample-mounting robot (the same model as 07A). CORA would model autonomous sample exchange as a Procedure over the spine threaded through the `Subject` aggregate and gated by a Clearance, the i03 / i24 / 07A / MX3 shape. | The robot is deferred autonomous-loop machinery, not a beam-path Asset. | The sample-exchange Procedure and Subject custody thread. |
-| DIAG-1 | Nice-to-have | The beam-position / XBPM and OAV-camera channel maps and PVs. | Read-only beam-position (graduated catalog `BeamPositionMonitor`) and OAV (`Camera`) probes; channel maps blank. | The diagnostic bindings. |
+| DIAG-1 | Nice-to-have | The beam-position / XBPM and OAV-camera channel maps and PVs. | Read-only beam-position (graduated catalog `PositionMonitor`) and OAV (`Camera`) probes; channel maps blank. | The diagnostic bindings. |
 
 ## Controls and technique scope
 

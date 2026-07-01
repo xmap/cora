@@ -21,7 +21,7 @@
 # family: the flat-panel detectors reuse Camera, the ion chamber and quad electrometer
 # FluxMonitor (#353), the cryostream / furnace TemperatureController (#350, graduated
 # BY i11), the bent double-Laue and high-resolution monochromators Monochromator, the
-# focusing mirror Mirror. Its one loose family is the BeamPositionMonitor, shared with
+# focusing mirror Mirror. Its one loose family is the PositionMonitor, shared with
 # 4-ID/8-ID/9-ID and held (DIAG-1). Per the i11 / i15-1 precedent the powder-diffraction
 # and total-scattering Capabilities are NOT coined here; they are the deferred
 # owner-scope cohort (TECH-1), and the autonomous sample robot is the deferred
@@ -102,10 +102,10 @@ optics:
       confirm: true
       note: "The master energy axis set by the double-Laue monochromator. XPD runs at a fixed high energy per experiment; whether energy is ever scanned as the measurement is ENERGY-1."
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor     # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:28IDA-BI:0{BPM:1-Ax:"
       confirm: true
-      note: "Beam-position monitor (bpm1) in the optics hutch. Binds the graduated BeamPositionMonitor Family (a consumer alongside 4-ID/8-ID/9-ID; DIAG-1), matching the catalog note that position monitors stay loose."
+      note: "Beam-position monitor (bpm1) in the optics hutch. Binds the graduated PositionMonitor Family (a consumer alongside 4-ID/8-ID/9-ID; DIAG-1), matching the catalog note that position monitors stay loose."
 
 # ===========================================================================
 # SAMPLE STAGE: the diffractometer, sample stages, pinhole, sample environment

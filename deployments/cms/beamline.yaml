@@ -40,7 +40,7 @@
 # SAXS / WAXS / MAXS Pilatus detectors bind Camera; the detector translations and
 # the telescoping flight path bind LinearStage; the beamstop binds BeamStop; the ion
 # chambers, electrometers, and scintillation counter bind FluxMonitor; the diamond
-# diode beam-position monitor binds the graduated BeamPositionMonitor Family
+# diode beam-position monitor binds the graduated PositionMonitor Family
 # (DIAG-1); the Linkam stage binds TemperatureController; the support table binds
 # Table. Two genuinely-new endstation devices are modelled by reuse rather than
 # coinage: the GIBar sample-exchange arm is carried as stage axes (LinearStage) at
@@ -204,7 +204,7 @@ detection:
     The Pilatus area detectors bind Camera; the detector translations and the
     telescoping flight path bind LinearStage; the beamstop binds BeamStop; the ion
     chamber, scintillation counter, and electrometers bind FluxMonitor; the diamond
-    diode beam-position monitor binds the graduated BeamPositionMonitor Family
+    diode beam-position monitor binds the graduated PositionMonitor Family
     (DIAG-1). The reflectivity (XR) reuses the SAXS Camera read over a
     sliding region-of-interest (the synthetic two-theta), with no two-theta arm and no
     point detector (XR-1).
@@ -246,11 +246,11 @@ detection:
       confirm: true
       note: "endstation flux monitors: the ion chamber (IM:3), the BIM4 scintillation counter (IM:4), and the endstation electrometer (IM:2); scalar readings, the channel map is DET-1"
     - name: BeamPositionMonitor
-      family: BeamPositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
+      family: PositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1)
       pv: "XF:11BMB-BI{BPM:1}Cur:I0-I"
       new: true
       confirm: true
-      note: "the BIM5 four-quadrant diamond-diode beam-position monitor; binds the graduated BeamPositionMonitor Family (DIAG-1); position vs intensity split is DIAG-1"
+      note: "the BIM5 four-quadrant diamond-diode beam-position monitor; binds the graduated PositionMonitor Family (DIAG-1); position vs intensity split is DIAG-1"
     - name: SupportTable
       family: Table
       pv: "XF:11BMB-ES{Tbl:Rear-Ax:Z}Mtr"

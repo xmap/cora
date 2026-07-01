@@ -157,7 +157,7 @@ monochromator:
       confirm: true
       note: "post-DCM beam-defining slit (OPT-2)"
     - name: BeamPositionMonitor_A
-      family: BeamPositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
+      family: PositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "XF:10IDA-OP{BPM:1"
       new: true
       confirm: true
@@ -215,7 +215,7 @@ transport:
       confirm: true
       note: "support / positioning table; axis set is an Asset-layer setting"
     - name: BeamPositionMonitor_C
-      family: BeamPositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
+      family: PositionMonitor      # catalog Family (graduated; presents Sensor; DIAG-1, BPM-1)
       pv: "XF:10IDC-OP{BPM:2"
       new: true
       confirm: true

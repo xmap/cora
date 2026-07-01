@@ -4,7 +4,7 @@
 
 8-ID has two sample-side endstations: the six-circle Huber diffractometer at `8-ID-E`, and the XPCS sample stack at `8-ID-I` (Aerotech translation, a rheometer shear-cell, and temperature-controlled holders). They are modelled as sample-stage groups in the [descriptor](../inventory.md).
 
-The diffractometer device binds the catalog `Goniometer` Family for its sample circles; the composed `Assembly(Diffractometer)` is in the catalog and materialized by the integration scenario (see [Model](../model.md#the-diffractometer-assembly-landed)). The beam-position monitor binds the graduated catalog `BeamPositionMonitor` Family (presents the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux); the temperature controllers bind the now-graduated `TemperatureController` catalog Family (presents `Regulator`, #350); the rheometer binds a loose `Rheometer` Family.
+The diffractometer device binds the catalog `Goniometer` Family for its sample circles; the composed `Assembly(Diffractometer)` is in the catalog and materialized by the integration scenario (see [Model](../model.md#the-diffractometer-assembly-landed)). The beam-position monitor binds the graduated catalog `PositionMonitor` Family (presents the `Sensor` Role, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux); the temperature controllers bind the now-graduated `TemperatureController` catalog Family (presents `Regulator`, #350); the rheometer binds a loose `Rheometer` Family.
 
 ## The six-circle diffractometer (8-ID-E)
 
@@ -15,7 +15,7 @@ A Huber six-circle diffractometer orients a single crystal through six rotation 
 | `Diffractometer_SixCircle` | `Goniometer` | six circles mu / eta / chi / phi / nu / delta + x/y/z; bound as the goniometer of the Diffractometer Assembly (`DIFF-1`) |
 | `ReciprocalSpace` | `PseudoAxis` | hklpy2 reciprocal-space layer (psic); partition rule is `DIFF-2` |
 | `TemperatureController_1/2` | `TemperatureController` | LakeShore 336 controllers (`TEMP-1`) |
-| `BeamPositionMonitor_E` | `BeamPositionMonitor` | Sydor TetrAMM monitor (`BPM-1`) |
+| `BeamPositionMonitor_E` | `PositionMonitor` | Sydor TetrAMM monitor (`BPM-1`) |
 | `FastShutter` | `Shutter` | gates the exposure (`XPCS-1`) |
 
 The six circles (mu, eta, chi, phi, nu, delta) are the strongest evidence for the `Assembly(Diffractometer)` slot shape; together with 4-ID's diffractometers they set `sample_circles` at cardinality `OneOrMore` (see [Model](../model.md#deliberately-not-here-yet)).
