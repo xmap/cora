@@ -13,7 +13,7 @@ Both techniques would need the [incident-beam chain](beamline.md) (the undulator
 
 ## Reuse, not new vocabulary
 
-ISR coins **no new Method**. Its resonant scattering reuses the `resonant_scattering` Method that APS 4-ID POLAR brought and CSX shares; its surface / CTR diffraction reuses the `diffraction` Method that 4-ID / 8-ID share. So ISR adds, when it lands, further consumers of two pending Methods, strengthening the case for cataloging them, but it does not mint vocabulary. The matching Site Practices (`ISR_resonant_scattering_practice`, `ISR_surface_diffraction_practice`) are carried pending in the [NSLS-II Site](../nsls2/index.md#the-techniques-adapted-here).
+ISR coins **no new Method**. Its resonant scattering reuses the `resonant_scattering` Method that APS 4-ID brought and CSX shares; its surface / CTR diffraction reuses the `diffraction` Method that 4-ID / 8-ID share. So ISR adds, when it lands, further consumers of two pending Methods, strengthening the case for cataloging them, but it does not mint vocabulary. The matching Site Practices (`ISR_resonant_scattering_practice`, `ISR_surface_diffraction_practice`) are carried pending in the [NSLS-II Site](../nsls2/index.md#the-techniques-adapted-here).
 
 ## Why these are doubly deferred
 

@@ -1,6 +1,6 @@
 # The beamline
 
-*The 19-BM-FACT beamline as areas you can jump to: the stages the beam passes through, plus the controls that drive them and the resources they draw on. Design-phase.*
+*The 19-BM beamline as areas you can jump to: the stages the beam passes through, plus the controls that drive them and the resources they draw on. Design-phase.*
 
 The beamline divides into two kinds of thing. Along the beam, in order, sit the stages: the [Source](../beamline.md) that delivers and conditions the beam in the front-end optics enclosure, the [Sample](sample.md) stage in air at the endstation, and the [Detector](detector.md) that records what comes through. Cutting across all of them are the shared concerns: the [Controls](controls.md) that drive the hardware, and the resources the beamline draws on.
 
@@ -8,7 +8,7 @@ The stages are containment trees of apparatus (`Asset.parent_id`); controls rela
 
 ## Enclosures
 
-19-BM-FACT runs in **filtered white-beam mode only**, with beam present in all enclosures whenever the front-end shutter is open. Three access-gated volumes contain it:
+19-BM runs in **filtered white-beam mode only**, with beam present in all enclosures whenever the front-end shutter is open. Three access-gated volumes contain it:
 
 | Enclosure | Role | What is in it |
 | --- | --- | --- |

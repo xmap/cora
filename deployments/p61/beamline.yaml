@@ -22,7 +22,7 @@
 # high-energy white-beam beamline; the experiment positioning reuses LinearStage, and
 # the technique reuses the pending energy_dispersive_diffraction / powder_diffraction
 # slugs (TECH-1). The Large Volume Press, if exposed, would reuse the allowlisted-loose
-# PressureCell Family (the 13-id-d / P02 precedent); it is not in this registry slice
+# PressureCell Family (the 13-id / P02 precedent); it is not in this registry slice
 # and is carried pending (PRESS-1).
 #
 # CONTROL HANDLES: the descriptor `pv` field carries the Tango device address read from

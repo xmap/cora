@@ -16,7 +16,7 @@ CMS is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 
 ## What makes CMS new
 
-The honest answer is: not much on the scattering, and one real thing on reflectivity. CMS measures soft-matter and thin-film structure by small- and wide-angle scattering (SAXS / WAXS / MAXS), grazing-incidence scattering (GISAXS / GIWAXS), and specular X-ray reflectivity (XR). The scattering overlaps the fleet heavily: CMS is the direct NSLS-II twin of SMI (12-ID), and shares its science axis with Diamond I22 and APS 9-ID / 12-ID-E. That scattering reuses the existing `Camera` / `Goniometer` / `Slit` / `BeamStop` / `FluxMonitor` / `Monochromator` / `Mirror` vocabulary and contributes reinforcement, not novelty.
+The honest answer is: not much on the scattering, and one real thing on reflectivity. CMS measures soft-matter and thin-film structure by small- and wide-angle scattering (SAXS / WAXS / MAXS), grazing-incidence scattering (GISAXS / GIWAXS), and specular X-ray reflectivity (XR). The scattering overlaps the fleet heavily: CMS is the direct NSLS-II twin of SMI (12-ID), and shares its science axis with Diamond I22 and APS 9-ID / 12-ID. That scattering reuses the existing `Camera` / `Goniometer` / `Slit` / `BeamStop` / `FluxMonitor` / `Monochromator` / `Mirror` vocabulary and contributes reinforcement, not novelty.
 
 CMS's two genuinely distinct contributions are:
 

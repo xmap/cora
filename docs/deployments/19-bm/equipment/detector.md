@@ -1,6 +1,6 @@
 # Detector
 
-*The 19-BM-FACT indirect-detection imaging system, and the downstream beam stops. Design-phase; the detector hardware is procured after the FDR.*
+*The 19-BM indirect-detection imaging system, and the downstream beam stops. Design-phase; the detector hardware is procured after the FDR.*
 
 19-BM records 2-D projections with an indirect-detection system: a scintillator converts the transmitted X-ray image to visible light, visible-light microscope optics relay it, and a camera captures the frames, which are reconstructed off-line into 3-D micron-resolution tomograms. The system sits in air, downstream of the sample in 19-BM-D.
 

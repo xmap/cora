@@ -29,7 +29,7 @@ Root Asset `P07` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `FluorescenceDetectors` | `Device` | EnergyDispersiveSpectrometer | p07-eh2 | EH2 MCA fluorescence (DET-1) |
 | `SampleStage` (EH2B) | `Device` | LinearStage | p07-eh2b | EH2B sample bank (exp01..64); grouped (GROUP-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `LinearStage`, `Slit`, `Goniometer`, `Hexapod`, `TemperatureController`, `Camera`, `EnergyDispersiveSpectrometer`. Allowlisted-loose Family reused: `Magnet` (the 4-ID POLAR precedent, a further consumer, `MAG-1`). No new family is coined and nothing graduates.
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `LinearStage`, `Slit`, `Goniometer`, `Hexapod`, `TemperatureController`, `Camera`, `EnergyDispersiveSpectrometer`. Allowlisted-loose Family reused: `Magnet` (the 4-ID precedent, a further consumer, `MAG-1`). No new family is coined and nothing graduates.
 
 ## Cross-cutting controllers
 

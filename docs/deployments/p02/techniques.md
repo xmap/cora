@@ -30,7 +30,7 @@ P02.2 puts the sample in a [diamond-anvil cell](equipment/sample.md) and collect
 
 ## A high-energy diffraction beamline on familiar vocabulary
 
-P02 is the fleet's high-energy powder / total-scattering beamline and its first diamond-anvil-cell extreme-conditions endstation. Its techniques reuse the `powder_diffraction` and `total_scattering` slugs already carried pending across the fleet (Diamond i11 / i15-1, NSLS-II XPD), so none forces a new Method now. The instrument anatomy reuses existing Families end to end: the monochromator binds `Monochromator`, the bendable mirrors `Mirror`, the detectors `Camera`, the sample environment `TemperatureController`, and the high-pressure cell the allowlisted-loose `PressureCell` (the 13-id-d precedent, now at its second consumer).
+P02 is the fleet's high-energy powder / total-scattering beamline and its first diamond-anvil-cell extreme-conditions endstation. Its techniques reuse the `powder_diffraction` and `total_scattering` slugs already carried pending across the fleet (Diamond i11 / i15-1, NSLS-II XPD), so none forces a new Method now. The instrument anatomy reuses existing Families end to end: the monochromator binds `Monochromator`, the bendable mirrors `Mirror`, the detectors `Camera`, the sample environment `TemperatureController`, and the high-pressure cell the allowlisted-loose `PressureCell` (the 13-id precedent, now at its second consumer).
 
 ## Not modelled yet
 

@@ -40,7 +40,7 @@ i06 coins no new Family and changes nothing in the catalog. The four devices tha
 
 - **The diffractometer Assembly (`DIFF-1`).** Whether the i06-1 sample circles plus the detector arm compose an `Assembly(Diffractometer)` is deferred, exactly as 4-ID, 8-ID, and CSX deferred materializing their soft X-ray diffractometer Assemblies in descriptor mode. The first cut is a flat `Goniometer` Asset plus a reciprocal-space `PseudoAxis`, with the Assembly named as the follow-on.
 
-- **The XMCD / XMLD / PEEM Methods.** Whether magnetic dichroism, photoemission microscopy, and resonant soft X-ray diffraction enter CORA's catalog as Capabilities / Methods is an owner decision; the Practices render unlinked, pending. XMCD and resonant scattering share the 4-ID POLAR Methods; XMLD and photoemission microscopy are new pending slugs (`TECH-1`, `PEEM-1`).
+- **The XMCD / XMLD / PEEM Methods.** Whether magnetic dichroism, photoemission microscopy, and resonant soft X-ray diffraction enter CORA's catalog as Capabilities / Methods is an owner decision; the Practices render unlinked, pending. XMCD and resonant scattering share the 4-ID Methods; XMLD and photoemission microscopy are new pending slugs (`TECH-1`, `PEEM-1`).
 
 - **The polarization Calibration (`POL-1`).** Pinning the polarization-to-phase conversion as a CORA-owned LookupTable Calibration revision (rather than letting the live i06 controller own it) is deferred; it is only needed if CORA must scan polarization without the i06 controller in the loop.
 

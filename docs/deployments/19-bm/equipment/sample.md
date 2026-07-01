@@ -1,6 +1,6 @@
 # Sample
 
-*The 19-BM-FACT in-air endstation. Design-phase; values are FDR design targets, and the manipulator design was out of FDR scope.*
+*The 19-BM in-air endstation. Design-phase; values are FDR design targets, and the manipulator design was out of FDR scope.*
 
 The sample stage sits in air in 19-BM-D. The beamline vacuum terminates at a water-cooled beryllium window (~50 m); a short rough-vacuum section protects that window from oxidation, then a Kapton window transitions to air. In the air gap the sample stage places the specimen in the white beam in front of the [Detector](detector.md).
 

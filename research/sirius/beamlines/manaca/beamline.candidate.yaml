@@ -1,0 +1,234 @@
+# CANDIDATE beamline descriptor: machine-extracted from a *-bits repo, NOT authoritative.
+# Every device carries new: true and a confirm note. Grouping by stage is a placeholder;
+# Family suggestions, enclosures, and per-axis PVs all need human curation and, for any
+# new Family, the naming-r3 gate. Do not copy into deployments/ without review.
+
+beamline:
+  name: MANACA
+  facility: sirius
+  tier: Unit
+  source: unknown-pending-confirmation
+enclosures:
+- name: MANACA
+  facility_code: sirius
+  confirm: enclosure inferred from PV prefix or station label
+source:
+  stage: source
+  intro: Candidate grouping by inferred stage; grouping and stage need confirm.
+  devices:
+  - name: cryo
+    family: EPICSActuator
+    pv: MNC:CRYCON:RTEMP
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'EPICSActuator'; the CORA Family needs a human;
+      MXCuBE object at 'cryo'; endstation to enclosure is a guess
+    source_class: EPICSActuator
+  - name: detector_distance
+    family: EPICSMotor
+    pv: MNC:B:PB04:CS1:m9
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'EPICSMotor'; the CORA Family needs a human;
+      MXCuBE object at 'detector_distance'; endstation to enclosure is a guess
+    source_class: EPICSMotor
+  - name: diffractometer
+    family: LNLSDiffractometer
+    enclosure: MANACA
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'LNLSDiffractometer'; the CORA Family needs
+      a human; MXCuBE object at 'diffractometer'; endstation to enclosure is a guess
+    source_class: LNLSDiffractometer
+  - name: energy
+    family: LNLSEnergy
+    pv: 'MNC:A:DCM01:'
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSEnergy'; the CORA Family needs a human;
+      MXCuBE object at 'energy'; endstation to enclosure is a guess
+    source_class: LNLSEnergy
+  - name: flux
+    family: EPICSActuator
+    pv: MNC:B:PICO02:FluxCividec
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'EPICSActuator'; the CORA Family needs a human;
+      MXCuBE object at 'flux'; endstation to enclosure is a guess
+    source_class: EPICSActuator
+  - name: md_camera
+    family: LNLSCamera
+    enclosure: MANACA
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'LNLSCamera'; the CORA Family needs a human;
+      MXCuBE object at 'md_camera'; endstation to enclosure is a guess
+    source_class: LNLSCamera
+  - name: resolution
+    family: ResolutionVirtualMotor
+    pv: MNC:B:SoftIOC:Resolution
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'ResolutionVirtualMotor'; the CORA Family
+      needs a human; MXCuBE object at 'resolution'; endstation to enclosure is a guess
+    source_class: ResolutionVirtualMotor
+  - name: safety_shutter
+    family: EPICSToggle
+    pv: 'MNC:A:PPS01:'
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'EPICSToggle'; the CORA Family needs a human;
+      MXCuBE object at 'safety_shutter'; endstation to enclosure is a guess
+    source_class: EPICSToggle
+  - name: sample_changer
+    family: LNLSSampleChanger
+    pv: 'MNC:B:ROBCS801:'
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSSampleChanger'; the CORA Family needs
+      a human; MXCuBE object at 'sample_changer'; endstation to enclosure is a guess
+    source_class: LNLSSampleChanger
+  - name: transmission
+    family: EPICSActuator
+    pv: 'MNC:B:TRANSMISSION:'
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'EPICSActuator'; the CORA Family needs a human;
+      MXCuBE object at 'transmission'; endstation to enclosure is a guess
+    source_class: EPICSActuator
+  - name: udiff_backlight
+    family: LNLSRestrictedActuator
+    pv: MNC:B:LUCIOLE01:LIGHT_CH1
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSRestrictedActuator'; the CORA Family
+      needs a human; MXCuBE object at 'udiff_backlight'; endstation to enclosure is
+      a guess
+    source_class: LNLSRestrictedActuator
+  - name: udiff_backlightswitch
+    family: LNLSRestrictedNState
+    pv: MNC:B:PB03:PV_ACTIVATE_BACKLIGHT
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSRestrictedNState'; the CORA Family needs
+      a human; MXCuBE object at 'udiff_backlightswitch'; endstation to enclosure is
+      a guess
+    source_class: LNLSRestrictedNState
+  - name: udiff_frontlight
+    family: LNLSRestrictedActuator
+    pv: MNC:B:LUCIOLE01:LIGHT_CH2
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSRestrictedActuator'; the CORA Family
+      needs a human; MXCuBE object at 'udiff_frontlight'; endstation to enclosure
+      is a guess
+    source_class: LNLSRestrictedActuator
+  - name: udiff_frontlightswitch
+    family: LNLSRestrictedNStateInterval
+    pv: MNC:B:LUCIOLE01:LIGHT_CH2
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSRestrictedNStateInterval'; the CORA Family
+      needs a human; MXCuBE object at 'udiff_frontlightswitch'; endstation to enclosure
+      is a guess
+    source_class: LNLSRestrictedNStateInterval
+  - name: udiff_kappa
+    family: LNLSRestrictedMotorDetachable
+    pv: MNC:B:PB05:m7
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSRestrictedMotorDetachable'; the CORA
+      Family needs a human; MXCuBE object at 'udiff_kappa'; endstation to enclosure
+      is a guess
+    source_class: LNLSRestrictedMotorDetachable
+  - name: udiff_kappaphi
+    family: LNLSRestrictedMotorDetachable
+    pv: MNC:B:PB05:m6
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSRestrictedMotorDetachable'; the CORA
+      Family needs a human; MXCuBE object at 'udiff_kappaphi'; endstation to enclosure
+      is a guess
+    source_class: LNLSRestrictedMotorDetachable
+  - name: udiff_omega
+    family: LNLSRestrictedMotor
+    pv: MNC:B:PB05:m8
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSRestrictedMotor'; the CORA Family needs
+      a human; MXCuBE object at 'udiff_omega'; endstation to enclosure is a guess
+    source_class: LNLSRestrictedMotor
+  - name: udiff_phiy
+    family: LNLSRestrictedMotor
+    pv: MNC:B:PB05:m2
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSRestrictedMotor'; the CORA Family needs
+      a human; MXCuBE object at 'udiff_phiy'; endstation to enclosure is a guess
+    source_class: LNLSRestrictedMotor
+  - name: udiff_phiz
+    family: LNLSRestrictedMotor
+    pv: MNC:B:PB05:m3
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSRestrictedMotor'; the CORA Family needs
+      a human; MXCuBE object at 'udiff_phiz'; endstation to enclosure is a guess
+    source_class: LNLSRestrictedMotor
+  - name: udiff_sampx
+    family: LNLSUpdateGridPositionHorizontal
+    pv: MNC:B:PB05:m1
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSUpdateGridPositionHorizontal'; the CORA
+      Family needs a human; MXCuBE object at 'udiff_sampx'; endstation to enclosure
+      is a guess
+    source_class: LNLSUpdateGridPositionHorizontal
+  - name: udiff_sampy
+    family: LNLSUpdateGridPositionVertical
+    pv: MNC:B:PB05:CS1:m8
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSUpdateGridPositionVertical'; the CORA
+      Family needs a human; MXCuBE object at 'udiff_sampy'; endstation to enclosure
+      is a guess
+    source_class: LNLSUpdateGridPositionVertical
+  - name: udiff_sampz
+    family: LNLSRestrictedMotor
+    pv: MNC:B:PB05:CS1:m9
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'LNLSRestrictedMotor'; the CORA Family needs
+      a human; MXCuBE object at 'udiff_sampz'; endstation to enclosure is a guess
+    source_class: LNLSRestrictedMotor
+  - name: udiff_zoom
+    family: EPICSNState
+    pv: MNC:B:BZOOM:cam1:ZoomLevel
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'EPICSNState'; the CORA Family needs a human;
+      MXCuBE object at 'udiff_zoom'; endstation to enclosure is a guess
+    source_class: EPICSNState
+  - name: und_phase
+    family: EPICSActuator
+    pv: SI-09SA:ID-APU22:Phase-Mon
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'EPICSActuator'; the CORA Family needs a human;
+      MXCuBE object at 'und_phase'; endstation to enclosure is a guess
+    source_class: EPICSActuator
+  - name: wavelength
+    family: EPICSActuator
+    pv: MNC:B:SoftIOC:Resolution:Wavelength_RBV
+    enclosure: MANACA
+    new: true
+    confirm: family is the MXCuBE class 'EPICSActuator'; the CORA Family needs a human;
+      MXCuBE object at 'wavelength'; endstation to enclosure is a guess
+    source_class: EPICSActuator
+  - name: xrf
+    family: LNLSXRF
+    enclosure: MANACA
+    new: true
+    confirm: no Exporter / TINE handle in the config object; control handle needs
+      confirm; family is the MXCuBE class 'LNLSXRF'; the CORA Family needs a human;
+      MXCuBE object at 'xrf'; endstation to enclosure is a guess
+    source_class: LNLSXRF

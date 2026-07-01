@@ -20,7 +20,7 @@ P61 is a seventeenth beamline at an existing Site, the facility's high-energy wh
 
 ## No new families (a thin, honest model)
 
-P61 coins no new Family. The motor bank binds `LinearStage`; the energy-dispersive detector is a pending `EnergyDispersiveSpectrometer` placeholder. Nothing in the catalog changes. The Large Volume Press (P61A), when exposed, would reuse the allowlisted-loose `PressureCell` Family (the P02 / 13-id-d precedent); it is carried pending (`PRESS-1`). The P61 registry slice exposes little beyond the grouped motor bank, so the source, the press, and the detectors are carried pending rather than invented, the model-what-the-source-supports posture as P11 / P21 / P23.
+P61 coins no new Family. The motor bank binds `LinearStage`; the energy-dispersive detector is a pending `EnergyDispersiveSpectrometer` placeholder. Nothing in the catalog changes. The Large Volume Press (P61A), when exposed, would reuse the allowlisted-loose `PressureCell` Family (the P02 / 13-id precedent); it is carried pending (`PRESS-1`). The P61 registry slice exposes little beyond the grouped motor bank, so the source, the press, and the detectors are carried pending rather than invented, the model-what-the-source-supports posture as P11 / P21 / P23.
 
 ## The control plane
 

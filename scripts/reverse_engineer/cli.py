@@ -125,22 +125,32 @@ def _collect_online_xml(repo_dir: Path) -> list[parse.TangoDevice]:
 
 
 def _collect_mxcube(repo_dir: Path, subdir: str) -> list[parse.MxcubeDevice]:
-    """Parse every HardwareObjects *.xml under a beamline's MXCuBE config dir.
+    """Parse every HardwareObjects device file under a beamline's MXCuBE config dir.
 
     `subdir` is the path of the beamline config within the repo, e.g.
-    mxcubecore/configuration/embl_hh_p14. Each .xml file is one device object;
+    mxcubecore/configuration/embl_hh_p14. Each file is one device object;
     rel_path is the file path relative to that config dir (suffix stripped), so
-    eh1/detector-eiger16m.xml becomes eh1/detector-eiger16m. Files whose root is
-    not an <object> are skipped by the lenient parser.
+    eh1/detector-eiger16m.xml becomes eh1/detector-eiger16m. Two config formats
+    are supported: the classic per-device XML (<object class="...">, EMBL / ALBA
+    / SOLEIL) and the newer per-device YAML (top-level class: + epics:, e.g.
+    Sirius Manaca). Files the lenient parser cannot resolve are skipped.
     """
     base = repo_dir / subdir
     devices: list[parse.MxcubeDevice] = []
-    for path in sorted(base.glob("**/*.xml")):
+    for path in sorted(base.glob("**/*")):
+        if not path.is_file():
+            continue
+        suffix = path.suffix.lower()
+        if suffix not in (".xml", ".yaml", ".yml"):
+            continue
         text = _read(path)
         if text is None:
             continue
         rel_path = path.relative_to(base).with_suffix("").as_posix()
-        device = parse.parse_mxcube_object(text, rel_path)
+        if suffix == ".xml":
+            device = parse.parse_mxcube_object(text, rel_path)
+        else:
+            device = parse.parse_mxcube_yaml_object(text, rel_path)
         if device is not None:
             devices.append(device)
     return devices
@@ -192,7 +202,8 @@ _ONLINEXML_SOURCE_DESC = (
     "DESY OnlineXML (the beamline's online_*.xml Tango device registry)"
 )
 _MXCUBE_SOURCE_DESC = (
-    "MXCuBE HardwareObjects (the beamline's configuration/*.xml device objects)"
+    "MXCuBE HardwareObjects (the beamline's per-device configuration objects, "
+    "classic *.xml or newer *.yaml)"
 )
 
 

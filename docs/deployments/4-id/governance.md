@@ -1,6 +1,6 @@
 # Governance
 
-*Who will act at 4-ID POLAR, and the trust shape that will gate it. First cut.*
+*Who will act at 4-ID, and the trust shape that will gate it. First cut.*
 
 Governance at 4-ID follows the same model as the 2-BM pilot: people and autonomous agents are facility principals at the [APS Site](../aps/index.md#who-acts-here), and on the beamline they surface through the actions they take. Their commands are gated by a trust shape (a Zone grouping the beamline's resources, a Conduit binding the surfaces that may issue commands, and Policies that say who may do what).
 

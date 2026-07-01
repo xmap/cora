@@ -21,7 +21,7 @@ P61 was reverse-engineered from P61's own public OnlineXML device registry ([git
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| PRESS-1 | Blocks-build | The Large Volume Press (P61A): its press / anvil control, and whether it should bind the allowlisted-loose `PressureCell` Family. | A pending press; would reuse `PressureCell` (the P02 / 13-id-d precedent) when exposed. | The press modelling. |
+| PRESS-1 | Blocks-build | The Large Volume Press (P61A): its press / anvil control, and whether it should bind the allowlisted-loose `PressureCell` Family. | A pending press; would reuse `PressureCell` (the P02 / 13-id precedent) when exposed. | The press modelling. |
 
 ## The detectors
 

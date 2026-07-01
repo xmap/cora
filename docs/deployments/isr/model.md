@@ -31,7 +31,7 @@ ISR coins no new Family and changes nothing in the catalog.
 
 ## No new Methods
 
-ISR's science reuses two pending Methods rather than coining: `resonant_scattering` (APS 4-ID POLAR, CSX) and `diffraction` (4-ID, 8-ID). Both are doubly deferred here because the diffractometer they run on is absent from source (`TECH-1`, `DIFF-1`). When ISR's diffractometer lands and the techniques are driven, ISR becomes a further consumer of each, strengthening the case for cataloging them, an owner decision, not an automatic one.
+ISR's science reuses two pending Methods rather than coining: `resonant_scattering` (APS 4-ID, CSX) and `diffraction` (4-ID, 8-ID). Both are doubly deferred here because the diffractometer they run on is absent from source (`TECH-1`, `DIFF-1`). When ISR's diffractometer lands and the techniques are driven, ISR becomes a further consumer of each, strengthening the case for cataloging them, an owner decision, not an automatic one.
 
 ## Deliberately not here yet
 
