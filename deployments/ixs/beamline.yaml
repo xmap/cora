@@ -26,7 +26,7 @@
 # MODELLING: every device reuses an existing catalog or loose Family EXCEPT the
 # signature instrument, the crystal energy analyzer, which is coined as ONE loose
 # Family `EnergyAnalyzer` at n=1 (naming-r3: the <Quantity>Analyzer sibling of
-# 4-ID's loose PolarizationAnalyzer). It is NOT graduated; a second hard
+# the catalog PolarizationAnalyzer). It is NOT graduated; a second hard
 # crystal-analyzer beamline must independently earn it, and whether EnergyAnalyzer
 # and PolarizationAnalyzer merge into one Analyzer Family is the open ANALYZER-1
 # (see model.md). The six-circle scattering arm binds the catalog Goniometer (the
@@ -331,7 +331,7 @@ analyzer:
     EnergyDispersiveSpectrometer, a per-event point Sensor, nor a Monochromator, an
     upstream incident optic, nor SIX's dispersive SpectrometerArm), so it is coined
     as ONE loose Family `EnergyAnalyzer` at n=1, the <Quantity>Analyzer sibling of
-    4-ID's loose PolarizationAnalyzer (naming-r3-cleared). It is NOT graduated; a
+    the catalog PolarizationAnalyzer (naming-r3-cleared). It is NOT graduated; a
     second hard crystal-analyzer beamline must independently earn it, and whether
     EnergyAnalyzer and PolarizationAnalyzer merge into one Analyzer Family is
     ANALYZER-1. The six diced crystals are carried as settings on the one Asset; the

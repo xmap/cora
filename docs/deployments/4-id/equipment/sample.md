@@ -14,7 +14,7 @@ The diffractometer devices bind the catalog `Goniometer` Family for their sample
 | --- | --- | --- |
 | `Diffractometer_Euler` | `Goniometer` | Huber Eulerian cradle; sample x/y/z mapped, circle roles partial (`DIFF-1`) |
 | `Diffractometer_HighPressure` | `Goniometer` | high-pressure diffractometer; chi/phi/sample-tilt + x/y/z mapped (`DIFF-1`) |
-| `PolarizationAnalyzer` | `PolarizationAnalyzer` (loose) | analyzer crystal stage (th/y) at 4-ID-B; resolves scattered polarization (`POL-2`) |
+| `PolarizationAnalyzer` | `PolarizationAnalyzer` (catalog) | analyzer crystal stage (th/y) at 4-ID-B; resolves scattered polarization (`POL-2`) |
 
 The circle geometry (4-circle Eulerian versus 6-circle, and which motor is which circle) is `DIFF-1`; it decides the `Assembly(Diffractometer)` slot shape. The reciprocal-space pseudo-axis is `DIFF-2`.
 

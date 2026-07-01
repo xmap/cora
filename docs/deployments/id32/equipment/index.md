@@ -12,7 +12,7 @@ Three enclosures carry the beamline, grouping pending (`ENC-1`): a shared `id32-
 
 - [Source](../beamline.md): the ESRF-EBS storage-ring state (a loose `StorageRing`, observe-only, `MACHINE-1`); the twin APPLE-II undulators bound to `InsertionDevice` (`SRC-1`); the polarization and incident-energy pseudo-axes over them (`POL-1`, `MONO-1`); the soft X-ray plane-grating monochromator bound to `GratingMonochromator` (`MONO-1`); the focusing mirrors (`OPT-1`) and beam slits (`OPT-2`). This page is generated from the descriptor.
 - [Sample](sample.md): the RIXS 4-circle diffractometer bound to `Goniometer` with a reciprocal-space `PseudoAxis` (`DIFF-1`, `DIFF-2`); the 9 T XMCD magnet bound to the loose `Magnet` (`MAG-1`); the LakeShore VTI and coil-diagnostic temperature controllers (`TEMP-1`); and the XMCD sample stage (`SAMPLE-1`).
-- [Detector](detector.md): the RIXS and XES dispersive spectrometer arms bound to the loose `SpectrometerArm` (`RIXS-1`); the scattered-beam polarimeter bound to the loose `PolarizationAnalyzer` (`POL-2`); and the two Andor CCDs bound to `Camera` (`DET-1`).
+- [Detector](detector.md): the RIXS and XES dispersive spectrometer arms bound to the loose `SpectrometerArm` (`RIXS-1`); the scattered-beam polarimeter bound to the catalog `PolarizationAnalyzer` (`POL-2`); and the two Andor CCDs bound to `Camera` (`DET-1`).
 
 ## Shared
 

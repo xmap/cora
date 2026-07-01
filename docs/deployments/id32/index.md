@@ -22,18 +22,18 @@ For the modelling, ID32's significance is that it brings **three loose families 
 
 - **`SpectrometerArm`** reaches the rule-of-three: ID32 carries the same `SpectrometerArmsController` class instantiated twice (the RIXS arm and the XES arm), so with the SIX soft-RIXS arm the family is now sighted three times.
 - **`Magnet`** gets a third consumer (4-ID + i10-1 + the ID32 9 T XMCD magnet).
-- **`PolarizationAnalyzer`** gets a third consumer (4-ID + i10 + the ID32 RIXS polarimeter).
+- **`PolarizationAnalyzer`** gets a further consumer (4-ID + i10 + the ID32 RIXS polarimeter); it has since graduated to a catalog Family across 4-ID / i10 / ID32 / P09, presenting Positioner.
 
-Per the owner decision, all three are **held loose** here, with their graduations deferred to dedicated gated catalog PRs (see [Model](model.md#loose-families-held-at-the-rule-of-three)). ID32 coins no new Family and changes nothing in the catalog.
+Per the owner decision, `SpectrometerArm` and `Magnet` are **held loose** here, with their graduations deferred to dedicated gated catalog PRs (see [Model](model.md#loose-families-held-at-the-rule-of-three)); `PolarizationAnalyzer` has graduated in its own dedicated PR. ID32 coins no new Family.
 
 ## Scope: what is and is not modelled
 
 | Part | In this cut | Why |
 | --- | --- | --- |
 | Shared optics (`id32-optics`) | Yes | The twin APPLE-II undulators, the polarization and incident-energy pseudo-axes, the soft X-ray PGM, the focusing mirrors, the beam slits |
-| RIXS endstation (`id32-rixs`) | Yes | The dispersive RIXS spectrometer arm (loose `SpectrometerArm`), the 4-circle diffractometer + reciprocal-space axis, the scattered-beam polarimeter (loose `PolarizationAnalyzer`), the Andor CCD |
+| RIXS endstation (`id32-rixs`) | Yes | The dispersive RIXS spectrometer arm (loose `SpectrometerArm`), the 4-circle diffractometer + reciprocal-space axis, the scattered-beam polarimeter (catalog `PolarizationAnalyzer`), the Andor CCD |
 | XMCD endstation (`id32-xmcd`) | Yes | The 9 T XMCD magnet (loose `Magnet`), the LakeShore VTI and coil-diagnostic controllers, the XES spectrometer arm (loose `SpectrometerArm`), the Andor CCD, the sample stage |
-| The three loose-family graduations | Named, not built | `SpectrometerArm`, `Magnet`, `PolarizationAnalyzer` reach a rule-of-three but are held; each graduation is a separate gated PR (`RIXS-1`, `MAG-1`, `POL-2`) |
+| The loose-family graduations | Named, not built | `SpectrometerArm`, `Magnet` reach a rule-of-three but are held; each graduation is a separate gated PR (`RIXS-1`, `MAG-1`). `PolarizationAnalyzer` has graduated to a catalog Family across 4-ID / i10 / ID32 / P09 (`POL-2`), presenting Positioner |
 | Exact optics handles | No | The PGM, mirrors, slits, diffractometer axes, and XMCD sample stage are carried confirm-pending (`MONO-1`, `OPT-1`, `OPT-2`, `DIFF-1`, `SAMPLE-1`) |
 | PSS permit signals and vacuum extent | No | Absent from the BLISS config, carried pending, not invented (`PSS-1`, `SUP-1`) |
 
@@ -43,7 +43,7 @@ The deferred parts are recorded on [Model](model.md#deliberately-not-here-yet).
 
 - **A new Site and a new control house-style.** ESRF is the 7th Site (`deployments/esrf/site.yaml`); the BLISS / Tango / IcePAP handles are modelled as opaque edge strings over the `ControlPort`, the way the MX3 heterogeneous-control precedent does (`CTRL-1`).
 - **The polarization spine reuses i06 / i10.** The twin APPLE-II undulators bind `InsertionDevice` and the polarization is a `PseudoAxis` over the undulator phase (`POL-1`).
-- **Three loose families held at the rule-of-three.** `SpectrometerArm` (RIXS + XES arms, the same controller class), `Magnet` (the 9 T XMCD magnet), and `PolarizationAnalyzer` (the RIXS polarimeter) are bound loose and held; graduations deferred to dedicated PRs.
+- **Two loose families held at the rule-of-three, one graduated.** `SpectrometerArm` (RIXS + XES arms, the same controller class) and `Magnet` (the 9 T XMCD magnet) are bound loose and held; graduations deferred to dedicated PRs. `PolarizationAnalyzer` (the RIXS polarimeter) has graduated to a catalog Family across 4-ID / i10 / ID32 / P09, presenting Positioner (`POL-2`).
 - **No new family, nothing graduates here.** The PGM binds `GratingMonochromator`, the diffractometer `Goniometer`, the CCDs `Camera`, the LakeShores `TemperatureController`; the catalog is unchanged.
 
 ## The beamline

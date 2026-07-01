@@ -41,4 +41,4 @@ Where these become Clearance-gated operation (for example any unattended or haza
 - **The Diamond operator pool and review structure (GOV-1).** Site-level and shared across the beamlines, carried pending on the Diamond Site, not instantiated per beamline.
 - **The concrete Zone, Conduit, and Policy instances.** Named as the trust shape, not built; they would land if and when the beamline approaches real scope, following the [2-BM governance](../2-bm/governance.md) shape.
 
-The hold-versus-graduate calls on the loose families (the RASOR analyzer arm on PolarizationAnalyzer, POL-2, and the magnet devices on Magnet, MAG-1) are equipment, not governance, decisions; they live on [Model](model.md). The full delete-on-answer queue is on [Open questions](questions.md).
+The RASOR analyzer arm binds the catalog PolarizationAnalyzer (graduated, POL-2); the analyzer-crystal spec is an equipment, not governance, detail. The hold-versus-graduate call on the remaining loose family (the magnet devices on Magnet, MAG-1) is likewise an equipment, not governance, decision; they live on [Model](model.md). The full delete-on-answer queue is on [Open questions](questions.md).

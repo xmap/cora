@@ -257,12 +257,12 @@ diffractometers:
       confirm: true
       note: "high-pressure diffractometer (HPDiffractometer); reciprocal-space axis via hklpy2 (DIFF-1, DIFF-2)"
     - name: PolarizationAnalyzer
-      family: PolarizationAnalyzer   # loose Family (POL-2, FAM-1)
+      family: PolarizationAnalyzer
       pv: { th: "4idbSoft:m9", y: "4idbSoft:m17" }
       new: true
       confirm: true
       enclosure: 4-ID-B
-      note: "polarization analyzer crystal stage (PolAnalyzer); analyzes scattered-beam polarization (POL-2)"
+      note: "polarization analyzer crystal stage (PolAnalyzer); analyzes scattered-beam polarization; binds the catalog PolarizationAnalyzer Family"
 
 sample-environment:
   stage: sample

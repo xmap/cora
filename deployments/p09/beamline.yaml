@@ -17,9 +17,10 @@
 #
 # WHAT IS NEW: no new device Family. P09 reuses existing Families end to end. It binds
 # the catalog PhaseRetarder Family (the polarization phase-retarder circles), the second
-# consumer that graduated it out of loose alongside 4-ID (P22 is the third), and two
-# Families still allowlisted-loose from 4-ID: PolarizationAnalyzer (the scattered-beam
-# analyzer) and Magnet (the 14 T sample-environment magnet). The diffractometer
+# consumer that graduated it out of loose alongside 4-ID (P22 is the third), and the
+# catalog PolarizationAnalyzer Family (the scattered-beam analyzer; graduated on the
+# rule-of-three across 4-ID, i10, ID32, P09; POL-2). The 14 T sample-environment magnet
+# binds the Family still allowlisted-loose from 4-ID: Magnet. The diffractometer
 # circles bind the catalog Goniometer Family (not the composed Diffractometer
 # Assembly), the same call as P01 EH2. The techniques (resonant scattering, magnetic
 # scattering, XMCD, HAXPES) earn no catalog Method; they are carried pending on the
@@ -138,7 +139,7 @@ mono-sample:
   stage: sample
   enclosure: p09-mono
   intro: "The MONO resonant-scattering experiment: the polarization phase retarder, the scattered-beam analyzer, the six-circle diffractometer goniometer, the AttoCube sample piezos, and the sample-environment temperature controllers."
-  note: "The phase retarder (two circles) binds the catalog PhaseRetarder Family; the analyzer reuses the 4-ID allowlisted-loose PolarizationAnalyzer Family. The diffractometer goniometer is e6cctrl; the hkl pseudo-axis is a sim device (DIFF-1)."
+  note: "The phase retarder (two circles) binds the catalog PhaseRetarder Family; the analyzer binds the catalog PolarizationAnalyzer Family. The diffractometer goniometer is e6cctrl; the hkl pseudo-axis is a sim device (DIFF-1)."
   devices:
     - name: PhaseRetarder
       family: PhaseRetarder
@@ -151,7 +152,7 @@ mono-sample:
       pv: {analyzer: "p09/analyzer/exp.01"}
       new: true
       confirm: true
-      note: "the scattered-beam polarization analyzer; reuses the 4-ID allowlisted-loose PolarizationAnalyzer Family (POL-2)"
+      note: "the scattered-beam polarization analyzer; binds the catalog PolarizationAnalyzer Family (POL-2)"
     - name: Goniometer
       family: Goniometer           # catalog Family; the six-circle (E6C) sample-orientation circles, would compose a Diffractometer Assembly (DIFF-1)
       pv: {ctrl: "p09/motor/exp.04", diffractometer: "p09/diffractometer/diffrac_eh1"}
@@ -252,7 +253,7 @@ mag-sample:
       pv: {analyzer: "p09/analyzer/mag.01"}
       new: true
       confirm: true
-      note: "the MAG scattered-beam polarization analyzer; reuses the 4-ID allowlisted-loose PolarizationAnalyzer Family (POL-2)"
+      note: "the MAG scattered-beam polarization analyzer; binds the catalog PolarizationAnalyzer Family (POL-2)"
     - name: Absorber
       family: Filter
       pv: {abs: "p09/absorbercontroller/mag.01"}

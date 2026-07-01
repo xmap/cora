@@ -24,15 +24,15 @@ ID32 coins no new Family. The twin APPLE-II undulators bind the catalog `Inserti
 
 ## Loose families held at the rule-of-three
 
-ID32 pushes three loose families to a genuine rule-of-three. Per the owner decision (2026-06-27) all three are **held loose here**, with their graduations deferred to dedicated, gated catalog PRs rather than bundled into this scaffold:
+ID32 pushes three loose families to a genuine rule-of-three. `PolarizationAnalyzer` has since graduated to a catalog Family (earned across 4-ID / i10 / ID32 / P09, presenting Positioner), so the RIXS polarimeter binds the catalog Family. The two remaining, `SpectrometerArm` and `Magnet`, are **held loose here**, with their graduations deferred to dedicated, gated catalog PRs rather than bundled into this scaffold:
 
 | Loose family | Sightings with ID32 | ID32 binding | Decision |
 | --- | --- | --- | --- |
 | `SpectrometerArm` | SIX + ID32 RIXS arm + ID32 XES arm | the two dispersive spectrometer arms (the same `SpectrometerArmsController` class instantiated twice) | **hold** (`RIXS-1`): the rule-of-three is met in-source (one controller class, two geometries, a third site), so it is graduation-ready; the graduation is a separate gated PR |
 | `Magnet` | 4-ID + i10-1 + ID32 | the 9 T / 4 T XMCD split-coil magnet | **hold** (`MAG-1`): a third consumer; graduation deferred to a dedicated PR |
-| `PolarizationAnalyzer` | 4-ID + i10 + ID32 | the RIXS scattered-beam polarimeter | **hold** (`POL-2`): a third consumer; graduation deferred |
+| `PolarizationAnalyzer` | 4-ID + i10 + ID32 + P09 | the RIXS scattered-beam polarimeter | **graduated** (`POL-2`): catalog Family across 4-ID / i10 / ID32 / P09, presents Positioner |
 
-Holding rather than graduating keeps this PR a clean scaffold (no catalog.yaml or Role change), and lets each graduation get its own naming-r3 and gate-review. The `_PROMOTION_REVIEWED` notes record all three as graduation-due. The clearest is `SpectrometerArm`: it presents the `Positioner` Role (an arm that positions a grating and carries a `Camera` at its focus), which is exactly why it never fit the point-Sensor families (`FluxMonitor` / `EnergyDispersiveSpectrometer`) and was coined loose at SIX.
+Holding rather than graduating kept this PR a clean scaffold (no catalog.yaml or Role change) for the two families still loose, and lets each graduation get its own naming-r3 and gate-review; `PolarizationAnalyzer` has since graduated in its own dedicated PR. The `_PROMOTION_REVIEWED` notes record the two remaining as graduation-due. The clearest is `SpectrometerArm`: it presents the `Positioner` Role (an arm that positions a grating and carries a `Camera` at its focus), which is exactly why it never fit the point-Sensor families (`FluxMonitor` / `EnergyDispersiveSpectrometer`) and was coined loose at SIX.
 
 ## The BLISS / Tango control plane
 

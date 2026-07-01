@@ -24,16 +24,16 @@
 #     so with the SIX soft-RIXS arm the family is now sighted three times. Per the user
 #     decision (2026-06-27) it is HELD loose here, with the graduation deferred to a
 #     dedicated gated catalog PR (RIXS-1).
-#   - The 9 T XMCD magnet is the third Magnet consumer (4-ID + i10-1 + ID32), and the
-#     RIXS polarimeter is the third PolarizationAnalyzer consumer (4-ID + i10 + ID32);
-#     both are HELD loose, graduations deferred (MAG-1, POL-2).
+#   - The 9 T XMCD magnet is the third Magnet consumer (4-ID + i10-1 + ID32), HELD
+#     loose, graduation deferred (MAG-1). The RIXS polarimeter binds the catalog
+#     PolarizationAnalyzer, graduated on the rule-of-three (4-ID + i10 + ID32 + P09; POL-2).
 #
 # MODELLING: ID32 coins NO new Family and changes nothing in the catalog (the rule-of-three
 # graduations are deferred to separate PRs per the user decision). The twin APPLE-II
 # undulators bind InsertionDevice and the polarization is a PseudoAxis (the i06 / i10
 # precedent); the PGM binds GratingMonochromator; the RIXS and XES dispersive spectrometer
-# arms bind the loose SpectrometerArm (SIX precedent); the RIXS polarimeter binds the loose
-# PolarizationAnalyzer; the 9 T XMCD magnet binds the loose Magnet; the LakeShore VTI and
+# arms bind the loose SpectrometerArm (SIX precedent); the RIXS polarimeter binds the catalog
+# PolarizationAnalyzer (POL-2); the 9 T XMCD magnet binds the loose Magnet; the LakeShore VTI and
 # coil-diagnostic controllers bind TemperatureController; the Andor CCDs bind Camera; the
 # 4-circle diffractometer binds Goniometer with a reciprocal-space PseudoAxis; the XMCD
 # sample stage binds LinearStage; the machine state binds the loose StorageRing.
@@ -148,8 +148,8 @@ rixs:
     The dispersive spectrometer arm binds the loose SpectrometerArm (the SIX precedent;
     HELD at its rule-of-three, RIXS-1). The sample circles bind Goniometer with a
     reciprocal-space PseudoAxis (the diffractometer Assembly, named-not-built, DIFF-1 /
-    DIFF-2). The scattered-beam polarimeter binds the loose PolarizationAnalyzer (the
-    4-ID / i10 precedent; HELD, POL-2). The CCD binds Camera.
+    DIFF-2). The scattered-beam polarimeter binds the catalog PolarizationAnalyzer (the
+    4-ID / i10 / P09 rule-of-three; POL-2). The CCD binds Camera.
   devices:
     - name: Diffractometer
       family: Goniometer
@@ -170,11 +170,11 @@ rixs:
       confirm: true
       note: "the ~5 m dispersive RIXS spectrometer arm (rixs_spectro): real axes detx/detz/grtx -> virtual arm radii r1/r2; grating modes RIXS_2500 (radius 122000, gr2roty) and RIXS_1400 (gr1roty). Binds the loose SpectrometerArm; with the XES arm and SIX this is its rule-of-three, HELD pending a dedicated graduation PR (RIXS-1)"
     - name: Polarimeter
-      family: PolarizationAnalyzer      # loose Family; HELD (graduation deferred, POL-2)
+      family: PolarizationAnalyzer
       pv: "IcePAP iceid324: thpol/chipol/zpol/ypol/tthpol"
       new: true
       confirm: true
-      note: "the scattered-beam polarimeter / polarization-analysis block on the RIXS arm; binds the loose PolarizationAnalyzer, the third consumer after 4-ID + i10, HELD (POL-2)"
+      note: "the scattered-beam polarimeter / polarization-analysis block on the RIXS arm; binds the catalog PolarizationAnalyzer Family, the third consumer after 4-ID + i10 (POL-2)"
     - name: RixsDetector
       family: Camera
       pv: "tango://id32/limaccds/andor_1 (Lima)"
