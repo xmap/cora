@@ -2,7 +2,7 @@
 #
 # I-TOMCAT (X02SA) is the insertion-device tomographic-microscopy beamline of the
 # rebuilt TOMCAT at the Swiss Light Source (SLS 2.0, Paul Scherrer Institut). It
-# is bound to the PSI Site (deployments/psi/site.yaml), CORA's EIGHTH Site. Under
+# is bound to the PSI Site (deployments/psi/site.yaml), CORA's FOURTEENTH Site. Under
 # SLS 2.0 the single legacy TOMCAT beamline was split into two: I-TOMCAT (X02SA,
 # undulator, this file) and S-TOMCAT (X02DA, 5 T superbend; not modelled here).
 # I-TOMCAT is the closest analog to the APS 2-BM micro-CT pilot.

@@ -16,7 +16,7 @@
 
 ## What makes FAXTOR different
 
-FAXTOR is **CORA's eighth Site** (ALBA, Barcelona) and its **second Tango / Sardana / Taurus control plane** (MAX IV is the first; the rest are EPICS, and the ESRF is BLISS). Its science is fast X-ray tomography and radiography: continuous-rotation micro-CT up to 20 Hz, 0.5-10 um pixel size, with absorption, propagation-phase, and grating-based contrast, fed by a multipole wiggler through a double multilayer monochromator (mono) or a filter set (filtered white beam).
+FAXTOR is **CORA's ninth Site** (ALBA, Barcelona) and its **second Tango / Sardana / Taurus control plane** (MAX IV is the first; the rest are EPICS, and the ESRF is BLISS). Its science is fast X-ray tomography and radiography: continuous-rotation micro-CT up to 20 Hz, 0.5-10 um pixel size, with absorption, propagation-phase, and grating-based contrast, fed by a multipole wiggler through a double multilayer monochromator (mono) or a filter set (filtered white beam).
 
 For the modelling, FAXTOR is a **reuse-and-reinforce** deployment: it brings a wholly new Site and control-system house-style, but coins **no new vocabulary**. It is a tomography beamline, so it reuses the imaging Families and Methods the fleet already carries (the 2-BM pilot and the MAX IV TomoWISE design):
 

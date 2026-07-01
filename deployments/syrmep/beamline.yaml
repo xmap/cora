@@ -7,7 +7,7 @@
 # sample-to-detector propagation rail. It does absorption, propagation-based
 # phase-contrast, and diffraction-enhanced imaging, plus a clinical breast-CT
 # programme (SYRMA-3D). It is bound to the Elettra Site
-# (deployments/elettra/site.yaml), CORA's EIGHTH Site and its FIRST Elettra
+# (deployments/elettra/site.yaml), CORA's ELEVENTH Site and its FIRST Elettra
 # deployment.
 #
 # STATUS: reverse-engineered, design-phase. Hardware facts (source, optics,

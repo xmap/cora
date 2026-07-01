@@ -5,7 +5,7 @@
 | Property | Value |
 | --- | --- |
 | Asset | `Alvra` (root Asset, `tier = Unit`, `parent_id = None`) |
-| Facility | [PSI](../psi/index.md) (bound via `facility_code = "psi"`, `FacilityKind = Site`), CORA's eighth Site and its second XFEL |
+| Facility | [PSI](../psi/index.md) (bound via `facility_code = "psi"`, `FacilityKind = Site`), CORA's fourteenth Site and its second XFEL |
 | Source | shared SwissFEL Aramis undulator line; per-shot photon energy, fed one station at a time (SRC-1, TOPO-1) |
 | Status | Off-roadmap modelling exercise (not a CORA pilot) |
 | Technique | femtosecond optical pump-probe, time-resolved XAS / XES (HERFD), serial femtosecond crystallography |

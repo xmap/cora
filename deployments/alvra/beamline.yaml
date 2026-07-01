@@ -2,7 +2,7 @@
 #
 # Alvra is an operating hard-X-ray pump-probe experimental station on SwissFEL's
 # Aramis branch at PSI. It is bound to the PSI Site (deployments/psi/site.yaml),
-# CORA's eighth Site and its SECOND XFEL after SLAC LCLS-MFX.
+# CORA's fourteenth Site and its SECOND XFEL after SLAC LCLS-MFX.
 #
 # STATUS: off-roadmap modelling exercise, NOT a CORA pilot. The device shape and the
 # EPICS control handles are reverse-engineered from PSI's open `eco` controls library
