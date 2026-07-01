@@ -69,7 +69,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Model
 
-[Model](model.md): the developer's by-kind index, P03's place as the fleet's first SAXS / WAXS beamline, and the record of what is deliberately deferred.
+[Model](model.md): the developer's by-kind index, P03's place as PETRA III's first SAXS / WAXS beamline, and the record of what is deliberately deferred.
 
 ## Not yet documented
 

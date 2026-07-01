@@ -4,7 +4,7 @@
 
 This cut models the source, the optics, and the two main tomography endstations, micro-resolution (MR) and high-resolution (HR). The further endstations in the config (MH, MED, laminography, radiography, PCO) are noted, not modelled (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id19/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. ID19, CORA's first non-EPICS beamline, coins **no new Family and changes nothing in the catalog**: microtomography is the existing `tomography` Method (see [Model](model.md#no-new-families-no-new-methods)). Control handles are filled with the real BLISS object and Tango device names read from the [public ID19 config](https://gitlab.esrf.fr/id19/beamline_configuration), carried confirm; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. ID19, an imaging beamline on the ESRF BLISS floor, coins **no new Family and changes nothing in the catalog**: microtomography is the existing `tomography` Method (see [Model](model.md#no-new-families-no-new-methods)). Control handles are filled with the real BLISS object and Tango device names read from the [public ID19 config](https://gitlab.esrf.fr/id19/beamline_configuration), carried confirm; no vendor Models are bound.
 
 ## The Asset tree
 

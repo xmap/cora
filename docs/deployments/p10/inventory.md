@@ -4,7 +4,7 @@
 
 This cut models the optics hutch (the undulator, the DCM, the optics stages, the beam shutter) and the three experiment areas (E1 coherent imaging, E2 XPCS / diffraction with the LCX piezo sub-station, LAB offline) with their sample stages, focusing, and the wide detector suite. It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p10/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P10, CORA's second XPCS beamline, **coins no new Family**: it reuses the optics / motion / detector Families across a five-enclosure layout. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P10, a further XPCS beamline, **coins no new Family**: it reuses the optics / motion / detector Families across a five-enclosure layout. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
 
 ## The Asset tree
 

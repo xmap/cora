@@ -1,6 +1,6 @@
 # Model
 
-*The developer's index into where P10 content lives, its place as the fleet's second XPCS beamline, and the record of what is deliberately deferred. First cut.*
+*The developer's index into where P10 content lives, its place as a further XPCS beamline, and the record of what is deliberately deferred. First cut.*
 
 P10 is a descriptor-and-docs scaffold today, reverse-engineered from P10's public OnlineXML registry: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
 
@@ -16,7 +16,7 @@ P10 is a descriptor-and-docs scaffold today, reverse-engineered from P10's publi
 
 ## What makes P10 new
 
-P10 is a sixth beamline at an existing Site, and the fleet's second XPCS beamline after the APS 8-ID exercise. Its science is coherent hard X-ray applications: XPCS, coherent diffraction imaging / ptychography, and coherent-beam diffraction, across three experiment areas. Its modelling first is the practice binding: P10's XPCS practice binds the **graduated** catalog `xpcs` Method directly, the first PETRA III practice whose Method is already earned (the others all carry pending practices). This is the reuse-earns-the-abstraction principle in action: a technique graduated at one facility (8-ID, EPICS) carries cleanly to another (PETRA III, Tango) without re-coining.
+P10 is a sixth beamline at an existing Site, and a further XPCS beamline after the APS 8-ID and NSLS-II CHX exercises. Its science is coherent hard X-ray applications: XPCS, coherent diffraction imaging / ptychography, and coherent-beam diffraction, across three experiment areas. Its modelling first is the practice binding: P10's XPCS practice binds the **graduated** catalog `xpcs` Method directly, the first PETRA III practice whose Method is already earned (the others all carry pending practices). This is the reuse-earns-the-abstraction principle in action: a technique graduated at one facility (8-ID, EPICS) carries cleanly to another (PETRA III, Tango) without re-coining.
 
 ## No new families
 

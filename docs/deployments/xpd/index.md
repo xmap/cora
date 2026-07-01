@@ -12,7 +12,7 @@
 | Source | 28-ID insertion device (no source PV in public config; damping wiggler per facility knowledge, SRC-1) |
 
 !!! note "How CORA would land on XPD"
-    These pages describe how CORA would model, govern, and conduct XPD, the eighth NSLS-II beamline after [FXI](../fxi/index.md), [HXN](../hxn/index.md), [BMM](../bmm/index.md), [SRX](../srx/index.md), [SIX](../six/index.md), [CHX](../chx/index.md), and [CSX](../csx/index.md). They are not a survey of the beamline's current software. The hardware facts (devices, EPICS PVs, axes) are read from public NSLS-II open source (the [`NSLS2/xpd-profile-collection`](https://github.com/NSLS2/xpd-profile-collection) profile collection) and verified against it; vendor part numbers and physical positions are not in it, so they, and every read value, are carried `confirm` until XPD staff verify them ([Open questions](questions.md)). This is a design-phase scaffold: the descriptor and these docs, with scenarios deferred.
+    These pages describe how CORA would model, govern, and conduct XPD, one of the NSLS-II beamlines CORA models. They are not a survey of the beamline's current software. The hardware facts (devices, EPICS PVs, axes) are read from public NSLS-II open source (the [`NSLS2/xpd-profile-collection`](https://github.com/NSLS2/xpd-profile-collection) profile collection) and verified against it; vendor part numbers and physical positions are not in it, so they, and every read value, are carried `confirm` until XPD staff verify them ([Open questions](questions.md)). This is a design-phase scaffold: the descriptor and these docs, with scenarios deferred.
 
 ## The defining shape: powder diffraction and PDF, a second facility
 

@@ -20,7 +20,7 @@ P04 "Variable Polarization XUV Beamline" is **CORA's second PETRA III beamline**
 
 For the modelling, P04 introduces one genuinely new device kind and reuses everything else:
 
-- **The grating monochromator (`OPT-1`).** P04's monochromator binds the catalog `GratingMonochromator` Family, a plane-grating monochromator, **not** the crystal `Monochromator` the hard X-ray beamlines (P01, the APS / ESRF tomography lines) use. This is CORA's first `GratingMonochromator` deployment.
+- **The grating monochromator (`OPT-1`).** P04's monochromator binds the catalog `GratingMonochromator` Family, a plane-grating monochromator, **not** the crystal `Monochromator` the hard X-ray beamlines (P01, the APS / ESRF tomography lines) use. This is CORA's first PETRA III `GratingMonochromator` deployment; the Family was introduced at NSLS-II SIX and graduated into the catalog at CSX.
 
 Otherwise P04 coins **no new Family**: the undulator binds `InsertionDevice`, the mirrors `Mirror`, the slits `Slit`, the sample manipulators `Manipulator`, the diagnostic cameras `Camera`, the electrometers `FluxMonitor`, the motorized phosphor screens the loose `Screen`. The technique (soft X-ray spectroscopy) earns no catalog Method and is carried pending on the [Site](../petra-iii/index.md) reusing the `xas_spectroscopy` and `angle_resolved_photoemission` slugs (`TECH-1`).
 
@@ -41,7 +41,7 @@ The deferred parts are recorded on [Model](model.md#deliberately-not-here-yet).
 ## Key modelling decisions
 
 - **A second beamline at an existing Site.** PETRA III is already modelled (`deployments/petra-iii/site.yaml`, the P01 scaffold); P04 adds its soft X-ray beamline and the soft X-ray practices.
-- **The grating monochromator is the one new binding.** P04's PGM binds the `GratingMonochromator` Family (the soft X-ray analog of the crystal `Monochromator`); CORA's first deployment of it. No new Family is coined.
+- **The grating monochromator is the one notable binding.** P04's PGM binds the `GratingMonochromator` Family (the soft X-ray analog of the crystal `Monochromator`), a further consumer of the catalog Family SIX introduced and CSX graduated. No new Family is coined.
 - **The optics report on the experiment host.** The undulator, PGM, mirrors, and exit slits report on the `haspp04exp2` Tango host but are logically the optics section; per the cross-host mapping decision they are homed in `p04-optics` with the host flagged (`HOST-1`).
 - **The unlabelled motor banks are grouped, not invented.** `exp1_mot01..16` and `ps2.01..14` carry no per-axis role in the registry; they are grouped as `Manipulator` Assets carrying the handles, every axis role pending (`GROUP-1`).
 
@@ -69,7 +69,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Model
 
-[Model](model.md): the developer's by-kind index, P04's place as CORA's first soft X-ray / grating-monochromator deployment, and the record of what is deliberately deferred.
+[Model](model.md): the developer's by-kind index, P04's place as CORA's first PETRA III soft X-ray / grating-monochromator deployment, and the record of what is deliberately deferred.
 
 ## Not yet documented
 

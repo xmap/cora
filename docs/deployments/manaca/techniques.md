@@ -18,7 +18,7 @@ Rotation MX needs the [incident energy](beamline.md) set by the [monochromator](
 
 ## A new beamline on familiar vocabulary
 
-MANACA is the fleet's fourth macromolecular-crystallography beamline after Diamond i03, NSLS-II FMX / AMX, and the Australian Synchrotron MX3, and Sirius's first MX beamline (its [MOGNO](../mogno/index.md) sibling is tomography). It ties into the MX lineage CORA already models: the same goniometer / detector / cryostream anatomy, driven here through the Sirius EPICS floor and MXCuBE3. It reuses the `mx_data_collection`, `grid_scan`, and `sample_exchange` Methods directly (all carried pending across the MX fleet); none forces a new device family, and the 48-pin sample changer is a Procedure, not a new device.
+MANACA is a further macromolecular-crystallography beamline after Diamond i03, NSLS-II FMX / AMX, and the Australian Synchrotron MX3, and Sirius's first MX beamline (its [MOGNO](../mogno/index.md) sibling is tomography). It ties into the MX lineage CORA already models: the same goniometer / detector / cryostream anatomy, driven here through the Sirius EPICS floor and MXCuBE3. It reuses the `mx_data_collection`, `grid_scan`, and `sample_exchange` Methods directly (all carried pending across the MX fleet); none forces a new device family, and the 48-pin sample changer is a Procedure, not a new device.
 
 ## Not modelled yet
 

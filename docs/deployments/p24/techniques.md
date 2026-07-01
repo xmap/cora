@@ -14,7 +14,7 @@ P24 mounts a single crystal on the [diffractometer](equipment/sample.md) and col
 
 ## A chemical crystallography beamline on familiar vocabulary
 
-P24 is the fleet's chemical (small-molecule) crystallography beamline. It is distinct from the macromolecular-crystallography beamlines (P11, i03, FMX / AMX, MANACA, TPS): those bind the `Goniometer` Family and the `mx_data_collection` Method, while P24 does small-molecule chemical crystallography, which CORA models as `diffraction` for now (no dedicated chemical-crystallography Method exists, and the registry does not expose a labelled goniometer). The instrument anatomy reuses existing Families (`LinearStage`, `Slit`, `EnergyDispersiveSpectrometer`); the area detector is carried pending.
+P24 is PETRA III's chemical (small-molecule) crystallography beamline, the fleet's second after Diamond [I19](../i19/index.md). It is distinct from the macromolecular-crystallography beamlines (P11, i03, FMX / AMX, MANACA, TPS): those bind the `Goniometer` Family and the `mx_data_collection` Method, while P24 does small-molecule chemical crystallography, which CORA models as `diffraction` for now (no dedicated chemical-crystallography Method exists, and the registry does not expose a labelled goniometer). The instrument anatomy reuses existing Families (`LinearStage`, `Slit`, `EnergyDispersiveSpectrometer`); the area detector is carried pending.
 
 ## Not modelled yet
 

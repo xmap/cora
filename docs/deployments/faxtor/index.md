@@ -41,7 +41,7 @@ The deferred parts are recorded on [Model](model.md#deliberately-not-here-yet).
 
 ## Key modelling decisions
 
-- **A new Site, a familiar control house-style.** ALBA is the 8th Site (`deployments/alba/site.yaml`); its Tango / Sardana / Taurus stack is the second after MAX IV, so the control plane is modelled the way TomoWISE did (handles omitted pending, `CTRL-1`), not invented.
+- **A new Site, a familiar control house-style.** ALBA is the 9th Site (`deployments/alba/site.yaml`); its Tango / Sardana / Taurus stack is the second after MAX IV, so the control plane is modelled the way TomoWISE did (handles omitted pending, `CTRL-1`), not invented.
 - **No new families.** The wiggler binds `InsertionDevice`, the DMM `Monochromator`, the rotary `RotaryStage`, the camera `Camera`; the catalog is unchanged (the 2-BM / TomoWISE imaging precedent).
 - **The detector is named, not bound.** The fast camera is the decision-critical device whose model is unpublished; it is carried as a pending `Camera` Asset so the [Detector](equipment/detector.md) page is real (`DET-1`).
 - **Radiography is a pending Practice.** Fast tomography reuses the catalog tomography Methods; radiography has no portable Method yet and is carried pending, reusing the 7-BM radiography slug (`TECH-1`).

@@ -4,7 +4,7 @@
 
 This cut models the source, the optics (including the KB nanofocus), the sample-scanning stack, and the two detection chains. The sample environments (cryostream, furnace, xeol) are noted, not modelled (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id16b/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. ID16B, CORA's first nanoprobe and second non-EPICS beamline, coins **no new Family and changes nothing in the catalog** (see [Model](model.md#no-new-families-two-reused-methods)). Control handles are filled with the real BLISS object and Tango device names read from the [public ID16B config](https://gitlab.esrf.fr/id16b/beamline_configuration), carried confirm; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. ID16B, the fleet's first KB nanoprobe with XRF and CORA's third non-EPICS beamline, coins **no new Family and changes nothing in the catalog** (see [Model](model.md#no-new-families-two-reused-methods)). Control handles are filled with the real BLISS object and Tango device names read from the [public ID16B config](https://gitlab.esrf.fr/id16b/beamline_configuration), carried confirm; no vendor Models are bound.
 
 ## The Asset tree
 

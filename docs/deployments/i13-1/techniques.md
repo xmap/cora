@@ -18,7 +18,7 @@ So the parts in source are a raster `LinearStage` (the PI piezo sample-scanning 
 
 ## Why the Capability is new, and deferred
 
-Ptychography is a genuinely new science Capability for CORA. The fleet has tomography, an XRF microprobe, and a hard X-ray nanoprobe, but no coherent lensless imaging: nowhere yet does a beamline raster a coherent beam and reconstruct an image from the diffraction it scatters. CORA carries the `ptychography` Method as pending rather than coining it outright, the same earn-the-abstraction discipline every new-domain technique follows (TECH-1).
+Ptychography is a genuinely new science Capability for CORA to model as a beamline's purpose. HXN already rasters a coherent nanobeam and reconstructs from the diffraction stack, but as one of several scanning-probe modes; I13-1 is the first beamline CORA models around coherent lensless imaging as its reason for being. CORA carries the `ptychography` Method as pending rather than coining it outright, the same earn-the-abstraction discipline every new-domain technique follows (TECH-1).
 
 It would be tempting to read the novelty as a new device family, a "coherent imaging" class. That is the wrong axis. The coherence is a property of the beam and the acquisition, and the devices that realise it are a raster `LinearStage` and `Camera`s already in the Catalog. The new thing is a Method, an acquisition shape plus a reconstruction, and it adds no Family ([Model](model.md)).
 

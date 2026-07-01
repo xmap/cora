@@ -22,7 +22,7 @@ P10's E1 endstation focuses the coherent beam (the CRL) and records coherent dif
 
 ## A graduated Method meets a new facility
 
-P10 is the fleet's second XPCS beamline. Unlike the other PETRA III beamlines (whose techniques are not yet earned and carry pending practices), P10's XPCS practice binds the graduated `xpcs` Method directly, reusing the abstraction the APS 8-ID deployment forced into the catalog. This is the reuse-earns-the-abstraction principle working as intended: a technique graduated at one facility carries cleanly to another on a different control plane. The coherent-imaging side reuses the pending `ptychography` slug; the instrument anatomy reuses existing Families (the CRL `Transfocator`, the hexapod `Hexapod`, the detector suite `Camera`).
+P10 is a further XPCS beamline (after APS 8-ID and NSLS-II CHX). Unlike the other PETRA III beamlines (whose techniques are not yet earned and carry pending practices), P10's XPCS practice binds the graduated `xpcs` Method directly, reusing the abstraction the APS 8-ID deployment forced into the catalog. This is the reuse-earns-the-abstraction principle working as intended: a technique graduated at one facility carries cleanly to another on a different control plane. The coherent-imaging side reuses the pending `ptychography` slug; the instrument anatomy reuses existing Families (the CRL `Transfocator`, the hexapod `Hexapod`, the detector suite `Camera`).
 
 ## Not modelled yet
 

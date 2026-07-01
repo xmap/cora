@@ -20,7 +20,7 @@ So the parts are a `RotaryStage` (the tomographic spin, the master motion, SAMPL
 
 ID19 is a microtomography beamline, and CORA already models microtomography at the 2-BM operational pilot and the MAX IV TomoWise design scaffold. The `tomography` Method, its Capability, and the device families it binds are all in place. ID19 is a further consumer of that Method, not a new technique, so the Practice is carried pending only because ID19 is not yet driven by CORA, not because the Method is new (TECH-1).
 
-The genuine novelty at ID19 is one layer down, in the control plane: ESRF runs BLISS (a Tango-based control system), not EPICS, so ID19 is the fleet's first live non-EPICS floor. That is a [Controls](equipment/controls.md) and seam concern, not a technique concern. Holding the technique constant is the point: it isolates the control-plane axis so the BLISS / Tango floor is the only thing that is new (see [Model](model.md)).
+The genuine novelty at ID19 is one layer down, in the control plane: ESRF runs BLISS (a Tango-based control system), not EPICS, and ID19 is the first to bring that BLISS floor to tomographic imaging (its ESRF sibling ID32 opened it for soft X-ray RIXS). That is a [Controls](equipment/controls.md) and seam concern, not a technique concern. Holding the technique constant is the point: it isolates the control-plane axis so the BLISS / Tango floor is the only thing that is new (see [Model](model.md)).
 
 ## Not modelled yet
 

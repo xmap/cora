@@ -1,6 +1,6 @@
 # ID16B
 
-*Hard X-ray nano-analysis and nano-imaging on the ESRF nanoprobe beamline: Kirkpatrick-Baez-focused nano-tomography and nano-XRF (X-ray fluorescence) mapping, including fluorescence-tomography. This page describes how CORA would model and run ID16B, reverse-engineered from the beamline's own public BLISS control configuration; it is not yet confirmed by ESRF staff. ID16B is CORA's second non-EPICS deployment and the fleet's first nanoprobe on a BLISS floor.*
+*Hard X-ray nano-analysis and nano-imaging on the ESRF nanoprobe beamline: Kirkpatrick-Baez-focused nano-tomography and nano-XRF (X-ray fluorescence) mapping, including fluorescence-tomography. This page describes how CORA would model and run ID16B, reverse-engineered from the beamline's own public BLISS control configuration; it is not yet confirmed by ESRF staff. ID16B is CORA's third non-EPICS deployment and the fleet's first nanoprobe on a BLISS floor.*
 
 | Property | Value |
 | --- | --- |
@@ -16,13 +16,13 @@
 
 ## What makes ID16B different
 
-ID16B is CORA's **first nanoprobe** and the **second non-EPICS deployment** after [ID19](../id19/index.md). It earns its place on two axes at once, while staying vocabulary-neutral.
+ID16B is the fleet's **first KB nanoprobe with XRF** and CORA's **third non-EPICS deployment** after [ID32](../id32/index.md) and [ID19](../id19/index.md). It earns its place on two axes at once, while staying vocabulary-neutral.
 
 - **It deepens the BLISS / Tango floor evidence.** Like ID19, ID16B runs ESRF BLISS (Tango-based), not EPICS. A second beamline on the same non-EPICS floor confirms the seam pattern from ID19 is not a one-off: motion stages are BLISS axes, detectors are Lima / MOSCA Tango device servers, and CORA's edge conducts over the `ControlPort` against that floor (CTRL-1).
 - **It is the first KB nanoprobe with XRF in the fleet.** The Kirkpatrick-Baez mirror pair focuses the beam to a nanoprobe, and the beamline runs nano-XRF mapping (raster the sample through the nanofocus, read a fluorescence spectrum per point) alongside nano-tomography. This is the first time a KB nanofocus and an energy-dispersive fluorescence detector appear at an ESRF deployment.
 - **Yet it coins nothing new.** Nano-tomography is plain `tomography` Method reuse (ID19, 2-BM, TomoWise). Nano-XRF mapping reuses the pending `scanning_fluorescence_microscopy` Method that APS 2-ID, NSLS-II XFM, and LIX already carry. The KB mirrors bind `Mirror`, the fluorescence detector binds `EnergyDispersiveSpectrometer` (the 2-ID / SRX / XFM precedent), the area detectors bind `Camera`, the stages bind `RotaryStage` / `LinearStage`. ID16B coins no new Family and changes nothing in the catalog.
 
-The net: ID16B reuses every device family and both Methods, and its contribution is a second non-EPICS beamline plus the first nanoprobe-and-XRF combination, landing on existing vocabulary.
+The net: ID16B reuses every device family and both Methods, and its contribution is a further beamline on the BLISS floor plus the first nanoprobe-and-XRF combination, landing on existing vocabulary.
 
 ## Scope: what is and is not modelled
 
@@ -54,7 +54,7 @@ Along the beam, in order:
 
 Cutting across:
 
-- [Controls](equipment/controls.md): the ESRF BLISS (Tango-based) control stack, CORA's second non-EPICS floor, with the real handles read from the config (CTRL-1). The PSS permit signals behind the shutters are not in the config and carried pending (PSS-1).
+- [Controls](equipment/controls.md): the ESRF BLISS (Tango-based) control stack, a further beamline on the BLISS floor, with the real handles read from the config (CTRL-1). The PSS permit signals behind the shutters are not in the config and carried pending (PSS-1).
 
 The cross-cutting reference view is the [Inventory](inventory.md), authored from the same descriptor as the generated [Source](beamline.md) walk.
 

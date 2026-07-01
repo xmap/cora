@@ -4,7 +4,7 @@
 
 This cut models the soft X-ray optics (the undulator, the plane-grating monochromator, the three mirrors, the exit slits) and the two experiment endstations (EXP1, EXP2 with their manipulators, electrometers, diagnostic screens, and cameras). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p04/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P04, CORA's second PETRA III beamline, **coins no new Family**: it reaches CORA's first `GratingMonochromator` deployment (the soft X-ray analog of the crystal `Monochromator`), already in the catalog, and reuses optics / motion Families otherwise. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P04, CORA's second PETRA III beamline, **coins no new Family**: it binds the catalog `GratingMonochromator` (the soft X-ray analog of the crystal `Monochromator`, introduced at SIX and graduated at CSX), and reuses optics / motion Families otherwise. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
 
 ## The Asset tree
 

@@ -14,7 +14,7 @@ All three are recorded as pending [Practices](../as/index.md#the-techniques-adap
 
 ## Why the Methods are reused, not coined
 
-MX3 brings a new Site, not a new technique. Rotation MX, grid-scan centring, and robot sample exchange are the i03 shapes, so MX3 binds the same pending Methods (`mx_data_collection`, `grid_scan`, `sample_exchange`) rather than coining anything; whether those Methods enter the catalog is the cross-facility owner-scope decision i03 opened (TECH-1), and MX3 reinforces the case at a second facility. The device Roles already exist (the MD3 presents Positioner via the graduated `Goniometer`, the Eiger presents Detector via `Camera`), so nothing new is needed in the device model either.
+MX3 brings a new Site, not a new technique. Rotation MX, grid-scan centring, and robot sample exchange are the i03 shapes, so MX3 binds the same pending Methods (`mx_data_collection`, `grid_scan`, `sample_exchange`) rather than coining anything; whether those Methods enter the catalog is the cross-facility owner-scope decision i03 opened (TECH-1), and MX3 reinforces the case at a further facility (after Diamond i03 and NSLS-II FMX / AMX). The device Roles already exist (the MD3 presents Positioner via the graduated `Goniometer`, the Eiger presents Detector via `Camera`), so nothing new is needed in the device model either.
 
 The autonomous sample exchange reuses the i03 / i24 autonomous-loop shape: a Procedure over the spine threaded through `Subject` custody, not a new device family (ROBOT-1). Indexing and integration of the diffraction frames are `ComputePort` work, not beamline Methods.
 

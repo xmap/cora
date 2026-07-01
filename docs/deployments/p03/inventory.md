@@ -4,7 +4,7 @@
 
 This cut models the shared optics (the undulator, the multilayer monochromator, the two mirrors, the defining slits, the quad BPMs) and the two endstations (the P03 microfocus and the P03-NANO GINIX nanofocus) with their focusing, sample stages, and detectors. It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p03/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P03, CORA's first SAXS / WAXS beamline, **coins no new Family**: it reuses the optics / motion / detector Families across a two-endstation layout. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P03, PETRA III's first SAXS / WAXS beamline, **coins no new Family**: it reuses the optics / motion / detector Families across a two-endstation layout. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
 
 ## The Asset tree
 

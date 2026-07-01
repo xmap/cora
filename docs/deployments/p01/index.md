@@ -16,7 +16,7 @@
 
 ## What makes P01 different
 
-P01 "Dynamics" is **CORA's first PETRA III beamline** and its **second Tango / Sardana control floor** (after MAX IV). Its science is hard X-ray dynamics: nuclear resonant scattering (NRS) and nuclear inelastic scattering at Moessbauer-isotope energies in EH1, hard X-ray diffraction in EH2, and resonant inelastic X-ray scattering (RIXS) on a KB-focused spectrometer in EH3, across 2.5-80 keV. The defining instrument is the **stack of four high-resolution monochromators** in EH1 that carve the meV bandwidth the NRS energy spectrum is scanned over.
+P01 "Dynamics" is **CORA's first PETRA III beamline** and a further **Tango / Sardana control floor** (after MAX IV and ALBA). Its science is hard X-ray dynamics: nuclear resonant scattering (NRS) and nuclear inelastic scattering at Moessbauer-isotope energies in EH1, hard X-ray diffraction in EH2, and resonant inelastic X-ray scattering (RIXS) on a KB-focused spectrometer in EH3, across 2.5-80 keV. The defining instrument is the **stack of four high-resolution monochromators** in EH1 that carve the meV bandwidth the NRS energy spectrum is scanned over.
 
 For the modelling, P01 introduces two genuinely new things and reuses everything else:
 
@@ -71,7 +71,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Model
 
-[Model](model.md): the developer's by-kind index, P01's place as CORA's first PETRA III beamline and second Tango / Sardana floor, and the record of what is deliberately deferred.
+[Model](model.md): the developer's by-kind index, P01's place as CORA's first PETRA III beamline and a further Tango / Sardana floor, and the record of what is deliberately deferred.
 
 ## Not yet documented
 

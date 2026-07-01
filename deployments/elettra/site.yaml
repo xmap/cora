@@ -1,7 +1,7 @@
 # CORA Site descriptor: the Elettra Sincrotrone Trieste site-level surface
 #
 # Elettra Sincrotrone Trieste (operated by Elettra Sincrotrone Trieste S.C.p.A.,
-# which also runs the FERMI free-electron laser) is the eighth Site CORA models,
+# which also runs the FERMI free-electron laser) is the eleventh Site CORA models,
 # and its first Italian facility. This file is the single human-readable source
 # for the facility's site-level instances: the Facility itself, the Practices it
 # would run, and the facility principals. It is the home of the SYRMEP hard X-ray

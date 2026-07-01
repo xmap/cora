@@ -22,7 +22,7 @@ The microfocus endstation's Pilatus 1M reads the wide-angle scattering simultane
 
 ## A new technique family on familiar vocabulary
 
-P03 is the fleet's first SAXS / WAXS beamline. Its techniques are new to CORA's catalog (which is tomography-, MX-, and spectroscopy-centric), but they reuse the `small_angle_scattering` and `wide_angle_scattering` slugs already in the catalog's method vocabulary, so neither forces a new Method to be coined now. The instrument anatomy reuses existing Families: the monochromator binds `Monochromator`, the mirrors `Mirror`, the CRL and GINIX hexapods `Hexapod`, the slits `Slit`, the detectors `Camera`. The GINIX nanofocus adds a waveguide (modelled as a `Hexapod` carrier plus `LinearStage` waveguide stages) and a sample rotation (`RotaryStage`) that suits scanning / nano-imaging, but no new Family.
+P03 is PETRA III's first SAXS / WAXS beamline. Its techniques reuse the `small_angle_scattering` and `wide_angle_scattering` slugs already in the catalog's method vocabulary (the same slugs the NSLS-II SMI / CMS and Diamond i22 scattering beamlines carry), so neither forces a new Method to be coined now. The instrument anatomy reuses existing Families: the monochromator binds `Monochromator`, the mirrors `Mirror`, the CRL and GINIX hexapods `Hexapod`, the slits `Slit`, the detectors `Camera`. The GINIX nanofocus adds a waveguide (modelled as a `Hexapod` carrier plus `LinearStage` waveguide stages) and a sample rotation (`RotaryStage`) that suits scanning / nano-imaging, but no new Family.
 
 ## Not modelled yet
 

@@ -16,7 +16,7 @@
 
 ## What makes P10 different
 
-P10 "Coherence Applications" is **CORA's sixth PETRA III beamline** and the fleet's **second XPCS beamline** after the APS 8-ID exercise. Its science is X-ray photon correlation spectroscopy (XPCS), coherent diffraction imaging / ptychography, and coherent-beam diffraction, across three experiment areas (E1 coherent imaging, E2 XPCS / diffraction, LAB).
+P10 "Coherence Applications" is **CORA's sixth PETRA III beamline** and a further **XPCS beamline** after the APS 8-ID and NSLS-II CHX exercises. Its science is X-ray photon correlation spectroscopy (XPCS), coherent diffraction imaging / ptychography, and coherent-beam diffraction, across three experiment areas (E1 coherent imaging, E2 XPCS / diffraction, LAB).
 
 The notable modelling first: P10 is the **first PETRA III beamline whose primary technique is already a graduated catalog Method**. XPCS was earned into the catalog by the APS 8-ID deployment, so P10's XPCS practice binds it **directly, not pending**, the first non-pending PETRA III practice. Coherent imaging reuses the pending `ptychography` / `coherent_surface_scattering` slugs (`TECH-1`).
 
@@ -67,7 +67,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Model
 
-[Model](model.md): the developer's by-kind index, P10's place as the fleet's second XPCS beamline and PETRA III's first earned-Method practice, and the record of what is deliberately deferred.
+[Model](model.md): the developer's by-kind index, P10's place as a further XPCS beamline and PETRA III's first earned-Method practice, and the record of what is deliberately deferred.
 
 ## Not yet documented
 

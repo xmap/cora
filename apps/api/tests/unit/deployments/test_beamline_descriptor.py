@@ -748,6 +748,109 @@ def test_index_badge_cells_match_descriptor() -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# Site-ordinal drift guard.
+#
+# Deployment prose repeatedly claims "CORA's Nth Site" for the facility a
+# beamline sits on. Because each page was written when the fleet was a different
+# size, these ordinals drifted: four separate facilities once all claimed
+# "eighth Site". The canonical order is the sequence in which CORA took each Site
+# on, pinned here as the single source of truth. This guard scans every
+# deployment's docs and descriptor for an "CORA's <ordinal> Site" claim and
+# fails if the ordinal word does not match the facility's canonical position, so
+# a future beamline cannot reintroduce a stale count. Only Site-level ordinals
+# are mechanized (they have one right answer); technique / per-facility-sequence
+# ordinals are phrased without a hard count on purpose.
+# ---------------------------------------------------------------------------
+
+# Canonical Site order: the sequence CORA took each facility on. Position i (1-based)
+# is the ordinal every "CORA's Nth Site" claim about that facility must use.
+_CANONICAL_SITE_ORDER = (
+    "aps",
+    "maxiv",
+    "diamond",
+    "nsls2",
+    "slac",
+    "as",
+    "esrf",
+    "sirius",
+    "alba",
+    "als",
+    "elettra",
+    "nsrrc",
+    "petra-iii",
+    "psi",
+)
+
+_ORDINAL_WORDS = {
+    1: {"first"},
+    2: {"second"},
+    3: {"third"},
+    4: {"fourth"},
+    5: {"fifth"},
+    6: {"sixth"},
+    7: {"seventh"},
+    8: {"eighth"},
+    9: {"ninth", "9th"},
+    10: {"tenth"},
+    11: {"eleventh", "11th"},
+    12: {"twelfth"},
+    13: {"thirteenth"},
+    14: {"fourteenth"},
+}
+
+# "CORA's <ordinal> Site", "the <ordinal> Site CORA models", "is the <ordinal> Site",
+# "<Facility> is the <ordinal> Site", "<Facility>, the <ordinal> Site", and the
+# "Nth)" short form used in a few page bullets (e.g. "ALBA, the 9th)").
+_SITE_ORDINAL_RE = re.compile(
+    r"(?:the|is the|its|CORA's)\s+"
+    r"(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|"
+    r"eleventh|twelfth|thirteenth|fourteenth|9th|11th)\s+Site",
+    re.IGNORECASE,
+)
+
+
+def _facility_ordinal(facility_code: str) -> int:
+    return _CANONICAL_SITE_ORDER.index(facility_code) + 1
+
+
+def test_canonical_site_order_covers_every_facility() -> None:
+    # Anchor: the pinned order must list exactly the facilities that have a
+    # site.yaml, so a new Site cannot be added without placing it in the order.
+    assert set(_CANONICAL_SITE_ORDER) == _site_facility_codes()
+
+
+def test_site_ordinal_claims_match_canonical_order() -> None:
+    # For every deployment, its facility fixes the one correct Site ordinal; any
+    # "CORA's Nth Site" claim in its docs or descriptor must use that word.
+    wrong: list[str] = []
+    for descriptor_path in _beamline_descriptors():
+        deployment = descriptor_path.parent.name
+        facility = bd.load(descriptor_path).beamline.facility
+        if facility is None or facility not in _CANONICAL_SITE_ORDER:
+            continue
+        expected_n = _facility_ordinal(facility)
+        expected_words = _ORDINAL_WORDS[expected_n]
+        site_yaml = _DEPLOYMENTS / facility / "site.yaml"
+        sources = [
+            descriptor_path,
+            site_yaml,
+            *sorted((_DOCS_DEPLOYMENTS / deployment).rglob("*.md")),
+        ]
+        for source in sources:
+            if not source.exists():
+                continue
+            for claim in _SITE_ORDINAL_RE.findall(source.read_text(encoding="utf-8")):
+                if claim.lower() not in expected_words:
+                    wrong.append(
+                        f"{source.relative_to(_REPO_ROOT)}: claims '{claim} Site' but "
+                        f"{facility} is CORA's #{expected_n} Site"
+                    )
+    assert not wrong, (
+        "stale Site ordinals (canonical order in _CANONICAL_SITE_ORDER):\n" + "\n".join(wrong)
+    )
+
+
 def test_malformed_descriptor_raises(tmp_path: Path) -> None:
     missing_beamline = tmp_path / "no_beamline.yaml"
     missing_beamline.write_text("enclosures: []\n", encoding="utf-8")

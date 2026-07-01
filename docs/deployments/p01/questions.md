@@ -2,7 +2,7 @@
 
 *What CORA needs the P01 team to confirm before the model can be trusted.*
 
-P01 was reverse-engineered from P01's own public OnlineXML device registry ([gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p01](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p01), branch `debian/jessie`) and a verified research brief, not from a live connection. The registry carries real Tango device names and control handles, but no physical detail (crystal cuts, energy ranges, bend radii, detector models). P01 is CORA's first PETRA III beamline and second Tango / Sardana control floor. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+P01 was reverse-engineered from P01's own public OnlineXML device registry ([gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p01](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p01), branch `debian/jessie`) and a verified research brief, not from a live connection. The registry carries real Tango device names and control handles, but no physical detail (crystal cuts, energy ranges, bend radii, detector models). P01 is CORA's first PETRA III beamline and a further Tango / Sardana control floor (after MAX IV and ALBA). Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 

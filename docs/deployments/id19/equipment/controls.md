@@ -1,8 +1,8 @@
 # Controls
 
-*The control stack and the orchestration seam. ESRF BLISS, a Tango-based control system, NOT EPICS. This is CORA's first deployment on a non-EPICS floor, and the page that carries its whole reason for existing.*
+*The control stack and the orchestration seam. ESRF BLISS, a Tango-based control system, NOT EPICS. This is CORA's first imaging deployment on the BLISS floor, and the page that carries its whole reason for existing.*
 
-ID19 runs the ESRF **BLISS** control system, which is built on **Tango**. This is the first thing to say plainly, because it is what makes ID19 different from every beamline CORA has modelled before: the APS, Diamond, NSLS-II, and SLAC deployments are all EPICS (ophyd / bluesky / dodal / pcdshub), and the one prior non-EPICS model, MAX IV TomoWise (Tango / Sardana), is design-phase only. ID19 is the fleet's first *live* non-EPICS floor. CORA observes that floor and, where it replaces BLISS scan orchestration, conducts over it; it does not replace BLISS or Tango.
+ID19 runs the ESRF **BLISS** control system, which is built on **Tango**. This is the first thing to say plainly, because it is what makes ID19 different from most beamlines CORA has modelled: the APS, Diamond, NSLS-II, and SLAC deployments are all EPICS (ophyd / bluesky / dodal / pcdshub). ID19's ESRF sibling ID32 opened the BLISS floor for CORA on soft X-ray RIXS; ID19 is the first to bring it to tomographic imaging. CORA observes that floor and, where it replaces BLISS scan orchestration, conducts over it; it does not replace BLISS or Tango.
 
 The handles on this page are real. They are read from ID19's own public Beacon device database ([`gitlab.esrf.fr/id19/beamline_configuration`](https://gitlab.esrf.fr/id19/beamline_configuration), the live `/users/blissadm/local/beamline_configuration` YAML tree), and carried `confirm` because a config snapshot is strong evidence, not a guarantee against the live system (CTRL-1).
 
@@ -40,7 +40,7 @@ What the config does **not** give, and so is not invented here:
 
 The tomographic acquisition is the seam a CORA edge replaces. At ID19 it runs as a BLISS scan procedure: a continuous rotation of the sample stage coupled to the Lima detector frame capture, the sample spun through the beam while the detector records a projection at each angle. That rotation-coupled-to-capture loop is the orchestration CORA's edge conducts over the same floor, driving through the BLISS device layer rather than BLISS owning the loop, with the conduct-versus-drive-through split decided per routine (CTRL-2).
 
-This is CORA's first non-EPICS deployment, so the seam is the whole point. The technique is plain microtomography, the existing `tomography` Method (TECH-1) the 2-BM pilot and TomoWise carry; ID19 coins no new device family. What ID19 proves is that the `ControlPort` and the conducting seam are genuinely control-system-agnostic: the same edge that conducts a scan over EPICS / ophyd-async at Diamond conducts it over BLISS / Tango here, against Lima detector servers and BLISS axes instead of EPICS IOCs.
+This is CORA's first imaging deployment on the BLISS floor, so the seam is the whole point. The technique is plain microtomography, the existing `tomography` Method (TECH-1) the 2-BM pilot and TomoWise carry; ID19 coins no new device family. What ID19 proves is that the `ControlPort` and the conducting seam are genuinely control-system-agnostic: the same edge that conducts a scan over EPICS / ophyd-async at Diamond conducts it over BLISS / Tango here, against Lima detector servers and BLISS axes instead of EPICS IOCs.
 
 The downstream volume reconstruction is not a beamline device. Recovering the real-space volume from the recorded projection stack is `ComputePort` work, the same reconstruction leg the other imaging beamlines carry, run over the port rather than modelled as an endstation Asset.
 
@@ -68,4 +68,4 @@ The shutter handles are known from the config (`frontend`, `id19/bsh/1`, `id19/b
 
 The Enclosure permit shape for the two hutches and the hazard tier are carried pending at the ESRF Site; the governance and safety envelope follow the 2-BM shape (see [Governance](../governance.md)). The ESRF operator pool and review are pending at the Site (GOV-1), and Clearances are issued at the ESRF Site.
 
-See [Open questions](../questions.md) for the control, detection, and safety items still to confirm, and [Model](../model.md#deliberately-not-here-yet) for the deferred endstations and why this first non-EPICS deployment coins no new vocabulary.
+See [Open questions](../questions.md) for the control, detection, and safety items still to confirm, and [Model](../model.md#deliberately-not-here-yet) for the deferred endstations and why this BLISS-floor imaging deployment coins no new vocabulary.

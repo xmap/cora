@@ -1,6 +1,6 @@
 # Model
 
-*The developer's index into where P04 content lives, its place as CORA's first soft X-ray / grating-monochromator deployment, and the record of what is deliberately deferred. First cut.*
+*The developer's index into where P04 content lives, its place as CORA's first PETRA III soft X-ray / grating-monochromator deployment, and the record of what is deliberately deferred. First cut.*
 
 P04 is a descriptor-and-docs scaffold today, reverse-engineered from P04's public OnlineXML registry: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
 
@@ -9,14 +9,14 @@ P04 is a descriptor-and-docs scaffold today, reverse-engineered from P04's publi
 | Beamline descriptor | [`deployments/p04/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p04/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
 | Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface (shared with P01); P04 adds the soft X-ray Practices |
 | Upstream source | [P04 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p04) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P04 is the first `GratingMonochromator` deployment but it is already a Family |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P04 binds `GratingMonochromator` (introduced at SIX, graduated at CSX), already a catalog Family |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; soft X-ray spectroscopy reuses the pending `xas_spectroscopy` / `angle_resolved_photoemission` slugs (`TECH-1`) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P04 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes P04 new
 
-P04 is a second beamline at an existing Site, and the fleet's entry into the soft X-ray regime. It is **CORA's first `GratingMonochromator` deployment**: its monochromator is a plane-grating monochromator (the soft X-ray analog of the crystal `Monochromator`), not the Bragg crystal mono the hard X-ray beamlines use. Its science is soft X-ray spectroscopy at 250-3000 eV (XAS via total electron yield, and photoemission), fed by a variable-polarization APPLE-II-type undulator.
+P04 is a second beamline at an existing Site, and PETRA III's entry into the soft X-ray regime (the fleet's soft X-ray line was opened by NSLS-II SIX). It **binds the catalog `GratingMonochromator` Family** (introduced at SIX, graduated at CSX): its monochromator is a plane-grating monochromator (the soft X-ray analog of the crystal `Monochromator`), not the Bragg crystal mono the hard X-ray beamlines use. Its science is soft X-ray spectroscopy at 250-3000 eV (XAS via total electron yield, and photoemission), fed by a variable-polarization APPLE-II-type undulator.
 
 ## No new families (the one new binding is already in the catalog)
 

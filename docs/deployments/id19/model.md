@@ -1,6 +1,6 @@
 # Model
 
-*The developer's index into where ID19 content lives, why this first non-EPICS deployment coins no new family, and the record of what is deliberately deferred.*
+*The developer's index into where ID19 content lives, why this BLISS-floor imaging deployment coins no new family, and the record of what is deliberately deferred.*
 
 ID19 is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's own public BLISS Beacon device database: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
 
@@ -16,7 +16,7 @@ ID19 is a descriptor-and-docs scaffold today, reverse-engineered from the beamli
 
 ## What makes ID19 new
 
-ID19 is CORA's first beamline on a **non-EPICS control floor**. The fleet to date is an EPICS monoculture (APS, Diamond, NSLS-II, SLAC, all ophyd / bluesky / dodal / pcdshub), and the one prior non-EPICS model, MAX IV TomoWise (Tango / Sardana), is design-phase only. ESRF runs BLISS, a Tango-based control system, so ID19 is the fleet's first *live* non-EPICS floor. That is the novelty, and it is a **control-plane** concern, not a device or technique concern.
+ID19 is CORA's first imaging beamline on a **non-EPICS control floor**. Most of the fleet is EPICS (APS, Diamond, NSLS-II, SLAC, all ophyd / bluesky / dodal / pcdshub). ESRF runs BLISS, a Tango-based control system; its soft X-ray sibling ID32 opened the BLISS floor for CORA, and ID19 is the first to bring it to tomographic imaging. That is the novelty, and it is a **control-plane** concern, not a device or technique concern.
 
 The seam model that today reads "EPICS is the floor" generalizes at ID19 to "BLISS / Tango is the floor". CORA's edge conducts the tomographic scan over its `ControlPort` against BLISS scan procedures and Lima detector servers, rather than EPICS IOCs. The test ID19 poses is that the `ControlPort` and the conduct-versus-drive-through seam are genuinely control-system-agnostic, not secretly EPICS-shaped (see [Controls](equipment/controls.md), CTRL-1).
 

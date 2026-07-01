@@ -1,6 +1,6 @@
 # The beamline
 
-*ID16B, area by area. CORA models the beamline as one root Asset (`ID16B`) with the devices nested below it; this page is the human walk, the [Inventory](../inventory.md) is the flat reference. ID16B is CORA's first nanoprobe and second non-EPICS beamline, reverse-engineered from the beamline's own public BLISS config.*
+*ID16B, area by area. CORA models the beamline as one root Asset (`ID16B`) with the devices nested below it; this page is the human walk, the [Inventory](../inventory.md) is the flat reference. ID16B is the fleet's first KB nanoprobe with XRF and CORA's third non-EPICS beamline, reverse-engineered from the beamline's own public BLISS config.*
 
 ID16B is the ESRF nano-analysis / nano-imaging beamline: a Kirkpatrick-Baez mirror pair focuses the beam to a nanoprobe, and the beamline runs nano-tomography (the `tomography` Method) and nano-XRF mapping (the pending `scanning_fluorescence_microscopy` Method), including fluorescence-tomography. This cut models the source, the optics, the KB nanofocus, the sample-scanning stack, and the two detection chains. The sample environments (cryostream, furnace, xeol) are noted, not modelled (ENV-1).
 
@@ -26,7 +26,7 @@ Each modelled device binds a catalog [Family](../../../catalog/families.md) and 
 
 ## Shared
 
-- [Controls](controls.md): the seam between CORA and the ESRF floor (ESRF BLISS / Tango over the `ControlPort`, CORA's second non-EPICS floor), the IcePAP and PI piezo motion controllers, and where the deferred pieces are tracked (CTRL-1). The PSS permit signals behind the shutters are not in the config and carried pending (PSS-1).
+- [Controls](controls.md): the seam between CORA and the ESRF floor (ESRF BLISS / Tango over the `ControlPort`), the IcePAP and PI piezo motion controllers, and where the deferred pieces are tracked (CTRL-1). The PSS permit signals behind the shutters are not in the config and carried pending (PSS-1).
 - Resources: the photon beam delivered from the source, plus cooling water and vacuum. These site utilities are carried pending (SUP-1).
 
 ## Reference

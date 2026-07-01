@@ -1,6 +1,6 @@
 # Model
 
-*The developer's index into where P01 content lives, its place as CORA's first PETRA III beamline and second Tango / Sardana floor, and the record of what is deliberately deferred. First cut.*
+*The developer's index into where P01 content lives, its place as CORA's first PETRA III beamline and a further Tango / Sardana floor, and the record of what is deliberately deferred. First cut.*
 
 P01 is a descriptor-and-docs scaffold today, reverse-engineered from P01's public OnlineXML registry: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
 
@@ -16,7 +16,7 @@ P01 is a descriptor-and-docs scaffold today, reverse-engineered from P01's publi
 
 ## What makes P01 new
 
-P01 is a new Site's first beamline, and two things genuinely new at the modelling level. It is **CORA's first PETRA III beamline** and its **second Tango / Sardana control floor** (after MAX IV). Its science is hard X-ray dynamics: nuclear resonant scattering in EH1, diffraction in EH2, and RIXS in EH3, across 2.5-80 keV.
+P01 is a new Site's first beamline, and two things genuinely new at the modelling level. It is **CORA's first PETRA III beamline** and a further **Tango / Sardana control floor** (after MAX IV and ALBA). Its science is hard X-ray dynamics: nuclear resonant scattering in EH1, diffraction in EH2, and RIXS in EH3, across 2.5-80 keV.
 
 - **The control plane (`CTRL-1`).** PETRA III runs Tango with Sardana as the scan layer. P01 is the first deployment whose device handles were read from a DESY OnlineXML registry, the Tango analog of the ESRF BLISS Beacon config and the APS Guarneri `devices.yml`. The OnlineXML extractor that produced the candidate is `scripts/reverse_engineer/` (the `--source onlinexml` path).
 - **The technique branch (`TECH-1`).** NRS and RIXS are new to CORA's catalog but reuse the IXS / RIXS slugs already carried pending across the fleet, so no Method is coined now.

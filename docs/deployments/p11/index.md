@@ -18,7 +18,7 @@
 
 P11 "Bio-Imaging and Diffraction" is **CORA's fourth PETRA III beamline** and PETRA III's first **macromolecular-crystallography** beamline. Its science is high-throughput rotation MX (a crystal mounted on a goniometer rotated through an oscillation while a Pilatus area detector reads frames, with cryostream cooling) plus coherent / full-field bio-imaging.
 
-For the modelling, P11 is a **reuse-and-reinforce** deployment: it coins no new vocabulary. It is the fourth MX beamline CORA models (after Diamond i03, NSLS-II FMX / AMX, the Australian Synchrotron MX3, Sirius MANACA, and NSRRC TPS 07A / 05A), and it reuses the MX vocabulary directly:
+For the modelling, P11 is a **reuse-and-reinforce** deployment: it coins no new vocabulary. It is a further MX beamline CORA models (after Diamond i03, NSLS-II FMX / AMX, the Australian Synchrotron MX3, Sirius MANACA, and NSRRC TPS 07A / 05A), and it reuses the MX vocabulary directly:
 
 - The cryostream binds the graduated `TemperatureController`; the area detector binds `Camera`; the fluorescence detector binds `EnergyDispersiveSpectrometer`.
 - The MX technique reuses the pending i03 `mx_data_collection` Method; the bio-imaging reuses the catalog `tomography` Method (`TECH-1`).

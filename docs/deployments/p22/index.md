@@ -18,7 +18,7 @@
 
 P22 "Hard X-ray Photoelectron Spectroscopy (HAXPES)" is **CORA's fourteenth PETRA III beamline** and the facility's hard X-ray photoemission beamline. Its defining structural fact is that it **shares its optics chain with P09**: the undulator, the double-crystal monochromator, the mirror pair, the phase retarder, and the absorber are P09 devices (on `p09/` addresses), and P22 is the HAXPES branch off that chain (`SHARED-1`).
 
-P22 coins **no new Family**. It reuses the allowlisted-loose `PhaseRetarder` Family (already graduation-due from P09 / 4-ID; P22 is a further consumer via the shared optics). The HAXPS sample stage binds `Manipulator`; the electron analyzer (the defining HAXPES instrument, not exposed in this registry slice) is carried pending against the catalog `ElectronAnalyzer` Family (graduated at NSLS-II ESM). The technique (HAXPES) reuses the pending `angle_resolved_photoemission` slug (`TECH-1`).
+P22 coins **no new Family**. It reuses the allowlisted-loose `PhaseRetarder` Family (already graduation-due from P09 / 4-ID; P22 is a further consumer via the shared optics). The HAXPS sample stage binds `Manipulator`; the electron analyzer (the defining HAXPES instrument, not exposed in this registry slice) is carried pending against the catalog `ElectronAnalyzer` Family (introduced at NSLS-II ESM, graduated at SST). The technique (HAXPES) reuses the pending `angle_resolved_photoemission` slug (`TECH-1`).
 
 ## Scope: what is and is not modelled
 

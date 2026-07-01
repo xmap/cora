@@ -1,6 +1,6 @@
 # The beamline
 
-*ID19, area by area. CORA models the beamline as one root Asset (`ID19`) with the devices nested below it; this page is the human walk, the [Inventory](../inventory.md) is the flat reference. ID19 is CORA's first beamline on a non-EPICS control floor, reverse-engineered from the beamline's own public BLISS config.*
+*ID19, area by area. CORA models the beamline as one root Asset (`ID19`) with the devices nested below it; this page is the human walk, the [Inventory](../inventory.md) is the flat reference. ID19 is CORA's first imaging beamline on a non-EPICS control floor, reverse-engineered from the beamline's own public BLISS config.*
 
 ID19 is the ESRF's long hard X-ray imaging / tomography beamline: its long source-to-sample distance gives the beam high spatial coherence, so a sample spun through the beam, imaged by a downstream area detector, yields microtomography, radiography, and propagation phase-contrast imaging (the `tomography` Method, TECH-1). This cut models the source, the optics, and the two main tomography endstations: micro-resolution (MR) and high-resolution (HR). The further endstations in the config (MH, MED, laminography, radiography, PCO) are noted, not modelled (ENDSTATION-1).
 
@@ -26,7 +26,7 @@ Each modelled device binds a catalog [Family](../../../catalog/families.md) and 
 
 ## Shared
 
-- [Controls](controls.md): the seam between CORA and the ESRF floor (ESRF BLISS / Tango over the `ControlPort`, CORA's first non-EPICS floor), the Elmo and IcePAP motion controllers, and where the deferred pieces are tracked (CTRL-1). The PSS permit signals behind the shutters are not in the config and carried pending (PSS-1).
+- [Controls](controls.md): the seam between CORA and the ESRF floor (ESRF BLISS / Tango over the `ControlPort`), the Elmo and IcePAP motion controllers, and where the deferred pieces are tracked (CTRL-1). The PSS permit signals behind the shutters are not in the config and carried pending (PSS-1).
 - Resources: the photon beam delivered from the source, plus cooling water and vacuum. These site utilities are carried pending (SUP-1).
 
 ## Reference

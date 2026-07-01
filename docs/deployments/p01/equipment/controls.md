@@ -2,7 +2,7 @@
 
 *The control plane P01 runs on, and the seam where CORA's edge would conduct over it. First cut.*
 
-P01 runs on the **PETRA III Tango control system with Sardana as the scan / motion SCADA layer**, not EPICS. This is CORA's second Tango / Sardana control floor (after MAX IV) and a sibling of the ESRF BLISS / Tango floor: the seam model that reads "EPICS is the floor" generalizes here to "Tango / Sardana is the floor" (`CTRL-1`).
+P01 runs on the **PETRA III Tango control system with Sardana as the scan / motion SCADA layer**, not EPICS. This is a further Tango / Sardana control floor (after MAX IV and ALBA) and a sibling of the ESRF BLISS / Tango floor: the seam model that reads "EPICS is the floor" generalizes here to "Tango / Sardana is the floor" (`CTRL-1`).
 
 ## The floor: Tango devices
 

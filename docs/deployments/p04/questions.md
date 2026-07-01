@@ -2,7 +2,7 @@
 
 *What CORA needs the P04 team to confirm before the model can be trusted.*
 
-P04 was reverse-engineered from P04's own public OnlineXML device registry ([gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p04](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p04), branch `debian/jessie`) and a verified research brief, not from a live connection. The registry carries real Tango device names and control handles, but no grating line densities, polarization modes, or energy calibration. P04 is CORA's second PETRA III beamline and its first soft X-ray / grating-monochromator deployment. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+P04 was reverse-engineered from P04's own public OnlineXML device registry ([gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p04](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p04), branch `debian/jessie`) and a verified research brief, not from a live connection. The registry carries real Tango device names and control handles, but no grating line densities, polarization modes, or energy calibration. P04 is CORA's second PETRA III beamline and PETRA III's first soft X-ray / grating-monochromator deployment. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 

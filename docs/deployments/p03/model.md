@@ -1,6 +1,6 @@
 # Model
 
-*The developer's index into where P03 content lives, its place as the fleet's first SAXS / WAXS beamline, and the record of what is deliberately deferred. First cut.*
+*The developer's index into where P03 content lives, its place as PETRA III's first SAXS / WAXS beamline, and the record of what is deliberately deferred. First cut.*
 
 P03 is a descriptor-and-docs scaffold today, reverse-engineered from P03's public OnlineXML registry: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
 

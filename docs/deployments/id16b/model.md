@@ -16,7 +16,7 @@ ID16B is a descriptor-and-docs scaffold today, reverse-engineered from the beaml
 
 ## What makes ID16B new
 
-ID16B is CORA's **second non-EPICS deployment** (after ID19) and its **first nanoprobe**. The novelty sits on two axes, both below the technique layer:
+ID16B is CORA's **third non-EPICS deployment** (after ID32 and ID19) and the fleet's **first KB nanoprobe with XRF**. The novelty sits on two axes, both below the technique layer:
 
 - **A second BLISS / Tango floor.** ID16B confirms the ID19 seam pattern is repeatable: motion stages are BLISS axes (IcePAP racks, PI piezo scanners, etel Tango motors), the fluorescence detector is a MOSCA / FalconX Tango device, the area detectors are Lima device servers, and CORA's edge conducts over the `ControlPort` against that floor (CTRL-1, see [Controls](equipment/controls.md)).
 - **The first KB nanoprobe with XRF.** The Kirkpatrick-Baez mirror pair focuses the beam to a nanoprobe, and an energy-dispersive fluorescence detector reads a spectrum per raster point. This device combination is new to the fleet, but every part binds an existing Family.

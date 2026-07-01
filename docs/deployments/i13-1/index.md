@@ -16,7 +16,7 @@
 
 ## What makes I13-1 different
 
-I13-1 is CORA's first coherent lensless-imaging beamline. The fleet has tomography, an XRF microprobe, and a hard X-ray nanoprobe, but no ptychography or CDI. Ptychography raster-scans a coherent illumination across overlapping points on the sample and records a far-field coherent-diffraction pattern at each point; the real-space image is reconstructed downstream from the diffraction stack.
+I13-1 is CORA's first dedicated coherent lensless-imaging beamline, and the first to open the pending ptychography Method. The fleet has tomography, an XRF microprobe, and a hard X-ray nanoprobe (HXN runs ptychography as one of several scanning-probe modes), but no beamline yet modelled around coherent lensless imaging as its purpose. Ptychography raster-scans a coherent illumination across overlapping points on the sample and records a far-field coherent-diffraction pattern at each point; the real-space image is reconstructed downstream from the diffraction stack.
 
 The novelty is **a Method, not a device family**: it is an acquisition shape (the coherent raster) plus a reconstruction, not a new class of hardware. The devices the technique needs are a sample-scanning stage and area detectors, both already in the catalog. So I13-1 coins no new Family and changes nothing in the catalog. The scout that surfaced I13-1 anticipated a new "coherent imaging" device family; that is the wrong axis (TECH-1).
 

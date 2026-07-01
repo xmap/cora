@@ -16,7 +16,7 @@ SYRMEP is a descriptor-and-docs scaffold today, reverse-engineered from public m
 
 ## What makes SYRMEP new
 
-SYRMEP is two things at the facility level and nothing new at the catalog level. It is CORA's **eighth Site** (Elettra Sincrotrone Trieste, Trieste), another re-test of the Site and Federation kernel, and the **first Tango + DonkiOrchestra** control house-style. The Tango device floor is shared with the ESRF's ID32, but the orchestration seam is the in-house, trigger-driven DonkiOrchestra framework (Elettra 2.0: the abstract "Executer" Tango device server), not BLISS and not EPICS. Its science is hard X-ray microtomography (absorption, propagation-based phase contrast, diffraction-enhanced imaging) plus the SYRMA-3D clinical breast-CT programme.
+SYRMEP is two things at the facility level and nothing new at the catalog level. It is CORA's **eleventh Site** (Elettra Sincrotrone Trieste, Trieste), another re-test of the Site and Federation kernel, and the **first Tango + DonkiOrchestra** control house-style. The Tango device floor is shared with the ESRF's ID32, but the orchestration seam is the in-house, trigger-driven DonkiOrchestra framework (Elettra 2.0: the abstract "Executer" Tango device server), not BLISS and not EPICS. Its science is hard X-ray microtomography (absorption, propagation-based phase contrast, diffraction-enhanced imaging) plus the SYRMA-3D clinical breast-CT programme.
 
 ## No new families: the imaging spine ports wholesale
 

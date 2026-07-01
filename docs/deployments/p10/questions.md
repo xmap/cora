@@ -2,7 +2,7 @@
 
 *What CORA needs the P10 team to confirm before the model can be trusted.*
 
-P10 was reverse-engineered from P10's own public OnlineXML device registry ([gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p10](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p10), branch `debian/jessie`) and a verified research brief, not from a live connection. The registry carries real Tango device names and control handles, but no coherence lengths, energy calibration, or physical positions. P10 is CORA's sixth PETRA III beamline and its second XPCS beamline. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+P10 was reverse-engineered from P10's own public OnlineXML device registry ([gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p10](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p10), branch `debian/jessie`) and a verified research brief, not from a live connection. The registry carries real Tango device names and control handles, but no coherence lengths, energy calibration, or physical positions. P10 is CORA's sixth PETRA III beamline and a further XPCS beamline (after APS 8-ID and NSLS-II CHX). Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 

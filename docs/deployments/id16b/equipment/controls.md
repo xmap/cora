@@ -1,6 +1,6 @@
 # Controls
 
-*The control stack and the orchestration seam. ESRF BLISS, a Tango-based control system, NOT EPICS. ID16B is CORA's second non-EPICS deployment, after ID19; this page shows the BLISS seam holding for a second beamline.*
+*The control stack and the orchestration seam. ESRF BLISS, a Tango-based control system, NOT EPICS. ID16B is CORA's third non-EPICS deployment, after ID32 and ID19; this page shows the BLISS seam holding for a further beamline.*
 
 ID16B runs the ESRF **BLISS** control system, built on **Tango**, the same non-EPICS floor as [ID19](../../id19/equipment/controls.md). The fleet's other deployments are all EPICS (ophyd / bluesky / dodal / pcdshub); ID19 was the first live non-EPICS floor, and ID16B is the second. A second beamline on the same floor is what turns the ID19 seam from a one-off into a pattern: CORA observes the BLISS floor and, where it replaces BLISS scan orchestration, conducts over it; it does not replace BLISS or Tango.
 
@@ -37,7 +37,7 @@ What the config does **not** give, and so is not invented here:
 
 Both ID16B acquisitions are BLISS scan procedures (the `daiquiri_tomo` and `daiquiri_fluo` / `fluo3d` sessions). Nano-tomography couples a continuous sample rotation to the area-detector frame capture; nano-XRF mapping couples a piezo raster to the fluorescence-detector readout. Those loops are the orchestration CORA's edge conducts over the same floor, driving through the BLISS device layer rather than BLISS owning the loop, with the conduct-versus-drive-through split decided per routine (CTRL-2).
 
-This is CORA's second non-EPICS deployment, so the seam evidence compounds: the same edge that conducts a tomo scan over BLISS at ID19 conducts both a tomo scan and an XRF raster over BLISS at ID16B, against Lima detectors, a MOSCA fluorescence detector, and IcePAP / PI piezo axes. The `ControlPort` is the same; only the floor's device shapes differ. The techniques are plain reuse (`tomography`, `scanning_fluorescence_microscopy`); ID16B coins no new device family.
+This is CORA's third non-EPICS deployment, so the seam evidence compounds: the same edge that conducts a tomo scan over BLISS at ID19 conducts both a tomo scan and an XRF raster over BLISS at ID16B, against Lima detectors, a MOSCA fluorescence detector, and IcePAP / PI piezo axes. The `ControlPort` is the same; only the floor's device shapes differ. The techniques are plain reuse (`tomography`, `scanning_fluorescence_microscopy`); ID16B coins no new device family.
 
 The downstream reconstructions are not beamline devices: the tomographic volume retrieval and the XRF map fitting are `ComputePort` work, run over the port rather than modelled as endstation Assets.
 

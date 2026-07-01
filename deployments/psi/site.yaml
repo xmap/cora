@@ -1,7 +1,7 @@
 # CORA Site descriptor: the PSI site-level surface
 #
-# The Paul Scherrer Institut (PSI, Villigen, Switzerland) is the eighth Site CORA
-# models. PSI hosts two photon sources: the Swiss Light Source (SLS / SLS 2.0)
+# The Paul Scherrer Institut (PSI, Villigen, Switzerland) is the fourteenth Site
+# CORA models. PSI hosts two photon sources: the Swiss Light Source (SLS / SLS 2.0)
 # storage ring and SwissFEL. This Site, like SLAC (the lab hosting LCLS), is the
 # institute; SLS and SwissFEL are sources within it, and the beamlines (I-TOMCAT on
 # SLS, the Aramis stations Alvra / Bernina / Cristallina on SwissFEL) are

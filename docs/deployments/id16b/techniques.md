@@ -22,7 +22,7 @@ The parts are a `RotaryStage` (the tomo spin / fluo-tomo rotation), `LinearStage
 
 CORA already models tomography (ID19, 2-BM) and scanning fluorescence microscopy (2-ID, XFM, LIX). ID16B is a further consumer of both, so the Practices are carried pending only because ID16B is not yet driven by CORA, not because the Methods are new.
 
-The novelty at ID16B is the combination and the floor: it is the fleet's first KB nanoprobe with an energy-dispersive fluorescence detector, and the second beamline on the BLISS / Tango control floor. Both are device-and-control concerns ([Model](model.md), [Controls](equipment/controls.md)), not technique concerns. Holding the Methods constant is the point: it isolates what is genuinely new.
+The novelty at ID16B is the combination and the floor: it is the fleet's first KB nanoprobe with an energy-dispersive fluorescence detector, and a further beamline on the BLISS / Tango control floor. Both are device-and-control concerns ([Model](model.md), [Controls](equipment/controls.md)), not technique concerns. Holding the Methods constant is the point: it isolates what is genuinely new.
 
 ## Not modelled yet
 

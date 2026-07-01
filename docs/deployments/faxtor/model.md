@@ -16,7 +16,7 @@ FAXTOR is a descriptor-and-docs scaffold today, reverse-engineered from ALBA's p
 
 ## What makes FAXTOR new
 
-FAXTOR is two things at the Site level and nothing new at the vocabulary level. It is CORA's **eighth Site** (ALBA, Barcelona), a re-test of the Site and Federation kernel, and the **second Tango / Sardana / Taurus** control plane CORA models. ALBA is the originating institution of Sardana (and of the Taurus GUI framework and the IcePAP motion controller), so this is the controls house-style's home facility; MAX IV (TomoWISE) was the first consumer CORA modelled. Its science is fast X-ray tomography and radiography on a multipole-wiggler source.
+FAXTOR is two things at the Site level and nothing new at the vocabulary level. It is CORA's **ninth Site** (ALBA, Barcelona), a re-test of the Site and Federation kernel, and the **second Tango / Sardana / Taurus** control plane CORA models. ALBA is the originating institution of Sardana (and of the Taurus GUI framework and the IcePAP motion controller), so this is the controls house-style's home facility; MAX IV (TomoWISE) was the first consumer CORA modelled. Its science is fast X-ray tomography and radiography on a multipole-wiggler source.
 
 ## No new families (the imaging spine reuses the 2-BM / TomoWISE precedent)
 

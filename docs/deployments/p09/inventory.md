@@ -4,7 +4,7 @@
 
 This cut models the MONO hutch (the undulator, the DCM, the mirrors, the CRL, the slit, the absorber, the resonant-scattering instrument, the fluorescence detectors), the DIF diffraction hutch, and the MAG high-field magnetism endstation. It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p09/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P09 **coins no new Family**: it is the second consumer of the allowlisted-loose `PhaseRetarder`, `PolarizationAnalyzer`, and `Magnet` Families the APS 4-ID POLAR deployment introduced, and reuses the optics / motion / detector Families otherwise. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P09 **coins no new Family**: it is the second consumer of the allowlisted-loose `PhaseRetarder`, and a further consumer of the `PolarizationAnalyzer` and `Magnet` Families the APS 4-ID POLAR deployment introduced, and reuses the optics / motion / detector Families otherwise. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
 
 ## The Asset tree
 

@@ -12,7 +12,7 @@
 | Source | 8-ID in-vacuum undulator on the NSLS-II 3 GeV ring (energy driven through the HHM trajectory) |
 
 !!! note "How CORA would land on ISS"
-    These pages describe how CORA would model, govern, and conduct ISS, the thirteenth NSLS-II beamline after [FXI](../fxi/index.md), [HXN](../hxn/index.md), [BMM](../bmm/index.md), [SRX](../srx/index.md), [SIX](../six/index.md), [CHX](../chx/index.md), [CSX](../csx/index.md), [XPD](../xpd/index.md), [ESM](../esm/index.md), [SMI](../smi/index.md), [IXS](../ixs/index.md), and [SST](../sst/index.md). They are not a survey of the beamline's current software. The hardware facts (devices, EPICS PVs, axes) are read from public NSLS-II open source (the `NSLS2/iss-profile-collection` bluesky / ophyd startup files) and verified against it; undulator parameters, crystal cuts, and physical positions are not in it, so they, and every read value, are carried `confirm` until ISS staff verify them ([Open questions](questions.md)). This is a design-phase scaffold: the descriptor and these docs, with scenarios deferred.
+    These pages describe how CORA would model, govern, and conduct ISS, one of the NSLS-II beamlines CORA models. They are not a survey of the beamline's current software. The hardware facts (devices, EPICS PVs, axes) are read from public NSLS-II open source (the `NSLS2/iss-profile-collection` bluesky / ophyd startup files) and verified against it; undulator parameters, crystal cuts, and physical positions are not in it, so they, and every read value, are carried `confirm` until ISS staff verify them ([Open questions](questions.md)). This is a design-phase scaffold: the descriptor and these docs, with scenarios deferred.
 
 ## The defining shape: the energy sweep is the measurement
 

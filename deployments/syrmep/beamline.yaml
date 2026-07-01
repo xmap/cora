@@ -22,7 +22,7 @@
 # (CTRL-1). Descriptor + docs scaffold; scenarios deferred.
 #
 # WHAT IS NEW: a new Site, and a new controls house-style; NO new Family.
-#   - A wholly NEW Site (Elettra, 8th) re-tests the Site / Federation kernel.
+#   - A wholly NEW Site (Elettra, 11th) re-tests the Site / Federation kernel.
 #   - The first Tango + DonkiOrchestra controls house-style (the rest are EPICS,
 #     Tango / Sardana at MAX IV, or Tango / BLISS / IcePAP at the ESRF). The Tango
 #     floor is shared with ID32, but the orchestration seam is the in-house,

@@ -1,6 +1,6 @@
 # ID19
 
-*Hard X-ray parallel-beam microtomography, radiography, and phase-contrast imaging on the long imaging beamline at the ESRF. This page describes how CORA would model and run ID19, reverse-engineered from the beamline's own public BLISS control configuration; it is not yet confirmed by ESRF staff. ID19 is CORA's first deployment on a non-EPICS control floor.*
+*Hard X-ray parallel-beam microtomography, radiography, and phase-contrast imaging on the long imaging beamline at the ESRF. This page describes how CORA would model and run ID19, reverse-engineered from the beamline's own public BLISS control configuration; it is not yet confirmed by ESRF staff. ID19 is CORA's first imaging deployment on a non-EPICS control floor.*
 
 | Property | Value |
 | --- | --- |
@@ -16,7 +16,7 @@
 
 ## What makes ID19 different
 
-ID19 is CORA's first beamline on a **non-EPICS control floor**. The whole fleet to date sits on EPICS, in one variant or another: the APS, Diamond, NSLS-II, and SLAC deployments are all ophyd / bluesky / dodal / pcdshub, and the one prior non-EPICS model, MAX IV [TomoWise](../tomowise/index.md), is design-phase only. ESRF runs **BLISS**, a Tango-based control system, so ID19 is the fleet's first *live* non-EPICS floor.
+ID19 is CORA's first imaging beamline on a **non-EPICS control floor**. Most of the fleet sits on EPICS, in one variant or another: the APS, Diamond, NSLS-II, and SLAC deployments are all ophyd / bluesky / dodal / pcdshub. ESRF runs **BLISS**, a Tango-based control system; its soft X-ray sibling [ID32](../id32/index.md) opened the BLISS floor for CORA, and ID19 is the first to bring it to tomographic imaging.
 
 It is worth being honest about where the novelty does, and does not, sit.
 
@@ -24,7 +24,7 @@ It is worth being honest about where the novelty does, and does not, sit.
 - **The instrument is not the novelty.** The rotation stages bind the catalog `RotaryStage`, the sample and detector positioning stages bind `LinearStage`, the detectors bind `Camera` (which presents the Detector Role), and the optics bind `Monochromator`, `Slit`, `Transfocator`, `Filter`, and `Shutter`. All are already in the catalog. ID19 coins no new Family and changes nothing in the catalog.
 - **The novelty is the control plane.** The seam model that today reads "EPICS is the floor" generalizes here to "BLISS / Tango is the floor". In BLISS a motion stage is a controller class with named axes (driven by Elmo serial controllers and IcePAP racks), and a detector is a Lima device server addressed by a Tango name (`id19/limaccd/frelon1`); CORA's edge conducts the tomographic scan over its `ControlPort` against that floor rather than EPICS. This is the test that the seam abstraction is not secretly EPICS-shaped (CTRL-1).
 
-The net: ID19 holds the device families and the technique constant and moves one axis, the control plane. Nothing graduates, nothing in the catalog changes; its contribution is the first non-EPICS, BLISS / Tango floor.
+The net: ID19 holds the device families and the technique constant and moves one axis, the control plane. Nothing graduates, nothing in the catalog changes; its contribution is bringing the BLISS / Tango floor to tomographic imaging.
 
 ## Scope: what is and is not modelled
 
@@ -56,7 +56,7 @@ Along the beam, in order:
 
 Cutting across, and central to this deployment:
 
-- [Controls](equipment/controls.md): the ESRF BLISS (Tango-based) control stack, CORA's first non-EPICS floor, with the real handles read from the config (CTRL-1). The PSS permit signals behind the shutters are not in the config and carried pending (PSS-1).
+- [Controls](equipment/controls.md): the ESRF BLISS (Tango-based) control stack, the BLISS floor CORA models, with the real handles read from the config (CTRL-1). The PSS permit signals behind the shutters are not in the config and carried pending (PSS-1).
 
 The cross-cutting reference view is the [Inventory](inventory.md), authored from the same descriptor as the generated [Source](beamline.md) walk.
 
@@ -70,7 +70,7 @@ The cross-cutting reference view is the [Inventory](inventory.md), authored from
 
 ## Model
 
-[Model](model.md): the developer's by-kind index into where each ID19 aggregate's content lives, why this first non-EPICS deployment coins no new vocabulary, what the BLISS / Tango control seam is, and the record of what is deliberately deferred.
+[Model](model.md): the developer's by-kind index into where each ID19 aggregate's content lives, why this BLISS-floor imaging deployment coins no new vocabulary, what the BLISS / Tango control seam is, and the record of what is deliberately deferred.
 
 ## Not yet documented
 
