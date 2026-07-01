@@ -332,7 +332,7 @@ sample-environment:
       enclosure: 4-ID-H
       note: "4-ID-H sample positioning table (Table4idh)"
     - name: PumpProbeLaser
-      family: Laser                  # loose Family (SAMPLE-1, FAM-1)
+      family: Laser                  # catalog Family (SAMPLE-1)
       pv: "4idhSoft:LQE1:"
       new: true
       confirm: true

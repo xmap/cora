@@ -47,7 +47,7 @@
 # -> FluxMonitor + Diagnostic (loose); SpectralEncoder (PSEN timetool) -> Diagnostic
 # (loose, the arrival-time monitor, LASER-1); GPS / XRDYou -> Goniometer (composed in the
 # Diffractometer Assembly, DIFF-1); HexapodPI / HexapodSymmetrie -> Hexapod; LaserBernina
-# -> loose Laser; the Jungfrau -> Camera; the event system / EVRs -> TimingController.
+# -> catalog Laser Family; the Jungfrau -> Camera; the event system / EVRs -> TimingController.
 # The Staeubli TX200 robot is a sample/detector handler over PShell (HTTP), not EPICS;
 # its modelling is deferred (ROBOT-1, the i03 / MX3 sample-exchange precedent).
 #
@@ -59,7 +59,7 @@
 #
 # DEFERRED (out of scope, noted not modelled): the externalized config state (CONFIG-1);
 # the sf-daq data plane (DAQ-1); the fs pump-probe laser delay + lxt timing (the laser
-# is a loose Laser device; its fs sync has no CORA model, LASER-1); the Staeubli robot
+# binds the catalog Laser Family; its fs sync has no CORA model, LASER-1); the Staeubli robot
 # (ROBOT-1); the sibling Aramis stations Alvra / Cristallina sharing the source (TOPO-1);
 # the RIXS / tape-drive / liquid-jet sample-environment variants whose appends are
 # commented out in eco (ENV-1).
@@ -256,7 +256,7 @@ aramis-optics:
       pv: "SAROP21-OLAS134"
       new: true
       confirm: true
-      note: "beamline reference / alignment laser (eco reflaser_beamline, RefLaser_Aramis); a loose Laser family device (alignment, not the pump-probe laser)"
+      note: "beamline reference / alignment laser (eco reflaser_beamline, RefLaser_Aramis); binds the catalog Laser Family (alignment, not the pump-probe laser)"
     - name: VerticalKBMirror
       family: Mirror
       pv: "SAROP21-OKBV139"
@@ -288,7 +288,7 @@ bernina-endstation:
     heavy-load/hexapod/robot) are actually mounted is read from the non-public bernina_config
     JSON and is carried unknown (CONFIG-1). The Staeubli TX200 robot (over PShell HTTP, not
     EPICS) handling samples / the detector is deferred (ROBOT-1). The fs pump-probe laser
-    folds into the loose Laser family; its fs sync (the eco lxt chain) is the cross-timing-
+    binds the catalog Laser Family; its fs sync (the eco lxt chain) is the cross-timing-
     domain gap (LASER-1).
   devices:
     - name: GPS_Goniometer
@@ -338,7 +338,7 @@ bernina-endstation:
       pv: "SLAAR21-LMOT"
       new: true
       confirm: true
-      note: "femtosecond optical pump-probe laser (eco las, LaserBernina); loose Laser family reused (the Alvra / LCLS-MFX precedent). The laser / X-ray fs synchronization (the eco lxt chain) is the cross-timing-domain gap (LASER-1)"
+      note: "femtosecond optical pump-probe laser (eco las, LaserBernina); binds the catalog Laser Family (the Alvra / LCLS-MFX precedent). The laser / X-ray fs synchronization (the eco lxt chain) is the cross-timing-domain gap (LASER-1)"
     - name: LaserShutter
       family: Shutter
       pv: "SLAAR21-LTIM01-EVR0"

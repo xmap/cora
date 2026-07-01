@@ -36,9 +36,9 @@
 # -> Slit; X-ray pulse picker -> Shutter (fast pulse gate; Shutter-vs-Chopper open,
 # PULSE-1); Pprm profile monitor -> Scintillator + Camera; PBPS / PBIG intensity-position
 # monitor -> FluxMonitor + Diagnostic (loose, reused); Double_Crystal_Mono -> Monochromator;
-# the experiment laser -> loose Laser (the LCLS-MFX / 4-ID precedent); the von Hamos ->
+# the experiment laser -> catalog Laser Family (the LCLS-MFX / 4-ID precedent); the von Hamos ->
 # EmissionSpectrometer (graduated catalog Family); the Jungfrau area detector -> Camera.
-# The reference / alignment laser -> loose Laser. The SwissFEL event timing -> TimingController.
+# The reference / alignment laser -> catalog Laser Family. The SwissFEL event timing -> TimingController.
 # Vacuum gate valves and the DAQ are floor and not modelled (as at LCLS-MFX / i03).
 #
 # Every device carries `new: true` (not a registered Asset) and `confirm: true` (PVs +
@@ -51,7 +51,7 @@
 #
 # DEFERRED (out of spine+core scope, noted not modelled): the sf-daq data plane (CORA
 # references a Dataset, does not own per-shot data, DAQ-1); the pump-probe optical-laser
-# delay chain + lxt fs timing (the laser is carried as a loose Laser device; its fs
+# delay chain + lxt fs timing (the laser binds the catalog Laser Family; its fs
 # X-ray/laser synchronization has no CORA model, LASER-1); the fixed-target / liquid-jet
 # sample delivery (SAMPLE-1); the sibling Aramis stations Bernina / Cristallina that
 # share the source (TOPO-1).
@@ -275,7 +275,7 @@ aramis-optics:
       pv: "SAROP11-OLAS120"
       new: true
       confirm: true
-      note: "beamline reference / alignment laser before the KB mirrors (OLAS); a loose Laser family device (alignment, not the pump-probe laser). The eco driver hardcodes an aperture PV on SAROP21-* (XREF-1)"
+      note: "beamline reference / alignment laser before the KB mirrors (OLAS); binds the catalog Laser Family (alignment, not the pump-probe laser). The eco driver hardcodes an aperture PV on SAROP21-* (XREF-1)"
     - name: AttenuatorIntensityMonitor
       family: FluxMonitor
       pv: "SAROP11-PBPS122"
@@ -310,8 +310,8 @@ prime-endstation:
   note: >
     The Huber sample manipulator and the optical table fold into LinearStage and Table.
     The fixed-target / liquid-jet sample delivery for serial crystallography has no
-    storage-ring analog and is deferred (SAMPLE-1). The pump-probe laser folds into the
-    loose Laser family (the LCLS-MFX precedent); its fs laser / X-ray synchronization (the
+    storage-ring analog and is deferred (SAMPLE-1). The pump-probe laser binds the
+    catalog Laser Family (the LCLS-MFX precedent); its fs laser / X-ray synchronization (the
     eco lxt timing chain) is the cross-timing-domain gap CORA cannot express (LASER-1). The
     von Hamos spectrometer composes its crystal-translation stage (eco vonHamosBragg) with
     the Jungfrau detector and binds the graduated EmissionSpectrometer Family (Alvra is a
@@ -340,7 +340,7 @@ prime-endstation:
       pv: {confirm: "SLAAR11-LMOT (experiment laser motors: waveplate, pump delay, compressors); fs timing via the eco lxt chain (LASER-1)"}
       new: true
       confirm: true
-      note: "femtosecond optical pump-probe laser; loose Laser family reused (the LCLS-MFX / 4-ID precedent). The delay stages are LinearStages, but the laser / X-ray fs synchronization (the eco lxt timing) is a cross-timing-domain relationship CORA cannot express (LASER-1)"
+      note: "femtosecond optical pump-probe laser; binds the catalog Laser Family (the LCLS-MFX / 4-ID precedent). The delay stages are LinearStages, but the laser / X-ray fs synchronization (the eco lxt timing) is a cross-timing-domain relationship CORA cannot express (LASER-1)"
     - name: LaserShutter
       family: Shutter
       pv: "SLAAR11-LTIM01-EVR0"

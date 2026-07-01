@@ -31,9 +31,9 @@ The naming-r3 choice is deliberate. The bare regime-generic role-noun `PressureC
 
 The Family, introduced at 13-ID, has since graduated into the catalog, earned across 13-ID and PETRA III P02; further high-pressure environments (the HPCAT 16-ID cells, the 13-BM-D large-volume press, the 4-ID cell) now bind the graduated Family (HP-1, PRESSURE-1).
 
-## Why the heating lasers do not bind the loose `Laser` family
+## Why the heating lasers do not bind the `Laser` family
 
-The two IPG YLR fibre lasers heat the sample, and there is already a loose `Laser` family in the fleet (it appears in the POLAR / 4-ID work). They are **not** the same Role. The `Laser` family covers pump-probe excitation, a fundamentally different job from steady-state sample heating. More to the point, the heating here is **open-loop on commanded power**: CORA commands `13IDD:US_LaserPower` / `13IDD:DS_LaserPower` and the sample temperature is *inferred* from thermal emission, not held by a closed temperature loop. So the live heating is a power actuator, a capability of the cell, not a temperature `Regulator` and not a binding of the pump-probe `Laser` family (HEAT-1). No closed-loop temperature controller is invented here.
+The two IPG YLR fibre lasers heat the sample, and there is already a catalog `Laser` family in the fleet (it appears in the POLAR / 4-ID work). They are **not** the same Role. The `Laser` family covers pump-probe excitation, a fundamentally different job from steady-state sample heating. More to the point, the heating here is **open-loop on commanded power**: CORA commands `13IDD:US_LaserPower` / `13IDD:DS_LaserPower` and the sample temperature is *inferred* from thermal emission, not held by a closed temperature loop. So the live heating is a power actuator, a capability of the cell, not a temperature `Regulator` and not a binding of the pump-probe `Laser` family (HEAT-1). No closed-loop temperature controller is invented here.
 
 ## The DAC positioning stage and the metrology spectrometer
 

@@ -10,7 +10,7 @@ Bernina is one of three co-equal stations (with Alvra and Cristallina) on one Ar
 
 ## The pump-probe laser Clearance
 
-Bernina runs a class-4 optical laser for pump-probe. CORA carries this as a `Clearance` hazard on the experiment (a facility-issued safety permit that must be Active before laser-on work), the same posture Alvra, LCLS-MFX, and 32-ID take. This is distinct from whether the laser is a driven Asset: the device folds into the loose `Laser` family, while the personnel-safety permit is a Clearance. The two coexist (LASER-1).
+Bernina runs a class-4 optical laser for pump-probe. CORA carries this as a `Clearance` hazard on the experiment (a facility-issued safety permit that must be Active before laser-on work), the same posture Alvra, LCLS-MFX, and 32-ID take. This is distinct from whether the laser is a driven Asset: the device folds into the catalog `Laser` Family, while the personnel-safety permit is a Clearance. The two coexist (LASER-1).
 
 ## What is not modelled
 

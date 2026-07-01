@@ -45,13 +45,13 @@ Root Asset `Alvra` (`tier = Unit`, `facility_code = psi`); sub-systems nest belo
 | `SampleStage` | LinearStage | `SARES11-XSAM125` | Huber sample XYZ manipulator; sample delivery deferred (SAMPLE-1) |
 | `OpticalTable` | Table | `SARES11-XOTA125` | Prime optical table; six physical + virtual axes |
 | `SampleMicroscope` | Camera | `SARES11-XMI125` | on-axis sample-view microscope; Detector Role for alignment |
-| `PumpProbeLaser` | **Laser** | `SLAAR11-LMOT` | fs optical pump-probe laser; loose family reused; fs sync is the gap (LASER-1) |
+| `PumpProbeLaser` | **Laser** | `SLAAR11-LMOT` | fs optical pump-probe laser; binds the catalog Laser Family; fs sync is the gap (LASER-1) |
 | `LaserShutter` | Shutter | `SLAAR11-LTIM01-EVR0` | pump-probe laser shutter via a SwissFEL EVR (TIMING-1) |
 | `EmissionSpectrometer` | **EmissionSpectrometer** | `SARES11-XCRY125` | von Hamos XES / HERFD spectrometer; binds the graduated family, fourth sighting (SPEC-1) |
 | `Detector` | Camera | (Jungfrau JF_4.5M) | per-shot area detector; frames flow through the sf-daq data plane (DAQ-1, DET-1) |
 | `EventTiming` | TimingController | (SwissFEL EVR; not in eco) | beam-synchronous event timing; event-code parameter has no typed home (TIMING-1) |
 
-Reused catalog Families (no new Family needed): `InsertionDevice`, `FluxMonitor`, `Shutter`, `Slit`, `Filter`, `Scintillator`, `Mirror`, `Monochromator`, `LinearStage`, `Table`, `Camera`, `TimingController`, and `EmissionSpectrometer` (the graduated crystal-analyzer emission-spectrometer Family, here on its fourth sighting). **No new catalog Family graduated here**, the same finding as LCLS-MFX. Loose families reused from sibling deployments: `FluxMonitor` and `Diagnostic` (Sensor families, from I22 / 2-BM / LCLS-MFX), `Laser` (from 4-ID / LCLS-MFX, here for both the pump-probe and the alignment-reference lasers). The fixed-target / liquid-jet sample delivery presents an endstation Role and is carried with its shape deferred rather than minting a Family, mirroring LCLS-MFX and I03.
+Reused catalog Families (no new Family needed): `InsertionDevice`, `FluxMonitor`, `Shutter`, `Slit`, `Filter`, `Scintillator`, `Mirror`, `Monochromator`, `LinearStage`, `Table`, `Camera`, `TimingController`, `EmissionSpectrometer` (the graduated crystal-analyzer emission-spectrometer Family, here on its fourth sighting), and `Laser` (the graduated optical sample laser, from 4-ID / LCLS-MFX, here for both the pump-probe and the alignment-reference lasers). **No new catalog Family graduated here**, the same finding as LCLS-MFX. Loose families reused from sibling deployments: `FluxMonitor` and `Diagnostic` (Sensor families, from I22 / 2-BM / LCLS-MFX). The fixed-target / liquid-jet sample delivery presents an endstation Role and is carried with its shape deferred rather than minting a Family, mirroring LCLS-MFX and I03.
 
 ## Pending confirmations
 

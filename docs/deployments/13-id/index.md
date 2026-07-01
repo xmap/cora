@@ -16,7 +16,7 @@
 
 ## What makes 13-ID different
 
-13-ID is **CORA's first extreme-conditions deployment**, the first instrument in the fleet whose sample sits in a high-pressure environment. The fleet has modelled thermal sample environments (the graduated `TemperatureController`), magnetic ones (the graduated `Magnet`), and pump-probe lasers (the loose `Laser`), but never a high-pressure one. This is the axis the EMA scout flagged the fleet lacked.
+13-ID is **CORA's first extreme-conditions deployment**, the first instrument in the fleet whose sample sits in a high-pressure environment. The fleet has modelled thermal sample environments (the graduated `TemperatureController`), magnetic ones (the graduated `Magnet`), and pump-probe lasers (the graduated `Laser`), but never a high-pressure one. This is the axis the EMA scout flagged the fleet lacked.
 
 The sample lives in a diamond anvil cell (DAC). The anvils are squeezed by a gas membrane driven by a GE/Druck PACE5000 pneumatic controller (`13IDD_PACE5000:PC1:Setpoint` / `Pressure_RBV`); the sample is heated from both sides by two IPG YLR fibre lasers (`13IDD:Laser1` / `Laser2`, power `13IDD:US_LaserPower` / `DS_LaserPower`); and the pressure and temperature are read optically in situ (thermal-emission spectroradiometry for temperature, `13IDD:us_las_temp` / `ds_las_temp`; ruby fluorescence, Raman, and Brillouin for pressure). The X-ray probe is otherwise familiar: monochromatic powder and single-crystal diffraction read on an area detector. The novelty is entirely the sample environment.
 

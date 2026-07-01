@@ -29,7 +29,7 @@ The circle geometry (4-circle Eulerian versus 6-circle, and which motor is which
 | `Magnet_Kepco_G` | `Magnet` | Kepco-driven electromagnet; station a guess (`TOPO-3`, `MAG-1`) |
 | `TemperatureController_336/340` | `TemperatureController` | LakeShore 336 / 340 controllers at 4-ID-G; catalog Family, presents `Regulator` (`TEMP-1`) |
 | `SampleTable_B`, `SampleTable_H` | `Table` | per-station sample positioning tables |
-| `PumpProbeLaser` | `Laser` (loose) | Ventus laser at 4-ID-H; model-versus-hazard open (`SAMPLE-1`) |
+| `PumpProbeLaser` | `Laser` | Ventus laser at 4-ID-H; model-versus-hazard open (`SAMPLE-1`) |
 | `SampleSlit_B/G/H` | `Slit` | per-station sample-defining slits |
 
 The high-pressure cell controllers and the preamplifiers that read the sample signal are present in the config but not modelled in this cut (`SAMPLE-2`).

@@ -33,7 +33,7 @@ Root Asset `Bernina` (`tier = Unit`, `facility_code = psi`); sub-systems nest be
 | `OpticsScreen` | Scintillator | `SAROP21-PPRM133` | profile monitor after the optics |
 | `AttenuatorScreen` | Scintillator | `SAROP21-PPRM138` | profile monitor after the attenuator |
 | `ArrivalTimeMonitorPSEN` | **Diagnostic** | `SAROP21-PSEN135` | spectral-encoding arrival-time monitor; drift-corrects the pump-probe delay (LASER-1) |
-| `ReferenceLaser` | **Laser** | `SAROP21-OLAS134` | alignment reference laser; loose family (not the pump-probe laser) |
+| `ReferenceLaser` | **Laser** | `SAROP21-OLAS134` | alignment reference laser; binds the catalog Laser Family (not the pump-probe laser) |
 | `VerticalKBMirror` | Mirror | `SAROP21-OKBV139` | vertical KB focusing mirror |
 | `HorizontalKBMirror` | Mirror | `SAROP21-OKBH140` | horizontal KB focusing mirror |
 | `GPS_Goniometer` | Goniometer | `SARES22-GPS` | the GPS six-circle diffractometer's goniometer; the `Diffractometer` Assembly's goniometer slot (DIFF-1) |
@@ -43,12 +43,12 @@ Root Asset `Bernina` (`tier = Unit`, `facility_code = psi`); sub-systems nest be
 | `XRD_ReciprocalSpace` | PseudoAxis | (eco diffcalc; kappa-to-You) | XRD hkl pseudo-axis; the Assembly's reciprocal_space slot (DIFF-1, DIFF-2) |
 | `USDTable` | Hexapod | (eco usd_table, HexapodSymmetrie) | upstream sample / diagnostic hexapod table |
 | `SampleCamera` | Camera | `SARES20-CAMS142-C1` | below-sample view microscope; Detector Role for alignment |
-| `PumpProbeLaser` | **Laser** | `SLAAR21-LMOT` | fs optical pump-probe laser; loose family reused; fs sync is the gap (LASER-1) |
+| `PumpProbeLaser` | **Laser** | `SLAAR21-LMOT` | fs optical pump-probe laser; binds the catalog Laser Family; fs sync is the gap (LASER-1) |
 | `LaserShutter` | Shutter | `SLAAR21-LTIM01-EVR0` | pump-probe laser shutter via a SwissFEL EVR (TIMING-1) |
 | `AreaDetector` | Camera | (Jungfrau JF07T32V02 16M / JF01T03V01 1.5M) | per-shot area detector; frames flow through the sf-daq data plane (DAQ-1, DET-1, CONFIG-1) |
 | `EventTiming` | TimingController | (SwissFEL master + CTA + EVRs) | beam-synchronous event timing; trigger pattern has no typed home (TIMING-1) |
 
-Reused catalog Families (no new Family needed): `InsertionDevice`, `FluxMonitor`, `Shutter`, `Filter`, `Slit`, `Mirror`, `Monochromator`, `Scintillator`, `Goniometer`, `RotaryStage`, `PseudoAxis`, `Hexapod`, `Camera`, `TimingController`. The GPS and XRD platforms reuse the graduated `Diffractometer` **Assembly** (4-ID / 8-ID), their third and fourth bindings (DIFF-1). **No new catalog Family or Assembly is coined here**, the same finding as Alvra and LCLS-MFX. Loose families reused: `FluxMonitor` and `Diagnostic` (Sensor families), `Laser` (for both the pump-probe and alignment-reference lasers). The Staeubli sample / detector robot is deferred (ROBOT-1), not minted as a Family.
+Reused catalog Families (no new Family needed): `InsertionDevice`, `FluxMonitor`, `Shutter`, `Filter`, `Slit`, `Mirror`, `Monochromator`, `Scintillator`, `Goniometer`, `RotaryStage`, `PseudoAxis`, `Hexapod`, `Camera`, `TimingController`, and `Laser` (the graduated optical sample laser, for both the pump-probe and alignment-reference lasers). The GPS and XRD platforms reuse the graduated `Diffractometer` **Assembly** (4-ID / 8-ID), their third and fourth bindings (DIFF-1). **No new catalog Family or Assembly is coined here**, the same finding as Alvra and LCLS-MFX. Loose families reused: `FluxMonitor` and `Diagnostic` (Sensor families). The Staeubli sample / detector robot is deferred (ROBOT-1), not minted as a Family.
 
 ## Pending confirmations
 

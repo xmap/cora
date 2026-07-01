@@ -51,7 +51,7 @@
 # FluxMonitor + Diagnostic (loose); the photon single-shot spectrometer (PSSS) -> Diagnostic
 # (loose, the spectral diagnostic); Diffractometer -> Goniometer (composed in the Diffractometer
 # Assembly, DIFF-1); the DilSc Mercury iPS magnet -> catalog Magnet (graduated, further consumer, MAG-1);
-# the LakeShore 372 -> TemperatureController (graduated); the alignment laser -> loose Laser;
+# the LakeShore 372 -> TemperatureController (graduated); the alignment laser -> catalog Laser Family;
 # the Jungfrau -> Camera; the CTA sequencer / EVR -> TimingController. The swissmx fast XY
 # stage -> LinearStage; the I0 chamber slits -> Slit.
 #
@@ -174,7 +174,7 @@ aramis-optics:
     (DCCM, ODCC110), distinct from Bernina's double-crystal mono (ODCM098); it folds into Monochromator,
     and Cristallina also runs pink / SASE beam mono-out (the mono screen selects out / mono / pink)
     (MONO-1). The X-ray pulse picker is a fast single-pulse gate folded into Shutter (PULSE-1). The
-    only laser in the optics is the X-ray ALIGNMENT laser (OLAS147), a loose Laser device, NOT a
+    only laser in the optics is the X-ray ALIGNMENT laser (OLAS147), a catalog Laser Family device, NOT a
     pump-probe laser (LASER-1).
   devices:
     - name: HorizontalMirror1
@@ -260,7 +260,7 @@ aramis-optics:
       pv: "SAROP31-OLAS147"
       new: true
       confirm: true
-      note: "X-ray alignment laser (slic AlignmentLaser, an in / out mirror); a loose Laser family device. This is NOT a pump-probe laser; no SLAAR / PALM / PSEN pump-probe laser exists in the slic source (LASER-1)"
+      note: "X-ray alignment laser (slic AlignmentLaser, an in / out mirror); binds the catalog Laser Family. This is NOT a pump-probe laser; no SLAAR / PALM / PSEN pump-probe laser exists in the slic source (LASER-1)"
 
 # --- SAMPLE STAGE: the Cristallina-Q and Cristallina-MX endstations ---
 

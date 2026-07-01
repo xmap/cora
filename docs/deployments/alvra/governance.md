@@ -6,7 +6,7 @@ Alvra's principals are facility principals at the [PSI Site](../psi/index.md), n
 
 ## The pump-probe laser Clearance
 
-Alvra runs a class-4 optical laser for pump-probe. CORA carries this as a `Clearance` hazard on the experiment (a facility-issued safety permit that must be Active before laser-on work), the same posture LCLS-MFX takes for its pump-probe laser and 32-ID takes for its additive-manufacturing laser. This is distinct from whether the laser is a driven Asset: the device folds into the loose `Laser` family (the LCLS-MFX / 4-ID precedent), while the personnel-safety permit is a Clearance. The two coexist (LASER-1).
+Alvra runs a class-4 optical laser for pump-probe. CORA carries this as a `Clearance` hazard on the experiment (a facility-issued safety permit that must be Active before laser-on work), the same posture LCLS-MFX takes for its pump-probe laser and 32-ID takes for its additive-manufacturing laser. This is distinct from whether the laser is a driven Asset: the device folds into the catalog `Laser` Family (the LCLS-MFX / 4-ID precedent), while the personnel-safety permit is a Clearance. The two coexist (LASER-1).
 
 ## The PSS permit
 
