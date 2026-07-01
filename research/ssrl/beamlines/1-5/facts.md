@@ -15,7 +15,7 @@ Candidate device facts for `1-5` (SSRL beamline 1-5, X-ray scattering / diffract
 | MarCCDDetector | Camera | `BL15:MARCCD:` | MarCCD | detection | yes (confirm) |
 | DexelaDetector | Camera | `SSRL:DEX2923:` | Dexela | detection | yes |
 | FluorescenceSpectrometer | EnergyDispersiveSpectrometer | (Xspress3) | Xspress3 | detection | yes |
-| RIOAnalogIO | GenericProbe (?) | `HITP:RIO.AI0-3`, `HITP:RIO.AO1-4`, `HITP:RIO.DO00-01` | EpicsSignal (NI RIO crate) | diagnostics | yes |
+| RIOAnalogIO | GenericProbe (?) | `HITP:RIO.AI0-3`, `HITP:RIO.AO1-4`, `HITP:RIO.DO00-01` | EpicsSignal (NI RIO crate) | source | yes |
 
 Device-level handles read verbatim from source: the `HiTpStage` MotorBundle, `PilatusDetector("BL15:PILATUS1M:")`, `MarCCD("BL15:MARCCD:")`, `Dexela("SSRL:DEX2923:")`, the `HITP:RIO` crate channels.
 

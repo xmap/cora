@@ -12,9 +12,9 @@ Asset granularity: one row per stage / assembly, device-level PV prefix, dodal c
 | Device | Suggested family | PV prefix | dodal class | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- |
 | Goniometer | Goniometer (?) | `BL02J-MO-` (x=`SAMP-01:X`, y=`GONJK-01:HEIGHT`, z=`SAMP-01:Z`, omega=`SAMP-01:OMEGA`) | XYZWrappedOmegaStage | sample | yes |
-| DCM | Monochromator | `BL02J-MO-DCM-01:` | DoubleCrystalMonochromatorBase | optics | yes |
-| Attenuator | Filter | `BL02J-OP-ATTN-01:` | EnumFilterAttenuator | optics | yes |
-| Slits | Slit | (Slits) | Slits | optics | yes |
+| DCM | Monochromator | `BL02J-MO-DCM-01:` | DoubleCrystalMonochromatorBase | source | yes |
+| Attenuator | Filter | `BL02J-OP-ATTN-01:` | EnumFilterAttenuator | source | yes |
+| Slits | Slit | (Slits) | Slits | source | yes |
 | EigerDetector | Camera | `BL02J-EA-EIGER-01:` | EigerDetector | detection | yes |
 | Flux | FluxMonitor | `BL02J-EA-FLUX-01:` | Flux | detection | yes |
 | Zebra | TimingController (?) | `BL02J-EA-ZEBRA-01:` | Zebra (+ ZebraFastGridScanTwoD) | detection | yes |

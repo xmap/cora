@@ -2,11 +2,11 @@
 # NOT authoritative. DELIBERATELY PARTIAL: the public dodal module carries only DCM + undulator; the
 # surface-diffraction diffractometer + detector are absent (DIFF-1/DET-1), not invented. PVs verified verbatim.
 
-beamline: {name: I07, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: I07, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: I07, facility_code: diamond, confirm: single-beamline enclosure; PV root BL07I (env-resolved)}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: DCM, family: Monochromator, pv: "BL07I-MO-DCM-01:", new: true, confirm: "i07 DCM (two PV bases: motion BL07I-MO-DCM-01: + diagnostic BL07I-DI-DCM-01:); Monochromator (catalog)"}

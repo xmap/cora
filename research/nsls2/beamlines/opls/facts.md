@@ -12,14 +12,14 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
 | PhotonShutter | Shutter | `XF:12IDA-PPS:2{PSh}` | (PPS shutter, 12-ID branch 2) | 12-ID-A | source | yes |
-| Transfocator | Transfocator | `XF:12ID1-OP{CRL-Ax:` | CRL lens-stack axes | 12-ID-1 | optics | yes |
-| SharedOpticsMotors | LinearStage (?) | `XF:12ID:m65` | shared 12-ID motors (m65-m68) | 12-ID | optics | yes |
+| Transfocator | Transfocator | `XF:12ID1-OP{CRL-Ax:` | CRL lens-stack axes | 12-ID-1 | source | yes |
+| SharedOpticsMotors | LinearStage (?) | `XF:12ID:m65` | shared 12-ID motors (m65-m68) | 12-ID | source | yes |
 | SampleStage | LinearStage | `XF:12ID1-ES{Smpl-Ax:` | sample positioning | 12-ID-1 | sample | yes |
-| CrystalDeflector | Mirror (?) | `XF:12ID1-ES{XtalDfl-Ax:` | crystal deflector axes | 12-ID-1 | optics | yes |
+| CrystalDeflector | Mirror (?) | `XF:12ID1-ES{XtalDfl-Ax:` | crystal deflector axes | 12-ID-1 | source | yes |
 | Chiller | TemperatureController (?) | `XF:12ID1-ES{Chiller}` | sample/detector chiller | 12-ID-1 | sample | yes |
 | SAXSStage | LinearStage | `XF:12ID1-ES{SAXS-Ax:` | SAXS flight-path / stage | 12-ID-1 | detection | yes |
 | SAXSDetectorStage | LinearStage | `XF:12ID1-ES{DetSAXS-Ax:` | SAXS detector positioning | 12-ID-1 | detection | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:12IDA-BI:2{EM:BPM1}` | EM BPMs (BPM1/2 at 12-IDA, BPM3 at 12-IDB) | 12-ID-A | diagnostics | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:12IDA-BI:2{EM:BPM1}` | EM BPMs (BPM1/2 at 12-IDA, BPM3 at 12-IDB) | 12-ID-A | source | yes |
 
 Device-level prefixes read verbatim from source: `XF:12IDA-PPS:2{PSh}`, `CRL-Ax:`, the `SAXS`/`DetSAXS`/`Smpl`/`XtalDfl` endstation stages, `Chiller`, the `EM:BPM1-3` electrometer BPMs, the shared `XF:12ID:m65-68` motors.
 

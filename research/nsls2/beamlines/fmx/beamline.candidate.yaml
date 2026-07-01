@@ -3,6 +3,9 @@
 # against source (startup/*.py), zero fabrications. Do not copy into deployments/ without review.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: FMX
   facility: nsls2
   tier: Unit
@@ -11,7 +14,7 @@ enclosures:
 - {name: 17-ID-A, facility_code: nsls2, confirm: optics hutch; inferred from XF:17IDA}
 - {name: 17-ID-C, facility_code: nsls2, confirm: MX endstation; inferred from XF:17IDC}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: FrontEndShutter, family: Shutter, pv: "XF:17ID-PPS:FAMX{Sh:FE}", new: true, confirm: "front-end PPS (shared FAMX); Shutter (catalog)"}
@@ -43,4 +46,4 @@ detection:
   - {name: BeamPositionMonitor, family: GenericProbe, pv: "XF:17IDA-BI:FMX{BPM:1", new: true, confirm: "BPMs (BPM:1-4); LOOSE GenericProbe, held DIAG-1"}
   - {name: BestMonitor, family: GenericProbe, pv: "XF:17IDC-BI:FMX{Best:2}", new: true, confirm: BEST beam-stabilization monitor; LOOSE GenericProbe}
   - {name: Zebra1, family: TimingController, pv: "XF:17IDA-ES:FMX{Zeb:1}", new: true, confirm: "Zebra gating (Zeb:1-3); TimingController (catalog), confirm timing role"}
-  - {name: MotionControllerSender, family: MotionController, pv: "XF:17ID-CT:FMX{MC17:Sender}", new: true, confirm: MC17 coordinator; MotionController (catalog), confirm}
+  - {name: MotionControllerSender, family: MotionController, pv: "XF:17ID-CT:FMX{MC17:Sender}", new: true, confirm: "MC17 coordinator; MotionController (catalog), confirm"}

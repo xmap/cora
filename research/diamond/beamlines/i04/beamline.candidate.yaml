@@ -2,11 +2,11 @@
 # NOT authoritative. dodal PVs use {beamline_prefix}=BL04I (env-resolved) + literal suffix; every
 # suffix below is read verbatim from source and verified, zero fabrications.
 
-beamline: {name: I04, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: I04, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: I04, facility_code: diamond, confirm: single-beamline enclosure; PV root BL04I (env-resolved)}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: DCM, family: Monochromator, pv: "BL04I-MO-DCM-01:", new: true, confirm: "DCM (i03 shared class); Monochromator (catalog)"}

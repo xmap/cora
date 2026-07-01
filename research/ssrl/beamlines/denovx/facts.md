@@ -12,7 +12,7 @@ Candidate device facts for `denovx` (SSRL DeNovX endstation, transmission X-ray 
 | CassetteStage | LinearStage | `TXRD:IMS:MOTOR1` (cx), `TXRD:IMS:MOTOR2` (cy) | cassetteStage(MotorBundle) of EpicsMotor | sample | yes |
 | DetectorZStage | LinearStage | `DETZ:IMS:MOTOR1` (detz) | EpicsMotor | detection | yes |
 | DexelaDetector | Camera | `SSRL:DEX2923:` | Dexela | detection | yes |
-| RIOAnalogIO | GenericProbe (?) | `TXRD:RIO.AI0-3`, `TXRD:RIO.AO0`, `TXRD:RIO.DO01/08-11` | EpicsSignal (NI RIO crate) | diagnostics | yes |
+| RIOAnalogIO | GenericProbe (?) | `TXRD:RIO.AI0-3`, `TXRD:RIO.AO0`, `TXRD:RIO.DO01/08-11` | EpicsSignal (NI RIO crate) | source | yes |
 
 Device-level handles read verbatim from source: `cassetteStage` (`TXRD:IMS:MOTOR1/2`), the detector-Z motor (`DETZ:IMS:MOTOR1`), `Dexela("SSRL:DEX2923:")`, the `TXRD:RIO` crate channels.
 

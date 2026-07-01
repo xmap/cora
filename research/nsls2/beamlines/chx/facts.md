@@ -10,13 +10,13 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | --- | --- | --- | --- | --- | --- | --- |
 | FrontEndShutter | Shutter | `XF:11ID-PPS{Sh:FE}` | (PPS shutter) | 11-ID-A | source | yes |
 | PhotonShutter | Shutter | `XF:11IDA-PPS{PSh}` | (PPS shutter) | 11-ID-A | source | yes |
-| Monochromator | Monochromator | `XF:11IDA-OP{Mono:DCM` | Si DCM (coherent beam) | 11-ID-A | optics | yes |
-| MultilayerMono | Monochromator | `XF:11IDA-OP{Mono:DMM` | double-multilayer mono (higher flux mode) | 11-ID-A | optics | yes |
-| HorizontalDeflectingMirror | Mirror | `XF:11IDA-OP{Mir:HDM` | pitch=`-Ax:P}Pos-I`; jacks (HDM) | 11-ID-A | optics | yes |
-| Transfocator | Transfocator | `XF:11IDA-OP{Lens:` | CRL lens stack | 11-ID-A | optics | yes |
-| Filter | Filter | `XF:11IDA-OP{Flt:1-Ax:` | y=`Y}Mtr` | 11-ID-A | optics | yes |
-| MonoBeamSlit | Slit | `XF:11IDA-OP{Slt:MB` | blade axes | 11-ID-A | optics | yes |
-| PinkBeamSlit | Slit | `XF:11IDA-OP{Slt:PB` | blade axes | 11-ID-A | optics | yes |
+| Monochromator | Monochromator | `XF:11IDA-OP{Mono:DCM` | Si DCM (coherent beam) | 11-ID-A | source | yes |
+| MultilayerMono | Monochromator | `XF:11IDA-OP{Mono:DMM` | double-multilayer mono (higher flux mode) | 11-ID-A | source | yes |
+| HorizontalDeflectingMirror | Mirror | `XF:11IDA-OP{Mir:HDM` | pitch=`-Ax:P}Pos-I`; jacks (HDM) | 11-ID-A | source | yes |
+| Transfocator | Transfocator | `XF:11IDA-OP{Lens:` | CRL lens stack | 11-ID-A | source | yes |
+| Filter | Filter | `XF:11IDA-OP{Flt:1-Ax:` | y=`Y}Mtr` | 11-ID-A | source | yes |
+| MonoBeamSlit | Slit | `XF:11IDA-OP{Slt:MB` | blade axes | 11-ID-A | source | yes |
+| PinkBeamSlit | Slit | `XF:11IDA-OP{Slt:PB` | blade axes | 11-ID-A | source | yes |
 | Diffractometer | Diffractometer (?) | `XF:11IDB-ES{Dif` | xh=`-Ax:XH}Mtr`; zh=`-Ax:ZH}Mtr` | 11-ID-B | sample | yes |
 | SAXSTable | Table | `XF:11IDB-ES{Tbl:SAXS-Ax:` | m1/m2/x1/x2 | 11-ID-B | detection | yes |
 | SampleBeamStop | BeamStop | `XF:11IDB-OP{BS:Samp` | x=`-Ax:X}Mtr`; y=`-Ax:Y}Mtr` | 11-ID-B | sample | yes |
@@ -29,8 +29,8 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | FluorescenceSpectrometer | EnergyDispersiveSpectrometer | `XF:11IDB-ES{Xsp:1}:` | Xspress3 | 11-ID-B | detection | yes |
 | ScalerCounter | GenericProbe (?) | `XF:11IDB-ES{Sclr:1}` | scaler channels | 11-ID-B | detection | yes |
 | Zebra | TimingController (?) | `XF:11IDB-ES{Zebra}:` | fly-scan / detector gating | 11-ID-B | detection | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:11IDA-BI{Bpm:1` | beam position cam/monitor | 11-ID-A | diagnostics | yes |
-| AH401BElectrometer | FluxMonitor (?) | `XF:11IDA-BI{AH401B}` | 4-channel electrometer | 11-ID-A | diagnostics | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:11IDA-BI{Bpm:1` | beam position cam/monitor | 11-ID-A | source | yes |
+| AH401BElectrometer | FluxMonitor (?) | `XF:11IDA-BI{AH401B}` | 4-channel electrometer | 11-ID-A | source | yes |
 
 Device-level prefixes read verbatim from source (`Mono:DCM`/`Mono:DMM`, `Mir:HDM`, `Lens:`, the `LINKAM` block, `Pmp:` syringe commands, the three Eiger dets, `Zebra`, `Dif`, `Tbl:SAXS`).
 

@@ -1,11 +1,11 @@
 # CANDIDATE beamline descriptor: hand-read from tangkong/SSRL-2-2 public bluesky profile, NOT
 # authoritative. Real BL22: PVs (properly customized profile). Verified verbatim, zero fabrications.
 
-beamline: {name: "2-2", facility: ssrl, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: "2-2", facility: ssrl, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: "2-2", facility_code: ssrl, confirm: "SSRL BL2-2 continuous XAS; real BL22: PV root"}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: ScanMaster, family: TimingController, pv: "BL22:SCAN:MASTER", new: true, confirm: "continuous-XAS energy-trajectory master; TimingController (catalog), confirm; drives the scanning mono (energy_scan Capability candidate)"}

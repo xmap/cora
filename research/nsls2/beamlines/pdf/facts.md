@@ -13,13 +13,13 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | --- | --- | --- | --- | --- | --- | --- |
 | ExperimentShutter | Shutter | `XF:28IDC-ES:1{Sh:Exp}` | Cmd-Cmd (exposure shutter) | 28-ID-C | source | yes |
 | FastShutter | Shutter | `XF:28IDC-ES:1{Sh2:Exp-Ax:` | motorized fast shutter | 28-ID-C | source | yes |
-| Monochromator | Monochromator | `XF:28ID1A-OP{Mono:SBM-Ax:` | sagittal bent mono axes | 28-ID-1-A | optics | yes |
-| VerticalFocusingMirror | Mirror | `XF:28ID1A-OP{Mir:VFM-Ax:` | VFM jack/bend axes | 28-ID-1-A | optics | yes |
-| WhiteBeamSlit0 | Slit | `XF:28ID1A-OP{Slt:0-Ax:` | blade axes | 28-ID-1-A | optics | yes |
-| WhiteBeamSlit1 | Slit | `XF:28ID1A-OP{Slt:1-Ax:` | blade axes | 28-ID-1-A | optics | yes |
-| EndstationSlit2 | Slit | `XF:28ID1B-OP{Slt:2-Ax:` | blade axes | 28-ID-1-B | optics | yes |
-| AntiScatterSlit | Slit | `XF:28ID1B-OP{Slt:AS-Ax:` | anti-scatter slit | 28-ID-1-B | optics | yes |
-| Filter | Filter | `XF:28ID1B-OP{Fltr:` | filter/attenuator | 28-ID-1-B | optics | yes |
+| Monochromator | Monochromator | `XF:28ID1A-OP{Mono:SBM-Ax:` | sagittal bent mono axes | 28-ID-1-A | source | yes |
+| VerticalFocusingMirror | Mirror | `XF:28ID1A-OP{Mir:VFM-Ax:` | VFM jack/bend axes | 28-ID-1-A | source | yes |
+| WhiteBeamSlit0 | Slit | `XF:28ID1A-OP{Slt:0-Ax:` | blade axes | 28-ID-1-A | source | yes |
+| WhiteBeamSlit1 | Slit | `XF:28ID1A-OP{Slt:1-Ax:` | blade axes | 28-ID-1-A | source | yes |
+| EndstationSlit2 | Slit | `XF:28ID1B-OP{Slt:2-Ax:` | blade axes | 28-ID-1-B | source | yes |
+| AntiScatterSlit | Slit | `XF:28ID1B-OP{Slt:AS-Ax:` | anti-scatter slit | 28-ID-1-B | source | yes |
+| Filter | Filter | `XF:28ID1B-OP{Fltr:` | filter/attenuator | 28-ID-1-B | source | yes |
 | SampleStage | LinearStage | `XF:28ID1B-ES{Stg:Smpl-Ax:` | x/y/z/ry | 28-ID-1-B | sample | yes |
 | SampleTable | Table | `XF:28ID1B-ES:1{Sample:Tbl-Ax:` | y1 + table axes | 28-ID-1-B | sample | yes |
 | SampleChanger | Positioner (?) | `XF:28ID1B-ES{Smpl:Chngr-Ax:` | yrot (robot/changer) | 28-ID-1-B | sample | yes |

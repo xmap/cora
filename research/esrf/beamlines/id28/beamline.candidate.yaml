@@ -7,6 +7,9 @@
 # discrepancies are flagged in facts.md (the side-station devices and the analyzer Family).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: ID28
   facility: esrf
   tier: Unit
@@ -43,7 +46,7 @@ source:
     new: true
     confirm: 'BLISS ESRF_Undulator; u22gap=IVU22a_GAP, u133gap=IVU13-3c_GAP (11.1-300 mm); period/segment SRC-1; family InsertionDevice (catalog)'
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: Premonochromator
@@ -130,7 +133,7 @@ sample:
     confirm: 'LakeShore 340 10K displex (gpib pad 12, Tango id28/regulation/lakeshore340_*, loop ls340_loop1); alternatives Oxford 700 (rfc2217://lid281:28326) + nanodac gas blower (172.29.46.36); family TemperatureController (catalog, Regulator) (TEMP-1)'
     source_class: LakeShore340
 diagnostics:
-  stage: diagnostics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: BeamViewer

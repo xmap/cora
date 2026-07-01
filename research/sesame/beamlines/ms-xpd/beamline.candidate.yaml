@@ -1,7 +1,7 @@
 # CANDIDATE beamline descriptor: hand-read from SESAME-Synchrotron/MS-XPD-ScanTool, NOT authoritative.
 # EPICS P prefix MS:. PVs verified verbatim, zero fabrications.
 
-beamline: {name: ms-xpd, facility: sesame, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: ms-xpd, facility: sesame, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: ID09, facility_code: sesame, confirm: "MS/XPD powder diffraction, insertion device; EPICS prefix MS:"}
 sample:

@@ -11,13 +11,13 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| Monochromator | Monochromator | `XF:04IDA-OP:1{Mono:DCM` | DCM axes | 4-ID-A | optics | yes |
-| HorizontalFocusingMirror | Mirror | `XF:04IDA-OP:1{Mir:HFM` | HFM | 4-ID-A | optics | yes |
-| VerticalFocusingMirror | Mirror | `XF:04IDA-OP:1{Mir:VFM` | VFM | 4-ID-A | optics | yes |
-| DoubleHighResMirror | Mirror | `XF:04IDB-OP:1{Mir:DHRM` | DHRM | 4-ID-B | optics | yes |
+| Monochromator | Monochromator | `XF:04IDA-OP:1{Mono:DCM` | DCM axes | 4-ID-A | source | yes |
+| HorizontalFocusingMirror | Mirror | `XF:04IDA-OP:1{Mir:HFM` | HFM | 4-ID-A | source | yes |
+| VerticalFocusingMirror | Mirror | `XF:04IDA-OP:1{Mir:VFM` | VFM | 4-ID-A | source | yes |
+| DoubleHighResMirror | Mirror | `XF:04IDB-OP:1{Mir:DHRM` | DHRM | 4-ID-B | source | yes |
 | Diffractometer | Diffractometer (?) | `XF:04IDD-ES:1{Dif:ISD-Ax:` | th + zeta only (partial diffractometer stub) | 4-ID-D | sample | yes |
 | Eiger1M | Camera | `XF:04IDD-ES{Det:Eig1M}` | Eiger 1M area detector | 4-ID-D | detection | yes |
-| BeamPositionMonitor3 | GenericProbe (?) | `XF:04IDB-BI:1{BPM:3-` | BPM | 4-ID-B | diagnostics | yes |
+| BeamPositionMonitor3 | GenericProbe (?) | `XF:04IDB-BI:1{BPM:3-` | BPM | 4-ID-B | source | yes |
 
 Device-level prefixes read verbatim from source: `Mono:DCM`, `Mir:HFM/VFM/DHRM`, `Dif:ISD` (th/zeta), `Det:Eig1M`.
 

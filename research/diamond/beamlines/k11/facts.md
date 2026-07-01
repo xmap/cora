@@ -11,8 +11,8 @@ Asset granularity: one row per stage / assembly, device-level PV prefix, dodal c
 
 | Device | Suggested family | PV prefix | dodal class | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- |
-| KBMirrorX | Mirror | `K11-OP-KBM-01:CS:X` | Motor (KB coordinate-system X) | optics | yes |
-| KBMirrorY | Mirror | `K11-OP-KBM-01:CS:Y` | Motor (KB coordinate-system Y) | optics | yes |
+| KBMirrorX | Mirror | `K11-OP-KBM-01:CS:X` | Motor (KB coordinate-system X) | source | yes |
+| KBMirrorY | Mirror | `K11-OP-KBM-01:CS:Y` | Motor (KB coordinate-system Y) | source | yes |
 
 Device-level prefixes read verbatim from source: `Motor("{beamline_prefix}-OP-KBM-01:CS:X")` and `Motor("{beamline_prefix}-OP-KBM-01:CS:Y")`. The two are the X and Y coordinate-system axes of a single KB mirror system (`KBM-01`).
 

@@ -4,6 +4,9 @@
 # new Family, the naming-r3 gate. Do not copy into deployments/ without review.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: P11
   facility: petra-iii
   tier: Unit

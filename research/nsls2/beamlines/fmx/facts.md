@@ -14,11 +14,11 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | FrontEndShutter | Shutter | `XF:17ID-PPS:FAMX{Sh:FE}` | (PPS shutter, shared FAMX front end) | 17-ID-A | source | yes |
 | PhotonShutter | Shutter | `XF:17IDA-PPS:FMX{PSh}` | (PPS shutter) | 17-ID-A | source | yes |
 | FastShutter | Shutter | `XF:17IDC-ES:FMX{Sht:1` | endstation fast shutter | 17-ID-C | source | yes |
-| Monochromator | Monochromator | `XF:17IDA-OP:FMX{Mono:DCM` | DCM axes | 17-ID-A | optics | yes |
-| HorizontalFocusingMirror | Mirror | `XF:17IDA-OP:FMX{Mir:HFM-PS}` | HFM bimorph (piezo segments) | 17-ID-A | optics | yes |
-| WhiteBeamSlit | Slit | `XF:17IDA-OP:FMX{Slt:1` | blade axes | 17-ID-A | optics | yes |
-| CRLAttenuator | Filter | `XF:17IDC-OP:FMX{Attn:BCU` | BCU attenuator (CRL/transmission LUT) | 17-ID-C | optics | yes |
-| Collimator | Collimator | `XF:17IDC-ES:FMX{Colli:1` | beam-defining collimator | 17-ID-C | optics | yes |
+| Monochromator | Monochromator | `XF:17IDA-OP:FMX{Mono:DCM` | DCM axes | 17-ID-A | source | yes |
+| HorizontalFocusingMirror | Mirror | `XF:17IDA-OP:FMX{Mir:HFM-PS}` | HFM bimorph (piezo segments) | 17-ID-A | source | yes |
+| WhiteBeamSlit | Slit | `XF:17IDA-OP:FMX{Slt:1` | blade axes | 17-ID-A | source | yes |
+| CRLAttenuator | Filter | `XF:17IDC-OP:FMX{Attn:BCU` | BCU attenuator (CRL/transmission LUT) | 17-ID-C | source | yes |
+| Collimator | Collimator | `XF:17IDC-ES:FMX{Colli:1` | beam-defining collimator | 17-ID-C | source | yes |
 | Goniometer | Goniometer | `XF:17IDC-ES:FMX{Gon:1` | single-omega gonio (+ `Gon:1-Sht` shutter, `Gon:1-Vec` vector) | 17-ID-C | sample | yes |
 | GoniometerStage2 | LinearStage | `XF:17IDC-ES:FMX{Gon:2-Ax:` | secondary gonio stage | 17-ID-C | sample | yes |
 | ChipScanner | LinearStage | `XF:17IDC-ES:FMX{Chip:1-Ax:` | fixed-target serial chip raster | 17-ID-C | sample | yes |
@@ -29,8 +29,8 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | MerlinDetector | Camera | `XF:17IDC-ES:FMX{Det:Mer}` | Merlin (serial/fast) | 17-ID-C | detection | yes |
 | BeamStop | BeamStop | `XF:17IDC-ES:FMX{BS:1` | beamstop axes | 17-ID-C | detection | yes |
 | DXPController | GenericProbe (?) | `XF:17IDC-BI:FMX{Keith:1}` | Keithley / DXP front-end | 17-ID-C | detection | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:17IDA-BI:FMX{BPM:1` | BPMs (BPM:1-4) | 17-ID-A | diagnostics | yes |
-| BestMonitor | GenericProbe (?) | `XF:17IDC-BI:FMX{Best:2}` | BEST beam-stabilization monitor | 17-ID-C | diagnostics | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:17IDA-BI:FMX{BPM:1` | BPMs (BPM:1-4) | 17-ID-A | source | yes |
+| BestMonitor | GenericProbe (?) | `XF:17IDC-BI:FMX{Best:2}` | BEST beam-stabilization monitor | 17-ID-C | source | yes |
 | Zebra1 | TimingController (?) | `XF:17IDA-ES:FMX{Zeb:1}` | Zebra gating (Zeb:1-3) | 17-ID-A | detection | yes |
 | MotionControllerSender | MotionController (?) | `XF:17ID-CT:FMX{MC17:Sender}` | MC17 motion-controller coordinator | 17-ID | sample | yes |
 

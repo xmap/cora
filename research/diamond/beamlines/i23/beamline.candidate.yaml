@@ -1,7 +1,7 @@
 # CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (src/dodal/beamlines/i23.py),
 # NOT authoritative. PVs use {beamline_prefix}=BL23I (env-resolved) + literal suffix, verified verbatim.
 
-beamline: {name: I23, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: I23, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: I23, facility_code: diamond, confirm: long-wavelength in-vacuum MX; PV root BL23I (env-resolved)}
 sample:

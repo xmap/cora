@@ -13,22 +13,22 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | --- | --- | --- | --- | --- | --- | --- |
 | PhotonShutter | Shutter | `XF:17IDA-OP:AMX{Slt:0` | (and front-end shutter shared FAMX) | 17-ID-A | source | yes |
 | FastShutter | Shutter | `XF:17IDB-ES:AMX{Sht:1` | endstation fast shutter | 17-ID-B | source | yes |
-| Monochromator | Monochromator | `XF:17IDA-OP:AMX{Mono:DCM` | DCM axes (+ dflux, CorrectDCM feedback) | 17-ID-A | optics | yes |
-| ToroidalDeflectingMirror | Mirror | `XF:17IDA-OP:AMX{Mir:TDM` | TDM axes | 17-ID-A | optics | yes |
-| WhiteBeamSlit0 | Slit | `XF:17IDA-OP:AMX{Slt:0` | blade axes | 17-ID-A | optics | yes |
-| WhiteBeamSlit1 | Slit | `XF:17IDA-OP:AMX{Slt:1` | blade axes | 17-ID-A | optics | yes |
-| CRLAttenuator | Filter | `XF:17IDB-OP:AMX{Attn:BCU` | BCU attenuator (transmission LUT) | 17-ID-B | optics | yes |
-| KBMirror | Mirror | `XF:17IDB-ES:AMX{Mir:1` | KB refocus mirror | 17-ID-B | optics | yes |
-| Collimator | Collimator | `XF:17IDB-ES:AMX{Colli:1` | beam-defining collimator | 17-ID-B | optics | yes |
+| Monochromator | Monochromator | `XF:17IDA-OP:AMX{Mono:DCM` | DCM axes (+ dflux, CorrectDCM feedback) | 17-ID-A | source | yes |
+| ToroidalDeflectingMirror | Mirror | `XF:17IDA-OP:AMX{Mir:TDM` | TDM axes | 17-ID-A | source | yes |
+| WhiteBeamSlit0 | Slit | `XF:17IDA-OP:AMX{Slt:0` | blade axes | 17-ID-A | source | yes |
+| WhiteBeamSlit1 | Slit | `XF:17IDA-OP:AMX{Slt:1` | blade axes | 17-ID-A | source | yes |
+| CRLAttenuator | Filter | `XF:17IDB-OP:AMX{Attn:BCU` | BCU attenuator (transmission LUT) | 17-ID-B | source | yes |
+| KBMirror | Mirror | `XF:17IDB-ES:AMX{Mir:1` | KB refocus mirror | 17-ID-B | source | yes |
+| Collimator | Collimator | `XF:17IDB-ES:AMX{Colli:1` | beam-defining collimator | 17-ID-B | source | yes |
 | Goniometer | Goniometer | `XF:17IDB-ES:AMX{Gon:1` | single-omega goniometer | 17-ID-B | sample | yes |
 | SampleMicroscope | GenericProbe (?) | `XF:17IDB-ES:AMX{Mic:1` | on-axis sample microscope | 17-ID-B | sample | yes |
 | MerlinDetector | Camera | `XF:17IDB-ES:AMX{Det:Mer}` | Merlin detector | 17-ID-B | detection | yes |
 | BeamStop | BeamStop | `XF:17IDB-ES:AMX{BS:1` | beamstop axes | 17-ID-B | detection | yes |
 | EMBLDetector | GenericProbe (?) | `XF:17IDB-ES:AMX{EMBL}` | EMBL beam-conditioning / detection unit | 17-ID-B | detection | yes |
 | DXPController | GenericProbe (?) | `XF:17IDB-BI:AMX{Keith:1}` | Keithley/DXP front-end | 17-ID-B | detection | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:17IDA-BI:AMX{BPM:1` | BPMs (BPM:1-3) | 17-ID-A | diagnostics | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:17IDA-BI:AMX{BPM:1` | BPMs (BPM:1-3) | 17-ID-A | source | yes |
 | Zebra1 | TimingController (?) | `XF:17IDB-ES:AMX{Zeb:1}` | Zebra gating (Zeb:1-2) | 17-ID-B | detection | yes |
-| BestMonitor | GenericProbe (?) | `XF:16IDB-CT{Best}` | BEST beam-stabilization monitor (shared) | 16-ID | diagnostics | yes |
+| BestMonitor | GenericProbe (?) | `XF:16IDB-CT{Best}` | BEST beam-stabilization monitor (shared) | 16-ID | source | yes |
 
 Device-level prefixes read verbatim from source: `Mono:DCM` (+ `CorrectDCM` feedback), `Mir:TDM`, `Attn:BCU`, `Gon:1` goniometer, `Colli:1`, `Det:Mer`, the Zebra pair. Robot is `26-robot.py` (sample exchange).
 

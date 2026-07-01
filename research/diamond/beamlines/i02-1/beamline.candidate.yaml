@@ -1,11 +1,11 @@
 # CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (src/dodal/beamlines/i02_1.py),
 # NOT authoritative. VMXm = I02J, beamline_prefix=BL02J (env-resolved). PVs verified verbatim.
 
-beamline: {name: I02-1, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: I02-1, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: I02-1, facility_code: diamond, confirm: VMXm microfocus MX (I02J); PV root BL02J (env-resolved)}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: DCM, family: Monochromator, pv: "BL02J-MO-DCM-01:", new: true, confirm: "DoubleCrystalMonochromatorBase; Monochromator (catalog)"}

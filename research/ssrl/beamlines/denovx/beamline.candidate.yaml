@@ -1,7 +1,7 @@
 # CANDIDATE beamline descriptor: hand-read from tangkong/SSRL-DeNovX public bluesky profile, NOT
 # authoritative. Real TXRD:/DETZ: PVs (well-customized). Verified verbatim, zero fabrications.
 
-beamline: {name: denovx, facility: ssrl, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: denovx, facility: ssrl, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: DeNovX, facility_code: ssrl, confirm: "SSRL DeNovX transmission-XRD endstation; host beamline/sector DENOVX-1; real TXRD: PV root"}
 sample:

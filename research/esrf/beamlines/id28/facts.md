@@ -15,22 +15,22 @@ Asset granularity: one row per stage / assembly, the device-level BLISS handle t
 | FrontEndShutter | Shutter | `acs.esrf.fr:10000/fe/master/id28` (BLISS `fe`, TangoShutter FrontEnd) | (PPS-fed front-end shutter) | oh1 | source | yes |
 | BeamShutters | Shutter | `id28/v-bsh/0`, `id28/v-bsh/1`, `id28/v-bsh/2` (BLISS `bsh1`/`bsh2`/`bsh3`, TangoShutter) | (three vacuum beam shutters) | oh1 | source | yes |
 | Undulator | InsertionDevice | `//acs:10000/id/master/id28` (BLISS `ESRF_Undulator`) | u22gap=`IVU22a_GAP` (11.1-300 mm); u133gap=`IVU13-3c_GAP` (11.1-300 mm) | oh1 | source | yes |
-| Premonochromator | Monochromator | (BLISS session motors `mono`, `pi1`, `pmscr`; no standalone controller yml in config) | mono=premono angle; pi1=second-xtal correction; pmscr=screen | oh1 | optics | yes |
-| Postmonochromator | Monochromator | (BLISS session motors `pmth`/`pmchi`/`pmy`/`pmz`/`pi2`/`pmono2`/`pmscr2`; no standalone controller yml) | pmth=theta; pmchi=chi; pmy/pmz=translations; pi2=fine rotation; pmono2=second-xtal | oh2 | optics | yes |
-| Monochromator | Monochromator | `e518id28` (tcp) (BLISS `PI_E518`, `oh3/main_mono_pi_e518.yml`) | pimth=`channel 1` (enc `pimth_enc`); pimchi=`channel 2` (enc `pimchi_enc`); session reals mth/mchi | oh3 | optics | yes |
-| BeamEnergy | PseudoAxis | `enet://gpibid28c` pad 3 (BLISS `F700`, ASL F700, `oh3/asl_f700.yml`) | monot=setpoint (7-23 C); deltae=energy (kev, +/-800); LAMBDA 0.5226; T0 22.854 | oh3 | optics | yes |
-| HorizontalFocusingMirror | Mirror | BLISS `hfm_ctrl` (HFM, `oh3/hfm.yml`) | real hfmb1/hfmb2 (benders); hfmz1/hfmz2 (z); hfmth (rotation); hfmtz (tiltz); calc hfmz/hfmy/hfmtx/hfmb | oh3 | optics | yes |
-| VerticalFocusingMirror | Mirror | BLISS `vfm_ctrl` (VFM, `oh3/vfm.yml`) | real vfmb1/vfmb2 (benders); vfmz1/vfmz2 (z); calc vfmz/vfmb | oh3 | optics | yes |
-| BeamPositionMonitor | BeamPositionMonitor | `tango://id28/elettra/oh2` (BLISS `elettra_bpm_oh2`, Elettra) | ebpmx/ebpmy (position); ebpmc1..ebpmc4 (quadrant currents); ebpmct (total) | oh2 | diagnostics | yes |
-| PrimarySlits | Slit | BLISS `slits_ph` / `slits_pv` (`slits/slit_phg.yml`, `slits/slit_pvg.yml`) | real pr/pl (h) on `iceid281`, pu/pd (v); calc phg/pho, pvg/pvo | oh3 | optics | yes |
-| MonoSlit | Slit | BLISS `slits_mx` (`slits/slit_mxgap.yml`) | real mxr/mxl; calc mxgap/mxoff | oh3 | optics | yes |
+| Premonochromator | Monochromator | (BLISS session motors `mono`, `pi1`, `pmscr`; no standalone controller yml in config) | mono=premono angle; pi1=second-xtal correction; pmscr=screen | oh1 | source | yes |
+| Postmonochromator | Monochromator | (BLISS session motors `pmth`/`pmchi`/`pmy`/`pmz`/`pi2`/`pmono2`/`pmscr2`; no standalone controller yml) | pmth=theta; pmchi=chi; pmy/pmz=translations; pi2=fine rotation; pmono2=second-xtal | oh2 | source | yes |
+| Monochromator | Monochromator | `e518id28` (tcp) (BLISS `PI_E518`, `oh3/main_mono_pi_e518.yml`) | pimth=`channel 1` (enc `pimth_enc`); pimchi=`channel 2` (enc `pimchi_enc`); session reals mth/mchi | oh3 | source | yes |
+| BeamEnergy | PseudoAxis | `enet://gpibid28c` pad 3 (BLISS `F700`, ASL F700, `oh3/asl_f700.yml`) | monot=setpoint (7-23 C); deltae=energy (kev, +/-800); LAMBDA 0.5226; T0 22.854 | oh3 | source | yes |
+| HorizontalFocusingMirror | Mirror | BLISS `hfm_ctrl` (HFM, `oh3/hfm.yml`) | real hfmb1/hfmb2 (benders); hfmz1/hfmz2 (z); hfmth (rotation); hfmtz (tiltz); calc hfmz/hfmy/hfmtx/hfmb | oh3 | source | yes |
+| VerticalFocusingMirror | Mirror | BLISS `vfm_ctrl` (VFM, `oh3/vfm.yml`) | real vfmb1/vfmb2 (benders); vfmz1/vfmz2 (z); calc vfmz/vfmb | oh3 | source | yes |
+| BeamPositionMonitor | BeamPositionMonitor | `tango://id28/elettra/oh2` (BLISS `elettra_bpm_oh2`, Elettra) | ebpmx/ebpmy (position); ebpmc1..ebpmc4 (quadrant currents); ebpmct (total) | oh2 | source | yes |
+| PrimarySlits | Slit | BLISS `slits_ph` / `slits_pv` (`slits/slit_phg.yml`, `slits/slit_pvg.yml`) | real pr/pl (h) on `iceid281`, pu/pd (v); calc phg/pho, pvg/pvo | oh3 | source | yes |
+| MonoSlit | Slit | BLISS `slits_mx` (`slits/slit_mxgap.yml`) | real mxr/mxl; calc mxgap/mxoff | oh3 | source | yes |
 | SampleStage | Goniometer (?) | `iceid282` (IcePAP host) | sax=`addr 52`; say=`addr 53`; saz=`addr 54`; th=`addr 23`; sphi=`addr 26`; chi=`addr 48`; tthm=`addr 24`; ty=`addr 22`; session adth/ovrot/tiltz | eh1 | sample | yes |
 | SideStationStage | LinearStage | `iceid285` (IcePAP host, `eh1_ss/motors/iceid285.yml`) | phi=`address 4`; omega=`address 6`; sz=`address 12` | eh1_ss | sample | yes |
 | SmarActStage | LinearStage | `172.29.46.81` (tcp) (BLISS `smaract1`, SmarAct_MCS2) | Gx=`channel 0`; Gy=`channel 1` (1 nano-degree step) | eh1_ss | sample | yes |
 | SampleSlits | Slit | BLISS `slits_sh` / `slits_sv` (`slits/slit_shg.yml`, `slits/slit_svg.yml`) | real sr/sl (h), su/sd (v); calc shg/sho, svg/svo; session i1shg/i1sho/i1svg/i1svo | eh1 | sample | yes |
-| Transfocator | Transfocator | `wcid28e` (controller_ip) (BLISS `tf`, Transfocator, `eh1_ss/tf.yml`) | layout `P L L L L L L L P` (8 lenslets + 2 pinholes) | eh1_ss | optics | yes |
-| BeamViewer | Screen (?) | `wcid28f` (modbustcp) (BLISS `mbv`, EBV, `eh1_ss/mbv.yml`); camera `id28/limaccds/mbv` | diode counter; single_model false; has_foil false | eh1_ss | diagnostics | yes |
-| BPMPositioner | LinearStage | `amc100id281` (host) (BLISS `AMC100`, attocube, `eh1/attocube_amc100_bpmxy.yml`) | bpm_y=`channel 1`; bpm_z=`channel 2` (ECSx5050) | eh1 | diagnostics | yes |
+| Transfocator | Transfocator | `wcid28e` (controller_ip) (BLISS `tf`, Transfocator, `eh1_ss/tf.yml`) | layout `P L L L L L L L P` (8 lenslets + 2 pinholes) | eh1_ss | source | yes |
+| BeamViewer | Screen (?) | `wcid28f` (modbustcp) (BLISS `mbv`, EBV, `eh1_ss/mbv.yml`); camera `id28/limaccds/mbv` | diode counter; single_model false; has_foil false | eh1_ss | source | yes |
+| BPMPositioner | LinearStage | `amc100id281` (host) (BLISS `AMC100`, attocube, `eh1/attocube_amc100_bpmxy.yml`) | bpm_y=`channel 1`; bpm_z=`channel 2` (ECSx5050) | eh1 | source | yes |
 | EnergyAnalyzer | EnergyAnalyzer | BLISS `tth_multilayer` (TwoThetaMultilayer, `eh1/tth_multilayer.yml`) + `a2_inca`/`a3_inca`/`a4_inca` (InclinedAnalyser, `eh1/inca.yml`) | arm: real tthm, calc tth; per-crystal: achipN/athpN (real), achiN/athN (calc); cylslits a1h..a9h, a1v..a6v (`CylSlit`, radius 43.5, `slits/cylslits.yml`) | eh1 | detection | yes |
 | Detector | Camera | `id28/limaccds/basler_0` (BLISS `basler_ixs`, Lima) + `id28/limaccds/pco` (BLISS `pco`, Lima) | basler bpm counters via `id28/bpm/basler_0` (intensity/x/y/fwhm_x/fwhm_y) | eh1 | detection | yes |
 | AnalyzerCounters | GenericProbe (?) | `tcp://lid282:8909` / `:8910` / `:8911` (BLISS `P201_282_A`/`B`/`C`, CT2 P201) | deta1..deta9 (per-analyzer); izero/ione/imirr; pmoni/pomoni; detsq; iver1/iver2/ihor1/ihor2 | eh1 | detection | yes |

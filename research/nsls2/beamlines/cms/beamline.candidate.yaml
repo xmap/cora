@@ -3,6 +3,9 @@
 # against source (startup/*.py), zero fabrications. Do not copy into deployments/ without review.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: CMS
   facility: nsls2
   tier: Unit
@@ -11,7 +14,7 @@ enclosures:
 - {name: 11-BM-A, facility_code: nsls2, confirm: optics hutch; inferred from XF:11BMA}
 - {name: 11-BM-B, facility_code: nsls2, confirm: endstation hutch; inferred from XF:11BMB}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: PhotonShutter, family: Shutter, pv: "XF:11BMA-PPS{PSh}", new: true, confirm: PPS shutter; Shutter (catalog)}

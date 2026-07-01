@@ -1,7 +1,7 @@
 # CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (i05.py, i05_1.py, i05_shared.py),
 # NOT authoritative. PVs use {beamline_prefix}=BL05I (env-resolved) + literal suffix, verified verbatim.
 
-beamline: {name: I05, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: I05, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: I05, facility_code: diamond, confirm: ARPES main branch; PV root BL05I (env-resolved)}
 - {name: I05-1, facility_code: diamond, confirm: nano-ARPES branch; shares optics}
@@ -13,7 +13,7 @@ source:
   - {name: UndulatorGap, family: InsertionDevice, pv: "SR05I-MO-SERVC-01:", new: true, confirm: "EPU gap; InsertionDevice (catalog)"}
   - {name: UndulatorPhase, family: InsertionDevice, pv: "SR05I-MO-SERVC-01:", new: true, confirm: "EPU locked-phase (variable polarization); InsertionDevice (catalog)"}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: PlaneGratingMono, family: GratingMonochromator, pv: "BL05I-OP-PGM-01:", new: true, confirm: "PGM; GratingMonochromator (catalog, graduated via csx); first Diamond consumer"}

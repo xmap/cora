@@ -5,6 +5,9 @@
 # verbatim against source (startup/*.py), zero fabrications.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: CHX
   facility: nsls2
   tier: Unit
@@ -31,7 +34,7 @@ source:
     new: true
     confirm: photon shutter; family Shutter (catalog)
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: Monochromator

@@ -7,6 +7,9 @@
 # per-axis leaves internally; the distinguishing leaf per Asset is confirm-pending.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: FXI
   facility: nsls2
   tier: Unit
@@ -33,7 +36,7 @@ source:
     new: true
     confirm: 'metal-foil shutter triad MFS/PMFS/WPFS; confirm Shutter vs Filter'
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: Monochromator

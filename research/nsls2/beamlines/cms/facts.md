@@ -13,10 +13,10 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | --- | --- | --- | --- | --- | --- | --- |
 | PhotonShutter | Shutter | `XF:11BMA-PPS{PSh}` | (PPS shutter) | 11-BM-A | source | yes |
 | ExperimentShutter | Shutter | `XF:11BM-ES{Shutter}` | fast exposure shutter (+ Psh_blade1/2) | 11-BM-B | source | yes |
-| MultilayerMono | Monochromator | `XF:11BMA-OP{Mono:DMM-Ax:` | double-multilayer mono axes | 11-BM-A | optics | yes |
-| ToroidalMirror | Mirror | `XF:11BMA-OP{Mir:Tor-Ax:` | toroidal mirror axes | 11-BM-A | optics | yes |
-| WhiteBeamSlit | Slit | `XF:11BMA-OP{Slt:0` | t/b/i/o blades (Slt:0-Ax:T) | 11-BM-A | optics | yes |
-| Attenuator | Filter | `XF:11BMB-ES{ATT:1-Ax:` | attenuator axes | 11-BM-B | optics | yes |
+| MultilayerMono | Monochromator | `XF:11BMA-OP{Mono:DMM-Ax:` | double-multilayer mono axes | 11-BM-A | source | yes |
+| ToroidalMirror | Mirror | `XF:11BMA-OP{Mir:Tor-Ax:` | toroidal mirror axes | 11-BM-A | source | yes |
+| WhiteBeamSlit | Slit | `XF:11BMA-OP{Slt:0` | t/b/i/o blades (Slt:0-Ax:T) | 11-BM-A | source | yes |
+| Attenuator | Filter | `XF:11BMB-ES{ATT:1-Ax:` | attenuator axes | 11-BM-B | source | yes |
 | SampleChamber | LinearStage | `XF:11BMB-ES{Chm:Smpl-Ax:` | sample chamber stages (Smpl/Smpl2/Smpl3) | 11-BM-B | sample | yes |
 | GateChamber | LinearStage | `XF:11BMB-ES{Chm:Gate-Ax:` | gate chamber axes | 11-BM-B | sample | yes |
 | Linkam | TemperatureController | `XF:11BM-ES:{LINKAM}` | thermal stage setpoint/ramp | 11-BM-B | sample | yes |
@@ -32,7 +32,7 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | FluorescenceSpectrometer | EnergyDispersiveSpectrometer | `XF:11BM-ES{Xsp:1}` | Xspress3 | 11-BM-B | detection | yes |
 | IonChamberA | FluxMonitor | `XF:11BMA-BI{IM:1}` | ion monitor (optics) | 11-BM-A | detection | yes |
 | IonChamberB | FluxMonitor | `XF:11BMB-BI{IM:2}` | ion monitor (endstation; IM:2-5) | 11-BM-B | detection | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:11BMB-BI{BPM:1}` | beam position monitor | 11-BM-B | diagnostics | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:11BMB-BI{BPM:1}` | beam position monitor | 11-BM-B | source | yes |
 | EndstationMotionController | MotionController | `XF:11BMB-CT{MC:06}` | motion controller | 11-BM-B | sample | yes |
 
 Device-level prefixes read verbatim from source (`Mono:DMM`, `Mir:Tor`, the three `Det:PIL*` Pilatus detectors + their `Det:SAXS/WAXS/MAXS` stages, the `LINKAM` block, `Chm:Smpl` chambers, `ATT:1` attenuator, `IM:1`/`IM:2` ion monitors).

@@ -13,10 +13,10 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | --- | --- | --- | --- | --- | --- | --- |
 | FrontEndShutter | Shutter | `XF:08ID-PPS{Sh:FE}` | (PPS shutter) | 8-ID-A | source | yes |
 | PhotonShutter | Shutter | `XF:08IDA-PPS{PSh}` | (PPS shutter) | 8-ID-A | source | yes |
-| Monochromator | Monochromator | `XF:08IDA-OP{Mono:HRM` | HHM high-heat-load mono (HRM); energy trajectory fly-scan; bragg + crystal axes (class HHM) | 8-ID-A | optics | yes |
-| CollimatingMirror | Mirror | `XF:08IDA-OP{Mir:CM` | bender=`-Ax:Bender}W-I`; jacks (Mir:CM) | 8-ID-A | optics | yes |
-| FocusingMirror | Mirror | `XF:08IDA-OP{Mir:FM` | bender=`-Ax:Bender}W-I`; jacks (Mir:FM) | 8-ID-A | optics | yes |
-| FilterBox | Filter | `XF:08IDA-OP{Fltr:FB` | filter/attenuator box | 8-ID-A | optics | yes |
+| Monochromator | Monochromator | `XF:08IDA-OP{Mono:HRM` | HHM high-heat-load mono (HRM); energy trajectory fly-scan; bragg + crystal axes (class HHM) | 8-ID-A | source | yes |
+| CollimatingMirror | Mirror | `XF:08IDA-OP{Mir:CM` | bender=`-Ax:Bender}W-I`; jacks (Mir:CM) | 8-ID-A | source | yes |
+| FocusingMirror | Mirror | `XF:08IDA-OP{Mir:FM` | bender=`-Ax:Bender}W-I`; jacks (Mir:FM) | 8-ID-A | source | yes |
+| FilterBox | Filter | `XF:08IDA-OP{Fltr:FB` | filter/attenuator box | 8-ID-A | source | yes |
 | KeithleyAmplifiers | GenericProbe (?) | `XF:08ID-ES:{K428}:` | A/B/C/D channels (k1-k4_amp, ICAmplifier_Keithley) | 8-ID-B | detection | yes |
 | AnalogPizzaBox | FluxMonitor | `XF:08IDB-CT{PBA:1}:` | APB ADC digitizing ion-chamber currents (apb/apb_ave/apb_stream) | 8-ID-B | detection | yes |
 | Pilatus100k_1 | Camera | `XF:08IDB-ES{Det:PIL1}` | Pilatus 100k area detector | 8-ID-B | detection | yes |
@@ -25,7 +25,7 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | Goniometer | RotaryStage | `XF:08IDB-OP{Gon:Th:1}Mtr` | theta (Gon:Th) | 8-ID-B | sample | yes |
 | SampleStage | LinearStage | `XF:08IDB-OP{Stage:Sample` | sample positioning stack | 8-ID-B | sample | yes |
 | AuxStage | LinearStage | `XF:08IDB-OP{Stage:Aux1` | x=`-Ax:X}Mtr`; y=`-Ax:Y}Mtr` | 8-ID-B | sample | yes |
-| EndstationBPM | GenericProbe (?) | `XF:08IDB-OP{BPM:ES-Ax:` | x=`X}` (endstation beam-position) | 8-ID-B | diagnostics | yes |
+| EndstationBPM | GenericProbe (?) | `XF:08IDB-OP{BPM:ES-Ax:` | x=`X}` (endstation beam-position) | 8-ID-B | source | yes |
 | DetectorStage | LinearStage | `XF:08IDB-OP{DetStage:2-Ax:` | x/y | 8-ID-B | detection | yes |
 | JohannSpectrometer | EmissionSpectrometer (?) | `XF:08IDB-OP{HRS:1-` | analyzer assy=`Ana:Assy:Y}Mtr`; det gonios=`Det:Gon:Theta1/2}Mtr`; crystal stacks=`Stk:1-4:{Roll,Yaw,X,Y}}Mtr` | 8-ID-B | detection | yes |
 | VonHamosSpectrometer | EmissionSpectrometer (?) | `XF:08IDB-OP{FIP-VHS:Stage` | stage1/stage2 axes (FIP-VHS); + `Analyzer-Ax:Y/Z` | 8-ID-B | detection | yes |

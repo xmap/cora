@@ -11,9 +11,9 @@ Asset granularity: one row per stage / assembly, device-level PV prefix, dodal c
 
 | Device | Suggested family | PV prefix | dodal class | Branch | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| PlaneGratingMonoB | GratingMonochromator | `BL07B-OP-PGM-01:` | PlaneGratingMonochromator | B | optics | yes |
-| PlaneGratingMonoC | GratingMonochromator | `BL07C-OP-PGM-01:` | PlaneGratingMonochromator | C | optics | yes |
-| ChannelCutMono | Monochromator | `BL07C-OP-CCM-01:` | ChannelCutMonochromator | C | optics | yes |
+| PlaneGratingMonoB | GratingMonochromator | `BL07B-OP-PGM-01:` | PlaneGratingMonochromator | B | source | yes |
+| PlaneGratingMonoC | GratingMonochromator | `BL07C-OP-PGM-01:` | PlaneGratingMonochromator | C | source | yes |
+| ChannelCutMono | Monochromator | `BL07C-OP-CCM-01:` | ChannelCutMonochromator | C | source | yes |
 | ElectronAnalyserB | ElectronAnalyzer | `BL07B-EA-DET-01:CAM:` | SpecsDetector[LensMode, PsuMode] | B | detection | yes |
 | ElectronAnalyserC | ElectronAnalyzer | `BL07C-EA-DET-01:CAM:` | SpecsDetector[LensMode, PsuMode] | C | detection | yes |
 | SampleManipulatorB52 | Manipulator | `BL07B-EA-SM-52:` | B07SampleManipulator52B | B | sample | yes |

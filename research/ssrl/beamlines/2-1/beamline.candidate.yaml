@@ -2,7 +2,7 @@
 # authoritative. PV-1: motor PVs are BL00: (placeholder/shared) and the Xspress3 root is an example
 # string; PVs recorded exactly as in source, every one flagged confirm. Verified verbatim, zero fabrications.
 
-beamline: {name: "2-1", facility: ssrl, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: "2-1", facility: ssrl, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: "2-1", facility_code: ssrl, confirm: "SSRL BL2-1 diffraction; PV namespace PV-1 (profile uses BL00: placeholders)"}
 sample:

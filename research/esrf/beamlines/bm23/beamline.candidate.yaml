@@ -9,6 +9,9 @@
 # bending-magnet XAS beamline (EXAFS/XANES + XES); NOT yet a deployment.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: BM23
   facility: esrf
   tier: Unit
@@ -44,7 +47,7 @@ source:
     new: true
     confirm: 'BM23 is a bending-magnet beamline; NO insertion-device controller in the config; source modeled loosely (2-BM precedent), NOT InsertionDevice; pv blank, no handle in source (SRC-1)'
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: Monochromator
@@ -65,7 +68,7 @@ optics:
     new: true
     confirm: 'primary slits (slits class, motors/slit_ps.yml; real psh/psr, calc pshg/psho); family Slit (catalog) (OPT-2)'
 diagnostics:
-  stage: diagnostics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: BeamViewers

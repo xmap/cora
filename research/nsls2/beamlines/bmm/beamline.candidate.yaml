@@ -5,6 +5,9 @@
 # already modeled, so this can be cross-checked against deployments/bmm/beamline.yaml.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: BMM
   facility: nsls2
   tier: Unit
@@ -31,7 +34,7 @@ source:
     new: true
     confirm: photon shutter into 6-BM-A; family Shutter (catalog)
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: CollimatingMirror

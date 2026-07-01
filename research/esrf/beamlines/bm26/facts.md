@@ -14,11 +14,11 @@ Asset granularity: one row per stage / assembly, the device-level BLISS handle t
 | StorageRing | StorageRing | `//acs.esrf.fr:10000/fe/master/bm26` (BLISS `machinfo`, MachInfo) | (observe-only; current/sbcurr/lifetime counters) | oh | source | yes |
 | FrontEndShutter | Shutter | `//acs.esrf.fr:10000/fe/master/bm26` (BLISS `fe`, TangoShutter, `equipment/devices/safshut.yml`) | (front-end shutter) | oh | source | yes |
 | BeamShutters | Shutter | `bm26/bsh/1`, `bm26/bsh/2` (BLISS `bsh1`/`bsh2`, TangoShutter); `bm26/v-rv/10` (BLISS `p1m_protection`, detector-protection shutter) | (two beam shutters + Pilatus-1M protection shutter) | oh/eh | source | yes |
-| Monochromator | Monochromator | BLISS `mono` (Monochromator, `equipment/mono/mono.yml`) | crystal Si111 (`monoxtals`); real bragg on PM600 (`pmcontroller`, `tango://d26/ld263_rp1/24`); energy calc (keV) | oh | optics | yes |
-| PrimarySlits | Slit | BLISS `s1slit` (`equipment/motion/slit_s1.yml`) | real s1horr/s1horl (h), s1vert/s1verb (v); calc s1horg/s1horo/s1verg/s1vero | oh | optics | yes |
-| OpticsSlits | Slit | BLISS `slit_h1` / `slit_h3` / `slit_h4` / `slit_h5` / `slit_h6` (`equipment/motion/slit_h*.yml`) | per-slit horizontal / vertical gap + offset blades | oh/eh | optics | yes |
-| Mirror | Mirror | `iced261` (IcePAP host) | ymirror / zmirror (mirror translation axes; reals on iced261) | oh | optics | yes |
-| BeamViewers | Screen (?) | BLISS `ohbv1` / `ohbv2` / `ohbv3` (EBV, `equipment/devices/beamviewer.yml`); wago `wcd26e` / `wcd26f` | optics-hutch beam viewers; diodes ohbv1cu / ohbv2cu / ohbv3cu | oh | diagnostics | yes |
+| Monochromator | Monochromator | BLISS `mono` (Monochromator, `equipment/mono/mono.yml`) | crystal Si111 (`monoxtals`); real bragg on PM600 (`pmcontroller`, `tango://d26/ld263_rp1/24`); energy calc (keV) | oh | source | yes |
+| PrimarySlits | Slit | BLISS `s1slit` (`equipment/motion/slit_s1.yml`) | real s1horr/s1horl (h), s1vert/s1verb (v); calc s1horg/s1horo/s1verg/s1vero | oh | source | yes |
+| OpticsSlits | Slit | BLISS `slit_h1` / `slit_h3` / `slit_h4` / `slit_h5` / `slit_h6` (`equipment/motion/slit_h*.yml`) | per-slit horizontal / vertical gap + offset blades | oh/eh | source | yes |
+| Mirror | Mirror | `iced261` (IcePAP host) | ymirror / zmirror (mirror translation axes; reals on iced261) | oh | source | yes |
+| BeamViewers | Screen (?) | BLISS `ohbv1` / `ohbv2` / `ohbv3` (EBV, `equipment/devices/beamviewer.yml`); wago `wcd26e` / `wcd26f` | optics-hutch beam viewers; diodes ohbv1cu / ohbv2cu / ohbv3cu | oh | source | yes |
 | SampleTable | LinearStage | `iced26x` (IcePAP); session axes `ztable`/`ytable`, `tab2_*` / `tab3_*` table controllers (`equipment/motion/tab2_*.yml`, `tab3_*.yml`) | experiment-table positioning (h-legs, nh, hgt, mh/mj/ms) | eh | sample | yes |
 | SampleStage | LinearStage | `iced26x` (IcePAP); session axes `samplex`/`sampley`, `sx`/`sy`/`sz`, `gonio`, `xcradle`/`ycradle` | SAXS/XAFS sample positioning + goniometer cradle | eh | sample | yes |
 | Beamstop | LinearStage | `iced26x` (IcePAP); session axes `bstopy`/`bstopyb` | SAXS beamstop translation | eh | detection | yes |
@@ -26,7 +26,7 @@ Asset granularity: one row per stage / assembly, the device-level BLISS handle t
 | LinkamStage | TemperatureController (?) | `rfc2217://ld263:28301` (BLISS `linkam1`, LinkamHardwareController, `equipment/devices/linkam.yml`) | Linkam temperature-controlled sample stage (bm26.linkam package) | eh | sample | yes |
 | SAXSDetector | Camera | `d26h/limaccd/1m3s` (BLISS `p1m`, Lima, `equipment/detectors/pilatus.yml`) | Pilatus 1M (SAXS) | eh | detection | yes |
 | WAXSDetector | Camera | `d26h/limaccd/300k` (BLISS `p300k`, Lima); image rotation 90 | Pilatus 300k (WAXS) | eh | detection | yes |
-| VideoCameras | Camera | `d26/limaccds/cam1`, `d26/limaccds/cam2`, `d26/limaccds/cam3` (BLISS `cambv1`/`cambv2`/`cambv3`, Lima, `equipment/detectors/basler.yml`) | Basler video cameras | eh | diagnostics | yes |
+| VideoCameras | Camera | `d26/limaccds/cam1`, `d26/limaccds/cam2`, `d26/limaccds/cam3` (BLISS `cambv1`/`cambv2`/`cambv3`, Lima, `equipment/detectors/basler.yml`) | Basler video cameras | eh | source | yes |
 | Picoammeters | FluxMonitor (?) | `enet://gpibd26a.esrf.fr` pad 14 (BLISS `k_pico1` / `k_pico2`, Keithley 6485, `equipment/counters/keithleys.yml`) | pico1 (XAFS ion-chamber / diode current readout) | eh | detection | yes |
 | AnalyzerCounters | GenericProbe (?) | `tcp://ld263.esrf.fr:8909` (BLISS `p201_0`, CT2 P201, `equipment/counters/p201.yml`) | beam-monitor / counting channels | eh | detection | yes |
 | TimingController | TimingController (?) | `enet://gpibd26c.esrf.fr` (BLISS `mussteh1`, musst, `equipment/devices/musst.yml`) | MUSST timing master (fly / gated scans) | eh | detection | yes |

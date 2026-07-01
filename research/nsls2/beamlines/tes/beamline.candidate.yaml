@@ -1,13 +1,13 @@
 # CANDIDATE beamline descriptor: hand-read from NSLS2/tes-profile-collection, NOT authoritative.
 # All PV prefixes verified verbatim against source (startup/*.py), zero fabrications.
 
-beamline: {name: TES, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: TES, facility: nsls2, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: 8-BM-A, facility_code: nsls2, confirm: optics hutch; inferred from XF:08BMA}
 - {name: 8-BM-ES, facility_code: nsls2, confirm: KB/endstation optics; inferred from XF:08BMES}
 - {name: 8-BM-C, facility_code: nsls2, confirm: sample-environment hutch; inferred from XF:08BMC}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: PhotonShutter, family: Shutter, pv: "XF:08BMES-PPS{PSh}", new: true, confirm: PPS shutter; Shutter (catalog)}

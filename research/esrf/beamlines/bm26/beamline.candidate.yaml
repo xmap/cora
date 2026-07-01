@@ -6,6 +6,9 @@
 # is NOT yet a deployment: net-new. It is a bending-magnet CRG beamline (no insertion device).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: BM26
   facility: esrf
   tier: Unit
@@ -41,7 +44,7 @@ source:
     new: true
     confirm: 'BM26 is a bending-magnet beamline; NO insertion-device controller in the config; source modeled loosely (2-BM precedent), NOT InsertionDevice; pv left blank, no handle in source (SRC-1)'
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: Monochromator
@@ -66,7 +69,7 @@ optics:
     new: true
     confirm: 'mirror translation axes ymirror/zmirror (reals on IcePAP iced261); family Mirror (catalog) (OPT-1)'
 diagnostics:
-  stage: diagnostics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - name: BeamViewers

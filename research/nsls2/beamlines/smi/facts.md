@@ -12,16 +12,16 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
 | PhotonShutter | Shutter | `XF:12IDA-PPS:2{PSh}` | (PPS shutter) | 12-ID-A | source | yes |
-| MultilayerMono | Monochromator | `XF:12IDA{dmm:2}` | double-multilayer mono | 12-ID-A | optics | yes |
-| Transfocator | Transfocator | `XF:12IDC-OP:2{Lens:CRL-Ax:` | CRL lens stack | 12-ID-C | optics | yes |
-| HubStage | LinearStage | `XF:12IDC-OP:2{HUB:Stg-Ax:` | hub positioning stage | 12-ID-C | optics | yes |
-| Filters | Filter | `XF:12IDC-OP:2{Fltr:1-1}` | filter array (Fltr:1-1 .. 1-12) | 12-ID-C | optics | yes |
+| MultilayerMono | Monochromator | `XF:12IDA{dmm:2}` | double-multilayer mono | 12-ID-A | source | yes |
+| Transfocator | Transfocator | `XF:12IDC-OP:2{Lens:CRL-Ax:` | CRL lens stack | 12-ID-C | source | yes |
+| HubStage | LinearStage | `XF:12IDC-OP:2{HUB:Stg-Ax:` | hub positioning stage | 12-ID-C | source | yes |
+| Filters | Filter | `XF:12IDC-OP:2{Fltr:1-1}` | filter array (Fltr:1-1 .. 1-12) | 12-ID-C | source | yes |
 | Manipulator | Manipulator | `XF:12ID2C-ES{MCS:2-Ax:` | grazing-incidence sample manipulator (coordinate system) | 12-ID-C | sample | yes |
 | Linkam | TemperatureController | `XF:12ID-ES{LINKAM}` | thermal stage (+ `:{LINKAM}` variant) | 12-ID-C | sample | yes |
 | SAXSBeamStop | BeamStop | `XF:12IDC-ES:2{BS:SAXS-Ax:` | SAXS beamstop | 12-ID-C | detection | yes |
 | TetrAMM | FluxMonitor | `XF:12ID:2{EM:Tetr1}` | TetrAMM electrometer (I0) | 12-ID | detection | yes |
-| BeamPositionMonitor1 | GenericProbe (?) | `XF:12IDA-BI:2{EM:BPM1}` | electrometer BPMs (BPM1/2/3) | 12-ID-A | diagnostics | yes |
-| SSASlitMonitor | GenericProbe (?) | `XF:12IDB-BI{EM:SSASlit}` | SSA slit current monitor | 12-ID-B | diagnostics | yes |
+| BeamPositionMonitor1 | GenericProbe (?) | `XF:12IDA-BI:2{EM:BPM1}` | electrometer BPMs (BPM1/2/3) | 12-ID-A | source | yes |
+| SSASlitMonitor | GenericProbe (?) | `XF:12IDB-BI{EM:SSASlit}` | SSA slit current monitor | 12-ID-B | source | yes |
 
 Device-level prefixes read verbatim from `smibase`: `dmm:2`, `Lens:CRL`, `MCS:2` manipulator, the `LINKAM` block, `BS:SAXS`, `EM:Tetr1`, the filter array, the EM BPMs.
 

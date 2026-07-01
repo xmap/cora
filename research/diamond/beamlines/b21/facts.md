@@ -13,8 +13,8 @@ Asset granularity: one row per stage / assembly, device-level PV prefix, dodal c
 | --- | --- | --- | --- | --- | --- |
 | SAXSDetector | Camera | `BL21B-EA-EIGER-01:` | EigerDetector | detection | yes |
 | WAXSDetector | Camera | `BL21B-EA-EIGER-02:` | EigerDetector | detection | yes |
-| Mirror | Mirror | `BL21B-OP-MR-01:` | SimpleMirror | optics | yes |
-| Slits | Slit | `BL21B-AL-SLITS-01:` (SLITS-01/02/03/05/06/07) | Slits | optics | yes |
+| Mirror | Mirror | `BL21B-OP-MR-01:` | SimpleMirror | source | yes |
+| Slits | Slit | `BL21B-AL-SLITS-01:` (SLITS-01/02/03/05/06/07) | Slits | source | yes |
 | IntensityMonitor | FluxMonitor (?) | `BL21B-DI-PHDGN-07:PHD1:` | QDV2F (quadrant diode) | detection | yes |
 | Table | Table | `BL21B-MO-TABLE-04:` | XYStage | sample | yes |
 | Panda | TimingController (?) | `BL21B-MO-PANDA-01:` | HDFPanda | detection | yes |

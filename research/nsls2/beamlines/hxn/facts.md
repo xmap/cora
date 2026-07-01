@@ -12,17 +12,17 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
 | PhotonShutter | Shutter | `XF:03IDB-PPS{PSh}` | (PPS shutter) | 3-ID-B | source | yes |
-| FluorescenceScreen | Screen | `XF:03IDA-OP{FS:1-Ax:` | y=`Y}Mtr` | 3-ID-A | diagnostics | yes |
-| Monochromator | Monochromator | `XF:03IDA-OP{Mon:1-Ax:` | bragg=`Bragg}Mtr`; p=`P}Mtr`; pf=`PF}Mtr` | 3-ID-A | optics | yes |
-| HorizontalCollimatingMirror | Mirror | `XF:03IDA-OP{HCM:1-Ax:` | pf=`PF}Mtr` | 3-ID-A | optics | yes |
-| HorizontalFocusingMirror | Mirror | `XF:03IDA-OP{HFM:1-Ax:` | pf=`PF}Mtr` | 3-ID-A | optics | yes |
-| Mirror1 | Mirror | `XF:03IDA-OP{Mir:1-Ax:` | p=`P}Mtr`; bend=`Bend}Mtr`; x/y | 3-ID-A | optics | yes |
-| Mirror2 | Mirror | `XF:03IDA-OP{Mir:2-Ax:` | p/bend/x | 3-ID-A | optics | yes |
-| VerticalMirrorSystem | Mirror | `XF:03IDA-OP{VMS:1-Ax:` | VMS axes | 3-ID-A | optics | yes |
-| Transfocator | Transfocator | `XF:03IDA-OP{Lens:CRL` | CRL lens stack | 3-ID-A | optics | yes |
-| WhiteBeamSlit1 | Slit | `XF:03IDA-OP{Slt:1` | blade axes | 3-ID-A | optics | yes |
-| WhiteBeamSlit2 | Slit | `XF:03IDA-OP{Slt:2` | blade axes | 3-ID-A | optics | yes |
-| SecondarySourceAperture | Slit | `XF:03IDB-OP{Slt:SSA1` | SSA blade axes | 3-ID-B | optics | yes |
+| FluorescenceScreen | Screen | `XF:03IDA-OP{FS:1-Ax:` | y=`Y}Mtr` | 3-ID-A | source | yes |
+| Monochromator | Monochromator | `XF:03IDA-OP{Mon:1-Ax:` | bragg=`Bragg}Mtr`; p=`P}Mtr`; pf=`PF}Mtr` | 3-ID-A | source | yes |
+| HorizontalCollimatingMirror | Mirror | `XF:03IDA-OP{HCM:1-Ax:` | pf=`PF}Mtr` | 3-ID-A | source | yes |
+| HorizontalFocusingMirror | Mirror | `XF:03IDA-OP{HFM:1-Ax:` | pf=`PF}Mtr` | 3-ID-A | source | yes |
+| Mirror1 | Mirror | `XF:03IDA-OP{Mir:1-Ax:` | p=`P}Mtr`; bend=`Bend}Mtr`; x/y | 3-ID-A | source | yes |
+| Mirror2 | Mirror | `XF:03IDA-OP{Mir:2-Ax:` | p/bend/x | 3-ID-A | source | yes |
+| VerticalMirrorSystem | Mirror | `XF:03IDA-OP{VMS:1-Ax:` | VMS axes | 3-ID-A | source | yes |
+| Transfocator | Transfocator | `XF:03IDA-OP{Lens:CRL` | CRL lens stack | 3-ID-A | source | yes |
+| WhiteBeamSlit1 | Slit | `XF:03IDA-OP{Slt:1` | blade axes | 3-ID-A | source | yes |
+| WhiteBeamSlit2 | Slit | `XF:03IDA-OP{Slt:2` | blade axes | 3-ID-A | source | yes |
+| SecondarySourceAperture | Slit | `XF:03IDB-OP{Slt:SSA1` | SSA blade axes | 3-ID-B | source | yes |
 | MLLScanStage | LinearStage | `XF:03IDC-ES{MCS:1-Ax:` | mlldiffy + MLL fine axes (coordinate system 1) | 3-ID-C | sample | yes |
 | ZPScanStage | LinearStage | `XF:03IDC-ES{MCS:2-Ax:` | zpx/zpy/zpz (coordinate system 2) | 3-ID-C | sample | yes |
 | ZPPiezoSample | LinearStage | `XF:03IDC-ES{Ppmac:1-` | zpssx/zpssy/zpssz fine piezo (PowerPMAC) | 3-ID-C | sample | yes |
@@ -38,8 +38,8 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | DXPController | GenericProbe (?) | `XF:03IDC-ES{DXP:1}` | DXP pulse processor | 3-ID-C | detection | yes |
 | ScalerCounter | GenericProbe (?) | `XF:03IDC-ES{Sclr:1}` | scaler channels (Sclr:1-3) | 3-ID-C | detection | yes |
 | FiberPositioners | LinearStage (?) | `XF:03IDC-ES{FPS:1` | FPS:1-6 fiber/positioner stages | 3-ID-C | detection | yes |
-| Interferometers | GenericProbe (?) | `XF:03IDC-ES{FPS:` | interferometric position metrology (23-interferometers) | 3-ID-C | diagnostics | yes |
-| BeamPositionMonitor | GenericProbe (?) | `XF:03ID-BI{EM:BPM1}` | EM:BPM1/BPM2 electrometer BPMs | 3-ID-A | diagnostics | yes |
+| Interferometers | GenericProbe (?) | `XF:03IDC-ES{FPS:` | interferometric position metrology (23-interferometers) | 3-ID-C | source | yes |
+| BeamPositionMonitor | GenericProbe (?) | `XF:03ID-BI{EM:BPM1}` | EM:BPM1/BPM2 electrometer BPMs | 3-ID-A | source | yes |
 | XeyeCamera | GenericProbe (?) | `XF:03IDB-BI{Xeye-CAM:1}` | on-axis viewing camera | 3-ID-B | sample | yes |
 
 Device-level prefixes read verbatim from source: `Mon:1-Ax:Bragg`, the `HCM:1`/`HFM:1`/`Mir:1`/`Mir:2`/`VMS:1` mirrors, `Lens:CRL`, the MLL/ZP coordinate systems (`MCS:1/2/3`), the piezo controllers (`Ppmac:1`, `ZpPI:1`, `ANC350:1-8`), and the Eiger/Merlin/Dexela/Vortex/Bruker detectors.

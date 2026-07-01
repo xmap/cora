@@ -8,6 +8,9 @@
 # the verbatim Tango-host prefix b-v-cosaxs-csdb-0:10000/ where the source does.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: CoSAXS
   facility: maxiv
   sector: "B310A"

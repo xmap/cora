@@ -17,7 +17,7 @@ Asset granularity: one row per stage / assembly, device-level PV (as in source),
 | MarCCDDetector | Camera | `BL15:MARCCD:` | MarCCD | detection | yes |
 | DexelaDetector | Camera | `SSRL:DEX2923:` | Dexela | detection | yes |
 | FluorescenceSpectrometer | EnergyDispersiveSpectrometer | `XSPRESS3-EXAMPLE:` (example root) | Xspress3 | detection | yes (PV-1: example root) |
-| RIOAnalogIO | GenericProbe (?) | `BL00:RIO.AI0-3`, `BL00:RIO.AO1-4`, `BL00:RIO.DO00-01` | EpicsSignal (NI RIO crate) | diagnostics | yes (PV-1) |
+| RIOAnalogIO | GenericProbe (?) | `BL00:RIO.AI0-3`, `BL00:RIO.AO1-4`, `BL00:RIO.DO00-01` | EpicsSignal (NI RIO crate) | source | yes (PV-1) |
 
 Device-level handles read verbatim from source: the `HiTpStage` MotorBundle (`BL00:IMS:MOTOR1-4`, `BL00:PICOD1:MOTOR2-3`), `PilatusDetector("BL15:PILATUS300K:")`, `MarCCD("BL15:MARCCD:")`, `Dexela("SSRL:DEX2923:")`, the RIO analog/digital channels.
 

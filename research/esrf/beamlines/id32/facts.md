@@ -11,18 +11,18 @@ Asset granularity: one row per stage / assembly, the device-level BLISS handle t
 
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| StorageRing | StorageRing | `//acs:10000/fe/master/id32` (BLISS `machinfo`, MachInfo); emittance `//acs:10000/srdiag/beam-emittance/main-h` / `main-v` | (observe-only machine state; emh/emv counters) | optics | source | yes |
-| FrontEndShutter | Shutter | `acs.esrf.fr:10000/fe/master/id32` (BLISS `fe`, TangoShutter FrontEnd) | (front-end shutter) | optics | source | yes |
-| BeamShutters | Shutter | `id32/v-rv/16a`, `id32/v-rv/16b`, `id32/v-rv/19a`, `id32/v-rv/20a`, `id32/v-rv/20b`, `id32/v-rv/21b` (BLISS `sh_rv*`, TangoShutter, `EXPH/safshut.yml`) | (six vacuum safety shutters) | optics | source | yes |
-| Undulators | InsertionDevice | `//acs:10000/id/master/id32` (BLISS `ESRF_Undulator`) | hu70ag=`HU70a_GAP`, hu70ap=`HU70a_PHASE`, hu70apo=`HU70a_POSOFFSET`, hu70ano=`HU70a_NEGOFFSET`; hu70cg=`HU70c_GAP`, hu70cp=`HU70c_PHASE`, hu70cpo/hu70cno; ps35bg=`PS35b_GAP` | optics | source | yes |
-| Monochromator | GratingMonochromator | BLISS `pgm` (MonochromatorGrating, `MONO/monochromator_grating.yml`) | gratings XMCD_300/XMCD_900 (l/mm), RIXS_800/RIXS_1600; calc reals nu=`mroty`, psi=`groty`; energy `energy_pgm` | optics | optics | yes |
-| BeamEnergy | PseudoAxis | BLISS `energy` / `energy_pgm` (GratingEnergyCalcMotor, `MONO/monochromator_grating_calc_motors.yml`) | energy (eV) over nu=`mroty`/psi=`groty`; undulator-tracked via `grating_tracker` | optics | optics | yes |
-| Polarization | PseudoAxis | BLISS PolarizationPolicy (`MONO/monochromator_grating.yml`) | policies horizontal/vertical/linear/circular_plus/circular_minus over APPLE-II gap/phase/offset modes | optics | optics | yes |
-| CffAxis | PseudoAxis | BLISS `rixs_cff_motor_ctrl` (CffMotorController, `RIXS/calc_motors/cff_rixs.yml`) | cff over nu=`mroty`, psi=`groty` | optics | optics | yes |
-| PrimarySlits | Slit | BLISS `psh` / `psv` (`EXPH/slits/slit_pshg.yml`, `slit_psvg.yml`) | real pshall/psring (h), calc pshg/psho; v slit pair | optics | optics | yes |
-| SecondarySlits | Slit | BLISS `ssh` / `ssv` (`EXPH/slits/slit_sshg.yml`, `slit_ssvg.yml`) | h/v gap + offset | optics | optics | yes |
-| MonoSlits | Slit | BLISS `msh` / `msv` (`EXPH/slits/slit_mshg.yml`, `slit_msvg.yml`) | h/v gap + offset | optics | optics | yes |
-| BeamViewers | Screen (?) | BLISS EBV / BpmController (`beamviewers/beamviewers.yml`); cameras `id32/limaccds/{diagon,dg2,dg3,dg4,dg5a,dg5b,dg6a,dg7b,bva,bvb,microscope}` | dg1..dg7 diagnostic viewers + diodes (dgN_diode); exit-slit bva/bvb; on-axis microscope | optics | diagnostics | yes |
+| StorageRing | StorageRing | `//acs:10000/fe/master/id32` (BLISS `machinfo`, MachInfo); emittance `//acs:10000/srdiag/beam-emittance/main-h` / `main-v` | (observe-only machine state; emh/emv counters) | source | source | yes |
+| FrontEndShutter | Shutter | `acs.esrf.fr:10000/fe/master/id32` (BLISS `fe`, TangoShutter FrontEnd) | (front-end shutter) | source | source | yes |
+| BeamShutters | Shutter | `id32/v-rv/16a`, `id32/v-rv/16b`, `id32/v-rv/19a`, `id32/v-rv/20a`, `id32/v-rv/20b`, `id32/v-rv/21b` (BLISS `sh_rv*`, TangoShutter, `EXPH/safshut.yml`) | (six vacuum safety shutters) | source | source | yes |
+| Undulators | InsertionDevice | `//acs:10000/id/master/id32` (BLISS `ESRF_Undulator`) | hu70ag=`HU70a_GAP`, hu70ap=`HU70a_PHASE`, hu70apo=`HU70a_POSOFFSET`, hu70ano=`HU70a_NEGOFFSET`; hu70cg=`HU70c_GAP`, hu70cp=`HU70c_PHASE`, hu70cpo/hu70cno; ps35bg=`PS35b_GAP` | source | source | yes |
+| Monochromator | GratingMonochromator | BLISS `pgm` (MonochromatorGrating, `MONO/monochromator_grating.yml`) | gratings XMCD_300/XMCD_900 (l/mm), RIXS_800/RIXS_1600; calc reals nu=`mroty`, psi=`groty`; energy `energy_pgm` | source | source | yes |
+| BeamEnergy | PseudoAxis | BLISS `energy` / `energy_pgm` (GratingEnergyCalcMotor, `MONO/monochromator_grating_calc_motors.yml`) | energy (eV) over nu=`mroty`/psi=`groty`; undulator-tracked via `grating_tracker` | source | source | yes |
+| Polarization | PseudoAxis | BLISS PolarizationPolicy (`MONO/monochromator_grating.yml`) | policies horizontal/vertical/linear/circular_plus/circular_minus over APPLE-II gap/phase/offset modes | source | source | yes |
+| CffAxis | PseudoAxis | BLISS `rixs_cff_motor_ctrl` (CffMotorController, `RIXS/calc_motors/cff_rixs.yml`) | cff over nu=`mroty`, psi=`groty` | source | source | yes |
+| PrimarySlits | Slit | BLISS `psh` / `psv` (`EXPH/slits/slit_pshg.yml`, `slit_psvg.yml`) | real pshall/psring (h), calc pshg/psho; v slit pair | source | source | yes |
+| SecondarySlits | Slit | BLISS `ssh` / `ssv` (`EXPH/slits/slit_sshg.yml`, `slit_ssvg.yml`) | h/v gap + offset | source | source | yes |
+| MonoSlits | Slit | BLISS `msh` / `msv` (`EXPH/slits/slit_mshg.yml`, `slit_msvg.yml`) | h/v gap + offset | source | source | yes |
+| BeamViewers | Screen (?) | BLISS EBV / BpmController (`beamviewers/beamviewers.yml`); cameras `id32/limaccds/{diagon,dg2,dg3,dg4,dg5a,dg5b,dg6a,dg7b,bva,bvb,microscope}` | dg1..dg7 diagnostic viewers + diodes (dgN_diode); exit-slit bva/bvb; on-axis microscope | source | source | yes |
 | RIXS_Diffractometer | Goniometer | BLISS `fourc` (DiffE4CH, geometry E4CH, `RIXS/diffractometer.yml`) | real tth=`$tth`, omega=`$th`, chi=`$chi`, phi=`$phi`, energy=`$energy` (iceid323 th/chi/phi); pseudo H/K/L/Q | RIXS | sample | yes |
 | RIXS_SampleManipulator | LinearStage | `id32/hexapode/rfo` (BLISS `hexa_rfo`, esrf_hexapode) + `e753id32-rfo:50000` (BLISS `rfopictrl`, PI_E753, `RIXS/rfo_pi753.yml`) | hexapod rfox/rfoy/rfoz/rforotx/rforoty/rforotz; PI piezo rfopi (closed-loop) | RIXS | sample | yes |
 | RIXS_SpectrometerArm | SpectrometerArm | BLISS `rixs_spectro` (SpectrometerArmsController, `RIXS/calc_motors/spectro_rixs.yml`) | real detx/detz/grtx (iceid324); virtual r1/r2; grating modes RIXS_2500 (gr2roty), RIXS_1400 (gr1roty), Rowland radius ~122000 | RIXS | detection | yes |

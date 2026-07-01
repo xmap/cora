@@ -1,7 +1,7 @@
 # CANDIDATE beamline descriptor: hand-read from SESAME-Synchrotron/BEATS_tomoscan IOC substitutions, NOT
 # authoritative. PV roots use the SESAME I10 (ID10) scheme; tomoscan prefix tomoscanBEATS:. Verified verbatim.
 
-beamline: {name: beats, facility: sesame, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: beats, facility: sesame, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: ID10, facility_code: sesame, confirm: "BEATS tomography (BEAmline for Tomography at SESAME); PV roots I10R*/I10EH/I10OH"}
 sample:

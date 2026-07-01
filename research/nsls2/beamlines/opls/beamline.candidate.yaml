@@ -2,12 +2,12 @@
 # All PV prefixes verified verbatim against source. COVERAGE-1: thin public profile; the
 # shared 12-ID mono/optics chain is deferred, not invented (OPLS shares the straight with SMI).
 
-beamline: {name: OPLS, facility: nsls2, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: OPLS, facility: nsls2, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: 12-ID-A, facility_code: nsls2, confirm: shared 12-ID optics; inferred from XF:12IDA}
 - {name: 12-ID-1, facility_code: nsls2, confirm: OPLS SAXS endstation; inferred from XF:12ID1}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: PhotonShutter, family: Shutter, pv: "XF:12IDA-PPS:2{PSh}", new: true, confirm: "PPS shutter (12-ID branch 2); Shutter (catalog)"}

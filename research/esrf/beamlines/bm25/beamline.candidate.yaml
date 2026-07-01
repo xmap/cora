@@ -8,6 +8,9 @@
 # SpLine (BM25) is a Spanish CRG bending-magnet beamline (XRD / XAS).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: BM25
   facility: esrf
   tier: Unit

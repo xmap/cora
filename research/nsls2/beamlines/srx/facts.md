@@ -15,23 +15,23 @@ Asset granularity: one row per stage / assembly, device-level PV prefix the desc
 | PhotonShutter2 | Shutter | `XF:05IDA-PPS:1{PSh:2}` | (PPS shutter) | 5-ID-A | source | yes |
 | PhotonShutter4 | Shutter | `XF:05IDB-PPS:1{PSh:4}` | (PPS shutter) | 5-ID-B | source | yes |
 | FastShutter | Shutter | `XF:05IDD{FS:1}` | Open-Cmd / Close-Cmd / Status | 5-ID-D | source | yes |
-| WhiteBeamSlit | Slit | `XF:05IDA-OP:1{Slt:1-Ax:` | blade axes (SRXSlitsWB) | 5-ID-A | optics | yes |
-| PinkBeamSlit | Slit | `XF:05IDA-OP:1{Slt:2-Ax:` | blade axes (SRXSlitsPB) | 5-ID-A | optics | yes |
-| HorizontalFocusingMirror | Mirror | `XF:05IDA-OP:1{Mir:1-Ax:` | fine_pitch=`PF}` (E-SP/E-I); jacks (SRXHFM) | 5-ID-A | optics | yes |
-| Monochromator | Monochromator | `XF:05IDA-OP:1{Mono:HDCM-Ax:` | p=`P}Mtr`; x2=`X2}Mtr`; piezo roll/pitch (PVPositionerPC); bragg | 5-ID-A | optics | yes |
-| SSASlit | Slit | `XF:05IDB-OP:1{Slt:SSA-Ax:` | x (ssa_ob/ssa_ib blades), gap/center calc (SRXSSACalc) | 5-ID-B | optics | yes |
-| KBSlit | Slit | `XF:05IDD-OP:1{Slt:KB-Ax:` | blade axes | 5-ID-D | optics | yes |
+| WhiteBeamSlit | Slit | `XF:05IDA-OP:1{Slt:1-Ax:` | blade axes (SRXSlitsWB) | 5-ID-A | source | yes |
+| PinkBeamSlit | Slit | `XF:05IDA-OP:1{Slt:2-Ax:` | blade axes (SRXSlitsPB) | 5-ID-A | source | yes |
+| HorizontalFocusingMirror | Mirror | `XF:05IDA-OP:1{Mir:1-Ax:` | fine_pitch=`PF}` (E-SP/E-I); jacks (SRXHFM) | 5-ID-A | source | yes |
+| Monochromator | Monochromator | `XF:05IDA-OP:1{Mono:HDCM-Ax:` | p=`P}Mtr`; x2=`X2}Mtr`; piezo roll/pitch (PVPositionerPC); bragg | 5-ID-A | source | yes |
+| SSASlit | Slit | `XF:05IDB-OP:1{Slt:SSA-Ax:` | x (ssa_ob/ssa_ib blades), gap/center calc (SRXSSACalc) | 5-ID-B | source | yes |
+| KBSlit | Slit | `XF:05IDD-OP:1{Slt:KB-Ax:` | blade axes | 5-ID-D | source | yes |
 | MicroSampleStage | LinearStage | `XF:05IDD-ES:1{Det:3-Ax:` | micro-station sample/det axes | 5-ID-D | sample | yes |
-| NanoKBHorizontal | Mirror | `XF:05IDD-ES:1{nKB:horz-Ax:` | x=`X}Mtr`; pc=`PC}`; pfpi=`PFPI}Mtr` | 5-ID-D | optics | yes |
-| NanoKBVertical | Mirror | `XF:05IDD-ES:1{nKB:vert-Ax:` | y=`Y}Mtr`; pc=`PC}`; pfpi=`PFPI}Mtr` | 5-ID-D | optics | yes |
+| NanoKBHorizontal | Mirror | `XF:05IDD-ES:1{nKB:horz-Ax:` | x=`X}Mtr`; pc=`PC}`; pfpi=`PFPI}Mtr` | 5-ID-D | source | yes |
+| NanoKBVertical | Mirror | `XF:05IDD-ES:1{nKB:vert-Ax:` | y=`Y}Mtr`; pc=`PC}`; pfpi=`PFPI}Mtr` | 5-ID-D | source | yes |
 | NanoSampleStage | LinearStage | `XF:05IDD-ES:1{nKB:Smpl-Ax:` | sx/sy/sz; ssx/ssy/ssz (fine); th/xth/zth | 5-ID-D | sample | yes |
 | NanoDetectorStage | LinearStage | `XF:05IDD-ES:1{nKB:Det-Ax:` | x/y/z=`{X,Y,Z}}Mtr`; dist=`Dist}MTR` | 5-ID-D | detection | yes |
 | NanoVisualMicroscope | Microscope (?) | `XF:05IDD-ES:1{nKB:VLM-Ax:` | x=`X}Mtr` | 5-ID-D | sample | yes |
-| PicoScale | GenericProbe (?) | `XF:05IDD-ES:1{PICOSCALE:1}` | interferometric position metrology | 5-ID-D | diagnostics | yes |
+| PicoScale | GenericProbe (?) | `XF:05IDD-ES:1{PICOSCALE:1}` | interferometric position metrology | 5-ID-D | source | yes |
 | IonChamber | FluxMonitor | `XF:05IDA-BI:1{IM:1}Int-I` | I0 ion chamber current | 5-ID-A | detection | yes |
 | Preamps | GenericProbe (?) | `XF:05IDD-CT{SR570:1}` / `{SR570:2}` / `{SR570:3}` | SR570 current preamps (I0/Im/It) | 5-ID-D | detection | yes |
-| QuadEMBPM | FluxMonitor (?) | `XF:05ID-BI{EM:BPM1}` / `{EM:BPM2}` | NSLS-II electrometer BPMs | 5-ID-A | diagnostics | yes |
-| AH501BPM | GenericProbe (?) | `XF:05IDA-BI{BPM:01}AH501:` / `{BPM:02}` / `{BPM:05}` | AH501 4-channel current BPMs | 5-ID-A | diagnostics | yes |
+| QuadEMBPM | FluxMonitor (?) | `XF:05ID-BI{EM:BPM1}` / `{EM:BPM2}` | NSLS-II electrometer BPMs | 5-ID-A | source | yes |
+| AH501BPM | GenericProbe (?) | `XF:05IDA-BI{BPM:01}AH501:` / `{BPM:02}` / `{BPM:05}` | AH501 4-channel current BPMs | 5-ID-A | source | yes |
 | FluorescenceSpectrometer | EnergyDispersiveSpectrometer | `XF:05IDD-ES{Xsp:3}:` | Xspress3 (SDD fluorescence MCA) | 5-ID-D | detection | yes |
 | ScalerCounter | GenericProbe (?) | `XF:05IDD-ES:1{Sclr:1}` | scaler channels | 5-ID-D | detection | yes |
 | Zebra | TimingController (?) | `XF:05IDD-ES:1{Dev:Zebra1}` | fly-scan pulse/gate generator | 5-ID-D | detection | yes |

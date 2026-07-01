@@ -11,8 +11,8 @@ Asset granularity: one row per stage / assembly, device-level PV (verbatim from 
 
 | Device | Suggested family | PV (verbatim) | source | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- |
-| PlaneGratingMono | GratingMonochromator | `PGM:getEnergy` (+ MonoName/MonoDSpacing scan records) | common.py / HESEB.db | optics | yes |
-| HarmonicRejection | Filter (?) | `BL:HarmonicRejection` | common.py | optics | yes |
+| PlaneGratingMono | GratingMonochromator | `PGM:getEnergy` (+ MonoName/MonoDSpacing scan records) | common.py / HESEB.db | source | yes |
+| HarmonicRejection | Filter (?) | `BL:HarmonicRejection` | common.py | source | yes |
 | SampleStage | LinearStage | (scan records `XStart`/`YStart`/`XStep`; sample stage) | HESEB.db | sample | yes (motor PV confirm) |
 | MCADetector | EnergyDispersiveSpectrometer (?) | `Test:mca1.R{i}` (MCA ROIs; dynamic) | ROIs.py | detection | yes (PV dynamic) |
 | PicoAmmeter | FluxMonitor (?) | (Keithley 6487, `heseb-pico-6487` IOC) | heseb-pico-6487 | detection | yes (separate IOC) |

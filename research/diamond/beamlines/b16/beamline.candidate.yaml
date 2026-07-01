@@ -1,7 +1,7 @@
 # CANDIDATE beamline descriptor: hand-read from DiamondLightSource/dodal (src/dodal/beamlines/b16.py),
 # NOT authoritative. Test beamline: generic positioners + area detector. PVs verified verbatim.
 
-beamline: {name: B16, facility: diamond, tier: Unit, source: unknown-pending-confirmation}
+beamline: {name: B16, facility: diamond, tier: Unit, source: unknown-pending-confirmation, maturity: model, evidence: controls_config, coverage: partial}
 enclosures:
 - {name: B16, facility_code: diamond, confirm: test beamline (optics/detector/metrology); PV root BL16B (env-resolved)}
 sample:

@@ -3,6 +3,9 @@
 # against source (startup/*.py), zero fabrications. Do not copy into deployments/ without review.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: XPD
   facility: nsls2
   tier: Unit
@@ -12,7 +15,7 @@ enclosures:
 - {name: 28-ID-C, facility_code: nsls2, confirm: endstation hutch; inferred from XF:28IDC}
 - {name: 28-ID-D, facility_code: nsls2, confirm: detector area; inferred from XF:28IDD}
 optics:
-  stage: optics
+  stage: source
   intro: Candidate grouping by inferred stage; grouping and stage need confirm.
   devices:
   - {name: ExperimentShutter, family: Shutter, pv: "XF:28IDC-ES:1{Sh2:Exp-Ax:", new: true, confirm: motorized exposure shutter; Shutter (catalog)}
