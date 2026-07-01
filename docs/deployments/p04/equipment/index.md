@@ -12,7 +12,7 @@ Three enclosures carry the beamline (`ENC-1`): the soft X-ray optics section (`p
 
 - [Source](../beamline.md): the P04 variable-polarization undulator (`SRC-1`); the plane-grating monochromator bound to `GratingMonochromator` (`OPT-1`), the three mirrors bound to `Mirror`, and the exit slits bound to `Slit`. This page is generated from the descriptor.
 - [Sample](sample.md): EXP1's sample manipulator and secondary positioner bound to `Manipulator` (`GROUP-1`) and its viewing camera bound to `Camera`; EXP2's exit-shutter unit bound to `Slit`, its positioner bound to `Manipulator`, and its virtual axes bound to `PseudoAxis`.
-- [Detector](detector.md): the drain-current electrometers bound to `FluxMonitor` (`DET-1`), and the EXP2 motorized diagnostic screens bound to the loose `Screen` with the beam-monitor cameras bound to `Camera` (`DIAG-1`).
+- [Detector](detector.md): the drain-current electrometers bound to `FluxMonitor` (`DET-1`), and the EXP2 motorized diagnostic screens bound to the catalog `Screen` with the beam-monitor cameras bound to `Camera` (`DIAG-1`).
 
 ## Shared
 

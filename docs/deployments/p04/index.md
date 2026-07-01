@@ -22,7 +22,7 @@ For the modelling, P04 introduces one genuinely new device kind and reuses every
 
 - **The grating monochromator (`OPT-1`).** P04's monochromator binds the catalog `GratingMonochromator` Family, a plane-grating monochromator, **not** the crystal `Monochromator` the hard X-ray beamlines (P01, the APS / ESRF tomography lines) use. This is CORA's first PETRA III `GratingMonochromator` deployment; the Family was introduced at NSLS-II SIX and graduated into the catalog at CSX.
 
-Otherwise P04 coins **no new Family**: the undulator binds `InsertionDevice`, the mirrors `Mirror`, the slits `Slit`, the sample manipulators `Manipulator`, the diagnostic cameras `Camera`, the electrometers `FluxMonitor`, the motorized phosphor screens the loose `Screen`. The technique (soft X-ray spectroscopy) earns no catalog Method and is carried pending on the [Site](../petra-iii/index.md) reusing the `xas_spectroscopy` and `angle_resolved_photoemission` slugs (`TECH-1`).
+Otherwise P04 coins **no new Family**: the undulator binds `InsertionDevice`, the mirrors `Mirror`, the slits `Slit`, the sample manipulators `Manipulator`, the diagnostic cameras `Camera`, the electrometers `FluxMonitor`, the motorized phosphor screens the catalog `Screen`. The technique (soft X-ray spectroscopy) earns no catalog Method and is carried pending on the [Site](../petra-iii/index.md) reusing the `xas_spectroscopy` and `angle_resolved_photoemission` slugs (`TECH-1`).
 
 ## Scope: what is and is not modelled
 

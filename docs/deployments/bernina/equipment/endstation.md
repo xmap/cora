@@ -19,7 +19,7 @@ The `USDTable` upstream hexapod (`HexapodSymmetrie`) folds into the `Hexapod` Fa
 
 ## The pump-probe laser
 
-The femtosecond optical laser (`SLAAR21-LMOT`) excites the sample before the X-ray probe, the same role it plays at Alvra. The laser device folds into the loose `Laser` family, and its delay stages are `LinearStage`s. What does not fold is the synchronization: the `eco` `lxt` timing chain holds the optical-laser and FEL timing domains together at the femtosecond level, and the [PSEN arrival-time monitor](../beamline.md) in the optics hutch corrects the residual jitter, a cross-timing-domain relationship CORA's single-domain `PartitionRule` cannot express (LASER-1). The laser is also a class-4 hazard gated by a Clearance (see [Governance](../governance.md)). The laser shutter (`SLAAR21-LTIM01-EVR0`) is driven through a SwissFEL event receiver, the beam-synchronous timing system (TIMING-1).
+The femtosecond optical laser (`SLAAR21-LMOT`) excites the sample before the X-ray probe, the same role it plays at Alvra. The laser device folds into the catalog `Laser` Family, and its delay stages are `LinearStage`s. What does not fold is the synchronization: the `eco` `lxt` timing chain holds the optical-laser and FEL timing domains together at the femtosecond level, and the [PSEN arrival-time monitor](../beamline.md) in the optics hutch corrects the residual jitter, a cross-timing-domain relationship CORA's single-domain `PartitionRule` cannot express (LASER-1). The laser is also a class-4 hazard gated by a Clearance (see [Governance](../governance.md)). The laser shutter (`SLAAR21-LTIM01-EVR0`) is driven through a SwissFEL event receiver, the beam-synchronous timing system (TIMING-1).
 
 ## Sample viewing
 

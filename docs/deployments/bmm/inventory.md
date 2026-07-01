@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/bmm/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/bmm-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection. BMM introduces **no new family**: it reuses existing catalog Families (the ion chambers reuse `FluxMonitor`, graduated in #353; the fluorescence detector the catalog `EnergyDispersiveSpectrometer`) and one loose family already carried by a sibling deployment (the diagnostic screens reuse the loose `Screen` from 2-BM).
+Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/bmm-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection. BMM introduces **no new family**: it reuses existing catalog Families (the ion chambers reuse `FluxMonitor`, graduated in #353; the fluorescence detector the catalog `EnergyDispersiveSpectrometer`) and another catalog Family carried by a sibling deployment (the diagnostic screens bind the catalog `Screen` Family, the 2-BM precedent).
 
 ## The Asset tree
 
@@ -23,7 +23,7 @@ Root Asset `BMM` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `SampleSlit` | Slit | `XF:06BM-BI{Slt:02}` | endstation entrance slit |
 | `Filter` | Filter | `XF:06BMA-BI{Fltr:01}` | attenuating filter paddles |
 | `EnergyAxis` | PseudoAxis | (computed) | master energy (drives Bragg); the axis an XAS scan sweeps |
-| `DiagnosticScreen` | Screen (loose) | `XF:06BMA-BI{Diag:02}` | fluorescent beam-viewing screens |
+| `DiagnosticScreen` | Screen | `XF:06BMA-BI{Diag:02}` | fluorescent beam-viewing screens |
 | `BeamPositionMonitor` | GenericProbe | `XF:06BM-BI{BPM:1}` | beam-position monitor + current transmitter |
 | `SampleStage` | LinearStage | `XF:06BM-ES{MC:09}` | XAFS sample positioning table (x/y/pitch/roll) |
 | `SampleWheel` | RotaryStage | `XF:06BMA-BI{XAFS-Ax:RotB}` | rotating sample wheel (batch XAS) |
@@ -33,7 +33,7 @@ Root Asset `BMM` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `ScalerCounter` | GenericProbe | `XF:06BM-ES:1{Sclr:1}` | scaler / point counter for alignment |
 | `EndstationMotionController` | MotionController | `XF:06BM-ES{MC:09}` | endstation motion controller |
 
-Every family is in the catalog except the loose `Screen` (the diagnostic screens, shared with 2-BM; held pending FLAG-1). The ion chambers reuse `FluxMonitor`, graduated in #353 from the i03/i15-1/i22 ion chambers; the fluorescence detector reuses `EnergyDispersiveSpectrometer`, graduated when 2-ID and 7-BM shared it.
+Every family is in the catalog, including `Screen` (the diagnostic screens, shared with 2-BM; graduated, FLAG-1). The ion chambers reuse `FluxMonitor`, graduated in #353 from the i03/i15-1/i22 ion chambers; the fluorescence detector reuses `EnergyDispersiveSpectrometer`, graduated when 2-ID and 7-BM shared it.
 
 ## Pending confirmations
 

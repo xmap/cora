@@ -27,11 +27,11 @@ Root Asset `P04` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `ExitShutterUnit` | `Device` | Slit | p04-exp2 | EXP2 exit-shutter / diagnostic unit (EXSU2); bpm / baffle roles pending (EXSU-1) |
 | `ExperimentPositioner` | `Device` | Manipulator | p04-exp2 | EXP2 generic positioner axes (exp2_mot06/08); roles pending (GROUP-1) |
 | `VirtualPositioners` | `Device` | PseudoAxis | p04-exp2 | EXP2 virtual position axes (ps / screen position) (GROUP-1) |
-| `DiagnosticScreens` | `Device` | Screen (loose) | p04-exp2 | EXP2 motorized phosphor screens for beam-path diagnostics (DIAG-1) |
+| `DiagnosticScreens` | `Device` | Screen | p04-exp2 | EXP2 motorized phosphor screens for beam-path diagnostics (DIAG-1) |
 | `BeamMonitorCameras` | `Device` | Camera | p04-exp2 | EXP2 Vimba cameras imaging the diagnostic screens (DIAG-1) |
 | `Electrometer` (EXP2) | `Device` | FluxMonitor | p04-exp2 | EXP2 Keithley 6517A drain-current electrometer (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `GratingMonochromator`, `Mirror`, `Slit`, `Manipulator`, `Camera`, `FluxMonitor`, `PseudoAxis`. Loose family reused from siblings: `Screen` (motorized phosphor diagnostic flag, the 2-BM FLAG-1 precedent). No new family is coined and nothing graduates. The `GratingMonochromator` is its first deployment but is already a catalog Family.
+Families reused from the catalog: `InsertionDevice`, `GratingMonochromator`, `Mirror`, `Slit`, `Manipulator`, `Camera`, `FluxMonitor`, `PseudoAxis`, `Screen` (motorized phosphor diagnostic flag, the 2-BM FLAG-1 precedent). No new family is coined here. The `GratingMonochromator` is its first deployment but is already a catalog Family.
 
 ## Cross-cutting controllers
 

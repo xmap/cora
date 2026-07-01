@@ -16,7 +16,7 @@
 
 ## What makes 13-ID new
 
-13-ID is CORA's first extreme-conditions deployment. The fleet has modelled thermal sample environments (the graduated `TemperatureController`), magnetic ones (the graduated `Magnet`), and pump-probe lasers (the loose `Laser`), but never a high-pressure one. 13-ID holds the sample in a diamond anvil cell (DAC): the anvils are squeezed by a gas membrane (a PACE5000 pneumatic controller) to the megabar regime, the sample is heated from both sides by two fibre lasers to thousands of kelvin, and the pressure and temperature are read optically in situ (thermal-emission spectroradiometry for temperature; ruby fluorescence, Raman, and Brillouin for pressure). The X-ray probe is otherwise familiar powder and single-crystal diffraction; the novelty is entirely the sample environment.
+13-ID is CORA's first extreme-conditions deployment. The fleet has modelled thermal sample environments (the graduated `TemperatureController`), magnetic ones (the graduated `Magnet`), and pump-probe lasers (the graduated `Laser`), but never a high-pressure one. 13-ID holds the sample in a diamond anvil cell (DAC): the anvils are squeezed by a gas membrane (a PACE5000 pneumatic controller) to the megabar regime, the sample is heated from both sides by two fibre lasers to thousands of kelvin, and the pressure and temperature are read optically in situ (thermal-emission spectroradiometry for temperature; ruby fluorescence, Raman, and Brillouin for pressure). The X-ray probe is otherwise familiar powder and single-crystal diffraction; the novelty is entirely the sample environment.
 
 ## The PressureCell family (graduated)
 
@@ -32,7 +32,7 @@ The cell is modelled as **one Asset** presenting the `Regulator` Role for its me
 
 ## The heating lasers are not the Laser family
 
-The two fibre lasers that heat the DAC sample do **not** bind the loose `Laser` Family. CORA binds by Role, not mechanism: a heating laser is a power-delivery / thermal-actuation role, distinct from the pump-probe `Laser` (4-ID, LCLS-MFX, held with a model-versus-hazard question that heating does not touch). Binding them to `Laser` would corrupt the signal that hold protects. They are the heating capability of the `PressureCell`. Whether that capability is ever a clean `TemperatureController` is `HEAT-1`: the live heating is open-loop on commanded power (`13IDD:US_LaserPower` / `DS_LaserPower`) with temperature inferred from emission, so today it is a power actuator, not a temperature `Regulator`. The upstream and downstream beams are one device with two sides (balanced double-sided heating), not two instances.
+The two fibre lasers that heat the DAC sample do **not** bind the catalog `Laser` Family. CORA binds by Role, not mechanism: a heating laser is a power-delivery / thermal-actuation role, distinct from the pump-probe `Laser` (4-ID, LCLS-MFX, whose model-versus-hazard question heating does not touch). Binding them to `Laser` would corrupt the signal that hold protects. They are the heating capability of the `PressureCell`. Whether that capability is ever a clean `TemperatureController` is `HEAT-1`: the live heating is open-loop on commanded power (`13IDD:US_LaserPower` / `DS_LaserPower`) with temperature inferred from emission, so today it is a power actuator, not a temperature `Regulator`. The upstream and downstream beams are one device with two sides (balanced double-sided heating), not two instances.
 
 ## No new families on the XRD spine
 

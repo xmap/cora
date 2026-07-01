@@ -6,7 +6,7 @@ MFX's principals are facility principals at the [SLAC Site](../slac/index.md), n
 
 ## The pump-probe laser Clearance
 
-MFX runs a class-4 optical laser for pump-probe, governed at LCLS by the Beam Transport Protection System (BTPS). CORA carries this as a `Clearance` hazard on the experiment (a facility-issued safety permit that must be Active before laser-on work), the same posture 32-ID takes for its additive-manufacturing laser. This is distinct from whether the laser is a driven Asset: the device folds into the loose `Laser` family (the 4-ID precedent), while the personnel-safety permit is a Clearance. The two coexist (LASER-1).
+MFX runs a class-4 optical laser for pump-probe, governed at LCLS by the Beam Transport Protection System (BTPS). CORA carries this as a `Clearance` hazard on the experiment (a facility-issued safety permit that must be Active before laser-on work), the same posture 32-ID takes for its additive-manufacturing laser. This is distinct from whether the laser is a driven Asset: the device folds into the catalog `Laser` Family (the 4-ID precedent), while the personnel-safety permit is a Clearance. The two coexist (LASER-1).
 
 ## The PPS permit
 

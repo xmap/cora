@@ -33,7 +33,7 @@ Root Asset `Cristallina` (`tier = Unit`, `facility_code = psi`); sub-systems nes
 | `OffsetMirror3` | Mirror | `SAROP31-ODMV152` | vertical offset mirror (M3) |
 | `VerticalKBMirror` | Mirror | `SAROP31-OKBV153` | vertical KB focusing mirror |
 | `HorizontalKBMirror` | Mirror | `SAROP31-OKBH154` | horizontal KB focusing mirror |
-| `AlignmentLaser` | **Laser** | `SAROP31-OLAS147` | X-ray alignment laser (NOT a pump-probe laser; loose family) (LASER-1) |
+| `AlignmentLaser` | **Laser** | `SAROP31-OLAS147` | X-ray alignment laser (NOT a pump-probe laser; catalog Laser Family) (LASER-1) |
 | `I0Chamber` | Slit | `SARES30-MCS20610` | I0 chamber: slit blades + foil changer (DIAG-1) |
 | `DM1_Goniometer` | Goniometer | `SARES31-GPS` | DM1 dilution-fridge diffractometer goniometer; the Assembly's goniometer slot (DIFF-1) |
 | `DM1_DetectorArm` | RotaryStage | (slic `SARES31-GPS:ROT2THETA`) | DM1 2-theta detector arm; the Assembly's detector_arm slot (DIFF-1) |
@@ -47,7 +47,7 @@ Root Asset `Cristallina` (`tier = Unit`, `facility_code = psi`); sub-systems nes
 | `AreaDetectorMX` | Camera | (Jungfrau JF17T16V01 8M) | Cristallina-MX science detector; via sf-daq (DAQ-1, DET-1) |
 | `EventTiming` | TimingController | (CTA `SAR-CCTA-ESC`, EVR `SARES30-LTIM01-EVR0`) | beam-synchronous event timing; mediates pump-probe (TIMING-1, LASER-1) |
 
-Reused catalog Families (no new Family needed): `InsertionDevice`, `FluxMonitor`, `Slit`, `Filter`, `Scintillator`, `Mirror`, `Monochromator`, `Goniometer`, `RotaryStage`, `PseudoAxis`, `TemperatureController`, `LinearStage`, `Camera`, `TimingController`, and `Magnet` (the vector superconducting magnet, a further consumer of the graduated Family after 4-ID / i10-1 / ID32, MAG-1). The DM1 and DM2 platforms reuse the graduated `Diffractometer` **Assembly** (Bernina GPS / XRD precedent), their fifth and sixth bindings (DIFF-1). **No new catalog Family or Assembly is coined here**, the same finding as Alvra and Bernina. Loose families reused: `FluxMonitor` and `Diagnostic` (Sensor families), and `Laser` (the X-ray alignment laser).
+Reused catalog Families (no new Family needed): `InsertionDevice`, `FluxMonitor`, `Slit`, `Filter`, `Scintillator`, `Mirror`, `Monochromator`, `Goniometer`, `RotaryStage`, `PseudoAxis`, `TemperatureController`, `LinearStage`, `Camera`, `TimingController`, `Magnet` (the vector superconducting magnet, a further consumer of the graduated Family after 4-ID / i10-1 / ID32, MAG-1), and `Laser` (the graduated optical sample laser, here the X-ray alignment laser). The DM1 and DM2 platforms reuse the graduated `Diffractometer` **Assembly** (Bernina GPS / XRD precedent), their fifth and sixth bindings (DIFF-1). **No new catalog Family or Assembly is coined here**, the same finding as Alvra and Bernina. Loose families reused: `FluxMonitor` and `Diagnostic` (Sensor families).
 
 ## Pending confirmations
 

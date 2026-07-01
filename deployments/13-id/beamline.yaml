@@ -19,7 +19,7 @@
 # deferred.
 #
 # WHAT IS NEW: the high-pressure sample environment. CORA has modelled thermal
-# (TemperatureController), magnetic (loose Magnet), and pump-probe (loose Laser) sample
+# (TemperatureController), magnetic (loose Magnet), and pump-probe (catalog Laser) sample
 # environments, but never an extreme-PRESSURE one. The DAC is a diamond anvil cell
 # whose pressure is loaded by a gas membrane (a GE/Druck PACE5000 pneumatic controller
 # pressurising a bellows that squeezes the anvils) to the megabar regime, with the
@@ -41,9 +41,9 @@
 #     (PACE5000 setpoint + readback); its double-sided laser heating (HEAT-1) and its
 #     in-situ pressure / temperature metrology (a Sensor capability) are capabilities of
 #     the same cell, not separate families.
-#   - The heating lasers do NOT bind the loose Laser Family: a heating laser is a
+#   - The heating lasers do NOT bind the catalog Laser Family: a heating laser is a
 #     power-delivery / thermal-actuation role, distinct from the pump-probe Laser
-#     (4-ID / LCLS-MFX, held). Whether the laser path is a clean TemperatureController
+#     (4-ID / LCLS-MFX). Whether the laser path is a clean TemperatureController
 #     is HEAT-1 (the live heating is open-loop on commanded power, temperature inferred
 #     from emission, so it is a power actuator, not a temperature Regulator, today).
 #   - The XRD probe spine reuses the catalog throughout: the Si DCM binds Monochromator,

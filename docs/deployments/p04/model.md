@@ -20,7 +20,7 @@ P04 is a second beamline at an existing Site, and PETRA III's entry into the sof
 
 ## No new families (the one new binding is already in the catalog)
 
-P04 coins no new Family. The plane-grating monochromator binds the catalog `GratingMonochromator` (its first deployment, but the Family exists); the undulator binds `InsertionDevice`; the mirrors bind `Mirror`; the slits bind `Slit`; the sample manipulators bind `Manipulator`; the diagnostic cameras bind `Camera`; the electrometers bind `FluxMonitor`; the virtual axes bind `PseudoAxis`; and the motorized phosphor screens bind the loose `Screen` (held across the fleet, the 2-BM `FLAG-1` precedent). Nothing in the catalog changes.
+P04 coins no new Family. The plane-grating monochromator binds the catalog `GratingMonochromator` (its first deployment, but the Family exists); the undulator binds `InsertionDevice`; the mirrors bind `Mirror`; the slits bind `Slit`; the sample manipulators bind `Manipulator`; the diagnostic cameras bind `Camera`; the electrometers bind `FluxMonitor`; the virtual axes bind `PseudoAxis`; and the motorized phosphor screens bind the catalog `Screen` Family (the 2-BM `FLAG-1` precedent). Nothing in the catalog changes.
 
 ## The control plane
 
