@@ -73,6 +73,7 @@ async def test_handler_appends_iteration_ended_event() -> None:
         "confidence_source": None,
         "alternatives": [],
         "model_ref": None,
+        "advised_next_point": None,
     }
 
 
