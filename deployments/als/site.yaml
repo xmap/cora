@@ -37,6 +37,7 @@ facility:
   heading: "ALS"
   kind: Site
   institution: Lawrence Berkeley National Laboratory (ALS)
+  control_plane: "BCS (LabVIEW)"
   beamlines: ["8.3.2"]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. 8.3.2 is a

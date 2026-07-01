@@ -34,6 +34,7 @@ facility:
   heading: "Sirius"
   kind: Site
   institution: Brazilian Synchrotron Light Laboratory (LNLS), CNPEM
+  control_plane: "EPICS + MXCuBE3"
   beamlines: [Carnauba, Caterete, Cedro, Ema, Imbuia, Ipe, Manaca, Mogno, Paineira, Quati, Sabia, Sapucaia]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. MOGNO runs

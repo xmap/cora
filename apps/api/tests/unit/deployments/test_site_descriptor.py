@@ -82,10 +82,21 @@ def test_every_site_loads_and_holds_facility_invariants(site_path: Path) -> None
     assert site.facility.display_name == site.facility.code
 
 
+@pytest.mark.parametrize("site_path", _ALL_SITES, ids=lambda p: p.parent.name)
+def test_every_site_declares_a_control_plane(site_path: Path) -> None:
+    """Every Site declares its control-plane house-style: the software floor
+    CORA's edge lands on, a facility-level fact surfaced on the facility page and
+    echoed in the landing-page intro's seam beat. Required (not just optional in
+    the schema) so a new Site cannot ship without it."""
+    control_plane = sd.load(site_path).facility.control_plane
+    assert control_plane, f"{site_path.parent.name}: facility.control_plane is missing or empty"
+
+
 def test_site_loads_and_validates() -> None:
     site = sd.load(_SITE)
     assert site.facility.code == "aps"
     assert site.facility.kind == "Site"
+    assert site.facility.control_plane == "EPICS / ophyd"
     # lower bounds, not exact: additive edits should not break this test, except
     # agents which are drift-guarded against the code seeds below. The two
     # non-pending LLM agents are equality-checked in test_agents_match_seed_constants;

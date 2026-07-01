@@ -27,6 +27,7 @@ facility:
   heading: "Diamond Light Source"
   kind: Site
   institution: Diamond Light Source Ltd, Harwell Campus, Didcot, UK
+  control_plane: "EPICS / dodal"
   beamlines: [I22, I03, I15-1, I11, I24, I06, I10, I20-1, I19, I13-1]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All

@@ -27,6 +27,7 @@ facility:
   heading: "SLAC"
   kind: Site
   institution: SLAC National Accelerator Laboratory
+  control_plane: "EPICS / pcdshub"
   beamlines: [LCLS-MFX]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. None of

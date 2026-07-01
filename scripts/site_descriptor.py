@@ -62,6 +62,14 @@ class SiteFacility(BaseModel):
     # single-word lowercase code like "aps" still renders as "APS".
     heading: str | None = None
     institution: str | None = None
+    # The facility's control-plane house-style: the software floor CORA's edge
+    # lands on and would drive through or replace (e.g. "EPICS / ophyd",
+    # "Tango / Sardana", "BLISS / Beacon / Tango / IcePAP"). A facility-level
+    # fact (the whole Site shares it), surfaced on the facility page and echoed
+    # in the landing-page intro's seam beat. Optional in the schema so a
+    # descriptor stays loadable mid-authoring; a fitness test requires it for
+    # every real Site.
+    control_plane: str | None = None
     sectors: list[str] = []
     beamlines: list[str] = []
     note: str | None = None

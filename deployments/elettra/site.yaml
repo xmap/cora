@@ -40,6 +40,7 @@ facility:
   heading: "Elettra Sincrotrone Trieste"
   kind: Site
   institution: Elettra Sincrotrone Trieste S.C.p.A.
+  control_plane: "Tango + DonkiOrchestra"
   beamlines: [SYRMEP]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. SYRMEP is a

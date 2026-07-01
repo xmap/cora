@@ -32,6 +32,7 @@ facility:
   heading: "ESRF"
   kind: Site
   institution: European Synchrotron Radiation Facility
+  control_plane: "BLISS / Beacon / Tango / IcePAP"
   beamlines: [ID32, ID19, ID16B, ID28]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method.

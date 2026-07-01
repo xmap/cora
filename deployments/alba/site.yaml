@@ -30,6 +30,7 @@ facility:
   heading: "ALBA"
   kind: Site
   institution: ALBA Synchrotron (CELLS)
+  control_plane: "Tango / Sardana / Taurus"
   beamlines: [FAXTOR]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. FAXTOR is a

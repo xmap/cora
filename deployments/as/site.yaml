@@ -32,6 +32,7 @@ facility:
   heading: "Australian Synchrotron"
   kind: Site
   institution: ANSTO (Australian Nuclear Science and Technology Organisation)
+  control_plane: "EPICS + MXCuBE Exporter + SIMPLON REST"
   beamlines: [MX3]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending

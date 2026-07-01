@@ -23,6 +23,7 @@ facility:
   heading: "MAX IV"
   kind: Site
   institution: MAX IV Laboratory, Lund University
+  control_plane: "Tango / Sardana"
   beamlines: [TomoWISE]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All

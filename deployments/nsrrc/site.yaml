@@ -39,6 +39,7 @@ facility:
   heading: "NSRRC"
   kind: Site
   institution: NSRRC (National Synchrotron Radiation Research Center, Hsinchu, Taiwan)
+  control_plane: "EPICS (Blu-Ice / DCSS)"
   beamlines: [TPS 07A, TPS 05A]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending

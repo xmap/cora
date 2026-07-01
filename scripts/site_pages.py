@@ -70,6 +70,8 @@ def _facility(
     rows = [["Facility code", f"`{f.code}`"], ["Kind", f"`{f.kind}`"]]
     if f.institution:
         rows.append(["Institution", f.institution])
+    if f.control_plane:
+        rows.append(["Control plane", f.control_plane])
     if f.sectors:
         rows.append(["Sectors", ", ".join(f"`{s}`" for s in f.sectors)])
     if beamlines:

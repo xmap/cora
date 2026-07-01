@@ -53,6 +53,7 @@ facility:
   heading: "PSI"
   kind: Site
   institution: Paul Scherrer Institut (PSI), Switzerland
+  control_plane: "EPICS (SLS) + eco / slic (SwissFEL)"
   beamlines: [I-TOMCAT, Alvra, Bernina, Cristallina]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. I-TOMCAT is a
