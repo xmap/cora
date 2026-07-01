@@ -2,13 +2,13 @@
 
 *Who will act at ISR, and the trust shape that will gate it. A deliberately partial first cut.*
 
-Governance at ISR follows the same model as the other NSLS-II beamlines: people and autonomous agents are facility principals at the [NSLS-II Site](../nsls2/index.md#who-acts-here), and on the beamline they surface through the actions they take. Their commands are gated by a trust shape (a Zone grouping the beamline's resources, a Conduit binding the surfaces that may issue commands, and Policies that say who may do what).
+Governance at ISR follows the same model as the other NSLS-II beamlines: people and autonomous agents are facility principals at the [NSLS-II Site](../nsls2/index.md#safety-and-governance), and on the beamline they surface through the actions they take. Their commands are gated by a trust shape (a Zone grouping the beamline's resources, a Conduit binding the surfaces that may issue commands, and Policies that say who may do what).
 
-ISR is not yet driven by CORA, so this shape is not yet instantiated. As a partial modelling-exercise scaffold, the deployment is descriptor and docs today, so the concrete Zone, Conduit, and Policy instances are deliberately not materialized. The NSLS-II operator pool and review structure is carried pending on the [NSLS-II Site](../nsls2/index.md#who-acts-here), shared with the rest of the fleet (`GOV-1`).
+ISR is not yet driven by CORA, so this shape is not yet instantiated. As a partial modelling-exercise scaffold, the deployment is descriptor and docs today, so the concrete Zone, Conduit, and Policy instances are deliberately not materialized. The NSLS-II operator pool and review structure is carried pending on the [NSLS-II Site](../nsls2/index.md#safety-and-governance), shared with the rest of the fleet (`GOV-1`).
 
 ## The safety boundary
 
-The safety tier is the other piece that is not yet settled, and the source is especially thin here: **no PSS search-and-secure permit signal, photon shutter, or hutch-interlock device is in the profile collection** (the only two-button-shutter use is the filter-bank actuation, not a beam shutter). So the Enclosure permit leaves and the interlock structure are carried pending and not invented here (`PSS-1`). What is already settled is the boundary: clearances (the safety forms that must be active to start) are issued at the [NSLS-II Site](../nsls2/index.md#the-safety-envelope), not on the beamline, and the beamline links up to them.
+The safety tier is the other piece that is not yet settled, and the source is especially thin here: **no PSS search-and-secure permit signal, photon shutter, or hutch-interlock device is in the profile collection** (the only two-button-shutter use is the filter-bank actuation, not a beam shutter). So the Enclosure permit leaves and the interlock structure are carried pending and not invented here (`PSS-1`). What is already settled is the boundary: clearances (the safety forms that must be active to start) are issued at the [NSLS-II Site](../nsls2/index.md#safety-and-governance), not on the beamline, and the beamline links up to them.
 
 ISR adds the hazard classes that come with its instruments. Those land with the equipment that brings them, and an experiment Clearance would carry them.
 

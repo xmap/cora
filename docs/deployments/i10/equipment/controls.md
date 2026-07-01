@@ -44,7 +44,7 @@ In each case EPICS stays the floor and CORA's edge replaces the bluesky-style or
 
 The PSS search-and-secure permit signals, the photon and front-end shutters, and any interlock tier are **absent from dodal** and are not invented here (PSS-1). dodal is a device-control library, not a safety-system description: it carries the motion and optics handles, not the permit leaves behind an interlocked enclosure. CORA names neither a permit signal nor a shutter for i10 until the beamline team supplies them.
 
-i10 also carries hazard classes that are governed at the Site, not modelled here: a soft X-ray UHV beamline with an intense polarized beam, high magnetic fields (a superconducting magnet at i10-1), and cryogenics. The Enclosure permit shape and the hazard tier are carried pending at the Diamond Site; the governance and safety envelope follow the 2-BM shape (see [Governance](../governance.md) and [the safety envelope](../../diamond/index.md#the-safety-envelope)).
+i10 also carries hazard classes that are governed at the Site, not modelled here: a soft X-ray UHV beamline with an intense polarized beam, high magnetic fields (a superconducting magnet at i10-1), and cryogenics. The Enclosure permit shape and the hazard tier are carried pending at the Diamond Site; the governance and safety envelope follow the 2-BM shape (see [Governance](../governance.md) and [the safety envelope](../../diamond/index.md#safety-and-governance)).
 
 ## Detection: point detectors, no area detector
 

@@ -2,7 +2,7 @@
 
 *Who may act at TPS 05A and the trust shape CORA applies. This is CORA's governance design landing on the beamline, not a description of the beamline's current controls authority.*
 
-People and agents are facility principals at the [NSRRC Site](../nsrrc/index.md#who-acts-here); on the beamline they surface through the actions they take. TPS 05A's governance is **identical to [TPS 07A](../tps-07a/governance.md)'s**, because both beamlines share the one NSRRC Site: the same principals, the same LDAP-backed staff (`ldap://10.7.1.1`), and the same mandatory radiation-safety-training portal (`safetytraining.nsrrc.org.tw`). The human roster is not in public source (GOV-1), so the principals are the design shape, not a registered list.
+People and agents are facility principals at the [NSRRC Site](../nsrrc/index.md#safety-and-governance); on the beamline they surface through the actions they take. TPS 05A's governance is **identical to [TPS 07A](../tps-07a/governance.md)'s**, because both beamlines share the one NSRRC Site: the same principals, the same LDAP-backed staff (`ldap://10.7.1.1`), and the same mandatory radiation-safety-training portal (`safetytraining.nsrrc.org.tw`). The human roster is not in public source (GOV-1), so the principals are the design shape, not a registered list.
 
 ## Who acts
 

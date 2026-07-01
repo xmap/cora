@@ -68,7 +68,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Governance
 
-[Governance](governance.md): who will act at HEX and the trust shape that gates their commands. People and autonomous agents are facility principals at the [NSLS-II Site](../nsls2/index.md#who-acts-here), surfacing through their actions and gated by a Zone-plus-Conduit-plus-Policy trust shape. HEX adds one distinct governance fact: a share of beamtime is reserved for NYSERDA-aligned, New York clean-energy proposals, scored by a dedicated evaluation committee (`GOV-1`). PSS search-and-secure permit signals and the shutters are absent from the profile collection and carried pending, not invented (`PSS-1`).
+[Governance](governance.md): who will act at HEX and the trust shape that gates their commands. People and autonomous agents are facility principals at the [NSLS-II Site](../nsls2/index.md#safety-and-governance), surfacing through their actions and gated by a Zone-plus-Conduit-plus-Policy trust shape. HEX adds one distinct governance fact: a share of beamtime is reserved for NYSERDA-aligned, New York clean-energy proposals, scored by a dedicated evaluation committee (`GOV-1`). PSS search-and-secure permit signals and the shutters are absent from the profile collection and carried pending, not invented (`PSS-1`).
 
 ## Model
 

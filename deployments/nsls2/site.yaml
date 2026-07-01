@@ -26,6 +26,7 @@ facility:
   kind: Site
   institution: Brookhaven National Laboratory
   control_plane: "EPICS / bluesky"
+  beamlines_note: "Two dozen operating beamlines spanning nearly the whole hard- and soft-X-ray technique surface, each modelled from its own bluesky profile collection."
   beamlines: [FXI, HXN, BMM, SRX, SIX, CHX, CSX, IOS, XPD, ESM, SMI, IXS, SST, ISS, FMX, CMS, XFM, LIX, HEX, AMX, XFP, ISR, CDI, PDF]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending

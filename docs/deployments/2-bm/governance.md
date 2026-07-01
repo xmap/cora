@@ -7,7 +7,7 @@
 
 The operator pool on shift, conceptually beamline-scoped. Facility-process principals (proposal PIs, the safety
 review board, the beamline scientist acting in a review-chain capacity) are facility-wide and live at
-[APS](../aps/index.md#who-acts-here). See [Model](../../architecture/model.md) for the aggregate shape.
+[APS](../aps/index.md#safety-and-governance). See [Model](../../architecture/model.md) for the aggregate shape.
 
 | Actor | Kind |
 | --- | --- |
@@ -30,4 +30,4 @@ A Policy governs who may issue which command across a Conduit.
 | Policy | Permitted principals | Permitted commands |
 | --- | --- | --- |
 | `2-BM Operations Policy` | `2-BM Operator 1..3` (above) | Operator-driven commands (Equipment, Recipe, Operation, Run, Subject, Dataset, Caution, Clearance, Supply, Campaign) |
-| `2-BM Agent Policy` | `Run Debrief` (see [APS principals](../aps/index.md#who-acts-here)) | Decision family: `RegisterDecision`, `RateDecision`, `AppendInferences` |
+| `2-BM Agent Policy` | `Run Debrief` (see [APS principals](../aps/index.md#safety-and-governance)) | Decision family: `RegisterDecision`, `RateDecision`, `AppendInferences` |

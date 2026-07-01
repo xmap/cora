@@ -21,7 +21,7 @@ import importlib.util
 import re
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -70,6 +70,7 @@ def _load(name: str) -> ModuleType:
 sd = _load("site_descriptor")
 sp = _load("site_pages")
 cd = _load("catalog_descriptor")
+bd = _load("beamline_descriptor")
 
 
 @pytest.mark.parametrize("site_path", _ALL_SITES, ids=lambda p: p.parent.name)
@@ -185,55 +186,133 @@ def test_site_guards_reject_bad_data(tmp_path: Path) -> None:
         sd.load(duplicate_practice)
 
 
+def _beamline_hosts(facility_code: str) -> list[tuple[str, str]]:
+    # The (label, slug) beamlines a facility hosts, for the roster-link guard.
+    hosts: list[tuple[str, str]] = []
+    for path in sorted((_REPO_ROOT / "deployments").glob("*/beamline.yaml")):
+        b = bd.load(path).beamline
+        if b.facility == facility_code:
+            hosts.append((b.name or path.parent.name, path.parent.name))
+    return hosts
+
+
+def _beamline_refs(facility_code: str) -> list[Any]:
+    # Build the roster refs the mkdocs hook would pass for one facility, so the
+    # render tests and guards exercise the roster spine, not an empty list.
+    # sp.BeamlineRef is dynamically loaded, hence the Any element type.
+    refs: list[Any] = []
+    for path in sorted((_REPO_ROOT / "deployments").glob("*/beamline.yaml")):
+        b = bd.load(path).beamline
+        if b.facility == facility_code:
+            refs.append(
+                sp.BeamlineRef(
+                    label=b.name or path.parent.name,
+                    slug=path.parent.name,
+                    maturity=b.maturity,
+                    evidence=b.evidence,
+                    coverage=b.coverage,
+                    summary=b.summary or "",
+                )
+            )
+    return refs
+
+
+def _aps_beamline_refs() -> list[Any]:
+    return _beamline_refs("aps")
+
+
+def _render_facility(site_path: Path) -> str:
+    site = sd.load(site_path)
+    slug = site_path.parent.name
+    catalog = cd.load(_CATALOG)
+    methods = frozenset(m.name for m in catalog.methods)
+    pages = sp.render_all(
+        site, slug=slug, catalog_methods=methods, beamlines=_beamline_refs(site.facility.code)
+    )
+    return pages[f"deployments/{slug}/index.md"]
+
+
+@pytest.mark.parametrize("site_path", _ALL_SITES, ids=lambda p: p.parent.name)
+def test_facility_page_has_no_empty_tables(site_path: Path) -> None:
+    """The redesign's core anti-regression: a facility page never renders a table
+    header with no body rows. A section with nothing real to show is omitted
+    entirely (adaptive rendering), not left as a hollow header + empty table."""
+    lines = _render_facility(site_path).splitlines()
+    empty: list[str] = []
+    for i, line in enumerate(lines):
+        # a table is `| ... |` then a `| --- |` separator; the row after the
+        # separator must itself be a `| ... |` body row.
+        has_sep = i + 2 < len(lines) and lines[i + 1].startswith("| ---")
+        is_header = line.startswith("| ") and has_sep
+        if is_header and not lines[i + 2].startswith("| "):
+            empty.append(line)
+    assert not empty, f"{site_path.parent.name}: facility page has empty table(s): {empty}"
+
+
+@pytest.mark.parametrize("site_path", _ALL_SITES, ids=lambda p: p.parent.name)
+def test_facility_page_roster_matches_hosted_beamlines(site_path: Path) -> None:
+    """The roster lists exactly the beamlines whose descriptor binds this Site,
+    each linked. The facility-page analog of the landing-page badge guard: the
+    roster cannot silently drop or invent a beamline."""
+    page = _render_facility(site_path)
+    hosts = _beamline_hosts(sd.load(site_path).facility.code)
+    if not hosts:
+        return
+    for label, slug in hosts:
+        assert f"[{label}](../{slug}/index.md)" in page, (
+            f"{site_path.parent.name}: roster missing {label}"
+        )
+
+
 def test_renders_single_site_narrative() -> None:
     site = sd.load(_SITE)
-    pages = sp.render_all(site, catalog_methods=frozenset({"tomography", "dark_field"}))
+    pages = sp.render_all(
+        site,
+        catalog_methods=frozenset({"tomography", "dark_field"}),
+        beamlines=_aps_beamline_refs(),
+    )
     # one reader-first narrative, NOT one page per bounded context
     assert set(pages) == {"deployments/aps/index.md"}
     page = pages["deployments/aps/index.md"]
     assert page.startswith("# APS")
     assert chr(0x2014) not in page
-    # organized by the reader's journey, not by aggregate
+    # the rich pilot Site renders every populated section
     for heading in (
+        "## The beamlines",
         "## The techniques adapted here",
-        "## The resources you draw on",
-        "## The safety envelope",
-        "## Who acts here",
+        "## What this Site provides",
+        "## Safety and governance",
+        "## Active cautions",
     ):
         assert heading in page, f"missing section {heading}"
+    # roster spine: a beamline row links to the sibling beamline dir with its
+    # badges + descriptor summary
+    assert "[2-BM](../2-bm/index.md)" in page
+    assert "the operational pilot" in page  # 2-BM's descriptor summary, single-sourced
     # both active agents surfaced with their models (the gap-fix)
     assert "CautionDrafter" in page and "claude-sonnet-4-6" in page
     assert "RunDebriefer" in page and "claude-haiku-4-5" in page
-    # the deterministic agents are seeded pending; surface every one so they are
-    # discoverable on the deployment page, not just the two live LLM agents
-    for pending_agent in (
-        "RunSupervisor",
-        "CautionPromoter",
-        "ClearanceExpirer",
-        "ClearanceWatcher",
-        "RunInitiator",
-    ):
+    # the deterministic agents are seeded pending; surface them as planned
+    for pending_agent in ("RunSupervisor", "ClearanceExpirer", "RunInitiator"):
         assert pending_agent in page, f"pending agent {pending_agent} not surfaced"
     # content woven in from every folded list
     assert "[`tomography`](../../catalog/methods.md)" in page  # practice -> catalog method
     assert "`human`" in page  # principals
-    assert "LiquidHelium" in page  # supplies
+    assert "LiquidHelium" in page  # a distinctive supply
     assert "ESAF" in page  # clearances
     assert "beam-flux transients" in page  # cautions
-    assert "Institution" in page and "Argonne" in page  # facility -> institution (context)
-    assert "../argonne/index.md" not in page  # institution is context, not a navigable deployment
-    # the Asset binding is dissolved into this page, not a separate Assets sub-page
-    assert "## How APS is modeled" in page
-    assert "../2-bm/index.md" in page  # beamline root Asset binding, folded in
-    assert "`Unit`" in page  # asset tier column rendered inline
-    assert "assets.md" not in page  # no link-out to a hand-authored Assets page
+    assert "Institution" in page and "Argonne" in page  # facts header
+    assert "Control plane" in page and "EPICS / ophyd" in page  # seam in the facts header
+    # the model mapping is one collapsed pointer, no per-page asset table
+    assert "## How this maps to CORA's model" in page
+    assert "assets.md" not in page
 
 
 def test_practice_method_links_only_known() -> None:
     site = sd.load(_SITE)
-    page = sp.render_all(site, catalog_methods=frozenset({"tomography"}))[
-        "deployments/aps/index.md"
-    ]
+    page = sp.render_all(
+        site, catalog_methods=frozenset({"tomography"}), beamlines=_aps_beamline_refs()
+    )["deployments/aps/index.md"]
     # known catalog method renders as a link
     assert "[`tomography`](../../catalog/methods.md)" in page
     # a method not in the catalog renders unlinked (bare code span)

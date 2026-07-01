@@ -63,7 +63,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Governance
 
-[Governance](governance.md): who would act at I06 and the trust shape (Zone plus Conduit plus Policy) that gates their commands. People and autonomous agents are facility principals at the [Diamond Site](../diamond/index.md#who-acts-here), carried pending site-level (`GOV-1`), following the 2-BM governance shape. The PSS search-and-secure permit signals and the photon / front-end shutters are absent from dodal and carried pending, not invented (`PSS-1`); the hazard envelope is a soft X-ray UHV beamline with intense polarized beam and in-situ temperature environments (see [the safety envelope](../diamond/index.md#the-safety-envelope)).
+[Governance](governance.md): who would act at I06 and the trust shape (Zone plus Conduit plus Policy) that gates their commands. People and autonomous agents are facility principals at the [Diamond Site](../diamond/index.md#safety-and-governance), carried pending site-level (`GOV-1`), following the 2-BM governance shape. The PSS search-and-secure permit signals and the photon / front-end shutters are absent from dodal and carried pending, not invented (`PSS-1`); the hazard envelope is a soft X-ray UHV beamline with intense polarized beam and in-situ temperature environments (see [the safety envelope](../diamond/index.md#safety-and-governance)).
 
 ## Model
 

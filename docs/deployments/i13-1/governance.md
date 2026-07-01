@@ -2,11 +2,11 @@
 
 *Who may act at I13-1 and the trust shape CORA applies. This is CORA's governance design landing on the coherence-branch endstation, not a description of the beamline's current controls authority. Scaffold, not yet instantiated.*
 
-People and autonomous agents are facility principals at the [Diamond Site](../diamond/index.md#who-acts-here); on the beamline they surface through the actions they take. The human roster is not in the `i13_1` dodal module (GOV-1), so the principals are the design shape, not a registered list. This page follows the same model as the other Diamond beamlines, and the same partial-first-cut posture as the I13-1 scaffold overall: only the coherence-branch endstation is in this cut, and the shared I13 source and optics are deferred (SRC-1, OPT-1).
+People and autonomous agents are facility principals at the [Diamond Site](../diamond/index.md#safety-and-governance); on the beamline they surface through the actions they take. The human roster is not in the `i13_1` dodal module (GOV-1), so the principals are the design shape, not a registered list. This page follows the same model as the other Diamond beamlines, and the same partial-first-cut posture as the I13-1 scaffold overall: only the coherence-branch endstation is in this cut, and the shared I13 source and optics are deferred (SRC-1, OPT-1).
 
 ## Who acts
 
-CORA brings its own Access model: a small set of facility roles (operator, beamline scientist, safety reviewer, and the autonomous-agent and service principals) scoped at the Diamond Site. An I13-1 beamtime is run by an operator or beamline scientist Actor; a safety reviewer holds the clearance authority. The Diamond operator pool and review structure are site-level and shared across the beamlines, so they are not instantiated per beamline; they are carried pending on the [Diamond Site page](../diamond/index.md#who-acts-here) (GOV-1). None of this is in dodal, which is a controls library, not an organizational record.
+CORA brings its own Access model: a small set of facility roles (operator, beamline scientist, safety reviewer, and the autonomous-agent and service principals) scoped at the Diamond Site. An I13-1 beamtime is run by an operator or beamline scientist Actor; a safety reviewer holds the clearance authority. The Diamond operator pool and review structure are site-level and shared across the beamlines, so they are not instantiated per beamline; they are carried pending on the [Diamond Site page](../diamond/index.md#safety-and-governance) (GOV-1). None of this is in dodal, which is a controls library, not an organizational record.
 
 ## The trust boundary
 

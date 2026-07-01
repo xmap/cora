@@ -249,9 +249,11 @@ def on_files(files: Any, *, config: Any) -> Any:
 
     generated: dict[str, str] = {}
 
-    # Beamlines: render each, and build the facility -> [(label, slug)] map the
-    # site pages use to cross-link to the beamlines they actually host.
-    beamlines_by_site: dict[str, list[tuple[str, str]]] = {}
+    # Beamlines: render each, and build the facility -> [BeamlineRef] map the
+    # site pages use for their roster (label, slug, badges, summary), so the
+    # facility page reads the one-liner + badges from the descriptor, not a
+    # hand-authored copy.
+    beamlines_by_site: dict[str, list[site_pages.BeamlineRef]] = {}
     for path in sorted(DEPLOYMENTS_DIR.glob("*/beamline.yaml")):
         slug = path.parent.name
         descriptor = beamline_descriptor.load(path)
@@ -263,10 +265,18 @@ def on_files(files: Any, *, config: Any) -> Any:
                 catalog_models=catalog_models,
             )
         )
-        facility = descriptor.beamline.facility
-        if facility:
-            label = descriptor.beamline.name or slug
-            beamlines_by_site.setdefault(facility, []).append((label, slug))
+        b = descriptor.beamline
+        if b.facility:
+            beamlines_by_site.setdefault(b.facility, []).append(
+                site_pages.BeamlineRef(
+                    label=b.name or slug,
+                    slug=slug,
+                    maturity=b.maturity,
+                    evidence=b.evidence,
+                    coverage=b.coverage,
+                    summary=b.summary or "",
+                )
+            )
 
     generated.update(catalog_pages.render_all(catalog))
 

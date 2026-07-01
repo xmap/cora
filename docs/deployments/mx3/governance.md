@@ -2,7 +2,7 @@
 
 *Who may act at MX3 and the trust shape CORA applies. This is CORA's governance design landing on the beamline, not a description of the beamline's current controls authority.*
 
-People and agents are facility principals at the [Australian Synchrotron Site](../as/index.md#who-acts-here); on the beamline they surface through the actions they take. The human roster is not in the device library (GOV-1), so the principals are the design shape, not a registered list.
+People and agents are facility principals at the [Australian Synchrotron Site](../as/index.md#safety-and-governance); on the beamline they surface through the actions they take. The human roster is not in the device library (GOV-1), so the principals are the design shape, not a registered list.
 
 ## Who acts
 

@@ -26,4 +26,4 @@ The 8.3.2 acquisition (the energy selection over the monochromator, the continuo
 
 ## Equipment protection
 
-The ALS personnel-safety permit signals, the front-end and photon shutters, and any equipment-protection interlock tier are not published per beamline and are not invented here (`PSS-1`). The Enclosure permit shape and the hazard tier are carried pending at the ALS Site; the governance and safety envelope follow the 2-BM shape (see [Governance](../governance.md) and [the safety envelope](../../als/index.md#the-safety-envelope)).
+The ALS personnel-safety permit signals, the front-end and photon shutters, and any equipment-protection interlock tier are not published per beamline and are not invented here (`PSS-1`). The Enclosure permit shape and the hazard tier are carried pending at the ALS Site; the governance and safety envelope follow the 2-BM shape (see [Governance](../governance.md) and [the safety envelope](../../als/index.md#safety-and-governance)).

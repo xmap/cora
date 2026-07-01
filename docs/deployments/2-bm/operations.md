@@ -19,7 +19,7 @@ are Permitted and its resources are available.
 ## Supplies
 
 A Supply is a continuously-available resource a run draws on. Beamline-scope Supplies are tracked here;
-facility-scope utilities live at [APS](../aps/index.md#the-resources-you-draw-on).
+facility-scope utilities live at [APS](../aps/index.md#what-this-site-provides).
 
 | Supply | Scope | Kind |
 | --- | --- | --- |
@@ -30,7 +30,7 @@ Run-level fact, not a beamline Supply), and compressed air is the APS facility s
 beamline-local spec.
 
 The photon beam, cooling water, vacuum, and electrical power are facility-scope utilities, observed through
-BLEPS and recorded at the [APS](../aps/index.md#the-resources-you-draw-on) level rather than as beamline
+BLEPS and recorded at the [APS](../aps/index.md#what-this-site-provides) level rather than as beamline
 Supplies; the BLEPS-to-Supply mapping is tracked on
 [Open questions](questions.md#equipment-protection-bleps).
 

@@ -2,11 +2,11 @@
 
 *Who may act at ID19 and the trust shape CORA applies. This is CORA's governance design landing on the beamline, not a description of the beamline's current controls authority. Scaffold, not yet instantiated.*
 
-People and autonomous agents are facility principals at the [ESRF Site](../esrf/index.md#who-acts-here); on the beamline they surface through the actions they take. The human roster is not in the BLISS config (GOV-1), so the principals are the design shape, not a registered list. This page follows the same model as the other beamlines.
+People and autonomous agents are facility principals at the [ESRF Site](../esrf/index.md#safety-and-governance); on the beamline they surface through the actions they take. The human roster is not in the BLISS config (GOV-1), so the principals are the design shape, not a registered list. This page follows the same model as the other beamlines.
 
 ## Who acts
 
-CORA brings its own Access model: a small set of facility roles (operator, beamline scientist, safety reviewer, and the autonomous-agent and service principals) scoped at the ESRF Site. An ID19 beamtime is run by an operator or beamline scientist Actor; a safety reviewer holds the clearance authority. The ESRF operator pool and review structure are site-level and shared across the beamlines, so they are not instantiated per beamline; they are carried pending on the [ESRF Site page](../esrf/index.md#who-acts-here) (GOV-1). None of this is in the BLISS config, which is a controls device database, not an organizational record.
+CORA brings its own Access model: a small set of facility roles (operator, beamline scientist, safety reviewer, and the autonomous-agent and service principals) scoped at the ESRF Site. An ID19 beamtime is run by an operator or beamline scientist Actor; a safety reviewer holds the clearance authority. The ESRF operator pool and review structure are site-level and shared across the beamlines, so they are not instantiated per beamline; they are carried pending on the [ESRF Site page](../esrf/index.md#safety-and-governance) (GOV-1). None of this is in the BLISS config, which is a controls device database, not an organizational record.
 
 ## The trust boundary
 

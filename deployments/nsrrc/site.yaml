@@ -40,6 +40,8 @@ facility:
   kind: Site
   institution: NSRRC (National Synchrotron Radiation Research Center, Hsinchu, Taiwan)
   control_plane: "EPICS (Blu-Ice / DCSS)"
+  beamlines_note: "A shared MX cluster: TPS 07A and TPS 05A run the same MD3 + ISARA kit on the common Blu-Ice / DCSS stack."
+  beamlines_note: "TPS 07A and TPS 05A are sibling stations of one MX cluster, sharing the Blu-Ice/DCSS-over-EPICS stack and the MD3 + ISARA kit."
   beamlines: [TPS 07A, TPS 05A]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. All pending

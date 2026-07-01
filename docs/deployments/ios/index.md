@@ -70,7 +70,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Governance
 
-[Governance](governance.md): who will act at IOS and the trust shape that gates their commands. People and autonomous agents are facility principals at the [NSLS-II Site](../nsls2/index.md#who-acts-here), surfacing through their actions and gated by a Zone-plus-Conduit-plus-Policy trust shape. The NSLS-II operator pool and review are pending at the Site (`GOV-1`). PSS search-and-secure permit signals and the photon shutters are absent from the profile collection and carried pending, not invented (`PSS-1`).
+[Governance](governance.md): who will act at IOS and the trust shape that gates their commands. People and autonomous agents are facility principals at the [NSLS-II Site](../nsls2/index.md#safety-and-governance), surfacing through their actions and gated by a Zone-plus-Conduit-plus-Policy trust shape. The NSLS-II operator pool and review are pending at the Site (`GOV-1`). PSS search-and-secure permit signals and the photon shutters are absent from the profile collection and carried pending, not invented (`PSS-1`).
 
 ## Model
 

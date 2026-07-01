@@ -38,7 +38,7 @@ The cross-cutting reference view is the [Inventory](inventory.md): the flat Asse
 
 ## Governance
 
-[Governance](governance.md): who may act at HXN and the trust shape CORA applies. People and agents are facility principals at the [NSLS-II Site](../nsls2/index.md#who-acts-here); CORA brings its own per-Actor authority.
+[Governance](governance.md): who may act at HXN and the trust shape CORA applies. People and agents are facility principals at the [NSLS-II Site](../nsls2/index.md#safety-and-governance); CORA brings its own per-Actor authority.
 
 ## Model
 

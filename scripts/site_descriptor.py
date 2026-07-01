@@ -70,6 +70,11 @@ class SiteFacility(BaseModel):
     # descriptor stays loadable mid-authoring; a fitness test requires it for
     # every real Site.
     control_plane: str | None = None
+    # A one-line note on how this Site's beamlines relate to each other (shared
+    # source, shared optics, canted straight, branch), rendered under the roster
+    # on the facility page. This is the intra-Site topology the flat landing-page
+    # list cannot show; hand-authored per Site until it earns a structured form.
+    beamlines_note: str | None = None
     sectors: list[str] = []
     beamlines: list[str] = []
     note: str | None = None

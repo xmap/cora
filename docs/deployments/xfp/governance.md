@@ -2,13 +2,13 @@
 
 *Who will act at XFP, and the trust shape that will gate it. First cut.*
 
-Governance at XFP follows the same model as the other NSLS-II beamlines: people and autonomous agents are facility principals at the [NSLS-II Site](../nsls2/index.md#who-acts-here), and on the beamline they surface through the actions they take. Their commands are gated by a trust shape (a Zone grouping the beamline's resources, a Conduit binding the surfaces that may issue commands, and Policies that say who may do what).
+Governance at XFP follows the same model as the other NSLS-II beamlines: people and autonomous agents are facility principals at the [NSLS-II Site](../nsls2/index.md#safety-and-governance), and on the beamline they surface through the actions they take. Their commands are gated by a trust shape (a Zone grouping the beamline's resources, a Conduit binding the surfaces that may issue commands, and Policies that say who may do what).
 
-XFP is not yet driven by CORA, so this shape is not yet instantiated. As a modelling-exercise scaffold, the deployment is descriptor and docs today, so the concrete Zone, Conduit, and Policy instances are deliberately not materialized. XFP is a Case Western Reserve University partner beamline operated within NSLS-II, so its operator and review structure is carried pending on the [NSLS-II Site](../nsls2/index.md#who-acts-here), with the partner-beamline operating model itself an open question (`GOV-1`).
+XFP is not yet driven by CORA, so this shape is not yet instantiated. As a modelling-exercise scaffold, the deployment is descriptor and docs today, so the concrete Zone, Conduit, and Policy instances are deliberately not materialized. XFP is a Case Western Reserve University partner beamline operated within NSLS-II, so its operator and review structure is carried pending on the [NSLS-II Site](../nsls2/index.md#safety-and-governance), with the partner-beamline operating model itself an open question (`GOV-1`).
 
 ## The safety boundary
 
-The safety tier is the other piece that is not yet settled. Only the front-end photon-shutter enable status is in the beamline's profile collection (interlock-derived; plans refuse to open the shutter when it is disabled), so the Enclosure permit leaves and the rest of the search-and-secure structure are carried pending and not invented here (`PSS-1`). What is already settled is the boundary: clearances (the safety forms that must be active to start) are issued at the [NSLS-II Site](../nsls2/index.md#the-safety-envelope), not on the beamline, and the beamline links up to them.
+The safety tier is the other piece that is not yet settled. Only the front-end photon-shutter enable status is in the beamline's profile collection (interlock-derived; plans refuse to open the shutter when it is disabled), so the Enclosure permit leaves and the rest of the search-and-secure structure are carried pending and not invented here (`PSS-1`). What is already settled is the boundary: clearances (the safety forms that must be active to start) are issued at the [NSLS-II Site](../nsls2/index.md#safety-and-governance), not on the beamline, and the beamline links up to them.
 
 XFP brings two distinctive hazards: a high-flux white beam, and the dose it delivers. They land with the equipment and the experiment that bring them, and an experiment Clearance would carry them.
 

@@ -35,7 +35,7 @@ The cross-cutting reference view is the [Inventory](inventory.md): the planned A
 
 ## Governance
 
-[Governance](governance.md): who will act at TomoWISE and the trust shape that gates their commands. People and agents are facility principals at the [MAX IV Site](../maxiv/index.md#who-acts-here).
+[Governance](governance.md): who will act at TomoWISE and the trust shape that gates their commands. People and agents are facility principals at the [MAX IV Site](../maxiv/index.md#safety-and-governance).
 
 ## Model
 

@@ -54,6 +54,8 @@ facility:
   kind: Site
   institution: Paul Scherrer Institut (PSI), Switzerland
   control_plane: "EPICS (SLS) + eco / slic (SwissFEL)"
+  beamlines_note: "Two sources under one institute: I-TOMCAT sits on the SLS storage ring, while Alvra, Bernina, and Cristallina are stations sharing the SwissFEL Aramis free-electron-laser source."
+  beamlines_note: "Two sources under one institute: I-TOMCAT is on the SLS storage ring, while Alvra, Bernina, and Cristallina are co-equal stations sharing the SwissFEL Aramis free-electron-laser source."
   beamlines: [I-TOMCAT, Alvra, Bernina, Cristallina]
 
 # ISA-88 Site Recipes: the facility-adapted form of a catalog Method. I-TOMCAT is a

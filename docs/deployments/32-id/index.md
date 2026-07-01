@@ -56,7 +56,7 @@ The cross-cutting reference view is the [Inventory](inventory.md): the planned A
 
 ## Governance
 
-[Governance](governance.md): who will act at 32-ID and the trust shape that gates their commands. People and agents are facility principals at the [APS Site](../aps/index.md#who-acts-here).
+[Governance](governance.md): who will act at 32-ID and the trust shape that gates their commands. People and agents are facility principals at the [APS Site](../aps/index.md#safety-and-governance).
 
 ## Model
 

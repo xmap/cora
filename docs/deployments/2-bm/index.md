@@ -35,7 +35,7 @@ The cross-cutting reference view is the [Inventory](inventory.md): the flat Asse
 
 ## Operations
 
-[Operations](operations.md) is the runbook for getting ready and measuring. It ties together [Procedures](procedures.md) (alignment, characterization, recovery), [Recipes](recipes.md) (deployment-bound step sequences that expand into Procedures), [Enclosures](enclosures.md) (the two hutch permits, optics hutch `2-BM-A` and experiment hutch `2-BM-B`), and [Cautions](cautions.md). Clearances, the safety forms that must be Active to start, are issued at the [APS Site](../aps/index.md#the-safety-envelope).
+[Operations](operations.md) is the runbook for getting ready and measuring. It ties together [Procedures](procedures.md) (alignment, characterization, recovery), [Recipes](recipes.md) (deployment-bound step sequences that expand into Procedures), [Enclosures](enclosures.md) (the two hutch permits, optics hutch `2-BM-A` and experiment hutch `2-BM-B`), and [Cautions](cautions.md). Clearances, the safety forms that must be Active to start, are issued at the [APS Site](../aps/index.md#safety-and-governance).
 
 ## Experiment
 
@@ -43,7 +43,7 @@ The cross-cutting reference view is the [Inventory](inventory.md): the flat Asse
 
 ## Governance
 
-[Governance](governance.md): who may act at 2-BM and the trust policies (Zone, Conduit, Policy) that gate their commands. People and autonomous agents are facility principals at the [APS Site](../aps/index.md#who-acts-here); on the beamline they surface through the actions they take.
+[Governance](governance.md): who may act at 2-BM and the trust policies (Zone, Conduit, Policy) that gate their commands. People and autonomous agents are facility principals at the [APS Site](../aps/index.md#safety-and-governance); on the beamline they surface through the actions they take.
 
 ## Model
 

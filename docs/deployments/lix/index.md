@@ -68,7 +68,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Governance
 
-[Governance](governance.md): who will act at LIX and the trust shape that gates their commands. People and autonomous agents are facility principals at the [NSLS-II Site](../nsls2/index.md#who-acts-here), surfacing through their actions and gated by a Zone-plus-Conduit-plus-Policy trust shape. The NSLS-II operator pool and review are pending at the Site (`GOV-1`). The profile collection's security model is a POSIX-ACL login, not a PSS integration, so the search-and-secure permit signals and shutters are absent and carried pending, not invented (`PSS-1`).
+[Governance](governance.md): who will act at LIX and the trust shape that gates their commands. People and autonomous agents are facility principals at the [NSLS-II Site](../nsls2/index.md#safety-and-governance), surfacing through their actions and gated by a Zone-plus-Conduit-plus-Policy trust shape. The NSLS-II operator pool and review are pending at the Site (`GOV-1`). The profile collection's security model is a POSIX-ACL login, not a PSS integration, so the search-and-secure permit signals and shutters are absent and carried pending, not invented (`PSS-1`).
 
 ## Model
 

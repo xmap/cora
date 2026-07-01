@@ -2,9 +2,9 @@
 
 *Who will act at 7-BM, and the trust shape that will gate it. Design-phase.*
 
-Governance at 7-BM follows the same model as the 2-BM pilot: people and autonomous agents are facility principals at the [APS Site](../aps/index.md#who-acts-here), and on the beamline they surface through the actions they take. Their commands are gated by a trust shape (a Zone grouping the beamline's resources, a Conduit binding the surfaces that may issue commands, and Policies that say who may do what).
+Governance at 7-BM follows the same model as the 2-BM pilot: people and autonomous agents are facility principals at the [APS Site](../aps/index.md#safety-and-governance), and on the beamline they surface through the actions they take. Their commands are gated by a trust shape (a Zone grouping the beamline's resources, a Conduit binding the surfaces that may issue commands, and Policies that say who may do what).
 
-Because 7-BM runs at the same APS Site as 2-BM, it reuses the APS facility envelope rather than creating a new one: the APS operator pool, the experiment-safety review structure, and the seeded agents are facility-wide and are inherited unchanged. This is the opposite of the TomoWISE deployment, which had to create a new MAX IV Site. 7-BM adds only its own beamline-bound principals (the 7-BM beamline scientists and operators), carried pending on the [APS site page](../aps/index.md#who-acts-here).
+Because 7-BM runs at the same APS Site as 2-BM, it reuses the APS facility envelope rather than creating a new one: the APS operator pool, the experiment-safety review structure, and the seeded agents are facility-wide and are inherited unchanged. This is the opposite of the TomoWISE deployment, which had to create a new MAX IV Site. 7-BM adds only its own beamline-bound principals (the 7-BM beamline scientists and operators), carried pending on the [APS site page](../aps/index.md#safety-and-governance).
 
 7-BM is pre-build for CORA, so the concrete trust shape is not yet instantiated. What is already settled is the boundary: clearances (the safety forms that must be active to start) are issued at the APS Site, not on the beamline, and the beamline links up to them rather than restating them.
 

@@ -66,7 +66,7 @@ The cross-cutting reference view is the [Inventory](inventory.md), authored from
 
 ## Governance
 
-[Governance](governance.md): who may act at ID19 and the trust shape CORA applies. People and autonomous agents are facility principals at the [ESRF Site](../esrf/index.md#who-acts-here), gated by a trust shape (Zone + Conduit + Policy). Clearances are issued at the ESRF Site; the operator pool and review are carried pending (GOV-1).
+[Governance](governance.md): who may act at ID19 and the trust shape CORA applies. People and autonomous agents are facility principals at the [ESRF Site](../esrf/index.md#safety-and-governance), gated by a trust shape (Zone + Conduit + Policy). Clearances are issued at the ESRF Site; the operator pool and review are carried pending (GOV-1).
 
 ## Model
 

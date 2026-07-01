@@ -2,13 +2,13 @@
 
 *Who would act at i19 and the trust shape that would gate it. This is CORA's governance design landing on the beamline, not a description of the beamline's current controls authority. Not yet instantiated (scaffold).*
 
-Governance at i19 follows the same model as the other Diamond beamlines: people and autonomous agents are facility principals at the [Diamond Site](../diamond/index.md#who-acts-here), and on the beamline they surface through the actions they take. Their commands are gated by a trust shape: a Zone grouping the beamline's resources, a Conduit binding the surfaces that may issue commands, and Policies that say who may do what. The human roster is not in the dodal module (GOV-1), so the principals below are the design shape, not a registered list.
+Governance at i19 follows the same model as the other Diamond beamlines: people and autonomous agents are facility principals at the [Diamond Site](../diamond/index.md#safety-and-governance), and on the beamline they surface through the actions they take. Their commands are gated by a trust shape: a Zone grouping the beamline's resources, a Conduit binding the surfaces that may issue commands, and Policies that say who may do what. The human roster is not in the dodal module (GOV-1), so the principals below are the design shape, not a registered list.
 
 Because i19 is a scaffold, the concrete trust shape is not instantiated. What is already settled is the boundary: clearances (the safety state that must be active to start) are issued at the Diamond Site, not on the beamline, and the beamline links up to them.
 
 ## Who acts
 
-The Diamond operator pool runs an i19 beamtime, with a beamline scientist and a safety reviewer in the facility-wide review chain. These are the Diamond facility principals, carried pending at the [Diamond Site page](../diamond/index.md#who-acts-here); i19 inherits them rather than coining its own (GOV-1). The Diamond proposal and cycle are a fact CORA's Campaign uses for custody.
+The Diamond operator pool runs an i19 beamtime, with a beamline scientist and a safety reviewer in the facility-wide review chain. These are the Diamond facility principals, carried pending at the [Diamond Site page](../diamond/index.md#safety-and-governance); i19 inherits them rather than coining its own (GOV-1). The Diamond proposal and cycle are a fact CORA's Campaign uses for custody.
 
 ## The trust boundary
 
@@ -27,7 +27,7 @@ A Policy governs who may issue which command across a Conduit.
 
 ## The safety envelope
 
-i19 inherits the Diamond [safety envelope](../diamond/index.md#the-safety-envelope). The one safety signal CORA can name today is the dodal interlocked optics shutter (`OpticsShutter`, BL19I-PS-SHTR-01), which is PSS-interlocked and bound to the Shutter family. Beyond that, the PSS search-and-secure permit signals per hutch are pending and are not invented (PSS-1). Clearances are issued at the Diamond Site and the beamline links up to them.
+i19 inherits the Diamond [safety envelope](../diamond/index.md#safety-and-governance). The one safety signal CORA can name today is the dodal interlocked optics shutter (`OpticsShutter`, BL19I-PS-SHTR-01), which is PSS-interlocked and bound to the Shutter family. Beyond that, the PSS search-and-secure permit signals per hutch are pending and are not invented (PSS-1). Clearances are issued at the Diamond Site and the beamline links up to them.
 
 ## The active-hutch permit (ACCESS-1)
 

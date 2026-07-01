@@ -71,7 +71,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Governance
 
-[Governance](governance.md): who will act at ISR and the trust shape that gates their commands. People and autonomous agents are facility principals at the [NSLS-II Site](../nsls2/index.md#who-acts-here), surfacing through their actions and gated by a Zone-plus-Conduit-plus-Policy trust shape. The NSLS-II operator pool and review are pending at the Site (`GOV-1`). No PSS / photon-shutter / hutch-interlock device is in the profile collection, so the permit signals are carried pending, not invented (`PSS-1`).
+[Governance](governance.md): who will act at ISR and the trust shape that gates their commands. People and autonomous agents are facility principals at the [NSLS-II Site](../nsls2/index.md#safety-and-governance), surfacing through their actions and gated by a Zone-plus-Conduit-plus-Policy trust shape. The NSLS-II operator pool and review are pending at the Site (`GOV-1`). No PSS / photon-shutter / hutch-interlock device is in the profile collection, so the permit signals are carried pending, not invented (`PSS-1`).
 
 ## Model
 

@@ -18,4 +18,4 @@ Holds the sample stage, the transmission-microscopy optics, and the detector.
 - Permit: the PSS permit leaf is unknown (PSS-1).
 - Open boundary: the Photometrics Kinetix camera lives in a `XF:18ID1-ES` namespace, distinct from `XF:18IDB-*`. Whether `18ID1-ES` is a separate endstation area or part of 18-IDB is unresolved (ENC-1); CORA folds it into 18-IDB for now.
 
-Clearances, the facility safety forms that must be Active to start, are issued at the [NSLS-II Site](../nsls2/index.md#the-safety-envelope) (`NSLS-II personal safety system`, pending).
+Clearances, the facility safety forms that must be Active to start, are issued at the [NSLS-II Site](../nsls2/index.md#safety-and-governance) (`NSLS-II personal safety system`, pending).

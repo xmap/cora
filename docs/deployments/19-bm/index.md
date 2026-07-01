@@ -35,7 +35,7 @@ The cross-cutting reference view is the [Inventory](inventory.md): the planned A
 
 ## Governance
 
-[Governance](governance.md): who will act at 19-BM and the trust shape that gates their commands. People and agents are facility principals at the [APS Site](../aps/index.md#who-acts-here); autonomy is first-class here, so this is the deployment where CORA's supervisory agents are intended to go operational.
+[Governance](governance.md): who will act at 19-BM and the trust shape that gates their commands. People and agents are facility principals at the [APS Site](../aps/index.md#safety-and-governance); autonomy is first-class here, so this is the deployment where CORA's supervisory agents are intended to go operational.
 
 ## Model
 

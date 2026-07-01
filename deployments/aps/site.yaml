@@ -23,6 +23,8 @@ facility:
   kind: Site
   institution: Argonne
   control_plane: "EPICS / ophyd"
+  beamlines_note: "The one Site where CORA spans all three maturities: 2-BM runs live, 7-BM / 19-BM / 32-ID are in design, and the rest are reverse-engineered models, all sharing the APS storage-ring envelope."
+  beamlines_note: "The pilot 2-BM runs live; 7-BM, 19-BM, and 32-ID are in design; the Sector 4/8/9/12/13 beamlines are reverse-engineered models. All share the APS storage-ring envelope."
   sectors: [Sector 2, Sector 4, Sector 7, Sector 8, Sector 9, Sector 12, Sector 13, Sector 32, Sector 19]
   beamlines: [2-BM, 2-ID, 7-BM, 32-ID, 19-BM, 4-ID, 8-ID, 9-ID, 12-ID, 13-ID]
 

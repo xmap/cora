@@ -34,4 +34,4 @@ The personnel PSS search-and-secure permit signals, the front-end and photon shu
 
 If CORA later models either, it would not model the interlock logic itself. The Koyo PLC is an Enclosure permit axis, not a device: CORA observes the permit signal and gates conduct on it, mapping the outcome to an Enclosure permit status, the same way it treats the PSS search-and-secure state. That observe-only mapping is not modelled in this cut.
 
-The [APS Site](../../aps/index.md#the-safety-envelope) page carries the shared safety envelope these permits sit within.
+The [APS Site](../../aps/index.md#safety-and-governance) page carries the shared safety envelope these permits sit within.
