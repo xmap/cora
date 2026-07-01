@@ -1,21 +1,21 @@
 # Open questions
 
-*What CORA needs the 12-ID-E team to confirm before the model can be trusted.*
+*What CORA needs the 12-ID team to confirm before the model can be trusted.*
 
-12-ID-E was reverse-engineered from the beamline's own bluesky / BITS instrument ([BCDA-APS/usaxs-bits](https://github.com/BCDA-APS/usaxs-bits)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, read from the `src/usaxs/configs/*.yml` device tables and `src/usaxs/devices/*.py` classes rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+12-ID was reverse-engineered from the beamline's own bluesky / BITS instrument ([BCDA-APS/usaxs-bits](https://github.com/BCDA-APS/usaxs-bits)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, read from the `src/usaxs/configs/*.yml` device tables and `src/usaxs/devices/*.py` classes rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| ENC-1 | Blocks-go-live | Is 12-ID-E one experiment hutch served by a shared upstream 12-ID optics zone, or do the optics live in the same hutch? | Two enclosures: a shared `12-ID-optics` zone and the `12-ID-E` experiment hutch. | The Enclosure grouping. |
+| ENC-1 | Blocks-go-live | Is 12-ID one experiment hutch served by a shared upstream 12-ID optics zone, or do the optics live in the same hutch? | Two enclosures: a shared `12-ID-optics` zone and the `12-ID-E` experiment hutch. | The Enclosure grouping. |
 | SRC-1 | Nice-to-have | The 12-ID undulator period and type (absent from the USAXS instrument config). | An insertion-device sector; the undulator gap is not exposed as a device. | The source Asset detail. |
 
 ## Source and optics
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| MACHINE-1 | Nice-to-have | The storage-ring state 12-ID-E reads (current, fill, top-up). | Observe-only machine state, a loose `StorageRing`; the exact PVs are pending. | The machine-state observation. |
+| MACHINE-1 | Nice-to-have | The storage-ring state 12-ID reads (current, fill, top-up). | Observe-only machine state, a loose `StorageRing`; the exact PVs are pending. | The machine-state observation. |
 | MONO-1 | Blocks-go-live | The 12-ID monochromator crystal cut / d-spacing, the incident-energy range, and the real energy PVs (the instrument wraps it as a soft device). | A double-crystal `Monochromator`; cut and range carried pending. | The monochromator Asset. |
 | ATTN-1 | Nice-to-have | The attenuator foil set (`12idPyFilter:`) and whether it folds into the `Filter` Family or earns a distinct `Attenuator` kind (the fleet-wide question). | An Al/Ti filter bank bound to `Filter`, the i03 / i15-1 precedent. | The attenuator's catalog home. |
 | OPT-2 | Nice-to-have | The blade-axis roles of each slit (guard, USAXS-defining) and the detector / SAXS translation stage axes. | Four-blade variable openings bound to `Slit`; translation stages bound to `LinearStage`. | The slit and stage axis detail. |

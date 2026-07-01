@@ -1,18 +1,18 @@
 # Inventory
 
-*The CORA Asset model for the operational core of 12-ID-E modelled today: the planned device tree and what still needs confirming.*
+*The CORA Asset model for the operational core of 12-ID modelled today: the planned device tree and what still needs confirming.*
 
-This cut models the shared 12-ID optics and the 12-ID-E USAXS / SAXS / WAXS endstation; the simulated devices, the legacy SPEC heritage, and the optional in-situ load frame are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/12-id-e/beamline.yaml) descriptor.
+This cut models the shared 12-ID optics and the 12-ID-E USAXS / SAXS / WAXS endstation hutch; the simulated devices, the legacy SPEC heritage, and the optional in-situ load frame are deferred (see [Model](model.md#deliberately-not-here-yet)). It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/12-id/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. 12-ID-E, CORA's first Bonse-Hart USAXS beamline, coins **no new Family and changes nothing in the catalog**: the Bonse-Hart crystal stages reuse `RotaryStage`, the autoranging photodiode and flux monitors reuse `FluxMonitor`, the temperature stages reuse the graduated `TemperatureController`, the area detectors reuse `Camera` (see [Model](model.md#what-makes-12-id-e-new)). Control handles are filled from the instrument config; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. 12-ID, CORA's first Bonse-Hart USAXS beamline, coins **no new Family and changes nothing in the catalog**: the Bonse-Hart crystal stages reuse `RotaryStage`, the autoranging photodiode and flux monitors reuse `FluxMonitor`, the temperature stages reuse the graduated `TemperatureController`, the area detectors reuse `Camera` (see [Model](model.md#what-makes-12-id-new)). Control handles are filled from the instrument config; no vendor Models are bound.
 
 ## The Asset tree
 
-Root Asset `12-ID-E` (`tier = Unit`, `facility_code = aps`); sub-systems nest below by `parent_id`.
+Root Asset `12-ID` (`tier = Unit`, `facility_code = aps`); sub-systems nest below by `parent_id`.
 
 | Asset | Tier | Family | Enclosure | Design spec / note |
 | --- | --- | --- | --- | --- |
-| `12-ID-E` | `Unit` | (root) | - | bound to the APS Site; Sector 12 |
+| `12-ID` | `Unit` | (root) | - | bound to the APS Site; Sector 12 |
 | `StorageRing` | `Device` | StorageRing (loose) | - | machine-level ring current, observe-only (MACHINE-1) |
 | `Monochromator` | `Device` | Monochromator | 12-ID-optics | the shared 12-ID double-crystal mono (MONO-1) |
 | `Attenuator` | `Device` | Filter | 12-ID-optics | Al/Ti attenuator filter bank, `12idPyFilter:` (ATTN-1) |

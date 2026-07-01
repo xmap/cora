@@ -1,10 +1,10 @@
-# 12-ID-E
+# 12-ID
 
-*The Bonse-Hart ultra-small-angle X-ray scattering (USAXS) beamline at APS Sector 12, and CORA's first USAXS deployment. The same instrument also runs pinhole SAXS and WAXS on area detectors. This page walks the operational core CORA models today. It is a reverse-engineered first cut, not yet a running model.*
+*The Bonse-Hart ultra-small-angle X-ray scattering (USAXS) beamline at APS Sector 12, and CORA's first USAXS deployment. The same instrument also runs pinhole SAXS and WAXS on area detectors. This page walks the operational core CORA models today. It is a reverse-engineered first cut, not yet a running model. The beamline id is `12-ID`; its USAXS experiment hutch `12-ID-E` is modelled as an [Enclosure](enclosures.md), not part of the beamline name.*
 
 | Property | Value |
 | --- | --- |
-| Asset | `12-ID-E` (root Asset, `tier = Unit`, `parent_id = None`) |
+| Asset | `12-ID` (root Asset, `tier = Unit`, `parent_id = None`) |
 | Facility | [APS](../aps/index.md) (bound via `facility_code = "aps"`, `FacilityKind = Site`) |
 | Sector | `Sector 12` (not a registered Asset) |
 | Status | First cut, reverse-engineered, design-phase (descriptor + docs; scenarios deferred) |
@@ -12,11 +12,11 @@
 | Control stack | APS EPICS / ophyd (the same floor as 2-BM / 2-ID / 7-BM / 32-ID / 19-BM / 4-ID / 8-ID / 9-ID); handles bound from the instrument config, carried confirm (`CTRL-1`) |
 
 !!! warning "First cut, and confirm-pending by intent"
-    This scaffold was reverse-engineered from the beamline's own bluesky/BITS instrument ([BCDA-APS/usaxs-bits](https://github.com/BCDA-APS/usaxs-bits)), specifically the `src/usaxs/configs/*.yml` device tables and the `src/usaxs/devices/*.py` classes. EPICS PVs are real and read from the config; vendor part numbers, serials, and physical positions are not in the config and are open questions. Every value is carried as `confirm` until 12-ID-E staff verify it. What CORA needs the team to confirm is on [Open questions](questions.md).
+    This scaffold was reverse-engineered from the beamline's own bluesky/BITS instrument ([BCDA-APS/usaxs-bits](https://github.com/BCDA-APS/usaxs-bits)), specifically the `src/usaxs/configs/*.yml` device tables and the `src/usaxs/devices/*.py` classes. EPICS PVs are real and read from the config; vendor part numbers, serials, and physical positions are not in the config and are open questions. Every value is carried as `confirm` until 12-ID staff verify it. What CORA needs the team to confirm is on [Open questions](questions.md).
 
-## What makes 12-ID-E different
+## What makes 12-ID different
 
-12-ID-E is **CORA's first Bonse-Hart USAXS beamline**, the first instrument in the fleet whose primary measurement is an angular rocking curve read by a single autoranging point detector rather than an image on an area detector. What is new is the acquisition shape: a matched pair of channel-cut crystal stages, the collimator upstream of the sample and the analyzer downstream, is rocked through the Bragg condition while one photodiode counts the transmitted beam through an autoranging amplifier across several gain decades. The rocking curve reaches momentum transfer q far below the pinhole-SAXS regime.
+12-ID is **CORA's first Bonse-Hart USAXS beamline**, the first instrument in the fleet whose primary measurement is an angular rocking curve read by a single autoranging point detector rather than an image on an area detector. What is new is the acquisition shape: a matched pair of channel-cut crystal stages, the collimator upstream of the sample and the analyzer downstream, is rocked through the Bragg condition while one photodiode counts the transmitted beam through an autoranging amplifier across several gain decades. The rocking curve reaches momentum transfer q far below the pinhole-SAXS regime.
 
 The acquisition has three moving parts:
 
@@ -26,7 +26,7 @@ The acquisition has three moving parts:
 
 This angular rocking fly-scan with a multi-decade autoranging point detector is **the** novel acquisition shape. The same instrument **also** runs pinhole SAXS and WAXS on area detectors, which reuse the existing scattering Capabilities and add nothing new.
 
-12-ID-E **coins no new family**. Every device binds an existing catalog or loose Family, and the catalog changes nothing. The two devices that could tempt a new Family do not need one:
+12-ID **coins no new family**. Every device binds an existing catalog or loose Family, and the catalog changes nothing. The two devices that could tempt a new Family do not need one:
 
 - **The Bonse-Hart crystal stages bind the catalog `RotaryStage`.** The operative axis is the crystal rocking rotation; channel-cut versus multi-bounce is a per-Asset setting, not a new optic Family. The rocking-curve scan is an acquisition shape, not a device class (`BONSE-1`).
 - **The autoranging photodiode binds the catalog `FluxMonitor`.** The UPD is a current-integrating point detector read through an autoranging Femto amplifier, the same anatomy as the I0 / I00 / I000 / TRD flux monitors and the counting scaler (the BMM quad-electrometer-as-primary precedent). The multi-decade gain autorange is a device-state setting. The pinhole SAXS and WAXS Pilatus area detectors bind the catalog `Camera` (`DET-1`).
@@ -62,20 +62,20 @@ Cutting across them:
 
 - [Controls](equipment/controls.md): the EPICS / ophyd control stack and the bluesky-orchestration seam; handles bound from the instrument config and carried confirm (`CTRL-1`).
 
-The cross-cutting reference view is the [Inventory](inventory.md). The [Source](beamline.md) page is generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/12-id-e/beamline.yaml) descriptor.
+The cross-cutting reference view is the [Inventory](inventory.md). The [Source](beamline.md) page is generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/12-id/beamline.yaml) descriptor.
 
 ## Techniques
 
-[Techniques](techniques.md): what the modelled part of 12-ID-E is designed to do, as intent. Bonse-Hart rocking-curve USAXS is a new Catalog Method (`ultra_small_angle_scattering`), deferred and rendered unlinked, carried pending (`USAXS-1`). The pinhole SAXS Practice (`small_angle_scattering`) and the WAXS Practice (`wide_angle_scattering`) reuse the existing i22 SAXS / WAXS [Methods](../../catalog/methods.md), also pending (`TECH-1`).
+[Techniques](techniques.md): what the modelled part of 12-ID is designed to do, as intent. Bonse-Hart rocking-curve USAXS is a new Catalog Method (`ultra_small_angle_scattering`), deferred and rendered unlinked, carried pending (`USAXS-1`). The pinhole SAXS Practice (`small_angle_scattering`) and the WAXS Practice (`wide_angle_scattering`) reuse the existing i22 SAXS / WAXS [Methods](../../catalog/methods.md), also pending (`TECH-1`).
 
 ## Governance
 
-[Governance](governance.md): who will act at 12-ID-E and the trust shape that gates their commands. People and autonomous agents are facility principals at the [APS Site](../aps/index.md); on the beamline they surface through the actions they take, gated by a trust shape (Zone, Conduit, Policy). The APS operator pool and safety-review structure are carried pending at the APS Site, shared across the beamlines (`GOV-1`). Clearances are issued at the [APS Site](../aps/index.md), not on the beamline.
+[Governance](governance.md): who will act at 12-ID and the trust shape that gates their commands. People and autonomous agents are facility principals at the [APS Site](../aps/index.md); on the beamline they surface through the actions they take, gated by a trust shape (Zone, Conduit, Policy). The APS operator pool and safety-review structure are carried pending at the APS Site, shared across the beamlines (`GOV-1`). Clearances are issued at the [APS Site](../aps/index.md), not on the beamline.
 
 ## Model
 
-[Model](model.md): the developer's by-kind index and the record of what is deliberately deferred. 12-ID-E coins no new Family, and the catalog is unchanged (see [Families](../../catalog/families.md)).
+[Model](model.md): the developer's by-kind index and the record of what is deliberately deferred. 12-ID coins no new Family, and the catalog is unchanged (see [Families](../../catalog/families.md)).
 
 ## Not yet documented
 
-12-ID-E is not yet driven by CORA, so the operations runbook and the live experiment view are deliberately not written yet. They join as the deployment firms up. The [2-BM deployment](../2-bm/index.md) shows the shape they will take. The PSS search-and-secure permit signals and the front-end and photon shutters are absent from the instrument config and are not invented here (`PSS-1`).
+12-ID is not yet driven by CORA, so the operations runbook and the live experiment view are deliberately not written yet. They join as the deployment firms up. The [2-BM deployment](../2-bm/index.md) shows the shape they will take. The PSS search-and-secure permit signals and the front-end and photon shutters are absent from the instrument config and are not invented here (`PSS-1`).

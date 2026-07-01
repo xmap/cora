@@ -1,6 +1,6 @@
-# 12-ID-E beamline descriptor (APS), reverse-engineered
+# 12-ID beamline descriptor (APS), reverse-engineered
 #
-# 12-ID-E is the APS ultra-small-angle X-ray scattering (USAXS) instrument, a
+# 12-ID is the APS ultra-small-angle X-ray scattering (USAXS) instrument, a
 # Bonse-Hart crystal-analyzer beamline that also runs pinhole SAXS and WAXS. It is
 # bound to the APS Site (deployments/aps/site.yaml), the ninth APS beamline after
 # 2-BM, 2-ID, 7-BM, 32-ID, 19-BM, 4-ID, 8-ID, and 9-ID, and CORA's FIRST
@@ -9,7 +9,7 @@
 # STATUS: reverse-engineered, design-phase. Every value is read from public open
 # source (the BCDA-APS bluesky/BITS instrument, github.com/BCDA-APS/usaxs-bits, its
 # src/usaxs/devices/*.py classes and src/usaxs/configs/*.yml device tables) or
-# inferred, carried `new: true` + `confirm: true` pending 12-ID-E staff. EPICS PVs
+# inferred, carried `new: true` + `confirm: true` pending 12-ID staff. EPICS PVs
 # are real and verified against the instrument config; vendor part numbers, serials,
 # and physical positions are not in it and are open questions. Same descriptor mode
 # as the other APS deployments; this scaffold is descriptor + docs, scenarios
@@ -25,7 +25,7 @@
 # deferred as a question (USAXS-1); the same instrument also runs pinhole SAXS and
 # WAXS on area detectors, which reuse the existing scattering Capabilities.
 #
-# MODELLING: every device reuses an existing catalog or loose Family. 12-ID-E coins
+# MODELLING: every device reuses an existing catalog or loose Family. 12-ID coins
 # NO new Family and changes nothing in the catalog. The Bonse-Hart collimator and
 # analyzer stages reuse RotaryStage (the crystal rocking is the operative axis;
 # channel-cut is a per-Asset setting, not a new optic Family); the autoranging Femto
@@ -38,10 +38,10 @@
 # Family coined for an un-instantiated device.
 #
 # Items left open are tagged inline with a (QUESTION-ID) answered on
-# docs/deployments/12-id-e/questions.md.
+# docs/deployments/12-id/questions.md.
 
 beamline:
-  name: 12-ID-E
+  name: 12-ID
   facility: aps                # APS Site (facility_code: aps)
   sector: "Sector 12"          # PV namespaces usxLAX / usxAERO / 12idPyFilter / usxRIO
   tier: Unit
@@ -52,7 +52,7 @@ beamline:
 # PV namespaces: usxLAX (the LAX soft-IOC: USAXS calcs, scalers, slits, many
 # motors), usxAERO (Aerotech motors), 12idPyFilter (attenuator), usxRIO (Femto
 # amplifier RIO), usxLINKAM / usxTEMP (sample temperature), usxPI (sample rotator).
-# Whether 12-ID-E is one experiment hutch plus shared upstream optics, and the PSS
+# Whether 12-ID is one experiment hutch plus shared upstream optics, and the PSS
 # permit leaves, are open (ENC-1, PSS-1).
 enclosures:
   - name: 12-ID-optics
@@ -235,12 +235,12 @@ detection:
       confirm: true
       note: "WAXS area detector on its translation (waxsx / waxs2x); reuses Camera (DET-1)"
 
-# Cross-cutting control. 12-ID-E runs EPICS (the floor); CORA observes and, where it
+# Cross-cutting control. 12-ID runs EPICS (the floor); CORA observes and, where it
 # replaces bluesky-style orchestration, conducts over it. The handles above were
 # read from the usaxs-bits instrument config and carried confirm (CTRL-1).
 controls:
   intro: >
-    12-ID-E runs on the APS EPICS / ophyd control stack, the same floor as the other
+    12-ID runs on the APS EPICS / ophyd control stack, the same floor as the other
     APS beamlines. The device handles above are bound from the BCDA-APS usaxs-bits
     instrument (its src/usaxs/configs/*.yml device tables and src/usaxs/devices/*.py
     classes), carried confirm pending staff verification (CTRL-1). The USAXS
@@ -253,7 +253,7 @@ controls:
 # Continuously-available resources a run draws on.
 resources:
   intro: >
-    The continuously-available facility resources a 12-ID-E run needs. The optics run
+    The continuously-available facility resources a 12-ID run needs. The optics run
     under vacuum (SUP-1).
   supplies:
     - kind: PhotonBeam

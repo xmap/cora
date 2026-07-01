@@ -16,7 +16,7 @@
 
 ## What makes LIX different
 
-Be precise about where the novelty is. LIX's measurement, small- and wide-angle X-ray scattering, is a science axis the fleet already speaks: it overlaps the materials-scattering beamlines [SMI](../smi/index.md), [CMS](../cms/index.md) (12-ID and 11-BM), Diamond [I22](../i22/index.md), and APS [9-ID](../9-id/index.md) / [12-ID-E](../12-id-e/index.md). The detectors, the optics, and the beam path reuse the catalog throughout and coin nothing. What is genuinely new at LIX is **above the detector and beside the sample**: the **Subject** and the **sample-delivery chain**.
+Be precise about where the novelty is. LIX's measurement, small- and wide-angle X-ray scattering, is a science axis the fleet already speaks: it overlaps the materials-scattering beamlines [SMI](../smi/index.md), [CMS](../cms/index.md) (12-ID and 11-BM), Diamond [I22](../i22/index.md), and APS [9-ID](../9-id/index.md) / [12-ID](../12-id/index.md). The detectors, the optics, and the beam path reuse the catalog throughout and coin nothing. What is genuinely new at LIX is **above the detector and beside the sample**: the **Subject** and the **sample-delivery chain**.
 
 LIX is the fleet's first **life-science solution-scattering** beamline. The specimen is not a solid mounted in the beam; it is a protein in liquid, often an eluting peak from in-line size-exclusion chromatography (SEC-SAXS), delivered by an HPLC fluidic chain through a flow cell. So the contributions that matter for CORA are:
 

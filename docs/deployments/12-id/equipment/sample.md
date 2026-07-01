@@ -1,10 +1,10 @@
 # Sample
 
-*The sample positioning stage, the sample rotator, and the in-situ temperature environments at 12-ID-E. Scaffold; PVs read from the bluesky/BITS instrument config (`github.com/BCDA-APS/usaxs-bits`), carried confirm.*
+*The sample positioning stage, the sample rotator, and the in-situ temperature environments at 12-ID. Scaffold; PVs read from the bluesky/BITS instrument config (`github.com/BCDA-APS/usaxs-bits`), carried confirm.*
 
 The USAXS sample side places the specimen between the matched Bonse-Hart crystal stages: the collimator rocks the beam onto the sample, the analyzer rocks downstream of it (both are USAXS optics on the [Source](../beamline.md) walk, since the rocking-curve scan against the collimator is the USAXS measurement). At the sample itself, a positioning stage sets where the specimen sits in the beam, a rotator turns it, and one of two temperature controllers conditions the in-situ thermal environment. None of these is a new device class; each binds an existing catalog [Family](../../../catalog/families.md).
 
-## The sample stack (12-ID-E)
+## The sample stack (12-ID)
 
 | Device | Family | PV | Design spec / note |
 | --- | --- | --- | --- |
@@ -26,7 +26,7 @@ Two temperature controllers serve the sample environment, and both bind the grad
 - the Linkam T96 temperature stage on `usxLINKAM:tc1:`, and
 - the PTC10 multi-channel temperature controller on `usxTEMP:tc1:`.
 
-This is the same Family three Diamond beamlines and IXS already use for their sample environments, so 12-ID-E coins nothing new for thermal control. The two units' temperature ranges, the PTC10's channel count, and whether the Linkam and the PTC10 coexist on a single measurement or are exchanged depending on the sample is `TEMP-1`.
+This is the same Family three Diamond beamlines and IXS already use for their sample environments, so 12-ID coins nothing new for thermal control. The two units' temperature ranges, the PTC10's channel count, and whether the Linkam and the PTC10 coexist on a single measurement or are exchanged depending on the sample is `TEMP-1`.
 
 ## Deferred: the in-situ load frame
 

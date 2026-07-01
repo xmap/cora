@@ -16,7 +16,7 @@
 
 ## What makes CMS different
 
-Be honest about this beamline: most of CMS is reinforcement, not novelty. Its small-, wide-, and medium-angle scattering (SAXS / WAXS / MAXS) and its grazing-incidence scattering (GISAXS / GIWAXS) overlap the fleet heavily. CMS is the direct NSLS-II twin of [SMI](../smi/index.md) (12-ID), and it shares its science axis with Diamond [I22](../i22/index.md) and APS [9-ID](../9-id/index.md) / [12-ID-E](../12-id-e/index.md). The scattering reuses the same `Camera` / `Goniometer` / `Slit` / `BeamStop` / `FluxMonitor` vocabulary, coins no new Family, and sits on the same pending scattering Method slugs the twins left deferred. So the scattering is the shape ported once more, not a new shape.
+Be honest about this beamline: most of CMS is reinforcement, not novelty. Its small-, wide-, and medium-angle scattering (SAXS / WAXS / MAXS) and its grazing-incidence scattering (GISAXS / GIWAXS) overlap the fleet heavily. CMS is the direct NSLS-II twin of [SMI](../smi/index.md) (12-ID), and it shares its science axis with Diamond [I22](../i22/index.md) and APS [9-ID](../9-id/index.md) / [12-ID](../12-id/index.md). The scattering reuses the same `Camera` / `Goniometer` / `Slit` / `BeamStop` / `FluxMonitor` vocabulary, coins no new Family, and sits on the same pending scattering Method slugs the twins left deferred. So the scattering is the shape ported once more, not a new shape.
 
 CMS has two genuinely distinct contributions:
 

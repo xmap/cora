@@ -16,7 +16,7 @@
 #
 # WHAT IS (AND IS NOT) NEW: CMS's SAXS / WAXS / MAXS / GISAXS scattering overlaps the
 # fleet heavily. It is the direct NSLS-II twin of SMI (12-ID), and shares its science
-# axis with Diamond I22 and APS 9-ID / 12-ID-E. The scattering reuses the existing
+# axis with Diamond I22 and APS 9-ID / 12-ID. The scattering reuses the existing
 # Camera / Goniometer / Slit / BeamStop / FluxMonitor / Monochromator / Mirror
 # vocabulary and coins nothing. CMS's two genuinely distinct contributions are:
 #   1. Specular X-ray REFLECTIVITY (XR), the fleet's first hard X-ray reflectometry.

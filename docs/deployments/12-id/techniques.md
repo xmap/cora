@@ -1,8 +1,8 @@
 # Techniques
 
-*What the modelled part of 12-ID-E is designed to do, as intent. First cut.*
+*What the modelled part of 12-ID is designed to do, as intent. First cut.*
 
-A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practice](../aps/index.md) is how a facility adapts it. 12-ID-E is CORA's first Bonse-Hart ultra-small-angle X-ray scattering (USAXS) beamline, and it also runs pinhole SAXS and WAXS on area detectors. The lead technique, USAXS, is a new Capability for the fleet, so its Method renders unlinked and is carried pending until a technique enters scope (USAXS-1); the SAXS and WAXS Methods share the [i22](../i22/techniques.md) scattering vocabulary and are pending the same owner-scope decision (TECH-1).
+A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practice](../aps/index.md) is how a facility adapts it. 12-ID is CORA's first Bonse-Hart ultra-small-angle X-ray scattering (USAXS) beamline, and it also runs pinhole SAXS and WAXS on area detectors. The lead technique, USAXS, is a new Capability for the fleet, so its Method renders unlinked and is carried pending until a technique enters scope (USAXS-1); the SAXS and WAXS Methods share the [i22](../i22/techniques.md) scattering vocabulary and are pending the same owner-scope decision (TECH-1).
 
 ## Bonse-Hart ultra-small-angle scattering
 
@@ -24,4 +24,4 @@ The new acquisition shape forces no new device families. The Bonse-Hart crystal 
 
 ## Not modelled yet
 
-The concrete acquisition recipes (the rocking-curve angular ranges, the gain-autorange behaviour and counting times for the photodiode, the pinhole-SAXS and WAXS camera geometries, and the temperature-ramp sequences) are not written yet; they join as the deployment approaches the point where CORA conducts over the floor. Whether USAXS enters CORA's catalog is an owner-scope decision and is deferred (USAXS-1); minting a cross-facility Method is not done from a modelling exercise until a technique enters a real scope, the same earn-the-abstraction discipline the SAXS and WAXS Methods follow (TECH-1). The Practices are carried pending on the [APS Site](../aps/index.md): `12IDE_usaxs_practice` (`ultra_small_angle_scattering`, USAXS-1), `12IDE_saxs_practice` (`small_angle_scattering`), and `12IDE_waxs_practice` (`wide_angle_scattering`). See [Open questions](questions.md) for the world-facts to confirm first.
+The concrete acquisition recipes (the rocking-curve angular ranges, the gain-autorange behaviour and counting times for the photodiode, the pinhole-SAXS and WAXS camera geometries, and the temperature-ramp sequences) are not written yet; they join as the deployment approaches the point where CORA conducts over the floor. Whether USAXS enters CORA's catalog is an owner-scope decision and is deferred (USAXS-1); minting a cross-facility Method is not done from a modelling exercise until a technique enters a real scope, the same earn-the-abstraction discipline the SAXS and WAXS Methods follow (TECH-1). The Practices are carried pending on the [APS Site](../aps/index.md): `12ID_usaxs_practice` (`ultra_small_angle_scattering`, USAXS-1), `12ID_saxs_practice` (`small_angle_scattering`), and `12ID_waxs_practice` (`wide_angle_scattering`). See [Open questions](questions.md) for the world-facts to confirm first.

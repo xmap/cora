@@ -1,26 +1,26 @@
 # Model
 
-*The developer's index into where 12-ID-E content lives, why this first Bonse-Hart USAXS deployment coins no new family, and the record of what is deliberately deferred. First cut.*
+*The developer's index into where 12-ID content lives, why this first Bonse-Hart USAXS deployment coins no new family, and the record of what is deliberately deferred. First cut.*
 
-12-ID-E is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's bluesky / BITS instrument: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+12-ID is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's bluesky / BITS instrument: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/12-id-e/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/12-id-e/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `12-ID-E` added to its beamline list, with USAXS / SAXS / WAXS Practices |
+| Beamline descriptor | [`deployments/12-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/12-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `12-ID` added to its beamline list, with USAXS / SAXS / WAXS Practices |
 | Extraction provenance | [BCDA-APS/usaxs-bits](https://github.com/BCDA-APS/usaxs-bits) | the `src/usaxs/configs/*.yml` device tables and `src/usaxs/devices/*.py` classes the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the USAXS Method is not yet coined (USAXS-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 12-ID-E Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 12-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
-## What makes 12-ID-E new
+## What makes 12-ID new
 
-12-ID-E is CORA's first Bonse-Hart ultra-small-angle X-ray scattering (USAXS) beamline. The fleet already has pinhole small- and wide-angle scattering (i22, 8-ID), grazing-incidence scattering (9-ID), total scattering and powder diffraction (i15-1, i11), and coherent XPCS (8-ID, CHX), but no crystal-analyzer USAXS. The novelty is the acquisition shape: a matched pair of channel-cut crystal stages, the collimator upstream of the sample and the analyzer downstream, is rocked through the Bragg condition while a single photodiode counts the transmitted intensity through an autoranging transimpedance amplifier across several gain decades. The rocking curve resolves momentum transfer far below the pinhole-SAXS regime. That angular rocking fly-scan with a multi-decade autoranging point detector is a new Capability, deferred as a question (USAXS-1, BONSE-1). The same instrument also runs pinhole SAXS and WAXS on area detectors, which reuse the existing scattering Capabilities. The novelty forces no new device families: every device below reuses an existing catalog or loose Family.
+12-ID is CORA's first Bonse-Hart ultra-small-angle X-ray scattering (USAXS) beamline. The fleet already has pinhole small- and wide-angle scattering (i22, 8-ID), grazing-incidence scattering (9-ID), total scattering and powder diffraction (i15-1, i11), and coherent XPCS (8-ID, CHX), but no crystal-analyzer USAXS. The novelty is the acquisition shape: a matched pair of channel-cut crystal stages, the collimator upstream of the sample and the analyzer downstream, is rocked through the Bragg condition while a single photodiode counts the transmitted intensity through an autoranging transimpedance amplifier across several gain decades. The rocking curve resolves momentum transfer far below the pinhole-SAXS regime. That angular rocking fly-scan with a multi-decade autoranging point detector is a new Capability, deferred as a question (USAXS-1, BONSE-1). The same instrument also runs pinhole SAXS and WAXS on area detectors, which reuse the existing scattering Capabilities. The novelty forces no new device families: every device below reuses an existing catalog or loose Family.
 
 ## No new families
 
-12-ID-E coins no new Family and changes nothing in the catalog. The two devices that could have tempted a new kind both fold into existing vocabulary:
+12-ID coins no new Family and changes nothing in the catalog. The two devices that could have tempted a new kind both fold into existing vocabulary:
 
 - **The Bonse-Hart crystal stages bind the catalog `RotaryStage`, not a new optic family.** The collimator and analyzer are channel-cut crystal stages whose operative axis is the crystal rocking rotation (plus alignment translations and a piezo fine-tilt). The rocking rotation is what `RotaryStage` already models; channel-cut versus multi-bounce is a per-Asset setting, not a new optic Family. The rocking-curve scan against the matched crystal is the USAXS measurement, an acquisition shape (USAXS-1), not a device class.
 

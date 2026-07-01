@@ -2,7 +2,7 @@
 
 *The control stack and the bluesky / BITS-orchestration seam. First cut; handles read from the instrument config, carried confirm.*
 
-12-ID-E runs on the APS EPICS / ophyd control stack, the same floor as 2-BM, 2-ID, 7-BM, 32-ID, 19-BM, 4-ID, 8-ID, and 9-ID. CORA observes that floor and, where it replaces bluesky-style orchestration, conducts over it; it does not replace EPICS itself.
+12-ID runs on the APS EPICS / ophyd control stack, the same floor as 2-BM, 2-ID, 7-BM, 32-ID, 19-BM, 4-ID, 8-ID, and 9-ID. CORA observes that floor and, where it replaces bluesky-style orchestration, conducts over it; it does not replace EPICS itself.
 
 ## Device handles
 
