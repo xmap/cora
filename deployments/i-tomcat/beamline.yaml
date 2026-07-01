@@ -165,7 +165,7 @@ sample-environment:
       confirm: true
       note: "the sample centring / translation stage on the rotation stage; the exact axis set and handles are SAMPLE-1"
     - name: SlipRing
-      family: SlipRing                  # loose Family (passive continuous-rotation feedthrough; allowlisted)
+      family: SlipRing                  # loose Family (rotation-stage feedthrough; a Positioner component, not a standalone Asset)
       new: true
       confirm: true
       note: "the continuous-rotation feedthrough for endless tomographic acquisition; channel count is SAMPLE-1"

@@ -354,8 +354,9 @@ PROMOTION_THRESHOLD = 2
 
 # Loose families: a device family string that is not (yet) a catalog Family.
 # Each is either a Supply observation that never becomes an Asset Family, a
-# passive beam-path element deferred under that tier, or a real candidate staged
-# behind an open question (the bucket leads each reason). A NEW loose family must
+# passive beam-path element deferred under that tier, a component of another
+# Asset (not a standalone Asset Family), or a real candidate staged behind an
+# open question (the bucket leads each reason). A NEW loose family must
 # land here with a reason: that forces a synonym or typo to surface in review
 # without forcing premature promotion into the catalog.
 _ALLOWED_LOOSE_FAMILIES = {
@@ -365,7 +366,7 @@ _ALLOWED_LOOSE_FAMILIES = {
     "HeatAbsorber": "passive-deferred: passive beam-path tier (TomoWISE front-end absorber)",
     "SafetyStack": "passive-deferred: passive safety composite (2-BM P6-50)",
     "Shielding": "passive-deferred: passive PSS-grade shielding (19-BM guillotines, ENC-1)",
-    "SlipRing": "passive-deferred: passive rotation feedthrough (TomoWISE)",
+    "SlipRing": "component: rotation-stage feedthrough, a Positioner component not an Asset",
     "Wedge": "passive-deferred: passive fixed wedge (2-BM)",
     "Diagnostic": "staged: arrival-time / photon-spectrum Sensor; fold-vs-promote open (DIAG-1)",
     "BetrandLens": "staged: novel TXM optic, FXI-only; rule-of-three open (OPTIC-3)",
@@ -390,7 +391,7 @@ _SUPPLY_LOOSE_FAMILIES = {"Beam", "Vacuum", "StorageRing"}
 # signal is mechanical, the decision stays human.
 _PROMOTION_REVIEWED = {
     "Diagnostic": "hold: arrival-time / photon-spectrum Sensor fold-vs-promote still open (DIAG-1)",
-    "SlipRing": "hold: passive feedthrough (tomowise + i-tomcat); passive-deferred, not an Asset",
+    "SlipRing": "hold: rotation-stage feedthrough; a Positioner component, not a standalone Asset",
 }
 
 # Catalog families bound by no deployment device. Symmetric to the orphan-model
