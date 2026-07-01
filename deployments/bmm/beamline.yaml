@@ -26,8 +26,8 @@
 #
 # No new family is introduced: every device reuses an existing catalog Family (the
 # ion chambers reuse FluxMonitor, graduated in #353; the fluorescence detector the
-# catalog EnergyDispersiveSpectrometer) or a loose family already carried by a
-# sibling deployment (the diagnostic screens reuse the loose Screen).
+# catalog EnergyDispersiveSpectrometer) or another catalog family already carried
+# by a sibling deployment (the diagnostic screens bind the catalog Screen Family).
 
 beamline:
   maturity: model
@@ -124,7 +124,7 @@ optics:
       pv: "XF:06BMA-BI{Diag:02"
       new: true
       confirm: true
-      note: "Fluorescent diagnostic screens (dm2_fs, dm3_fs) for beam viewing; loose Screen family (the 2-BM FLAG precedent)."
+      note: "Fluorescent diagnostic screens (dm2_fs, dm3_fs) for beam viewing; binds the catalog Screen Family (the 2-BM FLAG precedent)."
     - name: BeamPositionMonitor
       family: GenericProbe
       pv: "XF:06BM-BI{BPM:1"

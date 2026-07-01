@@ -11,9 +11,9 @@ P04's detection for soft X-ray absorption is the **drain-current electrometer** 
 
 ## EXP2 beam-path diagnostics
 
-- `DiagnosticScreens` binds the loose `Screen` family: the EXP2 motorized phosphor screens (`Screen_aft_PGM2 / RMU2 / EXP2 / EXSU2 / PIPE`), inserted into the beam path at points along the experiment section for alignment.
+- `DiagnosticScreens` binds the catalog `Screen` Family: the EXP2 motorized phosphor screens (`Screen_aft_PGM2 / RMU2 / EXP2 / EXSU2 / PIPE`), inserted into the beam path at points along the experiment section for alignment.
 - `BeamMonitorCameras` binds `Camera`: the EXP2 Vimba / Allied Vision cameras imaging the diagnostic screens.
 
 ## Families and confirmations
 
-The electrometers bind the catalog `FluxMonitor` Family, the cameras `Camera`, the screens the loose `Screen` family (held across the fleet, the 2-BM `FLAG-1` precedent). No new Family is coined. The measured channel of each electrometer (drain current vs I0), the screen positions, and the camera-to-screen mapping are not in the registry and are pending (`DET-1`, `DIAG-1`); the photoemission analyzer is a named endstation instrument not exposed in the OnlineXML. See [Open questions](../questions.md).
+The electrometers bind the catalog `FluxMonitor` Family, the cameras `Camera`, the screens the catalog `Screen` Family (the 2-BM `FLAG-1` precedent). No new Family is coined. The measured channel of each electrometer (drain current vs I0), the screen positions, and the camera-to-screen mapping are not in the registry and are pending (`DET-1`, `DIAG-1`); the photoemission analyzer is a named endstation instrument not exposed in the OnlineXML. See [Open questions](../questions.md).

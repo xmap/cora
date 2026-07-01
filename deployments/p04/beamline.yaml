@@ -19,7 +19,7 @@
 # Monochromator P01 / the hard X-ray beamlines use), CORA's first GratingMonochromator
 # deployment. Otherwise no new Family: the undulator binds InsertionDevice, the
 # mirrors Mirror, the slits Slit, the diagnostic cameras Camera, the electrometers
-# FluxMonitor, the motorized phosphor screens the loose Screen. The technique (soft
+# FluxMonitor, the motorized phosphor screens the catalog Screen. The technique (soft
 # X-ray spectroscopy: XPS / XAS / photoemission) earns no catalog Method and is
 # carried pending on the Site (TECH-1).
 #
@@ -214,7 +214,7 @@ exp2-screens:
       pv: {aft_pgm2: "p04/motor/exp2.05", aft_rmu2: "p04/motor/exp2.07", aft_exp2: "p04/motor/exp2.09", aft_exsu2: "p04/motor/exp2.10", bef_pipe: "p04/motor/exp2.11", aft_pipe: "p04/motor/exp2.12"}
       new: true
       confirm: true
-      note: "EXP2 motorized phosphor diagnostic screens (Screen_aft_PGM2 / RMU2 / EXP2 / EXSU2 / PIPE); insert positions for beam-path diagnostics, bound to the loose Screen family (DIAG-1)"
+      note: "EXP2 motorized phosphor diagnostic screens (Screen_aft_PGM2 / RMU2 / EXP2 / EXSU2 / PIPE); insert positions for beam-path diagnostics, bound to the catalog Screen Family (FLAG-1)"
     - name: BeamMonitorCameras
       family: Camera
       pv: {aft_pgm2: "p04/tangovimba/bm_aft_pgm2", bef_pipe: "p04/tangovimba/bm_bef_pipe", aft_pipe: "p04/tangovimba/bm_aft_pipe", aft_smu1: "p04/tangovimba/cam10", cam09: "p04/tangovimba/cam09", cam11: "p04/tangovimba/cam11", exsu2: "p04/tangovimba/exsu2"}
