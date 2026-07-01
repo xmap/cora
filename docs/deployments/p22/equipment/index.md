@@ -10,7 +10,7 @@ Two enclosures carry the beamline (`ENC-1`): the shared P09 / P22 optics (`p22-o
 
 ## Stations
 
-- [Source](../beamline.md): the shared P09 undulator (`SRC-1`); the DCM bound to `Monochromator` (`OPT-1`), the two mirrors bound to `Mirror`, the phase retarder bound to the loose `PhaseRetarder` (`POL-1`), the absorber bound to `Filter`, all on the P09 host (`SHARED-1`). This page is generated from the descriptor.
+- [Source](../beamline.md): the shared P09 undulator (`SRC-1`); the DCM bound to `Monochromator` (`OPT-1`), the two mirrors bound to `Mirror`, the phase retarder bound to the catalog `PhaseRetarder`, the absorber bound to `Filter`, all on the P09 host (`SHARED-1`). This page is generated from the descriptor.
 - [Sample](sample.md): the HAXPS sample / instrument bank bound to `Manipulator` (`GROUP-1`).
 - [Detector](detector.md): the HAXPES electron analyzer bound to the catalog `ElectronAnalyzer` Family, carried pending since not exposed in the registry slice (`DET-1`).
 

@@ -6,7 +6,7 @@ P09 carries three sample areas: the MONO resonant-scattering experiment, the DIF
 
 ## MONO: resonant scattering
 
-- `PhaseRetarder` binds the allowlisted-loose `PhaseRetarder` Family: the polarization phase-retarder circles (`phaseretardercircle1 / 2`) plus the AttoCube `pchi / pperp` fine axes; sets incident polarization (`POL-1`).
+- `PhaseRetarder` binds the catalog `PhaseRetarder` Family: the polarization phase-retarder circles (`phaseretardercircle1 / 2`) plus the AttoCube `pchi / pperp` fine axes; sets incident polarization (`POL-1`).
 - `PolarizationAnalyzer` binds the allowlisted-loose `PolarizationAnalyzer` Family: the scattered-beam analyzer; resolves scattered polarization (`POL-2`).
 - `Goniometer` binds the catalog `Goniometer` Family: the six-circle (E6C) diffractometer (`e6cctrl` + `diffrac_eh1`); modelled as a `Goniometer` Asset, not the composed `Diffractometer` Assembly (`DIFF-1`).
 - `SampleTemperature` binds `TemperatureController`: the CryoCon 32, Lakeshore 336 / 340, and LSCI controllers; cryogenic sample cooling (`TEMP-1`).
@@ -28,4 +28,4 @@ P09 carries three sample areas: the MONO resonant-scattering experiment, the DIF
 
 ## Families and confirmations
 
-The polarization / magnetism instruments bind the allowlisted-loose `PhaseRetarder`, `PolarizationAnalyzer`, and `Magnet` Families (the 4-ID precedent); the diffractometers bind the catalog `Goniometer`; the hexapod `Hexapod`, the piezos `LinearStage`, the cooling `TemperatureController`, the absorber `Filter`. P09 coins no new Family; it is the second consumer of the 4-ID vocabulary. The axis maps are read from the OnlineXML and carried confirm; the diffractometer circle counts, the magnet field, and the per-axis bank roles are pending. See [Open questions](../questions.md) and the [Inventory](../inventory.md).
+The polarization / magnetism instruments bind the catalog `PhaseRetarder` Family plus the allowlisted-loose `PolarizationAnalyzer` and `Magnet` Families (the 4-ID precedent); the diffractometers bind the catalog `Goniometer`; the hexapod `Hexapod`, the piezos `LinearStage`, the cooling `TemperatureController`, the absorber `Filter`. P09 coins no new Family; it is the second consumer of the 4-ID vocabulary. The axis maps are read from the OnlineXML and carried confirm; the diffractometer circle counts, the magnet field, and the per-axis bank roles are pending. See [Open questions](../questions.md) and the [Inventory](../inventory.md).

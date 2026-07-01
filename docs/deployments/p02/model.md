@@ -22,7 +22,7 @@ P02 is an eighth beamline at an existing Site, and the fleet's high-energy diffr
 
 P02 coins no new Family. The monochromator binds `Monochromator`; the bendable HFM / VFM mirrors bind `Mirror`; the slits bind `Slit`; the sample stages bind `LinearStage`; the sample environment binds `TemperatureController`; the detectors bind `Camera` / `EnergyDispersiveSpectrometer`; the beam monitor binds `FluxMonitor`; and the diamond-anvil cell binds the allowlisted-loose `PressureCell`. Nothing in the catalog changes.
 
-Adding P02 as `PressureCell`'s second consumer crossed the rule-of-three promotion threshold, so the loose-family review records a promote-or-hold note (`hold: graduation-due, PRESSURE-1`), matching the `PhaseRetarder` / `PolarizationAnalyzer` / `Magnet` entries P09 and the POLAR-family beamlines carry. This is the loose-family graduation guard working as designed.
+Adding P02 as `PressureCell`'s second consumer crossed the rule-of-three promotion threshold, so the loose-family review records a promote-or-hold note (`hold: graduation-due, PRESSURE-1`), matching the `PolarizationAnalyzer` / `Magnet` entries P09 and the POLAR-family beamlines carry. This is the loose-family graduation guard working as designed.
 
 ## The control plane
 
