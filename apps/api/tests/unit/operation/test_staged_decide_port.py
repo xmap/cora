@@ -18,6 +18,8 @@ import pytest
 
 from cora.operation.adapters.staged_decide_port import StagedDecidePort
 from cora.operation.ports.decide_port import (
+    DecideColdStartError,
+    DecideEvidenceRejectedError,
     SteeringAdvice,
     SteeringAxis,
     SteeringEvidence,
@@ -52,6 +54,22 @@ class _RecordingDecider:
 
     async def aclose(self) -> None:
         self.closed = True
+
+
+@dataclass
+class _RaisingDecider:
+    """A fake DecidePort brain that always raises a given exception."""
+
+    label: str
+    exc: Exception
+    calls: int = 0
+
+    async def advise_next(self, evidence: SteeringEvidence) -> SteeringAdvice:
+        self.calls += 1
+        raise self.exc
+
+    async def aclose(self) -> None:
+        return None
 
 
 def _space() -> SteeringSpace:
@@ -101,6 +119,36 @@ async def test_staged_counts_only_successful_observations() -> None:
     obs = (_obs(), _obs(succeeded=False), _obs(succeeded=False))
     advice = await port.advise_next(_evidence(obs))
     assert advice.model_ref == "seeder"
+
+
+async def test_staged_falls_back_to_seeder_when_brain_cold() -> None:
+    # Above the count threshold the brain is tried, but it is still cold (fewer
+    # USABLE observations than it needs, e.g. non-Good-quality points counted
+    # toward the threshold). The composite must fall back to the seeder so the
+    # loop keeps seeding, not propagate the reject and abort the run.
+    seeder = _RecordingDecider(label="seeder")
+    brain = _RaisingDecider(label="brain", exc=DecideColdStartError("needs more usable points"))
+    port = StagedDecidePort(seeder=seeder, brain=brain, threshold=2, brain_min_observations=2)
+    advice = await port.advise_next(_evidence((_obs(), _obs(), _obs())))  # 3 >= 2
+    assert brain.calls == 1  # the brain was tried
+    assert seeder.calls == 1  # and the seeder produced the fallback point
+    assert advice.model_ref == "seeder"
+    assert advice.verdict is SteeringVerdict.MEASURE
+
+
+async def test_staged_propagates_permanent_brain_rejection() -> None:
+    # A permanent DecideEvidenceRejectedError (not the cold-start subtype) is
+    # NOT fixable by more seeding, so it must propagate and let the loop abort
+    # rather than seed forever.
+    seeder = _RecordingDecider(label="seeder")
+    brain = _RaisingDecider(
+        label="brain", exc=DecideEvidenceRejectedError("unsupported objective kind")
+    )
+    port = StagedDecidePort(seeder=seeder, brain=brain, threshold=2, brain_min_observations=2)
+    with pytest.raises(DecideEvidenceRejectedError, match="unsupported objective"):
+        await port.advise_next(_evidence((_obs(), _obs())))
+    assert brain.calls == 1
+    assert seeder.calls == 0  # no fallback for a permanent rejection
 
 
 async def test_staged_phase_is_stateless_same_evidence_same_route() -> None:

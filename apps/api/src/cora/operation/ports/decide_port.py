@@ -216,6 +216,26 @@ class DecideEvidenceRejectedError(Exception):
         self.reason = reason
 
 
+class DecideColdStartError(DecideEvidenceRejectedError):
+    """The decider refused because the history is too small YET, not wrong.
+
+    A TRANSIENT subtype of `DecideEvidenceRejectedError`: the brain is
+    reachable and the request is well-formed, but there are too few usable
+    observations to act on (a GP needs seed points before a fit is
+    meaningful). More evidence fixes it. Distinct from a permanent
+    `DecideEvidenceRejectedError` (an unsupported objective kind, a missing
+    target, a non-continuous axis), which more evidence never fixes.
+
+    The distinction is load-bearing for `StagedDecidePort`: it catches THIS
+    subtype to fall back to its seeder for another point, keeping the loop
+    accreting usable observations, while it lets a permanent rejection
+    propagate so a misconfigured objective ends the run instead of seeding
+    forever. Being a subclass, it is still folded by the conduct loop's
+    `Decide*Error` handling and still matched by callers catching the base
+    `DecideEvidenceRejectedError`.
+    """
+
+
 class DecideAdviceMalformedError(Exception):
     """The decider returned advice that violates the port contract.
 
@@ -394,6 +414,7 @@ __all__ = [
     "AdviceAuditFields",
     "DecideAccessDeniedError",
     "DecideAdviceMalformedError",
+    "DecideColdStartError",
     "DecideEvidenceRejectedError",
     "DecideNotAvailableError",
     "DecidePort",

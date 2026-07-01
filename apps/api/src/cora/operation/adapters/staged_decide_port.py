@@ -29,12 +29,30 @@ this router.)
 The threshold gates on `obs.succeeded` (the port-level success flag), the
 caller-neutral signal that a measurement happened. A failed acquisition is a
 real datum for a seeder (a region to skip) but does NOT advance the GP toward
-a fittable history, so it must not count toward the handoff. The brain applies
-its own, stricter usability filter on top (it also drops non-Good-quality
-points); the `threshold >= brain.min_observations` construction invariant
-guarantees that by the time the brain is first consulted it has at least its
-required floor of successful observations, so the handoff cannot land the brain
-in its own reject-when-cold path on the first call.
+a fittable history, so it must not count toward the handoff.
+
+## Cold-start fallback (the count is a hint, not a guarantee)
+
+The composite counts what it can see (`obs.succeeded`), but the brain's real
+usability bar is stricter and INVISIBLE from here: the GP brain also drops
+non-Good-quality points and observations missing the target measurement. So
+`successful >= threshold` does NOT prove the brain has enough USABLE points;
+a run can cross the count threshold while several successful observations are
+Uncertain / Bad / off-target, leaving the brain below its own floor.
+
+Rather than duplicate the brain's private usability predicate here (which
+would couple the composite to one brain's filter and drift as the brain
+evolves), the composite treats the count as a HINT and defers to the brain's
+own verdict: when routing to the brain raises the transient
+`DecideColdStartError`, the composite falls back to the seeder for that call
+and emits another seed point. The loop then feeds one more observation and
+re-consults; the brain is retried as the usable history grows. This keeps the
+autonomous loop progressing instead of aborting the whole procedure the first
+time the brain finds itself cold (the conduct loop folds any `Decide*Error`
+into a run-ending abort), and it keeps the router brain-agnostic: only a
+PERMANENT rejection (unsupported objective kind, missing target, non-continuous
+axis, all base `DecideEvidenceRejectedError` and not the cold-start subtype)
+propagates and ends the run, because more seeding never fixes those.
 
 ## Stop semantics
 
@@ -47,6 +65,8 @@ verdict verbatim, `Stop` included.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+
+from cora.operation.ports.decide_port import DecideColdStartError
 
 if TYPE_CHECKING:
     from cora.operation.ports.decide_port import (
@@ -62,10 +82,14 @@ class StagedDecidePort:
     """A two-phase composite that routes seeder -> brain on successful-obs count.
 
     Satisfies the `DecidePort` Protocol structurally by delegating to two
-    `DecidePort` children. `threshold` is the number of successful
-    observations at which the handoff occurs; it must be >= the brain's own
-    cold-start floor so the brain is never consulted below it (the caller
-    passes the brain's `min_observations` or higher).
+    `DecidePort` children. `threshold` is the successful-observation count at
+    which the composite first TRIES the brain. It is a hint, not a hard
+    guarantee: because the brain's own usability bar is stricter and invisible
+    here, the composite falls back to the seeder whenever the brain signals it
+    is still cold (`DecideColdStartError`), so the loop keeps seeding until the
+    brain can actually fit. `threshold >= brain_min_observations` is a
+    fail-fast sanity check on obviously-misconfigured input, not the safety net
+    (the runtime fallback is).
     """
 
     def __init__(
@@ -81,24 +105,33 @@ class StagedDecidePort:
         if threshold < brain_min_observations:
             raise ValueError(
                 f"threshold ({threshold}) must be >= the brain's cold-start floor "
-                f"({brain_min_observations}); a lower threshold would hand the brain "
-                "fewer observations than it needs and trip its reject-when-cold path"
+                f"({brain_min_observations}); a lower threshold would try the brain "
+                "before it can possibly have enough observations to fit"
             )
         self._seeder = seeder
         self._brain = brain
         self._threshold = threshold
 
     async def advise_next(self, evidence: SteeringEvidence) -> SteeringAdvice:
-        """Route to the seeder below the threshold, else to the brain.
+        """Route to the seeder below the threshold, else try the brain.
 
         The number of successful observations is re-derived from the evidence
-        every call, so the routing is stateless and replay-stable. Any
-        `Decide*Error` the chosen child raises propagates unchanged (the loop
-        folds it into a deferred steering decision).
+        every call, so the routing is stateless and replay-stable. Below the
+        threshold the seeder decides. At or above it the brain is tried; if the
+        brain is still cold (raises the transient `DecideColdStartError`, e.g.
+        too few Good-quality target observations to fit) the composite falls
+        back to the seeder for another point so the loop keeps accreting usable
+        observations rather than aborting the run. Any other `Decide*Error`
+        (including a permanent `DecideEvidenceRejectedError`) propagates
+        unchanged, and the conduct loop folds it into a run-ending abort.
         """
         successful = sum(1 for obs in evidence.observations if obs.succeeded)
-        child = self._seeder if successful < self._threshold else self._brain
-        return await child.advise_next(evidence)
+        if successful < self._threshold:
+            return await self._seeder.advise_next(evidence)
+        try:
+            return await self._brain.advise_next(evidence)
+        except DecideColdStartError:
+            return await self._seeder.advise_next(evidence)
 
     async def aclose(self) -> None:
         """Release both children's resources; idempotent."""

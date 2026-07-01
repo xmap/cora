@@ -19,6 +19,11 @@ maps to the same point on every platform and torch version. So the seeder is
 a pure-function brain in the sense the conduct loop's replay property
 requires, exactly like the grid walker, and unlike the GP brain it seeds.
 
+The seeder SKIPS the sequence's raw 0th point (the all-zeros corner, which
+scales to every axis's lower bound: a degenerate, on-the-boundary seed): its
+own position `k` maps to raw draw `k + 1`, so the first seed is interior. This
+is still a pure function of position, so replay-stability is unchanged.
+
 ## Continuous axes only
 
 Sobol generates points in the unit hypercube, scaled to each axis's
@@ -121,18 +126,24 @@ def _require_continuous(axis: SteeringAxis) -> None:
 
 
 def _sobol_point(space: SteeringSpace, index: int) -> list[float]:
-    """The `index`-th unscrambled Sobol point, scaled to each axis's bounds.
+    """The `index`-th seed point (skipping the origin), scaled to each axis's bounds.
 
-    Draws `index + 1` points from a fresh unscrambled engine and takes the
-    last: an unscrambled Sobol sequence is a pure function of (dimension,
-    index), so this is deterministic and replay-stable without any RNG seed.
+    The 0th point of an UNSCRAMBLED Sobol sequence is the all-zeros corner of
+    the unit hypercube, which scales to every axis's lower bound: a degenerate,
+    on-the-boundary seed that wastes the first (often expensive) acquisition and
+    gives the GP a corner point rather than interior coverage. So the seeder
+    skips raw index 0 and maps its own position `index` to raw draw `index + 1`
+    (position 0 -> 0.5, 1 -> 0.75, 2 -> 0.25, ... in 1-D). It draws `index + 2`
+    points from a fresh unscrambled engine and takes the last; an unscrambled
+    Sobol sequence is a pure function of (dimension, draw index), so this stays
+    deterministic and replay-stable without any RNG seed.
     """
     import torch
 
     dimension = len(space.axes)
     engine = torch.quasirandom.SobolEngine(dimension=dimension, scramble=False)
-    drawn = engine.draw(index + 1, dtype=torch.double)
-    unit = drawn[index]
+    drawn = engine.draw(index + 2, dtype=torch.double)
+    unit = drawn[index + 1]
     point: list[float] = []
     for axis_index, axis in enumerate(space.axes):
         assert axis.lower is not None  # guarded by _require_continuous

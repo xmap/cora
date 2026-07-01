@@ -23,6 +23,8 @@ from cora.operation.ports.decide_port import (
     SteeringVerdict,
 )
 
+_MODEL_REF = "in_memory"
+
 
 class InMemoryDecidePort:
     """A stateless fake decider that replays seeded advice by iteration.
@@ -68,7 +70,7 @@ class InMemoryDecidePort:
         self._received.append(evidence)
         if 0 <= evidence.iteration_index < len(self._advice):
             return self._advice[evidence.iteration_index]
-        return SteeringAdvice(verdict=SteeringVerdict.STOP)
+        return SteeringAdvice(verdict=SteeringVerdict.STOP, model_ref=_MODEL_REF)
 
     async def aclose(self) -> None:
         """No-op: the fake holds no resources."""

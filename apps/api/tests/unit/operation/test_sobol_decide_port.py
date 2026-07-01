@@ -50,14 +50,15 @@ def _evidence(
     )
 
 
-async def test_sobol_first_point_is_sequence_start() -> None:
+async def test_sobol_first_point_skips_origin() -> None:
     port = SobolDecidePort()
     space = SteeringSpace(axes=(SteeringAxis(name="energy", lower=0.0, upper=1.0),))
     advice = await port.advise_next(_evidence(space, ()))
     assert advice.verdict is SteeringVerdict.MEASURE
     assert advice.next_point is not None
-    # Unscrambled 1-D Sobol starts at 0.0 (then 0.5, 0.75, 0.25, ...).
-    assert advice.next_point.coordinates["energy"] == 0.0
+    # The seeder skips the degenerate all-zeros origin (raw index 0): position 0
+    # maps to raw draw 1, so the first 1-D seed is 0.5 (then 0.75, 0.25, ...).
+    assert advice.next_point.coordinates["energy"] == 0.5
 
 
 async def test_sobol_is_deterministic_same_evidence_same_advice() -> None:
@@ -72,21 +73,21 @@ async def test_sobol_is_deterministic_same_evidence_same_advice() -> None:
 async def test_sobol_position_follows_observation_count() -> None:
     port = SobolDecidePort()
     space = SteeringSpace(axes=(SteeringAxis(name="x", lower=0.0, upper=1.0),))
-    # 1-D unscrambled Sobol: index 0 -> 0.0, index 1 -> 0.5.
+    # Origin-skipped 1-D Sobol: position 0 -> raw draw 1 -> 0.5, position 1 -> 0.75.
     a0 = await port.advise_next(_evidence(space, ()))
     a1 = await port.advise_next(_evidence(space, (_obs({"x": 0.0}),)))
     assert a0.next_point is not None and a1.next_point is not None
-    assert a0.next_point.coordinates["x"] == 0.0
-    assert a1.next_point.coordinates["x"] == 0.5
+    assert a0.next_point.coordinates["x"] == 0.5
+    assert a1.next_point.coordinates["x"] == 0.75
 
 
 async def test_sobol_scales_to_axis_bounds() -> None:
     port = SobolDecidePort()
     space = SteeringSpace(axes=(SteeringAxis(name="energy", lower=8.0, upper=12.0),))
-    # index 1 -> unit 0.5 -> 8.0 + 0.5 * 4.0 = 10.0
+    # position 1 -> raw draw 2 -> unit 0.75 -> 8.0 + 0.75 * 4.0 = 11.0
     advice = await port.advise_next(_evidence(space, (_obs({"energy": 8.0}),)))
     assert advice.next_point is not None
-    assert advice.next_point.coordinates["energy"] == 10.0
+    assert advice.next_point.coordinates["energy"] == 11.0
 
 
 async def test_sobol_multi_axis_point_covers_all_names() -> None:
@@ -100,9 +101,10 @@ async def test_sobol_multi_axis_point_covers_all_names() -> None:
     advice = await port.advise_next(_evidence(space, ()))
     assert advice.next_point is not None
     assert set(advice.next_point.coordinates) == {"x", "y"}
-    # First Sobol point is the origin of the (unscrambled) sequence.
-    assert advice.next_point.coordinates["x"] == 0.0
-    assert advice.next_point.coordinates["y"] == 0.0
+    # Origin-skipped: the first seed is raw draw 1 = (0.5, 0.5) in the unit cube,
+    # scaled per axis (x in [0,1] -> 0.5, y in [0,10] -> 5.0).
+    assert advice.next_point.coordinates["x"] == 0.5
+    assert advice.next_point.coordinates["y"] == 5.0
 
 
 async def test_sobol_never_stops() -> None:
@@ -117,10 +119,10 @@ async def test_sobol_never_stops() -> None:
 async def test_sobol_advances_past_failed_observation() -> None:
     port = SobolDecidePort()
     space = SteeringSpace(axes=(SteeringAxis(name="x", lower=0.0, upper=1.0),))
-    # A failed observation still counts toward position (index 1 -> 0.5).
+    # A failed observation still counts toward position (position 1 -> raw draw 2 -> 0.75).
     advice = await port.advise_next(_evidence(space, (_obs({"x": 0.0}, succeeded=False),)))
     assert advice.next_point is not None
-    assert advice.next_point.coordinates["x"] == 0.5
+    assert advice.next_point.coordinates["x"] == 0.75
 
 
 async def test_sobol_ignores_objective_kind() -> None:

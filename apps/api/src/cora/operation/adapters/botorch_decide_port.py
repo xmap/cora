@@ -36,10 +36,11 @@ run must actually be replayed or resumed.
 ## Rejects when cold
 
 A GP needs seed points before a fit is meaningful. With fewer than
-`min_observations` successful observations the adapter raises
-`DecideEvidenceRejectedError` rather than fitting a degenerate model: it never
-self-seeds. The staged decider guarantees the seeder runs first, so the brain
-is only consulted once warm; a direct caller gets a clear rejection.
+`min_observations` usable observations the adapter raises the transient
+`DecideColdStartError` (a `DecideEvidenceRejectedError` subtype) rather than
+fitting a degenerate model: it never self-seeds. The staged decider catches
+that subtype and falls back to its seeder for another point, so the brain is
+only fitted once warm; a direct caller gets a clear rejection it can act on.
 
 ## Objective kinds
 
@@ -64,6 +65,7 @@ from typing import TYPE_CHECKING, Any
 from cora.operation.adapters._optional_torch import require_botorch, require_torch
 from cora.operation.ports.decide_port import (
     DecideAdviceMalformedError,
+    DecideColdStartError,
     DecideEvidenceRejectedError,
     SteeringAdvice,
     SteeringEvidence,
@@ -126,9 +128,11 @@ class BoTorchDecidePort:
         """Fit a GP to the history and advise the acquisition-optimal next point.
 
         Raises `DecideEvidenceRejectedError` for an unsupported objective
-        kind, a missing target measurement, a non-continuous space, or too
-        few seed observations; `DecideAdviceMalformedError` if the optimizer
-        returns no candidate.
+        kind, a missing target measurement, or a non-continuous space; the
+        transient `DecideColdStartError` subtype for too few usable seed
+        observations (which more evidence fixes, so the staged composite
+        falls back to its seeder on it); `DecideAdviceMalformedError` if the
+        optimizer returns no candidate.
         """
         _require_supported_objective(evidence.objective)
         names = _continuous_axis_names(evidence.space)
@@ -137,7 +141,7 @@ class BoTorchDecidePort:
 
         usable = [obs for obs in evidence.observations if _is_usable(obs, target)]
         if len(usable) < self._min_observations:
-            raise DecideEvidenceRejectedError(
+            raise DecideColdStartError(
                 f"the {_MODEL_REF!r} decider needs >= {self._min_observations} usable "
                 f"observations to fit a GP, got {len(usable)}; seed the space first"
             )

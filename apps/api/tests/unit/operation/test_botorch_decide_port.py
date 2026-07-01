@@ -20,6 +20,7 @@ from cora.operation.adapters.decide_port_config import (
     build_decide_port,
 )
 from cora.operation.ports.decide_port import (
+    DecideColdStartError,
     DecideEvidenceRejectedError,
     DecidePort,
     SteeringAxis,
@@ -101,9 +102,24 @@ async def test_botorch_handles_minimize_objective() -> None:
 
 
 async def test_botorch_rejects_when_cold() -> None:
+    # The cold path raises the TRANSIENT DecideColdStartError subtype (so the
+    # staged composite can fall back to its seeder), still catchable as the base
+    # DecideEvidenceRejectedError.
     port = BoTorchDecidePort(min_observations=5)
-    with pytest.raises(DecideEvidenceRejectedError, match="usable observations"):
+    with pytest.raises(DecideColdStartError, match="usable observations"):
         await port.advise_next(_evidence(_maximize(), _seed_obs(2)))
+    with pytest.raises(DecideEvidenceRejectedError):
+        await port.advise_next(_evidence(_maximize(), _seed_obs(2)))
+
+
+async def test_botorch_permanent_rejection_is_not_cold_start() -> None:
+    # A permanent rejection (unsupported objective) must NOT be the cold-start
+    # subtype, so the staged composite lets it propagate instead of seeding.
+    port = BoTorchDecidePort(min_observations=1)
+    objective = SteeringObjective(kind=SteeringObjectiveKind.EXPLORE)
+    with pytest.raises(DecideEvidenceRejectedError) as excinfo:
+        await port.advise_next(_evidence(objective, _seed_obs(5)))
+    assert not isinstance(excinfo.value, DecideColdStartError)
 
 
 async def test_botorch_rejects_explore_objective() -> None:
