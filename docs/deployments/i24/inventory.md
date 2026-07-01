@@ -20,7 +20,7 @@ Root Asset `I24` (`tier = Unit`, `facility_code = diamond`); sub-systems nest be
 | `Aperture` | `Device` | Aperture | i24-optics | beam-defining aperture (OPT-2) |
 | `Goniometer` | `Device` | Goniometer | i24-experiment | vertical pin goniometer; reuses the I03-graduated Family (GONIO-1) |
 | `ChipStage` | `Device` | LinearStage | i24-experiment | fixed-target chip XYZ stage (dodal PMAC); chip-as-Fixture is CHIP-1, the raster seam is SSX-1 |
-| `Backlight` | `Device` | Backlight (loose) | i24-experiment | dual sample backlight; reused from I03 (BACKLIGHT-1) |
+| `Backlight` | `Device` | Backlight | i24-experiment | dual sample backlight; binds the catalog Family (BACKLIGHT-1) |
 | `OnAxisViewer` | `Device` | Camera | i24-experiment | on-axis-view alignment camera + beam-centre (CTRL-1) |
 | `Beamstop` | `Device` | BeamStop | i24-experiment | positioned beamstop (OPT-2) |
 | `SampleShutter` | `Device` | Shutter | i24-experiment | fast Zebra-controlled sample shutter (SSX-1) |
@@ -30,7 +30,7 @@ Root Asset `I24` (`tier = Unit`, `facility_code = diamond`); sub-systems nest be
 | `Timing` | `Device` | TimingController | i24-experiment | Zebra FPGA triggering of detector + shutter (SSX-1) |
 | `HutchShutter` | `Device` | Shutter | i24-optics | interlocked hutch photon shutter (PSS-1) |
 
-Families reused from the catalog: `Monochromator`, `Mirror`, `Filter`, `Aperture`, `Goniometer`, `LinearStage`, `Camera`, `BeamStop`, `Shutter`, `TimingController`. Loose families reused from siblings: `StorageRing`, `Backlight` (both from the Diamond / APS fleet). **No new family is coined**, and the catalog is unchanged.
+Families reused from the catalog: `Monochromator`, `Mirror`, `Filter`, `Aperture`, `Goniometer`, `LinearStage`, `Camera`, `BeamStop`, `Shutter`, `TimingController`, `Backlight` (the illumination affordance, graduated across the MX / imaging fleet). Loose families reused from siblings: `StorageRing`. **No new family is coined**, and the catalog is unchanged.
 
 ## Pending confirmations
 

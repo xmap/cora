@@ -25,7 +25,7 @@ P13 established the EMBL sub-operator control-domain; P14 reuses it and adds the
 
 ## No new families (the MX spine reuses the i03 precedent)
 
-P14 coins no new Family. Both diffractometers bind the graduated `Goniometer`; the area detectors bind `Camera`; the XRF detector binds `EnergyDispersiveSpectrometer`; the CRL binds `Transfocator`; the slits bind `Slit`; the focusing optic binds `Mirror`; the sample illumination binds the loose `Backlight`; the optics motions bind `LinearStage`, the energy and detector distance `PseudoAxis`. Nothing in the catalog changes. The MX technique reuses the pending i03 `mx_data_collection` Method (as P13 and the wider MX fleet do).
+P14 coins no new Family. Both diffractometers bind the graduated `Goniometer`; the area detectors bind `Camera`; the XRF detector binds `EnergyDispersiveSpectrometer`; the CRL binds `Transfocator`; the slits bind `Slit`; the focusing optic binds `Mirror`; the sample illumination binds the catalog `Backlight` (graduated across the MX / imaging fleet); the optics motions bind `LinearStage`, the energy and detector distance `PseudoAxis`. Nothing in the catalog changes. The MX technique reuses the pending i03 `mx_data_collection` Method (as P13 and the wider MX fleet do).
 
 ## The honest limitation: published mockups
 

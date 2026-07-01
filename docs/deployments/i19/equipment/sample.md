@@ -37,9 +37,9 @@ The MAPT pinhole and collimator are the consumer-facing beam-defining Asset onto
 | --- | --- | --- | --- |
 | `SampleViewerOnAxis` | [`Camera`](../../../catalog/families.md) | `BL19I-EA-OAV-01:` | the on-axis OAV viewing camera (in EH1, `i19-1`) (DET-1) |
 | `SampleViewerDiagonal` | [`Camera`](../../../catalog/families.md) | `BL19I-EA-OAV-02:` | the diagonal OAV viewing camera (in EH1, `i19-1`) (DET-1) |
-| `Backlight` | `Backlight` (loose) | `BL19I-EA-IOC-12:` | sample backlight in / out; fourth sighting, held under review (DET-1) |
+| `Backlight` | `Backlight` | `BL19I-EA-IOC-12:` | sample backlight in / out; binds the catalog Family (DET-1) |
 
-The OAV viewing cameras bind `Camera`. The thing that makes them interesting, **pin-tip recognition for centring, is a Method behaviour, not a device**: the image-recognition step that finds the crystal pin and drives the goniometer to centre it lives on the Camera as behaviour, so it adds no Family and no Asset (DET-1). The sample backlight reuses the loose `Backlight` Family, its **fourth sighting** after i03, i24, and fmx; the Family stays held under review (the illumination-affordance fold-versus-promote question), so i19 adds a sighting, not a new Family (DET-1).
+The OAV viewing cameras bind `Camera`. The thing that makes them interesting, **pin-tip recognition for centring, is a Method behaviour, not a device**: the image-recognition step that finds the crystal pin and drives the goniometer to centre it lives on the Camera as behaviour, so it adds no Family and no Asset (DET-1). The sample backlight binds the catalog `Backlight` Family, the illumination affordance graduated across the MX / imaging fleet (already bound at i03, i24, and fmx), so i19 adds a consumer, not a new Family (DET-1).
 
 ## Why no new family here
 
@@ -47,6 +47,6 @@ The four-circle is the page's whole modelling argument. A kappa four-circle goni
 
 - **The circles are a `Goniometer`.** The catalog `Goniometer` note already settles that chi-versus-kappa and axis count are a per-Asset setting, not a Family split. kappa is a setting. The phi / omega / kappa sample circles bind `Goniometer` (DIFF-1), the same as the i03 Smargon and the MX3 mini-kappa, and the serial arm binds a second `Goniometer` (SERIAL-1).
 - **The whole four-circle is an Assembly, not a Family.** The sample circles plus the 2theta arm plus det_z plus the reciprocal-space axis compose `Assembly(Diffractometer)`, named-not-built, the 4-ID / 8-ID / i06-1 pattern (DIFF-1, DIFF-2). Composition, not a new role-noun.
-- **The aperture and backlight reuse too.** The MAPT binds `Aperture` on the i03 precedent (APERTURE-1); the backlight is the loose `Backlight`'s fourth sighting (DET-1).
+- **The aperture and backlight reuse too.** The MAPT binds `Aperture` on the i03 precedent (APERTURE-1); the backlight binds the catalog `Backlight`, graduated across the MX / imaging fleet (DET-1).
 
 i19 is CORA's first chemical (small-molecule) crystallography beamline, and even so the sample side coins **no new Family and changes nothing in the catalog**. The genuine i19 novelty is elsewhere: the dual-hutch shared-optics access-control seam, a governance concern over the shared optics, not a device family (ACCESS-1). See the [Model](../model.md#the-dual-hutch-access-control-seam) page for that seam, the [Source](../beamline.md) walk for the shared optics and the EH1 / EH2 endstation devices in the descriptor, and the [Inventory](../inventory.md) for the full Asset tree.

@@ -22,9 +22,9 @@
 #
 # Reuses I22's loose StorageRing design-intent family and 2-BM's loose Diagnostic
 # family, rather than coining synonyms; FluxMonitor and TemperatureController were
-# first carried loose at I22 too and have since graduated to the catalog. Only one
-# genuinely-new loose family: Backlight (an illumination affordance no existing
-# Family carries; carried loose pending rule-of-three).
+# first carried loose at I22 too and have since graduated to the catalog. The
+# on-axis illumination binds the catalog Backlight Family (an illumination affordance
+# no prior Family carried; graduated across the MX / imaging fleet, DET-1).
 # Attenuator folds into the existing Filter Family; the aperture-scatterguard
 # folds into the existing Aperture Family (both adversarially verified).
 #
@@ -239,7 +239,7 @@ sample:
       pv: "BL03I"
       new: true
       confirm: true
-      note: "sample illumination for on-axis viewing; a new loose family (no existing Family carries an illumination affordance), earned only on rule-of-three (ROBOT-1 / DET-1)"
+      note: "sample illumination for on-axis viewing; binds the catalog Backlight Family (the first illumination affordance no prior Family carried, graduated across the MX / imaging fleet, DET-1)"
     - name: Cryostream
       family: TemperatureController
       pv: "BL03I-EA-CSTRM-01:"

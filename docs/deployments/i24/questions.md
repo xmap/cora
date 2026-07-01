@@ -29,7 +29,7 @@ i24 was reverse-engineered from Diamond's open controls library ([dodal](https:/
 | CHIP-1 | Blocks-build | How is the fixed-target chip addressed: the grid geometry, the well / aperture layout, and how a collection window maps to a stage position? | An addressable chip on the XYZ chip stage; the grid map lives in beamline software, not a PV. | The chip addressing; the CORA Fixture / Subject-grid modelling is on [Model](model.md#deliberately-not-here-yet). |
 | SSX-1 | Blocks-go-live | The serial-collection sequence: the raster pattern, the per-window dwell, and the laser / Zebra trigger timing. Does serial crystallography enter CORA's catalog as a Capability? | A triggered chip-raster fly-collection; the Capability is deferred, the Practice rendered pending. | The serial-collection shape; the CORA Capability is on [Model](model.md#deliberately-not-here-yet). |
 | LASER-1 | Nice-to-have | The PMAC-controlled lasers: are they a pump-probe excitation source CORA should model, or only a trigger setting and a hazard? | Carried as a trigger setting on the chip-collection seam, not a device; modelling deferred. | The laser model or hazard treatment. |
-| BACKLIGHT-1 | Nice-to-have | The dual backlight PV root and its positions. | Reuses I03's loose `Backlight` family; the root `BL24I` and positions pending. | The backlight Asset. |
+| BACKLIGHT-1 | Nice-to-have | The dual backlight PV root and its positions. | Binds the catalog `Backlight` Family; the root `BL24I` and positions pending. | The backlight Asset. |
 
 ## Detection
 

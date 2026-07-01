@@ -27,9 +27,10 @@
 # It introduces NO new catalog family: the MD3 goniometer reuses the graduated
 # Goniometer family (the i03 MX precedent), the DECTRIS Eiger and the OAV camera Camera,
 # the DMM Monochromator, the cryojet TemperatureController, the attenuator Filter, the
-# flux monitor FluxMonitor, the beamstop BeamStop, the shutters Shutter. Three loose
-# families are reused (all allowlisted): StorageRing (the ring-current monitor),
-# BeamPositionMonitor (the beam-steering BPM), and Backlight (the MD3 backlight). The
+# flux monitor FluxMonitor, the beamstop BeamStop, the shutters Shutter. Two loose
+# families are reused (all allowlisted): StorageRing (the ring-current monitor) and
+# BeamPositionMonitor (the beam-steering BPM). The MD3 backlight binds the catalog
+# Backlight Family (graduated across the MX / imaging fleet, DET-1). The
 # ISARA robot is modelled as a deferred Procedure (sample exchange), not a device family
 # (the i03 / i24 ROBOT-1 precedent). No Capability or Method is coined; the rotation-MX
 # techniques reuse the pending i03 Methods (mx_data_collection / grid_scan /
@@ -131,9 +132,9 @@ sample:
       confirm: true
       note: "Cryojet sample cooling (cryo_temperature; SAMPLET_MON / SETP_CMD). Reuses the TemperatureController family (graduated #350)."
     - name: Backlight
-      family: Backlight              # loose Family (i03 / i24 precedent)
+      family: Backlight              # catalog Family (DET-1)
       confirm: true
-      note: "MD3 sample backlight / frontlight illumination for on-axis viewing and centring; an Exporter-driven MD3 sub-device (no EPICS PV). Reuses the loose Backlight family (i03 / i24)."
+      note: "MD3 sample backlight / frontlight illumination for on-axis viewing and centring; an Exporter-driven MD3 sub-device (no EPICS PV). Binds the catalog Backlight Family (graduated across the MX / imaging fleet, DET-1)."
     - name: BeamStop
       family: BeamStop
       confirm: true

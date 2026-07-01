@@ -31,11 +31,11 @@ Root Asset `I19` (`tier = Unit`, `facility_code = diamond`); sub-systems nest be
 | `SerialStage` | `Device` | Goniometer | i19-2 | serial / microfocus fixed-target arm (x/y/z/phi), `BL19I-MO-SRL-01` (SERIAL-1) |
 | `Aperture` | `Device` | Aperture | i19-2 | MAPT pinhole + collimator microfocus aperture, `BL19I-OP-PCOL-01` (APERTURE-1) |
 | `BeamstopEH2` | `Device` | BeamStop | i19-2 | EH2 beamstop with homing, `BL19I-OP-ABSB-02` (DET-1) |
-| `Backlight` | `Device` | Backlight (loose) | i19-2 | sample backlight (in/out), `BL19I-EA-IOC-12`; 4th sighting, held (DET-1) |
+| `Backlight` | `Device` | Backlight | i19-2 | sample backlight (in/out), `BL19I-EA-IOC-12`; binds the catalog Family (DET-1) |
 | `TriggerControllerEH2` | `Device` | TimingController | i19-2 | EH2 Zebra trigger box, `BL19I-EA-ZEBRA-03` (DET-1) |
 | `TriggerSequencer` | `Device` | TimingController | i19-2 | EH2 PandA hardware sequencer, `BL19I-EA-PANDA-01` (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Filter`, `PseudoAxis`, `Shutter`, `Camera`, `TimingController`, `Goniometer`, `BeamStop`, `Aperture`. Loose families reused from siblings: `StorageRing` (supply), `Backlight` (i03 / i24 / fmx; fourth sighting, held under review DET-1). No new family is coined and nothing graduates.
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Filter`, `PseudoAxis`, `Shutter`, `Camera`, `TimingController`, `Goniometer`, `BeamStop`, `Aperture`, `Backlight` (the illumination affordance, graduated across the MX / imaging fleet, DET-1). Loose families reused from siblings: `StorageRing` (supply). No new family is coined and nothing graduates.
 
 ## Pending confirmations
 

@@ -139,11 +139,11 @@ sample:
       confirm: true
       note: "fixed-target chip stage (dodal PMAC, an XYZ stage); positions the addressable chip. The chip-as-Fixture / Subject-grid modelling is CHIP-1; the on-controller raster trajectory + laser / encoder triggering is the serial-collection seam (SSX-1)"
     - name: Backlight
-      family: Backlight                # loose Family (illumination; reused from I03; ROBOT-1 / DET-1)
+      family: Backlight                # catalog Family (illumination; DET-1)
       pv: "BL24I"
       new: true
       confirm: true
-      note: "dual sample backlight (dodal DualBacklight); reuses I03's loose Backlight family; the PV root and positions are BACKLIGHT-1"
+      note: "dual sample backlight (dodal DualBacklight); binds the catalog Backlight Family (graduated across the MX / imaging fleet, DET-1); the PV root and positions are BACKLIGHT-1"
     - name: OnAxisViewer
       family: Camera
       pv: "BL24I-DI-OAV-01:"

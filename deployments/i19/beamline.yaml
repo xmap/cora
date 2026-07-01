@@ -50,8 +50,8 @@
 # PandA hardware triggers bind TimingController; the serial / microfocus arm binds
 # Goniometer; the beamstops bind BeamStop; the shutter binds Shutter; the incident
 # energy is a PseudoAxis. The machine state reuses the loose StorageRing; the sample
-# backlight reuses the loose Backlight (already held under review, now its fourth
-# sighting after i03 / i24 / fmx).
+# backlight binds the catalog Backlight Family (graduated across the MX / imaging fleet,
+# DET-1).
 #
 # Items left open are tagged inline with a (QUESTION-ID) answered on
 # docs/deployments/i19/questions.md.
@@ -207,7 +207,7 @@ eh2:
     catalog Assembly(Diffractometer) with a reciprocal-space PseudoAxis, named-not-built
     (DIFF-1, DIFF-2). The Eiger binds Camera; the serial / microfocus arm binds a second
     Goniometer (SERIAL-1); the MAPT pinhole + collimator binds Aperture (APERTURE-1); the
-    beamstop binds BeamStop; the backlight reuses the loose Backlight; the Zebra and PandA
+    beamstop binds BeamStop; the backlight binds the catalog Backlight; the Zebra and PandA
     bind TimingController.
   devices:
     - name: Diffractometer
@@ -247,11 +247,11 @@ eh2:
       confirm: true
       note: "the EH2 beamstop (X / Y / Z with homing); same Family as the EH1 beamstop (DET-1)"
     - name: Backlight
-      family: Backlight                # loose Family, already held under review; 4th sighting (i03 + i24 + fmx + i19)
+      family: Backlight                # catalog Family (DET-1)
       pv: "BL19I-EA-IOC-12:"
       new: true
       confirm: true
-      note: "the sample backlight (in / out illumination for OAV centring); reuses the loose Backlight Family, its fourth sighting after i03 / i24 / fmx, held under review (DET-1)"
+      note: "the sample backlight (in / out illumination for OAV centring); binds the catalog Backlight Family (graduated across the MX / imaging fleet, DET-1)"
     - name: TriggerControllerEH2
       family: TimingController
       pv: "BL19I-EA-ZEBRA-03:"

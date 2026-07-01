@@ -4,7 +4,7 @@
 
 This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md), [Detector](equipment/detector.md), and [Controls](equipment/controls.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/fmx/beamline.yaml) descriptor the Source page renders from.
 
-Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against the `NSLS2/fmx-profile-collection` `startup/*.py` device classes; the real MX acquisition logic lives in the `lsdc` / `mxtools` libraries, referenced not modelled). No vendor Model is bound: part numbers are not in the profile collection. FMX introduces **no new Family and graduates nothing**: every device reuses the MX vocabulary Diamond i03 established, including the graduated `Goniometer`, `Camera` (the Eiger), and `Transfocator` (the CRL). The robotic sample changer is one Positioner-presenting Asset (not a new Family, the i03 / 19-BM precedent, ROBOT-1); the on-axis illumination binds the loose `Backlight` (FMX is the 3rd sighting, held, DET-1), and the beam-position monitors bind the graduated catalog `BeamPositionMonitor` Family (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux), with only the per-Asset channel map still pending (DIAG-1); see [Model](model.md#deliberately-not-here-yet).
+Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against the `NSLS2/fmx-profile-collection` `startup/*.py` device classes; the real MX acquisition logic lives in the `lsdc` / `mxtools` libraries, referenced not modelled). No vendor Model is bound: part numbers are not in the profile collection. FMX introduces **no new Family and graduates nothing**: every device reuses the MX vocabulary Diamond i03 established, including the graduated `Goniometer`, `Camera` (the Eiger), and `Transfocator` (the CRL). The robotic sample changer is one Positioner-presenting Asset (not a new Family, the i03 / 19-BM precedent, ROBOT-1); the on-axis illumination binds the catalog `Backlight` Family (graduated across the MX / imaging fleet, DET-1), and the beam-position monitors bind the graduated catalog `BeamPositionMonitor` Family (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux), with only the per-Asset channel map still pending (DIAG-1); see [Model](model.md#deliberately-not-here-yet).
 
 ## The Asset tree
 
@@ -27,7 +27,7 @@ Root Asset `FMX` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `EnergyAxis` | PseudoAxis | (computed) | master energy axis (LUT-coordinated) |
 | `Goniometer` | Goniometer | `XF:17IDC-ES:FMX{Gon:1}` | single-omega MX micro-goniometer |
 | `Robot` | (Positioner Asset) | `XF:17IDC-ES:FMX{Gov:Robot}` | robotic sample changer (ROBOT-1) |
-| `Backlight` | Backlight (loose) | `XF:17IDC-ES:FMX{Light:1}` | on-axis sample illumination |
+| `Backlight` | Backlight | `XF:17IDC-ES:FMX{Light:1}` | on-axis sample illumination |
 | `SampleCamera` | Camera | `XF:17IDC-ES:FMX{Cam:7}` | on-axis sample-viewing camera |
 | `AreaDetector` | Camera | `XF:17IDC-ES:FMX{Det:Eig16M}` | Eiger 16M pixel detector |
 | `FluorescenceDetector` | EnergyDispersiveSpectrometer | `XF:17IDC-ES:FMX{Det:Mer}` | Mercury XRF (edge selection) |
@@ -37,7 +37,7 @@ Root Asset `FMX` (`tier = Unit`, `facility_code = nsls2`); sub-systems nest belo
 | `VectorMotionController` | MotionController | `XF:17IDC-ES:FMX{Gon:1-Vec}` | PowerBrick rotation vector controller |
 | `Zebra` | TimingController | `XF:17IDC-ES:FMX{Zeb:3}` | FPGA trigger / position capture |
 
-Every family is in the catalog except the loose `Backlight` (held), with the graduated `BeamPositionMonitor` (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux) now catalogued; the `Robot` is a Positioner-presenting Asset with no Family (the i03 / 19-BM precedent). FMX graduates nothing: the `Goniometer`, `Camera`, and `Transfocator` reuse is the point, making FMX a clean second MX deployment after i03.
+Every family is in the catalog, including the `Backlight` (graduated across the MX / imaging fleet) and the graduated `BeamPositionMonitor` (presenting `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux); the `Robot` is a Positioner-presenting Asset with no Family (the i03 / 19-BM precedent). FMX graduates nothing: the `Goniometer`, `Camera`, and `Transfocator` reuse is the point, making FMX a clean second MX deployment after i03.
 
 ## Pending confirmations
 

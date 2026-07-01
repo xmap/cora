@@ -25,7 +25,7 @@ i24 introduces no new device class. Every device reuses an existing catalog or l
 - The vertical pin goniometer reuses the catalog `Goniometer`, the Family I03 graduated.
 - The fixed-target chip stage (dodal's PMAC, an XYZ stage) reuses `LinearStage`. The serial raster trajectory, the encoder position-compare, and the laser triggers run on the PMAC controller; they are the orchestration seam CORA's edge replaces, not a device Family.
 - The Eiger and Jungfrau detectors reuse `Camera` (Detector Role); the on-axis viewer reuses `Camera`; the Zebra reuses `TimingController`; the DCM reuses `Monochromator`; the focusing mirrors reuse `Mirror`; the attenuator reuses `Filter` (the I03 / i15-1 precedent, not a new Attenuator kind); the aperture, beamstop, and detector / chip stages reuse `Aperture` / `BeamStop` / `LinearStage`; the shutters reuse `Shutter`.
-- The dual backlight reuses I03's loose `Backlight`; the machine source state reuses the loose `StorageRing`. No new loose family either.
+- The dual backlight binds the catalog `Backlight` Family (graduated across the MX / imaging fleet); the machine source state reuses the loose `StorageRing`. No new loose family either.
 
 ## Deliberately not here yet
 

@@ -20,14 +20,14 @@ Root Asset `MANACA` (`tier = Unit`, `facility_code = sirius`); sub-systems nest 
 | `Attenuators` | `Device` | Filter | manaca-optics | attenuator / transmission unit; foil set pending (FILT-1) |
 | `Goniometer` | `Device` | Goniometer | manaca-experiment | MX goniometer, serial / room-temperature; axes pending (GONIO-1) |
 | `SampleTemperature` | `Device` | TemperatureController | manaca-experiment | cryostream sample cooling (TEMP-1) |
-| `Backlight` | `Device` | Backlight (loose) | manaca-experiment | on-axis viewing / centring illumination; held (DET-1) |
+| `Backlight` | `Device` | Backlight | manaca-experiment | on-axis viewing / centring illumination (DET-1) |
 | `BeamStop` | `Device` | BeamStop | manaca-experiment | direct-beam stop at the sample (SAMPLE-1) |
 | `AreaDetector` | `Device` | Camera | manaca-experiment | MX area detector (Pilatus / Eiger-class); model not published (DET-1) |
 | `DetectorStage` | `Device` | LinearStage | manaca-experiment | detector translation setting sample-to-detector distance (DET-1) |
 | `FluxMonitor` | `Device` | FluxMonitor | manaca-experiment | incident-flux monitor (DIAG-1) |
 | `OnAxisCamera` | `Device` | Camera | manaca-experiment | on-axis viewing camera for centring (DET-1) |
 
-Families reused from the catalog: `Shutter`, `Monochromator`, `PseudoAxis`, `Filter`, `Goniometer`, `TemperatureController`, `BeamStop`, `Camera`, `LinearStage`, `FluxMonitor`. Loose families reused from siblings: `StorageRing` (machine-state observe-only), `Backlight` (i03 / i24 / fmx / mx3; held, DET-1). No new family is coined and nothing graduates. The automated 48-pin sample changer is modelled as a deferred sample-exchange Procedure, not a device (ROBOT-1).
+Families reused from the catalog: `Shutter`, `Monochromator`, `PseudoAxis`, `Filter`, `Goniometer`, `TemperatureController`, `BeamStop`, `Camera`, `LinearStage`, `FluxMonitor`, `Backlight` (the on-axis illumination affordance, graduated across the MX / imaging fleet, DET-1). Loose families reused from siblings: `StorageRing` (machine-state observe-only). No new family is coined and nothing graduates. The automated 48-pin sample changer is modelled as a deferred sample-exchange Procedure, not a device (ROBOT-1).
 
 ## Pending confirmations
 

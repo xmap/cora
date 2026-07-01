@@ -20,7 +20,7 @@ MANACA is a new beamline at an existing Site, and nothing new at the vocabulary 
 
 ## No new families (the MX spine reuses the i03 / FMX / AMX / MX3 precedent)
 
-MANACA coins no new Family. The goniometer binds the graduated `Goniometer`; the monochromator binds `Monochromator` and the energy is a `PseudoAxis`; the attenuators bind `Filter`; the cryostream binds the graduated `TemperatureController`; the beamstop binds `BeamStop`; the area detector and the on-axis camera bind `Camera`, the detector stage `LinearStage`, the flux monitor the graduated `FluxMonitor`; the shutters bind `Shutter`; the machine state binds the supply-loose `StorageRing`, and the sample backlight the loose `Backlight` (held, `DET-1`). Nothing in the catalog changes. The automated 48-pin sample changer is a deferred sample-exchange Procedure, not a device family (the i03 / i24 / MX3 `ROBOT-1` precedent).
+MANACA coins no new Family. The goniometer binds the graduated `Goniometer`; the monochromator binds `Monochromator` and the energy is a `PseudoAxis`; the attenuators bind `Filter`; the cryostream binds the graduated `TemperatureController`; the beamstop binds `BeamStop`; the area detector and the on-axis camera bind `Camera`, the detector stage `LinearStage`, the flux monitor the graduated `FluxMonitor`; the shutters bind `Shutter`; the machine state binds the supply-loose `StorageRing`, and the sample backlight the catalog `Backlight` (graduated across the MX / imaging fleet, `DET-1`). Nothing in the catalog changes. The automated 48-pin sample changer is a deferred sample-exchange Procedure, not a device family (the i03 / i24 / MX3 `ROBOT-1` precedent).
 
 ## The control plane
 

@@ -28,9 +28,9 @@ Root Asset `13-ID` (`tier = Unit`, `facility_code = aps`); sub-systems nest belo
 | `DetectorStage` | `Device` | LinearStage | 13-ID-D | detector table + 2theta arm; the swing PseudoAxis binding deferred (DET-1) |
 | `FluxMonitor` | `Device` | FluxMonitor | 13-ID-D | ion chambers (`13IDD:scaler1`) + DAC photodiode (DET-1) |
 | `FluorescenceDetector` | `Device` | EnergyDispersiveSpectrometer | 13-ID-D | XGLab Dante MCA, `13IDD_Dante1:` (DET-1) |
-| `SampleIllumination` | `Device` | Backlight (loose) | 13-ID-D | fibre sample illumination for the viewing microscope (DET-1) |
+| `SampleIllumination` | `Device` | Backlight | 13-ID-D | fibre sample illumination for the viewing microscope (DET-1) |
 
-Families reused from the catalog: `Monochromator`, `PseudoAxis`, `Mirror`, `Slit`, `Aperture`, `Filter`, `Goniometer`, `Table`, `Camera`, `LinearStage`, `FluxMonitor`, `EnergyDispersiveSpectrometer`. Loose families reused from siblings: `StorageRing` (supply), `Backlight` (held under review). Introduced here and since graduated to the catalog (earned across 13-ID and P02): `PressureCell`.
+Families reused from the catalog: `Monochromator`, `PseudoAxis`, `Mirror`, `Slit`, `Aperture`, `Filter`, `Goniometer`, `Table`, `Camera`, `LinearStage`, `FluxMonitor`, `EnergyDispersiveSpectrometer`, `Backlight` (the fibre illumination affordance, graduated across the MX / imaging fleet). Loose families reused from siblings: `StorageRing` (supply). Introduced here and since graduated to the catalog (earned across 13-ID and P02): `PressureCell`.
 
 ## Pending confirmations
 

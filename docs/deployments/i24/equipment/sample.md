@@ -31,10 +31,10 @@ Two CORA modelling decisions are carried as questions rather than baked in:
 
 | Device | Family | Control handle | Notes |
 | --- | --- | --- | --- |
-| `Backlight` | `Backlight` (loose) | `BL24I` | the dual sample backlight (dodal DualBacklight); sample illumination for on-axis viewing |
+| `Backlight` | `Backlight` | `BL24I` | the dual sample backlight (dodal DualBacklight); sample illumination for on-axis viewing |
 | `OnAxisViewer` | `Camera` | `BL24I-DI-OAV-01:` | the on-axis-view alignment camera with beam-centre file (dodal OAVBeamCentreFile) |
 
-The dual backlight reuses I03's loose `Backlight` family: no existing Family carries an illumination affordance, so it stays loose and is earned only on a rule-of-three. The PV root `BL24I` and the backlight positions are pending (BACKLIGHT-1). The on-axis viewer reuses `Camera` for alignment imaging; its zoom and beam-centre configuration live in GDA files under `/dls_sw`, not in spine-owned PVs, so they are plumbing CORA observes rather than data it owns (CTRL-1).
+The dual backlight binds the catalog `Backlight` Family, the illumination affordance graduated across the MX / imaging fleet (DET-1). The PV root `BL24I` and the backlight positions are pending (BACKLIGHT-1). The on-axis viewer reuses `Camera` for alignment imaging; its zoom and beam-centre configuration live in GDA files under `/dls_sw`, not in spine-owned PVs, so they are plumbing CORA observes rather than data it owns (CTRL-1).
 
 ## The beamstop and the sample shutter
 

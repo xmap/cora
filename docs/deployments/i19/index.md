@@ -43,7 +43,7 @@ The deferred parts are recorded on [Model](model.md#deliberately-not-here-yet).
 - **Single-crystal diffraction reuses the pending `diffraction` Method (`TECH-1`).** 4-ID, 8-ID, and CSX are the prior consumers; chemical-versus-magnetic single crystal is a Practice-level science difference, not a new Method.
 - **The MAPT pinhole and collimator bind the catalog `Aperture` (`APERTURE-1`).** This follows the i03 MAPT precedent: the beam-defining Asset composes the pinhole and collimator stages, with the selectable aperture sizes as a Capability settings schema.
 - **The dual-hutch shared-optics access-control is the genuine novelty: an Enclosure-permit plus Trust-gate plus actuate-floor seam (the i19-blueapi arbiter), not a device family (`ACCESS-1`).** EH1 and EH2 are two `Enclosure`s; which one may drive the shared optics now is a permit axis on the Enclosure, governed by Trust, with `BL19I-OP-STAT-01:EHStatus` the read-model of that permit. A non-active hutch reading the shared optics read-only is the same single Asset surfaced through the permit (`MONO-1`, `OPT-1`, `ATTN-1`, `PSS-1`).
-- **The sample backlight reuses the loose `Backlight` Family, its fourth sighting, held (`DET-1`).** i03, i24, and fmx already bind it; I19 adds a sighting, not a new Family. Zero new families coined, nothing graduates, the catalog is unchanged.
+- **The sample backlight binds the catalog `Backlight` Family (`DET-1`).** i03, i24, and fmx already bind it; I19 adds a consumer of the illumination affordance graduated across the MX / imaging fleet, not a new Family. Zero new families coined, nothing graduates here, the catalog is unchanged.
 
 ## The beamline
 

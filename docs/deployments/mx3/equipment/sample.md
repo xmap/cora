@@ -8,7 +8,7 @@ MX3 holds a cryocooled crystal on the MD3 microdiffractometer and rotates it thr
 | --- | --- | --- | --- |
 | `Goniometer` | Goniometer | MXCuBE Exporter (no PV) | orients the crystal (omega / kappa / phi) |
 | `SampleTemperature` | TemperatureController | `MX3CRYOJET01:` | cryojet sample cooling |
-| `Backlight` | Backlight (loose) | MD3 Exporter (no PV) | sample backlight for centring |
+| `Backlight` | Backlight | MD3 Exporter (no PV) | sample backlight for centring |
 | `BeamStop` | BeamStop | MD3 Exporter (no PV) | blocks the direct beam at the sample |
 
 ## The MD3 goniometer

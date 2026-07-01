@@ -368,7 +368,6 @@ _ALLOWED_LOOSE_FAMILIES = {
     "SlipRing": "passive-deferred: passive rotation feedthrough (TomoWISE)",
     "Wedge": "passive-deferred: passive fixed wedge (2-BM)",
     "Diagnostic": "staged: arrival-time / photon-spectrum Sensor; fold-vs-promote open (DIAG-1)",
-    "Backlight": "staged: new illumination affordance; rule-of-three open (ROBOT-1/DET-1)",
     "BetrandLens": "staged: novel TXM optic, FXI-only; rule-of-three open (OPTIC-3)",
     "MultilayerLaueLens": "staged: novel 1D crossed-pair nano-focus optic, HXN-only (OPTIC-3)",
     "Chopper": "staged: rotary duty-cycle device; fold-vs-Family open (CHOP-1)",
@@ -395,7 +394,6 @@ _PROMOTION_REVIEWED = {
     "Diagnostic": "hold: arrival-time / photon-spectrum Sensor fold-vs-promote still open (DIAG-1)",
     "Screen": "hold: phosphor beam-viewing screen (2-BM, BMM); fold-vs-promote open (FLAG-1)",
     "Laser": "hold: pump-probe laser model-vs-hazard open (4-id + lcls-mfx; SAMPLE-1)",
-    "Backlight": "hold: sample-illumination fold-vs-promote open (i03 + i24 + fmx + i19; DET-1)",
     "SlipRing": "hold: passive feedthrough (tomowise + i-tomcat); passive-deferred, not an Asset",
 }
 

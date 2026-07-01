@@ -24,7 +24,7 @@ The PETRA III Site already carries the DESY house style (Tango / Sardana / Onlin
 
 ## No new families (the MX spine reuses the i03 precedent)
 
-P13 coins no new Family. The EMBLMiniDiff binds the graduated `Goniometer`; the area detectors bind `Camera`; the XRF detector binds `EnergyDispersiveSpectrometer`; the aperture / beamstop / objective bind `Aperture` / `BeamStop` / `Objective`; the sample illumination binds the loose `Backlight` (held for graduation across i03 / i24 / FMX / i19 and now P13); the optics motions bind `LinearStage`, the energy and detector distance `PseudoAxis`. Nothing in the catalog changes. The MX technique reuses the pending i03 `mx_data_collection` Method (as MANACA, TPS 07A, and P11 do).
+P13 coins no new Family. The EMBLMiniDiff binds the graduated `Goniometer`; the area detectors bind `Camera`; the XRF detector binds `EnergyDispersiveSpectrometer`; the aperture / beamstop / objective bind `Aperture` / `BeamStop` / `Objective`; the sample illumination binds the catalog `Backlight` (graduated across the MX / imaging fleet); the optics motions bind `LinearStage`, the energy and detector distance `PseudoAxis`. Nothing in the catalog changes. The MX technique reuses the pending i03 `mx_data_collection` Method (as MANACA, TPS 07A, and P11 do).
 
 ## The gain over P11: a config that names the instrument
 

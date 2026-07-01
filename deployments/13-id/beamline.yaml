@@ -52,7 +52,8 @@
 #     the Eiger2 / Pilatus area detectors and the LightField metrology spectrometer bind
 #     Camera, the ion chambers and photodiode bind FluxMonitor, the Dante MCA binds
 #     EnergyDispersiveSpectrometer, the incident energy and the mirror curvature axes
-#     bind PseudoAxis, the fibre illumination binds the loose Backlight, and the machine
+#     bind PseudoAxis, the fibre illumination binds the catalog Backlight Family (graduated
+#     across the MX / imaging fleet, DET-1), and the machine
 #     state binds the loose StorageRing.
 #   - High-pressure XRD is NOT a new technique: it reuses the pending diffraction and
 #     powder_diffraction Methods, with high pressure a Plan / sample-environment
@@ -236,11 +237,11 @@ detection:
       confirm: true
       note: "the XGLab Dante multi-channel-analyzer for energy-dispersive fluorescence (the 2-ID / 7-BM precedent); reuse, not novelty (DET-1)"
     - name: SampleIllumination
-      family: Backlight                # loose Family, already held under review
+      family: Backlight                # catalog Family (DET-1)
       pv: "13IDD:US_IllumOnOff"
       new: true
       confirm: true
-      note: "the fibre sample illumination (upstream / downstream on / off + splitter) for the viewing microscope; reuses the loose Backlight Family (DET-1)"
+      note: "the fibre sample illumination (upstream / downstream on / off + splitter) for the viewing microscope; binds the catalog Backlight Family (graduated across the MX / imaging fleet, DET-1)"
 
 # Cross-cutting control. 13-ID runs EPICS (the floor); CORA observes and, where it
 # replaces SPEC / bluesky-style orchestration, conducts over it. The handles above were

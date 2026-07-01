@@ -44,7 +44,7 @@ Beyond the four-circle (Goniometer) and the MAPT aperture (below), the rest reus
 
 - **The MAPT pinhole and collimator bind the catalog `Aperture` (`APERTURE-1`).** This follows the i03 ApertureScatterguard-at-MAPT precedent: the consumer-facing beam-defining Asset binds `Aperture`, composing the pinhole and collimator XY stages, with the configuration aperture sizes as a Capability settings schema. The discriminator tension (the catalog `Aperture` describes a fixed code pattern, while the MAPT is a driven, size-selectable opening) is carried as `APERTURE-1`; the i03 sibling, the same controls stack and the same MAPT, already binds `Aperture`, so i19 follows it.
 
-- **The sample backlight reuses the loose `Backlight` Family, its fourth sighting.** i03, i24, and fmx already bind it; i19 is the fourth consumer, and the Family stays held under review (the illumination-affordance fold-versus-promote question, `DET-1`). i19 adds a sighting, not a new Family.
+- **The sample backlight binds the catalog `Backlight` Family.** i03, i24, and fmx already bind it; i19 is a further consumer of the illumination affordance now graduated across the MX / imaging fleet (`DET-1`). i19 adds a consumer, not a new Family.
 
 ## Deliberately not here yet
 

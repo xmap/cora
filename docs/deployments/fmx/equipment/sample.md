@@ -8,7 +8,7 @@ FMX mounts cryo-cooled protein crystals on a single-omega micro-goniometer, exch
 | --- | --- | --- | --- |
 | `Goniometer` | Goniometer | `XF:17IDC-ES:FMX{Gon:1}` | orients and centres the crystal |
 | `Robot` | (Positioner Asset) | `XF:17IDC-ES:FMX{Gov:Robot}` | loads / unloads crystals from the dewar |
-| `Backlight` | Backlight (loose) | `XF:17IDC-ES:FMX{Light:1}` | on-axis illumination for centring |
+| `Backlight` | Backlight | `XF:17IDC-ES:FMX{Light:1}` | on-axis illumination for centring |
 | `SampleCamera` | Camera | `XF:17IDC-ES:FMX{Cam:7}` | on-axis sample viewing |
 
 ## The goniometer
@@ -21,4 +21,4 @@ The `Robot` is the automated sample changer, coordinated by the LSDC Governor st
 
 ## Sample environment
 
-The on-axis illumination (`Backlight`, a ring light) reuses the loose `Backlight` family that i03 and i24 use; FMX is the third sighting, still held pending the fold-vs-promote decision (DET-1). Sample cryo-cooling (the cold-gas cryostream) is not exposed in the profile collection, which carries only an annealer / thaw-air actuator (`XF:17IDC-ES:FMX{Wago:}`), so the cooling is deferred (CRYO-1); it would bind `TemperatureController` (the i03 cryostream precedent) once its PV is supplied.
+The on-axis illumination (`Backlight`, a ring light) binds the catalog `Backlight` Family that i03 and i24 also use, the illumination affordance graduated across the MX / imaging fleet (DET-1). Sample cryo-cooling (the cold-gas cryostream) is not exposed in the profile collection, which carries only an annealer / thaw-air actuator (`XF:17IDC-ES:FMX{Wago:}`), so the cooling is deferred (CRYO-1); it would bind `TemperatureController` (the i03 cryostream precedent) once its PV is supplied.

@@ -24,8 +24,8 @@
 # (the CRL), the Monochromator, the Mirror (HFM + KB), the Filter (the BCU / RI
 # attenuators), the BeamStop, the FluxMonitor, the EnergyDispersiveSpectrometer (the
 # Mercury fluorescence detector, modelled here rather than deferred as at i03), and the
-# loose Backlight (the on-axis illumination; FMX is the third sighting after i03 / i24,
-# still held, fold-vs-promote open DET-1) and the graduated BeamPositionMonitor Family (DIAG-1). The robotic
+# catalog Backlight Family (the on-axis illumination, graduated across the MX / imaging
+# fleet, DET-1) and the graduated BeamPositionMonitor Family (DIAG-1). The robotic
 # sample changer is one Positioner-presenting Asset (NO new SampleChanger Family), the
 # i03 / 19-BM precedent (ROBOT-1). The MX Methods (mx_data_collection, grid_scan,
 # sample_exchange) stay PENDING: FMX is their second consumer (after i03), which
@@ -154,8 +154,8 @@ sample:
     FMX mounts cryo-cooled protein crystals on a single-omega micro-goniometer with
     x/y/z centring and PI fine stages, exchanged by a robot from a dewar. The
     goniometer reuses the graduated Goniometer family; the robot is one Positioner
-    Asset (not a new Family); the on-axis illumination reuses the loose Backlight
-    family. Sample cryo-cooling (the cold-gas cryostream) is not exposed in the
+    Asset (not a new Family); the on-axis illumination binds the catalog Backlight
+    Family. Sample cryo-cooling (the cold-gas cryostream) is not exposed in the
     profile collection (an annealer / thaw-air actuator XF:17IDC-ES:FMX{Wago:} is),
     so it is deferred (CRYO-1).
   devices:
@@ -169,10 +169,10 @@ sample:
       confirm: true
       note: "Automated sample-changing robot, coordinated by the LSDC Governor state machine (XF:17IDC-ES:FMX{Gov:Robot}, with a dewar / puck safety interlock XF:17IDC-OP:FMX{DewarSwitch}). Per the i03 / 19-BM precedent: one Positioner-presenting Asset loading / unloading a Subject, gated by a Clearance, vendor in a bound Model; NOT a new SampleChanger Family. The exchange workflow and Subject custody lifecycle are deferred (ROBOT-1)."
     - name: Backlight
-      family: Backlight                # loose Family (held; DET-1)
+      family: Backlight                # catalog Family (DET-1)
       pv: "XF:17IDC-ES:FMX{Light:1"
       confirm: true
-      note: "On-axis sample illumination (ring light) for loop centring. Binds the loose Backlight family that i03 / i24 also use; FMX is the third sighting, still held pending the fold-vs-promote decision (DET-1)."
+      note: "On-axis sample illumination (ring light) for loop centring. Binds the catalog Backlight Family (graduated across the MX / imaging fleet, DET-1)."
     - name: SampleCamera
       family: Camera
       pv: "XF:17IDC-ES:FMX{Cam:7}"

@@ -29,7 +29,7 @@ i19 was reverse-engineered from the beamline's own bluesky device layer ([Diamon
 | DIFF-2 | Nice-to-have | The reciprocal-space coordination over the four-circle (the kappa-to-eulerian / hkl rule). | A reciprocal-space `PseudoAxis` over the circles, the rule deferred as on 4-ID / 8-ID / i06-1. | The reciprocal-space Asset. |
 | SERIAL-1 | Nice-to-have | The serial / microfocus fixed-target arm (`BL19I-MO-SRL-01`, x / y / z / phi) and its raster sub-mode. | A second `Goniometer` for the serial / microfocus delivery; the fixed-target raster carried as a note. | The serial-arm modelling. |
 | APERTURE-1 | Nice-to-have | The MAPT pinhole + collimator microfocus aperture and whether it binds `Aperture` (the i03 MAPT precedent) despite being a driven, size-selectable opening. | The pinhole + collimator bound to `Aperture`, the configuration sizes a Capability settings schema. | The aperture Family. |
-| DET-1 | Blocks-go-live | The Eiger detector model, the OAV viewing-camera roles, the beamstops, and the backlight. | The Eiger and OAVs bind `Camera`; the beamstops bind `BeamStop`; the backlight reuses the loose `Backlight`. | The detector and viewing modelling. |
+| DET-1 | Blocks-go-live | The Eiger detector model, the OAV viewing-camera roles, the beamstops, and the backlight. | The Eiger and OAVs bind `Camera`; the beamstops bind `BeamStop`; the backlight binds the catalog `Backlight`. | The detector and viewing modelling. |
 
 ## Control and safety
 

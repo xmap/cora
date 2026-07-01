@@ -130,10 +130,10 @@ sample:
       confirm: true
       note: "the cryostream sample cooling. Reuses the graduated TemperatureController family; handles pending (TEMP-1)"
     - name: Backlight
-      family: Backlight              # loose Family (i03 / i24 / fmx / mx3 precedent; held, DET-1)
+      family: Backlight              # catalog Family (DET-1)
       new: true
       confirm: true
-      note: "the on-axis sample backlight / frontlight for viewing and centring. Reuses the loose Backlight family (held; DET-1)"
+      note: "the on-axis sample backlight / frontlight for viewing and centring. Binds the catalog Backlight Family (graduated across the MX / imaging fleet, DET-1)"
     - name: BeamStop
       family: BeamStop
       new: true

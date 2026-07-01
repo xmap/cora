@@ -8,7 +8,7 @@ The MANACA experiment endstation (`manaca-experiment`) is where the crystal is h
 
 - **`Goniometer`** (`Goniometer`): the goniometer that holds the crystal and rotates it through an oscillation, with sample centring and alignment. MANACA supports serial and room-temperature MX in addition to standard cryocooled collection. Reuses the graduated `Goniometer` family (the i03 MX precedent, exercised at FMX / AMX / MX3); axis set pending (`GONIO-1`).
 - **`SampleTemperature`** (`TemperatureController`): the cryostream sample cooling; reuses the graduated `TemperatureController` family; handles pending (`TEMP-1`).
-- **`Backlight`** (`Backlight`, loose): the on-axis backlight / frontlight for viewing and centring; reuses the loose `Backlight` family (held, `DET-1`).
+- **`Backlight`** (`Backlight`): the on-axis backlight / frontlight for viewing and centring; binds the catalog `Backlight` Family (graduated across the MX / imaging fleet, `DET-1`).
 - **`BeamStop`** (`BeamStop`): the beamstop blocking the direct beam at the sample; axis set pending (`SAMPLE-1`).
 
 These reuse the MX Families the fleet already carries (i03 / FMX / AMX / MX3): a goniometer, a cryostream temperature controller, a sample backlight, and a beamstop. MANACA coins no new Family.

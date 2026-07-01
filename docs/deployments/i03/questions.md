@@ -43,7 +43,7 @@ As at I22, the EPICS PV prefix for every device is already recorded in the descr
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| DET-1 | Blocks-go-live | What are the Eiger threshold energy and beam-center, the detector-translation axis ranges, and how is the retractable fluorescence detector (and the sample backlight) modelled? | The Eiger reuses `Camera`; the fluorescence detector presents Sensor (loose); the backlight is a loose `Backlight` family; calibration to supply. | The detector calibration and the loose fluorescence / backlight modelling. |
+| DET-1 | Blocks-go-live | What are the Eiger threshold energy and beam-center, the detector-translation axis ranges, and how is the retractable fluorescence detector (and the sample backlight) modelled? | The Eiger reuses `Camera`; the fluorescence detector presents Sensor (loose); the backlight binds the catalog `Backlight` Family; calibration to supply. | The detector calibration and the loose fluorescence modelling. |
 
 ## Techniques, triggering, identity
 

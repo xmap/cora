@@ -29,7 +29,7 @@ Root Asset `P13` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `OnAxisCamera` | `Device` | Camera | p13-eh | on-axis / sample-changer viewing cameras; handle pending (OAV-1) |
 | `FluorescenceDetector` | `Device` | EnergyDispersiveSpectrometer | p13-eh | energy-dispersive XRF detector; edge scanning (DET-1) |
 
-Families reused from the catalog: `LinearStage`, `PseudoAxis`, `FluxMonitor`, `Goniometer`, `Aperture`, `BeamStop`, `Objective`, `Camera`, `EnergyDispersiveSpectrometer`, plus the loose `Backlight` (sample-illumination affordance, held for graduation, `DET-1`). No new family is coined and nothing graduates. The automated sample changer is MXCuBE bookkeeping, a deferred sample-exchange Procedure, not a device (`ROBOT-1`).
+Families reused from the catalog: `LinearStage`, `PseudoAxis`, `FluxMonitor`, `Goniometer`, `Aperture`, `BeamStop`, `Objective`, `Camera`, `EnergyDispersiveSpectrometer`, `Backlight` (the sample-illumination affordance, graduated across the MX / imaging fleet, `DET-1`). No new family is coined and nothing graduates. The automated sample changer is MXCuBE bookkeeping, a deferred sample-exchange Procedure, not a device (`ROBOT-1`).
 
 ## Cross-cutting controllers
 

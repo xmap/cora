@@ -20,4 +20,4 @@ I03's detection is the standard MX shape: one large area detector on a translati
 
 ## Families
 
-The Eiger reuses `Camera`; the detector motion reuses `LinearStage`. No new Family is earned on the detector side; the fluorescence detector and the sample backlight are carried loose (Sensor and the new `Backlight` family respectively), tracked by DET-1. See [Inventory](../inventory.md) for the Asset tree and [Open questions](../questions.md) for the detector calibration still to confirm.
+The Eiger reuses `Camera`; the detector motion reuses `LinearStage`. No new Family is earned on the detector side; the fluorescence detector is carried loose (Sensor), and the sample backlight binds the catalog `Backlight` Family (introduced here, since graduated across the MX / imaging fleet), tracked by DET-1. See [Inventory](../inventory.md) for the Asset tree and [Open questions](../questions.md) for the detector calibration still to confirm.

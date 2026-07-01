@@ -11,7 +11,7 @@ Two enclosures carry the beamline, grouping pending (`ENC-1`): a `manaca-optics`
 ## Stations
 
 - [Source](../beamline.md): the Sirius storage-ring state (a loose `StorageRing`, observe-only, `MACHINE-1`); the front-end shutter bound to `Shutter` (`PSS-1`); the monochromator bound to `Monochromator` (`MONO-1`); the master energy `PseudoAxis` (`ENERGY-1`); and the attenuators bound to `Filter` (`FILT-1`). This page is generated from the descriptor.
-- [Sample](sample.md): the goniometer bound to the graduated `Goniometer` (`GONIO-1`), the cryostream bound to `TemperatureController` (`TEMP-1`), the on-axis backlight bound to the loose `Backlight` (`DET-1`), and the beamstop bound to `BeamStop` (`SAMPLE-1`).
+- [Sample](sample.md): the goniometer bound to the graduated `Goniometer` (`GONIO-1`), the cryostream bound to `TemperatureController` (`TEMP-1`), the on-axis backlight bound to the catalog `Backlight` (`DET-1`), and the beamstop bound to `BeamStop` (`SAMPLE-1`).
 - [Detector](detector.md): the area detector bound to `Camera` (`DET-1`), its translation stage bound to `LinearStage`, the on-axis viewing camera bound to `Camera`, and the flux monitor bound to `FluxMonitor` (`DIAG-1`).
 
 ## Shared
