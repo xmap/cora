@@ -40,6 +40,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "macromolecular crystallography (rotation MX) on an MD3 microdiffractometer + DECTRIS Eiger with an ISARA robot; reuses the i03 Goniometer and MX Methods, novelty is the Site and its heterogeneous control plane"
   name: MX3
   facility: as                  # Australian Synchrotron Site (facility_code: as)
   sector: "MX3"                 # PV namespace MX3* (storage ring at SR11*)

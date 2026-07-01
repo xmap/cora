@@ -38,6 +38,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "applied / high-throughput X-ray absorption spectroscopy (transmission + fluorescence EXAFS / XANES) on a channel-cut DCM, sharing the P64 optics host; the applied half of the XAS pair, a thin reuse-and-reinforce scaffold (detection carried pending), reusing the pending `xas_spectroscopy` Method"
   name: P65
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P65"

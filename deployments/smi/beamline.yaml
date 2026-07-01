@@ -33,6 +33,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "small- and wide-angle scattering (SAXS/WAXS) with grazing incidence (GISAXS/GIWAXS), 12-ID; the NSLS-II twin of Diamond i22, modelled from public beamline config"
   name: SMI
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 12"          # PV namespace XF:12ID*

@@ -46,6 +46,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "high-energy hard X-ray diffraction: P02.1 powder diffraction / total scattering / PDF (~60 keV) + P02.2 extreme conditions (diamond-anvil-cell high-pressure diffraction); the fleet's second diamond-anvil-cell deployment (binds the catalog `PressureCell`, graduated across 13-ID and P02), bendable HFM / VFM mirrors, coins no new Family, reusing the pending `powder_diffraction` / `total_scattering` Methods"
   name: P02
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P02"

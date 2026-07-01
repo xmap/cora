@@ -42,6 +42,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "polarization and magnetic scattering across four stations (formerly branded POLAR); introduces the POLAR polarization / magnetism vocabulary (the graduated `PhaseRetarder`, `PolarizationAnalyzer`, and `Magnet` catalog Families)"
   name: 4-ID
   facility: aps                 # APS, the Site-level Facility (facility_code: aps)
   sector: "Sector 4"            # organizational label, not a registered asset

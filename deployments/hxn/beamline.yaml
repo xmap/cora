@@ -27,6 +27,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "scanning hard X-ray nanoprobe (nano-XRF, ptychography, nano-tomography), 3-ID; modelled from public beamline config"
   name: HXN
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 3"           # PV namespace XF:03ID*

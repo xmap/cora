@@ -28,6 +28,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "coherent soft X-ray scattering and RSXS (TARDIS diffractometer), 23-ID; graduates the GratingMonochromator Family, modelled from public beamline config"
   name: CSX
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 23"          # PV namespace XF:23ID*

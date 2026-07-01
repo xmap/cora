@@ -46,6 +46,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "variable-polarization soft X-ray spectroscopy (250-3000 eV: XAS, photoemission) across a soft X-ray optics section and two experiment endstations; CORA's first `GratingMonochromator` deployment (the plane-grating mono), reuses the optics / motion Families otherwise, reusing the pending `xas_spectroscopy` / `angle_resolved_photoemission` Methods"
   name: P04
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P04"

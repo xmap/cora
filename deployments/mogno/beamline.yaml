@@ -31,6 +31,7 @@ beamline:
   maturity: model
   evidence: narrative
   coverage: partial
+  summary: "cone-beam X-ray micro and nanotomography (phase-contrast, time-resolved 4D) across two stations; reuses the 2-BM / FXI tomography vocabulary, novelty is the Site and the fleet's first custom-Python (non-Bluesky) orchestration layer"
   name: MOGNO
   facility: sirius
   tier: Unit

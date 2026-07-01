@@ -72,6 +72,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "GSECARS high-pressure X-ray diffraction on a diamond anvil cell, Sector 13; the fleet's first extreme-conditions sample environment"
   name: 13-ID
   facility: aps                # APS Site (facility_code: aps); GSECARS CAT, sector 13
   sector: "Sector 13 (GSECARS)"

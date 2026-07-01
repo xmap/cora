@@ -45,6 +45,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "macromolecular crystallography (MX); graduates the Goniometer Family and exercises autonomous sample handling"
   name: I03
   facility: diamond
   tier: Unit

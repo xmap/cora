@@ -30,6 +30,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: partial
+  summary: "energy-dispersive / time-resolved EXAFS (EDE); a deliberately partial first cut, the dispersive polychromator + strip detector deferred (POLY-1 / STRIP-1)"
   name: I20-1
   facility: diamond             # Diamond Site (facility_code: diamond)
   sector: "i20-1 (EDE)"        # PV namespace BL51P* (dodal module p51, commissioning name)

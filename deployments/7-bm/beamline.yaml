@@ -35,6 +35,7 @@ beamline:
   maturity: design
   evidence: narrative
   coverage: full
+  summary: "multi-technique flow and combustion imaging, recommissioned for APS-U"
   name: "7-BM"
   facility: aps                 # APS, a Site-level Facility (facility_code: aps)
   sector: "Sector 7"            # organizational label, not a registered asset today

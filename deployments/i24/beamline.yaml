@@ -38,6 +38,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "serial / fixed-target macromolecular crystallography (chip-coordinate single-shot); reuses the Goniometer, first synchrotron serial MX"
   name: I24
   facility: diamond            # Diamond Site (facility_code: diamond)
   sector: "Sector 24"          # PV namespace BL24I*

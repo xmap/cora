@@ -30,6 +30,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "scanning X-ray fluorescence microprobe (raster XRF mapping on the Xspress3 + Maia detectors, bending magnet), 4-BM; CORA's 2nd scanning-XRF after 2-ID; modelled from public beamline config"
   name: XFM
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 4"           # PV namespace XF:04BM* (the endstation zone is 04BMC)

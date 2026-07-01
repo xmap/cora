@@ -40,6 +40,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "coherent diffractive imaging (forward CDI, ptychography, Bragg CDI) with a KB nanofocus and Eiger2 / Merlin photon-counting detectors, 9-ID; NSLS-II's coherent-imaging beamline after Diamond i13-1, distinct from APS 9-ID; modelled from public beamline config"
   name: CDI
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 9"           # PV namespace XF:09ID*

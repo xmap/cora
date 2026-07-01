@@ -37,6 +37,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "in situ / operando soft X-ray spectroscopy (ambient-pressure XPS / AP-PES, NEXAFS / XAS), 23-ID-2; the twin of CSX on the canted 23-ID straight; modelled from public beamline config"
   name: IOS
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 23"          # PV namespace XF:23ID*

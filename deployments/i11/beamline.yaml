@@ -42,6 +42,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "high-resolution powder diffraction; the rule-of-three that earned the TemperatureController graduation + the Regulator Role (landed via gate-review)"
   name: I11
   facility: diamond
   tier: Unit

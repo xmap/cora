@@ -29,6 +29,7 @@ beamline:
   maturity: design
   evidence: design_report
   coverage: full
+  summary: "bending-magnet autonomous high-throughput tomography (formerly branded FACT)"
   name: 19-BM
   facility: aps
   sector: Sector 19

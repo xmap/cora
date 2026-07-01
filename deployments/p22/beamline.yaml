@@ -43,6 +43,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "hard X-ray photoelectron spectroscopy (HAXPES) on a `Manipulator` sample stage + `ElectronAnalyzer`, sharing the P09 optics chain (undulator / DCM / mirrors / phase retarder); coins no new Family, reusing the pending `angle_resolved_photoemission` Method; the fleet's first shared-optics beamline pair"
   name: P22
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P22"

@@ -46,6 +46,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "high-throughput macromolecular crystallography (rotation MX) and bio-imaging on a goniometer + Pilatus detector with cryostream cooling; PETRA III's first MX beamline, a reuse-and-reinforce deployment coining no new vocabulary (reuses the i03 MX vocabulary and the pending `mx_data_collection` / `tomography` Methods); a sparse registry, so the experiment hutch is modelled as grouped stages with the goniometer carried as a question"
   name: P11
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P11"

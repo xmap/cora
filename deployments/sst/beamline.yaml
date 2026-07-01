@@ -36,6 +36,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "soft-and-tender dual-branch, multi-endstation (RSoXS scattering, NEXAFS absorption, HAXPES photoemission), 7-ID; modelled from public beamline config"
   name: SST
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 7"           # PV namespace XF:07ID*

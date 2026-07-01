@@ -60,6 +60,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "hard X-ray femtosecond pump-probe (time-resolved XAS / XES / HERFD and serial crystallography) on the SwissFEL Aramis branch; CORA's second XFEL, reinforcing the LCLS-MFX family-fold and acquisition-gap findings from an independent control stack (`eco`)"
   name: Alvra
   facility: psi
   tier: Unit

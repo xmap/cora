@@ -44,6 +44,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "micro- and nanofocus small- and wide-angle X-ray scattering (SAXS / WAXS, 9-23 keV) across shared P02 / P03 optics and two endstations (a microfocus endstation and the nanofocus GINIX waveguide endstation); PETRA III's first SAXS / WAXS beamline, coins no new Family, brings Galil DMC and SmarPod controllers, reusing the pending `small_angle_scattering` / `wide_angle_scattering` Methods"
   name: P03
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P03"

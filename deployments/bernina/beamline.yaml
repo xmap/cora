@@ -68,6 +68,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: partial
+  summary: "hard X-ray femtosecond pump-probe diffraction / scattering on two reconfigurable diffractometers (GPS six-circle, XRD You-geometry); the second co-equal station on the shared Aramis source, makes the shared-switched-source seam concrete, reuses the graduated Diffractometer Assembly; a deliberately partial first cut (`eco`), the live device config is externalized"
   name: Bernina
   facility: psi
   tier: Unit

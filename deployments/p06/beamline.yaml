@@ -45,6 +45,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "hard X-ray scanning micro / nano fluorescence and diffraction microscopy + nano-tomography across an optics hutch and two scanning-probe endstations (MC01 micro, NC1 nano); the fleet's fullest scanning-probe instrument (the Maia XRF array as `EnergyDispersiveSpectrometer`, hexapods, Aerotech fly-scan stages), coins no new Family, reusing the pending `scanning_fluorescence_microscopy` / `tomography` Methods"
   name: P06
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P06"

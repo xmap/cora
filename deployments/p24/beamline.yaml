@@ -41,6 +41,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "single-crystal / small-molecule chemical crystallography across an optics hutch and two experiment hutches (EH1 / EH2); coins no new Family (the small-molecule diffractometer reuses `LinearStage`, area detector pending), reusing the pending `diffraction` Method"
   name: P24
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P24"

@@ -64,6 +64,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "high-energy engineering X-ray scattering (imaging/tomography + energy-dispersive and powder diffraction on a superconducting wiggler, white 30-250 keV / mono 30-200 keV), 27-ID; the fleet's first true high-energy hard X-ray beamline; modelled from public beamline config"
   name: HEX
   facility: nsls2              # NSLS-II Site (facility_code: nsls2)
   sector: "27-ID"             # PV zones XF:27ID1 (endstation) seen in the profile collection; FOE-optics zone is CTRL-1

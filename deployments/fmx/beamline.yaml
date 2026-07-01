@@ -35,6 +35,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "frontier microfocusing macromolecular crystallography (rotation MX on a single-omega goniometer + Eiger, autonomous robot sample exchange), 17-ID-2; CORA's 2nd MX after i03; modelled from public beamline config"
   name: FMX
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 17"          # PV namespace XF:17ID* (the 17-ID-2 branch)

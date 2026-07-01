@@ -47,6 +47,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "nuclear resonant scattering and inelastic / resonant-inelastic scattering (2.5-80 keV) across two optics hutches and three experiment hutches (EH1 NRS high-resolution-monochromator stack, EH2 diffraction, EH3 RIXS / KB pair); reuses the optics / motion Families, novelty is the Site, its Tango / Sardana control plane read from the OnlineXML, and the NRS / RIXS technique branch (reusing the pending IXS / RIXS Methods)"
   name: P01
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P01"

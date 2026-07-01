@@ -39,6 +39,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "X-ray total scattering / pair distribution function (XPDF); a reuse + reinforce deployment (no new vocabulary)"
   name: I15-1
   facility: diamond
   tier: Unit

@@ -54,6 +54,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "EMBL Hamburg macromolecular crystallography (rotation MX); CORA's first EMBL Hamburg beamline, MXCuBE HardwareObjects source"
   name: P13
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P13"

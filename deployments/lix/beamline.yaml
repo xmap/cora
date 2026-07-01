@@ -59,6 +59,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "life-science solution scattering (bio-SAXS/WAXS, in-line SEC-SAXS) and scanning-microbeam mapping, 16-ID; the fleet's first solution beamline and fluidic sample-delivery chain; modelled from public beamline config"
   name: LIX
   facility: nsls2              # NSLS-II Site (facility_code: nsls2)
   sector: "16-ID"             # PV zones XF:16IDA (optics) / XF:16IDB (transport) / XF:16IDC (endstation)

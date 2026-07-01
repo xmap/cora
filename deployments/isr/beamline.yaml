@@ -46,6 +46,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: partial
+  summary: "in-situ and resonant hard X-ray scattering / surface diffraction, 4-ID; a deliberately partial first cut, the multi-circle diffractometer + in-situ environment + resonant energy axis deferred (DIFF-1 / INSITU-1 / RESONANT-1); modelled from public beamline config"
   name: ISR
   facility: nsls2              # NSLS-II Site (facility_code: nsls2)
   sector: "4-ID"              # PV zones XF:04IDA / B / C / D (A-D), FE:C04A front-end, SR:C04 ring

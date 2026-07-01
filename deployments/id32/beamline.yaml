@@ -44,6 +44,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "soft X-ray resonant inelastic scattering (RIXS) and X-ray magnetic dichroism (XMCD) on a ~5 m spectrometer arm + 9 T magnet; CORA's first ESRF deployment and first BLISS control plane"
   name: ID32
   facility: esrf               # ESRF Site (facility_code: esrf)
   sector: "ID32"

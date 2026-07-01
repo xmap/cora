@@ -41,6 +41,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: partial
+  summary: "hard X-ray ptychography and coherent diffraction imaging (CDI) on the I13 coherence branch; the fleet's first coherent lensless imaging"
   name: I13-1
   facility: diamond            # Diamond Site (facility_code: diamond)
   sector: "Sector 13 (I13 coherence branch)"   # PV prefix BL13J

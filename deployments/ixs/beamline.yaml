@@ -40,6 +40,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "momentum-resolved hard inelastic X-ray scattering, 10-ID; modelled from public beamline config"
   name: IXS
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 10"          # PV namespace XF:10ID*

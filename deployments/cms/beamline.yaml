@@ -54,6 +54,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "complex-materials scattering (SAXS/WAXS/MAXS, GISAXS/GIWAXS) and the fleet's first hard X-ray reflectivity (XR), 11-BM; the NSLS-II twin of SMI; modelled from public beamline config"
   name: CMS
   facility: nsls2              # NSLS-II Site (facility_code: nsls2)
   sector: "11-BM"             # PV zones XF:11BMA (FOE optics) / XF:11BMB (endstation)

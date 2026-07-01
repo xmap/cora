@@ -64,6 +64,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "EMBL Hamburg high-end two-endstation macromolecular crystallography (MX), the sibling of P13"
   name: P14
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P14"

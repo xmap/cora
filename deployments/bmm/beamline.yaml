@@ -33,6 +33,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "X-ray absorption spectroscopy (transmission + fluorescence XAS/EXAFS), 6-BM; modelled from public beamline config"
   name: BMM
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 6"           # PV namespace XF:06BM*

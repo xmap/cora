@@ -44,6 +44,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "high-energy materials-science diffraction (HEMS) on a multi-bounce DCM + four-circle diffractometer, with a 17 T high-field magnet endstation; jointly operated by Helmholtz-Zentrum Hereon + DESY, coins no new Family (a further consumer of the graduated `Magnet` Family), reusing the pending `diffraction` / `magnetic_scattering` Methods"
   name: P07
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P07"

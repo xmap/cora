@@ -32,6 +32,7 @@ beamline:
   maturity: model
   evidence: design_report
   coverage: full
+  summary: "insertion-device tomographic microscopy (absorption + propagation phase contrast + dynamic 4D CT on the PSI GigaFRoST camera), X02SA; the SLS 2.0 undulator half of the rebuilt TOMCAT, CORA's micro-CT analog of APS 2-BM"
   name: I-TOMCAT
   facility: psi                  # PSI Site (facility_code: psi)
   sector: "X02SA"

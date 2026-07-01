@@ -59,6 +59,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "macromolecular femtosecond crystallography at the LCLS free-electron laser; the first XFEL, where the device families fold but the per-shot acquisition paradigm does not"
   name: LCLS-MFX
   facility: slac
   tier: Unit

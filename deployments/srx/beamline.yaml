@@ -28,6 +28,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "submicron X-ray fluorescence microprobe (XRF mapping, XANES, XRF-tomography, diffraction), 5-ID; modelled from public beamline config"
   name: SRX
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 5"           # PV namespace XF:05ID*

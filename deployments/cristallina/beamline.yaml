@@ -73,6 +73,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "hard X-ray time-resolved diffraction / scattering on quantum materials (DM1 / DM2 diffractometers in a dilution-fridge vector superconducting magnet) plus serial crystallography; the third Aramis station, closes the shared-source triad, CORA's first deployment mined from `slic`, a further consumer of the graduated `Magnet` Family, no new Family"
   name: Cristallina
   facility: psi
   tier: Unit

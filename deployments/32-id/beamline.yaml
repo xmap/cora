@@ -36,6 +36,7 @@ beamline:
   maturity: design
   evidence: narrative
   coverage: partial
+  summary: "canted multi-instrument: optics spine and transmission X-ray microscope"
   name: 32-ID
   facility: aps                 # APS, the Site-level Facility (facility_code: aps)
   sector: "Sector 32"           # organizational label, not a registered asset

@@ -46,6 +46,7 @@ beamline:
   maturity: model
   evidence: narrative
   coverage: full
+  summary: "protein microcrystallography (rotation MX) on the same MD3 + ISARA kit with a DECTRIS EIGER2 X 9M; the MX-cluster sibling of 07A, a reuse-and-reinforce deployment coining no new vocabulary, modelled from the SPXF pages + the 2025 cluster paper (thinner source, PV namespace inferred)"
   name: TPS 05A
   facility: nsrrc               # NSRRC Site (facility_code: nsrrc)
   sector: "05a"                 # EPICS PV namespace INFERRED 05a: / 05a-ES: (not read from source; 07A's was verified, 05A's is by cluster convention, PV-1)

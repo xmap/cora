@@ -49,6 +49,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "micro-focus protein crystallography (rotation MX) on an Arinax MD3 + DECTRIS EIGER2 X 16M with an ISARA robot; reuses the i03 / MX3 Goniometer and MX Methods, novelty is the Site and its Blu-Ice/DCSS-over-EPICS orchestration seam (the 2-BM pattern, confirmed live over MXCuBE)"
   name: TPS 07A
   facility: nsrrc               # NSRRC Site (facility_code: nsrrc)
   sector: "07a"                 # EPICS PV namespace 07a: (endstation at 07a-ES:)

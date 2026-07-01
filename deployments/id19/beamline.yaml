@@ -42,6 +42,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "parallel-beam hard X-ray microtomography, radiography, and phase-contrast imaging on the long imaging beamline"
   name: ID19
   facility: esrf               # ESRF Site (facility_code: esrf)
   tier: Unit

@@ -37,6 +37,7 @@ beamline:
   maturity: model
   evidence: narrative
   coverage: full
+  summary: "macromolecular crystallography (rotation MX, serial and room-temperature) on a goniometer + area detector with a 48-pin sample changer; Sirius's first MX beamline, reuses the i03 / FMX / AMX / MX3 Goniometer and MX Methods on the EPICS floor + MXCuBE3, no new Family"
   name: MANACA
   facility: sirius              # Sirius Site (facility_code: sirius)
   sector: "MANACA"

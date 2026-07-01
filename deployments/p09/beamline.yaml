@@ -51,6 +51,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "resonant scattering, diffraction, and high-field magnetism (XMCD, magnetic scattering) across a resonant-scattering hutch, a diffraction hutch, and a 14 T magnetism endstation; a further consumer of the 4-ID polarization / magnetism vocabulary (the catalog `PhaseRetarder`, `PolarizationAnalyzer`, and `Magnet` Families), coins no new Family, reusing the pending `resonant_scattering` / `magnetic_scattering` / `xmcd` Methods"
   name: P09
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P09"

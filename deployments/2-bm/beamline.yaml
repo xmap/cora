@@ -28,6 +28,7 @@ beamline:
   maturity: pilot
   evidence: live
   coverage: full
+  summary: "bending-magnet micro-CT, the operational pilot"
   name: "2-BM"
   facility: aps                 # APS, a Site-level Facility (facility_code: aps)
   sector: "Sector 2"            # organizational label, not a registered asset today

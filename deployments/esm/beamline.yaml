@@ -35,6 +35,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "electron spectro-microscopy (ARPES), 21-ID; CORA's first photoemission beamline, graduates the Manipulator Family, modelled from public beamline config"
   name: ESM
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 21"          # PV namespace XF:21ID*

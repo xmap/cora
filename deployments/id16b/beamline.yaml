@@ -39,6 +39,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "KB-focused hard X-ray nano-tomography and nano-XRF on the ESRF nanoprobe"
   name: ID16B
   facility: esrf               # ESRF Site (facility_code: esrf)
   tier: Unit

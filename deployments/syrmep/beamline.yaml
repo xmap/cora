@@ -50,6 +50,7 @@ beamline:
   maturity: model
   evidence: narrative
   coverage: full
+  summary: "hard X-ray radiology and microtomography (absorption + phase-contrast + breast-CT); CORA's first Elettra deployment and first DonkiOrchestra control plane"
   name: SYRMEP
   facility: elettra            # Elettra Site (facility_code: elettra)
   sector: "SYRMEP"             # organizational label, not a registered asset today

@@ -39,6 +39,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "in-situ / operando X-ray diffraction and imaging; a thin reuse-and-reinforce scaffold (one grouped motor bank, optics / diffractometer / detectors carried grouped / pending), reusing the pending `diffraction` Method"
   name: P23
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P23"

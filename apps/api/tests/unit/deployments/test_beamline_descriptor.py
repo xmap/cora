@@ -735,6 +735,53 @@ def test_index_badge_cells_match_descriptor() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Beamline summary: single source for the "What it is" one-liner.
+#
+# The one-line description of a beamline is authored once, in its descriptor's
+# `summary`, and rendered in two places: the "What it is" cell on the landing
+# page and the beamline's row in its Site facility-page roster. This guard makes
+# the descriptor the single source: every beamline declares a summary, and the
+# landing-page cell equals it, so the two surfaces cannot drift.
+# ---------------------------------------------------------------------------
+
+
+def _index_summaries() -> dict[str, str]:
+    # slug -> the "What it is" (5th) cell of each landing-page table row.
+    pattern = re.compile(
+        r"\|\s*\[[^\]]+\]\(([^/]+)/index\.md\)\s*\|"
+        r"\s*[^|]+?\s*\|\s*[^|]+?\s*\|\s*[^|]+?\s*\|\s*(.+?)\s*\|\s*$"
+    )
+    out: dict[str, str] = {}
+    for line in _INDEX.read_text(encoding="utf-8").splitlines():
+        match = pattern.match(line.strip())
+        if match:
+            out[match.group(1)] = match.group(2)
+    return out
+
+
+@pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)
+def test_every_beamline_declares_a_summary(descriptor_path: Path) -> None:
+    summary = bd.load(descriptor_path).beamline.summary
+    assert summary, f"{descriptor_path.parent.name}: beamline.summary is missing or empty"
+
+
+def test_index_what_it_is_matches_descriptor_summary() -> None:
+    cells = _index_summaries()
+    mismatched: list[str] = []
+    for path in _beamline_descriptors():
+        slug = path.parent.name
+        summary = bd.load(path).beamline.summary
+        if cells.get(slug) != summary:
+            mismatched.append(
+                f"{slug}:\n  index:      {cells.get(slug)!r}\n  descriptor: {summary!r}"
+            )
+    assert not mismatched, (
+        "landing-page 'What it is' cells disagree with the descriptor summary "
+        "(the descriptor is the single source):\n" + "\n".join(mismatched)
+    )
+
+
+# ---------------------------------------------------------------------------
 # Site-ordinal drift guard.
 #
 # Deployment prose repeatedly claims "CORA's Nth Site" for the facility a

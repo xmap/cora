@@ -61,6 +61,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "X-ray footprinting of biological macromolecules in solution (white/pink-beam radiolytic dose delivery, offline mass-spec readout), 17-BM; the fleet's first dose-delivery beamline (no scattering detector); modelled from public beamline config"
   name: XFP
   facility: nsls2              # NSLS-II Site (facility_code: nsls2)
   sector: "17-BM"             # PV zones XF:17BM (beamline) / XF:17BMA (A-branch) / FE:C17B (front-end)

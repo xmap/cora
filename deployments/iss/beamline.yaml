@@ -38,6 +38,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "inner-shell spectroscopy (EXAFS by trajectory energy fly-scan, plus XES / HERFD on the Johann + von Hamos crystal emission spectrometers), 8-ID; modelled from public beamline config"
   name: ISS
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 8"           # PV namespace XF:08ID*

@@ -30,6 +30,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "X-ray photon correlation spectroscopy (XPCS) across four stations; the fleet's first coherent XPCS beamline, earns the xpcs Method"
   name: 8-ID
   facility: aps                 # APS, the Site-level Facility (facility_code: aps)
   sector: "Sector 8"            # organizational label, not a registered asset

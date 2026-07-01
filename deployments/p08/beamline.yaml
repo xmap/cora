@@ -42,6 +42,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "high-resolution diffraction (surface / interface, reflectivity, powder / single-crystal) on a six-circle Kohzu diffractometer with a rich detector set (Eiger / Pilatus / Mythen / PerkinElmer / Vortex); coins no new Family, reusing the pending `diffraction` Method"
   name: P08
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P08"

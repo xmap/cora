@@ -30,6 +30,7 @@ beamline:
   maturity: model
   evidence: narrative
   coverage: full
+  summary: "BL31 fast X-ray micro-CT and radiography (continuous-rotation tomography up to 20 Hz) on a multipole wiggler; reuses the tomography Families and Methods, novelty is the Site and its Tango / Sardana control plane"
   name: FAXTOR
   facility: alba                 # ALBA Site (facility_code: alba)
   sector: "BL31"

@@ -34,6 +34,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "coherent hard X-ray scattering (XPCS, SAXS/WAXS, GISAXS), 11-ID; the second coherent beamline after APS 8-ID, modelled from public beamline config"
   name: CHX
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 11"          # PV namespace XF:11ID*

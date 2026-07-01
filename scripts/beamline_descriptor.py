@@ -190,6 +190,12 @@ class Beamline(BaseModel):
     maturity: str
     evidence: str
     coverage: str
+    # One-line description of what the beamline is, in the fleet's own voice
+    # (technique + notable kit + fleet role). The single source for the
+    # "What it is" cell on the deployments landing page and the beamline's row
+    # in its Site facility-page roster, so the two never drift. Optional in the
+    # schema so a descriptor loads mid-authoring; a fitness test requires it.
+    summary: str | None = None
 
     @field_validator("z_span_mm")
     @classmethod

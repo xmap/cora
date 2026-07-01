@@ -44,6 +44,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "momentum-resolved hard X-ray inelastic scattering (IXS) on a multi-analyzer crystal spectrometer arm; CORA's second ESRF deployment"
   name: ID28
   facility: esrf               # ESRF Site (facility_code: esrf)
   sector: "ID28"

@@ -44,6 +44,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "Bonse-Hart ultra-small-angle X-ray scattering (USAXS) plus pinhole SAXS / WAXS, Sector 12; CORA's first USAXS deployment"
   name: 12-ID
   facility: aps                # APS Site (facility_code: aps)
   sector: "Sector 12"          # PV namespaces usxLAX / usxAERO / 12idPyFilter / usxRIO

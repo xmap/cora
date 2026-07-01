@@ -57,6 +57,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "BLADE twin APPLE-II soft X-ray: RASOR resonant scattering / reflectivity + i10-1 magnet dichroism"
   name: I10
   facility: diamond            # Diamond Site (facility_code: diamond)
   sector: "Sector 10"          # PV zones BL10I (spine) / ME01D (RASOR) / BL10J (i10-1); SR10I (ID servos)

@@ -21,6 +21,7 @@ beamline:
   maturity: design
   evidence: design_report
   coverage: full
+  summary: "micro- and nano-tomography, Technical Design Report phase"
   name: TomoWISE
   facility: maxiv
   tier: Unit

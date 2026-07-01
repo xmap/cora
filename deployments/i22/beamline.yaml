@@ -35,6 +35,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  summary: "small- and wide-angle X-ray scattering (SAXS/WAXS), reverse-engineered from dodal"
   name: I22
   facility: diamond
   tier: Unit
