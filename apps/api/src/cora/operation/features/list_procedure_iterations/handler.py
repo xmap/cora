@@ -79,7 +79,8 @@ class Handler(Protocol):
 
 def _row_to_item(row: Any) -> ProcedureIterationItem:
     raw_point = row["advised_next_point"]
-    # asyncpg returns a jsonb column as a JSON string on a plain SELECT.
+    # The pool's registered jsonb decoder returns a dict; the isinstance guard
+    # defensively also handles a raw JSON string if the codec is ever absent.
     advised_next_point = json.loads(raw_point) if isinstance(raw_point, str) else raw_point
     return ProcedureIterationItem(
         procedure_id=row["procedure_id"],
