@@ -29,6 +29,7 @@ from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.adapters.in_memory_decide_port import InMemoryDecidePort
 from cora.operation.conductor import Conductor
+from cora.operation.features.append_diagnostics import AppendProcedureDiagnostics
 from cora.operation.ports.decide_port import (
     DecideTimeoutError,
     SteeringAdvice,
@@ -396,3 +397,105 @@ async def test_conduct_until_advised_threads_advice_provenance_onto_end_iteratio
     assert prov["confidence_source"] is DecisionConfidenceSource.SELF_REPORTED
     assert prov["alternatives"] == ("motor=1.0",)
     assert prov["model_ref"] == "grid_walk"
+
+
+class _CapturingAppendDiagnostics:
+    """Fake append_diagnostics handler that records the commands it received."""
+
+    def __init__(self) -> None:
+        self.commands: list[AppendProcedureDiagnostics] = []
+
+    async def __call__(
+        self,
+        command: AppendProcedureDiagnostics,
+        *,
+        principal_id: object,
+        correlation_id: object,
+        causation_id: object = None,
+        surface_id: object = None,
+    ) -> int:
+        self.commands.append(command)
+        return len(command.entries)
+
+
+@pytest.mark.unit
+async def test_conduct_until_advised_writes_diagnostics_when_brain_supplies_them() -> None:
+    """A learning brain's advice.diagnostics is appended to the diagnostics logbook."""
+    transcript = _Transcript()
+    control = InMemoryControlPort()
+    control.simulate_connect(_MOTOR_ADDR)
+    compute = InMemoryComputePort()
+    compute.set_measurement_sequence(
+        ((_objective_measurement(2.0),), (_objective_measurement(0.1),))
+    )
+    brain = InMemoryDecidePort()
+    brain.set_advice_sequence(
+        [
+            SteeringAdvice(
+                verdict=SteeringVerdict.MEASURE,
+                next_point=SteeringPoint(coordinates={_MOTOR_ADDR: 3.0}),
+                model_ref="botorch",
+                diagnostics={"lengthscale_offset": 0.8, "noise": 0.005, "acquisition_value": 0.12},
+            ),
+            SteeringAdvice(
+                verdict=SteeringVerdict.STOP,
+                model_ref="botorch",
+                diagnostics={"lengthscale_offset": 0.7, "noise": 0.004, "acquisition_value": 0.03},
+            ),
+        ]
+    )
+    recorder = _CapturingAppendDiagnostics()
+    conductor = _conductor(
+        transcript, compute_port=compute, control_port=control, append_diagnostics=recorder
+    )
+
+    result = await conductor.conduct_until_advised(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=_pass_block(),  # type: ignore[arg-type]
+        decide_port=brain,
+        objective=_objective(),
+        space=_space(),
+        objective_capture_name=_OBJECTIVE_NAME,
+        point_to_captures=_point_to_captures,
+    )
+
+    assert result.succeeded is True
+    # One diagnostic command per steered iteration (measure + stop = 2).
+    assert len(recorder.commands) == 2
+    first_entry = recorder.commands[0].entries[0]
+    assert first_entry.model_ref == "botorch"
+    assert first_entry.iteration_index == 1
+    assert first_entry.payload["acquisition_value"] == 0.12
+
+
+@pytest.mark.unit
+async def test_conduct_until_advised_writes_no_diagnostics_for_stateless_brain() -> None:
+    """A brain that leaves diagnostics None (grid / sobol / in-memory) writes no rows."""
+    transcript = _Transcript()
+    control = InMemoryControlPort()
+    control.simulate_connect(_MOTOR_ADDR)
+    compute = InMemoryComputePort()
+    compute.set_measurement_sequence(((_objective_measurement(0.0),),))
+    brain = InMemoryDecidePort()
+    brain.set_advice_sequence([SteeringAdvice(verdict=SteeringVerdict.STOP, model_ref="grid_walk")])
+    recorder = _CapturingAppendDiagnostics()
+    conductor = _conductor(
+        transcript, compute_port=compute, control_port=control, append_diagnostics=recorder
+    )
+
+    result = await conductor.conduct_until_advised(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=_pass_block(),  # type: ignore[arg-type]
+        decide_port=brain,
+        objective=_objective(),
+        space=_space(),
+        objective_capture_name=_OBJECTIVE_NAME,
+        point_to_captures=_point_to_captures,
+    )
+
+    assert result.succeeded is True
+    assert recorder.commands == []

@@ -13,6 +13,7 @@ from mcp.server.fastmcp import FastMCP
 
 from cora.operation.features.abort_procedure import tool as abort_procedure_tool
 from cora.operation.features.append_activities import tool as append_activities_tool
+from cora.operation.features.append_diagnostics import tool as append_diagnostics_tool
 from cora.operation.features.complete_procedure import tool as complete_procedure_tool
 from cora.operation.features.conduct_procedure import tool as conduct_procedure_tool
 from cora.operation.features.conduct_until_advised import tool as conduct_until_advised_tool
@@ -90,6 +91,10 @@ def register_operation_tools(
     append_activities_tool.register(
         mcp,
         get_handler=lambda: get_handlers().append_activities,
+    )
+    append_diagnostics_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().append_diagnostics,
     )
     get_procedure_tool.register(
         mcp,

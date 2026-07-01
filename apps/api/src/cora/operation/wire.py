@@ -64,13 +64,17 @@ from cora.operation.adapters.in_memory_recipe_expander import (
 )
 from cora.operation.aggregates.procedure import (
     ActivityStore,
+    DiagnosticStore,
     InMemoryActivityStore,
+    InMemoryDiagnosticStore,
     PostgresActivityStore,
+    PostgresDiagnosticStore,
 )
 from cora.operation.conductor import Conductor, InMemoryActionRegistry
 from cora.operation.features import (
     abort_procedure,
     append_activities,
+    append_diagnostics,
     complete_procedure,
     conduct_procedure,
     conduct_until_advised,
@@ -117,6 +121,7 @@ class OperationHandlers:
     start_iteration: start_iteration.Handler
     end_iteration: end_iteration.Handler
     append_activities: append_activities.Handler
+    append_diagnostics: append_diagnostics.Handler
     get_procedure: get_procedure.Handler
     list_procedures: list_procedures.Handler
     list_procedure_iterations: list_procedure_iterations.Handler
@@ -178,6 +183,9 @@ def wire_operation(
     step_store: ActivityStore = (
         PostgresActivityStore(deps.pool) if deps.pool is not None else InMemoryActivityStore()
     )
+    diagnostic_store: DiagnosticStore = (
+        PostgresDiagnosticStore(deps.pool) if deps.pool is not None else InMemoryDiagnosticStore()
+    )
     # Recipe expansion port: default pure adapter. Per the design memo
     # ([[project-recipe-aggregate-design]] Locks), the port is
     # 2-arg pure substitution; future deployment-specific expanders
@@ -228,6 +236,11 @@ def wire_operation(
         command_name="AppendProcedureActivities",
         bc=_BC,
     )
+    append_diagnostics_handler = with_tracing(
+        append_diagnostics.bind(deps, diagnostic_store=diagnostic_store),
+        command_name="AppendProcedureDiagnostics",
+        bc=_BC,
+    )
     # Hoisted to locals so the bundle fields AND the Conductor share ONE
     # post-tracing iteration-lifecycle handler each; Conductor.conduct_until_converged
     # composes start_iteration + end_iteration around each convergence pass.
@@ -267,6 +280,7 @@ def wire_operation(
         hold_procedure=hold_handler,
         start_iteration=start_iteration_handler,
         end_iteration=end_iteration_handler,
+        append_diagnostics=append_diagnostics_handler,
     )
     # Resume-and-replay orchestration: a thin slice handler over
     # Conductor.reconduct (which composes resume + execute_from +
@@ -325,6 +339,7 @@ def wire_operation(
         start_iteration=start_iteration_handler,
         end_iteration=end_iteration_handler,
         append_activities=append_step_handler,
+        append_diagnostics=append_diagnostics_handler,
         get_procedure=with_tracing(
             get_procedure.bind(deps),
             command_name="GetProcedure",

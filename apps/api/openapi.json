@@ -1056,6 +1056,43 @@
         "title": "AppendProcedureActivitiesResponse",
         "type": "object"
       },
+      "AppendProcedureDiagnosticsRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /procedures/{procedure_id}/diagnostics`.",
+        "properties": {
+          "entries": {
+            "description": "List of diagnostic entries to append (1-500).",
+            "items": {
+              "$ref": "#/components/schemas/ProcedureDiagnosticRequest"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Entries",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entries"
+        ],
+        "title": "AppendProcedureDiagnosticsRequest",
+        "type": "object"
+      },
+      "AppendProcedureDiagnosticsResponse": {
+        "description": "Response body for the append slice.",
+        "properties": {
+          "event_count": {
+            "description": "Number of entries accepted by the store (includes silently-deduped retries; producer can re-call with the same event_ids safely).",
+            "minimum": 0.0,
+            "title": "Event Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "event_count"
+        ],
+        "title": "AppendProcedureDiagnosticsResponse",
+        "type": "object"
+      },
       "AppendProcedureStepsRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /procedures/{procedure_id}/activities`.",
@@ -9721,6 +9758,67 @@
         ],
         "title": "PresenceMode",
         "type": "string"
+      },
+      "ProcedureDiagnosticRequest": {
+        "additionalProperties": false,
+        "description": "One diagnostic entry's input payload.",
+        "properties": {
+          "event_id": {
+            "description": "Producer-supplied UUIDv7 entry id. Idempotency / dedup key; re-issuing the same id is a silent no-op.",
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "iteration_index": {
+            "description": "The steered-conduct iteration this diagnostic explains; joins to the same iteration_index on ProcedureIterationEnded.",
+            "minimum": 0.0,
+            "title": "Iteration Index",
+            "type": "integer"
+          },
+          "model_ref": {
+            "description": "The deciding brain that produced the diagnostics (e.g. 'botorch').",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Model Ref",
+            "type": "string"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional handler-time override (ISO-8601 with timezone). Defaults to server clock when omitted.",
+            "title": "Occurred At"
+          },
+          "payload": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "The deciding brain's opaque map of fitted-model summary scalars (per-axis lengthscales, observation noise, acquisition value). Keys are the adapter's private audit vocabulary; not schema-constrained so a different brain's scalar set needs no migration.",
+            "title": "Payload",
+            "type": "object"
+          },
+          "sampled_at": {
+            "description": "phenomenonTime (ISO-8601 with timezone): when the brain produced the advice this row explains.",
+            "format": "date-time",
+            "title": "Sampled At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "iteration_index",
+          "model_ref",
+          "payload",
+          "sampled_at"
+        ],
+        "title": "ProcedureDiagnosticRequest",
+        "type": "object"
       },
       "ProcedureIterationDTO": {
         "description": "One convergence-loop iteration of a Procedure.",
@@ -37786,6 +37884,103 @@
           }
         },
         "summary": "Conduct a Procedure in an AUTO convergence loop: iterate measure-correct passes until the criterion is met or the patience cap trips.",
+        "tags": [
+          "operation"
+        ]
+      }
+    },
+    "/procedures/{procedure_id}/diagnostics": {
+      "post": {
+        "operationId": "post_procedures_diagnostics_procedures__procedure_id__diagnostics_post",
+        "parameters": [
+          {
+            "description": "Target procedure's id.",
+            "in": "path",
+            "name": "procedure_id",
+            "required": true,
+            "schema": {
+              "description": "Target procedure's id.",
+              "format": "uuid",
+              "title": "Procedure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendProcedureDiagnosticsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppendProcedureDiagnosticsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Procedure exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Procedure is not in `Running` (the diagnostics logbook is implicitly closed), or a concurrent write to the same Procedure stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Request body failed schema validation: empty entries list, batch over cap, or missing required fields."
+          }
+        },
+        "summary": "Append a batch of GP-steering diagnostics to a Procedure's diagnostics logbook (lazy open-on-first-write).",
         "tags": [
           "operation"
         ]

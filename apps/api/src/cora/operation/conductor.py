@@ -140,6 +140,13 @@ from cora.operation.features.append_activities.command import (
 from cora.operation.features.append_activities.handler import (
     Handler as AppendProcedureActivitiesHandler,
 )
+from cora.operation.features.append_diagnostics.command import (
+    AppendProcedureDiagnostics,
+    DiagnosticInput,
+)
+from cora.operation.features.append_diagnostics.handler import (
+    Handler as AppendProcedureDiagnosticsHandler,
+)
 from cora.operation.features.complete_procedure.command import CompleteProcedure
 from cora.operation.features.complete_procedure.handler import (
     Handler as CompleteProcedureHandler,
@@ -962,9 +969,15 @@ class Conductor:
         hold_procedure: HoldProcedureHandler | None = None,
         start_iteration: StartProcedureIterationHandler | None = None,
         end_iteration: EndProcedureIterationHandler | None = None,
+        append_diagnostics: AppendProcedureDiagnosticsHandler | None = None,
     ) -> None:
         self._control_port = control_port
         self._append_step = append_step
+        # Optional: only wired when a GP/BO substrate is in play. When None,
+        # a steered pass whose advice carries diagnostics simply skips the
+        # audit write (the decision itself is unaffected). Mirrors the other
+        # optional handler refs below.
+        self._append_diagnostics = append_diagnostics
         self._clock = clock
         self._id_generator = id_generator
         self._action_registry: ActionRegistry = action_registry or InMemoryActionRegistry({})
@@ -2228,10 +2241,16 @@ class Conductor:
         pinned once and re-walked verbatim, re-driving it over identical inputs
         with a brain whose advice is a pure function of the evidence reproduces
         the run byte for byte: the same iteration boundaries, the same seeded
-        coordinates, the same advice provenance, and the same terminal. Both
-        shipped adapters are such brains, so the advised next_point is NOT
-        recorded on the iteration ledger; determinism comes from the stateless
-        brain plus the pinned block, not from a persisted coordinate. Re-seeding
+        coordinates, the same advice provenance, and the same terminal. The
+        stateless adapters (grid / Sobol / in-memory) are such brains, so the
+        advised next_point is NOT recorded on the iteration ledger; determinism
+        comes from the stateless brain plus the pinned block, not from a
+        persisted coordinate. (A non-deterministic learning brain additionally
+        supplies `advice.diagnostics`, which `_record_diagnostics` appends to a
+        side logbook for audit; that write folds into no aggregate state and
+        does not affect the loop's decisions or seeds, and the stateless brains
+        leave diagnostics None so a replay-deterministic run writes none.)
+        Re-seeding
         a RECORDED next_point for already-closed passes and consulting the brain
         only at the open frontier (so a NON-deterministic brain, a real GP /
         gpCAM / LLM, is not re-queried on replay) is a deferred leg: it needs
@@ -2417,6 +2436,15 @@ class Conductor:
                     model_ref=audit.model_ref,
                 ),
                 **envelope_kwargs,
+            )
+            await self._record_diagnostics(
+                advice=advice,
+                procedure_id=procedure_id,
+                iteration_index=next_index,
+                principal_id=principal_id,
+                correlation_id=correlation_id,
+                causation_id=causation_id,
+                surface_id=surface_id,
             )
             if record_turn is not None:
                 await record_turn(advice, observation, iteration_count - 1)
@@ -3506,6 +3534,46 @@ class Conductor:
             target=" ".join(target["command"]),
             error_class=type(exc).__name__,
             message=str(exc),
+        )
+
+    async def _record_diagnostics(
+        self,
+        *,
+        advice: SteeringAdvice,
+        procedure_id: UUID,
+        iteration_index: int,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None,
+        surface_id: UUID,
+    ) -> None:
+        """Append one GP-steering diagnostic row for this iteration, if any.
+
+        No-op unless the advising brain supplied `diagnostics` (a learning
+        brain does; the stateless grid / Sobol / in-memory brains leave it
+        None, so replay-deterministic runs write nothing) AND the optional
+        `append_diagnostics` handler is wired. The write lands in the
+        Procedure's diagnostics logbook (a side table that does NOT fold into
+        aggregate state), so it never affects the loop's decisions, seeds, or
+        the replay property; it is pure audit.
+        """
+        if advice.diagnostics is None or self._append_diagnostics is None:
+            return
+        now = self._clock.now()
+        entry = DiagnosticInput(
+            event_id=self._id_generator.new_id(),
+            iteration_index=iteration_index,
+            model_ref=advice.model_ref if advice.model_ref is not None else "unknown",
+            payload=dict(advice.diagnostics),
+            sampled_at=now,
+            occurred_at=now,
+        )
+        await self._append_diagnostics(
+            AppendProcedureDiagnostics(procedure_id=procedure_id, entries=(entry,)),
+            principal_id=principal_id,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+            surface_id=surface_id,
         )
 
     async def _record(
