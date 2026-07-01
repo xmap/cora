@@ -8,15 +8,20 @@ A beamline is never standalone: it sits inside a Site, a Federation `Facility` t
 
 ## [APS](aps/index.md)
 
-CORA's first multi-beamline Site: five beamlines share one APS envelope, which is reused rather than re-created per beamline.
+CORA's first multi-beamline Site: ten beamlines share one APS envelope, which is reused rather than re-created per beamline.
 
 | Beamline | Status | What it is |
 | --- | --- | --- |
 | [2-BM](2-bm/index.md) | Pilot | bending-magnet micro-CT, the operational pilot |
 | [2-ID](2-id/index.md) | In design | scanning fluorescence microprobe (2-ID-D hutch), mined from the EAA toolkit |
 | [7-BM](7-bm/index.md) | In design | multi-technique flow and combustion imaging, recommissioned for APS-U |
-| [19-BM](19-bm/index.md) | In design | bending-magnet autonomous high-throughput tomography |
+| [19-BM](19-bm/index.md) | In design | bending-magnet autonomous high-throughput tomography (formerly branded FACT) |
 | [32-ID](32-id/index.md) | In design (partial) | canted multi-instrument: optics spine and transmission X-ray microscope |
+| [4-ID](4-id/index.md) | Reverse-engineered | polarization and magnetic-scattering diffraction (formerly branded POLAR); the first non-tomography APS deployment |
+| [8-ID](8-id/index.md) | Reverse-engineered | X-ray photon correlation spectroscopy (XPCS) and coherent scattering |
+| [9-ID](9-id/index.md) | Reverse-engineered | the Coherent Surface Scattering Instrument (CSSI): grazing-incidence coherent surface scattering |
+| [12-ID](12-id/index.md) | Reverse-engineered | Bonse-Hart ultra-small-angle scattering (USAXS) plus pinhole SAXS / WAXS; the fleet's first USAXS beamline |
+| [13-ID](13-id/index.md) | Reverse-engineered | GSECARS high-pressure diffraction on a diamond anvil cell; the fleet's first extreme-conditions sample environment |
 
 ## [MAX IV](maxiv/index.md)
 
@@ -40,6 +45,8 @@ The third Site CORA models, and a deliberate off-roadmap exercise: real, operati
 | [I06](i06/index.md) | Modelling exercise | APPLE-II variable-polarization soft X-ray (XMCD/XMLD, PEEM, resonant diffraction); polarization as a controllable axis |
 | [I10](i10/index.md) | Modelling exercise | BLADE twin APPLE-II soft X-ray: RASOR resonant scattering / reflectivity + i10-1 magnet dichroism |
 | [I20-1](i20-1/index.md) | Modelling exercise | energy-dispersive / time-resolved EXAFS (EDE); a deliberately partial first cut, the dispersive polychromator + strip detector deferred (POLY-1 / STRIP-1) |
+| [I19](i19/index.md) | Modelling exercise | small-molecule single-crystal (chemical) crystallography; two experiment hutches in series share one optics line, only the active hutch may drive it |
+| [I13-1](i13-1/index.md) | Modelling exercise | hard X-ray ptychography and coherent diffraction imaging (CDI) on the I13 coherence branch; a deliberately partial first cut |
 
 ## [NSLS-II](nsls2/index.md)
 
@@ -88,6 +95,17 @@ The sixth Site CORA models, and its first Australian facility (operated by ANSTO
 | --- | --- | --- |
 | [MX3](mx3/index.md) | Reverse-engineered | macromolecular crystallography (rotation MX) on an MD3 microdiffractometer + DECTRIS Eiger with an ISARA robot; reuses the i03 Goniometer and MX Methods, novelty is the Site and its heterogeneous control plane |
 
+## [ESRF](esrf/index.md)
+
+The seventh Site CORA models (the European Synchrotron Radiation Facility, Grenoble), and the first BLISS / Tango / IcePAP controls house-style: the first live non-EPICS control floor, reverse-engineered from the ESRF's open BLISS Beacon `beamline_configuration` device databases.
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [ID32](id32/index.md) | Reverse-engineered | soft X-ray resonant inelastic scattering (RIXS) and X-ray magnetic dichroism (XMCD); CORA's first ESRF deployment |
+| [ID19](id19/index.md) | Reverse-engineered | hard X-ray parallel-beam microtomography, radiography, and phase-contrast imaging on the long imaging beamline; the first deployment on a non-EPICS floor |
+| [ID16B](id16b/index.md) | Reverse-engineered | Kirkpatrick-Baez-focused hard X-ray nano-tomography and nano-XRF mapping; the fleet's first nanoprobe on a BLISS floor |
+| [ID28](id28/index.md) | Reverse-engineered | momentum-resolved inelastic X-ray scattering (IXS); CORA's second ESRF deployment |
+
 ## [PSI](psi/index.md)
 
 CORA's eighth Site (the Paul Scherrer Institut). Like SLAC, the Site is the institute: PSI hosts two photon sources, the Swiss Light Source (SLS / SLS 2.0) storage ring and SwissFEL, with the beamlines as stations under it. The I-TOMCAT beamline (on SLS) is a hybrid modelled from PSI's public beamline pages and the SLS 2.0 design reports (the TomoWise tradition), because no public per-beamline controls config exists for TOMCAT; SLS is an EPICS facility with the BEC scan layer over ophyd, the seam CORA's edge would replace. The three SwissFEL Aramis stations make PSI CORA's second X-ray free-electron laser after SLAC, reverse-engineered from PSI's own controls libraries to re-test the XFEL findings against an independently-built FEL: LCLS-MFX was mined from SLAC's `pcdshub`, the Aramis stations from `eco` / `slic`. Alvra confirms the family-fold and acquisition-gap findings from an independent control stack; Bernina makes the shared-switched-source seam (TOPO-1) concrete, as the second co-equal station on the one Aramis source, and reaches the same gaps through diffraction; Cristallina closes the Aramis triad as the third station, is the first deployment mined from the `slic` library (eco's successor, on gitea.psi.ch) rather than `eco`, and adds a dilution-fridge vector-magnet sample environment. No PSI station coins a new Family.
@@ -107,6 +125,14 @@ CORA's first South American facility (the Brazilian Synchrotron Light Laboratory
 | --- | --- | --- |
 | [MOGNO](mogno/index.md) | Reverse-engineered (partial) | cone-beam X-ray micro and nanotomography (phase-contrast, time-resolved 4D) across two stations; reuses the 2-BM / FXI tomography vocabulary, novelty is the Site and the fleet's first custom-Python (non-Bluesky) orchestration layer |
 | [MANACA](manaca/index.md) | Reverse-engineered | macromolecular crystallography (rotation MX, serial and room-temperature) on a goniometer + area detector with a 48-pin sample changer; Sirius's first MX beamline, reuses the i03 / FMX / AMX / MX3 Goniometer and MX Methods on the EPICS floor + MXCuBE3, no new Family |
+
+## [Elettra](elettra/index.md)
+
+CORA's first Italian facility (Elettra Sincrotrone Trieste), and a Tango-native controls house-style whose beamline scan layer is the in-house DonkiOrchestra framework (not EPICS, not Sardana), the seam CORA's edge would conduct over.
+
+| Beamline | Status | What it is |
+| --- | --- | --- |
+| [SYRMEP](syrmep/index.md) | Reverse-engineered | hard X-ray radiology and microtomography; reuses the tomography Families and Methods, novelty is the Site and its Tango / DonkiOrchestra control plane |
 
 ## [ALBA](alba/index.md)
 
@@ -135,10 +161,12 @@ CORA's Site for PETRA III (DESY, Hamburg), and its second Tango / Sardana contro
 | [P04](p04/index.md) | Reverse-engineered | variable-polarization soft X-ray spectroscopy (250-3000 eV: XAS, photoemission) across a soft X-ray optics section and two experiment endstations; CORA's first `GratingMonochromator` deployment (the plane-grating mono), reuses the optics / motion Families otherwise, reusing the pending `xas_spectroscopy` / `angle_resolved_photoemission` Methods |
 | [P06](p06/index.md) | Reverse-engineered | hard X-ray scanning micro / nano fluorescence and diffraction microscopy + nano-tomography across an optics hutch and two scanning-probe endstations (MC01 micro, NC1 nano); the fleet's fullest scanning-probe instrument (the Maia XRF array as `EnergyDispersiveSpectrometer`, hexapods, Aerotech fly-scan stages), coins no new Family, reusing the pending `scanning_fluorescence_microscopy` / `tomography` Methods |
 | [P11](p11/index.md) | Reverse-engineered | high-throughput macromolecular crystallography (rotation MX) and bio-imaging on a goniometer + Pilatus detector with cryostream cooling; PETRA III's first MX beamline, a reuse-and-reinforce deployment coining no new vocabulary (reuses the i03 MX vocabulary and the pending `mx_data_collection` / `tomography` Methods); a sparse registry, so the experiment hutch is modelled as grouped stages with the goniometer carried as a question |
+| [P13](p13/index.md) | Reverse-engineered | EMBL Hamburg macromolecular crystallography (rotation MX); reuses the i03 MX Goniometer and Methods, CORA's first EMBL Hamburg beamline |
+| [P14](p14/index.md) | Reverse-engineered | EMBL Hamburg high-end macromolecular crystallography; P13's sibling and CORA's first two-endstation MX beamline |
 | [P03](p03/index.md) | Reverse-engineered | micro- and nanofocus small- and wide-angle X-ray scattering (SAXS / WAXS, 9-23 keV) across shared P02 / P03 optics and two endstations (a microfocus endstation and the nanofocus GINIX waveguide endstation); the fleet's first SAXS / WAXS beamline, coins no new Family, brings Galil DMC and SmarPod controllers, reusing the pending `small_angle_scattering` / `wide_angle_scattering` Methods |
 | [P10](p10/index.md) | Reverse-engineered | coherent hard X-ray applications (XPCS, coherent diffraction imaging / ptychography) across an optics hutch and three experiment areas (E1 coherent imaging, E2 XPCS / diffraction, LAB); the fleet's second XPCS beamline and the first PETRA III practice to bind a graduated catalog Method (`xpcs`, earned at 8-ID) rather than a pending slug; coins no new Family, with the widest detector suite in the set |
-| [P09](p09/index.md) | Reverse-engineered | resonant scattering, diffraction, and high-field magnetism (XMCD, magnetic scattering) across a resonant-scattering hutch, a diffraction hutch, and a 14 T magnetism endstation; the second consumer of the 4-ID POLAR polarization / magnetism vocabulary (the allowlisted-loose `PhaseRetarder` / `PolarizationAnalyzer` / `Magnet` Families), coins no new Family, reusing the pending `resonant_scattering` / `magnetic_scattering` / `xmcd` Methods |
-| [P02](p02/index.md) | Reverse-engineered | high-energy hard X-ray diffraction: P02.1 powder diffraction / total scattering / PDF (~60 keV) + P02.2 extreme conditions (diamond-anvil-cell high-pressure diffraction); the fleet's second diamond-anvil-cell deployment (reuses the 13-id-d allowlisted-loose `PressureCell`), bendable HFM / VFM mirrors, coins no new Family, reusing the pending `powder_diffraction` / `total_scattering` Methods |
+| [P09](p09/index.md) | Reverse-engineered | resonant scattering, diffraction, and high-field magnetism (XMCD, magnetic scattering) across a resonant-scattering hutch, a diffraction hutch, and a 14 T magnetism endstation; the second consumer of the 4-ID polarization / magnetism vocabulary (the allowlisted-loose `PhaseRetarder` / `PolarizationAnalyzer` / `Magnet` Families), coins no new Family, reusing the pending `resonant_scattering` / `magnetic_scattering` / `xmcd` Methods |
+| [P02](p02/index.md) | Reverse-engineered | high-energy hard X-ray diffraction: P02.1 powder diffraction / total scattering / PDF (~60 keV) + P02.2 extreme conditions (diamond-anvil-cell high-pressure diffraction); the fleet's second diamond-anvil-cell deployment (reuses the 13-id allowlisted-loose `PressureCell`), bendable HFM / VFM mirrors, coins no new Family, reusing the pending `powder_diffraction` / `total_scattering` Methods |
 | [P64](p64/index.md) | Reverse-engineered | advanced X-ray absorption spectroscopy (dilute / high-rate fluorescence EXAFS / XANES) on a Tsai DCM + a multi-element fluorescence detector (104-channel SIS3302); the advanced half of the PETRA III XAS pair, coins no new Family, reusing the pending `xas_spectroscopy` Method |
 | [P65](p65/index.md) | Reverse-engineered | applied / high-throughput X-ray absorption spectroscopy (transmission + fluorescence EXAFS / XANES) on a channel-cut DCM, sharing the P64 optics host; the applied half of the XAS pair, a thin reuse-and-reinforce scaffold (detection carried pending), reusing the pending `xas_spectroscopy` Method |
 | [P07](p07/index.md) | Reverse-engineered | high-energy materials-science diffraction (HEMS) on a multi-bounce DCM + four-circle diffractometer, with a 17 T high-field magnet endstation; jointly operated by Helmholtz-Zentrum Hereon + DESY, coins no new Family (a further consumer of the loose `Magnet`), reusing the pending `diffraction` / `magnetic_scattering` Methods |
