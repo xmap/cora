@@ -11,7 +11,7 @@ Three enclosures carry the beamline (`ENC-1`): the shared OH1 optics (`p02-oh1`,
 ## Stations
 
 - [Source](../beamline.md): the P02 undulator (`SRC-1`); the DCM bound to `Monochromator` (`OPT-1`), the bendable HFM / VFM mirrors bound to `Mirror`, the slits bound to `Slit`. This page is generated from the descriptor.
-- [Sample](sample.md): the P02.1 sample stage bound to `LinearStage` (`GROUP-1`) and its sample environment bound to `TemperatureController`; the P02.2 sample stage bound to `LinearStage`, the diamond-anvil cell bound to the allowlisted-loose `PressureCell` (`PRESSURE-1`), and the beam monitor bound to `FluxMonitor`.
+- [Sample](sample.md): the P02.1 sample stage bound to `LinearStage` (`GROUP-1`) and its sample environment bound to `TemperatureController`; the P02.2 sample stage bound to `LinearStage`, the diamond-anvil cell bound to the catalog `PressureCell` (`PRESSURE-1`), and the beam monitor bound to `FluxMonitor`.
 - [Detector](detector.md): the P02.1 Pilatus 1M and PerkinElmer bound to `Camera`, and the P02.2 MCA / SIS3302 fluorescence detectors bound to `EnergyDispersiveSpectrometer` (`DET-1`).
 
 ## Shared

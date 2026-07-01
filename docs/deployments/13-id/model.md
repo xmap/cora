@@ -18,15 +18,15 @@
 
 13-ID is CORA's first extreme-conditions deployment. The fleet has modelled thermal sample environments (the graduated `TemperatureController`), magnetic ones (the loose `Magnet`), and pump-probe lasers (the loose `Laser`), but never a high-pressure one. 13-ID holds the sample in a diamond anvil cell (DAC): the anvils are squeezed by a gas membrane (a PACE5000 pneumatic controller) to the megabar regime, the sample is heated from both sides by two fibre lasers to thousands of kelvin, and the pressure and temperature are read optically in situ (thermal-emission spectroradiometry for temperature; ruby fluorescence, Raman, and Brillouin for pressure). The X-ray probe is otherwise familiar powder and single-crystal diffraction; the novelty is entirely the sample environment.
 
-## New loose family: the PressureCell
+## The PressureCell family (graduated)
 
-13-ID introduces one device class no existing catalog Family covers: the high-pressure sample cell. Per earn-the-abstraction it is held **loose at n=1** and graduates nothing. The name was chosen via the naming-r3 gate.
+13-ID introduced one device class no existing catalog Family then covered: the high-pressure sample cell. It has since graduated to the catalog, earned across 13-ID and PETRA III P02 (the fleet's second diamond-anvil-cell environment). The name was chosen via the naming-r3 gate.
 
-| Loose family | Presents | What it is | Earns when |
+| Catalog family | Presents | What it is | Earned across |
 | --- | --- | --- | --- |
-| `PressureCell` | Regulator (membrane pressure) | a high-pressure sample environment (the diamond anvil cell): membrane gas pressure loading, double-sided laser heating, and in-situ pressure / temperature metrology, as one Asset | a second independent high-pressure environment (`PRESSURE-1`) |
+| `PressureCell` | Regulator (membrane pressure) | a high-pressure sample environment (the diamond anvil cell): membrane gas pressure loading, double-sided laser heating, and in-situ pressure / temperature metrology, as one Asset | 13-ID and PETRA III P02 (`PRESSURE-1`) |
 
-The name is deliberately the bare, regime-generic role-noun `PressureCell`, not `HighPressureCell` (the qualifier names the regime, the `OpticalTable` to `Table` mistake), nor `DiamondAnvilCell` (the qualifier names the implementation mechanism, which would force a near-duplicate family for the large-volume press or a clamp cell). `PressureCell` spans the DAC, the large-volume press, and clamp cells, so it will not fragment when the next high-pressure environment lands. Its rule-of-three triggers are named: APS HPCAT 16-ID, the sibling 13-BM-D large-volume press in the same GSECARS source tree, and the deferred 4-ID pressure cell (`PRESSURE-1`).
+The name is deliberately the bare, regime-generic role-noun `PressureCell`, not `HighPressureCell` (the qualifier names the regime, the `OpticalTable` to `Table` mistake), nor `DiamondAnvilCell` (the qualifier names the implementation mechanism, which would force a near-duplicate family for the large-volume press or a clamp cell). `PressureCell` spans the DAC, the large-volume press, and clamp cells, so it did not fragment when the next high-pressure environment landed. It graduated to the catalog across 13-ID and PETRA III P02; further high-pressure environments (APS HPCAT 16-ID, the sibling 13-BM-D large-volume press in the same GSECARS source tree, the 4-ID pressure cell) now bind the graduated Family (`PRESSURE-1`).
 
 The cell is modelled as **one Asset** presenting the `Regulator` Role for its membrane pressure (the PACE5000 setpoint and readback, settling to a target). Its double-sided laser heating and its in-situ pressure / temperature metrology are capabilities of the same cell, not separate families. It does not swallow the metrology spectrometer (which binds the catalog `Camera`) or the X-ray detectors; those are sibling Assets.
 
@@ -42,11 +42,11 @@ High-pressure diffraction is **not** a new technique: it reuses the pending `dif
 
 ## Deliberately not here yet
 
-- **The PressureCell graduation (`PRESSURE-1`).** Held loose at n=1; the named rule-of-three triggers are HPCAT 16-ID, the 13-BM-D large-volume press, and the 4-ID cell. A second independent high-pressure environment crosses the promotion threshold and forces a recorded hold-or-graduate decision.
+- **The PressureCell membrane / load control (`PRESSURE-1`).** The family has graduated to the catalog (earned across 13-ID and P02); the membrane / gas-loading control detail remains a staff confirmation.
 - **The heating-control binding (`HEAT-1`).** Whether any heating path closes a temperature-setpoint loop (a clean `TemperatureController`) versus the open-loop power actuation modelled here is a staff confirmation.
 - **The laser-safety PLC and the metrology excitation lasers (`LASER-1`).** The Koyo DL205 PLC is the laser-emission enclosure permit axis, an Enclosure concern, not a device; the Verdi / Raman excitation lasers live on a separate metrology host (`13RAMAN2`).
 - **The detector 2theta-arm transform (`DET-1`).** The swing transform binds `PseudoAxis`, but its live prefix was seen only in a Galil test template, so the binding is deferred rather than invented.
-- **The 13-BM stations and the large-volume press (`HP-1`).** A different multi-anvil probe spine, out of this station's scope; named as a PressureCell rule-of-three candidate.
+- **The 13-BM stations and the large-volume press (`HP-1`).** A different multi-anvil probe spine, out of this station's scope; would bind the catalog `PressureCell` Family when exposed.
 - **The diffraction Methods.** Whether high-pressure powder and single-crystal diffraction enter CORA's catalog is an owner decision; the Practices render unlinked, pending (`TECH-1`).
 - **The simulated devices and full asset-tree scenarios.** No `test_13_id_d_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).

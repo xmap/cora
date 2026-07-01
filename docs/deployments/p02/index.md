@@ -20,7 +20,7 @@ P02 "Hard X-ray Diffraction Beamline" is **CORA's eighth PETRA III beamline** an
 
 For the modelling, P02 coins **no new Family** but brings two notable things:
 
-- The fleet's **second diamond-anvil-cell** endstation: the P02.2 high-pressure environment reuses the allowlisted-loose `PressureCell` Family the APS 13-id deployment introduced. Adding P02 as its second consumer crosses the rule-of-three promotion threshold (recorded as a hold in the loose-family review, `PRESSURE-1`).
+- The fleet's **second diamond-anvil-cell** endstation: the P02.2 high-pressure environment binds the catalog `PressureCell` Family the APS 13-id deployment introduced. Adding P02 as its second consumer crossed the rule-of-three promotion threshold and graduated the Family to the catalog (earned across 13-id and P02, `PRESSURE-1`).
 - **Bendable focusing mirrors**: the HFM / VFM mirrors are exposed as curvature / ellipticity attribute motors, modelled as two `Mirror` Assets (`OPT-1`).
 
 The techniques (powder diffraction, total scattering / PDF, high-pressure diffraction) reuse the pending `powder_diffraction` / `total_scattering` slugs that i11 / i15-1 / XPD already share (`TECH-1`).
@@ -42,7 +42,7 @@ The deferred parts are recorded on [Model](model.md#deliberately-not-here-yet).
 ## Key modelling decisions
 
 - **An eighth beamline at an existing Site.** PETRA III is already modelled; P02 adds the high-energy diffraction beamline and its powder / total-scattering / high-pressure practices.
-- **The diamond-anvil cell reuses the 13-id PressureCell.** P02.2 is the second consumer of the allowlisted-loose `PressureCell` Family, crossing the rule-of-three promotion threshold; recorded as a hold (graduation-due) in the loose-family review (`PRESSURE-1`).
+- **The diamond-anvil cell binds the catalog PressureCell.** P02.2 is the second consumer of the `PressureCell` Family, crossing the rule-of-three promotion threshold and graduating it to the catalog (earned across 13-id and P02, `PRESSURE-1`).
 - **The bendable mirrors are two Mirror Assets.** The HFM / VFM curvature / ellipticity / tilt / z attribute motors are grouped as `HorizontalFocusingMirror` and `VerticalFocusingMirror` (`OPT-1`).
 - **The shared P02 / P03 optics live here.** P02 owns the OH1 high-heatload optics hutch that P03 also draws from (the `HOST-1` cross-reference noted on the P03 page); modelled as the `p02-oh1` enclosure.
 

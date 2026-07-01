@@ -12,9 +12,9 @@ P02 has two endstations sharing the OH1 optics: P02.1 (powder / total scattering
 ## P02.2: extreme conditions (diamond-anvil cell)
 
 - `SampleStage` binds `LinearStage`: the P02.2 sample / instrument motor banks (`eh2a_mot01..76`, `eh2b_mot01..64`), including the diamond-anvil-cell positioning stages; per-axis roles grouped (`GROUP-1`).
-- `PressureCell` binds the allowlisted-loose `PressureCell` Family: the P02.2 diamond-anvil-cell high-pressure environment. The membrane / gas-loading control is not separately labelled in the registry. This is the second consumer of the `PressureCell` Family (the 13-id precedent), crossing the rule-of-three promotion threshold (`PRESSURE-1`).
+- `PressureCell` binds the catalog `PressureCell` Family: the P02.2 diamond-anvil-cell high-pressure environment. The membrane / gas-loading control is not separately labelled in the registry. This is the second consumer of the `PressureCell` Family (the 13-id precedent), which crossed the rule-of-three promotion threshold and graduated the Family to the catalog (earned across 13-id and P02, `PRESSURE-1`).
 - `BeamMonitor` binds `FluxMonitor`: the P02.2 CAEN-ELS AH501D picoammeter; beam-intensity monitoring (`DET-1`).
 
 ## Families and confirmations
 
-Every Asset here binds an existing Family: `LinearStage` for the sample banks, `TemperatureController` for the sample environment, `FluxMonitor` for the beam monitor, and the allowlisted-loose `PressureCell` for the diamond-anvil cell. P02 coins no new Family. The axis maps are read from the OnlineXML and carried confirm; the per-axis bank roles, the pressure-cell membrane / load control, and the sample-environment detail are not in the registry and are pending. See [Open questions](../questions.md) and the [Inventory](../inventory.md).
+Every Asset here binds an existing Family: `LinearStage` for the sample banks, `TemperatureController` for the sample environment, `FluxMonitor` for the beam monitor, and the catalog `PressureCell` for the diamond-anvil cell. P02 coins no new Family. The axis maps are read from the OnlineXML and carried confirm; the per-axis bank roles, the pressure-cell membrane / load control, and the sample-environment detail are not in the registry and are pending. See [Open questions](../questions.md) and the [Inventory](../inventory.md).

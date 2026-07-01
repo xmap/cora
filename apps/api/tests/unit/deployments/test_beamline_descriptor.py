@@ -382,7 +382,6 @@ _ALLOWED_LOOSE_FAMILIES = {
     "FlightPath": "staged: evacuated XPCS flight path (8-ID); rule-of-three open (XPCS-2)",
     "SpectrometerArm": "staged: energy-dispersive RIXS arm (SIX); no point-Sensor fit (RIXS-1)",
     "EnergyAnalyzer": "staged: IXS diced crystal energy analyzer; n=1 (ANALYZER-1)",
-    "PressureCell": "staged: high-pressure DAC sample environment (13-id); n=1 (PRESSURE-1)",
 }
 
 # The subset of loose families that is conceptually a Supply observation (a
@@ -404,7 +403,6 @@ _PROMOTION_REVIEWED = {
     "Magnet": "hold: sample-env magnet, 4-id + i10-1 + esrf-id32; graduation-due (MAG-1)",
     "SpectrometerArm": "hold: dispersive arm, six + esrf-id32 RIXS+XES; graduation-due (RIXS-1)",
     "SlipRing": "hold: passive feedthrough (tomowise + i-tomcat); passive-deferred, not an Asset",
-    "PressureCell": "hold: DAC, 13-id + p02; 2nd consumer, graduation-due (PRESSURE-1)",
 }
 
 # Catalog families bound by no deployment device. Symmetric to the orphan-model

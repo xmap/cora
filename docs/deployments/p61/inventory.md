@@ -16,7 +16,7 @@ Root Asset `P61` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `ExperimentStage` | `Device` | LinearStage | p61-eh2 | experiment / instrument bank (eh_mot*, ~64 axes): sample + diffractometer, grouped (GROUP-1) |
 | `EnergyDispersiveDetector` | `Device` | EnergyDispersiveSpectrometer | p61-eh2 | energy-dispersive (Ge) detector; pending placeholder (DET-1) |
 
-Families reused from the catalog: `LinearStage`, `EnergyDispersiveSpectrometer`. No new family is coined and nothing graduates. The Large Volume Press (P61A), when exposed, would reuse the allowlisted-loose `PressureCell` Family (the P02 / 13-id precedent, `PRESS-1`).
+Families reused from the catalog: `LinearStage`, `EnergyDispersiveSpectrometer`. No new family is coined and nothing graduates here. The Large Volume Press (P61A), when exposed, would reuse the catalog `PressureCell` Family (graduated across 13-id and P02, `PRESS-1`).
 
 ## Cross-cutting controllers
 

@@ -21,7 +21,7 @@
 # WHAT IS NEW: no new device Family, and no new technique vocabulary. P61 is a thin
 # high-energy white-beam beamline; the experiment positioning reuses LinearStage, and
 # the technique reuses the pending energy_dispersive_diffraction / powder_diffraction
-# slugs (TECH-1). The Large Volume Press, if exposed, would reuse the allowlisted-loose
+# slugs (TECH-1). The Large Volume Press, if exposed, would reuse the catalog
 # PressureCell Family (the 13-id / P02 precedent); it is not in this registry slice
 # and is carried pending (PRESS-1).
 #

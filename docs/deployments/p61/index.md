@@ -18,7 +18,7 @@
 
 P61 "High Energy Wiggler Beamline" is **CORA's seventeenth PETRA III beamline** and the facility's high-energy white-beam beamline, fed by a damping wiggler. It runs **P61A** (Large Volume Press, high-pressure / high-temperature in-situ studies) and **P61B** (high-energy white-beam / engineering energy-dispersive diffraction). It is the last PETRA III beamline with a public OnlineXML registry, completing CORA's OnlineXML-driven coverage of the facility.
 
-P61 is a thin **reuse-and-reinforce** scaffold: it coins no new vocabulary. The motor bank binds `LinearStage`, the technique reuses the pending `energy_dispersive_diffraction` slug (`TECH-1`), and the energy-dispersive detector is carried as a pending `EnergyDispersiveSpectrometer` placeholder (`DET-1`). The Large Volume Press, if exposed, would reuse the allowlisted-loose `PressureCell` Family (the 13-id / P02 precedent); it is not in this registry slice and is carried pending (`PRESS-1`).
+P61 is a thin **reuse-and-reinforce** scaffold: it coins no new vocabulary. The motor bank binds `LinearStage`, the technique reuses the pending `energy_dispersive_diffraction` slug (`TECH-1`), and the energy-dispersive detector is carried as a pending `EnergyDispersiveSpectrometer` placeholder (`DET-1`). The Large Volume Press, if exposed, would reuse the catalog `PressureCell` Family (graduated across 13-id and P02); it is not in this registry slice and is carried pending (`PRESS-1`).
 
 ## Scope: what is and is not modelled
 
@@ -38,7 +38,7 @@ The deferred parts are recorded on [Model](model.md#deliberately-not-here-yet).
 - **A seventeenth beamline at an existing Site, modelled thinly.** PETRA III is already modelled; P61 adds the high-energy white-beam beamline and its practice. The sparse registry slice (one generic bank, on the unusual `debian/stretch` branch) means a thin model with the source / press / detectors carried pending, the model-what-the-source-supports posture.
 - **No new Family.** The motor bank binds `LinearStage`; the catalog is unchanged.
 - **The wiggler source.** P61 is a damping-wiggler beamline (`source: superconducting-wiggler`); the wiggler parameters are not in the registry and are carried pending (`SRC-1`).
-- **The Large Volume Press is named, not bound.** P61A's press would reuse the allowlisted-loose `PressureCell` Family (P02 precedent) when exposed; carried pending (`PRESS-1`).
+- **The Large Volume Press is named, not bound.** P61A's press would reuse the catalog `PressureCell` Family (graduated across 13-id and P02) when exposed; carried pending (`PRESS-1`).
 
 ## The beamline
 

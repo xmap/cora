@@ -8,4 +8,4 @@ P61's experiment positioning is exposed as one large generic motor bank, grouped
 
 ## Families and confirmations
 
-The experiment stage binds the catalog `LinearStage` Family; P61 coins no new Family. The axis map is read from the OnlineXML and carried confirm; the per-axis roles of the bank, the Large Volume Press (which would reuse the allowlisted-loose `PressureCell` Family when exposed, `PRESS-1`), and the sample-environment detail are not in the registry and are pending. See [Open questions](../questions.md) and the [Inventory](../inventory.md).
+The experiment stage binds the catalog `LinearStage` Family; P61 coins no new Family. The axis map is read from the OnlineXML and carried confirm; the per-axis roles of the bank, the Large Volume Press (which would reuse the catalog `PressureCell` Family when exposed, `PRESS-1`), and the sample-environment detail are not in the registry and are pending. See [Open questions](../questions.md) and the [Inventory](../inventory.md).

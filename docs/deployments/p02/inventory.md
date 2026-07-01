@@ -4,7 +4,7 @@
 
 This cut models the shared OH1 optics (the undulator, the DCM, the bendable HFM / VFM mirrors, the slits) and the two endstations (P02.1 powder / total scattering, P02.2 extreme conditions) with their sample stages, pressure cell, sample environment, and detectors. It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p02/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P02 **coins no new Family**: it reuses the optics / motion / detector Families and the allowlisted-loose `PressureCell` Family (the 13-id precedent, now at its second consumer). The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P02 **coins no new Family**: it reuses the optics / motion / detector Families and binds the catalog `PressureCell` Family (graduated across 13-id and P02, with P02 the second consumer that earned it). The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -24,11 +24,11 @@ Root Asset `P02` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `PilatusDetector` | `Device` | Camera | p02-1-powder | P02.1 Pilatus 1M; powder rings (DET-1) |
 | `PerkinElmerDetector` | `Device` | Camera | p02-1-powder | P02.1 PerkinElmer flat-panel; high-Q PDF (DET-1) |
 | `SampleStage` (P02.2) | `Device` | LinearStage | p02-2-extreme | P02.2 sample banks (eh2a 76 + eh2b 64 axes); grouped (GROUP-1) |
-| `PressureCell` | `Device` | PressureCell (loose) | p02-2-extreme | diamond-anvil-cell high-pressure environment; 2nd consumer (PRESSURE-1) |
+| `PressureCell` | `Device` | PressureCell | p02-2-extreme | diamond-anvil-cell high-pressure environment; second consumer that earned graduation (PRESSURE-1) |
 | `BeamMonitor` | `Device` | FluxMonitor | p02-2-extreme | CAEN-ELS AH501D picoammeter (DET-1) |
 | `FluorescenceDetectors` | `Device` | EnergyDispersiveSpectrometer | p02-2-extreme | P02.2 MCA + SIS3302 fluorescence (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Slit`, `LinearStage`, `TemperatureController`, `Camera`, `FluxMonitor`, `EnergyDispersiveSpectrometer`. Allowlisted-loose Family reused: `PressureCell` (the 13-id precedent, now at its second consumer, `PRESSURE-1`). No new family is coined and nothing graduates. The CH1 / CH2 dummy stubs are noted, not modelled (`STUB-1`).
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Slit`, `LinearStage`, `TemperatureController`, `Camera`, `FluxMonitor`, `EnergyDispersiveSpectrometer`, and `PressureCell` (graduated across 13-id and P02, with P02 the second consumer that earned it, `PRESSURE-1`). No new family is coined here. The CH1 / CH2 dummy stubs are noted, not modelled (`STUB-1`).
 
 ## Cross-cutting controllers
 

@@ -16,8 +16,8 @@
 #
 # WHAT IS NEW: no new device Family. P02 reuses existing Families end to end. It is
 # the fleet's high-energy powder-diffraction / total-scattering beamline and its first
-# diamond-anvil-cell extreme-conditions endstation; the high-pressure cell reuses the
-# allowlisted-loose PressureCell Family the APS 13-id deployment introduced. The
+# diamond-anvil-cell extreme-conditions endstation; the high-pressure cell binds the
+# catalog PressureCell Family (graduated across APS 13-id and P02). The
 # techniques (powder diffraction, total scattering / PDF, high-pressure diffraction)
 # earn no catalog Method beyond the existing powder_diffraction / total_scattering
 # slugs, carried pending on the Site (TECH-1).
@@ -169,7 +169,7 @@ extreme-sample:
   stage: sample
   enclosure: p02-2-extreme
   intro: "The P02.2 extreme-conditions endstation: the sample positioning and instrument motor banks (eh2a / eh2b), the diamond-anvil-cell high-pressure environment, and the CAEN-ELS picoammeter for beam monitoring."
-  note: "The eh2a (76 axes) and eh2b (64 axes) banks carry the P02.2 sample / instrument positioning, including the diamond-anvil-cell stages, roles not labelled (GROUP-1). The pressure cell reuses the 13-id allowlisted-loose PressureCell Family (PRESSURE-1)."
+  note: "The eh2a (76 axes) and eh2b (64 axes) banks carry the P02.2 sample / instrument positioning, including the diamond-anvil-cell stages, roles not labelled (GROUP-1). The pressure cell binds the catalog PressureCell Family (PRESSURE-1)."
   devices:
     - name: SampleStage
       family: LinearStage
@@ -182,7 +182,7 @@ extreme-sample:
       pv: {confirm: "diamond-anvil-cell high-pressure sample environment; the membrane / gas-loading control handles are not separately labelled in the registry (PRESSURE-1)"}
       new: true
       confirm: true
-      note: "the P02.2 diamond-anvil-cell high-pressure environment; reuses the 13-id allowlisted-loose PressureCell Family; the membrane / load control is not in the registry (PRESSURE-1)"
+      note: "the P02.2 diamond-anvil-cell high-pressure environment; binds the catalog PressureCell Family; the membrane / load control is not in the registry (PRESSURE-1)"
     - name: BeamMonitor
       family: FluxMonitor
       pv: {picoammeter: "p02/caenelsah501d/a501d"}

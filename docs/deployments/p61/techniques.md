@@ -14,7 +14,7 @@ P61 uses the high-energy white beam from the damping wiggler for energy-dispersi
 
 ## A thin high-energy white-beam beamline
 
-P61 is the fleet's high-energy white-beam wiggler beamline. Its technique reuses the `energy_dispersive_diffraction` slug already carried across the fleet, so it forces no new Method. The instrument anatomy reuses existing Families (`LinearStage`); the sparse registry slice means the model is deliberately thin, with the source, the Large Volume Press, and the detectors carried pending. The Large Volume Press (P61A), when exposed, would reuse the allowlisted-loose `PressureCell` Family (the P02 precedent).
+P61 is the fleet's high-energy white-beam wiggler beamline. Its technique reuses the `energy_dispersive_diffraction` slug already carried across the fleet, so it forces no new Method. The instrument anatomy reuses existing Families (`LinearStage`); the sparse registry slice means the model is deliberately thin, with the source, the Large Volume Press, and the detectors carried pending. The Large Volume Press (P61A), when exposed, would reuse the catalog `PressureCell` Family (graduated across 13-id and P02).
 
 ## Not modelled yet
 
