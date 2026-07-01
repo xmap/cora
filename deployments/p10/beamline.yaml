@@ -368,6 +368,12 @@ controls:
       new: true
       confirm: true
       note: "generic Tango motor controllers (motor_tango / spk / dcm) backing the mono, mirrors, and coupled axes (CTRL-1)"
+  triggering:
+    - name: Timing
+      family: TimingController
+      new: true
+      confirm: true
+      note: "the XPCS exposure-gating timing hardware feeding the coherent detectors (the 8-ID / CHX TimingController pattern); P10 runs XPCS so the gating fabric is present, the specific device and handle are read from the Sardana seam and carried confirm (CTRL-2)"
 
 # Continuously-available resources a run draws on.
 resources:
