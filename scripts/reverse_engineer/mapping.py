@@ -388,6 +388,19 @@ _MXCUBE_SOFTWARE_CLASSES: frozenset[str] = frozenset(
         "emblflexhcd",
         "emblflexharvester",
         "gphlworkflow-breakme",
+        # LNLS / newer YAML-config software services (Sirius Manaca): the Bluesky
+        # HTTP bridge, the LIMS / ISPyB client, machine-info, session, the queue
+        # manager, the sample-view centring UI, the beamline-actions procedure
+        # registry, and the composite beamline-config object are MXCuBE plumbing,
+        # not beamline devices, the same as the EMBL services above.
+        "blueskyhttpserver",
+        "lnlslims",
+        "lnlsmachineinfo",
+        "lnlssession",
+        "lnlsqueuemanager",
+        "sampleview",
+        "lnlsbeamlineactions",
+        "beamline",
     }
 )
 

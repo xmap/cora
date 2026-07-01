@@ -383,6 +383,86 @@ def test_parse_mxcube_object_rejects_non_object_and_malformed() -> None:
     assert parse.parse_mxcube_object("<object class=", "x") is None
 
 
+# Newer MXCuBE YAML HardwareObjects config (Sirius Manaca): top-level class: + epics:.
+
+_MXCUBE_YAML_MOTOR = """%YAML 1.2
+---
+class: LNLS.EPICS.EPICSMotor.LNLSRestrictedMotor
+epics:
+  "MNC:B:PB05:m8":
+    channels:
+      '':
+configuration:
+  username: Omega
+"""
+
+_MXCUBE_YAML_ENERGY = """%YAML 1.2
+---
+class: LNLS.EPICS.EPICSActuator.LNLSEnergy
+epics:
+  "MNC:A:DCM01:":
+    channels:
+      rbv:
+        suffix: "GonRx_Energy_RBV"
+      val:
+        suffix: "Energy_SP"
+"""
+
+_MXCUBE_YAML_MOCKUP = """%YAML 1.2
+---
+class: DetectorMockup.DetectorMockup
+configuration:
+  manufacturer: DECTRIS
+  model: 9M
+"""
+
+_MXCUBE_YAML_SERVICE = """%YAML 1.2
+---
+class: LNLS.BlueskyHttpServer.BlueskyHttpServer
+configuration:
+  base_url: http://localhost:60610
+"""
+
+
+def test_parse_mxcube_yaml_object_reads_leaf_class_and_epics_prefix() -> None:
+    motor = parse.parse_mxcube_yaml_object(_MXCUBE_YAML_MOTOR, "udiff_omega")
+    assert motor is not None
+    assert motor.obj_class == "LNLSRestrictedMotor"
+    assert motor.name == "udiff_omega"
+    assert motor.handle == "MNC:B:PB05:m8"
+    assert not motor.is_mockup
+    energy = parse.parse_mxcube_yaml_object(_MXCUBE_YAML_ENERGY, "energy")
+    assert energy is not None
+    assert energy.obj_class == "LNLSEnergy"
+    assert energy.handle == "MNC:A:DCM01:"
+
+
+def test_parse_mxcube_yaml_object_flags_mockup_and_missing_handle() -> None:
+    mockup = parse.parse_mxcube_yaml_object(_MXCUBE_YAML_MOCKUP, "detector")
+    assert mockup is not None
+    assert mockup.obj_class == "DetectorMockup"
+    assert mockup.is_mockup
+    assert mockup.handle is None
+
+
+def test_parse_mxcube_yaml_object_rejects_non_mapping_and_classless() -> None:
+    assert parse.parse_mxcube_yaml_object("- just\n- a\n- list", "x") is None
+    assert parse.parse_mxcube_yaml_object("configuration:\n  foo: bar", "x") is None
+    assert parse.parse_mxcube_yaml_object("not: valid: yaml: at: all:", "x") is None
+
+
+def test_to_candidate_device_mxcube_yaml_filters_lnls_software_service() -> None:
+    service = parse.parse_mxcube_yaml_object(_MXCUBE_YAML_SERVICE, "bluesky")
+    assert service is not None
+    assert mapping.to_candidate_device_mxcube(service, "MANACA") is None
+    motor = parse.parse_mxcube_yaml_object(_MXCUBE_YAML_MOTOR, "udiff_omega")
+    assert motor is not None
+    cand = mapping.to_candidate_device_mxcube(motor, "MANACA")
+    assert cand is not None
+    assert cand.pv == "MNC:B:PB05:m8"
+    assert cand.enclosure == "MANACA"
+
+
 def test_infer_enclosure_mxcube_endstation_and_root() -> None:
     assert parse.infer_enclosure_mxcube("eh1/detector-eiger16m", "P14").name == "P14-EH1"
     assert parse.infer_enclosure_mxcube("eh2/diff-omega", "PE2").name == "PE2-EH2"

@@ -80,7 +80,7 @@ Sirius runs **two distinct EPICS-based ecosystems split by layer**: an accelerat
 - Desktop: [`cnpem/sophys-gui`](https://github.com/cnpem/sophys-gui), a Qt/PyQt client controlling/monitoring a Bluesky instance over HTTP Server + Kafka (queue management, dynamic plan forms, login/permission tiers, live plotting via Kafka Bluesky Live). **[verified]**
 - Web: [`cnpem/sophys-web`](https://github.com/cnpem/sophys-web), a Next.js/React/TypeScript monorepo of beamline web apps over bluesky-httpserver (named apps: `spu-ui` for Sapucaia, `qua-ui` for Quati). **[verified]**
 - Accelerator GUI: PyDM + PyQt (`SiriusHLA` apps in [`lnls-sirius/hla`](https://github.com/lnls-sirius/hla)). A PyDM widget library, `sirius-widgets-case`, is reused in the beamline stack specifically for AreaDetector ROI configuration. **[verified]**
-- MX beamlines (Manaca): **MXCuBE Web** ([`cnpem/mxcubeweb-lnls`](https://github.com/cnpem/mxcubeweb-lnls), Manaca page cites MXCuBE3).
+- MX beamlines (Manaca): **MXCuBE Web** ([`cnpem/mxcubeweb-lnls`](https://github.com/cnpem/mxcubeweb-lnls), Manaca page cites MXCuBE3). This repo's per-device MXCuBE HardwareObjects config is public and carries real EPICS handles (`MNC:` prefix), so it is the one exception to the firewalled device source: it unlocks Manaca's device pass (see `beamlines/manaca/facts.md` and `recurrence.md`). The config is the newer per-device YAML HardwareObjects format, not the classic XML that ALBA / SOLEIL use.
 
 ### Data acquisition
 

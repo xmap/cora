@@ -48,7 +48,7 @@ A survey can exist with no deployment yet (a candidate facility), and a deployme
 | ESRF | yes | 8 of 8 (+ recurrence.md) | yes | BLISS / Tango, public Beacon config |
 | PSI | yes | none | yes | EPICS + BEC; device source on gitea (firewalled) |
 | ALBA | yes | 1 (XALOC, via MXCuBE) + recurrence.md | yes | Tango/Sardana firewalled; XALOC MX topology public via MXCuBE config |
-| Sirius | yes | none | yes | device source firewalled |
+| Sirius | yes | 1 (Manaca, via MXCuBE YAML) + recurrence.md | yes | Tango/Bluesky firewalled; Manaca MX topology public via MXCuBE config (`cnpem/mxcubeweb-lnls`, newer YAML format) |
 | Elettra | yes | none | yes | Tango / DonkiOrchestra; acquisition source private |
 | NSRRC | yes | none | yes | EPICS / Blu-Ice-DCSS; scattered personal repos |
 | ALS | yes | none | none | candidate facility |

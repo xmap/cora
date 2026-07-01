@@ -550,6 +550,65 @@ def parse_mxcube_object(text: str, rel_path: str) -> MxcubeDevice | None:
     )
 
 
+def _mxcube_yaml_handle(spec: dict[str, Any]) -> str | None:
+    """Return the device control handle from a YAML HardwareObjects object.
+
+    The newer YAML format carries the control handle under an `epics:` block
+    whose keys are the device PV prefixes (e.g. `MNC:B:PB05:m8`,
+    `MNC:A:DCM01:`). We return the first prefix key, matching the "pv is the
+    device prefix" convention the other extractors use (per-channel suffixes are
+    axis-level detail left to human curation). Objects with no `epics:` block
+    (mockups, pure software services, composite objects that only reference
+    child files) have no handle.
+    """
+    epics = spec.get("epics")
+    if isinstance(epics, dict):
+        for prefix in epics:
+            if isinstance(prefix, str) and prefix.strip():
+                return prefix.strip()
+    return None
+
+
+def parse_mxcube_yaml_object(text: str, rel_path: str) -> MxcubeDevice | None:
+    """Parse one MXCuBE HardwareObjects YAML file into an MxcubeDevice.
+
+    The newer MXCuBE config format (used by e.g. Sirius Manaca) replaces the
+    per-device `<object class="...">` XML with a YAML document carrying a
+    top-level `class:` (a dotted module path like
+    `LNLS.EPICS.EPICSMotor.LNLSRestrictedMotor`) and, for real devices, an
+    `epics:` block of PV prefixes. This mirrors `parse_mxcube_object`: it returns
+    the same MxcubeDevice shape so the mapper and emitter are source-agnostic.
+
+    obj_class is the leaf class name (the last dotted segment), matching how the
+    XML path carries a bare class and keeping the family-rule substring match
+    meaningful. Returns None when the document is not a mapping or has no class,
+    mirroring the lenient contract of the other parsers.
+    """
+    try:
+        spec = _lenient_load(text)
+    except yaml.YAMLError:
+        return None
+    if not isinstance(spec, dict):
+        return None
+    raw_class = spec.get("class")
+    if not isinstance(raw_class, str) or not raw_class.strip():
+        return None
+    obj_class = raw_class.strip().rsplit(".", 1)[-1]
+
+    name = rel_path.rsplit("/", 1)[-1]
+    is_mockup = "mockup" in raw_class.lower()
+
+    return MxcubeDevice(
+        name=name,
+        obj_class=obj_class,
+        rel_path=rel_path,
+        handle=_mxcube_yaml_handle(spec),
+        device_type=None,
+        model=None,
+        is_mockup=is_mockup,
+    )
+
+
 # MXCuBE endstation tokens that appear as the leading path segment of a device's
 # rel_path (eh1/detector.xml -> EH1). Anything else (a device at the beamline
 # root, or under beamFocusingMotors/) has no endstation token.
