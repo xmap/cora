@@ -5,7 +5,7 @@
 # 8-ID-E (a six-circle diffractometer endstation), and 8-ID-I (the XPCS sample and
 # coherent-detector endstation). It is bound to the APS Site
 # (deployments/aps/site.yaml). It is the second diffraction-capable APS deployment
-# after 4-ID POLAR, and it independently carries the device classes 4-ID
+# after 4-ID, and it independently carries the device classes 4-ID
 # introduced (a diffractometer, a transfocator, a temperature controller, and
 # beam-position monitors), so it is the deployment that earns those into the
 # catalog.

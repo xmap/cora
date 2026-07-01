@@ -18,7 +18,7 @@
 
 P09 "Resonant Scattering and Diffraction" is **CORA's seventh PETRA III beamline** and the richest of the PETRA III set in technique breadth: resonant elastic X-ray scattering and HAXPES in the MONO hutch, diffraction in the DIF hutch, and high-field magnetism (XMCD, magnetic scattering) in the MAG endstation with a 14 T superconducting magnet.
 
-For the modelling, P09 coins **no new Family** but exercises the polarization / magnetism vocabulary the APS 4-ID POLAR deployment introduced. It reuses three allowlisted-loose Families:
+For the modelling, P09 coins **no new Family** but exercises the polarization / magnetism vocabulary the APS 4-ID deployment introduced. It reuses three allowlisted-loose Families:
 
 - `PhaseRetarder` (the polarization phase-retarder circles, `POL-1`),
 - `PolarizationAnalyzer` (the scattered-beam analyzer, `POL-2`),
@@ -42,7 +42,7 @@ The deferred parts are recorded on [Model](model.md#deliberately-not-here-yet).
 ## Key modelling decisions
 
 - **A seventh beamline at an existing Site.** PETRA III is already modelled; P09 adds the resonant-scattering / magnetism beamline and its practices.
-- **The 4-ID POLAR vocabulary ports cleanly.** P09 reuses the allowlisted-loose `PhaseRetarder`, `PolarizationAnalyzer`, and `Magnet` Families that the APS 4-ID POLAR deployment introduced, the second consumer of each. No new Family is coined.
+- **The 4-ID vocabulary ports cleanly.** P09 reuses the allowlisted-loose `PhaseRetarder`, `PolarizationAnalyzer`, and `Magnet` Families that the APS 4-ID deployment introduced, the second consumer of each. No new Family is coined.
 - **The diffractometer circles bind Goniometer.** The MONO / DIF / MAG six-circle (E6C) diffractometers bind the catalog `Goniometer` Family, not the composed `Diffractometer` Assembly, until the full circle / detector-arm structure is confirmed (`DIFF-1`).
 - **The SIS3302 ROI explosion is grouped.** The SIS3302 fluorescence digitizer is exposed as many ROI sub-channels in the registry; grouped here as one `EnergyDispersiveSpectrometer` Asset (`DET-1`). A stray `p07/hexapodsmall` row (a P07 device imported into the P09 registry) is excluded (`HOST-1`).
 
@@ -70,7 +70,7 @@ The cross-cutting reference view is the [Inventory](inventory.md). The [Source](
 
 ## Model
 
-[Model](model.md): the developer's by-kind index, P09's place as the second consumer of the 4-ID POLAR polarization / magnetism vocabulary, and the record of what is deliberately deferred.
+[Model](model.md): the developer's by-kind index, P09's place as the second consumer of the 4-ID polarization / magnetism vocabulary, and the record of what is deliberately deferred.
 
 ## Not yet documented
 

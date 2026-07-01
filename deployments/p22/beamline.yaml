@@ -16,7 +16,7 @@
 # research/petra-iii/.
 #
 # WHAT IS NEW: no new device Family. P22 reuses existing Families, including the
-# allowlisted-loose PhaseRetarder Family (the 4-ID POLAR / P09 precedent, already
+# allowlisted-loose PhaseRetarder Family (the 4-ID / P09 precedent, already
 # graduation-due; P22 is a further consumer via the shared P09 optics). The electron
 # analyzer (the defining HAXPES instrument) is not exposed as a motor device in this
 # registry slice and is carried pending against the catalog ElectronAnalyzer Family

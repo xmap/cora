@@ -1,6 +1,6 @@
-# CORA Beamline descriptor: 4-ID POLAR (APS), operational-PV first cut
+# CORA Beamline descriptor: 4-ID (APS), operational-PV first cut
 #
-# 4-ID POLAR is the polarization and magnetic-scattering beamline at APS (Argonne),
+# 4-ID (formerly branded POLAR) is the polarization and magnetic-scattering beamline at APS (Argonne),
 # operational across stations 4-ID-A (optics), 4-ID-B, 4-ID-G, and 4-ID-H. It is
 # bound to the APS Site (deployments/aps/site.yaml), the same Site as the 2-BM
 # pilot. It is CORA's first non-tomography APS deployment: diffraction, magnetism,
@@ -8,7 +8,7 @@
 #
 # STATUS: first cut, reverse-engineered. Unlike the 7-BM / 32-ID design-phase
 # scaffolds, this descriptor binds the real EPICS control handles (`pv`), because
-# POLAR is operational and its handles were read from the beamline's own Bluesky
+# 4-ID is operational and its handles were read from the beamline's own Bluesky
 # instrument repo (BCDA-APS/polar-bits). A second snapshot of the
 # same instrument (BCDA-APS/6idb-bits, a 4-ID fork carrying a grafted 6-ID-B psic
 # endstation) was cross-checked to fill a few gaps (the emag magnet axes, the Euler
@@ -39,7 +39,7 @@
 # docs/deployments/4-id/questions.md.
 
 beamline:
-  name: 4-ID POLAR
+  name: 4-ID
   facility: aps                 # APS, the Site-level Facility (facility_code: aps)
   sector: "Sector 4"            # organizational label, not a registered asset
   tier: Unit
@@ -76,7 +76,7 @@ enclosures:
 insertion-devices:
   stage: source
   enclosure: 4-ID-A
-  intro: "The undulator source: a pair on the S04ID straight section feeding the POLAR optics."
+  intro: "The undulator source: a pair on the S04ID straight section feeding the 4-ID optics."
   note: "Modelled as one InsertionDevice Asset for the pair (PolarUndulatorPair); the period and gap detail is SRC-1, and whether to split it into two Assets is SRC-2."
   devices:
     - name: Undulators
@@ -89,7 +89,7 @@ insertion-devices:
 polarization-optics:
   stage: source
   enclosure: 4-ID-A
-  intro: "The phase retarders that set the X-ray polarization state: POLAR's defining capability. Three diamond phase-retarder stages, energy-tracking, on the 4idam motor crate."
+  intro: "The phase retarders that set the X-ray polarization state: 4-ID's defining capability. Three diamond phase-retarder stages, energy-tracking, on the 4idam motor crate."
   note: >
     pr1, pr2, pr3 are PRDevice / PRDeviceBase stages (each th/x/y). PhaseRetarder
     is a loose Family: the polarization-control device class is genuinely new to
@@ -235,7 +235,7 @@ filters:
 diffractometers:
   stage: sample
   enclosure: 4-ID-G
-  intro: "The 4-ID-G diffractometers: a Huber Eulerian cradle and a high-pressure diffractometer. These are POLAR's diffraction core."
+  intro: "The 4-ID-G diffractometers: a Huber Eulerian cradle and a high-pressure diffractometer. These are 4-ID's diffraction core."
   note: >
     huber_euler and huber_hp are modelled as plain multi-axis devices with their
     circle axis maps. The reusable Assembly(Diffractometer) (omega/chi/phi
@@ -267,7 +267,7 @@ diffractometers:
 sample-environment:
   stage: sample
   enclosure: 4-ID-B
-  intro: "The sample-environment apparatus: superconducting magnets, temperature controllers, and the sample positioning tables. POLAR's magnetic-scattering signature."
+  intro: "The sample-environment apparatus: superconducting magnets, temperature controllers, and the sample positioning tables. 4-ID's magnetic-scattering signature."
   note: >
     Magnets (bmag/emag 2 T, magnet911, the Kepco-driven gmag) bind a loose Magnet
     Family (MAG-1, FAM-1); the LakeShore 336/340 controllers bind the catalog
@@ -468,7 +468,7 @@ counters:
 # are carried confirm pending staff verification (CTRL-1).
 controls:
   intro: >
-    4-ID POLAR runs on the APS EPICS control stack, like 2-BM. Unlike the design-
+    4-ID runs on the APS EPICS control stack, like 2-BM. Unlike the design-
     phase scaffolds, the device control handles above are bound from the beamline's
     own Bluesky instrument repo (BCDA-APS/polar-bits) rather than left empty, but
     they remain confirm-pending: a value read from the operator's config is evidence

@@ -22,7 +22,7 @@ Root Asset `P22` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `SampleStage` | `Device` | Manipulator | p22-haxps | HAXPS sample manipulator bank (p22/motor, ~64 axes); grouped (GROUP-1) |
 | `ElectronAnalyzer` | `Device` | ElectronAnalyzer | p22-haxps | HAXPES hemispherical analyzer; not in the registry slice, pending (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Filter`, `Manipulator`, `ElectronAnalyzer`. Allowlisted-loose Family reused: `PhaseRetarder` (the 4-ID POLAR / P09 precedent, graduation-due, a further consumer via the shared optics, `POL-1`). No new family is coined and nothing graduates.
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Filter`, `Manipulator`, `ElectronAnalyzer`. Allowlisted-loose Family reused: `PhaseRetarder` (the 4-ID / P09 precedent, graduation-due, a further consumer via the shared optics, `POL-1`). No new family is coined and nothing graduates.
 
 ## Cross-cutting controllers
 

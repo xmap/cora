@@ -1,6 +1,6 @@
 # Model
 
-*The developer's index into where P09 content lives, its place as the second consumer of the 4-ID POLAR polarization / magnetism vocabulary, and the record of what is deliberately deferred. First cut.*
+*The developer's index into where P09 content lives, its place as the second consumer of the 4-ID polarization / magnetism vocabulary, and the record of what is deliberately deferred. First cut.*
 
 P09 is a descriptor-and-docs scaffold today, reverse-engineered from P09's public OnlineXML registry: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
 
@@ -16,15 +16,15 @@ P09 is a descriptor-and-docs scaffold today, reverse-engineered from P09's publi
 
 ## What makes P09 new
 
-P09 is a seventh beamline at an existing Site, and the richest of the PETRA III set in technique breadth: resonant elastic X-ray scattering and HAXPES (MONO), diffraction (DIF), and high-field magnetism / XMCD (MAG, a 14 T magnet). At the modelling level it is the **second consumer of the polarization / magnetism vocabulary** the APS 4-ID POLAR deployment introduced: the phase retarder, the polarization analyzer, and the high-field magnet.
+P09 is a seventh beamline at an existing Site, and the richest of the PETRA III set in technique breadth: resonant elastic X-ray scattering and HAXPES (MONO), diffraction (DIF), and high-field magnetism / XMCD (MAG, a 14 T magnet). At the modelling level it is the **second consumer of the polarization / magnetism vocabulary** the APS 4-ID deployment introduced: the phase retarder, the polarization analyzer, and the high-field magnet.
 
-## No new families (the 4-ID POLAR vocabulary ports cleanly)
+## No new families (the 4-ID vocabulary ports cleanly)
 
-P09 coins no new Family. It reuses three allowlisted-loose Families from 4-ID POLAR (`PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`), becoming the second consumer of each, the rule-of-three signal toward eventual graduation (a catalog-owner decision, not coined here). The diffractometers bind the catalog `Goniometer` Family (not the composed `Diffractometer` Assembly, the same call as P01 EH2); the optics bind `Monochromator` / `Mirror` / `Transfocator` / `Slit` / `Filter`; the sample environment binds `TemperatureController` / `Hexapod` / `LinearStage`; the detectors bind `Camera` / `EnergyDispersiveSpectrometer`. Nothing in the catalog changes.
+P09 coins no new Family. It reuses three allowlisted-loose Families from 4-ID (`PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`), becoming the second consumer of each, the rule-of-three signal toward eventual graduation (a catalog-owner decision, not coined here). The diffractometers bind the catalog `Goniometer` Family (not the composed `Diffractometer` Assembly, the same call as P01 EH2); the optics bind `Monochromator` / `Mirror` / `Transfocator` / `Slit` / `Filter`; the sample environment binds `TemperatureController` / `Hexapod` / `LinearStage`; the detectors bind `Camera` / `EnergyDispersiveSpectrometer`. Nothing in the catalog changes.
 
 ## The control plane
 
-P09 sits on the PETRA III Tango device floor with Sardana as the scan layer, the same as the other PETRA III beamlines. Its instrument diversity is high (OMS / VME58 steppers, Galil slits, PI + AttoCube piezos, a hexapod; PerkinElmer / Pilatus / Andor detectors, the SIS3302 digitizer, GPIB instruments). The handles are read from P09's public OnlineXML registry and carried confirm (`CTRL-1`). The resonant-scattering / magnetism acquisition (the energy / diffractometer / field scan with polarization switching) runs as a Sardana macro; that orchestration is the seam CORA's edge replaces or drives through over its `ControlPort`, the same shape as the 4-ID POLAR seam.
+P09 sits on the PETRA III Tango device floor with Sardana as the scan layer, the same as the other PETRA III beamlines. Its instrument diversity is high (OMS / VME58 steppers, Galil slits, PI + AttoCube piezos, a hexapod; PerkinElmer / Pilatus / Andor detectors, the SIS3302 digitizer, GPIB instruments). The handles are read from P09's public OnlineXML registry and carried confirm (`CTRL-1`). The resonant-scattering / magnetism acquisition (the energy / diffractometer / field scan with polarization switching) runs as a Sardana macro; that orchestration is the seam CORA's edge replaces or drives through over its `ControlPort`, the same shape as the 4-ID seam.
 
 ## Deliberately not here yet
 
@@ -32,7 +32,7 @@ P09 sits on the PETRA III Tango device floor with Sardana as the scan layer, the
 - **The optics detail (`OPT-1`).** The DCM crystal cut, the mirror coatings, and the CRL detail are carried confirm-pending.
 - **The diffractometer structure (`DIFF-1`).** The MONO / DIF / MAG six-circle counts and detector arms are pending; modelled as `Goniometer` Assets, not `Diffractometer` Assemblies.
 - **The motor-bank axis roles (`GROUP-1`).** The MONO / DIF `p09/motor` banks carry no per-axis role; grouped as stage Assets.
-- **The polarization / magnet detail (`POL-1`, `MAG-1`).** The phase-retarder / analyzer geometry and the 14 T magnet field / control are pending; the Families are the allowlisted-loose 4-ID POLAR ones.
+- **The polarization / magnet detail (`POL-1`, `MAG-1`).** The phase-retarder / analyzer geometry and the 14 T magnet field / control are pending; the Families are the allowlisted-loose 4-ID ones.
 - **The detector roster (`DET-1`).** The detector models and the SIS3302 channel count (collapsed from the registry's ROI explosion) are named, not fully bound.
 - **The host mapping (`HOST-1`).** A shared Lambda reports on the bare `petra3` host; a stray `p07/hexapodsmall` row (a P07 device) is excluded from P09.
 - **The handle freshness (`CTRL-1`).** The OnlineXML branch is `debian/jessie`; some handles may lag the live Tango database.

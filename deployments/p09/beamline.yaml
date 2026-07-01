@@ -16,7 +16,7 @@
 # verify it. The extraction is in research/petra-iii/.
 #
 # WHAT IS NEW: no new device Family. P09 reuses existing Families end to end, including
-# three allowlisted-loose Families the 4-ID POLAR deployment introduced: PhaseRetarder
+# three allowlisted-loose Families the 4-ID deployment introduced: PhaseRetarder
 # (the polarization phase-retarder circles), PolarizationAnalyzer (the scattered-beam
 # analyzer), and Magnet (the 14 T sample-environment magnet). The diffractometer
 # circles bind the catalog Goniometer Family (not the composed Diffractometer
@@ -137,20 +137,20 @@ mono-sample:
   stage: sample
   enclosure: p09-mono
   intro: "The MONO resonant-scattering experiment: the polarization phase retarder, the scattered-beam analyzer, the six-circle diffractometer goniometer, the AttoCube sample piezos, and the sample-environment temperature controllers."
-  note: "The phase retarder (two circles) and the analyzer reuse the 4-ID POLAR allowlisted-loose Families. The diffractometer goniometer is e6cctrl; the hkl pseudo-axis is a sim device (DIFF-1)."
+  note: "The phase retarder (two circles) and the analyzer reuse the 4-ID allowlisted-loose Families. The diffractometer goniometer is e6cctrl; the hkl pseudo-axis is a sim device (DIFF-1)."
   devices:
     - name: PhaseRetarder
       family: PhaseRetarder
       pv: {circle1: "p09/phaseretarder/phaseretardercircle1", circle2: "p09/phaseretarder/phaseretardercircle2", pchi: "p09/attocubeanc300motor/pchi", pperp: "p09/attocubeanc300motor/pperp"}
       new: true
       confirm: true
-      note: "the polarization phase-retarder circles (phaseretardercircle1 / 2) plus the AttoCube pchi / pperp fine axes; reuses the 4-ID POLAR allowlisted-loose PhaseRetarder Family (POL-1)"
+      note: "the polarization phase-retarder circles (phaseretardercircle1 / 2) plus the AttoCube pchi / pperp fine axes; reuses the 4-ID allowlisted-loose PhaseRetarder Family (POL-1)"
     - name: PolarizationAnalyzer
       family: PolarizationAnalyzer
       pv: {analyzer: "p09/analyzer/exp.01"}
       new: true
       confirm: true
-      note: "the scattered-beam polarization analyzer; reuses the 4-ID POLAR allowlisted-loose PolarizationAnalyzer Family (POL-2)"
+      note: "the scattered-beam polarization analyzer; reuses the 4-ID allowlisted-loose PolarizationAnalyzer Family (POL-2)"
     - name: Goniometer
       family: Goniometer           # catalog Family; the six-circle (E6C) sample-orientation circles, would compose a Diffractometer Assembly (DIFF-1)
       pv: {ctrl: "p09/motor/exp.04", diffractometer: "p09/diffractometer/diffrac_eh1"}
@@ -220,14 +220,14 @@ mag-sample:
   stage: sample
   enclosure: p09-mag
   intro: "The MAG high-field magnetism endstation: the 14 T superconducting magnet, the six-circle diffractometer goniometer, a sample hexapod, the PI sample piezos, the polarization analyzer, and the sample-environment temperature controllers."
-  note: "The 14 T magnet reuses the 4-ID POLAR allowlisted-loose Magnet Family. The hexapod is hexapodmotor; the piezos are PI E-710 (scan) and E-725 (sample)."
+  note: "The 14 T magnet reuses the 4-ID allowlisted-loose Magnet Family. The hexapod is hexapodmotor; the piezos are PI E-710 (scan) and E-725 (sample)."
   devices:
     - name: Magnet
       family: Magnet
       pv: {magnet: "p09/magnet/exp.01"}
       new: true
       confirm: true
-      note: "the MAG 14 T superconducting sample-environment magnet (magnet14tf); reuses the 4-ID POLAR allowlisted-loose Magnet Family (MAG-1)"
+      note: "the MAG 14 T superconducting sample-environment magnet (magnet14tf); reuses the 4-ID allowlisted-loose Magnet Family (MAG-1)"
     - name: Goniometer
       family: Goniometer           # catalog Family; the MAG six-circle sample-orientation circles (DIFF-1)
       pv: {ctrl: "p09/diffractometer/diffrac_mag", mu: "p09/diffracmu/mu"}
@@ -251,7 +251,7 @@ mag-sample:
       pv: {analyzer: "p09/analyzer/mag.01"}
       new: true
       confirm: true
-      note: "the MAG scattered-beam polarization analyzer; reuses the 4-ID POLAR allowlisted-loose PolarizationAnalyzer Family (POL-2)"
+      note: "the MAG scattered-beam polarization analyzer; reuses the 4-ID allowlisted-loose PolarizationAnalyzer Family (POL-2)"
     - name: Absorber
       family: Filter
       pv: {abs: "p09/absorbercontroller/mag.01"}
@@ -300,7 +300,7 @@ controls:
     carried confirm (CTRL-1). The resonant-scattering / magnetism acquisition (the
     energy / diffractometer / field scan coupled to the detector readout) runs as a
     Sardana macro; that orchestration is the seam CORA's edge would conduct over its
-    ControlPort, the same shape as the 4-ID POLAR seam (CTRL-2).
+    ControlPort, the same shape as the 4-ID seam (CTRL-2).
   motion_controllers:
     - name: OMS58Controllers
       family: MotionController

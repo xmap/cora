@@ -20,7 +20,7 @@ The MFX experiment hutch is where the transported beam is conditioned to its fin
 
 ## The pump-probe laser
 
-The femtosecond optical laser (`LAS:FS45` timing, `MFX:LAS:MMN:*` motors) excites the sample before the X-ray probe. The laser device folds into the loose `Laser` family (the 4-ID POLAR precedent, model-vs-hazard open), and the delay stage is a `LinearStage`. What does not fold is the synchronization: the `lxt_ttc` SyncAxis holds the laser and FEL timing domains together to within a ~50 fs deadband, a cross-timing-domain relationship CORA's single-domain `PartitionRule` cannot express (LASER-1). The laser is also a class-4 hazard gated by a Clearance (see [Governance](../governance.md)).
+The femtosecond optical laser (`LAS:FS45` timing, `MFX:LAS:MMN:*` motors) excites the sample before the X-ray probe. The laser device folds into the loose `Laser` family (the 4-ID precedent, model-vs-hazard open), and the delay stage is a `LinearStage`. What does not fold is the synchronization: the `lxt_ttc` SyncAxis holds the laser and FEL timing domains together to within a ~50 fs deadband, a cross-timing-domain relationship CORA's single-domain `PartitionRule` cannot express (LASER-1). The laser is also a class-4 hazard gated by a Clearance (see [Governance](../governance.md)).
 
 ## The interaction point
 

@@ -1,10 +1,10 @@
 # The beamline
 
-*The part of 4-ID POLAR CORA models today, as areas you can jump to: the optics spine and the per-station experiment systems, plus the controls that drive them. First cut.*
+*The part of 4-ID CORA models today, as areas you can jump to: the optics spine and the per-station experiment systems, plus the controls that drive them. First cut.*
 
-4-ID POLAR is a polarization and magnetic-scattering beamline with four lead-shielded stations: `4-ID-A` (optics), and `4-ID-B`, `4-ID-G`, `4-ID-H` (experiment). This cut models the operational core across all four; the Raman station and the peripheral electronics are deferred (see [Model](../model.md#deliberately-not-here-yet)).
+4-ID is a polarization and magnetic-scattering beamline with four lead-shielded stations: `4-ID-A` (optics), and `4-ID-B`, `4-ID-G`, `4-ID-H` (experiment). This cut models the operational core across all four; the Raman station and the peripheral electronics are deferred (see [Model](../model.md#deliberately-not-here-yet)).
 
-The modelled beamline divides into two kinds of thing. Along the beam, in order, sit the **stations**: the [Source](../beamline.md) that delivers, polarizes, and conditions the beam, the [Sample](sample.md) stage that places the specimen in it (and, at POLAR, applies field and temperature), and the [Detector](detector.md) that records what scatters. Cutting across them are the [Controls](controls.md) that drive the hardware. The stations are containment trees of apparatus (`Asset.parent_id`); controls relate to that apparatus sideways, by `controller_id`.
+The modelled beamline divides into two kinds of thing. Along the beam, in order, sit the **stations**: the [Source](../beamline.md) that delivers, polarizes, and conditions the beam, the [Sample](sample.md) stage that places the specimen in it (and, at 4-ID, applies field and temperature), and the [Detector](detector.md) that records what scatters. Cutting across them are the [Controls](controls.md) that drive the hardware. The stations are containment trees of apparatus (`Asset.parent_id`); controls relate to that apparatus sideways, by `controller_id`.
 
 ## Stations
 

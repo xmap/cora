@@ -7,7 +7,7 @@ bc_touches: Equipment
 
 Materializes the 8-ID-E six-circle Huber diffractometer as a Diffractometer
 Assembly and one Fixture, end-to-end against Postgres. This is the first spine
-exercise of the reverse-engineered APS deployments (4-ID POLAR and 8-ID): it
+exercise of the reverse-engineered APS deployments (4-ID and 8-ID): it
 proves the Assembly(Diffractometer) blueprint, which COMPOSES the Goniometer
 Family graduated for I03 MX (#340) rather than re-modelling the sample circles.
 

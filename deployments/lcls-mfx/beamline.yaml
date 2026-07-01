@@ -50,7 +50,7 @@
 # DEFERRED (out of spine+core scope, noted not modelled): the LCLS DAQ data plane
 # (psana/psdaq; CORA references a Dataset, does not own per-shot data, DAQ-1); the
 # pump-probe optical-laser delay stages + lxt/txt fs timing chain (the laser is
-# carried as a loose Laser family device, the 4-ID POLAR precedent, model-vs-hazard
+# carried as a loose Laser family device, the 4-ID precedent, model-vs-hazard
 # open; its fs X-ray/laser synchronization has no CORA model, LASER-1); the
 # liquid-jet / fixed-target sample delivery (SAMPLE-1); the sibling instruments
 # (CXI/XPP/XCS/MEC/TMO/RIX) that share the linac (TOPO-1).
@@ -272,7 +272,7 @@ mfx-endstation:
       pv: {confirm: "LAS:FS45 (laser timing) + MFX:LAS:MMN:* (delay / waveplate motors)"}
       new: true
       confirm: true
-      note: "femtosecond optical pump-probe laser; loose family reused from 4-ID POLAR (model-vs-hazard open, SAMPLE-1). The delay stage is a LinearStage, but the laser/X-ray fs synchronization (the lxt_ttc SyncAxis, ~50 fs deadband) is a cross-timing-domain relationship CORA cannot express (LASER-1)"
+      note: "femtosecond optical pump-probe laser; loose family reused from 4-ID (model-vs-hazard open, SAMPLE-1). The delay stage is a LinearStage, but the laser/X-ray fs synchronization (the lxt_ttc SyncAxis, ~50 fs deadband) is a cross-timing-domain relationship CORA cannot express (LASER-1)"
     - name: LiquidJet
       pv: "MFX:LJH"
       new: true

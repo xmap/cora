@@ -160,7 +160,7 @@ nav:
         - Techniques: deployments/32-id/techniques.md
         - Governance: deployments/32-id/governance.md
         - Model: deployments/32-id/model.md
-      - 4-ID POLAR:
+      - 4-ID:
         - deployments/4-id/index.md
         - Open questions: deployments/4-id/questions.md
         - The beamline:

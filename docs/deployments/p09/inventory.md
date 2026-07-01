@@ -4,7 +4,7 @@
 
 This cut models the MONO hutch (the undulator, the DCM, the mirrors, the CRL, the slit, the absorber, the resonant-scattering instrument, the fluorescence detectors), the DIF diffraction hutch, and the MAG high-field magnetism endstation. It is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages, authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p09/beamline.yaml) descriptor.
 
-Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P09 **coins no new Family**: it is the second consumer of the allowlisted-loose `PhaseRetarder`, `PolarizationAnalyzer`, and `Magnet` Families the APS 4-ID POLAR deployment introduced, and reuses the optics / motion / detector Families otherwise. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
+Devices bind to a catalog [Family](../../catalog/families.md) wherever one fits. P09 **coins no new Family**: it is the second consumer of the allowlisted-loose `PhaseRetarder`, `PolarizationAnalyzer`, and `Magnet` Families the APS 4-ID deployment introduced, and reuses the optics / motion / detector Families otherwise. The Tango device handles are read from the public OnlineXML registry; no vendor Models are bound.
 
 ## The Asset tree
 
@@ -40,7 +40,7 @@ Root Asset `P09` (`tier = Unit`, `facility_code = petra-iii`); sub-systems nest 
 | `PilatusDetector` (MAG) | `Device` | Camera | p09-mag | MAG Pilatus 100k (DET-1) |
 | `AndorCamera` | `Device` | Camera | p09-mag | MAG Andor camera (Lima) (DET-1) |
 
-Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Transfocator`, `Slit`, `Filter`, `LinearStage`, `Goniometer`, `TemperatureController`, `Hexapod`, `Camera`, `EnergyDispersiveSpectrometer`. Allowlisted-loose Families reused (the 4-ID POLAR precedent): `PhaseRetarder` (`POL-1`), `PolarizationAnalyzer` (`POL-2`), `Magnet` (`MAG-1`). No new family is coined and nothing graduates.
+Families reused from the catalog: `InsertionDevice`, `Monochromator`, `Mirror`, `Transfocator`, `Slit`, `Filter`, `LinearStage`, `Goniometer`, `TemperatureController`, `Hexapod`, `Camera`, `EnergyDispersiveSpectrometer`. Allowlisted-loose Families reused (the 4-ID precedent): `PhaseRetarder` (`POL-1`), `PolarizationAnalyzer` (`POL-2`), `Magnet` (`MAG-1`). No new family is coined and nothing graduates.
 
 ## Cross-cutting controllers
 

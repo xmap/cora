@@ -19,7 +19,7 @@
 
 P07 "High Energy Materials Science (HEMS)" is **CORA's eleventh PETRA III beamline** and the facility's high-energy hard X-ray materials-science beamline, **jointly operated by Helmholtz-Zentrum Hereon (2/3) and DESY (1/3)** (`OPERATOR-1`). Its science is high-energy diffraction and imaging for engineering / materials studies, including a 17 T high-field magnet endstation.
 
-P07 coins **no new Family**. It reuses the allowlisted-loose `Magnet` Family (the 4-ID POLAR precedent, of which P07's 17 T magnet is a further consumer). The four-circle Eulerian diffractometer and two-theta arm bind the catalog `Goniometer` Family (not the composed `Diffractometer` Assembly, the P01 EH2 call); the multi-bounce DCM binds `Monochromator`; the hexapod `Hexapod`; the Linkam stage `TemperatureController`; the detectors `Camera` / `EnergyDispersiveSpectrometer`. The techniques (high-energy diffraction, high-field materials science) reuse the pending `diffraction` / `magnetic_scattering` slugs (`TECH-1`).
+P07 coins **no new Family**. It reuses the allowlisted-loose `Magnet` Family (the 4-ID precedent, of which P07's 17 T magnet is a further consumer). The four-circle Eulerian diffractometer and two-theta arm bind the catalog `Goniometer` Family (not the composed `Diffractometer` Assembly, the P01 EH2 call); the multi-bounce DCM binds `Monochromator`; the hexapod `Hexapod`; the Linkam stage `TemperatureController`; the detectors `Camera` / `EnergyDispersiveSpectrometer`. The techniques (high-energy diffraction, high-field materials science) reuse the pending `diffraction` / `magnetic_scattering` slugs (`TECH-1`).
 
 ## Scope: what is and is not modelled
 

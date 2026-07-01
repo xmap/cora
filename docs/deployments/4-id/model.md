@@ -1,29 +1,29 @@
 # Model
 
-*The developer's index into where 4-ID POLAR content lives, the loose-Family graduation plan, and the record of what is deliberately deferred. First cut.*
+*The developer's index into where 4-ID content lives, the loose-Family graduation plan, and the record of what is deliberately deferred. First cut.*
 
-4-ID POLAR is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's instrument repo: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+4-ID is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's instrument repo: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
 
 | Kind | Where | Notes |
 | --- | --- | --- |
 | Beamline descriptor | [`deployments/4-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/4-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface, shared with 2-BM; `4-ID` added to its beamline list, with POLAR Practices |
+| Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface, shared with 2-BM; `4-ID` added to its beamline list, with its Practices |
 | Upstream source | [`BCDA-APS/polar-bits`](https://github.com/BCDA-APS/polar-bits) | the beamline's own Bluesky instrument repo the descriptor was reverse-engineered from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | no new Family added; POLAR reuses existing Families and binds new device classes to loose Family strings (see below) |
+| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | no new Family added; 4-ID reuses existing Families and binds new device classes to loose Family strings (see below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the diffraction / magnetism / polarization Methods are not yet coined (TECH-1) |
 | Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 4-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## Loose-Family graduation
 
-POLAR introduced eight device classes CORA had not earned into the catalog. Graduation needs two or more independent CORA deployments AND a settled abstraction. The 8-ID XPCS deployment adds the second independent beamline for `TemperatureController`, `Transfocator`, and `BeamPositionMonitor`. `TemperatureController` has since graduated to a catalog Family: the parallel Diamond i22/i03/i11 rule-of-three settled the settable-actuator abstraction, and it presents the new `Regulator` Role. `Transfocator` has likewise graduated to a catalog Family: a CRL focusing optic earned across eight deployments, so 4-ID's CRL now reuses it like any catalog Family (its lens material and lenslet count stay a per-Asset spec, `OPT-2`). `BeamPositionMonitor` stays loose pending its cross-facility abstraction review (sensor fold-vs-promote `DIAG-1`), allowlisted and recorded in the promotion register. The `Diffractometer` is the one that landed: as the `Assembly(Diffractometer)` blueprint (4-ID + 8-ID), which composes the catalog `Goniometer` Family, with an 8-ID Fixture scenario. The remaining four (`PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `Laser`) are single-beamline loose. All names were cleared by the naming-r3 review during the catalog-graduation pass.
+4-ID introduced eight device classes CORA had not earned into the catalog. Graduation needs two or more independent CORA deployments AND a settled abstraction. The 8-ID XPCS deployment adds the second independent beamline for `TemperatureController`, `Transfocator`, and `BeamPositionMonitor`. `TemperatureController` has since graduated to a catalog Family: the parallel Diamond i22/i03/i11 rule-of-three settled the settable-actuator abstraction, and it presents the new `Regulator` Role. `Transfocator` has likewise graduated to a catalog Family: a CRL focusing optic earned across eight deployments, so 4-ID's CRL now reuses it like any catalog Family (its lens material and lenslet count stay a per-Asset spec, `OPT-2`). `BeamPositionMonitor` stays loose pending its cross-facility abstraction review (sensor fold-vs-promote `DIAG-1`), allowlisted and recorded in the promotion register. The `Diffractometer` is the one that landed: as the `Assembly(Diffractometer)` blueprint (4-ID + 8-ID), which composes the catalog `Goniometer` Family, with an 8-ID Fixture scenario. The remaining four (`PhaseRetarder`, `PolarizationAnalyzer`, `Magnet`, `Laser`) are single-beamline loose. All names were cleared by the naming-r3 review during the catalog-graduation pass.
 
 | Loose Family | Presents (when graduated) | Status |
 | --- | --- | --- |
 | `TemperatureController` | Regulator | GRADUATED: catalog Family on the Diamond i22/i03/i11 rule-of-three; presents Regulator, requires Settable; 4-ID device details still to confirm (TEMP-1) |
 | `Transfocator` | Positioner | GRADUATED: catalog Family, a CRL focusing optic earned across eight deployments; 4-ID's CRL reuses it, lens spec still to confirm (OPT-2) |
 | `BeamPositionMonitor` | Sensor | HELD loose: 2nd beamline (Sydor + TetrAMM) but fold-vs-promote open (DIAG-1) |
-| `PhaseRetarder` | Positioner | loose: a second polarization beamline, or POLAR registration |
+| `PhaseRetarder` | Positioner | loose: a second polarization beamline, or 4-ID registration |
 | `PolarizationAnalyzer` | Positioner | loose: a second polarization beamline |
 | `Magnet` | confirm (Positioner or Sensor) | loose: needs a second magnetism beamline (8-ID has no sample magnet) |
 | `Laser` | confirm | loose: a second deployment, or the SAMPLE-1 model-versus-hazard decision |

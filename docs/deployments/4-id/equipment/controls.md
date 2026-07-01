@@ -2,11 +2,11 @@
 
 *The control stack and the bound device handles. First cut; handles read from the beamline config, carried confirm.*
 
-4-ID POLAR runs on the APS EPICS control stack, the same floor as the 2-BM pilot. CORA observes that floor and, where it replaces Bluesky-style scan and alignment orchestration, conducts over it; it does not replace EPICS itself.
+4-ID runs on the APS EPICS control stack, the same floor as the 2-BM pilot. CORA observes that floor and, where it replaces Bluesky-style scan and alignment orchestration, conducts over it; it does not replace EPICS itself.
 
 ## Device handles
 
-CORA models each device's control handle as an opaque string set at the edge. Unlike the 7-BM and 32-ID design-phase scaffolds, the handles here are filled: they were read from the beamline's own Bluesky instrument repo ([BCDA-APS/polar-bits](https://github.com/BCDA-APS/polar-bits)), so the descriptor carries the real PV prefixes and per-axis maps (`4idVDCM:`, `4idgSoft:`, `4idHHLM:`, and so on). They remain confirm-pending: a value read from the operator's config is evidence to verify with staff, not a CORA-owned fact (`CTRL-1`). This is the one way this deployment departs from the design-phase scaffolds, and it follows from POLAR being operational.
+CORA models each device's control handle as an opaque string set at the edge. Unlike the 7-BM and 32-ID design-phase scaffolds, the handles here are filled: they were read from the beamline's own Bluesky instrument repo ([BCDA-APS/polar-bits](https://github.com/BCDA-APS/polar-bits)), so the descriptor carries the real PV prefixes and per-axis maps (`4idVDCM:`, `4idgSoft:`, `4idHHLM:`, and so on). They remain confirm-pending: a value read from the operator's config is evidence to verify with staff, not a CORA-owned fact (`CTRL-1`). This is the one way this deployment departs from the design-phase scaffolds, and it follows from 4-ID being operational.
 
 ## Triggering
 

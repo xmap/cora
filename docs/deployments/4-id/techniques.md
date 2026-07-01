@@ -1,8 +1,8 @@
 # Techniques
 
-*What the modelled part of 4-ID POLAR is designed to do, as intent. First cut.*
+*What the modelled part of 4-ID is designed to do, as intent. First cut.*
 
-A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practice](../aps/index.md#the-techniques-adapted-here) is how a facility adapts it. POLAR's techniques are diffraction, magnetism, and polarization, none of which exist in CORA's imaging-heritage catalog yet, so the Methods below render unlinked and are carried pending until one enters the pilot scope (`TECH-1`). The function view survives the eventual hardware and catalog choices, which is why it can be written before the Methods are coined.
+A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practice](../aps/index.md#the-techniques-adapted-here) is how a facility adapts it. 4-ID's techniques are diffraction, magnetism, and polarization, none of which exist in CORA's imaging-heritage catalog yet, so the Methods below render unlinked and are carried pending until one enters the pilot scope (`TECH-1`). The function view survives the eventual hardware and catalog choices, which is why it can be written before the Methods are coined.
 
 ## Single-crystal diffraction
 
@@ -17,7 +17,7 @@ Both need the [diffractometers](equipment/sample.md) and the [detectors](equipme
 
 ## Magnetic and resonant scattering
 
-POLAR's signature: resonant scattering across an absorption edge, in an applied magnetic field and at low temperature, to probe magnetic and electronic order.
+4-ID's signature: resonant scattering across an absorption edge, in an applied magnetic field and at low temperature, to probe magnetic and electronic order.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

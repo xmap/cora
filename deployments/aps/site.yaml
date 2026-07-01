@@ -57,21 +57,21 @@ practices:
   - {name: 7BM_high_speed_imaging_practice, method: high_speed_imaging, pending: true, note: "white-beam chopper-gated movie bursts; Method not yet in catalog (TECH-1)"}
   - {name: 7BM_radiography_practice, method: radiography, pending: true, note: "focused-beam time-resolved point radiography; Method not yet in catalog (TECH-1)"}
   - {name: 7BM_energy_dispersive_diffraction_practice, method: energy_dispersive_diffraction, pending: true, note: "white-beam EDD; Method not yet in catalog (TECH-1)"}
-  # 19-BM-FACT (Sector 19) is pre-build; its Practices are the same portable
+  # 19-BM (Sector 19) is pre-build; its Practices are the same portable
   # tomography Methods adapted for the new beamline, carried pending until the
   # beamline is operating. White-beam only: no energy or mono practices.
-  - {name: 19BM_first_light_practice, method: first_light, pending: true, note: "19-BM-FACT design phase"}
-  - {name: 19BM_dark_field_practice, method: dark_field, pending: true, note: "19-BM-FACT design phase"}
-  - {name: 19BM_flat_field_practice, method: flat_field, pending: true, note: "19-BM-FACT design phase"}
-  - {name: 19BM_tomography_practice, method: tomography, pending: true, note: "19-BM-FACT design phase"}
-  - {name: 19BM_continuous_rotation_practice, method: continuous_rotation_tomography, pending: true, note: "19-BM-FACT high-throughput autonomous CT"}
-  - {name: 19BM_streaming_tomography_practice, method: streaming_tomography, pending: true, note: "19-BM-FACT design phase"}
+  - {name: 19BM_first_light_practice, method: first_light, pending: true, note: "19-BM design phase"}
+  - {name: 19BM_dark_field_practice, method: dark_field, pending: true, note: "19-BM design phase"}
+  - {name: 19BM_flat_field_practice, method: flat_field, pending: true, note: "19-BM design phase"}
+  - {name: 19BM_tomography_practice, method: tomography, pending: true, note: "19-BM design phase"}
+  - {name: 19BM_continuous_rotation_practice, method: continuous_rotation_tomography, pending: true, note: "19-BM high-throughput autonomous CT"}
+  - {name: 19BM_streaming_tomography_practice, method: streaming_tomography, pending: true, note: "19-BM design phase"}
   # 2-ID (Sector 2) is a scanning fluorescence microprobe beamline, pre-build for
   # CORA; the modelled hutch is 2-ID-D. Its technique is a new modality (point-
   # raster XRF), distinct from the projection-tomography Methods above, so its
   # Method is not yet in the catalog; the practice renders unlinked, pending (METHOD-1).
   - {name: 2ID_scanning_fluorescence_microscopy_practice, method: scanning_fluorescence_microscopy, pending: true, note: "2-ID-D sample-scanning XRF mapping; Method not yet in catalog (METHOD-1)"}
-  # 4-ID POLAR Practices (first cut). POLAR is a diffraction / magnetism /
+  # 4-ID Practices (first cut). 4-ID is a diffraction / magnetism /
   # polarization beamline; its Methods are not in the imaging-heritage catalog and
   # render unlinked, carried pending until a technique enters the pilot scope (TECH-1).
   - {name: 4ID_diffraction_practice, method: diffraction, pending: true, note: "single-crystal X-ray diffraction on the Huber diffractometers; Method not yet in catalog (TECH-1)"}
@@ -112,7 +112,7 @@ actors:
   - {name: Run Debrief, kind: agent}
   - {name: APS Experiment Safety Review Board, kind: human}
   - {name: 2-BM Beamline Scientist, kind: human}
-  - {name: 19-BM Beamline Scientist, kind: human, pending: true, note: "19-BM-FACT (Sector 19), pre-build; operator pool TBD"}
+  - {name: 19-BM Beamline Scientist, kind: human, pending: true, note: "19-BM (Sector 19), pre-build; operator pool TBD"}
   - {name: Proposal 2026-1234 PI, kind: human}
   - {name: Proposal 2026-1235 PI, kind: human}
   - {name: Proposal 2026-1236 PI, kind: human}
@@ -122,7 +122,7 @@ actors:
   - {name: Real ESRB membership, kind: human, pending: true, note: "vs committee-as-actor"}
   - {name: 7-BM Beamline Scientist, kind: human, pending: true, note: "7-BM beamline-bound staff"}
   - {name: 2-ID Beamline Scientist, kind: human, pending: true, note: "2-ID scanning fluorescence microprobe (Sector 2), 2-ID-D hutch; pre-build, operator pool TBD"}
-  - {name: 4-ID Beamline Scientist, kind: human, pending: true, note: "4-ID POLAR beamline-bound staff; operator pool TBD"}
+  - {name: 4-ID Beamline Scientist, kind: human, pending: true, note: "4-ID beamline-bound staff; operator pool TBD"}
   - {name: 8-ID Beamline Scientist, kind: human, pending: true, note: "8-ID XPCS beamline-bound staff; operator pool TBD"}
   - {name: 9-ID Beamline Scientist, kind: human, pending: true, note: "9-ID CSSI beamline-bound staff; operator pool TBD"}
 

@@ -2,7 +2,7 @@
 
 *The area detector, beam-view cameras, beam-position monitors, and counters. First cut; PVs read from the beamline config, carried confirm.*
 
-The detection side of POLAR is a mix: an Eiger area detector for diffraction patterns, flag-view cameras for beam alignment, beam-position and intensity monitors that diagnose and normalize the beam, and scaler counters. They are modelled in the detection stage of the [descriptor](../inventory.md). The Eiger and flag cameras reuse the `Camera` Family and the scalers the `GenericProbe` Family; the beam-position monitors bind a loose `BeamPositionMonitor` Family.
+The detection side of 4-ID is a mix: an Eiger area detector for diffraction patterns, flag-view cameras for beam alignment, beam-position and intensity monitors that diagnose and normalize the beam, and scaler counters. They are modelled in the detection stage of the [descriptor](../inventory.md). The Eiger and flag cameras reuse the `Camera` Family and the scalers the `GenericProbe` Family; the beam-position monitors bind a loose `BeamPositionMonitor` Family.
 
 ## Detector chain
 

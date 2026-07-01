@@ -1,6 +1,6 @@
-# CORA Beamline descriptor: 19-BM-FACT (APS), design phase
+# CORA Beamline descriptor: 19-BM (APS), design phase
 #
-# 19-BM-FACT (Fast Autonomous Computed Tomography) is a planned filtered
+# 19-BM (formerly branded FACT, Fast Autonomous Computed Tomography) is a planned filtered
 # white-beam bending-magnet imaging beamline at the APS (Sector 19), bound to
 # the existing APS Site (deployments/aps/site.yaml). It is built for
 # high-throughput, autonomous, micron-resolution CT with robotic sample

@@ -2,7 +2,7 @@
 
 *What CORA needs the P09 team to confirm before the model can be trusted.*
 
-P09 was reverse-engineered from P09's own public OnlineXML device registry ([gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p09](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p09), branch `debian/jessie`) and a verified research brief, not from a live connection. The registry carries real Tango device names and control handles, but no crystal cuts, magnet field, or energy calibration. P09 is CORA's seventh PETRA III beamline and the second consumer of the 4-ID POLAR polarization / magnetism vocabulary. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+P09 was reverse-engineered from P09's own public OnlineXML device registry ([gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p09](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p09), branch `debian/jessie`) and a verified research brief, not from a live connection. The registry carries real Tango device names and control handles, but no crystal cuts, magnet field, or energy calibration. P09 is CORA's seventh PETRA III beamline and the second consumer of the 4-ID polarization / magnetism vocabulary. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 
@@ -24,8 +24,8 @@ P09 was reverse-engineered from P09's own public OnlineXML device registry ([git
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
 | DIFF-1 | Blocks-build | The diffractometer circle counts (MONO / DIF / MAG) and whether each composes a Diffractometer Assembly with a detector arm. | A `Goniometer` Asset per area (six-circle E6C), not the composed Diffractometer Assembly, until detector arms are confirmed. | The diffractometer modelling. |
-| POL-1 | Nice-to-have | The phase-retarder geometry (circles + AttoCube fine axes) and the polarization-analyzer detail. | The allowlisted-loose `PhaseRetarder` + `PolarizationAnalyzer` Families (the 4-ID POLAR precedent); detail pending. | The polarization-instrument modelling. |
-| MAG-1 | Blocks-go-live | The MAG magnet field (14 T assumed), its cryogen, and its control / ramp interface. | A 14 T superconducting `Magnet` (the 4-ID POLAR loose Family); field and control pending. | The magnet modelling. |
+| POL-1 | Nice-to-have | The phase-retarder geometry (circles + AttoCube fine axes) and the polarization-analyzer detail. | The allowlisted-loose `PhaseRetarder` + `PolarizationAnalyzer` Families (the 4-ID precedent); detail pending. | The polarization-instrument modelling. |
+| MAG-1 | Blocks-go-live | The MAG magnet field (14 T assumed), its cryogen, and its control / ramp interface. | A 14 T superconducting `Magnet` (the 4-ID loose Family); field and control pending. | The magnet modelling. |
 | SAMPLE-1 | Nice-to-have | The MAG sample-hexapod and PI-piezo geometry. | A `Hexapod` + `LinearStage` piezos; geometry pending. | The MAG sample modelling. |
 | TEMP-1 | Nice-to-have | The CryoCon / Lakeshore / LSCI sensor / setpoint handles. | `TemperatureController` controllers; cryogenic cooling. | The temperature-control modelling. |
 

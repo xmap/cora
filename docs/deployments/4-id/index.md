@@ -1,10 +1,10 @@
-# 4-ID POLAR
+# 4-ID
 
-*Polarization and magnetic-scattering beamline at APS. This page walks the operational core CORA models today across four stations. It is a reverse-engineered first cut, not yet a running model.*
+*Polarization and magnetic-scattering beamline at APS (formerly branded POLAR). This page walks the operational core CORA models today across four stations. It is a reverse-engineered first cut, not yet a running model.*
 
 | Property | Value |
 | --- | --- |
-| Asset | `4-ID POLAR` (root Asset, `tier = Unit`, `parent_id = None`) |
+| Asset | `4-ID` (root Asset, `tier = Unit`, `parent_id = None`) |
 | Facility | [APS](../aps/index.md) (bound via `facility_code = "aps"`, `FacilityKind = Site`) |
 | Sector | `Sector 4` (organizational grouping; not a registered Asset) |
 | Status | First cut, reverse-engineered (operational core modelled; Raman station and the diffractometer Assembly deferred) |
@@ -12,13 +12,13 @@
 | Control stack | APS EPICS (the same floor as 2-BM); device handles bound from the beamline's instrument repo, carried confirm |
 
 !!! warning "First cut, and confirm-pending by intent"
-    This scaffold was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/polar-bits](https://github.com/BCDA-APS/polar-bits)). Unlike the 7-BM and 32-ID design-phase scaffolds, it binds the real EPICS control handles, because POLAR is operational. Every value is still carried as `confirm` until 4-ID staff verify it: a PV read from the operator's config is strong evidence, not a CORA-owned fact. What CORA needs the team to confirm is on [Open questions](questions.md).
+    This scaffold was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/polar-bits](https://github.com/BCDA-APS/polar-bits)). Unlike the 7-BM and 32-ID design-phase scaffolds, it binds the real EPICS control handles, because 4-ID is operational. Every value is still carried as `confirm` until 4-ID staff verify it: a PV read from the operator's config is strong evidence, not a CORA-owned fact. What CORA needs the team to confirm is on [Open questions](questions.md).
 
 ## What makes 4-ID different
 
-4-ID POLAR is CORA's first non-tomography APS deployment. It is unlike the 2-BM, 7-BM, and 32-ID imaging beamlines in three ways:
+4-ID is CORA's first non-tomography APS deployment. It is unlike the 2-BM, 7-BM, and 32-ID imaging beamlines in three ways:
 
-- **Polarization control.** Three diamond phase retarders set the X-ray polarization state, the capability POLAR is built around. CORA has no phase-retarder Family yet (a loose `PhaseRetarder`).
+- **Polarization control.** Three diamond phase retarders set the X-ray polarization state, the capability 4-ID is built around. CORA has no phase-retarder Family yet (a loose `PhaseRetarder`).
 - **Magnetic scattering.** Superconducting sample magnets (2 T at 4-ID-B, a high-field magnet at 4-ID-H) and low-temperature sample environments drive resonant magnetic scattering. New device classes to CORA: `Magnet` (loose) and `TemperatureController` (since graduated to a catalog Family presenting `Regulator`).
 - **Diffraction.** Huber diffractometers at 4-ID-G replace the tomography stage with a multi-circle goniometer and reciprocal-space (hklpy2) coordination, a shape CORA models as an Assembly, not yet built.
 
@@ -55,7 +55,7 @@ The cross-cutting reference view is the [Inventory](inventory.md): the planned A
 
 ## Techniques
 
-[Techniques](techniques.md): what the modelled part of 4-ID is designed to do, as intent. Each is a portable [Catalog](../../catalog/methods.md) Method that an APS [Practice](../aps/index.md#the-techniques-adapted-here) would adapt. POLAR's techniques (diffraction, magnetic scattering, dichroism) are new to CORA's imaging-heritage catalog and render unlinked, carried pending.
+[Techniques](techniques.md): what the modelled part of 4-ID is designed to do, as intent. Each is a portable [Catalog](../../catalog/methods.md) Method that an APS [Practice](../aps/index.md#the-techniques-adapted-here) would adapt. 4-ID's techniques (diffraction, magnetic scattering, dichroism) are new to CORA's imaging-heritage catalog and render unlinked, carried pending.
 
 ## Governance
 

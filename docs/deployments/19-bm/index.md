@@ -1,6 +1,6 @@
-# 19-BM-FACT
+# 19-BM
 
-*Planned filtered white-beam bending-magnet CT beamline at APS Sector 19, built for high-throughput autonomous tomography with robotic sample handling. This page walks the beamline as it is designed; everything here is a Final Design Report specification, not a commissioned measurement.*
+*Planned filtered white-beam bending-magnet CT beamline at APS Sector 19 (formerly branded FACT, Fast Autonomous Computed Tomography), built for high-throughput autonomous tomography with robotic sample handling. This page walks the beamline as it is designed; everything here is a Final Design Report specification, not a commissioned measurement.*
 
 | Property | Value |
 | --- | --- |
@@ -11,11 +11,11 @@
 | Control stack | EPICS (APS standard); PV names to be assigned |
 
 !!! warning "Design phase"
-    19-BM-FACT was under construction when the FDR was written. Every value on these pages is a design specification, carried as `confirm` until the beamline team verifies it. The things CORA still needs the team to confirm are collected on [Open questions](questions.md).
+    19-BM was under construction when the FDR was written. Every value on these pages is a design specification, carried as `confirm` until the beamline team verifies it. The things CORA still needs the team to confirm are collected on [Open questions](questions.md).
 
 ## The beamline
 
-19-BM-FACT is a sibling of the operational [2-BM](../2-bm/index.md): both are APS bending-magnet, indirect-detection, micron-CT beamlines. 19-BM differs in three ways that shape the model: it is filtered **white-beam only** (no monochromator or mirror optics, so the spectrum is set by filter selection), it runs in **three enclosures** (a front-end optics enclosure, a pure shielded transport, and the endstation), and it is built for **autonomous high-throughput operation** with a robotic sample changer.
+19-BM is a sibling of the operational [2-BM](../2-bm/index.md): both are APS bending-magnet, indirect-detection, micron-CT beamlines. 19-BM differs in three ways that shape the model: it is filtered **white-beam only** (no monochromator or mirror optics, so the spectrum is set by filter selection), it runs in **three enclosures** (a front-end optics enclosure, a pure shielded transport, and the endstation), and it is built for **autonomous high-throughput operation** with a robotic sample changer.
 
 Along the beam, in order:
 
