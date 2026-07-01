@@ -79,6 +79,14 @@ def build_candidate_dict(
             "facility": facility,
             "tier": "Unit",
             "source": "unknown-pending-confirmation",
+            # Badge axes: starting defaults for a freshly reverse-engineered
+            # candidate. maturity=model (an operating beamline modelled off the
+            # roadmap), evidence=controls_config (the bits / OnlineXML / MXCuBE
+            # sources all carry real per-device handles), coverage=partial (a
+            # first cut). Revise on confirmation.
+            "maturity": "model",
+            "evidence": "controls_config",
+            "coverage": "partial",
         },
         "enclosures": [
             {
