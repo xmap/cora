@@ -16,7 +16,7 @@
 | Storage ring | CESR, 768 m circumference | https://en.wikipedia.org/wiki/Cornell_High_Energy_Synchrotron_Source |
 | Ring energy | ~6 GeV, single-beam operation for light-source use (facility-seed figure; the collider-era CESR ran 3.5-12 GeV center-of-mass) | starting-context seed **[partly verified]**; https://en.wikipedia.org/wiki/Cornell_Electron_Storage_Ring |
 | Beamline layout | 7 beamlines / ~8 experimental stations post-upgrade (roster below) | https://www.chess.cornell.edu/users/beamlines |
-| Upgrade | CHESS-U: replaced ~one-sixth of CESR with modern multibend achromats; single-beam operation; horizontal emittance ~30 nm-rad; x-rays ~20-150 keV | https://www.chess.cornell.edu/chess-u |
+| Upgrade | CHESS-U: replaced ~one-sixth of CESR with modern multibend achromats; single-beam operation; horizontal emittance ~30 nm-rad (page states "~30 nanometers"; emittance unit is nm-rad); x-rays ~20-150 keV | https://www.chess.cornell.edu/chess-u |
 | Upgrade timeline | CHESS-U completed 2018 (dark period 2018, resumed ops thereafter) | https://www.chess.cornell.edu/chess-u |
 
 **[partly verified]** CHESS is a US high-energy storage-ring light source operated by Cornell/CLASSE on the 768 m CESR. The 2018 CHESS-U upgrade moved CESR to single-beam operation with a multibend-achromat arc, ~30 nm-rad emittance, and a high-energy (~20-150 keV) x-ray program. The exact post-upgrade beam energy and current are the one snapshot fact public pages did not settle cleanly (collider-era figures dominate the general references); the ~6 GeV seed figure is carried **[partly verified]** and routed to staff (Q1).
@@ -36,7 +36,7 @@
 | Structural Materials Beamline (SMB) | 1A3 (id1a3), 1A2 | high-energy diffraction microscopy, tomography, powder/rotation diffraction; mono + white beam | 40-80 keV (mono); 50-200+ keV (white) | firewalled | SPEC (device config internal) | https://www.chess.cornell.edu/users/beamlines |
 | PIPOXS | 2A | X-ray spectroscopy (XAS) of geometric + valence electronic structure | 3.5-58 keV | firewalled | SPEC (internal) | https://www.chess.cornell.edu/users/beamlines |
 | FAST | 3A (id3a) | time-resolved diffraction of structural-metals manufacturing processes | 20-70 keV | firewalled | SPEC (internal) | https://www.chess.cornell.edu/users/beamlines |
-| Functional Materials Beamline (FMB) | 3B (id3b) | SAXS/WAXS microscopy, radiography, phase-contrast imaging, fluorescence microscopy | 9-29 keV | firewalled | SPEC (internal) | https://www.chess.cornell.edu/users/beamlines |
+| Functional Materials Beamline (FMB) | 3B (id3b) | SAXS/WAXS microscopy, radiography, phase-contrast imaging, tomography, fluorescence microscopy | 9-29 keV | firewalled | SPEC (internal) | https://www.chess.cornell.edu/users/beamlines |
 | QM2 | 4B (id4b) | quantum-materials single-crystal diffraction | 6-52 keV | firewalled | SPEC (internal) | https://www.chess.cornell.edu/users/beamlines |
 | High Magnetic Field (HMF) | ID5 | scattering / spectroscopy in fields up to 20 T | 2.7-40 keV (Si111); 20-70 keV (Si220) | firewalled | SPEC (internal) | https://www.chess.cornell.edu/users/beamlines |
 | XBio (BioSAXS 7A1; FlexX 7B2) | 7A1, 7B2 | BioSAXS + high-pressure biophysics (7A1); macromolecular / serial / high-pressure crystallography (7B2) | 8-15 keV (7A1); 9-16 keV (7B2) | firewalled | SPEC (internal); MX likely a dedicated MX stack | https://www.chess.cornell.edu/users/beamlines |

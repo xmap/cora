@@ -18,7 +18,7 @@
 | Beam current | 250-400 mA | https://pal.postech.ac.kr/ko/pls/saveRing.do |
 | Emittance | 5.8 nm-rad (coupling ~1 %) | https://pal.postech.ac.kr/ko/pls/saveRing.do |
 | Bunch length / energy spread | 16 ps / 0.1 % | https://pal.postech.ac.kr/ko/pls/saveRing.do |
-| Insertion devices | 19 total: 12 in-vacuum planar undulators, 4 elliptically-polarized undulators, 2 out-vacuum planar undulators, 1 multipole wiggler | https://pal.postech.ac.kr/ko/pls/saveRing.do |
+| Insertion devices | 19 total: 12 in-vacuum planar undulators, 4 elliptically-polarized undulators, 2 multipole wigglers, 1 out-vacuum planar undulator | https://pal.postech.ac.kr/ko/pls/saveRing.do |
 | Beamline count | ~35 operating ports / endstations (map below) | https://pal.postech.ac.kr/ko/intro/plsbeamLineMap.do |
 | Upgrade | PLS-II: 2 GeV -> 3 GeV upgrade, new lattice, top-up injection (completed ~2011-2012) | https://doi.org/10.1080/08940886.2013.812448 |
 | Sibling facility | PAL-XFEL (superconducting-free-electron-laser sibling, separate machine) | https://pal.postech.ac.kr |

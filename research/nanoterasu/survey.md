@@ -44,8 +44,8 @@ What *is* modellable from public source is the **Tier-1 layer**: the roster, tec
 | BL08U | coalition (PhoSIC) | Soft X-ray XAS + XPS; AP-XPS; operando SX-XAFS | 180-2000 eV | TEY / partial-fluorescence-yield modes | firewalled | [BL08U](https://www.phosic.or.jp/equipment/BL08U/e/info_BL08U.html) |
 | BL08W (XRD / XAFS / SAXS branches) | coalition (PhoSIC) | Powder XRD, 2D mapping, in-situ; XAFS; SAXS | 17.5 keV or 28.5 keV (XRD) | Hamamatsu C14406DK-2918 flat panel; SDD XSDD30 | firewalled | [BL08W-XRD](https://www.phosic.or.jp/equipment/BL08W_XRD/e/info_BL08W_XRD.html) |
 | BL09U | coalition (PhoSIC) | HAXPES + macromolecular crystallography end station (MX-ES) | 5-15 keV (HAXPES fixed 6 keV) | Scienta Omicron electron analyzer | firewalled | [BL09U](https://www.phosic.or.jp/equipment/BL09U/e/info_BL09U.html) |
-| **BL09W** | coalition (PhoSIC) | **White-beam wide-field CT, white-beam micro-CT, 4D-CT** | white beam 4-30 keV (peak ~20 keV) | Hamamatsu C16240-20UP CMOS; LuAG:Ce 0.2 mm scintillator; 4.6 um px | firewalled | [BL09W](https://www.phosic.or.jp/equipment/BL09W/e/info_BL09W.html) |
-| **BL10U** | coalition (PhoSIC) | **Monochromatic micro-CT**, USAXS, XPCS, X-ray ptychography | 2.1-18.3 keV (CT 6-18.3 keV, typ. 8.3 / 15) | Hamamatsu AA-51 / ORCA-Flash 4.0, ~0.5 um px; ~1 um res, 1801 proj / 180 deg | firewalled | [BL10U](https://www.phosic.or.jp/equipment/BL10U/e/info_BL10U.html) |
+| **BL09W** | coalition (PhoSIC) | **White-beam wide-field CT, white-beam micro-CT, 4D-CT** | white beam 4-30 keV (peak ~20 keV); flux ~3.0e16 cps (calculated, per page) | Hamamatsu C16240-20UP CMOS; LuAG:Ce 0.2 mm scintillator; 4.6 um px | firewalled | [BL09W](https://www.phosic.or.jp/equipment/BL09W/e/info_BL09W.html) |
+| **BL10U** | coalition (PhoSIC) | **Monochromatic micro-CT**, USAXS, XPCS, X-ray ptychography | 2.1-18.3 keV (CT 6-18.3 keV, typ. 8.3 / 15) | Hamamatsu AA-51 / ORCA-Flash 4.0, ~0.5 um detector px (0.65 um CT-measured); ~1 um res, 1801 proj / 180 deg | firewalled | [BL10U](https://www.phosic.or.jp/equipment/BL10U/e/info_BL10U.html) |
 | BL14U | coalition (PhoSIC) | Soft X-ray XAS + XMCD; STXM / soft X-ray microscopy | 200-1400 eV (focused 600-1400) | transmission + TEY; focus <=100 nm; 8 T field | firewalled | [BL14U](https://www.phosic.or.jp/equipment/BL14U/e/info_BL14U.html) |
 
 **Strongest next picks for CORA's growth ladder (imaging/tomography-leaning):**
@@ -56,7 +56,7 @@ What *is* modellable from public source is the **Tier-1 layer**: the roster, tec
 
 The soft-X-ray photoemission/RIXS cluster (BL02U, BL06U, BL07U, BL13U, BL08U, BL14U) is rich but off CORA's tomography ladder; it is where a *photoemission* modeling axis would eventually be earned (twin of NSLS-II ESM / Diamond I05), not a first pick.
 
-**Every value above is a hardware-page fact, carried `confirm` until staff verify it. No PV, controller, or device handle appears here because none is public.**
+**Every value above is a published hardware-page fact (source-backed, not inferred); `confirm` here means "verify currency with staff," a lower bar than the genuinely `[unconfirmed]` control stack in section 3. No PV, controller, or device handle appears here because none is public.**
 
 **Identifier-scheme note.** NanoTerasu names beamlines `BL<nn><letter>` where the letter encodes the source type: `U` = undulator, `W` = wiggler/white-beam (BL08W, BL09W), and the same port can fan into named branches (BL08W splits into XRD / XAFS / SAXS branch stations; BL07U into HORNET / NanoESCA / SCORPIUS). This differs from the APS `sector.station` scheme the pilot assumes on two axes: the source-type letter is part of the identifier, and a single `BL` port hosts multiple co-equal branch endstations. Both are descriptor / identifier-scheme differences to model, not hardware differences. **[verified]** (from the beamline-page URL scheme and branch listings).
 

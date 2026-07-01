@@ -16,7 +16,7 @@
 | Ring energy | up to 1.7 GeV | https://en.wikipedia.org/wiki/BESSY |
 | Circumference | ~240 m | https://en.wikipedia.org/wiki/BESSY |
 | Operational since | 1998 | https://en.wikipedia.org/wiki/BESSY |
-| Beamline count | ~46 beamlines | https://en.wikipedia.org/wiki/BESSY |
+| Beamline count | ~46 beamlines (Wikipedia); the HZB catalog enumerates more stations (~65), a beamline-vs-station granularity difference | https://en.wikipedia.org/wiki/BESSY , https://www.helmholtz-berlin.de/user/infrastructure-at-hzb/bessy-ii/beamlines---stations/ |
 | Fill modes | multibunch (~350 bunches), single-bunch, low-alpha | https://en.wikipedia.org/wiki/BESSY |
 | Successor | BESSY III, 4th-gen soft/tender X-ray "Materials Discovery Facility" | https://www.helmholtz-berlin.de/media/landing/bessy3/index.html |
 | BESSY III timeline | construction 2032-2033; start operation 2038+ (design/consultation 2027-2029) | https://www.helmholtz-berlin.de/media/landing/bessy3/index.html |
@@ -41,7 +41,7 @@ Beamline roster from the HZB "Beamlines & Stations" catalog. Imaging / tomograph
 | TXM@U41 | X-ray microscopy + tomography, fluorescence imaging | 180-1800 eV (soft), 700-2800 eV (tender) | not identified in public hz-b repos | HZB catalog |
 | MAXYMUS | scanning X-ray microscopy, NEXAFS, magnetic dichroism | 200-1900 eV | not identified in public hz-b repos | HZB catalog |
 | MYSTIIC | X-ray microscopy, in-situ catalyst imaging | 250-2500 eV | not identified in public hz-b repos | HZB catalog |
-| SPEEM | photoemission electron + X-ray microscopy, time-resolved | 100-1800 eV | `electronAnalyser` AD driver (generic) | HZB catalog |
+| SPEEM | photoemission electron + X-ray microscopy, time-resolved | 100-1800 eV | generic `electronAnalyser` AD driver exists; per-beamline binding to SPEEM is inference [unconfirmed] | HZB catalog |
 | SMART | X-ray microscopy, PEEM, LEED/electron diffraction | unspecified | not identified in public hz-b repos | HZB catalog |
 | MX 14.1 / 14.2 / 14.3 | macromolecular crystallography | 5-15.5 keV | not in public hz-b repos | HZB catalog |
 | Diffraction@KMC-2 | diffraction / crystallography | 4-15 keV | possibly `dcm.py` family | HZB catalog |
@@ -51,7 +51,7 @@ Beamline roster from the HZB "Beamlines & Stations" catalog. Imaging / tomograph
 | IRIS | IR / THz spectroscopy | 0.0006-1 eV | not identified in public hz-b repos | HZB catalog |
 | PEAXIS | RIXS + photoemission | soft X-ray | not identified in public hz-b repos | HZB catalog |
 
-(Roster is a representative slice of the ~46-beamline catalog, biased toward imaging/microscopy and the lines with a plausible public control handle; it is not the full list. Read the HZB catalog for the complete roster.)
+(Roster is a representative slice, biased toward imaging/microscopy and the lines with a plausible public control handle; it is not the full list. The two public counts disagree at the beamline-vs-station granularity: Wikipedia cites ~46 beamlines, while the HZB catalog enumerates ~65 distinct instruments/stations. Read the HZB catalog for the complete roster.)
 
 **Strongest next picks for CORA's growth ladder.** The pilot ladder (APS 2-BM -> APS imaging -> MAX IV) is imaging/tomography-leaning, so the natural BESSY II entry points are the tomography lines:
 
@@ -104,7 +104,7 @@ All public HZB control source is on **GitHub** under the single org [`hz-b`](htt
 | [`kiwi-scan`](https://github.com/hz-b/kiwi-scan) | current modular YAML-configured EPICS scan framework (active 2026) | https://github.com/hz-b/kiwi-scan |
 | [`PyDevice`](https://github.com/hz-b/PyDevice) | EPICS-to-Python soft IOC device support | https://github.com/hz-b/PyDevice |
 | [`ADAndor`](https://github.com/hz-b/ADAndor), [`electronAnalyser`](https://github.com/hz-b/electronAnalyser) | EPICS areaDetector drivers (Andor CCD, Scienta analyser) | https://github.com/hz-b |
-| [`pmacpy`](https://github.com/hz-b/pmacpy) | Delta Tau PMAC motion controller tools | https://github.com/hz-b/pmacpy |
+| [`pmacpy`](https://github.com/hz-b/pmacpy) | PMAC motion controller tools (repo says "PMAC"; Delta Tau is the maker, inferred [partly verified]) | https://github.com/hz-b/pmacpy |
 | [`phoebus`](https://github.com/hz-b/phoebus), [`phoebusalarm`](https://github.com/hz-b/phoebusalarm) | CS-Studio / Phoebus operator GUI + alarm config | https://github.com/hz-b |
 | `bact-*`, `pamila`, `bact-twin-*` | accelerator/machine control + digital twin (out of beamline scope) | https://github.com/hz-b |
 | [`NeXus_data_examples`](https://github.com/hz-b/NeXus_data_examples), [`2026_BESSYII_Datathon`](https://github.com/hz-b/2026_BESSYII_Datathon) | NeXus conversion examples + FAIR-data training | https://github.com/hz-b |

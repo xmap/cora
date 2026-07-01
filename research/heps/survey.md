@@ -61,7 +61,7 @@ The phase-I roster below is the modellable set at the ROSTER level (identity, te
 
 None of these is device-modellable now; they are the beamlines to prioritize for a staff conversation, because a modeling decision for HEPS necessarily starts from an ask-staff device inventory, not a source read.
 
-**Identifier-scheme note:** HEPS names beamlines by a facility name plus an insertion-device/bending-magnet port ID: `ID##` for insertion-device beamlines (ID02, ID05, ID07, ID08, ID09, ID19, ID21, ID23, ID30, ID31, ID33, ID41, ID42, ID46) and `BM##` for bending-magnet beamlines (BM44). This is a straddle-line/port-number scheme (like the ESRF `ID##`/`BM##` convention), and differs from both the APS `sector.station` scheme the pilot assumes and the Diamond `I##`/`B##` scheme. This is a descriptor / identifier-scheme difference to model, not a hardware difference. **[verified]**
+**Identifier-scheme note:** HEPS names beamlines by a facility name plus an insertion-device/bending-magnet port ID: `ID##` for insertion-device beamlines (ID02, ID05, ID07, ID08, ID09, ID19, ID21, ID23, ID30, ID31, ID33, ID41, ID42, ID46) and `BM##` for bending-magnet beamlines (BM44). This is a port-number scheme observable directly from the roster (resembling the ESRF `ID##`/`BM##` convention [partly verified: the port-ID pattern is sourced from the roster; the ESRF analogy is analyst inference, not a facility claim]), and differs from both the APS `sector.station` scheme the pilot assumes and the Diamond `I##`/`B##` scheme. This is a descriptor / identifier-scheme difference to model, not a hardware difference. The `ID##`/`BM##` port IDs are **[verified]**.
 
 ---
 
