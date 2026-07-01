@@ -24,9 +24,14 @@ They arrive pre-validated from a self-validated `SteeringAdvice` (confidence
 in [0,1], rationale bounded), so the decider passes them through rather than
 re-validating. `confidence_source` is the typed `DecisionConfidenceSource`,
 matching the Decision record so the two audit homes stay type-faithful.
+`advised_next_point` is the coordinate the brain advised for the next pass
+(a `SteeringPoint.coordinates` map), recorded so a finished GP-steered run's
+decision trail is complete (TIER-1 replay; recording only, no re-seed).
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from cora.shared.decision_signals import DecisionConfidenceSource
@@ -46,3 +51,4 @@ class EndProcedureIteration:
     confidence_source: DecisionConfidenceSource | None = None
     alternatives: tuple[str, ...] = ()
     model_ref: str | None = None
+    advised_next_point: Mapping[str, Any] | None = None

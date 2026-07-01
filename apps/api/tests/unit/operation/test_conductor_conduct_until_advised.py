@@ -20,6 +20,7 @@ Asserted properties:
     the loop aborts with the brain's error_class, never an uncaught raise
 """
 
+from collections.abc import Mapping
 from uuid import uuid4
 
 import pytest
@@ -162,6 +163,13 @@ async def test_conduct_until_advised_measure_then_stop_seeds_second_pass() -> No
     assert brain.received_evidence[1].observations[1].point.coordinates[
         _MOTOR_ADDR
     ] == pytest.approx(3.0)
+    # TIER-1 replay: the advised coordinate is recorded on the iteration event.
+    # Pass 1 advised Measure -> records the point it pointed to (motor=3.0);
+    # pass 2 advised Stop -> records None (a Stop carries no next_point).
+    point_1 = transcript.end_iteration_provenance[0]["advised_next_point"]
+    assert isinstance(point_1, Mapping)
+    assert point_1[_MOTOR_ADDR] == pytest.approx(3.0)
+    assert transcript.end_iteration_provenance[1]["advised_next_point"] is None
 
 
 @pytest.mark.unit

@@ -220,17 +220,24 @@ async def test_conduct_until_advised_redrive_under_grid_walk_reproduces_identica
 
 
 @pytest.mark.unit
-def test_conduct_until_advised_replay_determinism_needs_no_recorded_next_point() -> None:
-    """The iteration carriers record NO advised coordinate; determinism is intrinsic.
+def test_conduct_until_advised_iteration_carriers_record_the_advised_point() -> None:
+    """The iteration carriers record `advised_next_point` (TIER-1 replay).
 
-    conduct_until_advised reproduces identically because the brain is a pure
-    function of the evidence and the step block is pinned once, NOT because a
-    next_point was persisted. These EXACT field sets pin that scope decision (the
-    same forcing-function the projection-metadata frozenset tests use): neither
-    the EndProcedureIteration command nor the ProcedureIterationEnded event
-    carries a point/coordinate today, and adding `advised_next_point` so a replay
-    can re-seed closed passes for a NON-deterministic brain (for example gpCAM)
-    is a deferred build-#2 leg that MUST consciously update these sets.
+    Two DISTINCT reconstruction mechanisms, and this field serves the second:
+      - RE-ASK the brain (pure-function brains only; grid / sobol / in-memory):
+        re-running the loop reproduces the run because the advice is a pure
+        function of the evidence and the step block is pinned once. This is
+        unchanged and does NOT depend on any recorded coordinate.
+      - READ the recorded log (any brain, incl. a non-deterministic GP): the
+        loop now records `advised_next_point` so a finished run's decision
+        trail is reconstructable by folding events, without re-asking the
+        (non-reproducible) brain.
+
+    These EXACT field sets consciously pin the carrier shape (the same
+    forcing-function the projection-metadata frozenset tests use). TIER-1
+    landed `advised_next_point`; the deferred RESUME leg (re-seed closed passes
+    + consult the brain only at the open frontier) would add a decide-loop
+    resume entry + a ValueCaptured channel, NOT more carrier fields.
     """
     assert {f.name for f in dataclasses.fields(EndProcedureIteration)} == {
         "procedure_id",
@@ -243,6 +250,7 @@ def test_conduct_until_advised_replay_determinism_needs_no_recorded_next_point()
         "confidence_source",
         "alternatives",
         "model_ref",
+        "advised_next_point",
     }
     assert {f.name for f in dataclasses.fields(ProcedureIterationEnded)} == {
         "procedure_id",
@@ -256,4 +264,5 @@ def test_conduct_until_advised_replay_determinism_needs_no_recorded_next_point()
         "confidence_source",
         "alternatives",
         "model_ref",
+        "advised_next_point",
     }

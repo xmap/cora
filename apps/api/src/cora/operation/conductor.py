@@ -2434,6 +2434,14 @@ class Conductor:
                     confidence_source=audit.confidence_source,
                     alternatives=audit.alternatives,
                     model_ref=audit.model_ref,
+                    # TIER-1 replay: record the advised coordinate on a Measure
+                    # verdict (None on Stop) so a finished GP-steered run's
+                    # decision trail is reconstructable by reading the log.
+                    advised_next_point=(
+                        dict(advice.next_point.coordinates)
+                        if advice.next_point is not None
+                        else None
+                    ),
                 ),
                 **envelope_kwargs,
             )

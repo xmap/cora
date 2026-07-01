@@ -93,5 +93,6 @@ def decide(
             confidence_source=command.confidence_source,
             alternatives=command.alternatives,
             model_ref=command.model_ref,
+            advised_next_point=command.advised_next_point,
         )
     ]

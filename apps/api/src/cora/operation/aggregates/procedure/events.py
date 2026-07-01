@@ -481,8 +481,18 @@ class ProcedureIterationEnded:
     / `model_ref` are the advice provenance for the in-conductor audit ledger
     (from `advice_to_audit_fields`, carrying the SAME names the mapper emits).
     `confidence_source` is the typed `DecisionConfidenceSource`, matching the
-    Decision record so the two audit homes stay type-faithful on replay. All
-    default to absent: a convergence or manual end leaves them unset. The
+    Decision record so the two audit homes stay type-faithful on replay.
+
+    `advised_next_point` is the coordinate the brain advised for the NEXT pass
+    (the `SteeringPoint.coordinates` map, axis-name -> value), present on a
+    `Measure` verdict and None on `Stop` (and on every non-steered /
+    convergence iteration). Recording it completes the decision trail so a
+    finished GP-steered run is reconstructable by READING the event log (a
+    non-deterministic brain cannot be faithfully reconstructed by RE-ASKING;
+    see `decider_replayability`). TIER-1 replay is recording only: it does NOT
+    re-seed the loop on replay (that resume leg stays deferred).
+
+    All default to absent: a convergence or manual end leaves them unset. The
     evolver folds none of them (it still folds only `converged`);
     `from_stored` reads them via `.get()` so pre-existing payloads deserialize
     to the absent defaults.
@@ -499,6 +509,7 @@ class ProcedureIterationEnded:
     confidence_source: DecisionConfidenceSource | None = None
     alternatives: tuple[str, ...] = ()
     model_ref: str | None = None
+    advised_next_point: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -726,6 +737,7 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
             confidence_source=confidence_source,
             alternatives=alternatives,
             model_ref=model_ref,
+            advised_next_point=advised_next_point,
         ):
             return {
                 "procedure_id": str(procedure_id),
@@ -741,6 +753,9 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 ),
                 "alternatives": list(alternatives),
                 "model_ref": model_ref,
+                "advised_next_point": (
+                    dict(advised_next_point) if advised_next_point is not None else None
+                ),
             }
         case RecipeExpansionRecorded(
             procedure_id=procedure_id,
@@ -960,6 +975,7 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     ),
                     alternatives=tuple(payload.get("alternatives", ())),
                     model_ref=payload.get("model_ref"),
+                    advised_next_point=payload.get("advised_next_point"),
                 ),
             )
         case "RecipeExpansionRecorded":

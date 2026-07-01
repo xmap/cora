@@ -753,6 +753,7 @@ def test_to_payload_serializes_iteration_ended(converged: bool | None, reason: s
         "confidence_source": None,
         "alternatives": [],
         "model_ref": None,
+        "advised_next_point": None,
     }
 
 
@@ -778,6 +779,42 @@ def test_iteration_ended_round_trips(converged: bool | None, reason: str | None)
     )
     rebuilt = from_stored(_stored("ProcedureIterationEnded", to_payload(event)))
     assert rebuilt == event
+
+
+@pytest.mark.unit
+def test_iteration_ended_round_trips_with_advised_next_point() -> None:
+    """A steered iteration's recorded advised coordinate survives the round trip."""
+    event = ProcedureIterationEnded(
+        procedure_id=uuid4(),
+        iteration_index=2,
+        converged=None,
+        reason=None,
+        occurred_at=_NOW,
+        advised_stop=False,
+        model_ref="botorch",
+        advised_next_point={"energy": 7.2, "gap": 3.1},
+    )
+    payload = to_payload(event)
+    assert payload["advised_next_point"] == {"energy": 7.2, "gap": 3.1}
+    rebuilt = from_stored(_stored("ProcedureIterationEnded", payload))
+    assert rebuilt == event
+
+
+@pytest.mark.unit
+def test_iteration_ended_pre_tier1_stream_folds_advised_next_point_to_none() -> None:
+    """A payload written before advised_next_point existed deserializes to None."""
+    event = ProcedureIterationEnded(
+        procedure_id=uuid4(),
+        iteration_index=1,
+        converged=True,
+        reason=None,
+        occurred_at=_NOW,
+    )
+    payload = to_payload(event)
+    del payload["advised_next_point"]  # simulate a pre-TIER-1 stream
+    rebuilt = from_stored(_stored("ProcedureIterationEnded", payload))
+    assert isinstance(rebuilt, ProcedureIterationEnded)
+    assert rebuilt.advised_next_point is None
 
 
 @pytest.mark.unit

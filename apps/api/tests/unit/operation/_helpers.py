@@ -278,6 +278,7 @@ def _make_handlers(transcript: Transcript) -> dict[str, object]:
                 "alternatives": command.alternatives,
                 "model_ref": command.model_ref,
                 "reason": command.reason,
+                "advised_next_point": command.advised_next_point,
             }
         )
 
