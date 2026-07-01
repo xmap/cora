@@ -60,11 +60,19 @@ _FORWARD_ONLY_MODEL_REFS = frozenset(
         "botorch",  # GP fit + acquisition: not bit-reproducible across environments
     }
 )
-"""`model_ref`s whose advice is NOT bit-reproducible on re-ask.
+"""`model_ref`s whose advice is NOT bit-reproducible on RE-ASK.
 
-A run that any of these brains decided is a fresh-forward-run artifact: a
-replay that re-asks the brain could diverge, so such a run must be treated as
-non-replayable until the recorded-decision leg lands.
+"forward-only" here means NOT re-ask-reproducible -- re-running the brain over
+the same evidence may diverge (GP fit + acquisition are not bit-reproducible
+across BLAS / threading / hardware / version). It is DISTINCT from "not
+recorded": TIER-1 replay records the brain's advised_next_point on the
+iteration event + surfaces it in the iteration projection, so a finished
+GP-steered run IS reconstructable by READING the recorded trail. This set
+stays as-is because the classifier judges the RE-ASK path (still unsafe); a
+run is not reclassified replay-safe just because the decision is recorded.
+Flipping a ref to replay-safe is earned only when a consumer RE-SEEDS the
+recorded point on replay instead of re-asking (the deferred resume leg:
+decide-loop resume entry + ValueCaptured channel).
 """
 
 _CLASSIFIED_MODEL_REFS = _REPLAY_SAFE_MODEL_REFS | _FORWARD_ONLY_MODEL_REFS
