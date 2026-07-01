@@ -91,6 +91,47 @@ async def test_botorch_proposes_point_within_bounds() -> None:
     assert advice.model_ref == "botorch"
 
 
+async def test_botorch_advice_carries_fit_diagnostics() -> None:
+    port = BoTorchDecidePort(min_observations=3)
+    advice = await port.advise_next(_evidence(_maximize(), _seed_obs(5)))
+    assert advice.diagnostics is not None
+    # Per-axis lengthscale + observation noise + acquisition value.
+    assert "lengthscale_x" in advice.diagnostics
+    assert "noise" in advice.diagnostics
+    assert "acquisition_value" in advice.diagnostics
+    # All values are plain floats (not tensors).
+    assert all(isinstance(v, float) for v in advice.diagnostics.values())
+
+
+async def test_botorch_diagnostics_cover_every_axis() -> None:
+    port = BoTorchDecidePort(min_observations=3)
+    space = SteeringSpace(
+        axes=(
+            SteeringAxis(name="energy", lower=0.0, upper=10.0),
+            SteeringAxis(name="gap", lower=0.0, upper=5.0),
+        )
+    )
+    obs = tuple(
+        SteeringObservation(
+            point=SteeringPoint(coordinates={"energy": float(i), "gap": float(i) / 2}),
+            measurements=(
+                Measurement(
+                    value=float(i) * (10 - i),
+                    kind="Scalar",
+                    quality="Good",
+                    produced_at=_T0,
+                    name="flux",
+                ),
+            ),
+        )
+        for i in range(5)
+    )
+    advice = await port.advise_next(_evidence(_maximize(), obs, space=space))
+    assert advice.diagnostics is not None
+    assert "lengthscale_energy" in advice.diagnostics
+    assert "lengthscale_gap" in advice.diagnostics
+
+
 async def test_botorch_handles_minimize_objective() -> None:
     port = BoTorchDecidePort(min_observations=3)
     objective = SteeringObjective(

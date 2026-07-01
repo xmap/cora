@@ -146,7 +146,7 @@ class BoTorchDecidePort:
                 f"observations to fit a GP, got {len(usable)}; seed the space first"
             )
 
-        next_point, acq_value = self._propose(
+        next_point, acq_value, diagnostics = self._propose(
             evidence.objective, evidence.space, names, usable, target
         )
         return SteeringAdvice(
@@ -154,6 +154,7 @@ class BoTorchDecidePort:
             next_point=SteeringPoint(coordinates=dict(zip(names, next_point, strict=True))),
             rationale=(f"GP-BO over {len(usable)} observations; acquisition value {acq_value:.4g}"),
             model_ref=_MODEL_REF,
+            diagnostics=diagnostics,
         )
 
     async def aclose(self) -> None:
@@ -167,11 +168,14 @@ class BoTorchDecidePort:
         names: list[str],
         usable: list[SteeringObservation],
         target: str,
-    ) -> tuple[list[float], float]:
-        """Fit the GP and optimize the acquisition; return (point, acq_value).
+    ) -> tuple[list[float], float, dict[str, float]]:
+        """Fit the GP and optimize the acquisition; return (point, acq_value, diagnostics).
 
-        All torch / botorch use is local to this method so the heavy imports
-        stay off the module load path.
+        `diagnostics` is the fitted model's summary scalars (per-axis
+        lengthscales, output scale, observation noise) plus the acquisition
+        value, for the caller's audit logbook. All torch / botorch use is
+        local to this method so the heavy imports stay off the module load
+        path.
         """
         import torch
         from botorch.fit import fit_gpytorch_mll
@@ -219,7 +223,8 @@ class BoTorchDecidePort:
         if candidate.numel() == 0:  # pragma: no cover  # optimizer always returns q>=1 rows
             raise DecideAdviceMalformedError("acquisition optimizer returned no candidate")
         point = [float(v) for v in candidate.view(-1)]
-        return point, float(acq_value)
+        diagnostics = _fit_diagnostics(model, names, float(acq_value))
+        return point, float(acq_value), diagnostics
 
 
 def _acquisition_for(model: Any, train_x: Any) -> Any:
@@ -235,6 +240,36 @@ def _acquisition_for(model: Any, train_x: Any) -> Any:
     from botorch.acquisition.logei import qLogNoisyExpectedImprovement
 
     return qLogNoisyExpectedImprovement(model=model, X_baseline=train_x)
+
+
+def _fit_diagnostics(model: Any, names: list[str], acq_value: float) -> dict[str, float]:
+    """The fitted GP's summary scalars, for the caller's audit logbook.
+
+    Reads the learned hyperparameters off the fitted `SingleTaskGP`: a
+    per-axis lengthscale (in the Normalize-transformed input space) from the
+    ARD kernel, and the observation noise, plus the acquisition value of the
+    chosen point. (BoTorch 0.18's `SingleTaskGP` default `covar_module` is a
+    bare ARD `RBFKernel` with no `ScaleKernel` wrapper, so there is no output
+    scale to read.) Keys are this adapter's private audit vocabulary; they
+    are opaque scalar breadcrumbs the caller records but never interprets, so
+    they never appear as `DecidePort` surface identifiers.
+
+    Best-effort by design: hyperparameter extraction reaches into GPyTorch
+    module internals whose exact attribute layout shifts across versions (the
+    ScaleKernel wrapper came and went; the lengthscale path may move again).
+    A shape / attribute surprise degrades to just the acquisition value
+    rather than failing the whole advice, because the audit trail must never
+    be the reason a steered pass aborts.
+    """
+    diagnostics: dict[str, float] = {"acquisition_value": acq_value}
+    try:
+        lengthscale = model.covar_module.lengthscale.detach().view(-1)
+        for axis_index, axis_name in enumerate(names):
+            diagnostics[f"lengthscale_{axis_name}"] = float(lengthscale[axis_index])
+        diagnostics["noise"] = float(model.likelihood.noise_covar.noise.detach().view(-1)[0])
+    except (AttributeError, IndexError, RuntimeError):  # pragma: no cover  # version-drift guard
+        pass
+    return diagnostics
 
 
 def _require_supported_objective(objective: SteeringObjective) -> None:
