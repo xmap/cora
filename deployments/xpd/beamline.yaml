@@ -28,6 +28,9 @@
 # i03 / i15-1 autonomous-loop shape (ROBOT-1).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: XPD
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 28"          # PV namespace XF:28ID*

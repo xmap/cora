@@ -56,6 +56,9 @@
 # (CXI/XPP/XCS/MEC/TMO/RIX) that share the linac (TOPO-1).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: LCLS-MFX
   facility: slac
   tier: Unit

@@ -38,6 +38,9 @@
 # docs/deployments/i13-1/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: I13-1
   facility: diamond            # Diamond Site (facility_code: diamond)
   sector: "Sector 13 (I13 coherence branch)"   # PV prefix BL13J

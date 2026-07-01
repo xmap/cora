@@ -70,6 +70,9 @@
 # source (TOPO-1); the disabled stages (DISABLED-1).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: Cristallina
   facility: psi
   tier: Unit

@@ -57,6 +57,9 @@
 # docs/deployments/i19/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: I19
   facility: diamond            # Diamond Site (facility_code: diamond)
   sector: "Sector 19"          # PV zones BL19I (optics + both hutches); SR19I (undulator)

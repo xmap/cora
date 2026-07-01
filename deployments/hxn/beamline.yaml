@@ -24,6 +24,9 @@
 # linear-zone crossed pair, not a 2D circular Fresnel optic).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: HXN
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 3"           # PV namespace XF:03ID*

@@ -30,6 +30,9 @@
 # sibling deployment (the diagnostic screens reuse the loose Screen).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: BMM
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 6"           # PV namespace XF:06BM*

@@ -34,6 +34,9 @@
 # docs/deployments/manaca/questions.md.
 
 beamline:
+  maturity: model
+  evidence: narrative
+  coverage: full
   name: MANACA
   facility: sirius              # Sirius Site (facility_code: sirius)
   sector: "MANACA"

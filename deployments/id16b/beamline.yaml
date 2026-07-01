@@ -36,6 +36,9 @@
 # docs/deployments/id16b/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: ID16B
   facility: esrf               # ESRF Site (facility_code: esrf)
   tier: Unit

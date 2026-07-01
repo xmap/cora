@@ -51,6 +51,9 @@
 # docs/deployments/cms/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: CMS
   facility: nsls2              # NSLS-II Site (facility_code: nsls2)
   sector: "11-BM"             # PV zones XF:11BMA (FOE optics) / XF:11BMB (endstation)

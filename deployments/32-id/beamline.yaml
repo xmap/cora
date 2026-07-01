@@ -33,6 +33,9 @@
 # docs/deployments/32-id/questions.md.
 
 beamline:
+  maturity: design
+  evidence: narrative
+  coverage: partial
   name: 32-ID
   facility: aps                 # APS, the Site-level Facility (facility_code: aps)
   sector: "Sector 32"           # organizational label, not a registered asset

@@ -27,6 +27,9 @@
 # a pending Practice on the Site (TECH-1).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: I20-1
   facility: diamond             # Diamond Site (facility_code: diamond)
   sector: "i20-1 (EDE)"        # PV namespace BL51P* (dodal module p51, commissioning name)

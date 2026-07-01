@@ -57,6 +57,9 @@
 # share the source (TOPO-1).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: Alvra
   facility: psi
   tier: Unit

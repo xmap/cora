@@ -29,6 +29,9 @@
 # docs/deployments/i-tomcat/questions.md.
 
 beamline:
+  maturity: model
+  evidence: design_report
+  coverage: full
   name: I-TOMCAT
   facility: psi                  # PSI Site (facility_code: psi)
   sector: "X02SA"

@@ -27,6 +27,9 @@
 # docs/deployments/faxtor/questions.md.
 
 beamline:
+  maturity: model
+  evidence: narrative
+  coverage: full
   name: FAXTOR
   facility: alba                 # ALBA Site (facility_code: alba)
   sector: "BL31"

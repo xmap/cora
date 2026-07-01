@@ -32,6 +32,9 @@
 # docs/deployments/esm/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: ESM
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 21"          # PV namespace XF:21ID*

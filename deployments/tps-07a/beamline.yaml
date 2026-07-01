@@ -46,6 +46,9 @@
 # sample_exchange) recorded as Practices on the Site.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: TPS 07A
   facility: nsrrc               # NSRRC Site (facility_code: nsrrc)
   sector: "07a"                 # EPICS PV namespace 07a: (endstation at 07a-ES:)

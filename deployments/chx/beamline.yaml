@@ -31,6 +31,9 @@
 # owner-scope cohort (TECH-1).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: CHX
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 11"          # PV namespace XF:11ID*

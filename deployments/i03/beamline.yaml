@@ -42,6 +42,9 @@
 # and cryostream-gantry variants; the hutch webcam.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: I03
   facility: diamond
   tier: Unit

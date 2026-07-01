@@ -41,6 +41,9 @@
 # docs/deployments/12-id-e/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: 12-ID-E
   facility: aps                # APS Site (facility_code: aps)
   sector: "Sector 12"          # PV namespaces usxLAX / usxAERO / 12idPyFilter / usxRIO

@@ -32,6 +32,9 @@
 # TemperatureController sibling, earned across i22 / 7-BM / LIX / XFP.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: I22
   facility: diamond
   tier: Unit

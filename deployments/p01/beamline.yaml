@@ -44,6 +44,9 @@
 # docs/deployments/p01/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: P01
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P01"

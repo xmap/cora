@@ -35,6 +35,9 @@
 # docs/deployments/i24/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: I24
   facility: diamond            # Diamond Site (facility_code: diamond)
   sector: "Sector 24"          # PV namespace BL24I*

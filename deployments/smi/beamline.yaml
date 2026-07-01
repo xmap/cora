@@ -30,6 +30,9 @@
 # Runs not a new technique, and the in-situ cells are deferred (INSITU-1).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: SMI
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 12"          # PV namespace XF:12ID*

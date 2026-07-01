@@ -49,6 +49,9 @@
 # docs/deployments/2-id/questions.md.
 
 beamline:
+  maturity: design
+  evidence: narrative
+  coverage: full
   name: 2-ID
   facility: aps                 # APS, the Site-level Facility (facility_code: aps)
   sector: "Sector 2"            # organizational label, not a registered asset

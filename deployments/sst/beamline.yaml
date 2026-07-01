@@ -33,6 +33,9 @@
 # measure unit, ADR cryostat, syringe pump) are deferred (INSITU-1).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: SST
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 7"           # PV namespace XF:07ID*

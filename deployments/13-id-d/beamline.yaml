@@ -67,6 +67,9 @@
 # docs/deployments/13-id-d/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: 13-ID-D
   facility: aps                # APS Site (facility_code: aps); GSECARS CAT, sector 13
   sector: "Sector 13 (GSECARS)"

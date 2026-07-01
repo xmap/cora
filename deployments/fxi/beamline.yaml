@@ -27,6 +27,9 @@
 # Fields: see deployments/2-bm/beamline.yaml for the shared shape.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: FXI
   facility: nsls2               # NSLS-II, a Site-level Facility (facility_code: nsls2)
   sector: "Sector 18"          # organizational label; PV namespace XF:18ID*

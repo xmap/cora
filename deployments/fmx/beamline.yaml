@@ -32,6 +32,9 @@
 # strengthens but does not coin them (TECH-1; the energy_scan deferral discipline).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: FMX
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 17"          # PV namespace XF:17ID* (the 17-ID-2 branch)

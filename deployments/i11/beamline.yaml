@@ -39,6 +39,9 @@
 # Every device carries new: true + confirm: true. Families-only (no Model bindings).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: I11
   facility: diamond
   tier: Unit

@@ -35,6 +35,9 @@
 # ion-chamber fill-gas flow and the in-situ sample environment are deferred (ENV-1).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: ISS
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 8"           # PV namespace XF:08ID*

@@ -34,6 +34,9 @@
 # docs/deployments/ios/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: IOS
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 23"          # PV namespace XF:23ID*

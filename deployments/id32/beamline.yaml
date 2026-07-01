@@ -42,6 +42,9 @@
 # docs/deployments/id32/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: ID32
   facility: esrf               # ESRF Site (facility_code: esrf)
   sector: "ID32"

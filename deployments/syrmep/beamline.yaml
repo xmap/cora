@@ -47,6 +47,9 @@
 # docs/deployments/syrmep/questions.md.
 
 beamline:
+  maturity: model
+  evidence: narrative
+  coverage: full
   name: SYRMEP
   facility: elettra            # Elettra Site (facility_code: elettra)
   sector: "SYRMEP"             # organizational label, not a registered asset today

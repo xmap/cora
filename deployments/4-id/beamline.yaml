@@ -39,6 +39,9 @@
 # docs/deployments/4-id/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: 4-ID POLAR
   facility: aps                 # APS, the Site-level Facility (facility_code: aps)
   sector: "Sector 4"            # organizational label, not a registered asset

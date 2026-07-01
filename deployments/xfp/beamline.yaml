@@ -58,6 +58,9 @@
 # docs/deployments/xfp/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: XFP
   facility: nsls2              # NSLS-II Site (facility_code: nsls2)
   sector: "17-BM"             # PV zones XF:17BM (beamline) / XF:17BMA (A-branch) / FE:C17B (front-end)

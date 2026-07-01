@@ -27,6 +27,9 @@
 # docs/deployments/8-id/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: 8-ID
   facility: aps                 # APS, the Site-level Facility (facility_code: aps)
   sector: "Sector 8"            # organizational label, not a registered asset

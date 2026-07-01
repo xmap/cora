@@ -27,6 +27,9 @@
 # XANES microspectroscopy leans on the deferred energy_scan Capability (ENERGY-1).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: XFM
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 4"           # PV namespace XF:04BM* (the endstation zone is 04BMC)

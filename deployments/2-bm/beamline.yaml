@@ -25,6 +25,9 @@
 #             yet checked with 2-BM staff
 
 beamline:
+  maturity: pilot
+  evidence: live
+  coverage: full
   name: "2-BM"
   facility: aps                 # APS, a Site-level Facility (facility_code: aps)
   sector: "Sector 2"            # organizational label, not a registered asset today

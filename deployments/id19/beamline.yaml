@@ -39,6 +39,9 @@
 # docs/deployments/id19/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: ID19
   facility: esrf               # ESRF Site (facility_code: esrf)
   tier: Unit

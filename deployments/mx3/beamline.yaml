@@ -36,6 +36,9 @@
 # sample_exchange) recorded as Practices on the Site.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: MX3
   facility: as                  # Australian Synchrotron Site (facility_code: as)
   sector: "MX3"                 # PV namespace MX3* (storage ring at SR11*)

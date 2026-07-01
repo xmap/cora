@@ -60,6 +60,9 @@
 # docs/deployments/i06/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: I06
   facility: diamond            # Diamond Site (facility_code: diamond)
   sector: "Sector 06"          # PV zones BL06I (spine) / BL06J (i06-1) / BL06K (i06-2); SR06I (ID servos)

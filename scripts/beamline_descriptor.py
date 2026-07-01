@@ -33,6 +33,36 @@ KNOWN_TOP_KEYS: frozenset[str] = frozenset({"beamline", "enclosures", "controls"
 # Mirror of the code's DrawingSystem enum; guarded by an enum-equality test.
 DRAWING_SYSTEMS: frozenset[str] = frozenset({"ICMS", "EDMS", "DOI"})
 
+# The three badge axes every beamline declares. Orthogonal by design: maturity
+# is CORA's relationship to the beamline, evidence is where the facts came from,
+# coverage is how complete the modelled slice is. Each is a closed vocabulary,
+# guarded by an enum-mirror test so it cannot silently grow, and by a cross-axis
+# consistency test so the combinations stay logical.
+
+# maturity: CORA's relationship to the beamline.
+#   pilot  - CORA drives it live (the operational pilot).
+#   design - on CORA's roadmap, pre-live, modelled from design documents ahead
+#            of build or recommissioning.
+#   model  - off-roadmap generalization exercise on an operating beamline.
+MATURITIES: frozenset[str] = frozenset({"pilot", "design", "model"})
+
+# evidence: provenance tier of the facts, strongest to weakest.
+#   live            - verified against the running instrument.
+#   design_report   - a staff-authored technical or final design report.
+#   controls_config - public machine-readable controls with real per-device
+#                     handles (dodal, bluesky profiles, DESY OnlineXML, ESRF
+#                     BLISS Beacon, MXCuBE HardwareObjects, eco / slic, pcdshub).
+#   narrative       - facility pages or papers only; families inferred, no
+#                     per-device control handles.
+EVIDENCE_TIERS: frozenset[str] = frozenset(
+    {"live", "design_report", "controls_config", "narrative"}
+)
+
+# coverage: completeness of the modelled scope.
+#   full    - the modelled slice is the whole operational core.
+#   partial - a deliberately incomplete cut of the device or physics model.
+COVERAGES: frozenset[str] = frozenset({"full", "partial"})
+
 # The beam-path stages every subsystem group declares. Closed and generalizable
 # across beamlines: the source delivers the incident beam, the sample holds the
 # specimen, detection records the signal. Each group maps to exactly one.
@@ -157,12 +187,38 @@ class Beamline(BaseModel):
     drawing: str | None = None
     source: str | None = None
     z_span_mm: list[int] | None = None
+    maturity: str
+    evidence: str
+    coverage: str
 
     @field_validator("z_span_mm")
     @classmethod
     def _two_endpoints(cls, value: list[int] | None) -> list[int] | None:
         if value is not None and len(value) != 2:
             raise ValueError("z_span_mm must be exactly [start, end]")
+        return value
+
+    @field_validator("maturity")
+    @classmethod
+    def _known_maturity(cls, value: str) -> str:
+        if value not in MATURITIES:
+            raise ValueError(f"unknown maturity {value!r}; expected one of {sorted(MATURITIES)}")
+        return value
+
+    @field_validator("evidence")
+    @classmethod
+    def _known_evidence(cls, value: str) -> str:
+        if value not in EVIDENCE_TIERS:
+            raise ValueError(
+                f"unknown evidence {value!r}; expected one of {sorted(EVIDENCE_TIERS)}"
+            )
+        return value
+
+    @field_validator("coverage")
+    @classmethod
+    def _known_coverage(cls, value: str) -> str:
+        if value not in COVERAGES:
+            raise ValueError(f"unknown coverage {value!r}; expected one of {sorted(COVERAGES)}")
         return value
 
 

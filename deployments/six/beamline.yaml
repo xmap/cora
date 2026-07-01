@@ -34,6 +34,9 @@
 # docs/deployments/six/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: SIX
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 2"           # PV namespace XF:02ID*

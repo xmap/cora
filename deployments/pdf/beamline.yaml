@@ -39,6 +39,9 @@
 # near and a far panel for the PDF Q-range (DIST-1).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: PDF
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 28"          # PV namespace XF:28ID1*

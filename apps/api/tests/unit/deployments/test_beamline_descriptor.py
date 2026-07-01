@@ -624,6 +624,61 @@ def test_doc_catalog_markers_reference_real_catalog_models() -> None:
     assert not stale, f"catalog:models markers reference models that do not exist: {stale}"
 
 
+# ---------------------------------------------------------------------------
+# Badge axes: maturity / evidence / coverage.
+#
+# Every beamline declares three orthogonal badge axes (see beamline_descriptor
+# for the vocabularies). These guards keep the vocabulary closed (an enum-mirror
+# per axis, matching the DrawingSystem mirror above) and the combinations logical
+# (the two invariants that must hold for the axes to mean what they claim): there
+# is exactly one live pilot, and live evidence and the pilot maturity are the same
+# beamline. Evidence and coverage are otherwise free of maturity, by design: a
+# roadmap beamline can be modelled from a design report or from narrative facts,
+# and an off-roadmap model can be a partial cut, so no further cross-axis law is
+# asserted (that would encode a coincidence of today's corpus as a rule).
+# ---------------------------------------------------------------------------
+
+_BADGE_MATURITIES = frozenset({"pilot", "design", "model"})
+_BADGE_EVIDENCE = frozenset({"live", "design_report", "controls_config", "narrative"})
+_BADGE_COVERAGES = frozenset({"full", "partial"})
+
+
+def test_badge_axis_vocabularies_are_closed() -> None:
+    # Mirror guard: the schema's frozensets are the source of truth; this pins the
+    # expected vocabulary so a silent widening in the schema fails the build.
+    assert bd.MATURITIES == _BADGE_MATURITIES
+    assert bd.EVIDENCE_TIERS == _BADGE_EVIDENCE
+    assert bd.COVERAGES == _BADGE_COVERAGES
+
+
+@pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)
+def test_every_beamline_declares_valid_badge_axes(descriptor_path: Path) -> None:
+    beamline = bd.load(descriptor_path).beamline
+    assert beamline.maturity in _BADGE_MATURITIES, descriptor_path.parent.name
+    assert beamline.evidence in _BADGE_EVIDENCE, descriptor_path.parent.name
+    assert beamline.coverage in _BADGE_COVERAGES, descriptor_path.parent.name
+
+
+def test_badge_axes_are_logically_consistent() -> None:
+    beamlines = {p.parent.name: bd.load(p).beamline for p in _beamline_descriptors()}
+    pilots = sorted(name for name, b in beamlines.items() if b.maturity == "pilot")
+    live = sorted(name for name, b in beamlines.items() if b.evidence == "live")
+    assert len(pilots) == 1, f"expected exactly one live pilot, got {pilots}"
+    assert pilots == live, (
+        f"pilot maturity and live evidence must be the same beamline: pilot={pilots}, live={live}"
+    )
+
+
+def test_badge_axes_are_not_vacuous() -> None:
+    # Pin a floor so the per-descriptor check cannot pass on an empty glob, and so
+    # a bulk misclassification that flattens an axis to one value is caught: the
+    # fleet spans multiple evidence tiers and carries at least one partial cut.
+    beamlines = [bd.load(p).beamline for p in _beamline_descriptors()]
+    assert len(beamlines) >= 50
+    assert len({b.evidence for b in beamlines}) >= 3
+    assert any(b.coverage == "partial" for b in beamlines)
+
+
 def test_malformed_descriptor_raises(tmp_path: Path) -> None:
     missing_beamline = tmp_path / "no_beamline.yaml"
     missing_beamline.write_text("enclosures: []\n", encoding="utf-8")

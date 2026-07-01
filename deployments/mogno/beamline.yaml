@@ -28,6 +28,9 @@
 # the EPICS floor; Bluesky is a future migration target at the beamline (ORCH-1).
 
 beamline:
+  maturity: model
+  evidence: narrative
+  coverage: partial
   name: MOGNO
   facility: sirius
   tier: Unit

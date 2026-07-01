@@ -32,6 +32,9 @@
 # FMX, AMX has no CRL transfocator and no on-axis backlight in source.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: AMX
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
   sector: "Sector 17"          # PV namespace XF:17ID* (the 17-ID-1 branch)

@@ -18,6 +18,9 @@
 # from-source and carried as confirm (LAYOUT-1).
 
 beamline:
+  maturity: design
+  evidence: design_report
+  coverage: full
   name: TomoWISE
   facility: maxiv
   tier: Unit

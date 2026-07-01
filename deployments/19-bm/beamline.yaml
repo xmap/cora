@@ -26,6 +26,9 @@
 # FDR; they are carried as plain spec lines, not as typed drawing refs.
 
 beamline:
+  maturity: design
+  evidence: design_report
+  coverage: full
   name: 19-BM
   facility: aps
   sector: Sector 19

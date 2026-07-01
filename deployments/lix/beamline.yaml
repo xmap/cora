@@ -56,6 +56,9 @@
 # docs/deployments/lix/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: LIX
   facility: nsls2              # NSLS-II Site (facility_code: nsls2)
   sector: "16-ID"             # PV zones XF:16IDA (optics) / XF:16IDB (transport) / XF:16IDC (endstation)

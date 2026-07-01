@@ -65,6 +65,9 @@
 # commented out in eco (ENV-1).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: partial
   name: Bernina
   facility: psi
   tier: Unit

@@ -61,6 +61,9 @@
 # docs/deployments/hex/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: HEX
   facility: nsls2              # NSLS-II Site (facility_code: nsls2)
   sector: "27-ID"             # PV zones XF:27ID1 (endstation) seen in the profile collection; FOE-optics zone is CTRL-1

@@ -41,6 +41,9 @@
 # docs/deployments/p61/questions.md.
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: P61
   facility: petra-iii          # PETRA III Site (facility_code: petra-iii)
   sector: "P61"

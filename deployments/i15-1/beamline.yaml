@@ -36,6 +36,9 @@
 # webcams; sam + slits_1 + clean (skip-flagged in dodal).
 
 beamline:
+  maturity: model
+  evidence: controls_config
+  coverage: full
   name: I15-1
   facility: diamond
   tier: Unit

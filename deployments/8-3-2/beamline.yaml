@@ -40,6 +40,9 @@
 # docs/deployments/8-3-2/questions.md.
 
 beamline:
+  maturity: model
+  evidence: narrative
+  coverage: full
   name: "8.3.2"
   facility: als                  # ALS Site (facility_code: als)
   sector: "8.3.2"                # ALS beamline number; not a registered Asset
