@@ -17,24 +17,24 @@ Asset granularity: one row per stage / assembly, the device-level handle the des
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
 | Undulator | InsertionDevice | `motor/ivu_gap_ctrl/1` (pool proxy) | ivu_gap=`motor/ivu_gap_ctrl/1` (4.5-25); ivu_taper=`motor/ivu_taper_ctrl/1` | B303A | source | yes |
-| BeamlineFilters | Filter | `b303a-o/opt/flt-01-yml` | bl_filter_1=`flt-01-yml`; bl_filter_2=`b303a-o/opt/flt-02-yml` (diamond filters, diagnostics module 1) | B303A-O | optics | yes |
-| VerticalFocusingMirror | Mirror | `b303a-o/opt/mir-01-xml` | x=`mir-01-xml`; y=`mir-01-yml`; pit=`mir-01-pitml`; yaw=`mir-01-yawml` (VFM) | B303A-O | optics | yes |
-| HorizontalFocusingMirror | Mirror | `b303a-o/opt/mir-02-xml` | x=`mir-02-xml`; y=`mir-02-yml`; pit=`mir-02-pitml`; bend=`mir-02-bendml` (HFM) | B303A-O | optics | yes |
-| Monochromator | Monochromator | `b303a-o/opt/mono-xml` | x=`mono-xml`; bragg=`MONO-BRAGML` (4.0-27.46); x2per=`mono-perml`; x2pit=`mono-pitml`; x2rol=`mono-rolml`; fine x2fpit=`B303A-O/CTL/PZCU-01`; fine x2frol=`B303A-O/CTL/PZCU-02` | B303A-O | optics | yes |
-| SecondarySourceAperture | Slit | `B303A-O/opt/SLIT-01-GAPXPM` | gapx=`SLIT-01-GAPXPM`; gapy=`SLIT-01-GAPYPM`; posx=`SLIT-01-POSXPM`; posy=`SLIT-01-POSYPM` (SSA, pool pseudo-motors) | B303A-O | optics | yes |
-| NanoBPM | BeamPositionMonitor | `b303a-o/dia/bpx-01` | y=`bpx-01` (nano beam-position monitor vertical stage) | B303A-O | diagnostics | yes |
-| BeamEnergy | PseudoAxis | `pseudomotor/nanomaxenergy_ctrl/1` | energy_raw=`nanomaxenergy_ctrl/1`; energy (corrected)=`pseudomotor/nanomaxenergy_corr_ctrl/1` (Sardana energy pseudo) | B303A-O | optics | yes |
+| BeamlineFilters | Filter | `b303a-o/opt/flt-01-yml` | bl_filter_1=`flt-01-yml`; bl_filter_2=`b303a-o/opt/flt-02-yml` (diamond filters, diagnostics module 1) | B303A-O | source | yes |
+| VerticalFocusingMirror | Mirror | `b303a-o/opt/mir-01-xml` | x=`mir-01-xml`; y=`mir-01-yml`; pit=`mir-01-pitml`; yaw=`mir-01-yawml` (VFM) | B303A-O | source | yes |
+| HorizontalFocusingMirror | Mirror | `b303a-o/opt/mir-02-xml` | x=`mir-02-xml`; y=`mir-02-yml`; pit=`mir-02-pitml`; bend=`mir-02-bendml` (HFM) | B303A-O | source | yes |
+| Monochromator | Monochromator | `b303a-o/opt/mono-xml` | x=`mono-xml`; bragg=`MONO-BRAGML` (4.0-27.46); x2per=`mono-perml`; x2pit=`mono-pitml`; x2rol=`mono-rolml`; fine x2fpit=`B303A-O/CTL/PZCU-01`; fine x2frol=`B303A-O/CTL/PZCU-02` | B303A-O | source | yes |
+| SecondarySourceAperture | Slit | `B303A-O/opt/SLIT-01-GAPXPM` | gapx=`SLIT-01-GAPXPM`; gapy=`SLIT-01-GAPYPM`; posx=`SLIT-01-POSXPM`; posy=`SLIT-01-POSYPM` (SSA, pool pseudo-motors) | B303A-O | source | yes |
+| NanoBPM | BeamPositionMonitor | `b303a-o/dia/bpx-01` | y=`bpx-01` (nano beam-position monitor vertical stage) | B303A-O | source | yes |
+| BeamEnergy | PseudoAxis | `pseudomotor/nanomaxenergy_ctrl/1` | energy_raw=`nanomaxenergy_ctrl/1`; energy (corrected)=`pseudomotor/nanomaxenergy_corr_ctrl/1` (Sardana energy pseudo) | B303A-O | source | yes |
 
 ### Diffraction endstation (B303A-E02 / B303A-EH)
 
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| DiagnosticsSlitAttenuatorStack | Slit | `B303A-EH/CTL/PZCU-04` (Smaract MCS, 15 axes) | dbpm2_x/y (axis 0/1); SEH slit seh_top/bottom/left/right (axis 2-5) -> gap/pos pseudos; attenuator1-4_x (axis 6-9); diode1_x (11); polarizer pol_x/pol_y/pol_rot (axis 12-14) | B303A-EH | optics | yes |
-| FastShutterDBPM1Stack | LinearStage | `B303A-EH/CTL/PZCU-07` (Smaract, 3 axes) | fastshutter_y (axis 0); dbpm1_x (1); dbpm1_y (2) (OH2 fast shutter + first diamond BPM) | B303A-EH | optics | yes |
+| DiagnosticsSlitAttenuatorStack | Slit | `B303A-EH/CTL/PZCU-04` (Smaract MCS, 15 axes) | dbpm2_x/y (axis 0/1); SEH slit seh_top/bottom/left/right (axis 2-5) -> gap/pos pseudos; attenuator1-4_x (axis 6-9); diode1_x (11); polarizer pol_x/pol_y/pol_rot (axis 12-14) | B303A-EH | source | yes |
+| FastShutterDBPM1Stack | LinearStage | `B303A-EH/CTL/PZCU-07` (Smaract, 3 axes) | fastshutter_y (axis 0); dbpm1_x (1); dbpm1_y (2) (OH2 fast shutter + first diamond BPM) | B303A-EH | source | yes |
 | SampleStage | LinearStage | `B303A/CTL/PZCU-LC400B` (nPoint LC400, 3 axes) | sx=axis 2; sy=axis 3; sz=axis 1 (sample scanning piezos, +/-50 um) | B303A-E02 | sample | yes |
 | SampleBaseStage | LinearStage | `B303A-EH/CTL/PZCU-08` (PiezoLegs, 3 axes) | basex=axis 0; basey=axis 1; basez=axis 2 (coarse sample positioning) | B303A-E02 | sample | yes |
-| SampleKBSlit | Slit | `B303A-EH/CTL/PZCU-03` (Smaract, used axes) | skb_top/bottom/left/right (axis 0-3) -> gap/pos pseudos; pinhole_x/y/z (axis 6-8) | B303A-EH | optics | yes |
-| KBMirrorPiezo | Mirror | `B303A-EH/CTL/PZCU-01` (PI E727, 3 axes) | m1froll=axis 1; m1fpitch=axis 2; m2fpitch=axis 3 (KB mirror fine pitch/roll piezos) | B303A-EH | optics | yes |
+| SampleKBSlit | Slit | `B303A-EH/CTL/PZCU-03` (Smaract, used axes) | skb_top/bottom/left/right (axis 0-3) -> gap/pos pseudos; pinhole_x/y/z (axis 6-8) | B303A-EH | source | yes |
+| KBMirrorPiezo | Mirror | `B303A-EH/CTL/PZCU-01` (PI E727, 3 axes) | m1froll=axis 1; m1fpitch=axis 2; m2fpitch=axis 3 (KB mirror fine pitch/roll piezos) | B303A-EH | source | yes |
 | OpticalMicroscopes | Camera (?) | `b303a-e02/dia/om-01-x` (on-axis) + `b303a-e02/dia/om-02-x` (top) | oam x/y/z/zoom=`om-01-{x,y,z,zoom}`; topm x/y/z/zoom=`om-02-{x,y,z,zoom}` (sample-viewing microscopes) | B303A-E02 | sample | yes |
 | Goniometer | Goniometer | `b303a-e02/dia/gon-01-theta` | theta=`gon-01-theta`; phi=`gon-01-phi`; x1/x2/x3=`gon-01-x{1,2,3}`; y1/y2=`gon-01-y{1,2}`; z=`gon-01-z` | B303A-E02 | sample | yes |
 | Beamstop | LinearStage | `B303A-E02/DIA/SAMS-01-X` | x=`SAMS-01-X`; y=`SAMS-01-Y` | B303A-E02 | detection | yes |
@@ -52,7 +52,7 @@ Asset granularity: one row per stage / assembly, the device-level handle the des
 
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| KBMirrorPiezo | Mirror | `B303A-E01/CTL/PZCU-04` (PI E727, 3 axes) | m1pitch=axis 1; m2pitch=axis 2; m1roll=axis 3 (imaging KB fine pitch/roll) | B303A-E01 | optics | yes |
+| KBMirrorPiezo | Mirror | `B303A-E01/CTL/PZCU-04` (PI E727, 3 axes) | m1pitch=axis 1; m2pitch=axis 2; m1roll=axis 3 (imaging KB fine pitch/roll) | B303A-E01 | source | yes |
 | SampleStage | LinearStage | `B303A/CTL/IMG-02` (NI-DAC, 3 axes) | sx=axis 0; sy=axis 1; sz=axis 2 (sample scanning piezos, +/-50 um) | B303A-E01 | sample | yes |
 | SampleBaseStage | LinearStage | `B303A-E01/CTL/PZCU-02` (PiezoLegs ImgSampleStage, 3 axes) | basex/basey/basez (coarse sample positioning) | B303A-E01 | sample | yes |
 | SampleOpticsStage | LinearStage | `B303A-E01/CTL/MCS2-01` (Smaract MCS2, 11 axes) | sample tilt slt/slr/sll/slb (axis 0-3); zone-plate / grating grx/gry/grz/grip (axis 4-7); sr rotation (axis 8); aperture apx/apy (axis 9-10) | B303A-E01 | sample | yes |

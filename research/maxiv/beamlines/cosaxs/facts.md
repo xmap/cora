@@ -17,21 +17,21 @@ Asset granularity: one row per stage / assembly, the device-level handle the des
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
 | Undulator | InsertionDevice | `b-v-cosaxs-csdb-0:10000/motor/gap_ctrl/1` | ivu_gap (4.599-49.9) | B310A | source | yes |
-| BeamEnergy | PseudoAxis | `b-v-cosaxs-csdb-0:10000/pm/mono_bragg_ctrl/1` | energy (mono bragg pseudo, 5000-32000 eV) | B310A-O | optics | yes |
-| VerticalFocusingMirror1 | Mirror | `b-v-cosaxs-csdb-0:10000/b310a-o02/opt/mir-01-bend01` | bend01=`mir-01-bend01`; pit=`mir-01-pit`; row translation x=`mrch-01-x`, y=`mrch-01-y` (VFM, two-bender, first) | B310A-O02 | optics | yes |
-| VerticalFocusingMirror2 | Mirror | `b-v-cosaxs-csdb-0:10000/b310a-o02/opt/mir-02-bend01` | bend01=`mir-02-bend01`; pit=`mir-02-pit`; y=`mir-02-y` (VFM, two-bender, second) | B310A-O02 | optics | yes |
-| HorizontalFocusingMirror1 | Mirror | `b-v-cosaxs-csdb-0:10000/b310a-o02/opt/mir-03-bend01` | bend01=`mir-03-bend01`; bend02=`mir-03-bend02`; pit=`mir-03-pit` (HFM, two-bender, first) | B310A-O02 | optics | yes |
-| HorizontalFocusingMirror2 | Mirror | `b-v-cosaxs-csdb-0:10000/b310a-o02/opt/mir-04-bend01` | bend01=`mir-04-bend01`; bend02=`mir-04-bend02`; pit=`mir-04-pit`; x=`mir-04-x`; row translation y=`mrch-02-y` (HFM, two-bender, second) | B310A-O02 | optics | yes |
-| CoherenceSlit | Slit | `b-v-cosaxs-csdb-0:10000/b310a-o02/opt/slit-01-xl` | blades xl/xr/yb/yt=`slit-01-{xl,xr,yb,yt}`; gap/pos pseudos `pm/o02_v_slit1_ctrl/{1,2}` (xgap/xpos), `pm/o02_h_slit1_ctrl/{1,2}` (ygap/ypos) | B310A-O02 | optics | yes |
+| BeamEnergy | PseudoAxis | `b-v-cosaxs-csdb-0:10000/pm/mono_bragg_ctrl/1` | energy (mono bragg pseudo, 5000-32000 eV) | B310A-O | source | yes |
+| VerticalFocusingMirror1 | Mirror | `b-v-cosaxs-csdb-0:10000/b310a-o02/opt/mir-01-bend01` | bend01=`mir-01-bend01`; pit=`mir-01-pit`; row translation x=`mrch-01-x`, y=`mrch-01-y` (VFM, two-bender, first) | B310A-O02 | source | yes |
+| VerticalFocusingMirror2 | Mirror | `b-v-cosaxs-csdb-0:10000/b310a-o02/opt/mir-02-bend01` | bend01=`mir-02-bend01`; pit=`mir-02-pit`; y=`mir-02-y` (VFM, two-bender, second) | B310A-O02 | source | yes |
+| HorizontalFocusingMirror1 | Mirror | `b-v-cosaxs-csdb-0:10000/b310a-o02/opt/mir-03-bend01` | bend01=`mir-03-bend01`; bend02=`mir-03-bend02`; pit=`mir-03-pit` (HFM, two-bender, first) | B310A-O02 | source | yes |
+| HorizontalFocusingMirror2 | Mirror | `b-v-cosaxs-csdb-0:10000/b310a-o02/opt/mir-04-bend01` | bend01=`mir-04-bend01`; bend02=`mir-04-bend02`; pit=`mir-04-pit`; x=`mir-04-x`; row translation y=`mrch-02-y` (HFM, two-bender, second) | B310A-O02 | source | yes |
+| CoherenceSlit | Slit | `b-v-cosaxs-csdb-0:10000/b310a-o02/opt/slit-01-xl` | blades xl/xr/yb/yt=`slit-01-{xl,xr,yb,yt}`; gap/pos pseudos `pm/o02_v_slit1_ctrl/{1,2}` (xgap/xpos), `pm/o02_h_slit1_ctrl/{1,2}` (ygap/ypos) | B310A-O02 | source | yes |
 
 ### Experimental station (B310A-E01 / B310A-E02)
 
 | Device | Suggested family | PV prefix | Axes (component handles) | Enclosure | Stage | Confirm |
 | --- | --- | --- | --- | --- | --- | --- |
-| UHVSlit1 | Slit | `b-v-cosaxs-csdb-0:10000/b310a-e01/opt/slit-01-xr` | blades xr/xl/yt/yb=`slit-01-{xr,xl,yt,yb}` | B310A-E01 | optics | yes |
-| UHVSlit2 | Slit | `b-v-cosaxs-csdb-0:10000/b310a-e01/opt/slit-02-xr` | blades xr/xl/yt/yb=`slit-02-{xr,xl,yt,yb}` | B310A-E01 | optics | yes |
-| LastSlit | Slit | `b-v-cosaxs-csdb-0:10000/b310a-e01/opt/slit-03-xr` | blades xr/xl/yt/yb=`slit-03-{xr,xl,yt,yb}` (last slit before lens array / pinhole / sample) | B310A-E01 | optics | yes |
-| AttenuatorBeamstopUnit | Filter | `b-v-cosaxs-csdb-0:10000/b310a-e01/dia/bcu01-x1pz` | absorber pushers x1pz/x2pz/x3pz/x4pz (Al / Ti foil ladders) + beamstop bsxpz/bsypz=`bcu01-{bsxpz,bsypz}` (BCU01) | B310A-E01 | optics | yes |
+| UHVSlit1 | Slit | `b-v-cosaxs-csdb-0:10000/b310a-e01/opt/slit-01-xr` | blades xr/xl/yt/yb=`slit-01-{xr,xl,yt,yb}` | B310A-E01 | source | yes |
+| UHVSlit2 | Slit | `b-v-cosaxs-csdb-0:10000/b310a-e01/opt/slit-02-xr` | blades xr/xl/yt/yb=`slit-02-{xr,xl,yt,yb}` | B310A-E01 | source | yes |
+| LastSlit | Slit | `b-v-cosaxs-csdb-0:10000/b310a-e01/opt/slit-03-xr` | blades xr/xl/yt/yb=`slit-03-{xr,xl,yt,yb}` (last slit before lens array / pinhole / sample) | B310A-E01 | source | yes |
+| AttenuatorBeamstopUnit | Filter | `b-v-cosaxs-csdb-0:10000/b310a-e01/dia/bcu01-x1pz` | absorber pushers x1pz/x2pz/x3pz/x4pz (Al / Ti foil ladders) + beamstop bsxpz/bsypz=`bcu01-{bsxpz,bsypz}` (BCU01) | B310A-E01 | source | yes |
 | GraniteTable | LinearStage | `b-v-cosaxs-csdb-0:10000/b310a-e01/dia/tab-01-x` | x=`tab-01-x`; y=`tab-01-y` | B310A-E01 | sample | yes |
 | SampleStage | LinearStage | `b-v-cosaxs-csdb-0:10000/b310a-e01/dia/sams-04-x` | Huber sample_x=`sams-04-x` (10-290); sample_y=`sams-04-y` (10-80) | B310A-E01 | sample | yes |
 | SampleTiltStack | LinearStage | `b310a-e01/ctl/pzsscu-02` (Smaract MCS2, 6 active axes) | sz (axis 0, long linear); sx (axis 1); sy (axis 2); pinx (axis 3); piny (axis 4); sr (axis 5, rotation) | B310A-E01 | sample | yes |
