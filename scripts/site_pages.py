@@ -171,9 +171,10 @@ def _techniques(
         return []
     blocks = [
         "## The techniques adapted here",
-        f"A Practice is {site_label}'s facility-tuned form of a cross-facility [Method]({MODEL_PAGE}): "
-        "the ISA-88 Site Recipe layer. The Method names a technique abstractly in the Catalog; the "
-        f"Practice is how {run_label} runs it here. Each row links up to the Method it adapts.",
+        f"A Practice is {site_label}'s facility-tuned form of a cross-facility "
+        f"[Method]({MODEL_PAGE}): the ISA-88 Site Recipe layer. The Method names a technique "
+        "abstractly in the Catalog; the Practice is how "
+        f"{run_label} runs it here. Each row links up to the Method it adapts.",
         _table(["Practice", "Method"], active),
     ]
     if pending:
