@@ -1407,13 +1407,16 @@
 | src/cora/operation/\_recipe\_expansion/\_resolved\_steps\_replay.py                      |        7 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/operation/acquisitions.py                                                       |      116 |        2 |       26 |        4 |     95.8% |240, 338, 453-\>458, 455-\>458 |
 | src/cora/operation/adapters/\_\_init\_\_.py                                              |        0 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/adapters/\_optional\_torch.py                                         |       10 |        2 |        4 |        2 |     71.4% |    28, 34 |
 | src/cora/operation/adapters/\_tree\_hash.py                                              |       45 |        0 |       14 |        0 |    100.0% |           |
+| src/cora/operation/adapters/botorch\_decide\_port.py                                     |       90 |        1 |       24 |        2 |     97.4% |261, 281-\>280 |
 | src/cora/operation/adapters/caproto\_control\_port.py                                    |      107 |        6 |       28 |        5 |     91.9% |137-138, 167, 188-\>191, 194-\>199, 197, 221-\>223, 246-247 |
 | src/cora/operation/adapters/compute\_port\_config.py                                     |       21 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/operation/adapters/control\_port\_beam\_availability\_lookup.py                 |       49 |        2 |       14 |        2 |     93.7% |    63, 75 |
 | src/cora/operation/adapters/control\_port\_config.py                                     |       21 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/operation/adapters/control\_port\_registry.py                                   |       36 |        1 |       14 |        1 |     96.0% |       138 |
-| src/cora/operation/adapters/decide\_port\_config.py                                      |       18 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/operation/adapters/decide\_port\_config.py                                      |       36 |        0 |        8 |        0 |    100.0% |           |
+| src/cora/operation/adapters/decider\_replayability.py                                    |       14 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/operation/adapters/epics\_ca\_control\_port.py                                  |       83 |        3 |       22 |        3 |     94.3% |255, 292, 386 |
 | src/cora/operation/adapters/epics\_pva\_control\_port.py                                 |      132 |       19 |       50 |       10 |     80.8% |189, 204, 208-\>213, 211-212, 216, 221-228, 232, 236, 284-285, 401, 403, 422-\>exit |
 | src/cora/operation/adapters/fdt\_transfer\_port.py                                       |       67 |        6 |       16 |        0 |     90.4% |71-72, 86, 89-91 |
@@ -1427,6 +1430,8 @@
 | src/cora/operation/adapters/in\_memory\_transfer\_port.py                                |       50 |        1 |       10 |        1 |     96.7% |       125 |
 | src/cora/operation/adapters/local\_process\_compute\_port.py                             |       89 |       12 |       24 |        5 |     85.0% |103-104, 131, 138, 157-158, 208-211, 218, 235 |
 | src/cora/operation/adapters/postgres\_procedure\_activity\_lookup.py                     |       12 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/adapters/sobol\_decide\_port.py                                       |       40 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/operation/adapters/staged\_decide\_port.py                                      |       20 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/operation/aggregates/\_\_init\_\_.py                                            |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/aggregates/procedure/\_\_init\_\_.py                                  |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/aggregates/procedure/entries.py                                       |       26 |        0 |        4 |        0 |    100.0% |           |
@@ -2393,7 +2398,7 @@
 | src/cora/trust/routes.py                                                                 |       68 |        2 |       12 |        0 |     97.5% |   151-152 |
 | src/cora/trust/tools.py                                                                  |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **50586** | **1044** | **7262** |  **314** | **97.4%** |           |
+| **TOTAL**                                                                                | **50778** | **1047** | **7312** |  **318** | **97.4%** |           |
 
 
 ## Setup coverage badge
