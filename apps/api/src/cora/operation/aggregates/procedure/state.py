@@ -120,6 +120,16 @@ hazard observations) would land as separate constants and separate
 state fields, not as additional values for the same kind. Mirrors
 LOGBOOK_KIND_OBSERVATION from Run BC."""
 
+LOGBOOK_KIND_DIAGNOSTIC: Final = "diagnostic"
+"""Discriminator for the Procedure's GP-steering diagnostics logbook.
+
+The predicted second Procedure-side logbook kind (see the note on
+LOGBOOK_KIND_ACTIVITY): a distinct constant + distinct state field
+(`diagnostic_logbook_id`), NOT another value on the activity logbook.
+Used as the `kind` value on `ProcedureDiagnosticLogbookOpened` events. One
+Procedure has at most one diagnostics logbook (lazy open-on-first-write,
+when a learning brain first advises a steered pass)."""
+
 # Closed enum for the `step_kind` discriminator on per-step rows.
 # The setpoint / action / check core is CORA's rename of ISA-106's
 # canonical Command/Perform/Verify triplet (renamed to avoid CQRS
@@ -180,6 +190,49 @@ STEPS_LOGBOOK_SCHEMA = LogbookSchema(
         "entries_operation_procedure_activities via the ActivityStore "
         "port (no per-row event on the Procedure stream). See "
         "[[project_operation_design]]."
+    ),
+)
+
+# Schema declaration for the GP-steering diagnostics logbook. Documentation-
+# grade, same posture as STEPS_LOGBOOK_SCHEMA: declares the stable row columns
+# so projections read entry shape uniformly. The per-iteration scalar set
+# (lengthscales, noise, acquisition value) lives in the JSON `payload` column,
+# NOT declared here, both because LogbookFieldType is closed over primitives
+# and because those keys are the deciding adapter's private optimizer
+# vocabulary, deliberately kept out of the schema surface.
+DIAGNOSTIC_LOGBOOK_SCHEMA = LogbookSchema(
+    fields={
+        "iteration_index": LogbookFieldSpec(
+            type="int",
+            description=(
+                "The steered-conduct iteration this diagnostic explains; joins "
+                "to the same iteration_index on ProcedureIterationEnded."
+            ),
+        ),
+        "model_ref": LogbookFieldSpec(
+            type="string",
+            description="The deciding brain that produced the diagnostics (e.g. 'botorch').",
+        ),
+        "sampled_at": LogbookFieldSpec(
+            type="datetime",
+            description="phenomenonTime: when the brain produced the advice this row explains.",
+        ),
+        "occurred_at": LogbookFieldSpec(
+            type="datetime",
+            description="When the handler appended the entry (CORA Clock port).",
+        ),
+        "recorded_at": LogbookFieldSpec(
+            type="datetime",
+            description="When Postgres wrote the row (DEFAULT now()).",
+        ),
+    },
+    description=(
+        "Per-Procedure GP-steering diagnostics: one row per steered iteration "
+        "decided by a learning brain, carrying the fitted model's summary "
+        "scalars in a JSON payload for audit ('why did the brain advise that "
+        "point'). Rows write directly to entries_operation_procedure_diagnostics "
+        "via the DiagnosticStore port (no per-row event on the Procedure "
+        "stream)."
     ),
 )
 
@@ -1358,6 +1411,16 @@ class Procedure:
     Per the lazy-open pattern: no eager open at start_procedure,
     no Closed event (terminal Procedure.status implicitly closes
     via `ProcedureStepsLogbookClosedError`).
+    """
+    diagnostic_logbook_id: UUID | None = None
+    """Lazy-opened on first `append_diagnostics`.
+
+    None until a learning brain first advises a steered pass; populated
+    by the `ProcedureDiagnosticLogbookOpened` envelope event the handler
+    emits on the Procedure stream. Distinct from `activity_logbook_id`:
+    Activity records physical steps, Diagnostic records GP-fit provenance
+    (the second predicted Procedure-side logbook kind). Same lazy-open
+    pattern: no eager open, no Closed event.
     """
     capability_id: UUID | None = field(default=None)
     """Optional binding to the universal Capability template (Recipe

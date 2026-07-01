@@ -266,6 +266,37 @@ class ProcedureActivitiesLogbookOpened:
 
 
 @dataclass(frozen=True)
+class ProcedureDiagnosticLogbookOpened:
+    """A GP-steering diagnostics logbook was attached to this Procedure.
+
+    The second Procedure-side logbook envelope event (after
+    `ProcedureActivitiesLogbookOpened`), for the predicted second logbook
+    kind. Naming is singular (`Diagnostic`) matching Run BC's
+    `RunObservationLogbookOpened` precedent, since it carries the entry-noun
+    discriminator upfront.
+
+    Lazy open-on-first-write: emitted by the `append_diagnostics` handler the
+    first time a learning brain's diagnostics are recorded for a steered pass
+    on this Procedure, NOT by `start_procedure`. Subsequent appends find the
+    logbook already attached and skip the open-event emission.
+
+    `kind` is `LOGBOOK_KIND_DIAGNOSTIC` from state.py, distinct from the
+    activity logbook's kind and carried on a distinct state field
+    (`diagnostic_logbook_id`). `schema` declares the row shape of
+    `entries_operation_procedure_diagnostics`.
+
+    No Closed event: like the activities logbook, terminal Procedure.status
+    (Completed | Aborted | Truncated) is the implicit close signal.
+    """
+
+    procedure_id: UUID
+    logbook_id: UUID
+    kind: str
+    schema: LogbookSchema
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class ProcedureTruncated:
     """A Procedure reached its partial-data terminal (Running | Held -> Truncated).
 
@@ -519,6 +550,7 @@ ProcedureEvent = (
     | ProcedureHeld
     | ProcedureResumed
     | ProcedureActivitiesLogbookOpened
+    | ProcedureDiagnosticLogbookOpened
     | ProcedureIterationStarted
     | ProcedureIterationEnded
     | RecipeExpansionRecorded
@@ -645,6 +677,20 @@ def to_payload(event: ProcedureEvent) -> dict[str, Any]:
                 "occurred_at": occurred_at.isoformat(),
             }
         case ProcedureActivitiesLogbookOpened(
+            procedure_id=procedure_id,
+            logbook_id=logbook_id,
+            kind=kind,
+            schema=schema,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "procedure_id": str(procedure_id),
+                "logbook_id": str(logbook_id),
+                "kind": kind,
+                "schema": schema.to_dict(),
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case ProcedureDiagnosticLogbookOpened(
             procedure_id=procedure_id,
             logbook_id=logbook_id,
             kind=kind,
@@ -875,6 +921,17 @@ def from_stored(stored: StoredEvent) -> ProcedureEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
+        case "ProcedureDiagnosticLogbookOpened":
+            return deserialize_or_raise(
+                "ProcedureDiagnosticLogbookOpened",
+                lambda: ProcedureDiagnosticLogbookOpened(
+                    procedure_id=UUID(payload["procedure_id"]),
+                    logbook_id=UUID(payload["logbook_id"]),
+                    kind=payload["kind"],
+                    schema=LogbookSchema.from_dict(payload["schema"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
         case "ProcedureIterationStarted":
             return deserialize_or_raise(
                 "ProcedureIterationStarted",
@@ -942,6 +999,7 @@ __all__ = [
     "ProcedureAborted",
     "ProcedureActivitiesLogbookOpened",
     "ProcedureCompleted",
+    "ProcedureDiagnosticLogbookOpened",
     "ProcedureEvent",
     "ProcedureHeld",
     "ProcedureIterationEnded",

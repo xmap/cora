@@ -13,13 +13,18 @@ InMemory + Postgres adapters + Activity dataclass) + projection.
 from cora.operation.aggregates.procedure.entries import (
     Activity,
     ActivityStore,
+    Diagnostic,
+    DiagnosticStore,
     InMemoryActivityStore,
+    InMemoryDiagnosticStore,
     PostgresActivityStore,
+    PostgresDiagnosticStore,
 )
 from cora.operation.aggregates.procedure.events import (
     ProcedureAborted,
     ProcedureActivitiesLogbookOpened,
     ProcedureCompleted,
+    ProcedureDiagnosticLogbookOpened,
     ProcedureEvent,
     ProcedureHeld,
     ProcedureIterationEnded,
@@ -40,7 +45,9 @@ from cora.operation.aggregates.procedure.read import (
     load_procedure_with_events,
 )
 from cora.operation.aggregates.procedure.state import (
+    DIAGNOSTIC_LOGBOOK_SCHEMA,
     LOGBOOK_KIND_ACTIVITY,
+    LOGBOOK_KIND_DIAGNOSTIC,
     PROCEDURE_KIND_MAX_LENGTH,
     PROCEDURE_NAME_MAX_LENGTH,
     RECIPE_EXPANSION_STEP_MAX,
@@ -97,7 +104,9 @@ from cora.operation.aggregates.procedure.state import (
 )
 
 __all__ = [
+    "DIAGNOSTIC_LOGBOOK_SCHEMA",
     "LOGBOOK_KIND_ACTIVITY",
+    "LOGBOOK_KIND_DIAGNOSTIC",
     "PROCEDURE_KIND_MAX_LENGTH",
     "PROCEDURE_NAME_MAX_LENGTH",
     "RECIPE_EXPANSION_STEP_MAX",
@@ -105,7 +114,10 @@ __all__ = [
     "STEP_KIND_VALUES",
     "Activity",
     "ActivityStore",
+    "Diagnostic",
+    "DiagnosticStore",
     "InMemoryActivityStore",
+    "InMemoryDiagnosticStore",
     "InvalidProcedureAbortReasonError",
     "InvalidProcedureHoldReasonError",
     "InvalidProcedureInterruptedAtError",
@@ -118,6 +130,7 @@ __all__ = [
     "InvalidRecipeBindingsError",
     "InvalidStepKindError",
     "PostgresActivityStore",
+    "PostgresDiagnosticStore",
     "Procedure",
     "ProcedureAbortReason",
     "ProcedureAborted",
@@ -135,6 +148,7 @@ __all__ = [
     "ProcedureCannotTruncateError",
     "ProcedureCapabilityExecutorMismatchError",
     "ProcedureCompleted",
+    "ProcedureDiagnosticLogbookOpened",
     "ProcedureEnclosureCoverageMismatchError",
     "ProcedureEvent",
     "ProcedureHeld",
