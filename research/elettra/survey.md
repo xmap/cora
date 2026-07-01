@@ -99,6 +99,8 @@ Public Elettra source is on **GitHub** (two orgs) and the public-readable self-h
 
 Notable `gitlab.elettra.eu` groups: `cs` (Control Systems: `cs/ds` Tango devices, `cs/gui`, `cs/lib` incl. cumbia, `cs/etc` incl. hdbpp/interlock/vacuum), `spe` (Software for experiments, per-beamline: `spe/gui` for xrf/xrd1/XPRESS/xafs), `syrmep_acquisition` (SYRMEP DAQ control + `tango_servers`), `FERMI-CR` (FERMI control room), `machine-learning`, `puma`. **[verified]** (open GitLab REST API)
 
+**Device-pass viability (scouted 2026-07-01): NOT buildable from public source.** What `gitlab.elettra.eu` publishes is device-server *code* (`cs/ds/*`, `spe/ds/*`: driver classes like `lakeshore325`, `picoflex`, `pm600`), GUIs (`spe/gui/*`), and service configs (`cs/etc/*`). What a Tier-2 pass needs, a per-beamline device *instance* registry with real control handles (the ESRF Beacon / PETRA OnlineXML / MXCuBE-config equivalent), is not public: the per-beamline config groups exist as public *shells* but gate their contents. `spe/conf/xafs` is marked `visibility: public` and described "Configuration files for ELETTRA XAFS beamline," yet returns zero projects over the REST API (recursively), where a genuinely-public group like `cs/ds` returns its projects fine. No Sardana/Taurus Pool config and no OnlineXML-style registry were found. So Elettra publishes the ingredients (classes) but not the manifest (which devices a beamline binds, at which Tango addresses); a faithful device pass needs the gated `spe/conf/*` repos or staff access. Elettra stays survey-only (like ALS / SPring-8), not for lack of a control system but because the instance registry is firewalled behind a public shell.
+
 Key repos for a CORA deployment:
 
 | Repo | Host | What it is |
