@@ -18,6 +18,7 @@ type-checker's path); the cora enums + seed constants are imported normally.
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -341,6 +342,87 @@ def test_pending_practice_methods_are_registered() -> None:
         "registered pending methods no longer named by any pending practice (graduated into "
         f"the catalog or removed); drop from _PENDING_METHODS: {stale}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Landing-page facility-card discipline.
+#
+# docs/deployments/index.md introduces each Site with a short hand-authored card
+# that answers three fixed questions: what the facility is, why CORA took it on,
+# and its control-plane house-style. The cards grew organically before this
+# convention (12 to 205 words, two rival opening formulas, per-beamline detail
+# leaking up from the beamline pages). A test cannot judge voice, but it can pin
+# the mechanical discipline so a new Site's card cannot balloon or drift back:
+#   - bounded length (no card balloons to a mini-essay again),
+#   - no "Nth Site" ordinal (the canonical order is the section order, guarded in
+#     test_beamline_descriptor; repeating it in prose is the cascade we removed),
+#   - no per-beamline slug link (that is beamline-page altitude; the Site's own
+#     table already links its beamlines).
+# This is the prose analog of the badge-cell / index-drift guards.
+# ---------------------------------------------------------------------------
+
+_INDEX = _REPO_ROOT / "docs" / "deployments" / "index.md"
+_INTRO_MAX_WORDS = 75
+_SITE_ORDINAL_RE = re.compile(
+    r"\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|"
+    r"eleventh|twelfth|thirteenth|fourteenth)\s+Site\b",
+    re.IGNORECASE,
+)
+_BEAMLINE_LINK_RE = re.compile(r"\]\([a-z0-9-]+/index\.md\)")
+
+
+def _site_intro_cards() -> dict[str, str]:
+    # slug -> the intro paragraph under each `## [Site](slug/index.md)` heading,
+    # i.e. the text between the heading and the first table / next heading.
+    lines = _INDEX.read_text(encoding="utf-8").splitlines()
+    cards: dict[str, str] = {}
+    heading = re.compile(r"## \[[^\]]+\]\(([^)]+)/index\.md\)")
+    i = 0
+    while i < len(lines):
+        m = heading.match(lines[i])
+        if m:
+            slug = m.group(1)
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            para: list[str] = []
+            while (
+                j < len(lines)
+                and lines[j].strip()
+                and not lines[j].startswith("|")
+                and not lines[j].startswith("##")
+            ):
+                para.append(lines[j])
+                j += 1
+            cards[slug] = " ".join(para)
+        i += 1
+    return cards
+
+
+def test_site_intro_cards_exist_for_every_site() -> None:
+    cards = _site_intro_cards()
+    site_slugs = {p.parent.name for p in _ALL_SITES}
+    missing = sorted(site_slugs - set(cards))
+    assert not missing, f"Sites with no intro card on docs/deployments/index.md: {missing}"
+    # anchor so the discipline checks below cannot pass vacuously on an empty parse
+    assert len(cards) >= len(site_slugs)
+
+
+def test_site_intro_cards_are_disciplined() -> None:
+    problems: list[str] = []
+    for slug, text in _site_intro_cards().items():
+        words = len(text.split())
+        if words > _INTRO_MAX_WORDS:
+            problems.append(f"{slug}: intro is {words} words (max {_INTRO_MAX_WORDS})")
+        if _SITE_ORDINAL_RE.search(text):
+            problems.append(
+                f"{slug}: intro states an 'Nth Site' ordinal (drop it; order is canonical)"
+            )
+        if _BEAMLINE_LINK_RE.search(text):
+            problems.append(
+                f"{slug}: intro links a beamline page (that is beamline-altitude detail)"
+            )
+    assert not problems, "facility-card discipline violations:\n" + "\n".join(problems)
 
 
 def test_malformed_site_raises(tmp_path: Path) -> None:

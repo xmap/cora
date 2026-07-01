@@ -6,6 +6,8 @@ A deployment is a beamline pilot: one instrument where the recipe ladder, BCs, a
 
 A beamline is never standalone: it sits inside a Site, a Federation `Facility` that owns the clearances, principals, practices, and facility-scope supplies the beamline inherits but does not own. The deployments below are grouped by that Site, in the order CORA took the Site on; each beamline page links up to its Site rather than restating it.
 
+Each Site is introduced by a short card that answers the same three questions: what the facility is, why CORA took it on (the operational pilot, the second-customer validation, or an off-roadmap exercise that stresses a new region, source, or control plane), and the control-plane house-style CORA's edge would land on. Beamline-level detail lives on the beamline pages, not here.
+
 Each beamline carries three independent badges, so the one word "status" no longer has to mean three things at once:
 
 - **Maturity** is CORA's relationship to the beamline. `Pilot` means CORA drives it live (only 2-BM today). `Design` means it is on the roadmap, modelled ahead of construction or recommissioning. `Model` means an off-roadmap exercise on an operating beamline, taken to test that the domain model generalizes.
@@ -16,7 +18,7 @@ The badges are read from each beamline's descriptor, so the table cannot drift f
 
 ## [APS](aps/index.md)
 
-CORA's first multi-beamline Site: five beamlines share one APS envelope, which is reused rather than re-created per beamline.
+The Advanced Photon Source (Argonne National Laboratory, near Chicago) is CORA's operational pilot Site and its first multi-beamline one: 2-BM runs live while its sibling beamlines are modelled alongside, all sharing one facility envelope. Control plane: EPICS / ophyd.
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -33,7 +35,7 @@ CORA's first multi-beamline Site: five beamlines share one APS envelope, which i
 
 ## [MAX IV](maxiv/index.md)
 
-The second Site CORA models; thin while its beamline is in design.
+MAX IV (Lund, Sweden) is CORA's second-customer Site: the first test that the platform ports off APS without per-facility rework, taken on while its beamline is still in design. Control plane: Tango / Sardana, the first non-EPICS house-style CORA plans to drive.
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -41,7 +43,7 @@ The second Site CORA models; thin while its beamline is in design.
 
 ## [Diamond Light Source](diamond/index.md)
 
-The third Site CORA models, and a deliberate off-roadmap exercise: real, operating beamlines modelled from Diamond's open `dodal` controls library to test that the dry-fact seed feeds CORA's intentional model, and that the model generalizes beyond tomography (SCOPE-1).
+Diamond Light Source (Harwell Campus, UK) is an off-roadmap generalization Site: CORA lands here to test that its intentional model, earned on APS tomography, generalizes to Diamond's operating beamlines across MX, scattering, and spectroscopy. Control plane: EPICS / dodal.
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -58,7 +60,7 @@ The third Site CORA models, and a deliberate off-roadmap exercise: real, operati
 
 ## [NSLS-II](nsls2/index.md)
 
-The fourth Site CORA models. Like the Diamond exercise, its beamlines are reverse-engineered from public open source (the NSLS-II bluesky profile collections), not a design report or a live connection.
+NSLS-II (Brookhaven National Laboratory, New York) is an off-roadmap generalization Site, and the fleet's broadest: CORA lands here to stretch the model across two dozen operating beamlines spanning nearly every hard- and soft-X-ray technique. Control plane: EPICS / bluesky.
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -89,7 +91,7 @@ The fourth Site CORA models. Like the Diamond exercise, its beamlines are revers
 
 ## [SLAC](slac/index.md)
 
-The fifth Site CORA models, and its first X-ray free-electron laser. Like the Diamond and FXI exercises, LCLS-MFX is reverse-engineered from public open source (here SLAC's `pcdshub` stack), chosen as the one deployment that tests whether CORA generalizes beyond the storage-ring acquisition paradigm to an XFEL.
+SLAC (SLAC National Accelerator Laboratory, California) is an off-roadmap generalization Site and CORA's first X-ray free-electron laser: it tests whether the model reaches past the storage-ring acquisition paradigm to an XFEL's per-shot regime. Control plane: EPICS / pcdshub.
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -97,7 +99,7 @@ The fifth Site CORA models, and its first X-ray free-electron laser. Like the Di
 
 ## [Australian Synchrotron](as/index.md)
 
-The sixth Site CORA models, and its first Australian facility (operated by ANSTO). Its MX3 beamline is reverse-engineered from the public `AustralianSynchrotron/mx3-beamline-library`, chosen to test that the Site / Federation kernel ports again and to stress the seam against a heterogeneous control plane (EPICS plus the MXCuBE Exporter protocol, the DECTRIS SIMPLON REST API, and a TCP sample robot).
+The Australian Synchrotron (operated by ANSTO, Melbourne) is an off-roadmap generalization Site and CORA's first in Australia: it re-tests the Site and Federation kernel in a new region and stresses the seam against a heterogeneous, multi-protocol floor. Control plane: EPICS + MXCuBE Exporter + SIMPLON REST.
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -105,7 +107,7 @@ The sixth Site CORA models, and its first Australian facility (operated by ANSTO
 
 ## [ESRF](esrf/index.md)
 
-The seventh Site CORA models (the ESRF, Grenoble), and the largest single-deployment re-test of the Site and Federation kernel: it brings the first BLISS / Beacon / Tango / IcePAP control plane to the fleet (the rest are EPICS, or Tango / Sardana at MAX IV / ALBA). Its beamlines are reverse-engineered from the ESRF's own public BLISS Beacon device databases on gitlab.esrf.fr, with real per-device handles carried until ESRF staff verify them.
+The ESRF (European Synchrotron Radiation Facility, Grenoble) is an off-roadmap generalization Site: CORA lands here to port the Site and Federation kernel onto a fourth-generation source and its BLISS control ecosystem, the first non-EPICS, non-Sardana house-style in the fleet. Control plane: BLISS / Beacon / Tango / IcePAP.
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -116,7 +118,7 @@ The seventh Site CORA models (the ESRF, Grenoble), and the largest single-deploy
 
 ## [Sirius](sirius/index.md)
 
-CORA's first South American facility (the Brazilian Synchrotron Light Laboratory, LNLS, at CNPEM in Campinas). Its beamlines are reverse-engineered from published papers and public facility pages rather than open controls configs, so they are thin scaffolds: device families are inferred but no control handles or vendor models are public, and every value stays `confirm` until staff verify it.
+Sirius (Brazilian Synchrotron Light Laboratory, LNLS at CNPEM, Campinas) is an off-roadmap generalization Site and CORA's first in South America: it re-tests the Site and Federation kernel in a new region on a fourth-generation source. Control plane: EPICS + MXCuBE3.
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -125,7 +127,7 @@ CORA's first South American facility (the Brazilian Synchrotron Light Laboratory
 
 ## [ALBA](alba/index.md)
 
-CORA's Site for the ALBA Synchrotron (Barcelona, Spain), and its second Tango / Sardana / Taurus control house-style after MAX IV (ALBA is the originating institution of Sardana). FAXTOR is reverse-engineered from ALBA's public facility pages, chosen to port the Site / Federation kernel again and to reuse the tomography vocabulary on a new facility and control plane.
+ALBA (CELLS, Barcelona, Spain) is an off-roadmap generalization Site: CORA lands here to reuse its tomography vocabulary on a new facility and control plane. ALBA is the home of Sardana, so its floor is the reference form of that house-style. Control plane: Tango / Sardana / Taurus.
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -133,7 +135,7 @@ CORA's Site for the ALBA Synchrotron (Barcelona, Spain), and its second Tango / 
 
 ## [ALS](als/index.md)
 
-CORA's Site for the Advanced Light Source (Lawrence Berkeley National Laboratory, Berkeley), and its first BCS controls house-style: every prior Site is EPICS, Tango / Sardana, or BLISS, while the ALS runs BCS (the Beamline Control System), a LabVIEW stack. 8.3.2 is reverse-engineered from ALS's public facility pages ([als.lbl.gov](https://als.lbl.gov/beamlines/8-3-2/), [microct.lbl.gov](https://microct.lbl.gov/)) and the public [als-computing](https://github.com/als-computing) GitHub org, chosen to reuse the tomography vocabulary on a new facility and a new control plane. Its device topology is read from the DXchange / DXfile HDF5 data-record schema that the ALS tooling reads (a third descriptor mode, between FXI's real EPICS PVs and FAXTOR's no-manifest); the live BCS control handles are not public and stay `confirm`-pending. The ALS-U upgrade (storage-ring dark time no sooner than October 2027, at least two years) is a roadmap constraint, with 8.3.2's upgrade fate carried as a staff question.
+The Advanced Light Source (Lawrence Berkeley National Laboratory, California) is an off-roadmap generalization Site: CORA lands here to reuse its tomography vocabulary on a facility whose floor is unlike any other in the fleet. Control plane: BCS (LabVIEW), the fleet's only LabVIEW house-style.
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -141,7 +143,7 @@ CORA's Site for the Advanced Light Source (Lawrence Berkeley National Laboratory
 
 ## [Elettra Sincrotrone Trieste](elettra/index.md)
 
-The eleventh Site CORA models (Elettra Sincrotrone Trieste), a re-test of the Site and Federation kernel that brings the first Tango + DonkiOrchestra control house-style to the fleet: SYRMEP runs the in-house, trigger-driven DonkiOrchestra framework, not BLISS and not EPICS. Its control handles are not in public source, so SYRMEP is modelled from Elettra's public beamline pages and published papers, every value carried until staff verify it.
+Elettra Sincrotrone Trieste (Trieste, Italy) is an off-roadmap generalization Site: CORA lands here to reuse its tomography vocabulary against an in-house, trigger-driven orchestration floor unlike the fleet's other house-styles. Control plane: Tango + DonkiOrchestra.
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -149,7 +151,7 @@ The eleventh Site CORA models (Elettra Sincrotrone Trieste), a re-test of the Si
 
 ## [NSRRC](nsrrc/index.md)
 
-CORA's first Taiwan facility (the National Synchrotron Radiation Research Center, Hsinchu, operating two rings, the Taiwan Light Source and the Taiwan Photon Source). TPS 07A is reverse-engineered from public open source (the `light911/NSRRC_TPS07A` + `light911/TPS07A-Meshbest` control trees plus JACoW proceedings), chosen because it is the only NSRRC beamline with a complete public control tree, and because its Blu-Ice/DCSS-over-EPICS seam is the 2-BM TomoScan pattern at an MX beamline. TPS 05A is its MX-cluster sibling, a reuse-and-reinforce deployment on the same Site, Blu-Ice/DCSS stack, and MD3 + ISARA kit (with an EIGER2 X 9M), modelled from the SPXF facility pages and the 2025 cluster paper. NSRRC publishes no official org code, so the corpus is scattered personal GitHub accounts.
+The NSRRC (National Synchrotron Radiation Research Center, Hsinchu, Taiwan) is an off-roadmap generalization Site and CORA's first in Taiwan: it re-tests the Site and Federation kernel in a new region, with an MX cluster whose orchestration seam is the pilot's TomoScan pattern seen at a crystallography beamline. Control plane: EPICS (Blu-Ice / DCSS).
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -158,7 +160,7 @@ CORA's first Taiwan facility (the National Synchrotron Radiation Research Center
 
 ## [PETRA III](petra-iii/index.md)
 
-CORA's Site for PETRA III (DESY, Hamburg), and its second Tango / Sardana control house-style after MAX IV / ALBA. P01 is reverse-engineered from P01's own public OnlineXML device registry (the `online_*.xml` Tango device list under `petra-iii-debian-packages` on gitlab.desy.de), extracted with the `scripts/reverse_engineer/` `--source onlinexml` path, chosen because the OnlineXML carries real per-device Tango handles across all 18 public PETRA III beamlines and because P01's NRS / RIXS dynamics techniques are new to CORA's technique surface.
+PETRA III (DESY, Hamburg, Germany) is an off-roadmap generalization Site, and the fleet's deepest single-facility set: CORA lands across its beamlines to widen the technique surface and re-test the kernel at scale on one Site. Control plane: Tango / Sardana.
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
@@ -184,7 +186,7 @@ CORA's Site for PETRA III (DESY, Hamburg), and its second Tango / Sardana contro
 
 ## [PSI](psi/index.md)
 
-CORA's fourteenth Site (the Paul Scherrer Institut). Like SLAC, the Site is the institute: PSI hosts two photon sources, the Swiss Light Source (SLS / SLS 2.0) storage ring and SwissFEL, with the beamlines as stations under it. The I-TOMCAT beamline (on SLS) is a hybrid modelled from PSI's public beamline pages and the SLS 2.0 design reports (the TomoWise tradition), because no public per-beamline controls config exists for TOMCAT; SLS is an EPICS facility with the BEC scan layer over ophyd, the seam CORA's edge would replace. The three SwissFEL Aramis stations make PSI CORA's second X-ray free-electron laser after SLAC, reverse-engineered from PSI's own controls libraries to re-test the XFEL findings against an independently-built FEL: LCLS-MFX was mined from SLAC's `pcdshub`, the Aramis stations from `eco` / `slic`. Alvra confirms the family-fold and acquisition-gap findings from an independent control stack; Bernina makes the shared-switched-source seam (TOPO-1) concrete, as the second co-equal station on the one Aramis source, and reaches the same gaps through diffraction; Cristallina closes the Aramis triad as the third station, is the first deployment mined from the `slic` library (eco's successor, on gitea.psi.ch) rather than `eco`, and adds a dilution-fridge vector-magnet sample environment. No PSI station coins a new Family.
+The Paul Scherrer Institut (Villigen, Switzerland) is an off-roadmap generalization Site and, like SLAC, an institute rather than a single ring: it hosts the SLS storage ring and the SwissFEL free-electron laser. CORA lands here to re-test its XFEL findings against an independently-built FEL and its micro-CT model against a second undulator source. Control plane: EPICS (SLS) + eco / slic (SwissFEL).
 
 | Beamline | Maturity | Evidence | Coverage | What it is |
 | --- | --- | --- | --- | --- |
