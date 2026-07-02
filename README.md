@@ -1464,6 +1464,16 @@
 | src/cora/operation/features/complete\_procedure/handler.py                               |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/complete\_procedure/route.py                                 |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/complete\_procedure/tool.py                                  |       15 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_from\_procedure/\_\_init\_\_.py                     |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_from\_procedure/command.py                          |       10 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_from\_procedure/handler.py                          |       38 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_from\_procedure/route.py                            |       24 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_from\_procedure/tool.py                             |       21 |        2 |        0 |        0 |     90.5% |     82-83 |
+| src/cora/operation/features/conduct\_or\_hold\_procedure/\_\_init\_\_.py                 |        5 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_or\_hold\_procedure/command.py                      |       11 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_or\_hold\_procedure/handler.py                      |       30 |        0 |        4 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_or\_hold\_procedure/route.py                        |       26 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/operation/features/conduct\_or\_hold\_procedure/tool.py                         |       24 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/conduct\_procedure/\_\_init\_\_.py                           |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/conduct\_procedure/command.py                                |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/conduct\_procedure/handler.py                                |       30 |        0 |        4 |        0 |    100.0% |           |
@@ -1506,11 +1516,6 @@
 | src/cora/operation/features/list\_procedures/query.py                                    |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/list\_procedures/route.py                                    |       27 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/list\_procedures/tool.py                                     |       27 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/features/reconduct\_procedure/\_\_init\_\_.py                         |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/features/reconduct\_procedure/command.py                              |       10 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/features/reconduct\_procedure/handler.py                              |       38 |        0 |       10 |        0 |    100.0% |           |
-| src/cora/operation/features/reconduct\_procedure/route.py                                |       24 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/features/reconduct\_procedure/tool.py                                 |       21 |        2 |        0 |        0 |     90.5% |     82-83 |
 | src/cora/operation/features/register\_procedure/\_\_init\_\_.py                          |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/register\_procedure/command.py                               |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/register\_procedure/decider.py                               |       20 |        0 |       10 |        0 |    100.0% |           |
@@ -1548,11 +1553,6 @@
 | src/cora/operation/features/truncate\_procedure/handler.py                               |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/truncate\_procedure/route.py                                 |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/features/truncate\_procedure/tool.py                                  |       17 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/features/try\_conduct\_procedure/\_\_init\_\_.py                      |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/features/try\_conduct\_procedure/command.py                           |       11 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/features/try\_conduct\_procedure/handler.py                           |       30 |        0 |        4 |        0 |    100.0% |           |
-| src/cora/operation/features/try\_conduct\_procedure/route.py                             |       26 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/operation/features/try\_conduct\_procedure/tool.py                              |       24 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/ports/\_\_init\_\_.py                                                 |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/ports/compute\_port.py                                                |       76 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/ports/control\_port.py                                                |       41 |        0 |        0 |        0 |    100.0% |           |

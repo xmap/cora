@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_1164eecb97aa37cc_conductor_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.3">coverage.py v7.14.3</a>,
-            created at 2026-07-02 12:45 +0000
+            created at 2026-07-02 15:23 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -619,12 +619,12 @@
     <p class="run"><span class="n"><a id="t535" href="#t535">535</a></span><span class="t"><span class="key">class</span> <span class="nam">ResolvedStepsRecordNotFoundError</span><span class="op">(</span><span class="nam">Exception</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t536" href="#t536">536</a></span><span class="t">    <span class="str">"""A Held Procedure cannot locate its pinned `ResolvedStepsRecorded` record.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t537" href="#t537">537</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t538" href="#t538">538</a></span><span class="t"><span class="str">    Raised by the `reconduct_procedure` (resume-and-replay) handler when a</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t538" href="#t538">538</a></span><span class="t"><span class="str">    Raised by the `conduct_from_procedure` (resume-and-replay) handler when a</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t539" href="#t539">539</a></span><span class="t"><span class="str">    Held Procedure's stream carries no `ResolvedStepsRecorded` event. A</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t540" href="#t540">540</a></span><span class="t"><span class="str">    conduct pins exactly one at start (while `Defined`), so a conducted</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t541" href="#t541">541</a></span><span class="t"><span class="str">    Procedure always has it; its absence is corruption (stream truncation,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t542" href="#t542">542</a></span><span class="t"><span class="str">    a manual event-store write, or a partial-write failure), not an</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t543" href="#t543">543</a></span><span class="t"><span class="str">    operational outcome. Kept OUT of the conduct/reconduct failures-in-body</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t543" href="#t543">543</a></span><span class="t"><span class="str">    operational outcome. Kept OUT of the conduct/conduct_from failures-in-body</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t544" href="#t544">544</a></span><span class="t"><span class="str">    contract (that is for step outcomes like an IOC rejecting a write).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t545" href="#t545">545</a></span><span class="t"><span class="str">    Sibling of `RecipeExpansionRecordNotFoundError`. Mapped to HTTP 500.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t546" href="#t546">546</a></span><span class="t"><span class="str">    """</span>&nbsp;</span><span class="r"></span></p>
@@ -1584,7 +1584,7 @@
     <p class="pln"><span class="n"><a id="t1500" href="#t1500">1500</a></span><span class="t"><span class="str">    persisted raw string values (an `ActuationKind` value or None) so a resume</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1501" href="#t1501">1501</a></span><span class="t"><span class="str">    can fold the PRE-HOLD conduct's observed kind (carried on `ProcedureHeld`)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1502" href="#t1502">1502</a></span><span class="t"><span class="str">    with the replay tail's kind before the terminal event. Without this, a</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1503" href="#t1503">1503</a></span><span class="t"><span class="str">    reconduct from a boundary past a simulated prefix would complete as</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1503" href="#t1503">1503</a></span><span class="t"><span class="str">    conduct_from from a boundary past a simulated prefix would complete as</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1504" href="#t1504">1504</a></span><span class="t"><span class="str">    `Physical` and slip past the `promote_dataset` Simulated/Hybrid gate. None</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1505" href="#t1505">1505</a></span><span class="t"><span class="str">    contributes nothing; a `Physical` + `Simulated` mix (or either with</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t1506" href="#t1506">1506</a></span><span class="t"><span class="str">    `Hybrid`) collapses to `Hybrid`. Pure + no `ActuationKind` import: the</span>&nbsp;</span><span class="r"></span></p>
@@ -1615,7 +1615,7 @@
             <a class="nav" href="z_1164eecb97aa37cc_conductor_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.3">coverage.py v7.14.3</a>,
-            created at 2026-07-02 12:45 +0000
+            created at 2026-07-02 15:23 +0000
         </p>
     </div>
 </footer>
