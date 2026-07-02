@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Scanning fluorescence / diffraction microscopy
 
-P06 focuses the beam (the multilayer or crystal monochromator feeding the KB optics) to a micro or nano spot, then rasters the sample across it with the [Aerotech scan stage](equipment/sample.md) while the [Maia XRF array](equipment/detector.md) reads the fluorescence at each point (and the area detectors read scattering / diffraction).
+P06 focuses the beam (the multilayer or crystal monochromator feeding the KB optics) to a micro or nano spot, then rasters the sample across it with the [Aerotech scan stage](sample.md) while the [Maia XRF array](detector.md) reads the fluorescence at each point (and the area detectors read scattering / diffraction).
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

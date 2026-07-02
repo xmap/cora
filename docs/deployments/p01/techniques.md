@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Nuclear resonant scattering (EH1)
 
-P01 sets the X-ray energy onto a Moessbauer isotope's nuclear resonance with the [double-crystal monochromator](beamline.md), then carves a meV / Moessbauer-energy bandwidth with the [high-resolution monochromator stack](equipment/sample.md) (the four nested / channel-cut HRMs). Scanning the high-resolution-monochromator energy axis while reading the time- and energy-resolved detector signal produces the nuclear inelastic / resonant spectrum.
+P01 sets the X-ray energy onto a Moessbauer isotope's nuclear resonance with the [double-crystal monochromator](source.md), then carves a meV / Moessbauer-energy bandwidth with the [high-resolution monochromator stack](sample.md) (the four nested / channel-cut HRMs). Scanning the high-resolution-monochromator energy axis while reading the time- and energy-resolved detector signal produces the nuclear inelastic / resonant spectrum.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ P01 sets the X-ray energy onto a Moessbauer isotope's nuclear resonance with the
 
 ## Resonant inelastic X-ray scattering (EH3)
 
-P01's EH3 endstation focuses the beam with the [KB mirror pair](equipment/sample.md) onto the sample and analyzes the inelastically scattered photons on the spectrometer arm, scanning the incident energy against the analyzed energy to map the excitation spectrum.
+P01's EH3 endstation focuses the beam with the [KB mirror pair](sample.md) onto the sample and analyzes the inelastically scattered photons on the spectrometer arm, scanning the incident energy against the analyzed energy to map the excitation spectrum.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ P01's EH3 endstation focuses the beam with the [KB mirror pair](equipment/sample
 
 ## Diffraction (EH2)
 
-P01's EH2 endstation carries a theta / two-theta [goniometer](equipment/sample.md) reading a detector on a positioning stage, for hard X-ray diffraction. The catalog carries no general diffraction Method today; the technique is noted, not bound, pending confirmation of the endstation's routine use (`TECH-1`, `DIFF-1`).
+P01's EH2 endstation carries a theta / two-theta [goniometer](sample.md) reading a detector on a positioning stage, for hard X-ray diffraction. The catalog carries no general diffraction Method today; the technique is noted, not bound, pending confirmation of the endstation's routine use (`TECH-1`, `DIFF-1`).
 
 ## A new technique branch on familiar vocabulary
 

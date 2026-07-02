@@ -46,6 +46,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P65 is an undulator beamline (applied XAS); the OnlineXML exposes the undulator energy axis (p65/petra3undulator) but no period or parameters, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "Applied X-ray absorption spectroscopy for routine EXAFS / XANES on a damping-wiggler source, with the standard ion-chamber and fluorescence detection chain."
+  source_ref:
+    label: "python-nxstools-extras-p65"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p65"
 
 # Two enclosures: the optics (shared with P64, on the hasnp64 host) and the experiment
 # endstation. DESY PSS permit signals are not in the OnlineXML (PSS-1).

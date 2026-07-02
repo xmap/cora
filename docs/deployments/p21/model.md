@@ -6,12 +6,12 @@ P21 is a descriptor-and-docs scaffold today, reverse-engineered from P21's publi
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/p21/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p21/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
+| Beamline descriptor | [`deployments/p21/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p21/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
 | Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface; P21 adds the diffraction / total-scattering Practices |
 | Upstream source | [P21 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p21) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P21 reuses `LinearStage` / `Slit` |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; diffraction / total scattering reuse the pending `diffraction` / `total_scattering` slugs (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P21 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers P21 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes P21 new

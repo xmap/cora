@@ -49,6 +49,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P24 is an undulator beamline (chemical crystallography); the OnlineXML exposes no undulator device in this slice, so the source is carried pending (SRC-1)"
+  page_layout: stages
+  shape: "Chemical crystallography: single-crystal diffraction on a precise multi-circle goniometer with area detection."
+  source_ref:
+    label: "python-nxstools-extras-p24"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p24"
 
 # Three enclosures: the optics hutch (the oh_mot bank + slits) and two experiment
 # hutches (EH2 main, EH1). DESY PSS permit signals are not in the OnlineXML (PSS-1).

@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Hard X-ray photoelectron spectroscopy
 
-P22 illuminates the sample with a monochromatic hard X-ray beam (the shared P09 optics, with the phase retarder setting polarization) and measures the kinetic-energy spectrum of the emitted photoelectrons on the [electron analyzer](equipment/detector.md), probing bulk / buried electronic structure (the hard X-ray depth advantage over soft X-ray photoemission).
+P22 illuminates the sample with a monochromatic hard X-ray beam (the shared P09 optics, with the phase retarder setting polarization) and measures the kinetic-energy spectrum of the emitted photoelectrons on the [electron analyzer](detector.md), probing bulk / buried electronic structure (the hard X-ray depth advantage over soft X-ray photoemission).
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

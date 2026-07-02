@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## High-energy white-beam / energy-dispersive diffraction
 
-P61 uses the high-energy white beam from the damping wiggler for energy-dispersive diffraction (P61B engineering / materials studies) and Large Volume Press high-pressure / high-temperature in-situ studies (P61A), reading the [energy-dispersive detector](equipment/detector.md).
+P61 uses the high-energy white beam from the damping wiggler for energy-dispersive diffraction (P61B engineering / materials studies) and Large Volume Press high-pressure / high-temperature in-situ studies (P61A), reading the [energy-dispersive detector](detector.md).
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

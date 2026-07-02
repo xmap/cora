@@ -54,6 +54,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P11 is an undulator beamline for macromolecular crystallography and bio-imaging; the OnlineXML exposes no undulator device (it sits on the single haspp11oh host with the beamline motors), so the source is carried pending (SRC-1)"
+  page_layout: stages
+  shape: "Macromolecular crystallography: rotation MX on a micro-goniometer and area detector with an automated sample changer, reusing the fleet MX vocabulary."
+  source_ref:
+    label: "python-nxstools-extras-p11"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p11"
 
 # Two enclosures inferred from the device-name prefixes (the registry exposes one
 # Tango host, haspp11oh, for the whole beamline): the optics hutch (oh / granite) and

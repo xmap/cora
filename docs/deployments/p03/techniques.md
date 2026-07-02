@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Small-angle X-ray scattering
 
-P03 focuses the beam (the multilayer monochromator feeding the CRL or the GINIX waveguide) to a micro or nano spot, illuminates the sample, and reads the small-angle scattering on the [Pilatus area detector](equipment/detector.md) at a distance.
+P03 focuses the beam (the multilayer monochromator feeding the CRL or the GINIX waveguide) to a micro or nano spot, illuminates the sample, and reads the small-angle scattering on the [Pilatus area detector](detector.md) at a distance.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

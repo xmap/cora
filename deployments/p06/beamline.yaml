@@ -53,6 +53,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P06 is an undulator beamline (hard X-ray micro / nano probe); the OnlineXML exposes the undulator (p06/undulator) and its gap / harmonic / taper virtual axes (p06/attributemotor) but no period or parameters, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "The fleet's most complete scanning-probe instrument: hard X-ray micro / nano fluorescence and diffraction microscopy and nano-tomography, with a Maia array across a micro and a nano endstation."
+  source_ref:
+    label: "python-nxstools-extras-p06"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p06"
 
 # Four enclosures: the optics / monochromator hutch and the two scanning-probe
 # endstations, plus a shared detection pool whose devices report on a bare p06 host.

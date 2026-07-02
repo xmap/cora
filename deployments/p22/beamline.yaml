@@ -51,6 +51,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P22 is an undulator beamline (HAXPES), sharing the undulator / optics with P09; the OnlineXML exposes the undulator (p09/undulator) but no period or parameters, carried pending (SRC-1, SHARED-1)"
+  page_layout: stages
+  shape: "Hard X-ray photoemission spectroscopy (HAXPES): a hemispherical electron analyzer probing buried interfaces at high photon energy."
+  source_ref:
+    label: "python-nxstools-extras-p22"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p22"
 
 # Two enclosures: the shared P09 / P22 optics, and the HAXPS experiment endstation. The
 # optics report on the P09 host (HOST-1, SHARED-1). DESY PSS permit signals are not in

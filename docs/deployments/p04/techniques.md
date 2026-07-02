@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Soft X-ray absorption spectroscopy
 
-P04 sets the photon energy (250-3000 eV) by coupling the [variable-polarization undulator](beamline.md) and the [plane-grating monochromator](beamline.md), then scans it across an absorption edge while reading the sample drain current on the [electrometer](equipment/detector.md) (total electron yield).
+P04 sets the photon energy (250-3000 eV) by coupling the [variable-polarization undulator](source.md) and the [plane-grating monochromator](source.md), then scans it across an absorption edge while reading the sample drain current on the [electrometer](detector.md) (total electron yield).
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

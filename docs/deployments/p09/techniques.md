@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Resonant elastic X-ray scattering
 
-P09 tunes the incident energy onto an absorption edge (the DCM) and measures the elastically scattered intensity on the six-circle [goniometer](equipment/sample.md), with the [phase retarder](equipment/sample.md) setting incident polarization and the [analyzer](equipment/sample.md) resolving the scattered polarization.
+P09 tunes the incident energy onto an absorption edge (the DCM) and measures the elastically scattered intensity on the six-circle [goniometer](sample.md), with the [phase retarder](sample.md) setting incident polarization and the [analyzer](sample.md) resolving the scattered polarization.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

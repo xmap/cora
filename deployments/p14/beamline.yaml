@@ -72,6 +72,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P14 is an undulator MX beamline; the MXCuBE config exposes the photon-energy service (TINEEnergy on /P14/Energy/P14Energy) but not the undulator device itself, so the source is carried pending (SRC-1)"
+  page_layout: stages
+  shape: "EMBL macromolecular crystallography with a micro-focus and a versatile branch (including BioSAXS), its handles read from the mxCuBE configuration."
+  source_ref:
+    label: "mxcube/mxcubecore (embl_hh_p14)"
+    url: "https://github.com/mxcube/mxcubecore/tree/develop/mxcubecore/configuration/embl_hh_p14"
 
 # Three enclosures: one optics hutch (the KB mirror pitch / roll motions on /P14/...,
 # the CRL transfocator, the beam-defining slits) feeding two experiment hutches, EH1

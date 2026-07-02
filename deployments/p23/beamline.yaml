@@ -47,6 +47,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P23 is an undulator beamline (in-situ diffraction); the OnlineXML exposes no undulator device in this slice, so the source is carried pending (SRC-1)"
+  page_layout: stages
+  shape: "In-situ and operando hard X-ray diffraction: a multi-circle diffractometer with sample environments for materials under working conditions."
+  source_ref:
+    label: "python-nxstools-extras-p23"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p23"
 
 # One enclosure inferred from the OnlineXML host (the registry exposes the eh_mot bank
 # on a single hasep23oh host): the experiment hutch carrying the optics and the

@@ -6,12 +6,12 @@ P06 is a descriptor-and-docs scaffold today, reverse-engineered from P06's publi
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/p06/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p06/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
+| Beamline descriptor | [`deployments/p06/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p06/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
 | Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface (shared with P01, P04); P06 adds the scanning / nano-tomography Practices |
 | Upstream source | [P06 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p06) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P06 is the fullest reuse yet (Hexapod, EnergyDispersiveSpectrometer, optics / motion / camera Families) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; scanning microscopy + nano-tomography reuse the pending `scanning_fluorescence_microscopy` / `tomography` slugs (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P06 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers P06 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes P06 new

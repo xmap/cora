@@ -6,12 +6,12 @@ P13 is a descriptor-and-docs scaffold today, reverse-engineered from EMBL Hambur
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/p13/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p13/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Exporter / TINE handles read from the MXCuBE config (`CTRL-1`) |
+| Beamline descriptor | [`deployments/p13/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p13/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; Exporter / TINE handles read from the MXCuBE config (`CTRL-1`) |
 | Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface; P13 adds the EMBL Hamburg sub-operator house-style section and the MX Practice (`SEAM-1`) |
 | Upstream source | [EMBL P13 MXCuBE config](https://github.com/mxcube/mxcubecore/tree/develop/mxcubecore/configuration/embl_hh_p13) | the beamline's own public MXCuBE HardwareObjects device topology the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P13 reuses the MX Families |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; MX reuses the pending i03 `mx_data_collection` slug (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P13 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers P13 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes P13 new

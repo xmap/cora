@@ -6,12 +6,12 @@ P03 is a descriptor-and-docs scaffold today, reverse-engineered from P03's publi
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/p03/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p03/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
+| Beamline descriptor | [`deployments/p03/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p03/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
 | Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface (shared with P01, P04, P06, P11); P03 adds the scattering Practices |
 | Upstream source | [P03 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p03) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P03 reuses the optics / motion / detector Families |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; SAXS / WAXS reuse the pending `small_angle_scattering` / `wide_angle_scattering` slugs (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P03 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers P03 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes P03 new

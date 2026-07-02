@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## High-energy materials-science diffraction
 
-P07 uses a high-energy monochromatic beam to study engineering materials (bulk diffraction, residual stress, texture, in-situ deformation), reading the diffraction on the [four-circle diffractometer](equipment/sample.md) and the [Pilatus / PerkinElmer detectors](equipment/detector.md).
+P07 uses a high-energy monochromatic beam to study engineering materials (bulk diffraction, residual stress, texture, in-situ deformation), reading the diffraction on the [four-circle diffractometer](sample.md) and the [Pilatus / PerkinElmer detectors](detector.md).
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

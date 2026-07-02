@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Macromolecular crystallography
 
-P13 mounts a crystal on the EMBLMiniDiff microdiffractometer (with cryostream cooling), rotates it through an oscillation, and reads frames on the [Eiger or Pilatus area detector](equipment/detector.md). It is a high-throughput rotation-MX beamline, with an XRF detector for anomalous-edge identification.
+P13 mounts a crystal on the EMBLMiniDiff microdiffractometer (with cryostream cooling), rotates it through an oscillation, and reads frames on the [Eiger or Pilatus area detector](detector.md). It is a high-throughput rotation-MX beamline, with an XRF detector for anomalous-edge identification.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

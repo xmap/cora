@@ -6,12 +6,12 @@ P02 is a descriptor-and-docs scaffold today, reverse-engineered from P02's publi
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/p02/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p02/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
+| Beamline descriptor | [`deployments/p02/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p02/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
 | Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface (shared with P01, P04, P06, P11, P03, P10, P09); P02 adds the diffraction Practices |
 | Upstream source | [P02 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p02) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | P02 reuses the optics / motion / detector Families and binds the catalog `PressureCell` (graduated across 13-id and P02, with P02 the second consumer that earned it) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; powder / total scattering reuse the pending `powder_diffraction` / `total_scattering` slugs (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P02 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers P02 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes P02 new

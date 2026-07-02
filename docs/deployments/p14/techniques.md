@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Macromolecular crystallography
 
-P14 mounts a crystal on a diffractometer (with cryostream cooling), rotates it through an oscillation, and reads frames on an area detector, across two experiment hutches: EH1 on the [EMBLMiniDiff + Eiger detectors](equipment/detector.md), EH2 on the [EMBLBSD + Pilatus 2M](equipment/detector.md). The EH1 CdTe Eiger variants extend the technique to high-energy data collection, and the X-ray imaging camera supports in-situ centring.
+P14 mounts a crystal on a diffractometer (with cryostream cooling), rotates it through an oscillation, and reads frames on an area detector, across two experiment hutches: EH1 on the [EMBLMiniDiff + Eiger detectors](detector.md), EH2 on the [EMBLBSD + Pilatus 2M](detector.md). The EH1 CdTe Eiger variants extend the technique to high-energy data collection, and the X-ray imaging camera supports in-situ centring.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

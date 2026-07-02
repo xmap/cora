@@ -6,12 +6,12 @@ P24 is a descriptor-and-docs scaffold today, reverse-engineered from P24's publi
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/p24/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p24/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
+| Beamline descriptor | [`deployments/p24/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p24/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
 | Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface; P24 adds the chemical-crystallography Practice |
 | Upstream source | [P24 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p24) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P24 reuses `LinearStage` / `Slit` / `PseudoAxis` / `EnergyDispersiveSpectrometer` / `Camera` |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; chemical crystallography reuses the pending `diffraction` slug (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P24 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers P24 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes P24 new

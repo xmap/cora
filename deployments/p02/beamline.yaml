@@ -54,6 +54,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P02 is an undulator beamline (high-energy diffraction); the OnlineXML exposes the undulator gap (p02/attributemotor/gap) but no period or parameters, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "Hard X-ray powder diffraction and total scattering (P02.1) and a diffraction / absorption branch (P02.2), on the PETRA III Tango / Sardana floor."
+  source_ref:
+    label: "python-nxstools-extras-p02"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p02"
 
 # Three enclosures: the shared OH1 optics, the P02.1 powder / total-scattering
 # endstation, and the P02.2 extreme-conditions endstation. The optics and both

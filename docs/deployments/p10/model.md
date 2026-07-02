@@ -6,12 +6,12 @@ P10 is a descriptor-and-docs scaffold today, reverse-engineered from P10's publi
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/p10/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p10/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
+| Beamline descriptor | [`deployments/p10/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p10/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
 | Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface (shared with P01, P04, P06, P11, P03); P10 adds the XPCS / coherent-imaging Practices |
 | Upstream source | [P10 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p10) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P10 reuses the optics / motion / detector Families |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | XPCS binds the graduated `xpcs` Method (not pending); coherent imaging reuses the pending `ptychography` slug (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P10 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers P10 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes P10 new

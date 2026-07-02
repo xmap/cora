@@ -6,13 +6,13 @@ P14 is a descriptor-and-docs scaffold today, reverse-engineered from EMBL Hambur
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/p14/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p14/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Exporter / TINE handles read from the MXCuBE configs (`CTRL-1`) |
+| Beamline descriptor | [`deployments/p14/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p14/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; Exporter / TINE handles read from the MXCuBE configs (`CTRL-1`) |
 | Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface; P14 reuses the EMBL Hamburg sub-operator house-style section (added with P13) and adds the MX Practice (`SEAM-1`) |
 | Upstream source (EH1) | [EMBL P14 MXCuBE config](https://github.com/mxcube/mxcubecore/tree/develop/mxcubecore/configuration/embl_hh_p14) | the EH1 MXCuBE HardwareObjects device topology |
 | Upstream source (EH2) | [EMBL PE2 MXCuBE config](https://github.com/mxcube/mxcubecore/tree/develop/mxcubecore/configuration/embl_hh_pe2) | the EH2 MXCuBE HardwareObjects device topology |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P14 reuses the MX Families |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; MX reuses the pending i03 `mx_data_collection` slug (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P14 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers P14 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes P14 new

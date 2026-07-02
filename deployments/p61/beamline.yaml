@@ -52,6 +52,11 @@ beamline:
   parent: null
   source: superconducting-wiggler
   source_confirm: "P61 is fed by a PETRA III damping wiggler (high-energy white beam); the OnlineXML exposes no source device in this slice, so the wiggler parameters are carried pending (SRC-1)"
+  page_layout: stages
+  shape: "High-energy white-beam engineering (P61A) and powder / total scattering (P61B) on a superconducting-wiggler source, for bulk and in-situ studies."
+  source_ref:
+    label: "python-nxstools-extras-p61"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p61"
 
 # One enclosure inferred from the OnlineXML host (the registry exposes the eh_mot bank
 # on a single hasnp61eh2 host): the experiment hutch. DESY PSS permit signals are not

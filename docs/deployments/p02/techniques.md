@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Powder diffraction (P02.1)
 
-P02.1 illuminates a powder / polycrystalline sample with a high-energy (~60 keV) monochromatic beam and reads the Debye-Scherrer rings on the [Pilatus 1M area detector](equipment/detector.md), with in-situ temperature control for parametric studies.
+P02.1 illuminates a powder / polycrystalline sample with a high-energy (~60 keV) monochromatic beam and reads the Debye-Scherrer rings on the [Pilatus 1M area detector](detector.md), with in-situ temperature control for parametric studies.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ P02.1 illuminates a powder / polycrystalline sample with a high-energy (~60 keV)
 
 ## Total scattering / PDF (P02.1)
 
-P02.1 also collects total scattering to high momentum transfer (the high-energy beam plus the [PerkinElmer flat-panel](equipment/detector.md)) for pair-distribution-function analysis of local / disordered structure.
+P02.1 also collects total scattering to high momentum transfer (the high-energy beam plus the [PerkinElmer flat-panel](detector.md)) for pair-distribution-function analysis of local / disordered structure.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ P02.1 also collects total scattering to high momentum transfer (the high-energy 
 
 ## High-pressure diffraction (P02.2)
 
-P02.2 puts the sample in a [diamond-anvil cell](equipment/sample.md) and collects diffraction under high pressure (and variable temperature), for extreme-conditions studies.
+P02.2 puts the sample in a [diamond-anvil cell](sample.md) and collects diffraction under high pressure (and variable temperature), for extreme-conditions studies.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
