@@ -51,6 +51,7 @@ InferenceStore.
 """
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cora.infrastructure.idempotency import with_idempotency
@@ -62,24 +63,33 @@ from cora.operation.adapters.control_port_config import build_control_port
 from cora.operation.adapters.in_memory_recipe_expander import (
     InMemoryRecipeExpander,
 )
+from cora.operation.adapters.postgres_procedure_outcome_lookup import (
+    InMemoryProcedureOutcomeLookup,
+    PostgresProcedureOutcomeLookup,
+)
 from cora.operation.aggregates.procedure import (
     ActivityStore,
     DiagnosticStore,
     InMemoryActivityStore,
     InMemoryDiagnosticStore,
+    InMemoryOutcomeStore,
+    OutcomeStore,
     PostgresActivityStore,
     PostgresDiagnosticStore,
+    PostgresOutcomeStore,
 )
 from cora.operation.conductor import Conductor, InMemoryActionRegistry
 from cora.operation.features import (
     abort_procedure,
     append_activities,
     append_diagnostics,
+    append_outcomes,
     complete_procedure,
     conduct_from_procedure,
     conduct_or_hold_procedure,
     conduct_procedure,
     conduct_until_advised,
+    conduct_until_advised_from,
     conduct_until_converged,
     end_iteration,
     get_procedure,
@@ -95,6 +105,9 @@ from cora.operation.features import (
 )
 from cora.operation.ports.compute_port import ComputePort
 from cora.operation.ports.control_port import ControlPort
+
+if TYPE_CHECKING:
+    from cora.operation.ports.procedure_outcome_lookup import ProcedureOutcomeLookup
 
 _BC = "operation"
 
@@ -122,12 +135,14 @@ class OperationHandlers:
     end_iteration: end_iteration.Handler
     append_activities: append_activities.Handler
     append_diagnostics: append_diagnostics.Handler
+    append_outcomes: append_outcomes.Handler
     get_procedure: get_procedure.Handler
     list_procedures: list_procedures.Handler
     list_procedure_iterations: list_procedure_iterations.Handler
     conduct_procedure: conduct_procedure.Handler
     conduct_until_converged: conduct_until_converged.Handler
     conduct_until_advised: conduct_until_advised.Handler
+    conduct_until_advised_from: conduct_until_advised_from.Handler
     conduct_or_hold_procedure: conduct_or_hold_procedure.Handler
     control_port: ControlPort
     """The ControlPort the Conductor talks to. Surfaced on the bundle
@@ -186,6 +201,19 @@ def wire_operation(
     diagnostic_store: DiagnosticStore = (
         PostgresDiagnosticStore(deps.pool) if deps.pool is not None else InMemoryDiagnosticStore()
     )
+    # Resume-time read over the recorded outcomes (the y-side of steered-resume
+    # reconstruction). In production a distinct Postgres reader over the same
+    # table; pool-less (tests / app_env=test) wraps the SAME in-memory write
+    # store so the resume read sees exactly what the conduct loop wrote.
+    outcome_store: OutcomeStore
+    outcome_lookup: ProcedureOutcomeLookup
+    if deps.pool is not None:
+        outcome_store = PostgresOutcomeStore(deps.pool)
+        outcome_lookup = PostgresProcedureOutcomeLookup(deps.pool)
+    else:
+        in_memory_outcomes = InMemoryOutcomeStore()
+        outcome_store = in_memory_outcomes
+        outcome_lookup = InMemoryProcedureOutcomeLookup(in_memory_outcomes)
     # Recipe expansion port: default pure adapter. Per the design memo
     # ([[project-recipe-aggregate-design]] Locks), the port is
     # 2-arg pure substitution; future deployment-specific expanders
@@ -241,6 +269,11 @@ def wire_operation(
         command_name="AppendProcedureDiagnostics",
         bc=_BC,
     )
+    append_outcomes_handler = with_tracing(
+        append_outcomes.bind(deps, outcome_store=outcome_store),
+        command_name="AppendProcedureOutcomes",
+        bc=_BC,
+    )
     # Hoisted to locals so the bundle fields AND the Conductor share ONE
     # post-tracing iteration-lifecycle handler each; Conductor.conduct_until_converged
     # composes start_iteration + end_iteration around each convergence pass.
@@ -281,6 +314,7 @@ def wire_operation(
         start_iteration=start_iteration_handler,
         end_iteration=end_iteration_handler,
         append_diagnostics=append_diagnostics_handler,
+        append_outcomes=append_outcomes_handler,
     )
     # Resume-and-replay orchestration: a thin slice handler over
     # Conductor.conduct_from (which composes resume + execute_from +
@@ -340,6 +374,7 @@ def wire_operation(
         end_iteration=end_iteration_handler,
         append_activities=append_step_handler,
         append_diagnostics=append_diagnostics_handler,
+        append_outcomes=append_outcomes_handler,
         get_procedure=with_tracing(
             get_procedure.bind(deps),
             command_name="GetProcedure",
@@ -371,6 +406,16 @@ def wire_operation(
         conduct_until_advised=with_tracing(
             conduct_until_advised.bind(deps, conductor=conductor, expansion_port=recipe_expander),
             command_name="ConductUntilAdvised",
+            bc=_BC,
+        ),
+        conduct_until_advised_from=with_tracing(
+            conduct_until_advised_from.bind(
+                deps,
+                conductor=conductor,
+                expansion_port=recipe_expander,
+                outcome_lookup=outcome_lookup,
+            ),
+            command_name="ConductUntilAdvisedFrom",
             bc=_BC,
         ),
         conduct_or_hold_procedure=conduct_or_hold_handler,

@@ -1093,6 +1093,43 @@
         "title": "AppendProcedureDiagnosticsResponse",
         "type": "object"
       },
+      "AppendProcedureOutcomesRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /procedures/{procedure_id}/outcomes`.",
+        "properties": {
+          "entries": {
+            "description": "List of outcome entries to append (1-500).",
+            "items": {
+              "$ref": "#/components/schemas/ProcedureOutcomeRequest"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Entries",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entries"
+        ],
+        "title": "AppendProcedureOutcomesRequest",
+        "type": "object"
+      },
+      "AppendProcedureOutcomesResponse": {
+        "description": "Response body for the append slice.",
+        "properties": {
+          "event_count": {
+            "description": "Number of entries accepted by the store (includes silently-deduped retries; producer can re-call with the same event_ids safely).",
+            "minimum": 0.0,
+            "title": "Event Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "event_count"
+        ],
+        "title": "AppendProcedureOutcomesResponse",
+        "type": "object"
+      },
       "AppendProcedureStepsRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /procedures/{procedure_id}/activities`.",
@@ -4071,6 +4108,99 @@
           "succeeded"
         ],
         "title": "ConductRunResponse",
+        "type": "object"
+      },
+      "ConductUntilAdvisedFromRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /procedures/{procedure_id}/conduct-until-advised-from`.",
+        "properties": {
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SteeringBudgetRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional informational budget surfaced to the brain (not enforced here)."
+          },
+          "decide": {
+            "$ref": "#/components/schemas/DecideConfigRequest",
+            "description": "The in-CORA brain selection (substrate + grid resolution)."
+          },
+          "objective": {
+            "$ref": "#/components/schemas/cora__operation___advise_wire__SteeringObjectiveRequest",
+            "description": "What good means: the steering objective the brain weighs."
+          },
+          "objective_capture_name": {
+            "description": "Captures-slot name the per-pass deposit fills; the loop surfaces it to the brain as the objective scalar after each pass.",
+            "minLength": 1,
+            "title": "Objective Capture Name",
+            "type": "string"
+          },
+          "space": {
+            "$ref": "#/components/schemas/cora__operation___advise_wire__SteeringSpaceRequest",
+            "description": "The feasible search space (axes + bounds / choices) the brain proposes in."
+          }
+        },
+        "required": [
+          "objective",
+          "space",
+          "objective_capture_name"
+        ],
+        "title": "ConductUntilAdvisedFromRequest",
+        "type": "object"
+      },
+      "ConductUntilAdvisedFromResponse": {
+        "description": "Response body for the conduct_until_advised_from slice.\n\n`succeeded` is True only when the resumed loop reached a brain-advised Stop\nand the Procedure completed. `re_establishment_boundary` echoes the derived\ncount of closed passes the resume re-seeded from. `completed_count` is the\nfinal pass's successful step count (informational).",
+        "properties": {
+          "actuation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actuation Kind"
+          },
+          "completed_count": {
+            "title": "Completed Count",
+            "type": "integer"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConductorFailureResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "procedure_id": {
+            "format": "uuid",
+            "title": "Procedure Id",
+            "type": "string"
+          },
+          "re_establishment_boundary": {
+            "title": "Re Establishment Boundary",
+            "type": "integer"
+          },
+          "succeeded": {
+            "title": "Succeeded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "procedure_id",
+          "completed_count",
+          "succeeded",
+          "re_establishment_boundary"
+        ],
+        "title": "ConductUntilAdvisedFromResponse",
         "type": "object"
       },
       "ConductUntilAdvisedRequest": {
@@ -10110,6 +10240,85 @@
           "items"
         ],
         "title": "ProcedureListResponse",
+        "type": "object"
+      },
+      "ProcedureOutcomeRequest": {
+        "additionalProperties": false,
+        "description": "One outcome entry's input payload.",
+        "properties": {
+          "actuation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Physical / Simulated / Hybrid provenance of the pass's measurements.",
+            "title": "Actuation Kind"
+          },
+          "event_id": {
+            "description": "Producer-supplied UUIDv7 entry id. Idempotency / dedup key; re-issuing the same id is a silent no-op.",
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "iteration_index": {
+            "description": "The steered-conduct pass this outcome records; the ascending order key for resume reconstruction and an audit cross-reference to the ProcedureIterationEnded of the same pass.",
+            "minimum": 0.0,
+            "title": "Iteration Index",
+            "type": "integer"
+          },
+          "measurements": {
+            "description": "The measured values the pass produced (the y): a list of Measurement dicts (value / kind / quality / name / units). Beamline-specific shape, not schema-constrained so a different measurement set needs no migration.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Measurements",
+            "type": "array"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional handler-time override (ISO-8601 with timezone). Defaults to server clock when omitted.",
+            "title": "Occurred At"
+          },
+          "point": {
+            "additionalProperties": true,
+            "description": "The coordinate map the pass measured at (the x), keyed by steering axis name. Carried on the row so a resume rebuilds the observation without a join to the iteration event's advised_next_point.",
+            "title": "Point",
+            "type": "object"
+          },
+          "sampled_at": {
+            "description": "phenomenonTime (ISO-8601 with timezone): when the pass produced these measurements.",
+            "format": "date-time",
+            "title": "Sampled At",
+            "type": "string"
+          },
+          "succeeded": {
+            "description": "Whether the pass's acquisition succeeded (a failed pass is a real datum).",
+            "title": "Succeeded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "event_id",
+          "iteration_index",
+          "point",
+          "measurements",
+          "succeeded",
+          "sampled_at"
+        ],
+        "title": "ProcedureOutcomeRequest",
         "type": "object"
       },
       "ProcedureResponse": {
@@ -38041,6 +38250,104 @@
         ]
       }
     },
+    "/procedures/{procedure_id}/conduct-until-advised-from": {
+      "post": {
+        "description": "Resume a steered Procedure at the frontier. Loop failures land in the body.",
+        "operationId": "post_procedures_conduct_until_advised_from_procedures__procedure_id__conduct_until_advised_from_post",
+        "parameters": [
+          {
+            "description": "Target procedure's id.",
+            "in": "path",
+            "name": "procedure_id",
+            "required": true,
+            "schema": {
+              "description": "Target procedure's id.",
+              "format": "uuid",
+              "title": "Procedure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConductUntilAdvisedFromRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConductUntilAdvisedFromResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Procedure with that id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Procedure is not Held, or its parent Run is Held."
+          },
+          "422": {
+            "description": "Request body failed schema validation, or the steering space / objective does not line up with the pinned recipe."
+          }
+        },
+        "summary": "Resume a Held recipe-driven steered Procedure: re-seed the brain from the recorded closed passes and continue asking it where to measure next.",
+        "tags": [
+          "operation"
+        ]
+      }
+    },
     "/procedures/{procedure_id}/conduct-until-converged": {
       "post": {
         "description": "Conduct a Procedure as a convergence loop. Failures land in the body.",
@@ -38568,6 +38875,103 @@
           }
         },
         "summary": "Begin one convergence-loop iteration on a Running Procedure",
+        "tags": [
+          "operation"
+        ]
+      }
+    },
+    "/procedures/{procedure_id}/outcomes": {
+      "post": {
+        "operationId": "post_procedures_outcomes_procedures__procedure_id__outcomes_post",
+        "parameters": [
+          {
+            "description": "Target procedure's id.",
+            "in": "path",
+            "name": "procedure_id",
+            "required": true,
+            "schema": {
+              "description": "Target procedure's id.",
+              "format": "uuid",
+              "title": "Procedure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendProcedureOutcomesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppendProcedureOutcomesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Procedure exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Procedure is not in `Running` (the outcome logbook is implicitly closed), or a concurrent write to the same Procedure stream conflicted (optimistic concurrency)."
+          },
+          "422": {
+            "description": "Request body failed schema validation: empty entries list, batch over cap, or missing required fields."
+          }
+        },
+        "summary": "Append a batch of steered-pass outcomes to a Procedure's outcome logbook (lazy open-on-first-write).",
         "tags": [
           "operation"
         ]

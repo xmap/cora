@@ -90,6 +90,7 @@ _DOMAIN_NOUN_ALLOWLIST: frozenset[str] = frozenset(
         "observation",  # Run: append_observations (logbook-entry rename, slice 3)
         "activity",  # Operation: append_activities (logbook-entry rename, slice 4)
         "diagnostic",  # Operation: append_diagnostics (GP-steering diagnostics logbook entry)
+        "outcome",  # Operation: append_outcomes (steered-pass measured-values logbook entry)
         "iteration",  # Operation: start_iteration / end_iteration (convergence-loop boundary noun)
         "entry",  # generic logbook-entry vocabulary
         "permission",  # Trust: list_permissions
@@ -109,6 +110,7 @@ _SUBJECT_EXEMPT_SLICES: frozenset[str] = frozenset(
     {
         "cora.operation.features.conduct_until_converged",
         "cora.operation.features.conduct_until_advised",
+        "cora.operation.features.conduct_until_advised_from",
     }
 )
 

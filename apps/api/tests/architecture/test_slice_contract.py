@@ -46,6 +46,7 @@ _ENTRY_APPEND_SLICES: frozenset[str] = frozenset(
         "cora.run.features.append_observations",
         "cora.operation.features.append_activities",
         "cora.operation.features.append_diagnostics",
+        "cora.operation.features.append_outcomes",
     }
 )
 # Orchestration slices: command-shaped but no decider; the handler
@@ -75,6 +76,12 @@ _ORCHESTRATION_SLICES: frozenset[str] = frozenset(
         # + complete/abort); no direct event emission. The DECIDE-axis sibling
         # of conduct_until_converged. See [[project_decide_layer_stage1_design]].
         "cora.operation.features.conduct_until_advised",
+        # Steered-RESUME entry: delegates Conductor.conduct_until_advised_from
+        # (resume + { start_iteration + execute + advise_next + end_iteration } *
+        # at the open frontier + complete/abort); no direct event emission. The
+        # DECIDE-axis twin of conduct_from_procedure. See
+        # [[project_resumable_conduct_design]].
+        "cora.operation.features.conduct_until_advised_from",
         # Bulk-mint sweep: enumerates Assets missing a persistent id and
         # delegates each to the assign_asset_persistent_id handler; no direct
         # event emission. See [[project_asset_persistent_id_design]].
