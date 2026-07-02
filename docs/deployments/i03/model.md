@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where I03 content lives. Design-phase.*
+*The developer's by-kind index: where each CORA aggregate's I03 content lives, the one catalog Family it graduates (`Goniometer`), and the record of what is deliberately deferred. Design-phase scaffold.*
 
-I03 is a documentation-and-descriptor scaffold: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives.
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/i03/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i03/beamline.yaml) | the device walk, with the dodal-derived EPICS PV handles; source of the generated [Source](source.md) page |
-| Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface; I03 added to its beamlines, with MX practices carried pending |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **one Family graduated: `Goniometer`** (pending to defined, the Smargon as canonical instance). I03 also reuses existing Families and carries the loose `StorageRing`. `Backlight` was introduced here and has since graduated to a catalog Family (the illumination affordance, earned across the MX / imaging fleet). `TemperatureController` (the cryostream / thawer) was loose here too but has since graduated to a catalog Family (presenting `Regulator`) on the i11 rule-of-three; `FluxMonitor` (the Flux / IPin readouts) likewise graduated, presenting the Sensor Role, on the i22/i03/i15-1 rule-of-three; the `QBPM` binds the graduated `BeamPositionMonitor` catalog Family (presents Sensor, earned across the wide fleet that shares it, distinct from `FluxMonitor` by measuring beam position rather than flux) |
-| Catalog Capability / Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the MX data-collection, grid-scan, and sample-exchange Methods are deferred until the technique enters scope (TECH-1) |
-| Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound; dodal names hardware (Dectris, Oxford Cryosystems, the robot) but no part is procured |
-| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers I03 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md), including the robot Clearance gate |
+| Aggregate (BC) | Where at I03 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## The one catalog change: graduating Goniometer
 

@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where ISR content lives, why this deployment is deliberately partial, why it coins no new family, and the record of what is deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's ISR content lives, why this deployment is deliberately partial, and the record of what is deferred. Design-phase scaffold.*
 
-ISR is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's profile collection, and a deliberately **partial** one: the public source is an early / commissioning, optics-first profile collection. It exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/isr/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/isr/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
-| Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `ISR` added to its beamline list, with the resonant / diffraction Practices |
-| Extraction provenance | [NSLS2/isr-profile-collection](https://github.com/NSLS2/isr-profile-collection) | the `startup/` device definitions the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; resonant_scattering (4-ID / CSX) and diffraction (4-ID / 8-ID) are reused pending (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers ISR Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at ISR |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## Why ISR is partial
 

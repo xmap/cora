@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where P03 content lives, its place as PETRA III's first SAXS / WAXS beamline, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's P03 content lives, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-P03 is a descriptor-and-docs scaffold today, reverse-engineered from P03's public OnlineXML registry: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/p03/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p03/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
-| Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface (shared with P01, P04, P06, P11); P03 adds the scattering Practices |
-| Upstream source | [P03 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p03) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P03 reuses the optics / motion / detector Families |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; SAXS / WAXS reuse the pending `small_angle_scattering` / `wide_angle_scattering` slugs (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers P03 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at P03 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes P03 new
 

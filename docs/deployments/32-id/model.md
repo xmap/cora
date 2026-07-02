@@ -1,17 +1,16 @@
 # Model
 
-*The developer's index into where 32-ID content lives, and the record of what is deliberately deferred. Design-phase.*
+*The developer's by-kind index: where each CORA aggregate's 32-ID content lives, a TXM nano-tomography beamline whose optic classes graduated once FXI shared them, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-32-ID is a documentation-and-descriptor scaffold today: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/32-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/32-id/beamline.yaml) | the device walk; source of the generated [Source](source.md) page |
-| Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface, shared with 2-BM; `32-ID` added to its beamline list |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | the spine reuses existing Families; the TXM optic classes (`Condenser`, `ZonePlate`, `PhaseRing`) graduated into the catalog once FXI became a second deployment sharing them |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; TXM nano-tomography reuses `tomography` |
-| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers 32-ID Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at 32-ID |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## Deliberately not here yet
 

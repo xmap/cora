@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where FAXTOR content lives, the new ALBA Site and Tango / Sardana control house-style it introduces, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's FAXTOR content lives, the new ALBA Site and Tango / Sardana control house-style it introduces, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-FAXTOR is a descriptor-and-docs scaffold today, reverse-engineered from ALBA's public facility pages: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/faxtor/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/faxtor/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; control handles unbound (`CTRL-1`) |
-| Site descriptor | [`deployments/alba/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/alba/site.yaml) | the NEW ALBA facility surface; `FAXTOR` its first beamline, with the tomography Practices |
-| Upstream source | [cells.es BL31 FAXTOR](https://www.cells.es/en/beamlines/bl31-faxtor) | the public ALBA facility material the descriptor and docs were reverse-engineered from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; FAXTOR reuses the imaging Families |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; tomography reuses existing Methods, radiography is pending (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers FAXTOR Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at FAXTOR |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes FAXTOR new
 

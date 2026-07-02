@@ -1,18 +1,17 @@
 # Model
 
-*The developer's index into where ID28 content lives, why it coins no new family, the further SpectrometerArm consumer it adds (the sighting that helped earn the graduation), and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's ID28 content lives, why it coins no new family and adds a further SpectrometerArm consumer, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-ID28 is a descriptor-and-docs scaffold today, reverse-engineered from the ESRF's BLISS Beacon device database: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/id28/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id28/beamline.yaml) | the device walk with bound handles; source of the generated [Source](source.md) page |
-| Site descriptor | [`deployments/esrf/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/esrf/site.yaml) | the ESRF facility surface; `ID28` added to its beamline list, with an IXS Practice |
-| Extraction provenance | [gitlab.esrf.fr/id28/beamline_configuration](https://gitlab.esrf.fr/id28/beamline_configuration) | the public BLISS Beacon device database the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | ID28 coins none; it is a further `SpectrometerArm` consumer, a sighting that reinforced the now-landed graduation (below) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the IXS Method is pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers ID28 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at ID28 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (the incident-energy PseudoAxis, realized over the F700 temperature controller) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes ID28 new
 

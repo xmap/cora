@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where P24 content lives, its place as the chemical crystallography beamline, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's P24 content lives, its single-crystal chemical crystallography distinct from the MX beamlines, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-P24 is a descriptor-and-docs scaffold today, reverse-engineered from P24's public OnlineXML registry: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/p24/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p24/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
-| Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface; P24 adds the chemical-crystallography Practice |
-| Upstream source | [P24 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p24) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P24 reuses `LinearStage` / `Slit` / `PseudoAxis` / `EnergyDispersiveSpectrometer` / `Camera` |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; chemical crystallography reuses the pending `diffraction` slug (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers P24 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at P24 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes P24 new
 

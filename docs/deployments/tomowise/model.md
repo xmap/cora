@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where TomoWISE content lives. Design-phase.*
+*The developer's by-kind index: where each CORA aggregate's TomoWISE content lives, the cross-facility `Microscope` / `Optics` Assemblies it reuses with 2-BM, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-TomoWISE is a documentation-and-descriptor scaffold today: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives.
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/tomowise/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/tomowise/beamline.yaml) | the device walk; source of the generated [Source](source.md) page |
-| Site descriptor | [`deployments/maxiv/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/maxiv/site.yaml) | the MAX IV facility surface |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | `InsertionDevice` added for the two sources; `Mask` promoted to a shared Family (front-end masks, now shared with 2-BM); other devices reuse existing Families |
-| Catalog Assembly | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | the two microscopes reuse the cross-facility `Microscope` / `Optics` Assemblies (shared with 2-BM); the `camera` and `propagation_distance` slots were generalized to `ZeroOrOne` so TomoWISE can share cameras + the gantry rail |
-| Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | one model bound: `optique_peter_micrx080` (the 2-BM Optique Peter housing) on both microscope Housings, as the design-target candidate (DET-2) |
-| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers TomoWISE Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at TomoWISE |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What is deliberately not here yet
 

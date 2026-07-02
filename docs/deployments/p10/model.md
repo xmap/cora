@@ -1,18 +1,17 @@
 # Model
 
-*The developer's index into where P10 content lives, its place as a further XPCS beamline, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's P10 content lives, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-P10 is a descriptor-and-docs scaffold today, reverse-engineered from P10's public OnlineXML registry: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/p10/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p10/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
-| Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface (shared with P01, P04, P06, P11, P03); P10 adds the XPCS / coherent-imaging Practices |
-| Upstream source | [P10 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p10) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P10 reuses the optics / motion / detector Families |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | XPCS binds the graduated `xpcs` Method (not pending); coherent imaging reuses the pending `ptychography` slug (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers P10 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at P10 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (coupled axes) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes P10 new
 
