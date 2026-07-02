@@ -104,6 +104,7 @@ def render_all(
                 blob_url=blob_url,
                 link_inventory=False,
                 include_enclosures=False,
+                flat=True,
             ),
             f"deployments/{slug}/index.md": _render_index(
                 descriptor,
@@ -322,6 +323,7 @@ def _render_page(
     blob_url: str,
     link_inventory: bool = True,
     include_enclosures: bool = True,
+    flat: bool = False,
 ) -> str:
     # Both beamline.md (walk layout) and the flat source.md (stages layout) sit
     # at deployments/<slug>/, so the catalog depth is the same for each.
@@ -329,16 +331,31 @@ def _render_page(
     beamline = descriptor.beamline
     blocks: list[str] = ["# Source"]
 
-    blocks.append(
-        "The incident beam, produced, conditioned, and defined before the sample. "
-        "A walk along the source-stage devices; the sample and detection stages are "
-        "documented as their own composed-fixture pages, the controllers that drive "
-        "these devices are on the Controls page, and the supplies they draw on are in "
-        "Operations. Each device pairs its human name with its control handle, its key "
-        "specs, and whether it is field replaceable. `new` marks a device not yet "
-        "modeled in CORA; `confirm` marks a value taken from the docs that staff have "
-        "not yet verified."
-    )
+    if flat:
+        # Stages layout: the stages are first-class sibling pages, so the intro
+        # orients to the source stage itself and links Controls as a sibling. No
+        # "walk" framing and no composed-fixture / Operations references (those
+        # are walk-layout concepts and Operations is not a page here).
+        intro = (
+            "The incident beam, produced, conditioned, and defined before the sample. "
+            "The controllers that drive these devices are on the [Controls](controls.md) "
+            "page. Each device pairs its human name with its control handle, its key "
+            "specs, and whether it is field replaceable. `new` marks a device not yet "
+            "modeled in CORA; `confirm` marks a value taken from the docs that staff have "
+            "not yet verified."
+        )
+    else:
+        intro = (
+            "The incident beam, produced, conditioned, and defined before the sample. "
+            "A walk along the source-stage devices; the sample and detection stages are "
+            "documented as their own composed-fixture pages, the controllers that drive "
+            "these devices are on the Controls page, and the supplies they draw on are in "
+            "Operations. Each device pairs its human name with its control handle, its key "
+            "specs, and whether it is field replaceable. `new` marks a device not yet "
+            "modeled in CORA; `confirm` marks a value taken from the docs that staff have "
+            "not yet verified."
+        )
+    blocks.append(intro)
     banner = (
         f"This page is generated from the descriptor at "
         f"[`deployments/{slug}/beamline.yaml`]({blob_url}). "
@@ -493,31 +510,36 @@ def _render_index(
     if flat:
         blocks.extend(_enclosures_blocks(descriptor))
 
-    # The beam walk: the natural spine, linking the generated stage pages. The
-    # stages layout links flat siblings and has no Inventory; the walk layout
-    # links the equipment/ pages and points at the Inventory reference.
-    source_link = "[Source](source.md)" if flat else "[Source](beamline.md)"
-    walk: list[str] = ["## Walk the beam"]
-    walk_links = [source_link]
-    if "sample" in stages:
-        walk_links.append("[Sample](sample.md)" if flat else "[Sample](equipment/sample.md)")
-    if "detection" in stages:
-        walk_links.append(
-            "[Detector](detector.md)" if flat else "[Detector](equipment/detector.md)"
-        )
-    walk_links.append("[Controls](controls.md)" if flat else "[Controls](equipment/controls.md)")
-    walk_sentence = (
-        "The instrument, area by area along the beam: "
-        + " to ".join(walk_links[:-1])
-        + f", driven by {walk_links[-1]}."
-    )
-    if not flat:
-        walk_sentence += (
-            " The full device tree, with families and control handles, is the "
+    if flat:
+        # Stages layout: the stages are first-class sibling pages, so present
+        # them as a section list (in beam order, controls last) rather than a
+        # one-line walk sentence. No Inventory (the stage pages are the tree).
+        section = ["## The beamline", "The devices along the beam, area by area."]
+        bullets = ["- [Source](source.md): the beam, produced and conditioned before the sample."]
+        if "sample" in stages:
+            bullets.append("- [Sample](sample.md): the sample environment and its positioning.")
+        if "detection" in stages:
+            bullets.append("- [Detector](detector.md): what records the beam after the sample.")
+        bullets.append("- [Controls](controls.md): the control plane CORA's edge conducts over.")
+        section.append("\n".join(bullets))
+        blocks.append("\n\n".join(section))
+    else:
+        # Walk layout: the beam walk as a one-line spine, linking the equipment/
+        # pages and pointing at the Inventory reference for the full device tree.
+        walk_links = ["[Source](beamline.md)"]
+        if "sample" in stages:
+            walk_links.append("[Sample](equipment/sample.md)")
+        if "detection" in stages:
+            walk_links.append("[Detector](equipment/detector.md)")
+        walk_links.append("[Controls](equipment/controls.md)")
+        walk_sentence = (
+            "The instrument, area by area along the beam: "
+            + " to ".join(walk_links[:-1])
+            + f", driven by {walk_links[-1]}."
+            + " The full device tree, with families and control handles, is the "
             "[Inventory](inventory.md)."
         )
-    walk.append(walk_sentence)
-    blocks.append("\n\n".join(walk))
+        blocks.append("## Walk the beam\n\n" + walk_sentence)
 
     blocks.append("## More")
     blocks.append(

@@ -215,17 +215,25 @@ def test_stages_layout_dissolves_inventory_into_flat_stage_pages() -> None:
     assert "deployments/srx/beamline.md" not in pages
     assert "deployments/srx/inventory.md" not in pages
     assert not any(path.startswith("deployments/srx/equipment/") for path in pages)
-    # the flat source page keeps the Source walk and drops the Inventory pointer
+    # the flat source page is the source stage itself, with no Inventory pointer
+    # and none of the walk-layout framing (no "walk", no composed-fixture pages,
+    # and no dangling Operations reference, which is not a page in this layout)
     source = pages["deployments/srx/source.md"]
     assert source.startswith("# Source")
     assert "inventory.md" not in source
+    assert "walk" not in source.lower()
+    assert "composed-fixture" not in source
+    assert "Operations" not in source
+    assert "[Controls](controls.md)" in source
     # Enclosures are a beamline-wide fact: the table moves up to the index and
     # off the Source page in the stages layout.
     assert "## Enclosures" not in source
-    # the index links the flat siblings, carries the Enclosures table, and no
-    # longer points at an Inventory
+    # the index presents the stages as first-class sibling pages, not a "Walk the
+    # beam" spine, carries the Enclosures table, and no longer points at Inventory
     index = pages["deployments/srx/index.md"]
     assert "[Source](source.md)" in index
+    assert "Walk the beam" not in index
+    assert "## The beamline" in index
     assert "## Enclosures" in index
     assert "`5-ID-A`" in index
     assert "inventory.md" not in index
@@ -245,6 +253,10 @@ def test_walk_layout_keeps_beamline_and_inventory_pages() -> None:
     assert "deployments/hxn/equipment/sample.md" in pages
     assert "deployments/hxn/equipment/detector.md" in pages
     assert "deployments/hxn/equipment/controls.md" in pages
+    # the walk layout keeps the "Walk the beam" spine and its Inventory pointer
+    index = pages["deployments/hxn/index.md"]
+    assert "## Walk the beam" in index
+    assert "[Inventory](inventory.md)" in index
 
 
 def test_markers_promoted_from_comments_to_fields() -> None:
