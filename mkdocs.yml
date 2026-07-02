@@ -182,7 +182,6 @@ nav:
         - Sample: deployments/12-id/sample.md
         - Detector: deployments/12-id/detector.md
         - Controls: deployments/12-id/controls.md
-        - Enclosures: deployments/12-id/enclosures.md
         - Techniques: deployments/12-id/techniques.md
         - Governance: deployments/12-id/governance.md
         - Model: deployments/12-id/model.md
@@ -193,7 +192,6 @@ nav:
         - Sample: deployments/13-id/sample.md
         - Detector: deployments/13-id/detector.md
         - Controls: deployments/13-id/controls.md
-        - Enclosures: deployments/13-id/enclosures.md
         - Techniques: deployments/13-id/techniques.md
         - Governance: deployments/13-id/governance.md
         - Model: deployments/13-id/model.md
