@@ -147,6 +147,13 @@ from cora.operation.features.append_diagnostics.command import (
 from cora.operation.features.append_diagnostics.handler import (
     Handler as AppendProcedureDiagnosticsHandler,
 )
+from cora.operation.features.append_outcomes.command import (
+    AppendProcedureOutcomes,
+    OutcomeInput,
+)
+from cora.operation.features.append_outcomes.handler import (
+    Handler as AppendProcedureOutcomesHandler,
+)
 from cora.operation.features.complete_procedure.command import CompleteProcedure
 from cora.operation.features.complete_procedure.handler import (
     Handler as CompleteProcedureHandler,
@@ -673,7 +680,7 @@ type error, not a runtime branch. The arm count is pinned against
 `STEP_KIND_VALUES` by `test_conductor_step_kinds_match_procedure`."""
 
 
-def _steering_probe_point(space: SteeringSpace) -> SteeringPoint:
+def steering_probe_point(space: SteeringSpace) -> SteeringPoint:
     """The space's authored-default coordinate (lower bound, or first choice).
 
     Used in two places that must agree: the `conduct_until_advised` wire-time
@@ -767,6 +774,42 @@ class ActionRegistry(Protocol):
     """
 
     def lookup(self, name: str) -> ActionBody | None: ...
+
+
+@dataclass(frozen=True)
+class _ResumeState:
+    """Pre-loaded state that seeds `_run_decide_loop` on a steered-conduct RESUME.
+
+    A fresh conduct starts the loop from zero (iteration_count 0, no
+    observations, no pending point). A resume reconstructs the closed passes
+    from the record and injects them here so the loop continues at the open
+    frontier and consults the brain only there:
+
+      - `iteration_count`: the aggregate's FSM iteration_count (how many passes
+        were STARTED), so the loop's next `start_iteration` index is
+        iteration_count + 1 and satisfies the strict-successor guard. This is
+        the FSM counter, which after an abandoned (mid-crash) pass legitimately
+        exceeds the number of recorded observations; the two are separate.
+      - `observations`: the reconstructed history the brain saw (from
+        `_steering_resume.reconstruct_observations`), so the frontier pass's
+        `advise_next` sees the full prior context. Its length is the brain's
+        cursor and may be less than `iteration_count` after an abandoned pass.
+      - `pending_point`: the coordinate the frontier pass measures at, obtained
+        by RE-ASKING the brain over `observations` before the loop is entered
+        (the resume driver only enters the loop on a MEASURE verdict, so this
+        is always a real coordinate here; a STOP completes before the loop).
+      - `folded_kind`: the actuation-kind fold across the closed passes, so the
+        terminal Dataset provenance survives the interruption (a simulated
+        prefix cannot be laundered to Physical by the resume).
+
+    Injection-only: the loop body is identical fresh-vs-resumed, so resume adds
+    no second code path and a fresh run stays byte-for-byte unchanged.
+    """
+
+    iteration_count: int
+    observations: tuple[SteeringObservation, ...]
+    pending_point: SteeringPoint | None
+    folded_kind: str | None
 
 
 @dataclass(frozen=True)
@@ -970,6 +1013,7 @@ class Conductor:
         start_iteration: StartProcedureIterationHandler | None = None,
         end_iteration: EndProcedureIterationHandler | None = None,
         append_diagnostics: AppendProcedureDiagnosticsHandler | None = None,
+        append_outcomes: AppendProcedureOutcomesHandler | None = None,
     ) -> None:
         self._control_port = control_port
         self._append_step = append_step
@@ -978,6 +1022,15 @@ class Conductor:
         # audit write (the decision itself is unaffected). Mirrors the other
         # optional handler refs below.
         self._append_diagnostics = append_diagnostics
+        # Optional: records each steered pass's measured values (the y the
+        # brain fit) to the outcome logbook, so a resume rebuilds the
+        # observation history from the record instead of re-measuring. When
+        # None, the loop simply skips the record (decision unaffected). Unlike
+        # diagnostics this fires for EVERY steered pass (uniform recording),
+        # not only learning brains: a stateless-brain run's outcomes are equally
+        # worth recording and the write folds into no aggregate state, so the
+        # replay-determinism property is untouched.
+        self._append_outcomes = append_outcomes
         self._clock = clock
         self._id_generator = id_generator
         self._action_registry: ActionRegistry = action_registry or InMemoryActionRegistry({})
@@ -2182,7 +2235,7 @@ class Conductor:
                     f"steering axis {axis.name!r} is not consumed by any SetpointStep "
                     "CaptureRef or SteeringRef in the static block"
                 )
-        probe = _steering_probe_point(space)
+        probe = steering_probe_point(space)
         seeded_keys = set(point_to_captures(probe))
         deposited = {step.capture_name for step in steps if isinstance(step, CaptureStep)} | {
             step.capture_name
@@ -2224,6 +2277,7 @@ class Conductor:
         correlation_id: UUID,
         causation_id: UUID | None,
         surface_id: UUID,
+        resume_from: _ResumeState | None = None,
     ) -> ConductorResult:
         """The post-start decide loop body of `conduct_until_advised`.
 
@@ -2266,11 +2320,21 @@ class Conductor:
         assert self._abort_procedure is not None
         assert self._start_iteration is not None
         assert self._end_iteration is not None
-        iteration_count = 0
+        # Fresh conduct starts from zero; a RESUME pre-loads the closed passes'
+        # reconstructed state so the loop continues at the open frontier and
+        # consults the brain only there. The seed / execute / advise / end body
+        # below is identical either way: resume is pure initial-state injection,
+        # NOT a second code path. A fresh run (resume_from=None) is byte-for-byte
+        # unchanged, so the pure-brain replay-determinism property is untouched.
+        iteration_count = resume_from.iteration_count if resume_from is not None else 0
         last_result: ConductorResult | None = None
-        folded_kind: str | None = None
-        observations: list[SteeringObservation] = []
-        pending_point: SteeringPoint | None = None
+        folded_kind = resume_from.folded_kind if resume_from is not None else None
+        observations: list[SteeringObservation] = (
+            list(resume_from.observations) if resume_from is not None else []
+        )
+        pending_point: SteeringPoint | None = (
+            resume_from.pending_point if resume_from is not None else None
+        )
         while True:
             if iteration_count >= _ABSOLUTE_MAX_ITERATIONS:
                 return await self._abort_absolute_ceiling(
@@ -2294,9 +2358,7 @@ class Conductor:
             # (the probe); pass 2+ seed the brain's advised point. The
             # observation then records seed_point, so every observation's
             # coordinates are where it actually measured.
-            seed_point = (
-                pending_point if pending_point is not None else _steering_probe_point(space)
-            )
+            seed_point = pending_point if pending_point is not None else steering_probe_point(space)
             pass_captures.update(point_to_captures(seed_point))
             result = await self.execute(
                 procedure_id=procedure_id,
@@ -2380,6 +2442,15 @@ class Conductor:
                 succeeded=result.succeeded,
             )
             observations.append(observation)
+            await self._record_outcome(
+                observation=observation,
+                procedure_id=procedure_id,
+                iteration_index=iteration_count - 1,
+                principal_id=principal_id,
+                correlation_id=correlation_id,
+                causation_id=causation_id,
+                surface_id=surface_id,
+            )
             evidence = SteeringEvidence(
                 objective=objective,
                 space=space,
@@ -2650,6 +2721,232 @@ class Conductor:
                 **envelope_kwargs,
             )
         return merged_result
+
+    async def conduct_until_advised_from(
+        self,
+        *,
+        procedure_id: UUID,
+        principal_id: UUID,
+        correlation_id: UUID,
+        steps: Sequence[Step],
+        decide_port: DecidePort,
+        objective: SteeringObjective,
+        space: SteeringSpace,
+        objective_capture_name: str,
+        point_to_captures: Callable[[SteeringPoint], dict[str, Any]],
+        closed_observations: tuple[SteeringObservation, ...],
+        fsm_iteration_count: int,
+        open_iteration_index: int | None,
+        budget: SteeringBudget | None = None,
+        record_turn: Callable[[SteeringAdvice, SteeringObservation, int], Awaitable[None]]
+        | None = None,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> ConductorResult:
+        """Resume a Held steered Procedure, re-seeding the brain from the record.
+
+        The DECIDE-axis twin of `conduct_from`: where `conduct_from` resumes a flat
+        pinned step list (resume -> execute_from -> terminalize), this resumes
+        an ITERATING brain loop (resume -> re-ask the brain at the frontier ->
+        `_run_decide_loop` -> terminalize). The measured passes already closed
+        are NOT re-driven and NOT re-measured: strategy A per the resume-semantics
+        research (Temporal / Restate / DBOS replay recorded results, they do not
+        re-run side effects; Optuna / Ax / BoTorch re-condition the surrogate
+        from stored trials and evaluate only new ones). A completed measure pass
+        is exactly such a side-effecting step, so its recorded outcome is
+        replayed, not re-driven, and the next move is an absolute one from the
+        current hardware position (no re-drive of a past setpoint; direction-of-
+        approach is a per-move controller concern, and true sample
+        path-dependence is a whole-trajectory property that belongs in
+        provenance, not resume).
+
+        The handler owns the read ports + the reconstruction (mirroring how the
+        `conduct_from` handler owns the pinned-step lookup); this method takes the
+        already-reconstructed evidence + the aggregate's iteration counters:
+
+          - `closed_observations` is the brain-visible history rebuilt from the
+            self-describing outcome rows (`reconstruct_observations`); its length
+            is the brain's cursor.
+          - `fsm_iteration_count` is the aggregate's `iteration_count` (passes
+            STARTED). It seeds the loop's `start_iteration` numbering so the next
+            index is a strict successor. After an abandoned (mid-crash) pass it
+            exceeds `len(closed_observations)`; the two counters are separate.
+          - `open_iteration_index` is the aggregate's `current_iteration_index`
+            when a pass was left open by a mid-crash hold (else None). It is
+            closed here (converged=None, advised_stop=None, an abandon reason)
+            BEFORE the frontier so the FSM has no dangling iteration and the
+            loop's first `start_iteration` does not collide with it.
+
+        RE-ASK, not replay-advice: after resume the brain is asked over
+        `closed_observations` for the frontier. A STOP verdict means the campaign
+        already reached its natural end -> complete immediately (this replaces a
+        no-frontier special case: the brain decides). A MEASURE verdict seeds the
+        loop's first new pass. This matches the ask-tell resumption norm
+        (re-condition on stored trials, then ask for the next point).
+
+        The folded actuation kind is rebuilt from the closed observations so a
+        simulated prefix cannot complete as Physical past the promote_dataset
+        gate (the steered twin of `conduct_from`'s prior-kind fold).
+
+        Requires resume + start_iteration + end_iteration + complete + abort
+        handlers at __init__ (the resume adds `resume_procedure` on top of
+        `conduct_until_advised`'s set); raises RuntimeError (a wiring bug)
+        otherwise. Like `conduct_from`, a refused resume (not-Held / held parent
+        Run / deny / not-found) PROPAGATES as its mapped HTTP code rather than
+        landing in the result body; no pass has run yet.
+        """
+        if (
+            self._resume_procedure is None
+            or self._complete_procedure is None
+            or self._abort_procedure is None
+            or self._start_iteration is None
+            or self._end_iteration is None
+        ):
+            raise RuntimeError(
+                "Conductor.conduct_until_advised_from() requires resume_procedure + "
+                "complete_procedure + abort_procedure + start_iteration + end_iteration "
+                "handlers at __init__."
+            )
+        self._validate_steering_wire(
+            steps=steps,
+            space=space,
+            objective_capture_name=objective_capture_name,
+            point_to_captures=point_to_captures,
+        )
+        envelope_kwargs: dict[str, Any] = {
+            "principal_id": principal_id,
+            "correlation_id": correlation_id,
+            "causation_id": causation_id,
+            "surface_id": surface_id,
+        }
+        # Held -> Running. Refusals (not-Held / held parent Run / authz deny /
+        # not-found) propagate to the route as their mapped HTTP codes; no pass
+        # has run, so they are NOT swallowed into the result body. Mirrors
+        # conduct_from. The re-establishment boundary is the count of recovered
+        # observations (audit only).
+        await self._resume_procedure(
+            ResumeProcedure(
+                procedure_id=procedure_id,
+                re_establishment_boundary=len(closed_observations),
+            ),
+            **envelope_kwargs,
+        )
+        # Close a pass left open by a mid-crash hold, so the FSM has no dangling
+        # iteration and the loop's first start_iteration (fsm_iteration_count +
+        # 1) does not collide with it. The abandoned pass recorded no advice; it
+        # is closed as a non-verdict, non-steering end (converged=None,
+        # advised_stop=None), the same shape the loop uses when a pass faults.
+        if open_iteration_index is not None:
+            await self._end_iteration(
+                EndProcedureIteration(
+                    procedure_id=procedure_id,
+                    iteration_index=open_iteration_index,
+                    converged=None,
+                    reason="resume abandoned an incomplete pass",
+                    advised_stop=None,
+                ),
+                **envelope_kwargs,
+            )
+        # Rebuild the actuation-kind fold across the closed passes so the
+        # terminal event reflects the FULL provenance, not just the frontier
+        # tail (guards the promote_dataset gate against a resume past a
+        # simulated prefix, the steered twin of conduct_from's prior-kind fold).
+        folded_kind: str | None = None
+        for observation in closed_observations:
+            folded_kind = merge_actuation_kinds(
+                folded_kind,
+                observation.actuation_kind.value
+                if observation.actuation_kind is not None
+                else None,
+            )
+        abort_procedure = self._abort_procedure
+        async with abort_orphan_on_cancel(
+            lambda: abort_procedure(
+                AbortProcedure(procedure_id=procedure_id, reason="cancelled mid-execute"),
+                **envelope_kwargs,
+            )
+        ):
+            # RE-ASK the brain at the frontier over the recovered history, so the
+            # brain (not a heuristic) decides whether the campaign continues. A
+            # STOP means it already reached its end -> complete now (no pass to
+            # run). A MEASURE seeds the loop's first new pass.
+            #
+            # `iteration_index` reproduces the turn AFTER the last recovered pass,
+            # i.e. `len(closed_observations) - 1` (the loop numbers each turn by
+            # the index of the pass just measured). With NO recovered pass there
+            # is no advice to reproduce: enter the loop with no pending point, so
+            # the first new pass runs the probe fresh exactly like a fresh
+            # conduct (a deterministic brain keyed on the observation count then
+            # matches a from-scratch run).
+            pending_point: SteeringPoint | None = None
+            if closed_observations:
+                frontier_evidence = SteeringEvidence(
+                    objective=objective,
+                    space=space,
+                    observations=closed_observations,
+                    budget=budget if budget is not None else SteeringBudget(),
+                    iteration_index=len(closed_observations) - 1,
+                    procedure_id=procedure_id,
+                )
+                try:
+                    frontier_advice = await decide_port.advise_next(frontier_evidence)
+                    if frontier_advice.verdict is SteeringVerdict.MEASURE:
+                        _validate_advice_point(frontier_advice.next_point, space)
+                except _DECIDE_ERRORS as exc:
+                    # A brain fault at the frontier aborts the resumed run; no
+                    # pass ran, so there is no open iteration to close first.
+                    failure = ConductorFailure(
+                        step_index=None,
+                        source_kind=_SOURCE_KIND_DECIDE,
+                        target=objective_capture_name,
+                        error_class=type(exc).__name__,
+                        message=str(exc),
+                    )
+                    await self._abort_after_failed_pass(
+                        procedure_id=procedure_id,
+                        failure=failure,
+                        folded_kind=folded_kind,
+                        envelope_kwargs=envelope_kwargs,
+                    )
+                    return ConductorResult(
+                        procedure_id=procedure_id,
+                        completed_count=0,
+                        failure=failure,
+                        actuation_kind=(
+                            ActuationKind(folded_kind) if folded_kind is not None else None
+                        ),
+                    )
+                if frontier_advice.verdict is SteeringVerdict.STOP:
+                    return await self._complete_advised(
+                        procedure_id=procedure_id,
+                        result=ConductorResult(procedure_id=procedure_id, completed_count=0),
+                        folded_kind=folded_kind,
+                        envelope_kwargs=envelope_kwargs,
+                    )
+                pending_point = frontier_advice.next_point
+            resume_from = _ResumeState(
+                iteration_count=fsm_iteration_count,
+                observations=closed_observations,
+                pending_point=pending_point,
+                folded_kind=folded_kind,
+            )
+            return await self._run_decide_loop(
+                procedure_id=procedure_id,
+                steps=steps,
+                decide_port=decide_port,
+                objective=objective,
+                space=space,
+                objective_capture_name=objective_capture_name,
+                point_to_captures=point_to_captures,
+                budget=budget,
+                record_turn=record_turn,
+                envelope_kwargs=envelope_kwargs,
+                principal_id=principal_id,
+                correlation_id=correlation_id,
+                causation_id=causation_id,
+                surface_id=surface_id,
+                resume_from=resume_from,
+            )
 
     async def _dispatch(
         self,
@@ -3588,6 +3885,50 @@ class Conductor:
             surface_id=surface_id,
         )
 
+    async def _record_outcome(
+        self,
+        *,
+        observation: SteeringObservation,
+        procedure_id: UUID,
+        iteration_index: int,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None,
+        surface_id: UUID,
+    ) -> None:
+        """Append one steered-pass outcome row (the measured y) for this iteration.
+
+        Fires for EVERY steered pass when the optional `append_outcomes` handler
+        is wired, uniform across brains: a stateless-brain run's outcomes are
+        recorded too, so any steered run is resumable-from-record. No-op only
+        when the handler is unwired. The write lands in the Procedure's outcome
+        logbook (a side table that does NOT fold into aggregate state), so it
+        never affects the loop's decisions, seeds, or the replay property; it is
+        the record a resume reads back instead of re-measuring.
+        """
+        if self._append_outcomes is None:
+            return
+        now = self._clock.now()
+        entry = OutcomeInput(
+            event_id=self._id_generator.new_id(),
+            iteration_index=iteration_index,
+            point=dict(observation.point.coordinates),
+            measurements=[_outcome_measurement_to_dict(m) for m in observation.measurements],
+            succeeded=observation.succeeded,
+            actuation_kind=(
+                observation.actuation_kind.value if observation.actuation_kind is not None else None
+            ),
+            sampled_at=now,
+            occurred_at=now,
+        )
+        await self._append_outcomes(
+            AppendProcedureOutcomes(procedure_id=procedure_id, entries=(entry,)),
+            principal_id=principal_id,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+            surface_id=surface_id,
+        )
+
     async def _record(
         self,
         *,
@@ -3897,6 +4238,26 @@ def _measurement_to_dict(reading: Measurement) -> dict[str, Any]:
     }
 
 
+def _outcome_measurement_to_dict(measurement: Measurement) -> dict[str, Any]:
+    """JSON-clean projection of a `Measurement` for the steered-pass outcome row.
+
+    Keeps `name` + `units` (SEPARATE from `_measurement_to_dict`, which drops
+    them and is pinned by the projection-metadata frozenset tests): a RESUME
+    rebuilds the observation the brain fit against by mapping each measurement
+    back BY NAME, so the name is load-bearing here. Symmetric with
+    `_measurement_from_dict`, which reads this shape back on resume.
+    """
+    return {
+        "name": measurement.name,
+        "value": measurement.value,
+        "kind": measurement.kind,
+        "quality": measurement.quality,
+        "quality_detail": measurement.quality_detail,
+        "units": measurement.units,
+        "produced_at": measurement.produced_at.isoformat(),
+    }
+
+
 def _compute_measurement_to_dict(measurement: Measurement) -> dict[str, Any]:
     """JSON-clean projection of a ComputeStep `Measurement` for the step payload.
 
@@ -3955,6 +4316,7 @@ __all__ = [
     "Step",
     "WithinToleranceCriterion",
     "is_acquisition_halt",
+    "steering_probe_point",
     "step_to_payload",
     "steps_from_payload",
 ]

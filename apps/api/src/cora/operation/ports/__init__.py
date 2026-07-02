@@ -57,6 +57,10 @@ from cora.operation.ports.procedure_activity_lookup import (
     ProcedureActivityLookup,
     ProcedureActivityRecency,
 )
+from cora.operation.ports.procedure_outcome_lookup import (
+    ProcedureOutcomeLookup,
+    RecordedOutcome,
+)
 from cora.operation.ports.transfer_port import (
     NoRouteForLocationError,
     TransferAccessDeniedError,
@@ -98,7 +102,9 @@ __all__ = [
     "NoRouteForLocationError",
     "ProcedureActivityLookup",
     "ProcedureActivityRecency",
+    "ProcedureOutcomeLookup",
     "Quality",
+    "RecordedOutcome",
     "TransferAccessDeniedError",
     "TransferEndpointUnreachableError",
     "TransferHandle",

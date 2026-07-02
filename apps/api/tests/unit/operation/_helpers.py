@@ -49,6 +49,7 @@ from cora.operation.features.abort_procedure.command import AbortProcedure
 from cora.operation.features.append_activities.command import AppendProcedureActivities
 from cora.operation.features.complete_procedure.command import CompleteProcedure
 from cora.operation.features.end_iteration.command import EndProcedureIteration
+from cora.operation.features.resume_procedure.command import ResumeProcedure
 from cora.operation.features.start_iteration.command import StartProcedureIteration
 from cora.operation.features.start_procedure.command import StartProcedure
 from cora.operation.ports.decide_port import (
@@ -242,11 +243,13 @@ class Transcript:
 
     events: list[str] = field(default_factory=list[str])
     start_iteration_indices: list[int] = field(default_factory=list[int])
+    end_iteration_indices: list[int] = field(default_factory=list[int])
     end_iteration_converged: list[bool | None] = field(default_factory=list[bool | None])
     end_iteration_advised_stop: list[bool | None] = field(default_factory=list[bool | None])
     end_iteration_provenance: list[dict[str, object]] = field(
         default_factory=list[dict[str, object]]
     )
+    resume_boundaries: list[int] = field(default_factory=list[int])
 
 
 def _make_handlers(transcript: Transcript) -> dict[str, object]:
@@ -259,6 +262,10 @@ def _make_handlers(transcript: Transcript) -> dict[str, object]:
     async def abort_procedure(command: AbortProcedure, **_: object) -> None:
         transcript.events.append("abort_procedure")
 
+    async def resume_procedure(command: ResumeProcedure, **_: object) -> None:
+        transcript.events.append("resume_procedure")
+        transcript.resume_boundaries.append(command.re_establishment_boundary)
+
     async def start_iteration(command: StartProcedureIteration, **_: object) -> None:
         transcript.events.append(f"start_iteration[{command.iteration_index}]")
         transcript.start_iteration_indices.append(command.iteration_index)
@@ -268,6 +275,7 @@ def _make_handlers(transcript: Transcript) -> dict[str, object]:
             f"end_iteration[{command.iteration_index}"
             f"=conv:{command.converged},stop:{command.advised_stop}]"
         )
+        transcript.end_iteration_indices.append(command.iteration_index)
         transcript.end_iteration_converged.append(command.converged)
         transcript.end_iteration_advised_stop.append(command.advised_stop)
         transcript.end_iteration_provenance.append(
@@ -286,6 +294,7 @@ def _make_handlers(transcript: Transcript) -> dict[str, object]:
         "start_procedure": start_procedure,
         "complete_procedure": complete_procedure,
         "abort_procedure": abort_procedure,
+        "resume_procedure": resume_procedure,
         "start_iteration": start_iteration,
         "end_iteration": end_iteration,
     }
@@ -303,6 +312,7 @@ def build_conductor(
     compute_port: InMemoryComputePort,
     control_port: InMemoryControlPort,
     append_diagnostics: object | None = None,
+    append_outcomes: object | None = None,
 ) -> Conductor:
     handlers = _make_handlers(transcript)
     return Conductor(
@@ -314,9 +324,11 @@ def build_conductor(
         start_procedure=handlers["start_procedure"],  # type: ignore[arg-type]
         complete_procedure=handlers["complete_procedure"],  # type: ignore[arg-type]
         abort_procedure=handlers["abort_procedure"],  # type: ignore[arg-type]
+        resume_procedure=handlers["resume_procedure"],  # type: ignore[arg-type]
         start_iteration=handlers["start_iteration"],  # type: ignore[arg-type]
         end_iteration=handlers["end_iteration"],  # type: ignore[arg-type]
         append_diagnostics=append_diagnostics,  # type: ignore[arg-type]
+        append_outcomes=append_outcomes,  # type: ignore[arg-type]
     )
 
 

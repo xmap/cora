@@ -31,6 +31,7 @@ from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
 from cora.operation.adapters.in_memory_decide_port import InMemoryDecidePort
 from cora.operation.conductor import Conductor
 from cora.operation.features.append_diagnostics import AppendProcedureDiagnostics
+from cora.operation.features.append_outcomes import AppendProcedureOutcomes
 from cora.operation.ports.decide_port import (
     DecideTimeoutError,
     SteeringAdvice,
@@ -507,3 +508,99 @@ async def test_conduct_until_advised_writes_no_diagnostics_for_stateless_brain()
 
     assert result.succeeded is True
     assert recorder.commands == []
+
+
+class _CapturingAppendOutcomes:
+    """Fake append_outcomes handler that records the commands it received."""
+
+    def __init__(self) -> None:
+        self.commands: list[AppendProcedureOutcomes] = []
+
+    async def __call__(
+        self,
+        command: AppendProcedureOutcomes,
+        *,
+        principal_id: object,
+        correlation_id: object,
+        causation_id: object = None,
+        surface_id: object = None,
+    ) -> int:
+        self.commands.append(command)
+        return len(command.entries)
+
+
+@pytest.mark.unit
+async def test_conduct_until_advised_records_one_outcome_per_measured_pass() -> None:
+    """Every steered pass records its measured y to the outcome logbook (uniform)."""
+    transcript = _Transcript()
+    control = InMemoryControlPort()
+    control.simulate_connect(_MOTOR_ADDR)
+    compute = InMemoryComputePort()
+    compute.set_measurement_sequence(
+        ((_objective_measurement(2.0),), (_objective_measurement(0.1),))
+    )
+    brain = InMemoryDecidePort()
+    brain.set_advice_sequence(
+        [
+            SteeringAdvice(
+                verdict=SteeringVerdict.MEASURE,
+                next_point=SteeringPoint(coordinates={_MOTOR_ADDR: 3.0}),
+                model_ref="grid_walk",
+            ),
+            SteeringAdvice(verdict=SteeringVerdict.STOP, model_ref="grid_walk"),
+        ]
+    )
+    recorder = _CapturingAppendOutcomes()
+    conductor = _conductor(
+        transcript, compute_port=compute, control_port=control, append_outcomes=recorder
+    )
+
+    result = await conductor.conduct_until_advised(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=_pass_block(),  # type: ignore[arg-type]
+        decide_port=brain,
+        objective=_objective(),
+        space=_space(),
+        objective_capture_name=_OBJECTIVE_NAME,
+        point_to_captures=_point_to_captures,
+    )
+
+    assert result.succeeded is True
+    # Uniform recording: one outcome per MEASURED pass (2 turns = 2 passes),
+    # even for a stateless grid_walk brain (unlike diagnostics, which fire only
+    # for a learning brain). iteration_index is 0-based per pass.
+    assert len(recorder.commands) == 2
+    first = recorder.commands[0].entries[0]
+    assert first.iteration_index == 0
+    assert first.measurements[0]["name"] == _OBJECTIVE_NAME
+    assert first.measurements[0]["value"] == 2.0
+    assert first.succeeded is True
+
+
+@pytest.mark.unit
+async def test_conduct_until_advised_records_no_outcomes_when_handler_unwired() -> None:
+    """With no append_outcomes handler wired, the loop records nothing (no-op)."""
+    transcript = _Transcript()
+    control = InMemoryControlPort()
+    control.simulate_connect(_MOTOR_ADDR)
+    compute = InMemoryComputePort()
+    compute.set_measurement_sequence(((_objective_measurement(0.0),),))
+    brain = InMemoryDecidePort()
+    brain.set_advice_sequence([SteeringAdvice(verdict=SteeringVerdict.STOP, model_ref="grid_walk")])
+    conductor = _conductor(transcript, compute_port=compute, control_port=control)
+
+    result = await conductor.conduct_until_advised(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=_pass_block(),  # type: ignore[arg-type]
+        decide_port=brain,
+        objective=_objective(),
+        space=_space(),
+        objective_capture_name=_OBJECTIVE_NAME,
+        point_to_captures=_point_to_captures,
+    )
+
+    assert result.succeeded is True
