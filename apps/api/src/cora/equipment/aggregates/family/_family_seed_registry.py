@@ -44,6 +44,7 @@ from cora.equipment.aggregates.family._family_registry import family_stream_id
 from cora.equipment.aggregates.family.affordance import Affordance
 from cora.equipment.aggregates.family.state import Family, FamilyName, FamilyStatus
 from cora.equipment.aggregates.role._role_registry import (
+    SEED_ROLE_CONTROLLER_ID,
     SEED_ROLE_DETECTOR_ID,
     SEED_ROLE_POSITIONER_ID,
     SEED_ROLE_REGULATOR_ID,
@@ -79,6 +80,7 @@ _POSITIONER = frozenset({SEED_ROLE_POSITIONER_ID})
 _DETECTOR = frozenset({SEED_ROLE_DETECTOR_ID})
 _SENSOR = frozenset({SEED_ROLE_SENSOR_ID})
 _REGULATOR = frozenset({SEED_ROLE_REGULATOR_ID})
+_CONTROLLER = frozenset({SEED_ROLE_CONTROLLER_ID})
 _HOMED = frozenset({Affordance.HOMEABLE, Affordance.LIMITABLE})
 _DETECTOR_AFFORDANCES = frozenset(
     {
@@ -126,6 +128,17 @@ _REGULATOR_FLOW = frozenset(
     {Affordance.SETTABLE, Affordance.PID_CONTROLLABLE, Affordance.REPORTABLE}
 )
 _REGULATOR_SETPOINT = frozenset({Affordance.SETTABLE, Affordance.REPORTABLE})
+
+# Batch 5 (Pass 1, Controller cluster). The two supervisory <Domain>Controller
+# boxes present the Controller Role. They carry signal-governance affordances
+# (Identifiable + status Reportable, plus Pulsing for the trigger generator),
+# NOT the operational motion/imaging affordances of the subordinate Assets
+# they govern. The Role's required {Identifiable} means a genuinely
+# empty-affordance box cannot present it, so "empty-Affordances leaves" in the
+# old docstring was reconciled to "signal-governance affordances" alongside
+# this batch.
+_CONTROLLER_MOTION = frozenset({Affordance.IDENTIFIABLE, Affordance.REPORTABLE})
+_CONTROLLER_TIMING = frozenset({Affordance.IDENTIFIABLE, Affordance.PULSING, Affordance.REPORTABLE})
 
 # Batch 2 (Pass 1, Detector cluster). Only direct-detection Camera
 # presents the Detector Role; per the Role docstring a composed
@@ -175,8 +188,8 @@ SEED_FAMILIES: Final[tuple[Family, ...]] = (
         affordances=_HOMED | {Affordance.POSABLE},
         presents_as=_POSITIONER,
     ),
-    _family("MotionController"),
-    _family("TimingController"),
+    _family("MotionController", affordances=_CONTROLLER_MOTION, presents_as=_CONTROLLER),
+    _family("TimingController", affordances=_CONTROLLER_TIMING, presents_as=_CONTROLLER),
     _family("Objective"),
     _family("PseudoAxis"),
     _family("Housing"),

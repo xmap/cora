@@ -133,6 +133,21 @@ def test_detector_cluster_is_populated() -> None:
     assert scintillator.affordances == frozenset({Affordance.CONSUMABLE})
 
 
+def test_controller_cluster_is_populated() -> None:
+    """Batch 5 (Controller cluster): the two supervisory <Domain>Controller
+    boxes present Controller, carrying signal-governance affordances
+    (Identifiable required; Pulsing on the timing generator) rather than
+    the operational affordances of the Assets they govern."""
+    controller_id = next(r.id for r in SEED_ROLES if r.name.value == "Controller")
+    presenting = {f.name.value for f in SEED_FAMILIES if controller_id in f.presents_as}
+    assert presenting == {"MotionController", "TimingController"}
+    for family in SEED_FAMILIES:
+        if controller_id in family.presents_as:
+            assert Affordance.IDENTIFIABLE in family.affordances
+    timing = next(f for f in SEED_FAMILIES if f.name.value == "TimingController")
+    assert Affordance.PULSING in timing.affordances
+
+
 def test_regulator_cluster_is_populated() -> None:
     """Batch 4 (Regulator cluster): the four sample-environment actuators
     that drive a process variable to a setpoint. Each carries Settable

@@ -139,10 +139,13 @@ CONTROLLER: Final[Role] = Role(
     name=RoleName("Controller"),
     docstring=(
         "Generates or routes signals (motion, timing) that govern subordinate "
-        "Assets. Satisfying Families are the empty-Affordances "
-        "<Domain>Controller leaves (MotionController, TimingController). The "
-        "Controller does NOT itself perform motion / imaging; subordinate "
-        "Assets do, under its supervision."
+        "Assets. Satisfying Families are the <Domain>Controller leaves "
+        "(MotionController, TimingController); they carry signal-governance "
+        "affordances (Identifiable, status Reportable, and Pulsing for a "
+        "trigger generator), NOT the operational motion / imaging affordances "
+        "of the subordinate Assets they supervise. The Controller does NOT "
+        "itself perform motion / imaging; subordinate Assets do, under its "
+        "supervision."
     ),
     required_affordances=frozenset({Affordance.IDENTIFIABLE}),
     optional_affordances=frozenset({Affordance.REPORTABLE, Affordance.PULSING}),

@@ -36,7 +36,7 @@ roles:
     produces: [EncoderPosition]
     consumes: [PositionCommand]
   - name: Controller
-    docstring: "Generates or routes signals (motion, timing) that govern subordinate Assets. Satisfying Families are the empty-Affordances <Domain>Controller leaves (MotionController, TimingController). The Controller does NOT itself perform motion / imaging; subordinate Assets do, under its supervision."
+    docstring: "Generates or routes signals (motion, timing) that govern subordinate Assets. Satisfying Families are the <Domain>Controller leaves (MotionController, TimingController); they carry signal-governance affordances (Identifiable, status Reportable, and Pulsing for a trigger generator), NOT the operational motion / imaging affordances of the subordinate Assets they supervise. The Controller does NOT itself perform motion / imaging; subordinate Assets do, under its supervision."
     required_affordances: [Identifiable]
     optional_affordances: [Reportable, Pulsing]
     produces: [ControlOut]
@@ -93,7 +93,11 @@ families:
     affordances: [Homeable, Limitable, Posable]
     presents_as: [Positioner]
   - name: MotionController
+    affordances: [Identifiable, Reportable]
+    presents_as: [Controller]
   - name: TimingController
+    affordances: [Identifiable, Pulsing, Reportable]
+    presents_as: [Controller]
     note: "Hardware timing-signal generation and distribution (triggers, gates, sync pulses); presents_as Controller, which carries Pulsing. Anchored at 2-BM by Timing (the softGlueZynq Zynq FPGA box). Substrate (softGlue, FPGA, Zynq) stays out of the name and lives in settings or the bound Model."
   - name: Objective
     note: "Per-lens identity inside the Microscope Assembly."
