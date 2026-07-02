@@ -30,6 +30,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  deployment_tier: pilot
   summary: "full-field transmission X-ray microscopy and tomography, 18-ID; modelled from public beamline config"
   name: FXI
   facility: nsls2               # NSLS-II, a Site-level Facility (facility_code: nsls2)

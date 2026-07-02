@@ -424,17 +424,13 @@ nav:
         - Model: deployments/bmm/model.md
       - SRX:
         - deployments/srx/index.md
-        - Open questions: deployments/srx/questions.md
-        - The beamline:
-          - deployments/srx/equipment/index.md
-          - Source: deployments/srx/beamline.md
-          - Sample: deployments/srx/equipment/sample.md
-          - Detector: deployments/srx/equipment/detector.md
-          - Controls: deployments/srx/equipment/controls.md
-          - Inventory: deployments/srx/inventory.md
+        - Source: deployments/srx/source.md
+        - Sample: deployments/srx/sample.md
+        - Detector: deployments/srx/detector.md
+        - Controls: deployments/srx/controls.md
         - Techniques: deployments/srx/techniques.md
         - Governance: deployments/srx/governance.md
-        - Model: deployments/srx/model.md
+        - Open questions: deployments/srx/questions.md
       - SIX:
         - deployments/six/index.md
         - Open questions: deployments/six/questions.md

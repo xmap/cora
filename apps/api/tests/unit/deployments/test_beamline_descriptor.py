@@ -191,6 +191,55 @@ def test_renders_source_stage_walk_and_no_em_dash() -> None:
     assert chr(0x2014) not in markdown
 
 
+def _render_all_pages(slug: str) -> dict[str, str]:
+    descriptor = bd.load(_DEPLOYMENTS / slug / "beamline.yaml")
+    catalog = cd.load(_CATALOG)
+    return bp.render_all(
+        descriptor,
+        slug=slug,
+        catalog_families=frozenset(f.name for f in catalog.families),
+        catalog_models=frozenset(m.name for m in catalog.models),
+        model_tier=descriptor.beamline.deployment_tier == "model",
+    )
+
+
+def test_stages_layout_dissolves_inventory_into_flat_stage_pages() -> None:
+    # SRX opts into page_layout: stages: Inventory is dissolved into flat
+    # source/sample/detector/controls siblings, with no equipment/ folder and no
+    # beamline.md or inventory.md.
+    pages = _render_all_pages("srx")
+    assert "deployments/srx/source.md" in pages
+    assert "deployments/srx/sample.md" in pages
+    assert "deployments/srx/detector.md" in pages
+    assert "deployments/srx/controls.md" in pages
+    assert "deployments/srx/beamline.md" not in pages
+    assert "deployments/srx/inventory.md" not in pages
+    assert not any(path.startswith("deployments/srx/equipment/") for path in pages)
+    # the flat source page keeps the Source walk and drops the Inventory pointer
+    assert pages["deployments/srx/source.md"].startswith("# Source")
+    assert "inventory.md" not in pages["deployments/srx/source.md"]
+    # the index links the flat siblings and no longer points at an Inventory
+    index = pages["deployments/srx/index.md"]
+    assert "[Source](source.md)" in index
+    assert "inventory.md" not in index
+    assert "equipment/" not in index
+
+
+def test_walk_layout_keeps_beamline_and_inventory_pages() -> None:
+    # A default model-tier beamline (page_layout omitted -> "walk") is unchanged:
+    # it still emits beamline.md, inventory.md, and the equipment/ stage pages.
+    pages = _render_all_pages("fxi")
+    assert "deployments/fxi/beamline.md" in pages
+    # fxi is a pilot (deployment_tier: pilot), so only the Source walk generates;
+    # assert a genuine model-tier walk beamline keeps the full set.
+    pages = _render_all_pages("hxn")
+    assert "deployments/hxn/beamline.md" in pages
+    assert "deployments/hxn/inventory.md" in pages
+    assert "deployments/hxn/equipment/sample.md" in pages
+    assert "deployments/hxn/equipment/detector.md" in pages
+    assert "deployments/hxn/equipment/controls.md" in pages
+
+
 def test_markers_promoted_from_comments_to_fields() -> None:
     descriptor = bd.load(_DESCRIPTOR)
     devices = {d.name: d for _name, group in descriptor.groups for d in group.devices}
@@ -541,11 +590,36 @@ def test_allowlist_guard_logic_detects_unexpected_and_stale() -> None:
 _DOCS_DEPLOYMENTS = _REPO_ROOT / "docs" / "deployments"
 
 
-def _deployment_doc_text(deployment: str) -> str:
-    base = _DOCS_DEPLOYMENTS / deployment
-    if not base.is_dir():
+def _generated_beamline_pages(deployment: str) -> str:
+    # The beamline's generated pages (Source walk always; for a model-tier
+    # beamline also index + the stage pages, plus inventory in the default "walk"
+    # layout, or flat source/sample/detector/controls siblings in the "stages"
+    # layout). These are virtual (injected by the mkdocs hook), not on disk, so
+    # the doc-drift guard must render them to see the devices they document. It
+    # joins all page values, so it is layout-agnostic: a device appears whatever
+    # path its stage page lands at.
+    path = _DEPLOYMENTS / deployment / "beamline.yaml"
+    if not path.exists():
         return ""
-    return "\n".join(path.read_text(encoding="utf-8") for path in sorted(base.rglob("*.md")))
+    descriptor = bd.load(path)
+    catalog = cd.load(_CATALOG)
+    pages = bp.render_all(
+        descriptor,
+        slug=deployment,
+        catalog_families=frozenset(f.name for f in catalog.families),
+        catalog_models=frozenset(m.name for m in catalog.models),
+        model_tier=descriptor.beamline.deployment_tier == "model",
+    )
+    return "\n".join(pages.values())
+
+
+def _deployment_doc_text(deployment: str) -> str:
+    parts: list[str] = []
+    base = _DOCS_DEPLOYMENTS / deployment
+    if base.is_dir():
+        parts.extend(path.read_text(encoding="utf-8") for path in sorted(base.rglob("*.md")))
+    parts.append(_generated_beamline_pages(deployment))
+    return "\n".join(parts)
 
 
 @pytest.mark.parametrize("descriptor_path", _beamline_descriptors(), ids=lambda p: p.parent.name)
