@@ -43,7 +43,10 @@ from cora.equipment.aggregates._value_types import RoleId
 from cora.equipment.aggregates.family._family_registry import family_stream_id
 from cora.equipment.aggregates.family.affordance import Affordance
 from cora.equipment.aggregates.family.state import Family, FamilyName, FamilyStatus
-from cora.equipment.aggregates.role._role_registry import SEED_ROLE_POSITIONER_ID
+from cora.equipment.aggregates.role._role_registry import (
+    SEED_ROLE_DETECTOR_ID,
+    SEED_ROLE_POSITIONER_ID,
+)
 
 
 def _family(
@@ -71,7 +74,26 @@ def _family(
 # so claiming those to satisfy the gate would model a lie; Pass 2 decides
 # it from evidence.
 _POSITIONER = frozenset({SEED_ROLE_POSITIONER_ID})
+_DETECTOR = frozenset({SEED_ROLE_DETECTOR_ID})
 _HOMED = frozenset({Affordance.HOMEABLE, Affordance.LIMITABLE})
+_DETECTOR_AFFORDANCES = frozenset(
+    {
+        Affordance.IMAGEABLE,
+        Affordance.BINNABLE,
+        Affordance.COOLABLE,
+        Affordance.TRIGGERABLE,
+        Affordance.STREAMABLE,
+    }
+)
+
+# Batch 2 (Pass 1, Detector cluster). Only direct-detection Camera
+# presents the Detector Role; per the Role docstring a composed
+# scintillator-relay Assembly is the OTHER path to Detector, so the bare
+# Scintillator Family does NOT present it. Scintillator is a passive
+# X-ray->light converter: its identity/material/thickness/lot are tracked
+# (Consumable), no command surface, no Role. Screen also does not detect;
+# its catalog note assigns it the Positioner Role for its insert axis, so
+# it joins the Positioner cluster here.
 
 
 # The graduated device-class roster. Order mirrors `catalog/catalog.yaml`
@@ -93,8 +115,12 @@ SEED_FAMILIES: Final[tuple[Family, ...]] = (
         affordances=_HOMED | {Affordance.ROTATABLE},
         presents_as=_POSITIONER,
     ),
-    _family("Camera"),
-    _family("Scintillator"),
+    _family(
+        "Camera",
+        affordances=_DETECTOR_AFFORDANCES,
+        presents_as=_DETECTOR,
+    ),
+    _family("Scintillator", affordances=frozenset({Affordance.CONSUMABLE})),
     _family("EnergyDispersiveSpectrometer"),
     _family("FluxMonitor"),
     _family("PositionMonitor"),
@@ -151,7 +177,11 @@ SEED_FAMILIES: Final[tuple[Family, ...]] = (
     _family("PressureCell"),
     _family("Backlight"),
     _family("Laser"),
-    _family("Screen"),
+    _family(
+        "Screen",
+        affordances=_HOMED | {Affordance.TRANSLATABLE},
+        presents_as=_POSITIONER,
+    ),
 )
 
 

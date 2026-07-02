@@ -17,6 +17,7 @@ from uuid import UUID
 import pytest
 
 from cora.equipment.aggregates.family import SEED_FAMILIES, FamilyName, family_stream_id
+from cora.equipment.aggregates.family.affordance import Affordance
 from cora.equipment.aggregates.family.state import FamilyStatus
 from cora.equipment.aggregates.role import SEED_ROLES
 
@@ -95,8 +96,9 @@ def test_seed_family_presents_as_only_references_seed_roles() -> None:
 
 
 def test_positioner_cluster_is_populated() -> None:
-    """Batch 1 (Positioner cluster) wired the expected families; guards
-    against an accidental drop when later batches edit the registry."""
+    """The families presenting Positioner; guards against an accidental
+    drop when later batches edit the registry. Screen joins via its insert
+    axis (Batch 2 evidence: it is a viewing target, not a detector)."""
     positioner_id = next(r.id for r in SEED_ROLES if r.name.value == "Positioner")
     presenting = {f.name.value for f in SEED_FAMILIES if positioner_id in f.presents_as}
     assert presenting == {
@@ -107,4 +109,19 @@ def test_positioner_cluster_is_populated() -> None:
         "Table",
         "Goniometer",
         "Manipulator",
+        "Screen",
     }
+
+
+def test_detector_cluster_is_populated() -> None:
+    """Batch 2 (Detector cluster): only the direct-detection Camera
+    presents Detector. Scintillator is a Consumable component of a
+    composed detector Assembly (Assembly presents the Role, not the bare
+    Family), so it must NOT present Detector."""
+    detector_id = next(r.id for r in SEED_ROLES if r.name.value == "Detector")
+    presenting = {f.name.value for f in SEED_FAMILIES if detector_id in f.presents_as}
+    assert presenting == {"Camera"}
+
+    scintillator = next(f for f in SEED_FAMILIES if f.name.value == "Scintillator")
+    assert scintillator.presents_as == frozenset()
+    assert scintillator.affordances == frozenset({Affordance.CONSUMABLE})
