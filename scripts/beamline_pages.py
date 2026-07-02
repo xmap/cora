@@ -477,31 +477,21 @@ def _render_index(
     )
     blocks.append(_table(["Property", "Value"], facts))
 
-    blocks.append(
-        _admonition(
-            f"This page is generated from the descriptor at "
-            f"[`deployments/{slug}/beamline.yaml`]({_BLOB_BASE}/deployments/{slug}/beamline.yaml). "
-            "Edit the descriptor, not this page.",
-            kind="info",
-            title="Generated from the descriptor",
-        )
+    # The provenance caveat (how trustworthy the facts are, keyed on evidence
+    # tier) folds into the generated-from banner rather than a near-identical
+    # "What CORA models" section; the enclosures it used to name are in the
+    # table below.
+    banner = (
+        f"This page is generated from the descriptor at "
+        f"[`deployments/{slug}/beamline.yaml`]({_BLOB_BASE}/deployments/{slug}/beamline.yaml). "
+        "Edit the descriptor, not this page."
     )
+    caveat = _confirm_clause(descriptor).strip()
+    if caveat:
+        banner += "\n\n" + caveat
+    blocks.append(_admonition(banner, kind="info", title="Generated from the descriptor"))
 
-    # What CORA models + scope, woven from the group intros and enclosures.
     stages = {g.stage for _n, g in descriptor.groups}
-    scope_bits: list[str] = []
-    if descriptor.enclosures:
-        encl = ", ".join(f"`{e.name}`" for e in descriptor.enclosures)
-        scope_bits.append(f"across {encl}")
-    what = (
-        f"CORA models the operational core of {name}"
-        + (f" {scope_bits[0]}" if scope_bits else "")
-        + "."
-        + _confirm_clause(descriptor)
-    )
-    blocks.append("## What CORA models")
-    blocks.append(what)
-
     flat = page_layout == "stages"
 
     # Enclosures are a beamline-wide spatial fact (every stage sits in a hutch),
