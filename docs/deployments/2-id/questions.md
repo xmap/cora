@@ -2,7 +2,7 @@
 
 *What CORA needs the 2-ID team to confirm before the model can be trusted.*
 
-2-ID is a design-phase scaffold mined from the [EAA](https://github.com/AdvancedPhotonSource/EAA) APS-microprobe integration and its [2-ID-D launcher](https://github.com/AdvancedPhotonSource/eaa_driver_scripts_aps_2idd). The launcher is a simulation and EAA does not describe the source optics, so almost every value in the [Inventory](inventory.md) is carried as a fact still to confirm. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are recorded on [Model](model.md#deliberately-not-here-yet) instead). It is a delete-on-answer queue: when an item is answered, the answer lands in the descriptor and the row is removed, with the reason in the commit. Priorities are `Blocks-build` (the answer changes the structure of the model, so CORA cannot finalize the shape without it), `Blocks-go-live` (a placeholder is fine for the description, but the real value is needed before CORA observes or drives the hardware), and `Nice-to-have`.
+2-ID is a design-phase scaffold mined from the [EAA](https://github.com/AdvancedPhotonSource/EAA) APS-microprobe integration and its [2-ID-D launcher](https://github.com/AdvancedPhotonSource/eaa_driver_scripts_aps_2idd). The launcher is a simulation and EAA does not describe the source optics, so almost every value in the [Inventory](index.md) is carried as a fact still to confirm. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are recorded on [Model](model.md#deliberately-not-here-yet) instead). It is a delete-on-answer queue: when an item is answered, the answer lands in the descriptor and the row is removed, with the reason in the commit. Priorities are `Blocks-build` (the answer changes the structure of the model, so CORA cannot finalize the shape without it), `Blocks-go-live` (a placeholder is fine for the description, but the real value is needed before CORA observes or drives the hardware), and `Nice-to-have`.
 
 ## Topology and scope
 
@@ -10,7 +10,7 @@ The one structural unknown: the Sector 2 hutch roster and where the shared optic
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| TOPO-1 | Blocks-build | What is Sector 2's experiment-hutch roster (2-ID-D plus which sister stations), which hutch do the source optics serve, what is the upstream optics-hutch identity, and what is the post-APS-U layout of the sector? | One root Unit Asset `2-ID` with one modelled experiment hutch `2-ID-D`; the sister hutch(es) and the optics-hutch are unmodelled pending this answer. | The hutch roster, the optics-hutch Enclosure, and one-vs-many hutch sub-trees in the [descriptor](inventory.md). |
+| TOPO-1 | Blocks-build | What is Sector 2's experiment-hutch roster (2-ID-D plus which sister stations), which hutch do the source optics serve, what is the upstream optics-hutch identity, and what is the post-APS-U layout of the sector? | One root Unit Asset `2-ID` with one modelled experiment hutch `2-ID-D`; the sister hutch(es) and the optics-hutch are unmodelled pending this answer. | The hutch roster, the optics-hutch Enclosure, and one-vs-many hutch sub-trees in the [descriptor](index.md). |
 
 ## Control and safety
 

@@ -52,6 +52,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "12-ID is an undulator sector; the USAXS instrument config does not expose the insertion-device gap as a device, so the undulator detail is SRC-1"
+  page_layout: stages
+  shape: "The fleet's first Bonse-Hart USAXS beamline: a matched channel-cut crystal pair is rocked through Bragg while an autoranging point detector counts the transmitted beam, reaching q far below pinhole SAXS."
+  source_ref:
+    label: "BCDA-APS/usaxs-bits"
+    url: "https://github.com/BCDA-APS/usaxs-bits"
 
 # PV namespaces: usxLAX (the LAX soft-IOC: USAXS calcs, scalers, slits, many
 # motors), usxAERO (Aerotech motors), 12idPyFilter (attenuator), usxRIO (Femto

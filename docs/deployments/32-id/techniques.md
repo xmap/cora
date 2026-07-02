@@ -13,7 +13,7 @@ The transmission X-ray microscope images the internal structure of a sample at n
 | Nano-tomography | `tomography` | step-scan projections over a rotation, magnified by the zone-plate optics |
 | Zernike phase-contrast nano-tomography | `tomography` | the phase ring is inserted for phase contrast; a Plan setting over the same Method, not a separate Method |
 
-Both realize `cora.capability.tomography` and need the [TXM sample stage](equipment/sample.md) and the [TXM detector](equipment/detector.md). Phase contrast is a configuration of the same tomography Method (the phase ring inserted), mirroring the 2-BM decision that laminography is a tomography Plan at a tilt setpoint rather than a new Method.
+Both realize `cora.capability.tomography` and need the [TXM sample stage](sample.md) and the [TXM detector](detector.md). Phase contrast is a configuration of the same tomography Method (the phase ring inserted), mirroring the 2-BM decision that laminography is a tomography Plan at a tilt setpoint rather than a new Method.
 
 ## Energy and beam mode
 

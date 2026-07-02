@@ -6,12 +6,12 @@
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/12-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/12-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/12-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/12-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `12-ID` added to its beamline list, with USAXS / SAXS / WAXS Practices |
 | Extraction provenance | [BCDA-APS/usaxs-bits](https://github.com/BCDA-APS/usaxs-bits) | the `src/usaxs/configs/*.yml` device tables and `src/usaxs/devices/*.py` classes the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the USAXS Method is not yet coined (USAXS-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 12-ID Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers 12-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes 12-ID new

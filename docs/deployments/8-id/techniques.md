@@ -13,7 +13,7 @@ XPCS measures the time correlations of a coherent speckle pattern to probe sampl
 | XPCS | [`xpcs`](../../catalog/methods.md) | coherent-scattering intensity time series on the Eiger / Lambda / Rigaku detectors, gated by the softGlue timing; now a catalog Method. Its acquisition is a DAQ-owned high-rate frame stream with no executing body yet, the [event-stream acquisition axis](model.md#deliberately-not-here-yet) (Stage 1) |
 | Small-angle scattering | `small_angle_scattering` | static SAXS on the same detectors; a Plan setting over the same chain |
 
-Both need the [XPCS sample stage](equipment/sample.md), the [coherent detectors](equipment/detector.md), and the flight path. The fast shutter and softGlue timing (`XPCS-1`, `XPCS-3`) gate the exposure.
+Both need the [XPCS sample stage](sample.md), the [coherent detectors](detector.md), and the flight path. The fast shutter and softGlue timing (`XPCS-1`, `XPCS-3`) gate the exposure.
 
 ## Six-circle diffraction
 
@@ -23,7 +23,7 @@ The 8-ID-E Huber diffractometer orients a single crystal through six circles and
 | --- | --- | --- |
 | Six-circle diffraction | `diffraction` | reciprocal-space scans on the six-circle Huber; shares the 4-ID `diffraction` Method (`TECH-1`) |
 
-It needs the [diffractometer](equipment/sample.md). The reciprocal-space coordination is `DIFF-2`; the reusable `Assembly(Diffractometer)` is on [Model](model.md#deliberately-not-here-yet).
+It needs the [diffractometer](sample.md). The reciprocal-space coordination is `DIFF-2`; the reusable `Assembly(Diffractometer)` is on [Model](model.md#deliberately-not-here-yet).
 
 ## Not modelled yet
 

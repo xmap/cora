@@ -2,7 +2,7 @@
 
 *What CORA needs the 7-BM team to confirm before the model can be trusted.*
 
-7-BM is in the design phase and its operations documentation is partial, so this page is long by design: almost every value in the [Inventory](inventory.md) is taken from the 7-BM docs or inferred, not confirmed with staff. Each row below is a fact the beamline team owns, not a CORA modelling choice. It is a delete-on-answer queue: when an item is answered, the answer lands in the descriptor and the row is removed (with the reason in the commit). Priorities are `Blocks-build` (needed before the model is built for real), `Blocks-go-live` (needed before first users), and `Nice-to-have`.
+7-BM is in the design phase and its operations documentation is partial, so this page is long by design: almost every value in the [Inventory](index.md) is taken from the 7-BM docs or inferred, not confirmed with staff. Each row below is a fact the beamline team owns, not a CORA modelling choice. It is a delete-on-answer queue: when an item is answered, the answer lands in the descriptor and the row is removed (with the reason in the commit). Priorities are `Blocks-build` (needed before the model is built for real), `Blocks-go-live` (needed before first users), and `Nice-to-have`.
 
 A note on what 7-BM tests that 2-BM did not: 7-BM is multi-technique (high-speed imaging, radiography, tomography, energy-dispersive diffraction, fluorescence), runs white, monochromatic, and focused beam, and carries a flow and combustion sample environment. The questions below concentrate on the new shapes; the tomography path itself reuses the 2-BM model unchanged.
 

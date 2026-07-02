@@ -39,6 +39,8 @@ beamline:
   source_confirm: "APS bending magnet (M3); 0.8 mrad horizontal acceptance, referenced to an alternate centerline 0.4 mrad inboard of the default new-BM centerline (FDR design phase)"
   z_span_mm: [0, 55000]
   z_span_confirm: true
+  page_layout: stages
+  shape: "A filtered white-beam bending-magnet micro-CT beamline, 2-BM's sibling, built for autonomous high-throughput tomography with a robotic sample changer across three enclosures."
 
 # Three access-gated enclosures. 19-BM-A is the front-end optics enclosure;
 # 19-BM-C is a pure shielded UHV transport with no beam intercepts; 19-BM-D is

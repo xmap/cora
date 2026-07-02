@@ -2,7 +2,7 @@
 
 *What CORA needs the 19-BM team to confirm before the model can be trusted.*
 
-19-BM is in the design phase, so almost every value in the [Inventory](inventory.md) is a Final Design Report specification, not a commissioned measurement. Each row below is a fact the beamline team or the FDR owns, not a CORA modelling choice. It is a delete-on-answer queue: when an item is answered, the answer lands in the descriptor and the row is removed (with the reason in the commit). Priorities are `Blocks-build` (needed before the model is built for real), `Blocks-go-live` (needed before first users), and `Nice-to-have`.
+19-BM is in the design phase, so almost every value in the [Inventory](index.md) is a Final Design Report specification, not a commissioned measurement. Each row below is a fact the beamline team or the FDR owns, not a CORA modelling choice. It is a delete-on-answer queue: when an item is answered, the answer lands in the descriptor and the row is removed (with the reason in the commit). Priorities are `Blocks-build` (needed before the model is built for real), `Blocks-go-live` (needed before first users), and `Nice-to-have`.
 
 ## Control and safety
 

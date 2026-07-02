@@ -11,7 +11,7 @@ An Enclosure models the observed permit status of an access-gated volume: a phys
 
 The Gates column derives from the beam-path groups that name each Enclosure; the permit signal is the search-and-secure PV CORA reads to observe the permit.
 
-Each Device declares which Enclosure it sits in via `located_in_enclosure_id`. The shared optics band (the silicon double-crystal monochromator, the focusing mirrors, the beam-defining slits, the clean-up pinhole, and the attenuator) is in `13-ID-optics`; the diamond anvil cell, the DAC positioning stage and lift table, the metrology spectrometer, and the diffraction detection chain are in `13-ID-D`. The Located-in column on [Assets](inventory.md) is the per-Device source of truth.
+Each Device declares which Enclosure it sits in via `located_in_enclosure_id`. The shared optics band (the silicon double-crystal monochromator, the focusing mirrors, the beam-defining slits, the clean-up pinhole, and the attenuator) is in `13-ID-optics`; the diamond anvil cell, the DAC positioning stage and lift table, the metrology spectrometer, and the diffraction detection chain are in `13-ID-D`. The Located-in column on the stage pages ([Source](source.md), [Sample](sample.md), [Detector](detector.md)) is the per-Device source of truth.
 
 ## Permit signals and the laser-safety axis
 

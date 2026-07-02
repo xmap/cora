@@ -43,6 +43,8 @@ beamline:
   parent: null
   source: bending-magnet
   source_confirm: "historically a bending-magnet source; the post-APS-U source for 7-BM is not stated in the docs (SRC-1)"
+  page_layout: stages
+  shape: "A multi-technique flow and combustion imaging beamline: high-speed imaging, energy-dispersive diffraction, radiography, and tomography over partly-shared apparatus, with a metered process-gas sample environment 2-BM has nothing like."
 
 enclosures:
   # Two access-gated hutches. 7-BM-A holds the conditioning optics; 7-BM-B is the

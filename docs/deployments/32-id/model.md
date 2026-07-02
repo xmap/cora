@@ -6,11 +6,11 @@
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/32-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/32-id/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/32-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/32-id/beamline.yaml) | the device walk; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface, shared with 2-BM; `32-ID` added to its beamline list |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | the spine reuses existing Families; the TXM optic classes (`Condenser`, `ZonePlate`, `PhaseRing`) graduated into the catalog once FXI became a second deployment sharing them |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; TXM nano-tomography reuses `tomography` |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 32-ID Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers 32-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## Deliberately not here yet

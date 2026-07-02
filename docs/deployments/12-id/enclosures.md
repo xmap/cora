@@ -11,7 +11,7 @@ An Enclosure models the observed permit status of an access-gated volume: a phys
 
 The Gates column derives from the beam-path groups that name each Enclosure; the permit signal is the search-and-secure PV CORA reads to observe the permit.
 
-Each Device declares which Enclosure it sits in via `located_in_enclosure_id`. The shared optics band (the double-crystal monochromator, the attenuator filter bank, and the guard and USAXS slits) is in `12-ID-optics`; the Bonse-Hart collimator and analyzer crystal stages, the sample stages and environment, the UPD photodiode and flux monitors, and the SAXS and WAXS area detectors are in `12-ID-E`. The Located-in column on [Assets](inventory.md) is the per-Device source of truth.
+Each Device declares which Enclosure it sits in via `located_in_enclosure_id`. The shared optics band (the double-crystal monochromator, the attenuator filter bank, and the guard and USAXS slits) is in `12-ID-optics`; the Bonse-Hart collimator and analyzer crystal stages, the sample stages and environment, the UPD photodiode and flux monitors, and the SAXS and WAXS area detectors are in `12-ID-E`. The Located-in column on the stage pages ([Source](source.md), [Sample](sample.md), [Detector](detector.md)) is the per-Device source of truth.
 
 ## Permit signal and gate
 

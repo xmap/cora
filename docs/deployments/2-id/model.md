@@ -6,11 +6,11 @@
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/2-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-id/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/2-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-id/beamline.yaml) | the device walk; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface, shared with 2-BM; `2-ID` added to its beamline list, with a pending scanning-fluorescence Practice and a pending beamline scientist |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | reuses `ZonePlate` (graduated with 32-ID + FXI) and `EnergyDispersiveSpectrometer` (graduated once 2-ID and 7-BM shared it); this deployment coins no new Family of its own |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; `scanning_fluorescence_microscopy` is named but not coined (see below) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 2-ID Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers 2-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## How EAA fits

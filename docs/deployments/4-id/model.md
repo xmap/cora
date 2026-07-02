@@ -6,12 +6,12 @@
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/4-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/4-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/4-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/4-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface, shared with 2-BM; `4-ID` added to its beamline list, with its Practices |
 | Upstream source | [`BCDA-APS/polar-bits`](https://github.com/BCDA-APS/polar-bits) | the beamline's own Bluesky instrument repo the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | no new Family added; 4-ID reuses existing Families and binds new device classes to loose Family strings (see below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the diffraction / magnetism / polarization Methods are not yet coined (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 4-ID Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers 4-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## Loose-Family graduation

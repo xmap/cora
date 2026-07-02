@@ -6,12 +6,12 @@
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/8-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/8-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/8-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/8-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `8-ID` added to its beamline list, with XPCS Practices |
 | Upstream source | [`BCDA-APS/8id-bits`](https://github.com/BCDA-APS/8id-bits) | the beamline's own Bluesky instrument repo the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | of the families 8-ID shares with 4-ID, `Transfocator`, `TemperatureController`, and `BeamPositionMonitor` have graduated to catalog Families (`BeamPositionMonitor` presents `Sensor`, distinct from `FluxMonitor` by measuring beam position rather than flux; below); 8-ID's other new classes stay loose too |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **`xpcs` added** (capability `cora.capability.xpcs`), the second beamline after LCLS-MFX to need the event-stream acquisition axis; small-angle-scattering and diffraction Methods stay deferred (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 8-ID Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers 8-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## Loose families held for gate-review

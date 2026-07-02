@@ -6,12 +6,12 @@
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/9-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/9-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/9-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/9-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `9-ID` added to its beamline list, with CSSI Practices |
 | Upstream source | [`BCDA-APS/9id_bits`](https://github.com/BCDA-APS/9id_bits) | the beamline's own Bluesky instrument repo the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; 9-ID is pure reuse, including the graduated `Transfocator` Family it shares with 4-ID / 8-ID, plus one loose family still held (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | `xpcs` now in catalog (shared with 8-ID; the surface-XPCS Practice links); surface-scattering / grazing-incidence / WAXS Methods stay deferred (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 9-ID Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers 9-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## Catalog reuse (what this deployment proves)

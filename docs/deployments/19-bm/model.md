@@ -6,12 +6,12 @@
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/19-bm/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/19-bm/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/19-bm/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/19-bm/beamline.yaml) | the device walk; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface, shared with 2-BM; 19-BM is added there as a second beamline |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added: 19-BM reuses the active families 2-BM established (`Slit`, `Filter`, `Shutter`, `RotaryStage`, `LinearStage`, `Table`, `Camera`, `Scintillator`, `TimingController`) |
 | Catalog Assembly | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | the indirect detector reuses the cross-facility `Microscope` / `Optics` Assemblies (shared with 2-BM and TomoWISE) |
 | Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound: 19-BM hardware is not yet procured |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 19-BM Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers 19-BM Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What is deliberately not here yet

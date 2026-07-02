@@ -2,7 +2,7 @@
 
 *What CORA needs the 12-ID team to confirm before the model can be trusted.*
 
-12-ID was reverse-engineered from the beamline's own bluesky / BITS instrument ([BCDA-APS/usaxs-bits](https://github.com/BCDA-APS/usaxs-bits)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, read from the `src/usaxs/configs/*.yml` device tables and `src/usaxs/devices/*.py` classes rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+12-ID was reverse-engineered from the beamline's own bluesky / BITS instrument ([BCDA-APS/usaxs-bits](https://github.com/BCDA-APS/usaxs-bits)), so the control handles in the [Inventory](index.md) are the beamline's real PVs, read from the `src/usaxs/configs/*.yml` device tables and `src/usaxs/devices/*.py` classes rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 

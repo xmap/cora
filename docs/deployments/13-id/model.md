@@ -6,12 +6,12 @@
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/13-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/13-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/13-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/13-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `13-ID` added to its beamline list, with high-pressure powder / single-crystal diffraction Practices |
 | Extraction provenance | [CARS-UChicago/GSECARS-EPICS](https://github.com/CARS-UChicago/GSECARS-EPICS) | the `iocBoot` startup scripts, `CARSApp/Db` templates, and `CARSApp/op/adl` screens the descriptor was reconstructed from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; one new device class stays loose at n=1 (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the diffraction Methods are pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 13-ID Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers 13-ID Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes 13-ID new
