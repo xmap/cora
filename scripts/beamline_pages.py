@@ -492,6 +492,11 @@ def _render_index(
         "Edit the descriptor, not this page."
     )
     caveat = _confirm_clause(descriptor).strip()
+    ref = beamline.source_ref
+    if ref is not None:
+        # Name the specific public source the facts were read from, alongside the
+        # evidence-tier caveat.
+        caveat = (caveat + " ").lstrip() + f"Source: [{ref.label}]({ref.url})."
     if caveat:
         banner += "\n\n" + caveat
     blocks.append(_admonition(banner, kind="info", title="Generated from the descriptor"))

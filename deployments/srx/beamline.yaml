@@ -38,6 +38,9 @@ beamline:
   source: insertion-device
   source_confirm: "IVU21 in-vacuum undulator (SR:C5-ID:G1{IVU21:1}), verified in source; parameters not fully in the profile collection (SRC-1)"
   shape: "The first beamline running several techniques on one instrument: scanning XRF, XANES, XRF-tomography, diffraction, and imaging across a micro and a KB-focused nano endstation."
+  source_ref:
+    label: "NSLS2/srx-profile-collection"
+    url: "https://github.com/NSLS2/srx-profile-collection"
 enclosures:
   # PV zones: 05IDA optics, 05IDB secondary-source / mono, 05IDD endstation. Modelled
   # as optics + experiment hutches; the intermediate 05IDB boundary is a staff

@@ -192,6 +192,21 @@ class Enclosure(BaseModel):
 
 
 
+class SourceRef(BaseModel):
+    """The public source the beamline's facts were read from.
+
+    A verifiable pointer to the profile collection, device layer, or facility
+    document a reverse-engineered beamline was extracted from, surfaced in the
+    generated-from banner. Absent for beamlines with no single documented
+    source (e.g. the live operational pilot).
+    """
+
+    model_config = _MODEL_CONFIG
+
+    label: str
+    url: str
+
+
 class Beamline(BaseModel):
     model_config = _MODEL_CONFIG
 
@@ -228,6 +243,10 @@ class Beamline(BaseModel):
     # lead of the generated index's beamline section. The one bespoke line no
     # descriptor field reconstructs; kept to a single sentence, not a paragraph.
     shape: str | None = None
+    # The public source the facts were read from (profile collection, device
+    # layer, or facility document), surfaced in the generated-from banner.
+    # Absent for beamlines with no single documented source (the live pilot).
+    source_ref: SourceRef | None = None
 
     @field_validator("z_span_mm")
     @classmethod

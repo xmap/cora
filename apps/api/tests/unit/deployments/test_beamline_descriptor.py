@@ -281,6 +281,26 @@ def test_pilot_stages_layout_generates_only_flat_source() -> None:
         assert pages[f"deployments/{slug}/source.md"].startswith("# Source")
 
 
+def test_source_ref_renders_as_provenance_link_in_banner() -> None:
+    # A beamline with a source_ref surfaces it in the generated-from banner as a
+    # link, so a reader can trace the facts to the public source they came from.
+    descriptor = bd.load(_DEPLOYMENTS / "hxn" / "beamline.yaml")
+    ref = descriptor.beamline.source_ref
+    assert ref is not None, "hxn should carry a source_ref"
+    banner_page = _render_all_pages("hxn")["deployments/hxn/index.md"]
+    assert f"[{ref.label}]({ref.url})" in banner_page
+
+
+def test_live_pilot_has_no_source_ref() -> None:
+    # 2-BM is the live operational pilot: its facts come from the running beamline,
+    # not a single extracted-from source, so it carries no source_ref (and the
+    # banner shows no provenance link).
+    descriptor = bd.load(_DEPLOYMENTS / "2-bm" / "beamline.yaml")
+    assert descriptor.beamline.source_ref is None
+    source_page = _render_all_pages("2-bm")["deployments/2-bm/source.md"]
+    assert "Source: [" not in source_page
+
+
 def test_walk_layout_keeps_beamline_and_inventory_pages() -> None:
     # A default model-tier beamline (page_layout omitted -> "walk") is unchanged:
     # it still emits beamline.md, inventory.md, and the equipment/ stage pages.

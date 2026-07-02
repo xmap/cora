@@ -41,6 +41,9 @@ beamline:
   source: insertion-device
   source_confirm: "insertion-device type (undulator vs damping wiggler) and parameters are not in the public profile collection (SRC-1)"
   # No z_span: the profile collection carries no layout / z reference (LAYOUT-1).
+  source_ref:
+    label: "NSLS2/fxi-profile-collection"
+    url: "https://github.com/NSLS2/fxi-profile-collection"
 
 enclosures:
   # Two access-gated areas, partitioned by the PV branch letter: 18-IDA carries the
