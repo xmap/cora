@@ -348,6 +348,7 @@ nav:
         - Controls: deployments/srx/controls.md
         - Techniques: deployments/srx/techniques.md
         - Governance: deployments/srx/governance.md
+        - Model: deployments/srx/model.md
         - Open questions: deployments/srx/questions.md
       - SIX:
         - deployments/six/index.md
