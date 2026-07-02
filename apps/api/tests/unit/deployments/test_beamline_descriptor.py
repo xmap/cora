@@ -249,16 +249,16 @@ def _stages_layout_slugs() -> list[str]:
 
 
 @pytest.mark.parametrize("slug", _stages_layout_slugs())
-def test_stages_layout_preserves_narrative_and_all_devices(slug: str) -> None:
-    # Every stages-layout beamline must carry a bespoke defining-shape narrative
-    # (the one section generation cannot reconstruct) verbatim on its generated
-    # index, and every modelled device must still appear across the flat stage
-    # pages, so a migration cannot silently drop content.
+def test_stages_layout_preserves_shape_and_all_devices(slug: str) -> None:
+    # Every stages-layout beamline must carry a one-line defining-shape sentence
+    # (the one bespoke line generation cannot reconstruct) as the lead of its
+    # generated index's beamline section, and every modelled device must still
+    # appear across the flat stage pages, so a migration cannot drop content.
     descriptor = bd.load(_DEPLOYMENTS / slug / "beamline.yaml")
-    assert descriptor.beamline.narrative is not None, f"{slug}: stages layout without a narrative"
+    assert descriptor.beamline.shape, f"{slug}: stages layout without a shape line"
     pages = _render_all_pages(slug)
     index = pages[f"deployments/{slug}/index.md"]
-    assert f"## {descriptor.beamline.narrative.title}" in index
+    assert descriptor.beamline.shape.strip() in index, f"{slug}: shape line missing from index"
     joined = "\n".join(pages.values())
     for _name, group in descriptor.groups:
         for device in group.devices:

@@ -487,12 +487,6 @@ def _render_index(
         )
     )
 
-    # The defining-shape lead: the one bespoke section, authored in the
-    # descriptor's narrative slot and rendered verbatim (see Narrative).
-    if beamline.narrative is not None:
-        blocks.append(f"## {beamline.narrative.title}")
-        blocks.append(beamline.narrative.body.strip())
-
     # What CORA models + scope, woven from the group intros and enclosures.
     stages = {g.stage for _n, g in descriptor.groups}
     scope_bits: list[str] = []
@@ -520,7 +514,9 @@ def _render_index(
         # Stages layout: the stages are first-class sibling pages, so present
         # them as a section list (in beam order, controls last) rather than a
         # one-line walk sentence. No Inventory (the stage pages are the tree).
-        section = ["## The beamline", "The devices along the beam, area by area."]
+        # The optional one-line shape leads the section when authored.
+        lead = beamline.shape.strip() if beamline.shape else "The devices along the beam, area by area."
+        section = ["## The beamline", lead]
         bullets = ["- [Source](source.md): the beam, produced and conditioned before the sample."]
         if "sample" in stages:
             bullets.append("- [Sample](sample.md): the sample environment and its positioning.")

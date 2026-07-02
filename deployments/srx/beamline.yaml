@@ -37,11 +37,7 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "IVU21 in-vacuum undulator (SR:C5-ID:G1{IVU21:1}), verified in source; parameters not fully in the profile collection (SRC-1)"
-  narrative:
-    title: "The defining shape: many techniques, one instrument"
-    body: |
-      The earlier deployments each anchor one technique family (FXI full-field imaging, HXN scanning ptychography, BMM spectroscopy). SRX is the first that runs **several on one beamline**: scanning XRF mapping, XANES, XRF-tomography, diffraction (via pixel detectors), and full-field imaging, across a micro endstation and a KB-focused nano endstation. The value to CORA is breadth, exercising the **multi-Capability-per-beamline** shape, and reuse: SRX introduces no new device Family, binding the ones the earlier NSLS-II beamlines and the catalog already carry.
-
+  shape: "The first beamline running several techniques on one instrument: scanning XRF, XANES, XRF-tomography, diffraction, and imaging across a micro and a KB-focused nano endstation."
 enclosures:
   # PV zones: 05IDA optics, 05IDB secondary-source / mono, 05IDD endstation. Modelled
   # as optics + experiment hutches; the intermediate 05IDB boundary is a staff

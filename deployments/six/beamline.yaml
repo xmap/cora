@@ -46,17 +46,7 @@ beamline:
   source: insertion-device
   source_confirm: "2-ID elliptically-polarizing undulator (EPU) on SR:C02-ID:G1A{EPU:1}; gap + phase (polarization) axes; whether SIX shares a canted straight with a sibling beamline is TOPO-1, the EPU type/period is SRC-1"
   page_layout: stages
-  narrative:
-    title: "What makes SIX different"
-    body: |
-      SIX is **CORA's first soft X-ray beamline**. The hard X-ray deployments before it never exercised this regime, so SIX introduced three device classes new to the catalog. One (`GratingMonochromator`) has since graduated, earned by the 2nd soft beamline CSX; the other two stay loose at n=1:
-
-      - **A grating monochromator, not a crystal DCM.** The PGM disperses with an interchangeable grating (500 / 1200 / 1800 l/mm) and a premirror at a fixed-focus c-value; the exit slit sets the energy resolution. There is no Bragg crystal, so it binds the `GratingMonochromator` Family (graduated across SIX + CSX), not the catalog `Monochromator`.
-      - **A RIXS spectrometer arm.** The signature instrument is a meters-long energy-dispersive arm (a bridge truss, an in-arm optics chamber that disperses, and a detector chamber) that swings to a scattering angle and spreads the emitted soft X-rays onto a photon-counting camera. SIX coined the `SpectrometerArm` Family for it; the family has since graduated into the catalog (earned across SIX + ESRF ID32 + ID28).
-      - **A UHV cryostat manipulator.** The sample sits on an x/y/z/theta manipulator under ultra-high vacuum and cryogenic cooling, a sample-environment role no hard X-ray motion Family captured; it binds the `Manipulator` Family (graduated across SIX + ESM).
-
-      Everything else (the EPU, the mirrors, the slits, the shutters, the camera, the counters, the temperature controller) reuses an existing catalog Family.
-
+  shape: "CORA's first soft X-ray beamline: a grating monochromator, a meters-long RIXS spectrometer arm, and a UHV cryostat manipulator, three device classes new to the catalog."
 # PV zones along the beamline: XF:02IDA (front-end optics), XF:02IDB (the PGM),
 # XF:02IDC (refocusing optics + exit slit), XF:02IDD-ES / XF:02ID1-ES (the RIXS
 # endstation). Whether these are four separate shielded hutches or beam zones

@@ -44,18 +44,7 @@ beamline:
   source: insertion-device
   source_confirm: "two elliptically-polarizing undulators on the SR:C21-ID straight (EPU57 on G1A, EPU105 on G1B); gap + phase (polarization) per device; the dual-EPU coordination and periods are SRC-1"
   page_layout: stages
-  narrative:
-    title: "What makes ESM different"
-    body: |
-      ESM is **CORA's first photoemission beamline**. Every prior beamline measures photons; ESM measures **electrons** (photon-in / electron-out), which brings a new detector regime:
-
-      - **A hemispherical electron analyzer.** The Scienta SES records electron counts over a kinetic-energy by emission-angle window set by the pass energy and lens mode. No photon-detector Family fits, so it binds the `ElectronAnalyzer` Family (presents the Detector Role), which graduated once SST earned the 2nd Scienta SES.
-
-      It is also a **consolidation** of the soft X-ray regime:
-
-      - **Reuses the graduated `GratingMonochromator`.** ESM's PGM is the third soft X-ray plane-grating monochromator (after SIX and CSX), so it binds the catalog Family rather than minting one.
-      - **Graduates `Manipulator`.** ESM's LT six-axis UHV cryostat manipulator is the second UHV sample manipulator after SIX, earning the abstraction (two-deployment threshold): `Manipulator` becomes a catalog Family in this deployment, and SIX's references are swept loose to graduated (see [Model](model.md#what-this-deployment-graduates)).
-
+  shape: "CORA's first photoemission beamline: it measures electrons, not photons, binding a hemispherical ElectronAnalyzer and graduating the UHV Manipulator."
 # PV zones: XF:21IDA (front-end optics), XF:21IDB (the PGM), XF:21IDC (branch optics +
 # exit slits), XF:21IDD-ES / XF:21ID1-ES (the ARPES endstation). Whether these are
 # separate shielded hutches, and the PSS permit leaves, are open (ENC-1, PSS-1).

@@ -49,23 +49,7 @@ beamline:
   source: insertion-device
   source_confirm: "10-ID in-vacuum undulator IVU22 on SR:C10-ID:G1{IVU22:1}; gap axis. The undulator period/type and whether the 10-ID straight is canted with a sibling beamline are SRC-1 / TOPO-1"
   page_layout: stages
-  narrative:
-    title: "What makes IXS different"
-    body: |
-      IXS is **CORA's first hard inelastic-scattering beamline**, the first photon-in / photon-out energy-LOSS technique in the fleet. The deployments before it cover elastic scattering (SAXS/WAXS, XPDF, powder, XPCS, MX), XRF microprobe, hard X-ray absorption (BMM), and soft resonant inelastic scattering (SIX), but no hard inelastic scattering. What is new is the acquisition shape: set the momentum transfer Q with a six-circle reciprocal-space pseudo-axis, then scan the incident energy against a fixed crystal analyzer, point-detecting the energy-analyzed scattered beam to build I(Q, energy-loss). meV resolution comes from a high-resolution monochromator plus a temperature-stabilized diced crystal analyzer.
-
-      The acquisition has three moving parts:
-
-      - **Set Q.** A six-circle scattering arm (tth / th / chi / phi) driven by an H/K/L reciprocal-space pseudo-axis places the detector at the scattering angle that selects the momentum transfer.
-      - **Scan incident energy.** The Si(111) double-crystal monochromator (DCM) and the high-resolution monochromator (HRM2) step the incident energy in meV steps while the analyzed final energy stays fixed; energy transfer is the difference.
-      - **Point-detect against a fixed analyzer.** A diced crystal energy analyzer Bragg-reflects the scattered beam to a fixed final energy and focuses the energy-selected photons onto quad electrometers, normalized by an I0 scaler. Detection is point / current-integrating, not an area detector.
-
-      Almost every device reuses an existing catalog or loose Family. IXS introduces **one** device class new to the catalog, the crystal energy analyzer, modelled as a loose family at n=1 (nothing graduated):
-
-      - **A diced crystal energy analyzer.** The signature instrument is a diced multi-crystal Bragg analyzer (six diced crystals, each with orientation and PID temperature stabilization) that selects a fixed final photon energy of the scattered beam and focuses energy-selected photons onto the point detectors. No catalog Family fits this anatomy, so it binds a loose `EnergyAnalyzer` Family, the `<Quantity>Analyzer` sibling of the catalog `PolarizationAnalyzer` (see [Model](model.md#new-loose-families)).
-
-      Everything else (the undulator, the DCM and HRM2 crystal monochromators, the mirrors, the slits, the transfocator, the six-circle arm, the temperature controller, the electrometers) reuses an existing catalog or loose Family.
-
+  shape: "CORA's first hard inelastic-scattering beamline: set Q with a six-circle arm, scan the incident energy against a fixed diced-crystal analyzer, and point-detect to build I(Q, energy-loss)."
 # PV zones along the beamline: FE:C10A (front end), XF:10IDA (DCM + first
 # diagnostics), XF:10IDB (the high-resolution monochromator + secondary source),
 # XF:10IDC (transport optics + table), XF:10IDD (the endstation: KB mirrors,

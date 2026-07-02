@@ -49,15 +49,7 @@ beamline:
   source: insertion-device
   source_confirm: "IVU18 in-vacuum undulator (SR:C09-ID:G1{IVU18:1}), verified in source; period/gap parameters not fully in the profile collection (SRC-1)"
   page_layout: stages
-  narrative:
-    title: "The defining shape: coherent imaging"
-    body: |
-      **Coherent diffractive imaging** arrived in the fleet with Diamond [i13-1](../i13-1/index.md) (ptychography and CDI, a deliberately partial endstation), which opened the deferred coherent-imaging Method. CDI is the second coherent-diffractive-imaging deployment, the first at NSLS-II, and the first modelled as a full source-to-detector beamline: it focuses a coherent beam to a small spot, records the far-field diffraction pattern on a photon-counting area detector, and recovers the real-space image offline by phase retrieval. The fleet has met coherence in other acts too: APS [8-ID](../8-id/index.md) and [CHX](../chx/index.md) record correlation time series (XPCS), [CSX](../csx/index.md) records coherent soft X-ray scattering, and [HXN](../hxn/index.md) runs ptychography as one of several scanning-probe modes.
-
-      The value to CORA is reinforcement, not new vocabulary. The coherent area detector that records the diffraction pattern is the same `Camera` shape CHX and HXN already carry; the KB nanofocus that forms the coherent spot is the same `Mirror` shape FMX and SRX carry; the offline reconstruction is a `ComputePort` leg, the imaging analogue of CHX's correlation analysis, not a beamline Method. CDI introduces **no new catalog Family**, and its techniques reinforce the deferred coherent-imaging Method i13-1 opened (the pending `ptychography` Method) without coining anything new.
-
-      The three imaging techniques differ only in how the frames are taken: a single far-field frame (forward CDI), a scan of overlapping frames across the sample (ptychography), or a rocking series around a Bragg peak (Bragg CDI). All three share the KB nanofocus, the goniometer, and the coherent detectors.
-
+  shape: "Coherent diffractive imaging: a focused coherent beam, the far-field diffraction pattern on an area detector, and the real-space image recovered offline by phase retrieval."
 enclosures:
   # PV zones: 09IDA first-optics hutch (FOE), 09IDB branch (DM3 slit, quadrant BPM),
   # 09IDC endstation (KB nanofocus, beam-conditioning unit, goniometer, towers), and

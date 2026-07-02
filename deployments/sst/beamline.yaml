@@ -45,11 +45,7 @@ beamline:
   source: insertion-device
   source_confirm: "two insertion-device sources, one per branch: the soft branch EPU60 (SR:C07-ID:G1A{SST1:1}) and the tender branch U42 (SR:C07-ID:G1A{SST2:1}), read from the shared sst-base energy classes. Periods and ranges not fully in the profile collection (SRC-1)"
   page_layout: stages
-  narrative:
-    title: "The defining shape: two branches, many techniques, one beamline"
-    body: |
-      SST is the broadest NSLS-II beamline CORA models: **two source-and-monochromator branches** (a soft branch, an EPU60 undulator with a plane-grating monochromator; a tender branch, a U42 undulator with a double-crystal monochromator) feeding **several endstations** across three technique families, soft X-ray scattering (RSoXS), absorption spectroscopy (NEXAFS), and photoemission (HAXPES). The value to CORA is breadth at the Site level: it reuses the soft-X-ray vocabulary the earlier NSLS-II beamlines earned (the `GratingMonochromator`, the `Manipulator`, the `ElectronAnalyzer`) across one more, larger instrument, and it brings the `ElectronAnalyzer` family to its second sighting, which GRADUATED it into the catalog. SST coins no new catalog Family of its own.
-
+  shape: "The broadest NSLS-II beamline CORA models: two source-and-monochromator branches feeding several endstations across RSoXS, NEXAFS, and HAXPES."
 enclosures:
   # The two branches are named SST-1 (soft) and SST-2 (tender) after their undulator
   # branch labels (SST1:1 EPU60, SST2:1 U42), which is grounded in source. The
