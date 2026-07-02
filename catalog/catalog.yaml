@@ -55,12 +55,20 @@ roles:
     consumes: [Setpoint]
 
 families:
-  # The graduated device-class roster (mirrors SEED_FAMILIES). Affordances
-  # empty for now; populated per Family in later batches (a Family carries its
-  # own affordances, which a Role's required set is checked against).
+  # The graduated device-class roster (mirrors SEED_FAMILIES). Affordances +
+  # presents_as are authored per Role cluster; a family's affordances must
+  # cover each presented Role's required_affordances (the add_family_presents_as
+  # gate). Batch 1 (Positioner cluster) is populated; remaining families stay
+  # empty until their batch lands.
   - name: RotaryStage
+    affordances: [Homeable, Limitable, Rotatable, Following, Marking]
+    presents_as: [Positioner]
   - name: LinearStage
+    affordances: [Homeable, Limitable, Translatable]
+    presents_as: [Positioner]
   - name: TiltStage
+    affordances: [Homeable, Limitable, Rotatable]
+    presents_as: [Positioner]
     note: "Limited-range rotational tilt-stage Family (a goniometer). Distinct from RotaryStage (it carries no PSO Following/Marking for fly-scans) and from LinearStage (the motion is rotational, not translation). 2-BM: the LaminographyPitch Kohzu goniometer, modelled in the SampleTower Assembly."
   - name: Camera
   - name: Scintillator
@@ -72,6 +80,8 @@ families:
     note: "Beam-position monitor Family: measures the transverse position (centroid) of the beam as a short vector, typically from a four-quadrant or segmented pickup (a quadrant BPM / QBPM, an X-ray BPM read for position, or a TetrAMM / picoammeter read for centroid rather than flux). Presents_as Sensor (a scalar or short-vector Reading, not a 2D Frame, so distinct from Camera and the Detector Role). The measured-quantity sibling of FluxMonitor: FluxMonitor measures beam flux / intensity, PositionMonitor measures beam centroid / position (the same device electronics can be read either way, so the discriminator is the measured quantity, the FluxMonitor / EnergyDispersiveSpectrometer precedent of a Sensor Family earned by what it measures). The 2-word <quantity>Monitor name mirrors FluxMonitor so the sibling set scans as one family. Graduated across the wide fleet that shares it: APS 4-ID / 8-ID / 9-ID, NSLS-II ISS / FMX / CDI / CHX / SMI / SRX / ISR / LIX, and the imaging and MX beamlines that carry a QBPM; beam-center calibration and quadrant-vs-segmented pickup are a per-Asset settings or bound-Model difference, not a Family split. Distinct too from the loose Diagnostic family (arrival-time and photon-spectrum monitors, which measure timing / spectrum, not position; those stay loose pending their own rule-of-three, DIAG-1)."
   - name: Shutter
   - name: Hexapod
+    affordances: [Homeable, Limitable, Posable]
+    presents_as: [Positioner]
   - name: MotionController
   - name: TimingController
     note: "Hardware timing-signal generation and distribution (triggers, gates, sync pulses); presents_as Controller, which carries Pulsing. Anchored at 2-BM by Timing (the softGlueZynq Zynq FPGA box). Substrate (softGlue, FPGA, Zynq) stays out of the name and lives in settings or the bound Model."
@@ -84,6 +94,8 @@ families:
   - name: GenericProbe
     note: "APS facility-scope template, an abstract detector probe-chain."
   - name: Table
+    affordances: [Homeable, Limitable, Translatable]
+    presents_as: [Positioner]
     note: "Support/positioning table Family (the hutch optical tables). One Family spans the 4-DOF sample table (pure translation), the 6-DOF detector table (six virtual axes on record 2bmb:table3), and the mirror table (in operational use, its X axes driven by the energy-change IOC for stripe selection, STAGE-7); the axis set is a per-Asset settings difference, not a Family split. 'Optical' is deliberately not in the name (it would name the contents, not the table's own nature; the OpticalHousing -> Housing precedent). Instances qualify at the Asset layer: SampleTable / DetectorTable / MirrorTable."
   - name: Slit
     note: "Beam-defining four-blade slit Family (four independently-driven blades forming a variable horizontal/vertical opening). 2-BM: ConditioningSlit (A-station L3-20) and SampleSlit (B-station)."
@@ -118,8 +130,12 @@ families:
   - name: InsertionDevice
     note: "Source-defining insertion-device Family (the storage-ring straight-section source). One Family spans the cryo-undulator and the wiggler; the device type and its gap / field parameters are a per-Asset settings difference, not a Family split (the Table precedent). TomoWISE: the CPMU14 cryogenic permanent-magnet undulator and the 3T3PW three-pole wiggler, switchable per operation mode. A bending-magnet source (2-BM) is not an insertion device; it stays modelled loosely as the beam source, not through this Family."
   - name: Goniometer
+    affordances: [Homeable, Limitable, Rotatable]
+    presents_as: [Positioner]
     note: "Multi-axis sample-orientation goniometer Family: omega / chi / phi rotation plus the x / y / z sample-centring translations, with centre-of-rotation control. The MX micro-goniometer. Distinct from RotaryStage (a single tomographic rotation axis that carries PSO fly-scan Following / Marking, which the goniometer does not) and from TiltStage (a limited-range tilt with no primary rotation axis); the discriminator is the multi-axis crystal-orientation role. Graduated from pending on i03 (the Smargon), CORA's first canonical-goniometer deployment; chi-vs-kappa and axis-count are a per-Asset settings or bound-Model difference, not a Family split (the InsertionDevice / Table precedent). The composed multi-stage scattering diffractometer (4-ID / 8-ID, the Diffractometer Assembly) binds one Goniometer Asset for its sample-orientation circles."
   - name: Manipulator
+    affordances: [Homeable, Limitable, Translatable, Rotatable]
+    presents_as: [Positioner]
     note: "Ultra-high-vacuum multi-axis sample manipulator Family: a serial stack of translations and rotations that positions a sample inside a UHV chamber, typically with cryogenic cooling. Distinct from Hexapod (a parallel-kinematic six-strut positioner), from Goniometer (the crystal-orientation circles for diffraction), and from a plain LinearStage / RotaryStage (a single in-air motion axis); the discriminator is the UHV serial-stack sample-environment role. Earned in once two deployments shared it, the soft X-ray beamlines SIX (NSLS-II 2-ID, the cryostat x/y/z/theta manipulator) and ESM (NSLS-II 21-ID, the LT six-axis cryo manipulator x/y/z/Rx/Ry/Rz); axis count, cryo range, and load-lock transfer are a per-Asset settings or bound-Model difference, not a Family split (the InsertionDevice / Goniometer precedent)."
   - name: ElectronAnalyzer
     note: "Hemispherical electron energy analyzer Family: a photoemission spectrometer that disperses photoelectrons by kinetic energy (and, in angle-resolved mode, emission angle) over a window set by the pass energy and lens mode. Presents the Detector Role (it acquires the spectrum), but distinct from the photon detectors (Camera, the energy-dispersive Sensor families): it measures electrons out, not photons. Distinct too from the photon EnergyAnalyzer (the IXS diced-crystal energy analyzer): that disperses photons, this disperses electrons. Earned in once two deployments shared it, the soft / tender X-ray photoemission beamlines ESM (NSLS-II 21-ID, the ARPES Scienta SES) and SST (NSLS-II 7-ID, the HAXPES Scienta SES); analyzer model, lens-mode set, and pass-energy range are a per-Asset settings or bound-Model difference, not a Family split (the InsertionDevice / Manipulator precedent). The photoemission electron microscope (LEEM / PEEM) is a distinct imaging instrument, deferred (PEEM-1)."

@@ -46,15 +46,22 @@ async def test_bootstrap_seeds_all_seed_families() -> None:
 
 
 async def test_bootstrap_seeds_pinned_deterministic_ids() -> None:
-    """Federation-portable: each Family's uuid5 id is its stream id."""
+    """Federation-portable: each Family's uuid5 id is its stream id.
+
+    A family that presents Roles seeds genesis + one FamilyPresentsAsAdded
+    per Role in one append, so the stream length is 1 + len(presents_as).
+    """
     kernel = _kernel()
     await bootstrap_families(kernel)
 
     for seed_family in SEED_FAMILIES:
         events, version = await kernel.event_store.load("Family", seed_family.id)
-        assert version == 1
-        assert len(events) == 1
+        expected_len = 1 + len(seed_family.presents_as)
+        assert version == expected_len
+        assert len(events) == expected_len
         assert events[0].event_type == "FamilyDefined"
+        for presents_event in events[1:]:
+            assert presents_event.event_type == "FamilyPresentsAsAdded"
 
 
 async def test_bootstrap_is_idempotent_across_calls() -> None:
@@ -65,7 +72,7 @@ async def test_bootstrap_is_idempotent_across_calls() -> None:
 
     for seed_family in SEED_FAMILIES:
         _events, version = await kernel.event_store.load("Family", seed_family.id)
-        assert version == 1
+        assert version == 1 + len(seed_family.presents_as)
 
 
 async def test_bootstrap_stamps_system_principal_id() -> None:

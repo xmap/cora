@@ -18,6 +18,7 @@ import pytest
 
 from cora.equipment.aggregates.family import SEED_FAMILIES, FamilyName, family_stream_id
 from cora.equipment.aggregates.family.state import FamilyStatus
+from cora.equipment.aggregates.role import SEED_ROLES
 
 pytestmark = pytest.mark.unit
 
@@ -67,12 +68,43 @@ def test_seed_families_ship_defined_status() -> None:
         assert family.status is FamilyStatus.DEFINED
 
 
-def test_seed_families_ship_empty_affordances_and_presents_as() -> None:
-    """Affordances + presents_as are authored in later thematic batches;
-    the seed ships them empty (see the registry module docstring)."""
+def test_seed_family_presents_as_is_covered_by_affordances() -> None:
+    """A seed Family may present a Role only when its own affordances cover
+    that Role's required_affordances. This is the exact invariant the
+    add_family_presents_as decider and the register_fixture union check
+    enforce at runtime, so the seed can never ship a state the gate would
+    reject."""
+    required_by_role_id = {role.id: role.required_affordances for role in SEED_ROLES}
     for family in SEED_FAMILIES:
-        assert family.affordances == frozenset(), (
-            f"Seed Family {family.name.value} ships non-empty affordances; "
-            "affordances are populated in a later batch, alongside the catalog"
+        for role_id in family.presents_as:
+            required = required_by_role_id[role_id]
+            missing = required - family.affordances
+            assert missing == frozenset(), (
+                f"Seed Family {family.name.value} presents Role {role_id} but its "
+                f"affordances miss {sorted(a.value for a in missing)}"
+            )
+
+
+def test_seed_family_presents_as_only_references_seed_roles() -> None:
+    """Every presented Role id resolves to a seeded Role (no dangling id)."""
+    seed_role_ids = {role.id for role in SEED_ROLES}
+    for family in SEED_FAMILIES:
+        assert family.presents_as <= seed_role_ids, (
+            f"Seed Family {family.name.value} presents a non-seed Role id"
         )
-        assert family.presents_as == frozenset()
+
+
+def test_positioner_cluster_is_populated() -> None:
+    """Batch 1 (Positioner cluster) wired the expected families; guards
+    against an accidental drop when later batches edit the registry."""
+    positioner_id = next(r.id for r in SEED_ROLES if r.name.value == "Positioner")
+    presenting = {f.name.value for f in SEED_FAMILIES if positioner_id in f.presents_as}
+    assert presenting == {
+        "RotaryStage",
+        "LinearStage",
+        "TiltStage",
+        "Hexapod",
+        "Table",
+        "Goniometer",
+        "Manipulator",
+    }

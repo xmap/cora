@@ -142,25 +142,22 @@ def test_roles_match_seed_roles() -> None:
 def test_families_match_seed_families() -> None:
     """Catalog `families:` is the code's SEED_FAMILIES (name-keyed graduation).
 
-    Mirrors `test_roles_match_seed_roles`: the graduated family roster in
-    catalog.yaml and the code seed must not drift. Affordances and
-    presents_as are authored in later thematic batches; while the seed
-    ships them empty, this asserts the catalog carries none either, so the
-    two stay in lockstep as each batch populates both sides together.
+    Mirrors `test_roles_match_seed_roles`: the graduated family roster,
+    each family's affordance set, and each family's presented Roles must
+    not drift between catalog.yaml (docs) and the code seed. Affordances
+    are authored per Role cluster in batches; both sides move together.
     """
     cat = cd.load(_CATALOG)
-    authored = {f.name for f in cat.families}
-    seeded = {str(getattr(f.name, "value", f.name)) for f in SEED_FAMILIES}
-    assert authored == seeded
-    for fam in cat.families:
-        assert not fam.affordances, (
-            f"{fam.name} carries catalog affordances but the seed is still empty; "
-            "populate SEED_FAMILIES in the same batch (drift)"
-        )
-        assert not fam.presents_as, (
-            f"{fam.name} carries catalog presents_as but the seed is still empty; "
-            "populate SEED_FAMILIES in the same batch (drift)"
-        )
+    authored = {f.name: f for f in cat.families}
+    seeded = {f.name.value: f for f in SEED_FAMILIES}
+    assert set(authored) == set(seeded)
+
+    role_name_by_id = {role.id: role.name.value for role in SEED_ROLES}
+    for name, seed in seeded.items():
+        fam = authored[name]
+        assert set(fam.affordances) == _vals(seed.affordances), f"{name} affordance drift"
+        seed_role_names = {role_name_by_id[rid] for rid in seed.presents_as}
+        assert set(fam.presents_as) == seed_role_names, f"{name} presents_as drift"
 
 
 def test_renders_all_catalog_pages() -> None:

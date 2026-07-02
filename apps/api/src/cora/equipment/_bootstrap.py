@@ -29,6 +29,8 @@ from typing import TYPE_CHECKING
 from cora.equipment.aggregates.family import (
     SEED_FAMILIES,
     FamilyDefined,
+    FamilyEvent,
+    FamilyPresentsAsAdded,
 )
 from cora.equipment.aggregates.family import (
     event_type_name as family_event_type_name,
@@ -139,18 +141,23 @@ async def bootstrap_equipment(kernel: Kernel) -> None:
 async def bootstrap_families(kernel: Kernel) -> None:
     """Seed the graduated device-class Families into the event store (idempotent).
 
-    Iterates `SEED_FAMILIES` and direct-appends one `FamilyDefined`
-    event per Family at `stream_id = family.id` (the deterministic
-    uuid5). `ConcurrencyError` on `expected_version=0` means the seed is
-    already present; we log and continue.
+    Iterates `SEED_FAMILIES` and direct-appends the Family's genesis
+    `FamilyDefined` event (carrying its seeded `affordances`) plus one
+    `FamilyPresentsAsAdded` event per presented Role, atomically on
+    `stream_id = family.id` (the deterministic uuid5). `ConcurrencyError`
+    on `expected_version=0` means the seed is already present; we log and
+    continue.
 
-    Seeds ship with empty `affordances` and no `presents_as`; those are
-    authored later via `version_family` / `add_family_presents_as`, so
-    this hook emits only the genesis event per Family.
+    `presents_as` is not on the genesis payload (it is an additive event),
+    so a family that presents Roles seeds as `[FamilyDefined,
+    FamilyPresentsAsAdded, ...]` in one append. The seed's affordances
+    already cover each presented Role's `required_affordances` (enforced by
+    `test_seed_families_presents_as_affordance_cover`), so this mirrors what
+    `add_family_presents_as` would accept.
 
     Safe to call on every app boot. LOAD-BEARING ORDER: must run AFTER
-    `bootstrap_equipment` (the later affordance-population batches that
-    add `presents_as` depend on the seeded Role ids existing first).
+    `bootstrap_equipment` (the `presents_as` events reference the seeded
+    Role ids, and downstream lookups resolve them).
     """
     now = kernel.clock.now()
     correlation_id = kernel.id_generator.new_id()
@@ -162,23 +169,35 @@ async def bootstrap_families(kernel: Kernel) -> None:
             affordances=family.affordances,
             occurred_at=now,
         )
-        new_event = to_new_event(
-            event_type=family_event_type_name(defined),
-            payload=family_to_payload(defined),
-            occurred_at=now,
-            event_id=kernel.id_generator.new_id(),
-            command_name=_FAMILY_COMMAND_NAME,
-            correlation_id=correlation_id,
-            causation_id=None,
-            principal_id=SYSTEM_PRINCIPAL_ID,
-        )
+        family_events: list[FamilyEvent] = [defined]
+        for role_id in sorted(family.presents_as, key=str):
+            family_events.append(
+                FamilyPresentsAsAdded(
+                    family_id=family.id,
+                    role_id=role_id,
+                    occurred_at=now,
+                )
+            )
+        new_events = [
+            to_new_event(
+                event_type=family_event_type_name(event),
+                payload=family_to_payload(event),
+                occurred_at=now,
+                event_id=kernel.id_generator.new_id(),
+                command_name=_FAMILY_COMMAND_NAME,
+                correlation_id=correlation_id,
+                causation_id=None,
+                principal_id=SYSTEM_PRINCIPAL_ID,
+            )
+            for event in family_events
+        ]
 
         try:
             await kernel.event_store.append(
                 stream_type=_FAMILY_STREAM_TYPE,
                 stream_id=family.id,
                 expected_version=0,
-                events=[new_event],
+                events=new_events,
             )
         except ConcurrencyError:
             _log.info(
@@ -192,6 +211,7 @@ async def bootstrap_families(kernel: Kernel) -> None:
             "family_seed.created",
             family_id=str(family.id),
             family_name=family.name.value,
+            presents_as_count=len(family.presents_as),
         )
 
 
