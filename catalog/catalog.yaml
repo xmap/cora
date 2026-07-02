@@ -245,27 +245,33 @@ methods:
   - name: motor_homing
     capability: cora.capability.maintenance
     purpose: "Reference-position seek for motorized Devices; leaves encoders zeroed for absolute moves."
-    needed_families: [RotaryStage, LinearStage]
+    required_roles: [Positioner]
+    note: "Binds by Role: homes any Positioner generically (not a specific stage family). Contrast hexapod_reboot, whose recovery is device-specific and stays family-bound."
   - name: resolution_alignment
     capability: cora.capability.alignment
     purpose: "The resolution step, an iterative propagation-distance peak search on a mounted resolution target."
-    needed_families: [LinearStage, Camera, Scintillator]
+    required_roles: [Positioner, Detector]
+    note: "Binds by Role: a Positioner (rotation and/or sample axes) and a Detector (a direct Camera or a composed scintillator-relay Assembly; the Scintillator is a detector-Assembly constituent, not a Method requirement)."
   - name: focus_alignment
     capability: cora.capability.alignment
     purpose: "The focus step, an iterative Sample-Z peak search for depth-of-focus."
-    needed_families: [LinearStage, Camera, Scintillator]
+    required_roles: [Positioner, Detector]
+    note: "Binds by Role: a Positioner (rotation and/or sample axes) and a Detector (a direct Camera or a composed scintillator-relay Assembly; the Scintillator is a detector-Assembly constituent, not a Method requirement)."
   - name: center_alignment
     capability: cora.capability.alignment
     purpose: "The center step, iterative 0/180 convergence on the rotation-axis pixel position."
-    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+    required_roles: [Positioner, Detector]
+    note: "Binds by Role: a Positioner (rotation and/or sample axes) and a Detector (a direct Camera or a composed scintillator-relay Assembly; the Scintillator is a detector-Assembly constituent, not a Method requirement)."
   - name: roll_alignment
     capability: cora.capability.alignment
     purpose: "The roll step, iterative 0/180 Y-delta correction so the rotation axis is perpendicular to the camera Y axis."
-    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+    required_roles: [Positioner, Detector]
+    note: "Binds by Role: a Positioner (rotation and/or sample axes) and a Detector (a direct Camera or a composed scintillator-relay Assembly; the Scintillator is a detector-Assembly constituent, not a Method requirement)."
   - name: pitch_alignment
     capability: cora.capability.alignment
     purpose: "The pitch step, iterative 0/180 sharpness-delta correction so the rotation axis is perpendicular to the beam."
-    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+    required_roles: [Positioner, Detector]
+    note: "Binds by Role: a Positioner (rotation and/or sample axes) and a Detector (a direct Camera or a composed scintillator-relay Assembly; the Scintillator is a detector-Assembly constituent, not a Method requirement)."
   - name: dark_field
     capability: cora.capability.acquisition
     purpose: "Dark-frame stack plus pixel-wise baseline, producing a Dataset for reconstruction subtraction."
@@ -288,7 +294,8 @@ methods:
   - name: sensitivity_characterization
     capability: cora.capability.characterization
     purpose: "Pre-step measuring motor-sensitivity constants empirically (bump an axis by a known delta, observe centroid shift, K = shift/bump)."
-    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+    required_roles: [Positioner, Detector]
+    note: "Binds by Role: a Positioner (rotation and/or sample axes) and a Detector (a direct Camera or a composed scintillator-relay Assembly; the Scintillator is a detector-Assembly constituent, not a Method requirement)."
   - name: energy_characterization
     capability: cora.capability.characterization
     purpose: "Energy calibration via a channel-cut crystal: rock a crystal of known 2d through its Bragg peak, fit the peak angle, recover the true beam energy, and re-save the corrected per-energy curve as a new revision (ENERGY-7)."
@@ -296,15 +303,18 @@ methods:
   - name: streaming_tomography
     capability: cora.capability.tomography
     purpose: "Live-reconstruction tomography supporting mid-flight adjust_run steering on observed reco quality."
-    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+    required_roles: [Positioner, Detector]
+    note: "Binds by Role: a Positioner (rotation and/or sample axes) and a Detector (a direct Camera or a composed scintillator-relay Assembly; the Scintillator is a detector-Assembly constituent, not a Method requirement)."
   - name: continuous_rotation_tomography
     capability: cora.capability.tomography
     purpose: "N back-to-back rotation Runs sharing one Plan and Subject under a Campaign(intent=Series)."
-    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+    required_roles: [Positioner, Detector]
+    note: "Binds by Role: a Positioner (rotation and/or sample axes) and a Detector (a direct Camera or a composed scintillator-relay Assembly; the Scintillator is a detector-Assembly constituent, not a Method requirement)."
   - name: mosaic_tomography
     capability: cora.capability.tomography
     purpose: "Tiled lateral-translation tomography for samples larger than the field of view, stitched in post."
-    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+    required_roles: [Positioner, Detector]
+    note: "Binds by Role: a Positioner (rotation and/or sample axes) and a Detector (a direct Camera or a composed scintillator-relay Assembly; the Scintillator is a detector-Assembly constituent, not a Method requirement)."
   - name: xpcs
     capability: cora.capability.xpcs
     purpose: "Coherent-scattering time-series acquisition: a high-rate frame stream on a coherent area detector, gated by the softGlue timing, correlated downstream into g2. The frame stream is DAQ-owned, distinct from a poll-to-Done capture (the event-stream acquisition axis)."
