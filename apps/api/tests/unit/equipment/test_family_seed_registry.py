@@ -133,6 +133,23 @@ def test_detector_cluster_is_populated() -> None:
     assert scintillator.affordances == frozenset({Affordance.CONSUMABLE})
 
 
+def test_regulator_cluster_is_populated() -> None:
+    """Batch 4 (Regulator cluster): the four sample-environment actuators
+    that drive a process variable to a setpoint. Each carries Settable
+    (the Regulator required affordance)."""
+    regulator_id = next(r.id for r in SEED_ROLES if r.name.value == "Regulator")
+    presenting = {f.name.value for f in SEED_FAMILIES if regulator_id in f.presents_as}
+    assert presenting == {
+        "TemperatureController",
+        "FlowController",
+        "Magnet",
+        "PressureCell",
+    }
+    for family in SEED_FAMILIES:
+        if regulator_id in family.presents_as:
+            assert Affordance.SETTABLE in family.affordances
+
+
 def test_sensor_cluster_is_populated() -> None:
     """Batch 3 (Sensor cluster): only the three point-measurement Sensors
     present the Sensor Role (scalar / short-vector Reading). No Analyzer

@@ -46,6 +46,7 @@ from cora.equipment.aggregates.family.state import Family, FamilyName, FamilySta
 from cora.equipment.aggregates.role._role_registry import (
     SEED_ROLE_DETECTOR_ID,
     SEED_ROLE_POSITIONER_ID,
+    SEED_ROLE_REGULATOR_ID,
     SEED_ROLE_SENSOR_ID,
 )
 
@@ -77,6 +78,7 @@ def _family(
 _POSITIONER = frozenset({SEED_ROLE_POSITIONER_ID})
 _DETECTOR = frozenset({SEED_ROLE_DETECTOR_ID})
 _SENSOR = frozenset({SEED_ROLE_SENSOR_ID})
+_REGULATOR = frozenset({SEED_ROLE_REGULATOR_ID})
 _HOMED = frozenset({Affordance.HOMEABLE, Affordance.LIMITABLE})
 _DETECTOR_AFFORDANCES = frozenset(
     {
@@ -105,6 +107,25 @@ _SENSOR_AFFORDANCES = frozenset(
 _ANALYZER_DETECTOR_AFFORDANCES = frozenset(
     {Affordance.IMAGEABLE, Affordance.TRIGGERABLE, Affordance.STREAMABLE}
 )
+# Batch 4 (Pass 1, Regulator cluster). All four sample-environment
+# actuators drive a continuous process variable to a setpoint (Settable,
+# the Regulator required affordance) and read it back (Reportable). The
+# two that expose an operator-tunable control loop also carry
+# PIDControllable; only TemperatureController exposes a cooling setpoint
+# (Coolable). Field ramp (Magnet) and membrane/load pressure (PressureCell)
+# are setpoint-driven but not operator-facing PID loops.
+_REGULATOR_TEMPERATURE = frozenset(
+    {
+        Affordance.SETTABLE,
+        Affordance.PID_CONTROLLABLE,
+        Affordance.COOLABLE,
+        Affordance.REPORTABLE,
+    }
+)
+_REGULATOR_FLOW = frozenset(
+    {Affordance.SETTABLE, Affordance.PID_CONTROLLABLE, Affordance.REPORTABLE}
+)
+_REGULATOR_SETPOINT = frozenset({Affordance.SETTABLE, Affordance.REPORTABLE})
 
 # Batch 2 (Pass 1, Detector cluster). Only direct-detection Camera
 # presents the Detector Role; per the Role docstring a composed
@@ -206,15 +227,19 @@ SEED_FAMILIES: Final[tuple[Family, ...]] = (
         affordances=_HOMED | {Affordance.TRANSLATABLE, Affordance.ROTATABLE},
         presents_as=_POSITIONER,
     ),
-    _family("TemperatureController"),
-    _family("FlowController"),
-    _family("Magnet"),
+    _family(
+        "TemperatureController",
+        affordances=_REGULATOR_TEMPERATURE,
+        presents_as=_REGULATOR,
+    ),
+    _family("FlowController", affordances=_REGULATOR_FLOW, presents_as=_REGULATOR),
+    _family("Magnet", affordances=_REGULATOR_SETPOINT, presents_as=_REGULATOR),
     _family(
         "PolarizationAnalyzer",
         affordances=_HOMED | {Affordance.ROTATABLE},
         presents_as=_POSITIONER,
     ),
-    _family("PressureCell"),
+    _family("PressureCell", affordances=_REGULATOR_SETPOINT, presents_as=_REGULATOR),
     _family("Backlight"),
     _family("Laser"),
     _family(
