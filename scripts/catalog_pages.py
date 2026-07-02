@@ -75,6 +75,7 @@ def _methods(catalog: Catalog) -> str:
             f"`{m.name}`",
             f"[`{m.capability}`](capabilities.md)" if m.capability else "",
             _codes(m.needed_families),
+            _codes(m.required_roles),
             m.purpose or "",
         ]
         for m in catalog.methods
@@ -83,10 +84,15 @@ def _methods(catalog: Catalog) -> str:
         [
             "# Methods",
             "The technique catalog. Each Method names a technique abstractly and "
-            "declares the device [Families](families.md) it needs and the "
-            "[Capability](capabilities.md) contract it realizes.",
+            "declares the device [Families](families.md) or [Roles](roles.md) it "
+            "binds and the [Capability](capabilities.md) contract it realizes. A "
+            "Method binds by Role (federation-portable) where a functional contract "
+            "fits, and by Family (anatomical) where a specific device class is meant.",
             _banner(),
-            _table(["Method", "Capability", "Needed families", "Purpose"], rows),
+            _table(
+                ["Method", "Capability", "Needed families", "Required roles", "Purpose"],
+                rows,
+            ),
         ]
     )
 

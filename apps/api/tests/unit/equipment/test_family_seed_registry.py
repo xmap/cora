@@ -171,9 +171,10 @@ def test_regulator_cluster_is_populated() -> None:
 def test_passive_tier_affordance_only_families_carry_no_role() -> None:
     """Batch 6: operable beam-conditioning optics carry a functional
     affordance but present NO Role (no Method binds them; the affordance is
-    the forward seam). Motorized != Positioner."""
+    the forward seam). Motorized != Positioner. Shutter is NOT here: it
+    crossed the rule-of-three and now presents the Shutter Role (see
+    test_shutter_family_presents_shutter_role)."""
     expected = {
-        "Shutter": {Affordance.SHUTTERABLE},
         "Filter": {Affordance.ATTENUABLE},
         "Mirror": {Affordance.BENDABLE},
         "Monochromator": {Affordance.INDEXABLE},
@@ -186,6 +187,16 @@ def test_passive_tier_affordance_only_families_carry_no_role() -> None:
         fam = by_name[name]
         assert fam.affordances == frozenset(affs), f"{name} affordance drift"
         assert fam.presents_as == frozenset(), f"{name} must present no Role"
+
+
+def test_shutter_family_presents_shutter_role() -> None:
+    """Shutter graduated from affordance-only to the Shutter Role when three
+    Methods needed to bind it (dark_field, flat_field, xpcs). Its Shutterable
+    affordance covers the Role's required set."""
+    shutter_id = next(r.id for r in SEED_ROLES if r.name.value == "Shutter")
+    shutter = next(f for f in SEED_FAMILIES if f.name.value == "Shutter")
+    assert shutter.presents_as == frozenset({shutter_id})
+    assert Affordance.SHUTTERABLE in shutter.affordances
 
 
 def test_passive_tier_empty_families_stay_empty() -> None:

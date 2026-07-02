@@ -53,6 +53,12 @@ roles:
     optional_affordances: [PIDControllable, Coolable, Reportable]
     produces: [Reading]
     consumes: [Setpoint]
+  - name: Shutter
+    docstring: "Gates the beam open or closed on operator command. Satisfying Families carry the Shutterable affordance (the Shutter Family: PSS, station, and hutch shutters). Graduated when three Methods needed to command a shutter as a bound contract (dark_field, flat_field, xpcs); distinct from a Positioner (it gates rather than positions a continuous axis) and from a passive BeamStop (which absorbs the beam permanently rather than gating it under command)."
+    required_affordances: [Shutterable]
+    optional_affordances: [Triggerable, Reportable]
+    produces: [BeamGateState]
+    consumes: [BeamGateCommand]
 
 families:
   # The graduated device-class roster (mirrors SEED_FAMILIES). Affordances +
@@ -90,6 +96,7 @@ families:
     note: "Beam-position monitor Family: measures the transverse position (centroid) of the beam as a short vector, typically from a four-quadrant or segmented pickup (a quadrant BPM / QBPM, an X-ray BPM read for position, or a TetrAMM / picoammeter read for centroid rather than flux). Presents_as Sensor (a scalar or short-vector Reading, not a 2D Frame, so distinct from Camera and the Detector Role). The measured-quantity sibling of FluxMonitor: FluxMonitor measures beam flux / intensity, PositionMonitor measures beam centroid / position (the same device electronics can be read either way, so the discriminator is the measured quantity, the FluxMonitor / EnergyDispersiveSpectrometer precedent of a Sensor Family earned by what it measures). The 2-word <quantity>Monitor name mirrors FluxMonitor so the sibling set scans as one family. Graduated across the wide fleet that shares it: APS 4-ID / 8-ID / 9-ID, NSLS-II ISS / FMX / CDI / CHX / SMI / SRX / ISR / LIX, and the imaging and MX beamlines that carry a QBPM; beam-center calibration and quadrant-vs-segmented pickup are a per-Asset settings or bound-Model difference, not a Family split. Distinct too from the loose Diagnostic family (arrival-time and photon-spectrum monitors, which measure timing / spectrum, not position; those stay loose pending their own rule-of-three, DIAG-1)."
   - name: Shutter
     affordances: [Shutterable]
+    presents_as: [Shutter]
   - name: Hexapod
     affordances: [Homeable, Limitable, Posable]
     presents_as: [Positioner]
@@ -274,7 +281,8 @@ methods:
   - name: tomography
     capability: cora.capability.tomography
     purpose: "The canonical imaging routine; a Run producing an H5 projection-stack Dataset from operator exposure, projections, and angle-range."
-    needed_families: [RotaryStage, LinearStage, Camera, Scintillator]
+    required_roles: [Positioner, Detector]
+    note: "Binds by Role (federation-portable), not by anatomical family. Two Positioner slots at runtime: the tomographic rotation axis and the sample x/y/z stack (RotaryStage + LinearStage both present Positioner). One Detector slot: a direct-detection Camera OR a composed scintillator-relay Assembly (the Scintillator is a constituent of that detector Assembly, not a separate Method requirement, so it drops out of the binding contract). See the recipe integration test for the exact RoleRequirement slots."
   - name: sensitivity_characterization
     capability: cora.capability.characterization
     purpose: "Pre-step measuring motor-sensitivity constants empirically (bump an axis by a known delta, observe centroid shift, K = shift/bump)."

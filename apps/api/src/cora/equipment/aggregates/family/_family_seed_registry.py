@@ -56,6 +56,7 @@ from cora.equipment.aggregates.role._role_registry import (
     SEED_ROLE_POSITIONER_ID,
     SEED_ROLE_REGULATOR_ID,
     SEED_ROLE_SENSOR_ID,
+    SEED_ROLE_SHUTTER_ID,
 )
 
 
@@ -88,6 +89,7 @@ _DETECTOR = frozenset({SEED_ROLE_DETECTOR_ID})
 _SENSOR = frozenset({SEED_ROLE_SENSOR_ID})
 _REGULATOR = frozenset({SEED_ROLE_REGULATOR_ID})
 _CONTROLLER = frozenset({SEED_ROLE_CONTROLLER_ID})
+_SHUTTER = frozenset({SEED_ROLE_SHUTTER_ID})
 _HOMED = frozenset({Affordance.HOMEABLE, Affordance.LIMITABLE})
 _DETECTOR_AFFORDANCES = frozenset(
     {
@@ -174,8 +176,10 @@ _CONTROLLER_TIMING = frozenset({Affordance.IDENTIFIABLE, Affordance.PULSING, Aff
 # graduated Regulator; the bar that deferred Conditioner). So operable
 # optics carry their functional affordance as a forward seam -- when a
 # Method later needs to bind e.g. an attenuator, `Attenuable` becomes that
-# Role's required set and Filter already covers it -- but no Shutter /
-# Attenuator / Bender Role is coined now. Motorized != Positioner: a Slit
+# Role's required set and Filter already covers it. (Shutter has since
+# crossed that trigger: three Methods bind a shutter, so it now presents
+# the Shutter Role -- its Shutterable was exactly the seam. Attenuator /
+# Bender remain affordance-only, un-earned.) Motorized != Positioner: a Slit
 # is beam-defining, a Monochromator is energy-selecting; their driven axes
 # are a per-Asset concern, not the Family's Role. Truly passive elements
 # (Mask, Window, BeamStop, Collimator, Aperture) and provenance-only /
@@ -216,7 +220,11 @@ SEED_FAMILIES: Final[tuple[Family, ...]] = (
     ),
     _family("FluxMonitor", affordances=_SENSOR_SCALAR, presents_as=_SENSOR),
     _family("PositionMonitor", affordances=_SENSOR_SCALAR, presents_as=_SENSOR),
-    _family("Shutter", affordances=frozenset({Affordance.SHUTTERABLE})),
+    _family(
+        "Shutter",
+        affordances=frozenset({Affordance.SHUTTERABLE}),
+        presents_as=_SHUTTER,
+    ),
     _family(
         "Hexapod",
         affordances=_HOMED | {Affordance.POSABLE},

@@ -18,8 +18,10 @@ from cora.equipment.aggregates.role._role_registry import (
     SEED_ROLE_POSITIONER_ID,
     SEED_ROLE_REGULATOR_ID,
     SEED_ROLE_SENSOR_ID,
+    SEED_ROLE_SHUTTER_ID,
     SEED_ROLES,
     SENSOR,
+    SHUTTER,
     role_stream_id,
 )
 from cora.equipment.aggregates.role._signal_type import (
@@ -62,7 +64,9 @@ __all__ = [
     "SEED_ROLE_POSITIONER_ID",
     "SEED_ROLE_REGULATOR_ID",
     "SEED_ROLE_SENSOR_ID",
+    "SEED_ROLE_SHUTTER_ID",
     "SENSOR",
+    "SHUTTER",
     "SIGNAL_TYPE_MAX_LENGTH",
     "InvalidRoleDocstringError",
     "InvalidRoleNameError",

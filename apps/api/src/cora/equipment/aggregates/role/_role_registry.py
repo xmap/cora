@@ -2,15 +2,23 @@
 
 Per [[project-role-aggregate-design]] sub-slice 3A:
 - The closed-core registry: Detector, Positioner, Controller, Sensor,
-  and Regulator. Regulator was added when the loose TemperatureController
-  family reached the rule-of-three (the Diamond i22 / i03 / i11 continuous-
-  setpoint thermal actuators): a Role for a device that drives a process
-  variable to a commanded setpoint, requiring the Settable affordance.
+  Regulator, and Shutter. Regulator was added when the loose
+  TemperatureController family reached the rule-of-three (the Diamond
+  i22 / i03 / i11 continuous-setpoint thermal actuators): a Role for a
+  device that drives a process variable to a commanded setpoint, requiring
+  the Settable affordance.
+- Shutter was added when three Methods needed to command a shutter as a
+  bound contract (dark_field, flat_field, xpcs): a Role for a device that
+  gates the beam open / closed, requiring the Shutterable affordance. This
+  is the narrow, non-vacuous slice of the deferred Conditioner (below): a
+  Method binds a shutter specifically, so the Role earns its slot with a
+  single required affordance, unlike the broad Conditioner.
 - Conditioner is DEFERRED per Q3 (2026-06-10 user pick): no Affordance
-  is universally required across Attenuators / Shutters / Mirrors, so
-  the required-set would be vacuous, degenerating the Role to a tag.
-  Rule-of-three trigger gates a future definition. (Regulator cleared
-  exactly this bar: Settable is required by every earning device.)
+  is universally required across Attenuators / Shutters / Mirrors, so the
+  broad required-set would be vacuous, degenerating the Role to a tag.
+  Rule-of-three trigger gates a future definition. (Regulator and Shutter
+  each cleared exactly this bar with a single required affordance: Settable
+  and Shutterable respectively.)
 
 These constants do NOT register events at module import. Seeding
 is performed via direct-append at scenario-fixture / lifespan-hook
@@ -88,6 +96,7 @@ SEED_ROLE_POSITIONER_ID: Final[RoleId] = role_stream_id(RoleName("Positioner"))
 SEED_ROLE_CONTROLLER_ID: Final[RoleId] = role_stream_id(RoleName("Controller"))
 SEED_ROLE_SENSOR_ID: Final[RoleId] = role_stream_id(RoleName("Sensor"))
 SEED_ROLE_REGULATOR_ID: Final[RoleId] = role_stream_id(RoleName("Regulator"))
+SEED_ROLE_SHUTTER_ID: Final[RoleId] = role_stream_id(RoleName("Shutter"))
 
 
 DETECTOR: Final[Role] = Role(
@@ -190,12 +199,32 @@ REGULATOR: Final[Role] = Role(
 )
 
 
+SHUTTER: Final[Role] = Role(
+    id=SEED_ROLE_SHUTTER_ID,
+    name=RoleName("Shutter"),
+    docstring=(
+        "Gates the beam open or closed on operator command. Satisfying Families "
+        "carry the Shutterable affordance (the Shutter Family: PSS, station, and "
+        "hutch shutters). Graduated when three Methods needed to command a shutter "
+        "as a bound contract (dark_field, flat_field, xpcs); distinct from a "
+        "Positioner (it gates rather than positions a continuous axis) and from a "
+        "passive BeamStop (which absorbs the beam permanently rather than gating it "
+        "under command)."
+    ),
+    required_affordances=frozenset({Affordance.SHUTTERABLE}),
+    optional_affordances=frozenset({Affordance.TRIGGERABLE, Affordance.REPORTABLE}),
+    produces=frozenset({SignalType("BeamGateState")}),
+    consumes=frozenset({SignalType("BeamGateCommand")}),
+)
+
+
 SEED_ROLES: Final[tuple[Role, ...]] = (
     DETECTOR,
     POSITIONER,
     CONTROLLER,
     SENSOR,
     REGULATOR,
+    SHUTTER,
 )
 
 
@@ -210,6 +239,8 @@ __all__ = [
     "SEED_ROLE_POSITIONER_ID",
     "SEED_ROLE_REGULATOR_ID",
     "SEED_ROLE_SENSOR_ID",
+    "SEED_ROLE_SHUTTER_ID",
     "SENSOR",
+    "SHUTTER",
     "role_stream_id",
 ]

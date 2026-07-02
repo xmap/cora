@@ -26,21 +26,23 @@ from cora.equipment.aggregates.role import (
     SEED_ROLE_POSITIONER_ID,
     SEED_ROLE_REGULATOR_ID,
     SEED_ROLE_SENSOR_ID,
+    SEED_ROLE_SHUTTER_ID,
     SEED_ROLES,
     SENSOR,
 )
 
 
 @pytest.mark.unit
-def test_seed_roles_closed_set_count_is_five() -> None:
-    """The closed-core seed ships exactly 5 Roles. Conditioner deferred (Q3)."""
-    assert len(SEED_ROLES) == 5
+def test_seed_roles_closed_set_count_is_six() -> None:
+    """The closed-core seed ships exactly 6 Roles. Conditioner deferred (Q3);
+    Shutter graduated (dark_field / flat_field / xpcs bind it)."""
+    assert len(SEED_ROLES) == 6
 
 
 @pytest.mark.unit
 def test_seed_role_names_are_pinned() -> None:
     names = {role.name.value for role in SEED_ROLES}
-    assert names == {"Detector", "Positioner", "Controller", "Sensor", "Regulator"}
+    assert names == {"Detector", "Positioner", "Controller", "Sensor", "Regulator", "Shutter"}
 
 
 @pytest.mark.unit
@@ -56,12 +58,13 @@ def test_seed_role_ids_are_pinned_uuid5() -> None:
     assert UUID("8fe49028-04a4-5a23-9fb3-b2b79eb9c620") == SEED_ROLE_CONTROLLER_ID
     assert UUID("9763082c-fd15-5ac6-8855-2da74c4ed661") == SEED_ROLE_SENSOR_ID
     assert UUID("63e1c642-76aa-5cb9-a856-d2f3f883b1fe") == SEED_ROLE_REGULATOR_ID
+    assert UUID("3f2ec96b-fb95-55e2-805c-d1c7797a962d") == SEED_ROLE_SHUTTER_ID
 
 
 @pytest.mark.unit
 def test_seed_role_ids_are_pairwise_distinct() -> None:
     ids = {role.id for role in SEED_ROLES}
-    assert len(ids) == 5
+    assert len(ids) == 6
 
 
 @pytest.mark.unit

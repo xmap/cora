@@ -156,6 +156,7 @@ class Method(BaseModel):
     name: str
     capability: str | None = None
     purpose: str | None = None
+    note: str | None = None
     needed_families: list[str] = []
     needed_supplies: list[str] = []
     required_roles: list[str] = []
@@ -301,6 +302,11 @@ def _check_references(path: Path, catalog: Catalog) -> None:
         unknown = sorted(set(m.needed_families) - family_names)
         if unknown:
             raise CatalogError(f"{path}: method '{m.name}' needs unknown families {unknown}")
+        unknown_method_roles = sorted(set(m.required_roles) - {r.name for r in catalog.roles})
+        if unknown_method_roles:
+            raise CatalogError(
+                f"{path}: method '{m.name}' requires unknown roles {unknown_method_roles}"
+            )
     for model in catalog.models:
         unknown = sorted(set(model.declared_families) - family_names)
         if unknown:

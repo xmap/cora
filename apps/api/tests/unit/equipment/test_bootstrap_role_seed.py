@@ -12,6 +12,7 @@ from cora.equipment.aggregates.role import (
     SEED_ROLE_POSITIONER_ID,
     SEED_ROLE_REGULATOR_ID,
     SEED_ROLE_SENSOR_ID,
+    SEED_ROLE_SHUTTER_ID,
     SEED_ROLES,
     load_role,
 )
@@ -66,6 +67,7 @@ async def test_bootstrap_seeds_pinned_deterministic_ids() -> None:
         SEED_ROLE_CONTROLLER_ID,
         SEED_ROLE_SENSOR_ID,
         SEED_ROLE_REGULATOR_ID,
+        SEED_ROLE_SHUTTER_ID,
     ):
         events, version = await kernel.event_store.load("Role", pinned_id)
         assert version == 1

@@ -59,13 +59,14 @@ def _vals(items: Any) -> set[str]:
 
 def test_catalog_loads_and_validates() -> None:
     cat = cd.load(_CATALOG)
-    assert len(cat.roles) == 5
+    assert len(cat.roles) == 6
     assert {r.name for r in cat.roles} == {
         "Detector",
         "Positioner",
         "Controller",
         "Sensor",
         "Regulator",
+        "Shutter",
     }
     # lower bounds, not exact: additive catalog edits should not break this test
     # (only roles == 5 is exact, because it is drift-guarded against SEED_ROLES).
