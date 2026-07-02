@@ -1,6 +1,6 @@
-"""Application-handler tests for `try_conduct_procedure` (pause-to-Held conduct).
+"""Application-handler tests for `conduct_or_hold_procedure` (pause-to-Held conduct).
 
-Orchestration handler delegating to `Conductor.try_conduct`. Pins the
+Orchestration handler delegating to `Conductor.conduct_or_hold`. Pins the
 hold-vs-abort branch + the guards against a real Conductor + real
 start/complete/abort/hold handlers over an in-memory store:
 
@@ -49,19 +49,19 @@ from cora.operation.features import (
     abort_procedure,
     append_activities,
     complete_procedure,
+    conduct_or_hold_procedure,
     hold_procedure,
     start_procedure,
-    try_conduct_procedure,
 )
 from cora.operation.features.complete_procedure.command import CompleteProcedure
+from cora.operation.features.conduct_or_hold_procedure import (
+    ConductOrHoldProcedure,
+    ConductOrHoldProcedureResult,
+)
+from cora.operation.features.conduct_or_hold_procedure import (
+    Handler as ConductOrHoldHandler,
+)
 from cora.operation.features.hold_procedure.command import HoldProcedure
-from cora.operation.features.try_conduct_procedure import (
-    Handler as TryConductHandler,
-)
-from cora.operation.features.try_conduct_procedure import (
-    TryConductProcedure,
-    TryConductProcedureResult,
-)
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 6, 21, 12, 0, 0, tzinfo=UTC)
@@ -110,13 +110,13 @@ def _deps(store: InMemoryEventStore, *, deny: bool = False) -> Kernel:
     )
 
 
-def _make_try_conduct(
+def _make_conduct_or_hold(
     deps: Kernel,
     port: InMemoryControlPort,
     *,
     hold_fails: bool = False,
     complete_fails: bool = False,
-) -> TryConductHandler:
+) -> ConductOrHoldHandler:
     conductor = Conductor(
         control_port=port,
         append_step=append_activities.bind(deps, step_store=InMemoryActivityStore()),
@@ -127,7 +127,7 @@ def _make_try_conduct(
         abort_procedure=abort_procedure.bind(deps),
         hold_procedure=_raising_hold if hold_fails else hold_procedure.bind(deps),
     )
-    return try_conduct_procedure.bind(
+    return conduct_or_hold_procedure.bind(
         deps, conductor=conductor, expansion_port=InMemoryRecipeExpander()
     )
 
@@ -161,7 +161,7 @@ async def _seed_defined(store: InMemoryEventStore) -> None:
 
 
 async def _seed_running(store: InMemoryEventStore) -> None:
-    """Seed a Registered + Started (Running) Procedure so try_conduct's
+    """Seed a Registered + Started (Running) Procedure so conduct_or_hold's
     start_procedure rejects it (Defined-only) as a lifecycle failure."""
     events = [
         ProcedureRegistered(
@@ -204,9 +204,11 @@ async def _event_types(store: InMemoryEventStore) -> list[str]:
     return [e.event_type for e in events]
 
 
-async def _call(handler: TryConductHandler, steps: Sequence[Step]) -> TryConductProcedureResult:
+async def _call(
+    handler: ConductOrHoldHandler, steps: Sequence[Step]
+) -> ConductOrHoldProcedureResult:
     return await handler(
-        TryConductProcedure(procedure_id=_PROCEDURE_ID, steps=steps),
+        ConductOrHoldProcedure(procedure_id=_PROCEDURE_ID, steps=steps),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -218,7 +220,7 @@ async def test_recoverable_setpoint_failure_pauses_to_held() -> None:
     port = InMemoryControlPort()  # 2bma:a NOT connected -> write fails (recoverable)
     await _seed_defined(store)
     result = await _call(
-        _make_try_conduct(_deps(store), port),
+        _make_conduct_or_hold(_deps(store), port),
         (SetpointStep(address="2bma:a", value=1.0),),
     )
 
@@ -228,7 +230,7 @@ async def test_recoverable_setpoint_failure_pauses_to_held() -> None:
     assert result.failure.error_class == "ControlNotConnectedError"
     assert await _status(store) is ProcedureStatus.HELD
     types = await _event_types(store)
-    assert "ResolvedStepsRecorded" in types  # manifest pinned -> reconduct-ready
+    assert "ResolvedStepsRecorded" in types  # manifest pinned -> resume-ready
     assert "ProcedureHeld" in types
     assert "ProcedureAborted" not in types
     assert "ProcedureCompleted" not in types
@@ -240,7 +242,7 @@ async def test_recoverable_check_failure_pauses_to_held() -> None:
     port = InMemoryControlPort()  # read of unconnected address fails (recoverable)
     await _seed_defined(store)
     result = await _call(
-        _make_try_conduct(_deps(store), port),
+        _make_conduct_or_hold(_deps(store), port),
         (CheckStep(address="2bma:a", criterion=EqualsCriterion(expected=1.0)),),
     )
 
@@ -257,7 +259,9 @@ async def test_action_failure_aborts_not_held() -> None:
     await _seed_defined(store)
     # An unregistered action -> UnknownActionError (source_kind=action), which
     # is NOT recoverable: an interrupted acquisition aborts rather than pausing.
-    result = await _call(_make_try_conduct(_deps(store), port), (ActionStep(name="unregistered"),))
+    result = await _call(
+        _make_conduct_or_hold(_deps(store), port), (ActionStep(name="unregistered"),)
+    )
 
     assert result.succeeded is False
     assert result.held is False
@@ -273,7 +277,7 @@ async def test_clean_run_completes() -> None:
     port.simulate_connect("2bma:a")
     await _seed_defined(store)
     result = await _call(
-        _make_try_conduct(_deps(store), port),
+        _make_conduct_or_hold(_deps(store), port),
         (SetpointStep(address="2bma:a", value=1.0),),
     )
 
@@ -288,7 +292,7 @@ async def test_clean_run_completes() -> None:
 async def test_empty_step_list_completes() -> None:
     store = InMemoryEventStore()
     await _seed_defined(store)
-    result = await _call(_make_try_conduct(_deps(store), InMemoryControlPort()), ())
+    result = await _call(_make_conduct_or_hold(_deps(store), InMemoryControlPort()), ())
 
     assert result.succeeded is True
     assert result.held is False
@@ -301,7 +305,7 @@ async def test_hold_itself_failing_leaves_running() -> None:
     port = InMemoryControlPort()  # 2bma:a not connected -> recoverable failure
     await _seed_defined(store)
     result = await _call(
-        _make_try_conduct(_deps(store), port, hold_fails=True),
+        _make_conduct_or_hold(_deps(store), port, hold_fails=True),
         (SetpointStep(address="2bma:a", value=1.0),),
     )
 
@@ -323,14 +327,14 @@ async def test_raises_unauthorized_on_deny() -> None:
     await _seed_defined(store)
     deps = _deps(store, deny=True)
     with pytest.raises(UnauthorizedError):
-        await _call(_make_try_conduct(deps, InMemoryControlPort()), ())
+        await _call(_make_conduct_or_hold(deps, InMemoryControlPort()), ())
 
 
 @pytest.mark.unit
-async def test_try_conduct_raises_not_found_when_procedure_absent() -> None:
+async def test_conduct_or_hold_raises_not_found_when_procedure_absent() -> None:
     store = InMemoryEventStore()
     with pytest.raises(ProcedureNotFoundError):
-        await _call(_make_try_conduct(_deps(store), InMemoryControlPort()), ())
+        await _call(_make_conduct_or_hold(_deps(store), InMemoryControlPort()), ())
 
 
 @pytest.mark.unit
@@ -339,7 +343,7 @@ async def test_start_rejected_records_lifecycle_failure() -> None:
     the result (not held, not a step failure), and no step runs."""
     store = InMemoryEventStore()
     await _seed_running(store)
-    result = await _call(_make_try_conduct(_deps(store), InMemoryControlPort()), ())
+    result = await _call(_make_conduct_or_hold(_deps(store), InMemoryControlPort()), ())
 
     assert result.succeeded is False
     assert result.held is False
@@ -356,7 +360,7 @@ async def test_complete_rejected_records_lifecycle_failure() -> None:
     store = InMemoryEventStore()
     await _seed_defined(store)
     result = await _call(
-        _make_try_conduct(_deps(store), InMemoryControlPort(), complete_fails=True), ()
+        _make_conduct_or_hold(_deps(store), InMemoryControlPort(), complete_fails=True), ()
     )
 
     assert result.succeeded is False

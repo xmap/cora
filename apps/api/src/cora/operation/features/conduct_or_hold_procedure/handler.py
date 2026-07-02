@@ -1,11 +1,11 @@
-"""Application handler for the `try_conduct_procedure` slice.
+"""Application handler for the `conduct_or_hold_procedure` slice.
 
 Pause-capable conduct. A thin orchestrator that delegates to
-`Conductor.try_conduct()` (the pause-to-Held twin of `Conductor.conduct()`):
+`Conductor.conduct_or_hold()` (the pause-to-Held twin of `Conductor.conduct()`):
 on a recoverable step failure the Conductor pauses the Procedure to `Held`
-rather than aborting it, so the operator can `reconduct` from the pinned
+rather than aborting it, so the operator can `conduct_from` from the pinned
 resolved steps. This is the Tier-1 producer that makes a Held + pinned-steps
-state reachable so the `reconduct` resume path has something to resume.
+state reachable so the `conduct_from` resume path has something to resume.
 
 Shares the pre-Conductor pipeline (recipe re-expansion + pseudoaxis +
 resolved-steps pin) with `conduct_procedure` via the BC-level
@@ -21,9 +21,9 @@ An orchestration entry point, not an aggregate-state-mutating decider.
 
 ## Authorization scope
 
-`TryConductProcedure` is authz-checked as its own command. The wrapped
+`ConductOrHoldProcedure` is authz-checked as its own command. The wrapped
 transition handlers each authz internally with their OWN command names; an
-operator authorized to call `TryConductProcedure` is NOT automatically
+operator authorized to call `ConductOrHoldProcedure` is NOT automatically
 authorized for those individually. Same layering as `conduct_procedure`.
 """
 
@@ -41,29 +41,29 @@ from cora.operation.aggregates.procedure import (
 )
 from cora.operation.conductor import Conductor
 from cora.operation.errors import UnauthorizedError
-from cora.operation.features.try_conduct_procedure.command import (
-    TryConductProcedure,
-    TryConductProcedureResult,
+from cora.operation.features.conduct_or_hold_procedure.command import (
+    ConductOrHoldProcedure,
+    ConductOrHoldProcedureResult,
 )
 from cora.operation.ports.recipe_expander import RecipeExpander
 
-_COMMAND_NAME = "TryConductProcedure"
+_COMMAND_NAME = "ConductOrHoldProcedure"
 
 _log = get_logger(__name__)
 
 
 class Handler(Protocol):
-    """Callable interface every try_conduct_procedure handler implements."""
+    """Callable interface every conduct_or_hold_procedure handler implements."""
 
     async def __call__(
         self,
-        command: TryConductProcedure,
+        command: ConductOrHoldProcedure,
         *,
         principal_id: UUID,
         correlation_id: UUID,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
-    ) -> TryConductProcedureResult: ...
+    ) -> ConductOrHoldProcedureResult: ...
 
 
 def bind(
@@ -72,24 +72,24 @@ def bind(
     conductor: Conductor,
     expansion_port: RecipeExpander,
 ) -> Handler:
-    """Build a try_conduct_procedure handler closed over deps + Conductor + port.
+    """Build a conduct_or_hold_procedure handler closed over deps + Conductor + port.
 
     `conductor` is the same BC-internal Conductor `conduct_procedure` uses; it
     carries the start / complete / abort / hold handlers (wired at app
-    composition) that `Conductor.try_conduct` composes. `expansion_port` is
+    composition) that `Conductor.conduct_or_hold` composes. `expansion_port` is
     the same instance wired for `register_procedure_from_recipe` + conduct.
     """
 
     async def handler(
-        command: TryConductProcedure,
+        command: ConductOrHoldProcedure,
         *,
         principal_id: UUID,
         correlation_id: UUID,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
-    ) -> TryConductProcedureResult:
+    ) -> ConductOrHoldProcedureResult:
         _log.info(
-            "try_conduct_procedure.start",
+            "conduct_or_hold_procedure.start",
             command_name=_COMMAND_NAME,
             procedure_id=str(command.procedure_id),
             step_count=len(command.steps),
@@ -106,7 +106,7 @@ def bind(
         )
         if isinstance(authz, Deny):
             _log.info(
-                "try_conduct_procedure.denied",
+                "conduct_or_hold_procedure.denied",
                 command_name=_COMMAND_NAME,
                 procedure_id=str(command.procedure_id),
                 principal_id=str(principal_id),
@@ -133,7 +133,7 @@ def bind(
             causation_id=causation_id,
         )
 
-        result = await conductor.try_conduct(
+        result = await conductor.conduct_or_hold(
             procedure_id=command.procedure_id,
             principal_id=principal_id,
             correlation_id=correlation_id,
@@ -143,7 +143,7 @@ def bind(
         )
 
         _log.info(
-            "try_conduct_procedure.success",
+            "conduct_or_hold_procedure.success",
             command_name=_COMMAND_NAME,
             procedure_id=str(command.procedure_id),
             completed_count=result.completed_count,
@@ -152,7 +152,7 @@ def bind(
             failure_class=(result.failure.error_class if result.failure is not None else None),
         )
 
-        return TryConductProcedureResult(
+        return ConductOrHoldProcedureResult(
             procedure_id=result.procedure_id,
             completed_count=result.completed_count,
             succeeded=result.succeeded,

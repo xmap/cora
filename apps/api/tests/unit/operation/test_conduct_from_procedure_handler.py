@@ -1,4 +1,4 @@
-"""Application-handler tests for `reconduct_procedure` (resume + replay).
+"""Application-handler tests for `conduct_from_procedure` (resume + replay).
 
 Orchestration handler composing `resume_procedure` + `Conductor.execute_from`
 + complete/abort. Pins the three-way terminal contract and the guards:
@@ -44,15 +44,15 @@ from cora.operation.features import (
     abort_procedure,
     append_activities,
     complete_procedure,
-    reconduct_procedure,
+    conduct_from_procedure,
     resume_procedure,
 )
-from cora.operation.features.reconduct_procedure import (
-    Handler as ReconductHandler,
+from cora.operation.features.conduct_from_procedure import (
+    ConductFromProcedure,
+    ConductFromProcedureResult,
 )
-from cora.operation.features.reconduct_procedure import (
-    ReconductProcedure,
-    ReconductProcedureResult,
+from cora.operation.features.conduct_from_procedure import (
+    Handler as ConductFromHandler,
 )
 from cora.operation.ports.control_port import ActuationKind, ControlPort
 from cora.run.aggregates.run import RunHeld, RunStarted
@@ -83,7 +83,7 @@ def _deps(store: InMemoryEventStore, *, deny: bool = False) -> Kernel:
     )
 
 
-def _make_reconduct(deps: Kernel, port: ControlPort) -> ReconductHandler:
+def _make_conduct_from(deps: Kernel, port: ControlPort) -> ConductFromHandler:
     conductor = Conductor(
         control_port=port,
         append_step=append_activities.bind(deps, step_store=InMemoryActivityStore()),
@@ -93,7 +93,7 @@ def _make_reconduct(deps: Kernel, port: ControlPort) -> ReconductHandler:
         complete_procedure=complete_procedure.bind(deps),
         abort_procedure=abort_procedure.bind(deps),
     )
-    return reconduct_procedure.bind(deps, conductor=conductor)
+    return conduct_from_procedure.bind(deps, conductor=conductor)
 
 
 async def _seed_held_with_steps(
@@ -182,9 +182,9 @@ async def _status(store: InMemoryEventStore) -> ProcedureStatus:
     return state.status
 
 
-async def _call(handler: ReconductHandler, boundary: int) -> ReconductProcedureResult:
+async def _call(handler: ConductFromHandler, boundary: int) -> ConductFromProcedureResult:
     return await handler(
-        ReconductProcedure(procedure_id=_PROCEDURE_ID, re_establishment_boundary=boundary),
+        ConductFromProcedure(procedure_id=_PROCEDURE_ID, re_establishment_boundary=boundary),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -204,7 +204,7 @@ async def test_clean_tail_resumes_then_auto_completes() -> None:
         ),
     )
     deps = _deps(store)
-    result = await _call(_make_reconduct(deps, port), 0)
+    result = await _call(_make_conduct_from(deps, port), 0)
 
     assert result.succeeded is True
     assert result.acquisition_halt is False
@@ -227,7 +227,7 @@ async def test_boundary_replays_only_the_tail_then_completes() -> None:
         ),
     )
     deps = _deps(store)
-    result = await _call(_make_reconduct(deps, port), 1)
+    result = await _call(_make_conduct_from(deps, port), 1)
     assert result.succeeded is True
     assert result.completed_count == 1
     assert await _status(store) is ProcedureStatus.COMPLETED
@@ -249,7 +249,7 @@ async def test_acquisition_halt_resumes_but_leaves_running() -> None:
         ),
     )
     deps = _deps(store)
-    result = await _call(_make_reconduct(deps, port), 0)
+    result = await _call(_make_conduct_from(deps, port), 0)
 
     assert result.succeeded is False
     assert result.acquisition_halt is True
@@ -270,7 +270,7 @@ async def test_genuine_step_failure_resumes_then_aborts() -> None:
     port = InMemoryControlPort()  # 2bma:a NOT connected -> write fails
     await _seed_held_with_steps(store, steps=(SetpointStep(address="2bma:a", value=1.0),))
     deps = _deps(store)
-    result = await _call(_make_reconduct(deps, port), 0)
+    result = await _call(_make_conduct_from(deps, port), 0)
 
     assert result.succeeded is False
     assert result.acquisition_halt is False
@@ -315,20 +315,20 @@ async def test_raises_when_resolved_steps_record_missing() -> None:
     )
     deps = _deps(store)
     with pytest.raises(ResolvedStepsRecordNotFoundError):
-        await _call(_make_reconduct(deps, InMemoryControlPort()), 0)
+        await _call(_make_conduct_from(deps, InMemoryControlPort()), 0)
 
 
 @pytest.mark.unit
-async def test_reconduct_raises_not_found_when_procedure_absent() -> None:
+async def test_conduct_from_raises_not_found_when_procedure_absent() -> None:
     store = InMemoryEventStore()
     deps = _deps(store)
     with pytest.raises(ProcedureNotFoundError):
-        await _call(_make_reconduct(deps, InMemoryControlPort()), 0)
+        await _call(_make_conduct_from(deps, InMemoryControlPort()), 0)
 
 
 @pytest.mark.unit
 async def test_raises_cannot_resume_when_not_held() -> None:
-    """A Running (not Held) Procedure with resolved steps cannot be reconducted."""
+    """A Running (not Held) Procedure with resolved steps cannot be resumed."""
     store = InMemoryEventStore()
     # Registered + ResolvedStepsRecorded + Started (Running, has resolved steps).
     resolved = (step_to_payload(SetpointStep(address="2bma:a", value=1.0)),)
@@ -368,7 +368,7 @@ async def test_raises_cannot_resume_when_not_held() -> None:
     )
     deps = _deps(store)
     with pytest.raises(ProcedureCannotResumeError):
-        await _call(_make_reconduct(deps, InMemoryControlPort()), 0)
+        await _call(_make_conduct_from(deps, InMemoryControlPort()), 0)
 
 
 @pytest.mark.unit
@@ -384,7 +384,7 @@ async def test_raises_cannot_resume_when_parent_run_held() -> None:
     )
     deps = _deps(store)
     with pytest.raises(ProcedureCannotResumeError) as exc:
-        await _call(_make_reconduct(deps, InMemoryControlPort()), 0)
+        await _call(_make_conduct_from(deps, InMemoryControlPort()), 0)
     assert exc.value.parent_run_held is True
 
 
@@ -394,7 +394,7 @@ async def test_raises_unauthorized_on_deny() -> None:
     await _seed_held_with_steps(store, steps=(SetpointStep(address="2bma:a", value=1.0),))
     deps = _deps(store, deny=True)
     with pytest.raises(UnauthorizedError):
-        await _call(_make_reconduct(deps, InMemoryControlPort()), 0)
+        await _call(_make_conduct_from(deps, InMemoryControlPort()), 0)
 
 
 @pytest.mark.unit
@@ -406,13 +406,13 @@ async def test_raises_when_boundary_past_step_count() -> None:
     await _seed_held_with_steps(store, steps=(SetpointStep(address="2bma:a", value=1.0),))
     deps = _deps(store)
     with pytest.raises(InvalidProcedureReEstablishmentBoundaryError):
-        await _call(_make_reconduct(deps, InMemoryControlPort()), 2)  # only 1 step pinned
+        await _call(_make_conduct_from(deps, InMemoryControlPort()), 2)  # only 1 step pinned
 
 
 @pytest.mark.unit
-async def test_reconduct_folds_pre_hold_actuation_kind_into_completion() -> None:
+async def test_conduct_from_folds_pre_hold_actuation_kind_into_completion() -> None:
     """Regression (provenance gate): a conduct that touched a SIMULATED route
-    before the hold must not complete as Physical when reconducted over a
+    before the hold must not complete as Physical when resumed over a
     physical tail. The pre-hold kind carried on ProcedureHeld is merged with
     the replay-tail kind, so the terminal event reports Hybrid and the
     promote_dataset Simulated/Hybrid gate still bites."""
@@ -427,7 +427,7 @@ async def test_reconduct_folds_pre_hold_actuation_kind_into_completion() -> None
         held_actuation_kind="Simulated",  # the pre-hold prefix touched a simulator
     )
     deps = _deps(store)
-    result = await _call(_make_reconduct(deps, registry), 0)
+    result = await _call(_make_conduct_from(deps, registry), 0)
 
     assert result.succeeded is True
     # Merged, NOT the tail-only Physical -> the response + the terminal event agree.

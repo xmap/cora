@@ -24,7 +24,7 @@ without parsing HTTP status codes.
 ## Pydantic wire types
 
 The shared step-list body + per-step failure shape live in the BC-level
-`cora.operation._conduct_wire` module (reused by `try_conduct_procedure`,
+`cora.operation._conduct_wire` module (reused by `conduct_or_hold_procedure`,
 which a slice cannot import directly). This slice owns only the
 conduct-specific request/response envelope.
 """

@@ -1,4 +1,4 @@
-"""The `ReconductProcedure` command + result -- intent dataclass for this slice.
+"""The `ConductFromProcedure` command + result -- intent dataclass for this slice.
 
 Resume-and-replay orchestration: resume a `Held` Procedure and replay its
 PINNED step-list tail from the re-establishment boundary (Tier 1 of
@@ -15,7 +15,7 @@ from cora.operation.conductor import ConductorFailure
 
 
 @dataclass(frozen=True)
-class ReconductProcedure:
+class ConductFromProcedure:
     """Resume a held Procedure and replay its pinned step-list tail."""
 
     procedure_id: UUID
@@ -23,8 +23,8 @@ class ReconductProcedure:
 
 
 @dataclass(frozen=True)
-class ReconductProcedureResult:
-    """Outcome of a reconduct (resume + replay).
+class ConductFromProcedureResult:
+    """Outcome of a conduct_from (resume + replay).
 
     `succeeded` is the canonical pass/fail bit (the replay's outcome).
     `acquisition_halt` is True iff replay stopped at an acquisition that

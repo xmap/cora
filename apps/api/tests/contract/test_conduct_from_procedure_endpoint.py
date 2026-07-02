@@ -1,14 +1,14 @@
-"""Contract tests for `POST /procedures/{procedure_id}/reconduct`.
+"""Contract tests for `POST /procedures/{procedure_id}/conduct-from`.
 
 Resume-and-replay: resumes a Held Procedure and replays its pinned
 step-list tail. 200 with replay outcomes in body; 404/409/422/500 for
 protocol / guard / corruption faults.
 
-The 200 happy paths are now API-reachable via `try_conduct_procedure`: it
+The 200 happy paths are now API-reachable via `conduct_or_hold_procedure`: it
 conducts a Procedure that pauses to `Held` on a recoverable step failure,
-leaving the pinned `ResolvedStepsRecorded` for `reconduct` to replay. The
+leaving the pinned `ResolvedStepsRecorded` for `conduct_from` to replay. The
 test wire-up uses `InMemoryControlPort` with no pre-connected addresses, so a
-setpoint fails (recoverable -> Held); reconduct then replays the pinned tail
+setpoint fails (recoverable -> Held); conduct_from then replays the pinned tail
 from the operator's boundary (an empty tail completes; a tail starting with an
 acquisition halts-for-operator).
 """
@@ -27,28 +27,28 @@ def _register(client: TestClient) -> UUID:
     return UUID(client.post("/procedures", json=body).json()["procedure_id"])
 
 
-def _try_conduct_to_held(client: TestClient, steps: list[dict[str, Any]]) -> UUID:
-    """Register + try-conduct a Procedure to Held (the recoverable setpoint at
+def _conduct_or_hold_to_held(client: TestClient, steps: list[dict[str, Any]]) -> UUID:
+    """Register + conduct-or-hold a Procedure to Held (the recoverable setpoint at
     index 0 fails on the unconnected port), leaving a pinned resolved-step list
-    `reconduct` can replay. Returns the Held Procedure's id."""
+    `conduct_from` can replay. Returns the Held Procedure's id."""
     pid = _register(client)
-    held = client.post(f"/procedures/{pid}/try-conduct", json={"steps": steps})
+    held = client.post(f"/procedures/{pid}/conduct-or-hold", json={"steps": steps})
     assert held.status_code == 200
     assert held.json()["held"] is True
     return pid
 
 
 @pytest.mark.contract
-def test_post_reconduct_completes_held_procedure_with_empty_tail() -> None:
-    """Reconduct a Held Procedure past the end of its resolved steps (empty
+def test_post_conduct_from_completes_held_procedure_with_empty_tail() -> None:
+    """ConductFrom a Held Procedure past the end of its resolved steps (empty
     tail): nothing to replay, so it auto-completes (200, succeeded)."""
     with TestClient(create_app()) as client:
-        pid = _try_conduct_to_held(
+        pid = _conduct_or_hold_to_held(
             client, [{"kind": "setpoint", "address": "2bma:x", "value": 1.0}]
         )
         # boundary == len(resolved steps): the replayed tail is empty.
         response = client.post(
-            f"/procedures/{pid}/reconduct", json={"re_establishment_boundary": 1}
+            f"/procedures/{pid}/conduct-from", json={"re_establishment_boundary": 1}
         )
     assert response.status_code == 200
     body = response.json()
@@ -57,11 +57,11 @@ def test_post_reconduct_completes_held_procedure_with_empty_tail() -> None:
 
 
 @pytest.mark.contract
-def test_post_reconduct_halts_on_acquisition_in_replayed_tail() -> None:
-    """Reconduct replaying a tail that starts with an acquisition halts for the
+def test_post_conduct_from_halts_on_acquisition_in_replayed_tail() -> None:
+    """ConductFrom replaying a tail that starts with an acquisition halts for the
     operator (200, acquisition_halt=True), leaving the Procedure Running."""
     with TestClient(create_app()) as client:
-        pid = _try_conduct_to_held(
+        pid = _conduct_or_hold_to_held(
             client,
             [
                 {"kind": "setpoint", "address": "2bma:x", "value": 1.0},
@@ -70,7 +70,7 @@ def test_post_reconduct_halts_on_acquisition_in_replayed_tail() -> None:
         )
         # boundary == 1 skips the prefix setpoint; the tail starts with the action.
         response = client.post(
-            f"/procedures/{pid}/reconduct", json={"re_establishment_boundary": 1}
+            f"/procedures/{pid}/conduct-from", json={"re_establishment_boundary": 1}
         )
     assert response.status_code == 200
     body = response.json()
@@ -79,28 +79,28 @@ def test_post_reconduct_halts_on_acquisition_in_replayed_tail() -> None:
 
 
 @pytest.mark.contract
-def test_post_reconduct_returns_404_for_unknown_id() -> None:
+def test_post_conduct_from_returns_404_for_unknown_id() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
-            f"/procedures/{uuid4()}/reconduct", json={"re_establishment_boundary": 0}
+            f"/procedures/{uuid4()}/conduct-from", json={"re_establishment_boundary": 0}
         )
     assert response.status_code == 404
 
 
 @pytest.mark.contract
-def test_post_reconduct_returns_409_for_defined_procedure() -> None:
-    """A Defined (non-Held) Procedure cannot be reconducted."""
+def test_post_conduct_from_returns_409_for_defined_procedure() -> None:
+    """A Defined (non-Held) Procedure cannot be resumed."""
     with TestClient(create_app()) as client:
         pid = _register(client)
         response = client.post(
-            f"/procedures/{pid}/reconduct", json={"re_establishment_boundary": 0}
+            f"/procedures/{pid}/conduct-from", json={"re_establishment_boundary": 0}
         )
     assert response.status_code == 409
 
 
 @pytest.mark.contract
-def test_post_reconduct_returns_409_for_completed_procedure_with_resolved_steps() -> None:
-    """A conduct pins resolved steps then completes; reconducting the (Completed)
+def test_post_conduct_from_returns_409_for_completed_procedure_with_resolved_steps() -> None:
+    """A conduct pins resolved steps then completes; resuming the (Completed)
     Procedure is refused by the resume status guard (not Held)."""
     with TestClient(create_app()) as client:
         pid = _register(client)
@@ -111,79 +111,79 @@ def test_post_reconduct_returns_409_for_completed_procedure_with_resolved_steps(
         assert conducted.status_code == 200
         assert conducted.json()["succeeded"] is True
         response = client.post(
-            f"/procedures/{pid}/reconduct", json={"re_establishment_boundary": 0}
+            f"/procedures/{pid}/conduct-from", json={"re_establishment_boundary": 0}
         )
     assert response.status_code == 409
 
 
 @pytest.mark.contract
-def test_post_reconduct_returns_500_for_held_procedure_without_resolved_steps() -> None:
+def test_post_conduct_from_returns_500_for_held_procedure_without_resolved_steps() -> None:
     """A Procedure started directly (no conduct) then held is Held WITHOUT a
-    pinned resolved steps; reconduct cannot locate it (corruption-shaped 500)."""
+    pinned resolved steps; conduct_from cannot locate it (corruption-shaped 500)."""
     with TestClient(create_app()) as client:
         pid = _register(client)
         assert client.post(f"/procedures/{pid}/start").status_code == 204
         assert client.post(f"/procedures/{pid}/hold", json={"reason": "pause"}).status_code == 204
         response = client.post(
-            f"/procedures/{pid}/reconduct", json={"re_establishment_boundary": 0}
+            f"/procedures/{pid}/conduct-from", json={"re_establishment_boundary": 0}
         )
     assert response.status_code == 500
 
 
 @pytest.mark.contract
-def test_post_reconduct_returns_422_for_negative_boundary() -> None:
+def test_post_conduct_from_returns_422_for_negative_boundary() -> None:
     """Pydantic ge=0 rejects a negative boundary at the wire before the handler."""
     with TestClient(create_app()) as client:
         pid = _register(client)
         response = client.post(
-            f"/procedures/{pid}/reconduct", json={"re_establishment_boundary": -1}
+            f"/procedures/{pid}/conduct-from", json={"re_establishment_boundary": -1}
         )
     assert response.status_code == 422
 
 
 @pytest.mark.contract
-def test_post_reconduct_returns_422_for_missing_boundary() -> None:
+def test_post_conduct_from_returns_422_for_missing_boundary() -> None:
     with TestClient(create_app()) as client:
         pid = _register(client)
-        response = client.post(f"/procedures/{pid}/reconduct", json={})
+        response = client.post(f"/procedures/{pid}/conduct-from", json={})
     assert response.status_code == 422
 
 
 @pytest.mark.contract
-def test_post_reconduct_returns_422_for_malformed_id() -> None:
+def test_post_conduct_from_returns_422_for_malformed_id() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
-            "/procedures/not-a-uuid/reconduct", json={"re_establishment_boundary": 0}
+            "/procedures/not-a-uuid/conduct-from", json={"re_establishment_boundary": 0}
         )
     assert response.status_code == 422
 
 
 @pytest.mark.contract
-def test_post_reconduct_returns_400_for_boundary_past_step_count() -> None:
+def test_post_conduct_from_returns_400_for_boundary_past_step_count() -> None:
     """A boundary strictly past the pinned step count is rejected (it would
     replay an empty tail and silently auto-complete)."""
     with TestClient(create_app()) as client:
-        pid = _try_conduct_to_held(
+        pid = _conduct_or_hold_to_held(
             client, [{"kind": "setpoint", "address": "2bma:x", "value": 1.0}]
         )
         response = client.post(
-            f"/procedures/{pid}/reconduct", json={"re_establishment_boundary": 2}
+            f"/procedures/{pid}/conduct-from", json={"re_establishment_boundary": 2}
         )
     assert response.status_code == 400
 
 
 @pytest.mark.contract
-def test_post_reconduct_aborts_on_a_genuine_step_failure() -> None:
+def test_post_conduct_from_aborts_on_a_genuine_step_failure() -> None:
     """Replaying a tail whose setpoint still fails (unconnected address) aborts:
     200 with succeeded=False + acquisition_halt=False (a genuine step failure,
     not an acquisition halt)."""
     with TestClient(create_app()) as client:
-        pid = _try_conduct_to_held(
+        pid = _conduct_or_hold_to_held(
             client, [{"kind": "setpoint", "address": "2bma:x", "value": 1.0}]
         )
         # boundary 0 re-drives the still-unconnected setpoint -> it fails again.
         response = client.post(
-            f"/procedures/{pid}/reconduct", json={"re_establishment_boundary": 0}
+            f"/procedures/{pid}/conduct-from", json={"re_establishment_boundary": 0}
         )
     assert response.status_code == 200
     body = response.json()

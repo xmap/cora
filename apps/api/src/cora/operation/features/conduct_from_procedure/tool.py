@@ -1,4 +1,4 @@
-"""MCP tool for the `reconduct_procedure` slice.
+"""MCP tool for the `conduct_from_procedure` slice.
 
 Mirrors the REST route: resumes a Held Procedure and replays its pinned
 step-list tail, returning a structured summary. Replay outcomes (a step
@@ -16,16 +16,16 @@ from pydantic import BaseModel, Field
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
-from cora.operation.features.reconduct_procedure.command import ReconductProcedure
-from cora.operation.features.reconduct_procedure.handler import Handler
-from cora.operation.features.reconduct_procedure.route import (
-    ReconductProcedureResponse,
+from cora.operation.features.conduct_from_procedure.command import ConductFromProcedure
+from cora.operation.features.conduct_from_procedure.handler import Handler
+from cora.operation.features.conduct_from_procedure.route import (
+    ConductFromProcedureResponse,
     result_to_wire,
 )
 
 
 class _ToolResult(BaseModel):
-    """MCP-shape mirror of `ReconductProcedureResponse` for tool-output validation."""
+    """MCP-shape mirror of `ConductFromProcedureResponse` for tool-output validation."""
 
     procedure_id: UUID
     completed_count: int
@@ -37,10 +37,10 @@ class _ToolResult(BaseModel):
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
-    """Register the `reconduct_procedure` tool on the given MCP server."""
+    """Register the `conduct_from_procedure` tool on the given MCP server."""
 
     @mcp.tool(
-        name="reconduct_procedure",
+        name="conduct_from_procedure",
         description=(
             "Resume a Held Procedure and replay its pinned step-list tail from "
             "re_establishment_boundary: re-drive setpoints, re-run checks, and "
@@ -52,7 +52,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             "Procedure, its parent Run not Held)."
         ),
     )
-    async def reconduct_procedure_tool(  # pyright: ignore[reportUnusedFunction]
+    async def conduct_from_procedure_tool(  # pyright: ignore[reportUnusedFunction]
         ctx: Context[Any, Any, Any],
         procedure_id: Annotated[
             UUID,
@@ -71,7 +71,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
     ) -> _ToolResult:
         handler = get_handler()
         result = await handler(
-            ReconductProcedure(
+            ConductFromProcedure(
                 procedure_id=procedure_id,
                 re_establishment_boundary=re_establishment_boundary,
             ),
@@ -79,7 +79,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             correlation_id=current_correlation_id(),
             surface_id=get_mcp_surface_id(),
         )
-        wire: ReconductProcedureResponse = result_to_wire(result)
+        wire: ConductFromProcedureResponse = result_to_wire(result)
         return _ToolResult(
             procedure_id=wire.procedure_id,
             completed_count=wire.completed_count,

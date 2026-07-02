@@ -535,12 +535,12 @@ class RecipeExpansionRecordNotFoundError(Exception):
 class ResolvedStepsRecordNotFoundError(Exception):
     """A Held Procedure cannot locate its pinned `ResolvedStepsRecorded` record.
 
-    Raised by the `reconduct_procedure` (resume-and-replay) handler when a
+    Raised by the `conduct_from_procedure` (resume-and-replay) handler when a
     Held Procedure's stream carries no `ResolvedStepsRecorded` event. A
     conduct pins exactly one at start (while `Defined`), so a conducted
     Procedure always has it; its absence is corruption (stream truncation,
     a manual event-store write, or a partial-write failure), not an
-    operational outcome. Kept OUT of the conduct/reconduct failures-in-body
+    operational outcome. Kept OUT of the conduct/conduct_from failures-in-body
     contract (that is for step outcomes like an IOC rejecting a write).
     Sibling of `RecipeExpansionRecordNotFoundError`. Mapped to HTTP 500.
     """
@@ -1500,7 +1500,7 @@ def merge_actuation_kinds(first: str | None, second: str | None) -> str | None:
     persisted raw string values (an `ActuationKind` value or None) so a resume
     can fold the PRE-HOLD conduct's observed kind (carried on `ProcedureHeld`)
     with the replay tail's kind before the terminal event. Without this, a
-    reconduct from a boundary past a simulated prefix would complete as
+    conduct_from from a boundary past a simulated prefix would complete as
     `Physical` and slip past the `promote_dataset` Simulated/Hybrid gate. None
     contributes nothing; a `Physical` + `Simulated` mix (or either with
     `Hybrid`) collapses to `Hybrid`. Pure + no `ActuationKind` import: the

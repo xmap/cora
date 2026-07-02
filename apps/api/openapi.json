@@ -3651,6 +3651,165 @@
         "title": "ComputeResourcesRequest",
         "type": "object"
       },
+      "ConductFromProcedureRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /procedures/{procedure_id}/conduct-from`.",
+        "properties": {
+          "re_establishment_boundary": {
+            "description": "Index in the pinned resolved step list from which the resume re-drives setpoints and re-runs checks. >= 0 (0 = re-establish from the first step). NOT a continuity proof.",
+            "minimum": 0.0,
+            "title": "Re Establishment Boundary",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "re_establishment_boundary"
+        ],
+        "title": "ConductFromProcedureRequest",
+        "type": "object"
+      },
+      "ConductFromProcedureResponse": {
+        "description": "Response body for the conduct_from_procedure slice.\n\n`succeeded` is the replay's pass/fail bit. `acquisition_halt` is True\niff the replay stopped at an acquisition needing an operator decision\n(the Procedure is left Running). `failure` is non-null iff `succeeded`\nis False (a halt or a genuine step failure).",
+        "properties": {
+          "acquisition_halt": {
+            "title": "Acquisition Halt",
+            "type": "boolean"
+          },
+          "actuation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actuation Kind"
+          },
+          "completed_count": {
+            "title": "Completed Count",
+            "type": "integer"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConductorFailureResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "procedure_id": {
+            "format": "uuid",
+            "title": "Procedure Id",
+            "type": "string"
+          },
+          "re_establishment_boundary": {
+            "title": "Re Establishment Boundary",
+            "type": "integer"
+          },
+          "succeeded": {
+            "title": "Succeeded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "procedure_id",
+          "completed_count",
+          "succeeded",
+          "re_establishment_boundary",
+          "acquisition_halt"
+        ],
+        "title": "ConductFromProcedureResponse",
+        "type": "object"
+      },
+      "ConductOrHoldProcedureRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /procedures/{procedure_id}/conduct-or-hold`.",
+        "properties": {
+          "steps": {
+            "description": "Steps the Conductor walks in order (0-500). Empty list is valid: start + complete fire with no steps.",
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "action": "#/components/schemas/_ActionStepRequest",
+                  "check": "#/components/schemas/_CheckStepRequest",
+                  "setpoint": "#/components/schemas/_SetpointStepRequest"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/_SetpointStepRequest"
+                },
+                {
+                  "$ref": "#/components/schemas/_ActionStepRequest"
+                },
+                {
+                  "$ref": "#/components/schemas/_CheckStepRequest"
+                }
+              ]
+            },
+            "maxItems": 500,
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "title": "ConductOrHoldProcedureRequest",
+        "type": "object"
+      },
+      "ConductOrHoldProcedureResponse": {
+        "description": "Response body for the conduct_or_hold_procedure slice.\n\n`succeeded` is the canonical pass/fail bit; `failure` is non-null iff\n`succeeded` is False. `held` is True iff a recoverable step failure paused\nthe Procedure to `Held` (resumable via `conduct_from`); a terminal `Aborted`\noutcome carries `succeeded=False` + `failure` + `held=False`.\n\n`actuation_kind` is the raw `ActuationKind` value the Conductor observed,\nor None when nothing instrumented was actuated. Read-only operator\nvisibility; the gate that consumes it reads the value server-side off the\nProcedure stream, never back from this response.",
+        "properties": {
+          "actuation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actuation Kind"
+          },
+          "completed_count": {
+            "title": "Completed Count",
+            "type": "integer"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConductorFailureResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "held": {
+            "default": false,
+            "title": "Held",
+            "type": "boolean"
+          },
+          "procedure_id": {
+            "format": "uuid",
+            "title": "Procedure Id",
+            "type": "string"
+          },
+          "succeeded": {
+            "title": "Succeeded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "procedure_id",
+          "completed_count",
+          "succeeded"
+        ],
+        "title": "ConductOrHoldProcedureResponse",
+        "type": "object"
+      },
       "ConductProcedureRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /procedures/{procedure_id}/conduct`.",
@@ -10701,79 +10860,6 @@
         "title": "RecipeResponse",
         "type": "object"
       },
-      "ReconductProcedureRequest": {
-        "additionalProperties": false,
-        "description": "Body for `POST /procedures/{procedure_id}/reconduct`.",
-        "properties": {
-          "re_establishment_boundary": {
-            "description": "Index in the pinned resolved step list from which the resume re-drives setpoints and re-runs checks. >= 0 (0 = re-establish from the first step). NOT a continuity proof.",
-            "minimum": 0.0,
-            "title": "Re Establishment Boundary",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "re_establishment_boundary"
-        ],
-        "title": "ReconductProcedureRequest",
-        "type": "object"
-      },
-      "ReconductProcedureResponse": {
-        "description": "Response body for the reconduct_procedure slice.\n\n`succeeded` is the replay's pass/fail bit. `acquisition_halt` is True\niff the replay stopped at an acquisition needing an operator decision\n(the Procedure is left Running). `failure` is non-null iff `succeeded`\nis False (a halt or a genuine step failure).",
-        "properties": {
-          "acquisition_halt": {
-            "title": "Acquisition Halt",
-            "type": "boolean"
-          },
-          "actuation_kind": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Actuation Kind"
-          },
-          "completed_count": {
-            "title": "Completed Count",
-            "type": "integer"
-          },
-          "failure": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ConductorFailureResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "procedure_id": {
-            "format": "uuid",
-            "title": "Procedure Id",
-            "type": "string"
-          },
-          "re_establishment_boundary": {
-            "title": "Re Establishment Boundary",
-            "type": "integer"
-          },
-          "succeeded": {
-            "title": "Succeeded",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "procedure_id",
-          "completed_count",
-          "succeeded",
-          "re_establishment_boundary",
-          "acquisition_halt"
-        ],
-        "title": "ReconductProcedureResponse",
-        "type": "object"
-      },
       "RecordAcquisitionRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /acquisitions`.",
@@ -14973,92 +15059,6 @@
           "reason"
         ],
         "title": "TruncateRunRequest",
-        "type": "object"
-      },
-      "TryConductProcedureRequest": {
-        "additionalProperties": false,
-        "description": "Body for `POST /procedures/{procedure_id}/try-conduct`.",
-        "properties": {
-          "steps": {
-            "description": "Steps the Conductor walks in order (0-500). Empty list is valid: start + complete fire with no steps.",
-            "items": {
-              "discriminator": {
-                "mapping": {
-                  "action": "#/components/schemas/_ActionStepRequest",
-                  "check": "#/components/schemas/_CheckStepRequest",
-                  "setpoint": "#/components/schemas/_SetpointStepRequest"
-                },
-                "propertyName": "kind"
-              },
-              "oneOf": [
-                {
-                  "$ref": "#/components/schemas/_SetpointStepRequest"
-                },
-                {
-                  "$ref": "#/components/schemas/_ActionStepRequest"
-                },
-                {
-                  "$ref": "#/components/schemas/_CheckStepRequest"
-                }
-              ]
-            },
-            "maxItems": 500,
-            "title": "Steps",
-            "type": "array"
-          }
-        },
-        "title": "TryConductProcedureRequest",
-        "type": "object"
-      },
-      "TryConductProcedureResponse": {
-        "description": "Response body for the try_conduct_procedure slice.\n\n`succeeded` is the canonical pass/fail bit; `failure` is non-null iff\n`succeeded` is False. `held` is True iff a recoverable step failure paused\nthe Procedure to `Held` (resumable via `reconduct`); a terminal `Aborted`\noutcome carries `succeeded=False` + `failure` + `held=False`.\n\n`actuation_kind` is the raw `ActuationKind` value the Conductor observed,\nor None when nothing instrumented was actuated. Read-only operator\nvisibility; the gate that consumes it reads the value server-side off the\nProcedure stream, never back from this response.",
-        "properties": {
-          "actuation_kind": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Actuation Kind"
-          },
-          "completed_count": {
-            "title": "Completed Count",
-            "type": "integer"
-          },
-          "failure": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ConductorFailureResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "held": {
-            "default": false,
-            "title": "Held",
-            "type": "boolean"
-          },
-          "procedure_id": {
-            "format": "uuid",
-            "title": "Procedure Id",
-            "type": "string"
-          },
-          "succeeded": {
-            "title": "Succeeded",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "procedure_id",
-          "completed_count",
-          "succeeded"
-        ],
-        "title": "TryConductProcedureResponse",
         "type": "object"
       },
       "UnbindPlanRoleRequest": {
@@ -37767,6 +37767,202 @@
         ]
       }
     },
+    "/procedures/{procedure_id}/conduct-from": {
+      "post": {
+        "description": "Resume + replay a Held Procedure. Replay outcomes land in the body.",
+        "operationId": "post_procedures_conduct_from_procedures__procedure_id__conduct_from_post",
+        "parameters": [
+          {
+            "description": "Target procedure's id.",
+            "in": "path",
+            "name": "procedure_id",
+            "required": true,
+            "schema": {
+              "description": "Target procedure's id.",
+              "format": "uuid",
+              "title": "Procedure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConductFromProcedureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConductFromProcedureResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "re_establishment_boundary is past the pinned resolved step count."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No procedure exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Procedure is not in `Held` status, OR its parent Run is itself `Held` (off-diagonal guard)."
+          },
+          "422": {
+            "description": "Path parameter or request body failed schema validation."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Held Procedure is missing its pinned resolved steps (corruption)."
+          }
+        },
+        "summary": "Resume a held Procedure and replay its pinned step-list tail (Held -> Running)",
+        "tags": [
+          "operation"
+        ]
+      }
+    },
+    "/procedures/{procedure_id}/conduct-or-hold": {
+      "post": {
+        "description": "Conduct a Procedure, pausing to Held on a recoverable failure.",
+        "operationId": "post_procedures_conduct_or_hold_procedures__procedure_id__conduct_or_hold_post",
+        "parameters": [
+          {
+            "description": "Target procedure's id.",
+            "in": "path",
+            "name": "procedure_id",
+            "required": true,
+            "schema": {
+              "description": "Target procedure's id.",
+              "format": "uuid",
+              "title": "Procedure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConductOrHoldProcedureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConductOrHoldProcedureResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "422": {
+            "description": "Request body failed schema validation: unknown step kind, missing required field, batch over cap, invalid criterion shape."
+          }
+        },
+        "summary": "Conduct a Procedure, pausing to Held on a recoverable failure: start -> walk steps -> complete (success) / pause to Held (recoverable setpoint or check failure) / abort (acquisition failure).",
+        "tags": [
+          "operation"
+        ]
+      }
+    },
     "/procedures/{procedure_id}/conduct-until-advised": {
       "post": {
         "description": "Conduct a Procedure as a steered loop. Failures land in the body.",
@@ -38377,124 +38573,6 @@
         ]
       }
     },
-    "/procedures/{procedure_id}/reconduct": {
-      "post": {
-        "description": "Resume + replay a Held Procedure. Replay outcomes land in the body.",
-        "operationId": "post_procedures_reconduct_procedures__procedure_id__reconduct_post",
-        "parameters": [
-          {
-            "description": "Target procedure's id.",
-            "in": "path",
-            "name": "procedure_id",
-            "required": true,
-            "schema": {
-              "description": "Target procedure's id.",
-              "format": "uuid",
-              "title": "Procedure Id",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
-            "in": "header",
-            "name": "X-Principal-Id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
-              "title": "X-Principal-Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReconductProcedureRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReconductProcedureResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "re_establishment_boundary is past the pinned resolved step count."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Authorize port denied the command."
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "No procedure exists with the given id."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Procedure is not in `Held` status, OR its parent Run is itself `Held` (off-diagonal guard)."
-          },
-          "422": {
-            "description": "Path parameter or request body failed schema validation."
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Held Procedure is missing its pinned resolved steps (corruption)."
-          }
-        },
-        "summary": "Resume a held Procedure and replay its pinned step-list tail (Held -> Running)",
-        "tags": [
-          "operation"
-        ]
-      }
-    },
     "/procedures/{procedure_id}/resume": {
       "post": {
         "operationId": "post_procedures_resume_procedures__procedure_id__resume_post",
@@ -38777,84 +38855,6 @@
           }
         },
         "summary": "Cleanup terminal of an interrupted Procedure (Running -> Truncated)",
-        "tags": [
-          "operation"
-        ]
-      }
-    },
-    "/procedures/{procedure_id}/try-conduct": {
-      "post": {
-        "description": "Conduct a Procedure, pausing to Held on a recoverable failure.",
-        "operationId": "post_procedures_try_conduct_procedures__procedure_id__try_conduct_post",
-        "parameters": [
-          {
-            "description": "Target procedure's id.",
-            "in": "path",
-            "name": "procedure_id",
-            "required": true,
-            "schema": {
-              "description": "Target procedure's id.",
-              "format": "uuid",
-              "title": "Procedure Id",
-              "type": "string"
-            }
-          },
-          {
-            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
-            "in": "header",
-            "name": "X-Principal-Id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
-              "title": "X-Principal-Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TryConductProcedureRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TryConductProcedureResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Authorize port denied the command."
-          },
-          "422": {
-            "description": "Request body failed schema validation: unknown step kind, missing required field, batch over cap, invalid criterion shape."
-          }
-        },
-        "summary": "Conduct a Procedure, pausing to Held on a recoverable failure: start -> walk steps -> complete (success) / pause to Held (recoverable setpoint or check failure) / abort (acquisition failure).",
         "tags": [
           "operation"
         ]

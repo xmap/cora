@@ -1,7 +1,7 @@
-"""Contract tests for `POST /procedures/{procedure_id}/try-conduct`.
+"""Contract tests for `POST /procedures/{procedure_id}/conduct-or-hold`.
 
 Pause-capable conduct: like conduct, but a RECOVERABLE step failure (setpoint
-/ check) PAUSES the Procedure to Held (resumable via reconduct) instead of
+/ check) PAUSES the Procedure to Held (resumable via conduct_from) instead of
 aborting. Always 200 with the outcome in the body; `held` flags the pause.
 404 for an unknown procedure, 422 for a malformed body.
 
@@ -25,11 +25,11 @@ def _register(client: TestClient) -> UUID:
 
 
 @pytest.mark.contract
-def test_post_try_conduct_empty_steps_completes() -> None:
+def test_post_conduct_or_hold_empty_steps_completes() -> None:
     """An empty step list starts + completes the Procedure (no failure to pause on)."""
     with TestClient(create_app()) as client:
         pid = _register(client)
-        response = client.post(f"/procedures/{pid}/try-conduct", json={"steps": []})
+        response = client.post(f"/procedures/{pid}/conduct-or-hold", json={"steps": []})
     assert response.status_code == 200
     body = response.json()
     assert body["succeeded"] is True
@@ -37,12 +37,12 @@ def test_post_try_conduct_empty_steps_completes() -> None:
 
 
 @pytest.mark.contract
-def test_post_try_conduct_recoverable_setpoint_pauses_to_held() -> None:
+def test_post_conduct_or_hold_recoverable_setpoint_pauses_to_held() -> None:
     """A setpoint to an unconnected address is recoverable: pause to Held, not abort."""
     with TestClient(create_app()) as client:
         pid = _register(client)
         response = client.post(
-            f"/procedures/{pid}/try-conduct",
+            f"/procedures/{pid}/conduct-or-hold",
             json={"steps": [{"kind": "setpoint", "address": "2bma:x", "value": 1.0}]},
         )
     assert response.status_code == 200
@@ -53,12 +53,12 @@ def test_post_try_conduct_recoverable_setpoint_pauses_to_held() -> None:
 
 
 @pytest.mark.contract
-def test_post_try_conduct_action_failure_aborts_not_held() -> None:
+def test_post_conduct_or_hold_action_failure_aborts_not_held() -> None:
     """An unregistered action is an acquisition failure: abort (not held)."""
     with TestClient(create_app()) as client:
         pid = _register(client)
         response = client.post(
-            f"/procedures/{pid}/try-conduct",
+            f"/procedures/{pid}/conduct-or-hold",
             json={"steps": [{"kind": "action", "name": "unregistered"}]},
         )
     assert response.status_code == 200
@@ -69,18 +69,18 @@ def test_post_try_conduct_action_failure_aborts_not_held() -> None:
 
 
 @pytest.mark.contract
-def test_post_try_conduct_returns_404_for_unknown_id() -> None:
+def test_post_conduct_or_hold_returns_404_for_unknown_id() -> None:
     with TestClient(create_app()) as client:
-        response = client.post(f"/procedures/{uuid4()}/try-conduct", json={"steps": []})
+        response = client.post(f"/procedures/{uuid4()}/conduct-or-hold", json={"steps": []})
     assert response.status_code == 404
 
 
 @pytest.mark.contract
-def test_post_try_conduct_returns_422_for_unknown_step_kind() -> None:
+def test_post_conduct_or_hold_returns_422_for_unknown_step_kind() -> None:
     with TestClient(create_app()) as client:
         pid = _register(client)
         response = client.post(
-            f"/procedures/{pid}/try-conduct",
+            f"/procedures/{pid}/conduct-or-hold",
             json={"steps": [{"kind": "teleport", "address": "x", "value": 1}]},
         )
     assert response.status_code == 422
