@@ -1,9 +1,9 @@
-"""Application handler for the `reconduct_procedure` slice.
+"""Application handler for the `conduct_from_procedure` slice.
 
 Resume-and-replay orchestration. Mirrors `conduct_procedure`: a thin
 slice handler that authz-checks + loads + locates the pinned resolved steps,
 then delegates the resume + replay + terminalize composition to
-`Conductor.reconduct` (the resume twin of `Conductor.conduct`). No
+`Conductor.conduct_from` (the resume twin of `Conductor.conduct`). No
 `decider.py`: like `conduct_procedure` this is an orchestration entry
 point, not an aggregate-state-mutating decider.
 
@@ -16,7 +16,7 @@ owns lifecycle-handler orchestration.
 
 ## Flow
 
-  1. authz `ReconductProcedure`.
+  1. authz `ConductFromProcedure`.
   2. load the Procedure + its raw events.
   3. status guard FIRST: a non-Held Procedure is a `ProcedureCannotResumeError`
      (409), raised BEFORE the step-list lookup so a Defined / Completed
@@ -26,25 +26,25 @@ owns lifecycle-handler orchestration.
      ALWAYS has exactly one; its absence is corruption ->
      `ResolvedStepsRecordNotFoundError`, 500) and parse it back into `Step`s
      via `steps_from_payload` -- resume NEVER re-derives the step list.
-  5. `Conductor.reconduct(steps, boundary)`: resume (Held -> Running, with
+  5. `Conductor.conduct_from(steps, boundary)`: resume (Held -> Running, with
      its own authz + off-diagonal parent-Run-Held guard) -> `execute_from`
      (re-drive setpoints, re-run checks, halt-for-operator on an acquisition)
      -> terminalize (complete on a clean tail / leave Running on an
      acquisition halt / best-effort abort on a genuine step failure).
-  6. project the `ConductorResult` onto `ReconductProcedureResult`
+  6. project the `ConductorResult` onto `ConductFromProcedureResult`
      (`acquisition_halt` is the named branch on the resume halt).
 
 The `re_establishment_boundary` is single-sourced: the operator supplies
-it once; `Conductor.reconduct` rides it into both
+it once; `Conductor.conduct_from` rides it into both
 `ProcedureResumed.re_establishment_boundary` (audit) and
 `execute_from(boundary=...)` (replay).
 
 ## Authorization scope
 
-`ReconductProcedure` is authz-checked as its own command. The wrapped
+`ConductFromProcedure` is authz-checked as its own command. The wrapped
 `resume_procedure` / `complete_procedure` / `abort_procedure` handlers
 (on the Conductor) each authz internally with their OWN command names; an
-operator authorized to call `ReconductProcedure` is NOT automatically
+operator authorized to call `ConductFromProcedure` is NOT automatically
 authorized for those individually. Same layering as `conduct_procedure`.
 """
 
@@ -66,50 +66,50 @@ from cora.operation.aggregates.procedure import (
 )
 from cora.operation.conductor import Conductor, is_acquisition_halt, steps_from_payload
 from cora.operation.errors import UnauthorizedError
-from cora.operation.features.reconduct_procedure.command import (
-    ReconductProcedure,
-    ReconductProcedureResult,
+from cora.operation.features.conduct_from_procedure.command import (
+    ConductFromProcedure,
+    ConductFromProcedureResult,
 )
 
-_COMMAND_NAME = "ReconductProcedure"
+_COMMAND_NAME = "ConductFromProcedure"
 
 _log = get_logger(__name__)
 
 
 class Handler(Protocol):
-    """Callable interface every reconduct_procedure handler implements."""
+    """Callable interface every conduct_from_procedure handler implements."""
 
     async def __call__(
         self,
-        command: ReconductProcedure,
+        command: ConductFromProcedure,
         *,
         principal_id: UUID,
         correlation_id: UUID,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
-    ) -> ReconductProcedureResult: ...
+    ) -> ConductFromProcedureResult: ...
 
 
 def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
-    """Build a reconduct_procedure handler closed over deps + the Conductor.
+    """Build a conduct_from_procedure handler closed over deps + the Conductor.
 
     `conductor` is the same BC-internal Conductor `conduct_procedure` uses;
     it carries the resume / complete / abort handlers (wired at app
-    composition) that `Conductor.reconduct` composes, so the internal
+    composition) that `Conductor.conduct_from` composes, so the internal
     transitions land with the same observability shape as direct REST / MCP
     calls.
     """
 
     async def handler(
-        command: ReconductProcedure,
+        command: ConductFromProcedure,
         *,
         principal_id: UUID,
         correlation_id: UUID,
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
-    ) -> ReconductProcedureResult:
+    ) -> ConductFromProcedureResult:
         _log.info(
-            "reconduct_procedure.start",
+            "conduct_from_procedure.start",
             command_name=_COMMAND_NAME,
             procedure_id=str(command.procedure_id),
             re_establishment_boundary=command.re_establishment_boundary,
@@ -126,7 +126,7 @@ def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
         )
         if isinstance(authz, Deny):
             _log.info(
-                "reconduct_procedure.denied",
+                "conduct_from_procedure.denied",
                 command_name=_COMMAND_NAME,
                 procedure_id=str(command.procedure_id),
                 principal_id=str(principal_id),
@@ -146,7 +146,7 @@ def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
         # missing-record case below as genuine corruption (a conducted,
         # Held Procedure ALWAYS has its pinned resolved steps) and avoids resuming
         # then failing to find them. The off-diagonal parent-Run-Held
-        # guard stays inside Conductor.reconduct's resume call.
+        # guard stays inside Conductor.conduct_from's resume call.
         if procedure.status is not ProcedureStatus.HELD:
             raise ProcedureCannotResumeError(command.procedure_id, current_status=procedure.status)
 
@@ -167,7 +167,7 @@ def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
         if command.re_establishment_boundary > len(steps):
             raise InvalidProcedureReEstablishmentBoundaryError(command.re_establishment_boundary)
 
-        result = await conductor.reconduct(
+        result = await conductor.conduct_from(
             procedure_id=command.procedure_id,
             principal_id=principal_id,
             correlation_id=correlation_id,
@@ -186,7 +186,7 @@ def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
         acquisition_halt = is_acquisition_halt(result.failure)
 
         _log.info(
-            "reconduct_procedure.success",
+            "conduct_from_procedure.success",
             command_name=_COMMAND_NAME,
             procedure_id=str(command.procedure_id),
             completed_count=result.completed_count,
@@ -195,7 +195,7 @@ def bind(deps: Kernel, *, conductor: Conductor) -> Handler:
             failure_class=(result.failure.error_class if result.failure is not None else None),
         )
 
-        return ReconductProcedureResult(
+        return ConductFromProcedureResult(
             procedure_id=command.procedure_id,
             completed_count=result.completed_count,
             succeeded=result.succeeded,

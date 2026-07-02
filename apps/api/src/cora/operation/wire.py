@@ -76,6 +76,8 @@ from cora.operation.features import (
     append_activities,
     append_diagnostics,
     complete_procedure,
+    conduct_from_procedure,
+    conduct_or_hold_procedure,
     conduct_procedure,
     conduct_until_advised,
     conduct_until_converged,
@@ -84,14 +86,12 @@ from cora.operation.features import (
     hold_procedure,
     list_procedure_iterations,
     list_procedures,
-    reconduct_procedure,
     register_procedure,
     register_procedure_from_recipe,
     resume_procedure,
     start_iteration,
     start_procedure,
     truncate_procedure,
-    try_conduct_procedure,
 )
 from cora.operation.ports.compute_port import ComputePort
 from cora.operation.ports.control_port import ControlPort
@@ -117,7 +117,7 @@ class OperationHandlers:
     truncate_procedure: truncate_procedure.Handler
     hold_procedure: hold_procedure.Handler
     resume_procedure: resume_procedure.Handler
-    reconduct_procedure: reconduct_procedure.Handler
+    conduct_from_procedure: conduct_from_procedure.Handler
     start_iteration: start_iteration.Handler
     end_iteration: end_iteration.Handler
     append_activities: append_activities.Handler
@@ -128,7 +128,7 @@ class OperationHandlers:
     conduct_procedure: conduct_procedure.Handler
     conduct_until_converged: conduct_until_converged.Handler
     conduct_until_advised: conduct_until_advised.Handler
-    try_conduct_procedure: try_conduct_procedure.Handler
+    conduct_or_hold_procedure: conduct_or_hold_procedure.Handler
     control_port: ControlPort
     """The ControlPort the Conductor talks to. Surfaced on the bundle
     so the FastAPI lifespan's teardown can call `aclose()` on it
@@ -217,14 +217,14 @@ def wire_operation(
     )
     # Hoisted to a local so the bundle field AND the Conductor share ONE
     # post-tracing resume handler instance (mirrors the start/complete/abort
-    # hoist; Conductor.reconduct composes this resume handler).
+    # hoist; Conductor.conduct_from composes this resume handler).
     resume_handler = with_tracing(
         resume_procedure.bind(deps),
         command_name="ResumeProcedure",
         bc=_BC,
     )
     # Hoisted likewise so the bundle field AND the Conductor share ONE
-    # post-tracing hold handler instance; Conductor.try_conduct composes it
+    # post-tracing hold handler instance; Conductor.conduct_or_hold composes it
     # to pause-to-Held on a recoverable conduct failure.
     hold_handler = with_tracing(
         hold_procedure.bind(deps),
@@ -283,19 +283,19 @@ def wire_operation(
         append_diagnostics=append_diagnostics_handler,
     )
     # Resume-and-replay orchestration: a thin slice handler over
-    # Conductor.reconduct (which composes resume + execute_from +
+    # Conductor.conduct_from (which composes resume + execute_from +
     # complete/abort). Reuses the same conductor; no sibling-slice imports.
-    reconduct_handler = with_tracing(
-        reconduct_procedure.bind(deps, conductor=conductor),
-        command_name="ReconductProcedure",
+    conduct_from_handler = with_tracing(
+        conduct_from_procedure.bind(deps, conductor=conductor),
+        command_name="ConductFromProcedure",
         bc=_BC,
     )
-    # Pause-capable conduct: a thin slice handler over Conductor.try_conduct
+    # Pause-capable conduct: a thin slice handler over Conductor.conduct_or_hold
     # (which composes start + execute + complete/hold/abort). Reuses the same
     # conductor + recipe expander as conduct; no sibling-slice imports.
-    try_conduct_handler = with_tracing(
-        try_conduct_procedure.bind(deps, conductor=conductor, expansion_port=recipe_expander),
-        command_name="TryConductProcedure",
+    conduct_or_hold_handler = with_tracing(
+        conduct_or_hold_procedure.bind(deps, conductor=conductor, expansion_port=recipe_expander),
+        command_name="ConductOrHoldProcedure",
         bc=_BC,
     )
     return OperationHandlers(
@@ -335,7 +335,7 @@ def wire_operation(
         ),
         hold_procedure=hold_handler,
         resume_procedure=resume_handler,
-        reconduct_procedure=reconduct_handler,
+        conduct_from_procedure=conduct_from_handler,
         start_iteration=start_iteration_handler,
         end_iteration=end_iteration_handler,
         append_activities=append_step_handler,
@@ -373,6 +373,6 @@ def wire_operation(
             command_name="ConductUntilAdvised",
             bc=_BC,
         ),
-        try_conduct_procedure=try_conduct_handler,
+        conduct_or_hold_procedure=conduct_or_hold_handler,
         control_port=control_port,
     )

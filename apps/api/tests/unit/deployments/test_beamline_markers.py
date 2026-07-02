@@ -31,11 +31,11 @@ pytestmark = pytest.mark.unit
 _REPO_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 _DESCRIPTOR = _REPO_ROOT / "deployments" / "2-bm" / "beamline.yaml"
-_EQUIPMENT = _REPO_ROOT / "docs" / "deployments" / "2-bm" / "equipment"
-_CONTROLS_PAGE = _EQUIPMENT / "controls.md"
-_CONTROLS_SRC_URI = "deployments/2-bm/equipment/controls.md"
-_MICROSCOPE_PAGE = _EQUIPMENT / "microscope.md"
-_MICROSCOPE_SRC_URI = "deployments/2-bm/equipment/microscope.md"
+_DEPLOY_DIR = _REPO_ROOT / "docs" / "deployments" / "2-bm"
+_CONTROLS_PAGE = _DEPLOY_DIR / "controls.md"
+_CONTROLS_SRC_URI = "deployments/2-bm/controls.md"
+_MICROSCOPE_PAGE = _DEPLOY_DIR / "microscope.md"
+_MICROSCOPE_SRC_URI = "deployments/2-bm/microscope.md"
 _ENCLOSURES_PAGE = _REPO_ROOT / "docs" / "deployments" / "2-bm" / "enclosures.md"
 _ENCLOSURES_SRC_URI = "deployments/2-bm/enclosures.md"
 

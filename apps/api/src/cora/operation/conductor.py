@@ -835,10 +835,10 @@ class ConductorResult:
     still reports the kind. Do not "fix" the observe-before-dispatch
     ordering in `_ActuationObserver` without revisiting this contract.
 
-    `held` is True ONLY when `try_conduct` paused the Procedure to `Held`
+    `held` is True ONLY when `conduct_or_hold` paused the Procedure to `Held`
     on a recoverable step failure (and the hold transition itself
     succeeded). Every other path (`execute` / `conduct` / `execute_from`
-    / `reconduct`, and a `try_conduct` whose hold itself failed) leaves it
+    / `conduct_from`, and a `conduct_or_hold` whose hold itself failed) leaves it
     False. It reflects the ACTUAL transition, not the mere recoverability
     of the failure, so a caller can distinguish a resumable `Held` outcome
     from a terminal `Aborted` one (both carry `succeeded=False` + `failure`).
@@ -849,7 +849,7 @@ class ConductorResult:
     order (mirroring `completed_count`) on BOTH the success and the
     failure construction, so a caller reads the produced outputs without
     re-parsing the activity log even when a later step halts. Both empty
-    on a conduct with no ComputeStep. The `conduct` / `reconduct`
+    on a conduct with no ComputeStep. The `conduct` / `conduct_from`
     `replace()` paths preserve them.
 
     `outputs` is the per-conduct artifact bus keyed by `output_ref_name`: a
@@ -1372,7 +1372,7 @@ class Conductor:
             )
         return result
 
-    async def try_conduct(
+    async def conduct_or_hold(
         self,
         *,
         procedure_id: UUID,
@@ -1390,14 +1390,14 @@ class Conductor:
           - a RECOVERABLE step failure (setpoint / check: re-drivable /
             re-runnable on resume) -> best-effort `hold_procedure` (Running ->
             Held). On a successful hold the result carries `held=True` so the
-            caller can offer `reconduct`; if the hold itself fails the
+            caller can offer `conduct_from`; if the hold itself fails the
             Procedure is left Running (same posture as conduct's best-effort
             abort that fails) and `held` stays False.
           - a NON-recoverable step failure (an action: an interrupted
             acquisition is not auto-resumable, Tier 2) -> best-effort
             `abort_procedure`, exactly like `conduct()`. Holding here would
             strand a Procedure whose replay tail starts with an acquisition
-            that `reconduct` can only halt-for-operator on.
+            that `conduct_from` can only halt-for-operator on.
           - lifecycle failures (start / complete rejected) and a mid-execute
             `CancelledError` keep `conduct()`'s behavior verbatim (no hold).
 
@@ -1406,7 +1406,7 @@ class Conductor:
         wiring bug) otherwise.
 
         This is the Tier-1 producer that makes a Held + pinned-resolved-steps
-        state reachable, so the `reconduct` resume path has something to
+        state reachable, so the `conduct_from` resume path has something to
         resume. See [[project_resumable_conduct_design]] Tier 1.
         """
         if (
@@ -1416,7 +1416,7 @@ class Conductor:
             or self._hold_procedure is None
         ):
             raise RuntimeError(
-                "Conductor.try_conduct() requires start_procedure + complete_procedure + "
+                "Conductor.conduct_or_hold() requires start_procedure + complete_procedure + "
                 "abort_procedure + hold_procedure handlers at __init__; only execute() is "
                 "available without them."
             )
@@ -1501,7 +1501,7 @@ class Conductor:
                     HoldProcedure(
                         procedure_id=procedure_id,
                         reason=_derive_failure_reason(failure),
-                        # Carry the observed-so-far kind so a later reconduct
+                        # Carry the observed-so-far kind so a later conduct_from
                         # folds the pre-hold provenance with the replay tail.
                         actuation_kind=actuation_kind,
                     ),
@@ -1568,7 +1568,7 @@ class Conductor:
         criterion union + matcher, reused as-is). There is NO walked
         convergence CheckStep, so a not-converged pass is not a step failure
         and the Procedure stays Running (NOT Held: this is a sibling of
-        conduct, not try_conduct).
+        conduct, not conduct_or_hold).
 
         CONTROL FLOW (B2/B3/B4):
 
@@ -1598,7 +1598,7 @@ class Conductor:
         absolute-ceiling-abort, failed-pass-abort, and absent-name-abort
         terminals, because every open iteration is closed via end_iteration
         before the terminal transition. The CANCELLATION terminal is the
-        documented exception (mirroring reconduct's cancel carve-out):
+        documented exception (mirroring conduct_from's cancel carve-out):
         `abort_orphan_on_cancel` fires AbortProcedure while an iteration may
         still be open (no end_iteration on the cancel path), so
         `current_iteration_index` may be left set. The denorm is inert (the
@@ -2505,7 +2505,7 @@ class Conductor:
             )
         return merged
 
-    async def reconduct(
+    async def conduct_from(
         self,
         *,
         procedure_id: UUID,
@@ -2560,7 +2560,7 @@ class Conductor:
             or self._abort_procedure is None
         ):
             raise RuntimeError(
-                "Conductor.reconduct() requires resume_procedure + complete_procedure + "
+                "Conductor.conduct_from() requires resume_procedure + complete_procedure + "
                 "abort_procedure handlers at __init__; only execute_from() is available "
                 "without them."
             )
@@ -3828,13 +3828,13 @@ def is_acquisition_halt(failure: ConductorFailure | None) -> bool:
 def _is_recoverable_failure(failure: ConductorFailure) -> bool:
     """True iff a conduct step failure is safe to PAUSE-and-resume, not abort.
 
-    Recoverable = a setpoint or check failure: on `reconduct` a setpoint is
+    Recoverable = a setpoint or check failure: on `conduct_from` a setpoint is
     re-driven (idempotent absolute write) and a check is re-run as a fresh
     gate, so the conduct can honestly continue from the boundary. An action
     failure is NOT recoverable here: an interrupted acquisition is
     non-idempotent (Tier 2 per-point decomposition is the real fix), and a
     Held Procedure whose replay tail starts with that acquisition could only
-    halt-for-operator on `reconduct`. This is `try_conduct`'s hold-vs-abort
+    halt-for-operator on `conduct_from`. This is `conduct_or_hold`'s hold-vs-abort
     branch; lifecycle failures never reach it (handled before the step-failure
     branch). See [[project_resumable_conduct_design]] Tier 1."""
     return failure.source_kind in (_STEP_KIND_SETPOINT, _STEP_KIND_CHECK)
@@ -3866,8 +3866,8 @@ def _mismatch_reason(criterion: CheckCriterion, value: Any) -> str:
 def _derive_failure_reason(failure: ConductorFailure) -> str:
     """Build a Procedure-aggregate-compliant reason string from a step failure.
 
-    Used for both the abort path (`conduct` / `reconduct`) and the
-    pause-to-Held path (`try_conduct`). Truncates to `REASON_MAX_LENGTH` so
+    Used for both the abort path (`conduct` / `conduct_from`) and the
+    pause-to-Held path (`conduct_or_hold`). Truncates to `REASON_MAX_LENGTH` so
     the AbortProcedure / HoldProcedure handler does not reject the call. The
     format leads with the step pointer (kind + index + target) so an operator
     scanning the reason knows immediately which step in the conducted sequence

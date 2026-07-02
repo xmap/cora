@@ -210,7 +210,7 @@ def evolve(state: Procedure | None, event: ProcedureEvent) -> Procedure:
             # the iteration denorms). Mirrors RunHeld. EXCEPT actuation_kind:
             # the conduct's observed-so-far kind rides ProcedureHeld and is
             # MERGED into state so it survives the hold->resume boundary (a
-            # reconduct from a boundary past a simulated prefix would otherwise
+            # conduct_from from a boundary past a simulated prefix would otherwise
             # complete as Physical and bypass the promote_dataset gate). Merge,
             # not set, so a manual operator hold (actuation_kind=None) cannot
             # wipe a prior conduct's recorded kind.

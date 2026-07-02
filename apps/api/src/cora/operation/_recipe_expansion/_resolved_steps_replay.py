@@ -1,4 +1,4 @@
-"""Resolved-steps replay helper for the `reconduct_procedure` handler.
+"""Resolved-steps replay helper for the `conduct_from_procedure` handler.
 
 The resume path replays a halted conduct from PINNED resolved steps rather
 than re-deriving the step list. This module locates the
@@ -31,7 +31,7 @@ def find_resolved_steps_record(
     been conducted carries exactly one; head-scan returns it.
 
     Returns `None` when no match. The caller decides whether None is an
-    error: the `reconduct_procedure` handler raises
+    error: the `conduct_from_procedure` handler raises
     `ResolvedStepsRecordNotFoundError` (a Held Procedure missing its pinned
     resolved steps is corruption, not an operational outcome).
     """

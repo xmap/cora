@@ -15,9 +15,10 @@ unit with injected collaborators, exercised against fakes.
 
 ## What it owns vs trusts
 
-It OWNS the sequence and the transfer gate: it begins the transfer, observes to
-a terminal (waiting through a non-terminal `Suspended`), and registers ONLY if
-the transfer Succeeded. It TRUSTS the caller's `RegisterDistribution`: the
+It OWNS the sequence and the transfer gate: it begins the transfer, polls
+`observe` to a terminal (a non-terminal `Suspended` just keeps polling; there is
+no special Suspended path yet), and registers ONLY if the transfer Succeeded. It
+TRUSTS the caller's `RegisterDistribution`: the
 caller (which holds the parent Dataset) builds it with the byte-identical-copy
 fields (checksum / byte_size / media_type equal to the parent Dataset); the
 Data BC decider enforces that equality. The `RecordAttestation` is built here
@@ -35,8 +36,12 @@ later. This mirrors the safety-envelope eventual-consistency window.
 ## Deferred
 
 A long-running continuous sync would complete via a later signal rather than a
-synchronous observe-loop; this unit polls to a terminal with a runaway bound.
-Real-adapter poll backoff and the signal-driven variant are deferred.
+synchronous observe-loop; this unit polls to a terminal with a runaway bound and
+NO inter-poll backoff (a busy-spin that is fakes-only safe, see
+`_observe_to_terminal`). Real-adapter poll backoff, a real `Suspended`
+intervention path, and the signal-driven variant are deferred to the
+first-real-adapter trigger; none may be skipped when this is wired to a live
+substrate (Globus first).
 """
 
 from __future__ import annotations
@@ -158,10 +163,23 @@ class DistributionMaterializer:
         )
 
     async def _observe_to_terminal(self, handle: TransferHandle) -> TransferProgress:
-        """Poll `observe` until a terminal, waiting through a non-terminal Suspended.
+        """Poll `observe` until a terminal; every non-terminal state just re-polls.
 
-        Bounded by `_MAX_OBSERVATIONS` as a runaway backstop; a real long-running
-        transfer would terminalize via a later signal instead (deferred).
+        A non-terminal observation (`Pending` / `Active` / `Suspended`) falls
+        through to the next poll: the loop does NOT fold on `Suspended`, but it
+        also does NOT special-case it (no longer wait, no credential-renewal
+        backoff). "Waiting through Suspended" here means "keeps polling," not
+        "waits patiently"; a real Suspended handling path is deferred.
+
+        BUSY-SPIN, FAKES-ONLY: there is NO delay between polls. A test double
+        returns a terminal on the first poll or two, so the spin never bites
+        here. Against a REAL adapter this hammers `observe()` up to
+        `_MAX_OBSERVATIONS` times with zero backoff, which either trips the
+        substrate's rate limit or burns the whole budget in seconds and raises
+        long before an hours-long transfer finishes. A real adapter MUST gain
+        poll backoff (or the deferred signal-driven terminalization) BEFORE this
+        is wired to one; see the module docstring "Deferred". `_MAX_OBSERVATIONS`
+        is a runaway backstop only, not a substitute for backoff.
         """
         for _ in range(_MAX_OBSERVATIONS):
             progress = await self.transfer_port.observe(handle)

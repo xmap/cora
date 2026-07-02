@@ -1,6 +1,6 @@
-"""HTTP route for the `reconduct_procedure` slice.
+"""HTTP route for the `conduct_from_procedure` slice.
 
-`POST /procedures/{procedure_id}/reconduct` resumes a Held Procedure and
+`POST /procedures/{procedure_id}/conduct-from` resumes a Held Procedure and
 replays its pinned step-list tail from `re_establishment_boundary`.
 
 ## Response code: 200, replay outcomes in body
@@ -27,15 +27,15 @@ from cora.infrastructure.routing import (
     get_surface_id,
 )
 from cora.operation._conduct_wire import ConductorFailureResponse, failure_to_wire
-from cora.operation.features.reconduct_procedure.command import (
-    ReconductProcedure,
-    ReconductProcedureResult,
+from cora.operation.features.conduct_from_procedure.command import (
+    ConductFromProcedure,
+    ConductFromProcedureResult,
 )
-from cora.operation.features.reconduct_procedure.handler import Handler
+from cora.operation.features.conduct_from_procedure.handler import Handler
 
 
-class ReconductProcedureRequest(BaseModel):
-    """Body for `POST /procedures/{procedure_id}/reconduct`."""
+class ConductFromProcedureRequest(BaseModel):
+    """Body for `POST /procedures/{procedure_id}/conduct-from`."""
 
     re_establishment_boundary: int = Field(
         ...,
@@ -50,8 +50,8 @@ class ReconductProcedureRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
 
-class ReconductProcedureResponse(BaseModel):
-    """Response body for the reconduct_procedure slice.
+class ConductFromProcedureResponse(BaseModel):
+    """Response body for the conduct_from_procedure slice.
 
     `succeeded` is the replay's pass/fail bit. `acquisition_halt` is True
     iff the replay stopped at an acquisition needing an operator decision
@@ -68,12 +68,12 @@ class ReconductProcedureResponse(BaseModel):
     actuation_kind: str | None = None
 
 
-def result_to_wire(result: ReconductProcedureResult) -> ReconductProcedureResponse:
-    """Build a `ReconductProcedureResponse` from the slice result.
+def result_to_wire(result: ConductFromProcedureResult) -> ConductFromProcedureResponse:
+    """Build a `ConductFromProcedureResponse` from the slice result.
 
     Public because `tool.py` calls it too.
     """
-    return ReconductProcedureResponse(
+    return ConductFromProcedureResponse(
         procedure_id=result.procedure_id,
         completed_count=result.completed_count,
         succeeded=result.succeeded,
@@ -85,7 +85,7 @@ def result_to_wire(result: ReconductProcedureResult) -> ReconductProcedureRespon
 
 
 def _get_handler(request: Request) -> Handler:
-    handler: Handler = request.app.state.operation.reconduct_procedure
+    handler: Handler = request.app.state.operation.conduct_from_procedure
     return handler
 
 
@@ -93,9 +93,9 @@ router = APIRouter(tags=["operation"])
 
 
 @router.post(
-    "/procedures/{procedure_id}/reconduct",
+    "/procedures/{procedure_id}/conduct-from",
     status_code=status.HTTP_200_OK,
-    response_model=ReconductProcedureResponse,
+    response_model=ConductFromProcedureResponse,
     responses={
         status.HTTP_400_BAD_REQUEST: {
             "model": ErrorResponse,
@@ -126,16 +126,16 @@ router = APIRouter(tags=["operation"])
     },
     summary="Resume a held Procedure and replay its pinned step-list tail (Held -> Running)",
 )
-async def post_procedures_reconduct(
+async def post_procedures_conduct_from(
     procedure_id: Annotated[UUID, Path(description="Target procedure's id.")],
-    body: ReconductProcedureRequest,
+    body: ConductFromProcedureRequest,
     handler: Annotated[Handler, Depends(_get_handler)],
     cid: Annotated[UUID, Depends(get_correlation_id)],
     principal_id: Annotated[UUID, Depends(get_principal_id)],
     surface_id: Annotated[UUID, Depends(get_surface_id)],
-) -> ReconductProcedureResponse:
+) -> ConductFromProcedureResponse:
     """Resume + replay a Held Procedure. Replay outcomes land in the body."""
-    command = ReconductProcedure(
+    command = ConductFromProcedure(
         procedure_id=procedure_id,
         re_establishment_boundary=body.re_establishment_boundary,
     )

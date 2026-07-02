@@ -1,6 +1,6 @@
 """Shared pre-conduct pipeline for the conduct verb-family slices.
 
-`conduct_procedure` and `try_conduct_procedure` resolve the SAME step list
+`conduct_procedure` and `conduct_or_hold_procedure` resolve the SAME step list
 the same way before handing it to the Conductor, then pin it identically:
 
   1. recipe re-expansion when the Procedure was created from a recipe
@@ -105,7 +105,7 @@ async def resolve_and_pin_conduct_steps(
 ) -> tuple[Step, ...]:
     """Resolve the final conduct step list + pin it as `ResolvedStepsRecorded`.
 
-    The shared pre-Conductor work for `conduct` / `try_conduct`: recipe
+    The shared pre-Conductor work for `conduct` / `conduct_or_hold`: recipe
     re-expansion (recipe-driven Procedures) -> pseudoaxis constituent
     expansion (Run-phase Procedures) -> pin. Returns the resolved steps to
     hand to the Conductor. `command_name` rides the pinned event's metadata.

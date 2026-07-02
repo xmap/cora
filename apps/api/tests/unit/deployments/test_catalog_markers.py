@@ -30,8 +30,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 _DESCRIPTOR = _REPO_ROOT / "deployments" / "2-bm" / "beamline.yaml"
 _CATALOG = _REPO_ROOT / "catalog" / "catalog.yaml"
-_MICROSCOPE_PAGE = _REPO_ROOT / "docs" / "deployments" / "2-bm" / "equipment" / "microscope.md"
-_MICROSCOPE_SRC_URI = "deployments/2-bm/equipment/microscope.md"
+_MICROSCOPE_PAGE = _REPO_ROOT / "docs" / "deployments" / "2-bm" / "microscope.md"
+_MICROSCOPE_SRC_URI = "deployments/2-bm/microscope.md"
 _INVENTORY_PAGE = _REPO_ROOT / "docs" / "deployments" / "2-bm" / "inventory.md"
 _INVENTORY_SRC_URI = "deployments/2-bm/inventory.md"
 

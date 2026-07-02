@@ -26,7 +26,7 @@ Priorities: `Blocks-build`, `Blocks-go-live`, `Nice-to-have`.
 | STAGE-1 | Blocks-go-live | The full diffractometer axis set behind the `SamplePositioner` pseudomotor, and whether the goniometric axes warrant a `Goniometer` plus a Diffractometer Assembly (the 8-ID precedent). | A `LinearStage` sample stack, rotation axes and the Assembly deferred. | The SampleStage axes and orientation modelling. |
 | DET-1 | Blocks-go-live | Which Eiger (4M / 1M / 500K) is the primary XPCS detector vs the spare set, whether a separate along-beam stage sets the sample-to-detector distance (the `Det:SAXS` motor is transverse X/Y only), and the Xspress3 element count. | Eiger 4M primary; all Cameras; no distance stage modelled. | The detector roster and q-range. |
 | CAM-1 | Nice-to-have | Which beam-viewing cameras (the Prosilica x-ray-eyes, the PointGrey, the OAV) are live. | The OAV modelled as a Camera; others noted. | The beam-viewing camera set. |
-| DIAG-1 | Nice-to-have | The scaler flux channel map (which channel is I0) and the BPM / AH401B electrometer channels. | Read-only flux and beam-position probes; channel maps blank. | The FluxCounter and BeamPositionMonitor bindings. |
+| DIAG-1 | Nice-to-have | The scaler flux channel map (which channel is I0) and the BPM / AH401B electrometer channels. | Read-only flux and beam-position probes; channel maps blank. | The FluxCounter and PositionMonitor bindings. |
 
 ## Controls and technique scope
 
