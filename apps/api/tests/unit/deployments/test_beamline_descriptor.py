@@ -332,19 +332,33 @@ def test_live_pilot_has_no_source_ref() -> None:
     assert "Source: [" not in source_page
 
 
-def test_walk_layout_keeps_beamline_and_inventory_pages() -> None:
-    # A default model-tier beamline (page_layout omitted -> "walk") is unchanged:
-    # it still emits beamline.md, inventory.md, and the equipment/ stage pages.
-    # id28 is still walk (NSLS-II + PETRA-III + Diamond + pilots migrated to
-    # stages; ESRF has not).
-    pages = _render_all_pages("id28")
-    assert "deployments/id28/beamline.md" in pages
-    assert "deployments/id28/inventory.md" in pages
-    assert "deployments/id28/equipment/sample.md" in pages
-    assert "deployments/id28/equipment/detector.md" in pages
-    assert "deployments/id28/equipment/controls.md" in pages
+def test_walk_layout_keeps_beamline_and_inventory_pages(tmp_path: Path) -> None:
+    # The walk layout (page_layout omitted -> "walk") still emits beamline.md,
+    # inventory.md, and the equipment/ stage pages with a "Walk the beam" spine.
+    # The whole real fleet has migrated to the stages layout (only the 2-BM pilot
+    # keeps a non-stages generated set), so this pins the walk path with a
+    # synthetic model-tier descriptor rather than a real beamline.
+    descriptor_yaml = (
+        "beamline:\n"
+        "  name: W\n"
+        "  maturity: model\n"
+        "  evidence: controls_config\n"
+        "  coverage: full\n"
+        "source:\n  stage: source\n  devices: []\n"
+        "sample:\n  stage: sample\n  devices: []\n"
+        "detector:\n  stage: detection\n  devices: []\n"
+    )
+    path = tmp_path / "beamline.yaml"
+    path.write_text(descriptor_yaml, encoding="utf-8")
+    descriptor = bd.load(path)
+    pages = bp.render_all(descriptor, slug="w", model_tier=True)
+    assert "deployments/w/beamline.md" in pages
+    assert "deployments/w/inventory.md" in pages
+    assert "deployments/w/equipment/sample.md" in pages
+    assert "deployments/w/equipment/detector.md" in pages
+    assert "deployments/w/equipment/controls.md" in pages
     # the walk layout keeps the "Walk the beam" spine and its Inventory pointer
-    index = pages["deployments/id28/index.md"]
+    index = pages["deployments/w/index.md"]
     assert "## Walk the beam" in index
     assert "[Inventory](inventory.md)" in index
 

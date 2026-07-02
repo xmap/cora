@@ -71,6 +71,11 @@ beamline:
     set per-shot and the same source feeds the Alvra, Bernina, and Cristallina stations
     one at a time (SRC-1 / TOPO-1). The Aramis undulator parameters are not in the eco
     manifest and are carried confirm.
+  page_layout: stages
+  shape: "A soft / tender XFEL endstation on PSI's Aramis branch (pump-probe spectroscopy, von Hamos emission); CORA's second XFEL, mined from an independent control stack, confirming the device families fold and the gaps are architectural."
+  source_ref:
+    label: "paulscherrerinstitute/eco"
+    url: "https://github.com/paulscherrerinstitute/eco"
 
 # Two access-gated zones. The Aramis optics hutch conditions the beam shared with the
 # other Aramis stations; the Alvra experiment hutch holds the Prime endstation. The eco

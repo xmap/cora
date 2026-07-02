@@ -2,7 +2,7 @@
 
 *What CORA needs the FAXTOR team to confirm before the model can be trusted.*
 
-FAXTOR was reverse-engineered from ALBA's public facility pages ([cells.es/en/beamlines/bl31-faxtor](https://www.cells.es/en/beamlines/bl31-faxtor)) and a verified research brief, not from a live connection. ALBA publishes no per-beamline device manifest, so the [Inventory](inventory.md) is a planned shape with control handles unbound. This is CORA's first ALBA Site and its second Tango / Sardana / Taurus controls house-style after MAX IV. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+FAXTOR was reverse-engineered from ALBA's public facility pages ([cells.es/en/beamlines/bl31-faxtor](https://www.cells.es/en/beamlines/bl31-faxtor)) and a verified research brief, not from a live connection. ALBA publishes no per-beamline device manifest, so the [Inventory](index.md) is a planned shape with control handles unbound. This is CORA's first ALBA Site and its second Tango / Sardana / Taurus controls house-style after MAX IV. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 

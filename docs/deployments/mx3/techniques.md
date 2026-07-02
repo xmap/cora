@@ -18,4 +18,4 @@ MX3 brings a new Site, not a new technique. Rotation MX, grid-scan centring, and
 
 The autonomous sample exchange reuses the i03 / i24 autonomous-loop shape: a Procedure over the spine threaded through `Subject` custody, not a new device family (ROBOT-1). Indexing and integration of the diffraction frames are `ComputePort` work, not beamline Methods.
 
-The genuinely new thing MX3 contributes is below the technique layer: a sixth Site and a heterogeneous control plane (see [Controls](equipment/controls.md)), which the technique vocabulary rides over unchanged.
+The genuinely new thing MX3 contributes is below the technique layer: a sixth Site and a heterogeneous control plane (see [Controls](controls.md)), which the technique vocabulary rides over unchanged.

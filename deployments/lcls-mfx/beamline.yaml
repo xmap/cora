@@ -69,6 +69,11 @@ beamline:
     SASE hard-X-ray FEL on the shared LCLS linac + HXR undulator line; photon energy
     is set per-shot (vernier / undulator), not as a standing setpoint, and the same
     source feeds many co-equal instruments one at a time (SRC-1 / TOPO-1).
+  page_layout: stages
+  shape: "CORA's first XFEL (SLAC LCLS): a per-shot, pulse-ID-tagged event stream at beam rate with femtosecond pump-probe; the device families fold and the genuine gaps are the acquisition ontology, not new device kinds."
+  source_ref:
+    label: "pcdshub"
+    url: "https://github.com/pcdshub"
 
 # Two access-gated zones. The shared front end + X-ray transport (FEE/XRT) feeds
 # every hard-X-ray instrument, not just MFX; CORA models it here as one enclosure

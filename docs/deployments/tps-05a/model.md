@@ -7,10 +7,10 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at TPS 05A |
 | --- | --- |
-| Asset (Equipment) | [Inventory](inventory.md#the-asset-tree) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](inventory.md#the-asset-tree) (EnergyAxis) |
+| Asset (Equipment) | [Inventory](source.md) (in this zone) |
+| Computed / virtual axes (Equipment) | [Inventory](source.md) (EnergyAxis) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
-| Enclosure (Enclosure) | [The beamline](equipment/index.md) (TPS-05A-OH optics, TPS-05A-EH experiment) |
+| Enclosure (Enclosure) | [The beamline](index.md#enclosures) (TPS-05A-OH optics, TPS-05A-EH experiment) |
 | Facility (Federation); Zone, Conduit, Policy (Trust); Actor (Access) | [NSRRC Site](../nsrrc/index.md), [Governance](governance.md) |
 | Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 

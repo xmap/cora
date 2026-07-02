@@ -6,12 +6,12 @@ ID32 is a descriptor-and-docs scaffold today, reverse-engineered from the ESRF's
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/id32/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id32/beamline.yaml) | the device walk with bound handles; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/id32/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id32/beamline.yaml) | the device walk with bound handles; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/esrf/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/esrf/site.yaml) | the NEW ESRF facility surface; `ID32` its first beamline, with RIXS / XMCD / XES Practices |
 | Extraction provenance | [gitlab.esrf.fr/id32/beamline_configuration](https://gitlab.esrf.fr/id32/beamline_configuration) | the public BLISS Beacon device database (a git mirror of the live config) the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | SpectrometerArm graduated (earned across SIX + ID32 RIXS/XES + ID28), Magnet graduated (earned across 4-ID + i10-1 + ID32; presents Regulator), and PolarizationAnalyzer graduated (earned across 4-ID + i10 + ID32 + P09; presents Positioner) (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the RIXS / XMCD / XES Methods are pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers ID32 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers ID32 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes ID32 new

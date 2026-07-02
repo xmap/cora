@@ -6,12 +6,12 @@ SYRMEP is a descriptor-and-docs scaffold today, reverse-engineered from public m
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/syrmep/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/syrmep/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; handles carried confirm-pending |
+| Beamline descriptor | [`deployments/syrmep/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/syrmep/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; handles carried confirm-pending |
 | Site descriptor | [`deployments/elettra/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/elettra/site.yaml) | the NEW Elettra facility surface; `SYRMEP` its first beamline, with the tomography Practices |
 | Upstream source | [elettra.eu SYRMEP pages](https://www.elettra.eu/elettra-beamlines/syrmep.html) | the public facility material (plus the EPJ Plus 2024 review and the J. Synchrotron Rad. 2023 large-FOV paper) the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; SYRMEP reuses the imaging spine |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; core tomography Methods reused, the new ones (helical / white-beam / phase-retrieval) pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers SYRMEP Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers SYRMEP Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes SYRMEP new

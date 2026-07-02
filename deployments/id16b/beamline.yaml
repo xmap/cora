@@ -46,6 +46,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "U205 undulator on the ID16B straight (ESRF_Undulator); energy reach and gap mapping are SRC-1"
+  page_layout: stages
+  shape: "The fleet's first KB nanoprobe with XRF: nano-XRF mapping and nano-tomography on the ESRF BLISS / Tango floor, coining no new vocabulary."
+  source_ref:
+    label: "gitlab.esrf.fr id16b/beamline_configuration"
+    url: "https://gitlab.esrf.fr/id16b/beamline_configuration"
 
 enclosures:
   - name: id16b-optics

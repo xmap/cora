@@ -54,6 +54,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "TPS 05A is fed by a TPS undulator (per the SPXF spec page); the front-end / insertion-device PV is not in any public source, so the source is carried generically and the ring-current monitor stands in as the source representation (SRC-1)"
+  page_layout: stages
+  shape: "NSRRC's protein-microcrystallography beamline, the MX-cluster sibling of TPS 07A: the same Blu-Ice / DCSS stack and MD3 + ISARA kit with a DECTRIS EIGER2 X 9M detector."
+  source_ref:
+    label: "nsrrcspxf docs"
+    url: "https://nsrrcspxf.github.io/nsrrcspxf/index.html"
 
 enclosures:
   # No public source exposes the 05A hutch layout. MX beamlines run an optics hutch

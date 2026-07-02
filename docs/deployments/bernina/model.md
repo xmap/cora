@@ -6,14 +6,14 @@ Bernina is a documentation-and-descriptor scaffold: it exists as the descriptor 
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/bernina/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/bernina/beamline.yaml) | the device walk, with the `eco`-derived EPICS PV prefixes; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/bernina/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/bernina/beamline.yaml) | the device walk, with the `eco`-derived EPICS PV prefixes; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/psi/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/psi/site.yaml) | the PSI facility surface; Bernina is its second beamline, with pump-probe and diffraction practices carried pending |
 | Extraction provenance | [paulscherrerinstitute/eco](https://github.com/paulscherrerinstitute/eco) | `eco/bernina/bernina.py` (the live inline-PV device list) and `eco/endstations/bernina_diffractometers.py` (the diffractometer axis topology) |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **none graduated.** Bernina reuses catalog Families, the graduated `Diffractometer` Assembly, and the graduated `Laser` Family (both the pump-probe and the alignment-reference lasers); loose families (`Diagnostic`, `FluxMonitor`) reused |
 | Catalog Assembly | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | reuses the graduated `Diffractometer` Assembly (4-ID / 8-ID); the GPS and XRD platforms are the third and fourth bindings (DIFF-1) |
 | Catalog Capability / Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; pump-probe (shared with Alvra) and time-resolved diffraction Methods are deferred (the catalog tomography Methods do not fit an XFEL) |
 | Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound; `eco` names hardware (the Jungfraus, the Staeubli robot) but no part is procured |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers Bernina Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers Bernina Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md), including the pump-probe laser Clearance |
 
 ## The headline: the diffraction platform is an Assembly, not a Family

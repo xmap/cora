@@ -10,7 +10,7 @@ CORA brings its own Access model: a small set of facility roles (operator, beaml
 
 ## The trust boundary
 
-CORA's Trust BC (Zone, Conduit, Policy) gates every command by who is acting and what the beamline state allows: who may drive the [sample rotation](equipment/sample.md) through a tomographic scan, raster the [piezo scanner](equipment/sample.md) for an XRF map, arm the [FalconX detector](equipment/detector.md) or an area detector, move the KB nanofocus or the monochromator, override a caution, or commit an alignment. This authority is CORA's own, expressed per Actor, not inherited from the beamline's controls layer. The ESRF proposal and cycle are a fact CORA's Campaign uses for custody.
+CORA's Trust BC (Zone, Conduit, Policy) gates every command by who is acting and what the beamline state allows: who may drive the [sample rotation](sample.md) through a tomographic scan, raster the [piezo scanner](sample.md) for an XRF map, arm the [FalconX detector](detector.md) or an area detector, move the KB nanofocus or the monochromator, override a caution, or commit an alignment. This authority is CORA's own, expressed per Actor, not inherited from the beamline's controls layer. The ESRF proposal and cycle are a fact CORA's Campaign uses for custody.
 
 Because ID16B is a reverse-engineered scaffold rather than a pilot, the concrete trust shape (the Zones grouping the optics and endstation resources, the Conduit binding the surfaces that may issue commands, and the Policies that say who may do what) is named here, not built. It would land, following the [2-BM governance](../2-bm/governance.md) shape, if and when the deployment approaches real scope.
 
@@ -33,7 +33,7 @@ Clearances (the safety forms that must be active to start) are issued at the ESR
 
 ID16B's reason for existing is nano-analysis: KB-focused nano-tomography and nano-XRF mapping. In CORA's model these are the existing `tomography` and `scanning_fluorescence_microscopy` Methods, not new techniques (TECH-1, METHOD-1); the devices they gate are `RotaryStage`, `LinearStage`, `Mirror`, `EnergyDispersiveSpectrometer`, and `Camera` Assets (SAMPLE-1, DET-1), and the reconstructions (the tomographic volume and the XRF map fitting) are `ComputePort` work, not beamline devices. That makes the repeated nano-acquisition the place CORA's custody and trust shapes would earn their keep: the trust boundary bounds who may drive the nanofocus and arm the detectors, and the Campaign and Subject shapes carry the sample's custody and the data record.
 
-The governance shape is the same CORA brings to every beamline; what is different at ID16B is the control floor (BLISS / Tango, not EPICS, see [Controls](equipment/controls.md)) and the nanoprobe device set. The trust boundary is control-floor-agnostic and device-agnostic: it gates commands by Actor and state regardless.
+The governance shape is the same CORA brings to every beamline; what is different at ID16B is the control floor (BLISS / Tango, not EPICS, see [Controls](controls.md)) and the nanoprobe device set. The trust boundary is control-floor-agnostic and device-agnostic: it gates commands by Actor and state regardless.
 
 If an autonomous Agent were added (for example to centre the sample on the nanoprobe or decide when an XRF map is complete), it would be a facility principal scoped at the Site, governed by the same trust boundary, with each choice recorded as a [Decision](../../architecture/modules/decision/index.md). None is declared yet; this stays design intent.
 

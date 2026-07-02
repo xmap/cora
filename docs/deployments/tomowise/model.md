@@ -6,12 +6,12 @@ TomoWISE is a documentation-and-descriptor scaffold today: it exists as the desc
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/tomowise/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/tomowise/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/tomowise/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/tomowise/beamline.yaml) | the device walk; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/maxiv/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/maxiv/site.yaml) | the MAX IV facility surface |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | `InsertionDevice` added for the two sources; `Mask` promoted to a shared Family (front-end masks, now shared with 2-BM); other devices reuse existing Families |
 | Catalog Assembly | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | the two microscopes reuse the cross-facility `Microscope` / `Optics` Assemblies (shared with 2-BM); the `camera` and `propagation_distance` slots were generalized to `ZeroOrOne` so TomoWISE can share cameras + the gantry rail |
 | Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | one model bound: `optique_peter_micrx080` (the 2-BM Optique Peter housing) on both microscope Housings, as the design-target candidate (DET-2) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers TomoWISE Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers TomoWISE Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What is deliberately not here yet

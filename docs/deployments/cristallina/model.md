@@ -6,14 +6,14 @@ Cristallina is a documentation-and-descriptor scaffold: it exists as the descrip
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/cristallina/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/cristallina/beamline.yaml) | the device walk, with the `slic`-derived EPICS PV prefixes; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/cristallina/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/cristallina/beamline.yaml) | the device walk, with the `slic`-derived EPICS PV prefixes; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/psi/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/psi/site.yaml) | the PSI facility surface; Cristallina is its third beamline, with diffraction and serial-crystallography practices carried pending |
 | Extraction provenance | [`slic/cristallina`](https://gitea.psi.ch/slic/cristallina) | the `channels/pv_channels.py` PV lists and `beamline/` + `crq_exp/` driver classes the descriptor was curated from (gitea.psi.ch, branch `master`) |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **none graduated here.** Cristallina reuses catalog Families, the graduated `Diffractometer` Assembly, `TemperatureController` Family, `Magnet` Family (a further consumer of the graduated `Magnet`), and the graduated `Laser` Family (the X-ray alignment laser); loose families (`Diagnostic`, `FluxMonitor`) reused |
 | Catalog Assembly | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | reuses the graduated `Diffractometer` Assembly; DM1 and DM2 are its fifth and sixth bindings (DIFF-1) |
 | Catalog Capability / Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the diffraction and serial-crystallography Methods are deferred, shared with Bernina / Alvra |
 | Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound; `slic` names hardware (the Jungfraus, the Oxford Mercury iPS, the LakeShore 372) but no part is procured |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers Cristallina Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers Cristallina Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md), including the high-field-magnet Clearance |
 
 ## The headline: no new Family, three things tested

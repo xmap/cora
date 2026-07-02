@@ -6,12 +6,12 @@
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/8-3-2/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/8-3-2/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; structure from the DXfile data record, control handles unbound (`CTRL-1`) |
+| Beamline descriptor | [`deployments/8-3-2/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/8-3-2/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; structure from the DXfile data record, control handles unbound (`CTRL-1`) |
 | Site descriptor | [`deployments/als/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/als/site.yaml) | the NEW ALS facility surface; `8.3.2` its first beamline, with the tomography Practices |
 | Upstream source | [als.lbl.gov 8.3.2](https://als.lbl.gov/beamlines/8-3-2/), [microct.lbl.gov](https://microct.lbl.gov/), [als-computing](https://github.com/als-computing) | the public ALS facility material and GitHub org the descriptor and docs were reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; 8.3.2 reuses the imaging Families |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; tomography reuses existing Methods |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 8.3.2 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers 8.3.2 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes 8.3.2 new

@@ -2,7 +2,7 @@
 
 *What CORA needs the ID32 team to confirm before the model can be trusted.*
 
-ID32 was reverse-engineered from the ESRF's open BLISS Beacon device database ([gitlab.esrf.fr/id32/beamline_configuration](https://gitlab.esrf.fr/id32/beamline_configuration), a git mirror of the live Beacon config), so the control handles in the [Inventory](inventory.md) are the beamline's real Tango / IcePAP / BLISS addresses, read from the config rather than confirmed by staff. This is CORA's first ESRF Site and first BLISS / Tango / IcePAP controls house-style. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+ID32 was reverse-engineered from the ESRF's open BLISS Beacon device database ([gitlab.esrf.fr/id32/beamline_configuration](https://gitlab.esrf.fr/id32/beamline_configuration), a git mirror of the live Beacon config), so the control handles in the [Inventory](index.md) are the beamline's real Tango / IcePAP / BLISS addresses, read from the config rather than confirmed by staff. This is CORA's first ESRF Site and first BLISS / Tango / IcePAP controls house-style. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 

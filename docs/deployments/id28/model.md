@@ -6,12 +6,12 @@ ID28 is a descriptor-and-docs scaffold today, reverse-engineered from the ESRF's
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/id28/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id28/beamline.yaml) | the device walk with bound handles; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/id28/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id28/beamline.yaml) | the device walk with bound handles; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/esrf/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/esrf/site.yaml) | the ESRF facility surface; `ID28` added to its beamline list, with an IXS Practice |
 | Extraction provenance | [gitlab.esrf.fr/id28/beamline_configuration](https://gitlab.esrf.fr/id28/beamline_configuration) | the public BLISS Beacon device database the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | ID28 coins none; it is a further `SpectrometerArm` consumer, a sighting that reinforced the now-landed graduation (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the IXS Method is pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers ID28 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers ID28 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes ID28 new

@@ -6,12 +6,12 @@ MANACA is a descriptor-and-docs scaffold today, reverse-engineered from Sirius's
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/manaca/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/manaca/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; control handles unbound (`CTRL-1`) |
+| Beamline descriptor | [`deployments/manaca/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/manaca/beamline.yaml) | the device walk; source of the generated [Source](source.md) page; control handles unbound (`CTRL-1`) |
 | Site descriptor | [`deployments/sirius/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/sirius/site.yaml) | the existing Sirius facility surface (shared with the MOGNO scaffold); MANACA adds the MX Practices |
 | Extraction provenance | the [MANACA facility page](https://lnls.cnpem.br/facilities/manaca/) and the MX device anatomy shared with i03 / FMX / AMX / MX3 | the public sources the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; MANACA reuses the MX Families |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the MX Methods reuse the pending i03 slugs (`TECH-1`, `ROBOT-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers MANACA Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers MANACA Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes MANACA new

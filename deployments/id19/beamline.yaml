@@ -49,6 +49,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "ESRF_Undulator set on the ID19 straight (Tango //acs.esrf.fr:10000/ID/MASTER/ID19): undulators u13a/u32a/u17-6c/u32c and the w150b wiggler (gap + taper); which feeds which mode is SRC-1"
+  page_layout: stages
+  shape: "The fleet's first imaging beamline on a non-EPICS floor: microtomography on the ESRF BLISS / Tango control system, reusing the established tomography spine."
+  source_ref:
+    label: "gitlab.esrf.fr id19/beamline_configuration"
+    url: "https://gitlab.esrf.fr/id19/beamline_configuration"
 
 # Two enclosures: the optics hutch carrying the shared source-conditioning optics,
 # and the experiment hutch carrying both tomography endstations. ESRF PSS permit

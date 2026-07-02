@@ -10,9 +10,9 @@ MOGNO illuminates the sample with a quasi-monochromatic divergent (cone) beam an
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| Cone-beam X-ray tomography | `tomography` | projections over a rotation on the [nanotomography](equipment/nanotomography.md) and [microtomography](equipment/microtomography.md) stations, hardware-triggered by the [TATU timing unit](equipment/controls.md); reuses the graduated `tomography` Method the APS 2-BM pilot and NSLS-II FXI share; practice pending (`TECH-1`) |
+| Cone-beam X-ray tomography | `tomography` | projections over a rotation on the [nanotomography](sample.md) and [microtomography](sample.md) stations, hardware-triggered by the [TATU timing unit](controls.md); reuses the graduated `tomography` Method the APS 2-BM pilot and NSLS-II FXI share; practice pending (`TECH-1`) |
 
-Tomography at MOGNO needs the [rotation axis](equipment/nanotomography.md) as the master clock, the [TATU trigger](equipment/controls.md) to hardware-sync projection acquisition, the [detector chain](equipment/detector.md) to record the projections plus flat and dark fields, and the [cone-beam magnification axis](equipment/detector.md) to set the resolution-and-field-of-view working point.
+Tomography at MOGNO needs the [rotation axis](sample.md) as the master clock, the [TATU trigger](controls.md) to hardware-sync projection acquisition, the [detector chain](detector.md) to record the projections plus flat and dark fields, and the [cone-beam magnification axis](detector.md) to set the resolution-and-field-of-view working point.
 
 ## A familiar technique on a third facility
 

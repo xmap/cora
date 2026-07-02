@@ -52,6 +52,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "ID32 is a soft X-ray APPLE-II beamline; the BLISS config binds the undulators (modelled below) but not their period; the undulator detail is SRC-1"
+  page_layout: stages
+  shape: "ESRF soft X-ray RIXS on a ~5 m dispersive spectrometer arm plus a 9 T XMCD / XES endstation; CORA's first BLISS / Beacon / Tango / IcePAP control plane, bringing three loose families to a rule-of-three."
+  source_ref:
+    label: "gitlab.esrf.fr id32/beamline_configuration"
+    url: "https://gitlab.esrf.fr/id32/beamline_configuration"
 
 # Control plane: BLISS / Beacon (a YAML device DB) over Tango + IcePAP, NOT EPICS. Handles
 # are Tango device URLs (id32/limaccds/andor_1), IcePAP host+address (iceid324), or BLISS

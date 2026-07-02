@@ -10,11 +10,11 @@ MANACA sets the X-ray energy (5-20 keV) with the undulator and the monochromator
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| Rotation MX data collection | `mx_data_collection` | oscillation collection on the [goniometer](equipment/sample.md) reading the [area detector](equipment/detector.md); reuses the i03 Method (also at FMX / AMX / MX3), not yet in the catalog (`TECH-1`) |
-| Grid scan | `grid_scan` | fast grid scan for sample location and centring on the [goniometer](equipment/sample.md); reuses the i03 Method; pending (`TECH-1`) |
+| Rotation MX data collection | `mx_data_collection` | oscillation collection on the [goniometer](sample.md) reading the [area detector](detector.md); reuses the i03 Method (also at FMX / AMX / MX3), not yet in the catalog (`TECH-1`) |
+| Grid scan | `grid_scan` | fast grid scan for sample location and centring on the [goniometer](sample.md); reuses the i03 Method; pending (`TECH-1`) |
 | Sample exchange | `sample_exchange` | the automated 48-pin changer load / centre / collect / unmount loop, modelled as a Procedure over the spine; reuses the i03 / MX3 Method; pending (`ROBOT-1`) |
 
-Rotation MX needs the [incident energy](beamline.md) set by the [monochromator](beamline.md), the [goniometer and cryostream](equipment/sample.md), and the [area detector](equipment/detector.md). Serial and room-temperature MX reuse the same chain with the sample-delivery and environment varied.
+Rotation MX needs the [incident energy](source.md) set by the [monochromator](source.md), the [goniometer and cryostream](sample.md), and the [area detector](detector.md). Serial and room-temperature MX reuse the same chain with the sample-delivery and environment varied.
 
 ## A new beamline on familiar vocabulary
 

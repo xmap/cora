@@ -6,19 +6,19 @@ ID16B is a descriptor-and-docs scaffold today, reverse-engineered from the beaml
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/id16b/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id16b/beamline.yaml) | the device walk with real BLISS / Tango handles; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/id16b/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id16b/beamline.yaml) | the device walk with real BLISS / Tango handles; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/esrf/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/esrf/site.yaml) | the ESRF facility surface; `ID16B` added to its beamline list, with two pending Practices |
 | Upstream source | [`gitlab.esrf.fr/id16b/beamline_configuration`](https://gitlab.esrf.fr/id16b/beamline_configuration) | the beamline's own public BLISS Beacon device database the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog Family |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; `tomography` reused, `scanning_fluorescence_microscopy` pending (TECH-1, METHOD-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers ID16B Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers ID16B Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes ID16B new
 
 ID16B is CORA's **third non-EPICS deployment** (after ID32 and ID19) and the fleet's **first KB nanoprobe with XRF**. The novelty sits on two axes, both below the technique layer:
 
-- **A second BLISS / Tango floor.** ID16B confirms the ID19 seam pattern is repeatable: motion stages are BLISS axes (IcePAP racks, PI piezo scanners, etel Tango motors), the fluorescence detector is a MOSCA / FalconX Tango device, the area detectors are Lima device servers, and CORA's edge conducts over the `ControlPort` against that floor (CTRL-1, see [Controls](equipment/controls.md)).
+- **A second BLISS / Tango floor.** ID16B confirms the ID19 seam pattern is repeatable: motion stages are BLISS axes (IcePAP racks, PI piezo scanners, etel Tango motors), the fluorescence detector is a MOSCA / FalconX Tango device, the area detectors are Lima device servers, and CORA's edge conducts over the `ControlPort` against that floor (CTRL-1, see [Controls](controls.md)).
 - **The first KB nanoprobe with XRF.** The Kirkpatrick-Baez mirror pair focuses the beam to a nanoprobe, and an energy-dispersive fluorescence detector reads a spectrum per raster point. This device combination is new to the fleet, but every part binds an existing Family.
 
 ## No new families, two reused methods

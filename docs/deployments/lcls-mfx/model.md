@@ -6,12 +6,12 @@ MFX is a documentation-and-descriptor scaffold: it exists as the descriptor and 
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/lcls-mfx/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/lcls-mfx/beamline.yaml) | the device walk, with the `pcdshub`-derived EPICS PV prefixes; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/lcls-mfx/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/lcls-mfx/beamline.yaml) | the device walk, with the `pcdshub`-derived EPICS PV prefixes; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/slac/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/slac/site.yaml) | the SLAC facility surface; MFX is its only beamline, with XFEL practices carried pending |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **no Family graduated at the time.** MFX reuses catalog Families, including the graduated `Transfocator` (a CRL focusing optic) and the graduated `Laser` (the pump-probe laser), and carries loose families (`FluxMonitor`, `Diagnostic` reused). It introduced `EmissionSpectrometer`, which has since GRADUATED into the catalog (ISS 2nd sighting, SPEC-1) |
 | Catalog Capability / Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; serial crystallography, pump-probe, and emission-spectroscopy Methods are deferred (the catalog tomography Methods do not fit an XFEL) |
 | Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound; `pcdshub` names hardware (Dectris, Rayonix, the von Hamos) but no part is procured |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers MFX Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers MFX Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md), including the pump-probe laser Clearance |
 
 ## The headline: the families fold, the gaps are architectural

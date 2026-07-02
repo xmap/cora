@@ -6,12 +6,12 @@ MOGNO is a descriptor-and-docs scaffold today, reverse-engineered from the publi
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/mogno/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/mogno/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page. No handles, no models bound (no public controls config) |
+| Beamline descriptor | [`deployments/mogno/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/mogno/beamline.yaml) | the device walk; source of the generated [Source](source.md) page. No handles, no models bound (no public controls config) |
 | Site descriptor | [`deployments/sirius/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/sirius/site.yaml) | the NEW Sirius facility surface; the full operating beamline catalog listed, MOGNO its first modelled beamline |
 | Extraction provenance | Campoi et al. 2025 (JPCS 3010 012137); Archilha et al. 2022 (JPCS 2380 012123); [facility page](https://lnls.cnpem.br/facilities/mogno/) | the published sources the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; MOGNO reuses existing tomography families |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; MOGNO reuses the graduated `tomography` Method |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers MOGNO Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers MOGNO Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes MOGNO new

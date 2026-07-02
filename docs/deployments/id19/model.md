@@ -6,19 +6,19 @@ ID19 is a descriptor-and-docs scaffold today, reverse-engineered from the beamli
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/id19/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id19/beamline.yaml) | the device walk with real BLISS / Tango handles; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/id19/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id19/beamline.yaml) | the device walk with real BLISS / Tango handles; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/esrf/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/esrf/site.yaml) | the ESRF facility surface, CORA's seventh Site; carries the microtomography Practice |
 | Upstream source | [`gitlab.esrf.fr/id19/beamline_configuration`](https://gitlab.esrf.fr/id19/beamline_configuration) | the beamline's own public BLISS Beacon device database the descriptor was reverse-engineered from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog Family |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; ID19 reuses the existing `tomography` Method (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers ID19 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers ID19 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes ID19 new
 
 ID19 is CORA's first imaging beamline on a **non-EPICS control floor**. Most of the fleet is EPICS (APS, Diamond, NSLS-II, SLAC, all ophyd / bluesky / dodal / pcdshub). ESRF runs BLISS, a Tango-based control system; its soft X-ray sibling ID32 opened the BLISS floor for CORA, and ID19 is the first to bring it to tomographic imaging. That is the novelty, and it is a **control-plane** concern, not a device or technique concern.
 
-The seam model that today reads "EPICS is the floor" generalizes at ID19 to "BLISS / Tango is the floor". CORA's edge conducts the tomographic scan over its `ControlPort` against BLISS scan procedures and Lima detector servers, rather than EPICS IOCs. The test ID19 poses is that the `ControlPort` and the conduct-versus-drive-through seam are genuinely control-system-agnostic, not secretly EPICS-shaped (see [Controls](equipment/controls.md), CTRL-1).
+The seam model that today reads "EPICS is the floor" generalizes at ID19 to "BLISS / Tango is the floor". CORA's edge conducts the tomographic scan over its `ControlPort` against BLISS scan procedures and Lima detector servers, rather than EPICS IOCs. The test ID19 poses is that the `ControlPort` and the conduct-versus-drive-through seam are genuinely control-system-agnostic, not secretly EPICS-shaped (see [Controls](controls.md), CTRL-1).
 
 ## No new families, no new methods
 

@@ -13,8 +13,8 @@ The techniques are recorded as pending [Practices](../esrf/index.md#the-techniqu
 
 Both are acquisition shapes CORA already models; ID16B runs them through one KB nanofocus.
 
-- **Nano-tomography.** The [rotation stage](equipment/sample.md) spins the sample through the nanofocused beam; the [area detector](equipment/detector.md) records a projection at each angle; the projection stack reconstructs to a volume. Same shape as ID19, at nanoscale resolution.
-- **Nano-XRF mapping.** The [piezo raster scanner](equipment/sample.md) steps the sample through the nanoprobe point by point; at each point the [fluorescence detector](equipment/detector.md) reads an energy-dispersive spectrum, and the element maps are fit downstream. Adding the rotation axis turns this into fluorescence-tomography (a 3D element map).
+- **Nano-tomography.** The [rotation stage](sample.md) spins the sample through the nanofocused beam; the [area detector](detector.md) records a projection at each angle; the projection stack reconstructs to a volume. Same shape as ID19, at nanoscale resolution.
+- **Nano-XRF mapping.** The [piezo raster scanner](sample.md) steps the sample through the nanoprobe point by point; at each point the [fluorescence detector](detector.md) reads an energy-dispersive spectrum, and the element maps are fit downstream. Adding the rotation axis turns this into fluorescence-tomography (a 3D element map).
 
 The parts are a `RotaryStage` (the tomo spin / fluo-tomo rotation), `LinearStage`s (coarse positioning and the PI piezo raster scanner), `Mirror`s (the KB nanofocus), an `EnergyDispersiveSpectrometer` (the FalconX XRF detector), and a `Camera` (the area detector). None is new. The reconstructions, both the tomographic volume and the XRF map fitting, are `ComputePort` work, not beamline devices.
 
@@ -22,7 +22,7 @@ The parts are a `RotaryStage` (the tomo spin / fluo-tomo rotation), `LinearStage
 
 CORA already models tomography (ID19, 2-BM) and scanning fluorescence microscopy (2-ID, XFM, LIX). ID16B is a further consumer of both, so the Practices are carried pending only because ID16B is not yet driven by CORA, not because the Methods are new.
 
-The novelty at ID16B is the combination and the floor: it is the fleet's first KB nanoprobe with an energy-dispersive fluorescence detector, and a further beamline on the BLISS / Tango control floor. Both are device-and-control concerns ([Model](model.md), [Controls](equipment/controls.md)), not technique concerns. Holding the Methods constant is the point: it isolates what is genuinely new.
+The novelty at ID16B is the combination and the floor: it is the fleet's first KB nanoprobe with an energy-dispersive fluorescence detector, and a further beamline on the BLISS / Tango control floor. Both are device-and-control concerns ([Model](model.md), [Controls](controls.md)), not technique concerns. Holding the Methods constant is the point: it isolates what is genuinely new.
 
 ## Not modelled yet
 
@@ -31,4 +31,4 @@ This cut models the source, optics, KB nanofocus, sample stack, and detection. T
 - The cryostream, furnace, and xeol sample environments (`EH/cryo`, `EH/furnace`, `EH/xeol`) and their Eurotherm / nanodac regulation. A `Cryostat` Family is not yet in the catalog, so the sample environment is deferred to keep this cut vocabulary-neutral (ENV-1).
 - The `mapping` / `oda` / `taurus` / `webui` software layers (not beamline devices).
 
-Each is named on the [Open questions](questions.md) page rather than modelled speculatively. The source walk that grounds what is and is not present is the generated [beamline](beamline.md) view.
+Each is named on the [Open questions](questions.md) page rather than modelled speculatively. The source walk that grounds what is and is not present is the generated [beamline](source.md) view.

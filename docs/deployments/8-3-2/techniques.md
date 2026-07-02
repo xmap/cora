@@ -10,10 +10,10 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| Tomography | [`tomography`](../../catalog/methods.md) | absorption and propagation-phase micro-CT, the [rotary stage](equipment/sample.md) stepped against the [scintillator + camera](equipment/detector.md); reuses the catalog tomography Method (the 2-BM pilot) |
-| Continuous-rotation tomography | [`continuous_rotation_tomography`](../../catalog/methods.md) | fast fly-scan tomography, the [rotary stage](equipment/sample.md) in continuous rotation as the trigger master (`TRIG-1`); reuses the catalog continuous-rotation Method |
+| Tomography | [`tomography`](../../catalog/methods.md) | absorption and propagation-phase micro-CT, the [rotary stage](sample.md) stepped against the [scintillator + camera](detector.md); reuses the catalog tomography Method (the 2-BM pilot) |
+| Continuous-rotation tomography | [`continuous_rotation_tomography`](../../catalog/methods.md) | fast fly-scan tomography, the [rotary stage](sample.md) in continuous rotation as the trigger master (`TRIG-1`); reuses the catalog continuous-rotation Method |
 
-Tomography needs the [incident energy](beamline.md) set by the [monochromator](beamline.md), the [rotary stage and sample positioning](equipment/sample.md), and the [scintillator + objective + camera](equipment/detector.md), with the [detector stack](equipment/detector.md) setting the sample-to-detector propagation distance.
+Tomography needs the [incident energy](source.md) set by the [monochromator](source.md), the [rotary stage and sample positioning](sample.md), and the [scintillator + objective + camera](detector.md), with the [detector stack](detector.md) setting the sample-to-detector propagation distance.
 
 ## A new Site on familiar vocabulary
 

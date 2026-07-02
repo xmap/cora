@@ -48,6 +48,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "MX3 is an undulator beamline, but the insertion-device / front-end source PV is not in the device library; only the storage-ring current monitor (SR11BCM01:CURRENT_MONITOR) is exposed. The source identity and parameters are an open question (SRC-1)"
+  page_layout: stages
+  shape: "The first Australian Synchrotron beamline: macromolecular crystallography on a heterogeneous control plane (EPICS plus the MXCuBE Exporter, DECTRIS SIMPLON REST, and a robot TCP), the fleet's first non-EPICS area detector."
+  source_ref:
+    label: "AustralianSynchrotron/mx3-beamline-library"
+    url: "https://github.com/AustralianSynchrotron/mx3-beamline-library"
 
 enclosures:
   # The device library exposes no enclosure / hutch layout, only the front-end and

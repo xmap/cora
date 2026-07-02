@@ -51,6 +51,11 @@ beamline:
   parent: null
   source: bending-magnet
   source_confirm: "8.3.2 is fed by a Superbend (superconducting bending magnet); the field and critical energy are not in the public data record, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "CORA's first ALS beamline: hard X-ray micro-tomography from a Superbend source, its first BCS (LabVIEW) control house-style, reusing the tomography spine with control handles unbound."
+  source_ref:
+    label: "als-computing"
+    url: "https://github.com/als-computing"
 
 # Access-gated volume. 8.3.2 is modelled as a single experiment hutch pending
 # staff confirmation of the optics / experiment grouping (ENC-1). The ALS PSS

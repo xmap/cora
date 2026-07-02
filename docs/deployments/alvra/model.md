@@ -6,13 +6,13 @@ Alvra is a documentation-and-descriptor scaffold: it exists as the descriptor an
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/alvra/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/alvra/beamline.yaml) | the device walk, with the `eco`-derived EPICS PV prefixes; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/alvra/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/alvra/beamline.yaml) | the device walk, with the `eco`-derived EPICS PV prefixes; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/psi/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/psi/site.yaml) | the PSI facility surface; Alvra is its first beamline, with XFEL practices carried pending |
 | Extraction provenance | [paulscherrerinstitute/eco](https://github.com/paulscherrerinstitute/eco) | the `eco/alvra/config.py` `aliases` dict and its driver classes the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **none graduated.** Alvra reuses catalog Families, including the graduated `EmissionSpectrometer` (the von Hamos, a fourth sighting) and the graduated `Laser` (both the pump-probe and the alignment-reference lasers), and carries loose families (`Diagnostic`, `FluxMonitor` reused) |
 | Catalog Capability / Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; pump-probe, time-resolved spectroscopy, and serial-crystallography Methods are deferred, reusing the pending LCLS-MFX Methods (the catalog tomography Methods do not fit an XFEL) |
 | Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound; `eco` names hardware (the Jungfrau, the Huber stage, the von Hamos) but no part is procured |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers Alvra Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers Alvra Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md), including the pump-probe laser Clearance |
 
 ## The headline: the families fold again, at a second XFEL

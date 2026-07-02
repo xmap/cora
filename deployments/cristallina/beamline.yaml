@@ -85,6 +85,11 @@ beamline:
     feeds the Alvra, Bernina, and Cristallina stations one at a time (SRC-1 / TOPO-1). The
     undulator period (15 mm) and the K-to-energy constants are in slic; the gap tables and
     source size are not, and are carried confirm (SRC-1).
+  page_layout: stages
+  shape: "A hard X-ray XFEL station, the third on PSI's shared Aramis source, closing the switched-source triad (Alvra / Bernina / Cristallina fed one at a time)."
+  source_ref:
+    label: "gitea.psi.ch slic/cristallina"
+    url: "https://gitea.psi.ch/slic/cristallina"
 
 # Two access-gated zones. The SAROP31 Aramis optics hutch conditions the beam shared with the
 # other Aramis stations; the Cristallina experiment hutch holds the diffractometers and the

@@ -30,6 +30,8 @@ beamline:
   source_confirm: "two switchable insertion devices: CPMU14 undulator + 3T3PW wiggler, selected per operation mode (TDR design phase)"
   z_span_mm: [0, 52000]
   z_span_confirm: true
+  page_layout: stages
+  shape: "A MAX IV micro- and nano-tomography beamline (two endstations on a shared source) modelled from its design report; the tomography spine on a Tango / Sardana floor."
 
 # Two access-gated hutches. PSS permit signals are MAX IV facility signals, not
 # yet named in the TDR (PSS-1).

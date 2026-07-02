@@ -6,11 +6,11 @@ I-TOMCAT is a documentation-and-descriptor scaffold today: it exists as the desc
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/i-tomcat/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i-tomcat/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/i-tomcat/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i-tomcat/beamline.yaml) | the device walk; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/psi/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/psi/site.yaml) | the PSI facility surface |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | no new Family: every device reuses an existing catalog Family (`InsertionDevice`, `Monochromator`, `Mirror`, `Filter`, `Window`, `Slit`, `Shutter`, `RotaryStage`, `LinearStage`, `Camera`, `Scintillator`, `Objective`, `Housing`, `TimingController`) or an allowlisted loose family (`StorageRing`, `SlipRing`) |
 | Catalog Model | not bound | the vendor part numbers read from the public pages (Aerotech ABRX150, the pco.edge / pco.dimax cameras, the PSI GigaFRoST) are carried as "(target)" in the descriptor notes pending confirmation, not bound as catalog Models (DET-1, STAGE-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers I-TOMCAT Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers I-TOMCAT Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## The seam: what CORA would replace vs drive through
