@@ -87,16 +87,18 @@ _SLUG = re.compile(r"`([a-z][a-z0-9_]+)`")
 # check. Names here are the slugs AS CITED today; the authoring slice renames
 # citations to the convention-checked canonical names as it pays each IOU.
 _PENDING_ALLOWLIST: dict[str, str] = {
-    "mx_data_collection": "earned-not-yet-authored",  # -> canonical `crystallography`
-    "xas_spectroscopy": "earned-not-yet-authored",  # -> canonical `absorption_spectroscopy`
-    "scanning_fluorescence_microscopy": "earned-not-yet-authored",
-    "powder_diffraction": "earned-not-yet-authored",
-    "small_angle_scattering": "earned-not-yet-authored",
-    "wide_angle_scattering": "earned-not-yet-authored",
-    "angle_resolved_photoemission": "earned-not-yet-authored",
-    "resonant_scattering": "earned-not-yet-authored",
-    "magnetic_scattering": "earned-not-yet-authored",
-    "diffraction": "decompose",  # too coarse; splits at author time
+    # Authored in the catalog under a canonical name (Lock 1); the slug stays
+    # only because a beamline.yaml citation still uses the old spelling. These
+    # clear when the citation-rewrite sweep renames the reference (then the slug
+    # becomes unreferenced and is removed).
+    "mx_data_collection": "authored-as-macromolecular_crystallography; citation-rewrite pending",
+    "xas_spectroscopy": "authored-as-absorption_spectroscopy; citation-rewrite pending",
+    "scanning_fluorescence_microscopy": "authored-as-xray_fluorescence_mapping; rewrite pending",
+    "small_angle_scattering": "authored-as-small_wide_angle_scattering; citation-rewrite pending",
+    "wide_angle_scattering": "authored-as-small_wide_angle_scattering; citation-rewrite pending",
+    "resonant_scattering": "authored-as-resonant_inelastic_scattering; citation-rewrite pending",
+    # Genuinely not yet earned (n<3) or deferred; stay pending until authored.
+    "magnetic_scattering": "not-yet-earned",
     "total_scattering": "not-yet-earned",
     "energy_dispersive_diffraction": "not-yet-earned",
     "xmcd": "not-yet-earned",

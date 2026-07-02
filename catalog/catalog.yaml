@@ -168,6 +168,35 @@ capabilities:
     name: X-ray Photon Correlation Spectroscopy
     description: "Coherent-scattering intensity time series probing sample dynamics: a long, fast frame stream on a coherent area detector under gated exposure, correlated downstream into g2. A science technique above the bare acquisition primitive, parallel to tomography."
     executor_shapes: [Method]
+  # Measurement-modality capabilities (the operations-layer re-derivation): six
+  # technique capabilities keyed by what the operation fundamentally produces,
+  # each realized by one or more Methods. Distinct from the five operational
+  # capabilities above (acquisition / alignment / characterization / maintenance
+  # / energy_change), which are cross-cutting and run regardless of modality. The
+  # tomography capability above is the transmission-imaging modality's first
+  # member and stays as-is for now (its rename into transmission_imaging is a
+  # later, non-additive slice); the xpcs capability above is a scattering-modality
+  # technique that predates this block.
+  - code: cora.capability.diffraction
+    name: X-ray Diffraction
+    description: "Elastic scattering into Bragg reflections from an ordered sample: the operation produces reflection intensities or a powder pattern from which structure is solved or refined. The modality spans powder, single-crystal, macromolecular, serial, and surface geometries as distinct Methods."
+    executor_shapes: [Method]
+  - code: cora.capability.scattering
+    name: X-ray Scattering
+    description: "Diffuse or coherent scattering into a detector pattern from a non-crystalline or dynamic sample: the operation produces a small/wide-angle pattern, a speckle time series, or a coherent-imaging dataset. Distinct from diffraction (which produces Bragg reflections from an ordered lattice); the discriminator is the disordered / coherent target."
+    executor_shapes: [Method]
+  - code: cora.capability.absorption_spectroscopy
+    name: X-ray Absorption Spectroscopy
+    description: "Measurement of the absorption coefficient as the incident energy is scanned across an element edge, in transmission or via fluorescence yield: the operation produces an energy scan (XANES near-edge and EXAFS extended regions are windows of one scan). Realized step-scanned or as a continuous energy fly-scan."
+    executor_shapes: [Method]
+  - code: cora.capability.emission_spectroscopy
+    name: X-ray Emission Spectroscopy
+    description: "Energy analysis of the X-rays leaving the sample, whether fluoresced, emitted, or inelastically scattered: the operation produces a dispersed spectrum (fluorescence map, emission line, resonant-inelastic map, or momentum-resolved inelastic spectrum). Grouped by the measurement output (a wavelength / energy-dispersed spectrum resolved on a crystal analyzer or spectrometer arm), NOT by the excitation physics, which is why non-resonant inelastic scattering (IXS) lives here rather than under scattering: IXS produces a dispersed energy-loss spectrum, not a small/wide-angle detector pattern. Distinct from absorption (which scans the incident energy and reads a yield) and from scattering (which produces a detector pattern from a disordered / coherent target)."
+    executor_shapes: [Method]
+  - code: cora.capability.photoemission_spectroscopy
+    name: Photoemission Spectroscopy
+    description: "Energy (and, angle-resolved, momentum) analysis of electrons photoemitted from the sample: the operation produces a photoelectron spectrum or band map. Distinct from the photon spectroscopies (absorption / emission): the measured particle is the electron, resolved by an electron analyzer."
+    executor_shapes: [Method]
   # Pending in code: cora.capability.energy_scan, cora.capability.steering.
 
 methods:
@@ -235,6 +264,97 @@ methods:
     capability: cora.capability.xpcs
     purpose: "Coherent-scattering time-series acquisition: a high-rate frame stream on a coherent area detector, gated by the softGlue timing, correlated downstream into g2. The frame stream is DAQ-owned, distinct from a poll-to-Done capture (the event-stream acquisition axis)."
     needed_families: [Camera, Shutter, TimingController]
+  # Modality technique methods (operations-layer re-derivation). needed_families
+  # is the MINIMAL defining hardware for the acquisition act (the discriminating
+  # detector / analyzer plus the essential motion or optic), kept tight so the
+  # coverage derivation is not over-constrained by incidental sample-environment
+  # kit. Community acronym in the purpose per the naming lock.
+  # -- Diffraction --
+  - name: powder_diffraction
+    capability: cora.capability.diffraction
+    purpose: "Powder / polycrystalline diffraction: an azimuthally-integrated ring pattern on an area or strip detector as the sample is spun, giving a one-dimensional intensity-vs-angle pattern for phase ID, Rietveld refinement, or total-scattering / PDF."
+    needed_families: [Camera]
+  - name: single_crystal_diffraction
+    capability: cora.capability.diffraction
+    purpose: "Small-molecule / chemical single-crystal diffraction: indexed Bragg reflections collected over sample orientations on an area detector, for small-unit-cell structure solution. Distinct from macromolecular_crystallography by sample scale and refinement pipeline."
+    needed_families: [Camera, PseudoAxis]
+  - name: macromolecular_crystallography
+    capability: cora.capability.diffraction
+    purpose: "Macromolecular crystallography (MX) rotation data collection: a rotation series on a protein crystal mounted on a goniometer, area-detector frames per oscillation wedge, for macromolecular structure solution."
+    needed_families: [Goniometer, Camera]
+  - name: serial_crystallography
+    capability: cora.capability.diffraction
+    purpose: "Serial crystallography (SSX / SFX): still or minimal-rotation single shots across many crystals delivered by fixed-target chip or injector, each a diffraction pattern, merged downstream. Distinct from macromolecular_crystallography by the fixed-target / serial delivery act rather than a rotation series."
+    needed_families: [Goniometer, Camera, TimingController]
+  - name: surface_diffraction
+    capability: cora.capability.diffraction
+    purpose: "Surface / interface diffraction and reflectivity: specular and off-specular Bragg intensities measured with a multi-circle diffractometer at grazing incidence, for surface structure and layer profiles."
+    needed_families: [Camera, PseudoAxis]
+  # -- Scattering --
+  - name: small_wide_angle_scattering
+    capability: cora.capability.scattering
+    purpose: "Small- and wide-angle X-ray scattering (SAXS/WAXS): a single exposure capturing both the small-angle and wide-angle diffuse pattern on area detectors, for nanostructure and packing. SAXS and WAXS are one simultaneous act, not two Methods."
+    needed_families: [Camera]
+  - name: grazing_incidence_scattering
+    capability: cora.capability.scattering
+    purpose: "Grazing-incidence small/wide-angle scattering (GISAXS / GIWAXS): SAXS/WAXS geometry at a grazing angle on a reflecting surface or thin film, probing in-plane and out-of-plane nanostructure. Distinct from small_wide_angle_scattering by the grazing surface-sensitive geometry."
+    needed_families: [Camera, PseudoAxis]
+  - name: coherent_diffraction_imaging
+    capability: cora.capability.scattering
+    purpose: "Coherent diffraction imaging (CDI): oversampled coherent far-field diffraction patterns from an isolated or scanned sample, phase-retrieved into a real-space image. Distinct from ptychography by the single-view (non-scanning) act."
+    needed_families: [Camera, LinearStage]
+  - name: ptychography
+    capability: cora.capability.scattering
+    purpose: "Ptychography: coherent diffraction patterns recorded at overlapping scan positions of a confined probe, jointly phase-retrieved into a high-resolution image and probe. Distinct from coherent_diffraction_imaging by the overlapping-scan act."
+    needed_families: [Camera, LinearStage]
+  # -- Absorption spectroscopy --
+  - name: absorption_spectroscopy
+    capability: cora.capability.absorption_spectroscopy
+    purpose: "Step-scanned X-ray absorption spectroscopy (XAS / XANES / EXAFS): the monochromator steps the incident energy across an edge while transmission or fluorescence yield is recorded, giving an absorption energy scan. XANES and EXAFS are near-edge and extended windows of one scan."
+    needed_families: [Monochromator]
+  - name: continuous_absorption_spectroscopy
+    capability: cora.capability.absorption_spectroscopy
+    purpose: "Continuous-energy X-ray absorption spectroscopy (QEXAFS / trajectory-energy fly-scan): the monochromator sweeps energy continuously while yield is streamed, for fast / time-resolved XAS. Distinct from absorption_spectroscopy by the continuous fly-scan act rather than discrete steps."
+    needed_families: [Monochromator]
+  # -- Emission spectroscopy --
+  - name: xray_fluorescence_mapping
+    capability: cora.capability.emission_spectroscopy
+    purpose: "Scanning X-ray fluorescence mapping (XRF): a focused beam raster-scans the sample while an energy-dispersive detector records the fluorescence spectrum per pixel, giving element maps. Distinct from the crystal-analyzer emission Methods by the energy-dispersive point detector."
+    needed_families: [EnergyDispersiveSpectrometer, LinearStage]
+  - name: xray_emission_spectroscopy
+    capability: cora.capability.emission_spectroscopy
+    purpose: "X-ray emission spectroscopy (XES / HERFD): a crystal-analyzer spectrometer disperses the emitted fluorescence lines to high energy resolution at a fixed incident energy, resolving chemical state. Distinct from xray_fluorescence_mapping by the wavelength-dispersive crystal analyzer."
+    needed_families: [EmissionSpectrometer]
+  - name: resonant_inelastic_scattering
+    capability: cora.capability.emission_spectroscopy
+    purpose: "Resonant inelastic X-ray scattering (RIXS): the incident energy is tuned to an absorption edge and the energy-loss spectrum of scattered photons is dispersed on a long spectrometer arm, giving a two-dimensional incident-vs-emitted map of electronic excitations."
+    needed_families: [SpectrometerArm]
+  - name: inelastic_scattering
+    capability: cora.capability.emission_spectroscopy
+    purpose: "Momentum-resolved (non-resonant) inelastic X-ray scattering (IXS): a multi-analyzer spectrometer arm resolves small energy losses versus momentum transfer, probing phonons and collective excitations. Distinct from RIXS by the non-resonant momentum-scan act."
+    needed_families: [SpectrometerArm]
+  # -- Photoemission spectroscopy --
+  - name: xray_photoelectron_spectroscopy
+    capability: cora.capability.photoemission_spectroscopy
+    purpose: "X-ray photoelectron spectroscopy (XPS / soft-X-ray photoemission): an electron analyzer records the kinetic-energy distribution of photoemitted electrons at a fixed photon energy, giving core-level and valence spectra for chemical state."
+    needed_families: [ElectronAnalyzer, Manipulator]
+  - name: hard_xray_photoelectron_spectroscopy
+    capability: cora.capability.photoemission_spectroscopy
+    purpose: "Hard X-ray photoelectron spectroscopy (HAXPES): XPS at multi-keV photon energy for greater probing depth, requiring a hard-X-ray-optimized analyzer and optics. Distinct from xray_photoelectron_spectroscopy by the depth-sensitive hard-X-ray act, not merely a photon-energy parameter."
+    needed_families: [ElectronAnalyzer, Manipulator]
+  - name: angle_resolved_photoemission
+    capability: cora.capability.photoemission_spectroscopy
+    purpose: "Angle-resolved photoemission spectroscopy (ARPES): an electron analyzer resolves photoelectron intensity versus kinetic energy AND emission angle, mapping the electronic band structure. Distinct from XPS by the added angle-resolved dimension."
+    needed_families: [ElectronAnalyzer, Manipulator]
+  # -- Transmission imaging (modality members beyond tomography) --
+  - name: radiography
+    capability: cora.capability.tomography
+    purpose: "Radiography: a single (or time-series) transmission projection through the sample onto a scintillator-coupled camera, without the rotation series that tomography adds. The projection primitive beneath tomography."
+    needed_families: [Camera, Scintillator]
+  - name: transmission_xray_microscopy
+    capability: cora.capability.tomography
+    purpose: "Full-field transmission X-ray microscopy (TXM): a zone-plate-magnified transmission image (optionally Zernike phase contrast), per projection, optionally rotated for nano-tomography. Distinct from tomography by the X-ray objective (zone plate) forming a magnified image rather than a scintillator-relay projection."
+    needed_families: [Camera, ZonePlate]
   - name: beamline_energy_change
     capability: cora.capability.energy_change
     purpose: "Set the beam energy by driving the energy-tracking optic axes (the DMM Bragg arms + M2 offset, and the sample-slit vertical pair) to their per-energy positions as one coordinated move."
