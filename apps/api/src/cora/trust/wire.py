@@ -44,6 +44,7 @@ from cora.trust.features import (
     register_visit,
     release_control_of_surface,
     resume_visit,
+    revoke_grant,
     start_visit,
     take_control_of_surface,
     void_visit,
@@ -69,6 +70,7 @@ class TrustHandlers:
     define_zone: define_zone.IdempotentHandler
     define_conduit: define_conduit.IdempotentHandler
     define_policy: define_policy.IdempotentHandler
+    revoke_grant: revoke_grant.Handler
     define_surface: define_surface.IdempotentHandler
     register_visit: register_visit.IdempotentHandler
     record_visit_arrival: record_visit_arrival.Handler
@@ -128,6 +130,11 @@ def wire_trust(deps: Kernel) -> TrustHandlers:
                 lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
             ),
             command_name="DefinePolicy",
+            bc=_BC,
+        ),
+        revoke_grant=with_tracing(
+            revoke_grant.bind(deps),
+            command_name="RevokeGrant",
             bc=_BC,
         ),
         define_surface=with_tracing(

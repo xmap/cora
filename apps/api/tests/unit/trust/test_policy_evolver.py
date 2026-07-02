@@ -7,7 +7,7 @@ import pytest
 
 from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust.aggregates.policy import Policy, PolicyName, evolve, fold
-from cora.trust.aggregates.policy.events import PolicyDefined
+from cora.trust.aggregates.policy.events import PolicyDefined, PolicyGrantRevoked
 from cora.trust.features import define_policy
 from cora.trust.features.define_policy import DefinePolicy
 
@@ -103,6 +103,99 @@ def test_fold_is_pure_same_input_same_output() -> None:
         )
     ]
     assert fold(events) == fold(events)
+
+
+@pytest.mark.unit
+def test_evolve_policy_grant_revoked_removes_principal() -> None:
+    """PolicyGrantRevoked drops the target principal from the permitted set."""
+    policy_id = uuid4()
+    conduit = uuid4()
+    p1, p2 = uuid4(), uuid4()
+    defined = evolve(
+        None,
+        PolicyDefined(
+            policy_id=policy_id,
+            name="Beam-team",
+            conduit_id=conduit,
+            permitted_principal_ids=(p1, p2),
+            permitted_commands=("HoldRun",),
+            occurred_at=_NOW,
+        ),
+    )
+    revoked = evolve(
+        defined,
+        PolicyGrantRevoked(
+            policy_id=policy_id,
+            revoked_principal_id=p2,
+            revoked_by=uuid4(),
+            reason="agent decommissioned",
+            occurred_at=_NOW,
+        ),
+    )
+    assert revoked.permitted_principal_ids == frozenset({p1})
+    # Everything else is preserved.
+    assert revoked.id == policy_id
+    assert revoked.conduit_id == conduit
+    assert revoked.permitted_commands == frozenset({"HoldRun"})
+
+
+@pytest.mark.unit
+def test_evolve_policy_grant_revoked_of_absent_principal_is_noop() -> None:
+    """Folding a revoke for a principal not in the set leaves the set intact
+    (the decider prevents emitting such an event, but the evolver must fold
+    any stored event idempotently)."""
+    policy_id = uuid4()
+    p1 = uuid4()
+    defined = evolve(
+        None,
+        PolicyDefined(
+            policy_id=policy_id,
+            name="X",
+            conduit_id=uuid4(),
+            permitted_principal_ids=(p1,),
+            permitted_commands=("HoldRun",),
+            occurred_at=_NOW,
+        ),
+    )
+    revoked = evolve(
+        defined,
+        PolicyGrantRevoked(
+            policy_id=policy_id,
+            revoked_principal_id=uuid4(),  # not in set
+            revoked_by=uuid4(),
+            reason="noop",
+            occurred_at=_NOW,
+        ),
+    )
+    assert revoked.permitted_principal_ids == frozenset({p1})
+
+
+@pytest.mark.unit
+def test_fold_define_then_revoke_yields_shrunk_set() -> None:
+    policy_id = uuid4()
+    conduit = uuid4()
+    p1, p2 = uuid4(), uuid4()
+    state = fold(
+        [
+            PolicyDefined(
+                policy_id=policy_id,
+                name="Beam-team",
+                conduit_id=conduit,
+                permitted_principal_ids=(p1, p2),
+                permitted_commands=("HoldRun",),
+                occurred_at=_NOW,
+            ),
+            PolicyGrantRevoked(
+                policy_id=policy_id,
+                revoked_principal_id=p1,
+                revoked_by=uuid4(),
+                reason="role change",
+                occurred_at=_NOW,
+            ),
+        ]
+    )
+    assert state is not None
+    assert state.permitted_principal_ids == frozenset({p2})
 
 
 @pytest.mark.unit

@@ -45,8 +45,40 @@ class PolicyDefined:
     surface_id: UUID = NIL_SENTINEL_ID
 
 
+@dataclass(frozen=True)
+class PolicyGrantRevoked:
+    """One principal's grant was revoked from a Policy.
+
+    Removes `revoked_principal_id` from the Policy's
+    `permitted_principal_ids` allow-list. The Policy aggregate was built
+    for exactly this: the state docstring notes an empty permitted set is
+    a valid deny-all, "useful for temporarily revoking access without
+    deleting the policy". So revocation is additive set-removal, not an
+    FSM transition, and `evaluate` needs no change: the shrunk set
+    already denies the removed principal.
+
+    This is the 6th compensation slice and the 2nd set-membership variant
+    (after `revoke_tool_from_agent`): silently idempotent at the decider
+    (no event emitted when the principal is already absent). Unlike that
+    sibling it carries a REQUIRED `reason`, because authority revocation
+    is audit-critical and the reason feeds the downstream mid-run
+    compensation Decision. `revoked_by` is the handler-injected principal
+    denorm (capture-don't-recompute).
+
+    Symmetric by construction: `revoked_principal_id` is a bare UUID, so
+    revoking a human's grant and an autonomous agent's grant are the same
+    operation with no actor-kind branch.
+    """
+
+    policy_id: UUID
+    revoked_principal_id: UUID
+    revoked_by: UUID
+    reason: str
+    occurred_at: datetime
+
+
 # Discriminated union of every event the Policy aggregate emits.
-PolicyEvent = PolicyDefined
+PolicyEvent = PolicyDefined | PolicyGrantRevoked
 
 
 def event_type_name(event: PolicyEvent) -> str:
@@ -81,6 +113,20 @@ def to_payload(event: PolicyEvent) -> dict[str, Any]:
                 "permitted_commands": sorted(permitted_commands),
                 "occurred_at": occurred_at.isoformat(),
             }
+        case PolicyGrantRevoked(
+            policy_id=policy_id,
+            revoked_principal_id=revoked_principal_id,
+            revoked_by=revoked_by,
+            reason=reason,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "policy_id": str(policy_id),
+                "revoked_principal_id": str(revoked_principal_id),
+                "revoked_by": str(revoked_by),
+                "reason": reason,
+                "occurred_at": occurred_at.isoformat(),
+            }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
 
@@ -104,6 +150,17 @@ def from_stored(stored: StoredEvent) -> PolicyEvent:
                     surface_id=UUID(payload.get("surface_id", str(NIL_SENTINEL_ID))),
                 ),
             )
+        case "PolicyGrantRevoked":
+            return deserialize_or_raise(
+                "PolicyGrantRevoked",
+                lambda: PolicyGrantRevoked(
+                    policy_id=UUID(payload["policy_id"]),
+                    revoked_principal_id=UUID(payload["revoked_principal_id"]),
+                    revoked_by=UUID(payload["revoked_by"]),
+                    reason=payload["reason"],
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
         case _:
             msg = f"Unknown PolicyEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)
@@ -112,6 +169,7 @@ def from_stored(stored: StoredEvent) -> PolicyEvent:
 __all__ = [
     "PolicyDefined",
     "PolicyEvent",
+    "PolicyGrantRevoked",
     "event_type_name",
     "from_stored",
     "to_payload",

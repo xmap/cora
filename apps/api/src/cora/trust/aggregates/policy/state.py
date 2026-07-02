@@ -21,8 +21,10 @@ in O(1) for `evaluate`); plain lists in event payloads (JSON-friendly,
 sorted for determinism). The evolver bridges the two.
 
 Status lifecycle (`Drafted → Approved → Active → Superseded`, per
-BC-map) and modify/revoke slices defer to later sub-phases per the
-same additive-state pattern as Zone and Conduit.
+BC-map) defers to a later sub-phase. Grant revocation has landed
+(`revoke_grant` emits `PolicyGrantRevoked`, which removes one principal
+from `permitted_principal_ids`) per the additive-state pattern shared
+with Zone and Conduit.
 
 **No referential integrity at command time.** `conduit_id` and
 each entry in `permitted_principal_ids` are stored as bare UUIDs
@@ -43,6 +45,7 @@ from uuid import UUID
 from cora.infrastructure.ports import Allow, AuthzResult, Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.shared.bounded_text import bounded_name
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 POLICY_NAME_MAX_LENGTH = 200
 
@@ -63,6 +66,40 @@ class PolicyAlreadyExistsError(Exception):
     def __init__(self, policy_id: UUID) -> None:
         super().__init__(f"Policy {policy_id} already exists")
         self.policy_id = policy_id
+
+
+class PolicyNotFoundError(Exception):
+    """Attempted to operate on a policy whose stream has no events.
+
+    Raised by the `revoke_grant` decider when the target Policy does not
+    exist. Mirrors the `<Aggregate>NotFoundError` family (Visit,
+    Credential); mapped to HTTP 404. Revoking a grant from a Policy that
+    was never defined is a caller error, not a silent no-op: the
+    idempotent path covers only an already-absent principal on an
+    existing Policy.
+    """
+
+    def __init__(self, policy_id: UUID) -> None:
+        super().__init__(f"Policy {policy_id} not found")
+        self.policy_id = policy_id
+
+
+class InvalidPolicyGrantRevokeReasonError(ValueError):
+    """The `revoke_grant` reason is empty, whitespace-only, or too long.
+
+    Mirrors the `Invalid<Aggregate><Verb>ReasonError` family (for
+    example `InvalidCampaignAbandonReasonError`); mapped to HTTP 400.
+    The reason is checked defensively at the decider in addition to the
+    API-boundary Pydantic bound so a non-HTTP caller (MCP, a test, a
+    future in-process caller) cannot bypass the length contract.
+    """
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Grant-revoke reason must be 1-{REASON_MAX_LENGTH} chars after "
+            f"trimming (got: {value!r})"
+        )
+        self.value = value
 
 
 class InvalidPolicySurfaceError(ValueError):

@@ -10,9 +10,14 @@ semantics matter for `evaluate`'s O(1) membership checks.
 """
 
 from collections.abc import Sequence
+from dataclasses import replace
 from typing import assert_never
 
-from cora.trust.aggregates.policy.events import PolicyDefined, PolicyEvent
+from cora.trust.aggregates.policy.events import (
+    PolicyDefined,
+    PolicyEvent,
+    PolicyGrantRevoked,
+)
 from cora.trust.aggregates.policy.state import Policy, PolicyName
 
 
@@ -35,6 +40,14 @@ def evolve(state: Policy | None, event: PolicyEvent) -> Policy:
                 permitted_principal_ids=frozenset(permitted_principal_ids),
                 permitted_commands=frozenset(permitted_commands),
                 surface_id=surface_id,
+            )
+        case PolicyGrantRevoked(revoked_principal_id=revoked_principal_id):
+            if state is None:  # pragma: no cover  # genesis always precedes revoke
+                msg = "PolicyGrantRevoked applied before PolicyDefined"
+                raise ValueError(msg)
+            return replace(
+                state,
+                permitted_principal_ids=(state.permitted_principal_ids - {revoked_principal_id}),
             )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)

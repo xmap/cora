@@ -45,9 +45,11 @@ from cora.trust.aggregates.conduit import (
     InvalidConduitNameError,
 )
 from cora.trust.aggregates.policy import (
+    InvalidPolicyGrantRevokeReasonError,
     InvalidPolicyNameError,
     InvalidPolicySurfaceError,
     PolicyAlreadyExistsError,
+    PolicyNotFoundError,
 )
 from cora.trust.aggregates.surface import InvalidSurfaceNameError, SurfaceAlreadyExistsError
 from cora.trust.aggregates.visit import (
@@ -94,6 +96,7 @@ from cora.trust.features import (
     register_visit,
     release_control_of_surface,
     resume_visit,
+    revoke_grant,
     start_visit,
     take_control_of_surface,
     void_visit,
@@ -187,6 +190,7 @@ def register_trust_routes(app: FastAPI) -> None:
     app.include_router(define_zone.router)
     app.include_router(define_conduit.router)
     app.include_router(define_policy.router)
+    app.include_router(revoke_grant.router)
     app.include_router(define_surface.router)
     app.include_router(evaluate_policy.router)
     app.include_router(get_surface.router)
@@ -236,12 +240,14 @@ def register_trust_routes(app: FastAPI) -> None:
     # VisitActorNotCheckedInError reuses 404 (semantically a not-found condition).
     # VisitParentNotFoundError reuses 404 (missing parent stream).
     for not_found_cls in (
+        PolicyNotFoundError,
         VisitNotFoundError,
         VisitActorNotCheckedInError,
         VisitParentNotFoundError,
     ):
         app.add_exception_handler(not_found_cls, _handle_not_found)
     for invalid_400_cls in (
+        InvalidPolicyGrantRevokeReasonError,
         InvalidPolicySurfaceError,
         InvalidVisitPlannedPeriodError,
         InvalidVisitReasonError,

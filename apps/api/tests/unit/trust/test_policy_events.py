@@ -8,6 +8,7 @@ import pytest
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.trust.aggregates.policy.events import (
     PolicyDefined,
+    PolicyGrantRevoked,
     event_type_name,
     from_stored,
     to_payload,
@@ -159,6 +160,77 @@ def test_from_stored_raises_on_unknown_event_type() -> None:
         from_stored(stored)
 
 
+@pytest.mark.unit
+def test_event_type_name_returns_policy_grant_revoked() -> None:
+    event = PolicyGrantRevoked(
+        policy_id=uuid4(),
+        revoked_principal_id=uuid4(),
+        revoked_by=uuid4(),
+        reason="agent decommissioned",
+        occurred_at=_NOW,
+    )
+    assert event_type_name(event) == "PolicyGrantRevoked"
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_policy_grant_revoked_to_primitives() -> None:
+    policy_id = uuid4()
+    revoked_principal_id = uuid4()
+    revoked_by = uuid4()
+    event = PolicyGrantRevoked(
+        policy_id=policy_id,
+        revoked_principal_id=revoked_principal_id,
+        revoked_by=revoked_by,
+        reason="agent decommissioned",
+        occurred_at=_NOW,
+    )
+    assert to_payload(event) == {
+        "policy_id": str(policy_id),
+        "revoked_principal_id": str(revoked_principal_id),
+        "revoked_by": str(revoked_by),
+        "reason": "agent decommissioned",
+        "occurred_at": _NOW.isoformat(),
+    }
+
+
+@pytest.mark.unit
+def test_from_stored_rebuilds_policy_grant_revoked() -> None:
+    policy_id = uuid4()
+    revoked_principal_id = uuid4()
+    revoked_by = uuid4()
+    stored = _stored(
+        "PolicyGrantRevoked",
+        {
+            "policy_id": str(policy_id),
+            "revoked_principal_id": str(revoked_principal_id),
+            "revoked_by": str(revoked_by),
+            "reason": "agent decommissioned",
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert rebuilt == PolicyGrantRevoked(
+        policy_id=policy_id,
+        revoked_principal_id=revoked_principal_id,
+        revoked_by=revoked_by,
+        reason="agent decommissioned",
+        occurred_at=_NOW,
+    )
+
+
+@pytest.mark.unit
+def test_policy_grant_revoked_round_trips() -> None:
+    original = PolicyGrantRevoked(
+        policy_id=uuid4(),
+        revoked_principal_id=uuid4(),
+        revoked_by=uuid4(),
+        reason="role change",
+        occurred_at=_NOW,
+    )
+    stored = _stored("PolicyGrantRevoked", to_payload(original))
+    assert from_stored(stored) == original
+
+
 # `to_new_event` envelope construction lives at
 # `cora.infrastructure.event_envelope` and is covered by
 # `tests/unit/test_event_envelope.py`.
@@ -169,6 +241,7 @@ def test_from_stored_raises_on_unknown_event_type() -> None:
     "event_type",
     [
         "PolicyDefined",
+        "PolicyGrantRevoked",
     ],
 )
 def test_from_stored_raises_on_malformed_payload(event_type: str) -> None:

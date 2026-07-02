@@ -96,6 +96,9 @@ _DOMAIN_NOUN_ALLOWLIST: frozenset[str] = frozenset(
         "event",  # Agent: dismiss_event_in_reaction
         "reaction",  # Agent: dismiss_event_in_reaction (Reaction = subscriber class)
         "revision",  # Calibration: publish_revision (cross-BC federation slice)
+        "grant",  # Trust: revoke_grant (one principal's membership in a Policy's
+        # permitted set; a persisted value-type within Policy, sibling of
+        # `permission`. See project_authority_revocation_design.)
     }
 )
 
