@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from cora.equipment.aggregates.assembly.state import SlotCardinality
+from cora.equipment.aggregates.family import SEED_FAMILIES
 from cora.equipment.aggregates.family.affordance import Affordance
 from cora.equipment.aggregates.model.state import ManufacturerIdentifierType
 from cora.equipment.aggregates.role import SEED_ROLES
@@ -136,6 +137,30 @@ def test_roles_match_seed_roles() -> None:
         assert set(role.optional_affordances) == _vals(seed.optional_affordances)
         assert set(role.produces) == _vals(seed.produces)
         assert set(role.consumes) == _vals(seed.consumes)
+
+
+def test_families_match_seed_families() -> None:
+    """Catalog `families:` is the code's SEED_FAMILIES (name-keyed graduation).
+
+    Mirrors `test_roles_match_seed_roles`: the graduated family roster in
+    catalog.yaml and the code seed must not drift. Affordances and
+    presents_as are authored in later thematic batches; while the seed
+    ships them empty, this asserts the catalog carries none either, so the
+    two stay in lockstep as each batch populates both sides together.
+    """
+    cat = cd.load(_CATALOG)
+    authored = {f.name for f in cat.families}
+    seeded = {str(getattr(f.name, "value", f.name)) for f in SEED_FAMILIES}
+    assert authored == seeded
+    for fam in cat.families:
+        assert not fam.affordances, (
+            f"{fam.name} carries catalog affordances but the seed is still empty; "
+            "populate SEED_FAMILIES in the same batch (drift)"
+        )
+        assert not fam.presents_as, (
+            f"{fam.name} carries catalog presents_as but the seed is still empty; "
+            "populate SEED_FAMILIES in the same batch (drift)"
+        )
 
 
 def test_renders_all_catalog_pages() -> None:

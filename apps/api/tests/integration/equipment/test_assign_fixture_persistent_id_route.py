@@ -50,7 +50,7 @@ _STUB_DOI_PREFIX = "10.0000/cora-stub"
 _STUB_HANDLE_PREFIX = "20.500.0000/cora-stub"
 
 
-def _define_family(client: TestClient, *, name: str = "Camera") -> str:
+def _define_family(client: TestClient, *, name: str = "TestCameraFamily") -> str:
     response = client.post(
         "/families",
         json={"name": name, "affordances": []},

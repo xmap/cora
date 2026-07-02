@@ -12,7 +12,7 @@ from tests.contract._mcp_helpers import open_session, parse_sse_data
 def _define_family_via_tool(
     client: TestClient,
     headers: dict[str, str],
-    name: str = "Camera",
+    name: str = "TestCameraFamily",
 ) -> UUID:
     response = client.post(
         "/mcp",

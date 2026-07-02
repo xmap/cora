@@ -3,9 +3,10 @@
 The handler verifies the Role exists via `RoleLookup` at the edge
 (RoleNotFoundError on miss). This decider only enforces the
 state-side strict-not-idempotent guard; the affordance-superset
-gate from 3B's Family decider is intentionally NOT replicated here
-(see memo Watch item: Assembly affordances are constituent-derived
-at register_fixture time, not template time).
+gate from 3B's Family decider is not replicated here because an
+Assembly's affordances are constituent-derived and unknown at
+template time. The gate is enforced instead at register_fixture time,
+once concrete Assets fill the slots, via FixtureCannotPresentRoleError.
 """
 
 from datetime import datetime

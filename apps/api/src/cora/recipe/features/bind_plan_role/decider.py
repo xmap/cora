@@ -25,9 +25,10 @@ XOR invariant enforced by the VO. The satisfaction check splits:
     `PlanRoleFamilyNotResolvableError`. If no Family satisfies but
     the Asset carries `fixture_id` AND the handler-loaded
     `AssemblyLookupResult.presents_as` contains `role_kind`, the
-    Assembly satisfaction path accepts the binding (Assembly
-    affordance-superset is enforced at register_fixture time, not
-    at template time per 3C state docstring). If neither path
+    Assembly satisfaction path accepts the binding on presents_as
+    membership. The Assembly affordance-superset is enforced at
+    register_fixture time (where the constituent Family union is
+    known), via FixtureCannotPresentRoleError. If neither path
     succeeds, `PlanRoleAssetCannotPresentError` fires.
 
 Invariants:
@@ -179,11 +180,12 @@ def decide(
         # Assembly satisfaction OR-branch: when no Family satisfied
         # and the Asset is part of a materialized Assembly (via
         # fixture_id), accept the binding iff the loaded Assembly's
-        # presents_as contains role_kind. Affordance-superset is NOT
-        # checked here -- Assembly affordances derive from the
-        # constituent Family union at register_fixture time per
-        # the 3C state.py docstring, so the check belongs at the
-        # fixture-registration layer, not the bind-time layer.
+        # presents_as contains role_kind. Affordance-superset is not
+        # re-checked here: Assembly affordances derive from the
+        # constituent Family union, which register_fixture already
+        # verified (FixtureCannotPresentRoleError) when the Fixture was
+        # materialized, so a fixture_id here means the union has covered
+        # the presented Roles.
         if not satisfied_by and asset.fixture_id is not None:
             assembly_row = context.assembly_lookup_result
             if assembly_row is not None and matching_role.role_kind in assembly_row.presents_as:

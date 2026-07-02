@@ -6,6 +6,7 @@ state and event types.
 """
 
 from cora.equipment.aggregates.family._family_registry import family_stream_id
+from cora.equipment.aggregates.family._family_seed_registry import SEED_FAMILIES
 from cora.equipment.aggregates.family.affordance import (
     Affordance,
     InvalidAffordanceError,
@@ -56,6 +57,7 @@ from cora.equipment.aggregates.family.state import (
 __all__ = [
     "FAMILY_NAME_MAX_LENGTH",
     "FAMILY_VERSION_TAG_MAX_LENGTH",
+    "SEED_FAMILIES",
     "Affordance",
     "Family",
     "FamilyAlreadyExistsError",

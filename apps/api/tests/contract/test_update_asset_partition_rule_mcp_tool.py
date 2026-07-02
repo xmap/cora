@@ -12,6 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from tests.contract._mcp_helpers import open_session, parse_sse_data
 
 
@@ -38,6 +39,9 @@ def _call_tool(
 
 def _setup_pseudoaxis_asset(client: TestClient, headers: dict[str, str]) -> UUID:
     """Define the PseudoAxis Family + register Asset + assign Family. Returns asset_id."""
+    # PseudoAxis (the partition-rule feature keys on this Family name) is
+    # seeded at boot, so define_family collides on its deterministic id
+    # (isError). Reuse the seeded Family via its name-derived id.
     fam_body = _call_tool(
         client,
         headers,
@@ -45,7 +49,10 @@ def _setup_pseudoaxis_asset(client: TestClient, headers: dict[str, str]) -> UUID
         name="define_family",
         arguments={"name": "PseudoAxis", "affordances": []},
     )
-    fam_id = UUID(fam_body["result"]["structuredContent"]["family_id"])  # type: ignore[index]
+    if fam_body["result"]["isError"]:  # type: ignore[index]
+        fam_id = family_stream_id(FamilyName("PseudoAxis"))
+    else:
+        fam_id = UUID(fam_body["result"]["structuredContent"]["family_id"])  # type: ignore[index]
 
     asset_body = _call_tool(
         client,

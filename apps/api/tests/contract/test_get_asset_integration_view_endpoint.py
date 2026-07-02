@@ -69,7 +69,7 @@ def test_get_integration_view_carries_combined_family_affordances() -> None:
         # Define a Family with a known affordance and add it to the Asset.
         family_id = client.post(
             "/families",
-            json={"name": "RotaryStage", "affordances": ["Posable"]},
+            json={"name": "TestPosableStage", "affordances": ["Posable"]},
         ).json()["family_id"]
         client.post(
             f"/assets/{asset_id}/add-family",
@@ -83,6 +83,6 @@ def test_get_integration_view_carries_combined_family_affordances() -> None:
     assert len(body["families"]) == 1
     family = body["families"][0]
     assert family["family_id"] == family_id
-    assert family["name"] == "RotaryStage"
+    assert family["name"] == "TestPosableStage"
     assert family["affordances"] == ["Posable"]
     assert body["incomplete"] is False

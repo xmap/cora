@@ -41,6 +41,17 @@ short-circuit convention. When non-None and an entry maps to
 the sorted-first orphan id: a Fixture should snapshot only
 equipment already on the floor, so install-then-register is
 the contract.
+
+`affordances_by_family_id` maps each bound Asset's Family id to that
+Family's Affordance value strings (from `FamilyLookup`). Together with
+`required_affordances_by_role_id` (each Role in the Assembly's
+`presents_as`, from `RoleLookup`), the decider enforces the deferred
+affordance-superset guarantee: the union of the bound Families'
+affordances must cover every presented Role's `required_affordances`
+(`FixtureCannotPresentRoleError`). Both default empty; when empty the
+decider skips the check (the Assembly presents no Roles, or a
+pool-less test path did not load the projections). Affordances are
+typed `frozenset[str]` to match the cross-aggregate lookup ports.
 """
 
 from dataclasses import dataclass, field
@@ -52,7 +63,7 @@ from cora.equipment.aggregates.asset import AssetLifecycle
 
 @dataclass(frozen=True)
 class RegisterFixtureContext:
-    """Snapshot of Assembly + Asset existence + lifecycle + install checks."""
+    """Snapshot of Assembly + Asset existence + lifecycle + install + affordance checks."""
 
     assembly_state: Assembly | None
     sub_assembly_states: dict[UUID, Assembly | None] = field(
@@ -65,3 +76,9 @@ class RegisterFixtureContext:
         default_factory=dict[UUID, AssetLifecycle | None]
     )
     mount_id_by_asset_id: dict[UUID, UUID | None] | None = None
+    affordances_by_family_id: dict[UUID, frozenset[str]] = field(
+        default_factory=dict[UUID, frozenset[str]]
+    )
+    required_affordances_by_role_id: dict[UUID, frozenset[str]] = field(
+        default_factory=dict[UUID, frozenset[str]]
+    )

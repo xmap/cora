@@ -17,7 +17,7 @@ def _seed_family_with_detector(client: TestClient, app: FastAPI) -> tuple[str, s
     """Create Camera Family + Detector Role + advertise. Return (family_id, role_id)."""
     family_resp = client.post(
         "/families",
-        json={"name": "Camera", "affordances": ["Imageable"]},
+        json={"name": "TestCameraFamily", "affordances": ["Imageable"]},
     )
     family_id = str(family_resp.json()["family_id"])
     role_resp = client.post(
@@ -74,7 +74,7 @@ def test_post_remove_presents_as_returns_409_when_role_not_advertised() -> None:
     with TestClient(create_app()) as client:
         family_resp = client.post(
             "/families",
-            json={"name": "Camera", "affordances": ["Imageable"]},
+            json={"name": "TestCameraFamily", "affordances": ["Imageable"]},
         )
         family_id = str(family_resp.json()["family_id"])
         role_resp = client.post(

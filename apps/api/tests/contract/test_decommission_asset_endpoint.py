@@ -99,7 +99,7 @@ def test_post_decommission_with_x_principal_id_header_succeeds() -> None:
     assert response.status_code == 204
 
 
-def _define_family(client: TestClient, name: str = "Camera") -> str:
+def _define_family(client: TestClient, name: str = "TestCameraFamily") -> str:
     response = client.post("/families", json={"name": name, "affordances": []})
     assert response.status_code == 201
     family_id: str = response.json()["family_id"]

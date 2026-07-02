@@ -16,7 +16,7 @@ from tests.contract._mcp_helpers import open_session, parse_sse_data
 def _define_family_via_tool(
     client: TestClient,
     headers: dict[str, str],
-    name: str = "Camera",
+    name: str = "TestCameraFamily",
 ) -> UUID:
     response = client.post(
         "/mcp",
@@ -109,7 +109,7 @@ def test_mcp_define_assembly_tool_returns_iserror_for_unknown_role() -> None:
 def test_mcp_define_assembly_tool_succeeds_with_slot_and_wire() -> None:
     with TestClient(create_app()) as client:
         headers = open_session(client)
-        camera_family = _define_family_via_tool(client, headers, "Camera")
+        camera_family = _define_family_via_tool(client, headers, "TestCameraFamily")
         trigger_family = _define_family_via_tool(client, headers, "TriggerSource")
         response = client.post(
             "/mcp",

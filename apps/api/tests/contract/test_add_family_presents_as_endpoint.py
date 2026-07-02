@@ -34,7 +34,7 @@ from cora.api.main import create_app
 def _create_camera_family(client: TestClient) -> str:
     response = client.post(
         "/families",
-        json={"name": "Camera", "affordances": ["Imageable", "Binnable"]},
+        json={"name": "TestCameraFamily", "affordances": ["Imageable", "Binnable"]},
     )
     assert response.status_code == 201, response.text
     return str(response.json()["family_id"])

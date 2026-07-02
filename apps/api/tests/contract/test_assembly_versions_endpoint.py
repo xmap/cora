@@ -126,7 +126,7 @@ def test_post_assembly_version_returns_404_for_unknown_presents_as_role() -> Non
 def test_post_assembly_version_returns_400_when_wire_references_unknown_slot() -> None:
     with TestClient(create_app()) as client:
         assembly_id = _define_assembly(client)
-        camera_family = _define_family(client, "Camera")
+        camera_family = _define_family(client, "TestCameraFamily")
         response = client.post(
             f"/assemblies/{assembly_id}/versions",
             json={
@@ -184,8 +184,8 @@ def test_post_assembly_version_replaces_structural_fields() -> None:
     """Replace-on-version: new slot set wholesale replaces the old."""
     with TestClient(create_app()) as client:
         assembly_id = _define_assembly(client)
-        camera_family = _define_family(client, "Camera")
-        scintillator_family = _define_family(client, "Scintillator")
+        camera_family = _define_family(client, "TestCameraFamily")
+        scintillator_family = _define_family(client, "TestScintillatorFamily")
         response = client.post(
             f"/assemblies/{assembly_id}/versions",
             json={

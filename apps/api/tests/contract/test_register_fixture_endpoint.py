@@ -144,7 +144,7 @@ def test_post_fixtures_returns_400_for_cardinality_violation() -> None:
 def test_post_fixtures_returns_400_for_family_mismatch() -> None:
     """Asset's family_ids do not intersect slot's required_family_ids."""
     with TestClient(create_app()) as client:
-        camera_family = _define_family(client, name="Camera")
+        camera_family = _define_family(client, name="TestCameraFamily")
         rotary_family = _define_family(client, name="Rotary")
         # Asset belongs to rotary, slot wants camera.
         rotary_asset = _register_asset(client, rotary_family, name="Rotary-1")

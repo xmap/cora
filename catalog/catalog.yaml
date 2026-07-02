@@ -9,13 +9,18 @@
 #   - the closed affordance / executor-shape vocabularies are validated against
 #     code-mirrored frozensets in scripts/catalog_descriptor.py (enum-equality
 #     tested), never re-authored here.
-#   - families, capabilities, methods, models have no global code seed; this
-#     file is their consolidated source, guarded by the round-trip test.
+#   - families MIRROR the code's SEED_FAMILIES; a drift-guard test asserts
+#     equality (the graduated device-class roster), same as roles.
+#   - capabilities, methods, models have no global code seed; this file is
+#     their consolidated source, guarded by the round-trip test.
 #
-# Families ship with no affordances on purpose: an affordance is a Role concern
-# (required_affordances live on the roles below), and a Family declares which
-# Roles it presents_as. Per-device settings and vendor bindings live on the
-# beamline page, not here.
+# An affordance is a Family property: it declares what the device CAN DO at the
+# physics layer. A Role declares required_affordances (the contract), and a
+# Family may present a Role only when its own affordances cover that Role's
+# required set (the add_family_presents_as gate). Families ship with empty
+# affordances today; affordances and presents_as are authored in later thematic
+# batches (populate SEED_FAMILIES and this file together). Per-device settings
+# and vendor bindings live on the beamline page, not here.
 
 roles:
   - name: Detector
@@ -50,7 +55,9 @@ roles:
     consumes: [Setpoint]
 
 families:
-  # Defined families today. Affordances intentionally empty (a Role concern).
+  # The graduated device-class roster (mirrors SEED_FAMILIES). Affordances
+  # empty for now; populated per Family in later batches (a Family carries its
+  # own affordances, which a Role's required set is checked against).
   - name: RotaryStage
   - name: LinearStage
   - name: TiltStage

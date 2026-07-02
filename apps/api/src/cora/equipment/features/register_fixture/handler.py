@@ -190,12 +190,49 @@ def bind(deps: Kernel) -> Handler:
                 ]
             sub_assembly_states = dict(zip(sub_ids, (t.result() for t in sub_tasks), strict=True))
 
+        # Affordance-superset inputs for the presents_as check: the
+        # required_affordances of each Role the Assembly presents, and the
+        # affordances of every bound Asset's Family. Only loaded when the
+        # Assembly actually presents Roles; the decider skips the check
+        # when required_affordances_by_role_id is empty. Both lookups are
+        # cross-aggregate reads (same ports bind_plan_role uses); values
+        # are frozenset[str] per the port contract.
+        required_affordances_by_role_id: dict[UUID, frozenset[str]] = {}
+        affordances_by_family_id: dict[UUID, frozenset[str]] = {}
+        if assembly_state is not None and assembly_state.presents_as:
+            role_ids = sorted(assembly_state.presents_as, key=str)
+            bound_family_ids = sorted(
+                {
+                    fid
+                    for fids in family_ids_by_asset_id.values()
+                    if fids is not None
+                    for fid in fids
+                },
+                key=str,
+            )
+            role_results = await asyncio.gather(*(deps.role_lookup.lookup(rid) for rid in role_ids))
+            required_affordances_by_role_id = {
+                rid: result.required_affordances
+                for rid, result in zip(role_ids, role_results, strict=True)
+                if result is not None
+            }
+            family_results = await asyncio.gather(
+                *(deps.family_lookup.lookup(fid) for fid in bound_family_ids)
+            )
+            affordances_by_family_id = {
+                fid: result.affordances
+                for fid, result in zip(bound_family_ids, family_results, strict=True)
+                if result is not None
+            }
+
         context = RegisterFixtureContext(
             assembly_state=assembly_state,
             sub_assembly_states=sub_assembly_states,
             family_ids_by_asset_id=family_ids_by_asset_id,
             lifecycle_by_asset_id=lifecycle_by_asset_id,
             mount_id_by_asset_id=mount_id_by_asset_id,
+            affordances_by_family_id=affordances_by_family_id,
+            required_affordances_by_role_id=required_affordances_by_role_id,
         )
 
         # Decider raises FixtureAlreadyExistsError defensively when

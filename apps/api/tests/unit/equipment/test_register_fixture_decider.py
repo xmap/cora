@@ -16,6 +16,7 @@ from cora.equipment.aggregates.assembly import (
     FixtureAssetNotAttachableError,
     FixtureAssetNotFoundError,
     FixtureAssetNotInstalledError,
+    FixtureCannotPresentRoleError,
     FixtureMappingIncompleteError,
     FixtureParameterOverridesInvalidError,
     SlotCardinality,
@@ -930,6 +931,160 @@ def test_decide_binds_union_across_multiple_sub_assemblies() -> None:
     )
     assert len(events) == 1
     assert {b.slot_name for b in events[0].slot_asset_bindings} == {"turret", "rotary"}
+
+
+def _assembly_presenting(
+    assembly_id: UUID,
+    *,
+    role_id: RoleId,
+    slots: frozenset[TemplateSlot],
+) -> Assembly:
+    """An Assembly that presents exactly one Role (for the affordance-cover check)."""
+    return Assembly(
+        id=assembly_id,
+        name=AssemblyName("Detector Fixture"),
+        presents_as=frozenset({role_id}),
+        required_slots=slots,
+        status=AssemblyStatus.DEFINED,
+        content_hash="abc123",
+    )
+
+
+@pytest.mark.unit
+def test_decide_accepts_when_bound_family_affordances_cover_presented_role() -> None:
+    """The union of bound Families' affordances covers the presented
+    Role's required_affordances -> FixtureRegistered."""
+    assembly_id = uuid4()
+    family_id = uuid4()
+    role_id = RoleId(uuid4())
+    asset_id = uuid4()
+    slot = _slot("camera", required_family_ids=frozenset({family_id}))
+    context = RegisterFixtureContext(
+        assembly_state=_assembly_presenting(assembly_id, role_id=role_id, slots=frozenset({slot})),
+        family_ids_by_asset_id={asset_id: frozenset({family_id})},
+        affordances_by_family_id={family_id: frozenset({"Imageable", "Triggerable"})},
+        required_affordances_by_role_id={role_id: frozenset({"Imageable"})},
+    )
+    command = RegisterFixture(
+        assembly_id=assembly_id,
+        slot_asset_bindings=frozenset({SlotAssetBinding(slot_name="camera", asset_id=asset_id)}),
+    )
+    events = register_fixture.decide(
+        state=None,
+        command=command,
+        context=context,
+        now=_NOW,
+        new_id=uuid4(),
+        registered_by=_TEST_ACTOR_ID,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], FixtureRegistered)
+
+
+@pytest.mark.unit
+def test_decide_rejects_when_bound_family_affordances_miss_presented_role() -> None:
+    """The bound Family lacks an affordance the presented Role requires
+    -> FixtureCannotPresentRoleError carrying the role_id + missing set."""
+    assembly_id = uuid4()
+    family_id = uuid4()
+    role_id = RoleId(uuid4())
+    asset_id = uuid4()
+    slot = _slot("camera", required_family_ids=frozenset({family_id}))
+    context = RegisterFixtureContext(
+        assembly_state=_assembly_presenting(assembly_id, role_id=role_id, slots=frozenset({slot})),
+        family_ids_by_asset_id={asset_id: frozenset({family_id})},
+        affordances_by_family_id={family_id: frozenset({"Triggerable"})},
+        required_affordances_by_role_id={role_id: frozenset({"Imageable"})},
+    )
+    command = RegisterFixture(
+        assembly_id=assembly_id,
+        slot_asset_bindings=frozenset({SlotAssetBinding(slot_name="camera", asset_id=asset_id)}),
+    )
+    with pytest.raises(FixtureCannotPresentRoleError) as exc_info:
+        register_fixture.decide(
+            state=None,
+            command=command,
+            context=context,
+            now=_NOW,
+            new_id=uuid4(),
+            registered_by=_TEST_ACTOR_ID,
+        )
+    assert exc_info.value.role_id == role_id
+    assert exc_info.value.missing_affordances == frozenset({"Imageable"})
+
+
+@pytest.mark.unit
+def test_decide_covers_presented_role_by_union_across_two_families() -> None:
+    """No single bound Family covers the Role, but the union of two
+    Families' affordances does (Lock 17 ANY-family disjunction, at the
+    Fixture level)."""
+    assembly_id = uuid4()
+    fam_a, fam_b = uuid4(), uuid4()
+    role_id = RoleId(uuid4())
+    asset_a, asset_b = uuid4(), uuid4()
+    slot_a = _slot("scintillator", required_family_ids=frozenset({fam_a}))
+    slot_b = _slot("camera", required_family_ids=frozenset({fam_b}))
+    context = RegisterFixtureContext(
+        assembly_state=_assembly_presenting(
+            assembly_id, role_id=role_id, slots=frozenset({slot_a, slot_b})
+        ),
+        family_ids_by_asset_id={asset_a: frozenset({fam_a}), asset_b: frozenset({fam_b})},
+        affordances_by_family_id={
+            fam_a: frozenset({"Capturing"}),
+            fam_b: frozenset({"Imageable"}),
+        },
+        required_affordances_by_role_id={role_id: frozenset({"Capturing", "Imageable"})},
+    )
+    command = RegisterFixture(
+        assembly_id=assembly_id,
+        slot_asset_bindings=frozenset(
+            {
+                SlotAssetBinding(slot_name="scintillator", asset_id=asset_a),
+                SlotAssetBinding(slot_name="camera", asset_id=asset_b),
+            }
+        ),
+    )
+    events = register_fixture.decide(
+        state=None,
+        command=command,
+        context=context,
+        now=_NOW,
+        new_id=uuid4(),
+        registered_by=_TEST_ACTOR_ID,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], FixtureRegistered)
+
+
+@pytest.mark.unit
+def test_decide_skips_affordance_check_when_role_map_empty() -> None:
+    """Default-empty required_affordances_by_role_id (the Assembly presents
+    no Roles, or a pool-less test path) short-circuits the check even
+    when the Assembly's presents_as is non-empty."""
+    assembly_id = uuid4()
+    family_id = uuid4()
+    role_id = RoleId(uuid4())
+    asset_id = uuid4()
+    slot = _slot("camera", required_family_ids=frozenset({family_id}))
+    context = RegisterFixtureContext(
+        assembly_state=_assembly_presenting(assembly_id, role_id=role_id, slots=frozenset({slot})),
+        family_ids_by_asset_id={asset_id: frozenset({family_id})},
+        # affordances_by_family_id + required_affordances_by_role_id omitted
+    )
+    command = RegisterFixture(
+        assembly_id=assembly_id,
+        slot_asset_bindings=frozenset({SlotAssetBinding(slot_name="camera", asset_id=asset_id)}),
+    )
+    events = register_fixture.decide(
+        state=None,
+        command=command,
+        context=context,
+        now=_NOW,
+        new_id=uuid4(),
+        registered_by=_TEST_ACTOR_ID,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], FixtureRegistered)
 
 
 @pytest.mark.unit

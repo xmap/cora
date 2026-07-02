@@ -135,6 +135,7 @@ from cora.enclosure.adapters import PostgresEnclosureLookup
 from cora.equipment import (
     EquipmentHandlers,
     bootstrap_equipment,
+    bootstrap_families,
     register_equipment_projections,
     register_equipment_routes,
     register_equipment_tools,
@@ -754,6 +755,17 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # authored at APS 2-BM that binds role_kind=Detector resolves
             # to the same id when shipped to MAX IV or DLS.
             await bootstrap_equipment(deps)
+
+            # Equipment BC seed Families: the graduated device-class
+            # roster (SEED_FAMILIES) at deterministic uuid5 ids, so a
+            # Camera at APS 2-BM and a Camera at MAX IV share one id and
+            # Assembly.content_hash converges across facilities.
+            # Idempotent (ConcurrencyError-as-already-seeded). LOAD-BEARING
+            # ORDER: runs AFTER bootstrap_equipment because the later
+            # affordance-population batches that add presents_as depend on
+            # the seeded Role ids existing first. Seeds ship with empty
+            # affordances; affordances + presents_as are authored later.
+            await bootstrap_families(deps)
 
             # Data BC Distribution backfill per
             # project_data_distribution_design Slice 2 (L23 + L24). Two

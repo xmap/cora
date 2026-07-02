@@ -18,7 +18,7 @@ def _define_family_via_tool(client: TestClient, headers: dict[str, str]) -> UUID
             "method": "tools/call",
             "params": {
                 "name": "define_family",
-                "arguments": {"name": "Camera", "affordances": []},
+                "arguments": {"name": "TestCameraFamily", "affordances": []},
             },
         },
         headers=headers,

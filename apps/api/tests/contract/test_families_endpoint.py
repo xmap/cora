@@ -133,7 +133,7 @@ def test_post_families_round_trips_non_empty_affordances_sorted() -> None:
         post = client.post(
             "/families",
             json={
-                "name": "RotaryStage",
+                "name": "SortTest",
                 "affordances": ["Rotatable", "Homeable", "Bendable"],
             },
         )
@@ -191,7 +191,7 @@ def test_get_families_renders_empty_affordances_as_list_not_null() -> None:
     """An explicitly-empty affordance set serializes as `[]`, never
     `null`. Determinism for clients that filter on the field shape."""
     with TestClient(create_app()) as client:
-        post = client.post("/families", json={"name": "Scintillator", "affordances": []})
+        post = client.post("/families", json={"name": "EmptyAffTest", "affordances": []})
         family_id = post.json()["family_id"]
         get = client.get(f"/families/{family_id}")
 

@@ -13,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cora.api.main import create_app
+from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.equipment.errors import UnauthorizedError
 from cora.equipment.features.update_asset_partition_rule.route import (
     _get_handler as _get_update_asset_partition_rule_handler,  # pyright: ignore[reportPrivateUsage]
@@ -20,7 +21,15 @@ from cora.equipment.features.update_asset_partition_rule.route import (
 
 
 def _define_family(client: TestClient, *, name: str = "PseudoAxis") -> UUID:
+    """Resolve the Family id for `name`.
+
+    PseudoAxis (the partition-rule feature keys on this Family name) is
+    seeded at boot, so the define collides on its deterministic id (409).
+    In that case reuse the seeded Family via its name-derived id.
+    """
     response = client.post("/families", json={"name": name, "affordances": []})
+    if response.status_code == 409:
+        return family_stream_id(FamilyName(name))
     assert response.status_code == 201, response.text
     return UUID(response.json()["family_id"])
 

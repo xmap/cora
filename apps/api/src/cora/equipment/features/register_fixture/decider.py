@@ -61,6 +61,7 @@ from cora.equipment.aggregates.assembly import (
     FixtureAssetNotAttachableError,
     FixtureAssetNotFoundError,
     FixtureAssetNotInstalledError,
+    FixtureCannotPresentRoleError,
     FixtureMappingIncompleteError,
     FixtureParameterOverridesInvalidError,
     SlotCardinality,
@@ -169,6 +170,11 @@ def decide(
         the referenced slot's required_family_ids
         -> FixtureAssetFamilyMismatchError carrying the slot_name and
         asset_id.
+      - For every Role the Assembly presents, the union of the bound
+        Families' affordances must cover the Role's required_affordances
+        -> FixtureCannotPresentRoleError carrying the role_id and the
+        missing affordances. Skipped when the Assembly presents no Roles
+        or the lookups were not loaded (pool-less test path).
       - command.parameter_overrides must validate against the Assembly's
         parameter_overrides_schema (STRICT posture: non-empty overrides
         on a schema-less Assembly rejects)
@@ -312,6 +318,32 @@ def decide(
         asset_family_ids = context.family_ids_by_asset_id.get(binding.asset_id)
         if asset_family_ids is None or not (asset_family_ids & slot.required_family_ids):
             raise FixtureAssetFamilyMismatchError(binding.slot_name, binding.asset_id)
+
+    # Affordance-superset guarantee, deferred here from
+    # add_assembly_presents_as / bind_plan_role (an Assembly declares
+    # presents_as at template time without knowing which Assets fill its
+    # slots; a Fixture materializes them). The union of every bound
+    # Family's affordances must cover each presented Role's
+    # required_affordances. Skipped when the Assembly presents no Roles or
+    # the projections were not loaded (pool-less test path leaves the maps
+    # empty).
+    if context.required_affordances_by_role_id:
+        bound_family_ids: frozenset[UUID] = frozenset(
+            family_id
+            for family_ids in context.family_ids_by_asset_id.values()
+            if family_ids is not None
+            for family_id in family_ids
+        )
+        union_affordances: frozenset[str] = frozenset(
+            affordance
+            for family_id in bound_family_ids
+            for affordance in context.affordances_by_family_id.get(family_id, frozenset())
+        )
+        for role_id in sorted(assembly.presents_as, key=str):
+            required = context.required_affordances_by_role_id.get(role_id, frozenset())
+            missing = required - union_affordances
+            if missing:
+                raise FixtureCannotPresentRoleError(role_id, missing)
 
     validate_values_against_schema(
         command.parameter_overrides,

@@ -13,7 +13,7 @@ from tests.contract._mcp_helpers import open_session, parse_sse_data
 def _seed_family_with_detector(client: TestClient, app: FastAPI) -> tuple[str, str]:
     family_resp = client.post(
         "/families",
-        json={"name": "Camera", "affordances": ["Imageable"]},
+        json={"name": "TestCameraFamily", "affordances": ["Imageable"]},
     )
     family_id = str(family_resp.json()["family_id"])
     role_resp = client.post(
@@ -85,7 +85,7 @@ def test_mcp_remove_family_presents_as_tool_returns_iserror_on_not_advertised() 
     with TestClient(create_app()) as client:
         family_resp = client.post(
             "/families",
-            json={"name": "Camera", "affordances": ["Imageable"]},
+            json={"name": "TestCameraFamily", "affordances": ["Imageable"]},
         )
         family_id = str(family_resp.json()["family_id"])
         role_resp = client.post(

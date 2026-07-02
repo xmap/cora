@@ -384,6 +384,28 @@ class FixtureAssetFamilyMismatchError(Exception):
         self.asset_id = asset_id
 
 
+class FixtureCannotPresentRoleError(Exception):
+    """The bound Assets' Family affordances do not cover a Role the
+    Assembly presents.
+
+    Closes the affordance-superset guarantee that `add_assembly_presents_as`
+    and `bind_plan_role` defer to fixture time: an Assembly may declare
+    `presents_as` a Role at template time without yet knowing which Assets
+    fill its slots, but a concrete Fixture materializes those Assets, so
+    the union of their Families' `affordances` must cover the Role's
+    `required_affordances`. Mirrors `FamilyCannotPresentAsError` (the
+    single-Family analog at `add_family_presents_as`).
+    """
+
+    def __init__(self, role_id: UUID, missing_affordances: frozenset[str]) -> None:
+        super().__init__(
+            f"Fixture cannot present Role {role_id}: bound Assets' Family "
+            f"affordances are missing {sorted(missing_affordances)}"
+        )
+        self.role_id = role_id
+        self.missing_affordances = missing_affordances
+
+
 class FixtureParameterOverridesInvalidError(ValueError):
     """`register_fixture`'s parameter_overrides dict fails the
     Assembly's parameter_overrides_schema validation.
@@ -789,9 +811,11 @@ class Assembly:
     facilities publishing the same-named Roles converge on the same
     Assembly content_hash (RoleIds are deterministic uuid5-over-name).
 
-    Affordance-superset check (Family.affordances >=
-    Role.required_affordances) remains DEFERRED to register_fixture
-    time, where the constituent Family union is known."""
+    Affordance-superset check (union of bound Families' affordances >=
+    Role.required_affordances) is enforced at register_fixture time,
+    where the constituent Family union is known
+    (FixtureCannotPresentRoleError); the template-time presents_as here
+    carries no affordance guarantee on its own."""
 
     def __post_init__(self) -> None:
         slot_names = {slot.slot_name.value for slot in self.required_slots}

@@ -21,7 +21,7 @@ from cora.equipment.aggregates.assembly import ASSEMBLY_NAME_MAX_LENGTH
 from cora.equipment.aggregates.assembly._content_hash import compute_assembly_content_hash
 
 
-def _define_family(client: TestClient, name: str = "Camera") -> UUID:
+def _define_family(client: TestClient, name: str = "TestCameraFamily") -> UUID:
     """Define a Family and return its id. Used for slot required_family_ids."""
     response = client.post(
         "/families",
@@ -51,7 +51,7 @@ def test_post_assemblies_returns_201_with_assembly_id_for_minimal_body() -> None
 @pytest.mark.contract
 def test_post_assemblies_returns_201_with_slots_and_wires() -> None:
     with TestClient(create_app()) as client:
-        camera_family = _define_family(client, "Camera")
+        camera_family = _define_family(client, "TestCameraFamily")
         trigger_family = _define_family(client, "TriggerSource")
         response = client.post(
             "/assemblies",
@@ -137,7 +137,7 @@ def test_post_assemblies_returns_400_for_invalid_parameter_overrides_schema() ->
 @pytest.mark.contract
 def test_post_assemblies_returns_400_when_wire_references_unknown_slot() -> None:
     with TestClient(create_app()) as client:
-        camera_family = _define_family(client, "Camera")
+        camera_family = _define_family(client, "TestCameraFamily")
         response = client.post(
             "/assemblies",
             json={

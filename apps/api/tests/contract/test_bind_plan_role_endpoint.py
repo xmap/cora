@@ -31,9 +31,8 @@ def setup_plan_with_role(client: TestClient) -> dict[str, Any]:
     Asset (carrying the right Family + port) + Plan binding the
     Asset. Returns ids needed for the role-binding calls."""
     cap_id = create_capability_via_api(client)
-    family_id = client.post("/families", json={"name": "Camera", "affordances": []}).json()[
-        "family_id"
-    ]
+    family_resp = client.post("/families", json={"name": "TestCameraFamily", "affordances": []})
+    family_id = family_resp.json()["family_id"]
     method_id = client.post(
         "/methods",
         json={
@@ -214,11 +213,11 @@ def setup_plan_with_role_kind(
     )
 
     family_id = client.post(
-        "/families", json={"name": "Camera", "affordances": ["Imageable"]}
+        "/families", json={"name": "TestCameraFamily", "affordances": ["Imageable"]}
     ).json()["family_id"]
     app.state.deps.family_lookup.register(
         family_id=UUID(family_id),
-        name="Camera",
+        name="TestCameraFamily",
         affordances=["Imageable"],
         presents_as=[role_id] if family_advertises else [],
     )
