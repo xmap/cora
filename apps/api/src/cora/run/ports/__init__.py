@@ -5,6 +5,10 @@ because their sole consumer is the Run-watching composition-root runtime
 (the RunSupervisor). See [[project_observation_signal_port_design]].
 """
 
+from cora.run.ports.run_actor_involvement_lookup import (
+    InMemoryRunActorInvolvementLookup,
+    RunActorInvolvementLookup,
+)
 from cora.run.ports.run_channel_lookup import (
     InMemoryRunChannelLookup,
     RunChannelLatest,
@@ -14,7 +18,9 @@ from cora.run.ports.run_channel_lookup import (
 )
 
 __all__ = [
+    "InMemoryRunActorInvolvementLookup",
     "InMemoryRunChannelLookup",
+    "RunActorInvolvementLookup",
     "RunChannelLatest",
     "RunChannelLookup",
     "RunChannelSignal",
