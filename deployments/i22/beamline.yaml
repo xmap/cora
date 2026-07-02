@@ -42,6 +42,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "undulator source (dodal UndulatorInKeV on SR22I); period / gap range / energy range not in dodal (SRC-1)"
+  page_layout: stages
+  shape: "Small- and wide-angle X-ray scattering (SAXS / WAXS): two area detectors run simultaneously at long and short camera length, with quantitative incident / transmitted flux; the first scattering shape after the tomography pilots."
+  source_ref:
+    label: "DiamondLightSource/dodal"
+    url: "https://github.com/DiamondLightSource/dodal"
 
 # Two access-gated hutches. dodal PV prefixes encode functional zones (OP optics,
 # MO motion, EA end-station, DI diagnostics) but NOT the hutch each device sits in

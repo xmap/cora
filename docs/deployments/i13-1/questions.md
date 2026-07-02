@@ -2,7 +2,7 @@
 
 *What CORA needs the I13-1 team to confirm before the model can be trusted.*
 
-I13-1 was reverse-engineered from the beamline's own bluesky device layer ([DiamondLightSource/dodal](https://github.com/DiamondLightSource/dodal), `src/dodal/beamlines/i13_1.py`), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, read from dodal rather than confirmed by staff. This is a **deliberately partial** first cut: dodal currently exposes only the coherence-branch endstation, so the shared I13 source and optics are deferred, not invented. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+I13-1 was reverse-engineered from the beamline's own bluesky device layer ([DiamondLightSource/dodal](https://github.com/DiamondLightSource/dodal), `src/dodal/beamlines/i13_1.py`), so the control handles in the [Inventory](index.md) are the beamline's real PVs, read from dodal rather than confirmed by staff. This is a **deliberately partial** first cut: dodal currently exposes only the coherence-branch endstation, so the shared I13 source and optics are deferred, not invented. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 

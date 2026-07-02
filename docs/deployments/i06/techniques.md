@@ -55,4 +55,4 @@ The intent above is the function view. The concrete recipes that turn it into ru
 
 - **The i06-1 detectors and flux monitor.** The diffraction scattering detector and the incident-flux / drain-current monitor are absent from dodal and are bound later from outside it, with no detector Family invented in the meantime (DET-1).
 
-For the source and optics that feed these techniques, see the generated source-walk on [the beamline page](beamline.md). For what the i06 team must confirm before the model can be trusted, see [Open questions](questions.md). The CORA-owned scope decisions (the polarization Calibration, the deferred Methods, the diffractometer Assembly) are recorded on the [Model](model.md#deliberately-not-here-yet) page.
+For the source and optics that feed these techniques, see the generated source-walk on [the beamline page](source.md). For what the i06 team must confirm before the model can be trusted, see [Open questions](questions.md). The CORA-owned scope decisions (the polarization Calibration, the deferred Methods, the diffractometer Assembly) are recorded on the [Model](model.md#deliberately-not-here-yet) page.

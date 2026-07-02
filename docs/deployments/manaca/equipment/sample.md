@@ -19,4 +19,4 @@ MANACA carries an automated 48-pin sample changer for high-throughput collection
 
 ## Not modelled yet
 
-The exact goniometer axes and geometry, the cryostream sensor and setpoint handles, the beamstop axes, and the serial / room-temperature sample-delivery detail are not published and are carried pending (`GONIO-1`, `TEMP-1`, `SAMPLE-1`). They land when LNLS staff confirm the endstation configuration. The [i03 sample](../../i03/equipment/sample.md) page shows the shape a fully-modelled MX endstation carries.
+The exact goniometer axes and geometry, the cryostream sensor and setpoint handles, the beamstop axes, and the serial / room-temperature sample-delivery detail are not published and are carried pending (`GONIO-1`, `TEMP-1`, `SAMPLE-1`). They land when LNLS staff confirm the endstation configuration. The [i03 sample](../../i03/sample.md) page shows the shape a fully-modelled MX endstation carries.

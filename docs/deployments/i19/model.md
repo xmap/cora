@@ -6,12 +6,12 @@ i19 is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/i19/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i19/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/i19/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i19/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface; `I19` added to its beamline list, with a single-crystal diffraction Practice |
 | Extraction provenance | [DiamondLightSource/dodal](https://github.com/DiamondLightSource/dodal) | the `src/dodal/beamlines/i19*.py` factories and `src/dodal/devices/` classes the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the diffraction Method is pending, shared with 4-ID / 8-ID / CSX (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers i19 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers i19 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md); the dual-hutch access-control seam is the design-relevant part |
 
 ## What makes i19 new (and what does not)

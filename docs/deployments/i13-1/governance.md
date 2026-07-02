@@ -10,7 +10,7 @@ CORA brings its own Access model: a small set of facility roles (operator, beaml
 
 ## The trust boundary
 
-CORA's Trust BC (Zone, Conduit, Policy) gates every command by who is acting and what the beamline state allows: who may drive the [sample stage](equipment/sample.md) through a ptychography raster, arm the [Merlin detector](equipment/detector.md) to record the far-field coherent-diffraction pattern, view the sample on the side camera, override a caution, or commit an alignment. This authority is CORA's own, expressed per Actor, not inherited from the beamline's controls layer. The Diamond proposal and cycle are a fact CORA's Campaign uses for custody.
+CORA's Trust BC (Zone, Conduit, Policy) gates every command by who is acting and what the beamline state allows: who may drive the [sample stage](sample.md) through a ptychography raster, arm the [Merlin detector](sample.md) to record the far-field coherent-diffraction pattern, view the sample on the side camera, override a caution, or commit an alignment. This authority is CORA's own, expressed per Actor, not inherited from the beamline's controls layer. The Diamond proposal and cycle are a fact CORA's Campaign uses for custody.
 
 Because I13-1 is a reverse-engineered scaffold rather than a pilot, the concrete trust shape (the Zone grouping the coherence-branch resources, the Conduit binding the surfaces that may issue commands, and the Policies that say who may do what) is named here, not built. It would land, following the [2-BM governance](../2-bm/governance.md) shape, if and when the deployment approaches real scope.
 

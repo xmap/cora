@@ -49,6 +49,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "source type not pinned in dodal (the Synchrotron device is facility-wide, observe-only); carried confirm (SRC-1)"
+  page_layout: stages
+  shape: "High-resolution powder diffraction with continuous-setpoint thermal sample environments; the rule-of-three deployment that graduated the TemperatureController Family and its Regulator Role."
+  source_ref:
+    label: "DiamondLightSource/dodal"
+    url: "https://github.com/DiamondLightSource/dodal"
 
 enclosures:
   - name: i11-optics

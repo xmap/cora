@@ -52,6 +52,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "undulator source (dodal UndulatorInKeV on SR03I, harmonic ~3); period / gap range / energy range not in dodal (SRC-1)"
+  page_layout: stages
+  shape: "Rotation macromolecular crystallography: it sweeps a crystal through a continuous omega rotation on a six-axis goniometer with an automated sample-changing robot; the deployment that graduated the Goniometer Family."
+  source_ref:
+    label: "DiamondLightSource/dodal"
+    url: "https://github.com/DiamondLightSource/dodal"
 
 # Two access-gated hutches (standard Diamond MX optics + experiment layout). dodal
 # PV prefixes encode functional zones (OP, MO, EA, DI), not the hutch or its PSS

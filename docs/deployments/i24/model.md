@@ -6,12 +6,12 @@ i24 is a descriptor-and-docs scaffold today, reverse-engineered from Diamond's d
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/i24/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i24/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/i24/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i24/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface; `I24` added to its beamline list, with a serial-crystallography Practice |
 | Extraction provenance | [DiamondLightSource/dodal](https://github.com/DiamondLightSource/dodal) | `src/dodal/beamlines/i24.py` and its device classes, the source the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; i24 coins no new Family (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the serial-crystallography Method is not yet coined (SSX-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers i24 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers i24 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes i24 new

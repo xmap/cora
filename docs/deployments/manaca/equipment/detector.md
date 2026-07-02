@@ -15,4 +15,4 @@ These bind the MX detection Families the fleet already carries (i03 / FMX / AMX 
 
 ## Named, not bound
 
-The area detector is the decision-critical device whose model MANACA's public sources do not give: the brief found the detector unpublished, so a `Camera` Asset is carried pending rather than guessed (`DET-1`). It is named here so the detection chain is real in the model, with its sensor, frame rate, and model left to LNLS staff to confirm. The [i03 detector](../../i03/equipment/detector.md) page shows the shape a fully-modelled MX detector carries.
+The area detector is the decision-critical device whose model MANACA's public sources do not give: the brief found the detector unpublished, so a `Camera` Asset is carried pending rather than guessed (`DET-1`). It is named here so the detection chain is real in the model, with its sensor, frame rate, and model left to LNLS staff to confirm. The [i03 detector](../../i03/detector.md) page shows the shape a fully-modelled MX detector carries.

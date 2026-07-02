@@ -6,12 +6,12 @@ I15-1 is a documentation-and-descriptor scaffold: it exists as the descriptor an
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/i15-1/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i15-1/beamline.yaml) | the device walk, with the dodal-derived EPICS PV handles; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/i15-1/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i15-1/beamline.yaml) | the device walk, with the dodal-derived EPICS PV handles; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface; I15-1 added to its beamlines, with a total-scattering practice carried pending |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **no new family coined by I15-1.** It reuses existing Families and the loose `StorageRing` (from I22); its incident-flux monitor reuses `FluxMonitor`, since graduated to a catalog Family (presenting the Sensor Role) on the i22/i03/i15-1 rule-of-three |
 | Catalog Capability / Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the total-scattering Capability is deferred until the technique enters scope (TECH-1) |
 | Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape |
 | Trust / governance | not yet instantiated | see [Governance](governance.md), including the interlock-as-permit and the robot Clearance |
 
 ## Why I15-1 adds no catalog kinds

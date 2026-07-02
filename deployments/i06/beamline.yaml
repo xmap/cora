@@ -71,6 +71,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "i06 is a soft X-ray APPLE-II undulator beamline; dodal binds the two APPLE-II insertion devices (modelled below) but not their period; the undulator detail is SRC-1"
+  page_layout: stages
+  shape: "Soft X-ray magnetic spectroscopy on the fleet's first APPLE-II source, driving polarization as a first-class experiment axis (XMCD / XMLD) plus a PEEM endstation."
+  source_ref:
+    label: "DiamondLightSource/dodal"
+    url: "https://github.com/DiamondLightSource/dodal"
 
 # PV zones: BL06I (the shared optics spine: PGM, the APPLE-II controllers, the i06
 # PEEM sample stage), SR06I (the APPLE-II servo crates SERVC-01 / SERVC-21), BL06J

@@ -6,12 +6,12 @@ I13-1 is a descriptor-and-docs scaffold today, reverse-engineered from the beaml
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/i13-1/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i13-1/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/i13-1/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i13-1/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface; `I13-1` added to its beamline list, with a ptychography Practice |
 | Extraction provenance | [DiamondLightSource/dodal](https://github.com/DiamondLightSource/dodal) | the `src/dodal/beamlines/i13_1.py` factory the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the ptychography Method is pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers I13-1 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers I13-1 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes I13-1 new

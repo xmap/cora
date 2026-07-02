@@ -335,15 +335,16 @@ def test_live_pilot_has_no_source_ref() -> None:
 def test_walk_layout_keeps_beamline_and_inventory_pages() -> None:
     # A default model-tier beamline (page_layout omitted -> "walk") is unchanged:
     # it still emits beamline.md, inventory.md, and the equipment/ stage pages.
-    # i22 is still walk (NSLS-II + both pilots migrated to stages; Diamond has not).
-    pages = _render_all_pages("i22")
-    assert "deployments/i22/beamline.md" in pages
-    assert "deployments/i22/inventory.md" in pages
-    assert "deployments/i22/equipment/sample.md" in pages
-    assert "deployments/i22/equipment/detector.md" in pages
-    assert "deployments/i22/equipment/controls.md" in pages
+    # id28 is still walk (NSLS-II + PETRA-III + Diamond + pilots migrated to
+    # stages; ESRF has not).
+    pages = _render_all_pages("id28")
+    assert "deployments/id28/beamline.md" in pages
+    assert "deployments/id28/inventory.md" in pages
+    assert "deployments/id28/equipment/sample.md" in pages
+    assert "deployments/id28/equipment/detector.md" in pages
+    assert "deployments/id28/equipment/controls.md" in pages
     # the walk layout keeps the "Walk the beam" spine and its Inventory pointer
-    index = pages["deployments/i22/index.md"]
+    index = pages["deployments/id28/index.md"]
     assert "## Walk the beam" in index
     assert "[Inventory](inventory.md)" in index
 

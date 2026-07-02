@@ -6,12 +6,12 @@ i06 is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/i06/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i06/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/i06/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i06/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface; `I06` added to its beamline list, with XMCD / XMLD / PEEM / resonant-diffraction Practices |
 | Extraction provenance | [DiamondLightSource/dodal](https://github.com/DiamondLightSource/dodal) | the `src/dodal/beamlines/i06*.py` factories and `src/dodal/devices/` classes the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the XMCD / XMLD / PEEM / resonant-scattering Methods are pending (TECH-1, PEEM-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers i06 Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers i06 Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes i06 new
