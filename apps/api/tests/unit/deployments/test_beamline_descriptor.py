@@ -240,21 +240,41 @@ def test_stages_layout_dissolves_inventory_into_flat_stage_pages() -> None:
     assert "equipment/" not in index
 
 
+def test_hybrid_layout_preserves_narrative_and_all_devices() -> None:
+    # hxn is the hybrid prototype: stages layout with the bespoke defining-shape
+    # lead preserved through generation via the descriptor narrative slot. The
+    # generated index must carry that narrative verbatim, and every modelled
+    # device must still appear across the flat stage pages (no content loss).
+    descriptor = bd.load(_DEPLOYMENTS / "hxn" / "beamline.yaml")
+    assert descriptor.beamline.narrative is not None
+    pages = _render_all_pages("hxn")
+    index = pages["deployments/hxn/index.md"]
+    assert "## The defining shape: a scanning probe" in index
+    assert "the sample is\n      rastered through" in index or "rastered through" in index
+    # every modelled device (no new: marker excluded) appears somewhere in the set
+    joined = "\n".join(pages.values())
+    for _name, group in descriptor.groups:
+        for device in group.devices:
+            if device.name and not device.new:
+                assert f"`{device.name}`" in joined, f"{device.name} lost from generated pages"
+
+
 def test_walk_layout_keeps_beamline_and_inventory_pages() -> None:
     # A default model-tier beamline (page_layout omitted -> "walk") is unchanged:
     # it still emits beamline.md, inventory.md, and the equipment/ stage pages.
     pages = _render_all_pages("fxi")
     assert "deployments/fxi/beamline.md" in pages
     # fxi is a pilot (deployment_tier: pilot), so only the Source walk generates;
-    # assert a genuine model-tier walk beamline keeps the full set.
-    pages = _render_all_pages("hxn")
-    assert "deployments/hxn/beamline.md" in pages
-    assert "deployments/hxn/inventory.md" in pages
-    assert "deployments/hxn/equipment/sample.md" in pages
-    assert "deployments/hxn/equipment/detector.md" in pages
-    assert "deployments/hxn/equipment/controls.md" in pages
+    # assert a genuine model-tier walk beamline keeps the full set (chx is still
+    # walk; hxn migrated to the stages layout as the hybrid prototype).
+    pages = _render_all_pages("chx")
+    assert "deployments/chx/beamline.md" in pages
+    assert "deployments/chx/inventory.md" in pages
+    assert "deployments/chx/equipment/sample.md" in pages
+    assert "deployments/chx/equipment/detector.md" in pages
+    assert "deployments/chx/equipment/controls.md" in pages
     # the walk layout keeps the "Walk the beam" spine and its Inventory pointer
-    index = pages["deployments/hxn/index.md"]
+    index = pages["deployments/chx/index.md"]
     assert "## Walk the beam" in index
     assert "[Inventory](inventory.md)" in index
 

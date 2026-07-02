@@ -190,6 +190,21 @@ class Enclosure(BaseModel):
     permit_signal: str | dict[str, Any] | None = None
 
 
+class Narrative(BaseModel):
+    """A preserved prose slot the generator cannot regenerate from structure.
+
+    The defining-shape lead that opens a beamline's index: a bespoke paragraph
+    on what makes this beamline distinct (its measurement shape, the new thing
+    it brings to the fleet). Structured content around it is generated; this
+    body is authored and rendered verbatim so it survives generation.
+    """
+
+    model_config = _MODEL_CONFIG
+
+    title: str
+    body: str
+
+
 class Beamline(BaseModel):
     model_config = _MODEL_CONFIG
 
@@ -221,6 +236,10 @@ class Beamline(BaseModel):
     # inventory + equipment/ pages under a "Walk the beam" group) or "stages"
     # (Inventory dissolved into flat source/sample/detector/controls siblings).
     page_layout: str = "walk"
+    # The defining-shape prose lead for the index, preserved verbatim through
+    # generation (the one bespoke section no descriptor field can reconstruct).
+    # Optional: absent for beamlines whose index carries only structured content.
+    narrative: Narrative | None = None
 
     @field_validator("z_span_mm")
     @classmethod

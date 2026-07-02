@@ -398,17 +398,14 @@ nav:
         - Model: deployments/fxi/model.md
       - HXN:
         - deployments/hxn/index.md
-        - Open questions: deployments/hxn/questions.md
-        - The beamline:
-          - deployments/hxn/equipment/index.md
-          - Source: deployments/hxn/beamline.md
-          - Sample: deployments/hxn/equipment/sample.md
-          - Detector: deployments/hxn/equipment/detector.md
-          - Controls: deployments/hxn/equipment/controls.md
-          - Inventory: deployments/hxn/inventory.md
+        - Source: deployments/hxn/source.md
+        - Sample: deployments/hxn/sample.md
+        - Detector: deployments/hxn/detector.md
+        - Controls: deployments/hxn/controls.md
         - Techniques: deployments/hxn/techniques.md
         - Governance: deployments/hxn/governance.md
         - Model: deployments/hxn/model.md
+        - Open questions: deployments/hxn/questions.md
       - BMM:
         - deployments/bmm/index.md
         - Open questions: deployments/bmm/questions.md

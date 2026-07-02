@@ -487,6 +487,12 @@ def _render_index(
         )
     )
 
+    # The defining-shape lead: the one bespoke section, authored in the
+    # descriptor's narrative slot and rendered verbatim (see Narrative).
+    if beamline.narrative is not None:
+        blocks.append(f"## {beamline.narrative.title}")
+        blocks.append(beamline.narrative.body.strip())
+
     # What CORA models + scope, woven from the group intros and enclosures.
     stages = {g.stage for _n, g in descriptor.groups}
     scope_bits: list[str] = []

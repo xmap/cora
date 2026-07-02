@@ -7,10 +7,10 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at HXN |
 | --- | --- |
-| Asset (Equipment) | [Inventory](inventory.md#the-asset-tree) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](inventory.md#the-asset-tree) (EnergyAxis) |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (EnergyAxis) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
-| Enclosure (Enclosure) | [The beamline](equipment/index.md) (3-ID-A optics, 3-ID-C endstation) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) (3-ID-A optics, 3-ID-C endstation) |
 | Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
 | Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
