@@ -10,7 +10,7 @@ SST's techniques are new-domain science (soft-X-ray scattering, absorption, phot
 | NEXAFS absorption | soft, energy sweep | drain current / partial electron yield / microcalorimeter fluorescence over an energy scan; the BMM energy-scan question (ENERGY-1, TECH-1) |
 | HAXPES photoemission | tender, fixed energy | photoelectron spectra on the hemispherical analyzer; the ESM photoemission family, new Capability pending (TECH-1) |
 
-All three need the per-endstation [sample manipulator](equipment/sample.md) and [detector](equipment/detector.md); the fast shutter gates the exposure, and the endstation in control selects the branch.
+All three need the per-endstation [sample manipulator](sample.md) and [detector](detector.md); the fast shutter gates the exposure, and the endstation in control selects the branch.
 
 ## Why the Capabilities stay deferred
 

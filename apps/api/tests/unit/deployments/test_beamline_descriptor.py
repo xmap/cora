@@ -240,23 +240,30 @@ def test_stages_layout_dissolves_inventory_into_flat_stage_pages() -> None:
     assert "equipment/" not in index
 
 
-def test_hybrid_layout_preserves_narrative_and_all_devices() -> None:
-    # hxn is the hybrid prototype: stages layout with the bespoke defining-shape
-    # lead preserved through generation via the descriptor narrative slot. The
-    # generated index must carry that narrative verbatim, and every modelled
-    # device must still appear across the flat stage pages (no content loss).
-    descriptor = bd.load(_DEPLOYMENTS / "hxn" / "beamline.yaml")
-    assert descriptor.beamline.narrative is not None
-    pages = _render_all_pages("hxn")
-    index = pages["deployments/hxn/index.md"]
-    assert "## The defining shape: a scanning probe" in index
-    assert "the sample is\n      rastered through" in index or "rastered through" in index
-    # every modelled device (no new: marker excluded) appears somewhere in the set
+def _stages_layout_slugs() -> list[str]:
+    slugs: list[str] = []
+    for path in sorted(_DEPLOYMENTS.glob("*/beamline.yaml")):
+        if bd.load(path).beamline.page_layout == "stages":
+            slugs.append(path.parent.name)
+    return slugs
+
+
+@pytest.mark.parametrize("slug", _stages_layout_slugs())
+def test_stages_layout_preserves_narrative_and_all_devices(slug: str) -> None:
+    # Every stages-layout beamline must carry a bespoke defining-shape narrative
+    # (the one section generation cannot reconstruct) verbatim on its generated
+    # index, and every modelled device must still appear across the flat stage
+    # pages, so a migration cannot silently drop content.
+    descriptor = bd.load(_DEPLOYMENTS / slug / "beamline.yaml")
+    assert descriptor.beamline.narrative is not None, f"{slug}: stages layout without a narrative"
+    pages = _render_all_pages(slug)
+    index = pages[f"deployments/{slug}/index.md"]
+    assert f"## {descriptor.beamline.narrative.title}" in index
     joined = "\n".join(pages.values())
     for _name, group in descriptor.groups:
         for device in group.devices:
             if device.name and not device.new:
-                assert f"`{device.name}`" in joined, f"{device.name} lost from generated pages"
+                assert f"`{device.name}`" in joined, f"{slug}: {device.name} lost from pages"
 
 
 def test_walk_layout_keeps_beamline_and_inventory_pages() -> None:
@@ -265,16 +272,16 @@ def test_walk_layout_keeps_beamline_and_inventory_pages() -> None:
     pages = _render_all_pages("fxi")
     assert "deployments/fxi/beamline.md" in pages
     # fxi is a pilot (deployment_tier: pilot), so only the Source walk generates;
-    # assert a genuine model-tier walk beamline keeps the full set (chx is still
-    # walk; hxn migrated to the stages layout as the hybrid prototype).
-    pages = _render_all_pages("chx")
-    assert "deployments/chx/beamline.md" in pages
-    assert "deployments/chx/inventory.md" in pages
-    assert "deployments/chx/equipment/sample.md" in pages
-    assert "deployments/chx/equipment/detector.md" in pages
-    assert "deployments/chx/equipment/controls.md" in pages
+    # assert a genuine model-tier walk beamline keeps the full set. i22 is still
+    # walk (the NSLS-II fleet migrated to the stages layout; Diamond has not yet).
+    pages = _render_all_pages("i22")
+    assert "deployments/i22/beamline.md" in pages
+    assert "deployments/i22/inventory.md" in pages
+    assert "deployments/i22/equipment/sample.md" in pages
+    assert "deployments/i22/equipment/detector.md" in pages
+    assert "deployments/i22/equipment/controls.md" in pages
     # the walk layout keeps the "Walk the beam" spine and its Inventory pointer
-    index = pages["deployments/chx/index.md"]
+    index = pages["deployments/i22/index.md"]
     assert "## Walk the beam" in index
     assert "[Inventory](inventory.md)" in index
 

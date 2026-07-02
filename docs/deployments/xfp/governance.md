@@ -14,13 +14,13 @@ XFP brings two distinctive hazards: a high-flux white beam, and the dose it deli
 
 | Hazard class | Where it lands | Tracking |
 | --- | --- | --- |
-| High-flux white / pink X-ray beam | the [optics](inventory.md) and [endstation](inventory.md) enclosures (FE:C17B, XF:17BM / XF:17BMA) (`ENC-1`) | (`PSS-1`, `WHITE-1`) |
-| Delivered radiolytic dose to biological samples | the [dose-delivery gating](beamline.md) and the [Sample](equipment/sample.md) side | (`DOSE-1`, `SUBJECT-1`) |
-| Vacuum white-beam optics | the [Source](beamline.md) walk | (`SUP-1`) |
-| Biological samples, buffers, and fluidics | the [Sample](equipment/sample.md) delivery chain | (`FLOW-1`, `SUBJECT-1`) |
+| High-flux white / pink X-ray beam | the [optics](index.md) and [endstation](index.md) enclosures (FE:C17B, XF:17BM / XF:17BMA) (`ENC-1`) | (`PSS-1`, `WHITE-1`) |
+| Delivered radiolytic dose to biological samples | the [dose-delivery gating](source.md) and the [Sample](sample.md) side | (`DOSE-1`, `SUBJECT-1`) |
+| Vacuum white-beam optics | the [Source](source.md) walk | (`SUP-1`) |
+| Biological samples, buffers, and fluidics | the [Sample](sample.md) delivery chain | (`FLOW-1`, `SUBJECT-1`) |
 
 The high-flux white beam is the interlocked hazard; its permit leaves stay pending until the PSS signals are confirmed (`PSS-1`). The delivered dose is itself a controlled hazard at a footprinting beamline, distinctive to its dose-delivery character, and travels with the dose-gating chain and the Subject (`DOSE-1`, `SUBJECT-1`). The biological-sample and fluidics hazards travel with the delivery chain (`FLOW-1`). None of these is invented; each is carried against its question.
 
 ## When the shape lands
 
-The concrete Zone, Conduit, and Policy instances, and the operator pool, land when the deployment approaches the point where CORA drives XFP, following the [2-BM governance](../2-bm/governance.md) shape. Because XFP shares the NSLS-II EPICS and ophyd floor with the rest of the fleet, it re-tests the Site and Federation kernel rather than introducing a new trust model. The distinctive wrinkles are the partner-beamline operating model (`GOV-1`) and the offline-readout seam: a Conduit would bound the dose-delivery command surfaces, while the downstream mass-spec analysis sits outside the beamline's trust boundary entirely (`READOUT-1`). The Zone groups the same optics and endstation resources the [inventory](inventory.md) lists; the Policies bind to the NSLS-II operator roles carried pending at the Site (`GOV-1`).
+The concrete Zone, Conduit, and Policy instances, and the operator pool, land when the deployment approaches the point where CORA drives XFP, following the [2-BM governance](../2-bm/governance.md) shape. Because XFP shares the NSLS-II EPICS and ophyd floor with the rest of the fleet, it re-tests the Site and Federation kernel rather than introducing a new trust model. The distinctive wrinkles are the partner-beamline operating model (`GOV-1`) and the offline-readout seam: a Conduit would bound the dose-delivery command surfaces, while the downstream mass-spec analysis sits outside the beamline's trust boundary entirely (`READOUT-1`). The Zone groups the same optics and endstation resources the [inventory](index.md) lists; the Policies bind to the NSLS-II operator roles carried pending at the Site (`GOV-1`).

@@ -14,12 +14,12 @@ ISR adds the hazard classes that come with its instruments. Those land with the 
 
 | Hazard class | Where it lands | Tracking |
 | --- | --- | --- |
-| Hard X-ray beam | the [optics](inventory.md) and [endstation](inventory.md) enclosures (XF:04ID) (`ENC-1`) | (`PSS-1`) |
-| Vacuum optics | the [Source](beamline.md) walk | (`SUP-1`) |
-| In-situ sample environments (when present) | the [Sample](equipment/sample.md) side | (`INSITU-1`) |
+| Hard X-ray beam | the [optics](index.md) and [endstation](index.md) enclosures (XF:04ID) (`ENC-1`) | (`PSS-1`) |
+| Vacuum optics | the [Source](source.md) walk | (`SUP-1`) |
+| In-situ sample environments (when present) | the [Sample](sample.md) side | (`INSITU-1`) |
 
 The hard X-ray beam is the interlocked hazard; its permit leaves stay pending until the PSS signals are confirmed (`PSS-1`). The in-situ sample environments that ISR's name implies (electrochemistry, gas, temperature, cryostat) would each bring their own hazards, but none is in the source yet, so they are carried against the in-situ question, not invented (`INSITU-1`).
 
 ## When the shape lands
 
-The concrete Zone, Conduit, and Policy instances, and the operator pool, land when ISR's profile collection firms up past its current optics-first state and the deployment approaches the point where CORA drives ISR, following the [2-BM governance](../2-bm/governance.md) shape. Because ISR shares the NSLS-II EPICS and ophyd floor with the rest of the fleet, it re-tests the Site and Federation kernel rather than introducing a new trust model. The Zone groups the same optics and endstation resources the [inventory](inventory.md) lists; the Policies bind to the NSLS-II operator roles carried pending at the Site (`GOV-1`).
+The concrete Zone, Conduit, and Policy instances, and the operator pool, land when ISR's profile collection firms up past its current optics-first state and the deployment approaches the point where CORA drives ISR, following the [2-BM governance](../2-bm/governance.md) shape. Because ISR shares the NSLS-II EPICS and ophyd floor with the rest of the fleet, it re-tests the Site and Federation kernel rather than introducing a new trust model. The Zone groups the same optics and endstation resources the [inventory](index.md) lists; the Policies bind to the NSLS-II operator roles carried pending at the Site (`GOV-1`).

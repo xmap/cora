@@ -69,6 +69,20 @@ beamline:
   parent: null
   source: bending-magnet
   source_confirm: "17-BM is a bending-magnet source (the name and the white-beam footprinting design imply it), but the profile collection exposes no source / dipole device, only the ring-current PV SR:OPS-BI{DCCT:1}I:Real-I. Source identity is SRC-1"
+  page_layout: stages
+  narrative:
+    title: "What makes XFP different"
+    body: |
+      XFP is the most structurally different beamline in the fleet, so read this carefully. Every other deployment CORA models is a **measurement** beamline: it conditions a beam, puts a sample in it, and a detector records a signal (a scattering pattern, a diffraction image, a spectrum, a tomogram). XFP is a **dose-delivery** beamline. It has **no scattering, area, or imaging detector at all**. Its job is to deliver a controlled radiolytic **dose** to a biological sample in solution; the actual structural readout, which residues were modified, is done **offline by mass spectrometry**, downstream and off the instrument.
+
+      That inverts the usual shape, and it is what makes XFP worth modelling:
+
+      - **The experiment variable is dose, not a measured signal.** Delivered dose is exposure time times incident flux times attenuation. The beamline's whole apparatus, the timed shutters, the delay-generator-fired millisecond fast shutter, the Al filter wheel, and the flux monitors, exists to set and measure that dose (`DOSE-1`).
+      - **The run produces a sample and a record, not frames.** A footprinting run produces (a) a footprinted **sample**, an irradiated aliquot, often captured into a fraction-collector tube, and (b) a **dose record**: exposure time, filter thickness, the flux time-series, and the well or tube identity. There are no measurement frames to store (`READOUT-1`).
+      - **The structural readout is the offline-readout seam.** The mass spectrometry that turns a footprinted sample into a structural map is downstream, off the beamline, and absent from the profile collection. CORA's run is the system of record for the dose and the sample provenance; the MS analysis is a separate, later step (`READOUT-1`).
+      - **The Subject is a biomolecule in solution.** Like [LIX](../lix/index.md), the specimen is a protein or nucleic acid in a buffer, delivered by a fluidic chain, not a solid mount (`SUBJECT-1`).
+
+      XFP coins **no new Family**. The whole device tree reuses existing vocabulary; the novelty lands on the Method (radiolytic footprinting), the Subject, and the offline-readout seam, not on device classes. The one reuse worth naming is the sample-delivery pump, which binds the catalog `FlowController` Family (graduated; presents Regulator), with XFP its fourth consumer (see below).
 
 # PV zones: FE:C17B (the front-end: the white-beam slits), XF:17BM-OP / XF:17BMA-OP
 # (the optics: the bendable mirror, the beamline slits), XF:17BMA-EPS / -PPS / -CT

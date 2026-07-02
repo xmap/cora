@@ -7,10 +7,10 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at BMM |
 | --- | --- |
-| Asset (Equipment) | [Inventory](inventory.md#the-asset-tree) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](inventory.md#the-asset-tree) (EnergyAxis) |
+| Asset (Equipment) | [Inventory](source.md) (in this zone) |
+| Computed / virtual axes (Equipment) | [Inventory](source.md) (EnergyAxis) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
-| Enclosure (Enclosure) | [The beamline](equipment/index.md) (6-BM-A optics, 6-BM-B endstation) |
+| Enclosure (Enclosure) | [The beamline](index.md#enclosures) (6-BM-A optics, 6-BM-B endstation) |
 | Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
 | Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 

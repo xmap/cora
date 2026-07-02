@@ -2,13 +2,13 @@
 
 *What CORA needs the SIX team to confirm before the model can be trusted.*
 
-SIX was reverse-engineered from the beamline's own bluesky profile collection ([NSLS2/six-profile-collection](https://github.com/NSLS2/six-profile-collection)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, read from the `startup/*.py` files rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet), including the new loose families). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+SIX was reverse-engineered from the beamline's own bluesky profile collection ([NSLS2/six-profile-collection](https://github.com/NSLS2/six-profile-collection)), so the control handles in the [Inventory](index.md) are the beamline's real PVs, read from the `startup/*.py` files rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet), including the new loose families). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| TOPO-1 | Blocks-build | Does SIX share a canted straight with a sibling beamline, or run off its own undulator in series? | One root Unit Asset `SIX` on its own EPU straight. | The source topology in the [descriptor](inventory.md). |
+| TOPO-1 | Blocks-build | Does SIX share a canted straight with a sibling beamline, or run off its own undulator in series? | One root Unit Asset `SIX` on its own EPU straight. | The source topology in the [descriptor](index.md). |
 | ENC-1 | Blocks-go-live | Are the PV zones `XF:02IDA/B/C/D` four separate shielded hutches or beam zones within fewer hutches? | Four enclosures, one per zone. | The Enclosure grouping. |
 
 ## Control and safety

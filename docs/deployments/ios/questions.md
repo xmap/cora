@@ -2,13 +2,13 @@
 
 *What CORA needs the IOS team to confirm before the model can be trusted.*
 
-IOS was reverse-engineered from the beamline's own bluesky profile collection ([NSLS2/ios-profile-collection](https://github.com/NSLS2/ios-profile-collection)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, read from the `startup/*.py` files rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+IOS was reverse-engineered from the beamline's own bluesky profile collection ([NSLS2/ios-profile-collection](https://github.com/NSLS2/ios-profile-collection)), so the control handles in the [Inventory](index.md) are the beamline's real PVs, read from the `startup/*.py` files rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| TOPO-1 | Blocks-build | The 23-ID canted straight: do the two EPUs feed both CSX (23-ID-1) and IOS (23-ID-2), and is IOS one root Unit? | One root Unit `IOS` fed by the canted twin-EPU straight (the 32-ID / CSX precedent). | The source topology in the [descriptor](inventory.md). |
+| TOPO-1 | Blocks-build | The 23-ID canted straight: do the two EPUs feed both CSX (23-ID-1) and IOS (23-ID-2), and is IOS one root Unit? | One root Unit `IOS` fed by the canted twin-EPU straight (the 32-ID / CSX precedent). | The source topology in the [descriptor](index.md). |
 | ENC-1 | Blocks-go-live | Are the PV zones `XF:23IDA` / `XF:23ID2-OP` / `XF:23ID2-ES` separate shielded hutches or beam zones within fewer? | Two enclosures (front-end optics + the 23-ID-2 branch). | The Enclosure grouping. |
 
 ## Control and safety

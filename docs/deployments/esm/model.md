@@ -6,12 +6,12 @@ ESM is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/esm/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/esm/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/esm/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/esm/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `ESM` added to its beamline list, with an ARPES Practice |
 | Extraction provenance | [NSLS2/esm-arpes-profile-collection](https://github.com/NSLS2/esm-arpes-profile-collection) | the `startup/*.py` device classes the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | `Manipulator` graduates with this deployment (below); `ElectronAnalyzer` graduated once SST earned the 2nd Scienta SES |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the ARPES Method is not yet coined (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers ESM Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers ESM Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What this deployment graduates

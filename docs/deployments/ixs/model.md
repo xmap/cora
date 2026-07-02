@@ -6,12 +6,12 @@ IXS is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/ixs/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/ixs/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/ixs/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/ixs/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `IXS` added to its beamline list, with an inelastic-scattering Practice |
 | Extraction provenance | [NSLS2/ixs-profile-collection](https://github.com/NSLS2/ixs-profile-collection) | the `startup/*.py` device classes the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; one new device class stays loose at n=1 (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the inelastic-scattering Method is not yet coined (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers IXS Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers IXS Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes IXS new

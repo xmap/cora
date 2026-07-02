@@ -43,6 +43,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "FMX (17-ID-2) shares its IVU21 in-vacuum undulator (SR:C17-ID:G1{IVU21:2}) and the 17-ID straight with its sibling AMX (17-ID-1); modelled as one root Unit feeding the 17-ID-2 branch (the CSX canted-23-ID / 32-ID precedent), not two roots. Undulator period and gap range not fully in the profile collection (SRC-1, TOPO-1)."
+  page_layout: stages
+  narrative:
+    title: "The defining shape: the second MX, pure reuse"
+    body: |
+      FMX is CORA's first **NSLS-II** macromolecular crystallography beamline and its second MX deployment overall, after Diamond i03. Its value is **coverage and reinforcement**, not a graduation: FMX coins no new Family and graduates nothing. It reuses the MX vocabulary i03 established, the graduated `Goniometer` (the single-omega micro-goniometer with x/y/z centring), the `Camera` (the Eiger pixel detector), the graduated `Transfocator` (the CRL), the `Monochromator`, the `Mirror` (the HFM and the KB microfocus pair), and the robot-as-Positioner pattern, at a second, independent facility. It brings the three MX Methods (rotation `mx_data_collection`, `grid_scan`, `sample_exchange`) to their second consumer, which strengthens but does not coin them (they stay pending, the `energy_scan` deferral discipline). The genuinely non-obvious part of MX, the autonomous sample-exchange loop, is the modelling target it shares with i03: a Procedure over the spine threaded through a `Subject` custody lifecycle and gated by a Clearance.
 
 enclosures:
   # 17-ID has a shared front-end / optics enclosure (PV zone XF:17IDA, the FOE: the

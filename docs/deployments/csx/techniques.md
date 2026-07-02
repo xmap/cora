@@ -13,7 +13,7 @@ CSX tunes the soft X-ray energy to an absorption edge and measures the scattered
 | Resonant soft X-ray scattering | `resonant_scattering` | RSXS on the TARDIS E6C; reuses the 4-ID `resonant_scattering` Method, in a soft X-ray regime (a Plan / settings difference) |
 | Soft X-ray diffraction | `diffraction` | coherent soft X-ray diffraction through the TARDIS circles; reuses the 4-ID / 8-ID `diffraction` Method |
 
-Both need the [grating monochromator](beamline.md) (the incident energy), the [TARDIS diffractometer](equipment/sample.md), and the [coherent detectors](equipment/detector.md). The arm and sample circles select the momentum transfer.
+Both need the [grating monochromator](source.md) (the incident energy), the [TARDIS diffractometer](sample.md), and the [coherent detectors](detector.md). The arm and sample circles select the momentum transfer.
 
 ## Coherence and holography
 

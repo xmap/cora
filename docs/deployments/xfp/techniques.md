@@ -9,7 +9,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 | X-ray footprinting (capillary-flow / static) | `x_ray_footprinting` | gate a timed white-beam dose onto a flowing solution capillary or flow-cell sample, recording exposure time x flux x attenuation as the delivered dose; the fleet's first dose-delivery Method, new to the catalog; readout is offline mass spec (`TECH-1`, `READOUT-1`) |
 | High-throughput footprinting (HTFly) | `x_ray_footprinting` | sweep a fly-cell row through the defining slit at a set stage velocity so the exposure (dose) is the slit gap over the velocity, across a 96-well plate; the same `x_ray_footprinting` Method with the HTFly stage as the dose-timing (`TECH-1`, `HT-1`) |
 
-Both modes need the [white-beam chain](beamline.md) (the mirror, the slits, the Al filter wheel for dose rate), the [dose gating](beamline.md) (the timed shutters or the delay-generator-fired Uniblitz, or the HTFly velocity), the [sample side](equipment/sample.md) (a stage and the delivery pump), and the [flux monitors](equipment/detector.md) (to record the delivered dose). They differ only in how the exposure is timed and how many samples are handled.
+Both modes need the [white-beam chain](source.md) (the mirror, the slits, the Al filter wheel for dose rate), the [dose gating](source.md) (the timed shutters or the delay-generator-fired Uniblitz, or the HTFly velocity), the [sample side](sample.md) (a stage and the delivery pump), and the [flux monitors](detector.md) (to record the delivered dose). They differ only in how the exposure is timed and how many samples are handled.
 
 ## The technique is dose delivery, and the readout is offline
 

@@ -38,6 +38,11 @@ beamline:
   parent: null
   source: bending-magnet
   source_confirm: "4-BM bending-magnet source; not an insertion device. The profile collection exposes only the endstation (the raster stage + detectors), not the source / optics, so those are carried confirm-only (SRC-1, PROFILE-1)."
+  page_layout: stages
+  narrative:
+    title: "The defining shape: scanning XRF, pure reuse"
+    body: |
+      XFM is a **scanning X-ray fluorescence microprobe**: it rasters a sample through a focused spot and reads the fluorescence spectrum at each point to build element maps, with a Maia array for fast continuous (fly-scan) mapping. It is CORA's second scanning-XRF beamline, after [2-ID](../2-id/index.md), and a **pure-reuse** deployment: it coins no Family and graduates nothing. The multi-element silicon-drift detectors reuse `EnergyDispersiveSpectrometer`, the raster stage `LinearStage`, the scaler I0 channels `FluxMonitor`, and the bending-magnet source the loose `Beam` PhotonBeam supply (the 2-BM / BMM precedent). XFM is the second consumer of the pending `scanning_fluorescence_microscopy` Method (2-ID was first), which strengthens but does not coin it (the energy_scan deferral discipline). It is a genuinely thin model: the public profile exposes only the endstation, so the optics are carried confirm-only.
 
 enclosures:
   # 4-BM has an optics enclosure and the experiment endstation. The endstation PV zone is

@@ -10,9 +10,9 @@ RIXS tunes the incident soft X-ray energy to an absorption edge and measures the
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| Resonant inelastic X-ray scattering | `resonant_inelastic_scattering` | the incident energy is set on the [grating monochromator](beamline.md); the emitted spectrum is dispersed by the [spectrometer arm](equipment/detector.md) and recorded on the photon-counting camera; Method not yet in catalog |
+| Resonant inelastic X-ray scattering | `resonant_inelastic_scattering` | the incident energy is set on the [grating monochromator](source.md); the emitted spectrum is dispersed by the [spectrometer arm](detector.md) and recorded on the photon-counting camera; Method not yet in catalog |
 
-It needs the [grating monochromator](beamline.md) (the incident-energy and resolution chain, exit slit included), the [UHV cryostat sample](equipment/sample.md), and the [RIXS spectrometer arm and camera](equipment/detector.md). The arm scattering angle selects the momentum transfer.
+It needs the [grating monochromator](source.md) (the incident-energy and resolution chain, exit slit included), the [UHV cryostat sample](sample.md), and the [RIXS spectrometer arm and camera](detector.md). The arm scattering angle selects the momentum transfer.
 
 ## Not modelled yet
 

@@ -41,6 +41,11 @@ beamline:
   parent: null
   source: bending-magnet
   source_confirm: "6-BM bending-magnet source (BMPS/IDPS on SR:C06-EPS); not an insertion device (SRC-1)"
+  page_layout: stages
+  narrative:
+    title: "The defining shape: an energy scan"
+    body: |
+      Every prior CORA deployment measures by scanning **position** ([FXI](../fxi/index.md) full-field at a fixed energy, [HXN](../hxn/index.md) rastering a spot, 2-BM rotating a sample). BMM measures by scanning **energy**: it sweeps the monochromator across an element's absorption edge and records the incident, transmitted, and reference ion-chamber currents (and a fluorescence spectrum) at each energy point. The absorption, `ln(I0/It)` versus energy, *is* the data. This is the spectroscopy axis CORA has not had, and BMM is the first real consumer of the `energy_scan` Capability the catalog already anticipates (see [Techniques](techniques.md)).
 
 enclosures:
   # 6-BM-A optics + the endstation. PV zones XF:06BMA (optics) and XF:06BM-ES

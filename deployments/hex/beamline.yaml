@@ -72,6 +72,19 @@ beamline:
   parent: null
   source: superconducting-wiggler
   source_confirm: "superconducting wiggler (SCW), 4.3 T on-axis peak field, 70 mm period, 1.2 m device length, cell-27 low-beta straight on the 3 GeV NSLS-II ring; cryogen-free (no liquid helium); commissioned 2023. Pole count and critical photon energy are SCW-1"
+  page_layout: stages
+  narrative:
+    title: "What makes HEX different"
+    body: |
+      Be honest about this beamline: much of HEX is reinforcement, not novelty. Its X-ray imaging and tomography overlap the fleet heavily, the [2-BM](../2-bm/index.md) operational pilot and the NSLS-II [FXI](../fxi/index.md) both do tomography, and its high-energy diffraction reuses the energy-dispersive and powder-diffraction shapes the fleet already debates as pending Methods (APS [7-BM](../7-bm/index.md) energy-dispersive diffraction, Diamond [i11](../i11/index.md) powder diffraction). The imaging and diffraction reuse the existing `Camera` / `Scintillator` / `RotaryStage` / `LinearStage` / `EnergyDispersiveSpectrometer` vocabulary, coin no new Family, and sit on the same pending Method slugs the siblings left deferred.
+
+      HEX has three genuinely distinct contributions:
+
+      - **Multi-technique in one experiment.** Imaging / tomography, EDXD, and ADXD are all available in the single operational endstation (the F-hutch) during the same experiment, with detectors and optics moved into place remotely per technique. This stresses the one-technique-per-acquisition assumption and the Controls seam: a technique switch is a positioning leg over the `ControlPort`, not a new Capability (`TECH-1`).
+      - **Very large and heavy engineering samples.** The sample tower carries up to 500 kg and is fully removable for custom in-situ / operando environments. The heavy reconfigurable fixture reuses `Table` + `RotaryStage` + `LinearStage` with capacity and configuration as settings; no `HeavyStage` Family is coined (`STAGE-1`).
+      - **A high-energy hard X-ray source.** The superconducting wiggler reaching 200 keV monochromatic is a first for the fleet. It binds the existing `InsertionDevice` Family (the undulator precedent), with the high field and energy reach carried as source specs (`SCW-1`).
+
+      HEX coins **no new Family**, nothing graduates, and the catalog is unchanged. Frame the rest of these docs around what is distinct, the multi-technique endstation, the heavy samples, and the high-energy source, and read the imaging and diffraction as the fleet shape ported, not invented.
 
 # All six designed enclosures are declared, forward-looking. Two are operational and
 # carry the device walk: the First Optics Enclosure (hex-foe, the A-hutch) and the

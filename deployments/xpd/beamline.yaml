@@ -39,6 +39,13 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "the source is an insertion device; no source PV or parameters are in the profile collection. It is understood from facility knowledge (not the profile collection) to be a damping wiggler, the high-flux high-energy source PDF needs; that subtype is an inference pending staff confirmation (SRC-1)"
+  page_layout: stages
+  narrative:
+    title: "The defining shape: powder diffraction and PDF, a second facility"
+    body: |
+      XPD is the NSLS-II twin of the Diamond [I11](../i11/index.md) (high-resolution powder diffraction) and [I15-1](../i15-1/index.md) (total scattering / PDF) beamlines. It brings that science axis to a second facility. The value to CORA is reinforcement: the powder-and-PDF shape (a high-energy beam through a powder or capillary sample onto a large area detector, the detector distance setting the accessible Q) ports across facilities with no new vocabulary. XPD introduces no new catalog Family, and its techniques sit on the same deferred Capabilities Diamond left pending.
+
+      A PDF measurement captures wide-Q total scattering on a large flat-panel detector at a fixed high energy; the bent double-Laue monochromator and the high-flux insertion-device source deliver the flux and energy that wide-Q reach needs.
 
 enclosures:
   # PV zones: 28IDA first-optics hutch (FOE: the double-Laue mono and focusing

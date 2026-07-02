@@ -50,6 +50,16 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "the source is the shared 28-ID damping wiggler (the high-flux high-energy source PDF and XPD both need); no source PV or parameters are in the profile collection, so the subtype is an inference pending staff confirmation (SRC-1)"
+  page_layout: stages
+  narrative:
+    title: "The defining shape: total scattering at a second endstation"
+    body: |
+      PDF is the **twin of XPD** on the shared 28-ID damping wiggler, and through XPD the NSLS-II counterpart of Diamond [i11](../i11/index.md) (powder diffraction) and [i15-1](../i15-1/index.md) (total scattering / PDF). Its value to CORA is reinforcement: the high-energy powder / PDF shape, a high-flux beam onto a large flat-panel detector with the detector distance setting the accessible Q, ports to a second NSLS-II endstation with no new vocabulary. PDF introduces **no new catalog Family**, and its techniques sit on the same deferred Methods XPD and the Diamond beamlines leave pending.
+
+      Two things distinguish PDF from XPD, and CORA carries both by what is real rather than coining anything new:
+
+      - A **side-bounce monochromator** (a single-bounce Laue crystal) in place of XPD's bent double-Laue. Both are high-energy Laue monochromators, so this is a `Monochromator` settings difference, not a new Family.
+      - An explicit **two-detector, two-distance** acquisition: a near panel and a far panel, one static and one stepping in and out of the beam, merged to cover the wide Q-range a pair distribution function needs. XPD reaches the two distances by moving one detector; PDF carries two (DIST-1).
 
 enclosures:
   # PV zones: 28ID1A first-optics hutch (FOE: the side-bounce mono and focusing

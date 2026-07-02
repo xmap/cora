@@ -46,6 +46,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "8-ID in-vacuum undulator on the NSLS-II 3 GeV ring (SR:OPS-BI{DCCT:1} reads the ring current). The profile collection drives photon energy through the HHM trajectory and does not expose the undulator gap / period PVs, so the source identity and range are inferred (SRC-1)."
+  page_layout: stages
+  narrative:
+    title: "The defining shape: the energy sweep is the measurement"
+    body: |
+      ISS is CORA's first dedicated **X-ray absorption spectroscopy** beamline, and its defining shape is the **trajectory energy fly-scan**: the high-heat-load monochromator follows a pre-computed Bragg-angle look-up table on a Delta-Tau motion controller while the ion-chamber and fluorescence detectors stream against an encoder. The energy sweep *is* the EXAFS measurement, the textbook case for the `energy_scan` Capability the catalog has anticipated since BMM (it stays deferred, ENERGY-1; ISS is a further consumer that strengthens it). Alongside absorption, ISS reads X-ray **emission**: two crystal emission spectrometers (a back-scattering Johann and a wavelength-dispersive von Hamos) measure XES and HERFD. Those spectrometers are the value to CORA: they bring the `EmissionSpectrometer` family to its second sighting (after LCLS-MFX's von Hamos), which GRADUATED it into the catalog. Every other device on ISS reuses an existing catalog Family.
 
 enclosures:
   # 8-ID has an optics enclosure (PV zone XF:08IDA, the FOE: mirrors, monochromators,

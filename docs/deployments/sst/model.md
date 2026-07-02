@@ -7,10 +7,10 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at SST |
 | --- | --- |
-| Asset (Equipment) | [Inventory](inventory.md#the-asset-tree) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](inventory.md#the-asset-tree) (EnergyAxis) |
+| Asset (Equipment) | [Inventory](source.md) (in this zone) |
+| Computed / virtual axes (Equipment) | [Inventory](source.md) (EnergyAxis) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
-| Enclosure (Enclosure) | [The beamline](equipment/index.md) (7-ID-A optics, SST-1 soft, SST-2 tender) |
+| Enclosure (Enclosure) | [The beamline](index.md#enclosures) (7-ID-A optics, SST-1 soft, SST-2 tender) |
 | Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
 | Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 

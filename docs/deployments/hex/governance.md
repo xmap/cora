@@ -20,13 +20,13 @@ HEX adds the hazard classes that come with its instruments. Those land with the 
 
 | Hazard class | Where it lands | Tracking |
 | --- | --- | --- |
-| High-energy hard X-ray beam (white to 250 keV, monochromatic to 200 keV) | the [optics](inventory.md) and [endstation](inventory.md) enclosures (`hex-foe`, `hex-endstation`) | (`PSS-1`, `SCW-1`) |
-| The superconducting wiggler source | the [Source](beamline.md) walk (cryogen-free, no liquid-helium hazard) | (`SCW-1`) |
-| Heavy-sample handling (up to 500 kg) | the [Sample](equipment/sample.md) tower | (`STAGE-1`) |
-| User-brought in-situ / operando environments | the [Sample](equipment/sample.md) endstation | (`INSITU-1`) |
+| High-energy hard X-ray beam (white to 250 keV, monochromatic to 200 keV) | the [optics](index.md) and [endstation](index.md) enclosures (`hex-foe`, `hex-endstation`) | (`PSS-1`, `SCW-1`) |
+| The superconducting wiggler source | the [Source](source.md) walk (cryogen-free, no liquid-helium hazard) | (`SCW-1`) |
+| Heavy-sample handling (up to 500 kg) | the [Sample](sample.md) tower | (`STAGE-1`) |
+| User-brought in-situ / operando environments | the [Sample](sample.md) endstation | (`INSITU-1`) |
 
 The high-energy beam is the interlocked hazard, and at these photon energies the shielding burden is heavier than the fleet's lower-energy beamlines; its permit leaves stay pending until the PSS signals are confirmed (`PSS-1`). The superconducting wiggler is cryogen-free, so no liquid-helium supply hazard is carried (`SCW-1`). The heavy-sample handling and the user-brought in-situ environments are operational hazards carried with the equipment that brings them (`STAGE-1`, `INSITU-1`); none is invented, each is recorded against its question.
 
 ## When the shape lands
 
-The concrete Zone, Conduit, and Policy instances, and the operator pool, land when the deployment approaches the point where CORA drives HEX, following the [2-BM governance](../2-bm/governance.md) shape. Because HEX shares the NSLS-II EPICS and ophyd floor with its siblings, it re-tests the Site and Federation kernel rather than introducing a new trust model. The Zone groups the same optics and endstation resources the [inventory](inventory.md) lists; the Conduit binds the command surfaces; the Policies bind to the NSLS-II operator roles carried pending at the Site, with the NYSERDA-aligned allocation Policy layered on top (`GOV-1`).
+The concrete Zone, Conduit, and Policy instances, and the operator pool, land when the deployment approaches the point where CORA drives HEX, following the [2-BM governance](../2-bm/governance.md) shape. Because HEX shares the NSLS-II EPICS and ophyd floor with its siblings, it re-tests the Site and Federation kernel rather than introducing a new trust model. The Zone groups the same optics and endstation resources the [inventory](index.md) lists; the Conduit binds the command surfaces; the Policies bind to the NSLS-II operator roles carried pending at the Site, with the NYSERDA-aligned allocation Policy layered on top (`GOV-1`).

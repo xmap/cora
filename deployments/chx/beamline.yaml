@@ -42,6 +42,13 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "IVU20 in-vacuum undulator (SR:C11-ID:G1{IVU20:1}), verified in source; parameters not fully in the profile collection (SRC-1)"
+  page_layout: stages
+  narrative:
+    title: "The defining shape: coherence, a second time"
+    body: |
+      CHX is the **second coherent beamline** CORA models. APS [8-ID](../8-id/index.md) brought XPCS first; CHX brings it at a second facility. The value to CORA is reinforcement: the coherent-beamline shape (an area detector recording a speckle time series under a fast-gated exposure) ports across facilities with no new vocabulary. CHX introduces no new catalog Family, and its techniques sit on the same deferred Methods 8-ID left pending.
+
+      XPCS measures the time correlations of a coherent speckle pattern to probe how a sample evolves, so it records long, fast time series on an area detector under a precisely gated exposure. CHX also runs static small- and wide-angle scattering (SAXS/WAXS) and grazing-incidence scattering (GISAXS) on the same detectors.
 
 enclosures:
   # PV zones: 11IDA first-optics hutch (FOE), 11IDB endstation (the long coherence

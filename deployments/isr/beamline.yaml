@@ -54,6 +54,22 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "4-ID is an in-vacuum-undulator (IVU) beamline; the profile collection binds only a read-only gap encoder (SR:C04-ID:G1{IVU:1-LEnc}Gap), no gap-drive setpoint and no energy range. Source identity and parameters are SRC-1"
+  page_layout: stages
+  narrative:
+    title: "What ISR is, and what the source actually contains"
+    body: |
+      ISR's mission is hard X-ray **in-situ** and **resonant** studies: resonant scattering near absorption edges, surface and interface diffraction (crystal truncation rods), and in-situ environments (electrochemistry, gas, temperature). That mission needs a multi-circle diffractometer, a tunable resonant energy axis, in-situ sample cells, and often polarization analysis.
+
+      The honest finding, and the reason this is a partial cut, is that the **public profile collection does not yet contain those mission devices.** What it binds is an optics-and-detectors-first scaffold:
+
+      - the front-end slit, the in-vacuum undulator gap (read-only), the double-crystal monochromator, the bendable focusing mirror pair, and the harmonic-rejection mirror;
+      - the four-foil attenuator bank;
+      - the Eiger 1M area detector and the diagnostic screen cameras;
+      - and, of the diffractometer, **only two bound axes** (a sample rotation `th` and a second axis `zeta`, under the `Dif:ISD` diffractometer IOC).
+
+      The multi-circle diffractometer (its orientation circles, its detector two-theta arm, its reciprocal-space engine), the in-situ sample environment, a wired resonant energy axis, and polarization analysis are all **absent or stubbed** (the flux-monitor electrometers are even commented out, and the energy axis is a non-functional stub). So CORA models what is PV-bound and routes the four mission-critical gaps to [Open questions](questions.md), the same discipline the [i20-1](../i20-1/index.md) (EDE) partial follows.
+
+      ISR coins **no new Family** and changes nothing in the catalog. Its science would reuse the existing pending `resonant_scattering` Method (APS [4-ID](../4-id/index.md), [CSX](../csx/index.md)) and `diffraction` Method (4-ID / [8-ID](../8-id/index.md)); both are deferred, and doubly so here because the diffractometer they run on is not yet in source.
 
 # PV zones: FE:C04A (front-end slit), XF:04IDA-OP (zone A optics: DCM, focusing
 # mirrors), XF:04IDB-OP (zone B optics: harmonic-rejection mirror), XF:04IDA/B/C-BI

@@ -6,12 +6,12 @@ SIX is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/six/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/six/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/six/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/six/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `SIX` added to its beamline list, with a RIXS Practice |
 | Extraction provenance | [NSLS2/six-profile-collection](https://github.com/NSLS2/six-profile-collection) | the `startup/*.py` device classes the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | GratingMonochromator + Manipulator + SpectrometerArm all graduated (earned by CSX + ESM + ID32/ID28); SIX coins no loose family that remains (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the RIXS Method is not yet coined (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers SIX Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers SIX Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## New loose families

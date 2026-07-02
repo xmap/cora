@@ -36,6 +36,17 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "two elliptically-polarizing undulators (EPU:1, EPU:2) on the canted SR:C23-ID straight, with a canting magnet / phaser at SR:C23-MG; modelled as one root Unit feeding the 23-ID-1 (CSX) branch (the 32-ID canted precedent), not two roots (TOPO-1); EPU type / period / polarization are SRC-1"
+  page_layout: stages
+  narrative:
+    title: "What CSX consolidates"
+    body: |
+      CSX is the **consolidation** of the soft X-ray regime that SIX opened. It earns abstractions rather than minting them:
+
+      - **It graduates `GratingMonochromator`.** CSX's VLS-PGM (200-2200 eV) is the second soft X-ray plane-grating monochromator after SIX's, which earns the rule-of-three: `GratingMonochromator` becomes a catalog Family in this deployment (see [Model](model.md#what-this-deployment-graduates)). The grating line density and energy range are a per-Asset settings difference, not a Family split.
+      - **It reuses the Diffractometer Assembly.** Its TARDIS endstation is an in-vacuum hkl E6C diffractometer; its circles bind the catalog `Goniometer` Family and the composed `Assembly(Diffractometer)`, a third hkl diffractometer after 4-ID and 8-ID (now in a soft X-ray, in-vacuum context).
+      - **It adds no new family of its own.** Every device reuses an existing catalog Family.
+
+      It runs on the inboard `23-ID-1` branch of the canted 23-ID straight (two EPUs feed the sector).
 
 # PV zones: XF:23IDA (front-end optics), XF:23ID1-OP (the 23-ID-1 branch optics,
 # the PGM), XF:23ID1-ES (the CSX endstation). Whether the front-end, branch optics,

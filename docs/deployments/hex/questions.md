@@ -2,7 +2,7 @@
 
 *What CORA needs the HEX team to confirm before the model can be trusted.*
 
-HEX was reverse-engineered from public sources (the BNL beamline page, the [beamline 27-ID wiki](https://wiki-nsls2.bnl.gov/beamline27ID), and the beamline's bluesky profile collection [NSLS2/hex-profile-collection](https://github.com/NSLS2/hex-profile-collection) and [NSLS2/hextools](https://github.com/NSLS2/hextools)), so the control handles in the [Inventory](inventory.md) are read from public config rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+HEX was reverse-engineered from public sources (the BNL beamline page, the [beamline 27-ID wiki](https://wiki-nsls2.bnl.gov/beamline27ID), and the beamline's bluesky profile collection [NSLS2/hex-profile-collection](https://github.com/NSLS2/hex-profile-collection) and [NSLS2/hextools](https://github.com/NSLS2/hextools)), so the control handles in the [Inventory](index.md) are read from public config rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 

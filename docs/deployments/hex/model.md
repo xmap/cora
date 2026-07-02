@@ -6,12 +6,12 @@ HEX is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/hex/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/hex/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/hex/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/hex/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `HEX` added to its beamline list, with the tomography / radiography / EDXD / powder-diffraction Practices |
 | Extraction provenance | [NSLS2/hex-profile-collection](https://github.com/NSLS2/hex-profile-collection), [NSLS2/hextools](https://github.com/NSLS2/hextools) | the `startup/*.py` device definitions and the detector helpers the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; tomography is graduated, the diffraction Methods are pending (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers HEX Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers HEX Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes HEX new
@@ -41,7 +41,7 @@ The one place HEX looks like it might force a new abstraction is its energy-disp
 
 The F-hutch offers imaging / tomography, EDXD, and ADXD in one experiment. CORA models the switch between them as a **positioning action over existing devices**, not a new Capability or device:
 
-- each technique has its detector already on the [detection](equipment/detector.md) side (the Kinetix cameras, the PerkinElmer flat panel, the GeRM strip detector);
+- each technique has its detector already on the [detection](detector.md) side (the Kinetix cameras, the PerkinElmer flat panel, the GeRM strip detector);
 - a `LinearStage` (`DetectorStage`) moves the chosen detector or optic into the beam;
 - CORA conducts that positioning over the `ControlPort`, then runs the technique's Method.
 

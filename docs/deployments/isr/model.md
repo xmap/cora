@@ -6,12 +6,12 @@ ISR is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/isr/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/isr/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/isr/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/isr/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `ISR` added to its beamline list, with the resonant / diffraction Practices |
 | Extraction provenance | [NSLS2/isr-profile-collection](https://github.com/NSLS2/isr-profile-collection) | the `startup/` device definitions the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; resonant_scattering (4-ID / CSX) and diffraction (4-ID / 8-ID) are reused pending (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers ISR Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers ISR Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## Why ISR is partial

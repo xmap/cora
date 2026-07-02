@@ -43,6 +43,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "AMX (17-ID-1) shares its IVU21 in-vacuum undulator (SR:C17-ID:G1{IVU21:1}) and the 17-ID straight with its sibling FMX (17-ID-2, which uses IVU21:2); modelled as one root Unit feeding the 17-ID-1 branch (the FMX / CSX precedent), not two roots. Undulator period and gap range not fully in the profile collection (SRC-1, TOPO-1)."
+  page_layout: stages
+  narrative:
+    title: "The defining shape: completing the 17-ID MX pair"
+    body: |
+      AMX is FMX's high-throughput sibling: they share the 17-ID straight and the IVU21 undulator, and building AMX completes the NSLS-II MX pair. It is CORA's third MX deployment (after Diamond i03 and NSLS-II FMX) and a **pure-reuse** build: it coins no Family and graduates nothing. It reuses the MX vocabulary i03 and FMX established, the graduated `Goniometer` (the single-omega micro-goniometer), the `Camera` (the Eiger), the `Monochromator` (here a vertical DCM), the `Mirror` (the tandem-deflection and KB pairs), and the robot-as-Positioner pattern. It brings the three MX Methods (rotation `mx_data_collection`, `grid_scan`, `sample_exchange`) to their third consumer, which strengthens but does not coin them (Methods are coined on a conduct-path, not a sighting count). A few hardware differences from FMX show CORA's modelling generalizes: AMX uses a vertical (not horizontal) DCM, tandem-deflection mirrors (not a single horizontal focusing mirror), and has no CRL transfocator.
 
 enclosures:
   # 17-ID has a shared front-end / optics enclosure (PV zone XF:17IDA, the FOE: the

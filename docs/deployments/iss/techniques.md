@@ -10,7 +10,7 @@ ISS's measurement is energy spectroscopy: it sweeps the incident energy across a
 | X-ray emission (XES) | emission spectrometer, fixed incident energy | the Johann or von Hamos crystal spectrometer disperses the emitted spectrum onto the area detector (SPEC-1, TECH-1) |
 | HERFD | emission spectrometer, incident-energy fly-scan | high-energy-resolution fluorescence detection: scan the incident energy, read one emission line through the analyzer (ENERGY-1, SPEC-1) |
 
-All three need the [sample stage](equipment/sample.md) and a [detector](equipment/detector.md); the trajectory fly-scan sweeps the energy and the analog pizza box reads the detectors synchronously.
+All three need the [sample stage](sample.md) and a [detector](detector.md); the trajectory fly-scan sweeps the energy and the analog pizza box reads the detectors synchronously.
 
 ## Why the Method scope stays pending
 

@@ -6,12 +6,12 @@ LIX is a descriptor-and-docs scaffold today, reverse-engineered from the beamlin
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Beamline descriptor | [`deployments/lix/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/lix/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
+| Beamline descriptor | [`deployments/lix/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/lix/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](source.md) page |
 | Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `LIX` added to its beamline list, with solution-scattering / SEC-SAXS / scanning Practices |
 | Extraction provenance | [NSLS2/lix-profile-collection](https://github.com/NSLS2/lix-profile-collection) | the `startup/` device definitions the descriptor was curated from |
 | Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none coined; every device reuses an existing catalog or loose Family (below), including the now-graduated `FlowController` |
 | Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; `solution_scattering` is a new pending slug and `scanning_fluorescence_microscopy` is reused pending (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers LIX Assets yet |
+| Equipment Assets | not yet registered | the [Inventory](index.md) is the planned shape; no scenario registers LIX Assets yet |
 | Trust / governance | not yet instantiated | see [Governance](governance.md) |
 
 ## What makes LIX new

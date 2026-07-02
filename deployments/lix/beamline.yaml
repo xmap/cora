@@ -67,6 +67,19 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "16-ID is an in-vacuum-undulator (IVU) beamline; the profile collection fits an empirical Keff(gap) curve (a 23 mm period implied, 3 GeV ring) but does not state the device model or length. Source identity and parameters are SRC-1"
+  page_layout: stages
+  narrative:
+    title: "What makes LIX different"
+    body: |
+      Be precise about where the novelty is. LIX's measurement, small- and wide-angle X-ray scattering, is a science axis the fleet already speaks: it overlaps the materials-scattering beamlines [SMI](../smi/index.md), [CMS](../cms/index.md) (12-ID and 11-BM), Diamond [I22](../i22/index.md), and APS [9-ID](../9-id/index.md) / [12-ID](../12-id/index.md). The detectors, the optics, and the beam path reuse the catalog throughout and coin nothing. What is genuinely new at LIX is **above the detector and beside the sample**: the **Subject** and the **sample-delivery chain**.
+
+      LIX is the fleet's first **life-science solution-scattering** beamline. The specimen is not a solid mounted in the beam; it is a protein in liquid, often an eluting peak from in-line size-exclusion chromatography (SEC-SAXS), delivered by an HPLC fluidic chain through a flow cell. So the contributions that matter for CORA are:
+
+      - **The solution Subject.** The thing measured is a buffer-borne macromolecule (or a chromatographic peak), a liquid sample with its own provenance, distinct from every solid mount the fleet has modelled (`SUBJECT-1`).
+      - **The fluidic sample-delivery chain.** An HPLC delivery pump, selector valves, a size-exclusion column, buffers, and a flow cell move the sample into the beam in lockstep with the exposure. This is the fleet's first fluidic delivery plane, and it is heterogeneous: mostly non-EPICS (a Moxa terminal server, the Agilent OpenLAB .NET SDK, a pcaspy soft-IOC), the same shape the [MX3](../mx3/index.md) deployment established for non-EPICS hardware (`FLUID-1`).
+      - **The SEC-SAXS Procedure.** Purge, equilibrate, inject, flow-during-exposure, and fraction: the run is a flow program correlated to the elution, a Procedure over the seam rather than a device (`FLUID-1`, `SEC-1`).
+
+      LIX coins **no new Family**, and the one reuse worth naming is the HPLC delivery pump, which binds the graduated catalog `FlowController` Family (one of the four consumers, i22 / 7-BM / LIX / XFP, that earned its graduation; see below). The catalog is otherwise unchanged. Frame the rest of these docs around the Subject and the delivery chain, and read the scattering itself as the fleet shape ported once more.
 
 # PV zones: XF:16IDA (the optics hutch: the DCM, the white-beam and KB mirrors, the
 # mono slit, the photon shutter), XF:16IDB (the transport hutch: the secondary-source

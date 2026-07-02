@@ -11,7 +11,7 @@ XPD's techniques are powder diffraction and total scattering, a science domain D
 | Variable-temperature diffraction | over a temperature ramp | the same, over a ramp on the sample-environment stages (TEMP-1) |
 | Autonomous sample exchange | n/a | a Procedure over the spine, threaded through `Subject` custody and gated by a Clearance (ROBOT-1) |
 
-All the scattering techniques need the [diffractometer and sample stages](equipment/sample.md), the [flat-panel detectors](equipment/detector.md), and the detector distance; the exposure shutter gates the frames.
+All the scattering techniques need the [diffractometer and sample stages](sample.md), the [flat-panel detectors](detector.md), and the detector distance; the exposure shutter gates the frames.
 
 ## Why the Capabilities stay deferred
 
