@@ -1,6 +1,6 @@
 """Shared HTTP/MCP wire shapes for the conduct verb-family slices.
 
-`conduct_procedure` and `try_conduct_procedure` accept the SAME step-list
+`conduct_procedure` and `conduct_or_hold_procedure` accept the SAME step-list
 body and surface the SAME per-step failure shape; this BC-level module owns
 those wire types + converters so both slices reuse them. A slice cannot
 import a sibling slice (the cross-slice-independence fitness), so the shared

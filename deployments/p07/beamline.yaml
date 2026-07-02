@@ -52,6 +52,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P07 is an undulator beamline (high-energy materials science, jointly operated by Helmholtz-Zentrum Hereon 2/3 + DESY 1/3); the OnlineXML exposes the undulator (p07/undulator) and its gap / taper (p07/attributemotor) but no period or parameters, carried pending (SRC-1, OPERATOR-1)"
+  page_layout: stages
+  shape: "High-energy materials science (up to ~200 keV): engineering diffraction and imaging of bulk samples on large, heavy sample stages."
+  source_ref:
+    label: "python-nxstools-extras-p07"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p07"
 
 # Three enclosures: the optics hutch (the multi-bounce DCM + OH2/OH3 slits), the EH2
 # main experiment hutch, and the EH2B secondary hutch. DESY / Hereon PSS permit

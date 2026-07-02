@@ -10,11 +10,11 @@ FAXTOR sets the X-ray energy with the multipole wiggler and the double multilaye
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| Tomography | [`tomography`](../../catalog/methods.md) | absorption and propagation-phase micro-CT on the [experiment endstation](equipment/sample.md), the [rotary stage](equipment/sample.md) stepped against the [scintillator + camera](equipment/detector.md); reuses the catalog tomography Method (the 2-BM pilot) |
-| Continuous-rotation tomography | [`continuous_rotation_tomography`](../../catalog/methods.md) | fast fly-scan tomography up to 20 Hz, the [rotary stage](equipment/sample.md) in continuous rotation as the trigger master (`TRIG-1`); reuses the catalog continuous-rotation Method |
+| Tomography | [`tomography`](../../catalog/methods.md) | absorption and propagation-phase micro-CT on the [experiment endstation](sample.md), the [rotary stage](sample.md) stepped against the [scintillator + camera](detector.md); reuses the catalog tomography Method (the 2-BM pilot) |
+| Continuous-rotation tomography | [`continuous_rotation_tomography`](../../catalog/methods.md) | fast fly-scan tomography up to 20 Hz, the [rotary stage](sample.md) in continuous rotation as the trigger master (`TRIG-1`); reuses the catalog continuous-rotation Method |
 | Radiography | `radiography` | time-resolved single-projection radiography; reuses the 7-BM `radiography` slug, no portable Method in the catalog yet; pending (`TECH-1`) |
 
-Tomography needs the [incident energy](beamline.md) set by the [monochromator or filters](beamline.md), the [rotary stage and sample positioning](equipment/sample.md), and the [scintillator + fast camera](equipment/detector.md). Radiography needs the same beam and detector without the rotation sweep.
+Tomography needs the [incident energy](source.md) set by the [monochromator or filters](source.md), the [rotary stage and sample positioning](sample.md), and the [scintillator + fast camera](detector.md). Radiography needs the same beam and detector without the rotation sweep.
 
 ## A new Site on familiar vocabulary
 

@@ -45,6 +45,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "MANACA is an undulator beamline (5-20 keV); the insertion-device period and parameters are not published, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "Sirius's first macromolecular-crystallography beamline: rotation MX on a goniometer and area detector with a 48-pin sample changer, reusing the fleet MX vocabulary on the Sirius EPICS floor."
+  source_ref:
+    label: "lnls.cnpem.br facility page"
+    url: "https://lnls.cnpem.br/facilities/manaca/"
 
 enclosures:
   # The public sources expose no per-beamline hutch layout or PSS permit leaves.

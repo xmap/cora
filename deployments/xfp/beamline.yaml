@@ -69,7 +69,11 @@ beamline:
   parent: null
   source: bending-magnet
   source_confirm: "17-BM is a bending-magnet source (the name and the white-beam footprinting design imply it), but the profile collection exposes no source / dipole device, only the ring-current PV SR:OPS-BI{DCCT:1}I:Real-I. Source identity is SRC-1"
-
+  page_layout: stages
+  shape: "A dose-delivery beamline, not a measurement one: no imaging detector; it delivers a controlled radiolytic dose to a solution sample, the structural readout done offline by mass spectrometry."
+  source_ref:
+    label: "NSLS2/xfp-profile-collection"
+    url: "https://github.com/NSLS2/xfp-profile-collection"
 # PV zones: FE:C17B (the front-end: the white-beam slits), XF:17BM-OP / XF:17BMA-OP
 # (the optics: the bendable mirror, the beamline slits), XF:17BMA-EPS / -PPS / -CT
 # (the shutters), XF:17BM-BI (the flux and beam-position monitors), XF:17BMA-ES:1 /

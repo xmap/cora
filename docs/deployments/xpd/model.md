@@ -7,10 +7,10 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at XPD |
 | --- | --- |
-| Asset (Equipment) | [Inventory](inventory.md#the-asset-tree) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](inventory.md#the-asset-tree) (EnergyAxis) |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (EnergyAxis) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
-| Enclosure (Enclosure) | [The beamline](equipment/index.md) (28-ID-A optics, 28-ID-C experiment) |
+| Enclosure (Enclosure) | [The beamline](index.md#enclosures) (28-ID-A optics, 28-ID-C experiment) |
 | Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
 | Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
@@ -25,4 +25,4 @@ This is a design-phase scaffold (descriptor + docs), mirroring the other NSLS-II
 - **The high-resolution channel** alongside the modelled main PDF channel: the high-resolution monochromator (`Mono:HRM`, in the 28-ID-C hutch) and the downstream high-resolution endstation (28-ID-D) are noted and deferred together (ENDSTATION-1), the way SRX deferred its micro endstation and 32-ID modelled one of several instruments.
 - **The calibration diffractometer (`Dif:2`)** and its Ecal wavelength-calibration routine (scanning against a standard to fit the beam wavelength) are a routine powder/PDF operation, deferred to a named question (CALIB-1) rather than modelled at this design phase. The dormant multi-analyzer stage (`MAD:DMS`) and the mono beam-defining slits (`Slt:MB1` / `Slt:MB2`) are deferred alongside it.
 - **The in-situ / operando accessories**: a QEPro UV-Vis spectrometer read in parallel with the diffraction pattern (a distinct optical-spectroscopy modality, not a `Camera`), the gas switcher, and the flash-sintering / electrochemistry power system, deferred to a named question (OPERANDO-1); the UV-Vis channel would need its own family decision when it lands.
-- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms. The [2-BM Model page](../2-bm/model.md) shows the shape a fully-modelled deployment carries.
+- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms.

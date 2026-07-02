@@ -58,6 +58,11 @@ beamline:
   parent: null
   source: bending-magnet
   source_confirm: "first bending magnet of section 6; at 2.4 GeV critical energy 5.59 keV, field 1.45 T (SRC-1)"
+  page_layout: stages
+  shape: "Elettra's hard X-ray microtomography beamline (absorption, phase-contrast, and clinical breast CT) on a Tango + DonkiOrchestra control house-style, coining nothing new."
+  source_ref:
+    label: "elettra.eu beamline page"
+    url: "https://www.elettra.eu/elettra-beamlines/syrmep.html"
 
 # Control plane: Tango (the device floor) with the in-house DonkiOrchestra scan
 # engine as the orchestration seam, NOT EPICS and NOT BLISS. Handles are NOT in

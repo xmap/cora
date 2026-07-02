@@ -7,10 +7,10 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at SMI |
 | --- | --- |
-| Asset (Equipment) | [Inventory](inventory.md#the-asset-tree) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](inventory.md#the-asset-tree) (EnergyAxis) |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (EnergyAxis) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
-| Enclosure (Enclosure) | [The beamline](equipment/index.md) (12-ID-A optics, 12-ID-C experiment) |
+| Enclosure (Enclosure) | [The beamline](index.md#enclosures) (12-ID-A optics, 12-ID-C experiment) |
 | Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
 | Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
@@ -23,4 +23,4 @@ This is a design-phase scaffold (descriptor + docs), mirroring the other NSLS-II
 - **No new Capability or Method.** SAXS, WAXS, and GISAXS sit on the deferred scattering Capabilities Diamond i22 left pending (`TECH-1`); SMI reinforces them without coining any, and records no Practice. Grazing incidence is a sample-orientation variant, not a new Capability; simultaneous SAXS+WAXS is coordinated Runs, not a combined technique. The integration and reduction are `ComputePort` work.
 - **The in-situ soft-matter cells.** The humidity cell (driven via Moxa analog IO, relative humidity computed in software) and the blade coater (a SmarAct stage plus a syringe pump) are SMI's specialty; they would each need their own family or Procedure decision, so they are deferred to a named question (`INSITU-1`) rather than modelled.
 - **The in-vacuum WAXS / SAXS chamber.** The active sample chamber (pressure gauges, gate valves, turbo pump, pump / vent automation) is carried as the facility `Vacuum` Supply, the i22 precedent; whether the active chamber enters CORA as its own device is the named question `VAC-1`.
-- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms. The [2-BM Model page](../2-bm/model.md) shows the shape a fully-modelled deployment carries.
+- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms.

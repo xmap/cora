@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where 7-BM content lives. Design-phase.*
+*The developer's by-kind index: where each CORA aggregate's 7-BM content lives, a flow / combustion deployment whose FlowController grounds the continuous-regulation gap, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-7-BM is a documentation-and-descriptor scaffold today: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives.
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/7-bm/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/7-bm/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface, shared with 2-BM; 7-BM is added to its beamlines and Sector 7, with 7-BM Practices, Supplies, Clearances, and Cautions carried pending |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | 7-BM reuses existing Families including `EnergyDispersiveSpectrometer` (graduated once 2-ID and 7-BM shared it) and the graduated `FlowController` Family (presents the Regulator Role, the settable-actuator sibling of TemperatureController, earned across i22 / 7-BM / LIX / XFP); it carries two loose design-intent families (`Chopper`, `Photodiode`) that render as plain text until earned |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | tomography reuses the existing Methods; the high-speed-imaging, radiography, and EDD Methods are deferred until the techniques enter scope (TECH-1) |
-| Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound; the 7-BM docs name vendors but no part is procured into the catalog |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 7-BM Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at 7-BM |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What is deliberately not here yet
 
@@ -23,5 +21,3 @@
 - **Detector assemblies.** The tomography detector is left as plain devices (scintillator plus camera). It could later compose the cross-facility `Microscope` Assembly that 2-BM and TomoWISE use, once a scenario registers it.
 
 - **The continuous-regulation runtime (the FlowController setpoint program).** The `FlowController` presents the earned `Regulator` Role and CORA commands its setpoint (a one-shot `SetpointStep`), but a continuous setpoint PROGRAM, a hold or ramp held during a Run while the scan acquires, has no runtime today: the Conductor walks a finite step list, and `SetpointStep` / `ControlPort.write` are one-shot. The regulation loop itself stays device/IOC-owned (the Sierra controller runs it); CORA's gap is expressing and observing the program, not hosting the loop. This is the deepest cross-facility architectural gap the audit named; 7-BM (flow/combustion) is its grounding case alongside i11 / XPD thermal. It is the continuous-regulation axis, deferred to a Stage-0 research note and a later gate-reviewed build, exactly as the event-stream axis was for XFEL/XPCS acquisition (FLOW-1).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

@@ -93,6 +93,8 @@ from cora.operation.features import (
     append_activities,
     append_diagnostics,
     complete_procedure,
+    conduct_from_procedure,
+    conduct_or_hold_procedure,
     conduct_procedure,
     conduct_until_advised,
     conduct_until_converged,
@@ -101,14 +103,12 @@ from cora.operation.features import (
     hold_procedure,
     list_procedure_iterations,
     list_procedures,
-    reconduct_procedure,
     register_procedure,
     register_procedure_from_recipe,
     resume_procedure,
     start_iteration,
     start_procedure,
     truncate_procedure,
-    try_conduct_procedure,
 )
 
 
@@ -245,7 +245,7 @@ def register_operation_routes(app: FastAPI) -> None:
     app.include_router(truncate_procedure.router)
     app.include_router(hold_procedure.router)
     app.include_router(resume_procedure.router)
-    app.include_router(reconduct_procedure.router)
+    app.include_router(conduct_from_procedure.router)
     app.include_router(start_iteration.router)
     app.include_router(end_iteration.router)
     app.include_router(append_activities.router)
@@ -256,7 +256,7 @@ def register_operation_routes(app: FastAPI) -> None:
     app.include_router(conduct_procedure.router)
     app.include_router(conduct_until_converged.router)
     app.include_router(conduct_until_advised.router)
-    app.include_router(try_conduct_procedure.router)
+    app.include_router(conduct_or_hold_procedure.router)
     for validation_cls in (
         InvalidProcedureNameError,
         InvalidProcedureKindError,
@@ -381,7 +381,7 @@ def register_operation_routes(app: FastAPI) -> None:
         RecipeExpansionRecordNotFoundError,
         RecipeExpansionReplayMismatchError,
         # resumable conduct: a Held Procedure missing its pinned resolved steps
-        # (corruption); kept out of the reconduct failures-in-body contract.
+        # (corruption); kept out of the conduct_from failures-in-body contract.
         ResolvedStepsRecordNotFoundError,
         # PseudoAxis pre-Conductor expansion ([[project-pseudoaxis-design]]
         # v3): the partition-rule math kernel returned a non-finite result,

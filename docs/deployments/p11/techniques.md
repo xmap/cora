@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Macromolecular crystallography
 
-P11 mounts a crystal on the goniometer (with cryostream cooling), rotates it through an oscillation, and reads frames on the [Pilatus area detector](equipment/detector.md). It is a high-throughput rotation-MX beamline.
+P11 mounts a crystal on the goniometer (with cryostream cooling), rotates it through an oscillation, and reads frames on the [Pilatus area detector](detector.md). It is a high-throughput rotation-MX beamline.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

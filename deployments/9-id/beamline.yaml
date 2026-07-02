@@ -41,6 +41,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "one planar undulator on the S09ID straight section (DSID extracted); whether a second undulator or a canted pair feeds a branch is SRC-1 / TOPO-1"
+  page_layout: stages
+  shape: "A coherent grazing-incidence scattering beamline (GISAXS / GIWAXS / surface XPCS): the sample sits at a shallow angle to a coherent beam for surface sensitivity, in almost pure catalog reuse."
+  source_ref:
+    label: "BCDA-APS/9id_bits"
+    url: "https://github.com/BCDA-APS/9id_bits"
 
 # Two lead-shielded stations: 9-ID-A holds the optics; 9-ID-D the CSSI endstation
 # (focusing, the grazing-incidence sample stack, and the detectors). PSS permit

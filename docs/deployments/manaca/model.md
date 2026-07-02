@@ -1,18 +1,17 @@
 # Model
 
-*The developer's index into where MANACA content lives, its place as Sirius's first MX beamline, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's MANACA content lives, its place as Sirius's first MX beamline, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-MANACA is a descriptor-and-docs scaffold today, reverse-engineered from Sirius's public facility pages: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/manaca/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/manaca/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; control handles unbound (`CTRL-1`) |
-| Site descriptor | [`deployments/sirius/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/sirius/site.yaml) | the existing Sirius facility surface (shared with the MOGNO scaffold); MANACA adds the MX Practices |
-| Extraction provenance | the [MANACA facility page](https://lnls.cnpem.br/facilities/manaca/) and the MX device anatomy shared with i03 / FMX / AMX / MX3 | the public sources the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; MANACA reuses the MX Families |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the MX Methods reuse the pending i03 slugs (`TECH-1`, `ROBOT-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers MANACA Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at MANACA |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (the incident-energy `PseudoAxis`) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes MANACA new
 
@@ -35,5 +34,3 @@ MANACA sits on the Sirius EPICS device floor with MXCuBE3 / MXCuBE Web as the MX
 - **The MX Methods (`TECH-1`, `ROBOT-1`).** Whether rotation MX, grid scan, and sample exchange enter CORA's catalog is an owner decision; the Practices render unlinked, pending, reusing the i03 slugs.
 - **The simulated devices and full asset-tree scenarios.** No `test_manaca_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

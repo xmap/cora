@@ -1,17 +1,16 @@
 # Model
 
-*The developer's index into where I-TOMCAT content lives. Modelling exercise.*
+*The developer's by-kind index: where each CORA aggregate's I-TOMCAT content lives, the SLS 2.0 control-stack seam this exercise draws, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-I-TOMCAT is a documentation-and-descriptor scaffold today: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives.
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/i-tomcat/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i-tomcat/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/psi/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/psi/site.yaml) | the PSI facility surface |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | no new Family: every device reuses an existing catalog Family (`InsertionDevice`, `Monochromator`, `Mirror`, `Filter`, `Window`, `Slit`, `Shutter`, `RotaryStage`, `LinearStage`, `Camera`, `Scintillator`, `Objective`, `Housing`, `TimingController`) or an allowlisted loose family (`StorageRing`, `SlipRing`) |
-| Catalog Model | not bound | the vendor part numbers read from the public pages (Aerotech ABRX150, the pco.edge / pco.dimax cameras, the PSI GigaFRoST) are carried as "(target)" in the descriptor notes pending confirmation, not bound as catalog Models (DET-1, STAGE-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers I-TOMCAT Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at I-TOMCAT |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## The seam: what CORA would replace vs drive through
 
@@ -31,5 +30,3 @@ This is the standard CORA lens (EPICS is the floor, the facility's scan/data sof
 - **Integration scenarios.** No `test_i_tomcat_*.py` registers I-TOMCAT Assets into the event store. Scenario code is where Assets become real, and hard-registering a modelling-exercise beamline with unconfirmed facts would commit speculative structure. It lands if the deployment firms toward a real connection.
 - **Vendor Models.** No catalog Model is bound. The "(target)" models in the descriptor are [open questions](questions.md), not bindings, because they are read from public pages and not staff-confirmed.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA has not connected to would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

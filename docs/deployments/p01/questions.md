@@ -10,7 +10,7 @@ P01 was reverse-engineered from P01's own public OnlineXML device registry ([git
 | --- | --- | --- | --- | --- |
 | ENC-1 | Blocks-go-live | The hutch grouping: two optics hutches (OH1, OH2) feeding three experiment hutches (EH1, EH2, EH3), or a different layout? | Two `p01-oh*` optics hutches and three `p01-eh*` experiment hutches, read from the OnlineXML host names. | The Enclosure grouping. |
 | SRC-1 | Nice-to-have | The undulator period and parameters, and whether gap_a/gap_b/taper_a/taper_b mean two sections or a canted arrangement. | An undulator source, 2.5-80 keV; gap / taper virtual axes only. | The source Asset detail. |
-| GROUP-1 | Nice-to-have | The Asset grouping of the registry's per-axis device list into instruments (one monochromator, one mirror, one sample stage). | The groupings on the [Inventory](inventory.md), inferred from the axis name prefixes. | The Asset boundaries. |
+| GROUP-1 | Nice-to-have | The Asset grouping of the registry's per-axis device list into instruments (one monochromator, one mirror, one sample stage). | The groupings on the [Inventory](index.md), inferred from the axis name prefixes. | The Asset boundaries. |
 
 ## Source and optics
 

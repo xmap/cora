@@ -35,6 +35,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "IVU20 in-vacuum undulator (SR:C3-ID:G1{IVU20:1}), verified in source; period/gap parameters not fully in the profile collection (SRC-1)"
+  page_layout: stages
+  shape: "A scanning probe: a zone plate or multilayer Laue lens focuses the beam to a nano-spot and the sample is rastered through it, several detectors read per dwell point."
+  source_ref:
+    label: "NSLS2/hxn-profile-collection"
+    url: "https://github.com/NSLS2/hxn-profile-collection"
 
 enclosures:
   # Three PV zones: 3-ID-A optics, 3-ID-B intermediate (secondary-source aperture,

@@ -67,7 +67,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "16-ID is an in-vacuum-undulator (IVU) beamline; the profile collection fits an empirical Keff(gap) curve (a 23 mm period implied, 3 GeV ring) but does not state the device model or length. Source identity and parameters are SRC-1"
-
+  page_layout: stages
+  shape: "The fleet's first life-science solution-scattering beamline: the novelty is the liquid Subject and an HPLC fluidic sample-delivery chain (SEC-SAXS), not the scattering itself."
+  source_ref:
+    label: "NSLS2/lix-profile-collection"
+    url: "https://github.com/NSLS2/lix-profile-collection"
 # PV zones: XF:16IDA (the optics hutch: the DCM, the white-beam and KB mirrors, the
 # mono slit, the photon shutter), XF:16IDB (the transport hutch: the secondary-source
 # aperture, the fast shutter, the upstream beam-position monitor), XF:16IDC (the

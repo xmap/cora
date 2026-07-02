@@ -16,6 +16,6 @@ Cristallina's defining hazard is not a laser (the `slic` source has no pump-prob
 
 - **Trust instantiation.** No scenario instantiates Cristallina trust zones or actors; this is a design-phase modelling exercise, so the governance shape is described, not seeded. It would land, following the [2-BM governance](../2-bm/governance.md) shape, if and when the deployment approaches real scope.
 - **The magnet as a safety-driven Asset.** The vector magnet is modelled as a hazard via a Clearance, not as an Asset CORA drives for safety (the ID32 magnet and the Alvra / Bernina laser precedent). Its field setpoints are an experiment concern; its safety is a permit.
-- **The DAQ and acquisition software as principals.** The SwissFEL `sf-daq`, `bsread`, and the `slic` scan suite are control-system software on the floor, not CORA actors (see [Controls](equipment/controls.md)). When the per-shot acquisition axis is designed (DAQ-1), the question of which principal authorizes a DAQ run is part of that work.
+- **The DAQ and acquisition software as principals.** The SwissFEL `sf-daq`, `bsread`, and the `slic` scan suite are control-system software on the floor, not CORA actors (see [Controls](controls.md)). When the per-shot acquisition axis is designed (DAQ-1), the question of which principal authorizes a DAQ run is part of that work.
 
 People and agents are facility principals at the [PSI Site](../psi/index.md); see [Open questions](questions.md) for the governance items still to confirm.

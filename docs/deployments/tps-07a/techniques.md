@@ -18,4 +18,4 @@ TPS 07A brings a new Site and a new seam, not a new technique. Rotation MX, mesh
 
 The autonomous sample exchange reuses the i03 / i24 / MX3 autonomous-loop shape: a Procedure over the spine threaded through `Subject` custody, not a new device family (ROBOT-1). The mesh-scan Dozor spot-scoring and CHiMP crystal detection are `ComputePort` work (an Observe / Compute leg), not beamline Methods.
 
-The genuinely new things TPS 07A contributes are below the technique layer: a new Site (NSRRC) and the Blu-Ice/DCSS-over-EPICS orchestration seam at an MX beamline (see [Controls](equipment/controls.md)), which the technique vocabulary rides over unchanged.
+The genuinely new things TPS 07A contributes are below the technique layer: a new Site (NSRRC) and the Blu-Ice/DCSS-over-EPICS orchestration seam at an MX beamline (see [Controls](controls.md)), which the technique vocabulary rides over unchanged.

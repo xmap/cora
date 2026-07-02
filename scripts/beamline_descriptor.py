@@ -63,6 +63,20 @@ EVIDENCE_TIERS: frozenset[str] = frozenset(
 #   partial - a deliberately incomplete cut of the device or physics model.
 COVERAGES: frozenset[str] = frozenset({"full", "partial"})
 
+# Documentation tier: whether the beamline's reader page set is generated from
+# this descriptor ("model") or hand-authored as a rich operational set with only
+# the Source walk generated ("pilot", the live-driven 2-BM / FXI).
+DEPLOYMENT_TIERS: frozenset[str] = frozenset({"model", "pilot"})
+
+# Page layout: how a model-tier beamline's generated reader set is shaped.
+#   walk   - the default: a Source page at beamline.md, an inventory.md reference,
+#            and the Sample / Detector / Controls pages under equipment/, wrapped
+#            in a "Walk the beam" nav group.
+#   stages - Inventory dissolved into the stages: flat source.md / sample.md /
+#            detector.md / controls.md siblings, no equipment/ folder, no
+#            inventory.md, nav flattened. The SRX pilot for this shape.
+PAGE_LAYOUTS: frozenset[str] = frozenset({"walk", "stages"})
+
 # The beam-path stages every subsystem group declares. Closed and generalizable
 # across beamlines: the source delivers the incident beam, the sample holds the
 # specimen, detection records the signal. Each group maps to exactly one.
@@ -176,6 +190,23 @@ class Enclosure(BaseModel):
     permit_signal: str | dict[str, Any] | None = None
 
 
+
+
+class SourceRef(BaseModel):
+    """The public source the beamline's facts were read from.
+
+    A verifiable pointer to the profile collection, device layer, or facility
+    document a reverse-engineered beamline was extracted from, surfaced in the
+    generated-from banner. Absent for beamlines with no single documented
+    source (e.g. the live operational pilot).
+    """
+
+    model_config = _MODEL_CONFIG
+
+    label: str
+    url: str
+
+
 class Beamline(BaseModel):
     model_config = _MODEL_CONFIG
 
@@ -196,12 +227,50 @@ class Beamline(BaseModel):
     # in its Site facility-page roster, so the two never drift. Optional in the
     # schema so a descriptor loads mid-authoring; a fitness test requires it.
     summary: str | None = None
+    # Which documentation tier this beamline's page set uses. "model" (the
+    # default) means the whole reader set is generated from this descriptor
+    # (index, inventory, beam-walk); "pilot" means CORA drives it live and its
+    # rich operational pages (recipes, procedures, operations, experiment) are
+    # hand-authored, so only the Source walk is generated. Set "pilot" on 2-BM
+    # and FXI; every other beamline is "model".
+    deployment_tier: str = "model"
+    # How the generated reader set is shaped: "walk" (the default, Source +
+    # inventory + equipment/ pages under a "Walk the beam" group) or "stages"
+    # (Inventory dissolved into flat source/sample/detector/controls siblings).
+    page_layout: str = "walk"
+    # One-line defining-shape sentence: what makes this beamline distinct (its
+    # measurement shape, the new thing it brings to the fleet), rendered as the
+    # lead of the generated index's beamline section. The one bespoke line no
+    # descriptor field reconstructs; kept to a single sentence, not a paragraph.
+    shape: str | None = None
+    # The public source the facts were read from (profile collection, device
+    # layer, or facility document), surfaced in the generated-from banner.
+    # Absent for beamlines with no single documented source (the live pilot).
+    source_ref: SourceRef | None = None
 
     @field_validator("z_span_mm")
     @classmethod
     def _two_endpoints(cls, value: list[int] | None) -> list[int] | None:
         if value is not None and len(value) != 2:
             raise ValueError("z_span_mm must be exactly [start, end]")
+        return value
+
+    @field_validator("deployment_tier")
+    @classmethod
+    def _known_deployment_tier(cls, value: str) -> str:
+        if value not in DEPLOYMENT_TIERS:
+            raise ValueError(
+                f"unknown deployment_tier {value!r}; expected one of {sorted(DEPLOYMENT_TIERS)}"
+            )
+        return value
+
+    @field_validator("page_layout")
+    @classmethod
+    def _known_page_layout(cls, value: str) -> str:
+        if value not in PAGE_LAYOUTS:
+            raise ValueError(
+                f"unknown page_layout {value!r}; expected one of {sorted(PAGE_LAYOUTS)}"
+            )
         return value
 
     @field_validator("maturity")

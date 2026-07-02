@@ -50,6 +50,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P08 is an undulator beamline (high-resolution diffraction); the OnlineXML exposes the undulator gap (p08/attributemotor/gap) but no period or parameters, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "High-resolution diffraction and reflectivity: a precise multi-circle diffractometer for surfaces, interfaces, and thin films."
+  source_ref:
+    label: "python-nxstools-extras-p08"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p08"
 
 # Two enclosures inferred from the device structure (the registry exposes one Tango
 # host): the optics hutch (the DCM / multilayer mono / CRL) and the experiment

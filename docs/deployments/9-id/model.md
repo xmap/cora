@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where 9-ID content lives, the catalog reuse this deployment proves, the metadata seam, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's 9-ID content lives, the cleanest pure-reuse case in the APS fleet whose metadata and Data Management PVs are a CORA seam not Assets, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-9-ID is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's instrument repo: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/9-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/9-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `9-ID` added to its beamline list, with CSSI Practices |
-| Upstream source | [`BCDA-APS/9id_bits`](https://github.com/BCDA-APS/9id_bits) | the beamline's own Bluesky instrument repo the descriptor was reverse-engineered from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; 9-ID is pure reuse, including the graduated `Transfocator` Family it shares with 4-ID / 8-ID, plus one loose family still held (below) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | `xpcs` now in catalog (shared with 8-ID; the surface-XPCS Practice links); surface-scattering / grazing-incidence / WAXS Methods stay deferred (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 9-ID Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at 9-ID |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## Catalog reuse (what this deployment proves)
 
@@ -45,5 +43,3 @@ The 9-ID instrument config carries a large set of metadata PVs (`experiment_name
 - **Full asset-tree scenarios and vendor Models.** No `test_9id_*.py` registers the 9-ID asset tree, and no vendor Models are bound. Those land when the design firms and the team approves.
 
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

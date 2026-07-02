@@ -7,10 +7,10 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at ISS |
 | --- | --- |
-| Asset (Equipment) | [Inventory](inventory.md#the-asset-tree) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](inventory.md#the-asset-tree) (EnergyAxis) |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (EnergyAxis) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
-| Enclosure (Enclosure) | [The beamline](equipment/index.md) (8-ID-A optics, 8-ID-B experiment) |
+| Enclosure (Enclosure) | [The beamline](index.md#enclosures) (8-ID-A optics, 8-ID-B experiment) |
 | Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
 | Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
@@ -26,4 +26,4 @@ This is a design-phase scaffold (descriptor + docs), mirroring the other NSLS-II
 - **The graduated `PositionMonitor`.** The beam-position diagnostics bind the graduated catalog `PositionMonitor` Family that the wide fleet shares; it presents the `Sensor` Role, earned across that fleet, distinct from `FluxMonitor` by measuring beam position rather than flux. The per-Asset beam-position channel map is the residual (`DIAG-1`).
 - **No new Capability or Method.** EXAFS leans on the deferred `energy_scan` Capability (ENERGY-1, the BMM question; ISS strengthens it as a further consumer without forcing it); XES / HERFD reuse the `xas_spectroscopy` Method LCLS-MFX left pending, the second consumer (TECH-1). ISS records that one pending Practice and coins nothing. The per-technique reduction is `ComputePort` work.
 - **The deferred in-situ environment.** The ion-chamber fill-gas mass-flow controllers (He / N2) would bind the graduated `FlowController` Family, but they and the broader in-situ sample environment are named in a question (`ENV-1`) rather than modelled at this design phase. ISS models the main transmission / fluorescence / emission legs as the representative configuration.
-- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms. The [2-BM Model page](../2-bm/model.md) shows the shape a fully-modelled deployment carries.
+- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms.

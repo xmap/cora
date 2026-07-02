@@ -38,6 +38,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "FAXTOR is driven by a multipole wiggler; the period, pole count, and field are not published, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "ALBA's fast X-ray tomography and radiography beamline (continuous-rotation micro-CT to 20 Hz) on a Tango / Sardana / Taurus control plane, reusing the imaging spine."
+  source_ref:
+    label: "cells.es beamline page"
+    url: "https://www.cells.es/en/beamlines/bl31-faxtor"
 
 # Two access-gated hutches. PSS permit signals are ALBA facility signals, not
 # published per beamline (PSS-1). The optics / experiment grouping is inferred from

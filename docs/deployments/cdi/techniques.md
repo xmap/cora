@@ -8,10 +8,10 @@ CDI's techniques are coherent diffractive imaging: focus a coherent beam, record
 | --- | --- | --- |
 | Ptychography | `ptychography` | a scan of overlapping coherent-diffraction frames across the sample; reuses the pending `ptychography` Method Diamond i13-1 opened; the reconstruction is a `ComputePort` leg, not a beamline Method (the HXN framing) |
 | Forward CDI | `coherent_diffraction_imaging` | a single far-field coherent-diffraction frame on the Eiger2 / Merlin from an isolated object; the single-shot variant of the same deferred coherent-imaging cohort, not separately coined |
-| Bragg CDI | `coherent_diffraction_imaging` | a rocking series around a Bragg peak for strain imaging of a crystalline grain, with the [goniometer](equipment/sample.md) setting the orientation; the same deferred coherent-imaging cohort |
+| Bragg CDI | `coherent_diffraction_imaging` | a rocking series around a Bragg peak for strain imaging of a crystalline grain, with the [goniometer](sample.md) setting the orientation; the same deferred coherent-imaging cohort |
 | Alignment | [`alignment`](../../catalog/methods.md) | beam, KB, mirror, and slit tuning; reuses the existing Method |
 
-All three imaging techniques need the [KB nanofocus and sample stack](equipment/sample.md) and the [coherent detectors](equipment/detector.md); how the exposure is gated on the floor is the open timing question (TIMING-1).
+All three imaging techniques need the [KB nanofocus and sample stack](sample.md) and the [coherent detectors](detector.md); how the exposure is gated on the floor is the open timing question (TIMING-1).
 
 ## Why the Methods stay deferred
 

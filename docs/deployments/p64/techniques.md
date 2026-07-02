@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Advanced X-ray absorption spectroscopy
 
-P64 scans the incident energy across an absorption edge (the Tsai DCM coupled to the undulator) and reads the absorption in transmission (the Lambda detectors) and, for dilute samples, in fluorescence on the large [multi-element detector](equipment/detector.md), measuring EXAFS / XANES.
+P64 scans the incident energy across an absorption edge (the Tsai DCM coupled to the undulator) and reads the absorption in transmission (the Lambda detectors) and, for dilute samples, in fluorescence on the large [multi-element detector](detector.md), measuring EXAFS / XANES.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

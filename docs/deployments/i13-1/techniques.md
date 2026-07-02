@@ -10,7 +10,7 @@ The technique is recorded as a pending [Practice](../diamond/index.md#the-techni
 
 ## The acquisition shape
 
-Ptychography is not a new kind of device, it is a way of acquiring. A coherent beam is rastered across the sample in overlapping points, the [sample stage](equipment/sample.md) moving point to point (SAMPLE-1); at each point the Merlin (the Medipix3 photon-counting detector) records the far-field coherent-diffraction pattern; and the stack of diffraction patterns, together with the known scan positions, is enough to reconstruct a real-space image of the sample. The overlap between adjacent points is what makes the reconstruction tractable.
+Ptychography is not a new kind of device, it is a way of acquiring. A coherent beam is rastered across the sample in overlapping points, the [sample stage](sample.md) moving point to point (SAMPLE-1); at each point the Merlin (the Medipix3 photon-counting detector) records the far-field coherent-diffraction pattern; and the stack of diffraction patterns, together with the known scan positions, is enough to reconstruct a real-space image of the sample. The overlap between adjacent points is what makes the reconstruction tractable.
 
 CDI is the same lensless-imaging idea read from far-field coherent diffraction; CORA carries the pair under the one `ptychography` Method (TECH-1).
 
@@ -33,4 +33,4 @@ This is a deliberately partial first cut, the same posture as the sibling i20-1 
 - The PSS search-and-secure permit signals and the photon / front-end shutters are absent from the dodal module and carried pending, not invented (PSS-1).
 - Beam-conditioning and shutter conduct paths, and the supporting infrastructure around the endstation, follow once their devices are in source (CTRL-1, SUP-1).
 
-Each of these is named on the [Open questions](questions.md) page rather than guessed at. The source walk that grounds what is and is not present is the generated [beamline](beamline.md) view.
+Each of these is named on the [Open questions](questions.md) page rather than guessed at. The source walk that grounds what is and is not present is the generated [beamline](source.md) view.

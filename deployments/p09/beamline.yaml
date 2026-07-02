@@ -59,6 +59,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P09 is an undulator beamline (resonant scattering / diffraction / magnetism); the OnlineXML exposes the undulator (p09/undulator) and its gap (p09/attributemotor/gap) but no period or parameters, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "Resonant scattering and hard X-ray photoemission (HAXPES): a diffractometer plus a hemispherical electron analyzer."
+  source_ref:
+    label: "python-nxstools-extras-p09"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p09"
 
 # Three enclosures: the resonant-scattering optics-and-experiment hutch (MONO), the
 # diffraction hutch (DIF), and the high-field magnetism endstation (MAG). DESY PSS

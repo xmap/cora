@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where I13-1 content lives, why coherent imaging coins no new family, and the record of what is deliberately deferred. First cut, deliberately partial.*
+*The developer's by-kind index: where each CORA aggregate's I13-1 content lives, why coherent imaging coins no new family, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-I13-1 is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's dodal device layer: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/i13-1/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i13-1/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface; `I13-1` added to its beamline list, with a ptychography Practice |
-| Extraction provenance | [DiamondLightSource/dodal](https://github.com/DiamondLightSource/dodal) | the `src/dodal/beamlines/i13_1.py` factory the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the ptychography Method is pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers I13-1 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at I13-1 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes I13-1 new
 
@@ -34,5 +32,3 @@ The coherent imaging itself is the `ptychography` Method, the fleet's first, car
 - **The ptychography Method and the reconstruction.** Whether ptychography / CDI enters CORA's catalog as a Capability / Method is an owner decision; the Practice renders unlinked, pending (`TECH-1`). The image reconstruction from the diffraction stack is `ComputePort` work, not a beamline device.
 - **The simulated devices and full asset-tree scenarios.** No `test_i13_1_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

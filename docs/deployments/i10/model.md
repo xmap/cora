@@ -1,18 +1,17 @@
 # Model
 
-*The developer's index into where i10 content lives, why this second APPLE-II deployment coins no new family, what it decides at two loose families' second sighting, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's i10 content lives, why this second APPLE-II deployment coins no new family and decides two loose families' second sighting, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-i10 is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's dodal device layer: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/i10/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i10/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface; `I10` added to its beamline list, with resonant-scattering / reflectivity / XMCD / XMLD Practices |
-| Extraction provenance | [DiamondLightSource/dodal](https://github.com/DiamondLightSource/dodal) | the `src/dodal/beamlines/i10*.py` factories and `src/dodal/devices/` classes the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the resonant-scattering / reflectivity / XMCD / XMLD Methods are pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers i10 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at i10 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (the polarization PseudoAxis) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes i10 new
 
@@ -47,5 +46,3 @@ The decision to bind the RASOR PaStage to the catalog `PolarizationAnalyzer` Fam
 - **The resonant-scattering / reflectivity / XMCD / XMLD Methods.** Whether they enter CORA's catalog is an owner decision; the Practices render unlinked, pending. Resonant scattering and XMCD share the 4-ID Methods, XMLD shares the i06 slug, and reflectivity is a new pending slug (`TECH-1`).
 - **The upstream diagnostics and simulated devices.** The diagnostic screens (d1-d7 fluorescent screens and webcams) and the simulated devices are not modelled in this cut; no `test_i10_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

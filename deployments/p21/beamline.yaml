@@ -48,6 +48,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P21 is an undulator beamline (Swedish Materials Science, high-energy diffraction); the OnlineXML exposes no undulator device in this slice, so the source is carried pending (SRC-1)"
+  page_layout: stages
+  shape: "High-energy X-ray diffraction (Swedish Materials Science, P21.1 / P21.2): powder and single-crystal diffraction of bulk and engineering samples across several stations."
+  source_ref:
+    label: "python-nxstools-extras-p21"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p21"
 
 # Three enclosures inferred from the OnlineXML host names: the P21.2 optics, the EH3
 # experiment endstation, and the LAB station. The P21.1 station (hasep211eh) exposed

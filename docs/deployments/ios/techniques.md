@@ -9,7 +9,7 @@ IOS's techniques are soft X-ray surface science under working conditions: ambien
 | Ambient-pressure photoemission (AP-XPS / AP-PES) | fixed energy, gas atmosphere | photoelectron spectra on the SPECS hemispherical analyzer under a working gas pressure; the ESM / SST photoemission family, new Capability pending (`TECH-1`) |
 | Soft NEXAFS / XAS | energy sweep | absorption by total / partial electron yield (drain current through the scaler) and partial fluorescence yield (the Vortex / Xspress3), over a PGM energy scan; the BMM energy-scan question (`ENERGY-1`, `TECH-1`) |
 
-Both need the [grating monochromator](beamline.md) (the incident energy), the [AP-PES manipulator](equipment/sample.md) (the sample in the analyzer focus), and the [analyzer and yield chain](equipment/detector.md). The detection mode (TEY drain current, PEY kinetic-energy-selected electrons through the analyzer, PFY region-of-interest fluorescence) is a setting, not a separate technique.
+Both need the [grating monochromator](source.md) (the incident energy), the [AP-PES manipulator](sample.md) (the sample in the analyzer focus), and the [analyzer and yield chain](detector.md). The detection mode (TEY drain current, PEY kinetic-energy-selected electrons through the analyzer, PFY region-of-interest fluorescence) is a setting, not a separate technique.
 
 ## Why the Capabilities stay deferred
 

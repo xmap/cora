@@ -44,7 +44,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "two insertion-device sources, one per branch: the soft branch EPU60 (SR:C07-ID:G1A{SST1:1}) and the tender branch U42 (SR:C07-ID:G1A{SST2:1}), read from the shared sst-base energy classes. Periods and ranges not fully in the profile collection (SRC-1)"
-
+  page_layout: stages
+  shape: "The broadest NSLS-II beamline CORA models: two source-and-monochromator branches feeding several endstations across RSoXS, NEXAFS, and HAXPES."
+  source_ref:
+    label: "NSLS-II-SST/sst-base"
+    url: "https://github.com/NSLS-II-SST/sst-base"
 enclosures:
   # The two branches are named SST-1 (soft) and SST-2 (tender) after their undulator
   # branch labels (SST1:1 EPU60, SST2:1 U42), which is grounded in source. The

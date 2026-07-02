@@ -10,7 +10,7 @@ PDF's techniques are high-energy total scattering and powder diffraction: a high
 | Powder diffraction | `powder_diffraction` | the same high-energy beam and detector for Rietveld-quality powder patterns; Method not yet in catalog, shared with i11 and XPD |
 | Alignment | [`alignment`](../../catalog/methods.md) | beam, monochromator, mirror, and slit tuning; reuses the existing Method |
 
-Both techniques need the [sample spinner and environment](equipment/sample.md) and the [area detectors](equipment/detector.md); the exposure is gated by the fast shutter, with the two-distance merge sequenced in software (DIST-1).
+Both techniques need the [sample spinner and environment](sample.md) and the [area detectors](detector.md); the exposure is gated by the fast shutter, with the two-distance merge sequenced in software (DIST-1).
 
 ## Why the Methods stay deferred
 

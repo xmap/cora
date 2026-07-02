@@ -79,6 +79,11 @@ beamline:
     set per-shot and the same source feeds the Alvra, Bernina, and Cristallina stations
     one at a time (SRC-1 / TOPO-1). The Aramis undulator parameters are not in the eco
     manifest and are carried confirm.
+  page_layout: stages
+  shape: "A hard X-ray XFEL diffractometer platform sharing the Aramis source with Alvra and Cristallina; the first deployment to make the switched-shared-source seam concrete as a second co-equal station."
+  source_ref:
+    label: "paulscherrerinstitute/eco"
+    url: "https://github.com/paulscherrerinstitute/eco"
 
 # Two access-gated zones. The Aramis optics hutch (the SAROP21 line) conditions the beam
 # shared with the other Aramis stations; the Bernina experiment hutch holds the GPS and

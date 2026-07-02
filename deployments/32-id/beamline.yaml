@@ -46,6 +46,11 @@ beamline:
   source_confirm: "canted pair of planar undulators (downstream Planar 1.35, upstream Planar 2.8; U33 tuning curve published); the two feed the two branches, mapping unconfirmed (TOPO-1, SRC-1)"
   z_span_mm: [24000, 70000]     # front-end mask (~24 m) to C-hutch detector; approximate (LAYOUT-1)
   z_span_confirm: "approximate; the published layout gives no single z reference (LAYOUT-1)"
+  page_layout: stages
+  shape: "A canted-source, three-station beamline hosting four in-house instruments; CORA models the transmission X-ray microscope (TXM) that sits in its tomography heritage and defers the rest."
+  source_ref:
+    label: "decarlof/32id-docs"
+    url: "https://github.com/decarlof/32id-docs"
 
 # Three lead-shielded stations, all rated for white and mono beam. 32-ID-A holds
 # beam-defining optics only (no experiments); 32-ID-B and 32-ID-C are the two

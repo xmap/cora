@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where 8.3.2 content lives, the new ALS Site and BCS / LabVIEW control house-style it introduces, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's 8.3.2 content lives, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-8.3.2 is a descriptor-and-docs scaffold today, reverse-engineered from ALS's public facility pages and the public `als-computing` GitHub org: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/8-3-2/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/8-3-2/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; structure from the DXfile data record, control handles unbound (`CTRL-1`) |
-| Site descriptor | [`deployments/als/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/als/site.yaml) | the NEW ALS facility surface; `8.3.2` its first beamline, with the tomography Practices |
-| Upstream source | [als.lbl.gov 8.3.2](https://als.lbl.gov/beamlines/8-3-2/), [microct.lbl.gov](https://microct.lbl.gov/), [als-computing](https://github.com/als-computing) | the public ALS facility material and GitHub org the descriptor and docs were reverse-engineered from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; 8.3.2 reuses the imaging Families |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; tomography reuses existing Methods |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 8.3.2 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at 8.3.2 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes 8.3.2 new
 
@@ -42,5 +40,3 @@ The downstream data movement and reconstruction is a separate, well-developed la
 - **The simulated devices and full asset-tree scenarios.** No `test_8_3_2_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
 - **The ALS-U upgrade fate (`ALSU-1`).** Whether 8.3.2 goes dark, is rebuilt, or relocates in the ALS-U dark time (no sooner than October 2027) is a staff question, not modelled here.
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

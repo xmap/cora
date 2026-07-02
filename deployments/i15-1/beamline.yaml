@@ -46,6 +46,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "source type not pinned in dodal (i15-1 is a branch line); carried confirm (SRC-1)"
+  page_layout: stages
+  shape: "High-energy total scattering and PDF: a consolidation deployment that coins nothing new, reusing existing Families and carrying its interlocks as Enclosure permits, not devices."
+  source_ref:
+    label: "DiamondLightSource/dodal"
+    url: "https://github.com/DiamondLightSource/dodal"
 
 # Two access-gated hutches. Unlike I22/I03, dodal records real interlock PVs here,
 # carried as the permit_signal candidates (confirm: these are interlock readbacks,

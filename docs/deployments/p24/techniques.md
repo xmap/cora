@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## Chemical crystallography
 
-P24 mounts a single crystal on the [diffractometer](equipment/sample.md) and collects single-crystal diffraction on the area detector to solve small-molecule / chemical structures (including at non-ambient conditions).
+P24 mounts a single crystal on the [diffractometer](sample.md) and collects single-crystal diffraction on the area detector to solve small-molecule / chemical structures (including at non-ambient conditions).
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

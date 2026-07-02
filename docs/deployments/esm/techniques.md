@@ -12,7 +12,7 @@ ARPES illuminates the sample with monochromatic soft X-rays and measures the kin
 | --- | --- | --- |
 | Angle-resolved photoemission | `angle_resolved_photoemission` | electron energy / angle spectra on the Scienta SES analyzer, at low temperature on the UHV manipulator; Method not yet in catalog |
 
-It needs the [grating monochromator](beamline.md) (the incident energy), the [UHV cryostat manipulator](equipment/sample.md), and the [electron analyzer](equipment/detector.md). Polarization is set by the dual EPUs.
+It needs the [grating monochromator](source.md) (the incident energy), the [UHV cryostat manipulator](sample.md), and the [electron analyzer](detector.md). Polarization is set by the dual EPUs.
 
 ## Not modelled yet
 

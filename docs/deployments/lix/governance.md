@@ -14,12 +14,12 @@ LIX adds the hazard classes that come with its instruments, and one that is dist
 
 | Hazard class | Where it lands | Tracking |
 | --- | --- | --- |
-| Hard X-ray beam | the [optics](inventory.md) and [endstation](inventory.md) enclosures (XF:16IDA / B / C) (`ENC-1`) | (`PSS-1`) |
-| Vacuum optics and the SAXS flight path | the [Source](beamline.md) walk and the detector translations | (`SUP-1`) |
-| Biological samples, buffers, and pressurized fluidics | the [Sample](equipment/sample.md) delivery chain (the HPLC pump, the buffers, the flow cell) | (`FLUID-1`, `SEC-1`) |
+| Hard X-ray beam | the [optics](index.md) and [endstation](index.md) enclosures (XF:16IDA / B / C) (`ENC-1`) | (`PSS-1`) |
+| Vacuum optics and the SAXS flight path | the [Source](source.md) walk and the detector translations | (`SUP-1`) |
+| Biological samples, buffers, and pressurized fluidics | the [Sample](sample.md) delivery chain (the HPLC pump, the buffers, the flow cell) | (`FLUID-1`, `SEC-1`) |
 
 The hard X-ray beam is the interlocked hazard; its permit leaves stay pending until the PSS signals are confirmed (`PSS-1`). The vacuum extent and the cooling supply that the optics and flight path depend on are carried pending (`SUP-1`). The biological-sample and pressurized-fluidics hazards are distinctive to a life-science solution beamline and travel with the delivery chain and the Subject; they are carried pending against the fluidic questions, not invented (`FLUID-1`, `SEC-1`).
 
 ## When the shape lands
 
-The concrete Zone, Conduit, and Policy instances, and the operator pool, land when the deployment approaches the point where CORA drives LIX, following the [2-BM governance](../2-bm/governance.md) shape. Because LIX shares the NSLS-II EPICS and ophyd floor with the rest of the fleet, it re-tests the Site and Federation kernel rather than introducing a new trust model. The one new wrinkle is the fluidic delivery chain: a Conduit would have to bind the HPLC cart's heterogeneous surfaces (the soft-IOC, the Moxa sockets) as command surfaces alongside EPICS, the same multi-transport Conduit shape the [MX3](../mx3/governance.md) deployment first surfaced. The Zone groups the same optics and endstation resources the [inventory](inventory.md) lists; the Policies bind to the NSLS-II operator roles carried pending at the Site (`GOV-1`).
+The concrete Zone, Conduit, and Policy instances, and the operator pool, land when the deployment approaches the point where CORA drives LIX, following the [2-BM governance](../2-bm/governance.md) shape. Because LIX shares the NSLS-II EPICS and ophyd floor with the rest of the fleet, it re-tests the Site and Federation kernel rather than introducing a new trust model. The one new wrinkle is the fluidic delivery chain: a Conduit would have to bind the HPLC cart's heterogeneous surfaces (the soft-IOC, the Moxa sockets) as command surfaces alongside EPICS, the same multi-transport Conduit shape the [MX3](../mx3/governance.md) deployment first surfaced. The Zone groups the same optics and endstation resources the [inventory](index.md) lists; the Policies bind to the NSLS-II operator roles carried pending at the Site (`GOV-1`).

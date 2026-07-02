@@ -1,18 +1,17 @@
 # Model
 
-*The developer's index into where MOGNO content lives, the new Sirius Site it introduces, its reuse-and-reinforce tomography posture, the compute axis named for reconstruction, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's MOGNO content lives, the new Sirius Site and the compute axis named for reconstruction, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-MOGNO is a descriptor-and-docs scaffold today, reverse-engineered from the published MOGNO papers and the public facility page: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/mogno/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/mogno/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page. No handles, no models bound (no public controls config) |
-| Site descriptor | [`deployments/sirius/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/sirius/site.yaml) | the NEW Sirius facility surface; the full operating beamline catalog listed, MOGNO its first modelled beamline |
-| Extraction provenance | Campoi et al. 2025 (JPCS 3010 012137); Archilha et al. 2022 (JPCS 2380 012123); [facility page](https://lnls.cnpem.br/facilities/mogno/) | the published sources the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; MOGNO reuses existing tomography families |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; MOGNO reuses the graduated `tomography` Method |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers MOGNO Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at MOGNO |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (the cone-beam magnification `PseudoAxis`) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes MOGNO new
 
@@ -51,5 +50,3 @@ MOGNO reconstructs on an HPC cluster. The beamline's reconstruction library is `
 - **The PSS permit signals and shutters (`PSS-1`).** Absent from public sources, carried pending, not invented.
 - **The simulated devices and full asset-tree scenarios.** No `test_mogno_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

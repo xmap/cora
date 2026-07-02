@@ -68,6 +68,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "i19 is an undulator beamline; dodal binds the undulator (UndulatorInKeV on SR19I-MO-SERVC-01) but not its period; the undulator detail is SRC-1"
+  page_layout: stages
+  shape: "The fleet's first chemical (small-molecule) single-crystal crystallography beamline, defined by a dual-hutch shared-optics access arbiter modelled as an Enclosure-permit Trust gate."
+  source_ref:
+    label: "DiamondLightSource/dodal"
+    url: "https://github.com/DiamondLightSource/dodal"
 
 # PV zones: BL19I (the shared optics and both experiment hutches: -OP / -MO optics and
 # motion, -EA endstation, -PS shutter, -RS beamstop), SR19I (the storage-ring undulator

@@ -1,18 +1,17 @@
 # Model
 
-*The developer's index into where SYRMEP content lives, the new Elettra Site and Tango / DonkiOrchestra control house-style it introduces, the imaging spine it reuses wholesale, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's SYRMEP content lives, the new Elettra Site and Tango / DonkiOrchestra control house-style it introduces, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-SYRMEP is a descriptor-and-docs scaffold today, reverse-engineered from public material: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/syrmep/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/syrmep/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; handles carried confirm-pending |
-| Site descriptor | [`deployments/elettra/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/elettra/site.yaml) | the NEW Elettra facility surface; `SYRMEP` its first beamline, with the tomography Practices |
-| Upstream source | [elettra.eu SYRMEP pages](https://www.elettra.eu/elettra-beamlines/syrmep.html) | the public facility material (plus the EPJ Plus 2024 review and the J. Synchrotron Rad. 2023 large-FOV paper) the descriptor was reverse-engineered from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; SYRMEP reuses the imaging spine |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; core tomography Methods reused, the new ones (helical / white-beam / phase-retrieval) pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers SYRMEP Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at SYRMEP |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (the incident-energy `PseudoAxis`) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes SYRMEP new
 

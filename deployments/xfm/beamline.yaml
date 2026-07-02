@@ -38,7 +38,11 @@ beamline:
   parent: null
   source: bending-magnet
   source_confirm: "4-BM bending-magnet source; not an insertion device. The profile collection exposes only the endstation (the raster stage + detectors), not the source / optics, so those are carried confirm-only (SRC-1, PROFILE-1)."
-
+  page_layout: stages
+  shape: "A scanning X-ray fluorescence microprobe: it rasters the sample through a focused spot and reads the fluorescence spectrum per point, with a Maia array for fast fly-scan mapping."
+  source_ref:
+    label: "NSLS2/xfm-profile-collection"
+    url: "https://github.com/NSLS2/xfm-profile-collection"
 enclosures:
   # 4-BM has an optics enclosure and the experiment endstation. The endstation PV zone is
   # XF:04BMC (the UTS stage and Xspress3); the optics zone (XF:04BMA) is inferred, not in

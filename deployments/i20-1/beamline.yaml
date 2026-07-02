@@ -38,6 +38,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "i20 is an undulator beamline, but the source / insertion device / front-end is not in the dodal commissioning module (p51.py); the PV root BL51P would carry it. Source identity and parameters are an open question (SRC-1)"
+  page_layout: stages
+  shape: "Energy-dispersive EXAFS (EDE): a bent-crystal polychromator disperses a band of energies across the sample and a strip detector captures the whole absorption spectrum in one shot; a partial scaffold pending the dispersive optics."
+  source_ref:
+    label: "DiamondLightSource/dodal"
+    url: "https://github.com/DiamondLightSource/dodal"
 
 enclosures:
   # The dodal commissioning module exposes no enclosure / hutch layout, only the

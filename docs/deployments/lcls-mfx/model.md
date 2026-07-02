@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where LCLS-MFX content lives, and the architectural gap register this exercise produced. Design-phase.*
+*The developer's by-kind index: where each CORA aggregate's LCLS-MFX content lives, how the device families fold while the gaps stay architectural, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-MFX is a documentation-and-descriptor scaffold: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, then records the gaps the exercise found.
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/lcls-mfx/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/lcls-mfx/beamline.yaml) | the device walk, with the `pcdshub`-derived EPICS PV prefixes; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/slac/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/slac/site.yaml) | the SLAC facility surface; MFX is its only beamline, with XFEL practices carried pending |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **no Family graduated at the time.** MFX reuses catalog Families, including the graduated `Transfocator` (a CRL focusing optic) and the graduated `Laser` (the pump-probe laser), and carries loose families (`FluxMonitor`, `Diagnostic` reused). It introduced `EmissionSpectrometer`, which has since GRADUATED into the catalog (ISS 2nd sighting, SPEC-1) |
-| Catalog Capability / Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; serial crystallography, pump-probe, and emission-spectroscopy Methods are deferred (the catalog tomography Methods do not fit an XFEL) |
-| Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound; `pcdshub` names hardware (Dectris, Rayonix, the von Hamos) but no part is procured |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers MFX Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md), including the pump-probe laser Clearance |
+| Aggregate (BC) | Where at LCLS-MFX |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## The headline: the families fold, the gaps are architectural
 
@@ -37,5 +35,3 @@ These are the parts of MFX this scaffold leaves out on purpose. Unlike the open 
 - **The von Hamos as a graduated Family.** `EmissionSpectrometer` GRADUATED into the catalog once NSLS-II ISS (8-ID) earned the second sighting (its Johann + von Hamos XES / HERFD spectrometers); MAX IV Balder (SCANIA-2D) is a third near-sighting. The residual open question is whether each analyzer crystal is a child Asset (SPEC-1).
 - **Sample delivery and the Subject custody thread.** The liquid jet / fixed target is endstation-specific and deferred (SAMPLE-1); no Family is coined.
 - **Integration scenarios.** No `test_lcls_mfx_*.py` registers MFX Assets. Hard-registering a design-phase, off-roadmap, XFEL beamline would commit speculative structure.
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

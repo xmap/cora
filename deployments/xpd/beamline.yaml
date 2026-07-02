@@ -39,7 +39,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "the source is an insertion device; no source PV or parameters are in the profile collection. It is understood from facility knowledge (not the profile collection) to be a damping wiggler, the high-flux high-energy source PDF needs; that subtype is an inference pending staff confirmation (SRC-1)"
-
+  page_layout: stages
+  shape: "The NSLS-II twin of Diamond I11 / I15-1: high-energy powder diffraction and total scattering onto a large area detector, the detector distance setting the accessible Q."
+  source_ref:
+    label: "NSLS2/xpd-profile-collection"
+    url: "https://github.com/NSLS2/xpd-profile-collection"
 enclosures:
   # PV zones: 28IDA first-optics hutch (FOE: the double-Laue mono and focusing
   # mirror), 28IDC the main experiment hutch (the PDF / powder endstation), 28IDD a

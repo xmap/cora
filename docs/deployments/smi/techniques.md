@@ -11,7 +11,7 @@ SMI's techniques are small- and wide-angle scattering, the science domain Diamon
 | Simultaneous SAXS+WAXS | both detectors at once | coordinated Runs under one Campaign, the routine mode, not a third technique (TECH-1) |
 | Grazing-incidence (GISAXS / GIWAXS) | shallow incidence, reflected geometry | the same scattering Methods with the sample at a grazing angle and the WAXS arc swung; a sample-orientation variant (TECH-1) |
 
-All the scattering techniques need the [grazing-incidence sample stack](equipment/sample.md) and the [SAXS / WAXS detectors](equipment/detector.md); the fast shutter gates the exposure.
+All the scattering techniques need the [grazing-incidence sample stack](sample.md) and the [SAXS / WAXS detectors](detector.md); the fast shutter gates the exposure.
 
 ## Why the Capabilities stay deferred
 

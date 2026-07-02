@@ -52,6 +52,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P03 is an undulator beamline (SAXS / WAXS, 9-23 keV); the OnlineXML exposes an undulator gap virtual axis (p03/attributemotor/gap) but no period or parameters, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "Small- and wide-angle scattering with a micro / nano focus branch (MiNaXS): SAXS / WAXS and GISAXS off films and interfaces."
+  source_ref:
+    label: "python-nxstools-extras-p03"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p03"
 
 # Three enclosures: the shared optics (P03 shares the high-heatload optics with P02),
 # the microfocus endstation, and the nanofocus GINIX endstation. The first defining

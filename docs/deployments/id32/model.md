@@ -1,30 +1,27 @@
 # Model
 
-*The developer's index into where ID32 content lives, the new ESRF Site and BLISS control house-style it introduces, the three loose families it brings to a rule-of-three (and holds), and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's ID32 content lives, the graduations it earns, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-ID32 is a descriptor-and-docs scaffold today, reverse-engineered from the ESRF's BLISS Beacon device database: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/id32/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/id32/beamline.yaml) | the device walk with bound handles; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/esrf/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/esrf/site.yaml) | the NEW ESRF facility surface; `ID32` its first beamline, with RIXS / XMCD / XES Practices |
-| Extraction provenance | [gitlab.esrf.fr/id32/beamline_configuration](https://gitlab.esrf.fr/id32/beamline_configuration) | the public BLISS Beacon device database (a git mirror of the live config) the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | SpectrometerArm graduated (earned across SIX + ID32 RIXS/XES + ID28), Magnet graduated (earned across 4-ID + i10-1 + ID32; presents Regulator), and PolarizationAnalyzer graduated (earned across 4-ID + i10 + ID32 + P09; presents Positioner) (below) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the RIXS / XMCD / XES Methods are pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers ID32 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at ID32 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (the polarization PseudoAxis) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes ID32 new
 
 ID32 is two things the fleet has not had: a new Site and a new controls house-style. It is CORA's **seventh Site** (the ESRF, Grenoble), the biggest re-test of the Site and Federation kernel a single deployment can be, and the **first BLISS / Beacon / Tango / IcePAP** control plane CORA models (the rest are EPICS, or Tango / Sardana at MAX IV). Its science is soft X-ray resonant inelastic scattering (RIXS) with a ~5 m dispersive spectrometer arm, and X-ray magnetic dichroism (XMCD) plus X-ray emission spectroscopy (XES) at a 9 Tesla high-field-magnet endstation, all fed by twin APPLE-II undulators through a soft X-ray plane-grating monochromator.
 
-## No new families (the polarization spine reuses the i06 / i10 precedent)
-
 ID32 coins no new Family. The twin APPLE-II undulators bind the catalog `InsertionDevice`, and the polarization is a `PseudoAxis` over the undulator phase, exactly as i06 and i10 modelled their APPLE-II sources; the PGM binds `GratingMonochromator`; the 4-circle diffractometer binds `Goniometer` with a reciprocal-space `PseudoAxis` (the Assembly named, not built, DIFF-1 / DIFF-2); the Andor CCDs bind `Camera`; the LakeShore VTI and coil-diagnostic controllers bind `TemperatureController`; the XMCD sample stage binds `LinearStage`; the machine state binds the loose `StorageRing`.
 
-## Loose families held at the rule-of-three
+## Loose families brought to a rule-of-three (all since graduated)
 
-ID32 pushed three loose families to a genuine rule-of-three. Per the owner decision (2026-06-27) each graduation is a dedicated, gated catalog PR rather than bundled into this scaffold. `SpectrometerArm`, `Magnet`, and `PolarizationAnalyzer` have all since **graduated** (their PRs landed): the RIXS polarimeter binds the catalog `PolarizationAnalyzer` Family (earned across 4-ID / i10 / ID32 / P09, presenting Positioner):
+ID32 pushed three loose families to a genuine rule-of-three. Per the owner decision (2026-06-27) each graduation is a dedicated, gated catalog PR rather than bundled into this scaffold; all three have since **graduated**.
 
 | Loose family | Sightings with ID32 | ID32 binding | Status |
 | --- | --- | --- | --- |
@@ -46,5 +43,3 @@ ID32 is the first non-EPICS, non-Sardana controls house-style in the fleet: BLIS
 - **The RIXS / XMCD / XES Methods.** Whether they enter CORA's catalog is an owner decision; the Practices render unlinked, pending, reusing the SIX RIXS, the 4-ID / i06 / i10 XMCD, and the xas_spectroscopy XES slugs (`TECH-1`).
 - **The simulated devices and full asset-tree scenarios.** No `test_id32_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

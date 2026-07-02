@@ -249,6 +249,14 @@ def on_files(files: Any, *, config: Any) -> Any:
 
     generated: dict[str, str] = {}
 
+    # Load every site first so a beamline render can reach its Site's facility
+    # label + control-plane seam (the generated model-tier index / controls
+    # pages echo them). code -> (heading, control_plane).
+    site_by_code: dict[str, tuple[str, str | None]] = {}
+    for path in sorted(DEPLOYMENTS_DIR.glob("*/site.yaml")):
+        f = site_descriptor.load(path).facility
+        site_by_code[f.code] = (f.heading or f.code.upper(), f.control_plane)
+
     # Beamlines: render each, and build the facility -> [BeamlineRef] map the
     # site pages use for their roster (label, slug, badges, summary), so the
     # facility page reads the one-liner + badges from the descriptor, not a
@@ -257,15 +265,19 @@ def on_files(files: Any, *, config: Any) -> Any:
     for path in sorted(DEPLOYMENTS_DIR.glob("*/beamline.yaml")):
         slug = path.parent.name
         descriptor = beamline_descriptor.load(path)
+        b = descriptor.beamline
+        facility_label, control_plane = site_by_code.get(b.facility or "", (None, None))
         generated.update(
             beamline_pages.render_all(
                 descriptor,
                 slug=slug,
                 catalog_families=catalog_families,
                 catalog_models=catalog_models,
+                facility_label=facility_label,
+                control_plane=control_plane,
+                model_tier=b.deployment_tier == "model",
             )
         )
-        b = descriptor.beamline
         if b.facility:
             beamlines_by_site.setdefault(b.facility, []).append(
                 site_pages.BeamlineRef(

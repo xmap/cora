@@ -46,7 +46,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "8-ID in-vacuum undulator on the NSLS-II 3 GeV ring (SR:OPS-BI{DCCT:1} reads the ring current). The profile collection drives photon energy through the HHM trajectory and does not expose the undulator gap / period PVs, so the source identity and range are inferred (SRC-1)."
-
+  page_layout: stages
+  shape: "The energy sweep is the measurement: a trajectory energy fly-scan for EXAFS, plus two crystal emission spectrometers (Johann and von Hamos) for XES and HERFD."
+  source_ref:
+    label: "NSLS2/iss-profile-collection"
+    url: "https://github.com/NSLS2/iss-profile-collection"
 enclosures:
   # 8-ID has an optics enclosure (PV zone XF:08IDA, the FOE: mirrors, monochromators,
   # filter box) and an experiment enclosure (PV zone XF:08IDB: sample stages, ion

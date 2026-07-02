@@ -1,18 +1,17 @@
 # Model
 
-*The developer's index into where HEX content lives, why this deployment coins no new family, how it models the multi-technique endstation and the heavy sample tower, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's HEX content lives, how it models the multi-technique endstation and the heavy sample tower, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-HEX is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's public sources: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/hex/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/hex/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `HEX` added to its beamline list, with the tomography / radiography / EDXD / powder-diffraction Practices |
-| Extraction provenance | [NSLS2/hex-profile-collection](https://github.com/NSLS2/hex-profile-collection), [NSLS2/hextools](https://github.com/NSLS2/hextools) | the `startup/*.py` device definitions and the detector helpers the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; tomography is graduated, the diffraction Methods are pending (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers HEX Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at HEX |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (the incident-energy `PseudoAxis`) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes HEX new
 
@@ -41,7 +40,7 @@ The one place HEX looks like it might force a new abstraction is its energy-disp
 
 The F-hutch offers imaging / tomography, EDXD, and ADXD in one experiment. CORA models the switch between them as a **positioning action over existing devices**, not a new Capability or device:
 
-- each technique has its detector already on the [detection](equipment/detector.md) side (the Kinetix cameras, the PerkinElmer flat panel, the GeRM strip detector);
+- each technique has its detector already on the [detection](detector.md) side (the Kinetix cameras, the PerkinElmer flat panel, the GeRM strip detector);
 - a `LinearStage` (`DetectorStage`) moves the chosen detector or optic into the beam;
 - CORA conducts that positioning over the `ControlPort`, then runs the technique's Method.
 
@@ -57,5 +56,3 @@ So the "multi-technique endstation" is a Practice-level sequence, not a fused me
 - **Pair-distribution-function and 3DXRD.** Public sources do not list PDF (that is NSLS-II 28-ID / [XPD](../xpd/index.md)) or three-dimensional X-ray diffraction for HEX, so neither is modelled or assumed (`TECH-1`).
 - **The simulated devices and full asset-tree scenarios.** No `test_hex_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where I22 content lives. Design-phase.*
+*The developer's by-kind index: where each CORA aggregate's I22 content lives, why it earns no catalog kinds and carries real EPICS handles, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-I22 is a documentation-and-descriptor scaffold: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives.
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/i22/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i22/beamline.yaml) | the device walk, with the dodal-derived EPICS PV handles; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface, the third Site; I22 practices, supplies, and the PSS clearance carried pending |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | no new Family added by I22 itself; it reuses existing Families and carries the loose design-intent family (`StorageRing`). `TemperatureController` (the Linkam) was carried loose here too but has since graduated to a catalog Family (presenting the `Regulator` Role) once it reached the rule-of-three at i11; `FluxMonitor` (the I0 / It ion chambers) likewise graduated, presenting the Sensor Role, on the i22/i03/i15-1 rule-of-three; `Transfocator` (the CRL focusing optic here) likewise graduated as a catalog Family in its own right, distinct from `Mirror` / `ZonePlate` / `Condenser`; `FlowController` (the peristaltic pump here) likewise graduated as a catalog Family presenting the `Regulator` Role, the `TemperatureController` sibling, earned across i22 / 7-BM / LIX / XFP |
-| Catalog Capability / Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the SAXS / WAXS scattering Capabilities are new vocabulary deferred until the technique enters scope (TECH-1) |
-| Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound; dodal names hardware but no part is procured into the catalog |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers I22 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at I22 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What is deliberately not here yet
 
@@ -22,4 +20,4 @@ I22 is a documentation-and-descriptor scaffold: it exists as the descriptor and 
 - **Operations and experiment views.** A runbook and live experiment view for an unmodelled beamline would be invention; see the note on the [index](index.md#not-yet-documented).
 - **Detector assemblies.** The two detectors are left as plain `Camera` devices. Whether the SAXS detector composes an Assembly with its beamstops and base is deferred (GROUP-1).
 
-What is genuinely new here versus the other scaffolds: the descriptor carries real EPICS control handles (from dodal), and the open questions are about the layers dodal cannot reach (calibration, safety, technique), not about the PVs. The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.
+What is genuinely new here versus the other scaffolds: the descriptor carries real EPICS control handles (from dodal), and the open questions are about the layers dodal cannot reach (calibration, safety, technique), not about the PVs.

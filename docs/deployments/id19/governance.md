@@ -10,7 +10,7 @@ CORA brings its own Access model: a small set of facility roles (operator, beaml
 
 ## The trust boundary
 
-CORA's Trust BC (Zone, Conduit, Policy) gates every command by who is acting and what the beamline state allows: who may drive a [rotation stage](equipment/sample.md) through a tomographic scan, arm a [detector](equipment/detector.md) to record the projection stack, move the monochromator or open a shutter, override a caution, or commit an alignment. This authority is CORA's own, expressed per Actor, not inherited from the beamline's controls layer. The ESRF proposal and cycle are a fact CORA's Campaign uses for custody.
+CORA's Trust BC (Zone, Conduit, Policy) gates every command by who is acting and what the beamline state allows: who may drive a [rotation stage](sample.md) through a tomographic scan, arm a [detector](detector.md) to record the projection stack, move the monochromator or open a shutter, override a caution, or commit an alignment. This authority is CORA's own, expressed per Actor, not inherited from the beamline's controls layer. The ESRF proposal and cycle are a fact CORA's Campaign uses for custody.
 
 Because ID19 is a reverse-engineered scaffold rather than a pilot, the concrete trust shape (the Zones grouping the optics and endstation resources, the Conduit binding the surfaces that may issue commands, and the Policies that say who may do what) is named here, not built. It would land, following the [2-BM governance](../2-bm/governance.md) shape, if and when the deployment approaches real scope.
 
@@ -35,7 +35,7 @@ Clearances (the safety forms that must be active to start) are issued at the ESR
 
 ID19's reason for existing is microtomography: a tomographic acquisition spins the sample through the beam and records a stack of projection radiographs, and a real-space volume is reconstructed from that stack. In CORA's model this is the existing `tomography` Method, not a new technique (TECH-1); the devices it gates are `RotaryStage`, `LinearStage`, and `Camera` Assets (SAMPLE-1, DET-1), and the reconstruction is `ComputePort` work, not a beamline device. That makes the repeated tomographic acquisition the place CORA's custody and trust shapes would earn their keep: the trust boundary bounds who may drive the rotation and arm the detector, and the Campaign and Subject shapes carry the sample's custody and the projection record.
 
-The governance shape is the same CORA brings to every beamline; what is different at ID19 is one layer down, in the control floor (BLISS / Tango, not EPICS, see [Controls](equipment/controls.md)). The trust boundary is control-floor-agnostic: it gates commands by Actor and state regardless of whether the floor underneath is EPICS or BLISS.
+The governance shape is the same CORA brings to every beamline; what is different at ID19 is one layer down, in the control floor (BLISS / Tango, not EPICS, see [Controls](controls.md)). The trust boundary is control-floor-agnostic: it gates commands by Actor and state regardless of whether the floor underneath is EPICS or BLISS.
 
 If an autonomous Agent were added (for example to centre the sample or decide when a scan is complete), it would be a facility principal scoped at the Site, governed by the same trust boundary, with each choice recorded as a [Decision](../../architecture/modules/decision/index.md). None is declared yet; this stays design intent.
 

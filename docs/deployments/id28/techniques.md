@@ -10,9 +10,9 @@ ID28 sets a meV-resolution incident energy with the high-resolution backscatteri
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| Momentum-resolved inelastic X-ray scattering | `inelastic_x_ray_scattering` | the momentum transfer Q is set by the [spectrometer-arm two-theta](equipment/detector.md); the meV incident energy is scanned on the [backscattering monochromator](beamline.md) against the fixed-angle [multi-analyzer crystals](equipment/detector.md); the energy-analyzed signal is counted per analyzer; reuses the NSLS-II IXS Method, the second consumer; Method not yet in catalog |
+| Momentum-resolved inelastic X-ray scattering | `inelastic_x_ray_scattering` | the momentum transfer Q is set by the [spectrometer-arm two-theta](detector.md); the meV incident energy is scanned on the [backscattering monochromator](source.md) against the fixed-angle [multi-analyzer crystals](detector.md); the energy-analyzed signal is counted per analyzer; reuses the NSLS-II IXS Method, the second consumer; Method not yet in catalog |
 
-It needs the [incident-energy chain](beamline.md) (the backscattering mono for the meV resolution), the [sample stage and its temperature environment](equipment/sample.md), and the [multi-analyzer spectrometer arm and its detectors](equipment/detector.md). The arm scattering angle sets the magnitude of the momentum transfer; the analyzer crystals fix the analyzed energy so the incident-energy scan reads out the energy loss.
+It needs the [incident-energy chain](source.md) (the backscattering mono for the meV resolution), the [sample stage and its temperature environment](sample.md), and the [multi-analyzer spectrometer arm and its detectors](detector.md). The arm scattering angle sets the magnitude of the momentum transfer; the analyzer crystals fix the analyzed energy so the incident-energy scan reads out the energy loss.
 
 ## The same inelastic axis, in the hard X-ray regime
 

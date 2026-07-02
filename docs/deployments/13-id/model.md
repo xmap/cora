@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where 13-ID content lives, the one new loose family this first extreme-conditions deployment introduces, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's 13-ID content lives, the first extreme-conditions deployment (high-pressure diamond anvil cell), and the record of what is deliberately deferred. Design-phase scaffold.*
 
-13-ID is a descriptor-and-docs scaffold today, reverse-engineered from the GSECARS EPICS support tree: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/13-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/13-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `13-ID` added to its beamline list, with high-pressure powder / single-crystal diffraction Practices |
-| Extraction provenance | [CARS-UChicago/GSECARS-EPICS](https://github.com/CARS-UChicago/GSECARS-EPICS) | the `iocBoot` startup scripts, `CARSApp/Db` templates, and `CARSApp/op/adl` screens the descriptor was reconstructed from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; one new device class stays loose at n=1 (below) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the diffraction Methods are pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 13-ID Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at 13-ID |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes 13-ID new
 
@@ -50,5 +48,3 @@ High-pressure diffraction is **not** a new technique: it reuses the pending `dif
 - **The diffraction Methods.** Whether high-pressure powder and single-crystal diffraction enter CORA's catalog is an owner decision; the Practices render unlinked, pending (`TECH-1`).
 - **The simulated devices and full asset-tree scenarios.** No `test_13_id_d_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

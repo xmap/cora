@@ -49,6 +49,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P10 is an undulator beamline (coherent hard X-rays); the OnlineXML exposes the undulator (p10/undulator) and its gap (p10/attributemotor/UNDULATORGAP) but no period or parameters, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "Coherence applications (XPCS, coherent imaging / ptychography) across three areas; the first PETRA III beamline whose primary technique binds a graduated catalog Method directly."
+  source_ref:
+    label: "python-nxstools-extras-p10"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p10"
 
 # Five enclosures: the optics hutch, the three experiment areas (E1 coherent imaging,
 # E2 XPCS / diffraction, LAB), and the LCX piezo sub-station. DESY PSS permit signals
@@ -368,6 +373,12 @@ controls:
       new: true
       confirm: true
       note: "generic Tango motor controllers (motor_tango / spk / dcm) backing the mono, mirrors, and coupled axes (CTRL-1)"
+  triggering:
+    - name: Timing
+      family: TimingController
+      new: true
+      confirm: true
+      note: "the XPCS exposure-gating timing hardware feeding the coherent detectors (the 8-ID / CHX TimingController pattern); P10 runs XPCS so the gating fabric is present, the specific device and handle are read from the Sardana seam and carried confirm (CTRL-2)"
 
 # Continuously-available resources a run draws on.
 resources:

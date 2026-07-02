@@ -28,6 +28,8 @@ beamline:
   maturity: pilot
   evidence: live
   coverage: full
+  deployment_tier: pilot
+  page_layout: stages
   summary: "bending-magnet micro-CT, the operational pilot"
   name: "2-BM"
   facility: aps                 # APS, a Site-level Facility (facility_code: aps)

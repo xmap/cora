@@ -42,6 +42,8 @@ beamline:
   source_confirm: "I-TOMCAT is the undulator branch of the rebuilt TOMCAT; the U15 undulator drives it, with a planned source upgrade to HTSU10 in 2027 (SRC-1)"
   z_span_mm: [0, 35000]
   z_span_confirm: true
+  page_layout: stages
+  shape: "A PSI SLS 2.0 undulator micro-CT beamline (absorption and phase-contrast, fast 4D tomography on the GigaFRoST camera), the closest SLS analog to the APS 2-BM pilot; modelled from its design report."
 
 # Two access-gated hutches: the shared optics hutch and the I-TOMCAT experiment
 # hutch (endstation ES2, ~33 m from source). The PSS permit-signal handles are

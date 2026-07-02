@@ -55,6 +55,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P01 is an undulator beamline (2.5-80 keV); the OnlineXML exposes undulator gap/taper virtual motors (gap_a, gap_b, taper_a, taper_b on p01/attributemotor) but no insertion-device period or parameters, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "Hard X-ray dynamics (nuclear resonant scattering, RIXS) across three endstations, defined by a stack of four high-resolution monochromators carving meV bandwidth; CORA's first Tango / Sardana floor after MAX IV."
+  source_ref:
+    label: "python-nxstools-extras-p01"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p01"
 
 # Five enclosures: two optics hutches carrying the shared source-conditioning optics,
 # and three experiment hutches, one per technique branch. DESY PSS permit signals are

@@ -13,7 +13,7 @@ The Huber diffractometers at 4-ID-G orient a single crystal and scan reciprocal 
 | X-ray diffraction | `diffraction` | reciprocal-space scans on the Eulerian or high-pressure diffractometer; Method not yet in catalog |
 | High-pressure diffraction | `diffraction` | the high-pressure diffractometer with a pressure cell; a Plan setting over the same Method |
 
-Both need the [diffractometers](equipment/sample.md) and the [detectors](equipment/detector.md). Whether the reciprocal-space coordination (hklpy2) is modelled as a `PseudoAxis` inside an `Assembly(Diffractometer)` is the design recorded on [Model](model.md#deliberately-not-here-yet); the world-fact half (the circle geometry) is `DIFF-1`.
+Both need the [diffractometers](sample.md) and the [detectors](detector.md). Whether the reciprocal-space coordination (hklpy2) is modelled as a `PseudoAxis` inside an `Assembly(Diffractometer)` is the design recorded on [Model](model.md#deliberately-not-here-yet); the world-fact half (the circle geometry) is `DIFF-1`.
 
 ## Magnetic and resonant scattering
 
@@ -24,7 +24,7 @@ Both need the [diffractometers](equipment/sample.md) and the [detectors](equipme
 | Resonant magnetic scattering | `magnetic_scattering` | scattering in field (2 T or high-field magnet) at low temperature; Method not yet in catalog |
 | Resonant elastic scattering | `resonant_scattering` | energy-resonant scattering across an edge; Method not yet in catalog |
 
-These need the [sample environment](equipment/sample.md) (magnet plus temperature controller) and the monochromator's energy control.
+These need the [sample environment](sample.md) (magnet plus temperature controller) and the monochromator's energy control.
 
 ## Polarization analysis
 
@@ -35,7 +35,7 @@ The phase retarders set the incident X-ray polarization, and the polarization an
 | X-ray magnetic circular dichroism | `xmcd` | circular polarization set by the phase retarders; Method not yet in catalog |
 | Polarization-analyzed scattering | `magnetic_scattering` | the analyzer crystal resolves the scattered polarization; a Plan setting over the scattering Method |
 
-These need the [phase retarders and polarization analyzer](equipment/sample.md).
+These need the [phase retarders and polarization analyzer](sample.md).
 
 ## Not modelled yet
 

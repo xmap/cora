@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where 12-ID content lives, why this first Bonse-Hart USAXS deployment coins no new family, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's 12-ID content lives, the first Bonse-Hart USAXS deployment that coins no new family, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-12-ID is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's bluesky / BITS instrument: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/12-id/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/12-id/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface; `12-ID` added to its beamline list, with USAXS / SAXS / WAXS Practices |
-| Extraction provenance | [BCDA-APS/usaxs-bits](https://github.com/BCDA-APS/usaxs-bits) | the `src/usaxs/configs/*.yml` device tables and `src/usaxs/devices/*.py` classes the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the USAXS Method is not yet coined (USAXS-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 12-ID Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at 12-ID |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes 12-ID new
 
@@ -41,5 +39,3 @@ The Linkam T96 and the PTC10 reuse the graduated `TemperatureController` Family 
 - **The simulated devices and full asset-tree scenarios.** No `test_12_id_e_*.py` registers the asset tree, and no vendor Models are bound. Those land when the design firms and the team approves.
 
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

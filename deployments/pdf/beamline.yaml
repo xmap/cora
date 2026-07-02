@@ -50,7 +50,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "the source is the shared 28-ID damping wiggler (the high-flux high-energy source PDF and XPD both need); no source PV or parameters are in the profile collection, so the subtype is an inference pending staff confirmation (SRC-1)"
-
+  page_layout: stages
+  shape: "XPD's twin on the shared 28-ID wiggler: high-energy total scattering onto large flat-panel detectors, with an explicit two-detector, two-distance acquisition for wide-Q PDF."
+  source_ref:
+    label: "NSLS2/pdf-profile-collection"
+    url: "https://github.com/NSLS2/pdf-profile-collection"
 enclosures:
   # PV zones: 28ID1A first-optics hutch (FOE: the side-bounce mono and focusing
   # mirror), 28ID1B the experiment hutch (the PDF / total-scattering endstation, with

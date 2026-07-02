@@ -7,10 +7,10 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at XFM |
 | --- | --- |
-| Asset (Equipment) | [Inventory](inventory.md#the-asset-tree) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](inventory.md#the-asset-tree) (EnergyAxis) |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (EnergyAxis) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
-| Enclosure (Enclosure) | [The beamline](equipment/index.md) (4-BM-A optics, 4-BM-C endstation) |
+| Enclosure (Enclosure) | [The beamline](index.md#enclosures) (4-BM-A optics, 4-BM-C endstation) |
 | Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
 | Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
@@ -26,4 +26,4 @@ This is a design-phase scaffold (descriptor + docs), mirroring 2-ID / SRX and th
 - **The endstation-only profile.** The public profile collection exposes only the raster stage, the Xspress3, the scaler, and the Maia (in a bypass file). The bending-magnet source, the monochromator, the focusing optic, and the shutters are not in the profile, so they are carried confirm-only with no PV (no fabricated PVs; PROFILE-1). The model is honest about being thin: it asserts the device classes a BM XRF / XANES microprobe must have, with their handles pending the team.
 - **The Maia detector.** XFM's signature fast continuous-mapping array (`XFM:MAIA`) is read from the bypass profile (`rvt/bypass40-maia.py`), not the active startup; it is modelled as a second `EnergyDispersiveSpectrometer` Asset and flagged (MAIA-1).
 - **XRF-tomography.** Out of scope: the profile exposes an X/Y/Z raster stage but no rotation axis, so the raster-x-rotation XRF-tomography (the SRX shape) is not modelled (TECH-1).
-- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms. The [2-BM Model page](../2-bm/model.md) shows the shape a fully-modelled deployment carries.
+- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms.

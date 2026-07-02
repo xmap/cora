@@ -6,11 +6,11 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| Biological solution scattering (bio-SAXS / WAXS) | `solution_scattering` | small- and wide-angle scattering from a protein in solution in the [flow cell](equipment/sample.md), read on the [SAXS Pilatus 1M](equipment/detector.md); the fleet's first solution-scattering Method, new to the catalog (`TECH-1`) |
-| In-line SEC-SAXS | `solution_scattering` | the [HPLC delivery pump](equipment/sample.md) flows an eluting size-exclusion peak through the cell while the SAXS detector reads; the same `solution_scattering` Method with the chromatographic elution as the acquisition axis (`TECH-1`, `FLUID-1`) |
-| Scanning-microbeam mapping | `scanning_fluorescence_microscopy` | raster the microbeam across a cell or tissue section on the [scanning goniometer](equipment/sample.md), reading scattering and fluorescence per point; reuses the existing pending Method (`TECH-1`) |
+| Biological solution scattering (bio-SAXS / WAXS) | `solution_scattering` | small- and wide-angle scattering from a protein in solution in the [flow cell](sample.md), read on the [SAXS Pilatus 1M](detector.md); the fleet's first solution-scattering Method, new to the catalog (`TECH-1`) |
+| In-line SEC-SAXS | `solution_scattering` | the [HPLC delivery pump](sample.md) flows an eluting size-exclusion peak through the cell while the SAXS detector reads; the same `solution_scattering` Method with the chromatographic elution as the acquisition axis (`TECH-1`, `FLUID-1`) |
+| Scanning-microbeam mapping | `scanning_fluorescence_microscopy` | raster the microbeam across a cell or tissue section on the [scanning goniometer](sample.md), reading scattering and fluorescence per point; reuses the existing pending Method (`TECH-1`) |
 
-All three techniques need the [incident-beam chain](beamline.md) (the undulator and DCM for energy, the mirrors and transfocator for focus, the slits), the [sample side](equipment/sample.md) (the positioning stack or scanning goniometer, and for the solution modes the fluidic delivery chain), and the [endstation detectors](equipment/detector.md) (the Pilatus heads, beamstop, flux monitors).
+All three techniques need the [incident-beam chain](source.md) (the undulator and DCM for energy, the mirrors and transfocator for focus, the slits), the [sample side](sample.md) (the positioning stack or scanning goniometer, and for the solution modes the fluidic delivery chain), and the [endstation detectors](detector.md) (the Pilatus heads, beamstop, flux monitors).
 
 ## Where the novelty is: the Subject, not the Method
 
@@ -22,7 +22,7 @@ The matching Site Practices (`LIX_solution_scattering_practice`, `LIX_sec_saxs_p
 
 ## SEC-SAXS is a Procedure over the fluidic seam
 
-In-line SEC-SAXS is the technique that most exercises the fluidic delivery chain, and CORA models it as a **Procedure**, not a new device. The run equilibrates the size-exclusion column, injects the sample, and reads SAXS frames continuously while the peak elutes through the [flow cell](equipment/sample.md). The actuators it drives, the [HPLC delivery pump](equipment/sample.md) (the graduated `FlowController`) and the selector valves (the seam), are conducted over the `ControlPort`; the [column and buffers](equipment/sample.md) are Supply; the eluting peak is a Subject; the frames correlated to the elution are the Dataset. The technique's identity in CORA's record lives in the Subject, Supply, and Procedure, not in a device or a new detector (`FLUID-1`, `SEC-1`, `SUBJECT-1`).
+In-line SEC-SAXS is the technique that most exercises the fluidic delivery chain, and CORA models it as a **Procedure**, not a new device. The run equilibrates the size-exclusion column, injects the sample, and reads SAXS frames continuously while the peak elutes through the [flow cell](sample.md). The actuators it drives, the [HPLC delivery pump](sample.md) (the graduated `FlowController`) and the selector valves (the seam), are conducted over the `ControlPort`; the [column and buffers](sample.md) are Supply; the eluting peak is a Subject; the frames correlated to the elution are the Dataset. The technique's identity in CORA's record lives in the Subject, Supply, and Procedure, not in a device or a new detector (`FLUID-1`, `SEC-1`, `SUBJECT-1`).
 
 ## Not modelled yet
 

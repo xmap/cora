@@ -15,6 +15,6 @@ As at every beamline, beam-on work in an enclosure is gated by the facility pers
 ## What is not modelled
 
 - **Trust instantiation.** No scenario instantiates MFX trust zones or actors; this is a design-phase modelling exercise, so the governance shape is described, not seeded.
-- **The DAQ and analysis software as principals.** The LCLS DAQ, `psana`, and the bluesky-based scan suite are control-system software on the floor, not CORA actors (see [Controls](equipment/controls.md)). When the per-shot acquisition axis is designed (DAQ-1), the question of which principal authorizes a DAQ run is part of that work.
+- **The DAQ and analysis software as principals.** The LCLS DAQ, `psana`, and the bluesky-based scan suite are control-system software on the floor, not CORA actors (see [Controls](controls.md)). When the per-shot acquisition axis is designed (DAQ-1), the question of which principal authorizes a DAQ run is part of that work.
 
 People and agents are facility principals at the [SLAC Site](../slac/index.md); see [Open questions](questions.md) for the governance items still to confirm.

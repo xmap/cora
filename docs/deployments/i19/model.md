@@ -1,18 +1,17 @@
 # Model
 
-*The developer's index into where i19 content lives, why the four-circle is not the novelty, what the dual-hutch access-control seam is, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's i19 content lives, why the four-circle is not the novelty and the dual-hutch access-control seam is, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-i19 is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's dodal device layer: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/i19/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i19/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface; `I19` added to its beamline list, with a single-crystal diffraction Practice |
-| Extraction provenance | [DiamondLightSource/dodal](https://github.com/DiamondLightSource/dodal) | the `src/dodal/beamlines/i19*.py` factories and `src/dodal/devices/` classes the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the diffraction Method is pending, shared with 4-ID / 8-ID / CSX (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers i19 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md); the dual-hutch access-control seam is the design-relevant part |
+| Aggregate (BC) | Where at i19 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (the incident-energy PseudoAxis) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes i19 new (and what does not)
 
@@ -54,5 +53,3 @@ Beyond the four-circle (Goniometer) and the MAPT aperture (below), the rest reus
 - **The diffraction Method.** Whether single-crystal diffraction enters CORA's catalog as a Capability / Method is an owner decision; the Practice renders unlinked, pending, reusing the slug 4-ID / 8-ID / CSX share (`TECH-1`).
 - **The centring image-recognition behaviour and the simulated devices.** The OAV pin-tip recognition is a Method behaviour on the Camera, not a device; no `test_i19_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

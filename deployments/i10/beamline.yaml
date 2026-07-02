@@ -65,6 +65,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "i10 is a soft X-ray twin-APPLE-II beamline; dodal binds the two APPLE-II insertion devices (modelled below) but not their period; the undulator detail is SRC-1"
+  page_layout: stages
+  shape: "Soft X-ray resonant scattering and spectroscopy on a twin APPLE-II source, I06's soft X-ray twin, feeding the RASOR polarization-analysis arm and the i10-1 magnet endstation."
+  source_ref:
+    label: "DiamondLightSource/dodal"
+    url: "https://github.com/DiamondLightSource/dodal"
 
 # PV zones: BL10I (the shared optics spine: PGM, the collimating / switching mirrors,
 # the APPLE-II controllers), SR10I (the APPLE-II servo crates SERVC-01 / SERVC-21),

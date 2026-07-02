@@ -67,4 +67,4 @@ The intent above is the function view. The concrete recipes that turn it into ru
 
 - **The science detectors.** Neither endstation has an area detector. The RASOR and i10-1 point and current-integrating channels bind the catalog `FluxMonitor` through their current amplifiers (DET-1); no detector Family is invented in the meantime.
 
-For the source and optics that feed these techniques, see the generated source-walk on [the beamline page](beamline.md). For what the i10 team must confirm before the model can be trusted, see [Open questions](questions.md). The CORA-owned scope decisions (the deferred Methods, the held families, the diffractometer Assembly) are recorded on the [Model](model.md#deliberately-not-here-yet) page.
+For the source and optics that feed these techniques, see the generated source-walk on [the beamline page](source.md). For what the i10 team must confirm before the model can be trusted, see [Open questions](questions.md). The CORA-owned scope decisions (the deferred Methods, the held families, the diffractometer Assembly) are recorded on the [Model](model.md#deliberately-not-here-yet) page.

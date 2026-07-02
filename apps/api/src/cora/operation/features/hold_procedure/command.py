@@ -29,6 +29,6 @@ class HoldProcedure:
     decided_by_decision_id: UUID | None = None
     actuation_kind: str | None = None
     """The raw `ActuationKind` value the Conductor observed in the conduct up
-    to this pause. `Conductor.try_conduct` sets it so the pre-hold provenance
+    to this pause. `Conductor.conduct_or_hold` sets it so the pre-hold provenance
     survives the hold->resume boundary (see `ProcedureHeld.actuation_kind`); an
     operator hold issued outside a conduct leaves it None."""

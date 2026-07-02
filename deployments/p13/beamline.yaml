@@ -62,6 +62,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P13 is an undulator MX beamline; the MXCuBE config exposes the photon-energy service (TINEEnergy on /P13/Energy/P13Energy) but not the undulator device itself, so the source is carried pending (SRC-1)"
+  page_layout: stages
+  shape: "EMBL macromolecular crystallography: rotation MX with an automated sample changer, its handles read from the mxCuBE configuration rather than a DESY OnlineXML registry."
+  source_ref:
+    label: "mxcube/mxcubecore (embl_hh_p13)"
+    url: "https://github.com/mxcube/mxcubecore/tree/develop/mxcubecore/configuration/embl_hh_p13"
 
 # Two enclosures inferred from the device prefixes and the EMBL MX layout: the optics
 # hutch (the KB mirror pitch / roll motions on /P13/P13Kb.*) and the experiment hutch

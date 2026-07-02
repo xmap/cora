@@ -52,6 +52,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "ID28 is an in-vacuum-undulator beamline; the BLISS config binds two undulators (IVU22a, IVU13-3c, modelled below); the exact period and segment count are SRC-1"
+  page_layout: stages
+  shape: "ESRF momentum-resolved hard X-ray inelastic scattering (IXS): a backscattering monochromator scanned by crystal temperature and a multi-analyzer spectrometer arm map phonon dispersions across momentum transfer."
+  source_ref:
+    label: "gitlab.esrf.fr id28/beamline_configuration"
+    url: "https://gitlab.esrf.fr/id28/beamline_configuration"
 
 # Control plane: BLISS / Beacon over Tango + IcePAP (the ID32 precedent). Handles are
 # BLISS axis/controller names and Tango device URLs, carried as opaque edge handles. The

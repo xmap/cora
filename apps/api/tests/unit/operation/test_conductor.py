@@ -1026,12 +1026,12 @@ async def test_conduct_without_lifecycle_handlers_raises_runtime_error() -> None
 
 
 @pytest.mark.unit
-async def test_try_conduct_without_handlers_raises_runtime_error() -> None:
-    """try_conduct() requires start + complete + abort + hold; a missing one is
+async def test_conduct_or_hold_without_handlers_raises_runtime_error() -> None:
+    """conduct_or_hold() requires start + complete + abort + hold; a missing one is
     a wiring bug, not a runtime failure, so it propagates."""
     conductor = _conductor(InMemoryControlPort(), _FakeAppendStep())  # no FSM handlers
-    with pytest.raises(RuntimeError, match="try_conduct"):
-        await conductor.try_conduct(
+    with pytest.raises(RuntimeError, match="conduct_or_hold"):
+        await conductor.conduct_or_hold(
             procedure_id=uuid4(),
             principal_id=uuid4(),
             correlation_id=uuid4(),
@@ -1040,12 +1040,12 @@ async def test_try_conduct_without_handlers_raises_runtime_error() -> None:
 
 
 @pytest.mark.unit
-async def test_reconduct_without_handlers_raises_runtime_error() -> None:
-    """reconduct() requires resume + complete + abort; a missing one is a
+async def test_conduct_from_without_handlers_raises_runtime_error() -> None:
+    """conduct_from() requires resume + complete + abort; a missing one is a
     wiring bug, so it propagates."""
     conductor = _conductor(InMemoryControlPort(), _FakeAppendStep())  # no FSM handlers
-    with pytest.raises(RuntimeError, match="reconduct"):
-        await conductor.reconduct(
+    with pytest.raises(RuntimeError, match="conduct_from"):
+        await conductor.conduct_from(
             procedure_id=uuid4(),
             principal_id=uuid4(),
             correlation_id=uuid4(),

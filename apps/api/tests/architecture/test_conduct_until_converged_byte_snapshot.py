@@ -23,7 +23,7 @@ import pytest
 from cora.operation import conductor as cm
 
 _FROZEN_DIGESTS = {
-    "conduct_until_converged": ("f6aa1070a5dca174bab7b4cc90afcaf309b10025aa1241b5d76b3da485bf40f1"),
+    "conduct_until_converged": ("e5a97bc1e9ca327feceecfc7d4fc68e9a9204771a91e978d687c5992a8ddc67a"),
     "_run_convergence_loop": ("f2b6f22c3ea1de8fae2581f99ccf2d047e876816ea9863b47d64e530c14b87ec"),
     "_complete_converged": ("eb13d348525223ff7f4aa481c51afecc0d45660acdd5feee49f6df2f005e6f5a"),
     "_abort_unconverged_cap": ("606e0122ed687df310c89d6b6d0c65b06c42150a9ed2a05c1eb4d9a2e526bd18"),

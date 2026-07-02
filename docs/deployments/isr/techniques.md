@@ -9,7 +9,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 | Resonant scattering | `resonant_scattering` | resonant elastic scattering near an absorption edge; reuses the Method APS [4-ID](../4-id/techniques.md) (POLAR) and [CSX](../csx/techniques.md) left pending; needs a tunable energy axis and a diffractometer, both absent from source (`TECH-1`, `RESONANT-1`, `DIFF-1`) |
 | Surface / interface diffraction | `diffraction` | crystal truncation rods and surface structure; reuses the `diffraction` Method 4-ID / [8-ID](../8-id/techniques.md) left pending; needs the multi-circle diffractometer, absent from source (`TECH-1`, `DIFF-1`) |
 
-Both techniques would need the [incident-beam chain](beamline.md) (the undulator, the DCM for energy, the focusing mirrors, the attenuator), a multi-circle [sample diffractometer](equipment/sample.md), and the [Eiger area detector](equipment/detector.md). The first two of those are partly modelled; the diffractometer is not.
+Both techniques would need the [incident-beam chain](source.md) (the undulator, the DCM for energy, the focusing mirrors, the attenuator), a multi-circle [sample diffractometer](sample.md), and the [Eiger area detector](detector.md). The first two of those are partly modelled; the diffractometer is not.
 
 ## Reuse, not new vocabulary
 

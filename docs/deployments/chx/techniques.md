@@ -11,7 +11,7 @@ CHX's techniques are coherent-scattering, new to CORA's imaging- and spectroscop
 | Grazing-incidence scattering | `small_angle_scattering` | GISAXS: the same scattering Method with the beam steered onto a surface by the `GrazingIncidenceMirror` (GI-1) |
 | Alignment | [`alignment`](../../catalog/methods.md) | beam, mirror, transfocator, and slit tuning; reuses the existing Method |
 
-All three scattering techniques need the [sample stack](equipment/sample.md) and the [coherent detectors](equipment/detector.md); the fast shutter and Zebra (TIMING-1) gate the exposure.
+All three scattering techniques need the [sample stack](sample.md) and the [coherent detectors](detector.md); the fast shutter and Zebra (TIMING-1) gate the exposure.
 
 ## Why the Methods stay deferred
 

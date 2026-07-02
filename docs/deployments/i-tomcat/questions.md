@@ -2,7 +2,7 @@
 
 *What CORA needs the I-TOMCAT team to confirm before the model can be trusted.*
 
-I-TOMCAT is a modelling exercise modelled from PSI's public pages and the SLS 2.0 design reports, so this page is long by design: almost every value in the [Inventory](inventory.md) is read from a public page, not a staff-confirmed fact, and some are legacy TOMCAT specs whose validity for the rebuilt beamline is itself uncertain. Each row below is a fact the beamline team or a design report owns, not a CORA modelling choice. It is a delete-on-answer queue: when an item is answered, the answer lands in the descriptor and the row is removed (with the reason in the commit). Priorities are `Blocks-build` (needed before the model is built for real), `Blocks-go-live` (needed before first users), and `Nice-to-have`.
+I-TOMCAT is a modelling exercise modelled from PSI's public pages and the SLS 2.0 design reports, so this page is long by design: almost every value in the [Inventory](index.md) is read from a public page, not a staff-confirmed fact, and some are legacy TOMCAT specs whose validity for the rebuilt beamline is itself uncertain. Each row below is a fact the beamline team or a design report owns, not a CORA modelling choice. It is a delete-on-answer queue: when an item is answered, the answer lands in the descriptor and the row is removed (with the reason in the commit). Priorities are `Blocks-build` (needed before the model is built for real), `Blocks-go-live` (needed before first users), and `Nice-to-have`.
 
 ## Control and safety
 

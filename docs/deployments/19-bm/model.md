@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where 19-BM content lives. Design-phase.*
+*The developer's by-kind index: where each CORA aggregate's 19-BM content lives, a second BM beamline that reuses the families 2-BM established and coins none of its own, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-19-BM is a documentation-and-descriptor scaffold today: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives.
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/19-bm/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/19-bm/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/aps/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/aps/site.yaml) | the APS facility surface, shared with 2-BM; 19-BM is added there as a second beamline |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added: 19-BM reuses the active families 2-BM established (`Slit`, `Filter`, `Shutter`, `RotaryStage`, `LinearStage`, `Table`, `Camera`, `Scintillator`, `TimingController`) |
-| Catalog Assembly | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | the indirect detector reuses the cross-facility `Microscope` / `Optics` Assemblies (shared with 2-BM and TomoWISE) |
-| Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound: 19-BM hardware is not yet procured |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers 19-BM Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at 19-BM |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What is deliberately not here yet
 
@@ -22,5 +20,3 @@
 - **The autonomy build.** The `RunSupervisor` enablement and the missing run-start capability that 19-BM's autonomous operation needs are real CORA work, not documentation; see [Governance](governance.md). They land as their own slices.
 - **The robotic sample changer.** Deferred behind its separate safety review (ROBOT-1).
 - **Operations and experiment views.** A runbook and live experiment view for an unbuilt beamline would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

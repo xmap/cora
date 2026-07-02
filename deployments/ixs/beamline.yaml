@@ -48,7 +48,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "10-ID in-vacuum undulator IVU22 on SR:C10-ID:G1{IVU22:1}; gap axis. The undulator period/type and whether the 10-ID straight is canted with a sibling beamline are SRC-1 / TOPO-1"
-
+  page_layout: stages
+  shape: "CORA's first hard inelastic-scattering beamline: set Q with a six-circle arm, scan the incident energy against a fixed diced-crystal analyzer, and point-detect to build I(Q, energy-loss)."
+  source_ref:
+    label: "NSLS2/ixs-profile-collection"
+    url: "https://github.com/NSLS2/ixs-profile-collection"
 # PV zones along the beamline: FE:C10A (front end), XF:10IDA (DCM + first
 # diagnostics), XF:10IDB (the high-resolution monochromator + secondary source),
 # XF:10IDC (transport optics + table), XF:10IDD (the endstation: KB mirrors,

@@ -41,7 +41,11 @@ beamline:
   parent: null
   source: bending-magnet
   source_confirm: "6-BM bending-magnet source (BMPS/IDPS on SR:C06-EPS); not an insertion device (SRC-1)"
-
+  page_layout: stages
+  shape: "Measures by scanning energy, not position: it sweeps the monochromator across an absorption edge, recording the ion-chamber currents per point; CORA's first spectroscopy beamline."
+  source_ref:
+    label: "NSLS2/bmm-profile-collection"
+    url: "https://github.com/NSLS2/bmm-profile-collection"
 enclosures:
   # 6-BM-A optics + the endstation. PV zones XF:06BMA (optics) and XF:06BM-ES
   # (endstation); the photon shutter is XF:06BM-PPS{Sh:A}.

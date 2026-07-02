@@ -10,11 +10,11 @@ USAXS reaches momentum transfer q far below the pinhole-SAXS regime by rocking a
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| Ultra-small-angle scattering (USAXS) | `ultra_small_angle_scattering` | the Bonse-Hart rocking curve: the [analyzer crystal stage](equipment/detector.md) rocks against the [collimator crystal stage](equipment/sample.md) through the Bragg condition while the [UPD photodiode](equipment/detector.md) point-counts the transmitted flux through an autoranging amplifier; new Capability, pending (USAXS-1, BONSE-1) |
-| Pinhole small-angle scattering (SAXS) | `small_angle_scattering` | low-q on the [SAXS Pilatus area detector](equipment/detector.md); shares the i22 SAXS Capability, pending (TECH-1) |
-| Wide-angle scattering (WAXS) | `wide_angle_scattering` | wide-q on the [WAXS Pilatus area detector](equipment/detector.md) on its translation; shares the i22 WAXS Capability, pending (TECH-1) |
+| Ultra-small-angle scattering (USAXS) | `ultra_small_angle_scattering` | the Bonse-Hart rocking curve: the [analyzer crystal stage](detector.md) rocks against the [collimator crystal stage](sample.md) through the Bragg condition while the [UPD photodiode](detector.md) point-counts the transmitted flux through an autoranging amplifier; new Capability, pending (USAXS-1, BONSE-1) |
+| Pinhole small-angle scattering (SAXS) | `small_angle_scattering` | low-q on the [SAXS Pilatus area detector](detector.md); shares the i22 SAXS Capability, pending (TECH-1) |
+| Wide-angle scattering (WAXS) | `wide_angle_scattering` | wide-q on the [WAXS Pilatus area detector](detector.md) on its translation; shares the i22 WAXS Capability, pending (TECH-1) |
 
-USAXS needs the [incident beam chain](beamline.md) (the shared 12-ID double-crystal monochromator and the attenuator filter bank), the [sample stack](equipment/sample.md) (positioning stage, rotator, and the Linkam and PTC10 temperature stages), the [Bonse-Hart crystal stages](equipment/detector.md), and the [autoranging photodiode with its flux monitors and scaler](equipment/detector.md) for normalization. The same instrument runs pinhole SAXS and WAXS on their Pilatus area detectors, which reuse the existing scattering Capabilities and the same beam.
+USAXS needs the [incident beam chain](source.md) (the shared 12-ID double-crystal monochromator and the attenuator filter bank), the [sample stack](sample.md) (positioning stage, rotator, and the Linkam and PTC10 temperature stages), the [Bonse-Hart crystal stages](detector.md), and the [autoranging photodiode with its flux monitors and scaler](detector.md) for normalization. The same instrument runs pinhole SAXS and WAXS on their Pilatus area detectors, which reuse the existing scattering Capabilities and the same beam.
 
 ## A new operating axis for the fleet
 

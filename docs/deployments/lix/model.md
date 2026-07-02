@@ -1,18 +1,17 @@
 # Model
 
-*The developer's index into where LIX content lives, why this deployment coins no new family, how it models a solution beamline's fluidic delivery without inventing device vocabulary, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's LIX content lives, how it models a solution beamline's fluidic delivery without inventing device vocabulary, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-LIX is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's profile collection: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/lix/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/lix/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `LIX` added to its beamline list, with solution-scattering / SEC-SAXS / scanning Practices |
-| Extraction provenance | [NSLS2/lix-profile-collection](https://github.com/NSLS2/lix-profile-collection) | the `startup/` device definitions the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none coined; every device reuses an existing catalog or loose Family (below), including the now-graduated `FlowController` |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; `solution_scattering` is a new pending slug and `scanning_fluorescence_microscopy` is reused pending (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers LIX Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at LIX |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (the incident-energy `PseudoAxis`) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes LIX new
 
@@ -60,5 +59,3 @@ This is the CORA-lens decision for a solution beamline: the experiment's identit
 - **The third Pilatus, the Kinetix, and the viewing cameras.** The 300K WAXS1 head is disabled, the Xspress3 is optional, and the Kinetix and Prosilica cameras are not modelled in this cut (`DET-1`).
 - **The simulated devices and full asset-tree scenarios.** No `test_lix_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

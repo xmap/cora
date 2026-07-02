@@ -54,6 +54,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P04 is a variable-polarization (APPLE-II-type) undulator beamline, 250-3000 eV; the OnlineXML exposes the undulator and its gap (p04/undulatorp04) but no period, polarization modes, or row-phase axes, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "Soft X-ray variable-polarization spectroscopy: a high-resolution plane-grating monochromator feeding photoemission and absorption endstations."
+  source_ref:
+    label: "python-nxstools-extras-p04"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p04"
 
 # Three enclosures: the soft X-ray optics section (the PGM and mirrors), and the two
 # experiment endstations. The optics devices report on the haspp04exp2 Tango host but

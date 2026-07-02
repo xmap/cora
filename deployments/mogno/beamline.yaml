@@ -38,6 +38,11 @@ beamline:
   parent: null
   source: bending-magnet
   source_confirm: "a 3.2 T dipole / superbend source (the hardware paper calls it a permanent-magnet dipole, the facility page a superbend); critical energy ~19 keV. Exact source type and parameters pending (SRC-1)."
+  page_layout: stages
+  shape: "The fleet's first South American facility (Sirius): cone-beam X-ray nano- and micro-tomography across two endstations on a beamline-owned PyEpics stack, reusing the tomography spine."
+  source_ref:
+    label: "lnls.cnpem.br facility page"
+    url: "https://lnls.cnpem.br/facilities/mogno/"
 
 # Two endstations, each its own access-gated experiment area: the nanotomography
 # station (elliptical-mirror nanofocus) and the microtomography station (large

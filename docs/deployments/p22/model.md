@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where P22 content lives, its place as the HAXPES branch off the P09 optics, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's P22 content lives, the shared-optics relationship with P09, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-P22 is a descriptor-and-docs scaffold today, reverse-engineered from P22's public OnlineXML registry: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/p22/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/p22/beamline.yaml) | the device walk; source of the generated [Source](beamline.md) page; Tango handles read from the OnlineXML (`CTRL-1`) |
-| Site descriptor | [`deployments/petra-iii/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/petra-iii/site.yaml) | the existing PETRA III facility surface; P22 adds the HAXPES Practice |
-| Upstream source | [P22 OnlineXML](https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p22) | the beamline's own public OnlineXML Tango device registry the descriptor was reverse-engineered from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; P22 reuses `Manipulator` / `ElectronAnalyzer` / optics Families + the catalog `PhaseRetarder` |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; HAXPES reuses the pending `angle_resolved_photoemission` slug (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers P22 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at P22 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes P22 new
 
@@ -39,5 +37,3 @@ P22 sits on the PETRA III Tango device floor with Sardana as the scan layer. Its
 - **The PSS permit signals (`PSS-1`).** Not in the OnlineXML; carried pending, not invented.
 - **The simulated devices and full asset-tree scenarios.** No `test_p22_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

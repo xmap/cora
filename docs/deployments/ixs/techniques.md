@@ -10,9 +10,9 @@ IXS sets the momentum transfer Q with the six-circle reciprocal-space arm, then 
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| Momentum-resolved inelastic X-ray scattering | `inelastic_scattering` | Q is set on the [six-circle spectrometer arm](equipment/detector.md) via the H/K/L reciprocal-space pseudo-axis; the incident energy is scanned on the [double-crystal and high-resolution monochromators](beamline.md) against the fixed [crystal energy analyzer](equipment/detector.md); the energy-analyzed signal is point-counted on the electrometers; Method not yet in catalog |
+| Momentum-resolved inelastic X-ray scattering | `inelastic_scattering` | Q is set on the [six-circle spectrometer arm](detector.md) via the H/K/L reciprocal-space pseudo-axis; the incident energy is scanned on the [double-crystal and high-resolution monochromators](source.md) against the fixed [crystal energy analyzer](detector.md); the energy-analyzed signal is point-counted on the electrometers; Method not yet in catalog |
 
-It needs the [incident-energy chain](beamline.md) (the DCM for the coarse energy and the high-resolution monochromator for the meV steps), the [sample stage](equipment/sample.md), and the [six-circle arm, crystal energy analyzer, and counting detectors](equipment/detector.md). The arm scattering angle sets the magnitude of the momentum transfer; the analyzer fixes the final energy so the incident-energy scan reads out the energy loss.
+It needs the [incident-energy chain](source.md) (the DCM for the coarse energy and the high-resolution monochromator for the meV steps), the [sample stage](sample.md), and the [six-circle arm, crystal energy analyzer, and counting detectors](detector.md). The arm scattering angle sets the magnitude of the momentum transfer; the analyzer fixes the final energy so the incident-energy scan reads out the energy loss.
 
 ## A new operating axis for the fleet
 

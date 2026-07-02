@@ -7,10 +7,10 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at AMX |
 | --- | --- |
-| Asset (Equipment) | [Inventory](inventory.md#the-asset-tree) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](inventory.md#the-asset-tree) (EnergyAxis) |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (EnergyAxis) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
-| Enclosure (Enclosure) | [The beamline](equipment/index.md) (17-ID-A optics, 17-ID-B experiment) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) (17-ID-A optics, 17-ID-B experiment) |
 | Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
 | Subject (the crystal custody thread) | [Governance](governance.md#the-autonomous-loop-under-custody) (deferred, ROBOT-1) |
 | Procedure, Recipe, Caution, Supply, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
@@ -32,4 +32,4 @@ This is a design-phase scaffold (descriptor + docs), mirroring FMX and the other
 - **The autonomous loop and the Subject custody thread.** The unattended exchange loop is a Procedure over the spine threaded through the `Subject` aggregate; deferred with i03 / FMX (ROBOT-1).
 - **Sample cryo-cooling.** The cold-gas cryostream is not exposed in the profile collection, so it is deferred (CRYO-1); it would bind `TemperatureController` (the i03 cryostream precedent) when its PV is supplied.
 - **The area detector PV.** The Eiger is not exposed in the AMX profile collection; it is carried `Camera` confirm-only (DET-1).
-- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms. The [2-BM Model page](../2-bm/model.md) shows the shape a fully-modelled deployment carries.
+- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms.

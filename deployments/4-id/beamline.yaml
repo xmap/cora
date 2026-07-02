@@ -50,6 +50,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "undulator pair on the S04ID straight section (PolarUndulatorPair, prefix S04ID:); periods and gaps unconfirmed (SRC-1)"
+  page_layout: stages
+  shape: "The fleet's first polarization and magnetic-scattering beamline: diamond phase retarders set the X-ray polarization, with superconducting magnets and low-temperature environments driving resonant magnetic scattering across four stations."
+  source_ref:
+    label: "BCDA-APS/polar-bits"
+    url: "https://github.com/BCDA-APS/polar-bits"
 
 # Four lead-shielded stations: 4-ID-A holds the polarization and beam-defining
 # optics; 4-ID-B, 4-ID-G, and 4-ID-H are the experimental stations (4-ID-G carries

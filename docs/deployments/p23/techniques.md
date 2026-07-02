@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## In-situ X-ray diffraction
 
-P23 measures diffraction (and imaging) of samples under in-situ / operando conditions, electrochemistry, thin-film growth, and controlled sample environments, on the [experiment diffractometer](equipment/sample.md).
+P23 measures diffraction (and imaging) of samples under in-situ / operando conditions, electrochemistry, thin-film growth, and controlled sample environments, on the [experiment diffractometer](sample.md).
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

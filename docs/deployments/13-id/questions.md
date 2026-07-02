@@ -2,7 +2,7 @@
 
 *What CORA needs the GSECARS 13-ID team to confirm before the model can be trusted.*
 
-13-ID was reverse-engineered from the GSECARS EPICS support tree ([CARS-UChicago/GSECARS-EPICS](https://github.com/CARS-UChicago/GSECARS-EPICS)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, reconstructed from the `iocBoot` startup scripts, the `CARSApp/Db` device templates, and the `CARSApp/op/adl` screens rather than confirmed by staff. This is an EPICS-native source (not a dodal or BITS Python roster), so the device-to-PV reconstruction is rougher and carried at medium confidence. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+13-ID was reverse-engineered from the GSECARS EPICS support tree ([CARS-UChicago/GSECARS-EPICS](https://github.com/CARS-UChicago/GSECARS-EPICS)), so the control handles in the [Inventory](index.md) are the beamline's real PVs, reconstructed from the `iocBoot` startup scripts, the `CARSApp/Db` device templates, and the `CARSApp/op/adl` screens rather than confirmed by staff. This is an EPICS-native source (not a dodal or BITS Python roster), so the device-to-PV reconstruction is rougher and carried at medium confidence. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 

@@ -46,6 +46,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "i24 is an undulator MX beamline; dodal exposes the Synchrotron source state (modelled below) but not the insertion-device gap as a device, so the undulator detail is SRC-1"
+  page_layout: stages
+  shape: "The fleet's first synchrotron serial / fixed-target crystallography: thousands of static crystals on a chip raster-scanned across the beam, one Zebra-gated snapshot per window, no goniometer rotation."
+  source_ref:
+    label: "DiamondLightSource/dodal"
+    url: "https://github.com/DiamondLightSource/dodal"
 
 # PV zones: BL24I-OP / -DI (optics, DCM, mirrors, OAV), BL24I-AL (aperture),
 # BL24I-MO (motion: goniometer, chip stage, beamstop, detector stage),

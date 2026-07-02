@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## High-resolution diffraction
 
-P08 uses a high-resolution monochromatic beam on a six-circle [diffractometer](equipment/sample.md) to measure surface / interface diffraction, reflectivity (XRR), and high-resolution powder / single-crystal diffraction, reading the [Eiger / Pilatus / Mythen detectors](equipment/detector.md).
+P08 uses a high-resolution monochromatic beam on a six-circle [diffractometer](sample.md) to measure surface / interface diffraction, reflectivity (XRR), and high-resolution powder / single-crystal diffraction, reading the [Eiger / Pilatus / Mythen detectors](detector.md).
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

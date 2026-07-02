@@ -80,6 +80,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "13-ID is an undulator sector shared with 13-ID-C / 13-ID-E; the undulator is energy-tracked with the mono but not exposed as a device in the support tree read, so the source detail is SRC-1"
+  page_layout: stages
+  shape: "The fleet's first extreme-conditions beamline: the sample sits in a laser-heated diamond anvil cell under gas-membrane pressure, read optically in situ; introduced the PressureCell Family."
+  source_ref:
+    label: "CARS-UChicago/GSECARS-EPICS"
+    url: "https://github.com/CARS-UChicago/GSECARS-EPICS"
 
 # PV zones: 13IDA (the shared 13-ID-A first optics: Si DCM), 13IDE:En (the derived
 # beamline energy), 13IDD (the 13-ID-D endstation: DAC stage, detectors, slits, flux,

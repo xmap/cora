@@ -10,11 +10,11 @@ ID32 sets the X-ray energy and polarization with the twin APPLE-II undulators an
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| Resonant inelastic X-ray scattering | `resonant_inelastic_scattering` | the roughly 5 m dispersive [spectrometer arm](equipment/detector.md) on the RIXS endstation, scanned in energy against the [incident-energy axis](beamline.md); reuses the SIX RIXS Method, the second consumer; Method not yet in the catalog |
-| X-ray magnetic dichroism | `xmcd` | absorption asymmetry in the 9 T [XMCD magnet](equipment/sample.md) between circular / linear polarizations set on the [APPLE-II](beamline.md); reuses the 4-ID / i06 / i10 dichroism Method; pending |
-| X-ray emission spectroscopy | `xas_spectroscopy` | the [XES Rowland arm](equipment/detector.md) at the XMCD endstation; reuses the `xas_spectroscopy` Method that ISS / LCLS-MFX left pending for XES; pending |
+| Resonant inelastic X-ray scattering | `resonant_inelastic_scattering` | the roughly 5 m dispersive [spectrometer arm](detector.md) on the RIXS endstation, scanned in energy against the [incident-energy axis](source.md); reuses the SIX RIXS Method, the second consumer; Method not yet in the catalog |
+| X-ray magnetic dichroism | `xmcd` | absorption asymmetry in the 9 T [XMCD magnet](sample.md) between circular / linear polarizations set on the [APPLE-II](source.md); reuses the 4-ID / i06 / i10 dichroism Method; pending |
+| X-ray emission spectroscopy | `xas_spectroscopy` | the [XES Rowland arm](detector.md) at the XMCD endstation; reuses the `xas_spectroscopy` Method that ISS / LCLS-MFX left pending for XES; pending |
 
-RIXS needs the [incident-energy and polarization axes](beamline.md), the [RIXS diffractometer](equipment/sample.md) to set the scattering geometry, and the [dispersive spectrometer arm and its CCD](equipment/detector.md). XMCD needs the polarization axis, the [9 T magnet and its VTI](equipment/sample.md), and a detection channel. XES needs the [emission spectrometer arm](equipment/detector.md).
+RIXS needs the [incident-energy and polarization axes](source.md), the [RIXS diffractometer](sample.md) to set the scattering geometry, and the [dispersive spectrometer arm and its CCD](detector.md). XMCD needs the polarization axis, the [9 T magnet and its VTI](sample.md), and a detection channel. XES needs the [emission spectrometer arm](detector.md).
 
 ## A new operating axis for the fleet, on familiar vocabulary
 

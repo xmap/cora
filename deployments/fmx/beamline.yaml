@@ -43,7 +43,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "FMX (17-ID-2) shares its IVU21 in-vacuum undulator (SR:C17-ID:G1{IVU21:2}) and the 17-ID straight with its sibling AMX (17-ID-1); modelled as one root Unit feeding the 17-ID-2 branch (the CSX canted-23-ID / 32-ID precedent), not two roots. Undulator period and gap range not fully in the profile collection (SRC-1, TOPO-1)."
-
+  page_layout: stages
+  shape: "CORA's first NSLS-II macromolecular crystallography beamline: rotation MX on a micro-goniometer and Eiger with an autonomous robot sample-exchange loop, pure reuse."
+  source_ref:
+    label: "NSLS2/fmx-profile-collection"
+    url: "https://github.com/NSLS2/fmx-profile-collection"
 enclosures:
   # 17-ID has a shared front-end / optics enclosure (PV zone XF:17IDA, the FOE: the
   # high-heat-load slit, the FMX horizontal DCM, the HFM) and the FMX experiment

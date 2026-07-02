@@ -7,10 +7,10 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at PDF |
 | --- | --- |
-| Asset (Equipment) | [Inventory](inventory.md#the-asset-tree) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](inventory.md#the-asset-tree) (`EnergyAxis`) |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [the stage pages](source.md) (`EnergyAxis`) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
-| Enclosure (Enclosure) | [The beamline](equipment/index.md) (28-ID-1-A optics, 28-ID-1-B endstation) |
+| Enclosure (Enclosure) | [The beamline](index.md#enclosures) (28-ID-1-A optics, 28-ID-1-B endstation) |
 | Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
 | Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
@@ -22,4 +22,4 @@ This is a design-phase scaffold (descriptor + docs), mirroring its twin [XPD](..
 - **The held loose family.** The `StorageRing` current readback is a loose supply observation (machine state), never an Asset Family.
 - **No new Capability or Method.** Total scattering / PDF and powder diffraction sit on the deferred `total_scattering` / `powder_diffraction` Methods Diamond i11 and i15-1 left pending (`TECH-1`); PDF reinforces them at a second NSLS-II endstation without coining either, and records no Practice until they land. The PDF reduction (azimuthal integration and the Fourier transform to G(r)) is `ComputePort` work, not a Method.
 - **The gas-handling and humidity rig.** Present in the profile collection but carried deferred (`ENV-1`): a design-phase scaffold models the thermal environment that is settled (`TemperatureController`) and defers the in-situ gas / humidity actuators until they earn modelling, the same discipline the other deployments follow.
-- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms. The [2-BM Model page](../2-bm/model.md) shows the shape a fully-modelled deployment carries.
+- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms.

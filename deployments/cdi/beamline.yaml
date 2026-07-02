@@ -48,7 +48,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "IVU18 in-vacuum undulator (SR:C09-ID:G1{IVU18:1}), verified in source; period/gap parameters not fully in the profile collection (SRC-1)"
-
+  page_layout: stages
+  shape: "Coherent diffractive imaging: a focused coherent beam, the far-field diffraction pattern on an area detector, and the real-space image recovered offline by phase retrieval."
+  source_ref:
+    label: "NSLS2/cdi-profile-collection"
+    url: "https://github.com/NSLS2/cdi-profile-collection"
 enclosures:
   # PV zones: 09IDA first-optics hutch (FOE), 09IDB branch (DM3 slit, quadrant BPM),
   # 09IDC endstation (KB nanofocus, beam-conditioning unit, goniometer, towers), and

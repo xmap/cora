@@ -11,7 +11,7 @@ that replay / verify that resolution:
   - `_replay`: locate + verify the genesis `RecipeExpansionRecorded` provenance
     on the `conduct_procedure` path (re-expand and compare pinned hashes).
   - `_resolved_steps_replay`: locate the pinned `ResolvedStepsRecorded` provenance
-    on the `reconduct_procedure` (resume) path.
+    on the `conduct_from_procedure` (resume) path.
 
 Re-exports the public surface so consumers import from the package
 (`from cora.operation._recipe_expansion import expand, find_recipe_expansion_record`).

@@ -1,18 +1,17 @@
 # Model
 
-*The developer's index into where CMS content lives, why this deployment coins no new family, how it models specular reflectivity without a device, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's CMS content lives, how it models specular reflectivity without a device, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-CMS is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's profile collection: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/cms/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/cms/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `CMS` added to its beamline list, with SAXS / WAXS / GISAXS / reflectivity Practices |
-| Extraction provenance | [NSLS2/cms-profile-collection](https://github.com/NSLS2/cms-profile-collection) | the `startup/*.py` device definitions the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; every device reuses an existing catalog or loose Family (below) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the scattering and reflectivity Methods are pending (TECH-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers CMS Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at CMS |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (the incident-energy `PseudoAxis`) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes CMS new
 
@@ -49,5 +48,3 @@ The "two-theta" is synthetic: the detector does not move, and the region-of-inte
 - **The chamber rebinding and the sth / schi swap.** The beamline_stage configurations rebind the logical goniometer axes across physical PVs at startup, and staff have at times swapped sth and schi; CORA models the logical `Goniometer` and carries the active binding as a setting (`SAMPLE-1`), not as separate Assets.
 - **The simulated devices and full asset-tree scenarios.** No `test_cms_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

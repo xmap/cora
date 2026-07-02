@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where XFP content lives, why this dose-delivery beamline coins no new family, how it models a beamline with no detector and an offline readout, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's XFP content lives, how it models a beamline with no detector and an offline readout, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-XFP is a descriptor-and-docs scaffold today, reverse-engineered from the beamline's profile collection: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/xfp/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/xfp/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/nsls2/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/nsls2/site.yaml) | the NSLS-II facility surface; `XFP` added to its beamline list, with the footprinting Practices |
-| Extraction provenance | [NSLS2/xfp-profile-collection](https://github.com/NSLS2/xfp-profile-collection) | the `startup/` device definitions the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | every device reuses an existing catalog or loose Family (below); the delivery pump binds the catalog `FlowController` Family (graduated; presents Regulator) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; `x_ray_footprinting` is a new pending slug, the fleet's first dose-delivery Method (`TECH-1`) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers XFP Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at XFP |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes XFP new
 
@@ -54,5 +52,3 @@ The one device reuse worth naming is the sample-delivery pump. Its anatomy is a 
 - **The time-resolved mixing mode.** The stopped-flow time-resolved footprinting mode is flagged unfinished in the source; no Practice is recorded for it (`TECH-1`).
 - **The simulated devices and full asset-tree scenarios.** No `test_xfp_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

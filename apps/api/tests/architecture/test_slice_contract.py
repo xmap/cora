@@ -60,11 +60,11 @@ _ORCHESTRATION_SLICES: frozenset[str] = frozenset(
         # Resume-and-replay entry: delegates resume_procedure +
         # Conductor.execute_from + complete/abort; no direct event emission.
         # See [[project_resumable_conduct_design]].
-        "cora.operation.features.reconduct_procedure",
-        # Pause-capable conduct entry: delegates Conductor.try_conduct
+        "cora.operation.features.conduct_from_procedure",
+        # Pause-capable conduct entry: delegates Conductor.conduct_or_hold
         # (start + execute + complete/hold/abort); no direct event emission.
         # See [[project_resumable_conduct_design]].
-        "cora.operation.features.try_conduct_procedure",
+        "cora.operation.features.conduct_or_hold_procedure",
         # AUTO-align convergence-loop entry: delegates
         # Conductor.conduct_until_converged (start + { start_iteration +
         # execute + end_iteration } * + complete/abort); no direct event

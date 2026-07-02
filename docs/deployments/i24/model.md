@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where i24 content lives, why this first serial-crystallography deployment coins no new vocabulary, and the record of what is deliberately deferred. First cut.*
+*The developer's by-kind index: where each CORA aggregate's i24 content lives, why this first serial-crystallography deployment coins no new vocabulary, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-i24 is a descriptor-and-docs scaffold today, reverse-engineered from Diamond's dodal controls library: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, and records the scope decisions that are CORA's to make (kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/i24/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i24/beamline.yaml) | the device walk with bound PVs; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface; `I24` added to its beamline list, with a serial-crystallography Practice |
-| Extraction provenance | [DiamondLightSource/dodal](https://github.com/DiamondLightSource/dodal) | `src/dodal/beamlines/i24.py` and its device classes, the source the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none changed; i24 coins no new Family (below) |
-| Catalog Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the serial-crystallography Method is not yet coined (SSX-1) |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers i24 Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md) |
+| Aggregate (BC) | Where at i24 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## What makes i24 new
 
@@ -40,5 +38,3 @@ i24 introduces no new device class. Every device reuses an existing catalog or l
 - **The simulated devices and full asset-tree scenarios.** No `test_i24_*.py` registers the i24 asset tree, and no vendor Models are bound. Those land when the design firms and the team approves.
 
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

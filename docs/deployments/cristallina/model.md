@@ -1,20 +1,17 @@
 # Model
 
-*The developer's index into where Cristallina content lives, the `Diffractometer` Assembly and `Magnet` rule-of-three decisions, and the `slic` provenance boundary. Design-phase.*
+*The developer's by-kind index: where each CORA aggregate's Cristallina content lives, how the diffractometers reuse the graduated Assembly and the vector magnet binds an earned Family, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-Cristallina is a documentation-and-descriptor scaffold: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, then records the CORA scope decisions Cristallina turns on: how the diffractometers compose (DIFF-1), how the vector magnet binds (MAG-1), and where the public-source boundary falls. These are kept off the staff [Open questions](questions.md), which carry only world-facts.
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/cristallina/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/cristallina/beamline.yaml) | the device walk, with the `slic`-derived EPICS PV prefixes; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/psi/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/psi/site.yaml) | the PSI facility surface; Cristallina is its third beamline, with diffraction and serial-crystallography practices carried pending |
-| Extraction provenance | [`slic/cristallina`](https://gitea.psi.ch/slic/cristallina) | the `channels/pv_channels.py` PV lists and `beamline/` + `crq_exp/` driver classes the descriptor was curated from (gitea.psi.ch, branch `master`) |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **none graduated here.** Cristallina reuses catalog Families, the graduated `Diffractometer` Assembly, `TemperatureController` Family, `Magnet` Family (a further consumer of the graduated `Magnet`), and the graduated `Laser` Family (the X-ray alignment laser); loose families (`Diagnostic`, `FluxMonitor`) reused |
-| Catalog Assembly | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | reuses the graduated `Diffractometer` Assembly; DM1 and DM2 are its fifth and sixth bindings (DIFF-1) |
-| Catalog Capability / Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the diffraction and serial-crystallography Methods are deferred, shared with Bernina / Alvra |
-| Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound; `slic` names hardware (the Jungfraus, the Oxford Mercury iPS, the LakeShore 372) but no part is procured |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers Cristallina Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md), including the high-field-magnet Clearance |
+| Aggregate (BC) | Where at Cristallina |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (the reciprocal-space `PseudoAxis`) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## The headline: no new Family, three things tested
 
@@ -55,5 +52,3 @@ These are the same deferrals Alvra and Bernina recorded; Cristallina re-confirms
 - **The serial-crystallography sample delivery (SAMPLE-1).** Beyond the fast XY stage, the Cristallina-MX delivery is deferred.
 - **The transmission-readback cross-reference (XREF-1).** The front-end attenuator's transmission readbacks alias to `SAROP31-OATT053`; carried `confirm`.
 - **Integration scenarios.** No `test_cristallina_*.py` registers Cristallina Assets. Hard-registering a design-phase, off-roadmap, XFEL beamline would commit speculative structure.
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

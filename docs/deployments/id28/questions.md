@@ -2,7 +2,7 @@
 
 *What CORA needs the ID28 team to confirm before the model can be trusted.*
 
-ID28 was reverse-engineered from the ESRF's open BLISS Beacon device database ([gitlab.esrf.fr/id28/beamline_configuration](https://gitlab.esrf.fr/id28/beamline_configuration), a git mirror of the live config), so the control handles in the [Inventory](inventory.md) are the beamline's real BLISS / Tango / IcePAP addresses, read from the config rather than confirmed by staff (the ID32 house-style precedent). Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+ID28 was reverse-engineered from the ESRF's open BLISS Beacon device database ([gitlab.esrf.fr/id28/beamline_configuration](https://gitlab.esrf.fr/id28/beamline_configuration), a git mirror of the live config), so the control handles in the [Inventory](index.md) are the beamline's real BLISS / Tango / IcePAP addresses, read from the config rather than confirmed by staff (the ID32 house-style precedent). Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 

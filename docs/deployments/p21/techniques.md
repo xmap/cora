@@ -6,7 +6,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 ## High-energy diffraction
 
-P21's P21.2 / EH3 branches use a high-energy monochromatic beam for bulk / engineering diffraction, residual stress, and texture studies on the [sample stages](equipment/sample.md), reading area detectors.
+P21's P21.2 / EH3 branches use a high-energy monochromatic beam for bulk / engineering diffraction, residual stress, and texture studies on the [sample stages](sample.md), reading area detectors.
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

@@ -2,7 +2,7 @@
 
 *What CORA needs the MANACA team to confirm before the model can be trusted.*
 
-MANACA was reverse-engineered from Sirius's public facility pages ([lnls.cnpem.br/facilities/manaca](https://lnls.cnpem.br/facilities/manaca/)) and a verified research brief, not from a live connection. LNLS publishes its control software (the Bluesky-based sophys family) openly, but no per-beamline EPICS PV manifest, so the [Inventory](inventory.md) is a planned shape with control handles unbound. MANACA is Sirius's first macromolecular-crystallography beamline, CORA's second modelled Sirius beamline after the [MOGNO](../mogno/index.md) tomography scaffold. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+MANACA was reverse-engineered from Sirius's public facility pages ([lnls.cnpem.br/facilities/manaca](https://lnls.cnpem.br/facilities/manaca/)) and a verified research brief, not from a live connection. LNLS publishes its control software (the Bluesky-based sophys family) openly, but no per-beamline EPICS PV manifest, so the [Inventory](index.md) is a planned shape with control handles unbound. MANACA is Sirius's first macromolecular-crystallography beamline, CORA's second modelled Sirius beamline after the [MOGNO](../mogno/index.md) tomography scaffold. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet)). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 

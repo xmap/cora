@@ -2,13 +2,13 @@
 
 *What CORA needs the 8-ID team to confirm before the model can be trusted.*
 
-8-ID was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/8id-bits](https://github.com/BCDA-APS/8id-bits)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, read from a config snapshot rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet), including the catalog graduation and the diffractometer Assembly). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+8-ID was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/8id-bits](https://github.com/BCDA-APS/8id-bits)), so the control handles in the [Inventory](index.md) are the beamline's real PVs, read from a config snapshot rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet), including the catalog graduation and the diffractometer Assembly). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| TOPO-1 | Blocks-build | Are the two undulators canted feeding separate branches, and do the four stations (`8-ID-A/D/E/I`) run off one beam in series or split? | One root Unit Asset `8-ID` with one optics spine feeding the stations in series. | One-vs-many beam walks in the [descriptor](inventory.md). |
+| TOPO-1 | Blocks-build | Are the two undulators canted feeding separate branches, and do the four stations (`8-ID-A/D/E/I`) run off one beam in series or split? | One root Unit Asset `8-ID` with one optics spine feeding the stations in series. | One-vs-many beam walks in the [descriptor](index.md). |
 
 ## Control and safety
 

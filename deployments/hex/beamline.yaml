@@ -72,7 +72,11 @@ beamline:
   parent: null
   source: superconducting-wiggler
   source_confirm: "superconducting wiggler (SCW), 4.3 T on-axis peak field, 70 mm period, 1.2 m device length, cell-27 low-beta straight on the 3 GeV NSLS-II ring; cryogen-free (no liquid helium); commissioned 2023. Pole count and critical photon energy are SCW-1"
-
+  page_layout: stages
+  shape: "A high-energy hard X-ray beamline (superconducting wiggler to 200 keV) running imaging, EDXD, and ADXD in one endstation on very large, heavy engineering samples."
+  source_ref:
+    label: "NSLS2/hex-profile-collection"
+    url: "https://github.com/NSLS2/hex-profile-collection"
 # All six designed enclosures are declared, forward-looking. Two are operational and
 # carry the device walk: the First Optics Enclosure (hex-foe, the A-hutch) and the
 # F-hutch endstation (hex-endstation), in a satellite building adjacent to Bldg. 742,

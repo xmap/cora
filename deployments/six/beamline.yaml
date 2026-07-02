@@ -45,7 +45,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "2-ID elliptically-polarizing undulator (EPU) on SR:C02-ID:G1A{EPU:1}; gap + phase (polarization) axes; whether SIX shares a canted straight with a sibling beamline is TOPO-1, the EPU type/period is SRC-1"
-
+  page_layout: stages
+  shape: "CORA's first soft X-ray beamline: a grating monochromator, a meters-long RIXS spectrometer arm, and a UHV cryostat manipulator, three device classes new to the catalog."
+  source_ref:
+    label: "NSLS2/six-profile-collection"
+    url: "https://github.com/NSLS2/six-profile-collection"
 # PV zones along the beamline: XF:02IDA (front-end optics), XF:02IDB (the PGM),
 # XF:02IDC (refocusing optics + exit slit), XF:02IDD-ES / XF:02ID1-ES (the RIXS
 # endstation). Whether these are four separate shielded hutches or beam zones

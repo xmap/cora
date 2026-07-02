@@ -49,6 +49,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "P64 is an undulator beamline (advanced XAS); the OnlineXML exposes the undulator energy axis (p64/petra3undulator) coupled into the mono, but no period or parameters, carried pending (SRC-1)"
+  page_layout: stages
+  shape: "X-ray absorption spectroscopy: a fixed-exit monochromator sweeping across absorption edges, with ion chambers and fluorescence detectors."
+  source_ref:
+    label: "python-nxstools-extras-p64"
+    url: "https://gitlab.desy.de/petra-iii-debian-packages/python-nxstools-extras-p64"
 
 # Two enclosures: the optics hutch (the Tsai DCM + the mirror pair) and the experiment
 # endstation. DESY PSS permit signals are not in the OnlineXML (PSS-1).

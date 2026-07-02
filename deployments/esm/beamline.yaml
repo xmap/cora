@@ -43,7 +43,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "two elliptically-polarizing undulators on the SR:C21-ID straight (EPU57 on G1A, EPU105 on G1B); gap + phase (polarization) per device; the dual-EPU coordination and periods are SRC-1"
-
+  page_layout: stages
+  shape: "CORA's first photoemission beamline: it measures electrons, not photons, binding a hemispherical ElectronAnalyzer and graduating the UHV Manipulator."
+  source_ref:
+    label: "NSLS2/esm-arpes-profile-collection"
+    url: "https://github.com/NSLS2/esm-arpes-profile-collection"
 # PV zones: XF:21IDA (front-end optics), XF:21IDB (the PGM), XF:21IDC (branch optics +
 # exit slits), XF:21IDD-ES / XF:21ID1-ES (the ARPES endstation). Whether these are
 # separate shielded hutches, and the PSS permit leaves, are open (ENC-1, PSS-1).

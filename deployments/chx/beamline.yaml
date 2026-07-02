@@ -42,7 +42,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "IVU20 in-vacuum undulator (SR:C11-ID:G1{IVU20:1}), verified in source; parameters not fully in the profile collection (SRC-1)"
-
+  page_layout: stages
+  shape: "CORA's second coherent beamline: an area detector records a speckle time series (XPCS) under a fast-gated exposure, the coherent shape ported to a second facility."
+  source_ref:
+    label: "NSLS2/chx-profile-collection"
+    url: "https://github.com/NSLS2/chx-profile-collection"
 enclosures:
   # PV zones: 11IDA first-optics hutch (FOE), 11IDB endstation (the long coherence
   # hutch, where the sample, flight path, and area detectors sit). Shutters span

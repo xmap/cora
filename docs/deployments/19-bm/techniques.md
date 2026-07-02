@@ -16,7 +16,7 @@ A technique is a portable [Catalog](../../catalog/methods.md) Method; a [Practic
 
 A few points of intent shape the model:
 
-- **Autonomy and throughput are the point.** 19-BM is built to run unattended at a high scan cadence with a robotic sample changer feeding it. The technique layer is ordinary tomography; what is distinctive is the autonomous operation around it (see [Governance](governance.md)) and the sample-exchange loop (see [Sample](equipment/sample.md)).
+- **Autonomy and throughput are the point.** 19-BM is built to run unattended at a high scan cadence with a robotic sample changer feeding it. The technique layer is ordinary tomography; what is distinctive is the autonomous operation around it (see [Governance](governance.md)) and the sample-exchange loop (see [Sample](sample.md)).
 - **Spectrum is set by filtering, not optics.** Selecting Si / Ge / Cu filters in the F3-30 unit hardens or softens the white-beam spectrum. This replaces the energy-selection techniques 2-BM has, which depend on its monochromator.
 - **Single beam mode.** There is one set of optics and one mode, so there is no beam-mode-change technique to model.
 

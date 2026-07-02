@@ -43,7 +43,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "AMX (17-ID-1) shares its IVU21 in-vacuum undulator (SR:C17-ID:G1{IVU21:1}) and the 17-ID straight with its sibling FMX (17-ID-2, which uses IVU21:2); modelled as one root Unit feeding the 17-ID-1 branch (the FMX / CSX precedent), not two roots. Undulator period and gap range not fully in the profile collection (SRC-1, TOPO-1)."
-
+  page_layout: stages
+  shape: "FMX's high-throughput sibling on the shared 17-ID straight, completing the NSLS-II MX pair: CORA's third MX deployment, pure reuse that coins no new Family."
+  source_ref:
+    label: "NSLS2/amx-profile-collection"
+    url: "https://github.com/NSLS2/amx-profile-collection"
 enclosures:
   # 17-ID has a shared front-end / optics enclosure (PV zone XF:17IDA, the FOE: the
   # high-heat-load slit, the vertical DCM, the tandem-deflection mirrors) and the AMX

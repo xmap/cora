@@ -1,19 +1,16 @@
 # Model
 
-*The developer's index into where Alvra content lives, and the architectural gap register this second-XFEL exercise re-confirms. Design-phase.*
+*The developer's by-kind index: where each CORA aggregate's Alvra content lives, how the device families fold at a second XFEL, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-Alvra is a documentation-and-descriptor scaffold: it exists as the descriptor and docs below, not yet as registered events or integration scenarios. This page points to where each piece lives, then records the gaps the exercise re-confirms (the CORA scope decisions, kept off the staff [Open questions](questions.md), which carry only world-facts).
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/alvra/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/alvra/beamline.yaml) | the device walk, with the `eco`-derived EPICS PV prefixes; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/psi/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/psi/site.yaml) | the PSI facility surface; Alvra is its first beamline, with XFEL practices carried pending |
-| Extraction provenance | [paulscherrerinstitute/eco](https://github.com/paulscherrerinstitute/eco) | the `eco/alvra/config.py` `aliases` dict and its driver classes the descriptor was curated from |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **none graduated.** Alvra reuses catalog Families, including the graduated `EmissionSpectrometer` (the von Hamos, a fourth sighting) and the graduated `Laser` (both the pump-probe and the alignment-reference lasers), and carries loose families (`Diagnostic`, `FluxMonitor` reused) |
-| Catalog Capability / Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; pump-probe, time-resolved spectroscopy, and serial-crystallography Methods are deferred, reusing the pending LCLS-MFX Methods (the catalog tomography Methods do not fit an XFEL) |
-| Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound; `eco` names hardware (the Jungfrau, the Huber stage, the von Hamos) but no part is procured |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape; no scenario registers Alvra Assets yet |
-| Trust / governance | not yet instantiated | see [Governance](governance.md), including the pump-probe laser Clearance |
+| Aggregate (BC) | Where at Alvra |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## The headline: the families fold again, at a second XFEL
 
@@ -37,5 +34,3 @@ These are the parts of Alvra this scaffold leaves out on purpose. Unlike the ope
 - **Sample delivery and the Subject custody thread.** The fixed-target / liquid-jet delivery on the Prime sample stage is endstation-specific and deferred (SAMPLE-1); no Family is coined, mirroring how LCLS-MFX carries its liquid jet.
 - **The eco cross-line references (XREF-1).** Several Alvra `eco` drivers reference `SAROP21-*` PVs (a sibling Aramis line) for an aperture and an energy readback. Whether that is correct for Alvra or a copy-paste artifact is not determinable from source; carried as an open question, not silently modelled.
 - **Integration scenarios.** No `test_alvra_*.py` registers Alvra Assets. Hard-registering a design-phase, off-roadmap, XFEL beamline would commit speculative structure.
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

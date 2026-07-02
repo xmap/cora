@@ -36,7 +36,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "two elliptically-polarizing undulators (EPU:1, EPU:2) on the canted SR:C23-ID straight, with a canting magnet / phaser at SR:C23-MG; modelled as one root Unit feeding the 23-ID-1 (CSX) branch (the 32-ID canted precedent), not two roots (TOPO-1); EPU type / period / polarization are SRC-1"
-
+  page_layout: stages
+  shape: "The consolidation of the soft X-ray regime SIX opened: it graduates GratingMonochromator and reuses the Diffractometer Assembly on its in-vacuum TARDIS endstation."
+  source_ref:
+    label: "NSLS2/csx-profile-collection"
+    url: "https://github.com/NSLS2/csx-profile-collection"
 # PV zones: XF:23IDA (front-end optics), XF:23ID1-OP (the 23-ID-1 branch optics,
 # the PGM), XF:23ID1-ES (the CSX endstation). Whether the front-end, branch optics,
 # and endstation are separate shielded hutches, and the PSS permit leaves, are open

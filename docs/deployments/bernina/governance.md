@@ -16,6 +16,6 @@ Bernina runs a class-4 optical laser for pump-probe. CORA carries this as a `Cle
 
 - **Trust instantiation.** No scenario instantiates Bernina trust zones or actors; this is a design-phase modelling exercise, so the governance shape is described, not seeded. It would land, following the [2-BM governance](../2-bm/governance.md) shape, if and when the deployment approaches real scope.
 - **The Staeubli sample / detector robot as a principal or driven Asset.** The robot runs over PShell (HTTP), not EPICS, and its modelling is deferred (ROBOT-1); when it is modelled, whether an autonomous sample-handling Agent acts through it is part of that work.
-- **The DAQ and acquisition software as principals.** The SwissFEL `sf-daq`, `bsread`, and the `eco` / `slic` scan suite are control-system software on the floor, not CORA actors (see [Controls](equipment/controls.md)). When the per-shot acquisition axis is designed (DAQ-1), the question of which principal authorizes a DAQ run is part of that work.
+- **The DAQ and acquisition software as principals.** The SwissFEL `sf-daq`, `bsread`, and the `eco` / `slic` scan suite are control-system software on the floor, not CORA actors (see [Controls](controls.md)). When the per-shot acquisition axis is designed (DAQ-1), the question of which principal authorizes a DAQ run is part of that work.
 
 People and agents are facility principals at the [PSI Site](../psi/index.md); see [Open questions](questions.md) for the governance items still to confirm.

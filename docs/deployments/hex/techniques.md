@@ -8,12 +8,12 @@ HEX is mostly reinforcement of imaging and high-energy diffraction the fleet alr
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| X-ray tomography and CT | `tomography` | high-energy white-beam and monochromatic tomography (continuous fly-rotation, `tomo_flyscan`) on the [Kinetix sCMOS cameras](equipment/detector.md); reuses the graduated Method (shared with [2-BM](../2-bm/techniques.md) and [FXI](../fxi/techniques.md)) |
-| Time-resolved radiography | `radiography` | 2D high-speed / in-situ radiography on the [Phantom Veo](equipment/detector.md); shares the Method APS [7-BM](../7-bm/techniques.md) left pending (`TECH-1`) |
-| Energy-dispersive diffraction (EDXD) | `energy_dispersive_diffraction` | spatially-resolved EDXD on the [GeRM germanium strip detector](equipment/detector.md); shares the Method 7-BM left pending, HEX the second consumer (`TECH-1`) |
-| Angle-dispersive / powder diffraction (ADXD) | `powder_diffraction` | monochromatic area-detector diffraction on the [PerkinElmer flat panel](equipment/detector.md); shares the Method Diamond [i11](../i11/techniques.md) left pending, HEX the second consumer (`TECH-1`) |
+| X-ray tomography and CT | `tomography` | high-energy white-beam and monochromatic tomography (continuous fly-rotation, `tomo_flyscan`) on the [Kinetix sCMOS cameras](detector.md); reuses the graduated Method (shared with [2-BM](../2-bm/techniques.md) and [FXI](../fxi/techniques.md)) |
+| Time-resolved radiography | `radiography` | 2D high-speed / in-situ radiography on the [Phantom Veo](detector.md); shares the Method APS [7-BM](../7-bm/techniques.md) left pending (`TECH-1`) |
+| Energy-dispersive diffraction (EDXD) | `energy_dispersive_diffraction` | spatially-resolved EDXD on the [GeRM germanium strip detector](detector.md); shares the Method 7-BM left pending, HEX the second consumer (`TECH-1`) |
+| Angle-dispersive / powder diffraction (ADXD) | `powder_diffraction` | monochromatic area-detector diffraction on the [PerkinElmer flat panel](detector.md); shares the Method Diamond [i11](../i11/techniques.md) left pending, HEX the second consumer (`TECH-1`) |
 
-All four techniques need the [incident-beam chain](beamline.md) (the superconducting wiggler, the low-energy filters, and the monochromator for the monochromatic modes), the [sample stack](equipment/sample.md) (the 500 kg sample tower, the tomographic rotation and translations), and the [endstation detectors](equipment/detector.md). The white beam serves high-speed imaging and EDXD; the monochromatic beam serves tomography at a chosen energy and angle-dispersive diffraction.
+All four techniques need the [incident-beam chain](source.md) (the superconducting wiggler, the low-energy filters, and the monochromator for the monochromatic modes), the [sample stack](sample.md) (the 500 kg sample tower, the tomographic rotation and translations), and the [endstation detectors](detector.md). The white beam serves high-speed imaging and EDXD; the monochromatic beam serves tomography at a chosen energy and angle-dispersive diffraction.
 
 ## The imaging and diffraction is reinforcement, not novelty
 
@@ -25,14 +25,14 @@ So the technique side of HEX earns no new abstraction. It reinforces, at a high-
 
 The structurally distinct thing about HEX is not any one technique; it is that imaging / tomography, EDXD, and ADXD are all available in the single F-hutch endstation during the same experiment, with detectors and optics moved into place remotely per technique. A high-energy beamline lets a user follow a working battery or a loaded engineering component and switch, within one mounting, between a tomographic view of the microstructure, an energy-dispersive map of internal strain and phase, and an angle-dispersive powder pattern.
 
-CORA models this as **multiple Methods over one endstation**, not a new Capability. The switch itself is a positioning action: a [detector / optics stage](equipment/detector.md) moves the chosen detector into the beam. That positioning binds the catalog `LinearStage` and is conducted over the `ControlPort` (see [Controls](equipment/controls.md)); it is a Practice-level sequence, not a new technique. The one-technique-per-acquisition assumption is what this stresses, and the resolution is that a Run selects its technique by positioning, then acquires (`TECH-1`).
+CORA models this as **multiple Methods over one endstation**, not a new Capability. The switch itself is a positioning action: a [detector / optics stage](detector.md) moves the chosen detector into the beam. That positioning binds the catalog `LinearStage` and is conducted over the `ControlPort` (see [Controls](controls.md)); it is a Practice-level sequence, not a new technique. The one-technique-per-acquisition assumption is what this stresses, and the resolution is that a Run selects its technique by positioning, then acquires (`TECH-1`).
 
 | Technique in the experiment | Detector | Family |
 | --- | --- | --- |
-| imaging / tomography | [Kinetix sCMOS](equipment/detector.md) + scintillator-lens | `Camera` + `Scintillator` |
-| time-resolved radiography | [Phantom Veo](equipment/detector.md) | `Camera` |
-| energy-dispersive diffraction (EDXD) | [GeRM strip detector](equipment/detector.md) | `EnergyDispersiveSpectrometer` |
-| angle-dispersive diffraction (ADXD) | [PerkinElmer flat panel](equipment/detector.md) | `Camera` |
+| imaging / tomography | [Kinetix sCMOS](detector.md) + scintillator-lens | `Camera` + `Scintillator` |
+| time-resolved radiography | [Phantom Veo](detector.md) | `Camera` |
+| energy-dispersive diffraction (EDXD) | [GeRM strip detector](detector.md) | `EnergyDispersiveSpectrometer` |
+| angle-dispersive diffraction (ADXD) | [PerkinElmer flat panel](detector.md) | `Camera` |
 
 ## Not modelled yet
 

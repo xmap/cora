@@ -57,6 +57,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "TPS 07A is fed by the TPS IU22 in-vacuum undulator (per the SPXF spec page); the front-end / insertion-device PV is not in the public control tree, so the source is carried generically and the ring-current monitor stands in as the source representation (SRC-1)"
+  page_layout: stages
+  shape: "NSRRC's Taiwan MX beamline: micro-focus macromolecular crystallography on a single EPICS floor with a Blu-Ice / DCSS orchestration layer CORA's edge would replace, the 2-BM seam rather than the MX3 seam."
+  source_ref:
+    label: "light911/NSRRC_TPS07A"
+    url: "https://github.com/light911/NSRRC_TPS07A"
 
 enclosures:
   # The control tree exposes no enclosure / hutch layout. MX beamlines run an optics

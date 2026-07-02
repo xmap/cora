@@ -14,20 +14,20 @@ The configured zones below live in these docs: the beamline itself, what it can 
 
 ## The beamline
 
-The systems you operate, in five areas: the three stations the beam passes through, plus the controls that drive them and the resources they draw on. See [the beamline overview](equipment/index.md) for how the areas relate.
+The systems you operate, in five areas: the three stations the beam passes through, plus the controls that drive them and the resources they draw on.
 
 Along the beam, in order:
 
-- [Source](beamline.md): the front-end optics that deliver and condition the beam (mirror, monochromator, slits, filters), rendered as the generated source-stage device walk.
-- [Sample](equipment/sample_tower.md): the positioning stack that places the specimen, a `SampleTower` [Assembly](../../catalog/assemblies.md) presenting the `Positioner` Role.
-- [Detector](equipment/microscope.md): the imaging system, a `Microscope` Assembly over a reusable `Optics` sub-assembly, presenting the `Detector` Role.
+- [Source](source.md): the front-end optics that deliver and condition the beam (mirror, monochromator, slits, filters), rendered as the generated source-stage device walk.
+- [Sample](sample_tower.md): the positioning stack that places the specimen, a `SampleTower` [Assembly](../../catalog/assemblies.md) presenting the `Positioner` Role.
+- [Detector](microscope.md): the imaging system, a `Microscope` Assembly over a reusable `Optics` sub-assembly, presenting the `Detector` Role.
 
 Cutting across all three:
 
-- [Controls](equipment/controls.md): the controllers and drive crates, related to the hardware by `controller_id`, with the trigger wiring that links them.
+- [Controls](controls.md): the controllers and drive crates, related to the hardware by `controller_id`, with the trigger wiring that links them.
 - Resources: the continuously-available supplies a run needs (beam, cooling, vacuum), tracked under [Operations > Supplies](operations.md#supplies).
 
-The cross-cutting reference view is the [Inventory](inventory.md): the flat Asset tree by `parent_id` with vendor Models, settings, drawings, and signal wiring, plus the computed axes. The [Source](beamline.md) page is generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor.
+The cross-cutting reference view is the [Inventory](inventory.md): the flat Asset tree by `parent_id` with vendor Models, settings, drawings, and signal wiring, plus the computed axes. The [Source](source.md) page is generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/2-bm/beamline.yaml) descriptor.
 
 ## Techniques
 

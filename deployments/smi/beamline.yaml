@@ -41,7 +41,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "in-vacuum undulator (SR:C12-ID:G1{IVU:1}), verified in source (the energy pseudopositioner drives its gap); period and range not fully in the profile collection (SRC-1)"
-
+  page_layout: stages
+  shape: "The NSLS-II twin of Diamond I22 scattering, adding grazing-incidence geometry and in-situ soft-matter cells: two area detectors read at once, the detector distance setting Q."
+  source_ref:
+    label: "NSLS2/smi-profile-collection"
+    url: "https://github.com/NSLS2/smi-profile-collection"
 enclosures:
   # PV zones: 12IDA first-optics hutch (FOE: mirrors, white-beam slit, FOE mono
   # slits), 12IDB / 12IDB1 secondary-source and diagnostics, 12IDC the experiment

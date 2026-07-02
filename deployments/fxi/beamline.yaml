@@ -30,6 +30,8 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  deployment_tier: model
+  page_layout: stages
   summary: "full-field transmission X-ray microscopy and tomography, 18-ID; modelled from public beamline config"
   name: FXI
   facility: nsls2               # NSLS-II, a Site-level Facility (facility_code: nsls2)
@@ -39,6 +41,10 @@ beamline:
   source: insertion-device
   source_confirm: "insertion-device type (undulator vs damping wiggler) and parameters are not in the public profile collection (SRC-1)"
   # No z_span: the profile collection carries no layout / z reference (LAYOUT-1).
+  shape: "A full-field transmission X-ray microscope: it floods the sample and images the whole field at once (fly and step tomography, radiography, XANES), the full-field counterpart to HXN's scanning probe."
+  source_ref:
+    label: "NSLS2/fxi-profile-collection"
+    url: "https://github.com/NSLS2/fxi-profile-collection"
 
 enclosures:
   # Two access-gated areas, partitioned by the PV branch letter: 18-IDA carries the

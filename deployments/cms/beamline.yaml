@@ -62,7 +62,11 @@ beamline:
   parent: null
   source: bending-magnet
   source_confirm: "11-BM is a bending-magnet (or three-pole-wiggler) source; the profile collection does not expose the source as a device, so the source detail is SRC-1"
-
+  page_layout: stages
+  shape: "Materials scattering (SAXS / WAXS / GISAXS) as the fleet shape ported once more, plus one distinct addition: specular reflectivity realized as a Method on a fixed area detector, no two-theta arm."
+  source_ref:
+    label: "NSLS2/cms-profile-collection"
+    url: "https://github.com/NSLS2/cms-profile-collection"
 # PV zones: XF:11BMA (the first optics enclosure: the DMM, the toroidal mirror, the
 # FOE slit and flux monitors), XF:11BMB (the endstation: the sample chamber, the
 # detectors, the endstation slits and monitors), XF:11BM1 (the newer elliptical

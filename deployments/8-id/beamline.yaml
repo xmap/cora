@@ -38,6 +38,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "two undulators on the S08ID straight section (downstream DSID, upstream USID); whether canted feeding two branches is SRC-1 / TOPO-1"
+  page_layout: stages
+  shape: "The coherent-scattering (XPCS) beamline: fast area detectors gated by an FPGA timing fabric downstream of an evacuated flight path, plus a six-circle diffractometer; the deployment that earned 4-ID's device classes into the catalog."
+  source_ref:
+    label: "BCDA-APS/8id-bits"
+    url: "https://github.com/BCDA-APS/8id-bits"
 
 # Four lead-shielded stations: 8-ID-A holds the optics; 8-ID-D the focusing
 # transfocators; 8-ID-E the six-circle diffractometer endstation; 8-ID-I the XPCS

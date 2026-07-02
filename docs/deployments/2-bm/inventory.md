@@ -70,7 +70,7 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `Camera_Selector` | `LinearStage` | `schunk_lptm_30` | `Housing` | Schunk LPTM 30; Pos.0=20, Pos.1=15; stage settings pending | live (settings pending) |
 | `Scintillator` | `Scintillator` | (microscope catalog) | `Housing` | thickness 100 um, decay 0.07 us | live |
 
-Microscope-bound Models (turret motor, Mitutoyo MPLAPO kit, FLIR Oryx, Crytur LuAG) live on the [Microscope deployment](equipment/microscope.md#vendor-catalog) page. The `kohzu_sa16a` binding for `LaminographyPitch` is on the [Sample tower](equipment/sample_tower.md) page.
+Microscope-bound Models (turret motor, Mitutoyo MPLAPO kit, FLIR Oryx, Crytur LuAG) live on the [Microscope deployment](microscope.md#vendor-catalog) page. The `kohzu_sa16a` binding for `LaminographyPitch` is on the [Sample tower](sample_tower.md) page.
 
 ## Settings
 
@@ -104,7 +104,7 @@ Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIV
 
 ## Vendor catalog
 
-Models bound to non-microscope 2-BM Assets. Model ids are derived from `(manufacturer, part number)`, so one vendor product converges on one id. Microscope-housing Models are on the [Microscope deployment](equipment/microscope.md#vendor-catalog) page.
+Models bound to non-microscope 2-BM Assets. Model ids are derived from `(manufacturer, part number)`, so one vendor product converges on one id. Microscope-housing Models are on the [Microscope deployment](microscope.md#vendor-catalog) page.
 
 <!-- catalog:models models=aerotech_hex300,aerotech_abrs250mp,aerotech_ensemble_ml,aerotech_automation1_ixr3,aerotech_ensemble_hle,aerotech_pro225sl,aerotech_tm3a,oms_vme58,kohzu_cyat070,piezosystem_jena_nv200d show=usedby -->
 <!-- /catalog:models -->

@@ -1,18 +1,16 @@
 # Model
 
-*The developer's index into where I15-1 content lives. Design-phase.*
+*The developer's by-kind index: where each CORA aggregate's I15-1 content lives, why it adds no catalog kinds and reinforces the existing model, and the record of what is deliberately deferred. Design-phase scaffold.*
 
-I15-1 is a documentation-and-descriptor scaffold: it exists as the descriptor and docs below, not yet as registered events or integration scenarios.
+For the aggregate shapes see the [architecture model](../../architecture/model.md) and the per-BC [modules](../../architecture/modules/index.md).
 
-| Kind | Where | Notes |
-| --- | --- | --- |
-| Beamline descriptor | [`deployments/i15-1/beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/i15-1/beamline.yaml) | the device walk, with the dodal-derived EPICS PV handles; source of the generated [Source](beamline.md) page |
-| Site descriptor | [`deployments/diamond/site.yaml`](https://github.com/xmap/cora/blob/main/deployments/diamond/site.yaml) | the Diamond facility surface; I15-1 added to its beamlines, with a total-scattering practice carried pending |
-| Catalog Family | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | **no new family coined by I15-1.** It reuses existing Families and the loose `StorageRing` (from I22); its incident-flux monitor reuses `FluxMonitor`, since graduated to a catalog Family (presenting the Sensor Role) on the i22/i03/i15-1 rule-of-three |
-| Catalog Capability / Method | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none added; the total-scattering Capability is deferred until the technique enters scope (TECH-1) |
-| Catalog Model | [`catalog/catalog.yaml`](https://github.com/xmap/cora/blob/main/catalog/catalog.yaml) | none bound |
-| Equipment Assets | not yet registered | the [Inventory](inventory.md) is the planned shape |
-| Trust / governance | not yet instantiated | see [Governance](governance.md), including the interlock-as-permit and the robot Clearance |
+| Aggregate (BC) | Where at I15-1 |
+| --- | --- |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md) |
+| Capability, Method (Recipe) | [Techniques](techniques.md) |
+| Enclosure (Enclosure) | [the index](index.md#enclosures) |
+| Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
+| Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
 ## Why I15-1 adds no catalog kinds
 
@@ -30,5 +28,3 @@ So I15-1 is a reuse + reinforce deployment: it provides the third `FluxMonitor` 
 - **The robot as a Family.** It presents the existing Positioner Role; shape deferred (ROBOT-1).
 - **Integration scenarios.** No `test_i15_1_*.py` registers I15-1 Assets.
 - **Operations and experiment views.** A runbook for an unmodelled beamline would be invention; see the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

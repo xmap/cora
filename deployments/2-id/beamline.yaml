@@ -60,6 +60,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "Sector 2 undulator; exact device type, period, and the post-APS-U source configuration unconfirmed (SRC-1, TOPO-1)"
+  page_layout: stages
+  shape: "A scanning X-ray fluorescence microprobe (the 2-ID-D hutch of a multi-hutch insertion-device beamline): it rasters a focused spot and reads the fluorescence spectrum per point, mined from the EAA automation tooling."
+  source_ref:
+    label: "AdvancedPhotonSource/EAA"
+    url: "https://github.com/AdvancedPhotonSource/EAA"
 
 # The one experiment hutch this scaffold models: 2-ID-D, the scanning fluorescence
 # microprobe. The sister station(s) and a shared upstream optics hutch are flagged

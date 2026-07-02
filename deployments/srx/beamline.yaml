@@ -28,6 +28,7 @@ beamline:
   maturity: model
   evidence: controls_config
   coverage: full
+  page_layout: stages           # Inventory dissolved into flat stage siblings
   summary: "submicron X-ray fluorescence microprobe (XRF mapping, XANES, XRF-tomography, diffraction), 5-ID; modelled from public beamline config"
   name: SRX
   facility: nsls2               # NSLS-II Site (facility_code: nsls2)
@@ -36,7 +37,10 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "IVU21 in-vacuum undulator (SR:C5-ID:G1{IVU21:1}), verified in source; parameters not fully in the profile collection (SRC-1)"
-
+  shape: "The first beamline running several techniques on one instrument: scanning XRF, XANES, XRF-tomography, diffraction, and imaging across a micro and a KB-focused nano endstation."
+  source_ref:
+    label: "NSLS2/srx-profile-collection"
+    url: "https://github.com/NSLS2/srx-profile-collection"
 enclosures:
   # PV zones: 05IDA optics, 05IDB secondary-source / mono, 05IDD endstation. Modelled
   # as optics + experiment hutches; the intermediate 05IDB boundary is a staff
@@ -143,7 +147,7 @@ sample:
       family: TemperatureController
       pv: "XF:05IDD-ES{LS:1-Chan:"
       confirm: true
-      note: "Sample-environment thermal control (temp_nanoKB, Lakeshore); reuses the TemperatureController family (graduated #350)."
+      note: "Sample-environment thermal control (temp_nanoKB, Lakeshore); binds the TemperatureController family."
 
 # ===========================================================================
 # DETECTION STAGE: the per-point and area detectors for the several techniques
@@ -188,7 +192,7 @@ detector:
       family: FluxMonitor
       pv: "XF:05IDD-ES:1{Sclr:1}"
       confirm: true
-      note: "Scaler-counted ion-chamber flux channels (I0 and others) for normalization; reuses FluxMonitor (graduated #353). Channel map pending (DIAG-1)."
+      note: "Scaler-counted ion-chamber flux channels (I0 and others) for normalization; binds the FluxMonitor family. Channel map pending (DIAG-1)."
 
 # ===========================================================================
 # Cross-cutting controls

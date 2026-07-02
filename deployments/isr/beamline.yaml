@@ -54,7 +54,11 @@ beamline:
   parent: null
   source: insertion-device
   source_confirm: "4-ID is an in-vacuum-undulator (IVU) beamline; the profile collection binds only a read-only gap encoder (SR:C04-ID:G1{IVU:1-LEnc}Gap), no gap-drive setpoint and no energy range. Source identity and parameters are SRC-1"
-
+  page_layout: stages
+  shape: "A hard X-ray in-situ and resonant-scattering mission, modelled as a partial optics-and-detectors-first cut because the multi-circle diffractometer and sample environments are not yet in the public source."
+  source_ref:
+    label: "NSLS2/isr-profile-collection"
+    url: "https://github.com/NSLS2/isr-profile-collection"
 # PV zones: FE:C04A (front-end slit), XF:04IDA-OP (zone A optics: DCM, focusing
 # mirrors), XF:04IDB-OP (zone B optics: harmonic-rejection mirror), XF:04IDA/B/C-BI
 # (diagnostics: screen cameras, BPM, electrometers), XF:04IDD-ES (zone D endstation:

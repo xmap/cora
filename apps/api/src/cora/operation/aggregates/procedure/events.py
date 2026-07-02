@@ -382,7 +382,7 @@ class ProcedureHeld:
     `actuation_kind` is the raw `ActuationKind` value the Conductor observed
     in the conduct UP TO this pause (None for an operator hold issued outside
     a conduct). It is carried so a later resume can fold the pre-hold
-    provenance with the replay tail's: without it, a `reconduct` from a
+    provenance with the replay tail's: without it, a `conduct_from` from a
     boundary past a simulated prefix would complete as `Physical` and slip
     past the `promote_dataset` Simulated/Hybrid gate. The evolver merges it
     into `Procedure.actuation_kind` (via `merge_actuation_kinds`);

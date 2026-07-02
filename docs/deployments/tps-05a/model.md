@@ -7,10 +7,10 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at TPS 05A |
 | --- | --- |
-| Asset (Equipment) | [Inventory](inventory.md#the-asset-tree) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](inventory.md#the-asset-tree) (EnergyAxis) |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (EnergyAxis) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
-| Enclosure (Enclosure) | [The beamline](equipment/index.md) (TPS-05A-OH optics, TPS-05A-EH experiment) |
+| Enclosure (Enclosure) | [The beamline](index.md#enclosures) (TPS-05A-OH optics, TPS-05A-EH experiment) |
 | Facility (Federation); Zone, Conduit, Policy (Trust); Actor (Access) | [NSRRC Site](../nsrrc/index.md), [Governance](governance.md) |
 | Procedure, Recipe, Caution, Supply, Subject, Run, Campaign, Dataset, Decision | deferred (design-phase; see below) |
 
@@ -24,4 +24,4 @@ This is a design-phase scaffold (descriptor + docs), mirroring the other reverse
 - **The frame egress and any mesh-scan compute.** The EIGER2 frame stream is a `TransferPort` leg into the Dataset of record; spot-scoring / indexing is `ComputePort` work, an Observe / Compute leg off the control seam (DET-1).
 - **No new Capability or Method.** Rotation MX reuses the pending i03 Methods, recorded as the `TPS05A_*` Practices on the Site; 05A reinforces the case at a further MX deployment without coining any (TECH-1).
 - **A verified PV namespace.** Unlike 07A (whose `07a:` / `07a-ES:` namespace was read from its control tree), 05A has no dedicated public tree, so its `05a:` / `05a-ES:` namespace is inferred by cluster convention and carried pending (PV-1), the fleet's most conservative PV posture.
-- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms. The [2-BM Model page](../2-bm/model.md) shows the shape a fully-modelled deployment carries.
+- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms.

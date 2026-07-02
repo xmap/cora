@@ -10,7 +10,7 @@ SYRMEP sets the X-ray energy with the Si(111) monochromator (or passes white / p
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |
-| Microtomography | [`tomography`](../../catalog/methods.md) | the canonical imaging routine on the [rotation stage](equipment/sample.md) and [camera](equipment/detector.md); reuses the 2-BM tomography Method directly |
+| Microtomography | [`tomography`](../../catalog/methods.md) | the canonical imaging routine on the [rotation stage](sample.md) and [camera](detector.md); reuses the 2-BM tomography Method directly |
 | Continuous (fly) tomography | [`continuous_rotation_tomography`](../../catalog/methods.md) | trigger-driven continuous rotation under DonkiOrchestra; reuses the catalog Method |
 | Wide / laminar-beam tomography | [`mosaic_tomography`](../../catalog/methods.md) | tiled tomography for samples beyond the field of view; reuses the catalog Method |
 | Dark / flat field | [`dark_field`](../../catalog/methods.md), [`flat_field`](../../catalog/methods.md) | the reconstruction baseline frames; reuse the catalog acquisition Methods |

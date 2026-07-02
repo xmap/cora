@@ -2,13 +2,13 @@
 
 *What CORA needs the 9-ID team to confirm before the model can be trusted.*
 
-9-ID was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/9id_bits](https://github.com/BCDA-APS/9id_bits)), so the control handles in the [Inventory](inventory.md) are the beamline's real PVs, read from a config snapshot rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet), including the metadata seam and the graduated `PositionMonitor` catalog Family). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+9-ID was reverse-engineered from the beamline's own Bluesky instrument repo ([BCDA-APS/9id_bits](https://github.com/BCDA-APS/9id_bits)), so the control handles in the [Inventory](index.md) are the beamline's real PVs, read from a config snapshot rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet), including the metadata seam and the graduated `PositionMonitor` catalog Family). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 
 | ID | Priority | Question | CORA assumes | Resolves |
 | --- | --- | --- | --- | --- |
-| TOPO-1 | Blocks-build | Do the two stations (`9-ID-A`, `9-ID-D`) run off one beam in series, and is there a single undulator or a canted pair? The config showed one undulator (`S09ID:DSID:`) and `9-ID-A` / `9-ID-D` prefixes. | One root Unit Asset `9-ID` with one optics spine feeding 9-ID-D in series; one undulator. | The beam walk and station count in the [descriptor](inventory.md). |
+| TOPO-1 | Blocks-build | Do the two stations (`9-ID-A`, `9-ID-D`) run off one beam in series, and is there a single undulator or a canted pair? The config showed one undulator (`S09ID:DSID:`) and `9-ID-A` / `9-ID-D` prefixes. | One root Unit Asset `9-ID` with one optics spine feeding 9-ID-D in series; one undulator. | The beam walk and station count in the [descriptor](index.md). |
 
 ## Control and safety
 
