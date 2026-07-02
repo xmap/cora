@@ -275,10 +275,10 @@ def test_stages_layout_preserves_shape_and_all_devices(slug: str) -> None:
 def test_pilot_stages_layout_generates_only_flat_source() -> None:
     # A pilot on the stages layout generates ONLY its Source page (flat source.md);
     # its index, sample, detector, controls, and operational pages are hand-authored.
-    for slug in ("2-bm", "fxi"):
-        pages = _render_all_pages(slug)
-        assert set(pages) == {f"deployments/{slug}/source.md"}, f"{slug}: {sorted(pages)}"
-        assert pages[f"deployments/{slug}/source.md"].startswith("# Source")
+    # 2-BM is the sole operational pilot (FXI is reverse-engineered, so model-tier).
+    pages = _render_all_pages("2-bm")
+    assert set(pages) == {"deployments/2-bm/source.md"}, sorted(pages)
+    assert pages["deployments/2-bm/source.md"].startswith("# Source")
 
 
 def test_source_ref_renders_as_provenance_link_in_banner() -> None:
@@ -291,16 +291,33 @@ def test_source_ref_renders_as_provenance_link_in_banner() -> None:
     assert f"[{ref.label}]({ref.url})" in banner_page
 
 
-def test_pilot_with_source_ref_surfaces_it_on_the_source_page() -> None:
-    # A pilot has no generated index, so its Source page is the only place the
-    # source-repo pointer can land. FXI carries a source_ref, so its generated
-    # source.md must show it (a model-tier beamline shows it on the index instead,
-    # and must NOT duplicate it on the source page).
-    descriptor = bd.load(_DEPLOYMENTS / "fxi" / "beamline.yaml")
-    ref = descriptor.beamline.source_ref
-    assert ref is not None, "fxi should carry a source_ref"
-    source_page = _render_all_pages("fxi")["deployments/fxi/source.md"]
-    assert f"[{ref.label}]({ref.url})" in source_page
+def test_pilot_source_ref_surfaces_on_source_page_not_duplicated_on_model_tier(
+    tmp_path: Path,
+) -> None:
+    # A pilot has no generated index, so its Source page is the only place a
+    # source_ref can land; a model-tier beamline shows it on the index and must
+    # NOT duplicate it on the source page. No real pilot currently carries a
+    # source_ref (2-BM is live), so render a synthetic pilot to pin the path.
+    descriptor_yaml = (
+        "beamline:\n"
+        "  name: T\n"
+        "  maturity: model\n"
+        "  evidence: controls_config\n"
+        "  coverage: full\n"
+        "  deployment_tier: pilot\n"
+        "  page_layout: stages\n"
+        "  source_ref:\n"
+        '    label: "org/repo"\n'
+        '    url: "https://example.test/org/repo"\n'
+        "source:\n"
+        "  stage: source\n"
+        "  devices: []\n"
+    )
+    path = tmp_path / "beamline.yaml"
+    path.write_text(descriptor_yaml, encoding="utf-8")
+    descriptor = bd.load(path)
+    pages = bp.render_all(descriptor, slug="t", model_tier=False)
+    assert "[org/repo](https://example.test/org/repo)" in pages["deployments/t/source.md"]
     # a model-tier beamline keeps its source page free of the pointer (on the index)
     assert "Source: [" not in _render_all_pages("hxn")["deployments/hxn/source.md"]
 
