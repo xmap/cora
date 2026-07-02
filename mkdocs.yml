@@ -1197,7 +1197,8 @@ nav:
   - Talks: talks.md
   - Papers:
     - papers.md
-    - Replay scrubber: scrubber.md
+    - Demos:
+      - Replay scrubber: scrubber.md
   - Reference:
     - reference/index.md
     - Workflow: reference/workflow.md
