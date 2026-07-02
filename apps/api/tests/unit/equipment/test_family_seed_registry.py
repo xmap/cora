@@ -114,6 +114,9 @@ def test_positioner_cluster_is_populated() -> None:
         # detecting a scalar), per their catalog notes.
         "SpectrometerArm",
         "PolarizationAnalyzer",
+        # Batch 6: the crystal-angle polarization retarder (its angle IS the
+        # function, per its catalog note).
+        "PhaseRetarder",
     }
 
 
@@ -163,6 +166,86 @@ def test_regulator_cluster_is_populated() -> None:
     for family in SEED_FAMILIES:
         if regulator_id in family.presents_as:
             assert Affordance.SETTABLE in family.affordances
+
+
+def test_passive_tier_affordance_only_families_carry_no_role() -> None:
+    """Batch 6: operable beam-conditioning optics carry a functional
+    affordance but present NO Role (no Method binds them; the affordance is
+    the forward seam). Motorized != Positioner."""
+    expected = {
+        "Shutter": {Affordance.SHUTTERABLE},
+        "Filter": {Affordance.ATTENUABLE},
+        "Mirror": {Affordance.BENDABLE},
+        "Monochromator": {Affordance.INDEXABLE},
+        "GratingMonochromator": {Affordance.INDEXABLE},
+        "Transfocator": {Affordance.INDEXABLE},
+        "Slit": {Affordance.LIMITABLE},
+    }
+    by_name = {f.name.value: f for f in SEED_FAMILIES}
+    for name, affs in expected.items():
+        fam = by_name[name]
+        assert fam.affordances == frozenset(affs), f"{name} affordance drift"
+        assert fam.presents_as == frozenset(), f"{name} must present no Role"
+
+
+def test_passive_tier_empty_families_stay_empty() -> None:
+    """Truly passive elements, provenance-only sources, and
+    per-Asset-controlled families carry no affordances and no Role."""
+    empty = {
+        "Aperture",
+        "Mask",
+        "Window",
+        "BeamStop",
+        "Collimator",
+        "Objective",
+        "PseudoAxis",
+        "Housing",
+        "GenericProbe",
+        "Condenser",
+        "ZonePlate",
+        "PhaseRing",
+        "InsertionDevice",
+        "Backlight",
+        "Laser",
+    }
+    by_name = {f.name.value: f for f in SEED_FAMILIES}
+    for name in empty:
+        fam = by_name[name]
+        assert fam.affordances == frozenset(), f"{name} unexpectedly carries affordances"
+        assert fam.presents_as == frozenset(), f"{name} unexpectedly presents a Role"
+
+
+def test_every_seed_family_reached_a_disposition() -> None:
+    """No family is left un-triaged: every seed family either carries an
+    affordance, presents a Role, or is on the explicit empty allowlist.
+    Guards against a newly-graduated family silently shipping blank."""
+    explicit_empty = {
+        "Aperture",
+        "Mask",
+        "Window",
+        "BeamStop",
+        "Collimator",
+        "Objective",
+        "PseudoAxis",
+        "Housing",
+        "GenericProbe",
+        "Condenser",
+        "ZonePlate",
+        "PhaseRing",
+        "InsertionDevice",
+        "Backlight",
+        "Laser",
+    }
+    for family in SEED_FAMILIES:
+        triaged = (
+            bool(family.affordances)
+            or bool(family.presents_as)
+            or family.name.value in explicit_empty
+        )
+        assert triaged, (
+            f"Seed Family {family.name.value} has no affordances, no Role, and is "
+            "not on the explicit-empty allowlist: give it a disposition"
+        )
 
 
 def test_sensor_cluster_is_populated() -> None:

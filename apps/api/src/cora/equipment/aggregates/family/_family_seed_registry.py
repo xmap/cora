@@ -27,9 +27,16 @@ Affordances + `presents_as` are authored bottom-up in batches. Pass 1
 presents (the `Family.affordances superset Role.required_affordances`
 gate at `add_family_presents_as` / register_fixture), then wires
 `presents_as`. Pass 2 (facility evidence) audits those drafts against the
-deployment descriptors. A family with an empty affordance set and no
-`presents_as` has simply not been reached by a batch yet (or is a passive
-part with no command surface, e.g. Window / Mask / BeamStop).
+deployment descriptors.
+
+Every seed family now has a disposition (enforced by
+`test_every_seed_family_reached_a_disposition`): it either presents a
+Role, carries a functional affordance with no Role (an operable optic no
+Method binds yet, e.g. Shutter -> Shutterable), or is explicitly empty (a
+truly passive part like Window / Mask / BeamStop, or a provenance-only /
+per-Asset-controlled family like InsertionDevice / Laser). A Role is
+coined only when a Method binds it; the standalone affordance is the
+forward seam for that future Role's required set.
 
 The invariant that keeps this honest: a family's `affordances` MUST be a
 superset of every presented Role's `required_affordances`. The
@@ -150,6 +157,23 @@ _CONTROLLER_TIMING = frozenset({Affordance.IDENTIFIABLE, Affordance.PULSING, Aff
 # it joins the Positioner cluster here.
 
 
+# Batch 6 (Pass 1, passive / beam-conditioning tier). These families
+# present NO Role: no Method binds them as a role_kind today. Per the
+# locked principle, an affordance describes what a family CAN DO, but a
+# Role is coined only when a Method binds it (the rule-of-three that
+# graduated Regulator; the bar that deferred Conditioner). So operable
+# optics carry their functional affordance as a forward seam -- when a
+# Method later needs to bind e.g. an attenuator, `Attenuable` becomes that
+# Role's required set and Filter already covers it -- but no Shutter /
+# Attenuator / Bender Role is coined now. Motorized != Positioner: a Slit
+# is beam-defining, a Monochromator is energy-selecting; their driven axes
+# are a per-Asset concern, not the Family's Role. Truly passive elements
+# (Mask, Window, BeamStop, Collimator, Aperture) and provenance-only /
+# per-Asset-controlled families (InsertionDevice, Backlight, Laser) stay
+# empty. PhaseRetarder is the one exception: its catalog note assigns it
+# the Positioner Role (the crystal angle IS its function, like
+# PolarizationAnalyzer), so it joins that cluster.
+
 # The graduated device-class roster. Order mirrors `catalog/catalog.yaml`
 # `families:` for reviewer diffability. Adding a name here is a catalog
 # graduation and must be matched in the catalog (drift-guard enforced).
@@ -182,7 +206,7 @@ SEED_FAMILIES: Final[tuple[Family, ...]] = (
     ),
     _family("FluxMonitor", affordances=_SENSOR_AFFORDANCES, presents_as=_SENSOR),
     _family("PositionMonitor", affordances=_SENSOR_AFFORDANCES, presents_as=_SENSOR),
-    _family("Shutter"),
+    _family("Shutter", affordances=frozenset({Affordance.SHUTTERABLE})),
     _family(
         "Hexapod",
         affordances=_HOMED | {Affordance.POSABLE},
@@ -199,21 +223,25 @@ SEED_FAMILIES: Final[tuple[Family, ...]] = (
         affordances=_HOMED | {Affordance.TRANSLATABLE},
         presents_as=_POSITIONER,
     ),
-    _family("Slit"),
+    _family("Slit", affordances=frozenset({Affordance.LIMITABLE})),
     _family("Aperture"),
     _family("Mask"),
     _family("Window"),
     _family("BeamStop"),
     _family("Collimator"),
-    _family("Mirror"),
-    _family("Monochromator"),
-    _family("GratingMonochromator"),
+    _family("Mirror", affordances=frozenset({Affordance.BENDABLE})),
+    _family("Monochromator", affordances=frozenset({Affordance.INDEXABLE})),
+    _family("GratingMonochromator", affordances=frozenset({Affordance.INDEXABLE})),
     _family("Condenser"),
     _family("ZonePlate"),
     _family("PhaseRing"),
-    _family("Transfocator"),
-    _family("PhaseRetarder"),
-    _family("Filter"),
+    _family("Transfocator", affordances=frozenset({Affordance.INDEXABLE})),
+    _family(
+        "PhaseRetarder",
+        affordances=_HOMED | {Affordance.ROTATABLE},
+        presents_as=_POSITIONER,
+    ),
+    _family("Filter", affordances=frozenset({Affordance.ATTENUABLE})),
     _family("InsertionDevice"),
     _family(
         "Goniometer",
