@@ -64,6 +64,7 @@ _WRITER_ARMS_PER_FIELD: dict[str, frozenset[str]] = {
     "parent_run_id": frozenset(),
     "activity_logbook_id": frozenset({"ProcedureActivitiesLogbookOpened"}),
     "diagnostic_logbook_id": frozenset({"ProcedureDiagnosticLogbookOpened"}),
+    "outcome_logbook_id": frozenset({"ProcedureOutcomeLogbookOpened"}),
     "capability_id": frozenset(),
     "recipe_id": frozenset(),
     "current_iteration_index": frozenset({"ProcedureIterationStarted", "ProcedureIterationEnded"}),
