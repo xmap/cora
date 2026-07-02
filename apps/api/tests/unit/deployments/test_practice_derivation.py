@@ -81,7 +81,7 @@ def _facility_of(slug: str) -> str | None:
     return descriptor.beamline.facility
 
 
-def test_derivation_runs_for_every_deployment() -> None:
+def test_derivation_covers_every_deployment() -> None:
     rosters = _rosters()
     # Guards against discovery drift: a moved path would make the checks below
     # pass vacuously. The fleet is known to be non-trivial.
