@@ -96,6 +96,9 @@ _DETECTOR_AFFORDANCES = frozenset(
         Affordance.COOLABLE,
         Affordance.TRIGGERABLE,
         Affordance.STREAMABLE,
+        # Pass 2: fleet cameras (Eiger / Pilatus) write HDF5 / TIFF to disk
+        # (iss, xfm, cdi), so the Camera Family records, not only streams.
+        Affordance.RECORDING,
     }
 )
 # Batch 3 (Pass 1, Sensor cluster). Of the seven measurement/analyzer
@@ -110,6 +113,13 @@ _DETECTOR_AFFORDANCES = frozenset(
 _SENSOR_AFFORDANCES = frozenset(
     {Affordance.REPORTABLE, Affordance.TRIGGERABLE, Affordance.STREAMABLE}
 )
+# Pass 2 (facility evidence) narrowed the point-monitor Sensors to a bare
+# scalar readout: ion chambers / picoammeters / quadrant monitors report a
+# current or centroid on query, with no device-level trigger or stream
+# hardware (chx/fmx/i03). Covers the Sensor required {Reportable}. The
+# high-rate EnergyDispersiveSpectrometer (Xspress3 HDF5 streaming) keeps
+# the fuller _SENSOR_AFFORDANCES set.
+_SENSOR_SCALAR = frozenset({Affordance.REPORTABLE})
 # Analyzer-detector families acquire a spectrum on a position-sensitive /
 # area detector; Imageable + trigger/stream, but not the Camera's on-sensor
 # Binnable/Coolable at the Family level (per-Asset bound-Model concern).
@@ -204,8 +214,8 @@ SEED_FAMILIES: Final[tuple[Family, ...]] = (
         affordances=_SENSOR_AFFORDANCES,
         presents_as=_SENSOR,
     ),
-    _family("FluxMonitor", affordances=_SENSOR_AFFORDANCES, presents_as=_SENSOR),
-    _family("PositionMonitor", affordances=_SENSOR_AFFORDANCES, presents_as=_SENSOR),
+    _family("FluxMonitor", affordances=_SENSOR_SCALAR, presents_as=_SENSOR),
+    _family("PositionMonitor", affordances=_SENSOR_SCALAR, presents_as=_SENSOR),
     _family("Shutter", affordances=frozenset({Affordance.SHUTTERABLE})),
     _family(
         "Hexapod",
@@ -245,7 +255,10 @@ SEED_FAMILIES: Final[tuple[Family, ...]] = (
     _family("InsertionDevice"),
     _family(
         "Goniometer",
-        affordances=_HOMED | {Affordance.ROTATABLE},
+        # Pass 2: goniometers carry x/y/z sample-centring translations
+        # alongside the orientation circles (Bernina GPS, 8-ID), so add
+        # Translatable to the Rotatable draft.
+        affordances=_HOMED | {Affordance.ROTATABLE, Affordance.TRANSLATABLE},
         presents_as=_POSITIONER,
     ),
     _family(

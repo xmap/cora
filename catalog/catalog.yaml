@@ -71,7 +71,7 @@ families:
     presents_as: [Positioner]
     note: "Limited-range rotational tilt-stage Family (a goniometer). Distinct from RotaryStage (it carries no PSO Following/Marking for fly-scans) and from LinearStage (the motion is rotational, not translation). 2-BM: the LaminographyPitch Kohzu goniometer, modelled in the SampleTower Assembly."
   - name: Camera
-    affordances: [Imageable, Binnable, Coolable, Triggerable, Streamable]
+    affordances: [Imageable, Binnable, Coolable, Triggerable, Streamable, Recording]
     presents_as: [Detector]
   - name: Scintillator
     affordances: [Consumable]
@@ -81,11 +81,11 @@ families:
     presents_as: [Sensor]
     note: "Energy-dispersive X-ray detector Family: resolves photon energy per event to give a spectrum, from which element maps or absorption edges are fit downstream. Presents_as Sensor (it produces a scalar or short-vector Reading per point, not a 2D Frame, so it is distinct from Camera and the Detector Role). One Family spans the silicon-drift and germanium variants; channel count and vendor are per-Asset settings. 2-ID: the 2-ID-D fluorescence detector (XRF mapping). 7-BM: the germanium energy-dispersive-diffraction detector. Earned in once two deployments shared it; the name deliberately avoids the reserved Detector Role noun (a detector is a Role an Asset plays, not its Family)."
   - name: FluxMonitor
-    affordances: [Reportable, Triggerable, Streamable]
+    affordances: [Reportable]
     presents_as: [Sensor]
     note: "Beam-flux / intensity monitor Family: measures incident or transmitted beam intensity as a scalar (ion chamber, X-ray beam-position monitor read as flux, four-channel picoammeter). Presents_as Sensor (a scalar Reading, not a 2D Frame, so distinct from Camera and the Detector Role); and distinct from the position-measuring PositionMonitor Family by what it measures, flux not centroid. One Family spans the ion chambers, XBPMs, and TetrAMM picoammeters; incident-vs-transmitted placement is a per-Asset setting. i22: the I0 / It ion chambers. i03: the Flux readout and the IPin ion chamber. i15-1: the JBPM TetrAMM. Earned in once three deployments shared it (the EnergyDispersiveSpectrometer precedent: a Sensor-presenting measurement Family graduates by what it measures)."
   - name: PositionMonitor
-    affordances: [Reportable, Triggerable, Streamable]
+    affordances: [Reportable]
     presents_as: [Sensor]
     note: "Beam-position monitor Family: measures the transverse position (centroid) of the beam as a short vector, typically from a four-quadrant or segmented pickup (a quadrant BPM / QBPM, an X-ray BPM read for position, or a TetrAMM / picoammeter read for centroid rather than flux). Presents_as Sensor (a scalar or short-vector Reading, not a 2D Frame, so distinct from Camera and the Detector Role). The measured-quantity sibling of FluxMonitor: FluxMonitor measures beam flux / intensity, PositionMonitor measures beam centroid / position (the same device electronics can be read either way, so the discriminator is the measured quantity, the FluxMonitor / EnergyDispersiveSpectrometer precedent of a Sensor Family earned by what it measures). The 2-word <quantity>Monitor name mirrors FluxMonitor so the sibling set scans as one family. Graduated across the wide fleet that shares it: APS 4-ID / 8-ID / 9-ID, NSLS-II ISS / FMX / CDI / CHX / SMI / SRX / ISR / LIX, and the imaging and MX beamlines that carry a QBPM; beam-center calibration and quadrant-vs-segmented pickup are a per-Asset settings or bound-Model difference, not a Family split. Distinct too from the loose Diagnostic family (arrival-time and photon-spectrum monitors, which measure timing / spectrum, not position; those stay loose pending their own rule-of-three, DIAG-1)."
   - name: Shutter
@@ -153,7 +153,7 @@ families:
   - name: InsertionDevice
     note: "Source-defining insertion-device Family (the storage-ring straight-section source). One Family spans the cryo-undulator and the wiggler; the device type and its gap / field parameters are a per-Asset settings difference, not a Family split (the Table precedent). TomoWISE: the CPMU14 cryogenic permanent-magnet undulator and the 3T3PW three-pole wiggler, switchable per operation mode. A bending-magnet source (2-BM) is not an insertion device; it stays modelled loosely as the beam source, not through this Family."
   - name: Goniometer
-    affordances: [Homeable, Limitable, Rotatable]
+    affordances: [Homeable, Limitable, Rotatable, Translatable]
     presents_as: [Positioner]
     note: "Multi-axis sample-orientation goniometer Family: omega / chi / phi rotation plus the x / y / z sample-centring translations, with centre-of-rotation control. The MX micro-goniometer. Distinct from RotaryStage (a single tomographic rotation axis that carries PSO fly-scan Following / Marking, which the goniometer does not) and from TiltStage (a limited-range tilt with no primary rotation axis); the discriminator is the multi-axis crystal-orientation role. Graduated from pending on i03 (the Smargon), CORA's first canonical-goniometer deployment; chi-vs-kappa and axis-count are a per-Asset settings or bound-Model difference, not a Family split (the InsertionDevice / Table precedent). The composed multi-stage scattering diffractometer (4-ID / 8-ID, the Diffractometer Assembly) binds one Goniometer Asset for its sample-orientation circles."
   - name: Manipulator
