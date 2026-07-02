@@ -1,12 +1,12 @@
 # Techniques
 
 *What 2-BM can do. Each technique runs a portable [Catalog](../../catalog/methods.md) Method, bound to this
-beamline's [hardware](beamline.md) and [Operations](operations.md). This function view survives equipment swaps.*
+beamline's [hardware](source.md) and [Operations](operations.md). This function view survives equipment swaps.*
 
 ## Imaging
 
-All realize `cora.capability.tomography` and need the [Microscope](equipment/microscope.md) detector and the
-[Sample tower](equipment/sample_tower.md).
+All realize `cora.capability.tomography` and need the [Microscope](microscope.md) detector and the
+[Sample tower](sample_tower.md).
 
 | Technique | Catalog method | Notes |
 | --- | --- | --- |

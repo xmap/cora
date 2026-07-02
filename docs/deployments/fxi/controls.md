@@ -31,15 +31,15 @@ This is where CORA's design meets the FXI floor. The seam has the same shape as 
 CORA **owns** (its Conductor, over the `ControlPort`):
 
 - the scan orchestration: arming the position-trigger, rotating the sample, collecting projections, taking flat and dark references, and moving back. CORA's Conductor runs this directly; it replaces the beamline's current scan orchestration rather than calling into it.
-- the energy change: the coupled move that holds magnification constant (see [Recipes](../recipes.md)) is a Conductor leg.
-- the decision of what to run, gated by the [trust boundary](../governance.md#the-trust-boundary).
+- the energy change: the coupled move that holds magnification constant (see [Recipes](recipes.md)) is a Conductor leg.
+- the decision of what to run, gated by the [trust boundary](governance.md#the-trust-boundary).
 
 CORA **drives through** (the floor it actuates and observes, and does not replace):
 
 - the EPICS IOCs, via the ophyd hardware abstraction (`Device.read()/set()/trigger()`): this is the `ControlPort` boundary, the handles CORA commands the hardware with;
 - the Zebra FPGA position-compare gating (the trigger pulses are generated in hardware off the rotary encoder);
 - the DCM PID feedback (`-Ax:Th2}PID.FBON`, `-Ax:Chi2}PID.FBON`), the PSS/PPS interlock, the camera IOCs, and the motion-controller IOCs;
-- the facility filestore where the detector's raw frames physically land. CORA's transfer leg moves frames from there over its `TransferPort` into CORA's own Dataset of record; CORA records the Dataset, it does not adopt the facility's data catalog (see [Experiment > Datasets](../experiment.md#datasets)).
+- the facility filestore where the detector's raw frames physically land. CORA's transfer leg moves frames from there over its `TransferPort` into CORA's own Dataset of record; CORA records the Dataset, it does not adopt the facility's data catalog (see [Experiment > Datasets](experiment.md#datasets)).
 
 So CORA brings one conducting engine to FXI, working over three ports: scan orchestration over the ControlPort, reconstruction over the ComputePort, and data egress over the TransferPort into the CORA Dataset. Each does work the beamline's software stack does today; CORA does it as its own design, against the same floor.
 

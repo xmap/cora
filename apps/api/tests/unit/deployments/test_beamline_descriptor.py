@@ -68,7 +68,8 @@ def _render_with_catalog() -> str:
         catalog_families=frozenset(f.name for f in catalog.families),
         catalog_models=frozenset(m.name for m in catalog.models),
     )
-    return pages["deployments/2-bm/beamline.md"]
+    # 2-BM is a pilot on the stages layout: its generated Source page is source.md.
+    return pages["deployments/2-bm/source.md"]
 
 
 def _humanize(name: str) -> str:
@@ -240,20 +241,25 @@ def test_stages_layout_dissolves_inventory_into_flat_stage_pages() -> None:
     assert "equipment/" not in index
 
 
-def _stages_layout_slugs() -> list[str]:
+def _model_stages_slugs() -> list[str]:
+    # Model-tier beamlines on the stages layout: these generate their whole
+    # reader set (index + flat stage pages) from the descriptor. Pilots also use
+    # the stages layout but hand-author index / sample / detector, so they are
+    # excluded from the generated-content guarantees below.
     slugs: list[str] = []
     for path in sorted(_DEPLOYMENTS.glob("*/beamline.yaml")):
-        if bd.load(path).beamline.page_layout == "stages":
+        b = bd.load(path).beamline
+        if b.page_layout == "stages" and b.deployment_tier == "model":
             slugs.append(path.parent.name)
     return slugs
 
 
-@pytest.mark.parametrize("slug", _stages_layout_slugs())
+@pytest.mark.parametrize("slug", _model_stages_slugs())
 def test_stages_layout_preserves_shape_and_all_devices(slug: str) -> None:
-    # Every stages-layout beamline must carry a one-line defining-shape sentence
-    # (the one bespoke line generation cannot reconstruct) as the lead of its
-    # generated index's beamline section, and every modelled device must still
-    # appear across the flat stage pages, so a migration cannot drop content.
+    # Every model-tier stages beamline must carry a one-line defining-shape
+    # sentence (the one bespoke line generation cannot reconstruct) as the lead
+    # of its generated index's beamline section, and every modelled device must
+    # still appear across the flat stage pages, so a migration cannot drop content.
     descriptor = bd.load(_DEPLOYMENTS / slug / "beamline.yaml")
     assert descriptor.beamline.shape, f"{slug}: stages layout without a shape line"
     pages = _render_all_pages(slug)
@@ -266,14 +272,19 @@ def test_stages_layout_preserves_shape_and_all_devices(slug: str) -> None:
                 assert f"`{device.name}`" in joined, f"{slug}: {device.name} lost from pages"
 
 
+def test_pilot_stages_layout_generates_only_flat_source() -> None:
+    # A pilot on the stages layout generates ONLY its Source page (flat source.md);
+    # its index, sample, detector, controls, and operational pages are hand-authored.
+    for slug in ("2-bm", "fxi"):
+        pages = _render_all_pages(slug)
+        assert set(pages) == {f"deployments/{slug}/source.md"}, f"{slug}: {sorted(pages)}"
+        assert pages[f"deployments/{slug}/source.md"].startswith("# Source")
+
+
 def test_walk_layout_keeps_beamline_and_inventory_pages() -> None:
     # A default model-tier beamline (page_layout omitted -> "walk") is unchanged:
     # it still emits beamline.md, inventory.md, and the equipment/ stage pages.
-    pages = _render_all_pages("fxi")
-    assert "deployments/fxi/beamline.md" in pages
-    # fxi is a pilot (deployment_tier: pilot), so only the Source walk generates;
-    # assert a genuine model-tier walk beamline keeps the full set. i22 is still
-    # walk (the NSLS-II fleet migrated to the stages layout; Diamond has not yet).
+    # i22 is still walk (NSLS-II + both pilots migrated to stages; Diamond has not).
     pages = _render_all_pages("i22")
     assert "deployments/i22/beamline.md" in pages
     assert "deployments/i22/inventory.md" in pages

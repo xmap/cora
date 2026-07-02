@@ -15,4 +15,4 @@ These reuse the imaging Families the fleet already carries (the 2-BM pilot and t
 
 ## Not modelled yet
 
-The exact axis travels, resolutions, and vendor models for the endstation stages are not published and are carried pending (`SAMPLE-1`). The triggering and synchronization scheme that ties the rotary master clock to the camera is likewise pending (`TRIG-1`). They land when ALBA staff confirm the endstation configuration. The [2-BM sample tower](../../2-bm/equipment/sample_tower.md) shows the shape a fully-modelled tomography endstation carries.
+The exact axis travels, resolutions, and vendor models for the endstation stages are not published and are carried pending (`SAMPLE-1`). The triggering and synchronization scheme that ties the rotary master clock to the camera is likewise pending (`TRIG-1`). They land when ALBA staff confirm the endstation configuration. The [2-BM sample tower](../../2-bm/sample_tower.md) shows the shape a fully-modelled tomography endstation carries.

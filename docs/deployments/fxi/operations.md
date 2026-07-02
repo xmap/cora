@@ -11,7 +11,7 @@ Operations ties together the procedures, recipes, enclosures, and cautions into 
 - [Enclosures](enclosures.md): the two hutch permits, optics hutch `18-IDA` and experiment hutch `18-IDB`.
 - [Cautions](cautions.md): the quirks to know (cross-wired zone-plate / Bertrand-lens Y axes, flaky shutter, Zebra overflow, camera staging timeout).
 
-A typical fly-tomography run, as CORA would conduct it: confirm the hutch permit and the energy-lookup Calibration; set the energy (the [energy-setting recipe](recipes.md)); capture dark and flat references; arm the position-trigger against the rotary; run the continuous-rotation fly scan; reconstruct. The staging is CORA's Conductor, acting over the EPICS floor through the ControlPort; see [Controls](equipment/controls.md#the-seam-cora-and-the-floor).
+A typical fly-tomography run, as CORA would conduct it: confirm the hutch permit and the energy-lookup Calibration; set the energy (the [energy-setting recipe](recipes.md)); capture dark and flat references; arm the position-trigger against the rotary; run the continuous-rotation fly scan; reconstruct. The staging is CORA's Conductor, acting over the EPICS floor through the ControlPort; see [Controls](controls.md#the-seam-cora-and-the-floor).
 
 ## Supplies
 

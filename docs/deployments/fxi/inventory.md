@@ -2,7 +2,7 @@
 
 *The CORA Asset model for FXI: the device tree read from the profile collection and what still needs confirming.*
 
-This is the cross-cutting reference view of the [Source](beamline.md) walk and the [Sample](equipment/sample.md) and [Detector](equipment/detector.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/fxi/beamline.yaml) descriptor the Source page renders from.
+This is the cross-cutting reference view of the [Source](source.md) walk and the [Sample](sample.md) and [Detector](detector.md) pages. It is generated-honest: authored from the same [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/fxi/beamline.yaml) descriptor the Source page renders from.
 
 Devices bind to catalog [Families](../../catalog/families.md) and carry real EPICS PVs (verified against `NSLS2/fxi-profile-collection`). No vendor Model is bound: part numbers are not in the profile collection, so they are carried as open questions, not bindings. Three TXM diffractive optics (`Condenser`, `ZonePlate`, `PhaseRing`) are catalog Families (graduated with this deployment); `BetrandLens` stays a loose family name that renders as text (FXI is its only sighting).
 

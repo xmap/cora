@@ -96,29 +96,34 @@ def render_all(
     blob_url = f"{_BLOB_BASE}/deployments/{slug}/beamline.yaml"
     layout = descriptor.beamline.page_layout
 
-    if model_tier and layout == "stages":
+    if layout == "stages":
+        # Stages layout: the generated Source page sits flat at source.md. A
+        # model-tier beamline's whole reader set is generated (index + the flat
+        # stage pages); a pilot hand-authors index / sample / detector / controls
+        # and their rich operational pages, so only its Source page generates.
         pages = {
             f"deployments/{slug}/source.md": _render_page(
                 descriptor,
                 slug=slug,
                 blob_url=blob_url,
                 link_inventory=False,
-                include_enclosures=False,
+                include_enclosures=not model_tier,
                 flat=True,
             ),
-            f"deployments/{slug}/index.md": _render_index(
+        }
+        if model_tier:
+            pages[f"deployments/{slug}/index.md"] = _render_index(
                 descriptor,
                 slug=slug,
                 facility_label=facility_label,
                 control_plane=control_plane,
                 page_layout=layout,
-            ),
-        }
-        pages.update(
-            _render_beamwalk(
-                descriptor, slug=slug, control_plane=control_plane, prefix="", depth="../../"
             )
-        )
+            pages.update(
+                _render_beamwalk(
+                    descriptor, slug=slug, control_plane=control_plane, prefix="", depth="../../"
+                )
+            )
         return pages
 
     pages = {

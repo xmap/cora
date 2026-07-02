@@ -16,20 +16,20 @@
 
 ## The beamline
 
-The systems the beam passes through, in three stages, plus the controls that drive them and the resources they draw on. See [the beamline overview](equipment/index.md) for how the areas relate.
+The systems the beam passes through, in three stages, plus the controls that drive them and the resources they draw on.
 
 Along the beam, in order:
 
-- [Source](beamline.md): the insertion-device source and the optics that condition the beam and set its energy (double-crystal monochromator, two mirrors, white-beam slit, attenuating filters, flux diagnostics), rendered as the generated source-stage device walk.
-- [Sample](equipment/sample.md): the TXM sample stage and the transmission-microscopy optics around it (condenser, aperture, zone plate, phase ring, Bertrand lens).
-- [Detector](equipment/detector.md): the imaging detector, a scintillator-relay-camera system, with the magnification computed from the zone-plate and detector positions.
+- [Source](source.md): the insertion-device source and the optics that condition the beam and set its energy (double-crystal monochromator, two mirrors, white-beam slit, attenuating filters, flux diagnostics), rendered as the generated source-stage device walk.
+- [Sample](sample.md): the TXM sample stage and the transmission-microscopy optics around it (condenser, aperture, zone plate, phase ring, Bertrand lens).
+- [Detector](detector.md): the imaging detector, a scintillator-relay-camera system, with the magnification computed from the zone-plate and detector positions.
 
 Cutting across all three:
 
-- [Controls](equipment/controls.md): the Zebra position-capture trigger box and the motion controllers, related to the hardware by `controller_id`.
+- [Controls](controls.md): the Zebra position-capture trigger box and the motion controllers, related to the hardware by `controller_id`.
 - Resources: the continuously-available supplies a run needs (beam, cooling, vacuum, liquid nitrogen), tracked under [Operations > Supplies](operations.md#supplies).
 
-The cross-cutting reference view is the [Inventory](inventory.md): the flat Asset tree by `parent_id` with families, PVs, and the values still pending confirmation. The [Source](beamline.md) page is generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/fxi/beamline.yaml) descriptor.
+The cross-cutting reference view is the [Inventory](inventory.md): the flat Asset tree by `parent_id` with families, PVs, and the values still pending confirmation. The [Source](source.md) page is generated from the [`beamline.yaml`](https://github.com/xmap/cora/blob/main/deployments/fxi/beamline.yaml) descriptor.
 
 ## Techniques
 

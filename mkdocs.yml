@@ -90,14 +90,11 @@ nav:
       - deployments/aps/index.md
       - 2-BM:
         - deployments/2-bm/index.md
-        - Open questions: deployments/2-bm/questions.md
-        - The beamline:
-          - deployments/2-bm/equipment/index.md
-          - Source: deployments/2-bm/beamline.md
-          - Sample: deployments/2-bm/equipment/sample_tower.md
-          - Detector: deployments/2-bm/equipment/microscope.md
-          - Controls: deployments/2-bm/equipment/controls.md
-          - Inventory: deployments/2-bm/inventory.md
+        - Source: deployments/2-bm/source.md
+        - Sample: deployments/2-bm/sample_tower.md
+        - Detector: deployments/2-bm/microscope.md
+        - Controls: deployments/2-bm/controls.md
+        - Inventory: deployments/2-bm/inventory.md
         - Techniques: deployments/2-bm/techniques.md
         - Operations:
           - deployments/2-bm/operations.md
@@ -108,6 +105,7 @@ nav:
         - Experiment: deployments/2-bm/experiment.md
         - Governance: deployments/2-bm/governance.md
         - Model: deployments/2-bm/model.md
+        - Open questions: deployments/2-bm/questions.md
       - 2-ID:
         - deployments/2-id/index.md
         - Open questions: deployments/2-id/questions.md
@@ -378,14 +376,11 @@ nav:
       - deployments/nsls2/index.md
       - FXI:
         - deployments/fxi/index.md
-        - Open questions: deployments/fxi/questions.md
-        - The beamline:
-          - deployments/fxi/equipment/index.md
-          - Source: deployments/fxi/beamline.md
-          - Sample: deployments/fxi/equipment/sample.md
-          - Detector: deployments/fxi/equipment/detector.md
-          - Controls: deployments/fxi/equipment/controls.md
-          - Inventory: deployments/fxi/inventory.md
+        - Source: deployments/fxi/source.md
+        - Sample: deployments/fxi/sample.md
+        - Detector: deployments/fxi/detector.md
+        - Controls: deployments/fxi/controls.md
+        - Inventory: deployments/fxi/inventory.md
         - Techniques: deployments/fxi/techniques.md
         - Operations:
           - deployments/fxi/operations.md
@@ -396,6 +391,7 @@ nav:
         - Experiment: deployments/fxi/experiment.md
         - Governance: deployments/fxi/governance.md
         - Model: deployments/fxi/model.md
+        - Open questions: deployments/fxi/questions.md
       - HXN:
         - deployments/hxn/index.md
         - Source: deployments/hxn/source.md

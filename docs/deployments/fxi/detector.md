@@ -34,4 +34,4 @@ The total magnification is a computed axis:
 Magnification = (DetU.z / zp.z - 1) * VLM
 ```
 
-with the visible-light-microscope factor `VLM = 10` (`GLOBAL_VLM_MAG`, `startup/20-global_param.py`). It is derived from two real Z positions (the detector support `DetU.z` and the zone-plate `zp.z`) and has no PV of its own. The energy-change move (`move_zp_ccd_xh`, see [Recipes](../recipes.md)) co-moves the zone plate and detector to hold magnification constant across energy.
+with the visible-light-microscope factor `VLM = 10` (`GLOBAL_VLM_MAG`, `startup/20-global_param.py`). It is derived from two real Z positions (the detector support `DetU.z` and the zone-plate `zp.z`) and has no PV of its own. The energy-change move (`move_zp_ccd_xh`, see [Recipes](recipes.md)) co-moves the zone plate and detector to hold magnification constant across energy.

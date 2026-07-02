@@ -32,7 +32,7 @@ These shape and analyze the beam through the sample. `Condenser`, `ZonePlate`, a
 The zone plate is reported in source (`startup/20-global_param.py`) as a NanoTools plate, 244 um diameter, 30 nm outer zone width. These are code constants, not staff-verified (OPTIC-4).
 
 !!! warning "Cross-wired Y axes"
-    In source, `zp.y` is wired to the `{BLens:1-Ax:Y}` record and `betr.y` is wired to the `{ZP:1-Ax:Y}` record: the zone-plate and Bertrand-lens Y axes are cross-wired. This is preserved faithfully in the descriptor and recorded as a [Caution](../cautions.md); do not "correct" it without confirming the real wiring with FXI staff.
+    In source, `zp.y` is wired to the `{BLens:1-Ax:Y}` record and `betr.y` is wired to the `{ZP:1-Ax:Y}` record: the zone-plate and Bertrand-lens Y axes are cross-wired. This is preserved faithfully in the descriptor and recorded as a [Caution](cautions.md); do not "correct" it without confirming the real wiring with FXI staff.
 
 ## Sample environment
 
