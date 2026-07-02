@@ -30,5 +30,3 @@ So I15-1 is a reuse + reinforce deployment: it provides the third `FluxMonitor` 
 - **The robot as a Family.** It presents the existing Positioner Role; shape deferred (ROBOT-1).
 - **Integration scenarios.** No `test_i15_1_*.py` registers I15-1 Assets.
 - **Operations and experiment views.** A runbook for an unmodelled beamline would be invention; see the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

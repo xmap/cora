@@ -46,5 +46,3 @@ These are the parts of 4-ID this cut leaves out on purpose. Each is a CORA scope
 - **Integration scenarios and vendor Models.** No `test_4id_*.py` registers 4-ID Assets, and no vendor Models are bound. Scenario code is where Assets become real; hard-registering a first-cut, confirm-pending beamline would commit speculative structure. Both land when the design firms and the team approves.
 
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

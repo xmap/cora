@@ -54,5 +54,3 @@ Beyond the four-circle (Goniometer) and the MAPT aperture (below), the rest reus
 - **The diffraction Method.** Whether single-crystal diffraction enters CORA's catalog as a Capability / Method is an owner decision; the Practice renders unlinked, pending, reusing the slug 4-ID / 8-ID / CSX share (`TECH-1`).
 - **The centring image-recognition behaviour and the simulated devices.** The OAV pin-tip recognition is a Method behaviour on the Camera, not a device; no `test_i19_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

@@ -40,5 +40,3 @@ i24 introduces no new device class. Every device reuses an existing catalog or l
 - **The simulated devices and full asset-tree scenarios.** No `test_i24_*.py` registers the i24 asset tree, and no vendor Models are bound. Those land when the design firms and the team approves.
 
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

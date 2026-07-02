@@ -60,5 +60,3 @@ So no Practice is bound until a Method lands; IOS is bound to the Site through t
 - **The photoemission and NEXAFS Methods.** Whether ambient-pressure photoemission and soft NEXAFS enter CORA's catalog as Capabilities / Methods is an owner decision; the techniques render unlinked, and no Practice is recorded (`TECH-1`, `ENERGY-1`).
 - **The simulated devices and full asset-tree scenarios.** No `test_ios_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

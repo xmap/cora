@@ -25,5 +25,3 @@ I03 is the first Diamond deployment to earn a new catalog Family. The catalog ha
 - **Integration scenarios.** No `test_i03_*.py` registers I03 Assets. Hard-registering a design-phase, off-roadmap beamline would commit speculative structure.
 - **The endstation Assembly.** The goniometer + aperture-scatterguard + backlight + cryostream are carried flat; an MX-endstation Assembly (the 2-BM SampleTower analogue) is promoted only when a feature must act on the whole (ASSEMBLY-1).
 - **Operations and experiment views.** A runbook for an unmodelled beamline would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

@@ -50,5 +50,3 @@ High-pressure diffraction is **not** a new technique: it reuses the pending `dif
 - **The diffraction Methods.** Whether high-pressure powder and single-crystal diffraction enter CORA's catalog is an owner decision; the Practices render unlinked, pending (`TECH-1`).
 - **The simulated devices and full asset-tree scenarios.** No `test_13_id_d_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

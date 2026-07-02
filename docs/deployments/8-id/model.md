@@ -43,5 +43,3 @@ The `Assembly(Diffractometer)` designed during the catalog-graduation pass is no
 - **Full asset-tree scenarios and vendor Models.** Beyond the diffractometer Assembly / Fixture scenario above, no `test_8id_*.py` registers the full 8-ID asset tree (the optics spine, the XPCS endstation), and no vendor Models are bound. Those land when the design firms and the team approves.
 
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

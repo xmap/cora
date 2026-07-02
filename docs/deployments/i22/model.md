@@ -22,4 +22,4 @@ I22 is a documentation-and-descriptor scaffold: it exists as the descriptor and 
 - **Operations and experiment views.** A runbook and live experiment view for an unmodelled beamline would be invention; see the note on the [index](index.md#not-yet-documented).
 - **Detector assemblies.** The two detectors are left as plain `Camera` devices. Whether the SAXS detector composes an Assembly with its beamstops and base is deferred (GROUP-1).
 
-What is genuinely new here versus the other scaffolds: the descriptor carries real EPICS control handles (from dodal), and the open questions are about the layers dodal cannot reach (calibration, safety, technique), not about the PVs. The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.
+What is genuinely new here versus the other scaffolds: the descriptor carries real EPICS control handles (from dodal), and the open questions are about the layers dodal cannot reach (calibration, safety, technique), not about the PVs.

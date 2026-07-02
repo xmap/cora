@@ -39,5 +39,3 @@ P22 sits on the PETRA III Tango device floor with Sardana as the scan layer. Its
 - **The PSS permit signals (`PSS-1`).** Not in the OnlineXML; carried pending, not invented.
 - **The simulated devices and full asset-tree scenarios.** No `test_p22_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

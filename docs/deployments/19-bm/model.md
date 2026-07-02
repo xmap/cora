@@ -22,5 +22,3 @@
 - **The autonomy build.** The `RunSupervisor` enablement and the missing run-start capability that 19-BM's autonomous operation needs are real CORA work, not documentation; see [Governance](governance.md). They land as their own slices.
 - **The robotic sample changer.** Deferred behind its separate safety review (ROBOT-1).
 - **Operations and experiment views.** A runbook and live experiment view for an unbuilt beamline would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

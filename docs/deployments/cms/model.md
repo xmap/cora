@@ -49,5 +49,3 @@ The "two-theta" is synthetic: the detector does not move, and the region-of-inte
 - **The chamber rebinding and the sth / schi swap.** The beamline_stage configurations rebind the logical goniometer axes across physical PVs at startup, and staff have at times swapped sth and schi; CORA models the logical `Goniometer` and carries the active binding as a setting (`SAMPLE-1`), not as separate Assets.
 - **The simulated devices and full asset-tree scenarios.** No `test_cms_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

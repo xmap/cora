@@ -42,5 +42,3 @@ The downstream data movement and reconstruction is a separate, well-developed la
 - **The simulated devices and full asset-tree scenarios.** No `test_8_3_2_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
 - **The ALS-U upgrade fate (`ALSU-1`).** Whether 8.3.2 goes dark, is rebuilt, or relocates in the ALS-U dark time (no sooner than October 2027) is a staff question, not modelled here.
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

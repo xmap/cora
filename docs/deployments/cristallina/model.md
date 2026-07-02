@@ -55,5 +55,3 @@ These are the same deferrals Alvra and Bernina recorded; Cristallina re-confirms
 - **The serial-crystallography sample delivery (SAMPLE-1).** Beyond the fast XY stage, the Cristallina-MX delivery is deferred.
 - **The transmission-readback cross-reference (XREF-1).** The front-end attenuator's transmission readbacks alias to `SAROP31-OATT053`; carried `confirm`.
 - **Integration scenarios.** No `test_cristallina_*.py` registers Cristallina Assets. Hard-registering a design-phase, off-roadmap, XFEL beamline would commit speculative structure.
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

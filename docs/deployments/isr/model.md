@@ -41,4 +41,4 @@ ISR's science reuses two pending Methods rather than coining: `resonant_scatteri
 - **The flux monitors (`DET-1`).** The QuadEM electrometers and the secondary-source slit are defined but commented out in source; not modelled until live.
 - **The Methods.** Whether `resonant_scattering` and `diffraction` enter CORA's catalog is an owner decision; the Practices render unlinked, pending (`TECH-1`).
 - **The simulated devices and full asset-tree scenarios.** No `test_isr_*.py` registers the asset tree, and no vendor Models are bound.
-- **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive, and whose primary instrument is not even in source, would be invention; they land when the diffractometer is bound and the team confirms. The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.
+- **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive, and whose primary instrument is not even in source, would be invention; they land when the diffractometer is bound and the team confirms.

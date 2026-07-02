@@ -34,5 +34,3 @@ The coherent imaging itself is the `ptychography` Method, the fleet's first, car
 - **The ptychography Method and the reconstruction.** Whether ptychography / CDI enters CORA's catalog as a Capability / Method is an owner decision; the Practice renders unlinked, pending (`TECH-1`). The image reconstruction from the diffraction stack is `ComputePort` work, not a beamline device.
 - **The simulated devices and full asset-tree scenarios.** No `test_i13_1_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

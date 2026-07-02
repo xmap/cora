@@ -53,5 +53,3 @@ These are the same deferrals Alvra and LCLS-MFX recorded; Bernina re-confirms th
 - **The RIXS / tape-drive / liquid-jet sample environments (ENV-1).** `eco` defines these but their appends are commented out, so they are not in the live module; deferred, not invented.
 - **The eco cross-line reference (XREF-1).** A live Bernina profile monitor (`prof_mirr_alv1`) carries an Alvra-line PV (`SAROP11-PPRM066`); whether that is a real shared device or a copy-paste residue is carried as an open question.
 - **Integration scenarios.** No `test_bernina_*.py` registers Bernina Assets. Hard-registering a design-phase, off-roadmap, XFEL beamline would commit speculative structure.
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

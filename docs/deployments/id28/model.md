@@ -40,5 +40,3 @@ Beyond the graduated `SpectrometerArm`, ID28 reuses the catalog throughout: the 
 - **The IXS Method.** Whether momentum-resolved IXS enters CORA's catalog is an owner decision; the Practice renders unlinked, pending, reusing the NSLS-II IXS slug (`TECH-1`).
 - **The simulated devices and full asset-tree scenarios.** No `test_id28_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

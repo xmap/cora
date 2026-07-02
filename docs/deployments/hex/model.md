@@ -57,5 +57,3 @@ So the "multi-technique endstation" is a Practice-level sequence, not a fused me
 - **Pair-distribution-function and 3DXRD.** Public sources do not list PDF (that is NSLS-II 28-ID / [XPD](../xpd/index.md)) or three-dimensional X-ray diffraction for HEX, so neither is modelled or assumed (`TECH-1`).
 - **The simulated devices and full asset-tree scenarios.** No `test_hex_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

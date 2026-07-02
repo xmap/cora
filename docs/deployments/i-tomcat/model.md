@@ -31,5 +31,3 @@ This is the standard CORA lens (EPICS is the floor, the facility's scan/data sof
 - **Integration scenarios.** No `test_i_tomcat_*.py` registers I-TOMCAT Assets into the event store. Scenario code is where Assets become real, and hard-registering a modelling-exercise beamline with unconfirmed facts would commit speculative structure. It lands if the deployment firms toward a real connection.
 - **Vendor Models.** No catalog Model is bound. The "(target)" models in the descriptor are [open questions](questions.md), not bindings, because they are read from public pages and not staff-confirmed.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA has not connected to would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

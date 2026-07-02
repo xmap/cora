@@ -35,5 +35,3 @@ MANACA sits on the Sirius EPICS device floor with MXCuBE3 / MXCuBE Web as the MX
 - **The MX Methods (`TECH-1`, `ROBOT-1`).** Whether rotation MX, grid scan, and sample exchange enter CORA's catalog is an owner decision; the Practices render unlinked, pending, reusing the i03 slugs.
 - **The simulated devices and full asset-tree scenarios.** No `test_manaca_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

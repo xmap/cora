@@ -37,5 +37,3 @@ These are the parts of Alvra this scaffold leaves out on purpose. Unlike the ope
 - **Sample delivery and the Subject custody thread.** The fixed-target / liquid-jet delivery on the Prime sample stage is endstation-specific and deferred (SAMPLE-1); no Family is coined, mirroring how LCLS-MFX carries its liquid jet.
 - **The eco cross-line references (XREF-1).** Several Alvra `eco` drivers reference `SAROP21-*` PVs (a sibling Aramis line) for an aperture and an energy readback. Whether that is correct for Alvra or a copy-paste artifact is not determinable from source; carried as an open question, not silently modelled.
 - **Integration scenarios.** No `test_alvra_*.py` registers Alvra Assets. Hard-registering a design-phase, off-roadmap, XFEL beamline would commit speculative structure.
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

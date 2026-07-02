@@ -7,8 +7,8 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at MX3 |
 | --- | --- |
-| Asset (Equipment) | [Inventory](source.md) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](source.md) (EnergyAxis) |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (EnergyAxis) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
 | Enclosure (Enclosure) | [The beamline](index.md#enclosures) (MX3-OH optics, MX3-EH experiment) |
 | Facility (Federation); Zone, Conduit, Policy (Trust); Actor (Access) | [Australian Synchrotron Site](../as/index.md), [Governance](governance.md) |
@@ -24,4 +24,4 @@ This is a design-phase scaffold (descriptor + docs), mirroring the other reverse
 - **The ISARA robot as a Procedure.** Autonomous sample exchange is a deferred Procedure over the spine threaded through `Subject` custody (ROBOT-1), reusing the i03 / i24 shape, not a new device family.
 - **The beam-steering controller.** The closed-loop PID steering paired with the BPM (`MX3DAQIOC04:`) fits no existing family cleanly; the BPM half binds `BeamPositionMonitor` and the steering controller is a deferred new-device question (STEER-1).
 - **No new Capability or Method.** Rotation MX reuses the pending i03 Methods (`mx_data_collection` / `grid_scan` / `sample_exchange`), recorded as Practices on the Site; MX3 reinforces the case without coining any (TECH-1).
-- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms. The [2-BM Model page](../2-bm/model.md) shows the shape a fully-modelled deployment carries.
+- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms.

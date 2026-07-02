@@ -52,5 +52,3 @@ P14 sits on EMBL Hamburg's MXCuBE + Exporter + TINE domain, distinct from the DE
 - **The PSS permit signals (`PSS-1`).** Not in the configs; carried pending, not invented.
 - **The simulated devices and full asset-tree scenarios.** No `test_p14_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

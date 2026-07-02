@@ -18,5 +18,5 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 This is a design-phase scaffold (descriptor + docs), reverse-engineered from the profile collection. Left out on purpose:
 
-- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms. The [2-BM Model page](../2-bm/model.md) shows the shape a fully-modelled deployment carries.
+- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms.
 - **`BertrandLens` catalog graduation.** A loose family at its only sighting (OPTIC-3); graduates at a second deployment.

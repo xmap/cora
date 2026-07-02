@@ -32,5 +32,3 @@ The Role was a **code change** to `cora.equipment.aggregates.role.SEED_ROLES`, w
 - **The robot as a Family.** It presents the existing Positioner Role; shape deferred (ROBOT-1).
 - **Integration scenarios.** No `test_i11_*.py` registers I11 Assets.
 - **Operations and experiment views.** See the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

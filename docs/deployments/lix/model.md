@@ -60,5 +60,3 @@ This is the CORA-lens decision for a solution beamline: the experiment's identit
 - **The third Pilatus, the Kinetix, and the viewing cameras.** The 300K WAXS1 head is disabled, the Xspress3 is optional, and the Kinetix and Prosilica cameras are not modelled in this cut (`DET-1`).
 - **The simulated devices and full asset-tree scenarios.** No `test_lix_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

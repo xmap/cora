@@ -47,5 +47,3 @@ The decision to bind the RASOR PaStage to the catalog `PolarizationAnalyzer` Fam
 - **The resonant-scattering / reflectivity / XMCD / XMLD Methods.** Whether they enter CORA's catalog is an owner decision; the Practices render unlinked, pending. Resonant scattering and XMCD share the 4-ID Methods, XMLD shares the i06 slug, and reflectivity is a new pending slug (`TECH-1`).
 - **The upstream diagnostics and simulated devices.** The diagnostic screens (d1-d7 fluorescent screens and webcams) and the simulated devices are not modelled in this cut; no `test_i10_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

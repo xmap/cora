@@ -7,8 +7,8 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 
 | Aggregate (BC) | Where at TPS 07A |
 | --- | --- |
-| Asset (Equipment) | [Inventory](source.md) (in this zone) |
-| Computed / virtual axes (Equipment) | [Inventory](source.md) (EnergyAxis) |
+| Asset (Equipment) | the stage pages: [Source](source.md), [Sample](sample.md), [Detector](detector.md) |
+| Computed / virtual axes (Equipment) | [Source](source.md) (EnergyAxis) |
 | Capability, Method (Recipe) | [Techniques](techniques.md) |
 | Enclosure (Enclosure) | [The beamline](index.md#enclosures) (TPS-07A-OH optics, TPS-07A-EH experiment) |
 | Facility (Federation); Zone, Conduit, Policy (Trust); Actor (Access) | [NSRRC Site](../nsrrc/index.md), [Governance](governance.md) |
@@ -24,4 +24,4 @@ This is a design-phase scaffold (descriptor + docs), mirroring the other reverse
 - **The ISARA robot as a Procedure.** Autonomous sample exchange is a deferred Procedure over the spine threaded through `Subject` custody (ROBOT-1), reusing the i03 / i24 / MX3 shape, not a new device family.
 - **The frame egress and mesh-scan compute.** The EIGER2 ZMQ / ASAP::O frame stream is a `TransferPort` leg into the Dataset of record; the Dozor spot-scoring and CHiMP crystal-detection are `ComputePort` work, an Observe / Compute leg off the control seam, not beamline Methods or Assets (DET-1).
 - **No new Capability or Method.** Rotation MX reuses the pending i03 Methods (`mx_data_collection` / `grid_scan` / `sample_exchange`), recorded as Practices on the Site; TPS 07A reinforces the case at a further MX facility without coining any (TECH-1).
-- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms. The [2-BM Model page](../2-bm/model.md) shows the shape a fully-modelled deployment carries.
+- **Operations and experiment views, integration scenarios, vendor Models.** A runbook and registered Assets for a beamline CORA does not yet drive would be invention; they land when the design firms and the team confirms.

@@ -37,5 +37,3 @@ These are the parts of MFX this scaffold leaves out on purpose. Unlike the open 
 - **The von Hamos as a graduated Family.** `EmissionSpectrometer` GRADUATED into the catalog once NSLS-II ISS (8-ID) earned the second sighting (its Johann + von Hamos XES / HERFD spectrometers); MAX IV Balder (SCANIA-2D) is a third near-sighting. The residual open question is whether each analyzer crystal is a child Asset (SPEC-1).
 - **Sample delivery and the Subject custody thread.** The liquid jet / fixed target is endstation-specific and deferred (SAMPLE-1); no Family is coined.
 - **Integration scenarios.** No `test_lcls_mfx_*.py` registers MFX Assets. Hard-registering a design-phase, off-roadmap, XFEL beamline would commit speculative structure.
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.

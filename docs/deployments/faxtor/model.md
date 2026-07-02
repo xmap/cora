@@ -35,5 +35,3 @@ FAXTOR is the second Tango / Sardana / Taurus controls house-style in the fleet,
 - **Radiography as a Method (`TECH-1`).** Whether it enters CORA's catalog is an owner decision; the Practice renders unlinked, pending, reusing the 7-BM `radiography` slug. Fast tomography reuses the catalog Methods directly.
 - **The simulated devices and full asset-tree scenarios.** No `test_faxtor_*.py` registers the asset tree, and no vendor Models are bound.
 - **Operations and experiment views.** A runbook and live experiment view for a beamline CORA does not yet drive would be invention; see the note on the [index](index.md#not-yet-documented).
-
-The [2-BM Model page](../2-bm/model.md) shows the by-kind index a fully-modelled deployment carries.
