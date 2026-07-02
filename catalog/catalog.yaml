@@ -269,11 +269,13 @@ methods:
   - name: dark_field
     capability: cora.capability.acquisition
     purpose: "Dark-frame stack plus pixel-wise baseline, producing a Dataset for reconstruction subtraction."
-    needed_families: [Shutter, Camera, Scintillator]
+    required_roles: [Shutter, Detector]
+    note: "Binds by Role: a Shutter (closed for the dark frames) and a Detector (a direct Camera or a composed scintillator-relay Assembly; the Scintillator is a constituent of that detector Assembly, not a separate Method requirement)."
   - name: flat_field
     capability: cora.capability.acquisition
     purpose: "Flat-field stack (shutter open, no sample) plus pixel-wise baseline, producing a Dataset for reconstruction division."
-    needed_families: [Shutter, Camera, Scintillator]
+    required_roles: [Shutter, Detector]
+    note: "Binds by Role: a Shutter (open, no sample) and a Detector (as in dark_field; the Scintillator is a detector-Assembly constituent, not a Method requirement)."
   - name: hexapod_reboot
     capability: cora.capability.maintenance
     purpose: "Recovery for a stuck hexapod controller: IOC stop, PDU power-cycle, IOC start, enable check."
@@ -306,7 +308,8 @@ methods:
   - name: xpcs
     capability: cora.capability.xpcs
     purpose: "Coherent-scattering time-series acquisition: a high-rate frame stream on a coherent area detector, gated by the softGlue timing, correlated downstream into g2. The frame stream is DAQ-owned, distinct from a poll-to-Done capture (the event-stream acquisition axis)."
-    needed_families: [Camera, Shutter, TimingController]
+    required_roles: [Detector, Shutter, Controller]
+    note: "X-ray Photon Correlation Spectroscopy (XPCS is the canonical technique name, kept abbreviated). Fully Role-bound: a Detector (the coherent area Camera), a Shutter (beam gating), and a Controller (the timing box generating the frame-gate pulses)."
   - name: beamline_energy_change
     capability: cora.capability.energy_change
     purpose: "Set the beam energy by driving the energy-tracking optic axes (the DMM Bragg arms + M2 offset, and the sample-slit vertical pair) to their per-energy positions as one coordinated move."
