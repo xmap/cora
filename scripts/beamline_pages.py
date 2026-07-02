@@ -109,6 +109,7 @@ def render_all(
                 link_inventory=False,
                 include_enclosures=not model_tier,
                 flat=True,
+                show_source_ref=not model_tier,
             ),
         }
         if model_tier:
@@ -127,7 +128,9 @@ def render_all(
         return pages
 
     pages = {
-        f"deployments/{slug}/beamline.md": _render_page(descriptor, slug=slug, blob_url=blob_url)
+        f"deployments/{slug}/beamline.md": _render_page(
+            descriptor, slug=slug, blob_url=blob_url, show_source_ref=not model_tier
+        )
     }
     if model_tier:
         pages[f"deployments/{slug}/index.md"] = _render_index(
@@ -329,6 +332,7 @@ def _render_page(
     link_inventory: bool = True,
     include_enclosures: bool = True,
     flat: bool = False,
+    show_source_ref: bool = False,
 ) -> str:
     # Both beamline.md (walk layout) and the flat source.md (stages layout) sit
     # at deployments/<slug>/, so the catalog depth is the same for each.
@@ -371,6 +375,11 @@ def _render_page(
             " For the CORA Asset model, settings, vendor catalog, drawings, and "
             "wiring, see [Inventory](inventory.md)."
         )
+    # A pilot has no generated index, so its Source page is the only place the
+    # source-repo pointer can land; a model-tier beamline shows it on the index.
+    ref = descriptor.beamline.source_ref
+    if show_source_ref and ref is not None:
+        banner += f"\n\nSource: [{ref.label}]({ref.url})."
     blocks.append(
         _admonition(banner, kind="info", title="Generated from the descriptor")
     )
