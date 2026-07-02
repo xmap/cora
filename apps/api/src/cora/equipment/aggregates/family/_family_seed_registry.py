@@ -46,6 +46,7 @@ from cora.equipment.aggregates.family.state import Family, FamilyName, FamilySta
 from cora.equipment.aggregates.role._role_registry import (
     SEED_ROLE_DETECTOR_ID,
     SEED_ROLE_POSITIONER_ID,
+    SEED_ROLE_SENSOR_ID,
 )
 
 
@@ -75,6 +76,7 @@ def _family(
 # it from evidence.
 _POSITIONER = frozenset({SEED_ROLE_POSITIONER_ID})
 _DETECTOR = frozenset({SEED_ROLE_DETECTOR_ID})
+_SENSOR = frozenset({SEED_ROLE_SENSOR_ID})
 _HOMED = frozenset({Affordance.HOMEABLE, Affordance.LIMITABLE})
 _DETECTOR_AFFORDANCES = frozenset(
     {
@@ -84,6 +86,24 @@ _DETECTOR_AFFORDANCES = frozenset(
         Affordance.TRIGGERABLE,
         Affordance.STREAMABLE,
     }
+)
+# Batch 3 (Pass 1, Sensor cluster). Of the seven measurement/analyzer
+# families, only the three point-measurement Sensors present the Sensor
+# Role (scalar / short-vector Reading, not a 2D frame). The catalog notes
+# assign the other four to Detector or Positioner INTENTIONALLY, so no
+# Analyzer Role is coined here (deferred ANALYZER-1; it earns a lock only
+# when a real Method needs an affordance set neither Detector nor Sensor
+# covers). ElectronAnalyzer + EmissionSpectrometer acquire a spectrum ->
+# Detector; PolarizationAnalyzer + SpectrometerArm are motorized arms ->
+# Positioner.
+_SENSOR_AFFORDANCES = frozenset(
+    {Affordance.REPORTABLE, Affordance.TRIGGERABLE, Affordance.STREAMABLE}
+)
+# Analyzer-detector families acquire a spectrum on a position-sensitive /
+# area detector; Imageable + trigger/stream, but not the Camera's on-sensor
+# Binnable/Coolable at the Family level (per-Asset bound-Model concern).
+_ANALYZER_DETECTOR_AFFORDANCES = frozenset(
+    {Affordance.IMAGEABLE, Affordance.TRIGGERABLE, Affordance.STREAMABLE}
 )
 
 # Batch 2 (Pass 1, Detector cluster). Only direct-detection Camera
@@ -121,9 +141,13 @@ SEED_FAMILIES: Final[tuple[Family, ...]] = (
         presents_as=_DETECTOR,
     ),
     _family("Scintillator", affordances=frozenset({Affordance.CONSUMABLE})),
-    _family("EnergyDispersiveSpectrometer"),
-    _family("FluxMonitor"),
-    _family("PositionMonitor"),
+    _family(
+        "EnergyDispersiveSpectrometer",
+        affordances=_SENSOR_AFFORDANCES,
+        presents_as=_SENSOR,
+    ),
+    _family("FluxMonitor", affordances=_SENSOR_AFFORDANCES, presents_as=_SENSOR),
+    _family("PositionMonitor", affordances=_SENSOR_AFFORDANCES, presents_as=_SENSOR),
     _family("Shutter"),
     _family(
         "Hexapod",
@@ -167,13 +191,29 @@ SEED_FAMILIES: Final[tuple[Family, ...]] = (
         affordances=_HOMED | {Affordance.TRANSLATABLE, Affordance.ROTATABLE},
         presents_as=_POSITIONER,
     ),
-    _family("ElectronAnalyzer"),
-    _family("EmissionSpectrometer"),
-    _family("SpectrometerArm"),
+    _family(
+        "ElectronAnalyzer",
+        affordances=_ANALYZER_DETECTOR_AFFORDANCES,
+        presents_as=_DETECTOR,
+    ),
+    _family(
+        "EmissionSpectrometer",
+        affordances=_ANALYZER_DETECTOR_AFFORDANCES,
+        presents_as=_DETECTOR,
+    ),
+    _family(
+        "SpectrometerArm",
+        affordances=_HOMED | {Affordance.TRANSLATABLE, Affordance.ROTATABLE},
+        presents_as=_POSITIONER,
+    ),
     _family("TemperatureController"),
     _family("FlowController"),
     _family("Magnet"),
-    _family("PolarizationAnalyzer"),
+    _family(
+        "PolarizationAnalyzer",
+        affordances=_HOMED | {Affordance.ROTATABLE},
+        presents_as=_POSITIONER,
+    ),
     _family("PressureCell"),
     _family("Backlight"),
     _family("Laser"),

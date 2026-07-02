@@ -110,18 +110,38 @@ def test_positioner_cluster_is_populated() -> None:
         "Goniometer",
         "Manipulator",
         "Screen",
+        # Batch 3: motorized analyzer arms (measure by positioning, not by
+        # detecting a scalar), per their catalog notes.
+        "SpectrometerArm",
+        "PolarizationAnalyzer",
     }
 
 
 def test_detector_cluster_is_populated() -> None:
-    """Batch 2 (Detector cluster): only the direct-detection Camera
-    presents Detector. Scintillator is a Consumable component of a
-    composed detector Assembly (Assembly presents the Role, not the bare
-    Family), so it must NOT present Detector."""
+    """The families presenting Detector. Direct-detection Camera plus the
+    two analyzer-detectors that acquire a spectrum on an area /
+    position-sensitive detector (ElectronAnalyzer, EmissionSpectrometer),
+    per their catalog notes. Scintillator is a Consumable component of a
+    composed detector Assembly (the Assembly presents the Role, not the
+    bare Family), so it must NOT present Detector."""
     detector_id = next(r.id for r in SEED_ROLES if r.name.value == "Detector")
     presenting = {f.name.value for f in SEED_FAMILIES if detector_id in f.presents_as}
-    assert presenting == {"Camera"}
+    assert presenting == {"Camera", "ElectronAnalyzer", "EmissionSpectrometer"}
 
     scintillator = next(f for f in SEED_FAMILIES if f.name.value == "Scintillator")
     assert scintillator.presents_as == frozenset()
     assert scintillator.affordances == frozenset({Affordance.CONSUMABLE})
+
+
+def test_sensor_cluster_is_populated() -> None:
+    """Batch 3 (Sensor cluster): only the three point-measurement Sensors
+    present the Sensor Role (scalar / short-vector Reading). No Analyzer
+    Role is coined; the analyzer families claim Detector/Positioner
+    intentionally per their catalog notes (deferred ANALYZER-1)."""
+    sensor_id = next(r.id for r in SEED_ROLES if r.name.value == "Sensor")
+    presenting = {f.name.value for f in SEED_FAMILIES if sensor_id in f.presents_as}
+    assert presenting == {
+        "EnergyDispersiveSpectrometer",
+        "FluxMonitor",
+        "PositionMonitor",
+    }
