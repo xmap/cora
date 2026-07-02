@@ -216,11 +216,18 @@ def test_stages_layout_dissolves_inventory_into_flat_stage_pages() -> None:
     assert "deployments/srx/inventory.md" not in pages
     assert not any(path.startswith("deployments/srx/equipment/") for path in pages)
     # the flat source page keeps the Source walk and drops the Inventory pointer
-    assert pages["deployments/srx/source.md"].startswith("# Source")
-    assert "inventory.md" not in pages["deployments/srx/source.md"]
-    # the index links the flat siblings and no longer points at an Inventory
+    source = pages["deployments/srx/source.md"]
+    assert source.startswith("# Source")
+    assert "inventory.md" not in source
+    # Enclosures are a beamline-wide fact: the table moves up to the index and
+    # off the Source page in the stages layout.
+    assert "## Enclosures" not in source
+    # the index links the flat siblings, carries the Enclosures table, and no
+    # longer points at an Inventory
     index = pages["deployments/srx/index.md"]
     assert "[Source](source.md)" in index
+    assert "## Enclosures" in index
+    assert "`5-ID-A`" in index
     assert "inventory.md" not in index
     assert "equipment/" not in index
 

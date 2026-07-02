@@ -99,7 +99,11 @@ def render_all(
     if model_tier and layout == "stages":
         pages = {
             f"deployments/{slug}/source.md": _render_page(
-                descriptor, slug=slug, blob_url=blob_url, link_inventory=False
+                descriptor,
+                slug=slug,
+                blob_url=blob_url,
+                link_inventory=False,
+                include_enclosures=False,
             ),
             f"deployments/{slug}/index.md": _render_index(
                 descriptor,
@@ -181,6 +185,30 @@ def _permit_signal_cell(permit_signal: str | dict[str, Any] | None) -> str:
     if note:
         return f"confirm: {note}"
     return ""
+
+
+def _enclosures_blocks(descriptor: BeamlineDescriptor) -> list[str]:
+    """The beamline-scoped Enclosures table (empty when the descriptor has none).
+
+    A beamline-wide spatial fact: every stage sits inside one of these hutches,
+    so the table belongs at beamline scope. In the stages layout it renders on
+    the index; in the walk layout it stays on the Source page.
+    """
+    if not descriptor.enclosures:
+        return []
+    rows = [
+        [
+            f"`{e.name}`",
+            e.role or "",
+            f"`{e.facility_code}`" if e.facility_code else "",
+            _permit_signal_cell(e.permit_signal),
+        ]
+        for e in descriptor.enclosures
+    ]
+    return [
+        "## Enclosures",
+        _table(["Enclosure", "Role", "Facility", "Permit signal"], rows),
+    ]
 
 
 def _specs_cell(device: Device) -> str:
@@ -288,7 +316,12 @@ def _render_group_body(group: Group) -> str:
 
 
 def _render_page(
-    descriptor: BeamlineDescriptor, *, slug: str, blob_url: str, link_inventory: bool = True
+    descriptor: BeamlineDescriptor,
+    *,
+    slug: str,
+    blob_url: str,
+    link_inventory: bool = True,
+    include_enclosures: bool = True,
 ) -> str:
     # Both beamline.md (walk layout) and the flat source.md (stages layout) sit
     # at deployments/<slug>/, so the catalog depth is the same for each.
@@ -342,18 +375,8 @@ def _render_page(
     if facts:
         blocks.append(_table(["Property", "Value"], facts))
 
-    if descriptor.enclosures:
-        rows = [
-            [
-                f"`{e.name}`",
-                e.role or "",
-                f"`{e.facility_code}`" if e.facility_code else "",
-                _permit_signal_cell(e.permit_signal),
-            ]
-            for e in descriptor.enclosures
-        ]
-        blocks.append("## Enclosures")
-        blocks.append(_table(["Enclosure", "Role", "Facility", "Permit signal"], rows))
+    if include_enclosures:
+        blocks.extend(_enclosures_blocks(descriptor))
 
     # Only the source stage renders as the generated walk; the sample and
     # detection stages are the composed-fixture pages (equipment/sample_tower,
@@ -462,10 +485,17 @@ def _render_index(
     blocks.append("## What CORA models")
     blocks.append(what)
 
+    flat = page_layout == "stages"
+
+    # Enclosures are a beamline-wide spatial fact (every stage sits in a hutch),
+    # so the stages layout carries the table on the index rather than the Source
+    # page. The walk layout keeps it on the Source page (see _render_page).
+    if flat:
+        blocks.extend(_enclosures_blocks(descriptor))
+
     # The beam walk: the natural spine, linking the generated stage pages. The
     # stages layout links flat siblings and has no Inventory; the walk layout
     # links the equipment/ pages and points at the Inventory reference.
-    flat = page_layout == "stages"
     source_link = "[Source](source.md)" if flat else "[Source](beamline.md)"
     walk: list[str] = ["## Walk the beam"]
     walk_links = [source_link]
