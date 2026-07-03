@@ -109,6 +109,7 @@ Layout (mirrors Recipe / Equipment / Trust / Subject):
 """
 
 from cora.run._projections import register_run_projections
+from cora.run._subscribers import register_run_subscribers
 from cora.run.errors import UnauthorizedError
 from cora.run.routes import register_run_routes
 from cora.run.tools import register_run_tools
@@ -119,6 +120,7 @@ __all__ = [
     "UnauthorizedError",
     "register_run_projections",
     "register_run_routes",
+    "register_run_subscribers",
     "register_run_tools",
     "wire_run",
 ]

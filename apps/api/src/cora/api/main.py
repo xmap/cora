@@ -195,6 +195,7 @@ from cora.run import (
     RunHandlers,
     register_run_projections,
     register_run_routes,
+    register_run_subscribers,
     register_run_tools,
     wire_run,
 )
@@ -797,6 +798,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # (RunDebriefer). Conditional: only registered when
             # `kernel.llm` is wired (ANTHROPIC_API_KEY configured).
             register_agent_subscribers(registry, deps)
+            # side-effecting Run BC subscribers (the authority-revocation
+            # kill-switch). Deterministic; gated by its own
+            # off-by-default setting.
+            register_run_subscribers(registry, deps)
             app.state.projections = registry
 
             # seed the RunDebriefer Agent record so

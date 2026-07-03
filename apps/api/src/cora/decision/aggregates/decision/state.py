@@ -294,6 +294,16 @@ ReactionDismissalChoice = Literal["EventDismissed"]
 REACTION_DISMISSAL_CHOICES: Final = frozenset({"EventDismissed"})
 
 
+# The authority-revocation-holder (a deterministic Run-BC Reaction acting
+# as SYSTEM_PRINCIPAL_ID) writes one Decision per in-flight Run it holds
+# when a principal's grant is revoked (Trust PolicyGrantRevoked). Records
+# WHY the run was parked: the revoked principal, the policy, and the source
+# event. Reuses the existing `Hold` DecisionChoice (no new choice set: the
+# only disposition is a reversible hold). See
+# [[project-authority-revocation-design]].
+DECISION_CONTEXT_AUTHORITY_REVOCATION = "AuthorityRevocation"
+
+
 # RunSupervisor agent writes one Decision per supervision disposition on
 # an in-flight Run. Open-ended convention identical to RunDebrief /
 # CautionProposal; the closed choice vocabulary lives in the

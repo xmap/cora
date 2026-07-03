@@ -230,6 +230,13 @@ depends_on = [
     "cora.equipment.aggregates",
     "cora.recipe.aggregates",
     "cora.subject.aggregates",
+    # `cora.decision.aggregates` provides `DecisionRegistered` + the
+    # Decision VOs, which the authority_revocation_holder Reaction
+    # (cora.run.subscribers) composes to record one
+    # Decision(context=AuthorityRevocation) per run it holds when a
+    # principal's grant is revoked. Same import direction + rationale as
+    # the Agent BC's Decision-writing reactions (see the cora.agent block).
+    "cora.decision.aggregates",
 ]
 
 # Operation BC depends on its own aggregates plus Equipment aggregate

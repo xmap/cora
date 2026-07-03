@@ -301,6 +301,14 @@ class Settings(BaseSettings):
     # no LLM, so it registers independently of ANTHROPIC_API_KEY.
     caution_promoter_enabled: bool = False
 
+    # `authority_revocation_holder_enabled` gates the authority-revocation
+    # kill-switch subscriber: on a Trust PolicyGrantRevoked it holds the revoked
+    # principal's in-flight runs (compensation). Default off: it takes autonomous
+    # hold actions, so a deployment opts in explicitly once it wants automatic
+    # mid-run compensation on authority withdrawal. Deterministic (no LLM), so it
+    # registers independently of ANTHROPIC_API_KEY.
+    authority_revocation_holder_enabled: bool = False
+
     # `clearance_expirer_enabled` gates the ClearanceExpirer background runtime
     # (the 3rd ACTIVE agent). Default off: deployments opt in explicitly.
     # `clearance_expirer_tick_seconds` is the sweep cadence (>= 0.1s); clearance
