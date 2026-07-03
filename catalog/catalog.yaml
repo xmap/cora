@@ -233,7 +233,7 @@ capabilities:
     executor_shapes: [Method, Procedure]
   - code: cora.capability.energy_change
     name: Energy Change
-    description: "Set the beam energy as one coordinated move of the energy-driven optic axes (the DMM Bragg arms + M2 offset, and the beam-tracking sample-slit vertical pair) to their per-energy positions. Takes a free energy value (keV) that interpolates the per-axis energy curves; distinct from a future energy_scan sweep. Realized as a Method (the parameterized recipe) and executed as a Procedure (the coordinated move)."
+    description: "Set the beam energy as one coordinated move of every energy-driven axis the deployment declares, each to its per-energy position. Which axes participate is per-deployment and NOT fixed here: the monochromator (crystal Bragg angle, or grating plus premirror c-value on a PGM), commonly a gap-tracked insertion-device source (undulator gap, and for an APPLE-II its phase), and any beam-following optics (a mirror vertical offset, a beam-tracking slit pair). The coordination is realized over a per-deployment energy PseudoAxis whose partition rule decomposes the commanded energy into those real axes (interpolating the per-axis energy curves); a bending-magnet beamline with no gap to track is the degenerate mono-only case of the same shape. Takes a free energy value (keV); distinct from a future energy_scan sweep (a trajectory through a range) and from a fixed-energy readback (a Calibration, not a commanded move). Realized as a Method (the parameterized recipe) and executed as a Procedure (the coordinated move over the deployment's energy axes)."
     executor_shapes: [Method, Procedure]
   - code: cora.capability.xpcs
     name: X-ray Photon Correlation Spectroscopy
