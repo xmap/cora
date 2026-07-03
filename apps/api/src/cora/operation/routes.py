@@ -92,11 +92,13 @@ from cora.operation.features import (
     abort_procedure,
     append_activities,
     append_diagnostics,
+    append_outcomes,
     complete_procedure,
     conduct_from_procedure,
     conduct_or_hold_procedure,
     conduct_procedure,
     conduct_until_advised,
+    conduct_until_advised_from,
     conduct_until_converged,
     end_iteration,
     get_procedure,
@@ -250,12 +252,14 @@ def register_operation_routes(app: FastAPI) -> None:
     app.include_router(end_iteration.router)
     app.include_router(append_activities.router)
     app.include_router(append_diagnostics.router)
+    app.include_router(append_outcomes.router)
     app.include_router(get_procedure.router)
     app.include_router(list_procedures.router)
     app.include_router(list_procedure_iterations.router)
     app.include_router(conduct_procedure.router)
     app.include_router(conduct_until_converged.router)
     app.include_router(conduct_until_advised.router)
+    app.include_router(conduct_until_advised_from.router)
     app.include_router(conduct_or_hold_procedure.router)
     for validation_cls in (
         InvalidProcedureNameError,

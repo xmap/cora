@@ -21,11 +21,17 @@ re-deriving a divergent history.
 The deciding brain is already on the stream (`ProcedureIterationEnded.
 model_ref`), so a steered run's replay-safety is derivable from data already
 recorded; no new event field or loop change is needed to MARK a run. The
-recorded-decision leg that would make a non-deterministic brain itself
-replayable (record the advised next_point and re-seed it instead of re-asking)
-is the separate, deferred build, earned when a GP-steered run must actually be
-replayed or resumed. Until then this classifier is how a consumer tells the two
-classes of run apart.
+recorded-decision leg that makes a non-deterministic brain RESUMABLE (record
+each pass's advised next_point + measured outcome, then re-seed the brain from
+that record instead of re-asking) is now SHIPPED: `conduct_until_advised_from`
+re-conditions the brain from the recorded (x, y) history and consults it live
+only at the open frontier. That does NOT reclassify a GP run as replay-safe:
+this classifier still judges the RE-ASK path (re-running the brain over the same
+evidence), which stays non-reproducible for a GP. Resume side-steps the re-ask
+entirely by replaying the recorded points, so "forward-only" (not
+re-ask-reproducible) and "resumable" (re-seed-from-record) are now BOTH true of
+a GP run at once. This classifier remains how a consumer that RE-ASKS tells the
+two classes apart.
 
 ## Keep this in lockstep with the deciders
 
@@ -65,14 +71,17 @@ _FORWARD_ONLY_MODEL_REFS = frozenset(
 "forward-only" here means NOT re-ask-reproducible -- re-running the brain over
 the same evidence may diverge (GP fit + acquisition are not bit-reproducible
 across BLAS / threading / hardware / version). It is DISTINCT from "not
-recorded": TIER-1 replay records the brain's advised_next_point on the
-iteration event + surfaces it in the iteration projection, so a finished
-GP-steered run IS reconstructable by READING the recorded trail. This set
-stays as-is because the classifier judges the RE-ASK path (still unsafe); a
-run is not reclassified replay-safe just because the decision is recorded.
-Flipping a ref to replay-safe is earned only when a consumer RE-SEEDS the
-recorded point on replay instead of re-asking (the deferred resume leg:
-decide-loop resume entry + ValueCaptured channel).
+recorded" AND from "not resumable": TIER-1 replay records the brain's
+advised_next_point on the iteration event + surfaces it in the iteration
+projection, so a finished GP-steered run IS reconstructable by READING the
+recorded trail; and `conduct_until_advised_from` now RESUMES such a run by
+re-seeding the brain from the recorded (x, y) history (re-seed, not re-ask).
+botorch STAYS in this set regardless: the classifier judges the RE-ASK path,
+which is still non-reproducible. A run is not reclassified replay-safe because
+its decisions are recorded or because it can be resumed; re-seed-from-record
+side-steps the re-ask rather than making the re-ask reproducible. Flipping a
+ref to replay-safe would require the RE-ASK itself to become bit-reproducible,
+which a GP's fit + acquisition are not.
 """
 
 _CLASSIFIED_MODEL_REFS = _REPLAY_SAFE_MODEL_REFS | _FORWARD_ONLY_MODEL_REFS

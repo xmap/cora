@@ -66,6 +66,9 @@ _INLINE_500_ALLOWLIST: frozenset[str] = frozenset(
         # entries: a 1-500 batch-size cap on the list of diagnostic entries,
         # not a char bound on a reason.
         "cora.operation.features.append_diagnostics.tool",
+        # entries: a 1-500 batch-size cap on the list of outcome entries,
+        # not a char bound on a reason.
+        "cora.operation.features.append_outcomes.tool",
     }
 )
 

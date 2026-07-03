@@ -8,6 +8,7 @@ import pytest
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.operation.aggregates.procedure import (
     DIAGNOSTIC_LOGBOOK_SCHEMA,
+    OUTCOME_LOGBOOK_SCHEMA,
     STEPS_LOGBOOK_SCHEMA,
     ProcedureAborted,
     ProcedureActivitiesLogbookOpened,
@@ -16,6 +17,7 @@ from cora.operation.aggregates.procedure import (
     ProcedureHeld,
     ProcedureIterationEnded,
     ProcedureIterationStarted,
+    ProcedureOutcomeLogbookOpened,
     ProcedureRegistered,
     ProcedureResumed,
     ProcedureStarted,
@@ -542,6 +544,57 @@ def test_procedure_diagnostic_logbook_opened_round_trips() -> None:
         occurred_at=_NOW,
     )
     stored = _stored("ProcedureDiagnosticLogbookOpened", to_payload(original))
+    rebuilt = from_stored(stored)
+    assert rebuilt == original
+
+
+# --- ProcedureOutcomeLogbookOpened (lazy-open envelope) ---
+
+
+@pytest.mark.unit
+def test_event_type_name_for_procedure_outcome_logbook_opened() -> None:
+    event = ProcedureOutcomeLogbookOpened(
+        procedure_id=uuid4(),
+        logbook_id=uuid4(),
+        kind="outcome",
+        schema=OUTCOME_LOGBOOK_SCHEMA,
+        occurred_at=_NOW,
+    )
+    assert event_type_name(event) == "ProcedureOutcomeLogbookOpened"
+
+
+@pytest.mark.unit
+def test_from_stored_rebuilds_procedure_outcome_logbook_opened() -> None:
+    procedure_id = uuid4()
+    logbook_id = uuid4()
+    stored = _stored(
+        "ProcedureOutcomeLogbookOpened",
+        {
+            "procedure_id": str(procedure_id),
+            "logbook_id": str(logbook_id),
+            "kind": "outcome",
+            "schema": OUTCOME_LOGBOOK_SCHEMA.to_dict(),
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    rebuilt = from_stored(stored)
+    assert isinstance(rebuilt, ProcedureOutcomeLogbookOpened)
+    assert rebuilt.procedure_id == procedure_id
+    assert rebuilt.logbook_id == logbook_id
+    assert rebuilt.kind == "outcome"
+    assert rebuilt.schema == OUTCOME_LOGBOOK_SCHEMA
+
+
+@pytest.mark.unit
+def test_procedure_outcome_logbook_opened_round_trips() -> None:
+    original = ProcedureOutcomeLogbookOpened(
+        procedure_id=uuid4(),
+        logbook_id=uuid4(),
+        kind="outcome",
+        schema=OUTCOME_LOGBOOK_SCHEMA,
+        occurred_at=_NOW,
+    )
+    stored = _stored("ProcedureOutcomeLogbookOpened", to_payload(original))
     rebuilt = from_stored(stored)
     assert rebuilt == original
 

@@ -130,6 +130,17 @@ Used as the `kind` value on `ProcedureDiagnosticLogbookOpened` events. One
 Procedure has at most one diagnostics logbook (lazy open-on-first-write,
 when a learning brain first advises a steered pass)."""
 
+LOGBOOK_KIND_OUTCOME: Final = "outcome"
+"""Discriminator for the Procedure's steered-pass outcome logbook.
+
+The third Procedure-side logbook kind (after activity + diagnostic): a
+distinct constant + distinct state field (`outcome_logbook_id`), recording
+the measured values (the y) the brain fit against each steered pass so a
+resume can rebuild the observation history from the record instead of
+re-measuring. Used as the `kind` value on `ProcedureOutcomeLogbookOpened`
+events. One Procedure has at most one outcome logbook (lazy open-on-first-
+write, when the first steered pass records its measurements)."""
+
 # Closed enum for the `step_kind` discriminator on per-step rows.
 # The setpoint / action / check core is CORA's rename of ISA-106's
 # canonical Command/Perform/Verify triplet (renamed to avoid CQRS
@@ -233,6 +244,51 @@ DIAGNOSTIC_LOGBOOK_SCHEMA = LogbookSchema(
         "point'). Rows write directly to entries_operation_procedure_diagnostics "
         "via the DiagnosticStore port (no per-row event on the Procedure "
         "stream)."
+    ),
+)
+
+# Schema declaration for the steered-pass outcome logbook. Same posture as
+# DIAGNOSTIC_LOGBOOK_SCHEMA. The per-pass measured values live in the JSON
+# `measurements` column (a list of Measurement dicts), NOT declared here,
+# because LogbookFieldType is closed over primitives and the measurement shape
+# is beamline-specific.
+OUTCOME_LOGBOOK_SCHEMA = LogbookSchema(
+    fields={
+        "iteration_index": LogbookFieldSpec(
+            type="int",
+            description=(
+                "The steered-conduct iteration this outcome records; joins to "
+                "the same iteration_index on ProcedureIterationEnded."
+            ),
+        ),
+        "succeeded": LogbookFieldSpec(
+            type="bool",
+            description="Whether the pass's acquisition succeeded (a failed pass is a real datum).",
+        ),
+        "actuation_kind": LogbookFieldSpec(
+            type="string",
+            description="Physical / Simulated / Hybrid provenance of the pass's measurements.",
+        ),
+        "sampled_at": LogbookFieldSpec(
+            type="datetime",
+            description="phenomenonTime: when the pass produced these measurements.",
+        ),
+        "occurred_at": LogbookFieldSpec(
+            type="datetime",
+            description="When the handler appended the entry (CORA Clock port).",
+        ),
+        "recorded_at": LogbookFieldSpec(
+            type="datetime",
+            description="When Postgres wrote the row (DEFAULT now()).",
+        ),
+    },
+    description=(
+        "Per-Procedure steered-pass outcomes: one row per steered iteration, "
+        "carrying the measured values (the y) the brain fit against in a JSON "
+        "measurements column, so a resume can rebuild the observation history "
+        "from the record instead of re-measuring. Rows write directly to "
+        "entries_operation_procedure_outcomes via the OutcomeStore port (no "
+        "per-row event on the Procedure stream)."
     ),
 )
 
@@ -1421,6 +1477,17 @@ class Procedure:
     Activity records physical steps, Diagnostic records GP-fit provenance
     (the second predicted Procedure-side logbook kind). Same lazy-open
     pattern: no eager open, no Closed event.
+    """
+    outcome_logbook_id: UUID | None = None
+    """Lazy-opened on first `append_outcomes`.
+
+    None until the first steered pass records its measurements; populated
+    by the `ProcedureOutcomeLogbookOpened` envelope event the handler emits
+    on the Procedure stream. Records the measured values (the y) each steered
+    pass produced, so a resume rebuilds the observation history from the
+    record instead of re-measuring. Distinct from `diagnostic_logbook_id`
+    (the model's internal scalars) and `activity_logbook_id` (physical steps).
+    Same lazy-open pattern: no eager open, no Closed event.
     """
     capability_id: UUID | None = field(default=None)
     """Optional binding to the universal Capability template (Recipe

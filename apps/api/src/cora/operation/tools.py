@@ -14,11 +14,15 @@ from mcp.server.fastmcp import FastMCP
 from cora.operation.features.abort_procedure import tool as abort_procedure_tool
 from cora.operation.features.append_activities import tool as append_activities_tool
 from cora.operation.features.append_diagnostics import tool as append_diagnostics_tool
+from cora.operation.features.append_outcomes import tool as append_outcomes_tool
 from cora.operation.features.complete_procedure import tool as complete_procedure_tool
 from cora.operation.features.conduct_from_procedure import tool as conduct_from_procedure_tool
 from cora.operation.features.conduct_or_hold_procedure import tool as conduct_or_hold_procedure_tool
 from cora.operation.features.conduct_procedure import tool as conduct_procedure_tool
 from cora.operation.features.conduct_until_advised import tool as conduct_until_advised_tool
+from cora.operation.features.conduct_until_advised_from import (
+    tool as conduct_until_advised_from_tool,
+)
 from cora.operation.features.conduct_until_converged import tool as conduct_until_converged_tool
 from cora.operation.features.end_iteration import tool as end_iteration_tool
 from cora.operation.features.get_procedure import tool as get_procedure_tool
@@ -96,6 +100,10 @@ def register_operation_tools(
         mcp,
         get_handler=lambda: get_handlers().append_diagnostics,
     )
+    append_outcomes_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().append_outcomes,
+    )
     get_procedure_tool.register(
         mcp,
         get_handler=lambda: get_handlers().get_procedure,
@@ -119,6 +127,10 @@ def register_operation_tools(
     conduct_until_advised_tool.register(
         mcp,
         get_handler=lambda: get_handlers().conduct_until_advised,
+    )
+    conduct_until_advised_from_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().conduct_until_advised_from,
     )
     conduct_or_hold_procedure_tool.register(
         mcp,
