@@ -595,3 +595,18 @@ assemblies:
       - { slot_name: goniometer, required_families: [Goniometer], cardinality: Exactly1 }
       - { slot_name: detector_arm, required_families: [RotaryStage], cardinality: ZeroOrMore }
       - { slot_name: reciprocal_space, required_families: [PseudoAxis], cardinality: Exactly1 }
+  - name: KirkpatrickBaez
+    note: >-
+      Reusable Kirkpatrick-Baez focusing mirror pair: a vertical-focusing mirror and a
+      horizontal-focusing mirror in crossed grazing-incidence geometry. Presents nothing on
+      its own (a beam-focusing optic, not a Role); composed by larger detector or endstation
+      Assemblies, or bound directly as a Fixture. Both slots are Exactly1 because a KB pair is
+      physically two mirrors with distinct focusing direction, axis maps, and addressing;
+      deployments that today carry the pair as one collapsed Mirror Asset split it into the two
+      mirrors that physically exist when they materialize the Fixture. Flat (no sub-assembly).
+      Earned in once independent beamlines shared it (Bernina, Cristallina, and Alvra already
+      bind the vertical and horizontal mirrors as separate Mirror Assets).
+    presents_as: []
+    required_slots:
+      - { slot_name: vertical_mirror, required_families: [Mirror], cardinality: Exactly1 }
+      - { slot_name: horizontal_mirror, required_families: [Mirror], cardinality: Exactly1 }
