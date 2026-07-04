@@ -545,10 +545,14 @@ models:
 # portable rung is the Method. Authored Recipes, if any, belong in the
 # deployment docs, not here.
 
-# Assemblies: reusable composition blueprints. The spine computes each
-# Assembly's id (uuid5 over name) and content_hash; sub-assembly links reference
-# the child by name. A beamline materializes these as Fixtures (slot -> Asset),
-# which live in the deployment descriptor, not here.
+# Assemblies: reusable composition blueprints. Each Assembly gets a fresh
+# per-registration id when it is defined; the spine computes its content_hash
+# from the blueprint. Two facilities that define the same blueprint get distinct
+# ids but an equal content_hash, so content_hash equality (not a shared id) is
+# what makes an Assembly recognizably the same across facilities. This differs
+# from Family and Role, whose ids are derived from the name. Sub-assembly links
+# reference the child by name. A beamline materializes these as Fixtures
+# (slot -> Asset), which live in the deployment descriptor, not here.
 assemblies:
   - name: Optics
     note: >-
