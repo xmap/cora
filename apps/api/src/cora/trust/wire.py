@@ -33,8 +33,10 @@ from cora.trust.features import (
     define_policy,
     define_surface,
     define_zone,
+    deny_ratification,
     evaluate_policy,
     get_surface,
+    grant_ratification,
     hold_visit,
     list_conduits,
     list_permissions,
@@ -43,6 +45,7 @@ from cora.trust.features import (
     record_visit_arrival,
     register_visit,
     release_control_of_surface,
+    request_ratification,
     resume_visit,
     revoke_grant,
     start_visit,
@@ -85,6 +88,9 @@ class TrustHandlers:
     take_control_of_surface: take_control_of_surface.Handler
     release_control_of_surface: release_control_of_surface.Handler
     revoke_grant: revoke_grant.Handler
+    request_ratification: request_ratification.Handler
+    grant_ratification: grant_ratification.Handler
+    deny_ratification: deny_ratification.Handler
     evaluate_policy: evaluate_policy.Handler
     get_surface: get_surface.Handler
     list_zones: list_zones.Handler
@@ -219,6 +225,21 @@ def wire_trust(deps: Kernel) -> TrustHandlers:
         revoke_grant=with_tracing(
             revoke_grant.bind(deps),
             command_name="RevokePolicyGrant",
+            bc=_BC,
+        ),
+        request_ratification=with_tracing(
+            request_ratification.bind(deps),
+            command_name="RequestRatification",
+            bc=_BC,
+        ),
+        grant_ratification=with_tracing(
+            grant_ratification.bind(deps),
+            command_name="GrantRatification",
+            bc=_BC,
+        ),
+        deny_ratification=with_tracing(
+            deny_ratification.bind(deps),
+            command_name="DenyRatification",
             bc=_BC,
         ),
         evaluate_policy=with_tracing(

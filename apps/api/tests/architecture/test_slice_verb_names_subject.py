@@ -68,6 +68,7 @@ _AGGREGATE_NAMES: frozenset[str] = frozenset(
         "policy",
         "practice",
         "procedure",
+        "ratification",
         "recipe",
         "role",
         "run",

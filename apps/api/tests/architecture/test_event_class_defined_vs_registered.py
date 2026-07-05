@@ -106,6 +106,15 @@ _GENESIS_VERB_DEVIATIONS: dict[tuple[str, str], str] = {
         "moment, not an instance template or a runtime binding; renaming "
         "to AcquisitionRegistered would mislabel a fact as an instance."
     ),
+    ("trust", "ratification"): (
+        "RatificationRequested names its own lifecycle state: RatificationStatus "
+        "is {Requested, Granted, Denied}, so the genesis event is the transition "
+        "into Requested. A RatificationRegistered genesis would emit an event "
+        "matching no state it produces, breaking the event/status symmetry. This "
+        "is the RunStarted shape (genesis encodes the transition into the first "
+        "state; the enum has no Registered member), not a template-definition or "
+        "an instance-registration the convention covers."
+    ),
     ("data", "attestation"): (
         "AttestationRecorded is a terminal-at-genesis recorded-fact-chain "
         "(one stream per Attestation; a single AttestationRecorded event). "

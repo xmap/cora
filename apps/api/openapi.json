@@ -6515,6 +6515,23 @@
         "title": "DemoteDatasetRequest",
         "type": "object"
       },
+      "DenyRatificationRequest": {
+        "description": "Body for `POST /ratifications/{ratification_id}/deny`.\n\n`reason` is operator-supplied free text (audit-log breadcrumb) explaining\nthe refusal. MUST NOT contain PII.",
+        "properties": {
+          "reason": {
+            "description": "Operator-supplied reason for the denial (audit-log breadcrumb; no PII).",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DenyRatificationRequest",
+        "type": "object"
+      },
       "DeprecateAgentRequest": {
         "description": "Body for `POST /agents/{agent_id}/deprecate`.",
         "properties": {
@@ -13204,6 +13221,58 @@
           "reason"
         ],
         "title": "RemoveRunFromCampaignRequest",
+        "type": "object"
+      },
+      "RequestRatificationRequest": {
+        "description": "Body for `POST /ratifications`.",
+        "properties": {
+          "command_name": {
+            "description": "Canonical name of the gated command.",
+            "title": "Command Name",
+            "type": "string"
+          },
+          "consequence_class": {
+            "description": "Declared class that triggered the requirement (bare-str label).",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Consequence Class",
+            "type": "string"
+          },
+          "ratification_id": {
+            "description": "Caller-supplied UUID. A subscriber may mint a deterministic uuid5 for replay-safe ingest; operator-direct may use uuid4.",
+            "format": "uuid",
+            "title": "Ratification Id",
+            "type": "string"
+          },
+          "target_action_id": {
+            "description": "Opaque id of the action being gated (e.g. the run id whose consequential command is held). Not existence-checked at the decider.",
+            "format": "uuid",
+            "title": "Target Action Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ratification_id",
+          "target_action_id",
+          "command_name",
+          "consequence_class"
+        ],
+        "title": "RequestRatificationRequest",
+        "type": "object"
+      },
+      "RequestRatificationResponse": {
+        "description": "Response body for `POST /ratifications`.",
+        "properties": {
+          "ratification_id": {
+            "format": "uuid",
+            "title": "Ratification Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ratification_id"
+        ],
+        "title": "RequestRatificationResponse",
         "type": "object"
       },
       "RestoreAssetRequest": {
@@ -39375,6 +39444,278 @@
         "summary": "Cleanup terminal of an interrupted Procedure (Running -> Truncated)",
         "tags": [
           "operation"
+        ]
+      }
+    },
+    "/ratifications": {
+      "post": {
+        "operationId": "post_ratifications_ratifications_post",
+        "parameters": [
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestRatificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestRatificationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (e.g. empty consequence_class)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Ratification with this id already exists."
+          },
+          "422": {
+            "description": "Request body failed schema validation."
+          }
+        },
+        "summary": "Request a second-principal co-signature for a consequential action",
+        "tags": [
+          "trust"
+        ]
+      }
+    },
+    "/ratifications/{ratification_id}/deny": {
+      "post": {
+        "operationId": "post_ratifications_deny_ratifications__ratification_id__deny_post",
+        "parameters": [
+          {
+            "description": "Target Ratification's id.",
+            "in": "path",
+            "name": "ratification_id",
+            "required": true,
+            "schema": {
+              "description": "Target Ratification's id.",
+              "format": "uuid",
+              "title": "Ratification Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DenyRatificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (whitespace-only reason)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Ratification exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Ratification is not in Requested status, or denier is the requester."
+          },
+          "422": {
+            "description": "Request body failed schema validation."
+          }
+        },
+        "summary": "Deny (refuse) a Requested Ratification (Requested -> Denied)",
+        "tags": [
+          "trust"
+        ]
+      }
+    },
+    "/ratifications/{ratification_id}/grant": {
+      "post": {
+        "operationId": "post_ratifications_grant_ratifications__ratification_id__grant_post",
+        "parameters": [
+          {
+            "description": "Target Ratification's id.",
+            "in": "path",
+            "name": "ratification_id",
+            "required": true,
+            "schema": {
+              "description": "Target Ratification's id.",
+              "format": "uuid",
+              "title": "Ratification Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Ratification exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Ratification is not in Requested status, or grantor is the requester."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Grant (co-sign) a Requested Ratification (Requested -> Granted)",
+        "tags": [
+          "trust"
         ]
       }
     },
