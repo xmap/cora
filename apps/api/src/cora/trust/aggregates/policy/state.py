@@ -43,6 +43,7 @@ from uuid import UUID
 from cora.infrastructure.ports import Allow, AuthzResult, Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.shared.bounded_text import bounded_name
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 POLICY_NAME_MAX_LENGTH = 200
 
@@ -79,6 +80,25 @@ class InvalidPolicySurfaceError(ValueError):
             "Policy surface_id must bind a real Surface "
             "(the nil sentinel is reserved for the retired V1 fold)"
         )
+
+
+class PolicyNotFoundError(Exception):
+    """A transition (e.g. revoke_grant) targeted a Policy stream with no events."""
+
+    def __init__(self, policy_id: UUID) -> None:
+        super().__init__(f"Policy {policy_id} not found")
+        self.policy_id = policy_id
+
+
+class InvalidPolicyGrantRevokeReasonError(ValueError):
+    """Reason text on revoke_grant is empty or too long after trim."""
+
+    def __init__(self, value: str) -> None:
+        super().__init__(
+            f"Policy grant-revoke reason must be 1-{REASON_MAX_LENGTH} chars "
+            f"after trimming (got: {value!r})"
+        )
+        self.value = value
 
 
 @bounded_name(max_length=POLICY_NAME_MAX_LENGTH, error_class=InvalidPolicyNameError)

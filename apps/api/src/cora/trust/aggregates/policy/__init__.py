@@ -10,6 +10,7 @@ slice (3d) and the `TrustAuthorize` adapter (3e).
 from cora.trust.aggregates.policy.events import (
     PolicyDefined,
     PolicyEvent,
+    PolicyGrantRevoked,
     event_type_name,
     from_stored,
     to_payload,
@@ -18,23 +19,28 @@ from cora.trust.aggregates.policy.evolver import evolve, fold
 from cora.trust.aggregates.policy.read import load_policy
 from cora.trust.aggregates.policy.state import (
     POLICY_NAME_MAX_LENGTH,
+    InvalidPolicyGrantRevokeReasonError,
     InvalidPolicyNameError,
     InvalidPolicySurfaceError,
     Policy,
     PolicyAlreadyExistsError,
     PolicyName,
+    PolicyNotFoundError,
     evaluate,
 )
 
 __all__ = [
     "POLICY_NAME_MAX_LENGTH",
+    "InvalidPolicyGrantRevokeReasonError",
     "InvalidPolicyNameError",
     "InvalidPolicySurfaceError",
     "Policy",
     "PolicyAlreadyExistsError",
     "PolicyDefined",
     "PolicyEvent",
+    "PolicyGrantRevoked",
     "PolicyName",
+    "PolicyNotFoundError",
     "evaluate",
     "event_type_name",
     "evolve",

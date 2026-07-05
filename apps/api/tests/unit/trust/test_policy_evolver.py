@@ -7,7 +7,7 @@ import pytest
 
 from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
 from cora.trust.aggregates.policy import Policy, PolicyName, evolve, fold
-from cora.trust.aggregates.policy.events import PolicyDefined
+from cora.trust.aggregates.policy.events import PolicyDefined, PolicyGrantRevoked
 from cora.trust.features import define_policy
 from cora.trust.features.define_policy import DefinePolicy
 
@@ -58,6 +58,57 @@ def test_evolve_converts_lists_to_frozensets() -> None:
     )
     assert state.permitted_principal_ids == frozenset({p1, p2})
     assert state.permitted_commands == frozenset({"A", "B"})
+
+
+@pytest.mark.unit
+def test_evolve_grant_revoked_drops_principal_from_permitted_set() -> None:
+    policy_id = uuid4()
+    conduit = uuid4()
+    p1, p2 = uuid4(), uuid4()
+    defined = PolicyDefined(
+        policy_id=policy_id,
+        name="Beam-team",
+        conduit_id=conduit,
+        permitted_principal_ids=(p1, p2),
+        permitted_commands=("RegisterActor",),
+        occurred_at=_NOW,
+    )
+    state = evolve(
+        evolve(None, defined),
+        PolicyGrantRevoked(
+            policy_id=policy_id,
+            principal_id=p1,
+            revoked_by=uuid4(),
+            reason="access review",
+            occurred_at=_NOW,
+        ),
+    )
+    assert state.permitted_principal_ids == frozenset({p2})
+
+
+@pytest.mark.unit
+def test_evolve_grant_revoked_of_absent_principal_leaves_set_unchanged() -> None:
+    policy_id = uuid4()
+    p1 = uuid4()
+    defined = PolicyDefined(
+        policy_id=policy_id,
+        name="Beam-team",
+        conduit_id=uuid4(),
+        permitted_principal_ids=(p1,),
+        permitted_commands=("RegisterActor",),
+        occurred_at=_NOW,
+    )
+    state = evolve(
+        evolve(None, defined),
+        PolicyGrantRevoked(
+            policy_id=policy_id,
+            principal_id=uuid4(),
+            revoked_by=uuid4(),
+            reason="access review",
+            occurred_at=_NOW,
+        ),
+    )
+    assert state.permitted_principal_ids == frozenset({p1})
 
 
 @pytest.mark.unit

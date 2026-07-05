@@ -30,6 +30,7 @@ from cora.trust.features.record_visit_arrival import tool as record_visit_arriva
 from cora.trust.features.register_visit import tool as register_visit_tool
 from cora.trust.features.release_control_of_surface import tool as release_control_of_surface_tool
 from cora.trust.features.resume_visit import tool as resume_visit_tool
+from cora.trust.features.revoke_grant import tool as revoke_grant_tool
 from cora.trust.features.start_visit import tool as start_visit_tool
 from cora.trust.features.take_control_of_surface import tool as take_control_of_surface_tool
 from cora.trust.features.void_visit import tool as void_visit_tool
@@ -52,6 +53,7 @@ def register_trust_tools(
     list_conduits_tool.register(mcp, get_handler=lambda: get_handlers().list_conduits)
     list_policies_tool.register(mcp, get_handler=lambda: get_handlers().list_policies)
     list_permissions_tool.register(mcp, get_handler=lambda: get_handlers().list_permissions)
+    revoke_grant_tool.register(mcp, get_handler=lambda: get_handlers().revoke_grant)
     # Visit lifecycle tools.
     register_visit_tool.register(mcp, get_handler=lambda: get_handlers().register_visit)
     record_visit_arrival_tool.register(mcp, get_handler=lambda: get_handlers().record_visit_arrival)

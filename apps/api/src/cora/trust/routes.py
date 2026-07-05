@@ -45,9 +45,11 @@ from cora.trust.aggregates.conduit import (
     InvalidConduitNameError,
 )
 from cora.trust.aggregates.policy import (
+    InvalidPolicyGrantRevokeReasonError,
     InvalidPolicyNameError,
     InvalidPolicySurfaceError,
     PolicyAlreadyExistsError,
+    PolicyNotFoundError,
 )
 from cora.trust.aggregates.surface import InvalidSurfaceNameError, SurfaceAlreadyExistsError
 from cora.trust.aggregates.visit import (
@@ -94,6 +96,7 @@ from cora.trust.features import (
     register_visit,
     release_control_of_surface,
     resume_visit,
+    revoke_grant,
     start_visit,
     take_control_of_surface,
     void_visit,
@@ -194,6 +197,7 @@ def register_trust_routes(app: FastAPI) -> None:
     app.include_router(list_conduits.router)
     app.include_router(list_policies.router)
     app.include_router(list_permissions.router)
+    app.include_router(revoke_grant.router)
     # Visit lifecycle slices.
     app.include_router(register_visit.router)
     app.include_router(record_visit_arrival.router)
@@ -239,9 +243,11 @@ def register_trust_routes(app: FastAPI) -> None:
         VisitNotFoundError,
         VisitActorNotCheckedInError,
         VisitParentNotFoundError,
+        PolicyNotFoundError,
     ):
         app.add_exception_handler(not_found_cls, _handle_not_found)
     for invalid_400_cls in (
+        InvalidPolicyGrantRevokeReasonError,
         InvalidPolicySurfaceError,
         InvalidVisitPlannedPeriodError,
         InvalidVisitReasonError,

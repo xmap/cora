@@ -13421,6 +13421,30 @@
         "title": "RevokeCredentialBody",
         "type": "object"
       },
+      "RevokeGrantRequest": {
+        "description": "Body for `POST /policies/{policy_id}/revoke-grant`.\n\n`permitted_principal_id` is the grant to remove from the Policy's allow-list.\n`reason` is operator-supplied free text (audit-log breadcrumb; also\nfeeds the downstream mid-run compensation Decision). MUST NOT contain PII.",
+        "properties": {
+          "permitted_principal_id": {
+            "description": "Principal (UUID) whose grant is revoked from the policy.",
+            "format": "uuid",
+            "title": "Permitted Principal Id",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Operator-supplied reason for the revocation (audit-log breadcrumb; no PII).",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "permitted_principal_id",
+          "reason"
+        ],
+        "title": "RevokeGrantRequest",
+        "type": "object"
+      },
       "RevokePermitRequest": {
         "description": "Body for `POST /federation/permits/{permit_id}/revoke`.\n\n`reason` is operator-supplied free text (audit-log breadcrumb)\nexplaining why the Permit is being revoked. Examples: \"peer\nfacility decommissioned\", \"credential compromise\", \"policy\nchange ended sharing agreement\".",
         "properties": {
@@ -36663,6 +36687,96 @@
           }
         },
         "summary": "List a Policy's permitted commands for (principal, conduit)",
+        "tags": [
+          "trust"
+        ]
+      }
+    },
+    "/policies/{policy_id}/revoke-grant": {
+      "post": {
+        "operationId": "post_policies_revoke_grant_policies__policy_id__revoke_grant_post",
+        "parameters": [
+          {
+            "description": "Target Policy's id.",
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "description": "Target Policy's id.",
+              "format": "uuid",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeGrantRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (whitespace-only reason)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Policy exists with the given id."
+          },
+          "422": {
+            "description": "Request body failed schema validation."
+          }
+        },
+        "summary": "Revoke one principal's grant from a Policy",
         "tags": [
           "trust"
         ]

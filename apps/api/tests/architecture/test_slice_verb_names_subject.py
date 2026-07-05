@@ -93,6 +93,7 @@ _DOMAIN_NOUN_ALLOWLIST: frozenset[str] = frozenset(
         "outcome",  # Operation: append_outcomes (steered-pass measured-values logbook entry)
         "iteration",  # Operation: start_iteration / end_iteration (convergence-loop boundary noun)
         "entry",  # generic logbook-entry vocabulary
+        "grant",  # Trust: revoke_grant (a grant = one entry in Policy.permitted_principal_ids)
         "permission",  # Trust: list_permissions
         "event",  # Agent: dismiss_event_in_reaction
         "reaction",  # Agent: dismiss_event_in_reaction (Reaction = subscriber class)
