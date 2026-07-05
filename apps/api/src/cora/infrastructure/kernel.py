@@ -68,6 +68,7 @@ from cora.infrastructure.ports import (
     NullInferenceRecorder,
     ProfileStore,
     RoleLookup,
+    RunActorInvolvementLookup,
     Signer,
     SupplyLookup,
     TokenVerifier,
@@ -152,6 +153,15 @@ class Kernel:
     `NoSuppliesRegisteredLookup` for the missing-kind path. Mirrors
     the `ClearanceLookup` / `CautionLookup` test-default pattern.
     See [[project_supply_preflight_gate_design]].
+
+    `run_actor_involvement_lookup`: cross-BC port consumed by the
+    authority-revocation holder subscriber (K3) to resolve the
+    in-flight Runs a revoked principal drives and hold each. Run BC
+    ships `PostgresRunActorInvolvementLookup` as the production adapter
+    (reads `proj_run_actor_involvement`). Test environments default to
+    `NoInvolvementLookup` (returns `[]`) so existing tests don't have
+    to seed runs; kill-switch tests override with the real adapter.
+    Mirrors the `ClearanceLookup` / `CautionLookup` test-default pattern.
 
     `dataset_distribution_lookup`: cross-BC port consumed by Run BC's
     `start_run` handler to gate a reconstruction Run on each declared
@@ -316,6 +326,7 @@ class Kernel:
     caution_lookup: CautionLookup
     capability_lookup: CapabilityLookup
     supply_lookup: SupplyLookup
+    run_actor_involvement_lookup: RunActorInvolvementLookup
     dataset_distribution_lookup: DatasetDistributionLookup
     compute_reachability_lookup: ComputeReachabilityLookup
     credential_lookup: CredentialLookup

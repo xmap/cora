@@ -131,6 +131,10 @@ from cora.infrastructure.ports.role_lookup import (
     RoleLookup,
     RoleLookupResult,
 )
+from cora.infrastructure.ports.run_actor_involvement_lookup import (
+    NoInvolvementLookup,
+    RunActorInvolvementLookup,
+)
 from cora.infrastructure.ports.signer import (
     Signer,
     SignerKeyInactiveError,
@@ -233,6 +237,7 @@ __all__ = [
     "NewEvent",
     "NoComputeReachabilityLookup",
     "NoDatasetDistributionsLookup",
+    "NoInvolvementLookup",
     "NoSuppliesRegisteredLookup",
     "NullInferenceRecorder",
     "PrincipalKind",
@@ -240,6 +245,7 @@ __all__ = [
     "ProfileStore",
     "RoleLookup",
     "RoleLookupResult",
+    "RunActorInvolvementLookup",
     "SeededComputeReachabilityLookup",
     "SeededDatasetDistributionLookup",
     "Signer",

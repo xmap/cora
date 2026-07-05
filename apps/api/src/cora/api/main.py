@@ -199,6 +199,7 @@ from cora.run import (
     register_run_tools,
     wire_run,
 )
+from cora.run.adapters import PostgresRunActorInvolvementLookup
 from cora.safety import (
     SafetyHandlers,
     register_safety_projections,
@@ -616,6 +617,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 caution_lookup_factory=PostgresCautionLookup,
                 capability_lookup_factory=PostgresCapabilityLookup,
                 supply_lookup_factory=PostgresSupplyLookup,
+                run_actor_involvement_lookup_factory=PostgresRunActorInvolvementLookup,
                 dataset_distribution_lookup_factory=PostgresDatasetDistributionLookup,
                 credential_lookup_factory=PostgresCredentialLookup,
                 facility_lookup_factory=PostgresFacilityLookup,

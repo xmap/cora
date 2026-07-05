@@ -106,8 +106,10 @@ from cora.infrastructure.ports import (
     LogbookMirror,
     NoComputeReachabilityLookup,
     NoDatasetDistributionsLookup,
+    NoInvolvementLookup,
     ProfileStore,
     RoleLookup,
+    RunActorInvolvementLookup,
     SupplyLookup,
     SystemClock,
     TokenVerifier,
@@ -164,6 +166,7 @@ def make_postgres_kernel(
     caution_lookup: CautionLookup | None = None,
     capability_lookup: CapabilityLookup | None = None,
     supply_lookup: SupplyLookup | None = None,
+    run_actor_involvement_lookup: RunActorInvolvementLookup | None = None,
     dataset_distribution_lookup: DatasetDistributionLookup | None = None,
     compute_reachability_lookup: ComputeReachabilityLookup | None = None,
     credential_lookup: CredentialLookup | None = None,
@@ -225,6 +228,13 @@ def make_postgres_kernel(
     injects the real `PostgresSupplyLookup` via the
     `supply_lookup_factory` argument; gate-specific tests override
     here explicitly. See [[project_supply_preflight_gate_design]].
+
+    `run_actor_involvement_lookup` defaults to `NoInvolvementLookup`
+    (returns `[]`) so existing tests don't have to seed runs.
+    Production's `build_kernel` injects the real
+    `PostgresRunActorInvolvementLookup` via the
+    `run_actor_involvement_lookup_factory` argument; kill-switch tests
+    override here explicitly.
 
     `dataset_distribution_lookup` defaults to `NoDatasetDistributionsLookup`
     (every Dataset has no Distribution): the conservative default for the
@@ -322,6 +332,11 @@ def make_postgres_kernel(
             capability_lookup if capability_lookup is not None else AlwaysEmptyCapabilityLookup()
         ),
         supply_lookup=(supply_lookup if supply_lookup is not None else AllSatisfiedSupplyLookup()),
+        run_actor_involvement_lookup=(
+            run_actor_involvement_lookup
+            if run_actor_involvement_lookup is not None
+            else NoInvolvementLookup()
+        ),
         dataset_distribution_lookup=(
             dataset_distribution_lookup
             if dataset_distribution_lookup is not None
@@ -374,6 +389,7 @@ def make_inmemory_kernel(
     caution_lookup: CautionLookup | None = None,
     capability_lookup: CapabilityLookup | None = None,
     supply_lookup: SupplyLookup | None = None,
+    run_actor_involvement_lookup: RunActorInvolvementLookup | None = None,
     dataset_distribution_lookup: DatasetDistributionLookup | None = None,
     compute_reachability_lookup: ComputeReachabilityLookup | None = None,
     credential_lookup: CredentialLookup | None = None,
@@ -427,6 +443,11 @@ def make_inmemory_kernel(
     reason: no projection worker, no `proj_supply_summary` table to
     read from. Gate-specific tests can override with
     `NoSuppliesRegisteredLookup` (missing-kind path) or a custom fake.
+
+    `run_actor_involvement_lookup` defaults to `NoInvolvementLookup`
+    (returns `[]`) for the same reason: no projection worker, no
+    `proj_run_actor_involvement` table to read from. Kill-switch tests
+    can override with a custom fake or the real adapter.
 
     `dataset_distribution_lookup` defaults to `NoDatasetDistributionsLookup`
     for the same reason: no projection worker, no
@@ -517,6 +538,11 @@ def make_inmemory_kernel(
             capability_lookup if capability_lookup is not None else AlwaysEmptyCapabilityLookup()
         ),
         supply_lookup=(supply_lookup if supply_lookup is not None else AllSatisfiedSupplyLookup()),
+        run_actor_involvement_lookup=(
+            run_actor_involvement_lookup
+            if run_actor_involvement_lookup is not None
+            else NoInvolvementLookup()
+        ),
         dataset_distribution_lookup=(
             dataset_distribution_lookup
             if dataset_distribution_lookup is not None
@@ -639,6 +665,25 @@ class SupplyLookupFactory(Protocol):
         self,
         pool: asyncpg.Pool,
     ) -> SupplyLookup: ...
+
+
+class RunActorInvolvementLookupFactory(Protocol):
+    """Builds the production RunActorInvolvementLookup port for the Kernel.
+
+    Run BC's `cora.run.adapters.PostgresRunActorInvolvementLookup` is
+    the production factory; `cora.api.main` binds it. Same factory-
+    injection shape as the other lookup factories so
+    `cora.infrastructure.deps` doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to `NoInvolvementLookup`
+    automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> RunActorInvolvementLookup: ...
 
 
 class DatasetDistributionLookupFactory(Protocol):
@@ -848,6 +893,7 @@ async def build_kernel(
     caution_lookup_factory: CautionLookupFactory | None = None,
     capability_lookup_factory: CapabilityLookupFactory | None = None,
     supply_lookup_factory: SupplyLookupFactory | None = None,
+    run_actor_involvement_lookup_factory: RunActorInvolvementLookupFactory | None = None,
     dataset_distribution_lookup_factory: DatasetDistributionLookupFactory | None = None,
     credential_lookup_factory: CredentialLookupFactory | None = None,
     facility_lookup_factory: FacilityLookupFactory | None = None,
@@ -956,6 +1002,11 @@ async def build_kernel(
         if supply_lookup_factory is not None
         else AllSatisfiedSupplyLookup()
     )
+    run_actor_involvement_lookup: RunActorInvolvementLookup = (
+        run_actor_involvement_lookup_factory(pool)
+        if run_actor_involvement_lookup_factory is not None
+        else NoInvolvementLookup()
+    )
     dataset_distribution_lookup: DatasetDistributionLookup = (
         dataset_distribution_lookup_factory(pool)
         if dataset_distribution_lookup_factory is not None
@@ -1009,6 +1060,7 @@ async def build_kernel(
         caution_lookup=caution_lookup,
         capability_lookup=capability_lookup,
         supply_lookup=supply_lookup,
+        run_actor_involvement_lookup=run_actor_involvement_lookup,
         dataset_distribution_lookup=dataset_distribution_lookup,
         credential_lookup=credential_lookup,
         facility_lookup=facility_lookup,
@@ -1103,6 +1155,7 @@ __all__ = [
     "FamilyLookupFactory",
     "LLMFactory",
     "RoleLookupFactory",
+    "RunActorInvolvementLookupFactory",
     "SupplyLookupFactory",
     "build_kernel",
     "make_inmemory_kernel",
