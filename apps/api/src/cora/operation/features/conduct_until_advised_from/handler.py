@@ -186,7 +186,7 @@ def bind(
         outcomes = await outcome_lookup.read_procedure_outcomes(procedure_id=command.procedure_id)
         closed_observations = reconstruct_observations(outcomes)
 
-        decide_port = build_decide_port(command.decide)
+        decide_port = build_decide_port(command.decide, llm=deps.llm)
         try:
             result = await conductor.conduct_until_advised_from(
                 procedure_id=command.procedure_id,

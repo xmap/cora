@@ -146,7 +146,7 @@ def bind(
             causation_id=causation_id,
         )
 
-        decide_port = build_decide_port(command.decide)
+        decide_port = build_decide_port(command.decide, llm=deps.llm)
         try:
             result = await conductor.conduct_until_advised(
                 procedure_id=command.procedure_id,

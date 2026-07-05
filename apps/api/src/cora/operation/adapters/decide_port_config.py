@@ -14,6 +14,8 @@ decider substrate:
   - `StagedDecidePort` (`staged` substrate; a two-phase composite that seeds
     with `sobol` then hands off to `botorch` on a successful-observation
     count; needs the optional `bo` group)
+  - `LlmDecidePort` (`llm` substrate; an LLM steering brain; needs an injected
+    `LLM` port via the `llm` argument, not an optional dependency group)
 
 These arms mirror `build_compute_port`, and a routing registry is earned only
 when the substrate count makes the if-chain unwieldy, exactly as ControlPort
@@ -48,32 +50,36 @@ from typing import TYPE_CHECKING, Literal
 from cora.operation.adapters.botorch_decide_port import BoTorchDecidePort
 from cora.operation.adapters.grid_walk_decide_port import GridWalkDecidePort
 from cora.operation.adapters.in_memory_decide_port import InMemoryDecidePort
+from cora.operation.adapters.llm_decide_port import LlmDecidePort
 from cora.operation.adapters.sobol_decide_port import SobolDecidePort
 from cora.operation.adapters.staged_decide_port import StagedDecidePort
 
 if TYPE_CHECKING:
+    from cora.infrastructure.ports.llm import LLM
     from cora.operation.ports.decide_port import DecidePort
 
-DecideSubstrate = Literal["in_memory", "grid_walk", "sobol", "botorch", "staged"]
+DecideSubstrate = Literal["in_memory", "grid_walk", "sobol", "botorch", "staged", "llm"]
 """The full set of decider substrates `build_decide_port` can materialise.
 
 `in_memory` is the deterministic fake; `grid_walk` is the in-CORA grid/sweep
 decider; `sobol` is the Sobol initial-design seeder; `botorch` is the GP
 Bayesian-optimization brain; `staged` is the two-phase sobol-then-botorch
-composite (the last three need the optional `bo` group). Adding an arm here
-makes it factory-buildable for in-process composition + deployment config;
-promoting it to the wire is a separate, deliberate step (see
-`WireDecideSubstrate`).
+composite (those three need the optional `bo` group); `llm` is the LLM
+steering brain (needs an injected `LLM` port via `build_decide_port`'s `llm`
+argument, not an optional dependency group). Adding an arm here makes it
+factory-buildable for in-process composition + deployment config; promoting
+it to the wire is a separate, deliberate step (see `WireDecideSubstrate`).
 """
 
 WireDecideSubstrate = Literal["in_memory", "grid_walk"]
 """The subset of substrates a remote caller may select over the HTTP/MCP wire.
 
 Narrower than `DecideSubstrate` on purpose: a substrate is wire-selectable
-only once its config has a designed wire representation. `sobol` (and later
-the GP brain) are factory-buildable but NOT wire-selectable yet, so widening
-`DecideSubstrate` never silently exposes an unconfigurable substrate on the
-live route. The wire request model types its `substrate` with this Literal.
+only once its config has a designed wire representation. `sobol`, the GP
+brain, and `llm` are factory-buildable but NOT wire-selectable yet, so
+widening `DecideSubstrate` never silently exposes an unconfigurable substrate
+on the live route. The wire request model types its `substrate` with this
+Literal.
 """
 
 
@@ -99,7 +105,11 @@ class DecidePortConfig:
     staged_threshold: int = 5
 
 
-def build_decide_port(config: DecidePortConfig | None = None) -> DecidePort:
+def build_decide_port(
+    config: DecidePortConfig | None = None,
+    *,
+    llm: LLM | None = None,
+) -> DecidePort:
     """Materialise the DecidePort the conduct loop talks to.
 
     None or the `in_memory` substrate returns an `InMemoryDecidePort` (the
@@ -107,9 +117,12 @@ def build_decide_port(config: DecidePortConfig | None = None) -> DecidePort:
     at the configured resolution. `sobol` / `botorch` return the seeder /
     GP brain (both probe the optional `bo` dependency at construction, raising
     `ValueError` if it is missing). `staged` composes a Sobol seeder + a
-    BoTorch brain into the two-phase composite. New arms are added here as
-    they are earned, exactly as `build_compute_port` grew its `local_process`
-    arm.
+    BoTorch brain into the two-phase composite. `llm` returns an
+    `LlmDecidePort` steered by the injected `llm` port, raising `ValueError`
+    if `llm` is None (mirroring the `bo`-missing guard: a config error surfaces
+    at construction, mapping to HTTP 422 before any FSM transition). Other arms
+    ignore the `llm` argument. New arms are added here as they are earned,
+    exactly as `build_compute_port` grew its `local_process` arm.
     """
     resolved = config if config is not None else DecidePortConfig()
     if resolved.substrate == "in_memory":
@@ -127,6 +140,13 @@ def build_decide_port(config: DecidePortConfig | None = None) -> DecidePort:
             threshold=resolved.staged_threshold,
             brain_min_observations=resolved.min_observations,
         )
+    if resolved.substrate == "llm":
+        if llm is None:
+            raise ValueError(
+                "the 'llm' decide substrate requires an llm port; "
+                "pass build_decide_port(config, llm=deps.llm)"
+            )
+        return LlmDecidePort(llm=llm)
     raise ValueError(  # pragma: no cover
         f"unsupported decide substrate: {resolved.substrate!r}"
     )

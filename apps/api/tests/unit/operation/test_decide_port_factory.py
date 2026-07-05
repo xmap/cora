@@ -14,6 +14,7 @@ import typing
 
 import pytest
 
+from cora.infrastructure.ports.llm import FakeLLM
 from cora.operation.adapters.decide_port_config import (
     DecidePortConfig,
     DecideSubstrate,
@@ -31,8 +32,11 @@ def test_build_decide_port_routes_every_substrate(substrate: str) -> None:
     """Every DecideSubstrate member builds a DecidePort (no un-routed arm)."""
     if substrate in _TORCH_SUBSTRATES:
         pytest.importorskip("botorch", reason=f"{substrate!r} needs the optional 'bo' extra")
+    # The `llm` arm needs an injected LLM port (not an optional extra); a
+    # FakeLLM satisfies it. Other arms ignore the kwarg.
+    llm = FakeLLM([]) if substrate == "llm" else None
     # Keep the staged threshold consistent with its brain floor (default 5).
-    port = build_decide_port(DecidePortConfig(substrate=substrate))  # type: ignore[arg-type]
+    port = build_decide_port(DecidePortConfig(substrate=substrate), llm=llm)  # type: ignore[arg-type]
     assert isinstance(port, DecidePort)
 
 
