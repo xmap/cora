@@ -15,6 +15,7 @@ from collections.abc import AsyncGenerator
 from cora.infrastructure.config import Settings
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
+from cora.infrastructure.projection.bookmark import ensure_bookmarks
 from cora.infrastructure.projection.registry import ProjectionRegistry
 from cora.infrastructure.projection.wakeup import (
     ListenNotifyWakeup,
@@ -49,6 +50,14 @@ async def projection_worker_lifespan(
         )
         yield
         return
+
+    # Ensure a bookmark row exists for every registered subscriber before the
+    # worker starts. Projections already have theirs (seeded by their migration);
+    # this creates the otherwise-missing rows for Reactions (side-effecting
+    # subscribers own no proj_* table, hence no migration, hence no seed). Without
+    # it a Reaction's first advance raises MissingBookmarkError forever inside the
+    # worker's backoff loop and it never fires. Idempotent (ON CONFLICT DO NOTHING).
+    await ensure_bookmarks(deps.pool, registry.names())
 
     wakeup: WakeupSource = (
         ListenNotifyWakeup(deps.pool) if settings.projection_use_listen_notify else PollOnlyWakeup()

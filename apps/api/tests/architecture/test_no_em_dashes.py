@@ -193,7 +193,6 @@ EMDASH_ALLOWLIST: frozenset[str] = frozenset(
         "src/cora/infrastructure/ports/profile_store.py",
         "src/cora/infrastructure/ports/signer.py",
         "src/cora/infrastructure/ports/token_verifier.py",
-        "src/cora/infrastructure/projection/bookmark.py",
         "src/cora/infrastructure/projection/drain.py",
         "src/cora/infrastructure/projection/handler.py",
         "src/cora/infrastructure/projection/wakeup.py",

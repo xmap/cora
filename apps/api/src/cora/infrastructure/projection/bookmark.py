@@ -23,11 +23,19 @@ small transaction. Pre-positions for the full read-side observability
 surface (admin endpoint + lag sampler + OTel) which stays deferred
 until the trigger fires.
 
-Bookmark rows are created by per-projection migrations (`INSERT INTO
-projection_bookmarks (name) VALUES (...) ON CONFLICT DO NOTHING`),
-not by the worker — registering a projection without its migration
-having landed will fail loudly at first advance, which is the
-behavior we want.
+Bookmark rows for PROJECTIONS are created by their per-projection
+migration (`INSERT INTO projection_bookmarks (name) VALUES (...) ON
+CONFLICT DO NOTHING`). Registering a projection whose migration never
+landed fails loudly at first advance (`test_projection_table_match`
+also enforces the migration exists), which is the behavior we want.
+
+REACTIONS (side-effecting subscribers) own no `proj_*` table and thus
+no migration, so nothing would seed their bookmark. `ensure_bookmarks`
+closes that gap: the lifespan calls it once for every registered
+subscriber before the worker starts, creating any missing row
+idempotently. Without it a reaction's first advance raises
+`MissingBookmarkError` forever inside the worker's backoff loop and the
+reaction never fires.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -71,6 +79,12 @@ SET last_error_at        = now(),
     consecutive_failures = consecutive_failures + 1,
     updated_at           = now()
 WHERE name = $1
+"""
+
+_ENSURE_BOOKMARK_SQL = """
+INSERT INTO projection_bookmarks (name)
+VALUES ($1)
+ON CONFLICT (name) DO NOTHING
 """
 
 
@@ -152,8 +166,24 @@ async def write_bookmark_failure(
         await conn.execute(_WRITE_BOOKMARK_FAILURE_SQL, name, truncated)
 
 
+async def ensure_bookmarks(pool: asyncpg.Pool, names: frozenset[str]) -> None:
+    """Idempotently create a bookmark row for each given subscriber name.
+
+    Called once at worker startup for every registered subscriber. For a
+    PROJECTION the row already exists (its migration seeded it), so the INSERT is
+    a no-op via `ON CONFLICT DO NOTHING`. For a REACTION (no table, no migration)
+    this creates the otherwise-missing row so its first advance can read a cursor
+    instead of raising `MissingBookmarkError` forever. Ordered by name for a
+    deterministic write sequence.
+    """
+    async with pool.acquire() as conn:
+        for name in sorted(names):
+            await conn.execute(_ENSURE_BOOKMARK_SQL, name)
+
+
 __all__ = [
     "MissingBookmarkError",
+    "ensure_bookmarks",
     "read_bookmark",
     "write_bookmark",
     "write_bookmark_failure",
