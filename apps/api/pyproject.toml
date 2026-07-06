@@ -8,7 +8,7 @@ authors = [{ name = "Doga Gursoy" }]
 license = { text = "Apache-2.0" }
 
 dependencies = [
-    "fastapi>=0.138.1,<0.139",
+    "fastapi>=0.139.0,<0.140",
     "asyncpg>=0.31.0,<0.32",
     "pydantic>=2.13.4,<3",
     "pydantic-settings>=2.14.2,<3",
@@ -32,13 +32,13 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.62b1,<0.63",
     "opentelemetry-instrumentation-asyncpg>=0.62b1,<0.63",
     "opentelemetry-exporter-otlp-proto-http>=1.41,<2",
-    "jsonschema-rs>=0.46.6,<1",
+    "jsonschema-rs>=0.46.10,<1",
     # Anthropic SDK: used by `AnthropicLLM`, the production implementor of
     # `cora.infrastructure.ports.LLM`. No other code imports this;
     # subscribers + tests use the port + `FakeLLM`. Pin <1 to flag a future
     # major SDK shift in CI
     # before it lands silently.
-    "anthropic>=0.112.0,<1",
+    "anthropic>=0.116.0,<1",
     # cryptography: explicit top-level floor pin. Previously pulled
     # transitively at 48.x via pyjwt[crypto]. Pinned explicitly to
     # >=46,<47 ahead of the federation wire-tier adapters (python-cwt
@@ -166,7 +166,7 @@ dev = [
     # tests/conftest.py and auto-activates on CI=true to derandomize the seed
     # and disable the local example database, sidestepping xdist seed
     # collisions across worker processes.
-    "hypothesis>=6.155.7,<7",
+    "hypothesis>=6.156.1,<7",
     # hypothesis-jsonschema: Hypothesis strategy builder driven by JSON
     # Schema documents. Used by `tests/contract/test_mcp_tools_fuzz.py`
     # (Iter H of the testing-techniques rollout) to generate
