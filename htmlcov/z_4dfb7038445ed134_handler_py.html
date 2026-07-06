@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_4dfb7038445ed134_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.3">coverage.py v7.14.3</a>,
-            created at 2026-07-04 17:03 +0000
+            created at 2026-07-06 02:36 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -270,7 +270,7 @@
     <p class="run"><span class="n"><a id="t186" href="#t186">186</a></span><span class="t">        <span class="nam">outcomes</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">outcome_lookup</span><span class="op">.</span><span class="nam">read_procedure_outcomes</span><span class="op">(</span><span class="nam">procedure_id</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">procedure_id</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t187" href="#t187">187</a></span><span class="t">        <span class="nam">closed_observations</span> <span class="op">=</span> <span class="nam">reconstruct_observations</span><span class="op">(</span><span class="nam">outcomes</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t188" href="#t188">188</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t189" href="#t189">189</a></span><span class="t">        <span class="nam">decide_port</span> <span class="op">=</span> <span class="nam">build_decide_port</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">decide</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t189" href="#t189">189</a></span><span class="t">        <span class="nam">decide_port</span> <span class="op">=</span> <span class="nam">build_decide_port</span><span class="op">(</span><span class="nam">command</span><span class="op">.</span><span class="nam">decide</span><span class="op">,</span> <span class="nam">llm</span><span class="op">=</span><span class="nam">deps</span><span class="op">.</span><span class="nam">llm</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t190" href="#t190">190</a></span><span class="t">        <span class="key">try</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t191" href="#t191">191</a></span><span class="t">            <span class="nam">result</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">conductor</span><span class="op">.</span><span class="nam">conduct_until_advised_from</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t">                <span class="nam">procedure_id</span><span class="op">=</span><span class="nam">command</span><span class="op">.</span><span class="nam">procedure_id</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -330,7 +330,7 @@
             <a class="nav" href="z_4dfb7038445ed134_route_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.14.3">coverage.py v7.14.3</a>,
-            created at 2026-07-04 17:03 +0000
+            created at 2026-07-06 02:36 +0000
         </p>
     </div>
 </footer>
