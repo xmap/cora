@@ -53,6 +53,20 @@ def test_skips_run_debrief_when_llm_is_none() -> None:
 
 
 @pytest.mark.unit
+def test_registers_authority_revocation_holder_unconditionally() -> None:
+    """The kill-switch (K3) registers ON BY DEFAULT: even with no LLM and default
+    settings (promoter off), the holder must be present. A kill-switch that must
+    be turned on is not a kill-switch; this pins the on-by-default contract so a
+    regression that gates or drops it fails CI."""
+    registry = ProjectionRegistry()
+    kernel = _kernel(llm=None)
+
+    register_agent_subscribers(registry, kernel)  # type: ignore[arg-type]
+
+    assert "authority_revocation_holder" in registry.names()
+
+
+@pytest.mark.unit
 def test_registers_caution_promoter_when_enabled() -> None:
     """The deterministic promoter registers independently of the LLM, gated by
     its own off-by-default setting."""

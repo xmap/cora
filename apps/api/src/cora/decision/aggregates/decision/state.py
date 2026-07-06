@@ -590,6 +590,41 @@ CampaignProgressChoice = Literal["Stuck"]
 CAMPAIGN_PROGRESS_CHOICES: Final = frozenset({"Stuck"})
 
 
+# AuthorityRevocationHolder agent (kill-switch K3) writes one Decision per
+# in-flight Run it evaluates after a PolicyGrantRevoked, linking the hold back to
+# the revocation via `parent_id`. Open-ended convention identical to
+# RunSupervision / CautionPromotion; the closed choice vocabulary lives in the
+# `AuthorityRevocationHoldChoice` Literal below. The context noun is
+# `AuthorityRevocationHold` (abstract action-noun, family-clean with the other
+# agent contexts); the agent kind is `AuthorityRevocationHolder` (the doer), the
+# same action-vs-doer asymmetry as ClearanceExpiry vs ClearanceExpirer.
+DECISION_CONTEXT_AUTHORITY_REVOCATION_HOLD = "AuthorityRevocationHold"
+
+
+# Closed `choice` value set for `context = "AuthorityRevocationHold"` Decisions.
+# Projection-validated, not domain-enforced. Two values:
+#
+#   - `Held`                 -- the run was Running and the hold succeeded: the
+#                              revoked principal's in-flight run is now contained.
+#   - `HoldDeferred`         -- the hold was a benign no-op: the run had already
+#                              left Running (already Held, terminal, missing, or a
+#                              lost concurrency race), or the holder was not
+#                              authorized, by the time it acted. Carries the Hold
+#                              work-noun (parallel to SupervisionDeferred /
+#                              PromotionDeferred) so it does not collide in the
+#                              shared, globally-filtered DecisionChoice projection.
+AuthorityRevocationHoldChoice = Literal[
+    "Held",
+    "HoldDeferred",
+]
+AUTHORITY_REVOCATION_HOLD_CHOICES: Final = frozenset(
+    {
+        "Held",
+        "HoldDeferred",
+    }
+)
+
+
 # acceptance-signal capture: closed 3-value rating set on
 # the new `DecisionRated` event. `useful` and `misleading` are
 # operator-affirmative; `ignored` is a positive marker ("operator saw

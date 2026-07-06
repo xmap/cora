@@ -54,6 +54,7 @@ from cora.agent import (
     register_agent_routes,
     register_agent_subscribers,
     register_agent_tools,
+    seed_authority_revocation_holder_agent,
     seed_calibration_watcher_agent,
     seed_campaign_watcher_agent,
     seed_caution_drafter_agent,
@@ -813,6 +814,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             register_agent_subscribers(registry, deps)
             app.state.projections = registry
 
+            # seed the AuthorityRevocationHolder Agent record FIRST: the
+            # kill-switch subscriber (K3) registers unconditionally and must
+            # resolve its `actor_id` at apply()-time. Idempotent across restarts.
+            await seed_authority_revocation_holder_agent(deps)
             # seed the RunDebriefer Agent record so
             # the subscriber can resolve `actor_id` at apply()-time.
             # Idempotent across restarts; safe to re-run forever.

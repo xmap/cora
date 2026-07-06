@@ -27,6 +27,7 @@ from cora.decision.aggregates.decision.events import (
 from cora.decision.aggregates.decision.evolver import evolve, fold
 from cora.decision.aggregates.decision.read import load_decision
 from cora.decision.aggregates.decision.state import (
+    AUTHORITY_REVOCATION_HOLD_CHOICES,
     CALIBRATION_VERIFICATION_CHOICES,
     CAMPAIGN_PROGRESS_CHOICES,
     CAUTION_PROMOTION_CHOICES,
@@ -39,6 +40,7 @@ from cora.decision.aggregates.decision.state import (
     DECISION_ALTERNATIVE_ENTRY_MAX_LENGTH,
     DECISION_ALTERNATIVES_MAX_ENTRIES,
     DECISION_CHOICE_MAX_LENGTH,
+    DECISION_CONTEXT_AUTHORITY_REVOCATION_HOLD,
     DECISION_CONTEXT_CALIBRATION_VERIFICATION,
     DECISION_CONTEXT_CAMPAIGN_PROGRESS,
     DECISION_CONTEXT_CAUTION_PROMOTION,
@@ -71,6 +73,7 @@ from cora.decision.aggregates.decision.state import (
     RUN_DEBRIEF_CHOICES,
     RUN_INITIATION_CHOICES,
     RUN_SUPERVISION_CHOICES,
+    AuthorityRevocationHoldChoice,
     CalibrationVerificationChoice,
     CampaignProgressChoice,
     CautionPromotionChoice,
@@ -119,6 +122,7 @@ from cora.decision.aggregates.decision.state import (
 )
 
 __all__ = [
+    "AUTHORITY_REVOCATION_HOLD_CHOICES",
     "CALIBRATION_VERIFICATION_CHOICES",
     "CAMPAIGN_PROGRESS_CHOICES",
     "CAUTION_PROMOTION_CHOICES",
@@ -131,6 +135,7 @@ __all__ = [
     "DECISION_ALTERNATIVES_MAX_ENTRIES",
     "DECISION_ALTERNATIVE_ENTRY_MAX_LENGTH",
     "DECISION_CHOICE_MAX_LENGTH",
+    "DECISION_CONTEXT_AUTHORITY_REVOCATION_HOLD",
     "DECISION_CONTEXT_CALIBRATION_VERIFICATION",
     "DECISION_CONTEXT_CAMPAIGN_PROGRESS",
     "DECISION_CONTEXT_CAUTION_PROMOTION",
@@ -170,6 +175,7 @@ __all__ = [
     "RUN_DEBRIEF_CHOICES",
     "RUN_INITIATION_CHOICES",
     "RUN_SUPERVISION_CHOICES",
+    "AuthorityRevocationHoldChoice",
     "CalibrationVerificationChoice",
     "CampaignProgressChoice",
     "CautionPromotionChoice",

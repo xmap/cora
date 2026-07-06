@@ -38,6 +38,10 @@ from cora.agent.errors import (
 )
 from cora.agent.routes import register_agent_routes
 from cora.agent.seed import seed_run_debriefer_agent
+from cora.agent.seed_authority_revocation_holder import (
+    AUTHORITY_REVOCATION_HOLDER_AGENT_ID,
+    seed_authority_revocation_holder_agent,
+)
 from cora.agent.seed_calibration_watcher import (
     CALIBRATION_WATCHER_AGENT_ID,
     seed_calibration_watcher_agent,
@@ -79,6 +83,7 @@ from cora.agent.tools import register_agent_tools
 from cora.agent.wire import AgentHandlers, wire_agent
 
 __all__ = [
+    "AUTHORITY_REVOCATION_HOLDER_AGENT_ID",
     "CALIBRATION_WATCHER_AGENT_ID",
     "CAMPAIGN_WATCHER_AGENT_ID",
     "CAUTION_PROMOTER_AGENT_ID",
@@ -100,6 +105,7 @@ __all__ = [
     "register_agent_routes",
     "register_agent_subscribers",
     "register_agent_tools",
+    "seed_authority_revocation_holder_agent",
     "seed_calibration_watcher_agent",
     "seed_campaign_watcher_agent",
     "seed_caution_drafter_agent",

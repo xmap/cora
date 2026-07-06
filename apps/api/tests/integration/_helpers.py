@@ -53,8 +53,10 @@ from cora.infrastructure.ports import (
     FakeClock,
     FixedIdGenerator,
     IdempotencyStore,
+    IdGenerator,
     ProfileStore,
     RoleLookup,
+    RunActorInvolvementLookup,
 )
 from cora.shared.facility_code import FacilityCode
 
@@ -73,6 +75,7 @@ def build_postgres_deps(
     *,
     now: datetime,
     ids: list[UUID] | None = None,
+    id_generator: IdGenerator | None = None,
     authz: Authorize | None = None,
     event_store: EventStore | None = None,
     idempotency_store: IdempotencyStore | None = None,
@@ -82,6 +85,7 @@ def build_postgres_deps(
     facility_lookup: FacilityLookup | None = None,
     asset_lookup: AssetLookup | None = None,
     role_lookup: RoleLookup | None = None,
+    run_actor_involvement_lookup: RunActorInvolvementLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
 ) -> Kernel:
@@ -113,7 +117,7 @@ def build_postgres_deps(
         pool,
         settings=Settings(app_env="test"),  # type: ignore[call-arg]
         clock=FakeClock(now),
-        id_generator=FixedIdGenerator(list(ids or [])),
+        id_generator=id_generator or FixedIdGenerator(list(ids or [])),
         authz=authz or AllowAllAuthorize(),
         event_store=event_store,
         idempotency_store=idempotency_store,
@@ -123,6 +127,7 @@ def build_postgres_deps(
         facility_lookup=facility_lookup,
         asset_lookup=asset_lookup,
         role_lookup=role_lookup,
+        run_actor_involvement_lookup=run_actor_involvement_lookup,
         profile_store=profile_store,
         llm=llm,
     )

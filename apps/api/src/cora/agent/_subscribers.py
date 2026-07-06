@@ -14,13 +14,21 @@ side); it only owns SIDE-EFFECTING subscribers that emit new events.
 
 ## Conditional registration
 
-If `kernel.llm is None` (`ANTHROPIC_API_KEY` unset), no subscribers
-are registered and a warning is logged. The alternative (raising at
-app startup) would refuse to boot a deployment that wants to defer
-Agent rollout.
+The deterministic subscribers (AuthorityRevocationHolder,
+CautionPromoter) register independently of `kernel.llm`. The
+LLM-backed subscribers (RunDebriefer, CautionDrafter) register only
+when `kernel.llm` is wired (`ANTHROPIC_API_KEY` set); if it is None
+they are skipped with a warning rather than refusing to boot a
+deployment that wants to defer Agent rollout.
 
 ## Registered subscribers
 
+  - `AuthorityRevocationHolderSubscriber` — DETERMINISTIC (no LLM),
+    the kill-switch (K3): on a `PolicyGrantRevoked`, holds each
+    in-flight Run the revoked principal drives (Running only) and
+    records one `Decision(context="AuthorityRevocationHold")` per run.
+    Registered UNCONDITIONALLY, on by default (a kill-switch that must
+    be turned on is not a kill-switch; the hold is reversible).
   - `RunDebrieferSubscriber` — terminal Run -> one
     advisory Decision with AAR narrative + 6-value choice.
   - `CautionDrafterSubscriber` — terminal Run -> one
@@ -32,10 +40,10 @@ Agent rollout.
     Caution + one `DecisionRegistered(context="CautionPromotion")`.
     Gated by `settings.caution_promoter_enabled` (default off).
 
-Both subscribers run concurrently and INDEPENDENTLY in the
-projection worker. Both classify as `Reaction` (the public sibling
-to `Projection`) and pin `batch_size = 1` on the class so the
-worker bounds the bookmark transaction to a single LLM round-trip.
+The subscribers run concurrently and INDEPENDENTLY in the projection
+worker. Each classifies as `Reaction` (the public sibling to
+`Projection`) and pins `batch_size = 1` on the class so the worker
+bounds the bookmark transaction to a single unit of work.
 
 ## Subscriber framework widening status
 
@@ -57,6 +65,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cora.agent.subscribers.authority_revocation_holder import (
+    make_authority_revocation_holder_subscriber,
+)
 from cora.agent.subscribers.caution_drafter import make_caution_drafter_subscriber
 from cora.agent.subscribers.caution_promoter import make_caution_promoter_subscriber
 from cora.agent.subscribers.run_debriefer import make_run_debriefer_subscriber
@@ -71,8 +82,22 @@ _log = get_logger(__name__)
 
 def register_agent_subscribers(registry: ProjectionRegistry, deps: Kernel) -> None:
     """Register Agent BC's subscribers into the projection-worker registry."""
+    # AuthorityRevocationHolder is the kill-switch (K3): DETERMINISTIC (no LLM)
+    # and registered UNCONDITIONALLY, on by default. A kill-switch that must be
+    # turned on is not a kill-switch; the hold it issues is reversible (resume_run
+    # exists), so default-on matches the safety intent. Its gate is a fast
+    # deterministic lookup (no LLM round-trip), so like CautionPromoter it does
+    # not warrant the deferred ReactionWorker pool split.
+    holder = make_authority_revocation_holder_subscriber(deps)
+    registry.register(holder)
+    _log.info(
+        "agent_subscriber.registered",
+        subscriber=holder.name,
+        subscribed_event_types=sorted(holder.subscribed_event_types),
+    )
+
     # CautionPromoter is DETERMINISTIC (no LLM), so it registers independently of
-    # ANTHROPIC_API_KEY, gated by its own off-by-default setting. It is the 3rd
+    # ANTHROPIC_API_KEY, gated by its own off-by-default setting. It is a
     # projection-worker Reaction; its gate is a fast deterministic check (no
     # 5-15s LLM round-trip), so it does not warrant the deferred ReactionWorker
     # pool split that the LLM Reactions' latency motivated.
