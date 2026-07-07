@@ -71,6 +71,10 @@ from cora.agent.seed_procedure_watcher import (
     PROCEDURE_WATCHER_AGENT_ID,
     seed_procedure_watcher_agent,
 )
+from cora.agent.seed_ratification_enforcer import (
+    RATIFICATION_ENFORCER_AGENT_ID,
+    seed_ratification_enforcer_agent,
+)
 from cora.agent.seed_run_initiator import (
     RUN_INITIATOR_AGENT_ID,
     seed_run_initiator_agent,
@@ -91,6 +95,7 @@ __all__ = [
     "CLEARANCE_WATCHER_AGENT_ID",
     "EXPERIMENT_STEERER_AGENT_ID",
     "PROCEDURE_WATCHER_AGENT_ID",
+    "RATIFICATION_ENFORCER_AGENT_ID",
     "RUN_INITIATOR_AGENT_ID",
     "RUN_SUPERVISOR_AGENT_ID",
     "AgentHandlers",
@@ -114,6 +119,7 @@ __all__ = [
     "seed_clearance_watcher_agent",
     "seed_experiment_steerer_agent",
     "seed_procedure_watcher_agent",
+    "seed_ratification_enforcer_agent",
     "seed_run_debriefer_agent",
     "seed_run_initiator_agent",
     "seed_run_supervisor_agent",

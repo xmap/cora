@@ -51,6 +51,11 @@ from cora.infrastructure.ports.compute_reachability_lookup import (
     NoComputeReachabilityLookup,
     SeededComputeReachabilityLookup,
 )
+from cora.infrastructure.ports.consequence_lookup import (
+    AlwaysRatifiedConsequenceLookup,
+    ConsequenceLookup,
+    NeverRatifiedConsequenceLookup,
+)
 from cora.infrastructure.ports.credential_lookup import (
     CredentialLookup,
     CredentialLookupResult,
@@ -166,6 +171,7 @@ __all__ = [
     "AlwaysEmptyCapabilityLookup",
     "AlwaysPermittedEnclosureLookup",
     "AlwaysQuietCautionLookup",
+    "AlwaysRatifiedConsequenceLookup",
     "AssemblyLookup",
     "AssemblyLookupResult",
     "AssetLookup",
@@ -192,6 +198,7 @@ __all__ = [
     "Clock",
     "ComputeReachabilityLookup",
     "ConcurrencyError",
+    "ConsequenceLookup",
     "CredentialLookup",
     "CredentialLookupResult",
     "DatasetDistributionLookup",
@@ -234,6 +241,7 @@ __all__ = [
     "LogbookMirror",
     "MinSeverity",
     "ModelRef",
+    "NeverRatifiedConsequenceLookup",
     "NewEvent",
     "NoComputeReachabilityLookup",
     "NoDatasetDistributionsLookup",

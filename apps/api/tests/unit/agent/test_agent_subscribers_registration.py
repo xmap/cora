@@ -67,6 +67,21 @@ def test_registers_authority_revocation_holder_unconditionally() -> None:
 
 
 @pytest.mark.unit
+def test_registers_ratification_enforcer_unconditionally() -> None:
+    """The consequence gate (Gate IV) hold + release subscribers register ON BY
+    DEFAULT (no LLM, default settings): without them a refused stop is never parked
+    / never un-parked, so the gate's shared-hold discharge would not fire. Pins the
+    on-by-default contract for both subscribers."""
+    registry = ProjectionRegistry()
+    kernel = _kernel(llm=None)
+
+    register_agent_subscribers(registry, kernel)  # type: ignore[arg-type]
+
+    assert "ratification_hold" in registry.names()
+    assert "ratification_release" in registry.names()
+
+
+@pytest.mark.unit
 def test_registers_caution_promoter_when_enabled() -> None:
     """The deterministic promoter registers independently of the LLM, gated by
     its own off-by-default setting."""

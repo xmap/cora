@@ -47,6 +47,7 @@ from cora.infrastructure.ports import (
     Authorize,
     CautionLookup,
     ClearanceLookup,
+    ConsequenceLookup,
     CredentialLookup,
     EventStore,
     FacilityLookup,
@@ -86,6 +87,7 @@ def build_postgres_deps(
     asset_lookup: AssetLookup | None = None,
     role_lookup: RoleLookup | None = None,
     run_actor_involvement_lookup: RunActorInvolvementLookup | None = None,
+    consequence_lookup: ConsequenceLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
 ) -> Kernel:
@@ -128,6 +130,7 @@ def build_postgres_deps(
         asset_lookup=asset_lookup,
         role_lookup=role_lookup,
         run_actor_involvement_lookup=run_actor_involvement_lookup,
+        consequence_lookup=consequence_lookup,
         profile_store=profile_store,
         llm=llm,
     )

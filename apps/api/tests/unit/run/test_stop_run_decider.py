@@ -42,6 +42,7 @@ def test_decide_emits_run_stopped_for_running_state() -> None:
         state=state,
         command=StopRun(run_id=state.id, reason="hit time budget cleanly"),
         now=_NOW,
+        ratification_covered=True,
     )
     assert events == [
         RunStopped(
@@ -60,6 +61,7 @@ def test_decide_accepts_held_source_state() -> None:
         state=state,
         command=StopRun(run_id=state.id, reason="ending early during hold"),
         now=_NOW,
+        ratification_covered=True,
     )
     assert len(events) == 1
     assert events[0].reason == "ending early during hold"
@@ -72,6 +74,7 @@ def test_decide_trims_reason_via_value_object() -> None:
         state=state,
         command=StopRun(run_id=state.id, reason="  scan complete; ending early  "),
         now=_NOW,
+        ratification_covered=True,
     )
     assert events[0].reason == "scan complete; ending early"
 
@@ -84,6 +87,7 @@ def test_decide_raises_run_not_found_when_state_is_none() -> None:
             state=None,
             command=StopRun(run_id=target_id, reason="X"),
             now=_NOW,
+            ratification_covered=True,
         )
     assert exc_info.value.run_id == target_id
 
@@ -96,6 +100,7 @@ def test_decide_raises_invalid_reason_for_whitespace_only() -> None:
             state=state,
             command=StopRun(run_id=state.id, reason="   "),
             now=_NOW,
+            ratification_covered=True,
         )
 
 
@@ -107,6 +112,7 @@ def test_decide_raises_invalid_reason_for_too_long() -> None:
             state=state,
             command=StopRun(run_id=state.id, reason="a" * 501),
             now=_NOW,
+            ratification_covered=True,
         )
 
 
@@ -122,6 +128,7 @@ def test_decide_raises_cannot_stop_from_any_terminal(terminal: RunStatus) -> Non
             state=state,
             command=StopRun(run_id=state.id, reason="X"),
             now=_NOW,
+            ratification_covered=True,
         )
     assert exc_info.value.current_status is terminal
 
@@ -134,6 +141,7 @@ def test_decide_error_message_names_required_running_or_held_status() -> None:
             state=state,
             command=StopRun(run_id=state.id, reason="X"),
             now=_NOW,
+            ratification_covered=True,
         )
     msg = str(exc_info.value)
     assert "Running" in msg
@@ -144,8 +152,8 @@ def test_decide_error_message_names_required_running_or_held_status() -> None:
 def test_decide_is_pure_same_inputs_same_outputs() -> None:
     state = _run()
     command = StopRun(run_id=state.id, reason="X")
-    first = stop_run.decide(state=state, command=command, now=_NOW)
-    second = stop_run.decide(state=state, command=command, now=_NOW)
+    first = stop_run.decide(state=state, command=command, now=_NOW, ratification_covered=True)
+    second = stop_run.decide(state=state, command=command, now=_NOW, ratification_covered=True)
     assert first == second
 
 
@@ -157,6 +165,7 @@ def test_decide_defaults_decided_by_decision_id_to_none_when_omitted() -> None:
         state=state,
         command=StopRun(run_id=state.id, reason="hit time budget cleanly"),
         now=_NOW,
+        ratification_covered=True,
     )
     assert events[0].decided_by_decision_id is None
 
@@ -174,5 +183,6 @@ def test_decide_threads_decided_by_decision_id_through_to_event() -> None:
             decided_by_decision_id=decision_id,
         ),
         now=_NOW,
+        ratification_covered=True,
     )
     assert events[0].decided_by_decision_id == decision_id

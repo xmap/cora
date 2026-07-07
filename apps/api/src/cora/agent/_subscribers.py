@@ -70,6 +70,8 @@ from cora.agent.subscribers.authority_revocation_holder import (
 )
 from cora.agent.subscribers.caution_drafter import make_caution_drafter_subscriber
 from cora.agent.subscribers.caution_promoter import make_caution_promoter_subscriber
+from cora.agent.subscribers.ratification_hold import make_ratification_hold_subscriber
+from cora.agent.subscribers.ratification_release import make_ratification_release_subscriber
 from cora.agent.subscribers.run_debriefer import make_run_debriefer_subscriber
 from cora.infrastructure.logging import get_logger
 
@@ -94,6 +96,26 @@ def register_agent_subscribers(registry: ProjectionRegistry, deps: Kernel) -> No
         "agent_subscriber.registered",
         subscriber=holder.name,
         subscribed_event_types=sorted(holder.subscribed_event_types),
+    )
+
+    # RatificationEnforcer (consequence gate, Gate IV): a DETERMINISTIC subscriber
+    # pair, registered UNCONDITIONALLY. The hold reacts to RatificationRequested
+    # (park the run pending co-sign); the release reacts to RatificationGranted
+    # (resume it). Both discharge into the same shared RunHeld/RunResumed hold the
+    # kill-switch uses; no LLM, so no ReactionWorker pool split needed.
+    ratification_hold = make_ratification_hold_subscriber(deps)
+    registry.register(ratification_hold)
+    _log.info(
+        "agent_subscriber.registered",
+        subscriber=ratification_hold.name,
+        subscribed_event_types=sorted(ratification_hold.subscribed_event_types),
+    )
+    ratification_release = make_ratification_release_subscriber(deps)
+    registry.register(ratification_release)
+    _log.info(
+        "agent_subscriber.registered",
+        subscriber=ratification_release.name,
+        subscribed_event_types=sorted(ratification_release.subscribed_event_types),
     )
 
     # CautionPromoter is DETERMINISTIC (no LLM), so it registers independently of

@@ -63,6 +63,7 @@ from cora.agent import (
     seed_clearance_watcher_agent,
     seed_experiment_steerer_agent,
     seed_procedure_watcher_agent,
+    seed_ratification_enforcer_agent,
     seed_run_debriefer_agent,
     seed_run_initiator_agent,
     seed_run_supervisor_agent,
@@ -235,6 +236,7 @@ from cora.trust import (
     warn_if_verdict_log_dormant,
     wire_trust,
 )
+from cora.trust.adapters import PostgresConsequenceLookup
 
 
 def _settings_for_app() -> Settings:
@@ -619,6 +621,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 capability_lookup_factory=PostgresCapabilityLookup,
                 supply_lookup_factory=PostgresSupplyLookup,
                 run_actor_involvement_lookup_factory=PostgresRunActorInvolvementLookup,
+                consequence_lookup_factory=PostgresConsequenceLookup,
                 dataset_distribution_lookup_factory=PostgresDatasetDistributionLookup,
                 credential_lookup_factory=PostgresCredentialLookup,
                 facility_lookup_factory=PostgresFacilityLookup,
@@ -818,6 +821,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # kill-switch subscriber (K3) registers unconditionally and must
             # resolve its `actor_id` at apply()-time. Idempotent across restarts.
             await seed_authority_revocation_holder_agent(deps)
+            # seed the RatificationEnforcer Agent record: the consequence-gate
+            # hold/release subscribers register unconditionally and must resolve
+            # their `actor_id` at apply()-time. Idempotent across restarts.
+            await seed_ratification_enforcer_agent(deps)
             # seed the RunDebriefer Agent record so
             # the subscriber can resolve `actor_id` at apply()-time.
             # Idempotent across restarts; safe to re-run forever.

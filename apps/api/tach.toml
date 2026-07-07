@@ -386,6 +386,12 @@ depends_on = [
     #     import: rule 2 stays inviolate.
     "cora.recipe.aggregates",
     "cora.caution.aggregates",
+    # RatificationEnforcer subscribers (consequence gate, Gate IV):
+    #   - `cora.trust.aggregates` for `load_ratification` (the release
+    #     subscriber resolves ratification_id -> target_action_id, since
+    #     RatificationGranted carries only the ratification_id). Read-only
+    #     cross-BC aggregate access, same shape as the other subscribers.
+    "cora.trust.aggregates",
 ]
 
 # API entrypoint composes every BC.

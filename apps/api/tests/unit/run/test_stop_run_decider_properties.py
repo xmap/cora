@@ -69,7 +69,12 @@ def test_stop_with_none_state_always_raises_not_found(
 ) -> None:
     """Empty stream always raises `RunNotFoundError` carrying command.run_id."""
     with pytest.raises(RunNotFoundError) as exc:
-        stop_run.decide(state=None, command=StopRun(run_id=run_id, reason=reason), now=now)
+        stop_run.decide(
+            state=None,
+            command=StopRun(run_id=run_id, reason=reason),
+            now=now,
+            ratification_covered=True,
+        )
     assert exc.value.run_id == run_id
 
 
@@ -91,6 +96,7 @@ def test_stop_from_permitted_source_emits_single_event(
         state=_run(run_id=run_id, status=source),
         command=StopRun(run_id=run_id, reason=reason),
         now=now,
+        ratification_covered=True,
     )
     assert events == [RunStopped(run_id=run_id, reason=reason, occurred_at=now)]
 
@@ -118,6 +124,7 @@ def test_stop_from_terminal_source_always_raises_cannot_stop(
             state=_run(run_id=run_id, status=source),
             command=StopRun(run_id=run_id, reason=reason),
             now=now,
+            ratification_covered=True,
         )
     assert exc.value.current_status is source
 
@@ -143,6 +150,7 @@ def test_stop_uses_state_id_not_command_run_id(
         state=_run(run_id=state_run_id, status=source),
         command=StopRun(run_id=command_run_id, reason=reason),
         now=now,
+        ratification_covered=True,
     )
     assert events[0].run_id == state_run_id
 
@@ -157,6 +165,6 @@ def test_stop_is_pure_same_input_same_output(
     """Two calls with identical args return equal events (no clock leakage)."""
     state = _run(run_id=run_id, status=RunStatus.RUNNING)
     command = StopRun(run_id=run_id, reason=reason)
-    first = stop_run.decide(state=state, command=command, now=now)
-    second = stop_run.decide(state=state, command=command, now=now)
+    first = stop_run.decide(state=state, command=command, now=now, ratification_covered=True)
+    second = stop_run.decide(state=state, command=command, now=now, ratification_covered=True)
     assert first == second

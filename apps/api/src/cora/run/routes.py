@@ -96,6 +96,7 @@ from cora.run.aggregates.run import (
     RunRequiresAvailableSupplyError,
     RunRequiresOpenBeamShuttersError,
     RunRequiresPermittedEnclosureError,
+    RunRequiresRatificationError,
     RunSubjectNotMountableError,
     RunSupplyCoverageMismatchError,
 )
@@ -252,6 +253,8 @@ def register_run_routes(app: FastAPI) -> None:
         RunCannotHoldError,
         RunCannotResumeError,
         RunCannotStopError,
+        # Consequence gate (Gate IV): stop needs a second principal's co-sign.
+        RunRequiresRatificationError,
         # Run transition guards (6f-4).
         RunCannotTruncateError,
         # Reading logbook closed (6f-5b): Run is in a terminal status.

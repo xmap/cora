@@ -9,6 +9,7 @@ re-exporting its class + adding it to `register_trust_projections`.
 
 from cora.trust.projections.conduit import ConduitSummaryProjection
 from cora.trust.projections.policy import PolicySummaryProjection
+from cora.trust.projections.ratification_coverage import RatificationCoverageProjection
 from cora.trust.projections.surface_active_visit import (
     SurfaceActiveVisit,
     SurfaceActiveVisitProjection,
@@ -21,6 +22,7 @@ from cora.trust.projections.zone import ZoneSummaryProjection
 __all__ = [
     "ConduitSummaryProjection",
     "PolicySummaryProjection",
+    "RatificationCoverageProjection",
     "SurfaceActiveVisit",
     "SurfaceActiveVisitProjection",
     "VisitPresenceProjection",

@@ -55,6 +55,7 @@ from cora.infrastructure.ports import (
     ClearanceTemplateLookup,
     Clock,
     ComputeReachabilityLookup,
+    ConsequenceLookup,
     CredentialLookup,
     DatasetDistributionLookup,
     EnclosureLookup,
@@ -162,6 +163,17 @@ class Kernel:
     `NoInvolvementLookup` (returns `[]`) so existing tests don't have
     to seed runs; kill-switch tests override with the real adapter.
     Mirrors the `ClearanceLookup` / `CautionLookup` test-default pattern.
+
+    `consequence_lookup`: cross-BC port consumed by Run BC's `stop_run`
+    handler for the consequence gate (Gate IV): is this action covered
+    by a GRANTED Ratification (a second, independent principal's
+    co-signature)? Trust BC ships `PostgresConsequenceLookup` as the
+    production adapter (reads `proj_trust_ratification_coverage`). Test
+    environments default to `AlwaysRatifiedConsequenceLookup` (coverage
+    always present) so existing stop_run tests stay green with stop_run
+    in the ratification allowlist; consequence-gate tests override with
+    `NeverRatifiedConsequenceLookup` (refuse-and-hold path) or the real
+    adapter (end-to-end).
 
     `dataset_distribution_lookup`: cross-BC port consumed by Run BC's
     `start_run` handler to gate a reconstruction Run on each declared
@@ -327,6 +339,7 @@ class Kernel:
     capability_lookup: CapabilityLookup
     supply_lookup: SupplyLookup
     run_actor_involvement_lookup: RunActorInvolvementLookup
+    consequence_lookup: ConsequenceLookup
     dataset_distribution_lookup: DatasetDistributionLookup
     compute_reachability_lookup: ComputeReachabilityLookup
     credential_lookup: CredentialLookup
