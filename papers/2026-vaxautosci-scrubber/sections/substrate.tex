@@ -39,6 +39,23 @@ procedure state (status, the current iteration and its verdict, and whether each
 activity is open or closed), and the recorded hashes cover the recipe expansion,
 the resolved steps and parameter bindings, written at run start.
 
+The stream is multi-owner. Every event's envelope carries an actor field
+(Table~\ref{tab:schema}), so different actors, the operator, the supervisor
+agent, the instrument tasks, and the facility itself, append into a single
+ordered log with per-event attribution. This yields two properties the scrubber
+renders directly. First, provenance at the cursor: the auditor drags to an
+instant and sees not only the reconstructed state but who is authoritative for
+each fact under that state. Second, latency between actors: the interval between
+one actor's fact and another actor's reaction, a beam-permit drop and an
+instrument's ramp-down, for example, is a legible span between two attributed
+events on one time axis rather than a datum to correlate from separate logs with
+different clocks. Under the everyone-keeps-their-own-log pattern those intervals
+are recoverable only with effort; under an attribution-carrying single log they
+are directly readable at the scrubbed cursor. The beam-permit fact is owned by
+the facility rather than emitted by CORA, so rendering it on a deployed run needs
+the bridge noted in Section~\ref{sec:limitations}; the substrate property holds
+regardless of which actor writes.
+
 The visual claim, that the timeline you are scrubbing is faithful to an
 unaltered record under stated assumptions, is what the paper is about; we
 enumerate those assumptions below rather than re-prove them here.
@@ -62,6 +79,41 @@ The records the scrubber reads are summarized in Table~\ref{tab:schema}.
     Iteration boundary & iteration index, converged verdict, reason \\[0.3em]
     Activity entry & step kind, payload, result (e.g. in-flight or ok),
       sampled-at \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The event kinds the fold consumes are a small, portable vocabulary
+(Table~\ref{tab:vocab}): a reader implementing the scrubber for another
+beamline emits the same kinds, and the actor field attributes each to its
+authoritative source. We give both the portable kind and the concrete event
+CORA emits, so the names are greppable in the released run data; every kind
+except the facility-owned beam-permit transition appears in the demonstrated
+run.
+
+\begin{table}[t]
+  \centering
+  \caption{The event kinds the fold consumes, with the concrete CORA event
+  behind each. Every kind but the facility-owned beam-permit transition (which
+  needs the bridge of Section~\ref{sec:limitations}) appears in the demonstrated
+  run.}
+  \label{tab:vocab}
+  \footnotesize
+  \begin{tabular}{@{}p{0.24\linewidth}p{0.34\linewidth}p{0.30\linewidth}@{}}
+    \toprule
+    \textbf{Kind} & \textbf{CORA event} & \textbf{Fold semantics} \\
+    \midrule
+    run start & \texttt{RunStarted} & initializes the run's active state \\[0.3em]
+    hold & \texttt{RunHeld} & run enters the held state \\[0.3em]
+    resume & \texttt{RunResumed} & ends the hold \\[0.3em]
+    run end & \texttt{RunCompleted} & terminates the run \\[0.3em]
+    iteration start & \texttt{ProcedureIteration\-Started} & opens an iteration
+      band \\[0.3em]
+    iteration end & \texttt{ProcedureIteration\-Ended} & closes it with the
+      verdict \\[0.3em]
+    activity & appended step (setpoint, acquire, check) & opens or closes a step
+      as an interval \\[0.3em]
+    beam permit & facility-owned, via bridge & updates the beam-permit lane \\
     \bottomrule
   \end{tabular}
 \end{table}

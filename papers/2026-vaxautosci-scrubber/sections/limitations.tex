@@ -13,8 +13,21 @@ scenario, exercised against a real Kernel and Postgres event store, and the run
 data, its generator, and the per-figure render scripts are released with the
 paper. What is real is what that scenario produced and we mirrored into the
 figure data: the activities, the four iteration verdicts (open, open, open,
-converged), the four run-lifecycle events, and the supervisor's recorded hold
-and resume decisions. What is synthetic is only the per-event timestamps,
+converged), the four run-lifecycle events, and the supervisor's hold and resume
+decisions, each recorded as a real event in the run with the decision that drove
+it. What is modeled rather than deployed is the beam-loss instant that triggers
+them: at 2-BM-B today a beam drop during the fly scan is not detected by the
+instrument controls (the position triggers keep firing the camera regardless of
+X-rays, blank frames are saved through the drop, and the scan completes
+structurally normally, a per-frame angle array is even written), so no beam-loss
+signal reaches the supervisor, and in the demonstrated run the beam-permit
+transition is injected. Detecting it on a deployed run needs two components
+outside CORA's own boundary: a beam-loss check inside the instrument's fly-scan
+loop, and a beam-permit bridge that emits the synchrotron's beam state, owned by
+the facility, into the same event stream. Both are proposed rather than built;
+the supervisor reaction we demonstrate is what CORA would drive once that signal
+arrives, played through the same real Kernel and Postgres event store as the
+rest of the run. What is synthetic is only the per-event timestamps,
 staggered for a readable axis because the scenario records one logical instant;
 the overnight wall-clock spread is illustrative, stated in prose rather than
 measured. The generator depends on nothing but the standard library and needs no
@@ -45,7 +58,13 @@ from and incremental re-folding rather than replaying from the start each time;
 we name these rather than build them. Three further extensions are natural: a
 live now-edge that subscribes to the event tail so the same timeline can monitor
 a run in progress, run-to-run diffing so two campaigns share one axis, and a
-deployed read interface, whose first read-only slice is already on the roadmap. The
+deployed read interface, whose first read-only slice is already on the roadmap. A
+fourth extension follows from the held-band reading above: at experiment-design
+time, CORA could elicit per-consumable and per-apparatus hold policies (e.g.,
+``park the cell at OCV if the hold exceeds N minutes'', ``abort rather than
+resume if He drops below threshold'') and record them in the run-start payload,
+so that the scrubber's held band shows not only that the run waited but what was
+supposed to happen while it waited, and whether it did. The
 closest extension is an agent-closed steered loop, an optimizer that decides the
 next action rather than a supervisor that recovers a conducted one; because such
 an optimizer would record its choices through the same decision substrate, the

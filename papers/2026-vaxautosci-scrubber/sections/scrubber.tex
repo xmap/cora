@@ -9,7 +9,9 @@
   \includegraphics[width=\textwidth]{figures/f1_scrubber}
   \caption{The replay scrubber over one agent-supervised run at APS
   2-BM. Color-coded bars across the top name the run's phases (alignment, scan,
-  save). A run-lifecycle lane records who drove each transition: the operator
+  save). A run-lifecycle lane records who drove each transition and carries a
+  continuous state line at the same height as the markers, solid while the run is
+  active and dashed while held: the operator
   started and the run completes, while the supervisor agent held the run when the
   beam dropped and resumed it when the beam returned (the gray band is the hold;
   the two hatched bands are the fly-scan setup, the rotary taxi to constant
@@ -131,7 +133,12 @@ an open interval rather than truncating the timeline, so a missing outcome is a
 positive mark that is seen rather than inferred. And we keep one linear time axis
 with an explicit held band rather than collapsing the hold, because the gap
 itself is the evidence that the run waited, on the same scale as everything
-else.
+else, and because the hold is itself an interval the auditor needs to scrub: a
+long wait can outlast a finite consumable (e.g., the cryostream He supply), and
+an in-situ apparatus (a battery being cycled, a furnace, a flow cell) is
+typically driven into a defined holding state for the duration of the wait, both
+of which are events that belong on the science time axis rather than in a
+separate log.
 
 \textbf{Auditing autonomous agents.} The lifecycle lane, and the decision
 records behind it, make the scrubber an instrument for agent accountability,
