@@ -1379,14 +1379,14 @@
 | src/cora/infrastructure/postgres/\_\_init\_\_.py                                         |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/postgres/pool.py                                                 |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/projection/\_\_init\_\_.py                                       |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/projection/bookmark.py                                           |       22 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/infrastructure/projection/bookmark.py                                           |       27 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/infrastructure/projection/cursor.py                                             |       31 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/projection/drain.py                                              |       34 |        1 |        8 |        1 |     95.2% |       120 |
 | src/cora/infrastructure/projection/handler.py                                            |       13 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/projection/lifespan.py                                           |       28 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/infrastructure/projection/lifespan.py                                           |       30 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/projection/registry.py                                           |       30 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/infrastructure/projection/wakeup.py                                             |       49 |        1 |       10 |        3 |     93.2% |98, 99-\>101, 127-\>131 |
-| src/cora/infrastructure/projection/worker.py                                             |       59 |        0 |        8 |        0 |    100.0% |           |
+| src/cora/infrastructure/projection/worker.py                                             |       59 |        6 |        8 |        0 |     91.0% |   208-228 |
 | src/cora/infrastructure/published\_artifact/\_\_init\_\_.py                              |        3 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/published\_artifact/\_stages.py                                  |       64 |        3 |       28 |        0 |     96.7% |87-88, 235 |
 | src/cora/infrastructure/published\_artifact/orchestrator.py                              |       48 |        1 |       16 |        1 |     96.9% |       135 |
@@ -2430,7 +2430,7 @@
 | src/cora/trust/routes.py                                                                 |       69 |        2 |       12 |        0 |     97.5% |   154-155 |
 | src/cora/trust/tools.py                                                                  |       52 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **51753** | **1055** | **7424** |  **320** | **97.5%** |           |
+| **TOTAL**                                                                                | **51760** | **1061** | **7426** |  **320** | **97.4%** |           |
 
 
 ## Setup coverage badge
