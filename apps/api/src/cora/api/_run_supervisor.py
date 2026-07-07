@@ -752,7 +752,14 @@ async def _issue_abort(
     benign no-op."""
     try:
         await abort_run(
-            AbortRun(run_id=run_id, reason=reason, decided_by_decision_id=decision_id),
+            AbortRun(
+                run_id=run_id,
+                reason=reason,
+                # Obligation gate (Gate III): kind-blind, so the supervisor agent
+                # justifies its autonomous abort with the same cause it acts on.
+                justification=f"run-supervisor: {reason}",
+                decided_by_decision_id=decision_id,
+            ),
             principal_id=RUN_SUPERVISOR_AGENT_ID,
             correlation_id=deps.id_generator.new_id(),
             surface_id=NIL_SENTINEL_ID,

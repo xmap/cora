@@ -283,7 +283,11 @@ async def test_abort_run_persists_with_trimmed_reason_and_round_trips_to_aborted
     )
 
     await abort_run.bind(deps)(
-        AbortRun(run_id=run_id, reason="  detector overheating  "),
+        AbortRun(
+            run_id=run_id,
+            reason="  detector overheating  ",
+            justification="operator: aborting for test",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

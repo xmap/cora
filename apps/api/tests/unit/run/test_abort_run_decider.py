@@ -41,7 +41,11 @@ def test_decide_emits_run_aborted_for_running_state() -> None:
     state = _run(status=RunStatus.RUNNING)
     events = abort_run.decide(
         state=state,
-        command=AbortRun(run_id=state.id, reason="detector overheating"),
+        command=AbortRun(
+            run_id=state.id,
+            reason="detector overheating",
+            justification="operator: aborting for test",
+        ),
         now=_NOW,
     )
     assert events == [
@@ -58,7 +62,11 @@ def test_decide_trims_reason_via_value_object() -> None:
     state = _run()
     events = abort_run.decide(
         state=state,
-        command=AbortRun(run_id=state.id, reason="  beam dump unscheduled  "),
+        command=AbortRun(
+            run_id=state.id,
+            reason="  beam dump unscheduled  ",
+            justification="operator: aborting for test",
+        ),
         now=_NOW,
     )
     assert events[0].reason == "beam dump unscheduled"
@@ -70,7 +78,11 @@ def test_decide_raises_run_not_found_when_state_is_none() -> None:
     with pytest.raises(RunNotFoundError) as exc_info:
         abort_run.decide(
             state=None,
-            command=AbortRun(run_id=target_id, reason="X"),
+            command=AbortRun(
+                run_id=target_id,
+                reason="X",
+                justification="operator: aborting for test",
+            ),
             now=_NOW,
         )
     assert exc_info.value.run_id == target_id
@@ -82,7 +94,11 @@ def test_decide_raises_invalid_reason_for_whitespace_only() -> None:
     with pytest.raises(InvalidRunAbortReasonError):
         abort_run.decide(
             state=state,
-            command=AbortRun(run_id=state.id, reason="   "),
+            command=AbortRun(
+                run_id=state.id,
+                reason="   ",
+                justification="operator: aborting for test",
+            ),
             now=_NOW,
         )
 
@@ -93,7 +109,11 @@ def test_decide_raises_invalid_reason_for_too_long() -> None:
     with pytest.raises(InvalidRunAbortReasonError):
         abort_run.decide(
             state=state,
-            command=AbortRun(run_id=state.id, reason="a" * 501),
+            command=AbortRun(
+                run_id=state.id,
+                reason="a" * 501,
+                justification="operator: aborting for test",
+            ),
             now=_NOW,
         )
 
@@ -104,7 +124,11 @@ def test_decide_raises_cannot_abort_when_already_completed() -> None:
     with pytest.raises(RunCannotAbortError) as exc_info:
         abort_run.decide(
             state=state,
-            command=AbortRun(run_id=state.id, reason="X"),
+            command=AbortRun(
+                run_id=state.id,
+                reason="X",
+                justification="operator: aborting for test",
+            ),
             now=_NOW,
         )
     assert exc_info.value.run_id == state.id
@@ -118,7 +142,11 @@ def test_decide_raises_cannot_abort_when_already_aborted() -> None:
     with pytest.raises(RunCannotAbortError) as exc_info:
         abort_run.decide(
             state=state,
-            command=AbortRun(run_id=state.id, reason="X"),
+            command=AbortRun(
+                run_id=state.id,
+                reason="X",
+                justification="operator: aborting for test",
+            ),
             now=_NOW,
         )
     assert exc_info.value.current_status is RunStatus.ABORTED
@@ -131,7 +159,11 @@ def test_decide_raises_cannot_abort_when_already_stopped() -> None:
     with pytest.raises(RunCannotAbortError) as exc_info:
         abort_run.decide(
             state=state,
-            command=AbortRun(run_id=state.id, reason="X"),
+            command=AbortRun(
+                run_id=state.id,
+                reason="X",
+                justification="operator: aborting for test",
+            ),
             now=_NOW,
         )
     assert exc_info.value.current_status is RunStatus.STOPPED
@@ -144,7 +176,11 @@ def test_decide_error_message_names_required_running_or_held_status() -> None:
     with pytest.raises(RunCannotAbortError) as exc_info:
         abort_run.decide(
             state=state,
-            command=AbortRun(run_id=state.id, reason="X"),
+            command=AbortRun(
+                run_id=state.id,
+                reason="X",
+                justification="operator: aborting for test",
+            ),
             now=_NOW,
         )
     msg = str(exc_info.value)
@@ -161,7 +197,11 @@ def test_decide_accepts_held_source_state_in_6f3() -> None:
     state = _run(status=RunStatus.HELD)
     events = abort_run.decide(
         state=state,
-        command=AbortRun(run_id=state.id, reason="emergency during hold"),
+        command=AbortRun(
+            run_id=state.id,
+            reason="emergency during hold",
+            justification="operator: aborting for test",
+        ),
         now=_NOW,
     )
     assert len(events) == 1
@@ -171,7 +211,11 @@ def test_decide_accepts_held_source_state_in_6f3() -> None:
 @pytest.mark.unit
 def test_decide_is_pure_same_inputs_same_outputs() -> None:
     state = _run()
-    command = AbortRun(run_id=state.id, reason="X")
+    command = AbortRun(
+        run_id=state.id,
+        reason="X",
+        justification="operator: aborting for test",
+    )
     first = abort_run.decide(state=state, command=command, now=_NOW)
     second = abort_run.decide(state=state, command=command, now=_NOW)
     assert first == second
@@ -186,7 +230,11 @@ def test_decide_defaults_decided_by_decision_id_to_none_when_omitted() -> None:
     state = _run(status=RunStatus.RUNNING)
     events = abort_run.decide(
         state=state,
-        command=AbortRun(run_id=state.id, reason="detector overheating"),
+        command=AbortRun(
+            run_id=state.id,
+            reason="detector overheating",
+            justification="operator: aborting for test",
+        ),
         now=_NOW,
     )
     assert events[0].decided_by_decision_id is None
@@ -203,6 +251,7 @@ def test_decide_threads_decided_by_decision_id_through_to_event() -> None:
             run_id=state.id,
             reason="agent EquipmentAbortDecision triggered",
             decided_by_decision_id=decision_id,
+            justification="operator: aborting for test",
         ),
         now=_NOW,
     )

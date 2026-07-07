@@ -82,6 +82,19 @@
             "description": "Optional Decision id that justified this abort (most commonly an OperatorAbortDecision or EquipmentAbortDecision per RunDebrief's 5-value choice enum). Maps to `prov:wasInformedBy` at the future PROV-O export adapter. NOT verified at the write path (eventual-consistency stance). Operators can record ad-hoc / emergency aborts without a Decision (Decision\u2192Run linkage).",
             "title": "Decided By Decision Id"
           },
+          "justification": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Obligation gate (Gate III): AbortRun requires an admission justification accounting for why this consequential action is taken. Fail-closed (absent / blank / over-length -> 422). Distinct from `reason`, which is post-hoc text on the RunAborted event; the justification is the precondition of admission. Kind-blind (a human and an agent supply it identically).",
+            "title": "Justification"
+          },
           "reason": {
             "description": "Free-form reason for the abort (1-500 chars after trimming). Today the field is unstructured; structured taxonomy is future-additive.",
             "maxLength": 500,
@@ -40592,7 +40605,14 @@
             "description": "Run is not in `Running` status (abort requires `Running` today; aborting a `Completed` or `Aborted` run raises), OR a concurrent write to the same run stream conflicted (optimistic concurrency)."
           },
           "422": {
-            "description": "Path parameter or request body failed schema validation."
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Path parameter or request body failed schema validation, OR the obligation gate (Gate III) refused the abort because no valid justification was supplied (absent / blank / over-length)."
           }
         },
         "summary": "Mark an existing Run as aborted (emergency-exit terminal)",

@@ -274,6 +274,10 @@ class ComputeRunDriver:
                 AbortRun(
                     run_id=run_id,
                     reason="cancelled mid-compute",
+                    # Obligation gate (Gate III): AbortRun requires a justification
+                    # even for machine-initiated aborts (kind-blind). The conductor
+                    # accounts for itself with the mechanical cause.
+                    justification="edge-conductor: compute conduct cancelled mid-flight",
                     actuation_kind=None,
                     producing_job_id=str(in_flight[0]) if in_flight else None,
                 ),
@@ -382,6 +386,9 @@ class ComputeRunDriver:
                 AbortRun(
                     run_id=run_id,
                     reason=outcome.failure or "compute conduct failed",
+                    # Obligation gate (Gate III): kind-blind, so the conductor
+                    # justifies its own abort with the mechanical failure cause.
+                    justification=f"edge-conductor: {outcome.failure or 'compute conduct failed'}",
                     actuation_kind=(
                         outcome.actuation_kind.value if outcome.actuation_kind is not None else None
                     ),

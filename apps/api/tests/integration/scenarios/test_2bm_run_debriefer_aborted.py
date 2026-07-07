@@ -414,6 +414,7 @@ async def test_run_debrief_agent_fires_on_equipment_abort(
                 "hexapod fault: HexapodAllEnabled stuck at 0; no positioner "
                 "control; aborting scan to run hexapod_reboot procedure"
             ),
+            justification="operator: aborting for test",
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

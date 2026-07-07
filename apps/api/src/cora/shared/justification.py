@@ -27,11 +27,21 @@ even by mistake.
 Declaration-only at this layer
 ------------------------------
 `COMMANDS_REQUIRING_JUSTIFICATION` is the declared class: the set of command
-names for which a justification is a precondition of admission. It ships EMPTY.
-Wiring a specific command's decider to call `require_justification`, and adding
-that command to the declared set, is a separate change per command; this module
-only supplies the mechanism. An empty declared set means the gate is inert until
-a command opts in, so shipping this primitive changes no existing behavior.
+names for which a justification is a precondition of admission. A command opts in
+by adding its name to the set AND calling `require_justification` at the top of
+its decider; this module only supplies the mechanism. v1 declares `AbortRun`
+(aborting a running experiment). Commands not in the set are unaffected: an empty
+or non-membership case leaves the gate inert for them.
+
+Not persisted at this layer (v1 deferral)
+-----------------------------------------
+`require_justification` VALIDATES the justification and returns the trimmed text,
+but v1 does NOT persist it: the gated command's event (e.g. RunAborted) does not
+carry the justification, so it is an admission precondition only, not part of the
+log. This is a deliberate scope cut (the `JustificationSupplied` event / the EG5
+"who justified what" replay story is the deferred richer half). A command that
+wants the justification on its event captures the returned value; abort_run does
+not, by design.
 """
 
 JUSTIFICATION_MAX_LENGTH = 500
@@ -45,14 +55,18 @@ admission, and either bound may be retuned without moving the other.
 """
 
 
-COMMANDS_REQUIRING_JUSTIFICATION: frozenset[str] = frozenset()
+COMMANDS_REQUIRING_JUSTIFICATION: frozenset[str] = frozenset({"AbortRun"})
 """The declared class: command names that require a justification at admission.
 
-Ships EMPTY. A command opts into the obligation gate by (1) adding its command
-name here and (2) calling `require_justification` at the top of its decider. Kept
-as a frozenset of canonical command-name strings, mirroring how other
-cross-cutting command-name sets are declared, so membership is a pure fold with
-no per-aggregate coupling.
+A command opts into the obligation gate by (1) adding its command name here and
+(2) calling `require_justification` at the top of its decider. Kept as a frozenset
+of canonical command-name strings, mirroring how other cross-cutting command-name
+sets are declared, so membership is a pure fold with no per-aggregate coupling.
+
+v1 membership: `AbortRun` (aborting a running experiment destroys in-progress
+data, the archetypal "account for yourself before a consequential act"). A
+justification is the admission precondition; the abort's post-hoc `reason` is a
+separate field on the RunAborted event.
 """
 
 

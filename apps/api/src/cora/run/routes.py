@@ -114,6 +114,7 @@ from cora.run.features import (
     stop_run,
     truncate_run,
 )
+from cora.shared.justification import JustificationRequiredError
 
 
 async def _handle_validation_error(request: Request, exc: Exception) -> JSONResponse:
@@ -121,6 +122,27 @@ async def _handle_validation_error(request: Request, exc: Exception) -> JSONResp
     _ = request
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
+        content={"detail": str(exc)},
+    )
+
+
+async def _handle_justification_required(request: Request, exc: Exception) -> JSONResponse:
+    """422 handler for the obligation gate (Gate III).
+
+    A declared-class command (AbortRun) was issued without a valid justification.
+    422 (unprocessable content) rather than 400: the request is well-formed but
+    fails the admission precondition of accounting for the action, matching the
+    422-for-unprocessable convention the Access / Federation / Operation BCs use.
+
+    Intra-BC distinction (deliberate, not drift): a bad `reason` on the same
+    command maps to 400 via `_handle_validation_error` (a domain-invariant on a
+    supplied value), while a missing/blank `justification` maps here to 422 (an
+    unmet admission precondition). So on one abort call an over-length reason is
+    400 but an over-length justification is 422; the two answer different questions
+    (domain validity of a value vs. accountability for the act)."""
+    _ = request
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={"detail": str(exc)},
     )
 
@@ -210,6 +232,8 @@ def register_run_routes(app: FastAPI) -> None:
         InvalidInputDatasetsError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
+    # Obligation gate (Gate III): missing/invalid justification -> 422.
+    app.add_exception_handler(JustificationRequiredError, _handle_justification_required)
     for not_found_cls in (RunNotFoundError,):
         app.add_exception_handler(not_found_cls, _handle_not_found)
     for already_exists_cls in (RunAlreadyExistsError,):

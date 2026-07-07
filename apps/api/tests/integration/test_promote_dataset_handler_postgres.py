@@ -208,7 +208,11 @@ async def test_register_dataset_persists_producing_run_end_state_in_payload(
     )
     # Drive the Run to Aborted so the captured end_state is non-trivial.
     await abort_run.bind(deps)(
-        AbortRun(run_id=run_id, reason="simulated abort for test"),
+        AbortRun(
+            run_id=run_id,
+            reason="simulated abort for test",
+            justification="operator: aborting for test",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

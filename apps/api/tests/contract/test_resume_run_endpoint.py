@@ -112,7 +112,13 @@ def test_post_resume_run_returns_409_when_aborted() -> None:
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
         client.post(f"/runs/{run_id}/hold")
-        client.post(f"/runs/{run_id}/abort", json={"reason": "emergency during hold"})
+        client.post(
+            f"/runs/{run_id}/abort",
+            json={
+                "reason": "emergency during hold",
+                "justification": "operator: aborting for test",
+            },
+        )
         response = client.post(f"/runs/{run_id}/resume")
     assert response.status_code == 409
     assert "Aborted" in response.json()["detail"]

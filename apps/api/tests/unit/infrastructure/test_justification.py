@@ -1,7 +1,8 @@
 """Unit tests for `cora.shared.justification` (the obligation-gate primitive).
 
 Coverage:
-  - Declared set ships EMPTY (the gate is inert until a command opts in).
+  - Declared set contains AbortRun (the first opt-in); a non-declared command is
+    unaffected (the gate is inert for it).
   - Non-declared command: justification is optional; None stays None, text is
     trimmed, blank-after-trim collapses to None.
   - Declared command: justification is a fail-closed precondition (None, blank,
@@ -21,12 +22,14 @@ from cora.shared.justification import (
     require_justification,
 )
 
-# ---------- declared set ships empty (dormant primitive) ----------
+# ---------- declared set membership (obligation gate opt-ins) ----------
 
 
 @pytest.mark.unit
-def test_declared_set_ships_empty() -> None:
-    assert len(COMMANDS_REQUIRING_JUSTIFICATION) == 0
+def test_declared_set_contains_abort_run() -> None:
+    """AbortRun is the first command to opt into the obligation gate (Gate III):
+    aborting a running experiment requires an admission justification."""
+    assert "AbortRun" in COMMANDS_REQUIRING_JUSTIFICATION
 
 
 # ---------- non-declared command: justification is optional ----------

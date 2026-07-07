@@ -34,6 +34,15 @@ class AbortRun:
     cancelled / timed-out job (None for operator aborts). The kind is
     folded onto `Run.actuation_kind` so even a failed conduct taints
     any Dataset that references the Run.
+
+    `justification` is the obligation gate (Gate III) input: since AbortRun is in
+    `COMMANDS_REQUIRING_JUSTIFICATION`, the decider requires a non-empty, bounded
+    justification at admission (fail-closed if absent/blank/over-length). Distinct
+    from `reason`: `reason` is post-hoc free text describing the abort that lands on
+    the RunAborted event; `justification` is the admission PRECONDITION accounting
+    for why the principal is entitled to take this consequential action. Kind-blind
+    (a human and an agent supply it identically). Optional on the dataclass so
+    non-declared callers are unaffected; the gate makes it mandatory for AbortRun.
     """
 
     run_id: UUID
@@ -41,3 +50,4 @@ class AbortRun:
     decided_by_decision_id: UUID | None = None
     actuation_kind: str | None = None
     producing_job_id: str | None = None
+    justification: str | None = None
