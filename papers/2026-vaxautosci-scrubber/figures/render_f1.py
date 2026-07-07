@@ -34,15 +34,16 @@ LANE_COLOR = {"setpoint": s.INK, "action": s.SUBINK, "check": s.STATE}
 LANE_MARKER = {"setpoint": "s", "action": "^", "check": "o"}
 
 # Lane y-coordinates, grouped by subsystem (top to bottom). The run/safety and
-# sample-handling lanes are spaced wider than the science swim-lanes because
-# each carries two-line marker labels both above and below its baseline.
-Y_OUTPUT = -1.4        # dataset written to disk, below the science swim-lanes
-Y_BAND = (-0.6, 2.55)  # iteration band spans the three science swim-lanes
-Y_PERMIT = 3.4         # run + safety group
-Y_RUN = 4.6
-Y_ROBOT = 5.9          # sample-handling group
-Y_CUSTODY = 6.9
-Y_PHASE = (7.65, 8.00)  # top strip: per-sample phase bars
+# sample-handling lanes are spaced a little wider than the science swim-lanes
+# because each carries compact two-line marker labels above and below its
+# baseline; gaps are kept as tight as those labels allow.
+Y_OUTPUT = -1.15       # dataset written to disk, below the science swim-lanes
+Y_BAND = (-0.5, 2.35)  # iteration band spans the three science swim-lanes
+Y_PERMIT = 2.9         # run + safety group
+Y_RUN = 3.75
+Y_ROBOT = 4.85         # sample-handling group
+Y_CUSTODY = 5.75
+Y_PHASE = (6.35, 6.65)  # top strip: per-sample phase bars
 
 PHASE_STYLE = {
     "Sample A": ("#DCE6F2", "#2C5282"),
@@ -73,7 +74,7 @@ def main() -> None:
     beam_back = secs(prov["beam_back_at"])
     xmax = max(secs(a["sampled_at"]) for a in acts)
 
-    fig, ax = s.figure(s.FULL_WIDTH, 5.2)
+    fig, ax = s.figure(s.FULL_WIDTH, 4.6)
 
     for y in LANE_Y.values():
         ax.axhline(y, color=s.RULE, lw=0.6, zorder=0)
