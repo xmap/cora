@@ -32,12 +32,10 @@ carry the verdict that colors each iteration band (T3). The swim-lane
 activities, the setpoint, acquire, check, and output rows, are themselves events appended as the
 system acts, with the intent recorded before the effect (the open-interval mechanism of
 Section~\ref{sec:crash}).
-Concretely, the example run is a four-event run-lifecycle stream (started, held,
-resumed, completed) alongside a twelve-event procedure stream with around two
-dozen activity rows; folding a prefix returns the reconstructed run and
-procedure state (status, the current iteration and its verdict, and whether each
-activity is open or closed), and the recorded hashes cover the recipe expansion,
-the resolved steps and parameter bindings, written at run start.
+Folding a prefix returns the reconstructed run and procedure state (status, the
+current iteration and its verdict, and whether each activity is open or closed),
+and the recorded hashes cover the recipe expansion, the resolved steps and
+parameter bindings, written at run start.
 
 The stream is multi-owner. Every event's envelope carries an actor field
 (Table~\ref{tab:schema}), so different actors, the operator, the supervisor

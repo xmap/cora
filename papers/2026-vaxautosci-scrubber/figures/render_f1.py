@@ -73,7 +73,7 @@ def main() -> None:
     beam_back = secs(prov["beam_back_at"])
     xmax = max(secs(a["sampled_at"]) for a in acts)
 
-    fig, ax = s.figure(s.FULL_WIDTH, 5.8)
+    fig, ax = s.figure(s.FULL_WIDTH, 5.2)
 
     for y in LANE_Y.values():
         ax.axhline(y, color=s.RULE, lw=0.6, zorder=0)

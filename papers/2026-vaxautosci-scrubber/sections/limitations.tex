@@ -12,10 +12,11 @@ The figures are not mock-ups. They derive from one passing integration
 scenario, exercised against a real Kernel and Postgres event store, and the run
 data, its generator, and the per-figure render scripts are released with the
 paper. What is real is what that scenario produced and we mirrored into the
-figure data: the activities, the four iteration verdicts (open, open, open,
-converged), the four run-lifecycle events, and the supervisor's hold and resume
-decisions, each recorded as a real event in the run with the decision that drove
-it. What is modeled rather than deployed is the beam-loss instant that triggers
+figure data: the two runs grouped under one campaign, the robot mount and
+dismount events that open and close each sample's custody, the per-sample
+iteration verdicts (open, open, open, converged), the run-lifecycle events, and
+the supervisor's hold and resume decisions, each recorded as a real event with
+the decision that drove it. What is modeled rather than deployed is the beam-loss instant that triggers
 them: at 2-BM-B today a beam drop during the fly scan is not detected by the
 instrument controls (the position triggers keep firing the camera regardless of
 X-rays, blank frames are saved through the drop, and the scan completes
@@ -27,7 +28,25 @@ loop, and a beam-permit bridge that emits the synchrotron's beam state, owned by
 the facility, into the same event stream. Both are proposed rather than built;
 the supervisor reaction we demonstrate is what CORA would drive once that signal
 arrives, played through the same real Kernel and Postgres event store as the
-rest of the run. What is synthetic is only the per-event timestamps,
+rest of the run.
+
+The robot-loaded framing has a similar deployed-versus-modeled boundary worth
+stating. The sample-change hardware at 2-BM is real: a robot arm with its own
+control layer that has executed mount and dismount cycles with a handshake that
+moves the sample stage to a taught pose, verifies it by readback, and returns
+it, and the instrument's scan software is scriptable over the same interface and
+already iterates a batch of per-sample scans. Interleaving a mount before and a
+dismount after each scan is therefore a small orchestration script over existing
+interfaces rather than new infrastructure. What we model, and record as events,
+is CORA's orchestration of that robot as a positioner asset with per-sample
+subject custody; the demonstrated campaign plays those custody events through
+the same event store as the runs they bracket. What remains out of scope is the
+supervisor decision layer beyond hold and resume that a fuller robot-loaded run
+would exercise: the per-sample field-of-view fit check, the branch between a
+local scan and a lens change, and per-sample recentering as a recorded
+supervised decision rather than a conducted procedure. These are the same class
+of recorded decisions the scrubber already renders, and they would be audited
+the same way once modeled. What is synthetic is only the per-event timestamps,
 staggered for a readable axis because the scenario records one logical instant;
 the overnight wall-clock spread is illustrative, stated in prose rather than
 measured. The generator depends on nothing but the standard library and needs no
