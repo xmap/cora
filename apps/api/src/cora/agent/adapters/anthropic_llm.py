@@ -237,7 +237,7 @@ class AnthropicLLM:
             # cost value call `compute_cost_usd` directly.
             record_llm_call(
                 span,
-                system="anthropic",
+                provider_name="anthropic",
                 request_model_ref=request.model_ref,
                 response_model_id=response_model_id,
                 usage=usage,

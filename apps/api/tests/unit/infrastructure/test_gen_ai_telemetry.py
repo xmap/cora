@@ -27,12 +27,12 @@ def reset_warning_set() -> None:
 
 @pytest.mark.unit
 def test_compute_cost_for_known_model() -> None:
-    """Opus 4.7 with 1M input tokens at $15/MT = exactly $15."""
+    """Opus 4.8 with 1M input tokens at $5/MT = exactly $5."""
     cost = compute_cost_usd(
-        ModelRef(provider="anthropic", model="claude-opus-4-7"),
+        ModelRef(provider="anthropic", model="claude-opus-4-8"),
         LLMUsage(input_tokens=1_000_000, output_tokens=0),
     )
-    assert cost == pytest.approx(15.00)
+    assert cost == pytest.approx(5.00)
 
 
 @pytest.mark.unit
@@ -75,8 +75,12 @@ def test_pricing_table_covers_all_documented_models() -> None:
     PRICING entry, or compute_cost_usd silently returns $0 and
     cost dashboards lie. Add to PRICING when adding a model."""
     expected = {
+        ("anthropic", "claude-opus-4-8"),
         ("anthropic", "claude-opus-4-7"),
         ("anthropic", "claude-sonnet-4-6"),
+        # The conduct-loop steering brain's default (DEFAULT_LLM_DECIDE_MODEL);
+        # unpriced it would meter the most autonomous spender at $0.
+        ("anthropic", "claude-sonnet-4-5"),
         ("anthropic", "claude-haiku-4-5"),
     }
     assert expected.issubset(set(PRICING))
@@ -89,7 +93,7 @@ def test_record_llm_call_returns_cost_for_known_model() -> None:
     span = trace.get_current_span()  # no-op span (no tracer configured)
     cost = record_llm_call(
         span,
-        system="anthropic",
+        provider_name="anthropic",
         request_model_ref=ModelRef(provider="anthropic", model="claude-sonnet-4-6"),
         response_model_id="claude-sonnet-4-6-20260301",
         usage=LLMUsage(input_tokens=1000, output_tokens=500),
@@ -109,7 +113,7 @@ def test_record_llm_call_is_safe_with_noop_span() -> None:
     # Must not raise:
     cost = record_llm_call(
         span,
-        system="anthropic",
+        provider_name="anthropic",
         request_model_ref=ModelRef(provider="anthropic", model="claude-haiku-4-5"),
         response_model_id="claude-haiku-4-5",
         usage=LLMUsage(

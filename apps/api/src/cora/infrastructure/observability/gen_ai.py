@@ -11,11 +11,13 @@ Reference: https://opentelemetry.io/docs/specs/semconv/gen-ai/
 Current status: experimental. Per the design memo's watch item, opt
 in is via `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`
 in production deploy config. Attribute names below match the spec as
-of January 2026; if the spec stabilizes with renames, this module
-is the single edit point.
+of July 2026 (`gen_ai.system` was deprecated in favour of
+`gen_ai.provider.name`; the durable Decision-side record was already
+on the new name, this module now matches it); if the spec renames
+again, this module is the single edit point.
 
 Attributes set on the active span:
-  - `gen_ai.system`            ("anthropic")
+  - `gen_ai.provider.name`     ("anthropic")
   - `gen_ai.operation.name`    ("chat")
   - `gen_ai.request.model`     (the model identifier from `ModelRef`)
   - `gen_ai.request.max_tokens`
@@ -92,13 +94,26 @@ class ModelPricing:
 
 
 PRICING: dict[tuple[str, str], ModelPricing] = {
-    # Anthropic public pricing (Feb 2026; 1h-TTL cache write tier).
+    # Anthropic public pricing (Jul 2026; 1h-TTL cache write tier).
     # Update when Anthropic publishes a new model or revises prices.
+    # Opus dropped to $5/$25 per MTok with the 4.7/4.8 generation.
+    ("anthropic", "claude-opus-4-8"): ModelPricing(
+        input_per_mtok=5.00,
+        output_per_mtok=25.00,
+        cache_write_per_mtok=6.25,
+        cache_read_per_mtok=0.50,
+    ),
     ("anthropic", "claude-opus-4-7"): ModelPricing(
-        input_per_mtok=15.00,
-        output_per_mtok=75.00,
-        cache_write_per_mtok=18.75,
-        cache_read_per_mtok=1.50,
+        input_per_mtok=5.00,
+        output_per_mtok=25.00,
+        cache_write_per_mtok=6.25,
+        cache_read_per_mtok=0.50,
+    ),
+    ("anthropic", "claude-sonnet-4-5"): ModelPricing(
+        input_per_mtok=3.00,
+        output_per_mtok=15.00,
+        cache_write_per_mtok=3.75,
+        cache_read_per_mtok=0.30,
     ),
     ("anthropic", "claude-sonnet-4-6"): ModelPricing(
         input_per_mtok=3.00,
@@ -171,7 +186,7 @@ def compute_cost_usd(model_ref: ModelRef, usage: LLMUsage) -> float:
 def record_llm_call(
     span: Span,
     *,
-    system: str,
+    provider_name: str,
     request_model_ref: ModelRef,
     response_model_id: str,
     usage: LLMUsage,
@@ -194,7 +209,7 @@ def record_llm_call(
     when tracing is disabled): set_attribute is a no-op and the
     histograms are no-op too when no MeterProvider is installed.
     """
-    span.set_attribute("gen_ai.system", system)
+    span.set_attribute("gen_ai.provider.name", provider_name)
     span.set_attribute("gen_ai.operation.name", "chat")
     span.set_attribute("gen_ai.request.model", request_model_ref.model)
     span.set_attribute("gen_ai.request.max_tokens", max_tokens)
@@ -212,7 +227,7 @@ def record_llm_call(
     )
 
     base_attrs = {
-        "gen_ai.system": system,
+        "gen_ai.provider.name": provider_name,
         "gen_ai.request.model": request_model_ref.model,
         "gen_ai.response.model": response_model_id,
     }
