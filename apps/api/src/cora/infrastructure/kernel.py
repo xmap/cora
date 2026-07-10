@@ -71,6 +71,7 @@ from cora.infrastructure.ports import (
     RoleLookup,
     RunActorInvolvementLookup,
     Signer,
+    SpendLookup,
     SupplyLookup,
     TokenVerifier,
 )
@@ -154,6 +155,15 @@ class Kernel:
     `NoSuppliesRegisteredLookup` for the missing-kind path. Mirrors
     the `ClearanceLookup` / `CautionLookup` test-default pattern.
     See [[project_supply_preflight_gate_design]].
+
+    `spend_lookup`: cross-BC port consumed by the budget gate at the
+    LLM producers' seams (RunDebriefer / CautionDrafter / regenerate;
+    the Operation BC steering brain at Tier 1.5) to sum an agent's
+    recorded spend in a cap window before permitting the next call.
+    Decision BC ships `PostgresSpendLookup` as the production adapter
+    (sums `entries_decision_inferences`). Test environments default
+    to `AlwaysZeroSpendLookup` (nothing spent) so a declared cap
+    never blocks tests that don't exercise budget gating.
 
     `run_actor_involvement_lookup`: cross-BC port consumed by the
     authority-revocation holder subscriber (K3) to resolve the
@@ -349,6 +359,7 @@ class Kernel:
     assembly_lookup: AssemblyLookup
     role_lookup: RoleLookup
     enclosure_lookup: EnclosureLookup
+    spend_lookup: SpendLookup
     profile_store: ProfileStore
     canonicalization_registry: CanonicalizationRegistry
     signing_registry: SigningRegistry

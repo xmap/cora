@@ -87,6 +87,7 @@ from cora.infrastructure.ports import (
     AlwaysPermittedEnclosureLookup,
     AlwaysQuietCautionLookup,
     AlwaysRatifiedConsequenceLookup,
+    AlwaysZeroSpendLookup,
     AssemblyLookup,
     AssetLookup,
     Authorize,
@@ -112,6 +113,7 @@ from cora.infrastructure.ports import (
     ProfileStore,
     RoleLookup,
     RunActorInvolvementLookup,
+    SpendLookup,
     SupplyLookup,
     SystemClock,
     TokenVerifier,
@@ -168,6 +170,7 @@ def make_postgres_kernel(
     caution_lookup: CautionLookup | None = None,
     capability_lookup: CapabilityLookup | None = None,
     supply_lookup: SupplyLookup | None = None,
+    spend_lookup: SpendLookup | None = None,
     run_actor_involvement_lookup: RunActorInvolvementLookup | None = None,
     consequence_lookup: ConsequenceLookup | None = None,
     dataset_distribution_lookup: DatasetDistributionLookup | None = None,
@@ -335,6 +338,7 @@ def make_postgres_kernel(
             capability_lookup if capability_lookup is not None else AlwaysEmptyCapabilityLookup()
         ),
         supply_lookup=(supply_lookup if supply_lookup is not None else AllSatisfiedSupplyLookup()),
+        spend_lookup=(spend_lookup if spend_lookup is not None else AlwaysZeroSpendLookup()),
         run_actor_involvement_lookup=(
             run_actor_involvement_lookup
             if run_actor_involvement_lookup is not None
@@ -397,6 +401,7 @@ def make_inmemory_kernel(
     caution_lookup: CautionLookup | None = None,
     capability_lookup: CapabilityLookup | None = None,
     supply_lookup: SupplyLookup | None = None,
+    spend_lookup: SpendLookup | None = None,
     run_actor_involvement_lookup: RunActorInvolvementLookup | None = None,
     consequence_lookup: ConsequenceLookup | None = None,
     dataset_distribution_lookup: DatasetDistributionLookup | None = None,
@@ -547,6 +552,7 @@ def make_inmemory_kernel(
             capability_lookup if capability_lookup is not None else AlwaysEmptyCapabilityLookup()
         ),
         supply_lookup=(supply_lookup if supply_lookup is not None else AllSatisfiedSupplyLookup()),
+        spend_lookup=(spend_lookup if spend_lookup is not None else AlwaysZeroSpendLookup()),
         run_actor_involvement_lookup=(
             run_actor_involvement_lookup
             if run_actor_involvement_lookup is not None
@@ -679,6 +685,25 @@ class SupplyLookupFactory(Protocol):
         self,
         pool: asyncpg.Pool,
     ) -> SupplyLookup: ...
+
+
+class SpendLookupFactory(Protocol):
+    """Builds the production SpendLookup port for the Kernel.
+
+    Decision BC's `cora.decision.adapters.PostgresSpendLookup` is the
+    production factory; `cora.api.main` binds it. Same factory-
+    injection shape as the other lookup factories so
+    `cora.infrastructure.deps` doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to
+    `AlwaysZeroSpendLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> SpendLookup: ...
 
 
 class RunActorInvolvementLookupFactory(Protocol):
@@ -926,6 +951,7 @@ async def build_kernel(
     caution_lookup_factory: CautionLookupFactory | None = None,
     capability_lookup_factory: CapabilityLookupFactory | None = None,
     supply_lookup_factory: SupplyLookupFactory | None = None,
+    spend_lookup_factory: SpendLookupFactory | None = None,
     run_actor_involvement_lookup_factory: RunActorInvolvementLookupFactory | None = None,
     consequence_lookup_factory: ConsequenceLookupFactory | None = None,
     dataset_distribution_lookup_factory: DatasetDistributionLookupFactory | None = None,
@@ -1036,6 +1062,9 @@ async def build_kernel(
         if supply_lookup_factory is not None
         else AllSatisfiedSupplyLookup()
     )
+    spend_lookup: SpendLookup = (
+        spend_lookup_factory(pool) if spend_lookup_factory is not None else AlwaysZeroSpendLookup()
+    )
     run_actor_involvement_lookup: RunActorInvolvementLookup = (
         run_actor_involvement_lookup_factory(pool)
         if run_actor_involvement_lookup_factory is not None
@@ -1099,6 +1128,7 @@ async def build_kernel(
         caution_lookup=caution_lookup,
         capability_lookup=capability_lookup,
         supply_lookup=supply_lookup,
+        spend_lookup=spend_lookup,
         run_actor_involvement_lookup=run_actor_involvement_lookup,
         consequence_lookup=consequence_lookup,
         dataset_distribution_lookup=dataset_distribution_lookup,

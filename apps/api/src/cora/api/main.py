@@ -124,6 +124,7 @@ from cora.decision import (
     register_decision_tools,
     wire_decision,
 )
+from cora.decision.adapters import PostgresSpendLookup
 from cora.enclosure import (
     EnclosureHandlers,
     enclosure_permit_monitor_lifespan,
@@ -620,6 +621,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 caution_lookup_factory=PostgresCautionLookup,
                 capability_lookup_factory=PostgresCapabilityLookup,
                 supply_lookup_factory=PostgresSupplyLookup,
+                spend_lookup_factory=PostgresSpendLookup,
                 run_actor_involvement_lookup_factory=PostgresRunActorInvolvementLookup,
                 consequence_lookup_factory=PostgresConsequenceLookup,
                 dataset_distribution_lookup_factory=PostgresDatasetDistributionLookup,
