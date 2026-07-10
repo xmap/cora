@@ -82,6 +82,7 @@ from cora.decision.aggregates.decision import (
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
+from cora.infrastructure.observability.gen_ai import compute_cost_usd
 from cora.infrastructure.ports import (
     AgentInferenceTrace,
     Deny,
@@ -339,6 +340,7 @@ async def _record_inference(
         finish_reasons=(response.stop_reason,) if response.stop_reason else (),
         input_tokens=response.usage.input_tokens,
         output_tokens=response.usage.output_tokens,
+        cost_usd=compute_cost_usd(request.model_ref, response.usage),
         request_max_tokens=request.max_output_tokens,
         agent_id=str(RUN_DEBRIEFER_AGENT_ID),
         agent_name=RUN_DEBRIEFER_AGENT_NAME,

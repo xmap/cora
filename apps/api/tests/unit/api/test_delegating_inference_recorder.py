@@ -67,6 +67,7 @@ def _trace() -> AgentInferenceTrace:
         finish_reasons=("tool_use",),
         input_tokens=1280,
         output_tokens=214,
+        cost_usd=0.00235,
         request_max_tokens=1024,
         agent_id="01900000-0000-7000-8000-0000000a0099",
         agent_name="RunDebriefer",
@@ -99,6 +100,7 @@ async def test_record_maps_trace_to_append_inferences_command() -> None:
     assert entry.finish_reasons == ("tool_use",)
     assert entry.input_tokens == 1280
     assert entry.output_tokens == 214
+    assert entry.cost_usd == 0.00235
     assert entry.request_max_tokens == 1024
     assert entry.agent_id == "01900000-0000-7000-8000-0000000a0099"
     assert entry.agent_name == "RunDebriefer"

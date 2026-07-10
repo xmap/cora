@@ -106,6 +106,18 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         ] = None,
         input_tokens: Annotated[int | None, Field(default=None, ge=0)] = None,
         output_tokens: Annotated[int | None, Field(default=None, ge=0)] = None,
+        cost_usd: Annotated[
+            float | None,
+            Field(
+                default=None,
+                ge=0.0,
+                description=(
+                    "Actual call cost in USD computed from usage tokens and "
+                    "provider pricing (CORA custom; no OTel attribute exists "
+                    "for call cost)."
+                ),
+            ),
+        ] = None,
         agent_id: Annotated[str | None, Field(default=None, max_length=200)] = None,
         agent_name: Annotated[str | None, Field(default=None, max_length=200)] = None,
         agent_description: Annotated[str | None, Field(default=None, max_length=2000)] = None,
@@ -145,6 +157,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             finish_reasons=tuple(finish_reasons or []),
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cost_usd=cost_usd,
             agent_id=agent_id,
             agent_name=agent_name,
             agent_description=agent_description,

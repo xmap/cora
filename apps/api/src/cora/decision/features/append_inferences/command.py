@@ -57,6 +57,7 @@ class ReasoningEntryInput:
     finish_reasons: tuple[str, ...] = field(default_factory=tuple[str, ...])
     input_tokens: int | None = None
     output_tokens: int | None = None
+    cost_usd: float | None = None
     agent_id: str | None = None
     agent_name: str | None = None
     agent_description: str | None = None

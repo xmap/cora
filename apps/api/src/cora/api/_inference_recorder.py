@@ -61,6 +61,7 @@ class DelegatingInferenceRecorder:
                     finish_reasons=trace.finish_reasons,
                     input_tokens=trace.input_tokens,
                     output_tokens=trace.output_tokens,
+                    cost_usd=trace.cost_usd,
                     agent_id=trace.agent_id,
                     agent_name=trace.agent_name,
                 ),

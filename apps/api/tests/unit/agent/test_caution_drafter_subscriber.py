@@ -1222,6 +1222,8 @@ async def test_apply_records_inference_on_proposal() -> None:
     assert call.trace.response_model == "claude-sonnet-4-6-20260201"
     assert call.trace.input_tokens == 2048
     assert call.trace.output_tokens == 320
+    # Sonnet 4.6 at $3/$15 per MTok: 2048 in + 320 out.
+    assert call.trace.cost_usd == pytest.approx(0.006144 + 0.0048)
     assert call.trace.finish_reasons == ("tool_use",)
     assert call.trace.agent_id == str(CAUTION_DRAFTER_AGENT_ID)
     assert call.trace.agent_name == CAUTION_DRAFTER_AGENT_NAME

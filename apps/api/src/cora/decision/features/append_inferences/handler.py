@@ -259,6 +259,7 @@ def _build_row(
         finish_reasons=entry.finish_reasons,
         input_tokens=entry.input_tokens,
         output_tokens=entry.output_tokens,
+        cost_usd=entry.cost_usd,
         agent_id=entry.agent_id,
         agent_name=entry.agent_name,
         agent_description=entry.agent_description,

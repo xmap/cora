@@ -111,6 +111,14 @@ class ReasoningEntryRequest(BaseModel):
     )
     input_tokens: int | None = Field(default=None, ge=0)
     output_tokens: int | None = Field(default=None, ge=0)
+    cost_usd: float | None = Field(
+        default=None,
+        ge=0.0,
+        description=(
+            "Actual call cost in USD computed from usage tokens and provider "
+            "pricing (CORA custom; no OTel attribute exists for call cost)."
+        ),
+    )
     agent_id: str | None = Field(default=None, max_length=200)
     agent_name: str | None = Field(default=None, max_length=200)
     agent_description: str | None = Field(default=None, max_length=2000)
@@ -220,6 +228,7 @@ async def post_decisions_reasoning_entries(
             finish_reasons=tuple(e.finish_reasons),
             input_tokens=e.input_tokens,
             output_tokens=e.output_tokens,
+            cost_usd=e.cost_usd,
             agent_id=e.agent_id,
             agent_name=e.agent_name,
             agent_description=e.agent_description,

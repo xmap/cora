@@ -1317,6 +1317,8 @@ async def test_apply_records_inference_on_success() -> None:
     assert call.trace.response_model == "claude-haiku-4-5-20260201"
     assert call.trace.input_tokens == 1280
     assert call.trace.output_tokens == 214
+    # Haiku 4.5 at $1/$5 per MTok: 1280 in + 214 out.
+    assert call.trace.cost_usd == pytest.approx(0.00128 + 0.00107)
     assert call.trace.finish_reasons == ("tool_use",)
     assert call.trace.request_max_tokens == 1024
     assert call.trace.agent_id == str(RUN_DEBRIEFER_AGENT_ID)

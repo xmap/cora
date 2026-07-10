@@ -624,6 +624,8 @@ async def test_handler_records_inference_on_success() -> None:
     assert call.trace.response_model == "claude-haiku-4-5-20260201"
     assert call.trace.input_tokens == 1536
     assert call.trace.output_tokens == 240
+    # Haiku 4.5 at $1/$5 per MTok: 1536 in + 240 out.
+    assert call.trace.cost_usd == pytest.approx(0.001536 + 0.0012)
     assert call.trace.finish_reasons == ("tool_use",)
     # The inference is the agent's, attributed to the agent principal (not
     # the operator who issued the command).

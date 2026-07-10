@@ -10780,6 +10780,19 @@
             ],
             "title": "Conversation Id"
           },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Actual call cost in USD computed from usage tokens and provider pricing (CORA custom; no OTel attribute exists for call cost).",
+            "title": "Cost Usd"
+          },
           "duration": {
             "anyOf": [
               {
