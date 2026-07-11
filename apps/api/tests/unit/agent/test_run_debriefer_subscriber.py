@@ -61,7 +61,13 @@ from cora.run.aggregates.run.events import (
     RunStopped,
     RunTruncated,
 )
-from tests.unit.agent._helpers import Ed25519FakeSigner, FakeInferenceRecorder
+from tests.unit.agent._helpers import (
+    Ed25519FakeSigner,
+    FakeInferenceRecorder,
+    FakeSpendLookup,
+    seed_defined_agent,
+    seed_suspended_agent,
+)
 
 _NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
 _LATER = datetime(2026, 5, 17, 14, 47, 0, tzinfo=UTC)
@@ -218,12 +224,14 @@ async def _build_subscriber(
     event_store: InMemoryEventStore,
     llm: FakeLLM,
     inference_recorder: FakeInferenceRecorder | None = None,
+    spend_lookup: FakeSpendLookup | None = None,
 ) -> RunDebrieferSubscriber:
     return RunDebrieferSubscriber(
         event_store=event_store,
         llm=llm,
         logbook_mirror=None,
         inference_recorder=inference_recorder,
+        spend_lookup=spend_lookup,
     )
 
 
@@ -395,6 +403,104 @@ async def test_apply_writes_debrief_deferred_on_llm_failure() -> None:
     assert "LLM call failed with LLMServerError" in (decision.reasoning or "")
     assert decision.inputs is not None
     assert decision.inputs["failure_error_class"] == "LLMServerError"
+
+
+# ---------- Suspension gate + budget gate ----------
+
+
+@pytest.mark.unit
+async def test_apply_skips_entirely_when_agent_suspended() -> None:
+    """A Suspended agent takes no actions: no LLM call, no Decision.
+    The per-apply suspension gate is what makes suspend_agent an
+    actual halt of LLM spend rather than a recorded intention."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store)
+    await seed_suspended_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        suspend_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        suspended_at=_NOW,
+        reason="cost overrun",
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert await load_decision(store, _derive_decision_id(event.event_id)) is None
+
+
+@pytest.mark.unit
+async def test_apply_defers_debrief_when_monthly_usd_cap_exhausted() -> None:
+    """Cap reached: the LLM call is skipped and the refusal is recorded
+    as this Run's DebriefDeferred Decision (coarse post-hoc tier)."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    recorder = FakeInferenceRecorder()
+    await _seed_run_debrief_actor(store)
+    await seed_defined_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        occurred_at=_NOW,
+        monthly_usd_cap=120.0,
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(
+        store, llm, recorder, spend_lookup=FakeSpendLookup(usd_spent=121.3)
+    )
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "DebriefDeferred"
+    assert "Agent budget exhausted: monthly_usd_cap" in (decision.reasoning or "")
+    assert decision.inputs is not None
+    assert decision.inputs["failure_error_class"] == "AgentBudgetExhausted"
+    assert decision.inputs["budget_cap_kind"] == "monthly_usd_cap"
+    assert recorder.calls == []
+
+
+@pytest.mark.unit
+async def test_apply_proceeds_normally_when_spend_is_under_cap() -> None:
+    """A declared budget with headroom never interferes with the
+    debrief: the gate is invisible until a cap is exhausted."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store)
+    await seed_defined_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        occurred_at=_NOW,
+        monthly_usd_cap=500.0,
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, spend_lookup=FakeSpendLookup(usd_spent=1.0))
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "NominalCompletion"
 
 
 @pytest.mark.unit

@@ -139,7 +139,9 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
+from cora.agent._budget_gate import find_budget_breach
 from cora.agent._subscriber_lease import attempt_debrief_lease
+from cora.agent.aggregates.agent import AgentStatus, load_agent
 from cora.agent.prompts import (
     RUN_DEBRIEF_PROMPT_TEMPLATE_ID,
     RunDebriefPayload,
@@ -169,6 +171,7 @@ from cora.infrastructure.logging import get_logger
 from cora.infrastructure.observability.gen_ai import compute_cost_usd
 from cora.infrastructure.ports import (
     AgentInferenceTrace,
+    AlwaysZeroSpendLookup,
     ConcurrencyError,
     NullInferenceRecorder,
 )
@@ -186,6 +189,7 @@ if TYPE_CHECKING:
         LLMResponse,
         LogbookMirror,
         Signer,
+        SpendLookup,
     )
     from cora.infrastructure.ports.event_store import EventStore, NewEvent, StoredEvent
     from cora.infrastructure.projection.handler import ConnectionLike
@@ -290,6 +294,7 @@ class RunDebrieferSubscriber:
         logbook_mirror: LogbookMirror | None,
         signer: Signer | None = None,
         inference_recorder: InferenceRecorder | None = None,
+        spend_lookup: SpendLookup | None = None,
     ) -> None:
         self.event_store = event_store
         self.llm = llm
@@ -299,6 +304,10 @@ class RunDebrieferSubscriber:
         # caller that omits it) stays inert; production wiring passes the
         # Kernel's recorder via `make_run_debriefer_subscriber`.
         self.inference_recorder = inference_recorder or NullInferenceRecorder()
+        # Defaults to zero spend so declared caps never block tests that
+        # don't exercise budget gating; production wiring passes the
+        # Kernel's PostgresSpendLookup.
+        self.spend_lookup = spend_lookup or AlwaysZeroSpendLookup()
 
     async def apply(self, event: StoredEvent, conn: ConnectionLike) -> None:
         """Process one terminal Run event.
@@ -368,6 +377,21 @@ class RunDebrieferSubscriber:
             )
             return
 
+        # Reversible-suspension gate: a Suspended agent takes no actions,
+        # LLM calls and Decision writes included. Mirrors the deactivated-
+        # actor skip above (per-apply check, so resume restores behavior
+        # for the NEXT terminal event; skipped work items are not
+        # replayed). The Agent fold also carries the declared budget the
+        # post-lease gate below reads.
+        agent = await load_agent(self.event_store, RUN_DEBRIEFER_AGENT_ID)
+        if agent is not None and agent.status is AgentStatus.SUSPENDED:
+            log.warning(
+                "run_debriefer.skip.agent_suspended",
+                agent_id=str(RUN_DEBRIEFER_AGENT_ID),
+                agent_name=RUN_DEBRIEFER_AGENT_NAME,
+            )
+            return
+
         # Cross-agent lease (per [[project-run-debriefer-lease-design]]):
         # append a DecisionDebriefRequested marker to the Run stream
         # BEFORE the LLM call so a losing agent pays zero LLM cost. The
@@ -394,6 +418,44 @@ class RunDebrieferSubscriber:
                 run_id=run_id,
                 terminal_event=event,
                 winning_agent_id=winning_agent_id,
+                log=log,
+            )
+            return
+
+        # Coarse post-hoc budget gate (the enforcement seam): refuse the
+        # call once a declared cap is exhausted, recording the refusal as
+        # this terminal Run's Decision so the one-Decision-per-terminal-Run
+        # invariant holds and operators see WHY the debrief is missing.
+        # After the lease so only the winning agent pays the spend lookup.
+        breach = await find_budget_breach(
+            agent=agent,
+            spend_lookup=self.spend_lookup,
+            as_of=event.occurred_at,
+        )
+        if breach is not None:
+            log.warning(
+                "run_debriefer.budget_exhausted",
+                cap_kind=breach.cap_kind,
+                cap_value=breach.cap_value,
+                spent=breach.spent,
+            )
+            await self._compose_and_append(
+                decision_id=decision_id,
+                actor=actor,
+                run_id=run_id,
+                terminal_event=event,
+                choice="DebriefDeferred",
+                confidence=None,
+                reasoning=(
+                    f"Agent budget exhausted: {breach.describe()}; LLM call "
+                    "skipped. Raise the cap via update_agent_budget or wait "
+                    "for the window to reset, then re-trigger the debrief."
+                ),
+                extra_inputs={
+                    "failure_error_class": "AgentBudgetExhausted",
+                    "budget_cap_kind": breach.cap_kind,
+                },
+                outcome="deferred",
                 log=log,
             )
             return
@@ -799,6 +861,7 @@ def make_run_debriefer_subscriber(deps: Kernel) -> RunDebrieferSubscriber:
         logbook_mirror=deps.logbook_mirror,
         signer=deps.signer,
         inference_recorder=deps.inference_recorder,
+        spend_lookup=deps.spend_lookup,
     )
 
 

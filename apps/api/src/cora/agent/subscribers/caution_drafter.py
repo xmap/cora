@@ -80,7 +80,9 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
+from cora.agent._budget_gate import find_budget_breach
 from cora.agent._subscriber_lease import attempt_debrief_lease
+from cora.agent.aggregates.agent import AgentStatus, load_agent
 from cora.agent.prompts import (
     CAUTION_DRAFTER_PROMPT_TEMPLATE_ID,
     CandidateTarget,
@@ -116,6 +118,7 @@ from cora.infrastructure.logging import get_logger
 from cora.infrastructure.observability.gen_ai import compute_cost_usd
 from cora.infrastructure.ports import (
     AgentInferenceTrace,
+    AlwaysZeroSpendLookup,
     ConcurrencyError,
     NullInferenceRecorder,
 )
@@ -134,6 +137,7 @@ if TYPE_CHECKING:
         LLMChatRequest,
         LLMResponse,
         Signer,
+        SpendLookup,
     )
     from cora.infrastructure.ports.event_store import EventStore, NewEvent, StoredEvent
     from cora.infrastructure.projection.handler import ConnectionLike
@@ -199,6 +203,7 @@ class CautionDrafterSubscriber:
         caution_lookup: CautionLookup,
         signer: Signer | None = None,
         inference_recorder: InferenceRecorder | None = None,
+        spend_lookup: SpendLookup | None = None,
     ) -> None:
         self.event_store = event_store
         self.llm = llm
@@ -208,6 +213,10 @@ class CautionDrafterSubscriber:
         # inert; production wiring passes the Kernel's recorder via
         # `make_caution_drafter_subscriber`.
         self.inference_recorder = inference_recorder or NullInferenceRecorder()
+        # Defaults to zero spend so declared caps never block tests that
+        # don't exercise budget gating; production wiring passes the
+        # Kernel's PostgresSpendLookup.
+        self.spend_lookup = spend_lookup or AlwaysZeroSpendLookup()
 
     async def apply(self, event: StoredEvent, conn: ConnectionLike) -> None:
         """Process one terminal Run event."""
@@ -267,6 +276,19 @@ class CautionDrafterSubscriber:
             )
             return
 
+        # Reversible-suspension gate (mirrors RunDebriefer): a Suspended
+        # agent takes no actions, LLM calls and Decision writes included.
+        # The Agent fold also carries the declared budget the post-lease
+        # gate below reads.
+        agent = await load_agent(self.event_store, CAUTION_DRAFTER_AGENT_ID)
+        if agent is not None and agent.status is AgentStatus.SUSPENDED:
+            log.warning(
+                "caution_drafter.skip.agent_suspended",
+                agent_id=str(CAUTION_DRAFTER_AGENT_ID),
+                agent_name=CAUTION_DRAFTER_AGENT_NAME,
+            )
+            return
+
         # Cross-agent lease (per [[project-run-debriefer-lease-design]];
         # mirrors RunDebriefer's gate verbatim). Reserved for future
         # multi-instance CautionDrafter variants (e.g., different LLM
@@ -294,6 +316,43 @@ class CautionDrafterSubscriber:
                 run_id=run_id,
                 terminal_event=event,
                 winning_agent_id=winning_agent_id,
+                log=log,
+            )
+            return
+
+        # Coarse post-hoc budget gate (mirrors RunDebriefer): refuse the
+        # call once a declared cap is exhausted, recording the refusal as
+        # this terminal Run's NoAction Decision so operators see WHY no
+        # caution proposal was drafted.
+        breach = await find_budget_breach(
+            agent=agent,
+            spend_lookup=self.spend_lookup,
+            as_of=event.occurred_at,
+        )
+        if breach is not None:
+            log.warning(
+                "caution_drafter.budget_exhausted",
+                cap_kind=breach.cap_kind,
+                cap_value=breach.cap_value,
+                spent=breach.spent,
+            )
+            await self._compose_and_append(
+                decision_id=decision_id,
+                actor=actor,
+                run_id=run_id,
+                terminal_event=event,
+                choice="NoAction",
+                confidence=None,
+                reasoning=(
+                    f"Agent budget exhausted: {breach.describe()}; LLM call "
+                    "skipped. Raise the cap via update_agent_budget or wait "
+                    "for the window to reset."
+                ),
+                extra_inputs={
+                    "failure_error_class": "AgentBudgetExhausted",
+                    "budget_cap_kind": breach.cap_kind,
+                },
+                outcome="deferred",
                 log=log,
             )
             return
@@ -805,6 +864,7 @@ def make_caution_drafter_subscriber(deps: Kernel) -> CautionDrafterSubscriber:
         caution_lookup=deps.caution_lookup,
         signer=deps.signer,
         inference_recorder=deps.inference_recorder,
+        spend_lookup=deps.spend_lookup,
     )
 
 

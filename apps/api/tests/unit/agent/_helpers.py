@@ -28,6 +28,7 @@ from cora.agent.aggregates.agent import (
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports import AgentInferenceTrace
+from cora.infrastructure.ports.spend_lookup import SpendLookupResult
 from cora.infrastructure.signing import event_type_to_payload_type
 from cora.shared.content_hash import canonical_body_bytes, pae_bytes
 from cora.shared.identity import ActorId
@@ -41,6 +42,44 @@ class RecordedInference:
     principal_id: UUID
     correlation_id: UUID
     causation_id: UUID | None
+
+
+class FakeSpendLookup:
+    """SpendLookup stub returning configured sums; records each query.
+
+    `windows` captures every `(agent_id, window_start, window_end)`
+    asked for, so gate tests can assert the window math without a
+    real store.
+    """
+
+    def __init__(
+        self,
+        *,
+        usd_spent: float = 0.0,
+        tokens_spent: int = 0,
+        call_count: int = 0,
+    ) -> None:
+        self.usd_spent = usd_spent
+        self.tokens_spent = tokens_spent
+        self.call_count = call_count
+        self.windows: list[tuple[UUID, datetime, datetime]] = []
+
+    async def find_agent_spend(
+        self,
+        *,
+        agent_id: UUID,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> SpendLookupResult:
+        self.windows.append((agent_id, window_start, window_end))
+        return SpendLookupResult(
+            agent_id=agent_id,
+            window_start=window_start,
+            window_end=window_end,
+            usd_spent=self.usd_spent,
+            tokens_spent=self.tokens_spent,
+            call_count=self.call_count,
+        )
 
 
 class FakeInferenceRecorder:
@@ -84,8 +123,15 @@ async def seed_defined_agent(
     correlation_id: UUID,
     principal_id: UUID,
     occurred_at: datetime,
+    monthly_usd_cap: float | None = None,
+    daily_token_cap: int | None = None,
 ) -> None:
-    """Append a single `AgentDefined` event to a fresh Agent stream."""
+    """Append a single `AgentDefined` event to a fresh Agent stream.
+
+    Optional caps land on the genesis payload (the additive
+    `AgentDefined` budget fields) so budget-gate tests can seed a
+    capped agent without a second `AgentBudgetUpdated` append.
+    """
     genesis = AgentDefined(
         agent_id=agent_id,
         kind="RunDebriefer",
@@ -97,6 +143,8 @@ async def seed_defined_agent(
         prompt_template_id=None,
         capabilities=frozenset(),
         occurred_at=occurred_at,
+        monthly_usd_cap=monthly_usd_cap,
+        daily_token_cap=daily_token_cap,
     )
     await store.append(
         stream_type="Agent",
