@@ -32,6 +32,7 @@ from cora.run.aggregates.run.events import (
 
 _NOW = datetime(2026, 6, 4, 12, 0, 0, tzinfo=UTC)
 _COMMAND_NAME = "TestSubscriber"
+_KIND = "RunDebriefer"
 
 
 def _terminal_event(
@@ -152,6 +153,7 @@ async def test_attempt_debrief_lease_on_clean_stream_acquires_lease() -> None:
     success, winner = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=agent_id,
         terminal_event=terminal,
         occurred_at=_NOW,
@@ -181,6 +183,7 @@ async def test_attempt_debrief_lease_prior_same_agent_lease_returns_success_idem
     await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=agent_id,
         terminal_event=terminal,
         occurred_at=_NOW,
@@ -191,6 +194,7 @@ async def test_attempt_debrief_lease_prior_same_agent_lease_returns_success_idem
     success, winner = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=agent_id,
         terminal_event=terminal,
         occurred_at=_NOW,
@@ -216,6 +220,7 @@ async def test_attempt_debrief_lease_with_prior_different_agent_lease_returns_wi
     await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=winner_id,
         terminal_event=terminal,
         occurred_at=_NOW,
@@ -225,6 +230,7 @@ async def test_attempt_debrief_lease_with_prior_different_agent_lease_returns_wi
     success, observed_winner = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=loser_id,
         terminal_event=terminal,
         occurred_at=_NOW,
@@ -253,6 +259,7 @@ async def test_attempt_debrief_lease_independent_terminal_events_both_acquire() 
     a_success, _ = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=agent_id,
         terminal_event=terminal_a,
         occurred_at=_NOW,
@@ -261,6 +268,7 @@ async def test_attempt_debrief_lease_independent_terminal_events_both_acquire() 
     b_success, _ = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=agent_id,
         terminal_event=terminal_b,
         occurred_at=_NOW,
@@ -313,6 +321,7 @@ async def test_attempt_debrief_lease_with_late_run_event_advancing_version_acqui
     success, winner = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=agent_id,
         terminal_event=terminal,
         occurred_at=_NOW,
@@ -397,6 +406,7 @@ def _foreign_lease_envelope(
     run_id: UUID,
     debriefer_agent_id: UUID,
     terminal_event_id: UUID,
+    debriefer_kind: str = _KIND,
 ) -> NewEvent:
     """Build a `DecisionDebriefRequested` envelope as if a peer subscriber wrote it."""
     return to_new_event(
@@ -404,6 +414,7 @@ def _foreign_lease_envelope(
         payload={
             "run_id": str(run_id),
             "debriefer_agent_id": str(debriefer_agent_id),
+            "debriefer_kind": debriefer_kind,
             "terminal_event_id": str(terminal_event_id),
             "occurred_at": _NOW.isoformat(),
         },
@@ -445,6 +456,7 @@ async def test_attempt_debrief_lease_concurrency_error_with_foreign_winner_retur
     success, winner = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=losing_id,
         terminal_event=terminal,
         occurred_at=_NOW,
@@ -480,6 +492,7 @@ async def test_attempt_debrief_lease_concurrency_error_with_own_lease_returns_su
     success, winner = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=agent_id,
         terminal_event=terminal,
         occurred_at=_NOW,
@@ -491,11 +504,11 @@ async def test_attempt_debrief_lease_concurrency_error_with_own_lease_returns_su
 
 
 @pytest.mark.unit
-async def test_attempt_debrief_lease_concurrency_error_with_no_lease_winner_returns_none() -> None:
-    """Append raises `ConcurrencyError`; re-scan finds the version
-    advanced by a NON-lease event (e.g., `RunAddedToCampaign`); helper
-    returns `(False, None)` so the caller writes a `DebriefConflicted`
-    Decision with `winning_agent_id` unidentified."""
+async def test_attempt_debrief_lease_retries_past_non_competing_version_bump() -> None:
+    """Append raises `ConcurrencyError` because a NON-lease event
+    (e.g., `RunAddedToCampaign`) advanced the version; the bounded
+    retry loop re-loads and acquires on the next attempt instead of
+    giving up (a non-competitor is not a loss)."""
     from cora.run.aggregates.run.events import RunAddedToCampaign
 
     base = InMemoryEventStore()
@@ -524,7 +537,69 @@ async def test_attempt_debrief_lease_concurrency_error_with_no_lease_winner_retu
     success, winner = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=agent_id,
+        terminal_event=terminal,
+        occurred_at=_NOW,
+        command_name=_COMMAND_NAME,
+    )
+
+    assert success is True
+    assert winner is None
+    stored, _v = await store.load("Run", run_id)
+    lease_events = [e for e in stored if e.event_type == "DecisionDebriefRequested"]
+    assert len(lease_events) == 1
+
+
+class _AlwaysConflictingStore:
+    """Store whose every `append` raises `ConcurrencyError` (a stream
+    hot with non-competing writers), driving the retry loop to
+    exhaustion."""
+
+    def __init__(self, delegate: InMemoryEventStore) -> None:
+        self._delegate = delegate
+
+    async def load(self, stream_type: str, stream_id: UUID) -> tuple[list[StoredEvent], int]:
+        return await self._delegate.load(stream_type, stream_id)
+
+    async def append(
+        self,
+        stream_type: str,
+        stream_id: UUID,
+        expected_version: int,
+        events: Sequence[NewEvent],
+    ) -> int:
+        raise ConcurrencyError(
+            stream_type=stream_type,
+            stream_id=stream_id,
+            expected=expected_version,
+            actual=expected_version + 1,
+        )
+
+    async def append_streams(
+        self,
+        streams: Sequence[StreamAppend],
+        *,
+        conn: object | None = None,
+    ) -> dict[UUID, int]:
+        return await self._delegate.append_streams(streams, conn=conn)
+
+
+@pytest.mark.unit
+async def test_attempt_debrief_lease_returns_degenerate_loss_on_retry_exhaustion() -> None:
+    """Every append attempt conflicts without a same-kind winner ever
+    appearing; the bounded loop gives up with `(False, None)` so the
+    caller exits without an LLM call or an identified winner."""
+    base = InMemoryEventStore()
+    run_id = uuid4()
+    await _seed_run(base, run_id)
+    terminal = _terminal_event(run_id=run_id)
+
+    success, winner = await attempt_debrief_lease(
+        _AlwaysConflictingStore(base),
+        run_id=run_id,
+        debriefer_kind=_KIND,
+        debriefer_agent_id=uuid4(),
         terminal_event=terminal,
         occurred_at=_NOW,
         command_name=_COMMAND_NAME,
@@ -532,6 +607,93 @@ async def test_attempt_debrief_lease_concurrency_error_with_no_lease_winner_retu
 
     assert success is False
     assert winner is None
+
+
+@pytest.mark.unit
+async def test_attempt_debrief_lease_different_kinds_both_acquire_same_terminal_event() -> None:
+    """Kind scoping: agents doing DIFFERENT jobs (RunDebriefer vs
+    CautionDrafter) hold independent leases for the same terminal
+    event; the second kind acquires instead of losing to the first."""
+    store = InMemoryEventStore()
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    terminal = _terminal_event(run_id=run_id)
+
+    first_success, _ = await attempt_debrief_lease(
+        store,
+        run_id=run_id,
+        debriefer_kind="RunDebriefer",
+        debriefer_agent_id=uuid4(),
+        terminal_event=terminal,
+        occurred_at=_NOW,
+        command_name=_COMMAND_NAME,
+    )
+    second_success, second_winner = await attempt_debrief_lease(
+        store,
+        run_id=run_id,
+        debriefer_kind="CautionDrafter",
+        debriefer_agent_id=uuid4(),
+        terminal_event=terminal,
+        occurred_at=_NOW,
+        command_name=_COMMAND_NAME,
+    )
+
+    assert first_success is True
+    assert second_success is True
+    assert second_winner is None
+    stored, _v = await store.load("Run", run_id)
+    lease_events = [e for e in stored if e.event_type == "DecisionDebriefRequested"]
+    assert len(lease_events) == 2
+
+
+@pytest.mark.unit
+async def test_attempt_debrief_lease_legacy_kindless_marker_contends_with_every_kind() -> None:
+    """A pre-scoping lease marker (payload without `debriefer_kind`)
+    keeps the old all-contend semantics: any kind scanning the stream
+    sees it as the winner, so historical streams replay exactly as
+    they did before scoping."""
+    store = InMemoryEventStore()
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    terminal = _terminal_event(run_id=run_id)
+    legacy_winner_id = uuid4()
+
+    legacy_payload = {
+        "run_id": str(run_id),
+        "debriefer_agent_id": str(legacy_winner_id),
+        "terminal_event_id": str(terminal.event_id),
+        "occurred_at": _NOW.isoformat(),
+    }
+    await store.append(
+        stream_type="Run",
+        stream_id=run_id,
+        expected_version=1,
+        events=[
+            to_new_event(
+                event_type="DecisionDebriefRequested",
+                payload=legacy_payload,
+                occurred_at=_NOW,
+                event_id=uuid4(),
+                command_name="LegacyAgent",
+                correlation_id=uuid4(),
+                causation_id=None,
+                principal_id=legacy_winner_id,
+            )
+        ],
+    )
+
+    success, winner = await attempt_debrief_lease(
+        store,
+        run_id=run_id,
+        debriefer_kind="CautionDrafter",
+        debriefer_agent_id=uuid4(),
+        terminal_event=terminal,
+        occurred_at=_NOW,
+        command_name=_COMMAND_NAME,
+    )
+
+    assert success is False
+    assert winner == legacy_winner_id
 
 
 @pytest.mark.unit
@@ -571,6 +733,7 @@ async def test_attempt_debrief_lease_skips_malformed_lease_payload_missing_winne
     success, winner = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=agent_id,
         terminal_event=terminal,
         occurred_at=_NOW,
@@ -603,6 +766,7 @@ async def test_attempt_debrief_lease_emits_acquired_log_on_clean_append() -> Non
         await attempt_debrief_lease(
             store,
             run_id=run_id,
+            debriefer_kind=_KIND,
             debriefer_agent_id=agent_id,
             terminal_event=terminal,
             occurred_at=_NOW,
@@ -633,6 +797,7 @@ async def test_attempt_debrief_lease_emits_same_agent_replay_log_on_own_prior_le
     await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=agent_id,
         terminal_event=terminal,
         occurred_at=_NOW,
@@ -643,6 +808,7 @@ async def test_attempt_debrief_lease_emits_same_agent_replay_log_on_own_prior_le
         await attempt_debrief_lease(
             store,
             run_id=run_id,
+            debriefer_kind=_KIND,
             debriefer_agent_id=agent_id,
             terminal_event=terminal,
             occurred_at=_NOW,
@@ -670,6 +836,7 @@ async def test_attempt_debrief_lease_emits_lost_log_with_winner_on_cross_agent_l
     await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=_KIND,
         debriefer_agent_id=winner_id,
         terminal_event=terminal,
         occurred_at=_NOW,
@@ -680,6 +847,7 @@ async def test_attempt_debrief_lease_emits_lost_log_with_winner_on_cross_agent_l
         await attempt_debrief_lease(
             store,
             run_id=run_id,
+            debriefer_kind=_KIND,
             debriefer_agent_id=loser_id,
             terminal_event=terminal,
             occurred_at=_NOW,
@@ -689,5 +857,5 @@ async def test_attempt_debrief_lease_emits_lost_log_with_winner_on_cross_agent_l
     lost = [e for e in logs if e.get("event") == "lease.lost"]
     assert len(lost) == 1
     assert lost[0]["winning_agent_id"] == str(winner_id)
-    assert lost[0]["decided_by"] == "initial_scan"
+    assert lost[0]["decided_by"] == "scan"
     assert lost[0]["debriefer_agent_id"] == str(loser_id)
