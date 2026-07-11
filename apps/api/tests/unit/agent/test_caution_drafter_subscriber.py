@@ -67,8 +67,8 @@ from tests.unit.agent._helpers import (
     Ed25519FakeSigner,
     FakeInferenceRecorder,
     FakeSpendLookup,
-    seed_defined_agent,
     seed_suspended_agent,
+    seed_versioned_agent,
 )
 
 _NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
@@ -471,6 +471,7 @@ async def test_apply_skips_entirely_when_agent_suspended() -> None:
     await subscriber.apply(event, conn=None)
 
     assert await load_decision(store, _derive_decision_id(event.event_id)) is None
+    assert llm.received == []
 
 
 @pytest.mark.unit
@@ -481,13 +482,15 @@ async def test_apply_defers_noaction_when_monthly_usd_cap_exhausted() -> None:
     llm = FakeLLM(responses=[_CANNED_NO_ACTION])
     recorder = FakeInferenceRecorder()
     await _seed_caution_drafter_actor(store)
-    await seed_defined_agent(
+    await seed_versioned_agent(
         store,
         agent_id=CAUTION_DRAFTER_AGENT_ID,
         genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
         correlation_id=_CORRELATION_ID,
         principal_id=_PRINCIPAL_ID,
-        occurred_at=_NOW,
+        defined_at=_NOW,
+        versioned_at=_NOW,
         monthly_usd_cap=120.0,
     )
     await _seed_plan(store)
@@ -508,6 +511,39 @@ async def test_apply_defers_noaction_when_monthly_usd_cap_exhausted() -> None:
     assert decision.inputs["failure_error_class"] == "AgentBudgetExhausted"
     assert decision.inputs["budget_cap_kind"] == "monthly_usd_cap"
     assert recorder.calls == []
+    assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_apply_proceeds_normally_when_spend_is_under_cap() -> None:
+    """A declared budget with headroom never interferes with the
+    draft: the gate is invisible until a cap is exhausted."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        monthly_usd_cap=500.0,
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, spend_lookup=FakeSpendLookup(usd_spent=1.0))
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert len(llm.received) == 1
+    assert "failure_error_class" not in (decision.inputs or {})
 
 
 class _RaisingLLM:
@@ -957,6 +993,9 @@ def test_make_caution_drafter_subscriber_constructs_when_llm_is_set() -> None:
     deps = build_deps(llm=FakeLLM())
     subscriber = make_caution_drafter_subscriber(deps)
     assert isinstance(subscriber, CautionDrafterSubscriber)
+    # The budget gate silently disables if the factory drops this wiring
+    # (the constructor default is the permissive AlwaysZeroSpendLookup).
+    assert subscriber.spend_lookup is deps.spend_lookup
 
 
 # ---------- Signer wiring ----------

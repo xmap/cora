@@ -25,6 +25,12 @@ tokens; see the SpendLookup port docstring), so the gate errs
 PERMISSIVE. A cap of exactly zero refuses every call: the `AgentBudget`
 value object already documents zero as recorded no-spend intent, and
 the gate is what makes that intent real.
+
+A SpendLookup ERROR, by contrast, propagates: the subscriber's apply
+raises, the projection worker's retry loop with backoff is the failure
+handler, and the bookmark does not advance. The gate never fails OPEN
+on a lookup error; wrapping it in a permissive except would let a
+database outage disable enforcement silently.
 """
 
 from dataclasses import dataclass

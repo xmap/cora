@@ -109,11 +109,12 @@ class ReasoningEntryRequest(BaseModel):
         max_length=16,
         description="OTel gen_ai.response.finish_reasons (multiple stops possible).",
     )
-    input_tokens: int | None = Field(default=None, ge=0)
-    output_tokens: int | None = Field(default=None, ge=0)
+    input_tokens: int | None = Field(default=None, ge=0, le=1_000_000_000)
+    output_tokens: int | None = Field(default=None, ge=0, le=1_000_000_000)
     cost_usd: float | None = Field(
         default=None,
         ge=0.0,
+        allow_inf_nan=False,
         description=(
             "Actual call cost in USD computed from usage tokens and provider "
             "pricing (CORA custom; no OTel attribute exists for call cost)."

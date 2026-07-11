@@ -29,14 +29,22 @@ back to the test that wrote it.
 
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import asyncpg
 
+from cora.agent.aggregates.agent import (
+    AgentStatus,
+    AgentVersioned,
+    load_agent,
+)
+from cora.agent.aggregates.agent import event_type_name as agent_event_type_name
+from cora.agent.aggregates.agent import to_payload as agent_to_payload
 from cora.infrastructure.adapters.in_memory_facility_lookup import InMemoryFacilityLookup
 from cora.infrastructure.adapters.postgres_profile_store import PostgresProfileStore
 from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_postgres_kernel
+from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import (
     LLM,
@@ -383,3 +391,46 @@ __all__ = [
     "seed_capability_postgres",
     "seed_run_upstream_chain_postgres",
 ]
+
+
+async def promote_seeded_agent(
+    deps: Kernel,
+    agent_id: UUID,
+    *,
+    principal_id: UUID,
+    correlation_id: UUID,
+    occurred_at: datetime,
+) -> None:
+    """Promote a seeded Defined fleet Agent to Versioned.
+
+    The subscribers' lifecycle gate fires on Versioned only (Defined
+    means "registered as config, NOT yet ready for invocation"), so
+    integration tests that exercise a subscriber end-to-end must mirror
+    the production bootstrap-then-promote ceremony after seeding.
+    Direct event append rather than the version_agent handler so pinned
+    FixedIdGenerator queues in scenario tests stay undisturbed.
+    Idempotent: an Agent already past Defined is left untouched.
+    """
+    agent = await load_agent(deps.event_store, agent_id)
+    if agent is None or agent.status is not AgentStatus.DEFINED:
+        return
+    versioned = AgentVersioned(
+        agent_id=agent_id, version=agent.version.value, occurred_at=occurred_at
+    )
+    await deps.event_store.append(
+        stream_type="Agent",
+        stream_id=agent_id,
+        expected_version=1,
+        events=[
+            to_new_event(
+                event_type=agent_event_type_name(versioned),
+                payload=agent_to_payload(versioned),
+                occurred_at=occurred_at,
+                event_id=uuid4(),
+                command_name="VersionAgent",
+                correlation_id=correlation_id,
+                causation_id=None,
+                principal_id=principal_id,
+            )
+        ],
+    )

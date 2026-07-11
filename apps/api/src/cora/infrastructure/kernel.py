@@ -157,9 +157,10 @@ class Kernel:
     See [[project_supply_preflight_gate_design]].
 
     `spend_lookup`: cross-BC port consumed by the budget gate at the
-    LLM producers' seams (RunDebriefer / CautionDrafter / regenerate;
-    the Operation BC steering brain at Tier 1.5) to sum an agent's
-    recorded spend in a cap window before permitting the next call.
+    LLM subscribers' seams (RunDebriefer / CautionDrafter) to sum an
+    agent's recorded spend in a cap window before permitting the next
+    call. Planned consumers, not wired today: the regenerate slice and
+    the Operation BC steering brain at the per-call pre-estimate tier.
     Decision BC ships `PostgresSpendLookup` as the production adapter
     (sums `entries_decision_inferences`). Test environments default
     to `AlwaysZeroSpendLookup` (nothing spent) so a declared cap

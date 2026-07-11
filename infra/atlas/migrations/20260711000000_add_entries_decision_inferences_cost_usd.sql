@@ -15,9 +15,18 @@
 -- and the spend lookup COALESCEs NULL to 0 so pre-migration history never
 -- inflates a balance. DOUBLE PRECISION matches the float the producer computes;
 -- sub-cent drift is irrelevant at cap granularity (caps are whole dollars).
--- No index: the spend lookup filters on agent_id + occurred_at, served by the
--- existing entries_decision_inferences indexes; add a covering index only if
--- the gate's read shows up in p95 (deferred-with-trigger).
+-- The CHECK rejects negative cost (would under-report spend and let the gate
+-- permit what it should refuse), NaN (PG sorts NaN above infinity, so the
+-- range check excludes it), and infinity (one +inf row would poison every
+-- window's SUM unclearably). NULL passes the CHECK by SQL semantics, which is
+-- exactly the legacy-row behavior wanted.
+-- No index: the spend lookup filters on agent_id + occurred_at; no existing
+-- index leads with agent_id, so the gate's SUM is a sequential scan of the
+-- append-only table, fine at pilot scale. Escalation ladder when the read
+-- shows up in p95: an (agent_id, occurred_at) index first, a proj_agent_spend
+-- read model second (deferred-with-trigger).
 
 ALTER TABLE entries_decision_inferences
-    ADD COLUMN cost_usd DOUBLE PRECISION;
+    ADD COLUMN cost_usd DOUBLE PRECISION
+        CONSTRAINT entries_decision_inferences_cost_usd_range
+        CHECK (cost_usd >= 0 AND cost_usd < 'infinity'::float8);

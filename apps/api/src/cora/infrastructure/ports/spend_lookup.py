@@ -1,11 +1,13 @@
 """SpendLookup port: cross-BC query for an agent's recorded LLM spend.
 
-Consumed by the Agent BC's LLM producers (RunDebriefer, CautionDrafter,
-the regenerate slice) and the Operation BC's steering brain to gate an
-LLM call on the caller's declared `AgentBudget` caps: the gate sums what
-the agent has already spent in the cap's window and refuses the next
-call once a cap is breached (coarse post-hoc enforcement; see the
-enforcement-tier ladder in the facility-LLM-budget design).
+Consumed by the Agent BC's LLM subscribers (RunDebriefer,
+CautionDrafter) to gate an LLM call on the caller's declared
+`AgentBudget` caps: the gate sums what the agent has already spent in
+the cap's window and refuses the next call once a cap is breached
+(coarse post-hoc enforcement per the tier ladder in
+[[project_budget_bc_research]]). Planned consumers, not wired today:
+the operator-triggered regenerate slice, and the Operation BC steering
+brain at the per-call pre-estimate tier.
 
 ## Convention
 
@@ -28,6 +30,17 @@ the adapter means a future award-window allocation (activation and
 expiry bound to run lifecycle events rather than the calendar) is a
 consumer-side change only.
 
+## Trust boundary (known limitation, follow-up owed)
+
+The ledger trusts every AppendInferences-authorized producer: entry
+rows carry a producer-supplied `agent_id` that is NOT bound to the
+calling principal, so a hostile or buggy authorized producer could
+inflate another agent's recorded spend and deny it service (inflation
+only; overspend cannot be manufactured this way). Under a real Trust
+policy the AppendInferences grant is the control. Binding `agent_id`
+to the calling principal (or persisting the envelope principal on the
+row and summing self-reported rows only) is the recorded follow-up.
+
 ## Known undercount (accepted for the coarse tier)
 
 Rows with `cost_usd IS NULL` (pre-migration history) sum as $0, and
@@ -35,7 +48,7 @@ cache-read/cache-write tokens are not persisted on the entry, so
 `tokens_spent` counts input + output only. Both make the gate slightly
 PERMISSIVE, never spuriously blocking, which is the right failure
 direction for a coarse post-hoc tier. The leak-free reserve-post-void
-tier owns exactness (deferred; see the Budget BC research memo).
+tier owns exactness (deferred; see [[project_budget_bc_research]]).
 """
 
 from dataclasses import dataclass

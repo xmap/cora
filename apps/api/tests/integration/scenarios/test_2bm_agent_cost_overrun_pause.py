@@ -196,8 +196,9 @@ async def test_agent_cost_overrun_pause_plays_out_end_to_end(
     assert versioned.status is AgentStatus.VERSIONED
 
     # ----- Initial budget envelope -----
-    # Operator declares the initial spend ceiling. Declaration-only;
-    # enforcement deferred to the Budget BC.
+    # Operator declares the initial spend ceiling; the subscribers'
+    # coarse post-hoc gate (cora.agent._budget_gate) enforces it
+    # against recorded spend at each LLM seam.
 
     await bind_update_budget(deps)(
         UpdateAgentBudget(

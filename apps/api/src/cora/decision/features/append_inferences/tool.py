@@ -104,13 +104,14 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             list[str] | None,
             Field(default=None, max_length=16),
         ] = None,
-        input_tokens: Annotated[int | None, Field(default=None, ge=0)] = None,
-        output_tokens: Annotated[int | None, Field(default=None, ge=0)] = None,
+        input_tokens: Annotated[int | None, Field(default=None, ge=0, le=1_000_000_000)] = None,
+        output_tokens: Annotated[int | None, Field(default=None, ge=0, le=1_000_000_000)] = None,
         cost_usd: Annotated[
             float | None,
             Field(
                 default=None,
                 ge=0.0,
+                allow_inf_nan=False,
                 description=(
                     "Actual call cost in USD computed from usage tokens and "
                     "provider pricing (CORA custom; no OTel attribute exists "

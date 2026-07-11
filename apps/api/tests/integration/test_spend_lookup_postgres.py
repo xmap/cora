@@ -66,16 +66,20 @@ def _row(
 @pytest.mark.integration
 async def test_sums_only_the_agents_rows_inside_the_window(db_pool: asyncpg.Pool) -> None:
     """usd/tokens/count sum the target agent's in-window rows; another
-    agent's rows and out-of-window rows are excluded; the window is
-    half-open (a row exactly at window_end does not count)."""
+    agent's rows, agentless rows, and out-of-window rows are excluded;
+    the window is half-open (a row exactly at window_start counts, a
+    row exactly at window_end does not)."""
     store = PostgresInferenceStore(db_pool)
     in_window = datetime(2026, 7, 10, tzinfo=UTC)
     await store.append(
         [
             _row(agent_id=_AGENT_ID, occurred_at=in_window, cost_usd=0.002),
             _row(agent_id=_AGENT_ID, occurred_at=in_window, cost_usd=0.003),
-            # Excluded: other agent, before start, exactly at end (half-open).
+            _row(agent_id=_AGENT_ID, occurred_at=_WINDOW_START, cost_usd=0.001),
+            # Excluded: other agent, agentless (operator-attributed row),
+            # before start, exactly at end (half-open).
             _row(agent_id=_OTHER_AGENT_ID, occurred_at=in_window, cost_usd=5.0),
+            _row(agent_id=None, occurred_at=in_window, cost_usd=3.0),
             _row(agent_id=_AGENT_ID, occurred_at=datetime(2026, 6, 30, tzinfo=UTC), cost_usd=7.0),
             _row(agent_id=_AGENT_ID, occurred_at=_WINDOW_END, cost_usd=9.0),
         ]
@@ -88,9 +92,9 @@ async def test_sums_only_the_agents_rows_inside_the_window(db_pool: asyncpg.Pool
     )
 
     assert result.agent_id == _AGENT_ID
-    assert result.usd_spent == pytest.approx(0.005)
-    assert result.tokens_spent == 300  # 2 rows x (100 in + 50 out)
-    assert result.call_count == 2
+    assert result.usd_spent == pytest.approx(0.006)
+    assert result.tokens_spent == 450  # 3 rows x (100 in + 50 out)
+    assert result.call_count == 3
 
 
 @pytest.mark.integration

@@ -681,7 +681,7 @@
         "type": "object"
       },
       "AgentStatus": {
-        "description": "The Agent's lifecycle state.\n\nFour values:\n\n  - `Defined`    -- registered as config; NOT yet ready for\n                    invocation (8f-b's subscriber filters on\n                    Versioned only).\n  - `Versioned`  -- promoted to ready-for-invocation; rainbow-\n                    deploy-style signal. Multiple Versioned\n                    Agents may exist concurrently (different\n                    `id`s sharing `kind`).\n  - `Suspended`  -- non-terminal operator-pause from\n                    `Versioned`. Returns to\n                    `Versioned` via `resume_agent`. Config\n                    changes (tools, budget) still permitted so\n                    the operator can fix permissions while\n                    paused. Cannot re-Version from Suspended\n                    (resume is its own dedicated verb).\n  - `Deprecated` -- terminal; cannot be re-Defined or re-\n                    Versioned. Future invocations must pick a\n                    non-Deprecated Agent of the same kind.\n                    Reachable from `Defined`, `Versioned`, or\n                    `Suspended`.",
+        "description": "The Agent's lifecycle state.\n\nFour values:\n\n  - `Defined`    -- registered as config; NOT yet ready for\n                    invocation (the LLM subscribers' lifecycle\n                    gate fires on Versioned only).\n  - `Versioned`  -- promoted to ready-for-invocation; rainbow-\n                    deploy-style signal. Multiple Versioned\n                    Agents may exist concurrently (different\n                    `id`s sharing `kind`).\n  - `Suspended`  -- non-terminal operator-pause from\n                    `Versioned`. Returns to\n                    `Versioned` via `resume_agent`. Config\n                    changes (tools, budget) still permitted so\n                    the operator can fix permissions while\n                    paused. Cannot re-Version from Suspended\n                    (resume is its own dedicated verb).\n  - `Deprecated` -- terminal; cannot be re-Defined or re-\n                    Versioned. Future invocations must pick a\n                    non-Deprecated Agent of the same kind.\n                    Reachable from `Defined`, `Versioned`, or\n                    `Suspended`.",
         "enum": [
           "Defined",
           "Versioned",
@@ -10824,6 +10824,7 @@
           "input_tokens": {
             "anyOf": [
               {
+                "maximum": 1000000000.0,
                 "minimum": 0.0,
                 "type": "integer"
               },
@@ -10862,6 +10863,7 @@
           "output_tokens": {
             "anyOf": [
               {
+                "maximum": 1000000000.0,
                 "minimum": 0.0,
                 "type": "integer"
               },

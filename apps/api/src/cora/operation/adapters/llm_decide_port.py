@@ -1,5 +1,14 @@
 """LlmDecidePort: an LLM steering brain behind the `DecidePort` seam.
 
+BUDGET NOTE: this is the one autonomous LLM caller with NO budget gate
+and NO durable spend record today. Its calls reach only the OTel cost
+histogram (via the adapter), never `entries_decision_inferences`, so
+the `SpendLookup` ledger cannot see them and `AgentBudget` caps do not
+bind it. The per-call pre-estimate tier plus a durable steering-spend
+record are the deferred follow-up (see [[project_budget_bc_research]]);
+until then the conduct loop's own iteration and wall-clock bounds are
+the only spend limiters on this path.
+
 The DECIDE-axis analogue of the LLM agents in the Agent BC, but homed in
 the Operation BC because it implements `DecidePort` (which lives here) and
 consumes only the `LLM` port and `cora.shared` steering value types, never

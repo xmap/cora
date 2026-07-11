@@ -149,6 +149,22 @@ async def test_monthly_breach_wins_when_both_caps_are_exhausted() -> None:
 
 
 @pytest.mark.unit
+async def test_daily_breach_detected_when_monthly_cap_has_headroom() -> None:
+    """The daily check must run even after a PASSING monthly check;
+    an early return after monthly headroom would silently disable
+    the token cap."""
+    store = InMemoryEventStore()
+    agent = await _agent_with_caps(store, monthly_usd_cap=500.0, daily_token_cap=100)
+    lookup = FakeSpendLookup(usd_spent=1.0, tokens_spent=101)
+
+    breach = await find_budget_breach(agent=agent, spend_lookup=lookup, as_of=_NOW)
+
+    assert breach is not None
+    assert breach.cap_kind == "daily_token_cap"
+    assert len(lookup.windows) == 2
+
+
+@pytest.mark.unit
 async def test_zero_cap_refuses_every_call() -> None:
     """AgentBudget documents a zero cap as recorded no-spend intent;
     the gate is what makes that intent real (0 spent >= 0 cap)."""

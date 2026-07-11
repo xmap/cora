@@ -38,7 +38,7 @@ def test_compute_cost_for_known_model() -> None:
 @pytest.mark.unit
 def test_compute_cost_sums_all_four_token_types() -> None:
     """100k input + 50k output + 200k cache_create + 1M cache_read on Haiku 4.5:
-    100k*$1 + 50k*$5 + 200k*$1.25 + 1M*$0.10, scaled per MTok."""
+    100k*$1 + 50k*$5 + 200k*$2 (1h-TTL write tier) + 1M*$0.10, per MTok."""
     cost = compute_cost_usd(
         ModelRef(provider="anthropic", model="claude-haiku-4-5"),
         LLMUsage(
@@ -48,7 +48,7 @@ def test_compute_cost_sums_all_four_token_types() -> None:
             cache_read_input_tokens=1_000_000,
         ),
     )
-    expected = 0.1 + 0.25 + 0.25 + 0.10
+    expected = 0.1 + 0.25 + 0.40 + 0.10
     assert cost == pytest.approx(expected)
 
 
@@ -78,12 +78,30 @@ def test_pricing_table_covers_all_documented_models() -> None:
         ("anthropic", "claude-opus-4-8"),
         ("anthropic", "claude-opus-4-7"),
         ("anthropic", "claude-sonnet-4-6"),
-        # The conduct-loop steering brain's default (DEFAULT_LLM_DECIDE_MODEL);
-        # unpriced it would meter the most autonomous spender at $0.
         ("anthropic", "claude-sonnet-4-5"),
         ("anthropic", "claude-haiku-4-5"),
     }
     assert expected.issubset(set(PRICING))
+
+
+@pytest.mark.unit
+def test_pricing_table_covers_every_fleet_default_model() -> None:
+    """The fleet's ACTUAL default ModelRef constants must be priced,
+    derived from the constants themselves so a default-model bump to
+    an unpriced model fails here instead of silently metering $0.
+    cost_usd is enforcement-load-bearing: an unpriced default makes
+    the monthly USD gate permanently permissive."""
+    from cora.agent.prompts.caution_drafter import DEFAULT_CAUTION_DRAFTER_MODEL
+    from cora.agent.prompts.run_debrief import DEFAULT_RUN_DEBRIEF_MODEL
+    from cora.operation.adapters._llm_decide_prompt import DEFAULT_LLM_DECIDE_MODEL
+
+    for default in (
+        DEFAULT_RUN_DEBRIEF_MODEL,
+        DEFAULT_CAUTION_DRAFTER_MODEL,
+        DEFAULT_LLM_DECIDE_MODEL,
+    ):
+        key = (default.provider, default.model)
+        assert key in PRICING, f"fleet default {key} has no PRICING entry"
 
 
 @pytest.mark.unit

@@ -276,16 +276,17 @@ class CautionDrafterSubscriber:
             )
             return
 
-        # Reversible-suspension gate (mirrors RunDebriefer): a Suspended
-        # agent takes no actions, LLM calls and Decision writes included.
-        # The Agent fold also carries the declared budget the post-lease
-        # gate below reads.
+        # Lifecycle gate (mirrors RunDebriefer): only a Versioned agent
+        # acts; Suspended, Deprecated, and not-yet-promoted Defined all
+        # skip. A missing Agent stream stays permissive. The Agent fold
+        # also carries the declared budget the post-lease gate reads.
         agent = await load_agent(self.event_store, CAUTION_DRAFTER_AGENT_ID)
-        if agent is not None and agent.status is AgentStatus.SUSPENDED:
+        if agent is not None and agent.status is not AgentStatus.VERSIONED:
             log.warning(
-                "caution_drafter.skip.agent_suspended",
+                "caution_drafter.skip.agent_not_versioned",
                 agent_id=str(CAUTION_DRAFTER_AGENT_ID),
                 agent_name=CAUTION_DRAFTER_AGENT_NAME,
+                agent_status=str(agent.status),
             )
             return
 

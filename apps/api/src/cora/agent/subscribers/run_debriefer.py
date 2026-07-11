@@ -377,18 +377,22 @@ class RunDebrieferSubscriber:
             )
             return
 
-        # Reversible-suspension gate: a Suspended agent takes no actions,
-        # LLM calls and Decision writes included. Mirrors the deactivated-
-        # actor skip above (per-apply check, so resume restores behavior
-        # for the NEXT terminal event; skipped work items are not
-        # replayed). The Agent fold also carries the declared budget the
-        # post-lease gate below reads.
+        # Lifecycle gate: only a Versioned agent acts. Suspended (the
+        # reversible operator pause) and Deprecated (the terminal retire
+        # verb) both mean no LLM calls and no Decision writes; Defined is
+        # not yet promoted for invocation per the AgentStatus contract.
+        # A missing Agent stream stays permissive (legacy deployments
+        # seeded only the Actor). Per-apply check, so resume restores
+        # behavior for the NEXT terminal event; skipped work items are
+        # not replayed. The Agent fold also carries the declared budget
+        # the post-lease gate below reads.
         agent = await load_agent(self.event_store, RUN_DEBRIEFER_AGENT_ID)
-        if agent is not None and agent.status is AgentStatus.SUSPENDED:
+        if agent is not None and agent.status is not AgentStatus.VERSIONED:
             log.warning(
-                "run_debriefer.skip.agent_suspended",
+                "run_debriefer.skip.agent_not_versioned",
                 agent_id=str(RUN_DEBRIEFER_AGENT_ID),
                 agent_name=RUN_DEBRIEFER_AGENT_NAME,
+                agent_status=str(agent.status),
             )
             return
 

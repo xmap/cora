@@ -175,6 +175,8 @@ async def seed_versioned_agent(
     principal_id: UUID,
     defined_at: datetime,
     versioned_at: datetime,
+    monthly_usd_cap: float | None = None,
+    daily_token_cap: int | None = None,
 ) -> None:
     """Seed Defined then Versioned, leaving the Agent at stream version 2."""
     await seed_defined_agent(
@@ -184,6 +186,8 @@ async def seed_versioned_agent(
         correlation_id=correlation_id,
         principal_id=principal_id,
         occurred_at=defined_at,
+        monthly_usd_cap=monthly_usd_cap,
+        daily_token_cap=daily_token_cap,
     )
     versioned = AgentVersioned(agent_id=agent_id, version="v1", occurred_at=versioned_at)
     await store.append(

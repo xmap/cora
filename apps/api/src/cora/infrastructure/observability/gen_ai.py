@@ -78,9 +78,10 @@ class ModelPricing:
     """Per-million-token USD prices for one LLM model.
 
     `cache_write_per_mtok` is the price of bytes WRITTEN to the
-    Anthropic prompt cache (usually higher than base input because
-    of the 1-hour TTL overhead). `cache_read_per_mtok` is the price
-    of bytes READ from cache (usually ~10% of base input).
+    Anthropic prompt cache at the TTL tier the producers use (2x base
+    input for the 1-hour TTL; 1.25x for the 5-minute tier).
+    `cache_read_per_mtok` is the price of bytes READ from cache
+    (usually ~10% of base input).
 
     Providers that don't expose cache pricing (or that don't support
     caching) set both cache fields equal to `input_per_mtok` so the
@@ -94,37 +95,40 @@ class ModelPricing:
 
 
 PRICING: dict[tuple[str, str], ModelPricing] = {
-    # Anthropic public pricing (Jul 2026; 1h-TTL cache write tier).
-    # Update when Anthropic publishes a new model or revises prices.
+    # Anthropic public pricing (Jul 2026). Cache writes are priced at
+    # the 1-HOUR TTL tier (2x base input), because that is the TTL the
+    # producers pin on their cache breakpoints; the 5-minute tier would
+    # be 1.25x. If a producer ever drops to 5m TTL, model per-TTL write
+    # prices instead of repricing the table.
     # Opus dropped to $5/$25 per MTok with the 4.7/4.8 generation.
     ("anthropic", "claude-opus-4-8"): ModelPricing(
         input_per_mtok=5.00,
         output_per_mtok=25.00,
-        cache_write_per_mtok=6.25,
+        cache_write_per_mtok=10.00,
         cache_read_per_mtok=0.50,
     ),
     ("anthropic", "claude-opus-4-7"): ModelPricing(
         input_per_mtok=5.00,
         output_per_mtok=25.00,
-        cache_write_per_mtok=6.25,
+        cache_write_per_mtok=10.00,
         cache_read_per_mtok=0.50,
     ),
     ("anthropic", "claude-sonnet-4-5"): ModelPricing(
         input_per_mtok=3.00,
         output_per_mtok=15.00,
-        cache_write_per_mtok=3.75,
+        cache_write_per_mtok=6.00,
         cache_read_per_mtok=0.30,
     ),
     ("anthropic", "claude-sonnet-4-6"): ModelPricing(
         input_per_mtok=3.00,
         output_per_mtok=15.00,
-        cache_write_per_mtok=3.75,
+        cache_write_per_mtok=6.00,
         cache_read_per_mtok=0.30,
     ),
     ("anthropic", "claude-haiku-4-5"): ModelPricing(
         input_per_mtok=1.00,
         output_per_mtok=5.00,
-        cache_write_per_mtok=1.25,
+        cache_write_per_mtok=2.00,
         cache_read_per_mtok=0.10,
     ),
 }
@@ -157,7 +161,8 @@ def compute_cost_usd(model_ref: ModelRef, usage: LLMUsage) -> float:
     `PRICING` entry when they see the warning.
 
     Cache-read tokens are billed at ~10% of base input; cache-write
-    tokens are billed at ~125% of base input (1h tier). Plain input
+    tokens are billed at 2x base input (the 1-hour TTL tier the
+    producers pin; the 5-minute tier would be 1.25x). Plain input
     tokens (`usage.input_tokens` minus cache hits/misses) are billed
     at base. The Anthropic SDK reports `input_tokens` exclusive of
     cache tokens, so the three add up to the actual chargeable input.

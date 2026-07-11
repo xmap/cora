@@ -126,6 +126,7 @@ from cora.subject.features.mount_subject import bind as bind_mount_subject
 from tests.integration._helpers import (
     build_postgres_deps,
     make_pg_profile_store,
+    promote_seeded_agent,
     seed_capability_postgres,
 )
 from tests.integration.scenarios._beamtime_fixture import (
@@ -423,6 +424,13 @@ async def test_run_debrief_agent_fires_on_equipment_abort(
     # ----- Agent fires on terminal RunAborted; emits EquipmentAbort -----
 
     await seed_run_debriefer_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        RUN_DEBRIEFER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
 
     run_events, _run_version = await deps.event_store.load("Run", _RUN_ID)
     terminal_events = [e for e in run_events if e.event_type == "RunAborted"]

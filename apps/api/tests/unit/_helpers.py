@@ -60,6 +60,7 @@ from cora.infrastructure.ports import (
     FixedIdGenerator,
     ProfileStore,
     RoleLookup,
+    SpendLookup,
 )
 from cora.recipe.aggregates.capability import (
     CapabilityCode,
@@ -131,6 +132,7 @@ def build_deps(
     family_lookup: FamilyLookup | None = None,
     assembly_lookup: AssemblyLookup | None = None,
     role_lookup: RoleLookup | None = None,
+    spend_lookup: SpendLookup | None = None,
 ) -> Kernel:
     """Build a Kernel for unit-test handler invocation.
 
@@ -229,6 +231,7 @@ def build_deps(
         publish_port=InMemoryPublishPort(),
         signature_port=InMemorySignaturePort(),
         permit_lookup=InMemoryPermitLookup(),
+        spend_lookup=spend_lookup,
     )
 
 
