@@ -147,7 +147,11 @@ from cora.agent.prompts import (
     RunDebriefPayload,
     build_run_debrief_chat_request,
 )
-from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID, RUN_DEBRIEFER_AGENT_NAME
+from cora.agent.seed import (
+    RUN_DEBRIEFER_AGENT_ID,
+    RUN_DEBRIEFER_AGENT_KIND,
+    RUN_DEBRIEFER_AGENT_NAME,
+)
 from cora.agent.subscribers._terminal_run_helpers import (
     extract_interrupted_at,
     extract_reason,
@@ -396,17 +400,20 @@ class RunDebrieferSubscriber:
             )
             return
 
-        # Cross-agent lease (per [[project-run-debriefer-lease-design]]):
+        # Same-kind lease (per [[project-run-debriefer-lease-design]]):
         # append a DecisionDebriefRequested marker to the Run stream
         # BEFORE the LLM call so a losing agent pays zero LLM cost. The
         # first writer wins via the existing UNIQUE(stream_type,
-        # stream_id, version) primitive; losing agents see the winner
-        # via the helper's re-load + emit a DebriefConflicted Decision
-        # on their own Decision stream for audit visibility.
+        # stream_id, version) primitive; a losing RunDebriefer VARIANT
+        # (rainbow-deploy sibling sharing this kind) sees the winner
+        # via the helper's re-load + emits a DebriefConflicted Decision
+        # on its own Decision stream for audit visibility. Other kinds
+        # (CautionDrafter) hold independent leases and never contend.
         lease_acquired, winning_agent_id = await attempt_debrief_lease(
             self.event_store,
             run_id=run_id,
             debriefer_agent_id=RUN_DEBRIEFER_AGENT_ID,
+            debriefer_kind=RUN_DEBRIEFER_AGENT_KIND,
             terminal_event=event,
             occurred_at=event.occurred_at,
             command_name=_COMMAND_NAME,

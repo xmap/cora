@@ -292,6 +292,15 @@ class DecisionDebriefRequested:
     same agent's retries are idempotent (re-append fails on event_id
     UNIQUE) but different agents compete on stream version.
 
+    Contention is scoped by `debriefer_kind` (the Agent aggregate's
+    `kind`): only agents doing the SAME JOB compete (rainbow-deploy
+    variants of one debriefer, per the design memo's multi-agent
+    pollution scenario). Distinct kinds (RunDebriefer vs
+    CautionDrafter) hold independent leases for the same terminal
+    event and both write their own Decisions. `None` only on
+    pre-scoping markers, which contend with every kind (legacy
+    wildcard).
+
     Audit-only on the Run aggregate: the evolver returns prior state
     unchanged. The lease's existence on the stream IS the lease. See
     [[project-run-debriefer-lease-design]] for the full design and
@@ -303,6 +312,7 @@ class DecisionDebriefRequested:
     debriefer_agent_id: UUID
     terminal_event_id: UUID
     occurred_at: datetime
+    debriefer_kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -833,12 +843,14 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             debriefer_agent_id=debriefer_agent_id,
             terminal_event_id=terminal_event_id,
             occurred_at=occurred_at,
+            debriefer_kind=debriefer_kind,
         ):
             return {
                 "run_id": str(run_id),
                 "debriefer_agent_id": str(debriefer_agent_id),
                 "terminal_event_id": str(terminal_event_id),
                 "occurred_at": occurred_at.isoformat(),
+                "debriefer_kind": debriefer_kind,
             }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
@@ -1072,6 +1084,7 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                     debriefer_agent_id=UUID(payload["debriefer_agent_id"]),
                     terminal_event_id=UUID(payload["terminal_event_id"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    debriefer_kind=payload.get("debriefer_kind"),
                 ),
             )
         case _:

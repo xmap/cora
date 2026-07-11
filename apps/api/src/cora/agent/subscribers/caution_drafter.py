@@ -92,6 +92,7 @@ from cora.agent.prompts import (
 )
 from cora.agent.seed_caution_drafter import (
     CAUTION_DRAFTER_AGENT_ID,
+    CAUTION_DRAFTER_AGENT_KIND,
     CAUTION_DRAFTER_AGENT_NAME,
 )
 from cora.agent.subscribers._terminal_run_helpers import (
@@ -290,18 +291,18 @@ class CautionDrafterSubscriber:
             )
             return
 
-        # Cross-agent lease (per [[project-run-debriefer-lease-design]];
+        # Same-kind lease (per [[project-run-debriefer-lease-design]];
         # mirrors RunDebriefer's gate verbatim). Reserved for future
         # multi-instance CautionDrafter variants (e.g., different LLM
-        # backends). The lease event_id includes CAUTION_DRAFTER_AGENT_ID
-        # in the uuid5 seed so the marker is independent of any
-        # RunDebriefer lease for the same terminal event; the two
-        # agents are intentionally distinct and both write their own
-        # Decisions.
+        # backends). Contention is scoped by debriefer_kind, so this
+        # lease is independent of any RunDebriefer lease for the same
+        # terminal event: the two agents do different jobs and both
+        # write their own Decisions.
         lease_acquired, winning_agent_id = await attempt_debrief_lease(
             self.event_store,
             run_id=run_id,
             debriefer_agent_id=CAUTION_DRAFTER_AGENT_ID,
+            debriefer_kind=CAUTION_DRAFTER_AGENT_KIND,
             terminal_event=event,
             occurred_at=event.occurred_at,
             command_name=_COMMAND_NAME,

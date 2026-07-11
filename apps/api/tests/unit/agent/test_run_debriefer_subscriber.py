@@ -26,6 +26,7 @@ from cora.agent.aggregates.agent import event_type_name as agent_event_type_name
 from cora.agent.aggregates.agent import to_payload as agent_to_payload
 from cora.agent.seed import (
     RUN_DEBRIEFER_AGENT_ID,
+    RUN_DEBRIEFER_AGENT_KIND,
     RUN_DEBRIEFER_AGENT_NAME,
 )
 from cora.agent.subscribers._terminal_run_helpers import (
@@ -1383,10 +1384,11 @@ async def test_apply_appends_lease_event_to_run_stream_on_happy_path() -> None:
 
 @pytest.mark.unit
 async def test_apply_writes_debrief_conflicted_when_another_agent_holds_lease() -> None:
-    """When a different agent already holds the lease (lease event on
-    Run stream by a foreign debriefer_agent_id), the subscriber writes
-    DebriefConflicted on its own Decision stream WITHOUT invoking the
-    LLM. Per the design memo: losing agents pay zero LLM cost."""
+    """When a different agent OF THE SAME KIND (a rainbow-deploy
+    RunDebriefer variant) already holds the lease, the subscriber
+    writes DebriefConflicted on its own Decision stream WITHOUT
+    invoking the LLM. Per the design memo: losing agents pay zero
+    LLM cost."""
     from cora.agent._subscriber_lease import attempt_debrief_lease
 
     store = InMemoryEventStore()
@@ -1401,6 +1403,7 @@ async def test_apply_writes_debrief_conflicted_when_another_agent_holds_lease() 
     pre_acquired, _ = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=RUN_DEBRIEFER_AGENT_KIND,
         debriefer_agent_id=foreign_agent_id,
         terminal_event=event,
         occurred_at=event.occurred_at,
@@ -1445,6 +1448,7 @@ async def test_apply_after_prior_lease_by_same_agent_proceeds_to_llm_and_writes_
     pre_acquired, _ = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=RUN_DEBRIEFER_AGENT_KIND,
         debriefer_agent_id=RUN_DEBRIEFER_AGENT_ID,
         terminal_event=event,
         occurred_at=event.occurred_at,

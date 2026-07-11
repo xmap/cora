@@ -26,6 +26,7 @@ from cora.access.aggregates.actor import event_type_name as actor_event_type_nam
 from cora.access.aggregates.actor import to_payload as actor_to_payload
 from cora.agent.seed_caution_drafter import (
     CAUTION_DRAFTER_AGENT_ID,
+    CAUTION_DRAFTER_AGENT_KIND,
     CAUTION_DRAFTER_AGENT_NAME,
 )
 from cora.agent.subscribers.caution_drafter import (
@@ -1238,6 +1239,7 @@ async def test_apply_writes_caution_draft_conflicted_when_another_agent_holds_le
     pre_acquired, _ = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=CAUTION_DRAFTER_AGENT_KIND,
         debriefer_agent_id=foreign_agent_id,
         terminal_event=event,
         occurred_at=event.occurred_at,
@@ -1411,3 +1413,86 @@ async def test_apply_inference_recorder_failure_does_not_break_decision() -> Non
     decision = await load_decision(store, _derive_decision_id(event.event_id))
     assert decision is not None
     assert decision.choice.value == "ProposeCaution"
+
+
+# ---------------------------------------------------------------------------
+# Coexistence with RunDebriefer on the same terminal event
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+async def test_apply_coexists_with_run_debriefer_on_same_terminal_event() -> None:
+    """The two agents do DIFFERENT jobs (debrief vs caution proposal),
+    so both must act on the same terminal Run event: the debrief lease
+    scopes contention to agents of the same KIND, and a RunDebriefer
+    lease must not push the CautionDrafter into a Conflicted decision
+    (nor vice versa)."""
+    from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID
+    from cora.agent.subscribers.run_debriefer import (
+        RunDebrieferSubscriber,
+    )
+    from cora.agent.subscribers.run_debriefer import (
+        _derive_decision_id as derive_debrief_decision_id,
+    )
+
+    store = InMemoryEventStore()
+    await _seed_caution_drafter_actor(store)
+    debrief_actor = ActorRegistered(
+        actor_id=RUN_DEBRIEFER_AGENT_ID,
+        occurred_at=_NOW,
+        kind=ActorKind.AGENT,
+    )
+    await store.append(
+        stream_type="Actor",
+        stream_id=RUN_DEBRIEFER_AGENT_ID,
+        expected_version=0,
+        events=[
+            to_new_event(
+                event_type=actor_event_type_name(debrief_actor),
+                payload=actor_to_payload(debrief_actor),
+                occurred_at=_NOW,
+                event_id=uuid4(),
+                command_name="SeedTestAgent",
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                principal_id=_PRINCIPAL_ID,
+            )
+        ],
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+
+    canned_debrief = FakeLLMResponse(
+        parsed={
+            "choice": "NominalCompletion",
+            "confidence": 0.92,
+            "reasoning": (
+                "Synopsis: nominal single-Plan Run, completed cleanly. "
+                "What was supposed to happen matches what happened; no "
+                "parameter adjustments; nominal execution throughout."
+            ),
+        },
+        stop_reason="tool_use",
+        model_id="claude-haiku-4-5",
+    )
+    debriefer = RunDebrieferSubscriber(
+        event_store=store,
+        llm=FakeLLM(responses=[canned_debrief]),
+        logbook_mirror=None,
+    )
+    caution_llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    caution = await _build_subscriber(store, caution_llm)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await debriefer.apply(event, conn=None)
+    await caution.apply(event, conn=None)
+
+    debrief_decision = await load_decision(store, derive_debrief_decision_id(event.event_id))
+    assert debrief_decision is not None
+    assert debrief_decision.choice.value == "NominalCompletion"
+
+    caution_decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert caution_decision is not None
+    assert caution_decision.choice.value == "NoAction"
+    assert len(caution_llm.received) == 1
