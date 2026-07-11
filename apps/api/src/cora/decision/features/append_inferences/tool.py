@@ -119,7 +119,19 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                 ),
             ),
         ] = None,
-        agent_id: Annotated[str | None, Field(default=None, max_length=200)] = None,
+        agent_id: Annotated[
+            str | None,
+            Field(
+                default=None,
+                max_length=200,
+                description=(
+                    "OTel gen_ai.agent.id. Principal-bound: when set, it MUST equal "
+                    "the calling principal's id (agent-attributed entries are the "
+                    "spend ledger the AgentBudget gate sums; self-reporting only). "
+                    "Mismatches reject the whole batch with 403."
+                ),
+            ),
+        ] = None,
         agent_name: Annotated[str | None, Field(default=None, max_length=200)] = None,
         agent_description: Annotated[str | None, Field(default=None, max_length=2000)] = None,
         conversation_id: Annotated[str | None, Field(default=None, max_length=200)] = None,

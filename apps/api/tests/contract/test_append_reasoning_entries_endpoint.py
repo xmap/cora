@@ -77,11 +77,17 @@ def test_post_reasoning_entries_handles_dedup_silently_on_retry() -> None:
 
 @pytest.mark.contract
 def test_post_reasoning_entries_accepts_full_otel_field_set() -> None:
-    """Round-trip every documented OTel gen_ai.* field through the API."""
+    """Round-trip every documented OTel gen_ai.* field through the API.
+
+    agent_id is principal-bound (self-reporting only), so the caller
+    identifies itself via X-Principal-Id and attributes the entry to
+    that same id."""
+    producer_id = str(uuid4())
     with TestClient(create_app()) as client:
         decision_id = _seed_decision(client)
         response = client.post(
             f"/decisions/{decision_id}/inferences",
+            headers={"X-Principal-Id": producer_id},
             json={
                 "entries": [
                     _good_entry(
@@ -98,7 +104,7 @@ def test_post_reasoning_entries_accepts_full_otel_field_set() -> None:
                         finish_reasons=["end_turn"],
                         input_tokens=512,
                         output_tokens=256,
-                        agent_id="agent-7e",
+                        agent_id=producer_id,
                         agent_name="ApprovalAgent",
                         agent_description="Reviews recipes",
                         conversation_id="conv-abc",
@@ -195,3 +201,44 @@ def test_post_reasoning_entries_rejects_extra_fields_with_422() -> None:
             json={"entries": [{**_good_entry(), "rogue_field": "boom"}]},
         )
     assert response.status_code == 422
+
+
+# ---------- Agent attribution is principal-bound ----------
+
+
+@pytest.mark.contract
+def test_post_reasoning_entries_rejects_foreign_agent_id_with_403() -> None:
+    """An entry attributing spend to an agent other than the calling
+    principal is refused: the ledger only accepts self-reported
+    agent spend (budget-inflation guard)."""
+    with TestClient(create_app()) as client:
+        decision_id = _seed_decision(client)
+        response = client.post(
+            f"/decisions/{decision_id}/inferences",
+            headers={"X-Principal-Id": str(uuid4())},
+            json={
+                "entries": [
+                    _good_entry(agent_id=str(uuid4()), cost_usd=250.0),
+                ]
+            },
+        )
+    assert response.status_code == 403
+    assert "self-reported" in response.json()["detail"]
+
+
+@pytest.mark.contract
+def test_post_reasoning_entries_accepts_self_reported_agent_id() -> None:
+    producer_id = str(uuid4())
+    with TestClient(create_app()) as client:
+        decision_id = _seed_decision(client)
+        response = client.post(
+            f"/decisions/{decision_id}/inferences",
+            headers={"X-Principal-Id": producer_id},
+            json={
+                "entries": [
+                    _good_entry(agent_id=producer_id, cost_usd=0.002),
+                ]
+            },
+        )
+    assert response.status_code == 200
+    assert response.json() == {"event_count": 1}

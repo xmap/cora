@@ -24,6 +24,7 @@ from cora.decision.aggregates.decision.events import (
     event_type_name,
     to_payload,
 )
+from cora.decision.errors import InferenceAgentMismatchError
 from cora.decision.features import append_inferences
 from cora.decision.features.append_inferences import (
     AppendInferences,
@@ -373,6 +374,84 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
         )
     assert exc_info.value.reason == "denied for test"
     assert inference_store.all() == []
+
+
+# ---------- Agent attribution is principal-bound ----------
+
+
+@pytest.mark.unit
+async def test_handler_rejects_entry_whose_agent_id_is_not_the_principal() -> None:
+    """Spend rows are summed per agent_id by the budget gate, so a
+    producer may only attribute entries to itself. A mismatched
+    agent_id rejects the batch before any write: no logbook open, no
+    stored rows."""
+    event_store = InMemoryEventStore()
+    await _seed_decision(event_store, _DECISION_ID)
+    inference_store = InMemoryInferenceStore()
+    deps = build_deps(ids=[_LOGBOOK_ID, _LOGBOOK_OPEN_EVENT_ID], now=_NOW, event_store=event_store)
+    victim_agent_id = str(uuid4())
+    with pytest.raises(InferenceAgentMismatchError) as exc_info:
+        await append_inferences.bind(deps, inference_store=inference_store)(
+            AppendInferences(
+                decision_id=_DECISION_ID,
+                entries=(_entry(agent_id=victim_agent_id, cost_usd=999.0),),
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc_info.value.entry_agent_id == victim_agent_id
+    assert exc_info.value.principal_id == str(_PRINCIPAL_ID)
+    assert inference_store.all() == []
+    state = await load_decision(event_store, _DECISION_ID)
+    assert state is not None
+    assert state.logbooks == {}
+
+
+@pytest.mark.unit
+async def test_handler_rejects_whole_batch_when_one_entry_mismatches() -> None:
+    """Atomic rejection: one spoofed entry poisons the batch; the
+    producer's own well-attributed entries in it are NOT stored."""
+    event_store = InMemoryEventStore()
+    await _seed_decision(event_store, _DECISION_ID)
+    inference_store = InMemoryInferenceStore()
+    deps = build_deps(ids=[_LOGBOOK_ID, _LOGBOOK_OPEN_EVENT_ID], now=_NOW, event_store=event_store)
+    with pytest.raises(InferenceAgentMismatchError):
+        await append_inferences.bind(deps, inference_store=inference_store)(
+            AppendInferences(
+                decision_id=_DECISION_ID,
+                entries=(
+                    _entry(agent_id=str(_PRINCIPAL_ID)),
+                    _entry(agent_id=str(uuid4())),
+                ),
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert inference_store.all() == []
+
+
+@pytest.mark.unit
+async def test_handler_accepts_self_reported_and_agentless_entries() -> None:
+    """The binding never blocks the legitimate shapes: agent_id equal
+    to the principal (self-report) and agent_id=None (no agent claim,
+    operator/tool provenance) both append."""
+    event_store = InMemoryEventStore()
+    await _seed_decision(event_store, _DECISION_ID)
+    inference_store = InMemoryInferenceStore()
+    deps = build_deps(ids=[_LOGBOOK_ID, _LOGBOOK_OPEN_EVENT_ID], now=_NOW, event_store=event_store)
+    count = await append_inferences.bind(deps, inference_store=inference_store)(
+        AppendInferences(
+            decision_id=_DECISION_ID,
+            entries=(
+                _entry(agent_id=str(_PRINCIPAL_ID), cost_usd=0.01),
+                _entry(agent_id=None),
+            ),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count == 2
+    assert len(inference_store.all()) == 2
 
 
 # ---------- Decision aggregate state reflects logbook ----------

@@ -51,7 +51,34 @@ class InvalidActorKindForDecisionError(ValueError):
         self.kind = kind
 
 
+class InferenceAgentMismatchError(Exception):
+    """An inference entry attributes an agent other than the caller.
+
+    Raised by the `append_inferences` handler when an entry carries an
+    `agent_id` that differs from the calling principal. Agent-attributed
+    inference rows are the spend ledger the `AgentBudget` gate sums per
+    agent, so attribution must be self-reported: a producer may record
+    its own spend, never another agent's (a mismatched row would let any
+    authorized producer inflate a victim agent's recorded spend and deny
+    it service). Rows with `agent_id=None` (operator- or tool-attributed
+    provenance with no agent claim) are unaffected.
+
+    Maps to HTTP 403 alongside `UnauthorizedError`: the request is
+    well-formed but the caller may never make it for that agent.
+    """
+
+    def __init__(self, *, entry_agent_id: str, principal_id: str) -> None:
+        super().__init__(
+            f"entry agent_id={entry_agent_id!r} does not match the calling "
+            f"principal {principal_id}; agent-attributed inference entries "
+            "must be self-reported"
+        )
+        self.entry_agent_id = entry_agent_id
+        self.principal_id = principal_id
+
+
 __all__ = [
+    "InferenceAgentMismatchError",
     "InvalidActorKindForDecisionError",
     "OverrideKindRequiresParentError",
     "UnauthorizedError",

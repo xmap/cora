@@ -147,7 +147,7 @@ async def test_append_inferences_full_lazy_open_and_jsonb_round_trip(
         input_tokens=512,
         output_tokens=256,
         cost_usd=0.00896,
-        agent_id="agent-7e",
+        agent_id=str(_PRINCIPAL_ID),
         agent_name="ApprovalAgent",
         conversation_id="conv-abc",
         messages={

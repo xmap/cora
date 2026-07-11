@@ -30,16 +30,20 @@ the adapter means a future award-window allocation (activation and
 expiry bound to run lifecycle events rather than the calendar) is a
 consumer-side change only.
 
-## Trust boundary (known limitation, follow-up owed)
+## Trust boundary
 
-The ledger trusts every AppendInferences-authorized producer: entry
-rows carry a producer-supplied `agent_id` that is NOT bound to the
-calling principal, so a hostile or buggy authorized producer could
-inflate another agent's recorded spend and deny it service (inflation
-only; overspend cannot be manufactured this way). Under a real Trust
-policy the AppendInferences grant is the control. Binding `agent_id`
-to the calling principal (or persisting the envelope principal on the
-row and summing self-reported rows only) is the recorded follow-up.
+Agent-attributed rows are principal-bound at the write path: the
+`append_inferences` handler rejects any entry whose `agent_id`
+differs from the calling principal (`InferenceAgentMismatchError`,
+403), so a producer can record spend against itself only, never
+inflate another agent's balance. All internal recorders (both LLM
+subscribers and the regenerate slice, via
+`DelegatingInferenceRecorder`) self-report with the agent's own
+actor id as principal. Residual trust surface: `agent_name` /
+`agent_description` remain unverified display strings, and a future
+on-behalf-of recorder (the Tier 1.5 steering-spend design) needs an
+explicit delegation mechanism rather than a relaxation of the
+binding.
 
 ## Known undercount (accepted for the coarse tier)
 
