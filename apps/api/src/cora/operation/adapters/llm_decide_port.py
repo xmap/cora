@@ -1,13 +1,16 @@
 """LlmDecidePort: an LLM steering brain behind the `DecidePort` seam.
 
-BUDGET NOTE: this is the one autonomous LLM caller with NO budget gate
-and NO durable spend record today. Its calls reach only the OTel cost
-histogram (via the adapter), never `entries_decision_inferences`, so
-the `SpendLookup` ledger cannot see them and `AgentBudget` caps do not
-bind it. The per-call pre-estimate tier plus a durable steering-spend
-record are the deferred follow-up (see [[project_budget_bc_research]]);
-until then the conduct loop's own iteration and wall-clock bounds are
-the only spend limiters on this path.
+BUDGET NOTE: with a `usage_sink` wired (the conduct handlers wire one),
+every call's token usage is surfaced on the conduct result, and the
+steer_experiment driver posts it to the durable inference ledger
+against the across-procedure Decision, so `SpendLookup` sees steering
+spend. The remaining gap is the gate: no budget check runs before a
+call yet (the per-call pre-estimate tier is the follow-up; see
+[[project_budget_bc_research]]), so until it lands the conduct loop's
+iteration and wall-clock bounds are the only spend limiters here.
+Transport-failed calls (timeout, rate limit) reach no sink; their
+tokens, if any were consumed server-side, are an accepted undercount
+in the permissive direction the coarse tier already documents.
 
 The DECIDE-axis analogue of the LLM agents in the Agent BC, but homed in
 the Operation BC because it implements `DecidePort` (which lives here) and
@@ -73,13 +76,14 @@ from cora.operation.ports.decide_port import (
     DecideTimeoutError,
     SteeringAdvice,
     SteeringEvidence,
+    SteeringLlmCall,
     SteeringPoint,
     SteeringVerdict,
 )
 from cora.shared.decision_signals import DecisionConfidenceSource
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from cora.infrastructure.ports.llm import LLM, ModelRef
 
@@ -92,9 +96,16 @@ class LlmDecidePort:
     (`build_decide_port`, `llm` substrate) injects the kernel's LLM.
     """
 
-    def __init__(self, *, llm: LLM, model_ref: ModelRef = DEFAULT_LLM_DECIDE_MODEL) -> None:
+    def __init__(
+        self,
+        *,
+        llm: LLM,
+        model_ref: ModelRef = DEFAULT_LLM_DECIDE_MODEL,
+        usage_sink: Callable[[SteeringLlmCall], None] | None = None,
+    ) -> None:
         self._llm = llm
         self._model_ref = model_ref
+        self._usage_sink = usage_sink
 
     async def advise_next(self, evidence: SteeringEvidence) -> SteeringAdvice:
         """Ask the LLM for the next steering action, or a stop.
@@ -120,6 +131,17 @@ class LlmDecidePort:
         ) as exc:
             raise DecideNotAvailableError(f"LLM call failed: {type(exc).__name__}") from exc
 
+        if self._usage_sink is not None:
+            # Before parsing: a malformed answer still cost real tokens,
+            # and the ledger records what was spent, not what was useful.
+            self._usage_sink(
+                SteeringLlmCall(
+                    provider=self._model_ref.provider,
+                    model_requested=self._model_ref.model,
+                    model_served=response.model_id,
+                    usage=response.usage,
+                )
+            )
         return self._advice_from_parsed(response.parsed, evidence)
 
     def _advice_from_parsed(

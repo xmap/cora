@@ -15,7 +15,7 @@ The Decision writes go through a real in-memory kernel with the seeded agent.
 # pyright: reportPrivateUsage=false
 
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 import pytest
 
@@ -29,6 +29,7 @@ from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, UUIDv7Generator
+from cora.infrastructure.ports.llm import LLMUsage
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation.adapters.decide_port_config import DecidePortConfig
 from cora.operation.conductor import ConductorFailure
@@ -39,11 +40,13 @@ from cora.operation.features.conduct_until_advised import (
 from cora.operation.features.hold_procedure import HoldProcedure
 from cora.operation.ports.decide_port import (
     SteeringAxis,
+    SteeringLlmCall,
     SteeringObjective,
     SteeringObjectiveKind,
     SteeringSpace,
 )
 from cora.operation.ports.measurement import Measurement
+from tests.unit.agent._helpers import FakeInferenceRecorder
 
 _NOW = datetime(2026, 6, 28, 12, 0, 0, tzinfo=UTC)
 _OBJECTIVE_NAME = "rotation_center"
@@ -300,3 +303,63 @@ async def test_steer_stands_down_when_agent_unseeded() -> None:
     # Nothing was written.
     events, _ = await kernel.event_store.load("Decision", _derive_decision_id(p0, 0))
     assert events == []
+
+
+def _sonnet_call(input_tokens: int = 1000, output_tokens: int = 100) -> SteeringLlmCall:
+    return SteeringLlmCall(
+        provider="anthropic",
+        model_requested="claude-sonnet-4-5",
+        model_served="claude-sonnet-4-5-20250929",
+        usage=LLMUsage(input_tokens=input_tokens, output_tokens=output_tokens),
+    )
+
+
+@pytest.mark.unit
+async def test_steer_posts_llm_usage_to_the_inference_ledger() -> None:
+    """Each steered procedure's LLM calls land on its across-procedure
+    Decision as inference rows: deterministic event ids, steerer
+    attribution, and a real cost from the pricing table, so the spend
+    ledger sees steering spend."""
+    kernel = _kernel()
+    recorder = FakeInferenceRecorder()
+    object.__setattr__(kernel, "inference_recorder", recorder)
+    await seed_experiment_steerer_agent(kernel)
+    p0 = uuid4()
+    from dataclasses import replace as dc_replace
+
+    result = dc_replace(_ok_result(p0, _TARGET), llm_calls=(_sonnet_call(), _sonnet_call(2000, 50)))
+    steps, _conduct, _hold = await _steer(kernel, procedure_ids=[p0], results={p0: result})
+
+    assert steps[0].choice == "Conclude"
+    decision_id = steps[0].decision_id
+    assert decision_id is not None
+    assert len(recorder.calls) == 2
+    first = recorder.calls[0]
+    assert first.trace.decision_id == decision_id
+    assert first.trace.event_id == uuid5(decision_id, "inference:0")
+    assert recorder.calls[1].trace.event_id == uuid5(decision_id, "inference:1")
+    assert first.trace.agent_id == str(EXPERIMENT_STEERER_AGENT_ID)
+    assert first.principal_id == EXPERIMENT_STEERER_AGENT_ID
+    assert first.trace.provider_name == "anthropic"
+    assert first.trace.request_model == "claude-sonnet-4-5"
+    assert first.trace.response_model == "claude-sonnet-4-5-20250929"
+    # Sonnet pricing: $3/M input + $15/M output.
+    assert first.trace.cost_usd == pytest.approx(1000 / 1e6 * 3 + 100 / 1e6 * 15)
+
+
+@pytest.mark.unit
+async def test_steer_stood_down_records_no_usage() -> None:
+    """An unseeded agent records no Decision, so its calls have no ledger
+    home; nothing is posted (and nothing crashes)."""
+    kernel = _kernel()
+    recorder = FakeInferenceRecorder()
+    object.__setattr__(kernel, "inference_recorder", recorder)
+    from dataclasses import replace as dc_replace
+
+    p0 = uuid4()
+    result = dc_replace(_ok_result(p0, 1030.0), llm_calls=(_sonnet_call(),))
+
+    steps, _conduct, _hold = await _steer(kernel, procedure_ids=[p0], results={p0: result})
+
+    assert steps[0].decision_id is None
+    assert recorder.calls == []

@@ -52,9 +52,13 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
-from cora.agent.seed_experiment_steerer import EXPERIMENT_STEERER_AGENT_ID
+from cora.agent.seed_experiment_steerer import (
+    EXPERIMENT_STEERER_AGENT_ID,
+    EXPERIMENT_STEERER_AGENT_NAME,
+)
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_EXPERIMENT_STEERING,
+    DECISION_REASONING_OPERATION_CHAT,
     DecisionChoice,
     DecisionConfidenceSource,
     DecisionContext,
@@ -68,12 +72,19 @@ from cora.decision.aggregates.decision import (
 )
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
+from cora.infrastructure.observability.gen_ai import compute_cost_usd
 from cora.infrastructure.ports import ConcurrencyError
+from cora.infrastructure.ports.inference_recorder import AgentInferenceTrace
+from cora.infrastructure.ports.llm import ModelRef
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.infrastructure.signing import SIGNED_EVENT_TYPES
 from cora.operation.features.conduct_until_advised import ConductUntilAdvised
 from cora.operation.features.hold_procedure import HoldProcedure
-from cora.operation.ports.decide_port import AdviceAuditFields, objective_is_satisfied
+from cora.operation.ports.decide_port import (
+    AdviceAuditFields,
+    SteeringLlmCall,
+    objective_is_satisfied,
+)
 from cora.shared.identity import ActorId
 
 if TYPE_CHECKING:
@@ -247,6 +258,57 @@ async def record_steering_decision(
     return decision_id
 
 
+async def _record_steering_inferences(
+    deps: Kernel,
+    *,
+    decision_id: UUID,
+    calls: Sequence[SteeringLlmCall],
+    correlation_id: UUID,
+) -> None:
+    """Post one steered procedure's LLM usage to the durable inference ledger.
+
+    Called AFTER the across-procedure Decision commits (the recorder's lazy
+    logbook-open loads it). Each call gets a deterministic event id derived
+    from the Decision, so a retried turn re-records the same ids and the
+    store dedups. `occurred_at` is the posting time, not the call time: the
+    brain seam carries no clock, and cap windows are calendar-sized, so the
+    approximation cannot move a call across a window in any way that
+    matters. The recorder port is best-effort and never raises, keeping
+    ledger trouble out of the steering path.
+    """
+    now = deps.clock.now()
+    for index, call in enumerate(calls):
+        cost_usd = compute_cost_usd(
+            ModelRef(provider=call.provider, model=call.model_requested),
+            call.usage,
+        )
+        trace = AgentInferenceTrace(
+            decision_id=decision_id,
+            event_id=uuid5(decision_id, f"inference:{index}"),
+            occurred_at=now,
+            operation_name=DECISION_REASONING_OPERATION_CHAT,
+            provider_name=call.provider,
+            request_model=call.model_requested,
+            response_model=call.model_served,
+            input_tokens=call.usage.input_tokens,
+            output_tokens=call.usage.output_tokens,
+            cost_usd=cost_usd,
+            agent_id=str(EXPERIMENT_STEERER_AGENT_ID),
+            agent_name=EXPERIMENT_STEERER_AGENT_NAME,
+        )
+        await deps.inference_recorder.record(
+            trace,
+            principal_id=EXPERIMENT_STEERER_AGENT_ID,
+            correlation_id=correlation_id,
+        )
+    if calls:
+        _log.info(
+            "experiment_steerer.inferences_recorded",
+            decision_id=str(decision_id),
+            call_count=len(calls),
+        )
+
+
 @dataclass(frozen=True)
 class SteerExperimentStepResult:
     """One across-procedure turn's outcome: the procedure steered, the disposition
@@ -357,6 +419,16 @@ async def steer_experiment(
             # collide across calls and link a Hold to a prior turn's Decision.
             decision_id=deps.id_generator.new_id(),
         )
+        if decision_id is not None:
+            # The steering spend rides the experiment record: every LLM call
+            # the brain made for this procedure lands on the across-procedure
+            # Decision's inference logbook, so the spend ledger sees it.
+            await _record_steering_inferences(
+                deps,
+                decision_id=decision_id,
+                calls=conduct_result.llm_calls,
+                correlation_id=correlation_id,
+            )
         results.append(
             SteerExperimentStepResult(
                 turn=turn,

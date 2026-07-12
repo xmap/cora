@@ -24,6 +24,7 @@ from cora.infrastructure.ports.llm import (
     LLMSchemaValidationError,
     LLMServerError,
     LLMTimeoutError,
+    LLMUsage,
 )
 from cora.operation.adapters.decide_port_config import (
     DecidePortConfig,
@@ -37,6 +38,7 @@ from cora.operation.ports.decide_port import (
     DecideTimeoutError,
     SteeringAxis,
     SteeringEvidence,
+    SteeringLlmCall,
     SteeringObjective,
     SteeringObjectiveKind,
     SteeringObservation,
@@ -169,6 +171,74 @@ async def test_llm_errors_translate_to_decide_taxonomy(
 
     with pytest.raises(expected):
         await port.advise_next(_evidence(_obs(1.0, 10.0)))
+
+
+async def test_advise_next_reports_usage_to_the_sink() -> None:
+    llm = FakeLLM(
+        [
+            FakeLLMResponse(
+                parsed={"verdict": "Stop", "confidence": 0.5, "rationale": "done"},
+                usage=LLMUsage(input_tokens=1200, output_tokens=80),
+                model_id="claude-sonnet-4-5-20250929",
+            )
+        ]
+    )
+    calls: list[SteeringLlmCall] = []
+    port = LlmDecidePort(llm=llm, usage_sink=calls.append)
+
+    await port.advise_next(_evidence(_obs(1.0, 10.0)))
+
+    assert len(calls) == 1
+    call = calls[0]
+    assert call.provider == "anthropic"
+    assert call.model_requested == "claude-sonnet-4-5"
+    assert call.model_served == "claude-sonnet-4-5-20250929"
+    assert call.usage.input_tokens == 1200
+    assert call.usage.output_tokens == 80
+
+
+async def test_malformed_advice_still_reports_usage() -> None:
+    """A hallucinated verdict still cost real tokens; the sink hears about
+    the call before parsing so the ledger records what was spent."""
+    llm = FakeLLM(
+        [
+            FakeLLMResponse(
+                parsed={"verdict": "Ponder", "confidence": 0.5, "rationale": "hmm"},
+                usage=LLMUsage(input_tokens=500, output_tokens=20),
+            )
+        ]
+    )
+    calls: list[SteeringLlmCall] = []
+    port = LlmDecidePort(llm=llm, usage_sink=calls.append)
+
+    with pytest.raises(DecideAdviceMalformedError):
+        await port.advise_next(_evidence(_obs(1.0, 10.0)))
+
+    assert len(calls) == 1
+    assert calls[0].usage.input_tokens == 500
+
+
+async def test_transport_error_reports_no_usage() -> None:
+    """A call that never returned has no provider-reported usage; the sink
+    stays silent (the documented permissive undercount)."""
+    llm = FakeLLM([LLMServerError("boom")])  # type: ignore[list-item]
+    calls: list[SteeringLlmCall] = []
+    port = LlmDecidePort(llm=llm, usage_sink=calls.append)
+
+    with pytest.raises(DecideNotAvailableError):
+        await port.advise_next(_evidence(_obs(1.0, 10.0)))
+
+    assert calls == []
+
+
+async def test_build_decide_port_threads_usage_sink_to_the_llm_arm() -> None:
+    llm = FakeLLM([FakeLLMResponse(parsed={"verdict": "Stop", "rationale": "ok"})])
+    calls: list[SteeringLlmCall] = []
+    port = build_decide_port(DecidePortConfig(substrate="llm"), llm=llm, usage_sink=calls.append)
+
+    await port.advise_next(_evidence(_obs(1.0, 10.0)))
+
+    assert len(calls) == 1
 
 
 async def test_unknown_verdict_is_malformed() -> None:

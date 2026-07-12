@@ -55,8 +55,10 @@ from cora.operation.adapters.sobol_decide_port import SobolDecidePort
 from cora.operation.adapters.staged_decide_port import StagedDecidePort
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from cora.infrastructure.ports.llm import LLM
-    from cora.operation.ports.decide_port import DecidePort
+    from cora.operation.ports.decide_port import DecidePort, SteeringLlmCall
 
 DecideSubstrate = Literal["in_memory", "grid_walk", "sobol", "botorch", "staged", "llm"]
 """The full set of decider substrates `build_decide_port` can materialise.
@@ -109,6 +111,7 @@ def build_decide_port(
     config: DecidePortConfig | None = None,
     *,
     llm: LLM | None = None,
+    usage_sink: Callable[[SteeringLlmCall], None] | None = None,
 ) -> DecidePort:
     """Materialise the DecidePort the conduct loop talks to.
 
@@ -146,7 +149,7 @@ def build_decide_port(
                 "the 'llm' decide substrate requires an llm port; "
                 "pass build_decide_port(config, llm=deps.llm)"
             )
-        return LlmDecidePort(llm=llm)
+        return LlmDecidePort(llm=llm, usage_sink=usage_sink)
     raise ValueError(  # pragma: no cover
         f"unsupported decide substrate: {resolved.substrate!r}"
     )
