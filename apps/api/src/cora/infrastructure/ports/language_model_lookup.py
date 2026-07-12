@@ -1,10 +1,12 @@
 """LanguageModelLookup port: is this model identity in the approved catalog?
 
 Consumed by the define_agent gate (an operator cannot register an agent
-on a model the facility has not approved) and by the startup fleet
-check (every seeded agent's model_ref must resolve). The query shape is
-by model identity, not by entry id, because that is the only key the
-consumers hold: an `Agent.model_ref` carries provider + model.
+on a model the facility has not approved). The shipped fleet's own
+defaults are covered by a unit consistency test that pins the fleet
+constants against the seed entries; no runtime consumer walks the
+fleet at startup. The query shape is by model identity, not by entry
+id, because that is the only key the consumer holds: an
+`Agent.model_ref` carries provider + model.
 
 ## Convention
 
@@ -12,18 +14,20 @@ Same neutral-port shape as `SpendLookup` and the start_run lookup
 family: a consumer-shaped Protocol + frozen result VO + an always-pass
 test stub here, with the production adapter shipped by the BC that owns
 the fact (the agent BC's `PostgresLanguageModelLookup` over
-`proj_language_model_summary`). The port lives in infrastructure even
-though today's consumers share the agent BC, because the catalog's next
-consumers (the conduct seam's degrade path, the pricing bridge) do not.
+`proj_agent_language_model_summary`). The port lives in infrastructure
+even though today's consumers share the agent BC, because the catalog's
+next consumers (the conduct seam's degrade path, the pricing bridge) do
+not.
 
 ## Failure direction
 
 The kernel default is the always-approved stub, so tests and
 deployments that have not stood up a catalog are unaffected (the same
 opt-in posture as every lookup in the family: declaring a catalog is
-what arms the gate). The Postgres adapter returns exactly what the
-projection holds; a missing row means "not in the catalog", which the
-gate treats as refusal once a catalog exists.
+what arms the gate). The Postgres adapter answers with the newest
+APPROVED entry only; None means "nothing currently approved for this
+identity" (never cataloged, or every entry for it is Defined or
+terminal), which the gate treats as refusal once a catalog exists.
 """
 
 from dataclasses import dataclass
@@ -43,7 +47,7 @@ class LanguageModelLookupResult:
 
 
 class LanguageModelLookup(Protocol):
-    """Cross-cutting port: resolve a model identity to its catalog entry."""
+    """Cross-cutting port: resolve a model identity to its approved catalog entry."""
 
     async def find_by_model(
         self,
@@ -51,11 +55,15 @@ class LanguageModelLookup(Protocol):
         provider: str,
         model: str,
     ) -> LanguageModelLookupResult | None:
-        """Return the entry for `(provider, model)`, or None when uncataloged.
+        """Return the newest APPROVED entry for `(provider, model)`, or None.
 
-        When several entries share an identity (a re-registration after
-        deprecation), the adapter returns the most recently created one:
-        the catalog's answer is always the current governance posture.
+        None means "nothing currently approved for this identity":
+        the identity was never cataloged, or every entry for it is
+        Defined or terminal. Approved-only on purpose: the gate's
+        question is whether an approval currently stands, so an
+        unapproved or deprecated newer entry can never shadow an
+        older Approved one, and deprecating a mistaken duplicate
+        restores the previous Approved entry.
         """
         ...
 
@@ -64,9 +72,10 @@ class AlwaysApprovedLanguageModelLookup:
     """Test-default stub: every model identity is an Approved entry.
 
     Mirrors `AlwaysZeroSpendLookup`'s role: the kernel default keeps
-    every existing test and catalog-less deployment permissive. The
-    synthetic entry id is the nil-adjacent constant below, never a real
-    stream id.
+    every existing test and catalog-less deployment permissive (the
+    approved-only contract is trivially satisfied because every answer
+    IS an Approved entry). The synthetic entry id is the nil-adjacent
+    constant below, never a real stream id.
     """
 
     _SYNTHETIC_ID = UUID("00000000-0000-0000-0000-00000000a11a")

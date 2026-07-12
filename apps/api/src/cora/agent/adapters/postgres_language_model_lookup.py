@@ -1,11 +1,13 @@
 """PostgresLanguageModelLookup: the catalog identity lookup over the projection.
 
 The agent BC ships the production adapter because it owns the fact:
-`proj_language_model_summary` is this BC's read model of its own
-aggregate. Latest-entry-wins on identity collisions (a model
-re-registered after a deprecation supersedes the dead entry as the
-current governance posture), which the `ORDER BY created_at DESC`
-encodes.
+`proj_agent_language_model_summary` is this BC's read model of its own
+aggregate. The lookup answers the GATE's question, the newest APPROVED
+entry for the identity, so an unapproved or deprecated newer entry can
+never shadow an older Approved one into refusing agent registration,
+and deprecating a mistaken duplicate restores the previous Approved
+entry. The `language_model_id DESC` tiebreak makes equal-created_at
+rows deterministic.
 """
 
 from __future__ import annotations
@@ -20,15 +22,15 @@ if TYPE_CHECKING:
 
 _FIND_SQL = """
 SELECT language_model_id, status, data_tier, archivability, snapshot_pin
-FROM proj_language_model_summary
-WHERE provider = $1 AND model = $2
-ORDER BY created_at DESC
+FROM proj_agent_language_model_summary
+WHERE provider = $1 AND model = $2 AND status = 'Approved'
+ORDER BY created_at DESC, language_model_id DESC
 LIMIT 1
 """
 
 
 class PostgresLanguageModelLookup:
-    """`LanguageModelLookup` over `proj_language_model_summary`."""
+    """`LanguageModelLookup` over `proj_agent_language_model_summary`."""
 
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool

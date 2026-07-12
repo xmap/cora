@@ -15,7 +15,9 @@ from cora.agent.aggregates.language_model import (
 from cora.agent.aggregates.language_model.events import (
     LanguageModelApproved,
     LanguageModelDefined,
+    LanguageModelDeprecated,
     LanguageModelEvent,
+    LanguageModelRetired,
     LanguageModelRetirementAnnounced,
 )
 from cora.agent.errors import UnauthorizedError
@@ -24,7 +26,7 @@ from cora.agent.features.list_at_risk_results import ListAtRiskResults
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
-from cora.infrastructure.ports import ModelTouchedDecision
+from cora.infrastructure.ports import ModelUsageLookupResult
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _T0 = datetime(2026, 7, 10, 11, 0, 0, tzinfo=UTC)
@@ -40,14 +42,14 @@ _PROVIDER = "anthropic"
 _MODEL = "claude-sonnet-4-5"
 
 _ROWS = (
-    ModelTouchedDecision(
+    ModelUsageLookupResult(
         decision_id=_DECISION_ID_A,
         occurred_at=_T1,
         request_model=_MODEL,
         response_model=f"{_MODEL}-20250929",
         agent_id="run-debriefer",
     ),
-    ModelTouchedDecision(
+    ModelUsageLookupResult(
         decision_id=_DECISION_ID_B,
         occurred_at=_T0,
         request_model=_MODEL,
@@ -60,13 +62,13 @@ _ROWS = (
 class _FakeModelUsageLookup:
     """Returns canned rows and records the identity it was asked about."""
 
-    def __init__(self, rows: tuple[ModelTouchedDecision, ...] = ()) -> None:
+    def __init__(self, rows: tuple[ModelUsageLookupResult, ...] = ()) -> None:
         self.rows = rows
         self.calls: list[tuple[str, str]] = []
 
     async def find_decisions_touching_model(
         self, *, provider: str, model: str
-    ) -> tuple[ModelTouchedDecision, ...]:
+    ) -> tuple[ModelUsageLookupResult, ...]:
         self.calls.append((provider, model))
         return self.rows
 
@@ -92,6 +94,8 @@ async def _seed_language_model(
     archivability: str,
     approved: bool = False,
     retirement_announced: bool = False,
+    retired: bool = False,
+    deprecated: bool = False,
 ) -> None:
     events: list[LanguageModelEvent] = [
         LanguageModelDefined(
@@ -123,6 +127,22 @@ async def _seed_language_model(
                 language_model_id=_LANGUAGE_MODEL_ID,
                 reason="Vendor sunsets the alias",
                 effective_at=None,
+                occurred_at=_T2,
+            )
+        )
+    if retired:
+        events.append(
+            LanguageModelRetired(
+                language_model_id=_LANGUAGE_MODEL_ID,
+                reason="Vendor removed the endpoint",
+                occurred_at=_T2,
+            )
+        )
+    if deprecated:
+        events.append(
+            LanguageModelDeprecated(
+                language_model_id=_LANGUAGE_MODEL_ID,
+                reason="Facility withdrew approval",
                 occurred_at=_T2,
             )
         )
@@ -225,6 +245,50 @@ async def test_defined_alias_entry_is_not_at_risk_but_results_stay_listed() -> N
 
     assert view.at_risk is False
     assert view.reproducibility_grade == "AttributableOnly"
+    assert view.results == _ROWS
+
+
+@pytest.mark.unit
+async def test_retired_alias_entry_is_at_risk() -> None:
+    """Retirement (with or without a prior announcement) is the other
+    vendor lifecycle event that turns a fragile Alias identity into
+    live risk."""
+    store = InMemoryEventStore()
+    await _seed_language_model(store, archivability="Alias", approved=True, retired=True)
+    lookup = _FakeModelUsageLookup(rows=_ROWS)
+    deps = _build_deps(event_store=store, model_usage_lookup=lookup)
+    handler = list_at_risk_results.bind(deps)
+
+    view = await handler(
+        ListAtRiskResults(language_model_id=_LANGUAGE_MODEL_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert view.reproducibility_grade == "AttributableOnly"
+    assert view.at_risk is True
+    assert view.results == _ROWS
+
+
+@pytest.mark.unit
+async def test_deprecated_alias_entry_is_not_at_risk() -> None:
+    """Deprecation is the FACILITY ending an entry's service life; it
+    does not take the provider-side identity out of service, so even a
+    fragile Alias identity stays at_risk false."""
+    store = InMemoryEventStore()
+    await _seed_language_model(store, archivability="Alias", approved=True, deprecated=True)
+    lookup = _FakeModelUsageLookup(rows=_ROWS)
+    deps = _build_deps(event_store=store, model_usage_lookup=lookup)
+    handler = list_at_risk_results.bind(deps)
+
+    view = await handler(
+        ListAtRiskResults(language_model_id=_LANGUAGE_MODEL_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert view.reproducibility_grade == "AttributableOnly"
+    assert view.at_risk is False
     assert view.results == _ROWS
 
 

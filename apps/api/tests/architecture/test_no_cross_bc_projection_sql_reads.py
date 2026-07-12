@@ -49,32 +49,13 @@ if TYPE_CHECKING:
 # design memo overriding the port-mediated cross-BC integration rule.
 _CROSS_BC_READ_ALLOWLIST: frozenset[tuple[str, str]] = frozenset()
 
-# Aggregate-named tables whose first token is NOT the owning BC:
-# full table name -> owning BC. Without this, the prefix-derived
-# ownership below misreads `proj_language_model_summary` as a read of
-# a (nonexistent) `language` BC. Reads of a listed table from any
-# OTHER BC still fail the rule.
-_TABLE_OWNER_OVERRIDES: dict[str, str] = {
-    # agent BC's LanguageModel aggregate keeps the aggregate-named
-    # shape (equipment owns the `Model` stream type; see the
-    # model-catalog design lock and test_projection_table_bc_prefix).
-    "proj_language_model_summary": "agent",
-}
-
-# Captures the full projection table named in a FROM / JOIN clause:
-# `FROM proj_equipment_asset_summary` -> "proj_equipment_asset_summary".
-# The owning BC is then the table's first token (BC names are single
-# lowercase tokens) unless `_TABLE_OWNER_OVERRIDES` names the table
-# explicitly. `LATERAL`/CTE joins (JOIN ancestors, JOIN LATERAL
-# unnest) do not match `proj_` and are ignored.
-_PROJ_READ_RE = re.compile(r"\b(?:FROM|JOIN)\s+(proj_[a-z][a-z0-9_]*)", re.IGNORECASE)
-
-
-def _referenced_bc(table_name: str) -> str:
-    override = _TABLE_OWNER_OVERRIDES.get(table_name)
-    if override is not None:
-        return override
-    return table_name[len("proj_") :].split("_", 1)[0].lower()
+# Captures the BC prefix of a projection table named in a FROM / JOIN
+# clause: `FROM proj_equipment_asset_summary` -> "equipment". The
+# non-greedy `[a-z]+?` stops at the first underscore (BC names are
+# single lowercase tokens), so the multi-word table tail never bleeds
+# into the captured BC. `LATERAL`/CTE joins (JOIN ancestors, JOIN
+# LATERAL unnest) do not match `proj_` and are ignored.
+_PROJ_READ_RE = re.compile(r"\b(?:FROM|JOIN)\s+proj_([a-z]+?)_", re.IGNORECASE)
 
 
 def _qualified(p: Path) -> str:
@@ -99,16 +80,14 @@ def test_bc_source_reads_only_its_own_bc_projection(path: Path) -> None:
 
     offenders: list[str] = []
     for match in _PROJ_READ_RE.finditer(text):
-        table_name = match.group(1).lower()
-        referenced_bc = _referenced_bc(table_name)
+        referenced_bc = match.group(1).lower()
         if referenced_bc == owning_bc:
             continue
         if (owning_bc, referenced_bc) in _CROSS_BC_READ_ALLOWLIST:
             continue
         lineno = text[: match.start()].count("\n") + 1
         offenders.append(
-            f"line {lineno}: reads {table_name} owned by {referenced_bc!r} "
-            f"(owning BC is {owning_bc!r})"
+            f"line {lineno}: reads proj_{referenced_bc}_* (owning BC is {owning_bc!r})"
         )
 
     assert not offenders, (

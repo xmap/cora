@@ -598,3 +598,14 @@ def test_classifier_idempotency_conflict_error_returns_422() -> None:
 @pytest.mark.unit
 def test_classifier_explicit_override_attribute_wins() -> None:
     assert classify_error_status(_ExplicitOverrideError("teapot")) == 418
+
+
+@pytest.mark.unit
+def test_classifier_language_model_not_approved_error_returns_400() -> None:
+    """The define_agent gate refusal carries the explicit 400 override:
+    without it the class name matches no pattern, the error classifies
+    as 5xx, and the idempotency claim strands Claimed instead of
+    finalizing like every sibling validation error."""
+    from cora.agent.aggregates.language_model import LanguageModelNotApprovedError
+
+    assert classify_error_status(LanguageModelNotApprovedError("anthropic", "m", None)) == 400

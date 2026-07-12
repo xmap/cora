@@ -624,6 +624,13 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 capability_lookup_factory=PostgresCapabilityLookup,
                 supply_lookup_factory=PostgresSupplyLookup,
                 spend_lookup_factory=PostgresSpendLookup,
+                # LanguageModel catalog lookup for the define_agent gate
+                # and the at-risk-results usage lookup, both through the
+                # factory grammar. Test mode (app_env=test) skips the
+                # factories and keeps the always-approved / always-empty
+                # stubs, matching the ports' opt-in posture.
+                language_model_lookup_factory=PostgresLanguageModelLookup,
+                model_usage_lookup_factory=PostgresModelUsageLookup,
                 run_actor_involvement_lookup_factory=PostgresRunActorInvolvementLookup,
                 consequence_lookup_factory=PostgresConsequenceLookup,
                 dataset_distribution_lookup_factory=PostgresDatasetDistributionLookup,
@@ -697,29 +704,6 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 "spend_guard",
                 BudgetSpendGuard(event_store=deps.event_store, spend_lookup=deps.spend_lookup),
             )
-            # LanguageModel catalog lookup for the define_agent gate. Only
-            # bound when a real pool exists: the in-memory kernel keeps the
-            # always-approved stub (no projection worker, no
-            # proj_language_model_summary table), matching the port's
-            # opt-in posture. Must land BEFORE wire_agent so define_agent
-            # closes over the production adapter.
-            if deps.pool is not None:
-                object.__setattr__(
-                    deps,
-                    "language_model_lookup",
-                    PostgresLanguageModelLookup(deps.pool),
-                )
-                # ModelUsageLookup for the at-risk-results read slice.
-                # Same opt-in posture: the in-memory kernel keeps the
-                # always-empty stub (no entries_decision_inferences table
-                # to scan). Decision BC ships the adapter because it owns
-                # the inference entries; binding it here keeps the Agent
-                # BC off that table (the no-cross-BC-SQL-reads seam).
-                object.__setattr__(
-                    deps,
-                    "model_usage_lookup",
-                    PostgresModelUsageLookup(deps.pool),
-                )
             app.state.supply = wire_supply(deps)
             app.state.enclosure = wire_enclosure(deps)
 
@@ -867,6 +851,15 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # models, born Defined AND Approved so the define_agent gate
             # never refuses the shipped fleet on a fresh deployment.
             await seed_language_models(deps)
+            # Drain Agent-owned projections synchronously (the federation /
+            # enclosure drain shape below): first boot must not refuse
+            # define_agent for the models the seed just approved while the
+            # worker catches up, and PostgresLanguageModelLookup reads
+            # proj_agent_language_model_summary. Cheap no-op in-memory.
+            agent_only_registry = ProjectionRegistry()
+            register_agent_projections(agent_only_registry, deps)
+            if deps.pool is not None:
+                await drain_projections(deps.pool, agent_only_registry, deadline_seconds=5.0)
             # same shape for RunSupervisor (deterministic in-loop agent).
             await seed_run_supervisor_agent(deps)
             # same shape for RunInitiator (deterministic agent that starts Runs;

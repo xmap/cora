@@ -6,6 +6,11 @@ retirement, enumerate every Decision whose recorded LLM calls used
 that model, so the slice can grade each result by whether it stays
 re-executable (the entry's `ArchivabilityTier` axis).
 
+The `ModelUsage` prefix (not `LanguageModelUsage`) is deliberate: the
+columns this port reads are the OTel `request_model` /
+`response_model` provenance strings on inference rows, not
+LanguageModel catalog entries.
+
 ## Convention
 
 Same shape as the `SpendLookup` / `LanguageModelLookup` family: a
@@ -25,12 +30,15 @@ usage facts.
 
 A row touches the model identity `(provider, model)` when
 `provider_name = provider` AND (`request_model = model` OR
-`response_model = model` OR `response_model LIKE model || '-%'`).
-The LIKE arm exists because providers resolve an alias onto dated
-snapshots: a request for `claude-sonnet-4-5` answers as
-`claude-sonnet-4-5-20250929`, and those calls are equally at risk
-when the alias retires; the caller never pinned the snapshot, so the
-alias's retirement takes the identity they recorded out of service.
+`response_model = model` OR `response_model` is `model` plus a dated
+snapshot suffix, exactly `-YYYYMMDD`). The snapshot arm exists because
+providers resolve an alias onto dated snapshots: a request for
+`claude-sonnet-4-5` answers as `claude-sonnet-4-5-20250929`, and those
+calls are equally at risk when the alias retires; the caller never
+pinned the snapshot, so the alias's retirement takes the identity they
+recorded out of service. The suffix is exactly eight characters so a
+sibling minor version (`claude-sonnet-4` vs `claude-sonnet-4-5`) never
+counts as a touch.
 
 The result carries ONE row per Decision (the newest touching call),
 because the consumer enumerates affected Decisions, not raw calls.
@@ -43,7 +51,7 @@ from uuid import UUID
 
 
 @dataclass(frozen=True)
-class ModelTouchedDecision:
+class ModelUsageLookupResult:
     """One Decision whose recorded LLM calls touched the queried model.
 
     Field values come from the Decision's NEWEST touching inference
@@ -68,20 +76,21 @@ class ModelUsageLookup(Protocol):
         *,
         provider: str,
         model: str,
-    ) -> tuple[ModelTouchedDecision, ...]:
+    ) -> tuple[ModelUsageLookupResult, ...]:
         """Return one row per touching Decision, newest call first.
 
         A Decision touches the model when any of its inference rows
         matches `provider_name = provider` AND (`request_model = model`
-        OR `response_model = model` OR `response_model` is a dated
-        snapshot of it, the `model || '-%'` LIKE arm; see the module
-        docstring for why snapshot answers count). No touching rows
-        returns the empty tuple, never None.
+        OR `response_model = model` OR `response_model` is the model's
+        own dated snapshot, `model` plus exactly `-YYYYMMDD`; see the
+        module docstring for why snapshot answers count and sibling
+        minor versions do not). No touching rows returns the empty
+        tuple, never None.
         """
         ...
 
 
-class EmptyModelUsageLookup:
+class AlwaysEmptyModelUsageLookup:
     """Test-default stub: no recorded call ever touched any model.
 
     Mirrors `AlwaysZeroSpendLookup`'s role: tests and deployments
@@ -96,12 +105,12 @@ class EmptyModelUsageLookup:
         *,
         provider: str,
         model: str,
-    ) -> tuple[ModelTouchedDecision, ...]:
+    ) -> tuple[ModelUsageLookupResult, ...]:
         return ()
 
 
 __all__ = [
-    "EmptyModelUsageLookup",
-    "ModelTouchedDecision",
+    "AlwaysEmptyModelUsageLookup",
     "ModelUsageLookup",
+    "ModelUsageLookupResult",
 ]

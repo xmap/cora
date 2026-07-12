@@ -201,7 +201,7 @@ def build_deps(
 
     `model_usage_lookup` injects a usage-lookup fake for
     `list_at_risk_results` handler tests (typically a fake returning
-    seeded `ModelTouchedDecision` rows). Defaults to the kernel's
+    seeded `ModelUsageLookupResult` rows). Defaults to the kernel's
     always-empty stub via `make_inmemory_kernel`, so tests that don't
     exercise the at-risk surface see no touched Decisions.
     """

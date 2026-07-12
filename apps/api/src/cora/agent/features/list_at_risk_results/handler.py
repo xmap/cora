@@ -51,7 +51,7 @@ from cora.agent.errors import UnauthorizedError
 from cora.agent.features.list_at_risk_results.query import ListAtRiskResults
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import Deny, ModelTouchedDecision
+from cora.infrastructure.ports import Deny, ModelUsageLookupResult
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 
 _QUERY_NAME = "ListAtRiskResults"
@@ -81,7 +81,7 @@ class AtRiskResultsView:
     archivability: ArchivabilityTier
     reproducibility_grade: str
     at_risk: bool
-    results: tuple[ModelTouchedDecision, ...]
+    results: tuple[ModelUsageLookupResult, ...]
 
 
 class Handler(Protocol):

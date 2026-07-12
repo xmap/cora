@@ -1,10 +1,12 @@
 -- The facility model catalog's read model: one row per LanguageModel
 -- entry, queried by model identity (provider + model), which is the shape
--- both consumers need. The define_agent gate and the startup fleet check
--- ask "is this model_ref Approved, and at what tiers?"; the at-risk-results
--- surface asks "which entries announced retirement, and were they Pinned
--- or Alias?". Neither question is answerable from the event store without
--- a by-identity index, which is exactly what a projection is for.
+-- both consumers need. The define_agent gate asks "is this model_ref
+-- Approved, and at what tiers?" (the shipped fleet's defaults are pinned
+-- against the seeds by a unit consistency test, not by any startup
+-- check); the at-risk-results surface asks "which entries announced
+-- retirement, and were they Pinned or Alias?". Neither question is
+-- answerable from the event store without a by-identity index, which is
+-- exactly what a projection is for.
 --
 -- cost_basis is deliberately absent: pricing stays on the aggregate (few
 -- entries, config-shaped) so there is exactly one pricing home.
@@ -12,7 +14,7 @@
 -- Mutable read model. cora_app gets full DML. Bookmark seeded so the
 -- projection worker advances from genesis on first run.
 
-CREATE TABLE proj_language_model_summary (
+CREATE TABLE proj_agent_language_model_summary (
     language_model_id        UUID        PRIMARY KEY,
     name                     TEXT        NOT NULL,
     provider                 TEXT        NOT NULL,
@@ -40,15 +42,15 @@ CREATE TABLE proj_language_model_summary (
 );
 
 -- The lookup's query shape: latest entry for a (provider, model) pair.
-CREATE INDEX proj_language_model_summary_identity_idx
-    ON proj_language_model_summary (provider, model);
+CREATE INDEX proj_agent_language_model_summary_identity_idx
+    ON proj_agent_language_model_summary (provider, model);
 
-CREATE INDEX proj_language_model_summary_keyset_idx
-    ON proj_language_model_summary (created_at, language_model_id);
+CREATE INDEX proj_agent_language_model_summary_keyset_idx
+    ON proj_agent_language_model_summary (created_at, language_model_id);
 
 GRANT SELECT, INSERT, UPDATE, DELETE
-    ON proj_language_model_summary TO cora_app;
+    ON proj_agent_language_model_summary TO cora_app;
 
 INSERT INTO projection_bookmarks (name)
-VALUES ('proj_language_model_summary')
+VALUES ('proj_agent_language_model_summary')
 ON CONFLICT DO NOTHING;

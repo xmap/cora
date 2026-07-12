@@ -85,6 +85,7 @@ from cora.infrastructure.ports import (
     AlwaysApprovedLanguageModelLookup,
     AlwaysCoveredClearanceLookup,
     AlwaysEmptyCapabilityLookup,
+    AlwaysEmptyModelUsageLookup,
     AlwaysPermittedEnclosureLookup,
     AlwaysQuietCautionLookup,
     AlwaysRatifiedConsequenceLookup,
@@ -101,7 +102,6 @@ from cora.infrastructure.ports import (
     ConsequenceLookup,
     CredentialLookup,
     DatasetDistributionLookup,
-    EmptyModelUsageLookup,
     EnclosureLookup,
     EventStore,
     FacilityLookup,
@@ -186,6 +186,8 @@ def make_postgres_kernel(
     assembly_lookup: AssemblyLookup | None = None,
     role_lookup: RoleLookup | None = None,
     enclosure_lookup: EnclosureLookup | None = None,
+    language_model_lookup: LanguageModelLookup | None = None,
+    model_usage_lookup: ModelUsageLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
@@ -304,6 +306,20 @@ def make_postgres_kernel(
     injects the real `PostgresRoleLookup` via the
     `role_lookup_factory` argument.
 
+    `language_model_lookup` defaults to `AlwaysApprovedLanguageModelLookup`
+    (every identity Approved) so integration tests that never stood up
+    a catalog keep the define_agent gate disarmed. Production's
+    `build_kernel` injects the real `PostgresLanguageModelLookup` via
+    the `language_model_lookup_factory` argument; gate-specific tests
+    override here explicitly.
+
+    `model_usage_lookup` defaults to `AlwaysEmptyModelUsageLookup` (no
+    recorded call touched any model) so tests that don't exercise the
+    at-risk-results surface stay inert. Production's `build_kernel`
+    injects the real `PostgresModelUsageLookup` via the
+    `model_usage_lookup_factory` argument; slice-specific tests
+    override here explicitly.
+
     `llm` defaults to `None` because most BCs and tests don't need
     an LLM; only Agent BC subscribers consume it. Production's
     `build_kernel` injects `AnthropicLLM` when
@@ -377,6 +393,14 @@ def make_postgres_kernel(
         role_lookup=(role_lookup if role_lookup is not None else InMemoryRoleLookup()),
         enclosure_lookup=(
             enclosure_lookup if enclosure_lookup is not None else AlwaysPermittedEnclosureLookup()
+        ),
+        language_model_lookup=(
+            language_model_lookup
+            if language_model_lookup is not None
+            else AlwaysApprovedLanguageModelLookup()
+        ),
+        model_usage_lookup=(
+            model_usage_lookup if model_usage_lookup is not None else AlwaysEmptyModelUsageLookup()
         ),
         profile_store=(profile_store if profile_store is not None else PostgresProfileStore(pool)),
         canonicalization_registry=_build_default_canonicalization_registry(),
@@ -522,17 +546,17 @@ def make_inmemory_kernel(
 
     `language_model_lookup` defaults to `AlwaysApprovedLanguageModelLookup`
     (every identity Approved) for the same reason: no projection worker,
-    no `proj_language_model_summary` table to read from, and the
+    no `proj_agent_language_model_summary` table to read from, and the
     define_agent gate must stay disarmed for every existing test.
     Gate-specific tests override with a fake returning None or a
     non-Approved entry.
 
-    `model_usage_lookup` defaults to `EmptyModelUsageLookup` (no
+    `model_usage_lookup` defaults to `AlwaysEmptyModelUsageLookup` (no
     recorded call touched any model) for the same reason: no Postgres,
     no `entries_decision_inferences` table to scan, and the at-risk
     read slice must stay inert for every test that doesn't exercise
     it. Slice-specific tests override with a fake returning seeded
-    `ModelTouchedDecision` rows.
+    `ModelUsageLookupResult` rows.
 
     `llm` defaults to `None`; the in-memory kernel is for unit /
     contract tests that don't exercise LLM subscribers. Subscriber
@@ -614,7 +638,7 @@ def make_inmemory_kernel(
             else AlwaysApprovedLanguageModelLookup()
         ),
         model_usage_lookup=(
-            model_usage_lookup if model_usage_lookup is not None else EmptyModelUsageLookup()
+            model_usage_lookup if model_usage_lookup is not None else AlwaysEmptyModelUsageLookup()
         ),
         profile_store=profile_store if profile_store is not None else InMemoryProfileStore(),
         canonicalization_registry=_build_default_canonicalization_registry(),
@@ -732,6 +756,44 @@ class SpendLookupFactory(Protocol):
         self,
         pool: asyncpg.Pool,
     ) -> SpendLookup: ...
+
+
+class LanguageModelLookupFactory(Protocol):
+    """Builds the production LanguageModelLookup port for the Kernel.
+
+    Agent BC's `cora.agent.adapters.PostgresLanguageModelLookup` is the
+    production factory; `cora.api.main` binds it. Same factory-
+    injection shape as the other lookup factories so
+    `cora.infrastructure.deps` doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to
+    `AlwaysApprovedLanguageModelLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> LanguageModelLookup: ...
+
+
+class ModelUsageLookupFactory(Protocol):
+    """Builds the production ModelUsageLookup port for the Kernel.
+
+    Decision BC's `cora.decision.adapters.PostgresModelUsageLookup` is
+    the production factory; `cora.api.main` binds it. Same factory-
+    injection shape as the other lookup factories so
+    `cora.infrastructure.deps` doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to
+    `AlwaysEmptyModelUsageLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> ModelUsageLookup: ...
 
 
 class RunActorInvolvementLookupFactory(Protocol):
@@ -980,6 +1042,8 @@ async def build_kernel(
     capability_lookup_factory: CapabilityLookupFactory | None = None,
     supply_lookup_factory: SupplyLookupFactory | None = None,
     spend_lookup_factory: SpendLookupFactory | None = None,
+    language_model_lookup_factory: LanguageModelLookupFactory | None = None,
+    model_usage_lookup_factory: ModelUsageLookupFactory | None = None,
     run_actor_involvement_lookup_factory: RunActorInvolvementLookupFactory | None = None,
     consequence_lookup_factory: ConsequenceLookupFactory | None = None,
     dataset_distribution_lookup_factory: DatasetDistributionLookupFactory | None = None,
@@ -1093,6 +1157,16 @@ async def build_kernel(
     spend_lookup: SpendLookup = (
         spend_lookup_factory(pool) if spend_lookup_factory is not None else AlwaysZeroSpendLookup()
     )
+    language_model_lookup: LanguageModelLookup = (
+        language_model_lookup_factory(pool)
+        if language_model_lookup_factory is not None
+        else AlwaysApprovedLanguageModelLookup()
+    )
+    model_usage_lookup: ModelUsageLookup = (
+        model_usage_lookup_factory(pool)
+        if model_usage_lookup_factory is not None
+        else AlwaysEmptyModelUsageLookup()
+    )
     run_actor_involvement_lookup: RunActorInvolvementLookup = (
         run_actor_involvement_lookup_factory(pool)
         if run_actor_involvement_lookup_factory is not None
@@ -1157,6 +1231,8 @@ async def build_kernel(
         capability_lookup=capability_lookup,
         supply_lookup=supply_lookup,
         spend_lookup=spend_lookup,
+        language_model_lookup=language_model_lookup,
+        model_usage_lookup=model_usage_lookup,
         run_actor_involvement_lookup=run_actor_involvement_lookup,
         consequence_lookup=consequence_lookup,
         dataset_distribution_lookup=dataset_distribution_lookup,
@@ -1253,6 +1329,8 @@ __all__ = [
     "FacilityLookupFactory",
     "FamilyLookupFactory",
     "LLMFactory",
+    "LanguageModelLookupFactory",
+    "ModelUsageLookupFactory",
     "RoleLookupFactory",
     "RunActorInvolvementLookupFactory",
     "SupplyLookupFactory",

@@ -137,9 +137,9 @@ from cora.infrastructure.ports.llm import (
 )
 from cora.infrastructure.ports.logbook_mirror import LogbookMirror
 from cora.infrastructure.ports.model_usage_lookup import (
-    EmptyModelUsageLookup,
-    ModelTouchedDecision,
+    AlwaysEmptyModelUsageLookup,
     ModelUsageLookup,
+    ModelUsageLookupResult,
 )
 from cora.infrastructure.ports.profile_store import Profile, ProfileStore
 from cora.infrastructure.ports.role_lookup import (
@@ -189,6 +189,7 @@ __all__ = [
     "AlwaysApprovedLanguageModelLookup",
     "AlwaysCoveredClearanceLookup",
     "AlwaysEmptyCapabilityLookup",
+    "AlwaysEmptyModelUsageLookup",
     "AlwaysGrantedSpendGuard",
     "AlwaysPermittedEnclosureLookup",
     "AlwaysQuietCautionLookup",
@@ -226,7 +227,6 @@ __all__ = [
     "DatasetDistributionLookup",
     "DatasetDistributionLookupResult",
     "Deny",
-    "EmptyModelUsageLookup",
     "EnclosureLookup",
     "EnclosureLookupResult",
     "EventStore",
@@ -266,8 +266,8 @@ __all__ = [
     "LogbookMirror",
     "MinSeverity",
     "ModelRef",
-    "ModelTouchedDecision",
     "ModelUsageLookup",
+    "ModelUsageLookupResult",
     "NeverRatifiedConsequenceLookup",
     "NewEvent",
     "NoComputeReachabilityLookup",

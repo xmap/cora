@@ -1,14 +1,16 @@
 """LanguageModelSummaryProjection: folds the catalog entry's lifecycle
-into the `proj_language_model_summary` read model.
+into the `proj_agent_language_model_summary` read model.
 
 The catalog's one query shape is by model identity, not by id: the
-define_agent gate and the startup fleet check ask "is (provider, model)
-Approved, and at what tiers?", so the projection carries the identity
-columns the `LanguageModelLookup` adapter filters on, plus the two tier
-axes and the lifecycle columns the at-risk-results surface reads.
-Follows the Path C convention (state stays decider-minimal; lifecycle
-timestamps live on the projection); the same
-state-always-holds-latest posture as `AgentSummaryProjection`.
+define_agent gate asks "is (provider, model) Approved, and at what
+tiers?" (the shipped fleet's defaults are pinned against the seeds by
+a unit consistency test, not by any startup check), so the projection
+carries the identity columns the `LanguageModelLookup` adapter filters
+on, plus the two tier axes and the lifecycle columns the
+at-risk-results surface reads. Follows the Path C convention (state
+stays decider-minimal; lifecycle timestamps live on the projection);
+the same state-always-holds-latest posture as
+`AgentSummaryProjection`.
 
 `cost_basis` is intentionally NOT projected: the pricing bridge reads
 the aggregate (few entries, config-shaped), and duplicating rates into
@@ -24,7 +26,7 @@ from cora.infrastructure.ports.event_store import StoredEvent
 from cora.infrastructure.projection.handler import ConnectionLike
 
 _INSERT_SQL = """
-INSERT INTO proj_language_model_summary
+INSERT INTO proj_agent_language_model_summary
     (language_model_id, name, provider, model, snapshot_pin, served_via,
      data_tier, archivability, status, created_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Defined', $9)
@@ -32,7 +34,7 @@ ON CONFLICT (language_model_id) DO NOTHING
 """
 
 _UPDATE_APPROVED_SQL = """
-UPDATE proj_language_model_summary
+UPDATE proj_agent_language_model_summary
 SET status = 'Approved',
     approved_at = $2,
     updated_at = now()
@@ -40,7 +42,7 @@ WHERE language_model_id = $1
 """
 
 _UPDATE_RETIREMENT_ANNOUNCED_SQL = """
-UPDATE proj_language_model_summary
+UPDATE proj_agent_language_model_summary
 SET status = 'RetirementAnnounced',
     retirement_announced_at = $2,
     retirement_effective_at = $3,
@@ -49,7 +51,7 @@ WHERE language_model_id = $1
 """
 
 _UPDATE_RETIRED_SQL = """
-UPDATE proj_language_model_summary
+UPDATE proj_agent_language_model_summary
 SET status = 'Retired',
     retired_at = $2,
     updated_at = now()
@@ -57,7 +59,7 @@ WHERE language_model_id = $1
 """
 
 _UPDATE_DEPRECATED_SQL = """
-UPDATE proj_language_model_summary
+UPDATE proj_agent_language_model_summary
 SET status = 'Deprecated',
     deprecated_at = $2,
     updated_at = now()
@@ -66,9 +68,9 @@ WHERE language_model_id = $1
 
 
 class LanguageModelSummaryProjection:
-    """Maintains the `proj_language_model_summary` read model."""
+    """Maintains the `proj_agent_language_model_summary` read model."""
 
-    name = "proj_language_model_summary"
+    name = "proj_agent_language_model_summary"
     subscribed_event_types = frozenset(
         {
             "LanguageModelDefined",

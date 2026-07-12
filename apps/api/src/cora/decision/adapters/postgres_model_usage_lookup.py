@@ -8,10 +8,17 @@ recorded LLM calls touched one model identity, one row per Decision
 ## Match semantics (see the port docstring for the WHY)
 
 A row matches when `provider_name = $1` AND (`request_model = $2` OR
-`response_model = $2` OR `response_model LIKE $2 || '-%'`). The LIKE
-arm catches alias calls the provider answered with a dated snapshot
-(`claude-sonnet-4-5` -> `claude-sonnet-4-5-20250929`); those results
-are equally at risk when the alias retires.
+`response_model = $2` OR `response_model LIKE escaped(model) ||
+'-________'`). The LIKE arm catches alias calls the provider answered
+with a dated snapshot (`claude-sonnet-4-5` ->
+`claude-sonnet-4-5-20250929`); those results are equally at risk when
+the alias retires. Exactly eight underscores because the suffix is a
+YYYYMMDD snapshot date: a sibling minor version like `-5` or `-59`
+must NOT match (`claude-sonnet-4` is not touched by
+`claude-sonnet-4-5` calls). The model param is escaped Python-side
+(backslash, percent, underscore) before entering the LIKE pattern so
+an operator-curated model id containing SQL LIKE metacharacters must
+not widen matching; the two equality arms keep the raw value.
 
 ## Why query the entries table (not a projection)
 
@@ -32,7 +39,7 @@ Neither before the trigger fires.
 
 import asyncpg
 
-from cora.infrastructure.ports.model_usage_lookup import ModelTouchedDecision
+from cora.infrastructure.ports.model_usage_lookup import ModelUsageLookupResult
 
 # DISTINCT ON keeps the newest row per Decision (inner ORDER BY pairs
 # decision_id with occurred_at DESC as DISTINCT ON requires); the outer
@@ -51,7 +58,7 @@ FROM (
       AND (
         request_model = $2
         OR response_model = $2
-        OR response_model LIKE $2 || '-%'
+        OR response_model LIKE $3 || '-________' ESCAPE '\\'
       )
     ORDER BY decision_id, occurred_at DESC
 ) newest_per_decision
@@ -70,11 +77,12 @@ class PostgresModelUsageLookup:
         *,
         provider: str,
         model: str,
-    ) -> tuple[ModelTouchedDecision, ...]:
+    ) -> tuple[ModelUsageLookupResult, ...]:
+        escaped = model.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         async with self._pool.acquire() as conn:
-            rows = await conn.fetch(_FIND_TOUCHING_DECISIONS_SQL, provider, model)
+            rows = await conn.fetch(_FIND_TOUCHING_DECISIONS_SQL, provider, model, escaped)
         return tuple(
-            ModelTouchedDecision(
+            ModelUsageLookupResult(
                 decision_id=row["decision_id"],
                 occurred_at=row["occurred_at"],
                 request_model=row["request_model"],

@@ -32,10 +32,12 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 
 
 class _FixedLanguageModelLookup:
-    """Gate stub: answers every identity with one fixed catalog result."""
+    """Gate stub: answers every identity with one fixed catalog result
+    and records the identities it was asked about."""
 
     def __init__(self, result: LanguageModelLookupResult | None) -> None:
         self._result = result
+        self.calls: list[tuple[str, str]] = []
 
     async def find_by_model(
         self,
@@ -43,7 +45,7 @@ class _FixedLanguageModelLookup:
         provider: str,
         model: str,
     ) -> LanguageModelLookupResult | None:
-        _ = (provider, model)
+        self.calls.append((provider, model))
         return self._result
 
 
@@ -231,6 +233,29 @@ async def test_handler_denied_does_not_write_either_stream() -> None:
     assert actor_version == 0
     assert agent_events == []
     assert actor_events == []
+
+
+@pytest.mark.unit
+async def test_handler_gate_queries_exactly_the_commands_model_identity() -> None:
+    """The gate resolves the command's own model_ref (provider, model),
+    once: a drift to a hardcoded identity or a double lookup fails here."""
+    lookup = _FixedLanguageModelLookup(
+        LanguageModelLookupResult(
+            language_model_id=UUID("01900000-0000-7000-8000-00000000d002"),
+            status="Approved",
+            data_tier="Internal",
+            archivability="Alias",
+            snapshot_pin=None,
+        )
+    )
+    deps = _build_deps(language_model_lookup=lookup)
+    handler = define_agent.bind(deps, profile_store=make_profile_store())
+    await handler(
+        _command(),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert lookup.calls == [("anthropic", "claude-sonnet-4-6")]
 
 
 @pytest.mark.unit

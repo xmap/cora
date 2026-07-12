@@ -16,9 +16,12 @@ Per [[project_lifecycle_status_naming]] the FSM is a single axis,
                      \\-> Retired (unannounced provider removal)
   {Defined, Approved, RetirementAnnounced} -> Deprecated
 
-Approval is the facility's governance act (bootstrap-then-promote, the
-same ceremony as the agent fleet: a Defined entry is registered but not
-yet usable). `RetirementAnnounced` models the VENDOR's lifecycle event
+Approval is the facility's governance act: a Defined entry is
+registered but unusable by the define_agent gate until approved. The
+seed precedent is Safety's clearance-template seed, which writes
+Defined + Activated in one append; the agent-fleet seeds are NOT the
+analogy (they land Defined and are gated at runtime by `Actor.active`,
+not by `AgentStatus`). `RetirementAnnounced` models the VENDOR's lifecycle event
 (the paper's governance-event claim: a provider announcing retirement
 becomes an appended fact the at-risk-results projection reads), while
 `Deprecated` models the FACILITY withdrawing its own approval; the two
@@ -61,6 +64,7 @@ does). The at-risk-results projection grades by this axis.
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
+from typing import ClassVar
 from uuid import UUID
 
 from cora.agent.aggregates.agent import ModelRef
@@ -75,7 +79,7 @@ class LanguageModelStatus(StrEnum):
     """The catalog entry's lifecycle state.
 
     - `Defined`              -- registered as config; NOT yet approved for
-                                use (fleet model_ref checks require
+                                use (the define_agent gate requires
                                 Approved).
     - `Approved`             -- the facility's governance act: usable for
                                 the entry's declared data tier.
@@ -291,6 +295,11 @@ class LanguageModelNotApprovedError(Exception):
     gate arms only when a deployment stands up a real catalog. `status`
     is None when the identity is absent from the catalog entirely.
     """
+
+    # Gate refusal must finalize the idempotency claim as a 400 like
+    # every sibling validation error, not strand it Claimed (the name
+    # matches none of classify_error_status's class-name patterns).
+    idempotency_http_status: ClassVar[int] = 400
 
     def __init__(self, provider: str, model: str, status: str | None) -> None:
         detail = f"catalog status {status}" if status is not None else "not in the catalog"

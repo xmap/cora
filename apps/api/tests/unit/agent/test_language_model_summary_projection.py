@@ -41,7 +41,7 @@ def _stored(event_type: str, payload: dict[str, Any]) -> StoredEvent:
 @pytest.mark.unit
 def test_projection_metadata() -> None:
     proj = LanguageModelSummaryProjection()
-    assert proj.name == "proj_language_model_summary"
+    assert proj.name == "proj_agent_language_model_summary"
     assert proj.subscribed_event_types == frozenset(
         {
             "LanguageModelDefined",
@@ -80,7 +80,7 @@ async def test_language_model_defined_inserts_with_defined_status() -> None:
     args = conn.execute.await_args
     assert args is not None
     sql = args.args[0]
-    assert "INSERT INTO proj_language_model_summary" in sql
+    assert "INSERT INTO proj_agent_language_model_summary" in sql
     assert "ON CONFLICT (language_model_id) DO NOTHING" in sql
     assert "'Defined'" in sql
     assert args.args[1] == _LANGUAGE_MODEL_ID
@@ -111,7 +111,7 @@ async def test_language_model_approved_updates_status_and_approved_at() -> None:
     args = conn.execute.await_args
     assert args is not None
     sql = args.args[0]
-    assert "UPDATE proj_language_model_summary" in sql
+    assert "UPDATE proj_agent_language_model_summary" in sql
     assert "SET status = 'Approved'" in sql
     assert "approved_at = $2" in sql
     assert args.args[1] == _LANGUAGE_MODEL_ID
@@ -138,7 +138,7 @@ async def test_retirement_announced_updates_status_and_both_retirement_timestamp
     args = conn.execute.await_args
     assert args is not None
     sql = args.args[0]
-    assert "UPDATE proj_language_model_summary" in sql
+    assert "UPDATE proj_agent_language_model_summary" in sql
     assert "SET status = 'RetirementAnnounced'" in sql
     assert "retirement_announced_at = $2" in sql
     assert "retirement_effective_at = $3" in sql
@@ -189,7 +189,7 @@ async def test_language_model_retired_updates_status_and_retired_at() -> None:
     args = conn.execute.await_args
     assert args is not None
     sql = args.args[0]
-    assert "UPDATE proj_language_model_summary" in sql
+    assert "UPDATE proj_agent_language_model_summary" in sql
     assert "SET status = 'Retired'" in sql
     assert "retired_at = $2" in sql
     assert args.args[1] == _LANGUAGE_MODEL_ID
@@ -214,7 +214,7 @@ async def test_language_model_deprecated_updates_status_and_deprecated_at() -> N
     args = conn.execute.await_args
     assert args is not None
     sql = args.args[0]
-    assert "UPDATE proj_language_model_summary" in sql
+    assert "UPDATE proj_agent_language_model_summary" in sql
     assert "SET status = 'Deprecated'" in sql
     assert "deprecated_at = $2" in sql
     assert args.args[1] == _LANGUAGE_MODEL_ID

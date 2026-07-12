@@ -6,13 +6,21 @@ ExperimentSteerer LLM-decide default. Each entry is born Defined AND
 Approved (two events on the fresh stream) because seeds bypass the
 handlers: the `define_agent` gate refuses any model identity without
 an Approved entry, and a fresh deployment must not refuse
-`define_agent` for the fleet it ships with. The operator's governance
-lever is `deprecate_language_model`, which withdraws the seeded
-approval like any other.
+`define_agent` for the fleet it ships with. The seed precedent is
+Safety's clearance-template seed, which likewise writes Defined +
+Activated in one append (the agent-fleet seeds are NOT the precedent:
+they land Defined and are gated at runtime by `Actor.active`, not
+`AgentStatus`). The operator's governance lever is
+`deprecate_language_model`, which withdraws the seeded approval like
+any other.
 
 Idempotent in the `_agent_seed` style: `expected_version=0` append
 with `ConcurrencyError`-as-no-op, so a stream that already exists is
-skipped (an operator's later transitions are never overwritten).
+skipped (an operator's later transitions are never overwritten). The
+skip path inspects the existing stream's first event: a stream at a
+deterministic seed id whose genesis was NOT written by this seed is a
+squatted stream an operator must inspect, and it logs a WARNING
+instead of the routine already-present INFO.
 
 Ids are deterministic `uuid5` values from the pinned
 `LANGUAGE_MODEL_SEED_NAMESPACE`, so the same entry resolves to the
@@ -58,6 +66,8 @@ if TYPE_CHECKING:
 
 
 _log = get_logger(__name__)
+
+_SEED_COMMAND_NAME: Final[str] = "SeedLanguageModels"
 
 
 # Fixed UUID5 namespace for seeded catalog-entry ids. Generated once at
@@ -190,7 +200,7 @@ async def seed_language_models(kernel: Kernel) -> None:
                 payload=to_payload(event),
                 occurred_at=now,
                 event_id=uuid5(LANGUAGE_MODEL_SEED_NAMESPACE, f"{identity_key}/{tag}"),
-                command_name="SeedLanguageModels",
+                command_name=_SEED_COMMAND_NAME,
                 correlation_id=uuid5(LANGUAGE_MODEL_SEED_NAMESPACE, f"{identity_key}/bootstrap"),
                 causation_id=None,
                 principal_id=SYSTEM_PRINCIPAL_ID,
@@ -209,12 +219,28 @@ async def seed_language_models(kernel: Kernel) -> None:
                 events=new_events,
             )
         except ConcurrencyError:
-            _log.info(
-                "language_model_seed.already_present",
-                language_model_id=str(language_model_id),
-                provider=entry.model_ref.provider,
-                model=entry.model_ref.model,
-            )
+            # A stream already sits at this deterministic seed id. If its
+            # genesis was not written by this seed, an entry pre-exists
+            # that bootstrap never created (a uuid5 squat), so an operator
+            # must inspect it; the squatter's events are never overwritten
+            # either way.
+            stored, _version = await kernel.event_store.load("LanguageModel", language_model_id)
+            found_command_name = stored[0].metadata.get("command") if stored else None
+            if found_command_name != _SEED_COMMAND_NAME:
+                _log.warning(
+                    "language_model_seed.stream_squatted",
+                    language_model_id=str(language_model_id),
+                    provider=entry.model_ref.provider,
+                    model=entry.model_ref.model,
+                    found_command_name=found_command_name,
+                )
+            else:
+                _log.info(
+                    "language_model_seed.already_present",
+                    language_model_id=str(language_model_id),
+                    provider=entry.model_ref.provider,
+                    model=entry.model_ref.model,
+                )
             continue
 
         _log.info(

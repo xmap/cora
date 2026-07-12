@@ -148,8 +148,9 @@ EXEMPT_FROM_ENDPOINT_CONTRACT: frozenset[str] = frozenset(
         # the family's REST + MCP suite can be authored together (the
         # Frame / Facility precedent). Decider + PBT + handler unit
         # tests + projection apply tests pin behavior; the OpenAPI
-        # snapshot locks the wire shape. Remove when the contract
-        # suite lands.
+        # snapshot pins route paths and schemas only, so handler
+        # binding, MCP tool registration, and status-code mapping stay
+        # uncovered until the contract suite lands. Remove when it does.
         "cora.agent.features.announce_language_model_retirement",
         "cora.agent.features.approve_language_model",
         "cora.agent.features.define_language_model",
@@ -160,7 +161,10 @@ EXEMPT_FROM_ENDPOINT_CONTRACT: frozenset[str] = frozenset(
         # suite (same deferral as the command slices above). Handler unit
         # tests (test_list_at_risk_results_handler.py) + the Postgres
         # adapter integration test (test_model_usage_lookup_postgres.py)
-        # pin behavior; the OpenAPI snapshot locks the wire shape.
+        # pin behavior; the OpenAPI snapshot pins route paths and
+        # schemas only, so handler binding, MCP tool registration, and
+        # status-code mapping stay uncovered until the contract suite
+        # lands.
         "cora.agent.features.list_at_risk_results",
     }
 )

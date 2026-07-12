@@ -140,9 +140,12 @@ class LanguageModelDefined:
 
     Initial status implicitly `Defined` (event type IS the state-change
     indicator; the genesis evolver hardcodes the mapping). A Defined
-    entry is registered but NOT yet usable: fleet `model_ref` checks
-    require Approved (bootstrap-then-promote, the agent-fleet
-    ceremony).
+    entry is registered but NOT yet usable: the define_agent gate
+    requires Approved. Approval is the governance act; the seed
+    precedent for skipping it at bootstrap is Safety's
+    clearance-template seed (Defined + Activated in one append), not
+    the agent-fleet seeds (those land Defined and are gated at runtime
+    by `Actor.active`, not `AgentStatus`).
 
     `served_via` / `data_tier` / `archivability` travel as the
     StrEnum string values; `cost_basis` as the discriminated dict.

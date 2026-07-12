@@ -46,7 +46,10 @@ from cora.access.aggregates.actor import (
     to_payload as actor_to_payload,
 )
 from cora.agent.aggregates.agent import AgentName, event_type_name, to_payload
-from cora.agent.aggregates.language_model import LanguageModelNotApprovedError
+from cora.agent.aggregates.language_model import (
+    LanguageModelNotApprovedError,
+    LanguageModelStatus,
+)
 from cora.agent.errors import UnauthorizedError
 from cora.agent.features.define_agent.command import DefineAgent
 from cora.agent.features.define_agent.decider import decide
@@ -179,7 +182,7 @@ def bind(deps: Kernel, *, profile_store: ProfileStore) -> Handler:
             provider=command.model_ref.provider,
             model=command.model_ref.model,
         )
-        if entry is None or entry.status != "Approved":
+        if entry is None or entry.status != LanguageModelStatus.APPROVED.value:
             raise LanguageModelNotApprovedError(
                 command.model_ref.provider,
                 command.model_ref.model,

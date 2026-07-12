@@ -238,7 +238,9 @@ A new aggregate picks its pause verb by this rule: grant-shaped gets `suspend` p
 
 Projection tables follow the shape `proj_<bc>_<aggregate>_<rowtype>` where `<rowtype>` names the stored relation (`_summary`, `_membership`, `_children`, `_consumers`, `_ratings`, `_presence`). Examples: `proj_equipment_asset_summary`, `proj_recipe_plan_summary`, `proj_federation_credential_summary`, `proj_trust_visit_summary`.
 
-When the BC contains a single aggregate AND the BC name equals the aggregate name, the redundant prefix is dropped: `proj_<aggregate>_<rowtype>`. Examples: `proj_run_summary`, `proj_agent_summary`, `proj_supply_summary`, `proj_caution_summary`. The dropped-prefix form applies to 8 BCs today (agent, calibration, campaign, caution, decision, run, subject, supply).
+When the BC contains a single aggregate AND the BC name equals the aggregate name, the redundant prefix is dropped: `proj_<aggregate>_<rowtype>`. Examples: `proj_run_summary`, `proj_supply_summary`, `proj_caution_summary`. The dropped-prefix form applies to 7 BCs today (calibration, campaign, caution, decision, run, subject, supply); agent left the list when it gained a second aggregate.
+
+In a multi-aggregate BC, a non-eponymous aggregate's table takes the full `proj_<bc>_<aggregate>_<rowtype>` shape: `proj_equipment_model_summary` (BC = equipment, aggregate = Model), `proj_agent_language_model_summary` (BC = agent, aggregate = LanguageModel). The eponymous aggregate keeps the stutter carve-out: the Agent aggregate's table is `proj_agent_summary`, not `proj_agent_agent_summary`.
 
 When the BC contains a single aggregate but the BC name differs from the aggregate name, the BC prefix stays for grep symmetry with multi-aggregate BCs: `proj_access_actor_summary` (BC = access, aggregate = actor), `proj_data_dataset_summary`, `proj_operation_procedure_summary`, `proj_safety_clearance_summary`.
 

@@ -113,6 +113,95 @@ async def test_finds_decisions_by_request_model_and_dated_snapshot_response(
 
 
 @pytest.mark.integration
+async def test_sibling_minor_versions_are_excluded_from_the_snapshot_arm(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """The snapshot arm matches exactly eight suffix characters (the
+    YYYYMMDD date), so sibling minor versions of the queried entry
+    (`-5`, `-59`, `-5x` after `claude-sonnet-4`) never count as a
+    touch, while the entry's own dated snapshot does."""
+    store = PostgresInferenceStore(db_pool)
+    own_snapshot_id = uuid4()
+    await store.append(
+        [
+            _row(
+                decision_id=own_snapshot_id,
+                occurred_at=_T1,
+                request_model="claude-haiku-4-5",
+                response_model="claude-sonnet-4-20250514",
+            ),
+            _row(
+                decision_id=uuid4(),
+                occurred_at=_T1,
+                request_model="claude-haiku-4-5",
+                response_model="claude-sonnet-4-5",
+            ),
+            _row(
+                decision_id=uuid4(),
+                occurred_at=_T1,
+                request_model="claude-haiku-4-5",
+                response_model="claude-sonnet-4-59",
+            ),
+            _row(
+                decision_id=uuid4(),
+                occurred_at=_T1,
+                request_model="claude-haiku-4-5",
+                response_model="claude-sonnet-4-5x",
+            ),
+        ]
+    )
+
+    results = await PostgresModelUsageLookup(db_pool).find_decisions_touching_model(
+        provider=_PROVIDER,
+        model="claude-sonnet-4",
+    )
+
+    assert [r.decision_id for r in results] == [own_snapshot_id]
+
+
+@pytest.mark.integration
+async def test_snapshot_matching_never_bleeds_between_sibling_models(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Both directions of the sibling seam: entry claude-sonnet-4 is
+    not touched by claude-sonnet-4-5 calls or its dated snapshot, and
+    entry claude-sonnet-4-5 is not touched by claude-sonnet-4's own
+    dated snapshot; each entry matches only its own snapshot."""
+    store = PostgresInferenceStore(db_pool)
+    sonnet_4_snapshot_id = uuid4()
+    sonnet_4_5_snapshot_id = uuid4()
+    await store.append(
+        [
+            _row(
+                decision_id=sonnet_4_snapshot_id,
+                occurred_at=_T1,
+                request_model="claude-haiku-4-5",
+                response_model="claude-sonnet-4-20250514",
+            ),
+            _row(
+                decision_id=sonnet_4_5_snapshot_id,
+                occurred_at=_T2,
+                request_model="claude-haiku-4-5",
+                response_model=f"{_MODEL}-20250929",
+            ),
+        ]
+    )
+    lookup = PostgresModelUsageLookup(db_pool)
+
+    sonnet_4_results = await lookup.find_decisions_touching_model(
+        provider=_PROVIDER,
+        model="claude-sonnet-4",
+    )
+    sonnet_4_5_results = await lookup.find_decisions_touching_model(
+        provider=_PROVIDER,
+        model=_MODEL,
+    )
+
+    assert [r.decision_id for r in sonnet_4_results] == [sonnet_4_snapshot_id]
+    assert [r.decision_id for r in sonnet_4_5_results] == [sonnet_4_5_snapshot_id]
+
+
+@pytest.mark.integration
 async def test_rows_from_other_providers_are_excluded(db_pool: asyncpg.Pool) -> None:
     """The same model string under a different provider_name is a
     different identity and never counts as a touch."""

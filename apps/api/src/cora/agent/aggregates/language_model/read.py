@@ -2,9 +2,9 @@
 
 `load_language_model(event_store, language_model_id) -> LanguageModel | None`
 mirrors `load_agent` / `load_caution` / `load_supply`. Used by the
-`get_language_model` query slice and the update-style handlers
-(approve / announce-retirement / retire / deprecate load the target
-entry before the decider).
+update-style handlers (approve / announce-retirement / retire /
+deprecate load the target entry before the decider) and the
+`list_at_risk_results` read slice.
 """
 
 from uuid import UUID
