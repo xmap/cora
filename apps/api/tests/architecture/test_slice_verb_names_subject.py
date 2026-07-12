@@ -99,6 +99,10 @@ _DOMAIN_NOUN_ALLOWLIST: frozenset[str] = frozenset(
         "event",  # Agent: dismiss_event_in_reaction
         "reaction",  # Agent: dismiss_event_in_reaction (Reaction = subscriber class)
         "revision",  # Calibration: publish_revision (cross-BC federation slice)
+        # Agent: list_at_risk_results (a result = one Decision's recorded
+        # LLM output, graded for reproducibility by the model catalog's
+        # ArchivabilityTier; the design's at-risk-results vocabulary)
+        "result",
     }
 )
 

@@ -40,6 +40,7 @@ Subject / Equipment / Supply / Safety / Caution:
   - `announce_language_model_retirement` (transition; no idempotency wrap)
   - `retire_language_model`   (transition; no idempotency wrap)
   - `deprecate_language_model` (transition; no idempotency wrap)
+  - `list_at_risk_results`    (query)
 """
 
 from dataclasses import dataclass
@@ -55,6 +56,7 @@ from cora.agent.features import (
     dismiss_event_in_reaction,
     get_agent,
     grant_tool_to_agent,
+    list_at_risk_results,
     promote_caution_proposal,
     regenerate_run_debrief,
     resume_agent,
@@ -94,6 +96,7 @@ class AgentHandlers:
     announce_language_model_retirement: announce_language_model_retirement.Handler
     retire_language_model: retire_language_model.Handler
     deprecate_language_model: deprecate_language_model.Handler
+    list_at_risk_results: list_at_risk_results.Handler
 
 
 def wire_agent(deps: Kernel) -> AgentHandlers:
@@ -238,6 +241,11 @@ def wire_agent(deps: Kernel) -> AgentHandlers:
         deprecate_language_model=with_tracing(
             deprecate_language_model.bind(deps),
             command_name="DeprecateLanguageModel",
+            bc=_BC,
+        ),
+        list_at_risk_results=with_tracing(
+            list_at_risk_results.bind(deps),
+            command_name="ListAtRiskResults",
             bc=_BC,
         ),
     )

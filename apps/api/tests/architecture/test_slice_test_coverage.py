@@ -155,6 +155,13 @@ EXEMPT_FROM_ENDPOINT_CONTRACT: frozenset[str] = frozenset(
         "cora.agent.features.define_language_model",
         "cora.agent.features.deprecate_language_model",
         "cora.agent.features.retire_language_model",
+        # list_at_risk_results (LanguageModel catalog read slice): REST
+        # contract test deferred alongside the catalog family's contract
+        # suite (same deferral as the command slices above). Handler unit
+        # tests (test_list_at_risk_results_handler.py) + the Postgres
+        # adapter integration test (test_model_usage_lookup_postgres.py)
+        # pin behavior; the OpenAPI snapshot locks the wire shape.
+        "cora.agent.features.list_at_risk_results",
     }
 )
 
@@ -216,6 +223,9 @@ EXEMPT_FROM_MCP_CONTRACT: frozenset[str] = frozenset(
         "cora.agent.features.define_language_model",
         "cora.agent.features.deprecate_language_model",
         "cora.agent.features.retire_language_model",
+        # list_at_risk_results: MCP contract test deferred alongside the
+        # REST contract test (same rationale as the catalog slices above).
+        "cora.agent.features.list_at_risk_results",
     }
 )
 

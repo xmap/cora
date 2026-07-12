@@ -24,6 +24,7 @@ from cora.agent.features.dismiss_event_in_reaction import (
 )
 from cora.agent.features.get_agent import tool as get_agent_tool
 from cora.agent.features.grant_tool_to_agent import tool as grant_tool_to_agent_tool
+from cora.agent.features.list_at_risk_results import tool as list_at_risk_results_tool
 from cora.agent.features.promote_caution_proposal import tool as promote_caution_proposal_tool
 from cora.agent.features.regenerate_run_debrief import tool as regenerate_run_debrief_tool
 from cora.agent.features.regenerate_run_debrief.handler import (
@@ -122,6 +123,10 @@ def register_agent_tools(
     deprecate_language_model_tool.register(
         mcp,
         get_handler=lambda: get_handlers().deprecate_language_model,
+    )
+    list_at_risk_results_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().list_at_risk_results,
     )
 
 

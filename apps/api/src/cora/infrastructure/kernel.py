@@ -60,6 +60,7 @@ from cora.infrastructure.ports import (
     ConsequenceLookup,
     CredentialLookup,
     DatasetDistributionLookup,
+    EmptyModelUsageLookup,
     EnclosureLookup,
     EventStore,
     FacilityLookup,
@@ -69,6 +70,7 @@ from cora.infrastructure.ports import (
     InferenceRecorder,
     LanguageModelLookup,
     LogbookMirror,
+    ModelUsageLookup,
     NullInferenceRecorder,
     ProfileStore,
     RoleLookup,
@@ -182,6 +184,18 @@ class Kernel:
     Approved) so tests and catalog-less deployments keep the
     pre-catalog behavior; standing up a real catalog is what arms the
     gate. Mirrors the `spend_lookup` opt-in posture.
+
+    `model_usage_lookup`: cross-BC port consumed by Agent BC's
+    `list_at_risk_results` read slice to enumerate the Decisions whose
+    recorded LLM calls touched a catalog entry's model identity (the
+    at-risk-results surface a vendor retirement announcement lights
+    up). Decision BC ships `PostgresModelUsageLookup` as the production
+    adapter (reads `entries_decision_inferences`, the same durable fact
+    `spend_lookup` sums). Test environments default to
+    `EmptyModelUsageLookup` (no recorded call touched any model) so
+    tests that don't exercise the at-risk surface stay inert;
+    slice-specific tests inject a fake returning seeded rows or the
+    real adapter.
 
     `run_actor_involvement_lookup`: cross-BC port consumed by the
     authority-revocation holder subscriber (K3) to resolve the
@@ -438,6 +452,14 @@ class Kernel:
     composition root binds the Agent BC's `PostgresLanguageModelLookup`
     over `proj_language_model_summary` when a pool exists, arming the
     Approved-entry gate."""
+
+    model_usage_lookup: ModelUsageLookup = field(default_factory=EmptyModelUsageLookup)
+    """Enumerate the Decisions whose recorded LLM calls touched one
+    model identity (one row per Decision, newest touching call).
+    Defaults to the always-empty stub so tests and deployments without
+    an inference logbook see an empty at-risk list; the composition
+    root binds the Decision BC's `PostgresModelUsageLookup` over
+    `entries_decision_inferences` when a pool exists."""
 
 
 Teardown = Callable[[], Awaitable[None]]

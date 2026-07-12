@@ -126,7 +126,7 @@ from cora.decision import (
     register_decision_tools,
     wire_decision,
 )
-from cora.decision.adapters import PostgresSpendLookup
+from cora.decision.adapters import PostgresModelUsageLookup, PostgresSpendLookup
 from cora.enclosure import (
     EnclosureHandlers,
     enclosure_permit_monitor_lifespan,
@@ -708,6 +708,17 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                     deps,
                     "language_model_lookup",
                     PostgresLanguageModelLookup(deps.pool),
+                )
+                # ModelUsageLookup for the at-risk-results read slice.
+                # Same opt-in posture: the in-memory kernel keeps the
+                # always-empty stub (no entries_decision_inferences table
+                # to scan). Decision BC ships the adapter because it owns
+                # the inference entries; binding it here keeps the Agent
+                # BC off that table (the no-cross-BC-SQL-reads seam).
+                object.__setattr__(
+                    deps,
+                    "model_usage_lookup",
+                    PostgresModelUsageLookup(deps.pool),
                 )
             app.state.supply = wire_supply(deps)
             app.state.enclosure = wire_enclosure(deps)

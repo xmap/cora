@@ -92,6 +92,7 @@ from cora.agent.features import (
     dismiss_event_in_reaction,
     get_agent,
     grant_tool_to_agent,
+    list_at_risk_results,
     promote_caution_proposal,
     regenerate_run_debrief,
     resume_agent,
@@ -191,6 +192,7 @@ def register_agent_routes(app: FastAPI) -> None:
     app.include_router(announce_language_model_retirement.router)
     app.include_router(retire_language_model.router)
     app.include_router(deprecate_language_model.router)
+    app.include_router(list_at_risk_results.router)
     # 400 validation handlers: Invalid<X> family + cross-aggregate guards.
     #
     # NOT registered here: DecisionParentAgentMismatchError +

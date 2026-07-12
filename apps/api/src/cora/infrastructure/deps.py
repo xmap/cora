@@ -101,6 +101,7 @@ from cora.infrastructure.ports import (
     ConsequenceLookup,
     CredentialLookup,
     DatasetDistributionLookup,
+    EmptyModelUsageLookup,
     EnclosureLookup,
     EventStore,
     FacilityLookup,
@@ -109,6 +110,7 @@ from cora.infrastructure.ports import (
     IdGenerator,
     LanguageModelLookup,
     LogbookMirror,
+    ModelUsageLookup,
     NoComputeReachabilityLookup,
     NoDatasetDistributionsLookup,
     NoInvolvementLookup,
@@ -416,6 +418,7 @@ def make_inmemory_kernel(
     role_lookup: RoleLookup | None = None,
     enclosure_lookup: EnclosureLookup | None = None,
     language_model_lookup: LanguageModelLookup | None = None,
+    model_usage_lookup: ModelUsageLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
@@ -524,6 +527,13 @@ def make_inmemory_kernel(
     Gate-specific tests override with a fake returning None or a
     non-Approved entry.
 
+    `model_usage_lookup` defaults to `EmptyModelUsageLookup` (no
+    recorded call touched any model) for the same reason: no Postgres,
+    no `entries_decision_inferences` table to scan, and the at-risk
+    read slice must stay inert for every test that doesn't exercise
+    it. Slice-specific tests override with a fake returning seeded
+    `ModelTouchedDecision` rows.
+
     `llm` defaults to `None`; the in-memory kernel is for unit /
     contract tests that don't exercise LLM subscribers. Subscriber
     tests that DO exercise the LLM path inject `FakeLLM`
@@ -602,6 +612,9 @@ def make_inmemory_kernel(
             language_model_lookup
             if language_model_lookup is not None
             else AlwaysApprovedLanguageModelLookup()
+        ),
+        model_usage_lookup=(
+            model_usage_lookup if model_usage_lookup is not None else EmptyModelUsageLookup()
         ),
         profile_store=profile_store if profile_store is not None else InMemoryProfileStore(),
         canonicalization_registry=_build_default_canonicalization_registry(),
