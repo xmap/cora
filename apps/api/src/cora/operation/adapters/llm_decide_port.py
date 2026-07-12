@@ -1,16 +1,18 @@
 """LlmDecidePort: an LLM steering brain behind the `DecidePort` seam.
 
-BUDGET NOTE: with a `usage_sink` wired (the conduct handlers wire one),
-every call's token usage is surfaced on the conduct result, and the
-steer_experiment driver posts it to the durable inference ledger
-against the across-procedure Decision, so `SpendLookup` sees steering
-spend. The remaining gap is the gate: no budget check runs before a
-call yet (the per-call pre-estimate tier is the follow-up; see
-[[project_budget_bc_research]]), so until it lands the conduct loop's
-iteration and wall-clock bounds are the only spend limiters here.
-Transport-failed calls (timeout, rate limit) reach no sink; their
-tokens, if any were consumed server-side, are an accepted undercount
-in the permissive direction the coarse tier already documents.
+BUDGET NOTE: the steering brain is metered AND gated. Metered: with a
+`usage_sink` wired (the conduct handlers wire one), every call's token
+usage is surfaced on the conduct result, and the steer_experiment
+driver posts it to the durable inference ledger against the
+across-procedure Decision, so `SpendLookup` sees steering spend.
+Gated: when built with a `SpendGuard`, a charged agent, and a clock
+(the steer_experiment path), `_refuse_if_over_budget` runs the
+per-call pre-estimate tier BEFORE each chat, raising
+`DecideBudgetExhaustedError` on a would-be breach so no tokens are
+bought; the conduct loop folds the refusal into a deferred steering
+decision. Transport-failed calls (timeout, rate limit) reach no sink;
+their tokens, if any were consumed server-side, are an accepted
+undercount in the permissive direction the coarse tier documents.
 
 The DECIDE-axis analogue of the LLM agents in the Agent BC, but homed in
 the Operation BC because it implements `DecidePort` (which lives here) and
@@ -57,6 +59,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
+from cora.infrastructure.observability.gen_ai import estimate_llm_call_ceiling
 from cora.infrastructure.ports.llm import (
     LLMAuthenticationError,
     LLMInvalidRequestError,
@@ -72,6 +75,7 @@ from cora.operation.adapters._llm_decide_prompt import (
 )
 from cora.operation.ports.decide_port import (
     DecideAdviceMalformedError,
+    DecideBudgetExhaustedError,
     DecideNotAvailableError,
     DecideTimeoutError,
     SteeringAdvice,
@@ -84,8 +88,11 @@ from cora.shared.decision_signals import DecisionConfidenceSource
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
+    from uuid import UUID
 
-    from cora.infrastructure.ports.llm import LLM, ModelRef
+    from cora.infrastructure.ports.clock import Clock
+    from cora.infrastructure.ports.llm import LLM, LLMChatRequest, ModelRef
+    from cora.infrastructure.ports.spend_guard import SpendGuard
 
 
 class LlmDecidePort:
@@ -102,10 +109,16 @@ class LlmDecidePort:
         llm: LLM,
         model_ref: ModelRef = DEFAULT_LLM_DECIDE_MODEL,
         usage_sink: Callable[[SteeringLlmCall], None] | None = None,
+        spend_guard: SpendGuard | None = None,
+        spend_agent_id: UUID | None = None,
+        clock: Clock | None = None,
     ) -> None:
         self._llm = llm
         self._model_ref = model_ref
         self._usage_sink = usage_sink
+        self._spend_guard = spend_guard
+        self._spend_agent_id = spend_agent_id
+        self._clock = clock
 
     async def advise_next(self, evidence: SteeringEvidence) -> SteeringAdvice:
         """Ask the LLM for the next steering action, or a stop.
@@ -117,6 +130,7 @@ class LlmDecidePort:
         """
         payload = evidence_to_payload(evidence)
         request = build_llm_decide_chat_request(payload, model_ref=self._model_ref)
+        await self._refuse_if_over_budget(request)
         try:
             response = await self._llm.chat(request)
         except LLMTimeoutError as exc:
@@ -143,6 +157,39 @@ class LlmDecidePort:
                 )
             )
         return self._advice_from_parsed(response.parsed, evidence)
+
+    async def _refuse_if_over_budget(self, request: LLMChatRequest) -> None:
+        """The per-call pre-estimate gate: refuse BEFORE tokens are bought.
+
+        Active only when the brain was built with a guard, an agent to
+        charge, and a clock (the steer_experiment driver's path). The
+        estimate is a deliberate ceiling (see `estimate_llm_call_ceiling`),
+        so the gate's error is one-sided: it may refuse a call the balance
+        could barely afford, never permit one it cannot. An unpriced model
+        has no ceiling and passes ungated, the documented permissive
+        direction. Raises `DecideBudgetExhaustedError`, which the conduct
+        loop folds into a deferred steering decision.
+        """
+        if self._spend_guard is None or self._spend_agent_id is None or self._clock is None:
+            return
+        input_chars = len(request.user_message.text) + sum(
+            len(block.text) for block in request.system.blocks
+        )
+        ceiling = estimate_llm_call_ceiling(
+            self._model_ref,
+            input_chars=input_chars,
+            max_output_tokens=request.max_output_tokens,
+        )
+        if ceiling is None:
+            return
+        reason = await self._spend_guard.refuse_reason(
+            agent_id=self._spend_agent_id,
+            estimated_cost_usd=ceiling.cost_usd,
+            estimated_tokens=ceiling.tokens,
+            as_of=self._clock.now(),
+        )
+        if reason is not None:
+            raise DecideBudgetExhaustedError(reason)
 
     def _advice_from_parsed(
         self, parsed: Mapping[str, Any], evidence: SteeringEvidence

@@ -69,6 +69,7 @@ from cora.agent import (
     seed_run_supervisor_agent,
     wire_agent,
 )
+from cora.agent.adapters import BudgetSpendGuard
 from cora.api._calibration_watcher import calibration_watcher_lifespan
 from cora.api._campaign_watcher import campaign_watcher_lifespan
 from cora.api._clearance_expirer import clearance_expirer_lifespan
@@ -689,6 +690,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 deps,
                 "inference_recorder",
                 DelegatingInferenceRecorder(app.state.decision.append_inferences),
+            )
+            object.__setattr__(
+                deps,
+                "spend_guard",
+                BudgetSpendGuard(event_store=deps.event_store, spend_lookup=deps.spend_lookup),
             )
             app.state.supply = wire_supply(deps)
             app.state.enclosure = wire_enclosure(deps)

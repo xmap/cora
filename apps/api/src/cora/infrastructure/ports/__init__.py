@@ -146,6 +146,10 @@ from cora.infrastructure.ports.signer import (
     SignerKeyNotFoundError,
     SignerUnavailableError,
 )
+from cora.infrastructure.ports.spend_guard import (
+    AlwaysGrantedSpendGuard,
+    SpendGuard,
+)
 from cora.infrastructure.ports.spend_lookup import (
     AlwaysZeroSpendLookup,
     SpendLookup,
@@ -174,6 +178,7 @@ __all__ = [
     "AllowAllAuthorize",
     "AlwaysCoveredClearanceLookup",
     "AlwaysEmptyCapabilityLookup",
+    "AlwaysGrantedSpendGuard",
     "AlwaysPermittedEnclosureLookup",
     "AlwaysQuietCautionLookup",
     "AlwaysRatifiedConsequenceLookup",
@@ -266,6 +271,7 @@ __all__ = [
     "SignerKeyInactiveError",
     "SignerKeyNotFoundError",
     "SignerUnavailableError",
+    "SpendGuard",
     "SpendLookup",
     "SpendLookupResult",
     "StoredEvent",

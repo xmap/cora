@@ -45,6 +45,7 @@ from cora.infrastructure.config import Settings
 from cora.infrastructure.ports import (
     LLM,
     AllBeamOpenLookup,
+    AlwaysGrantedSpendGuard,
     AssemblyLookup,
     AssetLookup,
     Authorize,
@@ -71,6 +72,7 @@ from cora.infrastructure.ports import (
     RoleLookup,
     RunActorInvolvementLookup,
     Signer,
+    SpendGuard,
     SpendLookup,
     SupplyLookup,
     TokenVerifier,
@@ -373,6 +375,7 @@ class Kernel:
     signature_port: SignaturePort | None = None
     permit_lookup: PermitLookup | None = None
     beam_availability_lookup: BeamAvailabilityLookup = field(default_factory=AllBeamOpenLookup)
+    spend_guard: SpendGuard = field(default_factory=AlwaysGrantedSpendGuard)
     """Cross-BC port consumed by Run BC's `start_run` and Operation
     BC's `start_procedure` to read live beam-availability state (the
     front-end + station `BeamBlockingM` shutters and the ACIS FES-permit

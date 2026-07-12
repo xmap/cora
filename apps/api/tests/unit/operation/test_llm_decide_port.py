@@ -12,9 +12,11 @@ parsed dicts, so no network traffic.
 
 from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 import pytest
 
+from cora.infrastructure.ports import FakeClock
 from cora.infrastructure.ports.llm import (
     FakeLLM,
     FakeLLMResponse,
@@ -33,6 +35,7 @@ from cora.operation.adapters.decide_port_config import (
 from cora.operation.adapters.llm_decide_port import LlmDecidePort
 from cora.operation.ports.decide_port import (
     DecideAdviceMalformedError,
+    DecideBudgetExhaustedError,
     DecideNotAvailableError,
     DecidePort,
     DecideTimeoutError,
@@ -290,3 +293,94 @@ def test_factory_llm_substrate_builds_llm_decide_port() -> None:
 def test_factory_llm_substrate_requires_llm() -> None:
     with pytest.raises(ValueError, match="requires an llm port"):
         build_decide_port(DecidePortConfig(substrate="llm"))
+
+
+class _SpyGuard:
+    """SpendGuard spy: records the ask, answers with a canned reason."""
+
+    def __init__(self, reason: str | None) -> None:
+        self._reason = reason
+        self.asks: list[dict[str, object]] = []
+
+    async def refuse_reason(
+        self,
+        *,
+        agent_id: UUID,
+        estimated_cost_usd: float,
+        estimated_tokens: int,
+        as_of: datetime,
+    ) -> str | None:
+        self.asks.append(
+            {
+                "agent_id": agent_id,
+                "estimated_cost_usd": estimated_cost_usd,
+                "estimated_tokens": estimated_tokens,
+                "as_of": as_of,
+            }
+        )
+        return self._reason
+
+
+_GATE_NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
+_GATE_AGENT_ID = UUID("01900000-0000-7000-8000-0000aaaa0077")
+
+
+async def test_refusing_guard_stops_the_call_before_any_tokens() -> None:
+    llm = FakeLLM([_response({"verdict": "Stop", "rationale": "never reached"})])
+    calls: list[SteeringLlmCall] = []
+    guard = _SpyGuard("monthly_usd_cap of 100 would be breached")
+    port = LlmDecidePort(
+        llm=llm,
+        usage_sink=calls.append,
+        spend_guard=guard,
+        spend_agent_id=_GATE_AGENT_ID,
+        clock=FakeClock(_GATE_NOW),
+    )
+
+    with pytest.raises(DecideBudgetExhaustedError):
+        await port.advise_next(_evidence(_obs(1.0, 10.0)))
+
+    assert llm.received == []
+    assert calls == []
+    assert len(guard.asks) == 1
+
+
+async def test_granting_guard_sees_a_positive_ceiling_then_the_call_proceeds() -> None:
+    llm = FakeLLM([_response({"verdict": "Stop", "rationale": "done"})])
+    guard = _SpyGuard(None)
+    port = LlmDecidePort(
+        llm=llm,
+        spend_guard=guard,
+        spend_agent_id=_GATE_AGENT_ID,
+        clock=FakeClock(_GATE_NOW),
+    )
+
+    advice = await port.advise_next(_evidence(_obs(1.0, 10.0)))
+
+    assert advice.verdict is SteeringVerdict.STOP
+    assert len(llm.received) == 1
+    ask = guard.asks[0]
+    assert ask["agent_id"] == _GATE_AGENT_ID
+    assert ask["as_of"] == _GATE_NOW
+    assert isinstance(ask["estimated_cost_usd"], float)
+    assert ask["estimated_cost_usd"] > 0
+    assert isinstance(ask["estimated_tokens"], int)
+    assert ask["estimated_tokens"] > 0
+
+
+async def test_guard_without_a_charged_agent_is_not_consulted() -> None:
+    """Route-driven conduct has no spend_agent_id; the guard stays silent
+    and the call is operator-accountable, mirroring regenerate."""
+    llm = FakeLLM([_response({"verdict": "Stop", "rationale": "done"})])
+    guard = _SpyGuard("would refuse if asked")
+    port = LlmDecidePort(
+        llm=llm,
+        spend_guard=guard,
+        spend_agent_id=None,
+        clock=FakeClock(_GATE_NOW),
+    )
+
+    await port.advise_next(_evidence(_obs(1.0, 10.0)))
+
+    assert guard.asks == []
+    assert len(llm.received) == 1

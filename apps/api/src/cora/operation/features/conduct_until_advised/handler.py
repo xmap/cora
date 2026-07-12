@@ -147,7 +147,13 @@ def bind(
         )
 
         llm_calls: list[SteeringLlmCall] = []
-        decide_port = build_decide_port(command.decide, llm=deps.llm, usage_sink=llm_calls.append)
+        decide_port = build_decide_port(
+            command.decide,
+            llm=deps.llm,
+            usage_sink=llm_calls.append,
+            spend_guard=deps.spend_guard,
+            clock=deps.clock,
+        )
         try:
             result = await conductor.conduct_until_advised(
                 procedure_id=command.procedure_id,

@@ -363,3 +363,19 @@ async def test_steer_stood_down_records_no_usage() -> None:
 
     assert steps[0].decision_id is None
     assert recorder.calls == []
+
+
+@pytest.mark.unit
+async def test_steer_stamps_the_steerer_agent_id_onto_the_decide_config() -> None:
+    """The driver stamps its agent onto the brain config so the
+    pre-estimate gate has someone to charge; route callers cannot set
+    this (the field is not on the wire models)."""
+    kernel = _kernel()
+    await seed_experiment_steerer_agent(kernel)
+    p0 = uuid4()
+
+    _steps, conduct, _hold = await _steer(
+        kernel, procedure_ids=[p0], results={p0: _ok_result(p0, _TARGET)}
+    )
+
+    assert conduct.calls[0].decide.spend_agent_id == EXPERIMENT_STEERER_AGENT_ID

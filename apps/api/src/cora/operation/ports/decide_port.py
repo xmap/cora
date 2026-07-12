@@ -193,6 +193,17 @@ class DecideNotAvailableError(Exception):
         self.reason = reason
 
 
+class DecideBudgetExhaustedError(DecideNotAvailableError):
+    """The caller's budget refused the next steering call before it was made.
+
+    Raised by a budget-guarded brain when the pre-call estimate would
+    breach the calling agent's declared cap. Subclasses
+    `DecideNotAvailableError` so the conduct loop's existing fold turns
+    the refusal into a deferred steering decision with this class name
+    on the record; no call was made and no tokens were bought.
+    """
+
+
 class DecideTimeoutError(Exception):
     """A hard await ceiling elapsed before the decider returned advice.
 
@@ -448,6 +459,7 @@ __all__ = [
     "AdviceAuditFields",
     "DecideAccessDeniedError",
     "DecideAdviceMalformedError",
+    "DecideBudgetExhaustedError",
     "DecideColdStartError",
     "DecideEvidenceRejectedError",
     "DecideNotAvailableError",

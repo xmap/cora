@@ -12,6 +12,7 @@ from cora.infrastructure.observability.gen_ai import (
     ModelPricing,
     _warned_missing_pricing,
     compute_cost_usd,
+    estimate_llm_call_ceiling,
     record_llm_call,
 )
 from cora.infrastructure.ports.llm import LLMUsage, ModelRef
@@ -158,3 +159,32 @@ def test_model_pricing_is_frozen() -> None:
     )
     with pytest.raises((AttributeError, Exception)):
         p.input_per_mtok = 99.0  # type: ignore[misc]
+
+
+@pytest.mark.unit
+def test_estimate_llm_call_ceiling_prices_input_at_cache_write_rate() -> None:
+    """The ceiling biases high on purpose: 300 chars -> 100 tokens (chars/3)
+    at the cache-write rate, plus the full max_output_tokens at the output
+    rate. Sonnet: cache write $6/M, output $15/M."""
+    ceiling = estimate_llm_call_ceiling(
+        ModelRef(provider="anthropic", model="claude-sonnet-4-5"),
+        input_chars=300,
+        max_output_tokens=1_000,
+    )
+
+    assert ceiling is not None
+    assert ceiling.tokens == 100 + 1_000
+    assert ceiling.cost_usd == pytest.approx(100 / 1e6 * 6.00 + 1_000 / 1e6 * 15.00)
+
+
+@pytest.mark.unit
+def test_estimate_llm_call_ceiling_unpriced_model_returns_none() -> None:
+    """No price means no ceiling; the caller skips the gate (permissive),
+    matching compute_cost_usd's zero-dollar posture for unpriced models."""
+    ceiling = estimate_llm_call_ceiling(
+        ModelRef(provider="acme", model="mystery-1"),
+        input_chars=1_000,
+        max_output_tokens=100,
+    )
+
+    assert ceiling is None

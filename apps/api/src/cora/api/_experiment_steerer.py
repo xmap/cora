@@ -386,6 +386,10 @@ async def steer_experiment(
     v1's deterministic Continue/Conclude/Hold rule + caller-supplied procedure_ids
     are the first step, not the destination.
     """
+    if decide.spend_agent_id is None:
+        # The brain's pre-estimate gate charges the steering agent; route
+        # callers cannot set this (the field is not on the wire models).
+        decide = replace(decide, spend_agent_id=EXPERIMENT_STEERER_AGENT_ID)
     results: list[SteerExperimentStepResult] = []
     for turn, procedure_id in enumerate(procedure_ids):
         conduct_result = await conduct(

@@ -8,5 +8,6 @@ depend only on `cora.infrastructure.ports.LLM`.
 """
 
 from cora.agent.adapters.anthropic_llm import AnthropicLLM
+from cora.agent.adapters.budget_spend_guard import BudgetSpendGuard
 
-__all__ = ["AnthropicLLM"]
+__all__ = ["AnthropicLLM", "BudgetSpendGuard"]

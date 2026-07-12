@@ -151,6 +151,46 @@ _cost_histogram = _meter.create_histogram(
 )
 
 
+@dataclass(frozen=True)
+class LlmCallCeiling:
+    """Upper-bound cost and token count for one not-yet-made LLM call."""
+
+    cost_usd: float
+    tokens: int
+
+
+def estimate_llm_call_ceiling(
+    model_ref: ModelRef, *, input_chars: int, max_output_tokens: int
+) -> LlmCallCeiling | None:
+    """Estimate the most one LLM call can cost, before making it.
+
+    The pre-estimate enforcement tier refuses a call whose projected
+    spend would breach a cap, so this estimate must be a CEILING: its
+    error must point toward refusing a call the balance could barely
+    afford, never toward permitting one it cannot. Two deliberate
+    high-side biases deliver that. Input tokens are estimated at one
+    token per three characters (real English and JSON run closer to
+    four); and the whole input estimate is priced at the model's
+    cache-WRITE rate, the dearest input tier, as if every byte missed
+    the cache. Output is priced at the full `max_output_tokens`, which
+    the provider enforces as a hard cap.
+
+    Returns None when `(provider, model)` has no `PRICING` entry: no
+    price means no ceiling, and the caller skips the gate (permissive,
+    matching `compute_cost_usd`'s $0-for-unpriced posture) rather than
+    refusing calls it cannot cost.
+    """
+    pricing = PRICING.get((model_ref.provider, model_ref.model))
+    if pricing is None:
+        return None
+    input_tokens = -(-input_chars // 3)
+    cost = (
+        input_tokens / 1_000_000 * pricing.cache_write_per_mtok
+        + max_output_tokens / 1_000_000 * pricing.output_per_mtok
+    )
+    return LlmCallCeiling(cost_usd=cost, tokens=input_tokens + max_output_tokens)
+
+
 def compute_cost_usd(model_ref: ModelRef, usage: LLMUsage) -> float:
     """Compute the dollar cost of one LLM call.
 
