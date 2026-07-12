@@ -268,18 +268,23 @@ async def _record_steering_inferences(
     """Post one steered procedure's LLM usage to the durable inference ledger.
 
     Called AFTER the across-procedure Decision commits (the recorder's lazy
-    logbook-open loads it). Each call gets a deterministic event id derived
-    from the Decision, so a retried turn re-records the same ids and the
-    store dedups. `occurred_at` is the posting time, not the call time: the
-    brain seam carries no clock, and cap windows are calendar-sized, so the
-    approximation cannot move a call across a window in any way that
-    matters. The recorder port is best-effort and never raises, keeping
-    ledger trouble out of the steering path.
+    logbook-open loads it). Event ids derive from the Decision id per call
+    index; since the driver mints a FRESH Decision per turn, a retried turn
+    records its calls under a new Decision, which is the correct ledger
+    behavior (the retry re-spent). The derivation exists so any
+    same-Decision replay dedups at the store. `occurred_at` is the posting
+    time, not the call time: the brain seam carries no clock, and cap
+    windows are calendar-sized, so the approximation cannot move a call
+    across a window in any way that matters. The recorder port is
+    best-effort and never raises, keeping ledger trouble out of the
+    steering path. A conduct that crashes on a non-decide fault loses its
+    in-memory call list, an accepted crash-path undercount in the same
+    permissive direction as transport failures.
     """
     now = deps.clock.now()
     for index, call in enumerate(calls):
         cost_usd = compute_cost_usd(
-            ModelRef(provider=call.provider, model=call.model_requested),
+            ModelRef(provider=call.provider, model=call.request_model),
             call.usage,
         )
         trace = AgentInferenceTrace(
@@ -288,8 +293,8 @@ async def _record_steering_inferences(
             occurred_at=now,
             operation_name=DECISION_REASONING_OPERATION_CHAT,
             provider_name=call.provider,
-            request_model=call.model_requested,
-            response_model=call.model_served,
+            request_model=call.request_model,
+            response_model=call.response_model,
             input_tokens=call.usage.input_tokens,
             output_tokens=call.usage.output_tokens,
             cost_usd=cost_usd,
@@ -392,6 +397,18 @@ async def steer_experiment(
         decide = replace(decide, spend_agent_id=EXPERIMENT_STEERER_AGENT_ID)
     results: list[SteerExperimentStepResult] = []
     for turn, procedure_id in enumerate(procedure_ids):
+        # Stand down BEFORE conducting, not only at record time: a
+        # deactivated Actor must not burn a whole turn of LLM calls whose
+        # spend then has no Decision to land on (the ledger would never
+        # see it, and no cap could).
+        actor = await load_actor(deps.event_store, EXPERIMENT_STEERER_AGENT_ID)
+        if actor is None or not actor.active:
+            _log.info(
+                "experiment_steerer.stood_down_before_conduct",
+                turn=turn,
+                seeded=actor is not None,
+            )
+            break
         conduct_result = await conduct(
             ConductUntilAdvised(
                 procedure_id=procedure_id,

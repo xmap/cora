@@ -46,7 +46,7 @@ class BudgetSpendGuard:
         self._event_store = event_store
         self._spend_lookup = spend_lookup
 
-    async def refuse_reason(
+    async def refusal_reason(
         self,
         *,
         agent_id: UUID,

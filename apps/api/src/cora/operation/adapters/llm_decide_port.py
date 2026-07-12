@@ -8,7 +8,7 @@ across-procedure Decision, so `SpendLookup` sees steering spend.
 Gated: when built with a `SpendGuard`, a charged agent, and a clock
 (the steer_experiment path), `_refuse_if_over_budget` runs the
 per-call pre-estimate tier BEFORE each chat, raising
-`DecideBudgetExhaustedError` on a would-be breach so no tokens are
+`DecideSpendRefusedError` on a would-be breach so no tokens are
 bought; the conduct loop folds the refusal into a deferred steering
 decision. Transport-failed calls (timeout, rate limit) reach no sink;
 their tokens, if any were consumed server-side, are an accepted
@@ -23,10 +23,12 @@ onto a validated `SteeringAdvice`.
 
 ## Stateless by construction
 
-Like every `DecidePort` brain, it holds no cross-call memory: the full
-`SteeringEvidence.observations` is handed over each call and serialised
-into the prompt, so a replay that re-drives an earlier turn yields the same
-request. The LLM's own non-determinism is captured at the seam per
+Like every `DecidePort` brain, it holds no cross-call STEERING memory:
+the full `SteeringEvidence.observations` is handed over each call and
+serialised into the prompt, so a replay that re-drives an earlier turn
+yields the same request. The one instance field that accumulates is
+spend telemetry (the in-conduct actuals the budget gate projects with),
+which never influences advice. The LLM's own non-determinism is captured at the seam per
 [[project_non_determinism_principle]]: the caller records the returned
 advice onto its event stream, so a replay never re-asks the model.
 
@@ -59,7 +61,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from cora.infrastructure.observability.gen_ai import estimate_llm_call_ceiling
+from cora.infrastructure.observability.gen_ai import (
+    compute_cost_usd,
+    estimate_llm_call_ceiling,
+)
 from cora.infrastructure.ports.llm import (
     LLMAuthenticationError,
     LLMInvalidRequestError,
@@ -75,8 +80,8 @@ from cora.operation.adapters._llm_decide_prompt import (
 )
 from cora.operation.ports.decide_port import (
     DecideAdviceMalformedError,
-    DecideBudgetExhaustedError,
     DecideNotAvailableError,
+    DecideSpendRefusedError,
     DecideTimeoutError,
     SteeringAdvice,
     SteeringEvidence,
@@ -119,6 +124,14 @@ class LlmDecidePort:
         self._spend_guard = spend_guard
         self._spend_agent_id = spend_agent_id
         self._clock = clock
+        # In-conduct actuals: the ledger is only posted per turn (after the
+        # conduct returns), so without this the whole loop would be judged
+        # against one frozen baseline and a long conduct could stack many
+        # small calls past a cap. Spend telemetry, not steering memory: the
+        # brain stays stateless for replay purposes (a fresh instance is
+        # built per conduct, and advice still depends only on the evidence).
+        self._conduct_spent_usd = 0.0
+        self._conduct_spent_tokens = 0
 
     async def advise_next(self, evidence: SteeringEvidence) -> SteeringAdvice:
         """Ask the LLM for the next steering action, or a stop.
@@ -145,14 +158,18 @@ class LlmDecidePort:
         ) as exc:
             raise DecideNotAvailableError(f"LLM call failed: {type(exc).__name__}") from exc
 
+        self._conduct_spent_usd += compute_cost_usd(self._model_ref, response.usage)
+        self._conduct_spent_tokens += (response.usage.input_tokens or 0) + (
+            response.usage.output_tokens or 0
+        )
         if self._usage_sink is not None:
             # Before parsing: a malformed answer still cost real tokens,
             # and the ledger records what was spent, not what was useful.
             self._usage_sink(
                 SteeringLlmCall(
                     provider=self._model_ref.provider,
-                    model_requested=self._model_ref.model,
-                    model_served=response.model_id,
+                    request_model=self._model_ref.model,
+                    response_model=response.model_id,
                     usage=response.usage,
                 )
             )
@@ -163,33 +180,46 @@ class LlmDecidePort:
 
         Active only when the brain was built with a guard, an agent to
         charge, and a clock (the steer_experiment driver's path). The
-        estimate is a deliberate ceiling (see `estimate_llm_call_ceiling`),
-        so the gate's error is one-sided: it may refuse a call the balance
-        could barely afford, never permit one it cannot. An unpriced model
-        has no ceiling and passes ungated, the documented permissive
-        direction. Raises `DecideBudgetExhaustedError`, which the conduct
-        loop folds into a deferred steering decision.
+        projection adds three parts: the ledger baseline (inside the
+        guard), the actual cost of the calls THIS conduct already made
+        (the ledger only hears about them after the turn posts), and a
+        deliberate ceiling for the next call (see
+        `estimate_llm_call_ceiling`), so a long conduct cannot stack many
+        small calls past a cap against a frozen baseline. Residual
+        overspend is one call's estimate error plus cross-conduct races,
+        which the reserve tier owns. An unpriced model has no ceiling but
+        the guard still runs with zero estimates, so the lifecycle stop
+        and the already-over-cap refusal survive a missing PRICING entry.
+        Raises `DecideSpendRefusedError`, which the conduct loop folds
+        into a deferred steering decision.
         """
         if self._spend_guard is None or self._spend_agent_id is None or self._clock is None:
             return
-        input_chars = len(request.user_message.text) + sum(
-            len(block.text) for block in request.system.blocks
+        # The structured-output schema is billed input too; string length is
+        # a fair stand-in for its serialized size.
+        input_chars = (
+            len(request.user_message.text)
+            + sum(len(block.text) for block in request.system.blocks)
+            + len(str(request.structured_output_schema))
         )
         ceiling = estimate_llm_call_ceiling(
             self._model_ref,
             input_chars=input_chars,
             max_output_tokens=request.max_output_tokens,
         )
-        if ceiling is None:
-            return
-        reason = await self._spend_guard.refuse_reason(
+        # An unpriced model has no cost ceiling, but the guard still runs
+        # with zero estimates: the lifecycle stop (a suspended agent) and
+        # the already-over-cap refusal must not depend on pricing coverage.
+        estimated_cost = ceiling.cost_usd if ceiling is not None else 0.0
+        estimated_tokens = ceiling.tokens if ceiling is not None else 0
+        reason = await self._spend_guard.refusal_reason(
             agent_id=self._spend_agent_id,
-            estimated_cost_usd=ceiling.cost_usd,
-            estimated_tokens=ceiling.tokens,
+            estimated_cost_usd=estimated_cost + self._conduct_spent_usd,
+            estimated_tokens=estimated_tokens + self._conduct_spent_tokens,
             as_of=self._clock.now(),
         )
         if reason is not None:
-            raise DecideBudgetExhaustedError(reason)
+            raise DecideSpendRefusedError(reason)
 
     def _advice_from_parsed(
         self, parsed: Mapping[str, Any], evidence: SteeringEvidence

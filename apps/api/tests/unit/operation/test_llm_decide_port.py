@@ -35,9 +35,9 @@ from cora.operation.adapters.decide_port_config import (
 from cora.operation.adapters.llm_decide_port import LlmDecidePort
 from cora.operation.ports.decide_port import (
     DecideAdviceMalformedError,
-    DecideBudgetExhaustedError,
     DecideNotAvailableError,
     DecidePort,
+    DecideSpendRefusedError,
     DecideTimeoutError,
     SteeringAxis,
     SteeringEvidence,
@@ -176,6 +176,7 @@ async def test_llm_errors_translate_to_decide_taxonomy(
         await port.advise_next(_evidence(_obs(1.0, 10.0)))
 
 
+@pytest.mark.unit
 async def test_advise_next_reports_usage_to_the_sink() -> None:
     llm = FakeLLM(
         [
@@ -194,12 +195,13 @@ async def test_advise_next_reports_usage_to_the_sink() -> None:
     assert len(calls) == 1
     call = calls[0]
     assert call.provider == "anthropic"
-    assert call.model_requested == "claude-sonnet-4-5"
-    assert call.model_served == "claude-sonnet-4-5-20250929"
+    assert call.request_model == "claude-sonnet-4-5"
+    assert call.response_model == "claude-sonnet-4-5-20250929"
     assert call.usage.input_tokens == 1200
     assert call.usage.output_tokens == 80
 
 
+@pytest.mark.unit
 async def test_malformed_advice_still_reports_usage() -> None:
     """A hallucinated verdict still cost real tokens; the sink hears about
     the call before parsing so the ledger records what was spent."""
@@ -221,6 +223,7 @@ async def test_malformed_advice_still_reports_usage() -> None:
     assert calls[0].usage.input_tokens == 500
 
 
+@pytest.mark.unit
 async def test_transport_error_reports_no_usage() -> None:
     """A call that never returned has no provider-reported usage; the sink
     stays silent (the documented permissive undercount)."""
@@ -234,6 +237,7 @@ async def test_transport_error_reports_no_usage() -> None:
     assert calls == []
 
 
+@pytest.mark.unit
 async def test_build_decide_port_threads_usage_sink_to_the_llm_arm() -> None:
     llm = FakeLLM([FakeLLMResponse(parsed={"verdict": "Stop", "rationale": "ok"})])
     calls: list[SteeringLlmCall] = []
@@ -302,7 +306,7 @@ class _SpyGuard:
         self._reason = reason
         self.asks: list[dict[str, object]] = []
 
-    async def refuse_reason(
+    async def refusal_reason(
         self,
         *,
         agent_id: UUID,
@@ -325,6 +329,7 @@ _GATE_NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
 _GATE_AGENT_ID = UUID("01900000-0000-7000-8000-0000aaaa0077")
 
 
+@pytest.mark.unit
 async def test_refusing_guard_stops_the_call_before_any_tokens() -> None:
     llm = FakeLLM([_response({"verdict": "Stop", "rationale": "never reached"})])
     calls: list[SteeringLlmCall] = []
@@ -337,7 +342,7 @@ async def test_refusing_guard_stops_the_call_before_any_tokens() -> None:
         clock=FakeClock(_GATE_NOW),
     )
 
-    with pytest.raises(DecideBudgetExhaustedError):
+    with pytest.raises(DecideSpendRefusedError):
         await port.advise_next(_evidence(_obs(1.0, 10.0)))
 
     assert llm.received == []
@@ -345,6 +350,7 @@ async def test_refusing_guard_stops_the_call_before_any_tokens() -> None:
     assert len(guard.asks) == 1
 
 
+@pytest.mark.unit
 async def test_granting_guard_sees_a_positive_ceiling_then_the_call_proceeds() -> None:
     llm = FakeLLM([_response({"verdict": "Stop", "rationale": "done"})])
     guard = _SpyGuard(None)
@@ -368,6 +374,7 @@ async def test_granting_guard_sees_a_positive_ceiling_then_the_call_proceeds() -
     assert ask["estimated_tokens"] > 0
 
 
+@pytest.mark.unit
 async def test_guard_without_a_charged_agent_is_not_consulted() -> None:
     """Route-driven conduct has no spend_agent_id; the guard stays silent
     and the call is operator-accountable, mirroring regenerate."""
@@ -384,3 +391,58 @@ async def test_guard_without_a_charged_agent_is_not_consulted() -> None:
 
     assert guard.asks == []
     assert len(llm.received) == 1
+
+
+@pytest.mark.unit
+async def test_build_decide_port_threads_the_gate_trio_to_the_llm_arm() -> None:
+    """Mutation catcher: dropping spend_guard / spend_agent_id / clock from
+    the factory's llm arm silently disarms production gating while every
+    direct-construction test stays green."""
+    llm = FakeLLM([_response({"verdict": "Stop", "rationale": "never reached"})])
+    guard = _SpyGuard("cap would be breached")
+    port = build_decide_port(
+        DecidePortConfig(substrate="llm", spend_agent_id=_GATE_AGENT_ID),
+        llm=llm,
+        spend_guard=guard,
+        clock=FakeClock(_GATE_NOW),
+    )
+
+    with pytest.raises(DecideSpendRefusedError):
+        await port.advise_next(_evidence(_obs(1.0, 10.0)))
+
+    assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_second_ask_projects_the_first_calls_actual_spend() -> None:
+    """The ledger only hears about a conduct's calls after the turn posts,
+    so the brain adds its own in-conduct actuals to each projection; a
+    long conduct cannot stack calls against a frozen baseline."""
+    llm = FakeLLM(
+        [
+            FakeLLMResponse(
+                parsed={"verdict": "Measure", "next_point": {"x": 1.0}, "rationale": "go"},
+                usage=LLMUsage(input_tokens=1_000_000, output_tokens=0),
+            ),
+            FakeLLMResponse(
+                parsed={"verdict": "Stop", "rationale": "done"},
+                usage=LLMUsage(input_tokens=0, output_tokens=0),
+            ),
+        ]
+    )
+    guard = _SpyGuard(None)
+    port = LlmDecidePort(
+        llm=llm,
+        spend_guard=guard,
+        spend_agent_id=_GATE_AGENT_ID,
+        clock=FakeClock(_GATE_NOW),
+    )
+
+    await port.advise_next(_evidence(_obs(1.0, 10.0)))
+    await port.advise_next(_evidence(_obs(1.0, 10.0)))
+
+    first, second = guard.asks
+    # Sonnet base input is $3/M: one million input tokens adds ~$3 of
+    # recorded-but-unposted spend to the second projection.
+    assert second["estimated_cost_usd"] >= first["estimated_cost_usd"] + 2.9  # type: ignore[operator]
+    assert second["estimated_tokens"] >= first["estimated_tokens"] + 1_000_000  # type: ignore[operator]

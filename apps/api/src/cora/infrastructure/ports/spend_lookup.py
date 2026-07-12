@@ -5,9 +5,11 @@ CautionDrafter) to gate an LLM call on the caller's declared
 `AgentBudget` caps: the gate sums what the agent has already spent in
 the cap's window and refuses the next call once a cap is breached
 (coarse post-hoc enforcement per the tier ladder in
-[[project_budget_bc_research]]). Planned consumers, not wired today:
-the operator-triggered regenerate slice, and the Operation BC steering
-brain at the per-call pre-estimate tier.
+[[project_budget_bc_research]]), and by the Agent BC's
+`BudgetSpendGuard`, the pre-call half that gates the Operation BC
+steering brain at the per-call pre-estimate tier. The
+operator-triggered regenerate slice stays deliberately ungated (an
+accountable human asked; the call is still metered and debited).
 
 ## Convention
 

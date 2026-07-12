@@ -188,3 +188,17 @@ def test_estimate_llm_call_ceiling_unpriced_model_returns_none() -> None:
     )
 
     assert ceiling is None
+
+
+@pytest.mark.unit
+def test_estimate_llm_call_ceiling_rounds_the_input_estimate_up() -> None:
+    """301 chars is 100.33 tokens at chars/3; the ceiling must round UP
+    (101), keeping the estimate's error one-sided."""
+    ceiling = estimate_llm_call_ceiling(
+        ModelRef(provider="anthropic", model="claude-sonnet-4-5"),
+        input_chars=301,
+        max_output_tokens=10,
+    )
+
+    assert ceiling is not None
+    assert ceiling.tokens == 101 + 10

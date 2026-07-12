@@ -193,7 +193,7 @@ class DecideNotAvailableError(Exception):
         self.reason = reason
 
 
-class DecideBudgetExhaustedError(DecideNotAvailableError):
+class DecideSpendRefusedError(DecideNotAvailableError):
     """The caller's budget refused the next steering call before it was made.
 
     Raised by a budget-guarded brain when the pre-call estimate would
@@ -384,8 +384,8 @@ class SteeringLlmCall:
     """
 
     provider: str
-    model_requested: str
-    model_served: str | None
+    request_model: str
+    response_model: str | None
     usage: "LLMUsage"
 
 
@@ -459,11 +459,11 @@ __all__ = [
     "AdviceAuditFields",
     "DecideAccessDeniedError",
     "DecideAdviceMalformedError",
-    "DecideBudgetExhaustedError",
     "DecideColdStartError",
     "DecideEvidenceRejectedError",
     "DecideNotAvailableError",
     "DecidePort",
+    "DecideSpendRefusedError",
     "DecideTimeoutError",
     "SteeringAdvice",
     "SteeringAxis",

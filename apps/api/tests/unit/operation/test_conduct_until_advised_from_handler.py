@@ -34,6 +34,7 @@ import pytest
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.ports.llm import FakeLLM, FakeLLMResponse, LLMUsage
 from cora.operation.adapters.decide_port_config import DecidePortConfig, DecideSubstrate
 from cora.operation.adapters.in_memory_compute_port import InMemoryComputePort
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
@@ -110,9 +111,9 @@ class _LenientIds:
         return uuid4()
 
 
-def _deps(store: InMemoryEventStore, *, deny: bool = False) -> Kernel:
+def _deps(store: InMemoryEventStore, *, deny: bool = False, llm: FakeLLM | None = None) -> Kernel:
     return _build_deps_shared(
-        ids=[uuid4() for _ in range(40)], now=_NOW, event_store=store, deny=deny
+        ids=[uuid4() for _ in range(40)], now=_NOW, event_store=store, deny=deny, llm=llm
     )
 
 
@@ -624,3 +625,32 @@ async def test_resume_authz_deny_raises_unauthorized() -> None:
     with pytest.raises(UnauthorizedError):
         await _call(_make_conduct_from(deps, port, compute, outcome_store))
     assert await _status(store) is ProcedureStatus.HELD
+
+
+@pytest.mark.unit
+async def test_resume_with_an_llm_brain_surfaces_its_calls_on_the_result() -> None:
+    """The handler wires the usage sink into the brain and the collected
+    calls onto the result; dropping either silently unmeters the llm
+    substrate while every adapter-level test stays green."""
+    store = InMemoryEventStore()
+    port = InMemoryControlPort()
+    port.simulate_connect(_MOTOR_ADDR)
+    compute = InMemoryComputePort()  # nothing queued: Stop completes, no pass
+    outcome_store = InMemoryOutcomeStore()
+    await _seed_held_steered(store, outcome_store, closed=[(3.0, 2.0), (4.0, 0.5)])
+    llm = FakeLLM(
+        [
+            FakeLLMResponse(
+                parsed={"verdict": "Stop", "rationale": "target met"},
+                usage=LLMUsage(input_tokens=700, output_tokens=40),
+            )
+        ]
+    )
+    deps = _deps(store, llm=llm)
+
+    result = await _call(_make_conduct_from(deps, port, compute, outcome_store), substrate="llm")
+
+    assert result.succeeded is True
+    assert len(result.llm_calls) == 1
+    assert result.llm_calls[0].usage.input_tokens == 700
+    assert result.llm_calls[0].request_model == "claude-sonnet-4-5"
