@@ -14,6 +14,7 @@ from cora.infrastructure.observability.gen_ai import (
     compute_cost_usd,
     estimate_llm_call_ceiling,
     record_llm_call,
+    set_pricing_overlay,
 )
 from cora.infrastructure.ports.llm import LLMUsage, ModelRef
 
@@ -202,3 +203,97 @@ def test_estimate_llm_call_ceiling_rounds_the_input_estimate_up() -> None:
 
     assert ceiling is not None
     assert ceiling.tokens == 101 + 10
+
+
+# Deliberately different from every static Sonnet figure so a test
+# asserting these numbers proves the overlay was consulted.
+_CATALOG_SONNET = ModelPricing(
+    input_per_mtok=4.00,
+    output_per_mtok=20.00,
+    cache_write_per_mtok=8.00,
+    cache_read_per_mtok=0.40,
+)
+
+
+@pytest.mark.unit
+def test_catalog_overlay_entry_shadows_static_pricing_in_compute_cost_usd() -> None:
+    """The catalog is the governance home of pricing: a catalog price
+    for a statically priced identity wins over the table."""
+    assert PRICING[("anthropic", "claude-sonnet-4-5")] != _CATALOG_SONNET
+    set_pricing_overlay({("anthropic", "claude-sonnet-4-5"): _CATALOG_SONNET})
+    try:
+        cost = compute_cost_usd(
+            ModelRef(provider="anthropic", model="claude-sonnet-4-5"),
+            LLMUsage(input_tokens=1_000_000, output_tokens=0),
+        )
+        assert cost == pytest.approx(4.00)
+    finally:
+        set_pricing_overlay({})
+
+
+@pytest.mark.unit
+def test_catalog_overlay_entry_shadows_static_pricing_in_estimate_ceiling() -> None:
+    """The pre-estimate gate must meter the same governed price the
+    post-call cost meter uses, or the gate and the bill disagree."""
+    set_pricing_overlay({("anthropic", "claude-sonnet-4-5"): _CATALOG_SONNET})
+    try:
+        ceiling = estimate_llm_call_ceiling(
+            ModelRef(provider="anthropic", model="claude-sonnet-4-5"),
+            input_chars=300,
+            max_output_tokens=1_000,
+        )
+        assert ceiling is not None
+        assert ceiling.cost_usd == pytest.approx(100 / 1e6 * 8.00 + 1_000 / 1e6 * 20.00)
+    finally:
+        set_pricing_overlay({})
+
+
+@pytest.mark.unit
+def test_key_absent_from_overlay_falls_back_to_static_pricing() -> None:
+    """An installed overlay only shadows its own keys; every other
+    identity keeps its static-table price."""
+    set_pricing_overlay({("anthropic", "claude-sonnet-4-5"): _CATALOG_SONNET})
+    try:
+        cost = compute_cost_usd(
+            ModelRef(provider="anthropic", model="claude-opus-4-8"),
+            LLMUsage(input_tokens=1_000_000, output_tokens=0),
+        )
+        assert cost == pytest.approx(5.00)
+    finally:
+        set_pricing_overlay({})
+
+
+@pytest.mark.unit
+def test_replacing_overlay_with_empty_mapping_restores_static_only_pricing() -> None:
+    """Wholesale replacement is the removal path: an entry absent from
+    the new mapping falls back to the static table on the next set."""
+    set_pricing_overlay({("anthropic", "claude-sonnet-4-5"): _CATALOG_SONNET})
+    try:
+        set_pricing_overlay({})
+        cost = compute_cost_usd(
+            ModelRef(provider="anthropic", model="claude-sonnet-4-5"),
+            LLMUsage(input_tokens=1_000_000, output_tokens=0),
+        )
+        assert cost == pytest.approx(3.00)
+    finally:
+        set_pricing_overlay({})
+
+
+@pytest.mark.unit
+def test_key_missing_from_both_overlay_and_static_still_warns_and_costs_zero(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The unpriced-model warning fires only when BOTH the overlay and
+    the static table miss; an overlay being installed must not mute it."""
+    set_pricing_overlay({("anthropic", "claude-sonnet-4-5"): _CATALOG_SONNET})
+    try:
+        with caplog.at_level(logging.WARNING, logger="cora.infrastructure.observability.gen_ai"):
+            cost = compute_cost_usd(
+                ModelRef(provider="acme", model="mystery-1"),
+                LLMUsage(input_tokens=1_000_000, output_tokens=0),
+            )
+        assert cost == 0.0
+        matches = [r for r in caplog.records if "no PRICING entry" in r.getMessage()]
+        assert len(matches) == 1
+    finally:
+        set_pricing_overlay({})

@@ -27,6 +27,7 @@ Public surface re-exported here:
   - `build_llm`                (LLMFactory for `build_kernel`)
 """
 
+from cora.agent._pricing_bridge import refresh_language_model_pricing
 from cora.agent._projections import register_agent_projections
 from cora.agent._subscribers import register_agent_subscribers
 from cora.agent.aggregates.agent import load_agent
@@ -109,6 +110,7 @@ __all__ = [
     "UnauthorizedError",
     "build_llm",
     "load_agent",
+    "refresh_language_model_pricing",
     "register_agent_projections",
     "register_agent_routes",
     "register_agent_subscribers",

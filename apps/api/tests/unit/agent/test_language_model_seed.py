@@ -14,6 +14,7 @@ from uuid import UUID
 import pytest
 import structlog.testing
 
+from cora.agent._pricing_bridge import to_model_pricing
 from cora.agent.aggregates.agent import ModelRef
 from cora.agent.aggregates.language_model import (
     LanguageModelDefined,
@@ -92,6 +93,19 @@ def test_seed_pricing_figures_match_observability_pricing_table() -> None:
             cache_write_per_mtok=pricing.cache_write_per_mtok,
             cache_read_per_mtok=pricing.cache_read_per_mtok,
         )
+
+
+@pytest.mark.unit
+def test_overlay_built_from_seed_constants_equals_static_pricing_rows() -> None:
+    """The day-1 no-behavior-change claim, pinned without a database:
+    the mapping the pricing bridge would build from the seeded entries
+    is exactly the static PRICING rows for those identities, so first
+    boot's overlay install changes no metered figure."""
+    overlay = {
+        (entry.model_ref.provider, entry.model_ref.model): to_model_pricing(entry.cost_basis)
+        for entry in SEED_LANGUAGE_MODELS
+    }
+    assert overlay == {key: PRICING[key] for key in overlay}
 
 
 @pytest.mark.unit

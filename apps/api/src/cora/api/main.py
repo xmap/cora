@@ -50,6 +50,7 @@ from cora.access import (
 from cora.agent import (
     AgentHandlers,
     build_llm,
+    refresh_language_model_pricing,
     register_agent_projections,
     register_agent_routes,
     register_agent_subscribers,
@@ -860,6 +861,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             register_agent_projections(agent_only_registry, deps)
             if deps.pool is not None:
                 await drain_projections(deps.pool, agent_only_registry, deadline_seconds=5.0)
+                # Feed the observability pricing overlay from the catalog
+                # just drained. Day one the overlay equals the static table
+                # because the seeds mirror it; the bridge is what lets a
+                # facility's catalog pricing diverge deliberately.
+                await refresh_language_model_pricing(pool=deps.pool, event_store=deps.event_store)
             # same shape for RunSupervisor (deterministic in-loop agent).
             await seed_run_supervisor_agent(deps)
             # same shape for RunInitiator (deterministic agent that starts Runs;

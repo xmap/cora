@@ -44,6 +44,14 @@ config file: cadence is too low for runtime overrides, and the
 git history of edits IS the audit trail. Update when Anthropic
 publishes a new model or revises a price.
 
+The catalog overlay sits in front of the table: the agent BC's
+LanguageModel catalog is the governance home of pricing, and its
+loader feeds a process-local overlay via `set_pricing_overlay` at
+startup. The static table is the fallback and the day-1 content
+(the fleet seeds mirror it, pinned by test). A runtime catalog
+pricing change takes effect at next boot; the in-process refresh
+subscriber is the recorded follow-up.
+
 ## Metrics
 
 Two histograms:
@@ -66,6 +74,8 @@ from typing import TYPE_CHECKING
 from opentelemetry import metrics
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from opentelemetry.trace import Span
 
     from cora.infrastructure.ports.llm import LLMUsage, ModelRef
@@ -138,6 +148,32 @@ PRICING: dict[tuple[str, str], ModelPricing] = {
 # than per call (would flood the log under steady traffic).
 _warned_missing_pricing: set[tuple[str, str]] = set()
 
+# Process-local catalog overlay, consulted before PRICING. Replaced
+# wholesale by set_pricing_overlay; never mutated in place.
+_pricing_overlay: dict[tuple[str, str], ModelPricing] = {}
+
+
+def set_pricing_overlay(pricing: Mapping[tuple[str, str], ModelPricing]) -> None:
+    """Replace the catalog pricing overlay atomically.
+
+    Called by the agent BC's loader at startup with every Approved
+    token-priced catalog entry. The whole overlay is REPLACED (a new
+    dict is assigned, never mutated in place), so an entry removed
+    from the catalog falls back to the static table on the next set
+    rather than lingering at a withdrawn price.
+    """
+    global _pricing_overlay
+    _pricing_overlay = dict(pricing)
+
+
+def _resolve_pricing(key: tuple[str, str]) -> ModelPricing | None:
+    """Catalog overlay first (the governed price), then the static table."""
+    overlay = _pricing_overlay.get(key)
+    if overlay is not None:
+        return overlay
+    return PRICING.get(key)
+
+
 _meter = metrics.get_meter("cora.gen_ai")
 _token_histogram = _meter.create_histogram(
     name="gen_ai.client.token.usage",
@@ -175,12 +211,12 @@ def estimate_llm_call_ceiling(
     the cache. Output is priced at the full `max_output_tokens`, which
     the provider enforces as a hard cap.
 
-    Returns None when `(provider, model)` has no `PRICING` entry: no
-    price means no ceiling, and the caller skips the gate (permissive,
-    matching `compute_cost_usd`'s $0-for-unpriced posture) rather than
-    refusing calls it cannot cost.
+    Returns None when `(provider, model)` has no entry in the catalog
+    overlay or `PRICING`: no price means no ceiling, and the caller
+    skips the gate (permissive, matching `compute_cost_usd`'s
+    $0-for-unpriced posture) rather than refusing calls it cannot cost.
     """
-    pricing = PRICING.get((model_ref.provider, model_ref.model))
+    pricing = _resolve_pricing((model_ref.provider, model_ref.model))
     if pricing is None:
         return None
     input_tokens = -(-input_chars // 3)
@@ -194,11 +230,12 @@ def estimate_llm_call_ceiling(
 def compute_cost_usd(model_ref: ModelRef, usage: LLMUsage) -> float:
     """Compute the dollar cost of one LLM call.
 
-    Returns 0.0 with a one-time warning when `(provider, model)`
-    isn't in `PRICING`. The 0.0 is intentional: dashboards then
-    show a flat $0 series for unpriced models, which is easier to
-    notice than raising and breaking the call. Operators add a
-    `PRICING` entry when they see the warning.
+    Returns 0.0 with a one-time warning when `(provider, model)` is
+    in neither the catalog overlay nor `PRICING`. The 0.0 is
+    intentional: dashboards then show a flat $0 series for unpriced
+    models, which is easier to notice than raising and breaking the
+    call. Operators add a `PRICING` entry (or approve a catalog
+    entry) when they see the warning.
 
     Cache-read tokens are billed at ~10% of base input; cache-write
     tokens are billed at 2x base input (the 1-hour TTL tier the
@@ -208,13 +245,13 @@ def compute_cost_usd(model_ref: ModelRef, usage: LLMUsage) -> float:
     cache tokens, so the three add up to the actual chargeable input.
     """
     key = (model_ref.provider, model_ref.model)
-    pricing = PRICING.get(key)
+    pricing = _resolve_pricing(key)
     if pricing is None:
         if key not in _warned_missing_pricing:
             _warned_missing_pricing.add(key)
             _log.warning(
                 "gen_ai.compute_cost_usd: no PRICING entry for %s; "
-                "reporting $0 until cora.infrastructure.observability.gen_ai.PRICING "
+                "reporting $0 until a catalog entry is approved or "
                 "is updated. Cost dashboards will show $0 for this model.",
                 key,
             )
@@ -305,4 +342,5 @@ __all__ = [
     "ModelPricing",
     "compute_cost_usd",
     "record_llm_call",
+    "set_pricing_overlay",
 ]
