@@ -57,6 +57,18 @@ from cora.agent.aggregates.agent import (
     InvalidModelRefError,
     InvalidToolNameError,
 )
+from cora.agent.aggregates.language_model import (
+    InvalidCostBasisError,
+    InvalidEndpointNoteError,
+    InvalidLanguageModelNameError,
+    InvalidLanguageModelReasonError,
+    LanguageModelAlreadyExistsError,
+    LanguageModelCannotAnnounceRetirementError,
+    LanguageModelCannotApproveError,
+    LanguageModelCannotDeprecateError,
+    LanguageModelCannotRetireError,
+    LanguageModelNotFoundError,
+)
 from cora.agent.errors import (
     CautionProposalMalformedError,
     CautionProposalNotActionableError,
@@ -200,15 +212,21 @@ def register_agent_routes(app: FastAPI) -> None:
         CautionProposalMalformedError,
         # dismiss_event_in_reaction validation error.
         InvalidDismissalReasonError,
+        # LanguageModel catalog validation errors.
+        InvalidLanguageModelNameError,
+        InvalidEndpointNoteError,
+        InvalidLanguageModelReasonError,
+        InvalidCostBasisError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
     for not_found_cls in (
         AgentNotFoundError,
+        LanguageModelNotFoundError,
         SubscriberBookmarkNotFoundError,
         DismissalEventNotFoundError,
     ):
         app.add_exception_handler(not_found_cls, _handle_not_found)
-    for already_exists_cls in (AgentAlreadyExistsError,):
+    for already_exists_cls in (AgentAlreadyExistsError, LanguageModelAlreadyExistsError):
         app.add_exception_handler(already_exists_cls, _handle_already_exists)
     for cannot_transition_cls in (
         AgentCannotVersionError,
@@ -220,6 +238,10 @@ def register_agent_routes(app: FastAPI) -> None:
         AgentCannotUpdateBudgetError,
         AgentCannotSetTargetPlanError,
         EventAlreadyDismissedError,
+        LanguageModelCannotApproveError,
+        LanguageModelCannotAnnounceRetirementError,
+        LanguageModelCannotRetireError,
+        LanguageModelCannotDeprecateError,
     ):
         app.add_exception_handler(cannot_transition_cls, _handle_cannot_transition)
     app.add_exception_handler(UnauthorizedError, _handle_unauthorized)

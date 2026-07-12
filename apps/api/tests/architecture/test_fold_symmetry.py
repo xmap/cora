@@ -71,6 +71,11 @@ if TYPE_CHECKING:
 # aggregate directory; nested VOs use their own class name.
 _INTRINSIC_ALLOWLIST: dict[str, str] = {
     "caution.Caution.expires_at": "operator-supplied calendar deadline; not a fact-act",
+    "agent.LanguageModel.retirement_effective_at": (
+        "vendor-announced future cutoff date; the announcing actor lives on the "
+        "LanguageModelRetirementAnnounced envelope, and the date is the vendor's "
+        "schedule, not a CORA fact-act"
+    ),
     "caution.Caution.authored_by": (
         "genesis author identity-ref inherited through supersede / retire; "
         "the act-of-authoring is the genesis fold-NEITHER posture"
