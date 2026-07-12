@@ -43,9 +43,10 @@ if TYPE_CHECKING:
 # `proj_<aggregate>_<rowtype>` (e.g., proj_run_summary, not
 # proj_run_run_summary). Add a BC here only after confirming it has
 # exactly one aggregate AND the BC name matches the aggregate name.
+# `agent` left this set when the LanguageModel aggregate landed; its
+# proj_agent_summary still passes via the prefix-present branch.
 _BCS_WITH_MATCHING_SINGLE_AGGREGATE: frozenset[str] = frozenset(
     {
-        "agent",
         "calibration",
         "campaign",
         "caution",
@@ -55,6 +56,16 @@ _BCS_WITH_MATCHING_SINGLE_AGGREGATE: frozenset[str] = frozenset(
         "supply",
     }
 )
+
+# Aggregate-named tables whose aggregate name differs from the owning
+# BC's name: table -> owning BC. The agent BC's second aggregate is
+# LanguageModel (the longer name is load-bearing: equipment owns the
+# `Model` stream type), and its table keeps the aggregate-named shape
+# `proj_language_model_summary` per the model-catalog design lock
+# rather than stuttering `proj_agent_language_model_summary`.
+_AGGREGATE_NAMED_TABLES: dict[str, str] = {
+    "proj_language_model_summary": "agent",
+}
 
 
 def _populate_registry_from_bcs() -> tuple[ProjectionRegistry, dict[str, str]]:
@@ -98,6 +109,11 @@ def test_projection_table_bc_prefix(table_name: str) -> None:
             "All projection table names must use the `proj_` prefix."
         )
     rest = table_name[len("proj_") :]
+
+    if _AGGREGATE_NAMED_TABLES.get(table_name) == bc:
+        # Explicitly-listed aggregate-named table (BC has multiple
+        # aggregates and this aggregate's name differs from the BC's).
+        return
 
     if bc in _BCS_WITH_MATCHING_SINGLE_AGGREGATE:
         # Convention: drop the redundant prefix. Table starts with the

@@ -63,7 +63,6 @@ EMDASH_ALLOWLIST: frozenset[str] = frozenset(
         "src/cora/access/projections/summary.py",
         "src/cora/access/routes.py",
         "src/cora/access/wire.py",
-        "src/cora/agent/_projections.py",
         "src/cora/agent/_subscribers.py",
         "src/cora/agent/aggregates/agent/events.py",
         "src/cora/agent/aggregates/agent/evolver.py",

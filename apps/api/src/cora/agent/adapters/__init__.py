@@ -9,5 +9,6 @@ depend only on `cora.infrastructure.ports.LLM`.
 
 from cora.agent.adapters.anthropic_llm import AnthropicLLM
 from cora.agent.adapters.budget_spend_guard import BudgetSpendGuard
+from cora.agent.adapters.postgres_language_model_lookup import PostgresLanguageModelLookup
 
-__all__ = ["AnthropicLLM", "BudgetSpendGuard"]
+__all__ = ["AnthropicLLM", "BudgetSpendGuard", "PostgresLanguageModelLookup"]

@@ -282,6 +282,26 @@ class LanguageModelCannotRetireError(Exception):
         self.current_status = current_status
 
 
+class LanguageModelNotApprovedError(Exception):
+    """An agent cannot be registered on a model the facility has not approved.
+
+    Raised by the `define_agent` gate when the command's model identity
+    resolves to no catalog entry, or to an entry whose status is not
+    Approved. The kernel's default lookup approves everything, so the
+    gate arms only when a deployment stands up a real catalog. `status`
+    is None when the identity is absent from the catalog entirely.
+    """
+
+    def __init__(self, provider: str, model: str, status: str | None) -> None:
+        detail = f"catalog status {status}" if status is not None else "not in the catalog"
+        super().__init__(
+            f"LanguageModel {provider}/{model} is not approved for agent registration ({detail})"
+        )
+        self.provider = provider
+        self.model = model
+        self.status = status
+
+
 class LanguageModelCannotDeprecateError(Exception):
     """Attempted `deprecate_language_model` from a disqualifying status.
 

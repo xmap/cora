@@ -58,6 +58,7 @@ from cora.infrastructure.ports import (
     FakeClock,
     FamilyLookup,
     FixedIdGenerator,
+    LanguageModelLookup,
     ProfileStore,
     RoleLookup,
     SpendLookup,
@@ -133,6 +134,7 @@ def build_deps(
     assembly_lookup: AssemblyLookup | None = None,
     role_lookup: RoleLookup | None = None,
     spend_lookup: SpendLookup | None = None,
+    language_model_lookup: LanguageModelLookup | None = None,
 ) -> Kernel:
     """Build a Kernel for unit-test handler invocation.
 
@@ -188,6 +190,12 @@ def build_deps(
     the slice resolves at the handler edge. Each defaults to a fresh
     empty in-memory adapter per call; tests on the slice-1 family_id
     path never touch them.
+
+    `language_model_lookup` injects a catalog-lookup stub for
+    `define_agent` gate tests (typically a fake returning None or a
+    non-Approved entry). Defaults to the kernel's always-approved stub
+    via `make_inmemory_kernel`, so every non-gate test keeps the
+    pre-catalog behavior.
     """
     if authz is None:
         authz = DenyAllAuthorize() if deny else AllowAllAuthorize()
@@ -232,6 +240,7 @@ def build_deps(
         signature_port=InMemorySignaturePort(),
         permit_lookup=InMemoryPermitLookup(),
         spend_lookup=spend_lookup,
+        language_model_lookup=language_model_lookup,
     )
 
 

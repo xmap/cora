@@ -10,6 +10,7 @@ encodes.
 
 from __future__ import annotations
 
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 from typing import TYPE_CHECKING
 
 from cora.infrastructure.ports.language_model_lookup import LanguageModelLookupResult

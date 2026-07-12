@@ -82,6 +82,7 @@ from cora.infrastructure.logging import configure_logging
 from cora.infrastructure.ports import (
     LLM,
     AllSatisfiedSupplyLookup,
+    AlwaysApprovedLanguageModelLookup,
     AlwaysCoveredClearanceLookup,
     AlwaysEmptyCapabilityLookup,
     AlwaysPermittedEnclosureLookup,
@@ -106,6 +107,7 @@ from cora.infrastructure.ports import (
     FamilyLookup,
     IdempotencyStore,
     IdGenerator,
+    LanguageModelLookup,
     LogbookMirror,
     NoComputeReachabilityLookup,
     NoDatasetDistributionsLookup,
@@ -413,6 +415,7 @@ def make_inmemory_kernel(
     assembly_lookup: AssemblyLookup | None = None,
     role_lookup: RoleLookup | None = None,
     enclosure_lookup: EnclosureLookup | None = None,
+    language_model_lookup: LanguageModelLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
@@ -514,6 +517,13 @@ def make_inmemory_kernel(
     adapter's `register(...)` helper; tests that don't touch a Role
     leave the dict empty (the default).
 
+    `language_model_lookup` defaults to `AlwaysApprovedLanguageModelLookup`
+    (every identity Approved) for the same reason: no projection worker,
+    no `proj_language_model_summary` table to read from, and the
+    define_agent gate must stay disarmed for every existing test.
+    Gate-specific tests override with a fake returning None or a
+    non-Approved entry.
+
     `llm` defaults to `None`; the in-memory kernel is for unit /
     contract tests that don't exercise LLM subscribers. Subscriber
     tests that DO exercise the LLM path inject `FakeLLM`
@@ -587,6 +597,11 @@ def make_inmemory_kernel(
         role_lookup=(role_lookup if role_lookup is not None else InMemoryRoleLookup()),
         enclosure_lookup=(
             enclosure_lookup if enclosure_lookup is not None else AlwaysPermittedEnclosureLookup()
+        ),
+        language_model_lookup=(
+            language_model_lookup
+            if language_model_lookup is not None
+            else AlwaysApprovedLanguageModelLookup()
         ),
         profile_store=profile_store if profile_store is not None else InMemoryProfileStore(),
         canonicalization_registry=_build_default_canonicalization_registry(),

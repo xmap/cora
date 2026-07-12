@@ -74,12 +74,12 @@ def test_introspection_aggregates_match_filesystem() -> None:
     assert generated == _filesystem_aggregates()
 
 
-def test_counts_are_seventeen_bcs_and_forty_one_aggregates() -> None:
+def test_counts_are_seventeen_bcs_and_forty_two_aggregates() -> None:
     # Anti-drift pins for the model.md headline; bump deliberately on a BC/aggregate add.
-    # 41 aggregates: the Trust BC gained Ratification (the consequence gate).
+    # 42 aggregates: the Agent BC gained LanguageModel (the facility model catalog).
     model = ai.introspect(_CORA)
     assert model.bc_count == 17
-    assert model.aggregate_count == 41
+    assert model.aggregate_count == 42
 
 
 def test_enclosure_bc_and_equipment_role_are_present() -> None:
@@ -140,7 +140,7 @@ def test_bc_table_group_map_covers_every_bc() -> None:
 
 def test_count_renderer() -> None:
     assert ap.render_count(_MODEL, {"kind": "bc", "spell": "true", "cap": "true"}) == "Seventeen"
-    assert ap.render_count(_MODEL, {"kind": "aggregate", "spell": "true"}) == "forty-one"
+    assert ap.render_count(_MODEL, {"kind": "aggregate", "spell": "true"}) == "forty-two"
     assert ap.render_count(_MODEL, {"kind": "bc"}) == "17"
     assert ap.render_count(_MODEL, {"kind": "event", "bc": "decision"}) == "4"
     assert ap.render_count(_MODEL, {"kind": "slice", "bc": "equipment"}) == "60"

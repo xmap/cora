@@ -1,8 +1,10 @@
 """Agent bounded context.
 
-One aggregate, `Agent`. Genesis plus a lifecycle FSM
+Two aggregates. `Agent`: genesis plus a lifecycle FSM
 (`Defined -> Versioned -> Suspended? -> Deprecated`) with tool
-grants and budget envelopes.
+grants and budget envelopes. `LanguageModel`: the facility's
+catalog entry for one approved LLM, homed beside the fleet whose
+`Agent.model_ref` it governs.
 
 Production `AnthropicLLM` ships at
 `cora.agent.adapters.AnthropicLLM` and is wired into the
@@ -67,6 +69,7 @@ from cora.agent.seed_experiment_steerer import (
     EXPERIMENT_STEERER_AGENT_ID,
     seed_experiment_steerer_agent,
 )
+from cora.agent.seed_language_models import seed_language_models
 from cora.agent.seed_procedure_watcher import (
     PROCEDURE_WATCHER_AGENT_ID,
     seed_procedure_watcher_agent,
@@ -118,6 +121,7 @@ __all__ = [
     "seed_clearance_expirer_agent",
     "seed_clearance_watcher_agent",
     "seed_experiment_steerer_agent",
+    "seed_language_models",
     "seed_procedure_watcher_agent",
     "seed_ratification_enforcer_agent",
     "seed_run_debriefer_agent",

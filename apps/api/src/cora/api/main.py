@@ -62,6 +62,7 @@ from cora.agent import (
     seed_clearance_expirer_agent,
     seed_clearance_watcher_agent,
     seed_experiment_steerer_agent,
+    seed_language_models,
     seed_procedure_watcher_agent,
     seed_ratification_enforcer_agent,
     seed_run_debriefer_agent,
@@ -69,7 +70,7 @@ from cora.agent import (
     seed_run_supervisor_agent,
     wire_agent,
 )
-from cora.agent.adapters import BudgetSpendGuard
+from cora.agent.adapters import BudgetSpendGuard, PostgresLanguageModelLookup
 from cora.api._calibration_watcher import calibration_watcher_lifespan
 from cora.api._campaign_watcher import campaign_watcher_lifespan
 from cora.api._clearance_expirer import clearance_expirer_lifespan
@@ -696,6 +697,18 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 "spend_guard",
                 BudgetSpendGuard(event_store=deps.event_store, spend_lookup=deps.spend_lookup),
             )
+            # LanguageModel catalog lookup for the define_agent gate. Only
+            # bound when a real pool exists: the in-memory kernel keeps the
+            # always-approved stub (no projection worker, no
+            # proj_language_model_summary table), matching the port's
+            # opt-in posture. Must land BEFORE wire_agent so define_agent
+            # closes over the production adapter.
+            if deps.pool is not None:
+                object.__setattr__(
+                    deps,
+                    "language_model_lookup",
+                    PostgresLanguageModelLookup(deps.pool),
+                )
             app.state.supply = wire_supply(deps)
             app.state.enclosure = wire_enclosure(deps)
 
@@ -839,6 +852,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_run_debriefer_agent(deps)
             # same shape for CautionDrafter.
             await seed_caution_drafter_agent(deps)
+            # LanguageModel catalog entries for the fleet's three default
+            # models, born Defined AND Approved so the define_agent gate
+            # never refuses the shipped fleet on a fresh deployment.
+            await seed_language_models(deps)
             # same shape for RunSupervisor (deterministic in-loop agent).
             await seed_run_supervisor_agent(deps)
             # same shape for RunInitiator (deterministic agent that starts Runs;

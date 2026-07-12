@@ -67,6 +67,7 @@ from cora.agent.aggregates.language_model import (
     LanguageModelCannotApproveError,
     LanguageModelCannotDeprecateError,
     LanguageModelCannotRetireError,
+    LanguageModelNotApprovedError,
     LanguageModelNotFoundError,
 )
 from cora.agent.errors import (
@@ -82,14 +83,19 @@ from cora.agent.errors import (
     UnauthorizedError,
 )
 from cora.agent.features import (
+    announce_language_model_retirement,
+    approve_language_model,
     define_agent,
+    define_language_model,
     deprecate_agent,
+    deprecate_language_model,
     dismiss_event_in_reaction,
     get_agent,
     grant_tool_to_agent,
     promote_caution_proposal,
     regenerate_run_debrief,
     resume_agent,
+    retire_language_model,
     revoke_tool_from_agent,
     set_agent_target_plan,
     suspend_agent,
@@ -180,6 +186,11 @@ def register_agent_routes(app: FastAPI) -> None:
     app.include_router(regenerate_run_debrief.router)
     app.include_router(promote_caution_proposal.router)
     app.include_router(dismiss_event_in_reaction.router)
+    app.include_router(define_language_model.router)
+    app.include_router(approve_language_model.router)
+    app.include_router(announce_language_model_retirement.router)
+    app.include_router(retire_language_model.router)
+    app.include_router(deprecate_language_model.router)
     # 400 validation handlers: Invalid<X> family + cross-aggregate guards.
     #
     # NOT registered here: DecisionParentAgentMismatchError +
@@ -217,6 +228,8 @@ def register_agent_routes(app: FastAPI) -> None:
         InvalidEndpointNoteError,
         InvalidLanguageModelReasonError,
         InvalidCostBasisError,
+        # define_agent catalog gate (arms only when a real catalog is wired).
+        LanguageModelNotApprovedError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
     for not_found_cls in (

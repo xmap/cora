@@ -109,6 +109,11 @@ from cora.infrastructure.ports.inference_recorder import (
     InferenceRecorder,
     NullInferenceRecorder,
 )
+from cora.infrastructure.ports.language_model_lookup import (
+    AlwaysApprovedLanguageModelLookup,
+    LanguageModelLookup,
+    LanguageModelLookupResult,
+)
 from cora.infrastructure.ports.llm import (
     LLM,
     CacheBreakpoint,
@@ -176,6 +181,7 @@ __all__ = [
     "AllSatisfiedSupplyLookup",
     "Allow",
     "AllowAllAuthorize",
+    "AlwaysApprovedLanguageModelLookup",
     "AlwaysCoveredClearanceLookup",
     "AlwaysEmptyCapabilityLookup",
     "AlwaysGrantedSpendGuard",
@@ -248,6 +254,8 @@ __all__ = [
     "LLMSystemPrompt",
     "LLMTimeoutError",
     "LLMUsage",
+    "LanguageModelLookup",
+    "LanguageModelLookupResult",
     "LockedRecent",
     "LogbookMirror",
     "MinSeverity",
