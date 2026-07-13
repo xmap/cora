@@ -8,7 +8,7 @@ binds the award window to a Campaign's lifecycle. Design lock:
 
 Balance is never stored: it folds from the same inference ledger every
 other spend tier sums, so this aggregate carries only the envelope's
-declared shape (ceiling, holder note, window timestamps) and its FSM.
+declared shape (ceiling, note, window timestamps) and its FSM.
 
 Per [[project_lifecycle_status_naming]] the FSM is a single axis,
 `AllocationStatus`:
@@ -50,7 +50,7 @@ from cora.shared.bounded_text import bounded_name, validate_bounded_text
 from cora.shared.identity import ActorId
 from cora.shared.text_bounds import REASON_MAX_LENGTH
 
-ALLOCATION_HOLDER_NOTE_MAX_LENGTH = 200
+ALLOCATION_NOTE_MAX_LENGTH = 200
 
 
 class AllocationStatus(StrEnum):
@@ -93,12 +93,12 @@ class InvalidAllocationCeilingError(ValueError):
         self.value = value
 
 
-class InvalidAllocationHolderNoteError(ValueError):
-    """The supplied holder note is empty, whitespace-only, or too long."""
+class InvalidAllocationNoteError(ValueError):
+    """The supplied note is empty, whitespace-only, or too long."""
 
     def __init__(self, value: str) -> None:
         super().__init__(
-            f"Allocation holder note must be 1-{ALLOCATION_HOLDER_NOTE_MAX_LENGTH} chars "
+            f"Allocation note must be 1-{ALLOCATION_NOTE_MAX_LENGTH} chars "
             f"after trimming (got: {value!r})"
         )
         self.value = value
@@ -157,7 +157,30 @@ class AllocationCannotActivateError(Exception):
         self.current_status = current_status
 
 
-class AllocationCannotAmendError(Exception):
+class AllocationAlreadyActiveError(Exception):
+    """Attempted to activate a second envelope while one is already Active.
+
+    Best-effort single-writer guard on the deployment's one instrument
+    envelope: the gates enforce a single Active allocation's ceiling and
+    the sealer closes a single Active allocation on CampaignClosed, so a
+    second Active envelope would silently reset the spend window (older
+    ceiling stops being enforced) and orphan the first (its auto-seal
+    would never fire). The active allocation must be sealed or voided
+    before another is activated. The check reads the projection, so a
+    tight concurrent race is possible and accepted; the invariant is a
+    guard, not a lock.
+    """
+
+    def __init__(self, allocation_id: UUID, active_allocation_id: UUID) -> None:
+        super().__init__(
+            f"Allocation {allocation_id} cannot be activated: allocation "
+            f"{active_allocation_id} is already Active; seal or void it first"
+        )
+        self.allocation_id = allocation_id
+        self.active_allocation_id = active_allocation_id
+
+
+class AllocationCannotAmendCeilingError(Exception):
     """Attempted `amend_allocation_ceiling` from a disqualifying status.
 
     Source set is `{Granted, Active}`: the ceiling is the cost-overrun
@@ -220,17 +243,15 @@ class AllocationCannotVoidError(Exception):
 
 
 @bounded_name(
-    max_length=ALLOCATION_HOLDER_NOTE_MAX_LENGTH,
-    error_class=InvalidAllocationHolderNoteError,
+    max_length=ALLOCATION_NOTE_MAX_LENGTH,
+    error_class=InvalidAllocationNoteError,
 )
 @dataclass(frozen=True)
-class AllocationHolderNote:
+class AllocationNote:
     """Operator-facing name for the envelope. Trimmed; 1-200 chars.
 
-    A note, not a holder reference: v1's holder is implicitly the
-    deployment's own beamline, so the note names the envelope for
-    operators (award cycle, proposal block) rather than pointing at a
-    holder aggregate that does not exist yet.
+    The note labels the envelope for operators (award cycle, proposal
+    block).
     """
 
     value: str
@@ -289,7 +310,7 @@ class Allocation:
 
     id: UUID
     ceiling_usd: float
-    holder_note: AllocationHolderNote
+    note: AllocationNote
     campaign_id: UUID | None
     granted_at: datetime
     granted_by: ActorId

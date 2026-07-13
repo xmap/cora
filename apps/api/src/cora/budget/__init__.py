@@ -4,14 +4,14 @@ Owns the Allocation aggregate: the spending envelope the deployment's
 beamline receives and spends, the system-of-record half of the
 facility LLM-budget arc. Design lock: [[project_allocation_design]].
 
-  - `Allocation` aggregate: identity + USD ceiling + holder note +
+  - `Allocation` aggregate: identity + USD ceiling + note +
     optional Campaign binding + 4-state FSM
     `Granted -> Active -> Sealed`, with `Voided` from Granted/Active.
 
 Balance is never stored: it folds from the inference ledger every
 other spend tier sums. The allocation's own lifecycle IS the award
 window (`activated_at` to `sealed_at`); the gate stack's envelope
-check (stage C) reads the Active envelope's ceiling against the
+check reads the Active envelope's ceiling against the
 instance-total ledger fold over that window.
 
 Lifecycle slices: `grant_allocation` (genesis -> Granted, dormant),
@@ -21,6 +21,15 @@ cost-overrun tighten lever), `seal_allocation` (Active -> Sealed;
 closing the books with a server-computed final-spend snapshot),
 `void_allocation` (Granted | Active -> Voided; operator withdraws a
 mistaken grant, REQUIRED reason).
+
+Authz posture: every one of these five commands bounds the whole
+instrument's LLM spend, so a real Trust policy should treat them as a
+single instrument-admin tier, kept off the routine-operator grant.
+`CloseCampaign` belongs in that tier too: the CampaignClosed sealer
+seals the bound envelope, and a sealed envelope no longer constrains
+spend, so authority to close a campaign transitively lifts the
+ceiling. Under the default `AllowAllAuthorize` posture all of these
+are open, the pre-existing deployment default, not new here.
 
 Layout:
     aggregates/<aggregate>/   -- aggregate state, events union, evolver, read

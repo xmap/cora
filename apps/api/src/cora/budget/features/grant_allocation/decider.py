@@ -15,8 +15,8 @@ recompute).
   - State must be None (genesis-only) -> `AllocationAlreadyExistsError`
   - `ceiling_usd` must be finite and strictly positive
     -> `InvalidAllocationCeilingError`
-  - `holder_note` wrapped via `AllocationHolderNote(...)`; 1-200 chars
-    after trim -> `InvalidAllocationHolderNoteError`
+  - `note` wrapped via `AllocationNote(...)`; 1-200 chars
+    after trim -> `InvalidAllocationNoteError`
   - `campaign_id` is a bare cross-BC reference; NOT resolved here
     (eventual-consistency stance per the Caution / Calibration
     precedent), so no validation beyond the boundary's UUID typing.
@@ -32,7 +32,7 @@ from cora.budget.aggregates.allocation import (
     Allocation,
     AllocationAlreadyExistsError,
     AllocationGranted,
-    AllocationHolderNote,
+    AllocationNote,
     validate_allocation_ceiling,
 )
 from cora.budget.features.grant_allocation.command import GrantAllocation
@@ -53,21 +53,21 @@ def decide(
       - State must be None (genesis-only) -> AllocationAlreadyExistsError
       - Ceiling must be finite and strictly positive
         -> InvalidAllocationCeilingError
-      - Holder note must be valid -> InvalidAllocationHolderNoteError
-        (via AllocationHolderNote VO)
+      - Note must be valid -> InvalidAllocationNoteError
+        (via AllocationNote VO)
     """
     if state is not None:
         raise AllocationAlreadyExistsError(state.id)
 
     validate_allocation_ceiling(command.ceiling_usd)
-    holder_note = AllocationHolderNote(command.holder_note)
+    note = AllocationNote(command.note)
 
     return [
         AllocationGranted(
             allocation_id=new_id,
             ceiling_usd=command.ceiling_usd,
             campaign_id=command.campaign_id,
-            holder_note=holder_note.value,
+            note=note.value,
             granted_by=granted_by,
             occurred_at=now,
         )

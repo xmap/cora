@@ -1,6 +1,6 @@
 """HTTP route for the `grant_allocation` slice.
 
-`POST /allocations` with body carrying ceiling_usd / holder_note +
+`POST /allocations` with body carrying ceiling_usd / note +
 optional campaign_id / allocation_id. Returns 201 + `{allocation_id}`
 on success.
 
@@ -16,7 +16,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Request, status
 from pydantic import BaseModel, Field
 
-from cora.budget.aggregates.allocation import ALLOCATION_HOLDER_NOTE_MAX_LENGTH
+from cora.budget.aggregates.allocation import ALLOCATION_NOTE_MAX_LENGTH
 from cora.budget.features.grant_allocation.command import GrantAllocation
 from cora.budget.features.grant_allocation.handler import IdempotentHandler
 from cora.infrastructure.routing import (
@@ -35,10 +35,10 @@ class GrantAllocationRequest(BaseModel):
         gt=0.0,
         description="USD spending ceiling for the envelope. Finite and greater than 0.",
     )
-    holder_note: str = Field(
+    note: str = Field(
         ...,
         min_length=1,
-        max_length=ALLOCATION_HOLDER_NOTE_MAX_LENGTH,
+        max_length=ALLOCATION_NOTE_MAX_LENGTH,
         description=(
             "Operator-facing name for the envelope (award cycle, proposal "
             "block). The holder itself is implicitly this deployment's beamline."
@@ -84,7 +84,7 @@ router = APIRouter(tags=["budget"])
         status.HTTP_400_BAD_REQUEST: {
             "model": ErrorResponse,
             "description": (
-                "Domain invariant violated (non-finite ceiling, whitespace-only holder note)."
+                "Domain invariant violated (non-finite ceiling, whitespace-only note)."
             ),
         },
         status.HTTP_403_FORBIDDEN: {
@@ -120,7 +120,7 @@ async def post_allocations(
     allocation_id = await handler(
         GrantAllocation(
             ceiling_usd=body.ceiling_usd,
-            holder_note=body.holder_note,
+            note=body.note,
             campaign_id=body.campaign_id,
             allocation_id=body.allocation_id,
         ),

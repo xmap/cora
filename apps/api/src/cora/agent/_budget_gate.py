@@ -18,7 +18,7 @@ triggering event's `occurred_at`, NOT wall clock, so a replayed work
 item gates identically (the non-determinism rule: subscribers decide
 from event facts, not ambient time).
 
-`find_envelope_breach` is the instrument-wide arm above the per-agent
+`find_allocation_breach` is the instrument-wide arm above the per-agent
 caps: when the deployment has an Active Allocation envelope (budget
 BC), instance-total spend over the envelope's own lifecycle window
 must stay inside its ceiling. Absent or sealed envelope means no
@@ -141,7 +141,7 @@ async def find_budget_breach(
 
 
 @dataclass(frozen=True)
-class EnvelopeBreach:
+class AllocationBreach:
     """The Active allocation envelope cannot afford the next call."""
 
     allocation_id: UUID
@@ -158,13 +158,13 @@ class EnvelopeBreach:
         )
 
 
-async def find_envelope_breach(
+async def find_allocation_breach(
     *,
     allocation_lookup: "AllocationLookup",
     spend_lookup: "SpendLookup",
     as_of: datetime,
     pending_usd: float = 0.0,
-) -> EnvelopeBreach | None:
+) -> AllocationBreach | None:
     """Return the Active envelope's breach, or None to permit.
 
     The instrument-wide arm above the per-agent caps: with an Active
@@ -206,7 +206,7 @@ async def find_envelope_breach(
     projected_over = spend.usd_spent + pending_usd > envelope.ceiling_usd
     exhausted_post_hoc = pending_usd == 0.0 and spend.usd_spent >= envelope.ceiling_usd
     if projected_over or exhausted_post_hoc:
-        return EnvelopeBreach(
+        return AllocationBreach(
             allocation_id=envelope.allocation_id,
             ceiling_usd=envelope.ceiling_usd,
             spent_usd=spend.usd_spent,
@@ -216,10 +216,10 @@ async def find_envelope_breach(
 
 
 __all__ = [
+    "AllocationBreach",
     "BudgetBreach",
-    "EnvelopeBreach",
     "calendar_day_window",
     "calendar_month_window",
+    "find_allocation_breach",
     "find_budget_breach",
-    "find_envelope_breach",
 ]

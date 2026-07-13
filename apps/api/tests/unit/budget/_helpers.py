@@ -13,7 +13,7 @@ from cora.budget.aggregates.allocation import (
     AllocationActivated,
     AllocationEvent,
     AllocationGranted,
-    AllocationHolderNote,
+    AllocationNote,
     AllocationStatus,
     event_type_name,
     to_payload,
@@ -46,7 +46,7 @@ def make_allocation(
     return Allocation(
         id=allocation_id or uuid4(),
         ceiling_usd=ceiling_usd,
-        holder_note=AllocationHolderNote("FY26 imaging award"),
+        note=AllocationNote("FY26 imaging award"),
         campaign_id=campaign_id,
         granted_at=GRANTED_AT,
         granted_by=GRANTED_BY,
@@ -66,7 +66,7 @@ def granted_event(
         allocation_id=allocation_id,
         ceiling_usd=ceiling_usd,
         campaign_id=campaign_id,
-        holder_note="FY26 imaging award",
+        note="FY26 imaging award",
         granted_by=GRANTED_BY,
         occurred_at=GRANTED_AT,
     )

@@ -244,6 +244,14 @@ def make_postgres_kernel(
     `supply_lookup_factory` argument; gate-specific tests override
     here explicitly. See [[project_supply_preflight_gate_design]].
 
+    `spend_lookup` and `allocation_lookup` default to the disarmed
+    stubs (`AlwaysZeroSpendLookup` / `NoActiveAllocationLookup`) here,
+    the same opt-in posture as every other lookup: an integration test
+    that does not exercise the envelope never meters or gates on it.
+    The fail-loud requirement lives one layer up, in `build_kernel`'s
+    Postgres branch, which raises when either financial factory is
+    missing so a real deployment can never silently meter zero.
+
     `run_actor_involvement_lookup` defaults to `NoInvolvementLookup`
     (returns `[]`) so existing tests don't have to seed runs.
     Production's `build_kernel` injects the real
@@ -322,13 +330,6 @@ def make_postgres_kernel(
     injects the real `PostgresModelUsageLookup` via the
     `model_usage_lookup_factory` argument; slice-specific tests
     override here explicitly.
-
-    `allocation_lookup` defaults to `NoActiveAllocationLookup` (no
-    envelope Active) so existing tests and allocation-less deployments
-    keep the unconstrained envelope behavior; activating an allocation
-    is what arms the gate. Production's `build_kernel` injects the real
-    `PostgresAllocationLookup` via the `allocation_lookup_factory`
-    argument; envelope-gate tests override here explicitly.
 
     `llm` defaults to `None` because most BCs and tests don't need
     an LLM; only Agent BC subscribers consume it. Production's
@@ -577,7 +578,7 @@ def make_inmemory_kernel(
     `proj_budget_allocation_summary` table to read from, and the
     envelope check must stay disarmed for every test that never
     declared an allocation. Envelope-gate tests override with a fake
-    returning a chosen `ActiveAllocation`.
+    returning a chosen `AllocationLookupResult`.
 
     `llm` defaults to `None`; the in-memory kernel is for unit /
     contract tests that don't exercise LLM subscribers. Subscriber
@@ -1164,6 +1165,18 @@ async def build_kernel(
         )
         return kernel, _noop_teardown
 
+    if spend_lookup_factory is None or allocation_lookup_factory is None:
+        # Fail loud, not open: a Postgres deployment that silently fell back
+        # to the zero-spend stub and the no-active-envelope stub would meter
+        # every call at $0 and disarm the instrument ceiling, and every seal
+        # would record $0 as the official closing figure. The financial
+        # lookups are the one place a missing binding must stop startup.
+        raise ValueError(
+            "build_kernel requires spend_lookup_factory and "
+            "allocation_lookup_factory in a Postgres deployment; a missing "
+            "financial lookup would silently meter zero and disarm the "
+            "spend envelope"
+        )
     pool = await create_pool(
         settings.database_url,
         min_size=settings.db_pool_min_size,
@@ -1198,9 +1211,8 @@ async def build_kernel(
         if supply_lookup_factory is not None
         else AllSatisfiedSupplyLookup()
     )
-    spend_lookup: SpendLookup = (
-        spend_lookup_factory(pool) if spend_lookup_factory is not None else AlwaysZeroSpendLookup()
-    )
+    # Non-None guaranteed by the fail-loud guard above.
+    spend_lookup: SpendLookup = spend_lookup_factory(pool)
     language_model_lookup: LanguageModelLookup = (
         language_model_lookup_factory(pool)
         if language_model_lookup_factory is not None
@@ -1211,11 +1223,8 @@ async def build_kernel(
         if model_usage_lookup_factory is not None
         else AlwaysEmptyModelUsageLookup()
     )
-    allocation_lookup: AllocationLookup = (
-        allocation_lookup_factory(pool)
-        if allocation_lookup_factory is not None
-        else NoActiveAllocationLookup()
-    )
+    # Non-None guaranteed by the fail-loud guard above.
+    allocation_lookup: AllocationLookup = allocation_lookup_factory(pool)
     run_actor_involvement_lookup: RunActorInvolvementLookup = (
         run_actor_involvement_lookup_factory(pool)
         if run_actor_involvement_lookup_factory is not None

@@ -6,7 +6,7 @@ from uuid import uuid4
 import pytest
 
 from cora.budget.aggregates.allocation import (
-    AllocationCannotAmendError,
+    AllocationCannotAmendCeilingError,
     AllocationCeilingAmended,
     AllocationNotFoundError,
     AllocationStatus,
@@ -64,7 +64,7 @@ def test_not_found_when_state_is_none() -> None:
 @pytest.mark.parametrize("status", [AllocationStatus.SEALED, AllocationStatus.VOIDED])
 def test_cannot_amend_terminal_envelope(status: AllocationStatus) -> None:
     envelope = make_allocation(status)
-    with pytest.raises(AllocationCannotAmendError):
+    with pytest.raises(AllocationCannotAmendCeilingError):
         decide(
             state=envelope,
             command=AmendAllocationCeiling(allocation_id=envelope.id, ceiling_usd=100.0),

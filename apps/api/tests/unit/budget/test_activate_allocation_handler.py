@@ -11,6 +11,7 @@ from uuid import UUID
 import pytest
 
 from cora.budget.aggregates.allocation import (
+    AllocationAlreadyActiveError,
     AllocationCannotActivateError,
     AllocationNotFoundError,
 )
@@ -19,7 +20,9 @@ from cora.budget.features import activate_allocation
 from cora.budget.features.activate_allocation import ActivateAllocation
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.ports.allocation_lookup import AllocationLookupResult
 from tests.unit._helpers import build_deps as _build_deps_shared
+from tests.unit.agent._helpers import FakeAllocationLookup
 from tests.unit.budget._helpers import (
     activated_event,
     granted_event,
@@ -141,3 +144,91 @@ async def test_handler_denied_does_not_write_to_stream() -> None:
     assert version == 1
     assert len(events) == 1
     assert events[0].event_type == "AllocationGranted"
+
+
+_OTHER_ACTIVE_ID = UUID("01900000-0000-7000-8000-00000000d0ff")
+
+
+def _active_result(allocation_id: UUID) -> AllocationLookupResult:
+    return AllocationLookupResult(
+        allocation_id=allocation_id,
+        ceiling_usd=100.0,
+        activated_at=_NOW,
+        campaign_id=None,
+    )
+
+
+@pytest.mark.unit
+async def test_handler_refuses_when_a_different_envelope_is_already_active() -> None:
+    """Single-Active guard: a second activation while another envelope is
+    Active must be refused, so the gates and the sealer can rely on one
+    Active allocation. The stream is not mutated."""
+    store = InMemoryEventStore()
+    await seed_allocation_events(store, _ALLOCATION_ID, granted_event(_ALLOCATION_ID))
+    lookup = FakeAllocationLookup(active=_active_result(_OTHER_ACTIVE_ID))
+    deps = _build_deps_shared(
+        ids=[_ACTIVATE_EVENT_ID], now=_NOW, event_store=store, allocation_lookup=lookup
+    )
+    handler = activate_allocation.bind(deps)
+
+    with pytest.raises(AllocationAlreadyActiveError) as exc:
+        await handler(
+            ActivateAllocation(allocation_id=_ALLOCATION_ID),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+    assert exc.value.active_allocation_id == _OTHER_ACTIVE_ID
+    assert lookup.find_active_calls == 1
+    _events, version = await store.load("Allocation", _ALLOCATION_ID)
+    assert version == 1  # unchanged: only the seeded Granted event
+
+
+@pytest.mark.unit
+async def test_handler_activates_when_no_other_envelope_is_active() -> None:
+    """A sealed or voided prior envelope leaves nothing Active, so the
+    lookup returns None and activation proceeds."""
+    store = InMemoryEventStore()
+    await seed_allocation_events(store, _ALLOCATION_ID, granted_event(_ALLOCATION_ID))
+    lookup = FakeAllocationLookup(active=None)
+    deps = _build_deps_shared(
+        ids=[_ACTIVATE_EVENT_ID], now=_NOW, event_store=store, allocation_lookup=lookup
+    )
+    handler = activate_allocation.bind(deps)
+
+    await handler(
+        ActivateAllocation(allocation_id=_ALLOCATION_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert lookup.find_active_calls == 1
+    events, version = await store.load("Allocation", _ALLOCATION_ID)
+    assert version == 2
+    assert events[-1].event_type == "AllocationActivated"
+
+
+@pytest.mark.unit
+async def test_handler_permits_reactivating_the_same_active_envelope_to_the_decider() -> None:
+    """When find_active returns THIS allocation (not a different one), the
+    guard does not fire; the decider's own Granted-only source set is
+    what rejects a re-activation."""
+    store = InMemoryEventStore()
+    await seed_allocation_events(
+        store,
+        _ALLOCATION_ID,
+        granted_event(_ALLOCATION_ID),
+        activated_event(_ALLOCATION_ID),
+    )
+    lookup = FakeAllocationLookup(active=_active_result(_ALLOCATION_ID))
+    deps = _build_deps_shared(
+        ids=[_ACTIVATE_EVENT_ID], now=_NOW, event_store=store, allocation_lookup=lookup
+    )
+    handler = activate_allocation.bind(deps)
+
+    with pytest.raises(AllocationCannotActivateError):
+        await handler(
+            ActivateAllocation(allocation_id=_ALLOCATION_ID),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )

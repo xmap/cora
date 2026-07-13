@@ -49,7 +49,7 @@ from cora.budget.aggregates.allocation.events import (
 )
 from cora.budget.aggregates.allocation.state import (
     Allocation,
-    AllocationHolderNote,
+    AllocationNote,
     AllocationStatus,
 )
 from cora.infrastructure.evolver import require_state
@@ -62,7 +62,7 @@ def evolve(state: Allocation | None, event: AllocationEvent) -> Allocation:
             allocation_id=allocation_id,
             ceiling_usd=ceiling_usd,
             campaign_id=campaign_id,
-            holder_note=holder_note,
+            note=note,
             granted_by=granted_by,
             occurred_at=occurred_at,
         ):
@@ -70,7 +70,7 @@ def evolve(state: Allocation | None, event: AllocationEvent) -> Allocation:
             return Allocation(
                 id=allocation_id,
                 ceiling_usd=ceiling_usd,
-                holder_note=AllocationHolderNote(holder_note),
+                note=AllocationNote(note),
                 campaign_id=campaign_id,
                 granted_at=occurred_at,
                 granted_by=granted_by,

@@ -9,7 +9,7 @@ precedent; a retried PUT must not append a second identical fact).
 
   - State must not be None -> `AllocationNotFoundError`
   - Current status must be Granted or Active
-    -> `AllocationCannotAmendError`
+    -> `AllocationCannotAmendCeilingError`
   - `ceiling_usd` must be finite and strictly positive
     -> `InvalidAllocationCeilingError`
 """
@@ -18,7 +18,7 @@ from datetime import datetime
 
 from cora.budget.aggregates.allocation import (
     Allocation,
-    AllocationCannotAmendError,
+    AllocationCannotAmendCeilingError,
     AllocationCeilingAmended,
     AllocationNotFoundError,
     AllocationStatus,
@@ -43,14 +43,14 @@ def decide(
     Invariants:
       - State must not be None -> AllocationNotFoundError
       - Current status must be Granted or Active
-        -> AllocationCannotAmendError
+        -> AllocationCannotAmendCeilingError
       - Ceiling must be finite and strictly positive
         -> InvalidAllocationCeilingError
     """
     if state is None:
         raise AllocationNotFoundError(command.allocation_id)
     if state.status not in _AMENDABLE_STATUSES:
-        raise AllocationCannotAmendError(state.id, state.status)
+        raise AllocationCannotAmendCeilingError(state.id, state.status)
 
     # Validate BEFORE the idempotency short-circuit so a bad ceiling
     # fires even when it happens to equal the stored value shape-wise.

@@ -6,12 +6,12 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.budget.aggregates.allocation import (
-    ALLOCATION_HOLDER_NOTE_MAX_LENGTH,
+    ALLOCATION_NOTE_MAX_LENGTH,
     AllocationAlreadyExistsError,
     AllocationGranted,
     AllocationStatus,
     InvalidAllocationCeilingError,
-    InvalidAllocationHolderNoteError,
+    InvalidAllocationNoteError,
 )
 from cora.budget.features.grant_allocation.command import GrantAllocation
 from cora.budget.features.grant_allocation.decider import decide
@@ -27,7 +27,7 @@ _CAMPAIGN_ID = UUID("01900000-0000-7000-8000-000000000044")
 def _command(**overrides: object) -> GrantAllocation:
     base: dict[str, object] = {
         "ceiling_usd": 25000.0,
-        "holder_note": "FY26 imaging award",
+        "note": "FY26 imaging award",
     }
     base.update(overrides)
     return GrantAllocation(**base)  # type: ignore[arg-type]
@@ -43,7 +43,7 @@ def test_minimal_command_emits_single_allocation_granted() -> None:
             allocation_id=_NEW_ID,
             ceiling_usd=25000.0,
             campaign_id=None,
-            holder_note="FY26 imaging award",
+            note="FY26 imaging award",
             granted_by=_GRANTED_BY,
             occurred_at=_NOW,
         )
@@ -92,12 +92,12 @@ def test_non_positive_or_non_finite_ceiling_raises(bad_ceiling: float) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("bad_note", ["", "   ", "x" * (ALLOCATION_HOLDER_NOTE_MAX_LENGTH + 1)])
-def test_invalid_holder_note_raises(bad_note: str) -> None:
-    with pytest.raises(InvalidAllocationHolderNoteError):
+@pytest.mark.parametrize("bad_note", ["", "   ", "x" * (ALLOCATION_NOTE_MAX_LENGTH + 1)])
+def test_invalid_note_raises(bad_note: str) -> None:
+    with pytest.raises(InvalidAllocationNoteError):
         decide(
             state=None,
-            command=_command(holder_note=bad_note),
+            command=_command(note=bad_note),
             now=_NOW,
             new_id=_NEW_ID,
             granted_by=_GRANTED_BY,
@@ -105,16 +105,16 @@ def test_invalid_holder_note_raises(bad_note: str) -> None:
 
 
 @pytest.mark.unit
-def test_holder_note_trim_propagates() -> None:
+def test_note_trim_propagates() -> None:
     """The VO trims; the decider passes the trimmed value into the event."""
     events = decide(
         state=None,
-        command=_command(holder_note="  FY26 imaging award  "),
+        command=_command(note="  FY26 imaging award  "),
         now=_NOW,
         new_id=_NEW_ID,
         granted_by=_GRANTED_BY,
     )
-    assert events[0].holder_note == "FY26 imaging award"
+    assert events[0].note == "FY26 imaging award"
 
 
 @pytest.mark.unit

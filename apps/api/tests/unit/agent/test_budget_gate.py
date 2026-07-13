@@ -8,13 +8,13 @@ import pytest
 from cora.agent._budget_gate import (
     calendar_day_window,
     calendar_month_window,
+    find_allocation_breach,
     find_budget_breach,
-    find_envelope_breach,
 )
 from cora.agent.aggregates.agent import load_agent
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.ports.allocation_lookup import (
-    ActiveAllocation,
+    AllocationLookupResult,
     NoActiveAllocationLookup,
 )
 from tests.unit.agent._helpers import (
@@ -30,8 +30,8 @@ _PRINCIPAL_ID = uuid4()
 _ACTIVATED_AT = datetime(2026, 7, 1, 8, 0, 0, tzinfo=UTC)
 
 
-def _envelope(*, ceiling_usd: float = 100.0) -> ActiveAllocation:
-    return ActiveAllocation(
+def _envelope(*, ceiling_usd: float = 100.0) -> AllocationLookupResult:
+    return AllocationLookupResult(
         allocation_id=uuid4(),
         ceiling_usd=ceiling_usd,
         activated_at=_ACTIVATED_AT,
@@ -198,7 +198,7 @@ async def test_zero_cap_refuses_every_call() -> None:
     assert breach.cap_kind == "monthly_usd_cap"
 
 
-# ---------- find_envelope_breach ----------
+# ---------- find_allocation_breach ----------
 
 
 @pytest.mark.unit
@@ -207,7 +207,7 @@ async def test_no_active_envelope_permits_without_summing_spend() -> None:
     SUM is never issued on the disarmed path."""
     spend = FakeSpendLookup(total_usd_spent=1_000_000.0)
 
-    breach = await find_envelope_breach(
+    breach = await find_allocation_breach(
         allocation_lookup=NoActiveAllocationLookup(),
         spend_lookup=spend,
         as_of=_NOW,
@@ -224,7 +224,7 @@ async def test_envelope_spend_below_ceiling_permits_over_the_lifecycle_window() 
     envelope = _envelope(ceiling_usd=100.0)
     spend = FakeSpendLookup(total_usd_spent=99.99)
 
-    breach = await find_envelope_breach(
+    breach = await find_allocation_breach(
         allocation_lookup=FakeAllocationLookup(envelope),
         spend_lookup=spend,
         as_of=_NOW,
@@ -240,7 +240,7 @@ async def test_post_hoc_exactly_exhausted_envelope_breaches() -> None:
     exactly on the ceiling refuses the NEXT call (the >= arm)."""
     envelope = _envelope(ceiling_usd=100.0)
 
-    breach = await find_envelope_breach(
+    breach = await find_allocation_breach(
         allocation_lookup=FakeAllocationLookup(envelope),
         spend_lookup=FakeSpendLookup(total_usd_spent=100.0),
         as_of=_NOW,
@@ -261,7 +261,7 @@ async def test_pre_estimate_projection_landing_exactly_on_ceiling_grants() -> No
     convention)."""
     envelope = _envelope(ceiling_usd=100.0)
 
-    breach = await find_envelope_breach(
+    breach = await find_allocation_breach(
         allocation_lookup=FakeAllocationLookup(envelope),
         spend_lookup=FakeSpendLookup(total_usd_spent=99.5),
         as_of=_NOW,
@@ -275,7 +275,7 @@ async def test_pre_estimate_projection_landing_exactly_on_ceiling_grants() -> No
 async def test_pre_estimate_projection_over_ceiling_breaches() -> None:
     envelope = _envelope(ceiling_usd=100.0)
 
-    breach = await find_envelope_breach(
+    breach = await find_allocation_breach(
         allocation_lookup=FakeAllocationLookup(envelope),
         spend_lookup=FakeSpendLookup(total_usd_spent=99.5),
         as_of=_NOW,
@@ -292,7 +292,7 @@ async def test_envelope_breach_describe_names_the_allocation() -> None:
     must name the envelope and its window start for operators."""
     envelope = _envelope(ceiling_usd=100.0)
 
-    breach = await find_envelope_breach(
+    breach = await find_allocation_breach(
         allocation_lookup=FakeAllocationLookup(envelope),
         spend_lookup=FakeSpendLookup(total_usd_spent=250.0),
         as_of=_NOW,

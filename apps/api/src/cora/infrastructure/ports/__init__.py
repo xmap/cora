@@ -6,8 +6,8 @@ from `ports/`, never from adapter modules.
 """
 
 from cora.infrastructure.ports.allocation_lookup import (
-    ActiveAllocation,
     AllocationLookup,
+    AllocationLookupResult,
     NoActiveAllocationLookup,
 )
 from cora.infrastructure.ports.assembly_lookup import (
@@ -187,11 +187,11 @@ from cora.infrastructure.ports.token_verifier import (
 
 __all__ = [
     "LLM",
-    "ActiveAllocation",
     "AgentInferenceTrace",
     "AllBeamOpenLookup",
     "AllSatisfiedSupplyLookup",
     "AllocationLookup",
+    "AllocationLookupResult",
     "Allow",
     "AllowAllAuthorize",
     "AlwaysApprovedLanguageModelLookup",

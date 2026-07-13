@@ -7,17 +7,23 @@ the ledger snapshot and the SYSTEM principal), the skip family
 projection row), and idempotent replay.
 """
 
+# pyright: reportPrivateUsage=false
+
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 import pytest
 
 from cora.budget.aggregates.allocation import AllocationStatus, load_allocation
-from cora.budget.subscribers.allocation_sealer import AllocationSealerSubscriber
+from cora.budget.subscribers.allocation_sealer import (
+    _ALLOCATION_SEALER_NAMESPACE,
+    AllocationSealerSubscriber,
+)
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from cora.infrastructure.ports.allocation_lookup import ActiveAllocation
+from cora.infrastructure.ports import ConcurrencyError
+from cora.infrastructure.ports.allocation_lookup import AllocationLookupResult
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.infrastructure.ports.spend_lookup import TotalSpendResult
 from cora.infrastructure.routing import SYSTEM_PRINCIPAL_ID
@@ -33,10 +39,10 @@ _CLOSED_AT = datetime(2026, 7, 13, 18, 30, 0, tzinfo=UTC)
 
 
 class _FakeAllocationLookup:
-    def __init__(self, active: ActiveAllocation | None) -> None:
+    def __init__(self, active: AllocationLookupResult | None) -> None:
         self.active = active
 
-    async def find_active(self) -> ActiveAllocation | None:
+    async def find_active(self) -> AllocationLookupResult | None:
         return self.active
 
 
@@ -79,8 +85,8 @@ def _campaign_closed(campaign_id: UUID) -> StoredEvent:
     )
 
 
-def _active_row(allocation_id: UUID, campaign_id: UUID | None) -> ActiveAllocation:
-    return ActiveAllocation(
+def _active_row(allocation_id: UUID, campaign_id: UUID | None) -> AllocationLookupResult:
+    return AllocationLookupResult(
         allocation_id=allocation_id,
         ceiling_usd=25000.0,
         activated_at=ACTIVATED_AT,
@@ -158,6 +164,11 @@ async def test_bound_active_allocation_is_sealed_with_ledger_snapshot() -> None:
     assert seal_envelope.event_type == "AllocationSealed"
     assert seal_envelope.correlation_id == trigger.correlation_id
     assert seal_envelope.causation_id == trigger.event_id
+    # Deterministic event id: a replay derives the same id, so the store's
+    # UNIQUE(event_id) backs the expected-version guard.
+    assert seal_envelope.event_id == uuid5(
+        _ALLOCATION_SEALER_NAMESPACE, f"seal:{trigger.event_id}:{allocation_id}"
+    )
 
 
 @pytest.mark.unit
@@ -289,7 +300,7 @@ async def test_non_trigger_event_type_is_ignored(monkeypatch: Any) -> None:
 
     called = False
 
-    async def _boom() -> ActiveAllocation | None:
+    async def _boom() -> AllocationLookupResult | None:
         nonlocal called
         called = True
         return None
@@ -298,3 +309,63 @@ async def test_non_trigger_event_type_is_ignored(monkeypatch: Any) -> None:
     await sub.apply(other, AsyncMock())
 
     assert called is False
+
+
+class _ConflictOnceStore:
+    """Wraps a store to raise ConcurrencyError on the FIRST append only,
+    simulating a benign concurrent write (an operator amend) landing
+    between the sealer's load and its append."""
+
+    def __init__(self, delegate: InMemoryEventStore) -> None:
+        self._delegate = delegate
+        self._append_calls = 0
+
+    async def load(self, stream_type: str, stream_id: UUID) -> Any:
+        return await self._delegate.load(stream_type, stream_id)
+
+    async def append(
+        self,
+        *,
+        stream_type: str,
+        stream_id: UUID,
+        expected_version: int,
+        events: Any,
+    ) -> Any:
+        self._append_calls += 1
+        if self._append_calls == 1:
+            raise ConcurrencyError(
+                stream_type=stream_type,
+                stream_id=stream_id,
+                expected=expected_version,
+                actual=expected_version + 1,
+            )
+        return await self._delegate.append(
+            stream_type=stream_type,
+            stream_id=stream_id,
+            expected_version=expected_version,
+            events=events,
+        )
+
+
+@pytest.mark.unit
+async def test_seal_retries_past_a_benign_concurrent_write() -> None:
+    """A concurrent amend bumps the version between load and append; the
+    sealer re-loads and retries rather than forfeiting the automatic
+    seal. The envelope ends Sealed after the retry."""
+    store = InMemoryEventStore()
+    allocation_id = uuid4()
+    await _seed_active_allocation(store, allocation_id, campaign_id=_CAMPAIGN_ID)
+    conflict_store = _ConflictOnceStore(store)
+    sub = AllocationSealerSubscriber(
+        event_store=conflict_store,  # type: ignore[arg-type]
+        allocation_lookup=_FakeAllocationLookup(_active_row(allocation_id, _CAMPAIGN_ID)),
+        spend_lookup=_FakeTotalSpendLookup(total_usd_spent=12.5),  # type: ignore[arg-type]
+    )
+
+    await sub.apply(_campaign_closed(_CAMPAIGN_ID), AsyncMock())
+
+    assert conflict_store._append_calls == 2  # one conflict, one success
+    state = await load_allocation(store, allocation_id)
+    assert state is not None
+    assert state.status is AllocationStatus.SEALED
+    assert state.spent_usd_at_seal == 12.5

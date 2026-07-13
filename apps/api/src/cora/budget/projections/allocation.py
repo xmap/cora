@@ -27,7 +27,7 @@ from cora.infrastructure.projection.handler import ConnectionLike
 
 _INSERT_SQL = """
 INSERT INTO proj_budget_allocation_summary
-    (allocation_id, ceiling_usd, campaign_id, holder_note, status,
+    (allocation_id, ceiling_usd, campaign_id, note, status,
      granted_at, created_at)
 VALUES ($1, $2, $3, $4, 'Granted', $5, $5)
 ON CONFLICT (allocation_id) DO NOTHING
@@ -92,7 +92,7 @@ class AllocationSummaryProjection:
                     UUID(event.payload["allocation_id"]),
                     event.payload["ceiling_usd"],
                     (UUID(campaign_id_raw) if campaign_id_raw is not None else None),
-                    event.payload["holder_note"],
+                    event.payload["note"],
                     datetime.fromisoformat(event.payload["occurred_at"]),
                 )
             case "AllocationActivated":

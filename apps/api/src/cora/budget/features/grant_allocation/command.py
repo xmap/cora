@@ -1,9 +1,9 @@
 """The `GrantAllocation` command -- intent dataclass for this slice.
 
 Carries the caller-controlled fields for one spending envelope: the
-USD ceiling, the operator-facing holder note, and an optional
+USD ceiling, the operator-facing note, and an optional
 `campaign_id` that binds the award window to a Campaign's lifecycle
-(the stage-C CampaignClosed subscriber seals a campaign-bound
+(the CampaignClosed subscriber seals a campaign-bound
 envelope beside the campaign's own books).
 
 `allocation_id` is optional. None (the default) keeps the
@@ -27,6 +27,6 @@ class GrantAllocation:
     """Grant a new spending envelope (lands in Granted, dormant)."""
 
     ceiling_usd: float
-    holder_note: str
+    note: str
     campaign_id: UUID | None = None
     allocation_id: UUID | None = None

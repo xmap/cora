@@ -14,7 +14,7 @@ import pytest
 
 from cora.agent.adapters import BudgetSpendGuard
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from cora.infrastructure.ports.allocation_lookup import ActiveAllocation
+from cora.infrastructure.ports.allocation_lookup import AllocationLookupResult
 from tests.unit.agent._helpers import (
     FakeAllocationLookup,
     FakeSpendLookup,
@@ -30,8 +30,8 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-00000009900a")
 _ENVELOPE_ACTIVATED_AT = datetime(2026, 5, 1, 8, 0, 0, tzinfo=UTC)
 
 
-def _envelope(*, ceiling_usd: float = 100.0) -> ActiveAllocation:
-    return ActiveAllocation(
+def _envelope(*, ceiling_usd: float = 100.0) -> AllocationLookupResult:
+    return AllocationLookupResult(
         allocation_id=uuid4(),
         ceiling_usd=ceiling_usd,
         activated_at=_ENVELOPE_ACTIVATED_AT,
@@ -150,6 +150,23 @@ async def test_projection_landing_exactly_on_the_cap_grants() -> None:
 
     reason = await guard.refusal_reason(
         agent_id=agent_id, estimated_cost_usd=0.5, estimated_tokens=100, as_of=_NOW
+    )
+
+    assert reason is None
+
+
+@pytest.mark.unit
+async def test_daily_token_projection_landing_exactly_on_the_cap_grants() -> None:
+    """The daily-token arm's equality edge mirrors the monthly USD arm:
+    spent + estimate == cap is the last permitted call, so the strict
+    `>` comparison must not refuse it."""
+    store = InMemoryEventStore()
+    agent_id = uuid4()
+    await _versioned_agent(store, agent_id, daily_token_cap=50_000)
+    guard = _guard(store, FakeSpendLookup(tokens_spent=49_000))
+
+    reason = await guard.refusal_reason(
+        agent_id=agent_id, estimated_cost_usd=0.01, estimated_tokens=1_000, as_of=_NOW
     )
 
     assert reason is None

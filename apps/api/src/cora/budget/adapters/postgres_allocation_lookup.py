@@ -4,10 +4,12 @@ The budget BC ships the production adapter because it owns the fact:
 `proj_budget_allocation_summary` is this BC's read model of its own
 aggregate. The lookup answers the GATE's question, the deployment's
 single Active envelope. At-most-one-Active is enforced best-effort at
-grant/activate time; should an overlap slip through that race, the
-newest `activated_at` wins (the most recently opened window is the
-operator's current intent) with `allocation_id DESC` making
-equal-timestamp rows deterministic, per the port contract.
+activate time (activate_allocation refuses with
+AllocationAlreadyActiveError when another envelope is already Active);
+should an overlap slip through that projection-read race, the newest
+`activated_at` wins (the most recently opened window is the operator's
+current intent) with `allocation_id DESC` making equal-timestamp rows
+deterministic, per the port contract.
 """
 
 from __future__ import annotations
@@ -15,7 +17,7 @@ from __future__ import annotations
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 from typing import TYPE_CHECKING
 
-from cora.infrastructure.ports.allocation_lookup import ActiveAllocation
+from cora.infrastructure.ports.allocation_lookup import AllocationLookupResult
 
 if TYPE_CHECKING:
     import asyncpg
@@ -35,12 +37,12 @@ class PostgresAllocationLookup:
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
 
-    async def find_active(self) -> ActiveAllocation | None:
+    async def find_active(self) -> AllocationLookupResult | None:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(_FIND_ACTIVE_SQL)
         if row is None:
             return None
-        return ActiveAllocation(
+        return AllocationLookupResult(
             allocation_id=row["allocation_id"],
             ceiling_usd=row["ceiling_usd"],
             activated_at=row["activated_at"],

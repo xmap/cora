@@ -77,7 +77,7 @@ def test_introspection_aggregates_match_filesystem() -> None:
 def test_counts_are_eighteen_bcs_and_forty_three_aggregates() -> None:
     # Anti-drift pins for the model.md headline; bump deliberately on a BC/aggregate add.
     # 18 BCs / 43 aggregates: the budget BC landed with Allocation (the
-    # beamline's spending envelope, the allocation arc's stage A).
+    # beamline's spending envelope, the budget BC).
     model = ai.introspect(_CORA)
     assert model.bc_count == 18
     assert model.aggregate_count == 43
@@ -124,7 +124,7 @@ def test_in_process_stub_slice_has_no_surface() -> None:
 
 def test_bc_table_renders_full_membership() -> None:
     table = ap.render_bc_table(_MODEL, {})
-    assert "`enclosure`" in table  # the omitted 17th BC
+    assert "`enclosure`" in table  # a BC easy to miss in a hand-count
     assert "`role`" in table  # the omitted equipment aggregate
     # 18 Active rows since budget shipped; strategy is the one Planned row left.
     assert table.count("Active") == 18

@@ -36,7 +36,7 @@ def _genesis(
         allocation_id=allocation_id or uuid4(),
         ceiling_usd=25000.0,
         campaign_id=campaign_id,
-        holder_note="FY26 imaging award",
+        note="FY26 imaging award",
         granted_by=_GRANTED_BY,
         occurred_at=_T0,
     )
@@ -55,7 +55,7 @@ def test_genesis_folds_to_granted_state() -> None:
     assert state.id == e.allocation_id
     assert state.status is AllocationStatus.GRANTED
     assert state.ceiling_usd == 25000.0
-    assert state.holder_note.value == "FY26 imaging award"
+    assert state.note.value == "FY26 imaging award"
     assert state.campaign_id == _CAMPAIGN_ID
     assert state.granted_at == _T0
     assert state.granted_by == _GRANTED_BY

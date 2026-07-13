@@ -29,7 +29,7 @@ Supply / Safety / Caution:
 every wiring site states which ledger fold the seal snapshot records.
 Production binds `make_ledger_total_spend(deps.spend_lookup)`, the
 instance-total fold over `entries_decision_inferences` (the one-line
-swap the stage-A `zero_total_spend` seam promised).
+swap the `zero_total_spend` seam promised).
 """
 
 from dataclasses import dataclass

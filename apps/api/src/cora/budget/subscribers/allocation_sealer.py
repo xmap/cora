@@ -32,18 +32,31 @@ The seal's `occurred_at` and its ledger window end are the
 CampaignClosed event's `occurred_at`, not wall clock, so a replayed
 delivery derives the same event (the subscribers' determinism rule).
 The seal event's `event_id` is a UUIDv5 of (trigger event, allocation)
-and the append is guarded by the loaded stream version, so a
-re-delivery after a successful seal either short-circuits on the
-non-Active pre-guard or no-ops on `ConcurrencyError`. Skips (no
-Active envelope, unbound envelope, campaign mismatch, lost race) log
-at info and advance the bookmark; nothing here may wedge it.
+and the append is guarded by the loaded stream version. A benign
+concurrent write (an operator `amend_allocation_ceiling` landing
+between load and append) bumps the version while the envelope is
+still Active, so instead of forfeiting the automatic seal the sealer
+re-loads and retries the append at the fresh version (bounded, a few
+attempts); the deterministic event id keeps the retry idempotent. A
+re-delivery after a real seal short-circuits on the non-Active fold
+pre-guard. Skips (no Active envelope, unbound envelope, campaign
+mismatch, retry exhaustion) advance the bookmark; nothing here may
+wedge it.
 
-## Lookup + fold double-check
+## Lookup + fold double-check, and the projection-lag caveat
 
 `AllocationLookup.find_active` (projection-backed) finds the
 candidate cheaply, then the aggregate stream is loaded and folded
-before deciding: the projection may lag its own stream, and the fold
-is the truth the optimistic append is versioned against.
+before deciding: the fold is the truth the optimistic append is
+versioned against. The double-check guards the stale-POSITIVE
+direction (projection still shows Active, fold says otherwise) and
+logs it at WARNING as a real divergence. It cannot guard the
+stale-NEGATIVE direction: because subscribers run on independent
+cursors, the summary projection may not yet reflect an
+`AllocationActivated` that landed just before CampaignClosed, so a
+`no_active_allocation` or `campaign_mismatch` skip can be a false
+negative. A missed automatic seal is recovered by the operator's
+manual `seal_allocation` slice, which reads the stream directly.
 """
 
 from __future__ import annotations
@@ -86,6 +99,13 @@ _TRIGGER_EVENT_TYPE = "CampaignClosed"
 # same id, so the event store's UNIQUE(event_id) backs up the
 # expected-version guard.
 _ALLOCATION_SEALER_NAMESPACE = UUID("01900000-0000-7000-8000-0000a10c0002")
+
+_MAX_SEAL_ATTEMPTS = 3
+"""Bounded reload-and-retry on a lost seal race. A benign concurrent
+writer (an operator amend while the envelope is still Active) bumps the
+stream version; rather than forfeit the automatic seal, the sealer
+re-loads and retries at the fresh version. Three attempts covers the
+realistic burst; beyond it the seal is deferred to the manual slice."""
 
 _log = get_logger(__name__)
 
@@ -146,77 +166,104 @@ class AllocationSealerSubscriber:
             )
             return
 
-        stored, current_version = await self.event_store.load(
-            stream_type=_STREAM_TYPE,
-            stream_id=active.allocation_id,
-        )
-        state = fold([from_stored(s) for s in stored])
-        if state is None or state.status is not AllocationStatus.ACTIVE:
-            # Stale projection row or a replayed delivery after the seal:
-            # either way the envelope is not an open window anymore.
-            log.info(
-                "allocation_sealer.skip.not_active",
-                allocation_id=str(active.allocation_id),
-                status=(str(state.status) if state is not None else None),
-            )
-            return
-
-        window_start = state.activated_at
-        assert window_start is not None  # Active state always folds activated_at
-        spent_usd = await self._total_spend_reader(
-            window_start=window_start,
-            window_end=event.occurred_at,
-        )
-
-        command = SealAllocation(
-            allocation_id=state.id,
-            reason=f"Campaign {closed_campaign_id} closed; books sealed automatically.",
-        )
-        domain_events = decide(
-            state=state,
-            command=command,
-            now=event.occurred_at,
-            spent_usd=spent_usd,
-            sealed_by=ActorId(SYSTEM_PRINCIPAL_ID),
-        )
-        new_events = [
-            to_new_event(
-                event_type=event_type_name(domain_event),
-                payload=to_payload(domain_event),
-                occurred_at=domain_event.occurred_at,
-                event_id=uuid5(
-                    _ALLOCATION_SEALER_NAMESPACE,
-                    f"seal:{event.event_id}:{state.id}",
-                ),
-                command_name=_COMMAND_NAME,
-                correlation_id=event.correlation_id,
-                causation_id=event.event_id,
-                principal_id=SYSTEM_PRINCIPAL_ID,
-            )
-            for domain_event in domain_events
-        ]
-        try:
-            await self.event_store.append(
+        allocation_id = active.allocation_id
+        for attempt in range(_MAX_SEAL_ATTEMPTS):
+            stored, current_version = await self.event_store.load(
                 stream_type=_STREAM_TYPE,
-                stream_id=state.id,
-                expected_version=current_version,
-                events=new_events,
+                stream_id=allocation_id,
             )
-        except ConcurrencyError:
-            # The stream advanced between load and append (an operator
-            # sealed or voided concurrently, or a duplicate delivery
-            # raced). The next delivery, if any, re-evaluates fresh.
+            state = fold([from_stored(s) for s in stored])
+            if state is None or state.status is not AllocationStatus.ACTIVE:
+                # Fold disagrees with the projection that named this
+                # candidate Active: a stale-positive projection row, or a
+                # replayed delivery after the seal already landed. Either
+                # way the window is closed; the divergence is worth a
+                # WARNING (the projection is behind its own stream).
+                log.warning(
+                    "allocation_sealer.skip.not_active",
+                    allocation_id=str(allocation_id),
+                    status=(str(state.status) if state is not None else None),
+                )
+                return
+            if state.campaign_id != closed_campaign_id:
+                # The stream rebound to another campaign since the
+                # projection read; not this CampaignClosed's envelope.
+                log.info(
+                    "allocation_sealer.skip.campaign_mismatch_on_fold",
+                    allocation_id=str(allocation_id),
+                    bound_campaign_id=(
+                        str(state.campaign_id) if state.campaign_id is not None else None
+                    ),
+                )
+                return
+
+            window_start = state.activated_at
+            assert window_start is not None  # Active state always folds activated_at
+            spent_usd = await self._total_spend_reader(
+                window_start=window_start,
+                window_end=event.occurred_at,
+            )
+
+            command = SealAllocation(
+                allocation_id=state.id,
+                reason=f"Campaign {closed_campaign_id} closed; books sealed automatically.",
+            )
+            domain_events = decide(
+                state=state,
+                command=command,
+                now=event.occurred_at,
+                spent_usd=spent_usd,
+                sealed_by=ActorId(SYSTEM_PRINCIPAL_ID),
+            )
+            new_events = [
+                to_new_event(
+                    event_type=event_type_name(domain_event),
+                    payload=to_payload(domain_event),
+                    occurred_at=domain_event.occurred_at,
+                    event_id=uuid5(
+                        _ALLOCATION_SEALER_NAMESPACE,
+                        f"seal:{event.event_id}:{state.id}",
+                    ),
+                    command_name=_COMMAND_NAME,
+                    correlation_id=event.correlation_id,
+                    causation_id=event.event_id,
+                    principal_id=SYSTEM_PRINCIPAL_ID,
+                )
+                for domain_event in domain_events
+            ]
+            try:
+                await self.event_store.append(
+                    stream_type=_STREAM_TYPE,
+                    stream_id=state.id,
+                    expected_version=current_version,
+                    events=new_events,
+                )
+            except ConcurrencyError:
+                # The stream advanced between load and append. If a benign
+                # writer (an operator amend) bumped the version while the
+                # envelope is still Active, re-load and retry; the
+                # deterministic event id keeps this idempotent. A concurrent
+                # seal or void lands the next iteration on the non-Active
+                # pre-guard and returns.
+                if attempt + 1 < _MAX_SEAL_ATTEMPTS:
+                    log.info(
+                        "allocation_sealer.seal_conflict_retry",
+                        allocation_id=str(state.id),
+                        attempt=attempt,
+                    )
+                    continue
+                log.warning(
+                    "allocation_sealer.skip.seal_retries_exhausted",
+                    allocation_id=str(state.id),
+                )
+                return
+
             log.info(
-                "allocation_sealer.skip.lost_seal_race",
+                "allocation_sealer.sealed",
                 allocation_id=str(state.id),
+                spent_usd=spent_usd,
             )
             return
-
-        log.info(
-            "allocation_sealer.sealed",
-            allocation_id=str(state.id),
-            spent_usd=spent_usd,
-        )
 
 
 def make_allocation_sealer_subscriber(deps: Kernel) -> AllocationSealerSubscriber:

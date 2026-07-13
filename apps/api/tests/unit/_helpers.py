@@ -209,7 +209,7 @@ def build_deps(
 
     `allocation_lookup` injects an envelope-lookup fake for the
     budget-gate and allocation-sealer tests (typically a fake
-    returning a chosen `ActiveAllocation`). Defaults to the kernel's
+    returning a chosen `AllocationLookupResult`). Defaults to the kernel's
     never-Active stub via `make_inmemory_kernel`, so tests that never
     declared an allocation keep the envelope check disarmed.
     """

@@ -6,7 +6,7 @@ from uuid import UUID
 import pytest
 
 from cora.budget.aggregates.allocation import (
-    AllocationCannotAmendError,
+    AllocationCannotAmendCeilingError,
     AllocationNotFoundError,
     AllocationVoided,
 )
@@ -104,7 +104,7 @@ async def test_handler_raises_cannot_amend_after_void() -> None:
     )
     deps = _build_deps(event_store=store)
     handler = amend_allocation_ceiling.bind(deps)
-    with pytest.raises(AllocationCannotAmendError):
+    with pytest.raises(AllocationCannotAmendCeilingError):
         await handler(
             AmendAllocationCeiling(allocation_id=_ALLOCATION_ID, ceiling_usd=100.0),
             principal_id=_PRINCIPAL_ID,

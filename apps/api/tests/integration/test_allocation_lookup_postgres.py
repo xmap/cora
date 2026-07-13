@@ -23,7 +23,7 @@ _T2 = datetime(2026, 7, 12, tzinfo=UTC)
 
 _INSERT_SQL = """
 INSERT INTO proj_budget_allocation_summary
-    (allocation_id, ceiling_usd, campaign_id, holder_note, status,
+    (allocation_id, ceiling_usd, campaign_id, note, status,
      granted_at, activated_at, created_at)
 VALUES ($1, $2, $3, 'FY26 imaging award', $4, $5, $6, $5)
 """

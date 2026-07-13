@@ -7,7 +7,7 @@ command slices:
 
     cmd = grant_allocation.GrantAllocation(
         ceiling_usd=25000.0,
-        holder_note="FY26 imaging award",
+        note="FY26 imaging award",
     )
     handler = grant_allocation.bind(deps)
     allocation_id = await handler(cmd, principal_id=..., correlation_id=...)

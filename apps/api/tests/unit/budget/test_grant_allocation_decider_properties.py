@@ -75,7 +75,7 @@ def test_grant_with_any_existing_state_always_raises_already_exists(
     with pytest.raises(AllocationAlreadyExistsError) as exc:
         decide(
             state=make_allocation(status, allocation_id=state_id),
-            command=GrantAllocation(ceiling_usd=100.0, holder_note="Envelope"),
+            command=GrantAllocation(ceiling_usd=100.0, note="Envelope"),
             now=now,
             new_id=new_id,
             granted_by=ActorId(granted_by),
@@ -86,14 +86,14 @@ def test_grant_with_any_existing_state_always_raises_already_exists(
 @pytest.mark.unit
 @given(
     ceiling=_valid_ceilings,
-    holder_note=printable_ascii_text(max_size=200),
+    note=printable_ascii_text(max_size=200),
     new_id=st.uuids(),
     granted_by=st.uuids(),
     now=aware_datetimes(),
 )
 def test_grant_happy_path_emits_single_event_with_injected_fields(
     ceiling: float,
-    holder_note: str,
+    note: str,
     new_id: UUID,
     granted_by: UUID,
     now: datetime,
@@ -101,7 +101,7 @@ def test_grant_happy_path_emits_single_event_with_injected_fields(
     """Any finite positive ceiling grants; the event carries the inputs verbatim."""
     events = decide(
         state=None,
-        command=GrantAllocation(ceiling_usd=ceiling, holder_note=holder_note),
+        command=GrantAllocation(ceiling_usd=ceiling, note=note),
         now=now,
         new_id=new_id,
         granted_by=ActorId(granted_by),
@@ -110,7 +110,7 @@ def test_grant_happy_path_emits_single_event_with_injected_fields(
     event = events[0]
     assert event.allocation_id == new_id
     assert event.ceiling_usd == ceiling
-    assert event.holder_note == holder_note
+    assert event.note == note
     assert event.granted_by == ActorId(granted_by)
     assert event.occurred_at == now
     assert event.campaign_id is None
@@ -134,7 +134,7 @@ def test_grant_non_positive_or_non_finite_ceiling_always_raises(
     with pytest.raises(InvalidAllocationCeilingError):
         decide(
             state=None,
-            command=GrantAllocation(ceiling_usd=ceiling, holder_note="Envelope"),
+            command=GrantAllocation(ceiling_usd=ceiling, note="Envelope"),
             now=now,
             new_id=new_id,
             granted_by=ActorId(granted_by),
@@ -155,7 +155,7 @@ def test_grant_is_pure_same_input_same_output(
     now: datetime,
 ) -> None:
     """Two calls with identical args return equal events (no clock leakage)."""
-    command = GrantAllocation(ceiling_usd=ceiling, holder_note="Envelope")
+    command = GrantAllocation(ceiling_usd=ceiling, note="Envelope")
     first = decide(
         state=None, command=command, now=now, new_id=new_id, granted_by=ActorId(granted_by)
     )

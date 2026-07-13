@@ -57,7 +57,7 @@ def _build_deps(
 def _command(**overrides: object) -> GrantAllocation:
     base: dict[str, object] = {
         "ceiling_usd": 25000.0,
-        "holder_note": "FY26 imaging award",
+        "note": "FY26 imaging award",
     }
     base.update(overrides)
     return GrantAllocation(**base)  # type: ignore[arg-type]
@@ -68,7 +68,7 @@ async def _seed_allocation(store: InMemoryEventStore, allocation_id: UUID) -> No
         allocation_id=allocation_id,
         ceiling_usd=25000.0,
         campaign_id=None,
-        holder_note="Seeded envelope",
+        note="Seeded envelope",
         granted_by=ActorId(_PRINCIPAL_ID),
         occurred_at=_NOW,
     )
@@ -138,7 +138,7 @@ async def test_handler_appends_single_granted_event_with_principal_as_granted_by
     assert payload["allocation_id"] == str(_NEW_ID)
     assert payload["ceiling_usd"] == 25000.0
     assert payload["campaign_id"] == "01900000-0000-7000-8000-000000000044"
-    assert payload["holder_note"] == "FY26 imaging award"
+    assert payload["note"] == "FY26 imaging award"
     assert payload["granted_by"] == str(_PRINCIPAL_ID)
     assert payload["occurred_at"] == _NOW.isoformat()
 

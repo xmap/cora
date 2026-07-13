@@ -46,7 +46,7 @@ from cora.infrastructure.ports import (
     LLMServerError,
     LLMUsage,
 )
-from cora.infrastructure.ports.allocation_lookup import ActiveAllocation
+from cora.infrastructure.ports.allocation_lookup import AllocationLookupResult
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.recipe.aggregates.plan import (
     PlanDefined,
@@ -543,7 +543,7 @@ async def test_apply_defers_noaction_when_allocation_envelope_exhausted() -> Non
     run_id = uuid4()
     await _seed_run(store, run_id)
     activated_at = datetime(2026, 5, 1, 8, 0, 0, tzinfo=UTC)
-    envelope = ActiveAllocation(
+    envelope = AllocationLookupResult(
         allocation_id=uuid4(),
         ceiling_usd=100.0,
         activated_at=activated_at,
@@ -571,6 +571,53 @@ async def test_apply_defers_noaction_when_allocation_envelope_exhausted() -> Non
     assert recorder.calls == []
     assert llm.received == []
     assert spend_lookup.total_windows == [(activated_at, _LATER)]
+
+
+@pytest.mark.unit
+async def test_apply_agent_cap_breach_wins_over_the_envelope() -> None:
+    """Gate ordering: the per-agent cap is checked before the instrument
+    envelope, so a capped agent defers with AgentBudgetExhausted and the
+    envelope lookup is never consulted."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    recorder = FakeInferenceRecorder()
+    await _seed_caution_drafter_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        monthly_usd_cap=120.0,
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    envelope = AllocationLookupResult(
+        allocation_id=uuid4(),
+        ceiling_usd=100.0,
+        activated_at=datetime(2026, 5, 1, 8, 0, 0, tzinfo=UTC),
+        campaign_id=None,
+    )
+    allocation_lookup = FakeAllocationLookup(envelope)
+    spend_lookup = FakeSpendLookup(usd_spent=121.3, total_usd_spent=100.0)
+    subscriber = await _build_subscriber(
+        store, llm, recorder, spend_lookup=spend_lookup, allocation_lookup=allocation_lookup
+    )
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.inputs is not None
+    assert decision.inputs["failure_error_class"] == "AgentBudgetExhausted"
+    assert allocation_lookup.find_active_calls == 0
+    assert spend_lookup.total_windows == []
+    assert llm.received == []
 
 
 @pytest.mark.unit
@@ -1055,6 +1102,7 @@ def test_make_caution_drafter_subscriber_constructs_when_llm_is_set() -> None:
     # The budget gate silently disables if the factory drops this wiring
     # (the constructor default is the permissive AlwaysZeroSpendLookup).
     assert subscriber.spend_lookup is deps.spend_lookup
+    assert subscriber.allocation_lookup is deps.allocation_lookup
 
 
 # ---------- Signer wiring ----------

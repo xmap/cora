@@ -192,6 +192,32 @@ def test_post_reasoning_entries_rejects_missing_required_field_with_422() -> Non
 
 
 @pytest.mark.contract
+def test_post_reasoning_entries_rejects_cost_usd_above_upper_bound_with_422() -> None:
+    """cost_usd is capped at 100000 USD per entry: no single LLM call
+    costs six figures, and an unbounded value would let one poisoned
+    entry exhaust any instrument envelope."""
+    with TestClient(create_app()) as client:
+        decision_id = _seed_decision(client)
+        response = client.post(
+            f"/decisions/{decision_id}/inferences",
+            json={"entries": [_good_entry(cost_usd=100_000.01)]},
+        )
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_reasoning_entries_accepts_cost_usd_exactly_at_upper_bound() -> None:
+    """The bound is inclusive: a 100000 USD entry is the largest legal figure."""
+    with TestClient(create_app()) as client:
+        decision_id = _seed_decision(client)
+        response = client.post(
+            f"/decisions/{decision_id}/inferences",
+            json={"entries": [_good_entry(cost_usd=100_000.0)]},
+        )
+    assert response.status_code == 200
+
+
+@pytest.mark.contract
 def test_post_reasoning_entries_rejects_extra_fields_with_422() -> None:
     """`extra: forbid` on both request schemas."""
     with TestClient(create_app()) as client:

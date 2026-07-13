@@ -17,7 +17,7 @@ CREATE TABLE proj_budget_allocation_summary (
     allocation_id      UUID             PRIMARY KEY,
     ceiling_usd        DOUBLE PRECISION NOT NULL CHECK (ceiling_usd > 0),
     campaign_id        UUID,
-    holder_note        TEXT             NOT NULL,
+    note               TEXT             NOT NULL,
     status             TEXT             NOT NULL CHECK (
         status IN ('Granted', 'Active', 'Sealed', 'Voided')
     ),

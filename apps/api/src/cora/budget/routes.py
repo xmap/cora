@@ -20,7 +20,7 @@ and get collapsed via the Campaign / Trust / Equipment / Supply loop
 pattern:
 
   - 400 (validation): InvalidAllocationCeiling,
-    InvalidAllocationHolderNote, InvalidAllocationReason
+    InvalidAllocationNote, InvalidAllocationReason
   - 404 (load miss): AllocationNotFound
   - 409 (defensive guard for AlreadyExists): AllocationAlreadyExists
   - 409 (transition guards): AllocationCannotActivate,
@@ -31,14 +31,15 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from cora.budget.aggregates.allocation import (
+    AllocationAlreadyActiveError,
     AllocationAlreadyExistsError,
     AllocationCannotActivateError,
-    AllocationCannotAmendError,
+    AllocationCannotAmendCeilingError,
     AllocationCannotSealError,
     AllocationCannotVoidError,
     AllocationNotFoundError,
     InvalidAllocationCeilingError,
-    InvalidAllocationHolderNoteError,
+    InvalidAllocationNoteError,
     InvalidAllocationReasonError,
 )
 from cora.budget.errors import UnauthorizedError
@@ -116,17 +117,20 @@ def register_budget_routes(app: FastAPI) -> None:
     app.include_router(void_allocation.router)
     for validation_cls in (
         InvalidAllocationCeilingError,
-        InvalidAllocationHolderNoteError,
+        InvalidAllocationNoteError,
         InvalidAllocationReasonError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
     for not_found_cls in (AllocationNotFoundError,):
         app.add_exception_handler(not_found_cls, _handle_not_found)
-    for already_exists_cls in (AllocationAlreadyExistsError,):
+    for already_exists_cls in (
+        AllocationAlreadyExistsError,
+        AllocationAlreadyActiveError,
+    ):
         app.add_exception_handler(already_exists_cls, _handle_already_exists)
     for cannot_transition_cls in (
         AllocationCannotActivateError,
-        AllocationCannotAmendError,
+        AllocationCannotAmendCeilingError,
         AllocationCannotSealError,
         AllocationCannotVoidError,
     ):

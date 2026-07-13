@@ -5,7 +5,7 @@ final-spend snapshot is NOT on the command: the handler computes it
 at seal time by folding the inference ledger over the envelope's own
 window (`activated_at` to the seal instant) via the injected
 TotalSpendReader, so a caller can never assert a figure the ledger
-does not support. The stage-C CampaignClosed subscriber and the REST
+does not support. The CampaignClosed subscriber and the REST
 route both drive this one slice.
 
 `reason` is optional: a routine end-of-window seal needs no

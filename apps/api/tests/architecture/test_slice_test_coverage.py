@@ -166,7 +166,7 @@ EXEMPT_FROM_ENDPOINT_CONTRACT: frozenset[str] = frozenset(
         # status-code mapping stay uncovered until the contract suite
         # lands.
         "cora.agent.features.list_at_risk_results",
-        # Allocation slices (budget BC, allocation arc stage A): REST
+        # Allocation slices (budget BC): REST
         # contract tests deferred so the family's REST + MCP suite can
         # be authored together (the LanguageModel / Frame / Facility
         # precedent). Decider + PBT + handler unit tests

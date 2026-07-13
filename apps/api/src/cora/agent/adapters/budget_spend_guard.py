@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING
 from cora.agent._budget_gate import (
     calendar_day_window,
     calendar_month_window,
-    find_envelope_breach,
+    find_allocation_breach,
 )
 from cora.agent.aggregates.agent import AgentStatus, load_agent
 from cora.infrastructure.ports import NoActiveAllocationLookup
@@ -92,7 +92,7 @@ class BudgetSpendGuard:
             if per_agent_reason is not None:
                 return per_agent_reason
 
-        envelope_breach = await find_envelope_breach(
+        envelope_breach = await find_allocation_breach(
             allocation_lookup=self._allocation_lookup,
             spend_lookup=self._spend_lookup,
             as_of=as_of,

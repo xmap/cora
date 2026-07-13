@@ -139,7 +139,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
-from cora.agent._budget_gate import find_budget_breach, find_envelope_breach
+from cora.agent._budget_gate import find_allocation_breach, find_budget_breach
 from cora.agent._subscriber_lease import attempt_debrief_lease
 from cora.agent.aggregates.agent import AgentStatus, load_agent
 from cora.agent.prompts import (
@@ -482,7 +482,7 @@ class RunDebrieferSubscriber:
         # of that agent's own headroom (post-hoc arm, pending 0). Same
         # deferral composition as the cap breach so the one-Decision-
         # per-terminal-Run invariant holds and operators see WHY.
-        envelope_breach = await find_envelope_breach(
+        envelope_breach = await find_allocation_breach(
             allocation_lookup=self.allocation_lookup,
             spend_lookup=self.spend_lookup,
             as_of=event.occurred_at,
@@ -504,8 +504,8 @@ class RunDebrieferSubscriber:
                 reasoning=(
                     f"Allocation exhausted: {envelope_breach.describe()}; LLM "
                     "call skipped. Raise the ceiling via "
-                    "amend_allocation_ceiling or grant a new envelope, then "
-                    "re-trigger the debrief."
+                    "amend_allocation_ceiling, or seal or void this envelope "
+                    "and activate a new one, then re-trigger the debrief."
                 ),
                 extra_inputs={
                     "failure_error_class": "AllocationExhausted",

@@ -58,14 +58,14 @@ class AllocationGranted:
 
     `campaign_id` is a bare cross-BC reference (eventual-consistency
     stance per the Caution / Calibration precedent); when set, the
-    stage-C CampaignClosed subscriber seals this envelope beside the
+    CampaignClosed subscriber seals this envelope beside the
     campaign's own books.
     """
 
     allocation_id: UUID
     ceiling_usd: float
     campaign_id: UUID | None
-    holder_note: str
+    note: str
     granted_by: ActorId
     occurred_at: datetime
 
@@ -158,7 +158,7 @@ def to_payload(event: AllocationEvent) -> dict[str, Any]:
             allocation_id=allocation_id,
             ceiling_usd=ceiling_usd,
             campaign_id=campaign_id,
-            holder_note=holder_note,
+            note=note,
             granted_by=granted_by,
             occurred_at=occurred_at,
         ):
@@ -166,7 +166,7 @@ def to_payload(event: AllocationEvent) -> dict[str, Any]:
                 "allocation_id": str(allocation_id),
                 "ceiling_usd": ceiling_usd,
                 "campaign_id": str(campaign_id) if campaign_id is not None else None,
-                "holder_note": holder_note,
+                "note": note,
                 "granted_by": str(granted_by),
                 "occurred_at": occurred_at.isoformat(),
             }
@@ -243,7 +243,7 @@ def from_stored(stored: StoredEvent) -> AllocationEvent:
                     allocation_id=UUID(payload["allocation_id"]),
                     ceiling_usd=payload["ceiling_usd"],
                     campaign_id=(UUID(campaign_id_raw) if campaign_id_raw is not None else None),
-                    holder_note=payload["holder_note"],
+                    note=payload["note"],
                     granted_by=ActorId(UUID(payload["granted_by"])),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 )

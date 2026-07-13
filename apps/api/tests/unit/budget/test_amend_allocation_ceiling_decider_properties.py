@@ -12,7 +12,7 @@ Load-bearing properties:
     command.allocation_id.
   - The source-state partition is total over `AllocationStatus`:
     Granted and Active accept; Sealed and Voided always raise
-    `AllocationCannotAmendError` carrying the current status.
+    `AllocationCannotAmendCeilingError` carrying the current status.
   - PUT idempotency: amending to the stored ceiling returns [] for
     every valid ceiling; amending to a different valid ceiling emits
     exactly one event carrying it verbatim with state.id.
@@ -31,7 +31,7 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from cora.budget.aggregates.allocation import (
-    AllocationCannotAmendError,
+    AllocationCannotAmendCeilingError,
     AllocationCeilingAmended,
     AllocationNotFoundError,
     AllocationStatus,
@@ -142,7 +142,7 @@ def test_amend_from_terminal_source_always_raises_cannot_amend(
 ) -> None:
     """Sealed and Voided books cannot be rewritten; carries the current status."""
     envelope = make_allocation(source)
-    with pytest.raises(AllocationCannotAmendError) as exc:
+    with pytest.raises(AllocationCannotAmendCeilingError) as exc:
         decide(
             state=envelope,
             command=AmendAllocationCeiling(allocation_id=envelope.id, ceiling_usd=ceiling),

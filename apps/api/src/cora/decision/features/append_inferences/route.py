@@ -114,10 +114,15 @@ class ReasoningEntryRequest(BaseModel):
     cost_usd: float | None = Field(
         default=None,
         ge=0.0,
+        le=100_000.0,
         allow_inf_nan=False,
         description=(
             "Actual call cost in USD computed from usage tokens and provider "
-            "pricing (CORA custom; no OTel attribute exists for call cost)."
+            "pricing (CORA custom; no OTel attribute exists for call cost). "
+            "Upper bound 100000: no single LLM call costs six figures, and "
+            "an unbounded value would let one poisoned entry exhaust any "
+            "instrument envelope and permanently corrupt a sealed books "
+            "figure."
         ),
     )
     agent_id: str | None = Field(

@@ -11,7 +11,7 @@ from uuid import UUID
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
-from cora.budget.aggregates.allocation import ALLOCATION_HOLDER_NOTE_MAX_LENGTH
+from cora.budget.aggregates.allocation import ALLOCATION_NOTE_MAX_LENGTH
 from cora.budget.features.grant_allocation.command import GrantAllocation
 from cora.budget.features.grant_allocation.handler import IdempotentHandler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
@@ -33,7 +33,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
         description=(
             "Grant a new spending envelope for this deployment's beamline "
             "(lands in Granted, dormant; a separate activation opens the "
-            "spend window). Required: ceiling_usd, holder_note. Optional: "
+            "spend window). Required: ceiling_usd, note. Optional: "
             "campaign_id (binds the award window to a Campaign), "
             "allocation_id (omit to mint server-side)."
         ),
@@ -47,11 +47,11 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
                 description="USD spending ceiling. Finite and greater than 0.",
             ),
         ],
-        holder_note: Annotated[
+        note: Annotated[
             str,
             Field(
                 min_length=1,
-                max_length=ALLOCATION_HOLDER_NOTE_MAX_LENGTH,
+                max_length=ALLOCATION_NOTE_MAX_LENGTH,
                 description="Operator-facing name for the envelope.",
             ),
         ],
@@ -80,7 +80,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
         new_id = await handler(
             GrantAllocation(
                 ceiling_usd=ceiling_usd,
-                holder_note=holder_note,
+                note=note,
                 campaign_id=campaign_id,
                 allocation_id=allocation_id,
             ),

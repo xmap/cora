@@ -28,7 +28,7 @@ from cora.agent.aggregates.agent import (
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports import AgentInferenceTrace
-from cora.infrastructure.ports.allocation_lookup import ActiveAllocation
+from cora.infrastructure.ports.allocation_lookup import AllocationLookupResult
 from cora.infrastructure.ports.spend_lookup import SpendLookupResult, TotalSpendResult
 from cora.infrastructure.signing import event_type_to_payload_type
 from cora.shared.content_hash import canonical_body_bytes, pae_bytes
@@ -113,11 +113,11 @@ class FakeAllocationLookup:
     can pin that the disarmed path never reaches the total-spend sum.
     """
 
-    def __init__(self, active: ActiveAllocation | None = None) -> None:
+    def __init__(self, active: AllocationLookupResult | None = None) -> None:
         self.active = active
         self.find_active_calls = 0
 
-    async def find_active(self) -> ActiveAllocation | None:
+    async def find_active(self) -> AllocationLookupResult | None:
         self.find_active_calls += 1
         return self.active
 

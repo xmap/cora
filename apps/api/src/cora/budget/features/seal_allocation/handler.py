@@ -11,7 +11,7 @@ closing-the-books figure.
 
 `total_spend_reader` is bound at wire time, NOT resolved from Kernel:
 `wire.py` binds `make_ledger_total_spend(deps.spend_lookup)` (the
-SpendLookup-backed fold the stage-A seam promised), so the
+SpendLookup-backed fold), so the
 CampaignClosed sealer subscriber and the REST route both flow through
 this one slice with the same ledger answer. `zero_total_spend`
 remains exported for tests that want a seal without a ledger.
@@ -72,7 +72,7 @@ class TotalSpendReader(Protocol):
 async def zero_total_spend(*, window_start: datetime, window_end: datetime) -> float:
     """Ledger-less reader: every seal records `spent_usd = 0.0`.
 
-    Was the stage-A wire binding before `find_total_spend` existed;
+    The reader that predates `find_total_spend`;
     kept exported for tests that exercise the seal FSM without
     standing up an inference ledger (the figure is honestly the
     reader's answer, and a zero reader states that intent loudly).

@@ -1,7 +1,7 @@
 """AllocationLookup port: which spending envelope is currently Active?
 
 Consumed by the envelope arm of the budget gate stack: the coarse
-post-hoc gate (`cora.agent._budget_gate.find_envelope_breach`), the
+post-hoc gate (`cora.agent._budget_gate.find_allocation_breach`), the
 pre-estimate `BudgetSpendGuard`, and the budget BC's own
 CampaignClosed sealer subscriber. All three ask the same one-row
 question: "is an envelope Active right now, and what are its ceiling
@@ -26,7 +26,9 @@ envelope declared means no envelope constraint. Declaring and
 activating an allocation is what arms the gate, the same opt-in
 posture as every lookup in the family, so every existing test and
 allocation-less deployment is unaffected. The at-most-one-Active
-invariant is enforced best-effort at grant/activate time; on an
+invariant is enforced best-effort at activate time (activate_allocation
+refuses with AllocationAlreadyActiveError when another envelope is
+already Active); on an
 anomalous overlap the adapter answers with the newest-activated
 envelope (documented on `find_active`), so the gate keys on the most
 recent operator intent rather than refusing to answer.
@@ -39,7 +41,7 @@ from uuid import UUID
 
 
 @dataclass(frozen=True)
-class ActiveAllocation:
+class AllocationLookupResult:
     """The deployment's currently Active spending envelope.
 
     `activated_at` is the spend-window start every instance-total
@@ -56,7 +58,7 @@ class ActiveAllocation:
 class AllocationLookup(Protocol):
     """Cross-cutting port: resolve the deployment's single Active envelope."""
 
-    async def find_active(self) -> ActiveAllocation | None:
+    async def find_active(self) -> AllocationLookupResult | None:
         """Return the Active allocation envelope, or None when none is Active.
 
         None disarms the envelope check entirely (no envelope, no
@@ -78,12 +80,12 @@ class NoActiveAllocationLookup:
     posture: activating an envelope is what arms the gate).
     """
 
-    async def find_active(self) -> ActiveAllocation | None:
+    async def find_active(self) -> AllocationLookupResult | None:
         return None
 
 
 __all__ = [
-    "ActiveAllocation",
     "AllocationLookup",
+    "AllocationLookupResult",
     "NoActiveAllocationLookup",
 ]

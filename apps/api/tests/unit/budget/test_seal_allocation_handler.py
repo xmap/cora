@@ -5,7 +5,7 @@ handler folds the envelope, threads its `activated_at` and the Clock's
 `now` into the injected reader, and records the reader's answer as the
 seal's spend snapshot. The tests pin the window threading, the
 guard-path short-circuit (no ledger read for a window that never
-opened), and the stage-A zero-reader posture.
+opened), and the explicit-zero-reader posture.
 """
 
 from datetime import UTC, datetime
@@ -127,8 +127,9 @@ async def test_handler_carries_seal_reason_to_payload() -> None:
 
 @pytest.mark.unit
 async def test_handler_with_zero_reader_records_zero_snapshot() -> None:
-    """Stage-A posture: the bound zero-reader makes every seal record 0.0
-    honestly until stage C wires the ledger-backed fold."""
+    """Binding the zero reader explicitly, with no ledger fold, makes
+    every seal record 0.0 honestly as the reader's answer. Production
+    wiring binds make_ledger_total_spend; the reader is a seam."""
     store = InMemoryEventStore()
     await _seed_active(store)
     deps = _build_deps(event_store=store)
@@ -192,3 +193,32 @@ async def test_handler_denied_does_not_write_or_read_ledger() -> None:
     assert version == 2
     assert len(events) == 2
     assert reader.calls == []
+
+
+@pytest.mark.unit
+async def test_wire_budget_binds_the_ledger_reader_not_the_zero_reader() -> None:
+    """The seam's whole point: `wire_budget` binds
+    `make_ledger_total_spend(deps.spend_lookup)`, so an operator seal
+    records the instance-total ledger sum, not 0.0. Rebinding
+    `zero_total_spend` in wire.py would make this record 0.0 and fail."""
+    from cora.budget.wire import wire_budget
+    from tests.unit.agent._helpers import FakeSpendLookup
+
+    store = InMemoryEventStore()
+    await _seed_active(store)
+    spend_lookup = FakeSpendLookup(total_usd_spent=777.0)
+    deps = _build_deps_shared(
+        ids=[_SEAL_EVENT_ID], now=_NOW, event_store=store, spend_lookup=spend_lookup
+    )
+    handlers = wire_budget(deps)
+
+    await handlers.seal_allocation(
+        SealAllocation(allocation_id=_ALLOCATION_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    events, _version = await store.load("Allocation", _ALLOCATION_ID)
+    assert events[-1].event_type == "AllocationSealed"
+    assert events[-1].payload["spent_usd"] == 777.0
+    assert spend_lookup.total_windows == [(ACTIVATED_AT, _NOW)]

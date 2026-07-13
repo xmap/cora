@@ -7826,17 +7826,17 @@
             "title": "Ceiling Usd",
             "type": "number"
           },
-          "holder_note": {
+          "note": {
             "description": "Operator-facing name for the envelope (award cycle, proposal block). The holder itself is implicitly this deployment's beamline.",
             "maxLength": 200,
             "minLength": 1,
-            "title": "Holder Note",
+            "title": "Note",
             "type": "string"
           }
         },
         "required": [
           "ceiling_usd",
-          "holder_note"
+          "note"
         ],
         "title": "GrantAllocationRequest",
         "type": "object"
@@ -11142,6 +11142,7 @@
           "cost_usd": {
             "anyOf": [
               {
+                "maximum": 100000.0,
                 "minimum": 0.0,
                 "type": "number"
               },
@@ -11149,7 +11150,7 @@
                 "type": "null"
               }
             ],
-            "description": "Actual call cost in USD computed from usage tokens and provider pricing (CORA custom; no OTel attribute exists for call cost).",
+            "description": "Actual call cost in USD computed from usage tokens and provider pricing (CORA custom; no OTel attribute exists for call cost). Upper bound 100000: no single LLM call costs six figures, and an unbounded value would let one poisoned entry exhaust any instrument envelope and permanently corrupt a sealed books figure.",
             "title": "Cost Usd"
           },
           "duration": {
@@ -19277,7 +19278,7 @@
                 }
               }
             },
-            "description": "Domain invariant violated (non-finite ceiling, whitespace-only holder note)."
+            "description": "Domain invariant violated (non-finite ceiling, whitespace-only note)."
           },
           "403": {
             "content": {
