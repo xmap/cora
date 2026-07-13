@@ -43,6 +43,7 @@ _BC_ROWS: tuple[tuple[str, str], ...] = (
     ("Procedure", "campaign"),
     ("Resource", "supply"),
     ("Resource", "operation"),
+    ("Resource", "budget"),
     ("Authority", "trust"),
     ("Authority", "safety"),
     ("Authority", "federation"),
@@ -56,9 +57,10 @@ _BC_ROWS: tuple[tuple[str, str], ...] = (
 )
 
 # Reserved BCs scoped but not implemented (no code, so authored here).
+# budget left this tuple when the Allocation aggregate shipped; it now
+# renders as an Active row from the introspected code model.
 _PLANNED_ROWS: tuple[tuple[str, str, str], ...] = (
     ("Governance", "strategy", "strategy"),
-    ("Resource", "budget", "budget"),
 )
 
 _INLINE_KINDS = frozenset({"count", "bc-aggregates"})

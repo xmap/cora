@@ -756,6 +756,22 @@
         "title": "AlternateIdentifierKind",
         "type": "string"
       },
+      "AmendAllocationCeilingRequest": {
+        "description": "Body for `POST /allocations/{allocation_id}/ceiling`.",
+        "properties": {
+          "ceiling_usd": {
+            "description": "The post-amend USD ceiling (PUT semantics, not a delta). Finite and greater than 0.",
+            "exclusiveMinimum": 0.0,
+            "title": "Ceiling Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "ceiling_usd"
+        ],
+        "title": "AmendAllocationCeilingRequest",
+        "type": "object"
+      },
       "AmendClearanceRequest": {
         "description": "Body for `POST /clearances/{parent_id}/amend`.\n\nMirrors `RegisterClearanceRequest`'s child-fields exactly. The\n`parent_id` comes from the URL path, not the body.",
         "properties": {
@@ -7775,6 +7791,71 @@
         "title": "GhsDto",
         "type": "object"
       },
+      "GrantAllocationRequest": {
+        "description": "Body for `POST /allocations`.",
+        "properties": {
+          "allocation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional caller-supplied id for configuration-seeded envelopes needing stable ids across environments. Omit (or pass null) to let the server mint a UUIDv7.",
+            "title": "Allocation Id"
+          },
+          "campaign_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional Campaign binding for the award window. When set, the CampaignClosed subscriber seals this envelope beside the campaign's own books. Pass null for an unbound envelope.",
+            "title": "Campaign Id"
+          },
+          "ceiling_usd": {
+            "description": "USD spending ceiling for the envelope. Finite and greater than 0.",
+            "exclusiveMinimum": 0.0,
+            "title": "Ceiling Usd",
+            "type": "number"
+          },
+          "holder_note": {
+            "description": "Operator-facing name for the envelope (award cycle, proposal block). The holder itself is implicitly this deployment's beamline.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Holder Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ceiling_usd",
+          "holder_note"
+        ],
+        "title": "GrantAllocationRequest",
+        "type": "object"
+      },
+      "GrantAllocationResponse": {
+        "description": "Response body for `POST /allocations`.",
+        "properties": {
+          "allocation_id": {
+            "format": "uuid",
+            "title": "Allocation Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "allocation_id"
+        ],
+        "title": "GrantAllocationResponse",
+        "type": "object"
+      },
       "GrantToolToAgentRequest": {
         "description": "Body for `POST /agents/{agent_id}/tools/grant`.",
         "properties": {
@@ -14228,6 +14309,27 @@
         "title": "SchemeDTO",
         "type": "object"
       },
+      "SealAllocationRequest": {
+        "description": "Body for `POST /allocations/{allocation_id}/seal`.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional closing note (an early close usually carries context; a routine end-of-window seal needs none). Pass null to omit.",
+            "title": "Reason"
+          }
+        },
+        "title": "SealAllocationRequest",
+        "type": "object"
+      },
       "SealEditionRequest": {
         "additionalProperties": false,
         "description": "Optional overrides for `POST /editions/{edition_id}/seal`.",
@@ -16361,6 +16463,23 @@
         ],
         "title": "VisitType",
         "type": "string"
+      },
+      "VoidAllocationRequest": {
+        "description": "Body for `POST /allocations/{allocation_id}/void`.",
+        "properties": {
+          "reason": {
+            "description": "Why the grant is withdrawn. Required: voiding an award is a governance act the audit log must always carry context for.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "VoidAllocationRequest",
+        "type": "object"
       },
       "VoidVisitRequest": {
         "description": "Body for `POST /visits/{visit_id}/void`.",
@@ -19086,6 +19205,487 @@
         "summary": "Version a Defined Agent (Defined -> Versioned)",
         "tags": [
           "agent"
+        ]
+      }
+    },
+    "/allocations": {
+      "post": {
+        "operationId": "post_allocations_allocations_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantAllocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantAllocationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (non-finite ceiling, whitespace-only holder note)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The target Allocation stream already has events. Reachable in practice only with a caller-supplied allocation_id; essentially impossible for server-minted UUIDv7 ids."
+          },
+          "422": {
+            "description": "Request body failed schema validation (missing field, length out of bounds, non-positive ceiling, invalid UUID), OR Idempotency-Key was reused with a different request body."
+          }
+        },
+        "summary": "Grant a new spending envelope (lands in Granted, dormant)",
+        "tags": [
+          "budget"
+        ]
+      }
+    },
+    "/allocations/{allocation_id}/activate": {
+      "post": {
+        "operationId": "post_allocations_activate_allocations__allocation_id__activate_post",
+        "parameters": [
+          {
+            "description": "Target Allocation's id.",
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "description": "Target Allocation's id.",
+              "format": "uuid",
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Allocation exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Allocation is not in Granted status (activate_allocation is single-source from Granted only)."
+          },
+          "422": {
+            "description": "Path parameter failed schema validation."
+          }
+        },
+        "summary": "Activate a Granted Allocation (Granted -> Active)",
+        "tags": [
+          "budget"
+        ]
+      }
+    },
+    "/allocations/{allocation_id}/ceiling": {
+      "post": {
+        "operationId": "post_allocations_ceiling_allocations__allocation_id__ceiling_post",
+        "parameters": [
+          {
+            "description": "Target Allocation's id.",
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "description": "Target Allocation's id.",
+              "format": "uuid",
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AmendAllocationCeilingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (non-finite ceiling)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Allocation exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Allocation is not in Granted or Active status (amend_allocation_ceiling cannot rewrite a closed envelope)."
+          },
+          "422": {
+            "description": "Request body failed schema validation (missing field, non-positive ceiling) or path parameter is not a UUID."
+          }
+        },
+        "summary": "Amend an Allocation's USD ceiling (PUT semantics)",
+        "tags": [
+          "budget"
+        ]
+      }
+    },
+    "/allocations/{allocation_id}/seal": {
+      "post": {
+        "operationId": "post_allocations_seal_allocations__allocation_id__seal_post",
+        "parameters": [
+          {
+            "description": "Target Allocation's id.",
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "description": "Target Allocation's id.",
+              "format": "uuid",
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SealAllocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (whitespace-only reason)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Allocation exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Allocation is not in Active status (seal_allocation closes an open spend window; void a dormant grant instead)."
+          },
+          "422": {
+            "description": "Request body failed schema validation (reason length out of bounds) or path parameter is not a UUID."
+          }
+        },
+        "summary": "Seal an Active Allocation (Active -> Sealed, closing the books)",
+        "tags": [
+          "budget"
+        ]
+      }
+    },
+    "/allocations/{allocation_id}/void": {
+      "post": {
+        "operationId": "post_allocations_void_allocations__allocation_id__void_post",
+        "parameters": [
+          {
+            "description": "Target Allocation's id.",
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "description": "Target Allocation's id.",
+              "format": "uuid",
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidAllocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (whitespace-only reason)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Allocation exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Allocation is not in Granted or Active status (a sealed or voided envelope cannot be re-terminated)."
+          },
+          "422": {
+            "description": "Request body failed schema validation (missing or over-length reason) or path parameter is not a UUID."
+          }
+        },
+        "summary": "Void a Granted or Active Allocation (-> Voided)",
+        "tags": [
+          "budget"
         ]
       }
     },

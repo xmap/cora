@@ -123,6 +123,15 @@ _GENESIS_VERB_DEVIATIONS: dict[tuple[str, str], str] = {
         "AttestationRegistered would misframe a fact as an entity. Mirrors "
         "the Calibration-revision / run / seal fact-shaped precedent."
     ),
+    ("budget", "allocation"): (
+        "AllocationGranted uses the exact verb of the paper and of HPC "
+        "accounting for an award, and it names the FSM's initial state "
+        "(AllocationStatus.GRANTED), the RatificationRequested shape: the "
+        "genesis event IS the transition into the first state. An "
+        "AllocationRegistered genesis would emit an event matching no "
+        "state it produces and erase the award semantic the whole "
+        "allocation arc is built on."
+    ),
 }
 
 

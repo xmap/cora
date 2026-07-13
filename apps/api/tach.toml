@@ -58,6 +58,10 @@ path = "cora.agent.aggregates"
 depends_on = ["cora.infrastructure", "cora.shared"]
 
 [[modules]]
+path = "cora.budget.aggregates"
+depends_on = ["cora.infrastructure", "cora.shared"]
+
+[[modules]]
 path = "cora.campaign.aggregates"
 depends_on = ["cora.infrastructure", "cora.shared"]
 
@@ -394,6 +398,18 @@ depends_on = [
     "cora.trust.aggregates",
 ]
 
+# Budget BC owns the Allocation aggregate (the beamline's spending
+# envelope; 4-state FSM Granted -> Active -> Sealed | Voided). Day-1
+# lock: `campaign_id` is a bare UUID reference with NO cross-BC kernel
+# load on the write path (eventual-consistency stance per the Caution /
+# Calibration precedent), and the seal's TotalSpendReader is an
+# injected callable (stage A binds a zero-reader; stage C binds the
+# SpendLookup-backed fold), so the BC depends only on shared +
+# infrastructure.
+[[modules]]
+path = "cora.budget"
+depends_on = ["cora.infrastructure", "cora.shared", "cora.budget.aggregates"]
+
 # API entrypoint composes every BC.
 [[modules]]
 path = "cora.api"
@@ -404,6 +420,7 @@ depends_on = [
     # RunSupervisor runtime gates on Actor.active (operator-revocation) via load_actor.
     "cora.access.aggregates",
     "cora.agent",
+    "cora.budget",
     "cora.calibration",
     "cora.campaign",
     "cora.caution",

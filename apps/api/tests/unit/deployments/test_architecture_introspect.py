@@ -74,12 +74,13 @@ def test_introspection_aggregates_match_filesystem() -> None:
     assert generated == _filesystem_aggregates()
 
 
-def test_counts_are_seventeen_bcs_and_forty_two_aggregates() -> None:
+def test_counts_are_eighteen_bcs_and_forty_three_aggregates() -> None:
     # Anti-drift pins for the model.md headline; bump deliberately on a BC/aggregate add.
-    # 42 aggregates: the Agent BC gained LanguageModel (the facility model catalog).
+    # 18 BCs / 43 aggregates: the budget BC landed with Allocation (the
+    # beamline's spending envelope, the allocation arc's stage A).
     model = ai.introspect(_CORA)
-    assert model.bc_count == 17
-    assert model.aggregate_count == 42
+    assert model.bc_count == 18
+    assert model.aggregate_count == 43
 
 
 def test_enclosure_bc_and_equipment_role_are_present() -> None:
@@ -125,9 +126,11 @@ def test_bc_table_renders_full_membership() -> None:
     table = ap.render_bc_table(_MODEL, {})
     assert "`enclosure`" in table  # the omitted 17th BC
     assert "`role`" in table  # the omitted equipment aggregate
-    assert table.count("Active") == 17
-    assert table.count("Planned") == 2
+    # 18 Active rows since budget shipped; strategy is the one Planned row left.
+    assert table.count("Active") == 18
+    assert table.count("Planned") == 1
     assert "`strategy`" in table and "`budget`" in table
+    assert "`allocation`" in table
     assert chr(0x2014) not in table
 
 
@@ -139,9 +142,9 @@ def test_bc_table_group_map_covers_every_bc() -> None:
 
 
 def test_count_renderer() -> None:
-    assert ap.render_count(_MODEL, {"kind": "bc", "spell": "true", "cap": "true"}) == "Seventeen"
-    assert ap.render_count(_MODEL, {"kind": "aggregate", "spell": "true"}) == "forty-two"
-    assert ap.render_count(_MODEL, {"kind": "bc"}) == "17"
+    assert ap.render_count(_MODEL, {"kind": "bc", "spell": "true", "cap": "true"}) == "Eighteen"
+    assert ap.render_count(_MODEL, {"kind": "aggregate", "spell": "true"}) == "forty-three"
+    assert ap.render_count(_MODEL, {"kind": "bc"}) == "18"
     assert ap.render_count(_MODEL, {"kind": "event", "bc": "decision"}) == "4"
     assert ap.render_count(_MODEL, {"kind": "slice", "bc": "equipment"}) == "60"
 
@@ -168,7 +171,7 @@ def test_bc_aggregates_renderer() -> None:
 def test_expand_markers_idempotent() -> None:
     md = "lead <!-- arch:count kind=bc spell=true cap=true -->X<!-- /arch:count --> tail"
     out = ap.expand_markers(md, model=_MODEL, src_uri="architecture/model.md")
-    assert "Seventeen" in out
+    assert "Eighteen" in out
     assert out.startswith("lead <!-- arch:count") and out.endswith("/arch:count --> tail")
     # re-expanding a generated page is stable
     assert ap.expand_markers(out, model=_MODEL, src_uri="architecture/model.md") == out

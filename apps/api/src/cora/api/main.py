@@ -86,6 +86,12 @@ from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
+from cora.budget import (
+    BudgetHandlers,
+    register_budget_routes,
+    register_budget_tools,
+    wire_budget,
+)
 from cora.calibration import (
     CalibrationHandlers,
     register_calibration_projections,
@@ -588,6 +594,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
         handlers: CampaignHandlers = fastapi_app.state.campaign
         return handlers
 
+    def _get_budget_handlers() -> BudgetHandlers:
+        handlers: BudgetHandlers = fastapi_app.state.budget
+        return handlers
+
     def _get_agent_handlers() -> AgentHandlers:
         handlers: AgentHandlers = fastapi_app.state.agent
         return handlers
@@ -608,6 +618,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_caution_tools(mcp, get_handlers=_get_caution_handlers)
     register_calibration_tools(mcp, get_handlers=_get_calibration_handlers)
     register_campaign_tools(mcp, get_handlers=_get_campaign_handlers)
+    register_budget_tools(mcp, get_handlers=_get_budget_handlers)
     register_agent_tools(mcp, get_handlers=_get_agent_handlers)
     register_conduct_run_tools(mcp, get_runtime=_get_compute_run_driver, get_deps=_get_deps)
     mcp_app = mcp.streamable_http_app()
@@ -733,6 +744,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             app.state.caution = wire_caution(deps)
             app.state.calibration = wire_calibration(deps)
             app.state.campaign = wire_campaign(deps)
+            app.state.budget = wire_budget(deps)
             app.state.agent = wire_agent(deps)
 
             app.state.compute_run_driver = ComputeRunDriver(
@@ -1078,6 +1090,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_caution_routes(fastapi_app)
     register_calibration_routes(fastapi_app)
     register_campaign_routes(fastapi_app)
+    register_budget_routes(fastapi_app)
     register_agent_routes(fastapi_app)
     register_conduct_run_routes(fastapi_app)
     # RFC 9728 Protected Resource Metadata. Discoverable

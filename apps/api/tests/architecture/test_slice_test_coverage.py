@@ -166,6 +166,19 @@ EXEMPT_FROM_ENDPOINT_CONTRACT: frozenset[str] = frozenset(
         # status-code mapping stay uncovered until the contract suite
         # lands.
         "cora.agent.features.list_at_risk_results",
+        # Allocation slices (budget BC, allocation arc stage A): REST
+        # contract tests deferred so the family's REST + MCP suite can
+        # be authored together (the LanguageModel / Frame / Facility
+        # precedent). Decider + PBT + handler unit tests
+        # (tests/unit/budget/) pin behavior; the OpenAPI snapshot pins
+        # route paths and schemas only, so handler binding, MCP tool
+        # registration, and status-code mapping stay uncovered until
+        # the contract suite lands. Remove when it does.
+        "cora.budget.features.activate_allocation",
+        "cora.budget.features.amend_allocation_ceiling",
+        "cora.budget.features.grant_allocation",
+        "cora.budget.features.seal_allocation",
+        "cora.budget.features.void_allocation",
     }
 )
 
@@ -230,6 +243,15 @@ EXEMPT_FROM_MCP_CONTRACT: frozenset[str] = frozenset(
         # list_at_risk_results: MCP contract test deferred alongside the
         # REST contract test (same rationale as the catalog slices above).
         "cora.agent.features.list_at_risk_results",
+        # Allocation slices (budget BC): MCP contract tests deferred
+        # alongside the REST contract tests (same rationale as the
+        # endpoint allowlist entries above). Remove when the family's
+        # contract suite lands.
+        "cora.budget.features.activate_allocation",
+        "cora.budget.features.amend_allocation_ceiling",
+        "cora.budget.features.grant_allocation",
+        "cora.budget.features.seal_allocation",
+        "cora.budget.features.void_allocation",
     }
 )
 
