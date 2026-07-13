@@ -34,7 +34,7 @@ from uuid import UUID
 
 import asyncpg
 
-from cora.infrastructure.ports.spend_lookup import SpendLookupResult
+from cora.infrastructure.ports.spend_lookup import SpendLookupResult, TotalSpendResult
 
 _SUM_AGENT_SPEND_SQL = """
 SELECT
@@ -46,6 +46,19 @@ FROM entries_decision_inferences
 WHERE agent_id = $1
   AND occurred_at >= $2
   AND occurred_at < $3
+"""
+
+# No agent filter on purpose: the allocation envelope's one balance
+# covers the whole instrument, so agent-attributed and agentless
+# (operator-attributed) rows sum alike. Same COALESCE posture as the
+# per-agent SUM: NULL-cost legacy rows contribute $0, never poison.
+_SUM_TOTAL_SPEND_SQL = """
+SELECT
+    COALESCE(SUM(cost_usd), 0)::float8 AS usd_spent,
+    COUNT(*)::bigint AS call_count
+FROM entries_decision_inferences
+WHERE occurred_at >= $1
+  AND occurred_at < $2
 """
 
 # Token sums accumulate in NUMERIC (arbitrary precision) so one
@@ -82,6 +95,26 @@ class PostgresSpendLookup:
             window_end=window_end,
             usd_spent=float(row["usd_spent"]),
             tokens_spent=min(int(row["tokens_spent"]), _TOKENS_CLAMP),
+            call_count=int(row["call_count"]),
+        )
+
+    async def find_total_spend(
+        self,
+        *,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> TotalSpendResult:
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                _SUM_TOTAL_SPEND_SQL,
+                window_start,
+                window_end,
+            )
+        assert row is not None  # aggregate queries always return one row
+        return TotalSpendResult(
+            window_start=window_start,
+            window_end=window_end,
+            usd_spent=float(row["usd_spent"]),
             call_count=int(row["call_count"]),
         )
 

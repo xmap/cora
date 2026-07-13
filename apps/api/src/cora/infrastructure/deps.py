@@ -81,6 +81,7 @@ from cora.infrastructure.kernel import Kernel, Teardown
 from cora.infrastructure.logging import configure_logging
 from cora.infrastructure.ports import (
     LLM,
+    AllocationLookup,
     AllSatisfiedSupplyLookup,
     AlwaysApprovedLanguageModelLookup,
     AlwaysCoveredClearanceLookup,
@@ -111,6 +112,7 @@ from cora.infrastructure.ports import (
     LanguageModelLookup,
     LogbookMirror,
     ModelUsageLookup,
+    NoActiveAllocationLookup,
     NoComputeReachabilityLookup,
     NoDatasetDistributionsLookup,
     NoInvolvementLookup,
@@ -188,6 +190,7 @@ def make_postgres_kernel(
     enclosure_lookup: EnclosureLookup | None = None,
     language_model_lookup: LanguageModelLookup | None = None,
     model_usage_lookup: ModelUsageLookup | None = None,
+    allocation_lookup: AllocationLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
@@ -320,6 +323,13 @@ def make_postgres_kernel(
     `model_usage_lookup_factory` argument; slice-specific tests
     override here explicitly.
 
+    `allocation_lookup` defaults to `NoActiveAllocationLookup` (no
+    envelope Active) so existing tests and allocation-less deployments
+    keep the unconstrained envelope behavior; activating an allocation
+    is what arms the gate. Production's `build_kernel` injects the real
+    `PostgresAllocationLookup` via the `allocation_lookup_factory`
+    argument; envelope-gate tests override here explicitly.
+
     `llm` defaults to `None` because most BCs and tests don't need
     an LLM; only Agent BC subscribers consume it. Production's
     `build_kernel` injects `AnthropicLLM` when
@@ -402,6 +412,9 @@ def make_postgres_kernel(
         model_usage_lookup=(
             model_usage_lookup if model_usage_lookup is not None else AlwaysEmptyModelUsageLookup()
         ),
+        allocation_lookup=(
+            allocation_lookup if allocation_lookup is not None else NoActiveAllocationLookup()
+        ),
         profile_store=(profile_store if profile_store is not None else PostgresProfileStore(pool)),
         canonicalization_registry=_build_default_canonicalization_registry(),
         signing_registry=SigningRegistry(),
@@ -443,6 +456,7 @@ def make_inmemory_kernel(
     enclosure_lookup: EnclosureLookup | None = None,
     language_model_lookup: LanguageModelLookup | None = None,
     model_usage_lookup: ModelUsageLookup | None = None,
+    allocation_lookup: AllocationLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
@@ -558,6 +572,13 @@ def make_inmemory_kernel(
     it. Slice-specific tests override with a fake returning seeded
     `ModelUsageLookupResult` rows.
 
+    `allocation_lookup` defaults to `NoActiveAllocationLookup` (no
+    envelope Active) for the same reason: no projection worker, no
+    `proj_budget_allocation_summary` table to read from, and the
+    envelope check must stay disarmed for every test that never
+    declared an allocation. Envelope-gate tests override with a fake
+    returning a chosen `ActiveAllocation`.
+
     `llm` defaults to `None`; the in-memory kernel is for unit /
     contract tests that don't exercise LLM subscribers. Subscriber
     tests that DO exercise the LLM path inject `FakeLLM`
@@ -639,6 +660,9 @@ def make_inmemory_kernel(
         ),
         model_usage_lookup=(
             model_usage_lookup if model_usage_lookup is not None else AlwaysEmptyModelUsageLookup()
+        ),
+        allocation_lookup=(
+            allocation_lookup if allocation_lookup is not None else NoActiveAllocationLookup()
         ),
         profile_store=profile_store if profile_store is not None else InMemoryProfileStore(),
         canonicalization_registry=_build_default_canonicalization_registry(),
@@ -775,6 +799,25 @@ class LanguageModelLookupFactory(Protocol):
         self,
         pool: asyncpg.Pool,
     ) -> LanguageModelLookup: ...
+
+
+class AllocationLookupFactory(Protocol):
+    """Builds the production AllocationLookup port for the Kernel.
+
+    Budget BC's `cora.budget.adapters.PostgresAllocationLookup` is the
+    production factory; `cora.api.main` binds it. Same factory-
+    injection shape as the other lookup factories so
+    `cora.infrastructure.deps` doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to
+    `NoActiveAllocationLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> AllocationLookup: ...
 
 
 class ModelUsageLookupFactory(Protocol):
@@ -1044,6 +1087,7 @@ async def build_kernel(
     spend_lookup_factory: SpendLookupFactory | None = None,
     language_model_lookup_factory: LanguageModelLookupFactory | None = None,
     model_usage_lookup_factory: ModelUsageLookupFactory | None = None,
+    allocation_lookup_factory: AllocationLookupFactory | None = None,
     run_actor_involvement_lookup_factory: RunActorInvolvementLookupFactory | None = None,
     consequence_lookup_factory: ConsequenceLookupFactory | None = None,
     dataset_distribution_lookup_factory: DatasetDistributionLookupFactory | None = None,
@@ -1167,6 +1211,11 @@ async def build_kernel(
         if model_usage_lookup_factory is not None
         else AlwaysEmptyModelUsageLookup()
     )
+    allocation_lookup: AllocationLookup = (
+        allocation_lookup_factory(pool)
+        if allocation_lookup_factory is not None
+        else NoActiveAllocationLookup()
+    )
     run_actor_involvement_lookup: RunActorInvolvementLookup = (
         run_actor_involvement_lookup_factory(pool)
         if run_actor_involvement_lookup_factory is not None
@@ -1233,6 +1282,7 @@ async def build_kernel(
         spend_lookup=spend_lookup,
         language_model_lookup=language_model_lookup,
         model_usage_lookup=model_usage_lookup,
+        allocation_lookup=allocation_lookup,
         run_actor_involvement_lookup=run_actor_involvement_lookup,
         consequence_lookup=consequence_lookup,
         dataset_distribution_lookup=dataset_distribution_lookup,

@@ -139,7 +139,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
-from cora.agent._budget_gate import find_budget_breach
+from cora.agent._budget_gate import find_budget_breach, find_envelope_breach
 from cora.agent._subscriber_lease import attempt_debrief_lease
 from cora.agent.aggregates.agent import AgentStatus, load_agent
 from cora.agent.prompts import (
@@ -177,6 +177,7 @@ from cora.infrastructure.ports import (
     AgentInferenceTrace,
     AlwaysZeroSpendLookup,
     ConcurrencyError,
+    NoActiveAllocationLookup,
     NullInferenceRecorder,
 )
 from cora.infrastructure.signing import SIGNED_EVENT_TYPES
@@ -188,6 +189,7 @@ if TYPE_CHECKING:
     from cora.infrastructure.kernel import Kernel
     from cora.infrastructure.ports import (
         LLM,
+        AllocationLookup,
         InferenceRecorder,
         LLMChatRequest,
         LLMResponse,
@@ -299,6 +301,7 @@ class RunDebrieferSubscriber:
         signer: Signer | None = None,
         inference_recorder: InferenceRecorder | None = None,
         spend_lookup: SpendLookup | None = None,
+        allocation_lookup: AllocationLookup | None = None,
     ) -> None:
         self.event_store = event_store
         self.llm = llm
@@ -312,6 +315,9 @@ class RunDebrieferSubscriber:
         # don't exercise budget gating; production wiring passes the
         # Kernel's PostgresSpendLookup.
         self.spend_lookup = spend_lookup or AlwaysZeroSpendLookup()
+        # Defaults to no Active envelope so the instrument-wide allocation
+        # check stays disarmed unless a test (or production wiring) arms it.
+        self.allocation_lookup = allocation_lookup or NoActiveAllocationLookup()
 
     async def apply(self, event: StoredEvent, conn: ConnectionLike) -> None:
         """Process one terminal Run event.
@@ -465,6 +471,45 @@ class RunDebrieferSubscriber:
                 extra_inputs={
                     "failure_error_class": "AgentBudgetExhausted",
                     "budget_cap_kind": breach.cap_kind,
+                },
+                outcome="deferred",
+                log=log,
+            )
+            return
+
+        # Instrument-wide envelope gate, above the per-agent caps: an
+        # exhausted Active allocation stops every LLM caller regardless
+        # of that agent's own headroom (post-hoc arm, pending 0). Same
+        # deferral composition as the cap breach so the one-Decision-
+        # per-terminal-Run invariant holds and operators see WHY.
+        envelope_breach = await find_envelope_breach(
+            allocation_lookup=self.allocation_lookup,
+            spend_lookup=self.spend_lookup,
+            as_of=event.occurred_at,
+        )
+        if envelope_breach is not None:
+            log.warning(
+                "run_debriefer.allocation_exhausted",
+                allocation_id=str(envelope_breach.allocation_id),
+                ceiling_usd=envelope_breach.ceiling_usd,
+                spent_usd=envelope_breach.spent_usd,
+            )
+            await self._compose_and_append(
+                decision_id=decision_id,
+                actor=actor,
+                run_id=run_id,
+                terminal_event=event,
+                choice="DebriefDeferred",
+                confidence=None,
+                reasoning=(
+                    f"Allocation exhausted: {envelope_breach.describe()}; LLM "
+                    "call skipped. Raise the ceiling via "
+                    "amend_allocation_ceiling or grant a new envelope, then "
+                    "re-trigger the debrief."
+                ),
+                extra_inputs={
+                    "failure_error_class": "AllocationExhausted",
+                    "allocation_id": str(envelope_breach.allocation_id),
                 },
                 outcome="deferred",
                 log=log,
@@ -873,6 +918,7 @@ def make_run_debriefer_subscriber(deps: Kernel) -> RunDebrieferSubscriber:
         signer=deps.signer,
         inference_recorder=deps.inference_recorder,
         spend_lookup=deps.spend_lookup,
+        allocation_lookup=deps.allocation_lookup,
     )
 
 

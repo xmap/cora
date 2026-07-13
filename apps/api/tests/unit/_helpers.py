@@ -45,6 +45,7 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import (
     LLM,
+    AllocationLookup,
     Allow,
     AllowAllAuthorize,
     AssemblyLookup,
@@ -137,6 +138,7 @@ def build_deps(
     spend_lookup: SpendLookup | None = None,
     language_model_lookup: LanguageModelLookup | None = None,
     model_usage_lookup: ModelUsageLookup | None = None,
+    allocation_lookup: AllocationLookup | None = None,
 ) -> Kernel:
     """Build a Kernel for unit-test handler invocation.
 
@@ -204,6 +206,12 @@ def build_deps(
     seeded `ModelUsageLookupResult` rows). Defaults to the kernel's
     always-empty stub via `make_inmemory_kernel`, so tests that don't
     exercise the at-risk surface see no touched Decisions.
+
+    `allocation_lookup` injects an envelope-lookup fake for the
+    budget-gate and allocation-sealer tests (typically a fake
+    returning a chosen `ActiveAllocation`). Defaults to the kernel's
+    never-Active stub via `make_inmemory_kernel`, so tests that never
+    declared an allocation keep the envelope check disarmed.
     """
     if authz is None:
         authz = DenyAllAuthorize() if deny else AllowAllAuthorize()
@@ -250,6 +258,7 @@ def build_deps(
         spend_lookup=spend_lookup,
         language_model_lookup=language_model_lookup,
         model_usage_lookup=model_usage_lookup,
+        allocation_lookup=allocation_lookup,
     )
 
 

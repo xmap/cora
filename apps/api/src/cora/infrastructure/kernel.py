@@ -45,6 +45,7 @@ from cora.infrastructure.config import Settings
 from cora.infrastructure.ports import (
     LLM,
     AllBeamOpenLookup,
+    AllocationLookup,
     AlwaysApprovedLanguageModelLookup,
     AlwaysEmptyModelUsageLookup,
     AlwaysGrantedSpendGuard,
@@ -71,6 +72,7 @@ from cora.infrastructure.ports import (
     LanguageModelLookup,
     LogbookMirror,
     ModelUsageLookup,
+    NoActiveAllocationLookup,
     NullInferenceRecorder,
     ProfileStore,
     RoleLookup,
@@ -462,6 +464,18 @@ class Kernel:
     an inference logbook see an empty at-risk list; the composition
     root binds the Decision BC's `PostgresModelUsageLookup` over
     `entries_decision_inferences` when a pool exists."""
+
+    allocation_lookup: AllocationLookup = field(default_factory=NoActiveAllocationLookup)
+    """Resolve the deployment's single Active spending envelope.
+    Consumed by the envelope arm of the budget gate stack (post-hoc
+    subscriber gate, pre-estimate `BudgetSpendGuard`) and by the
+    budget BC's CampaignClosed sealer. Defaults to the never-Active
+    stub so tests and deployments without a declared allocation keep
+    the unconstrained behavior; the composition root binds the budget
+    BC's `PostgresAllocationLookup` over
+    `proj_budget_allocation_summary` when a pool exists. Activating
+    an envelope is what arms the check (the `spend_lookup` opt-in
+    posture)."""
 
 
 Teardown = Callable[[], Awaitable[None]]

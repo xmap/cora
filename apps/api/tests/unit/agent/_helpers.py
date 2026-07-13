@@ -28,7 +28,8 @@ from cora.agent.aggregates.agent import (
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports import AgentInferenceTrace
-from cora.infrastructure.ports.spend_lookup import SpendLookupResult
+from cora.infrastructure.ports.allocation_lookup import ActiveAllocation
+from cora.infrastructure.ports.spend_lookup import SpendLookupResult, TotalSpendResult
 from cora.infrastructure.signing import event_type_to_payload_type
 from cora.shared.content_hash import canonical_body_bytes, pae_bytes
 from cora.shared.identity import ActorId
@@ -47,9 +48,13 @@ class RecordedInference:
 class FakeSpendLookup:
     """SpendLookup stub returning configured sums; records each query.
 
-    `windows` captures every `(agent_id, window_start, window_end)`
-    asked for, so gate tests can assert the window math without a
-    real store.
+    `windows` captures every per-agent `(agent_id, window_start,
+    window_end)` asked for, and `total_windows` every instance-total
+    `(window_start, window_end)`, so gate tests can assert the window
+    math without a real store. `total_usd_spent` configures the
+    instance-total answer independently of the per-agent `usd_spent`
+    because the envelope check and the per-agent caps sum different
+    row sets.
     """
 
     def __init__(
@@ -58,11 +63,16 @@ class FakeSpendLookup:
         usd_spent: float = 0.0,
         tokens_spent: int = 0,
         call_count: int = 0,
+        total_usd_spent: float = 0.0,
+        total_call_count: int = 0,
     ) -> None:
         self.usd_spent = usd_spent
         self.tokens_spent = tokens_spent
         self.call_count = call_count
+        self.total_usd_spent = total_usd_spent
+        self.total_call_count = total_call_count
         self.windows: list[tuple[UUID, datetime, datetime]] = []
+        self.total_windows: list[tuple[datetime, datetime]] = []
 
     async def find_agent_spend(
         self,
@@ -80,6 +90,36 @@ class FakeSpendLookup:
             tokens_spent=self.tokens_spent,
             call_count=self.call_count,
         )
+
+    async def find_total_spend(
+        self,
+        *,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> TotalSpendResult:
+        self.total_windows.append((window_start, window_end))
+        return TotalSpendResult(
+            window_start=window_start,
+            window_end=window_end,
+            usd_spent=self.total_usd_spent,
+            call_count=self.total_call_count,
+        )
+
+
+class FakeAllocationLookup:
+    """AllocationLookup stub returning one configured envelope (or None).
+
+    `find_active_calls` counts consultations so envelope-gate tests
+    can pin that the disarmed path never reaches the total-spend sum.
+    """
+
+    def __init__(self, active: ActiveAllocation | None = None) -> None:
+        self.active = active
+        self.find_active_calls = 0
+
+    async def find_active(self) -> ActiveAllocation | None:
+        self.find_active_calls += 1
+        return self.active
 
 
 class FakeInferenceRecorder:

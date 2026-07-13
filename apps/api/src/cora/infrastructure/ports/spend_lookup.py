@@ -80,8 +80,25 @@ class SpendLookupResult:
     call_count: int
 
 
+@dataclass(frozen=True)
+class TotalSpendResult:
+    """The deployment's instance-total spend inside one window.
+
+    No agent axis: the sum covers EVERY costed inference row,
+    agent-attributed and operator-attributed alike, because the
+    allocation envelope covers the whole instrument's LLM spend (one
+    balance per beamline). The echoed window bounds make gate and
+    seal log lines self-describing.
+    """
+
+    window_start: datetime
+    window_end: datetime
+    usd_spent: float
+    call_count: int
+
+
 class SpendLookup(Protocol):
-    """Cross-BC port: sum an agent's recorded LLM spend in a window."""
+    """Cross-BC port: sum recorded LLM spend in a window (per agent or instance-total)."""
 
     async def find_agent_spend(
         self,
@@ -95,6 +112,22 @@ class SpendLookup(Protocol):
         An agent with no recorded calls in the window returns a zero
         row (never None): "no spend" and "unknown agent" are the same
         answer to a budget gate.
+        """
+        ...
+
+    async def find_total_spend(
+        self,
+        *,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> TotalSpendResult:
+        """Return the instance-total spend for `[window_start, window_end)`.
+
+        Sums ALL rows regardless of `agent_id` (including agentless,
+        operator-attributed rows): the allocation envelope's one
+        balance covers the whole instrument. A window with no
+        recorded calls returns a zero row (never None), matching the
+        per-agent contract.
         """
         ...
 
@@ -125,9 +158,23 @@ class AlwaysZeroSpendLookup:
             call_count=0,
         )
 
+    async def find_total_spend(
+        self,
+        *,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> TotalSpendResult:
+        return TotalSpendResult(
+            window_start=window_start,
+            window_end=window_end,
+            usd_spent=0.0,
+            call_count=0,
+        )
+
 
 __all__ = [
     "AlwaysZeroSpendLookup",
     "SpendLookup",
     "SpendLookupResult",
+    "TotalSpendResult",
 ]

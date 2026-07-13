@@ -10,11 +10,11 @@ snapshot lands in the `AllocationSealed` payload as the
 closing-the-books figure.
 
 `total_spend_reader` is bound at wire time, NOT resolved from Kernel:
-stage A has no instance-total spend query yet, so `wire.py` binds
-`zero_total_spend` (every stage-A seal records 0.0) and stage C
-replaces it with the SpendLookup-backed reader when
-`find_total_spend` lands. Binding the seam now means the stage-C
-subscriber and the route both flow through this one slice unchanged.
+`wire.py` binds `make_ledger_total_spend(deps.spend_lookup)` (the
+SpendLookup-backed fold the stage-A seam promised), so the
+CampaignClosed sealer subscriber and the REST route both flow through
+this one slice with the same ledger answer. `zero_total_spend`
+remains exported for tests that want a seal without a ledger.
 
 The reader is only consulted when the loaded envelope has an open
 window (`activated_at` set); on the guard paths (missing stream,
@@ -28,7 +28,7 @@ decider so the seal fact-act folds with its attribution half per
 """
 
 from datetime import datetime
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
 from cora.budget.aggregates.allocation import (
@@ -47,6 +47,9 @@ from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.shared.identity import ActorId
 
+if TYPE_CHECKING:
+    from cora.infrastructure.ports import SpendLookup
+
 _STREAM_TYPE = "Allocation"
 _COMMAND_NAME = "SealAllocation"
 
@@ -58,23 +61,46 @@ class TotalSpendReader(Protocol):
 
     The window is the envelope's own lifecycle: `[window_start,
     window_end)` with `window_start = activated_at` and `window_end`
-    the seal instant. Stage C implements this over SpendLookup's
-    `find_total_spend`; stage A binds `zero_total_spend`.
+    the seal instant. Production binds `make_ledger_total_spend`
+    (SpendLookup's `find_total_spend`); `zero_total_spend` is the
+    ledger-less test reader.
     """
 
     async def __call__(self, *, window_start: datetime, window_end: datetime) -> float: ...
 
 
 async def zero_total_spend(*, window_start: datetime, window_end: datetime) -> float:
-    """Stage-A placeholder reader: no instance-total spend query exists yet.
+    """Ledger-less reader: every seal records `spent_usd = 0.0`.
 
-    Every stage-A seal records `spent_usd = 0.0`. Honest by
-    construction: the figure is the reader's answer, and until stage C
-    wires the SpendLookup-backed reader the ledger-backed answer is
-    not available, not silently approximated.
+    Was the stage-A wire binding before `find_total_spend` existed;
+    kept exported for tests that exercise the seal FSM without
+    standing up an inference ledger (the figure is honestly the
+    reader's answer, and a zero reader states that intent loudly).
+    Production wiring binds `make_ledger_total_spend` instead.
     """
     _ = (window_start, window_end)
     return 0.0
+
+
+def make_ledger_total_spend(spend_lookup: "SpendLookup") -> TotalSpendReader:
+    """Build the production reader over `SpendLookup.find_total_spend`.
+
+    One closure instead of a class because the seal snapshot needs
+    exactly the USD figure; the echoed window and call count on
+    `TotalSpendResult` stay available to the lookup's other consumers
+    (the envelope gate). Shared by `wire_budget` (route + MCP path)
+    and the CampaignClosed sealer subscriber so every seal records
+    the same ledger fold.
+    """
+
+    async def reader(*, window_start: datetime, window_end: datetime) -> float:
+        result = await spend_lookup.find_total_spend(
+            window_start=window_start,
+            window_end=window_end,
+        )
+        return result.usd_spent
+
+    return reader
 
 
 class Handler(Protocol):

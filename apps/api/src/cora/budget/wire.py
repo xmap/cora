@@ -23,13 +23,13 @@ Supply / Safety / Caution:
   - `seal_allocation`          (transition; no idempotency wrap)
   - `void_allocation`          (transition; no idempotency wrap)
 
-## Stage-A TotalSpendReader
+## TotalSpendReader
 
-`seal_allocation.bind` takes the reader as an explicit keyword.
-Stage A binds `zero_total_spend` (no instance-total spend query
-exists yet, so every stage-A seal honestly records 0.0); stage C
-replaces this one argument with the SpendLookup-backed fold when
-`find_total_spend` lands, leaving the slice untouched.
+`seal_allocation.bind` takes the reader as an explicit keyword so
+every wiring site states which ledger fold the seal snapshot records.
+Production binds `make_ledger_total_spend(deps.spend_lookup)`, the
+instance-total fold over `entries_decision_inferences` (the one-line
+swap the stage-A `zero_total_spend` seam promised).
 """
 
 from dataclasses import dataclass
@@ -42,7 +42,7 @@ from cora.budget.features import (
     seal_allocation,
     void_allocation,
 )
-from cora.budget.features.seal_allocation import zero_total_spend
+from cora.budget.features.seal_allocation import make_ledger_total_spend
 from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
@@ -89,7 +89,9 @@ def wire_budget(deps: Kernel) -> BudgetHandlers:
             bc=_BC,
         ),
         seal_allocation=with_tracing(
-            seal_allocation.bind(deps, total_spend_reader=zero_total_spend),
+            seal_allocation.bind(
+                deps, total_spend_reader=make_ledger_total_spend(deps.spend_lookup)
+            ),
             command_name="SealAllocation",
             bc=_BC,
         ),

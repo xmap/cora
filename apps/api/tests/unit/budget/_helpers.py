@@ -56,11 +56,16 @@ def make_allocation(
     )
 
 
-def granted_event(allocation_id: UUID) -> AllocationGranted:
+def granted_event(
+    allocation_id: UUID,
+    *,
+    ceiling_usd: float = 25000.0,
+    campaign_id: UUID | None = None,
+) -> AllocationGranted:
     return AllocationGranted(
         allocation_id=allocation_id,
-        ceiling_usd=25000.0,
-        campaign_id=None,
+        ceiling_usd=ceiling_usd,
+        campaign_id=campaign_id,
         holder_note="FY26 imaging award",
         granted_by=GRANTED_BY,
         occurred_at=GRANTED_AT,

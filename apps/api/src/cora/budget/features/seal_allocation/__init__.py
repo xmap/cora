@@ -9,9 +9,10 @@ command slices, plus the slice-owned TotalSpendReader seam:
     handler = seal_allocation.bind(deps, total_spend_reader=reader)
     await handler(cmd, principal_id=..., correlation_id=...)
 
-`zero_total_spend` is the stage-A reader (`wire.py` binds it); stage
-C replaces it with the SpendLookup-backed fold without touching this
-slice.
+`make_ledger_total_spend(spend_lookup)` builds the production reader
+over `SpendLookup.find_total_spend`; `wire.py` and the CampaignClosed
+sealer subscriber both bind it. `zero_total_spend` stays exported for
+tests that seal without standing up a ledger.
 """
 
 from cora.budget.features.seal_allocation import tool
@@ -21,6 +22,7 @@ from cora.budget.features.seal_allocation.handler import (
     Handler,
     TotalSpendReader,
     bind,
+    make_ledger_total_spend,
     zero_total_spend,
 )
 from cora.budget.features.seal_allocation.route import router
@@ -31,6 +33,7 @@ __all__ = [
     "TotalSpendReader",
     "bind",
     "decide",
+    "make_ledger_total_spend",
     "router",
     "tool",
     "zero_total_spend",

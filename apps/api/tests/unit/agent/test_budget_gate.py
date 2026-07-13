@@ -9,14 +9,34 @@ from cora.agent._budget_gate import (
     calendar_day_window,
     calendar_month_window,
     find_budget_breach,
+    find_envelope_breach,
 )
 from cora.agent.aggregates.agent import load_agent
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
-from tests.unit.agent._helpers import FakeSpendLookup, seed_defined_agent
+from cora.infrastructure.ports.allocation_lookup import (
+    ActiveAllocation,
+    NoActiveAllocationLookup,
+)
+from tests.unit.agent._helpers import (
+    FakeAllocationLookup,
+    FakeSpendLookup,
+    seed_defined_agent,
+)
 
 _NOW = datetime(2026, 7, 11, 15, 30, 0, tzinfo=UTC)
 _CORRELATION_ID = uuid4()
 _PRINCIPAL_ID = uuid4()
+
+_ACTIVATED_AT = datetime(2026, 7, 1, 8, 0, 0, tzinfo=UTC)
+
+
+def _envelope(*, ceiling_usd: float = 100.0) -> ActiveAllocation:
+    return ActiveAllocation(
+        allocation_id=uuid4(),
+        ceiling_usd=ceiling_usd,
+        activated_at=_ACTIVATED_AT,
+        campaign_id=None,
+    )
 
 
 async def _agent_with_caps(
@@ -176,3 +196,109 @@ async def test_zero_cap_refuses_every_call() -> None:
 
     assert breach is not None
     assert breach.cap_kind == "monthly_usd_cap"
+
+
+# ---------- find_envelope_breach ----------
+
+
+@pytest.mark.unit
+async def test_no_active_envelope_permits_without_summing_spend() -> None:
+    """No envelope declared means no envelope constraint; the ledger
+    SUM is never issued on the disarmed path."""
+    spend = FakeSpendLookup(total_usd_spent=1_000_000.0)
+
+    breach = await find_envelope_breach(
+        allocation_lookup=NoActiveAllocationLookup(),
+        spend_lookup=spend,
+        as_of=_NOW,
+    )
+
+    assert breach is None
+    assert spend.total_windows == []
+
+
+@pytest.mark.unit
+async def test_envelope_spend_below_ceiling_permits_over_the_lifecycle_window() -> None:
+    """The window is the envelope's own lifecycle [activated_at,
+    as_of), not calendar arithmetic."""
+    envelope = _envelope(ceiling_usd=100.0)
+    spend = FakeSpendLookup(total_usd_spent=99.99)
+
+    breach = await find_envelope_breach(
+        allocation_lookup=FakeAllocationLookup(envelope),
+        spend_lookup=spend,
+        as_of=_NOW,
+    )
+
+    assert breach is None
+    assert spend.total_windows == [(_ACTIVATED_AT, _NOW)]
+
+
+@pytest.mark.unit
+async def test_post_hoc_exactly_exhausted_envelope_breaches() -> None:
+    """Post-hoc callers pass no pending figure, so spend landing
+    exactly on the ceiling refuses the NEXT call (the >= arm)."""
+    envelope = _envelope(ceiling_usd=100.0)
+
+    breach = await find_envelope_breach(
+        allocation_lookup=FakeAllocationLookup(envelope),
+        spend_lookup=FakeSpendLookup(total_usd_spent=100.0),
+        as_of=_NOW,
+    )
+
+    assert breach is not None
+    assert breach.allocation_id == envelope.allocation_id
+    assert breach.ceiling_usd == 100.0
+    assert breach.spent_usd == pytest.approx(100.0)
+    assert breach.window_start == _ACTIVATED_AT
+
+
+@pytest.mark.unit
+async def test_pre_estimate_projection_landing_exactly_on_ceiling_grants() -> None:
+    """With a pending estimate the check is strictly-greater: a call
+    projected to land exactly ON the ceiling is the last one the
+    envelope affords (matches BudgetSpendGuard's per-agent
+    convention)."""
+    envelope = _envelope(ceiling_usd=100.0)
+
+    breach = await find_envelope_breach(
+        allocation_lookup=FakeAllocationLookup(envelope),
+        spend_lookup=FakeSpendLookup(total_usd_spent=99.5),
+        as_of=_NOW,
+        pending_usd=0.5,
+    )
+
+    assert breach is None
+
+
+@pytest.mark.unit
+async def test_pre_estimate_projection_over_ceiling_breaches() -> None:
+    envelope = _envelope(ceiling_usd=100.0)
+
+    breach = await find_envelope_breach(
+        allocation_lookup=FakeAllocationLookup(envelope),
+        spend_lookup=FakeSpendLookup(total_usd_spent=99.5),
+        as_of=_NOW,
+        pending_usd=0.6,
+    )
+
+    assert breach is not None
+    assert breach.spent_usd == pytest.approx(99.5)
+
+
+@pytest.mark.unit
+async def test_envelope_breach_describe_names_the_allocation() -> None:
+    """The describe() sentence lands on deferred Decisions, so it
+    must name the envelope and its window start for operators."""
+    envelope = _envelope(ceiling_usd=100.0)
+
+    breach = await find_envelope_breach(
+        allocation_lookup=FakeAllocationLookup(envelope),
+        spend_lookup=FakeSpendLookup(total_usd_spent=250.0),
+        as_of=_NOW,
+    )
+
+    assert breach is not None
+    description = breach.describe()
+    assert str(envelope.allocation_id) in description
+    assert _ACTIVATED_AT.isoformat() in description

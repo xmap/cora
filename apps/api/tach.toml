@@ -403,9 +403,10 @@ depends_on = [
 # lock: `campaign_id` is a bare UUID reference with NO cross-BC kernel
 # load on the write path (eventual-consistency stance per the Caution /
 # Calibration precedent), and the seal's TotalSpendReader is an
-# injected callable (stage A binds a zero-reader; stage C binds the
-# SpendLookup-backed fold), so the BC depends only on shared +
-# infrastructure.
+# injected callable (production binds the SpendLookup-backed fold via
+# the neutral port), so the BC depends only on shared + infrastructure.
+# The CampaignClosed sealer subscribes by event-type STRING and reads
+# the campaign id off the payload; no cora.campaign import.
 [[modules]]
 path = "cora.budget"
 depends_on = ["cora.infrastructure", "cora.shared", "cora.budget.aggregates"]

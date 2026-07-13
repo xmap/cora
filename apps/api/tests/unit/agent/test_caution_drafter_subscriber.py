@@ -46,6 +46,7 @@ from cora.infrastructure.ports import (
     LLMServerError,
     LLMUsage,
 )
+from cora.infrastructure.ports.allocation_lookup import ActiveAllocation
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.recipe.aggregates.plan import (
     PlanDefined,
@@ -66,6 +67,7 @@ from cora.run.aggregates.run.events import (
 from tests.unit._helpers import build_deps
 from tests.unit.agent._helpers import (
     Ed25519FakeSigner,
+    FakeAllocationLookup,
     FakeInferenceRecorder,
     FakeSpendLookup,
     seed_suspended_agent,
@@ -246,6 +248,7 @@ async def _build_subscriber(
     llm: FakeLLM,
     inference_recorder: FakeInferenceRecorder | None = None,
     spend_lookup: FakeSpendLookup | None = None,
+    allocation_lookup: FakeAllocationLookup | None = None,
 ) -> CautionDrafterSubscriber:
     return CautionDrafterSubscriber(
         event_store=event_store,
@@ -253,6 +256,7 @@ async def _build_subscriber(
         caution_lookup=AlwaysQuietCautionLookup(),
         inference_recorder=inference_recorder,
         spend_lookup=spend_lookup,
+        allocation_lookup=allocation_lookup,
     )
 
 
@@ -513,6 +517,60 @@ async def test_apply_defers_noaction_when_monthly_usd_cap_exhausted() -> None:
     assert decision.inputs["budget_cap_kind"] == "monthly_usd_cap"
     assert recorder.calls == []
     assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_apply_defers_noaction_when_allocation_envelope_exhausted() -> None:
+    """The instrument-wide envelope stops the draft even though this
+    agent has no declared caps of its own; the refusal is this Run's
+    NoAction Decision with the AllocationExhausted marker (mirrors the
+    RunDebriefer arm)."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    recorder = FakeInferenceRecorder()
+    await _seed_caution_drafter_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    activated_at = datetime(2026, 5, 1, 8, 0, 0, tzinfo=UTC)
+    envelope = ActiveAllocation(
+        allocation_id=uuid4(),
+        ceiling_usd=100.0,
+        activated_at=activated_at,
+        campaign_id=None,
+    )
+    spend_lookup = FakeSpendLookup(total_usd_spent=100.0)
+    subscriber = await _build_subscriber(
+        store,
+        llm,
+        recorder,
+        spend_lookup=spend_lookup,
+        allocation_lookup=FakeAllocationLookup(envelope),
+    )
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "NoAction"
+    assert "Allocation exhausted" in (decision.reasoning or "")
+    assert decision.inputs is not None
+    assert decision.inputs["failure_error_class"] == "AllocationExhausted"
+    assert decision.inputs["allocation_id"] == str(envelope.allocation_id)
+    assert recorder.calls == []
+    assert llm.received == []
+    assert spend_lookup.total_windows == [(activated_at, _LATER)]
 
 
 @pytest.mark.unit

@@ -18,6 +18,12 @@ triggering event's `occurred_at`, NOT wall clock, so a replayed work
 item gates identically (the non-determinism rule: subscribers decide
 from event facts, not ambient time).
 
+`find_envelope_breach` is the instrument-wide arm above the per-agent
+caps: when the deployment has an Active Allocation envelope (budget
+BC), instance-total spend over the envelope's own lifecycle window
+must stay inside its ceiling. Absent or sealed envelope means no
+constraint (opt-in, like cap declaration).
+
 ## Failure direction
 
 The spend sums undercount (NULL-cost legacy rows, unrecorded cache
@@ -36,9 +42,11 @@ database outage disable enforcement silently.
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 if TYPE_CHECKING:
     from cora.agent.aggregates.agent import Agent
+    from cora.infrastructure.ports.allocation_lookup import AllocationLookup
     from cora.infrastructure.ports.spend_lookup import SpendLookup
 
 
@@ -132,9 +140,86 @@ async def find_budget_breach(
     return None
 
 
+@dataclass(frozen=True)
+class EnvelopeBreach:
+    """The Active allocation envelope cannot afford the next call."""
+
+    allocation_id: UUID
+    ceiling_usd: float
+    spent_usd: float
+    window_start: datetime
+
+    def describe(self) -> str:
+        """One human-readable sentence for a deferred Decision's reasoning."""
+        return (
+            f"allocation {self.allocation_id} ceiling of {self.ceiling_usd:g} USD "
+            f"reached (instance-total spend {self.spent_usd:g} since "
+            f"{self.window_start.isoformat()})"
+        )
+
+
+async def find_envelope_breach(
+    *,
+    allocation_lookup: "AllocationLookup",
+    spend_lookup: "SpendLookup",
+    as_of: datetime,
+    pending_usd: float = 0.0,
+) -> EnvelopeBreach | None:
+    """Return the Active envelope's breach, or None to permit.
+
+    The instrument-wide arm above the per-agent caps: with an Active
+    allocation, instance-total spend is summed over the envelope's
+    own window `[activated_at, as_of)` (the lifecycle IS the window;
+    no calendar arithmetic) across ALL costed rows, agent-attributed
+    and operator-attributed alike. No Active envelope means no
+    constraint: declaring and activating one is what arms this check,
+    so every envelope-less deployment and test stays permissive.
+
+    Two refusal arms because the two caller tiers ask different
+    questions, mirroring the per-agent convention split between
+    `find_budget_breach` (post-hoc, `>=`) and `BudgetSpendGuard`
+    (pre-estimate, strict `>`):
+
+      - `spent + pending > ceiling`: the pre-estimate arm. Callers
+        pass `pending_usd` = the next call's estimated ceiling (plus
+        any in-conduct actuals they carry), and a projection landing
+        exactly ON the ceiling is the last call the envelope affords,
+        so only strictly-over refuses.
+      - `pending == 0 and spent >= ceiling`: the post-hoc arm.
+        Post-hoc callers pass no pending figure, so "exactly
+        exhausted" must refuse the NEXT call (`>` alone would let a
+        balance sitting exactly at the ceiling keep spending forever).
+
+    `as_of` is the triggering event's `occurred_at`, not wall clock,
+    per the subscribers' determinism rule; a replayed event whose
+    `occurred_at` predates `activated_at` sums an empty window and
+    permits. A lookup ERROR propagates (fail closed), same stance as
+    the per-agent gate.
+    """
+    envelope = await allocation_lookup.find_active()
+    if envelope is None:
+        return None
+    spend = await spend_lookup.find_total_spend(
+        window_start=envelope.activated_at,
+        window_end=as_of,
+    )
+    projected_over = spend.usd_spent + pending_usd > envelope.ceiling_usd
+    exhausted_post_hoc = pending_usd == 0.0 and spend.usd_spent >= envelope.ceiling_usd
+    if projected_over or exhausted_post_hoc:
+        return EnvelopeBreach(
+            allocation_id=envelope.allocation_id,
+            ceiling_usd=envelope.ceiling_usd,
+            spent_usd=spend.usd_spent,
+            window_start=envelope.activated_at,
+        )
+    return None
+
+
 __all__ = [
     "BudgetBreach",
+    "EnvelopeBreach",
     "calendar_day_window",
     "calendar_month_window",
     "find_budget_breach",
+    "find_envelope_breach",
 ]

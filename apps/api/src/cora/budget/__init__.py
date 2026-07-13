@@ -25,11 +25,16 @@ mistaken grant, REQUIRED reason).
 Layout:
     aggregates/<aggregate>/   -- aggregate state, events union, evolver, read
     features/<verb>_<noun>/   -- vertical slice: command + decider + handler + route + tool
+    adapters/                 -- PostgresAllocationLookup (the AllocationLookup port)
+    projections/              -- AllocationSummaryProjection (read model writer)
+    subscribers/              -- AllocationSealerSubscriber (CampaignClosed -> seal)
     wire.py                   -- BudgetHandlers bundle + wire_budget(deps)
     routes.py                 -- register_budget_routes(app)
     tools.py                  -- register_budget_tools(mcp, get_handlers=...)
 """
 
+from cora.budget._projections import register_budget_projections
+from cora.budget._subscribers import register_budget_subscribers
 from cora.budget.errors import UnauthorizedError
 from cora.budget.routes import register_budget_routes
 from cora.budget.tools import register_budget_tools
@@ -38,7 +43,9 @@ from cora.budget.wire import BudgetHandlers, wire_budget
 __all__ = [
     "BudgetHandlers",
     "UnauthorizedError",
+    "register_budget_projections",
     "register_budget_routes",
+    "register_budget_subscribers",
     "register_budget_tools",
     "wire_budget",
 ]

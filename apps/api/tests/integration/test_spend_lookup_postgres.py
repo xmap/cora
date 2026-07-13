@@ -1,9 +1,11 @@
 """Integration tests for `PostgresSpendLookup` over `entries_decision_inferences`.
 
 Seeds inference rows directly through `PostgresInferenceStore` (the same
-write path production uses) and verifies the spend sums respect the
-agent filter, the half-open window bounds, and the NULL-cost COALESCE
-that keeps pre-migration history from inflating a balance.
+write path production uses) and verifies both sum shapes: the per-agent
+sums respect the agent filter, and the instance-total sums (the
+allocation envelope's one balance) cover agented and agentless rows
+alike. Both respect the half-open window bounds and the NULL-cost
+COALESCE that keeps pre-migration history from inflating a balance.
 """
 
 from datetime import UTC, datetime
@@ -140,4 +142,70 @@ async def test_agent_with_no_rows_returns_a_zero_row(db_pool: asyncpg.Pool) -> N
 
     assert result.usd_spent == 0.0
     assert result.tokens_spent == 0
+    assert result.call_count == 0
+
+
+@pytest.mark.integration
+async def test_total_spend_sums_agented_and_agentless_rows_alike(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """The envelope covers the whole instrument: two different agents'
+    rows AND an operator-attributed (agentless) row all debit the one
+    balance, with NULL-cost history contributing $0 but still counting
+    as a call."""
+    store = PostgresInferenceStore(db_pool)
+    in_window = datetime(2026, 7, 10, tzinfo=UTC)
+    await store.append(
+        [
+            _row(agent_id=_AGENT_ID, occurred_at=in_window, cost_usd=0.002),
+            _row(agent_id=_OTHER_AGENT_ID, occurred_at=in_window, cost_usd=5.0),
+            _row(agent_id=None, occurred_at=in_window, cost_usd=3.0),
+            _row(agent_id=None, occurred_at=in_window, cost_usd=None),
+        ]
+    )
+
+    result = await PostgresSpendLookup(db_pool).find_total_spend(
+        window_start=_WINDOW_START,
+        window_end=_WINDOW_END,
+    )
+
+    assert result.usd_spent == pytest.approx(8.002)
+    assert result.call_count == 4
+    assert result.window_start == _WINDOW_START
+    assert result.window_end == _WINDOW_END
+
+
+@pytest.mark.integration
+async def test_total_spend_respects_the_half_open_window(db_pool: asyncpg.Pool) -> None:
+    """A row exactly at window_start counts, a row exactly at
+    window_end does not, and rows outside the bounds never leak into
+    the envelope's balance."""
+    store = PostgresInferenceStore(db_pool)
+    await store.append(
+        [
+            _row(agent_id=_AGENT_ID, occurred_at=_WINDOW_START, cost_usd=0.5),
+            _row(agent_id=None, occurred_at=_WINDOW_END, cost_usd=9.0),
+            _row(agent_id=None, occurred_at=datetime(2026, 6, 30, tzinfo=UTC), cost_usd=7.0),
+        ]
+    )
+
+    result = await PostgresSpendLookup(db_pool).find_total_spend(
+        window_start=_WINDOW_START,
+        window_end=_WINDOW_END,
+    )
+
+    assert result.usd_spent == pytest.approx(0.5)
+    assert result.call_count == 1
+
+
+@pytest.mark.integration
+async def test_total_spend_over_an_empty_window_returns_a_zero_row(
+    db_pool: asyncpg.Pool,
+) -> None:
+    result = await PostgresSpendLookup(db_pool).find_total_spend(
+        window_start=_WINDOW_START,
+        window_end=_WINDOW_END,
+    )
+
+    assert result.usd_spent == 0.0
     assert result.call_count == 0

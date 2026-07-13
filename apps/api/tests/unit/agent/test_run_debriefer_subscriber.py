@@ -50,6 +50,7 @@ from cora.infrastructure.ports import (
     LLMServerError,
     LLMUsage,
 )
+from cora.infrastructure.ports.allocation_lookup import ActiveAllocation
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.run.aggregates.run import (
     RunStarted,
@@ -69,6 +70,7 @@ from cora.run.aggregates.run.events import (
 from tests.unit._helpers import build_deps
 from tests.unit.agent._helpers import (
     Ed25519FakeSigner,
+    FakeAllocationLookup,
     FakeInferenceRecorder,
     FakeSpendLookup,
     seed_defined_agent,
@@ -232,6 +234,7 @@ async def _build_subscriber(
     llm: FakeLLM,
     inference_recorder: FakeInferenceRecorder | None = None,
     spend_lookup: FakeSpendLookup | None = None,
+    allocation_lookup: FakeAllocationLookup | None = None,
 ) -> RunDebrieferSubscriber:
     return RunDebrieferSubscriber(
         event_store=event_store,
@@ -239,6 +242,7 @@ async def _build_subscriber(
         logbook_mirror=None,
         inference_recorder=inference_recorder,
         spend_lookup=spend_lookup,
+        allocation_lookup=allocation_lookup,
     )
 
 
@@ -533,6 +537,62 @@ async def test_apply_defers_debrief_when_daily_token_cap_exhausted() -> None:
             datetime(2026, 5, 18, tzinfo=UTC),
         )
     ]
+
+
+@pytest.mark.unit
+async def test_apply_defers_debrief_when_allocation_envelope_exhausted() -> None:
+    """The instrument-wide envelope stops the call even though this
+    agent has no declared caps of its own: instance-total spend over
+    [activated_at, event.occurred_at) has reached the Active ceiling,
+    and the refusal is recorded as this Run's DebriefDeferred with the
+    AllocationExhausted marker."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    recorder = FakeInferenceRecorder()
+    await _seed_run_debrief_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    activated_at = datetime(2026, 5, 1, 8, 0, 0, tzinfo=UTC)
+    envelope = ActiveAllocation(
+        allocation_id=uuid4(),
+        ceiling_usd=100.0,
+        activated_at=activated_at,
+        campaign_id=None,
+    )
+    spend_lookup = FakeSpendLookup(total_usd_spent=100.0)
+    subscriber = await _build_subscriber(
+        store,
+        llm,
+        recorder,
+        spend_lookup=spend_lookup,
+        allocation_lookup=FakeAllocationLookup(envelope),
+    )
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "DebriefDeferred"
+    assert "Allocation exhausted" in (decision.reasoning or "")
+    assert decision.inputs is not None
+    assert decision.inputs["failure_error_class"] == "AllocationExhausted"
+    assert decision.inputs["allocation_id"] == str(envelope.allocation_id)
+    assert recorder.calls == []
+    assert llm.received == []
+    # The envelope window is its own lifecycle: activation to the
+    # terminal event's occurred_at (_LATER), never wall clock.
+    assert spend_lookup.total_windows == [(activated_at, _LATER)]
 
 
 @pytest.mark.unit
