@@ -61,6 +61,34 @@ _AUTHZ_BATCH = 200
 _REPLAY_STREAM = 100
 _REPLAY_ITERS = 20000
 
+# Order-of-magnitude guards, NOT budgets. The paper's numbers come from a
+# deliberate CORA_PERF_OUT run on the developer testcontainer; these two
+# assertions run on whatever shared CI runner GitHub assigns, so they must be
+# calibrated to the claim's SHAPE rather than to a machine.
+#
+# The shape being guarded: Policy.evaluate is an in-memory decision with no I/O,
+# so it costs microseconds. A regression that matters means someone put a lookup
+# on the decision path, and that costs milliseconds: a 1000x move, not a 10% one.
+#
+# Why the old `< 5.0` looked safe and was not, measured 2026-07-16:
+#
+#   developer machine   0.253us   <- what the author calibrated against
+#   old ceiling         5.0us     <- ~20x the dev number; reads as generous
+#   shared CI runner    ~5.44us   <- ~21x SLOWER than dev for this in-memory call
+#
+# The ceiling was never careless; it was ~20x headroom on the machine it was
+# written on. It failed because CI is ~21x slower here, which no author would
+# guess, landing the budget a hair under the runner's actual cost. It passed on
+# main and failed twice on a PR minutes later with code that cannot touch authz.
+#
+# 50us is ~200x the dev median and ~9x the CI median, and mirrors the headroom
+# the replay floor already had (78k/s observed against a 10k/s floor, ~8x) which
+# is why that assertion never flaked and this one did. Tighten only against a
+# same-run baseline; an absolute wall-clock number cannot be tightened safely on
+# infrastructure whose speed varies 20x from the machine you wrote it on.
+_AUTHZ_MEDIAN_CEILING_US = 50.0
+_REPLAY_FLOOR_EVENTS_PER_S = 10_000.0
+
 _ENVIRONMENT = (
     "developer testcontainer (pgvector/pgvector:pg18 via testcontainers, asyncpg); "
     "wall-clock, single-threaded, not a tuned benchmark"
@@ -271,5 +299,14 @@ async def test_authority_revocation_perf_characterizes_authz_replay_and_killswit
         assert scales[str(k)]["runs_held"] == k, (
             f"K={k}: only {scales[str(k)]['runs_held']}/{k} held"
         )
-    assert float(authz["median"]) < 5.0
-    assert float(replay["events_per_s"]) > 10_000.0
+    assert float(authz["median"]) < _AUTHZ_MEDIAN_CEILING_US, (
+        f"authz median {authz['median']:.3f}us exceeded the order-of-magnitude ceiling "
+        f"{_AUTHZ_MEDIAN_CEILING_US}us. This guards the SHAPE of the claim (Policy.evaluate "
+        "is an in-memory microsecond-scale decision), not a tuned budget: a real regression "
+        "here means someone gave the decision path I/O, which costs milliseconds. If this "
+        "fires in the hundreds, look for a lookup that crept in. See the ceiling's rationale."
+    )
+    assert float(replay["events_per_s"]) > _REPLAY_FLOOR_EVENTS_PER_S, (
+        f"replay {replay['events_per_s']:.0f} events/s fell below the order-of-magnitude "
+        f"floor {_REPLAY_FLOOR_EVENTS_PER_S:.0f}/s"
+    )
