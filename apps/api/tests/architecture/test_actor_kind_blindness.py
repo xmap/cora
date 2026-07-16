@@ -1,9 +1,21 @@
-"""Architecture fitness: governance machinery never branches on `Actor.kind`.
+"""Architecture fitness: no principal's authority varies by its own kind.
 
 An autonomous agent and a human operator are the same kind of actor to the
-system: every gate decides over a bare principal, and none of them asks
-whether that principal is a machine. That claim is load-bearing, so this
-test locks it rather than leaving it to prose and discipline.
+system: authority is decided over a bare principal, and nothing asks whether
+that principal is a machine. That claim is load-bearing, so this test locks
+it rather than leaving it to prose and discipline.
+
+The distinction the whole file turns on is SUBJECT kind vs CALLER kind.
+
+  - CALLER kind is the kind of the authenticated principal making a request.
+    Nothing reads it, and Rule 2 makes that structural rather than merely
+    observed: `Authorize.authorize` cannot receive a kind, and `Policy`
+    carries no kind field, so the policy decision point cannot see it even
+    in principle. A caller-kind branch is what would falsify the claim.
+  - SUBJECT kind is the kind of an Actor a command NAMES: the Actor being
+    minted, the Actor a Decision is attributed to. Reading it decides what a
+    command means, not what its caller may do. Two such reads exist and both
+    are enumerated below.
 
 Sibling to `test_actor_kind_sync.py`, which pins the kind VOCABULARY across
 DTO Literals and the SQL CHECK. This one pins the USAGE.
@@ -11,8 +23,8 @@ DTO Literals and the SQL CHECK. This one pins the USAGE.
 ## Rule 1: every `ActorKind` branch is an enumerated carve-out
 
 A comparison against `ActorKind`, or against one of its bare string values
-on a `kind`-named operand, is a branch in the machinery. Two exist and both
-are deliberate, enumerated with their reason in
+on a `kind`-named operand, is a branch. Both that exist today read subject
+kind, and each is enumerated with its reason in
 `_ACTOR_KIND_BRANCH_ALLOWLIST`. The discovered set is asserted equal to the
 allowlist in BOTH directions, so a new branch fails as drift-in and a
 deleted branch fails as a stale entry. A ratchet would only catch the first.
@@ -24,18 +36,32 @@ sees them.
 
 ## Rule 2: the Authorize port cannot observe kind
 
-The structural claim the other two rest on. `Authorize.authorize` takes
+The structural claim the others rest on. `Authorize.authorize` takes
 `principal_id`, `command_name`, `conduit_id`, `surface_id`. Kind is not a
 parameter, so the policy decision point cannot branch on it even in
 principle, and `Policy` carries no kind field to branch with. Widening that
 signature would falsify the claim silently, so the parameter set is pinned.
 
-## Rule 3: the signing obligation is discriminated by event type, not kind
+## Rule 3: nothing that produces a signature reads kind
 
-`SIGNED_EVENT_TYPES` decides which events need a `Signer`. Every signing
-site gates on the event type alone. A signing site that read `ActorKind`
-would make the evidentiary obligation kind-conditional in the machinery
-rather than in the event vocabulary.
+Evidentiary obligation is kind-aware by design (an agent's identity is
+key-backed; a human's is a session), but it is carried by the event
+vocabulary and by which paths are wired with a `Signer`, never by a branch
+inside signing code.
+
+The rule keys on files that CALL `<x>.sign(...)`, not on files importing
+`SIGNED_EVENT_TYPES`. The registry names which event types are signature
+targets and is legitimately read by the verify side too, so importing it
+does not make a file a signing site: `signing.py` DEFINES the set (and so
+never imports it), while a read-side obligation predicate would import it
+while signing nothing. Verification reading a subject's kind to decide
+whether an absent signature is an anomaly is evidence-checking, not a gate,
+and this rule deliberately leaves it free.
+
+Free of THIS rule, that is. Rule 1 still sees it and still wants it named in
+the allowlist with a reason, because the allowlist is the ledger of every
+place kind matters. The division is: Rule 1 says enumerate and justify; Rule
+3 says that inside signing code no justification is accepted.
 """
 
 import ast
@@ -45,10 +71,16 @@ import pytest
 
 from tests.architecture.conftest import CORA_ROOT, tracked_python_files
 
-# Machinery branches on ActorKind that are deliberate. Each entry names why
-# the branch does not partition principals by kind. Keyed by
-# `<path under cora/>::<enclosing qualname>` rather than `path:line` so the
-# entry does not go stale silently when unrelated lines move.
+# Deliberate reads of a SUBJECT's kind. Each entry names why the branch does
+# not partition principals by kind. Keyed by `<path under cora/>::<enclosing
+# qualname>` rather than `path:line` so the entry does not go stale silently
+# when unrelated lines move.
+#
+# A CALLER-kind branch does not belong here and is not allowlistable: it
+# falsifies the claim outright. There are none, and Rule 2 keeps it that way
+# structurally. A third SUBJECT-kind entry is worth a design look, not an
+# automatic rewrite; moving a subject-kind read into Policy data would be a
+# category error, since Policy governs what a CALLER may do.
 _ACTOR_KIND_BRANCH_ALLOWLIST: dict[str, str] = {
     "access/features/register_actor/decider.py::decide": (
         "Genesis guard on the minted subject, not on the caller. Reads `command.kind`, "
@@ -63,11 +95,9 @@ _ACTOR_KIND_BRANCH_ALLOWLIST: dict[str, str] = {
         "by `command.decided_by`, the attribution target; the authorization decision was "
         "already made on `principal_id` by a port whose signature cannot carry kind (see "
         "test_authorize_port_signature_omits_actor_kind). Refuses agent-attributed rows "
-        "on the unsigned operator route so that route cannot become a signing-bypass "
-        "door. Agents keep full capability to record Decisions through the signed append "
-        "path. A THIRD entry in this allowlist is the rule-of-three trigger to move the "
-        "discriminator out of machinery and into Policy data, which today has no kind "
-        "field at all."
+        "on the unsigned operator route, so that route offers no unsigned path for rows "
+        "the Signer-wired subscriber path would have signed. Agents keep full capability "
+        "to record Decisions through that signed path, so this costs them no authority."
     ),
 }
 
@@ -176,18 +206,31 @@ def _authorize_protocol_params() -> frozenset[str]:
     raise AssertionError("Authorize Protocol declares no `authorize` method")
 
 
-def _files_importing(symbol: str) -> list[Path]:
-    """Files that actually import `symbol`, not files that merely name it in prose."""
-    importers: set[Path] = set()
+def _signing_sites() -> list[Path]:
+    """Files that PRODUCE a signature: they call `<something>.sign(...)`.
+
+    Keying on the call rather than on a `SIGNED_EVENT_TYPES` import matters in
+    both directions. The two subscriber sites take their `Signer` by
+    constructor and never import the port, so an import-keyed rule would miss
+    them; and `signing.py` defines the registry rather than importing it, so an
+    import-keyed rule would exempt the very file holding the verifier while
+    catching an innocent read-side predicate that imports the registry and
+    signs nothing.
+    """
+    sites: set[Path] = set()
     for path in tracked_python_files():
         text = path.read_text()
-        if symbol not in text:
+        if ".sign(" not in text:
             continue
         for node in ast.walk(ast.parse(text)):
-            if isinstance(node, ast.ImportFrom) and any(a.name == symbol for a in node.names):
-                importers.add(path)
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "sign"
+            ):
+                sites.add(path)
                 break
-    return sorted(importers)
+    return sorted(sites)
 
 
 @pytest.mark.architecture
@@ -231,7 +274,7 @@ def test_authorize_port_signature_omits_actor_kind() -> None:
 @pytest.mark.architecture
 @pytest.mark.parametrize(
     "path",
-    _files_importing("SIGNED_EVENT_TYPES"),
+    _signing_sites(),
     ids=lambda p: p.relative_to(CORA_ROOT).as_posix(),
 )
 def test_signing_site_does_not_read_actor_kind(path: Path) -> None:
@@ -243,9 +286,10 @@ def test_signing_site_does_not_read_actor_kind(path: Path) -> None:
         and node.value.id == "ActorKind"
     )
     assert not reads, (
-        f"{path.relative_to(CORA_ROOT).as_posix()} gates signing and reads ActorKind:\n  "
+        f"{path.relative_to(CORA_ROOT).as_posix()} produces a signature and reads ActorKind:\n  "
         + "\n  ".join(reads)
-        + "\n\nThe signing obligation is discriminated by event type (SIGNED_EVENT_TYPES), "
-        "never by who is acting. A signing site that reads kind moves the evidentiary "
-        "rule out of the event vocabulary and into a branch on the principal."
+        + "\n\nWhich rows carry a signature is settled by the event vocabulary "
+        "(SIGNED_EVENT_TYPES) and by which paths are wired with a Signer, never by a "
+        "branch inside signing code. Verification may read a subject's kind to decide "
+        "whether an absent signature is an anomaly; producing one may not."
     )
