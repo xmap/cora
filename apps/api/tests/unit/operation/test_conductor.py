@@ -1562,7 +1562,7 @@ async def test_conduct_reraises_concurrency_error_from_complete_procedure() -> N
 async def test_execute_setpoint_via_registry_with_unrouted_address_records_failure() -> None:
     """NoAdapterForAddressError now lives in _CONTROL_ERRORS; records + halts cleanly."""
     registry = ControlPortRegistry()
-    registry.register_str_port("known:", InMemoryControlPort())
+    registry.register_control_port("known:", InMemoryControlPort())
     appender = _FakeAppendStep()
     conductor = Conductor(
         control_port=registry,
@@ -1595,7 +1595,7 @@ async def test_actuation_kind_is_physical_when_route_not_simulated() -> None:
     inner = InMemoryControlPort()
     inner.simulate_connect("2bma:rot:val")
     registry = ControlPortRegistry()
-    registry.register_str_port("2bma:", inner, is_simulated=False)
+    registry.register_control_port("2bma:", inner, is_simulated=False)
     appender = _FakeAppendStep()
     conductor = _conductor(registry, appender, ids=[uuid4()])
     result = await conductor.execute(
@@ -1619,7 +1619,7 @@ async def test_actuation_kind_is_simulated_when_route_is_simulated() -> None:
     inner = InMemoryControlPort()
     inner.simulate_connect("sim:rot:val")
     registry = ControlPortRegistry()
-    registry.register_str_port("sim:", inner, is_simulated=True)
+    registry.register_control_port("sim:", inner, is_simulated=True)
     appender = _FakeAppendStep()
     conductor = _conductor(registry, appender, ids=[uuid4()])
     result = await conductor.execute(
@@ -1640,8 +1640,8 @@ async def test_actuation_kind_is_hybrid_when_conduct_touches_both() -> None:
     real = InMemoryControlPort()
     real.simulate_connect("real:m1")
     registry = ControlPortRegistry()
-    registry.register_str_port("sim:", sim, is_simulated=True)
-    registry.register_str_port("real:", real, is_simulated=False)
+    registry.register_control_port("sim:", sim, is_simulated=True)
+    registry.register_control_port("real:", real, is_simulated=False)
     appender = _FakeAppendStep()
     conductor = _conductor(registry, appender, ids=[uuid4(), uuid4()])
     result = await conductor.execute(
@@ -1682,7 +1682,7 @@ async def test_actuation_kind_is_none_for_bare_port_without_routing_table() -> N
 async def test_actuation_kind_is_none_when_no_step_touches_control_port() -> None:
     """A conduct that drives nothing (empty steps) records no kind."""
     registry = ControlPortRegistry()
-    registry.register_str_port("2bma:", InMemoryControlPort(), is_simulated=True)
+    registry.register_control_port("2bma:", InMemoryControlPort(), is_simulated=True)
     appender = _FakeAppendStep()
     conductor = _conductor(registry, appender)
     result = await conductor.execute(
@@ -1701,7 +1701,7 @@ async def test_actuation_kind_is_simulated_when_action_body_drives_simulated_rou
     inner = InMemoryControlPort()
     inner.simulate_connect("sim:m1")
     control = ControlPortRegistry()
-    control.register_str_port("sim:", inner, is_simulated=True)
+    control.register_control_port("sim:", inner, is_simulated=True)
 
     async def drive(ctx: ActionContext) -> Mapping[str, Any]:
         await ctx.control_port.write("sim:m1", 1.0)
@@ -1730,7 +1730,7 @@ async def test_actuation_kind_is_simulated_when_setpoint_write_fails_on_simulate
     conduct: the kind reflects routes attempted, not only succeeded."""
     inner = InMemoryControlPort()  # never connected -> write raises
     control = ControlPortRegistry()
-    control.register_str_port("sim:", inner, is_simulated=True)
+    control.register_control_port("sim:", inner, is_simulated=True)
     appender = _FakeAppendStep()
     conductor = _conductor(control, appender, ids=[uuid4()])
     result = await conductor.execute(
@@ -1754,7 +1754,7 @@ async def test_conduct_threads_simulated_kind_into_complete_command() -> None:
     inner = InMemoryControlPort()
     inner.simulate_connect("sim:rot:val")
     registry = ControlPortRegistry()
-    registry.register_str_port("sim:", inner, is_simulated=True)
+    registry.register_control_port("sim:", inner, is_simulated=True)
     appender = _FakeAppendStep()
     start = _FakeLifecycleHandler()
     complete = _FakeLifecycleHandler()
@@ -1781,7 +1781,7 @@ async def test_conduct_threads_kind_into_abort_command_on_execute_failure() -> N
     data; routes attempted before the failing step taint it)."""
     inner = InMemoryControlPort()  # never connected -> the write fails
     registry = ControlPortRegistry()
-    registry.register_str_port("sim:", inner, is_simulated=True)
+    registry.register_control_port("sim:", inner, is_simulated=True)
     appender = _FakeAppendStep()
     start = _FakeLifecycleHandler()
     complete = _FakeLifecycleHandler()

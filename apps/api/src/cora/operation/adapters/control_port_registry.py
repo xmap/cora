@@ -39,7 +39,7 @@ is the seam to widen, not the executor.
 
 `InMemoryControlPort` is `str`-surfaced (it is also the caller-facing
 double used by 148 test sites), so it is not a `SubstrateControlPort`.
-The registry wraps it in `_StrAddressSubstrate`, a thin shim that
+The registry wraps it in `_StrAddressSubstratePort`, a thin shim that
 unwraps a `ControlAddress` back to its string and delegates. That keeps
 the in-memory adapter untouched while letting the registry's typed
 dispatch treat every route uniformly.
@@ -80,7 +80,7 @@ if TYPE_CHECKING:
     from cora.operation.ports.control_port import ControlPort
 
 
-class _StrAddressSubstrate:
+class _StrAddressSubstratePort:
     """Adapt a `str`-surfaced `ControlPort` to the typed `SubstrateControlPort`.
 
     Wraps `InMemoryControlPort` (and any other `str`-address port) so the
@@ -117,7 +117,7 @@ class _StrAddressSubstrate:
 class ControlPortRegistry:
     """Prefix-routed composite implementing `ControlPort`.
 
-    Construct empty, call `register(prefix, port, substrate)` for each
+    Construct empty, call `register_substrate_port(prefix, port, substrate)` for each
     substrate route at app startup, then hand the registry to the
     executor as a single `ControlPort`. The executor never sees the
     routing table.
@@ -127,7 +127,7 @@ class ControlPortRegistry:
         self._routes: list[tuple[str, SubstrateControlPort[Any], Substrate, bool]] = []
         self._closed = False
 
-    def register(
+    def register_substrate_port(
         self,
         prefix: str,
         port: SubstrateControlPort[Any],
@@ -150,7 +150,7 @@ class ControlPortRegistry:
         self._routes = [(p, a, s, sim) for (p, a, s, sim) in self._routes if p != prefix]
         self._routes.append((prefix, port, substrate, is_simulated))
 
-    def register_str_port(
+    def register_control_port(
         self,
         prefix: str,
         port: ControlPort,
@@ -160,14 +160,16 @@ class ControlPortRegistry:
     ) -> None:
         """Register a `str`-surfaced `ControlPort` (e.g. `InMemoryControlPort`).
 
-        Wraps `port` in the module-private `_StrAddressSubstrate` shim so the
+        Wraps `port` in the module-private `_StrAddressSubstratePort` shim so the
         typed route table can hold it uniformly with the real substrate
         adapters, keeping the shim an implementation detail callers never name.
         `substrate` defaults to `in_memory` because that is the only
         `str`-surfaced adapter today; pass another value only if a future
         `str`-address adapter routes under a different parsing family.
         """
-        self.register(prefix, _StrAddressSubstrate(port), substrate, is_simulated=is_simulated)
+        self.register_substrate_port(
+            prefix, _StrAddressSubstratePort(port), substrate, is_simulated=is_simulated
+        )
 
     def route(self, address: str) -> SubstrateControlPort[Any]:
         """Return the adapter for `address` via longest-prefix-match.
@@ -203,7 +205,7 @@ class ControlPortRegistry:
 
     async def read(self, address: str) -> Measurement:
         port, substrate = self._resolve(address)
-        return await port.read(parse_control_address(substrate, address))
+        return await port.read(parse_control_address(address, substrate))
 
     async def write(
         self,
@@ -215,12 +217,12 @@ class ControlPortRegistry:
     ) -> None:
         port, substrate = self._resolve(address)
         await port.write(
-            parse_control_address(substrate, address), value, wait=wait, timeout_s=timeout_s
+            parse_control_address(address, substrate), value, wait=wait, timeout_s=timeout_s
         )
 
     def subscribe(self, address: str) -> AsyncIterator[Measurement]:
         port, substrate = self._resolve(address)
-        return port.subscribe(parse_control_address(substrate, address))
+        return port.subscribe(parse_control_address(address, substrate))
 
     async def aclose(self) -> None:
         """Close every registered adapter; idempotent.

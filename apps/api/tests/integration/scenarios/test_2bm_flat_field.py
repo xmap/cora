@@ -325,7 +325,7 @@ async def test_flat_field_recipe_conducts_flats_against_softioc(
     # conduct observe Simulated.
     port = EpicsCaControlPort()
     registry = ControlPortRegistry()
-    registry.register(softioc, port, "epics_ca", is_simulated=True)
+    registry.register_substrate_port(softioc, port, "epics_ca", is_simulated=True)
     step_store = PostgresActivityStore(db_pool)
     conductor = Conductor(
         control_port=registry,
@@ -425,7 +425,7 @@ async def test_flat_field_recipe_conducts_flats_against_softioc(
 
     # The axis is back at the captured aligned home (the restore landed).
     readback_port = ControlPortRegistry()
-    readback_port.register(softioc, EpicsCaControlPort(), "epics_ca")
+    readback_port.register_substrate_port(softioc, EpicsCaControlPort(), "epics_ca")
     try:
         axis_final = await readback_port.read(axis)
         assert axis_final.value == pytest.approx(_SAMPLE_HOME_MM)

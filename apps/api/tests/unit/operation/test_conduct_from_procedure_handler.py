@@ -421,7 +421,7 @@ async def test_conduct_from_folds_pre_hold_actuation_kind_into_completion() -> N
     inner.simulate_connect("real:a")
     registry = ControlPortRegistry()
     # the replay tail is physical
-    registry.register_str_port("real:", inner, is_simulated=False)
+    registry.register_control_port("real:", inner, is_simulated=False)
     await _seed_held_with_steps(
         store,
         steps=(SetpointStep(address="real:a", value=1.0),),

@@ -122,7 +122,7 @@ async def test_simulated_route_conduct_yields_non_promotable_dataset(
 
     inner = EpicsCaControlPort()
     registry = ControlPortRegistry()
-    registry.register(softioc, inner, "epics_ca", is_simulated=True)
+    registry.register_substrate_port(softioc, inner, "epics_ca", is_simulated=True)
     conductor = _conductor(deps, db_pool, registry)
     try:
         result = await conductor.conduct(
@@ -184,7 +184,7 @@ async def test_physical_route_conduct_yields_promotable_dataset(
 
     inner = EpicsCaControlPort()
     registry = ControlPortRegistry()
-    registry.register(softioc, inner, "epics_ca", is_simulated=False)
+    registry.register_substrate_port(softioc, inner, "epics_ca", is_simulated=False)
     conductor = _conductor(deps, db_pool, registry)
     try:
         result = await conductor.conduct(
@@ -295,8 +295,8 @@ async def test_hybrid_route_conduct_yields_non_promotable_dataset(
     registry = ControlPortRegistry()
     # Longest-prefix match: the double_value PV is declared simulated, the
     # long_value PV physical. Both speak CA to the same soft IOC.
-    registry.register(f"{softioc}double_value", inner, "epics_ca", is_simulated=True)
-    registry.register(f"{softioc}long_value", inner, "epics_ca", is_simulated=False)
+    registry.register_substrate_port(f"{softioc}double_value", inner, "epics_ca", is_simulated=True)
+    registry.register_substrate_port(f"{softioc}long_value", inner, "epics_ca", is_simulated=False)
     conductor = _conductor(deps, db_pool, registry)
     try:
         result = await conductor.conduct(

@@ -58,7 +58,7 @@ def build_control_port(routes: Sequence[ControlPortRoute]) -> ControlPort:
     default + test convenience). Non-empty routes returns a
     `ControlPortRegistry` populated with the configured substrate
     adapters per prefix. `in_memory` routes go through
-    `register_str_port` (the registry wraps the `str`-surfaced adapter);
+    `register_control_port` (the registry wraps the `str`-surfaced adapter);
     the real substrate adapters register directly on the typed surface.
     """
     if not routes:
@@ -66,11 +66,11 @@ def build_control_port(routes: Sequence[ControlPortRoute]) -> ControlPort:
     registry = ControlPortRegistry()
     for route in routes:
         if route.substrate == "in_memory":
-            registry.register_str_port(
+            registry.register_control_port(
                 route.prefix, InMemoryControlPort(), is_simulated=route.is_simulated
             )
         else:
-            registry.register(
+            registry.register_substrate_port(
                 route.prefix,
                 _build_substrate(route.substrate),
                 route.substrate,
@@ -83,7 +83,7 @@ def _build_substrate(substrate: Substrate) -> SubstrateControlPort[Any]:
     """Construct the per-substrate typed adapter with deployment defaults.
 
     Handles the typed-address substrate adapters only; `in_memory` is
-    registered through `ControlPortRegistry.register_str_port` in
+    registered through `ControlPortRegistry.register_control_port` in
     `build_control_port` because it is `str`-surfaced.
 
     Per-adapter constructor kwargs (timeouts, etc.) ride on the

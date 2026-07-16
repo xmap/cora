@@ -248,7 +248,7 @@ async def test_align_resolution_recipe_conducts_compute_and_writes_calibration(
     # The pixel-size Measurement is seeded so fetch_measurements surfaces it.
     port = EpicsCaControlPort()
     registry = ControlPortRegistry()
-    registry.register(softioc, port, "epics_ca", is_simulated=True)
+    registry.register_substrate_port(softioc, port, "epics_ca", is_simulated=True)
     compute_port = InMemoryComputePort()
     compute_port.set_next_measurements((_pixel_size_measurement(_MEASURED_PIXEL_SIZE_UM),))
     step_store = PostgresActivityStore(db_pool)

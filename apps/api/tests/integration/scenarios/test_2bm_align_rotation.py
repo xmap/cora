@@ -266,7 +266,7 @@ async def test_align_rotation_recipe_conducts_compute_and_writes_calibration(
     # tuple under exercise).
     port = EpicsCaControlPort()
     registry = ControlPortRegistry()
-    registry.register(softioc, port, "epics_ca", is_simulated=True)
+    registry.register_substrate_port(softioc, port, "epics_ca", is_simulated=True)
     compute_port = InMemoryComputePort()
     compute_port.set_next_measurements(
         (

@@ -11,7 +11,7 @@ string into a substrate-typed `ControlAddress` (at route-match time).
 
 This module is that typed address space: the sum
 `EpicsPvAddress | TangoAttributeAddress | InMemoryAddress` plus the single
-`parse_control_address(substrate, raw)` dispatch the registry calls. The
+`parse_control_address(raw, substrate)` dispatch the registry calls. The
 substrate adapters (`SubstrateControlPort` implementations) consume the typed
 variants so they never re-parse a raw string per call: the Tango adapter reads
 `address.device` / `address.attribute` instead of splitting a TRL on every read.
@@ -130,7 +130,7 @@ arm in `parse_control_address`.
 """
 
 
-def parse_control_address(substrate: Substrate, raw: str) -> ControlAddress:
+def parse_control_address(raw: str, substrate: Substrate) -> ControlAddress:
     """Parse a raw address string into the `ControlAddress` for `substrate`.
 
     The single str->typed dispatch the `ControlPortRegistry` calls once it has

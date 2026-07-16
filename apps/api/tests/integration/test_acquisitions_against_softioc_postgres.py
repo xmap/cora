@@ -140,7 +140,7 @@ async def test_conductor_runs_collect_action_against_real_softioc_and_postgres(
     await _seed_defined_procedure(deps.event_store, procedure_id)
     step_store = PostgresActivityStore(db_pool)
     control_port = ControlPortRegistry()
-    control_port.register(softioc, EpicsCaControlPort(), "epics_ca")
+    control_port.register_substrate_port(softioc, EpicsCaControlPort(), "epics_ca")
     conductor = _build_conductor(
         deps.event_store,
         db_pool,
@@ -233,7 +233,7 @@ async def test_conductor_runs_discrete_action_walks_axis_with_per_point_collects
     await _seed_defined_procedure(deps.event_store, procedure_id)
     step_store = PostgresActivityStore(db_pool)
     control_port = ControlPortRegistry()
-    control_port.register(softioc, EpicsCaControlPort(), "epics_ca")
+    control_port.register_substrate_port(softioc, EpicsCaControlPort(), "epics_ca")
     conductor = _build_conductor(
         deps.event_store,
         db_pool,
@@ -321,7 +321,7 @@ async def test_conductor_runs_continuous_action_with_axis_sweep_against_softioc(
     await _seed_defined_procedure(deps.event_store, procedure_id)
     step_store = PostgresActivityStore(db_pool)
     control_port = ControlPortRegistry()
-    control_port.register(softioc, EpicsCaControlPort(), "epics_ca")
+    control_port.register_substrate_port(softioc, EpicsCaControlPort(), "epics_ca")
     conductor = _build_conductor(
         deps.event_store,
         db_pool,
@@ -398,7 +398,7 @@ class control_port_reuse:  # noqa: N801
 
     def __init__(self, softioc_prefix: str) -> None:
         self._port = ControlPortRegistry()
-        self._port.register(softioc_prefix, EpicsCaControlPort(), "epics_ca")
+        self._port.register_substrate_port(softioc_prefix, EpicsCaControlPort(), "epics_ca")
 
     async def __aenter__(self) -> ControlPortRegistry:
         return self._port

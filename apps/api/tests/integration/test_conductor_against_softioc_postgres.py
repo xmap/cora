@@ -75,7 +75,7 @@ def _control_port(softioc: str, *, default_timeout_s: float | None = None) -> Co
         else EpicsCaControlPort(default_timeout_s=default_timeout_s)
     )
     registry = ControlPortRegistry()
-    registry.register(softioc, adapter, "epics_ca")
+    registry.register_substrate_port(softioc, adapter, "epics_ca")
     return registry
 
 

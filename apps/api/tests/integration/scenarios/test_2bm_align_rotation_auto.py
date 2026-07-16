@@ -265,7 +265,7 @@ async def _build_align_routine(
 
     port = EpicsCaControlPort()
     registry = ControlPortRegistry()
-    registry.register(softioc, port, "epics_ca", is_simulated=True)
+    registry.register_substrate_port(softioc, port, "epics_ca", is_simulated=True)
     compute_port = InMemoryComputePort()
     compute_port.set_measurement_sequence(
         tuple((_rotation_center_measurement(c),) for c in centers_sequence)
