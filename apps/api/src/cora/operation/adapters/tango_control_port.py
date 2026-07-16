@@ -175,8 +175,25 @@ def _kind_for(attr: Any) -> MeasurementKind:
 
 
 def _unpack_value(attr: Any, kind: MeasurementKind) -> Any:
-    """Extract a Python-native value from a Tango `DeviceAttribute`."""
+    """Extract a Python-native value from a Tango `DeviceAttribute`.
+
+    Returns `None` when the attribute carries no value, whatever its kind.
+    On ATTR_INVALID the Tango core discards the value but keeps
+    `data_format`, so an invalid spectrum still classifies as `Array` while
+    `attr.value` is `None`: unpacking it as a sequence would raise a bare
+    `TypeError` that is not a `ControlPort` error family and so escapes the
+    Conductor's closed catch tuple. `None` instead keeps an invalid read
+    shaped like every other invalid read (an invalid scalar already reads
+    back as `None`), and preserves the forensic pairing of `quality='Bad'`
+    with `quality_detail=attr_quality=ATTR_INVALID` that the Conductor
+    records against the failed step. Deciding whether a value is usable is
+    the consumer's call, not this adapter's: `_require_finite_number`
+    already turns a `None` capture into a structured step failure, and a
+    check criterion already treats it as a clean mismatch.
+    """
     value: Any = getattr(attr, "value", None)
+    if value is None:
+        return None
     if kind == "Image":
         if hasattr(value, "tolist"):
             return tuple(tuple(row) for row in value.tolist())

@@ -102,7 +102,16 @@ class _TimeVal:
 
 
 class _DeviceAttribute:
-    """Stand-in for `tango.DeviceAttribute` with the fields the ACL unpacks."""
+    """Stand-in for `tango.DeviceAttribute` with the fields the ACL unpacks.
+
+    ATTR_INVALID forces `value` to None whatever the caller passes, because
+    the Tango core discards the value on an invalid read while keeping
+    `data_format`. Coupling the two here is what stops this double from
+    expressing a reading the real substrate cannot produce: an earlier
+    version took value and quality as independent kwargs, so a live value
+    paired with ATTR_INVALID looked reasonable, and the invalid-array cell
+    (where the adapter unpacked None as a sequence) was never reachable.
+    """
 
     def __init__(
         self,
@@ -114,7 +123,7 @@ class _DeviceAttribute:
         seconds: float = 0.0,
         name: str = "attr",
     ) -> None:
-        self.value = value
+        self.value = None if quality == "ATTR_INVALID" else value
         self.quality = _Enum(quality)
         self.data_format = _Enum(data_format)
         self.type = _Enum(attr_type)
@@ -256,6 +265,36 @@ async def test_read_collapses_attr_quality(
     assert reading.quality == expected
     if expected != "Good":
         assert attr_quality in reading.quality_detail
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("data_format", "attr_type"),
+    [
+        ("SCALAR", "DevDouble"),
+        ("SPECTRUM", "DevDouble"),
+        ("IMAGE", "DevLong"),
+        ("SCALAR", "DevEnum"),
+    ],
+)
+async def test_read_invalid_quality_returns_none_value_for_every_data_format(
+    fake_tango: None, data_format: str, attr_type: str
+) -> None:
+    """An invalid read carries no value, and says so the same way at every kind.
+
+    The kind still comes from `data_format` (Tango keeps it on an invalid
+    read), so this pins that an invalid SPECTRUM stays `Array` while its
+    value is None, rather than being unpacked as a sequence.
+    """
+    port = _make_port(
+        read_result=_DeviceAttribute(
+            value=1.0, quality="ATTR_INVALID", data_format=data_format, attr_type=attr_type
+        )
+    )
+    reading = await port.read(_ADDR)
+    assert reading.value is None
+    assert reading.quality == "Bad"
+    assert "ATTR_INVALID" in reading.quality_detail
 
 
 @pytest.mark.unit

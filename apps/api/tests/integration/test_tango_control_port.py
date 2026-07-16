@@ -39,12 +39,14 @@ mutate state and stay order-independent.
   - Protocol conformance via `isinstance` (no device)
   - Every `MeasurementKind` branch (Scalar / Array / Image / Categorical)
   - `Quality=Uncertain` via a device-declared ATTR_WARNING attribute
+  - `Quality=Bad` with no value via a device-declared ATTR_INVALID
+    spectrum (the shape the Tango core forces on an invalid read)
   - Write round-trip on a scalar, and the value-coercion failure path
   - `ControlAccessDeniedError` via API_AttrNotWritable on a read-only
     attribute
   - subscribe initial synchronised event + post-write fan-out
   - aclose idempotency
-  - Two known defects pinned as strict xfail, so their fix flips them
+  - The DevEnum label defect pinned as strict xfail, so its fix flips it
     green and `strict` forbids leaving the marker behind
 
 Out of scope:
@@ -268,19 +270,23 @@ async def test_read_warning_quality_collapses_to_uncertain(tango_device: str) ->
 
 
 @pytest.mark.integration
-@pytest.mark.xfail(
-    strict=True,
-    reason="An ATTR_INVALID array raises a bare TypeError from _unpack_value: Tango "
-    "discards the value but keeps data_format, so tuple(None) escapes the port's "
-    "error families and the Conductor's closed catch tuple.",
-)
-async def test_read_invalid_quality_array_raises_value_coercion(
+async def test_read_invalid_quality_array_returns_bad_reading_with_no_value(
     tango_device: str,
 ) -> None:
+    """Tango discards the value on ATTR_INVALID but keeps data_format.
+
+    So the kind stays `Array` with nothing to unpack. The reading carries
+    that as a None value against Bad quality rather than raising, which is
+    what an invalid scalar already does, and keeps the ATTR_INVALID
+    breadcrumb the Conductor records against the failed step.
+    """
     port = TangoControlPort()
     try:
-        with pytest.raises(ControlValueCoercionError):
-            await port.read(_addr(tango_device, "invalid_spectrum"))
+        reading = await port.read(_addr(tango_device, "invalid_spectrum"))
+        assert reading.kind == "Array"
+        assert reading.value is None
+        assert reading.quality == "Bad"
+        assert "ATTR_INVALID" in reading.quality_detail
     finally:
         await port.aclose()
 
