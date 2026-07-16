@@ -23,7 +23,7 @@ masked the hole.
 Before widening the allowlist below: wire the GPU-hour to USD conversion into the
 cost math, or make the cost path refuse an entry whose basis it cannot price.
 Then add the adapter. See [[project-reserve-post-void-stage0]] for the
-enforcement-ladder Stage 0 that surfaced this.
+enforcement-ladder evaluation that surfaced this.
 
 The `LLM` Protocol and its always-pass stub live in the port module and are
 excluded here: the house convention keeps both beside the port they serve.

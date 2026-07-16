@@ -694,7 +694,7 @@ class AgentBudget:
     ships too (`cora.agent.adapters.budget_spend_guard`, gating the
     autonomous steering brain), as does the Budget BC's per-beamline
     Allocation envelope layered above these per-agent caps. Only the
-    leak-free reserve-post-void tier remains unbuilt (Stage 0 at
+    leak-free reserve-post-void tier remains unbuilt (evaluated at
     [[project-reserve-post-void-stage0]]).
 
     Zero caps allowed and enforced as the recorded "no spend" intent:
