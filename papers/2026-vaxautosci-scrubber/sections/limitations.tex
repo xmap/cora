@@ -10,15 +10,25 @@ integration cost.
 
 The figures are not mock-ups. They derive from one passing integration
 scenario, exercised against a real Kernel and Postgres event store, and the run
-data, its generator, and the per-figure render scripts are released with the
-paper. What is real is what that scenario produced and we mirrored into the
-figure data: the activities, the four iteration verdicts (open, open, open,
-converged), the four run-lifecycle events, and the supervisor's recorded hold
-and resume decisions. What is synthetic is only the per-event timestamps,
-staggered for a readable axis because the scenario records one logical instant;
-the overnight wall-clock spread is illustrative, stated in prose rather than
-measured. The generator depends on nothing but the standard library and needs no
-database, so a reader can regenerate the figure data directly.
+data, generator, and per-figure render scripts are released with the paper. The
+scenario records the campaign grouping, sample custody, per-sample iteration
+verdicts, run-lifecycle events, and supervisor hold/resume decisions. What is
+modeled rather than deployed is the beam-loss signal: at 2-BM-B today a fly-scan
+continues structurally through a beam drop, so no beam-loss event reaches the
+supervisor. The demonstrated beam-permit transition is injected; a deployed run
+needs a fly-scan beam-loss check and a facility-owned beam-permit bridge into the
+same event stream. The supervisor reaction itself is exercised through the real
+Kernel and Postgres event store.
+
+The robot-loaded framing has a similar boundary. The 2-BM sample-change hardware
+is real and has executed mount/dismount cycles, and the scan software already
+iterates batches over scriptable interfaces. What we model is CORA's
+orchestration of that robot as a positioner asset with per-sample subject
+custody, recorded through the same event store as the runs it brackets. Fuller
+robot-loaded supervision, such as field-of-view checks, lens-change branches, or
+per-sample recentering decisions, remains future work. The per-event timestamps
+are also synthetic, staggered for a readable axis because the scenario records
+one logical instant; the overnight wall-clock spread is illustrative.
 
 Two boundaries matter for how the contribution should be read, both about what
 the run and the badge are not. The run is
@@ -34,28 +44,14 @@ recorded expansion, by recomputing content-addressed hashes against an
 append-only store; it is an integrity check, not adversarial tamper resistance,
 under the conditions stated in Section~\ref{sec:substrate}.
 
-The fold-to-version helper that drives the cursor was written for this
-visualization on top of the system's existing fold-on-read path. The fold is
-scoped to one run's stream, not the whole store, so the work is bounded by a
-single run rather than the entire event history; but because that path keeps no
-snapshots, the cost of reconstructing a distant instant still grows with the
-length of that stream. For the short run shown here it is imperceptible, and for
-long campaigns the standard remedies apply directly, periodic snapshots to fold
-from and incremental re-folding rather than replaying from the start each time;
-we name these rather than build them. Three further extensions are natural: a
-live now-edge that subscribes to the event tail so the same timeline can monitor
-a run in progress, run-to-run diffing so two campaigns share one axis, and a
-deployed read interface, whose first read-only slice is already on the roadmap. The
-closest extension is an agent-closed steered loop, an optimizer that decides the
-next action rather than a supervisor that recovers a conducted one; because such
-an optimizer would record its choices through the same decision substrate, the
-run-lifecycle lane and the decision records would carry its next-action choices
-and be audited exactly as the supervisor's holds and resumes are here. We expect
-the design to generalize in the same way beyond this run, to other conducted
-procedures and other facilities, since nothing in the scrubber is specific to
-this case beyond a small vocabulary it reads from the log: the requirement on a
-host system is modest, an append-only, deterministically-foldable event log with
-a content-addressed expansion and a recorded actor on each event.
+The fold-to-version helper was written for this visualization on top of the
+system's existing fold-on-read path. It folds one run's stream, so the work is
+bounded by a single run, but reconstructing a distant instant still grows with
+that stream's length. For long campaigns, periodic snapshots and incremental
+re-folding are the natural remedies. Extensions include a live now-edge for
+monitoring, run-to-run diffing, a deployed read interface, recorded hold policies
+for consumables and apparatus, and agent-closed steered loops whose optimizer
+choices would be audited through the same decision records.
 
 Three threats temper these claims. The construct question is whether T1 through
 T4 capture what auditing a conducted run actually needs; we derived them from

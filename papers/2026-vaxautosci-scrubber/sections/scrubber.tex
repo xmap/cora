@@ -7,45 +7,25 @@
 \begin{figure*}[t]
   \centering
   \includegraphics[width=\textwidth]{figures/f1_scrubber}
-  \caption{The replay scrubber over one agent-supervised run at APS
-  2-BM. Color-coded bars across the top name the run's phases (alignment, scan,
-  save). A run-lifecycle lane records who drove each transition: the operator
-  started and the run completes, while the supervisor agent held the run when the
-  beam dropped and resumed it when the beam returned (the gray band is the hold;
-  the two hatched bands are the fly-scan setup, the rotary taxi to constant
-  velocity and trigger arm, needed before the first frame and again after the
-  hold). A beam-permit lane shows the safety envelope the supervisor gates on:
-  satisfied except across the hold, where it reads lost. Below, the setpoint,
-  acquire, and check swim-lanes, with one verdict-tinted band per pass of the
-  conducted rotation-axis centering search (amber open, green converged) grouping
-  that pass's three activities. The fold-to-version cursor is parked at the
-  beam-loss instant: folding the event stream to there reconstructs the state
-  shown in the read-out, including the third projection as an open interval (its
-  in-flight marker is recorded but its outcome is not yet). Past the cursor,
-  after the run resumes, the scan runs to completion and the dataset is written
-  to disk. Time spacing is synthetic.}
+  \caption{The replay scrubber over one robot-loaded, two-sample session at APS
+  2-BM. Lanes encode sample custody, robot actions, run lifecycle, beam permit,
+  and the conducted setpoint/acquire/check loop. The cursor is parked at the
+  beam-loss instant on sample B: folding the event stream to that position
+  reconstructs the read-out, including the supervisor hold and projection 3 as an
+  open interval. After the cursor, the run resumes and completes. Time spacing is
+  synthetic.}
   \label{fig:scrubber}
 \end{figure*}
 
-Before the mechanics, the experience. The scrubber turns a finished run into
-something a scientist can play back: drag a handle along time and the run
-re-forms at that instant, the way a video scrubber jumps to a frame.
-
-The scrubber presents one recorded run on a single horizontal time axis
+The scrubber presents one recorded session on a single horizontal time axis
 (Figure~\ref{fig:scrubber}), a stack of lanes that each answer a different
-question. The activity swim-lanes carry one track per kind of step the run
-performs, a position setpoint, an acquisition, a check, and the dataset write to
-disk, with every activity drawn at its recorded time within its lane. Above them
-a run-lifecycle lane records the autonomous arc, who or what caused each
-transition, colored by actor, so an auditor sees at a glance where control passed
-between the operator and the supervisor agent; and a beam-permit lane shows the
-safety envelope the supervisor gates on, satisfied except across the hold. Color-coded
-bars across the top name the run's phases (alignment, scan, save). The iterative
-structure of the conducted alignment is shown as one shaded band per pass, each
-tinted by that pass's recorded verdict and grouping the pass's setpoint, acquire,
-and check. An activity that was opened but never closed, the
-record of intent before effect, is drawn as an open interval rather than a
-filled mark, so an unfinished step reads as a visible gap.
+question. Activity swim-lanes track setpoints, acquisitions, checks, and output;
+the run-lifecycle lane colors each transition by actor; the beam-permit lane
+shows the safety condition; and the sample-custody and robot lanes say which
+sample was mounted and who put it there. The conducted alignment is shown as one
+verdict-tinted band per pass, grouping that pass's setpoint, acquire, and check.
+An activity opened but not yet closed is drawn as an open interval, so an
+unfinished step reads as a visible gap rather than a silent truncation.
 
 The interaction is a single draggable cursor. Setting the cursor to a position
 $t$ folds the event stream up to $t$ and renders the reconstructed state of the
@@ -60,10 +40,8 @@ and \emph{who or what} was driving it.
   \includegraphics[width=\linewidth]{figures/f2_fidelity}
   \caption{The fidelity check the badge runs at the cursor. The content-addressed
   hashes recorded at run start, over the recipe expansion (the resolved steps and
-  the parameter bindings), are recomputed from the state reconstructed by folding
-  to the cursor and compared; a match reads verified, a mismatch would read
-  altered. The digest shown is an
-  illustrative content hash of the run data.}
+  parameter bindings), are recomputed from the folded state and compared; a match
+  reads verified, a mismatch would read altered.}
   \label{fig:fidelity}
 \end{figure}
 
@@ -76,30 +54,31 @@ append-only and the expansion is content-addressed, into something a reader can
 see at the exact instant they are inspecting, rather than a claim they must take
 on faith.
 
-We walk through an unattended, agent-supervised run on APS 2-BM. An operator
-starts the run and leaves; the system conducts the pre-scan rotation-axis centering
-alignment, a four-iteration peak-bracket search over the sample stage
-\texttt{SampleTop\_X} that minimizes the center-of-rotation residual. The
-residual falls from $2.00$ to $1.05$\,px, rises to $1.40$\,px at $0.080$\,mm
-(bracketing the minimum in $[0.040, 0.080]$\,mm), and the fourth pass bisects to
-$0.060$\,mm at $0.30$\,px and converges; read by color, the iteration bands show
-the verdict sequence open, open, open, converged (T3). The science scan begins; two
-projections complete and the third is in flight when the beam drops. The supervisor
-agent holds the run; the beam returns and the supervisor resumes it, each
-transition recorded as the agent's decision in the lifecycle lane. With the
-cursor at the beam-loss instant (Figure~\ref{fig:scrubber}), the fold shows the
-alignment already converged, two projections done and the third still open, and the run held
-by the agent, and the fidelity badge confirms that the reconstructed recipe
-expansion is faithful to the hash recorded at run start (T4).
+We walk through an unattended, robot-loaded session on APS 2-BM. An operator
+queues two samples and leaves; a sample-changing robot loads each in turn, and
+the session runs as one campaign of two runs on a single time axis. For each
+sample the robot mounts it onto the rotary stage (the sample-custody lane opens),
+and the system conducts a pre-scan rotation-axis centering alignment, a
+four-iteration peak-bracket search over the sample stage \texttt{SampleTop\_X}
+that minimizes the center-of-rotation residual. On sample B the residual sequence
+ends at $0.30$\,px, so the iteration bands read open, open, open, converged (T3).
+The science scan then begins; two projections complete and the third is in flight
+when the beam drops. With the cursor at that instant (Figure~\ref{fig:scrubber}),
+the fold shows sample B mounted by the robot, its alignment already converged,
+projection 3 still open, the run held by the supervisor, and the fidelity badge
+verified (T4).
 
-Read as a morning audit, the same run answers the auditor's questions in the
-order they arise. Dragging the cursor into the gap in the held band localizes the
-third projection as an open interval, exactly the exposure in flight when the
-beam dropped, rather than guessing it (T1, developed in Section~\ref{sec:crash}).
-Dragging to the resume transition opens its decision, the supervisor resumed
-because the start-safety envelope was satisfied again, and the folded state shows
-what the agent saw at that instant (T2). In a few minutes, and without re-running
-anything, the auditor has recovered what the run did overnight, what was
+Read as a morning audit, the same session answers the auditor's questions in the
+order they arise. Reading the sample-custody lane at any instant says which
+sample was on the stage and who put it there, so an interrupted exposure is
+attributed to the right sample without cross-referencing a loader log. Dragging
+the cursor into the gap in the held band localizes the third projection as an
+open interval, exactly the exposure in flight when the beam dropped, rather than
+guessing it (T1, developed in Section~\ref{sec:crash}). Dragging to the resume
+transition opens its decision, the supervisor resumed because the start-safety
+envelope was satisfied again, and the folded state shows what the agent saw at
+that instant (T2). In a few minutes, and without re-running anything, the auditor
+has recovered what the two-sample session did overnight, which sample was
 interrupted, and why the agent acted.
 
 \textbf{Formalization.} The mechanism behind that walkthrough is a single fold.
@@ -118,37 +97,13 @@ $\mathrm{hash}(\mathrm{bind}(S_t)) = h^{\star}_{\mathrm{bind}}$. Since
 $\mathrm{evolve}$ only folds recorded events, $S_t$ reproduces the record rather
 than re-running the alignment.
 
-\textbf{Design rationale.} Each encoding answers an audit question rather than
-decorating the timeline. We give the run lifecycle its own lane, colored by
-actor, instead of annotating events in place, so that \emph{who or what was
-driving} is legible across the whole run and accountability is separated from
-activity. We draw convergence as verdict-colored iteration bands rather than
-a metric curve: the auditor is asking whether and on which pass the search
-decided it had converged, which is the verdict, not the residual value. We place
-the fidelity badge inline at the cursor rather than in a separate trust panel, so
-trust is judged at the instant being inspected. We render an unfinished step as
-an open interval rather than truncating the timeline, so a missing outcome is a
-positive mark that is seen rather than inferred. And we keep one linear time axis
-with an explicit held band rather than collapsing the hold, because the gap
-itself is the evidence that the run waited, on the same scale as everything
-else.
-
-\textbf{Auditing autonomous agents.} The lifecycle lane, and the decision
-records behind it, make the scrubber an instrument for agent accountability,
-which is the harder half of the human-agent handoff. Each transition the
-supervisor drives is recorded with the actor that caused it and a decision the
-auditor can open: not only that the run was held and resumed, but who or what
-decided, when, and on what basis. Scrubbing to a transition reconstructs the
-state the agent saw at that instant, so ``why did it resume here'' is answered by
-replay rather than by trusting a log line. Accountability is not only about the
-acquisition: the same fold reconstructs every axis the system records as events,
-so the beam-permit lane shown here, and the clearance, training, and
-authorization boundaries the system records elsewhere, are recovered at the
-cursor alongside the science, and an auditor scrubs the safety envelope that
-gated a decision as readily as the data it produced. The questions an auditor
-asks do not change as autonomy deepens; only how many of the recorded decisions
-were the agent's rather than a person's. The
-same lane that here distinguishes operator from supervisor would, with more
-agents in the loop, separate their contributions and surface where they
-contended or handed off, the multi-agent orchestration view that prior
-provenance tools do not provide.
+\textbf{Design rationale and agent audit.} Each encoding answers an audit
+question rather than decorating the timeline. The lifecycle lane makes who or
+what was driving legible across the run; verdict-colored iteration bands answer
+whether and when the search converged; the inline fidelity badge judges trust at
+the inspected instant; and the explicit held band keeps the wait itself on the
+science time axis. The same lane also makes the scrubber an accountability view:
+scrubbing to a supervisor transition reconstructs the state the agent saw, so
+``why did it resume here'' is answered by replay rather than by trusting a log
+line. As autonomy deepens, the same actor field would separate multiple agents
+and expose their handoffs or contention.

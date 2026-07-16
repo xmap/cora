@@ -1013,6 +1013,10 @@ body::before {
 .cs-permit--ok { stroke: var(--cs-good); }
 .cs-permit--lost { stroke: var(--cs-alarm); stroke-dasharray: 2 2.5; }
 
+/* Run lifecycle state line (solid active, dashed held), under the markers */
+.cs-run-line { stroke: var(--cs-sub); stroke-width: 1.6; stroke-linecap: butt; }
+.cs-run-line--held { stroke-dasharray: 1.4 1.6; }
+
 /* Run lifecycle markers */
 .cs-life { stroke: var(--cs-surface); stroke-width: 1.2; }
 .cs-life--operator { fill: var(--cs-operator); }

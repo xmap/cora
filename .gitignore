@@ -96,6 +96,12 @@ papers/*/*.brf
 papers/*/*.pdf
 papers/*/_minted*/
 
+# Paper working directories are local-only by default (drafts stay off the
+# remote). The vaxautosci-scrubber paper is the exception and stays tracked.
+# To publish another paper, add a matching negation below.
+papers/*/
+!papers/2026-vaxautosci-scrubber/
+
 # Mutmut working tree (regenerated per audit; holds the AST-mutated copy
 # of src/ + tests/ under apps/api/mutants/). Never committed.
 apps/api/mutants/

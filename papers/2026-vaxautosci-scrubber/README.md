@@ -14,9 +14,10 @@ record.
   conference style, published to IEEE Xplore.
 - **Deadline:** July 8 2026 (23:59 AoE).
 - **Status:** Full draft, builds on the official VGTC conference class.
-  `main.tex` is 5 pages total (references start on page 5), about 4 pages of body
-  excluding references, inside the 4-6 limit. All sections written; all figures
-  (F1, F2, F3, Table 1, F5) rendered from real run data; references confirmed.
+  `main.tex` builds to 7 pages total; the body fits inside the 4-6 page limit,
+  with references beginning on page 6 and continuing to page 7. All sections
+  written; all figures (F1, F2, F3, Table 1, F5) rendered from real run data;
+  references confirmed.
 
 ## Topic landing (PCS)
 
@@ -93,9 +94,10 @@ The official VGTC conference class is vendored here (`vgtc.cls` +
 
     latexmk -pdf main.tex
 
-This produces the exact VGTC conference format: 5 pages total, references
-beginning on page 5, so about 4 pages of body excluding references, inside the
-4-6 page limit. For double-blind review, switch to
+This produces the exact VGTC conference format: 7 pages total, with the body
+inside the 4-6 page limit and references beginning on page 6. Submit the
+LaTeX-built `main.pdf` from this folder; do not submit a macOS Preview-resaved
+desktop copy. For double-blind review, switch to
 `\documentclass[review]{vgtc}` and set `\onlineid` to the assigned id.
 
 `preview.tex` is a no-frills IEEEtran proxy over the same shared sections, for
@@ -107,7 +109,8 @@ vendored class and bibstyle files are tracked.
 - [x] Produce the figures (F1, F2, F3, Table 1, F5) from real run data.
 - [x] Fill all sections.
 - [x] Confirm the four flagged references in `refs.bib`.
-- [x] Build `main.tex` on the official VGTC class (5 pages, within limit).
+- [x] Build `main.tex` on the official VGTC class (7 pages total, body within
+      the 4-6 page limit).
 - [x] Author block: Doga Gursoy (corresponding, dgursoy@anl.gov) and Francesco
       De Carlo (no email), Advanced Photon Source, Argonne National Laboratory,
       single-blind. For double-blind instead, set `\documentclass[review]{vgtc}`

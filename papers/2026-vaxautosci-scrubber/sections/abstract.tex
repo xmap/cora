@@ -17,9 +17,9 @@ unfinished steps, and a badge that verifies the replayed recipe expansion matche
 the content hash recorded at run start. We ground the prototype in an
 integration-tested, agent-supervised scenario run on an APS 2-BM micro-CT
 configuration, against the real event-sourcing stack: the system conducts a
-rotation-axis centering alignment, a supervisor agent holds the run on beam loss
-and auto-resumes it, and the scrubber localizes the interrupted projection by
-folding to the beam-loss instant. The run is agent-supervised rather than
+rotation-axis centering alignment, a supervisor agent holds the run on a modeled
+beam-loss signal and auto-resumes it, and the scrubber localizes the interrupted
+projection by folding to that instant. The run is agent-supervised rather than
 agent-closed: the agent recovers a conducted run, it does not select the science.
 We discuss how event-sourced records reshape provenance visualization for
 autonomous science.

@@ -21,29 +21,40 @@ beyond what an event-sourced system of record already keeps. We summarize the
 substrate here, and stress that it is the enabling condition, not the
 contribution (Figure~\ref{fig:substrate}).
 
-Three records carry everything the four tasks
-need. Each event's envelope records who or what caused it and its position in
-the stream, which gives the cursor a well-defined instant to fold to (T2) and
-gives an unfinished activity a position to mark as an open interval (T1). The
-run-start payload records the recipe the run expanded from, together with
-content-addressed hashes of that expansion; recomputing and comparing those
-hashes is exactly the fidelity badge (T4). The per-iteration boundary events
-carry the verdict that colors each iteration band (T3). The swim-lane
-activities, the setpoint, acquire, check, and output rows, are themselves events appended as the
-system acts, with the intent recorded before the effect (the open-interval mechanism of
-Section~\ref{sec:crash}).
-Concretely, the example run is a four-event run-lifecycle stream (started, held,
-resumed, completed) alongside a twelve-event procedure stream with around two
-dozen activity rows; folding a prefix returns the reconstructed run and
-procedure state (status, the current iteration and its verdict, and whether each
-activity is open or closed), and the recorded hashes cover the recipe expansion,
-the resolved steps and parameter bindings, written at run start.
+Three records carry everything the four tasks need. Each event's envelope
+records who or what caused it and its stream position, giving the cursor a
+well-defined instant to fold to (T2) and an unfinished activity a position to
+mark as an open interval (T1). The run-start payload records the expanded recipe
+and its content-addressed hashes, feeding the fidelity badge (T4). The
+per-iteration boundary events carry the verdict that colors each iteration band
+(T3). Activity entries, the setpoint, acquire, check, and output rows, are
+appended as the system acts, with intent recorded before effect
+(Section~\ref{sec:crash}). Folding a prefix returns the reconstructed run and
+procedure state: status, current iteration and verdict, and which activities are
+open or closed.
+
+The stream is multi-owner. Every event's envelope carries an actor field
+(Table~\ref{tab:schema}), so different actors, the operator, the supervisor
+agent, the instrument tasks, and the facility itself, append into a single
+ordered log with per-event attribution. This yields two properties the scrubber
+renders directly. First, provenance at the cursor: the auditor drags to an
+instant and sees not only the reconstructed state but who is authoritative for
+each fact under that state. Second, latency between actors: the interval between
+one actor's fact and another actor's reaction, a beam-permit drop and an
+instrument's ramp-down, for example, is a legible span between two attributed
+events on one time axis rather than a datum to correlate from separate logs with
+different clocks. Under the everyone-keeps-their-own-log pattern those intervals
+are recoverable only with effort; under an attribution-carrying single log they
+are directly readable at the scrubbed cursor. The beam-permit fact is owned by
+the facility rather than emitted by CORA, so rendering it on a deployed run needs
+the bridge noted in Section~\ref{sec:limitations}; the substrate property holds
+regardless of which actor writes.
 
 The visual claim, that the timeline you are scrubbing is faithful to an
-unaltered record under stated assumptions, is what the paper is about; we
-enumerate those assumptions below rather than re-prove them here.
-
-The records the scrubber reads are summarized in Table~\ref{tab:schema}.
+unaltered record under stated assumptions, is what the paper is about. The
+records the scrubber reads are summarized in Table~\ref{tab:schema}; the
+concrete CORA events behind them are run start, hold, resume, run end, iteration
+start and end, activity entries, and a facility-owned beam-permit transition.
 
 \begin{table}[t]
   \centering

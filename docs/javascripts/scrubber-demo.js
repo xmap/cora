@@ -298,6 +298,33 @@
     g.appendChild(permitSeg(run.beamLoss, run.beamBack, true));
     g.appendChild(permitSeg(run.beamBack, run.xmax, false));
 
+    // Run-lifecycle state line: solid while active, dashed while held, absent
+    // before start and after completion, mirroring the beam-permit lane so the
+    // run state is legible at every cursor position (not only at the markers).
+    // Neutral tone, not the beam-permit green, so the two lanes read distinct.
+    const runAt = {};
+    run.run.events.forEach((e) => {
+      runAt[e.type] = parseT(e.at) - run.t0;
+    });
+    const runSeg = (x0, x1, held) =>
+      svg("line", {
+        x1: X(x0),
+        y1: LANE.run,
+        x2: X(x1),
+        y2: LANE.run,
+        class: `cs-run-line ${held ? "cs-run-line--held" : "cs-run-line--active"}`,
+      });
+    if (
+      runAt.RunStarted != null &&
+      runAt.RunHeld != null &&
+      runAt.RunResumed != null &&
+      runAt.RunCompleted != null
+    ) {
+      g.appendChild(runSeg(runAt.RunStarted, runAt.RunHeld, false));
+      g.appendChild(runSeg(runAt.RunHeld, runAt.RunResumed, true));
+      g.appendChild(runSeg(runAt.RunResumed, runAt.RunCompleted, false));
+    }
+
     // Run-lifecycle markers: operator square, agent diamond, with labels.
     const labelFor = {
       RunStarted: ["started", "operator"],
