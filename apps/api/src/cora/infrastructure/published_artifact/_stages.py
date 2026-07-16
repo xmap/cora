@@ -196,9 +196,12 @@ def check_dco_chain(artifact: PublishedArtifact) -> StageResult:
 
     Per project_federation_port_design.md: the Linux-kernel
     `coding-assistants.rst` invariant transplant requires at least
-    one human Signed-off-by. The decider enforces the deeper
-    invariant (actor_id resolves to Actor.kind == human) at
-    publish-time; this gate checks the chain shape at verify-time.
+    one human Signed-off-by. This gate checks the chain SHAPE only.
+
+    The deeper invariant (actor_id resolves to Actor.kind == human) is
+    NOT enforced anywhere: no publish-time decider reads the kind. A
+    `SignedOffBy` naming an agent actor_id passes this gate. See the
+    `SignedOffBy` docstring in `ports/federation/value_types.py`.
     """
     if not artifact.dco_chain:
         return StageResult(

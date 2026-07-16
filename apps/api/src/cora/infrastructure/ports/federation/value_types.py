@@ -95,9 +95,18 @@ class SignedOffBy:
     """Human Signed-off-by attribution; the only DCO arm that closes the chain.
 
     Per the Linux-kernel `coding-assistants.rst` invariant transplant,
-    AI actors cannot Signed-off-by. The federation decider enforces
-    that `actor_id` resolves to `Actor.kind == human`; an Agent
-    actor_id raises `DcoChainMissingHumanSignoffError`.
+    AI actors cannot Signed-off-by.
+
+    NOT ENFORCED TODAY. Nothing checks that `actor_id` resolves to
+    `Actor.kind == human`: no decider reads the kind, and
+    `DcoChainMissingHumanSignoffError` does not exist. `check_dco_chain`
+    verifies only that the chain carries at least one `SignedOffBy`
+    entry, not that its actor is human, so an agent actor_id passes
+    today. The human-only rule is design intent per
+    [[project_federation_port_design]], not a shipped check. Building it
+    would add the first branch on `Actor.kind` outside the two carve-outs
+    enumerated in `tests/architecture/test_actor_kind_blindness.py`, which
+    is where the reason for it belongs.
     """
 
     actor_id: UUID
@@ -125,9 +134,13 @@ class CoDevelopedBy:
     """Collaborative attribution between TWO HUMAN actors.
 
     Mirrors the Linux kernel `CO-DEVELOPED-BY` convention. Both
-    `actor_id_a` and `actor_id_b` MUST resolve to `Actor.kind ==
-    human`; Agent actor_ids raise `CoDevelopedByForbidsAgentError`
-    at the decider.
+    `actor_id_a` and `actor_id_b` are intended to resolve to
+    `Actor.kind == human`.
+
+    NOT ENFORCED TODAY, same as `SignedOffBy`: no decider reads the
+    kind and `CoDevelopedByForbidsAgentError` does not exist. Agent
+    actor_ids pass. Design intent per
+    [[project_federation_port_design]], not a shipped check.
     """
 
     actor_id_a: UUID

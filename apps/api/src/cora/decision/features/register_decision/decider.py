@@ -37,11 +37,22 @@ raises `OverrideKindRequiresParentError` if the command has
 `register_decision` is the operator-driven slice. Agent-emitted
 Decisions go through the subscriber path (CautionDrafter,
 RunDebriefer) so the Signer port can sign each row per
-[[project_signed_events_design]] (SIGNED_EVENT_TYPES =
-{DecisionRegistered}, discriminated at write time by
-`actor.kind == AGENT`). The decider refuses `context.actor.kind
-== AGENT` with `InvalidActorKindForDecisionError` so the slice
-cannot become a signing-bypass route.
+[[project_signed_events_design]].
+
+The signing obligation is discriminated by EVENT TYPE, not by actor
+kind. Every signing site gates on `signer is None or
+new_event.event_type not in SIGNED_EVENT_TYPES` (=
+{DecisionRegistered}); none of them reads `Actor.kind`, and
+`tests/architecture/test_actor_kind_blindness.py` pins that.
+
+The decider refuses `context.actor.kind == AGENT` with
+`InvalidActorKindForDecisionError` so this slice does not offer an
+unsigned path for rows that the subscriber path would have signed.
+The guard reads the kind of the Actor a Decision is ATTRIBUTED to
+(`command.decided_by`), never the authenticated principal, which the
+Authorize port structurally cannot observe. Note the guard rests on
+honest attribution: `decided_by` is body-supplied and is not
+reconciled against `principal_id`.
 
 ## VO trim semantics
 
