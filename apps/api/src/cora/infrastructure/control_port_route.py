@@ -32,12 +32,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-Substrate = Literal["in_memory", "epics_ca", "epics_pva"]
+Substrate = Literal["in_memory", "epics_ca", "epics_pva", "tango"]
 """The closed set of ControlPort substrates a deployment can select.
 
 `in_memory` is the test + opt-out default; `epics_ca` + `epics_pva`
-are the production EPICS adapters. New substrates land here as
-additive literal values plus a matching arm in the BC-side
+are the production EPICS adapters; `tango` is the PyTango adapter for
+Tango-floor deployments (ESRF BLISS, MAX IV). New substrates land here
+as additive literal values plus a matching arm in the BC-side
 `build_control_port` factory's `_build_substrate` switch.
 """
 

@@ -52,6 +52,12 @@ from tests.architecture.conftest import CORA_ROOT, tracked_python_files
 # names why no bare role noun fits.
 _PORT_SUFFIX_ALLOWLIST: dict[str, str] = {
     "ControlPort": "value-IO seam; 'Control' alone is a bare verb, no role noun fits",
+    "SubstrateControlPort": (
+        "the typed-address sibling of ControlPort that substrate adapters "
+        "implement; carries the same bare-verb 'Control' plus the 'Substrate' "
+        "qualifier that distinguishes the registry-facing seam from the "
+        "caller-facing ControlPort, so the Port suffix stays for the same reason"
+    ),
     "ComputePort": (
         "compute-job submission seam; 'Compute' is a bare verb and the "
         "graceful role noun 'JobRunner' is reserved for the multi-substrate "

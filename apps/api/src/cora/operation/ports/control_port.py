@@ -24,13 +24,24 @@ yields `Measurement` values. See that module for field-by-field detail.
 
 ## Address space
 
-`address: str` at v1. Adapters parse substrate-specific syntax: EPICS
-PV name (`"2bm:rot:rbv"`), Tango TRL (`"sys/tg_test/1/double_scalar"`),
-OPC UA NodeId string (`"ns=2;s=Demo.Static.Scalar.Double"`). At second-
-substrate trigger, promote to a typed-sum `ControlAddress`
-(`EpicsPvAddress | TangoAttributeAddress | OpcUaNodeAddress`) per
-watch item 4; the change is BC-internal and non-breaking outside the
-Operation BC.
+The caller-facing `ControlPort` stays `address: str`. Callers (the
+Conductor, `acquisitions`, the beam-availability lookup) receive raw
+address strings from recipe steps and cannot know a substrate:
+whether `"2bm:rot:rbv"` is EPICS Channel Access, `"2bm:cam1:image"`
+is EPICS pvAccess, or `"sys/tg_test/1/double_scalar"` is a Tango
+attribute is a property of the deployment ROUTE table, never of the
+string. So the string surface is where callers belong.
+
+The second-substrate trigger (Tango) fired the typed-sum promotion,
+but at the layer where substrate identity actually lives: the
+registry-to-adapter seam. `ControlPortRegistry` matches a route by
+string prefix, then parses the string into a `ControlAddress`
+(`EpicsPvAddress | TangoAttributeAddress | InMemoryAddress`, see
+`cora.operation.ports.control_address`) per the route's declared
+substrate, and hands the typed variant to a `SubstrateControlPort`
+adapter. The substrate adapters consume typed addresses; the change
+is BC-internal and non-breaking outside the Operation BC. OPC UA
+stays deferred (no `OpcUaNodeAddress` variant until its adapter lands).
 
 ## Out of scope (deferred sibling ports)
 
@@ -66,9 +77,19 @@ through the iterator so silent stream pause is impossible.
 
 from collections.abc import AsyncIterator
 from enum import StrEnum
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, TypeVar, runtime_checkable
 
+from cora.operation.ports.control_address import ControlAddress
 from cora.operation.ports.measurement import Measurement, MeasurementKind, Quality
+
+_AddressT_contra = TypeVar("_AddressT_contra", bound=ControlAddress, contravariant=True)
+"""Contravariant address type for `SubstrateControlPort`.
+
+Contravariant because an adapter is a consumer of addresses: an adapter that
+accepts a narrow variant (`EpicsPvAddress`) satisfies
+`SubstrateControlPort[EpicsPvAddress]`. The registry stores adapters as
+`SubstrateControlPort[Any]` because only it knows (at route-match time, not
+statically) which variant a given route's adapter expects."""
 
 
 class ActuationKind(StrEnum):
@@ -290,9 +311,57 @@ class ControlPort(Protocol):
         ...
 
 
+class SubstrateControlPort(Protocol[_AddressT_contra]):
+    """Typed-address value-IO port implemented by concrete substrate adapters.
+
+    The registry-facing sibling of `ControlPort`. Where `ControlPort` is the
+    caller-facing `str` surface, `SubstrateControlPort` is what
+    `EpicsCaControlPort`, `EpicsPvaControlPort`, `CaprotoControlPort`, and
+    `TangoControlPort` implement: it takes a `ControlAddress` (the typed sum
+    parsed by `ControlPortRegistry` from the matched route's substrate). The
+    adapter never re-parses a raw string; it reads the typed variant's fields
+    directly (`EpicsPvAddress.pv`, `TangoAttributeAddress.device` /
+    `.attribute`).
+
+    Generic in the address variant (contravariant): the EPICS adapters are
+    `SubstrateControlPort[EpicsPvAddress]`, the Tango adapter is
+    `SubstrateControlPort[TangoAttributeAddress]`. Each adapter legitimately
+    accepts only its own variant. `ControlPortRegistry` holds routes as
+    `SubstrateControlPort[Any]` because the substrate->variant correlation it
+    guarantees (it parses the route's substrate into the matching variant) is
+    a runtime invariant the type system cannot track statically.
+
+    `ControlPortRegistry` is the seam between the two surfaces: it implements
+    `ControlPort` (`str`), and for each call parses the address into a
+    `ControlAddress` and dispatches to the matched `SubstrateControlPort`.
+    The exception families, `Measurement` shape, and subscribe semantics are
+    identical to `ControlPort`; only the address type differs.
+    """
+
+    async def read(self, address: _AddressT_contra) -> Measurement:
+        """Read the current `Measurement` at `address`. See `ControlPort.read`."""
+        ...
+
+    async def write(
+        self,
+        address: _AddressT_contra,
+        value: int | float | bool | str | tuple[Any, ...],
+        *,
+        wait: bool = True,
+        timeout_s: float = 30.0,
+    ) -> None:
+        """Write `value` to `address`. See `ControlPort.write`."""
+        ...
+
+    def subscribe(self, address: _AddressT_contra) -> AsyncIterator[Measurement]:
+        """Subscribe to value changes on `address`. See `ControlPort.subscribe`."""
+        ...
+
+
 __all__ = [
     "ActuationKind",
     "ControlAccessDeniedError",
+    "ControlAddress",
     "ControlNotConnectedError",
     "ControlPort",
     "ControlTimeoutError",
@@ -302,4 +371,5 @@ __all__ = [
     "MeasurementKind",
     "NoAdapterForAddressError",
     "Quality",
+    "SubstrateControlPort",
 ]
