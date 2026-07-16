@@ -23,10 +23,15 @@ from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.epics_ca_control_port import EpicsCaControlPort
 from cora.operation.adapters.epics_pva_control_port import EpicsPvaControlPort
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
+from cora.operation.adapters.tango_control_port import TangoControlPort
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     NoAdapterForAddressError,
 )
+
+
+def _no_tango_probe(_substrate: str) -> None:
+    """Neutralised `require_tango`: PyTango is absent in the base test env."""
 
 
 @pytest.mark.unit
@@ -80,6 +85,27 @@ def test_build_control_port_with_mixed_routes_picks_right_adapter_per_prefix() -
     assert isinstance(port.route("2bma:cam1:image:data"), EpicsPvaControlPort)
     # The general prefix catches every other 2bma: address.
     assert isinstance(port.route("2bma:rot:val"), EpicsCaControlPort)
+
+
+@pytest.mark.unit
+def test_build_control_port_with_tango_route_constructs_tango_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A `tango` route builds a `TangoControlPort`.
+
+    The adapter probes PyTango importability at construction; PyTango is not
+    installed in the base test environment, so the probe is neutralised here
+    to exercise the factory arm rather than the missing-extra path (that path
+    is covered by `test_require_tango_raises_value_error_when_pytango_absent`).
+    """
+    monkeypatch.setattr(
+        "cora.operation.adapters.tango_control_port.require_tango",
+        _no_tango_probe,
+    )
+    port = build_control_port([ControlPortRoute(prefix="id19/", substrate="tango")])
+    assert isinstance(port, ControlPortRegistry)
+    routed = port.route("id19/bsh/1/state")
+    assert isinstance(routed, TangoControlPort)
 
 
 @pytest.mark.unit

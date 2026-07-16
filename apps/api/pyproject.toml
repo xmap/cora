@@ -104,6 +104,20 @@ dependencies = [
 bo = [
     "botorch>=0.16,<1",
 ]
+# tango (Actuate-axis Tango arm): the optional dependency group for
+# `TangoControlPort` at `cora/operation/adapters/`, the ControlPort adapter
+# for Tango-floor deployments (ESRF BLISS / Beacon, MAX IV Tango / Sardana).
+# PyTango binds the C++ Tango core plus omniORB: a heavy native stack that
+# only Tango deployments need, so it is kept OUT of the base install (EPICS
+# deployments go through aioca / p4p). The adapter imports `tango.asyncio`
+# lazily and probes importability at construction (`_optional_tango.py`), so
+# selecting the `tango` substrate without this group installed fails as a
+# `ValueError` at wiring / handler time (mapped to 422), never as an uncaught
+# `ImportError` mid-loop. LGPL-3.0 (PyTango binding) over the C++ Tango core.
+# Pin <11 to flag a future major SDK shift.
+tango = [
+    "pytango>=10,<11",
+]
 
 [dependency-groups]
 dev = [

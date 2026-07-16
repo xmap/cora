@@ -22,8 +22,12 @@ the env var without importing BC-specific adapter classes.
     reachable but no real substrate is exercised).
   - `epics_ca`: production CA via aioca (`EpicsCaControlPort`).
   - `epics_pva`: production PVA via p4p (`EpicsPvaControlPort`).
+  - `tango`: Tango device attributes via PyTango (`TangoControlPort`).
+    Ships under the optional `tango` dependency group; selecting it
+    without the extra installed raises `ValueError` at construction
+    (probed via `_optional_tango.require_tango`).
 
-Future substrates (`tango`, `opc_ua`) land as additive code edits in
+Future substrates (`opc_ua`) land as additive code edits in
 `cora.infrastructure.control_port_route` (literal) plus a new arm in
 `_build_substrate` here.
 
@@ -43,6 +47,7 @@ from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.epics_ca_control_port import EpicsCaControlPort
 from cora.operation.adapters.epics_pva_control_port import EpicsPvaControlPort
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
+from cora.operation.adapters.tango_control_port import TangoControlPort
 from cora.operation.ports.control_port import ControlPort, SubstrateControlPort
 
 
@@ -90,7 +95,7 @@ def _build_substrate(substrate: Substrate) -> SubstrateControlPort[Any]:
         return EpicsCaControlPort()
     if substrate == "epics_pva":
         return EpicsPvaControlPort()
-    raise ValueError(f"substrate {substrate!r} has no adapter wired yet")
+    return TangoControlPort()
 
 
 __all__ = ["build_control_port"]
