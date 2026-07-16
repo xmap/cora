@@ -4,14 +4,9 @@
   \centering
   \caption{Where the replay scrubber sits relative to the closest prior work.
   $\bullet$ = present, $\circ$ = absent or not surfaced to the user.
-  \emph{Replay} names the reconstruction mechanism; \emph{fidelity} is an
-  integrity check, over the replayed recipe expansion, recomputed at the cursor
-  and shown to a human;
-  \emph{run-state provenance} is per-iteration verdict and in-flight semantics
-  along a run; \emph{who / handoff} is a per-transition actor (human or agent)
-  record; \emph{scrub} is an interactive time cursor. C2PA/Atlas read $\circ$ on
-  fidelity because their check is over static artifacts, not replayed run state;
-  the distinction is the per-cursor reconstruction, not the hash. No prior system
+  \emph{Fidelity} means a cursor-time integrity check over replayed run state,
+  not a static artifact hash; \emph{who / handoff} is a per-transition actor
+  record; and \emph{scrub} is an interactive time cursor. No prior system
   combines all five columns.}
   \label{tab:compare}
   \footnotesize
