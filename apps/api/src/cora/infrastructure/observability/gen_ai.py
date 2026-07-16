@@ -34,10 +34,11 @@ Anthropic-specific (not in spec yet, included per their cookbook):
 
 `cora.agent.llm.cost.usd` is a custom histogram (no OTel spec
 equivalent today). Computed in `compute_cost_usd` from `PRICING`
-indexed by `(provider, model)`. Unknown models cost 0.0 with a
-warning logged once per process (the adapter alerts so operators
-notice unpriced models in dashboards rather than discovering it
-silently at billing reconciliation).
+indexed by `(provider, model)`. Unknown models cost 0.0, with a
+warning logged once per process so it cannot flood, and the
+`cora.agent.llm.unpriced_calls` counter incremented on every such
+call so the condition is alertable rather than only visible as a
+flat $0 series someone has to notice at billing reconciliation.
 
 The pricing table is intentionally a plain `dict` rather than a
 config file: cadence is too low for runtime overrides, and the
@@ -185,6 +186,11 @@ _cost_histogram = _meter.create_histogram(
     unit="USD",
     description="Per-call LLM cost in USD computed from usage tokens and provider pricing",
 )
+_unpriced_call_counter = _meter.create_counter(
+    name="cora.agent.llm.unpriced_calls",
+    unit="{call}",
+    description="LLM calls recorded at $0 because no catalog or static pricing entry resolved",
+)
 
 
 @dataclass(frozen=True)
@@ -230,12 +236,21 @@ def estimate_llm_call_ceiling(
 def compute_cost_usd(model_ref: ModelRef, usage: LLMUsage) -> float:
     """Compute the dollar cost of one LLM call.
 
-    Returns 0.0 with a one-time warning when `(provider, model)` is
-    in neither the catalog overlay nor `PRICING`. The 0.0 is
-    intentional: dashboards then show a flat $0 series for unpriced
-    models, which is easier to notice than raising and breaking the
-    call. Operators add a `PRICING` entry (or approve a catalog
-    entry) when they see the warning.
+    Returns 0.0 when `(provider, model)` is in neither the catalog
+    overlay nor `PRICING`. The 0.0 is intentional: dashboards then
+    show a flat $0 series for unpriced models, which is easier to
+    notice than raising and breaking the call. Operators add a
+    `PRICING` entry (or approve a catalog entry) when they see it.
+
+    Two signals fire on that path and they carry different weight.
+    The log warning is deduplicated to once per process per identity
+    so it cannot flood, which is also why it cannot carry an alert.
+    The `cora.agent.llm.unpriced_calls` counter increments on EVERY
+    unpriced call, so a nonzero rate is alertable. That matters
+    because an unpriced model does not merely mis-report a dashboard:
+    it makes the USD arm of both enforcement tiers inert (the
+    post-hoc gate sums $0 forever and the pre-estimate guard projects
+    $0), while the daily token cap keeps working and masks it.
 
     Cache-read tokens are billed at ~10% of base input; cache-write
     tokens are billed at 2x base input (the 1-hour TTL tier the
@@ -247,6 +262,13 @@ def compute_cost_usd(model_ref: ModelRef, usage: LLMUsage) -> float:
     key = (model_ref.provider, model_ref.model)
     pricing = _resolve_pricing(key)
     if pricing is None:
+        _unpriced_call_counter.add(
+            1,
+            {
+                "gen_ai.provider.name": model_ref.provider,
+                "gen_ai.request.model": model_ref.model,
+            },
+        )
         if key not in _warned_missing_pricing:
             _warned_missing_pricing.add(key)
             _log.warning(
