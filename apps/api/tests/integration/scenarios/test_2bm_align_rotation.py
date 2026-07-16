@@ -266,7 +266,7 @@ async def test_align_rotation_recipe_conducts_compute_and_writes_calibration(
     # tuple under exercise).
     port = EpicsCaControlPort()
     registry = ControlPortRegistry()
-    registry.register(softioc, port, is_simulated=True)
+    registry.register(softioc, port, "epics_ca", is_simulated=True)
     compute_port = InMemoryComputePort()
     compute_port.set_next_measurements(
         (
@@ -291,7 +291,7 @@ async def test_align_rotation_recipe_conducts_compute_and_writes_calibration(
 
     try:
         # Park theta at the home the first rotation setpoint expects.
-        await port.write(theta, _THETA_ZERO_DEG, wait=True)
+        await registry.write(theta, _THETA_ZERO_DEG, wait=True)
         # Recipe-driven conduct: empty caller steps re-expand the pinned template.
         result = await conduct(
             ConductProcedure(procedure_id=procedure_id, steps=()),

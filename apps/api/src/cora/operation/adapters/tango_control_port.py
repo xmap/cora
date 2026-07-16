@@ -333,7 +333,15 @@ class TangoControlPort:
         if proxy is None:
             from tango.asyncio import DeviceProxy
 
-            proxy = await asyncio.wait_for(DeviceProxy(device), timeout=self._default_timeout_s)
+            # `tango.asyncio.DeviceProxy` is a partial over `get_device_proxy`
+            # whose declared return does not vary with green mode, so it types
+            # as a bare DeviceProxy. Under Asyncio it really returns an
+            # awaitable, which the integration module proves: `wait_for` on a
+            # non-awaitable would raise TypeError instead of passing.
+            proxy = await asyncio.wait_for(
+                DeviceProxy(device),  # pyright: ignore[reportArgumentType]
+                timeout=self._default_timeout_s,
+            )
             self._proxies[device] = proxy
         return proxy
 

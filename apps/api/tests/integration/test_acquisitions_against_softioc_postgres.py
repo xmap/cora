@@ -31,6 +31,7 @@ import pytest
 
 from cora.infrastructure.event_envelope import to_new_event
 from cora.operation.acquisitions import collect, continuous, discrete
+from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.epics_ca_control_port import EpicsCaControlPort
 from cora.operation.aggregates.procedure import (
     PostgresActivityStore,
@@ -88,7 +89,7 @@ async def _seed_defined_procedure(deps_event_store: object, procedure_id: UUID) 
 def _build_conductor(
     deps_event_store: object,
     db_pool: asyncpg.Pool,
-    control_port: EpicsCaControlPort,
+    control_port: ControlPortRegistry,
     *,
     clock: object,
     id_generator: object,
@@ -138,7 +139,8 @@ async def test_conductor_runs_collect_action_against_real_softioc_and_postgres(
     )
     await _seed_defined_procedure(deps.event_store, procedure_id)
     step_store = PostgresActivityStore(db_pool)
-    control_port = EpicsCaControlPort()
+    control_port = ControlPortRegistry()
+    control_port.register(softioc, EpicsCaControlPort(), "epics_ca")
     conductor = _build_conductor(
         deps.event_store,
         db_pool,
@@ -230,7 +232,8 @@ async def test_conductor_runs_discrete_action_walks_axis_with_per_point_collects
     )
     await _seed_defined_procedure(deps.event_store, procedure_id)
     step_store = PostgresActivityStore(db_pool)
-    control_port = EpicsCaControlPort()
+    control_port = ControlPortRegistry()
+    control_port.register(softioc, EpicsCaControlPort(), "epics_ca")
     conductor = _build_conductor(
         deps.event_store,
         db_pool,
@@ -317,7 +320,8 @@ async def test_conductor_runs_continuous_action_with_axis_sweep_against_softioc(
     )
     await _seed_defined_procedure(deps.event_store, procedure_id)
     step_store = PostgresActivityStore(db_pool)
-    control_port = EpicsCaControlPort()
+    control_port = ControlPortRegistry()
+    control_port.register(softioc, EpicsCaControlPort(), "epics_ca")
     conductor = _build_conductor(
         deps.event_store,
         db_pool,
@@ -377,18 +381,26 @@ async def test_conductor_runs_continuous_action_with_axis_sweep_against_softioc(
 
 
 class control_port_reuse:  # noqa: N801
-    """Async-context manager that opens a fresh `EpicsCaControlPort` for assertions.
+    """Async-context manager that opens a fresh `ControlPort` for assertions.
 
     The Conductor's own port is `aclose()`d after `conduct()` returns;
     readback assertions against PVs the body just wrote need a NEW port.
     Wrapping with `async with` so the assertion block closes the port
     deterministically.
+
+    Yields the registry, not the bare adapter, which is why the prefix is
+    no longer ignored: the registry carries the `str` address surface these
+    assertions read with, and it is what production wires via
+    `build_control_port`. `EpicsCaControlPort` itself speaks
+    `EpicsPvAddress`. The registry closes every route it holds, so the
+    adapter still shuts down with the block.
     """
 
-    def __init__(self, _softioc_prefix: str) -> None:
-        self._port = EpicsCaControlPort()
+    def __init__(self, softioc_prefix: str) -> None:
+        self._port = ControlPortRegistry()
+        self._port.register(softioc_prefix, EpicsCaControlPort(), "epics_ca")
 
-    async def __aenter__(self) -> EpicsCaControlPort:
+    async def __aenter__(self) -> ControlPortRegistry:
         return self._port
 
     async def __aexit__(self, *_: object) -> None:

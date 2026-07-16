@@ -30,6 +30,7 @@ import asyncpg
 import pytest
 
 from cora.infrastructure.event_envelope import to_new_event
+from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.epics_ca_control_port import EpicsCaControlPort
 from cora.operation.aggregates.procedure import (
     PostgresActivityStore,
@@ -53,6 +54,29 @@ from tests.integration._helpers import build_postgres_deps
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-0000020c0099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000020c00aa")
+
+
+def _control_port(softioc: str, *, default_timeout_s: float | None = None) -> ControlPortRegistry:
+    """Wire the CA adapter the way `build_control_port` does in production.
+
+    The Conductor takes a `str`-addressed `ControlPort`, which is the
+    registry, not a substrate adapter: `EpicsCaControlPort` speaks
+    `EpicsPvAddress` and satisfies `SubstrateControlPort` instead. Handing
+    the bare adapter to the Conductor typechecks as an error even though it
+    runs, because `isinstance` against a runtime-checkable Protocol compares
+    method names and not signatures.
+
+    `default_timeout_s` stays None unless a test needs a short one, so the
+    adapter keeps its own default rather than having it restated here.
+    """
+    adapter = (
+        EpicsCaControlPort()
+        if default_timeout_s is None
+        else EpicsCaControlPort(default_timeout_s=default_timeout_s)
+    )
+    registry = ControlPortRegistry()
+    registry.register(softioc, adapter, "epics_ca")
+    return registry
 
 
 async def _seed_defined_procedure(deps_event_store: object, procedure_id: UUID) -> None:
@@ -128,7 +152,7 @@ async def test_conductor_runs_setpoint_check_against_real_softioc_and_postgres(
     complete_handler = bind_complete(deps)
     abort_handler = bind_abort(deps)
     append_step_handler = bind_append(deps, step_store=step_store)
-    control_port = EpicsCaControlPort()
+    control_port = _control_port(softioc)
     conductor = Conductor(
         control_port=control_port,
         append_step=append_step_handler,
@@ -236,7 +260,7 @@ async def test_conductor_aborts_procedure_when_setpoint_fails_against_softioc(
     )
     await _seed_defined_procedure(deps.event_store, procedure_id)
     step_store = PostgresActivityStore(db_pool)
-    control_port = EpicsCaControlPort(default_timeout_s=0.3)
+    control_port = _control_port(softioc, default_timeout_s=0.3)
     conductor = Conductor(
         control_port=control_port,
         append_step=bind_append(deps, step_store=step_store),
@@ -307,7 +331,7 @@ async def test_conductor_completes_procedure_with_equals_check_against_softioc(
     )
     await _seed_defined_procedure(deps.event_store, procedure_id)
     step_store = PostgresActivityStore(db_pool)
-    control_port = EpicsCaControlPort()
+    control_port = _control_port(softioc)
     conductor = Conductor(
         control_port=control_port,
         append_step=bind_append(deps, step_store=step_store),

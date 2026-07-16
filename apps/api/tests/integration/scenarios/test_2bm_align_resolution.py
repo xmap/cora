@@ -248,7 +248,7 @@ async def test_align_resolution_recipe_conducts_compute_and_writes_calibration(
     # The pixel-size Measurement is seeded so fetch_measurements surfaces it.
     port = EpicsCaControlPort()
     registry = ControlPortRegistry()
-    registry.register(softioc, port, is_simulated=True)
+    registry.register(softioc, port, "epics_ca", is_simulated=True)
     compute_port = InMemoryComputePort()
     compute_port.set_next_measurements((_pixel_size_measurement(_MEASURED_PIXEL_SIZE_UM),))
     step_store = PostgresActivityStore(db_pool)
@@ -267,7 +267,7 @@ async def test_align_resolution_recipe_conducts_compute_and_writes_calibration(
 
     try:
         # Park the sample at the in-beam home the first setpoint expects.
-        await port.write(axis, _SAMPLE_IN_MM, wait=True)
+        await registry.write(axis, _SAMPLE_IN_MM, wait=True)
         # Recipe-driven conduct: empty caller steps re-expand the pinned template.
         result = await conduct(
             ConductProcedure(procedure_id=procedure_id, steps=()),

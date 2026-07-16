@@ -66,6 +66,12 @@ Out of scope:
     emits; lands with that fix.
 """
 
+# PyTango's server decorators are untyped: `@attribute` plus its `.write`
+# sibling reads as a redeclaration of the same name, and the device methods
+# it wraps come back partially unknown. Same posture as the EPICS
+# integration modules, which suppress the same rules for aioca / p4p.
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportRedeclaration=false
+
 import asyncio
 import time
 from collections.abc import Iterator

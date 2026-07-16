@@ -231,7 +231,7 @@ async def test_xpcs_stream_recipe_conducts_event_stream_and_leaves_no_observatio
         Measurement(value=_URI, kind="Categorical", quality="Good", produced_at=_NOW),
     )
     registry = ControlPortRegistry()
-    registry.register(_DETECTOR, port, is_simulated=True)
+    registry.register_str_port(_DETECTOR, port, is_simulated=True)
     step_store = PostgresActivityStore(db_pool)
     conductor = Conductor(
         control_port=registry,

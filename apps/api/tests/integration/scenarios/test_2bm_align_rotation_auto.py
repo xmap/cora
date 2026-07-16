@@ -265,7 +265,7 @@ async def _build_align_routine(
 
     port = EpicsCaControlPort()
     registry = ControlPortRegistry()
-    registry.register(softioc, port, is_simulated=True)
+    registry.register(softioc, port, "epics_ca", is_simulated=True)
     compute_port = InMemoryComputePort()
     compute_port.set_measurement_sequence(
         tuple((_rotation_center_measurement(c),) for c in centers_sequence)
@@ -286,7 +286,7 @@ async def _build_align_routine(
     )
     conduct = bind_conduct_until_converged(deps, conductor=conductor, expansion_port=expander)
     # Park theta at the home the first rotation setpoint expects.
-    await port.write(theta, _THETA_ZERO_DEG, wait=True)
+    await registry.write(theta, _THETA_ZERO_DEG, wait=True)
     return deps, conduct, procedure_id, rotary_asset_id, registry, compute_port
 
 
