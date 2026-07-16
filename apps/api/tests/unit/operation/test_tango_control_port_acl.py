@@ -1,12 +1,19 @@
 """Unit-tier ACL tests for `TangoControlPort` translation + error mapping.
 
-Mirrors `test_epics_pva_control_port_acl.py`. PyTango is a heavy native
-dependency that is not installed in the base test environment and CI has no
-TangoTest device the way it runs a live EPICS softIOC, so these tests inject a
-fake `tango` / `tango.asyncio` module into `sys.modules`, neutralise the
-import probe, and pre-seed the adapter's per-device proxy cache. That exercises
-every ACL branch (kind classification, quality collapse, DevFailed reason
-mapping, subscribe lifecycle) without a live Tango control plane.
+Mirrors `test_epics_pva_control_port_acl.py`. These tests inject a fake
+`tango` / `tango.asyncio` module into `sys.modules`, neutralise the import
+probe, and pre-seed the adapter's per-device proxy cache, so every ACL branch
+(kind classification, quality collapse, DevFailed reason mapping, subscribe
+lifecycle) runs with no substrate and no optional extra installed. Injecting a
+failure by reason is also far easier against a double than against a device.
+
+The fake earns its place at this tier only. It is not evidence that the
+adapter matches PyTango: a fake written alongside the adapter encodes the same
+assumptions, so both agree even where the real library disagrees with both.
+`tests/integration/test_tango_control_port.py` drives the real adapter against
+a real device server and is what holds the adapter to PyTango's actual
+behaviour. Keep the two in step: when a branch here asserts a shape, the
+integration module is where that shape is confirmed to be real.
 
 Coverage:
 
