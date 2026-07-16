@@ -8,9 +8,11 @@ not import `tango` at module load; it probes importability in its `__init__`
 via the helper here.
 
 The probe raises `ValueError` (not `ImportError`) on a missing dependency so
-the gap surfaces where the ControlPort is materialised (`build_control_port`
-at wiring / handler time) rather than as an uncaught `ImportError` deep in the
-conduct loop, after a procedure has already started. Mirrors the `bo` group's
+the gap surfaces where the ControlPort is materialised (`build_control_port`,
+called once at wiring) rather than as an uncaught `ImportError` deep in the
+conduct loop, after a procedure has already started. Selecting the substrate
+without the group installed therefore fails startup, loudly and before any
+run begins. Mirrors the `bo` group's
 `_optional_torch.py` posture.
 """
 

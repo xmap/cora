@@ -12,7 +12,7 @@ PyTango (`tango`) binds the C++ Tango core plus omniORB, a heavy native stack
 that only Tango-floor deployments need. It ships under the optional `tango`
 dependency group and is NOT imported at module load; the adapter probes
 importability in `__init__` via `_optional_tango.require_tango` (raising
-`ValueError`, mapped to 422, rather than an uncaught `ImportError` mid-loop)
+`ValueError` at wiring, rather than an uncaught `ImportError` mid-loop)
 and imports `tango.asyncio` lazily on first use. This keeps `import cora`
 cheap on EPICS-only installs.
 

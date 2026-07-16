@@ -112,8 +112,9 @@ bo = [
 # deployments go through aioca / p4p). The adapter imports `tango.asyncio`
 # lazily and probes importability at construction (`_optional_tango.py`), so
 # selecting the `tango` substrate without this group installed fails as a
-# `ValueError` at wiring / handler time (mapped to 422), never as an uncaught
-# `ImportError` mid-loop. LGPL-3.0 (PyTango binding) over the C++ Tango core.
+# `ValueError` at wiring time, never as an uncaught `ImportError` mid-loop.
+# The port is built once in the FastAPI lifespan, so a missing group fails
+# startup rather than a request. LGPL-3.0 (PyTango binding) over the C++ Tango core.
 # Pin <11 to flag a future major SDK shift.
 tango = [
     "pytango>=10,<11",

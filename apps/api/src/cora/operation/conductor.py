@@ -181,6 +181,7 @@ from cora.operation.ports.compute_port import (
     JobSpec,
     MeasurementNotFoundError,
 )
+from cora.operation.ports.control_address import MalformedControlAddressError
 from cora.operation.ports.control_port import (
     ActuationKind,
     ControlAccessDeniedError,
@@ -219,17 +220,25 @@ _CONTROL_ERRORS: tuple[type[Exception], ...] = (
     ControlValueCoercionError,
     ControlAccessDeniedError,
     NoAdapterForAddressError,
+    MalformedControlAddressError,
 )
-"""The closed set of `Control*Error` classes the Conductor maps to
+"""The closed set of port error classes the Conductor maps to
 `ConductorFailure`. Tuple shape lets the `except` clause stay
-declarative; new exception classes in `cora.operation.ports.control_port`
-must be added here explicitly (no `Exception` catch-all so non-port
-exceptions still propagate to the caller's task).
+declarative; a new exception class in EITHER `control_port` or
+`control_address` must be added here explicitly (no `Exception`
+catch-all so non-port exceptions still propagate to the caller's task).
+`test_control_errors_cover_port_exceptions` enforces that, because
+naming only one of the two modules is exactly how
+`MalformedControlAddressError` was missed.
 
-`NoAdapterForAddressError` is included so a misconfigured
-`ControlPortRegistry` (an address with no matching prefix) records
-a structured step-failure rather than letting an opaque exception
-propagate to the route layer and strand the Procedure in `Running`."""
+The two routing-boundary errors are included so a misconfigured
+`ControlPortRegistry` records a structured step-failure rather than
+letting an opaque exception propagate to the route layer and strand the
+Procedure in `Running`: `NoAdapterForAddressError` for an address no
+prefix matches, and `MalformedControlAddressError` for one that matches a
+route but does not satisfy that substrate's address syntax (a Tango TRL
+with no attribute segment, say). Both are recipe or configuration gaps an
+operator must see as a failed step, not as a dead conduct task."""
 
 
 _LIFECYCLE_RERAISE: tuple[type[Exception], ...] = (
