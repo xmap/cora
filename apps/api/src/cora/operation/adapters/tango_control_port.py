@@ -46,7 +46,13 @@ unpacks:
     `type == DevEnum` or a `DevState` value -> "Categorical"; else "Scalar".
   - `value`: numpy scalars via `.item()`; spectra via `tuple(...)`; images via
     tuple-of-tuples; `DevEnum` resolved to its label string via the attribute
-    config's enum labels; `DevState` via its name.
+    config's enum labels, cached per address and falling back to the
+    stringified ordinal when the config is unreachable; `DevState` via its
+    name (it arrives as a real IntEnum and reports no enum labels). `None`
+    whenever the attribute carries no value, which is what an ATTR_INVALID
+    read is. A `DevEnum` SPECTRUM stays an `Array` of ordinals: the label
+    lookup covers the scalar case only, since a per-element label array has
+    no consumer yet.
   - `quality` (`AttrQuality` -> `Quality`): `ATTR_VALID` -> Good;
     `ATTR_WARNING` / `ATTR_CHANGING` -> Uncertain;
     `ATTR_ALARM` / `ATTR_INVALID` -> Bad.
@@ -174,7 +180,7 @@ def _kind_for(attr: Any) -> MeasurementKind:
     return "Scalar"
 
 
-def _unpack_value(attr: Any, kind: MeasurementKind) -> Any:
+def _unpack_value(attr: Any, kind: MeasurementKind, enum_labels: tuple[str, ...] | None) -> Any:
     """Extract a Python-native value from a Tango `DeviceAttribute`.
 
     Returns `None` when the attribute carries no value, whatever its kind.
@@ -203,12 +209,15 @@ def _unpack_value(attr: Any, kind: MeasurementKind) -> Any:
             return tuple(value.tolist())
         return tuple(value)
     if kind == "Categorical":
-        # DevState values stringify to their state name; DevEnum values
-        # carry a `.name` when PyTango resolves the label, else fall back
-        # to the raw string form.
+        # DevState arrives as a real IntEnum carrying its own label, so it
+        # needs no config lookup (and reports no enum_labels). DevEnum
+        # arrives as a bare int and is resolved against the cached labels.
         if hasattr(value, "name"):
             return value.name
-        return str(value)
+        index = int(value)
+        if enum_labels is not None and 0 <= index < len(enum_labels):
+            return enum_labels[index]
+        return str(index)
     scalar: Any = value
     if hasattr(scalar, "item"):
         scalar = scalar.item()
@@ -217,10 +226,15 @@ def _unpack_value(attr: Any, kind: MeasurementKind) -> Any:
     return scalar
 
 
-def _to_reading(attr: Any) -> Measurement:
-    """Translate a Tango `DeviceAttribute` to `Measurement`."""
+def _to_reading(attr: Any, enum_labels: tuple[str, ...] | None = None) -> Measurement:
+    """Translate a Tango `DeviceAttribute` to `Measurement`.
+
+    `enum_labels` resolves a DevEnum ordinal to its label; None leaves the
+    ordinal stringified, which is the right fallback for a non-enum or an
+    unreachable attribute config.
+    """
     kind = _kind_for(attr)
-    value = _unpack_value(attr, kind)
+    value = _unpack_value(attr, kind, enum_labels)
     quality = getattr(attr, "quality", None)
     time_val = getattr(attr, "time", None)
     timestamp = time_val.totime() if time_val is not None else 0.0
@@ -270,7 +284,43 @@ class TangoControlPort:
         require_tango("tango")
         self._default_timeout_s = default_timeout_s
         self._proxies: dict[str, Any] = {}
+        self._enum_labels: dict[str, tuple[str, ...]] = {}
         self._closed = False
+
+    async def _resolve_enum_labels(self, address: TangoAttributeAddress) -> tuple[str, ...] | None:
+        """Cache a DevEnum attribute's labels per address via its attribute config.
+
+        Mirrors `EpicsCaControlPort._resolve_enum_labels`. Labels live in the
+        attribute CONFIG, never on the read value, so this costs one extra
+        round trip at first encounter; caching keeps it off the conduct
+        loop's per-read path, where on a real Tango network (unlike
+        loopback) it would be a real CORBA call per read.
+
+        An empty tuple is cached and returned as None, meaning "not an enum".
+        Caching that negative matters here in a way it does not for EPICS:
+        `DevState` is a common Categorical that reports NO labels, so
+        without it every DevState read would re-fetch the config forever.
+        A config fetch that fails is not an error worth raising: the read
+        itself already succeeded, so fall back to the ordinal rather than
+        turn a readable attribute into a failed step.
+        """
+        from tango import DevFailed
+
+        raw = str(address)
+        cached = self._enum_labels.get(raw)
+        if cached is not None:
+            return cached or None
+        try:
+            proxy = await self._proxy_for(address.device)
+            config = await asyncio.wait_for(
+                proxy.get_attribute_config(address.attribute),
+                timeout=self._default_timeout_s,
+            )
+        except (TimeoutError, DevFailed):
+            return None
+        labels = tuple(str(label) for label in getattr(config, "enum_labels", ()))
+        self._enum_labels[raw] = labels
+        return labels or None
 
     async def _proxy_for(self, device: str) -> Any:
         """Return a cached asyncio `DeviceProxy` for `device`, building it lazily.
@@ -300,7 +350,10 @@ class TangoControlPort:
             raise ControlNotConnectedError(raw) from exc
         except DevFailed as exc:
             raise _map_dev_failed(raw, exc, timeout_s=self._default_timeout_s) from exc
-        return _to_reading(attr)
+        enum_labels: tuple[str, ...] | None = None
+        if _kind_for(attr) == "Categorical":
+            enum_labels = await self._resolve_enum_labels(address)
+        return _to_reading(attr, enum_labels)
 
     async def write(
         self,
@@ -407,16 +460,21 @@ class TangoControlPort:
                 attr = getattr(event, "attr_value", None)
                 if attr is None:
                     continue
-                yield _to_reading(attr)
+                enum_labels: tuple[str, ...] | None = None
+                if _kind_for(attr) == "Categorical":
+                    enum_labels = await self._resolve_enum_labels(address)
+                yield _to_reading(attr, enum_labels)
         finally:
             with contextlib.suppress(Exception):
                 await proxy.unsubscribe_event(event_id)
 
     async def aclose(self) -> None:
-        """Drop cached device proxies; idempotent.
+        """Drop cached device proxies + enum labels; idempotent.
 
         Tango `DeviceProxy` objects release their CORBA connection on
-        garbage collection; dropping the cache is sufficient. Provided so
+        garbage collection; dropping the cache is sufficient. The enum-label
+        cache goes with them so a reopened port re-reads attribute config
+        rather than trusting labels from before a device restart. Provided so
         production code paths can call `aclose()` polymorphically against any
         `ControlPort`.
         """
@@ -424,6 +482,7 @@ class TangoControlPort:
             return
         self._closed = True
         self._proxies.clear()
+        self._enum_labels.clear()
 
 
 __all__ = ["TangoControlPort"]

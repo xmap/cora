@@ -155,17 +155,33 @@ class _FakeProxy:
         read_raises: BaseException | None = None,
         write_raises: BaseException | None = None,
         events: tuple[Any, ...] = (),
+        enum_labels: tuple[str, ...] = (),
+        config_raises: BaseException | None = None,
     ) -> None:
         self._read_result = read_result
         self._read_raises = read_raises
         self._write_raises = write_raises
         self._events = events
+        self._enum_labels = enum_labels
+        self._config_raises = config_raises
         self.unsubscribed: list[int] = []
+        self.config_reads: list[str] = []
 
     async def read_attribute(self, _attribute: str) -> Any:
         if self._read_raises is not None:
             raise self._read_raises
         return self._read_result
+
+    async def get_attribute_config(self, attribute: str) -> Any:
+        """Enum labels live in the CONFIG, never on the read value.
+
+        Empty labels is what a real non-enum attribute reports, including
+        DevState, so that is the default here.
+        """
+        self.config_reads.append(attribute)
+        if self._config_raises is not None:
+            raise self._config_raises
+        return types.SimpleNamespace(enum_labels=self._enum_labels)
 
     async def write_attribute(self, _attribute: str, _value: Any) -> None:
         if self._write_raises is not None:
@@ -239,11 +255,83 @@ async def test_read_image_translates_to_image_kind(fake_tango: None) -> None:
 
 
 @pytest.mark.unit
-async def test_read_devenum_translates_to_categorical_label(fake_tango: None) -> None:
-    port = _make_port(read_result=_DeviceAttribute(value=_Enum("OPEN"), attr_type="DevEnum"))
+async def test_read_devenum_resolves_ordinal_to_label_from_config(fake_tango: None) -> None:
+    """A DevEnum read carries a bare ordinal; the label comes from the config."""
+    port = _make_port(
+        read_result=_DeviceAttribute(value=1, attr_type="DevEnum"),
+        enum_labels=("CLOSED", "OPEN", "FAULT"),
+    )
     reading = await port.read(_ADDR)
     assert reading.kind == "Categorical"
     assert reading.value == "OPEN"
+
+
+@pytest.mark.unit
+async def test_read_devstate_uses_value_name_without_reading_config(fake_tango: None) -> None:
+    """DevState arrives as a real IntEnum, so it needs no config round trip."""
+    port = _make_port(read_result=_DeviceAttribute(value=_Enum("RUNNING"), attr_type="DevState"))
+    reading = await port.read(_ADDR)
+    assert reading.kind == "Categorical"
+    assert reading.value == "RUNNING"
+
+
+@pytest.mark.unit
+async def test_read_devenum_falls_back_to_ordinal_when_config_unreadable(
+    fake_tango: None,
+) -> None:
+    """A readable attribute must not fail a step because its config is not."""
+    port = _make_port(
+        read_result=_DeviceAttribute(value=2, attr_type="DevEnum"),
+        config_raises=_DevFailed(_DevError("API_AttrNotFound")),
+    )
+    reading = await port.read(_ADDR)
+    assert reading.value == "2"
+
+
+@pytest.mark.unit
+async def test_read_devenum_ordinal_outside_labels_falls_back_to_ordinal(
+    fake_tango: None,
+) -> None:
+    port = _make_port(
+        read_result=_DeviceAttribute(value=9, attr_type="DevEnum"),
+        enum_labels=("CLOSED", "OPEN"),
+    )
+    reading = await port.read(_ADDR)
+    assert reading.value == "9"
+
+
+@pytest.mark.unit
+async def test_read_devenum_twice_reads_config_once(fake_tango: None) -> None:
+    """The label cache keeps the config round trip off the per-read path."""
+    port = _make_port(
+        read_result=_DeviceAttribute(value=1, attr_type="DevEnum"),
+        enum_labels=("CLOSED", "OPEN"),
+    )
+    await port.read(_ADDR)
+    await port.read(_ADDR)
+    proxy = port._proxies[_ADDR.device]  # pyright: ignore[reportPrivateUsage]
+    assert proxy.config_reads == [_ADDR.attribute]
+
+
+@pytest.mark.unit
+async def test_read_devstate_twice_reads_config_once(fake_tango: None) -> None:
+    """The negative is cached too, or every DevState read pays a round trip."""
+    port = _make_port(read_result=_DeviceAttribute(value=_Enum("FAULT"), attr_type="DevState"))
+    await port.read(_ADDR)
+    await port.read(_ADDR)
+    proxy = port._proxies[_ADDR.device]  # pyright: ignore[reportPrivateUsage]
+    assert len(proxy.config_reads) <= 1
+
+
+@pytest.mark.unit
+async def test_aclose_drops_the_enum_label_cache(fake_tango: None) -> None:
+    port = _make_port(
+        read_result=_DeviceAttribute(value=1, attr_type="DevEnum"),
+        enum_labels=("CLOSED", "OPEN"),
+    )
+    await port.read(_ADDR)
+    await port.aclose()
+    assert port._enum_labels == {}  # pyright: ignore[reportPrivateUsage]
 
 
 @pytest.mark.unit

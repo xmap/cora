@@ -44,10 +44,10 @@ mutate state and stay order-independent.
   - Write round-trip on a scalar, and the value-coercion failure path
   - `ControlAccessDeniedError` via API_AttrNotWritable on a read-only
     attribute
+  - DevEnum label resolution off the attribute config, and DevState off
+    the value's own name
   - subscribe initial synchronised event + post-write fan-out
   - aclose idempotency
-  - The DevEnum label defect pinned as strict xfail, so its fix flips it
-    green and `strict` forbids leaving the marker behind
 
 Out of scope:
 
@@ -243,17 +243,27 @@ async def test_read_devstate_returns_categorical_state_name(tango_device: str) -
 
 
 @pytest.mark.integration
-@pytest.mark.xfail(
-    strict=True,
-    reason="DevEnum labels are not resolved: read_attribute returns a bare int, so "
-    "the adapter stringifies the ordinal. Needs get_attribute_config().enum_labels.",
-)
 async def test_read_devenum_returns_categorical_label(tango_device: str) -> None:
     port = TangoControlPort()
     try:
+        await port.write(_addr(tango_device, "shutter"), 1)
         reading = await port.read(_addr(tango_device, "shutter"))
         assert reading.kind == "Categorical"
         assert reading.value == "OPEN"
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_read_devenum_after_write_reflects_the_new_label(tango_device: str) -> None:
+    """Labels are cached per address, so a later read must still track the value."""
+    port = TangoControlPort()
+    try:
+        await port.write(_addr(tango_device, "shutter"), 2)
+        reading = await port.read(_addr(tango_device, "shutter"))
+        assert reading.value == "FAULT"
+        await port.write(_addr(tango_device, "shutter"), 0)
+        assert (await port.read(_addr(tango_device, "shutter"))).value == "CLOSED"
     finally:
         await port.aclose()
 
