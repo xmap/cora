@@ -331,7 +331,11 @@ async def test_abort_from_held_state_persists_and_round_trips_to_aborted(
         correlation_id=_CORRELATION_ID,
     )
     await abort_run.bind(deps)(
-        AbortRun(run_id=run_id, reason="emergency during hold"),
+        AbortRun(
+            run_id=run_id,
+            reason="emergency during hold",
+            justification="operator: aborting for test",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -77,7 +77,11 @@ async def test_handler_returns_none_on_success() -> None:
     deps = build_deps(ids=[_ABORTED_EVENT_ID], now=_NOW, event_store=store)
 
     result = await abort_run.bind(deps)(
-        AbortRun(run_id=_RUN_ID, reason="detector overheating"),
+        AbortRun(
+            run_id=_RUN_ID,
+            reason="detector overheating",
+            justification="operator: aborting for test",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -91,7 +95,11 @@ async def test_handler_appends_run_aborted_event_with_trimmed_reason() -> None:
     deps = build_deps(ids=[_ABORTED_EVENT_ID], now=_NOW, event_store=store)
 
     await abort_run.bind(deps)(
-        AbortRun(run_id=_RUN_ID, reason="  beam dump unscheduled  "),
+        AbortRun(
+            run_id=_RUN_ID,
+            reason="  beam dump unscheduled  ",
+            justification="operator: aborting for test",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -112,7 +120,11 @@ async def test_handler_raises_run_not_found_when_run_does_not_exist() -> None:
 
     with pytest.raises(RunNotFoundError):
         await handler(
-            AbortRun(run_id=_RUN_ID, reason="X"),
+            AbortRun(
+                run_id=_RUN_ID,
+                reason="X",
+                justification="operator: aborting for test",
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -126,7 +138,11 @@ async def test_handler_raises_invalid_reason_for_whitespace_only() -> None:
 
     with pytest.raises(InvalidRunAbortReasonError):
         await abort_run.bind(deps)(
-            AbortRun(run_id=_RUN_ID, reason="   "),
+            AbortRun(
+                run_id=_RUN_ID,
+                reason="   ",
+                justification="operator: aborting for test",
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -141,7 +157,11 @@ async def test_handler_raises_cannot_abort_when_already_aborted() -> None:
 
     with pytest.raises(RunCannotAbortError):
         await abort_run.bind(deps)(
-            AbortRun(run_id=_RUN_ID, reason="X"),
+            AbortRun(
+                run_id=_RUN_ID,
+                reason="X",
+                justification="operator: aborting for test",
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -155,7 +175,11 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
 
     with pytest.raises(UnauthorizedError) as exc_info:
         await abort_run.bind(deny_deps)(
-            AbortRun(run_id=_RUN_ID, reason="X"),
+            AbortRun(
+                run_id=_RUN_ID,
+                reason="X",
+                justification="operator: aborting for test",
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -170,7 +194,11 @@ async def test_handler_propagates_causation_id_to_appended_event() -> None:
     deps = build_deps(ids=[_ABORTED_EVENT_ID], now=_NOW, event_store=store)
 
     await abort_run.bind(deps)(
-        AbortRun(run_id=_RUN_ID, reason="X"),
+        AbortRun(
+            run_id=_RUN_ID,
+            reason="X",
+            justification="operator: aborting for test",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         causation_id=causation,

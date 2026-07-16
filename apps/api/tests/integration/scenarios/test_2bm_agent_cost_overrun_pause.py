@@ -54,18 +54,21 @@ This scenario exercises that cycle end-to-end:
      crossed 80% of monthly cap with two weeks of beamtime
      remaining; runaway projected.
   2. Operator suspends the RunDebriefer agent (`suspend_agent`)
-     citing the cost overrun. The agent's `actor_id` is now
-     associated with an Actor that the subscriber's revocation
-     gate (per [[project_run_debrief_design]] security gate-review)
-     will treat as paused.
+     citing the cost overrun. The subscriber's suspension gate
+     (per-apply `Agent.status` check in
+     `RunDebrieferSubscriber.apply`) now skips every subsequent
+     terminal Run event: no LLM call, no Decision, until resume.
   3. Operator tightens the budget envelope
      (`update_agent_budget`): drops `monthly_usd_cap` to the
      remaining-budget amount and adds a per-day token cap to
      short-circuit any single-day spike.
   4. Operator resumes the agent (`resume_agent`) once the new
      budget is in place. The agent is back in `Versioned` state
-     and the subscriber will pick up subsequent terminal Run
-     events.
+     and the subscriber picks up subsequent terminal Run events,
+     with the coarse post-hoc budget gate enforcing the tightened
+     caps against recorded spend (see
+     `tests/unit/agent/test_budget_gate.py` and the subscriber
+     budget-gate tests for the enforcement behavior itself).
 
 ## Why a separate scenario
 
@@ -193,8 +196,9 @@ async def test_agent_cost_overrun_pause_plays_out_end_to_end(
     assert versioned.status is AgentStatus.VERSIONED
 
     # ----- Initial budget envelope -----
-    # Operator declares the initial spend ceiling. Declaration-only;
-    # enforcement deferred to the Budget BC.
+    # Operator declares the initial spend ceiling; the subscribers'
+    # coarse post-hoc gate (cora.agent._budget_gate) enforces it
+    # against recorded spend at each LLM seam.
 
     await bind_update_budget(deps)(
         UpdateAgentBudget(

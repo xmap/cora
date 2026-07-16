@@ -43,6 +43,7 @@ from cora.decision.aggregates.decision import (
     InvalidReasoningSignatureError,
 )
 from cora.decision.errors import (
+    InferenceAgentMismatchError,
     InvalidActorKindForDecisionError,
     OverrideKindRequiresParentError,
     UnauthorizedError,
@@ -154,3 +155,4 @@ def register_decision_routes(app: FastAPI) -> None:
     ):
         app.add_exception_handler(logbook_state_cls, _handle_logbook_state)
     app.add_exception_handler(UnauthorizedError, _handle_unauthorized)
+    app.add_exception_handler(InferenceAgentMismatchError, _handle_unauthorized)

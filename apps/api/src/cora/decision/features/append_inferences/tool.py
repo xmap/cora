@@ -104,9 +104,38 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             list[str] | None,
             Field(default=None, max_length=16),
         ] = None,
-        input_tokens: Annotated[int | None, Field(default=None, ge=0)] = None,
-        output_tokens: Annotated[int | None, Field(default=None, ge=0)] = None,
-        agent_id: Annotated[str | None, Field(default=None, max_length=200)] = None,
+        input_tokens: Annotated[int | None, Field(default=None, ge=0, le=1_000_000_000)] = None,
+        output_tokens: Annotated[int | None, Field(default=None, ge=0, le=1_000_000_000)] = None,
+        cost_usd: Annotated[
+            float | None,
+            Field(
+                default=None,
+                ge=0.0,
+                le=100_000.0,
+                allow_inf_nan=False,
+                description=(
+                    "Actual call cost in USD computed from usage tokens and "
+                    "provider pricing (CORA custom; no OTel attribute exists "
+                    "for call cost). Upper bound 100000: no single LLM call "
+                    "costs six figures, and an unbounded value would let one "
+                    "poisoned entry exhaust any instrument envelope and "
+                    "permanently corrupt a sealed books figure."
+                ),
+            ),
+        ] = None,
+        agent_id: Annotated[
+            str | None,
+            Field(
+                default=None,
+                max_length=200,
+                description=(
+                    "OTel gen_ai.agent.id. Principal-bound: when set, it MUST equal "
+                    "the calling principal's id (agent-attributed entries are the "
+                    "spend ledger the AgentBudget gate sums; self-reporting only). "
+                    "Mismatches reject the whole batch with 403."
+                ),
+            ),
+        ] = None,
         agent_name: Annotated[str | None, Field(default=None, max_length=200)] = None,
         agent_description: Annotated[str | None, Field(default=None, max_length=2000)] = None,
         conversation_id: Annotated[str | None, Field(default=None, max_length=200)] = None,
@@ -145,6 +174,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             finish_reasons=tuple(finish_reasons or []),
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cost_usd=cost_usd,
             agent_id=agent_id,
             agent_name=agent_name,
             agent_description=agent_description,

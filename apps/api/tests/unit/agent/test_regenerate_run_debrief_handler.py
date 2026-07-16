@@ -22,7 +22,11 @@ from cora.access.aggregates.actor import (
 )
 from cora.access.aggregates.actor import event_type_name as actor_event_type_name
 from cora.access.aggregates.actor import to_payload as actor_to_payload
-from cora.agent.aggregates.agent import AgentDeactivatedError, AgentNotSeededError
+from cora.agent.aggregates.agent import (
+    AgentDeactivatedError,
+    AgentNotSeededError,
+    AgentSuspendedError,
+)
 from cora.agent.errors import UnauthorizedError
 from cora.agent.features import regenerate_run_debrief
 from cora.agent.features.regenerate_run_debrief import RegenerateRunDebrief
@@ -48,7 +52,12 @@ from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import to_payload as run_to_payload
 from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps
-from tests.unit.agent._helpers import FakeInferenceRecorder
+from tests.unit.agent._helpers import (
+    FakeInferenceRecorder,
+    FakeSpendLookup,
+    seed_suspended_agent,
+    seed_versioned_agent,
+)
 
 _NOW = datetime(2026, 5, 17, 16, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000088001")
@@ -354,6 +363,87 @@ async def test_handler_raises_agent_deactivated_when_actor_inactive() -> None:
 
 
 @pytest.mark.unit
+async def test_handler_raises_agent_suspended_when_agent_paused() -> None:
+    """An operator-suspended agent cannot author on-demand Decisions
+    either: suspend means STOP, including the manual path. Resume
+    first. Mirrors the subscriber's Versioned-only lifecycle gate."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_run(store, run_id)
+    await seed_suspended_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        suspend_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        suspended_at=_NOW,
+        reason="cost overrun",
+    )
+    deps = build_deps(
+        ids=[_NEW_DECISION_ID],
+        now=_NOW,
+        event_store=store,
+        llm=llm,
+    )
+    handler = bind(deps)
+
+    with pytest.raises(AgentSuspendedError):
+        await handler(
+            RegenerateRunDebrief(run_id=run_id),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_handler_proceeds_when_agent_budget_is_exhausted() -> None:
+    """Pin the deliberate asymmetry with the subscribers: the
+    operator-triggered regenerate is NOT budget-gated (an accountable
+    human explicitly asked; the call is still metered and debited),
+    so an exhausted cap must not block it."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_run(store, run_id)
+    await seed_versioned_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        monthly_usd_cap=100.0,
+    )
+    deps = build_deps(
+        ids=[_NEW_DECISION_ID],
+        now=_NOW,
+        event_store=store,
+        llm=llm,
+        spend_lookup=FakeSpendLookup(usd_spent=250.0),
+    )
+    handler = bind(deps)
+
+    decision_id = await handler(
+        RegenerateRunDebrief(run_id=run_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert decision_id == _NEW_DECISION_ID
+    assert len(llm.received) == 1
+
+
+@pytest.mark.unit
 async def test_handler_raises_parent_missing_when_parent_absent() -> None:
     store = InMemoryEventStore()
     llm = FakeLLM(responses=[_CANNED_OK])
@@ -624,6 +714,8 @@ async def test_handler_records_inference_on_success() -> None:
     assert call.trace.response_model == "claude-haiku-4-5-20260201"
     assert call.trace.input_tokens == 1536
     assert call.trace.output_tokens == 240
+    # Haiku 4.5 at $1/$5 per MTok: 1536 in + 240 out.
+    assert call.trace.cost_usd == pytest.approx(0.001536 + 0.0012)
     assert call.trace.finish_reasons == ("tool_use",)
     # The inference is the agent's, attributed to the agent principal (not
     # the operator who issued the command).

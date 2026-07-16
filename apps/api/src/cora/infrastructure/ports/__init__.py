@@ -5,6 +5,11 @@ wired into `Kernel` at startup. Domain and application code imports only
 from `ports/`, never from adapter modules.
 """
 
+from cora.infrastructure.ports.allocation_lookup import (
+    AllocationLookup,
+    AllocationLookupResult,
+    NoActiveAllocationLookup,
+)
 from cora.infrastructure.ports.assembly_lookup import (
     AssemblyLookup,
     AssemblyLookupResult,
@@ -50,6 +55,11 @@ from cora.infrastructure.ports.compute_reachability_lookup import (
     ComputeReachabilityLookup,
     NoComputeReachabilityLookup,
     SeededComputeReachabilityLookup,
+)
+from cora.infrastructure.ports.consequence_lookup import (
+    AlwaysRatifiedConsequenceLookup,
+    ConsequenceLookup,
+    NeverRatifiedConsequenceLookup,
 )
 from cora.infrastructure.ports.credential_lookup import (
     CredentialLookup,
@@ -104,6 +114,11 @@ from cora.infrastructure.ports.inference_recorder import (
     InferenceRecorder,
     NullInferenceRecorder,
 )
+from cora.infrastructure.ports.language_model_lookup import (
+    AlwaysApprovedLanguageModelLookup,
+    LanguageModelLookup,
+    LanguageModelLookupResult,
+)
 from cora.infrastructure.ports.llm import (
     LLM,
     CacheBreakpoint,
@@ -126,6 +141,11 @@ from cora.infrastructure.ports.llm import (
     ModelRef,
 )
 from cora.infrastructure.ports.logbook_mirror import LogbookMirror
+from cora.infrastructure.ports.model_usage_lookup import (
+    AlwaysEmptyModelUsageLookup,
+    ModelUsageLookup,
+    ModelUsageLookupResult,
+)
 from cora.infrastructure.ports.profile_store import Profile, ProfileStore
 from cora.infrastructure.ports.role_lookup import (
     RoleLookup,
@@ -140,6 +160,16 @@ from cora.infrastructure.ports.signer import (
     SignerKeyInactiveError,
     SignerKeyNotFoundError,
     SignerUnavailableError,
+)
+from cora.infrastructure.ports.spend_guard import (
+    AlwaysGrantedSpendGuard,
+    SpendGuard,
+)
+from cora.infrastructure.ports.spend_lookup import (
+    AlwaysZeroSpendLookup,
+    SpendLookup,
+    SpendLookupResult,
+    TotalSpendResult,
 )
 from cora.infrastructure.ports.supply_lookup import (
     AllSatisfiedSupplyLookup,
@@ -160,12 +190,19 @@ __all__ = [
     "AgentInferenceTrace",
     "AllBeamOpenLookup",
     "AllSatisfiedSupplyLookup",
+    "AllocationLookup",
+    "AllocationLookupResult",
     "Allow",
     "AllowAllAuthorize",
+    "AlwaysApprovedLanguageModelLookup",
     "AlwaysCoveredClearanceLookup",
     "AlwaysEmptyCapabilityLookup",
+    "AlwaysEmptyModelUsageLookup",
+    "AlwaysGrantedSpendGuard",
     "AlwaysPermittedEnclosureLookup",
     "AlwaysQuietCautionLookup",
+    "AlwaysRatifiedConsequenceLookup",
+    "AlwaysZeroSpendLookup",
     "AssemblyLookup",
     "AssemblyLookupResult",
     "AssetLookup",
@@ -192,6 +229,7 @@ __all__ = [
     "Clock",
     "ComputeReachabilityLookup",
     "ConcurrencyError",
+    "ConsequenceLookup",
     "CredentialLookup",
     "CredentialLookupResult",
     "DatasetDistributionLookup",
@@ -230,11 +268,17 @@ __all__ = [
     "LLMSystemPrompt",
     "LLMTimeoutError",
     "LLMUsage",
+    "LanguageModelLookup",
+    "LanguageModelLookupResult",
     "LockedRecent",
     "LogbookMirror",
     "MinSeverity",
     "ModelRef",
+    "ModelUsageLookup",
+    "ModelUsageLookupResult",
+    "NeverRatifiedConsequenceLookup",
     "NewEvent",
+    "NoActiveAllocationLookup",
     "NoComputeReachabilityLookup",
     "NoDatasetDistributionsLookup",
     "NoInvolvementLookup",
@@ -252,12 +296,16 @@ __all__ = [
     "SignerKeyInactiveError",
     "SignerKeyNotFoundError",
     "SignerUnavailableError",
+    "SpendGuard",
+    "SpendLookup",
+    "SpendLookupResult",
     "StoredEvent",
     "StreamAppend",
     "SupplyLookup",
     "SupplyLookupResult",
     "SystemClock",
     "TokenVerifier",
+    "TotalSpendResult",
     "UUIDv7Generator",
     "VerifiedPrincipal",
 ]

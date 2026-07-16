@@ -29,7 +29,10 @@ via aggregate-state errors hoisted from this slice
     HTTP 404 (already-mapped by Run BC's routes).
   - RunDebriefer Agent's Actor must exist and be active; raises
     `AgentNotSeededError` / `AgentDeactivatedError` (both in
-    `cora.agent.aggregates.agent.state`) -> HTTP 400.
+    `cora.agent.aggregates.agent.state`) -> HTTP 400. A Suspended
+    agent raises `AgentSuspendedError` (resume first); the budget
+    gate is deliberately NOT applied on this operator-triggered
+    path (conscious, human-accountable spend; still debited).
   - When `parent_decision_id` is supplied: parent Decision must
     exist (`DecisionParentNotFoundError` from
     `cora.decision.aggregates.decision`; HTTP 409 per Decision
@@ -58,7 +61,13 @@ from typing import Any, Protocol
 from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
-from cora.agent.aggregates.agent import AgentDeactivatedError, AgentNotSeededError
+from cora.agent.aggregates.agent import (
+    AgentDeactivatedError,
+    AgentNotSeededError,
+    AgentStatus,
+    AgentSuspendedError,
+    load_agent,
+)
 from cora.agent.errors import UnauthorizedError
 from cora.agent.features.regenerate_run_debrief.command import RegenerateRunDebrief
 from cora.agent.features.regenerate_run_debrief.context import RegenerateRunDebriefContext
@@ -82,6 +91,7 @@ from cora.decision.aggregates.decision import (
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
+from cora.infrastructure.observability.gen_ai import compute_cost_usd
 from cora.infrastructure.ports import (
     AgentInferenceTrace,
     Deny,
@@ -179,6 +189,16 @@ def bind(deps: Kernel) -> Handler:
             raise AgentNotSeededError(RUN_DEBRIEFER_AGENT_ID, RUN_DEBRIEFER_AGENT_NAME)
         if not actor.active:
             raise AgentDeactivatedError(RUN_DEBRIEFER_AGENT_ID)
+
+        # Suspension gate: the reversible operator pause means the agent
+        # takes no actions, and an on-demand regenerate must not defeat
+        # it; the operator resumes first. The BUDGET gate is deliberately
+        # absent here: an operator-triggered regenerate is a conscious,
+        # human-accountable spend (the coarse post-hoc tier targets the
+        # autonomous subscribers), and the call still debits the ledger.
+        agent = await load_agent(deps.event_store, RUN_DEBRIEFER_AGENT_ID)
+        if agent is not None and agent.status is AgentStatus.SUSPENDED:
+            raise AgentSuspendedError(RUN_DEBRIEFER_AGENT_ID)
 
         # Pre-load parent Decision when ref set; enforce same-agent +
         # same-Run scope.
@@ -339,6 +359,7 @@ async def _record_inference(
         finish_reasons=(response.stop_reason,) if response.stop_reason else (),
         input_tokens=response.usage.input_tokens,
         output_tokens=response.usage.output_tokens,
+        cost_usd=compute_cost_usd(request.model_ref, response.usage),
         request_max_tokens=request.max_output_tokens,
         agent_id=str(RUN_DEBRIEFER_AGENT_ID),
         agent_name=RUN_DEBRIEFER_AGENT_NAME,

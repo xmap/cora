@@ -33,6 +33,7 @@ from cora.operation.conductor import Conductor
 from cora.operation.features.append_diagnostics import AppendProcedureDiagnostics
 from cora.operation.features.append_outcomes import AppendProcedureOutcomes
 from cora.operation.ports.decide_port import (
+    DecideSpendRefusedError,
     DecideTimeoutError,
     SteeringAdvice,
     SteeringEvidence,
@@ -206,6 +207,49 @@ async def test_conduct_until_advised_failed_pass_closes_iteration_then_aborts() 
     assert transcript.end_iteration_advised_stop == [None]
     assert transcript.events[-2].startswith("end_iteration[1=")
     assert transcript.events[-1] == "abort_procedure"
+
+
+class _BudgetRefusingDecidePort:
+    """A brain whose budget guard refused: raises DecideSpendRefusedError."""
+
+    async def advise_next(self, evidence: SteeringEvidence) -> SteeringAdvice:
+        _ = evidence
+        raise DecideSpendRefusedError("monthly_usd_cap of 100 would be breached")
+
+    async def aclose(self) -> None:
+        return None
+
+
+@pytest.mark.unit
+async def test_conduct_until_advised_budget_refusal_folds_into_recorded_decision() -> None:
+    """DecideSpendRefusedError is in the folded Decide family: a budget
+    refusal defers the steering decision with the class name on the
+    record instead of crashing the loop (delete the subclass relation
+    and this test catches it)."""
+    transcript = _Transcript()
+    control = InMemoryControlPort()
+    control.simulate_connect(_MOTOR_ADDR)
+    compute = InMemoryComputePort()
+    compute.set_measurement_sequence(((_objective_measurement(2.0),),))
+    conductor = _conductor(transcript, compute_port=compute, control_port=control)
+
+    result = await conductor.conduct_until_advised(
+        procedure_id=uuid4(),
+        principal_id=uuid4(),
+        correlation_id=uuid4(),
+        steps=_pass_block(),  # type: ignore[arg-type]
+        decide_port=_BudgetRefusingDecidePort(),
+        objective=_objective(),
+        space=_space(),
+        objective_capture_name=_OBJECTIVE_NAME,
+        point_to_captures=_point_to_captures,
+    )
+
+    assert result.succeeded is False
+    assert result.failure is not None
+    assert result.failure.error_class == "DecideSpendRefusedError"
+    assert result.failure.source_kind == "decide"
+    assert "monthly_usd_cap" in result.failure.message
 
 
 class _RaisingDecidePort:

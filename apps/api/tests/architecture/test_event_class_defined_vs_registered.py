@@ -106,6 +106,15 @@ _GENESIS_VERB_DEVIATIONS: dict[tuple[str, str], str] = {
         "moment, not an instance template or a runtime binding; renaming "
         "to AcquisitionRegistered would mislabel a fact as an instance."
     ),
+    ("trust", "ratification"): (
+        "RatificationRequested names its own lifecycle state: RatificationStatus "
+        "is {Requested, Granted, Denied}, so the genesis event is the transition "
+        "into Requested. A RatificationRegistered genesis would emit an event "
+        "matching no state it produces, breaking the event/status symmetry. This "
+        "is the RunStarted shape (genesis encodes the transition into the first "
+        "state; the enum has no Registered member), not a template-definition or "
+        "an instance-registration the convention covers."
+    ),
     ("data", "attestation"): (
         "AttestationRecorded is a terminal-at-genesis recorded-fact-chain "
         "(one stream per Attestation; a single AttestationRecorded event). "
@@ -113,6 +122,15 @@ _GENESIS_VERB_DEVIATIONS: dict[tuple[str, str], str] = {
         "not the registration of a long-lived instance; renaming to "
         "AttestationRegistered would misframe a fact as an entity. Mirrors "
         "the Calibration-revision / run / seal fact-shaped precedent."
+    ),
+    ("budget", "allocation"): (
+        "AllocationGranted uses the exact verb of the paper and of HPC "
+        "accounting for an award, and it names the FSM's initial state "
+        "(AllocationStatus.GRANTED), the RatificationRequested shape: the "
+        "genesis event IS the transition into the first state. An "
+        "AllocationRegistered genesis would emit an event matching no "
+        "state it produces and erase the award semantic the whole "
+        "allocation arc is built on."
     ),
 }
 

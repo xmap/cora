@@ -14,8 +14,9 @@ The Decision writes go through a real in-memory kernel with the seeded agent.
 # white-box test of the runtime internals (private functions / constants)
 # pyright: reportPrivateUsage=false
 
+from dataclasses import replace as dc_replace
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID, uuid4, uuid5
 
 import pytest
 
@@ -29,6 +30,7 @@ from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_inmemory_kernel
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, UUIDv7Generator
+from cora.infrastructure.ports.llm import LLMUsage
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.operation.adapters.decide_port_config import DecidePortConfig
 from cora.operation.conductor import ConductorFailure
@@ -39,11 +41,13 @@ from cora.operation.features.conduct_until_advised import (
 from cora.operation.features.hold_procedure import HoldProcedure
 from cora.operation.ports.decide_port import (
     SteeringAxis,
+    SteeringLlmCall,
     SteeringObjective,
     SteeringObjectiveKind,
     SteeringSpace,
 )
 from cora.operation.ports.measurement import Measurement
+from tests.unit.agent._helpers import FakeInferenceRecorder
 
 _NOW = datetime(2026, 6, 28, 12, 0, 0, tzinfo=UTC)
 _OBJECTIVE_NAME = "rotation_center"
@@ -286,17 +290,127 @@ async def test_steer_records_signed_decisions() -> None:
 
 @pytest.mark.unit
 async def test_steer_stands_down_when_agent_unseeded() -> None:
-    """No seeded agent -> the first turn records nothing (None) and the loop stops."""
+    """No seeded agent -> the loop stops BEFORE conducting anything: a
+    stood-down steerer must not burn LLM calls whose spend has no
+    Decision to land on."""
     kernel = _kernel()  # ExperimentSteerer NOT seeded
     p0, p1 = uuid4(), uuid4()
     results = {p0: _ok_result(p0, 1030.0), p1: _ok_result(p1, 1029.0)}
 
     steps, conduct, hold = await _steer(kernel, procedure_ids=[p0, p1], results=results)
 
-    assert len(steps) == 1  # broke after the first stand-down
-    assert steps[0].decision_id is None
-    assert len(conduct.calls) == 1
+    assert steps == []
+    assert conduct.calls == []
     assert hold.calls == []
     # Nothing was written.
     events, _ = await kernel.event_store.load("Decision", _derive_decision_id(p0, 0))
     assert events == []
+
+
+def _sonnet_call(input_tokens: int = 1000, output_tokens: int = 100) -> SteeringLlmCall:
+    return SteeringLlmCall(
+        provider="anthropic",
+        request_model="claude-sonnet-4-5",
+        response_model="claude-sonnet-4-5-20250929",
+        usage=LLMUsage(input_tokens=input_tokens, output_tokens=output_tokens),
+    )
+
+
+@pytest.mark.unit
+async def test_steer_posts_llm_usage_to_the_inference_ledger() -> None:
+    """Each steered procedure's LLM calls land on its across-procedure
+    Decision as inference rows: deterministic event ids, steerer
+    attribution, and a real cost from the pricing table, so the spend
+    ledger sees steering spend."""
+    kernel = _kernel()
+    recorder = FakeInferenceRecorder()
+    object.__setattr__(kernel, "inference_recorder", recorder)
+    await seed_experiment_steerer_agent(kernel)
+    p0 = uuid4()
+    result = dc_replace(_ok_result(p0, _TARGET), llm_calls=(_sonnet_call(), _sonnet_call(2000, 50)))
+    steps, _conduct, _hold = await _steer(kernel, procedure_ids=[p0], results={p0: result})
+
+    assert steps[0].choice == "Conclude"
+    decision_id = steps[0].decision_id
+    assert decision_id is not None
+    assert len(recorder.calls) == 2
+    first = recorder.calls[0]
+    assert first.trace.decision_id == decision_id
+    assert first.trace.event_id == uuid5(decision_id, "inference:0")
+    assert recorder.calls[1].trace.event_id == uuid5(decision_id, "inference:1")
+    assert first.trace.agent_id == str(EXPERIMENT_STEERER_AGENT_ID)
+    assert first.principal_id == EXPERIMENT_STEERER_AGENT_ID
+    assert first.trace.provider_name == "anthropic"
+    assert first.trace.request_model == "claude-sonnet-4-5"
+    assert first.trace.response_model == "claude-sonnet-4-5-20250929"
+    # Sonnet pricing: $3/M input + $15/M output.
+    assert first.trace.cost_usd == pytest.approx(1000 / 1e6 * 3 + 100 / 1e6 * 15)
+
+
+@pytest.mark.unit
+async def test_steer_stood_down_records_no_usage() -> None:
+    """An unseeded agent conducts nothing, posts nothing: the stand-down
+    now happens before any spend, so there is no unledgered burn."""
+    kernel = _kernel()
+    recorder = FakeInferenceRecorder()
+    object.__setattr__(kernel, "inference_recorder", recorder)
+    p0 = uuid4()
+    result = dc_replace(_ok_result(p0, 1030.0), llm_calls=(_sonnet_call(),))
+
+    steps, conduct, _hold = await _steer(kernel, procedure_ids=[p0], results={p0: result})
+
+    assert steps == []
+    assert conduct.calls == []
+    assert recorder.calls == []
+
+
+@pytest.mark.unit
+async def test_steer_stamps_the_steerer_agent_id_onto_the_decide_config() -> None:
+    """The driver stamps its agent onto the brain config so the
+    pre-estimate gate has someone to charge; route callers cannot set
+    this (the field is not on the wire models)."""
+    kernel = _kernel()
+    await seed_experiment_steerer_agent(kernel)
+    p0 = uuid4()
+
+    _steps, conduct, _hold = await _steer(
+        kernel, procedure_ids=[p0], results={p0: _ok_result(p0, _TARGET)}
+    )
+
+    assert conduct.calls[0].decide.spend_agent_id == EXPERIMENT_STEERER_AGENT_ID
+
+
+@pytest.mark.unit
+async def test_steer_posts_each_turns_usage_onto_that_turns_own_decision() -> None:
+    """Two steered procedures, one call each: the inference rows land on
+    their own turn's Decision (a bug posting everything against the
+    first or last Decision would cross-charge turns)."""
+    kernel = _kernel()
+    recorder = FakeInferenceRecorder()
+    object.__setattr__(kernel, "inference_recorder", recorder)
+    await seed_experiment_steerer_agent(kernel)
+    p0, p1 = uuid4(), uuid4()
+    results = {
+        p0: dc_replace(_ok_result(p0, 1030.0), llm_calls=(_sonnet_call(),)),
+        p1: dc_replace(_ok_result(p1, _TARGET), llm_calls=(_sonnet_call(2000, 50),)),
+    }
+
+    steps, _conduct, _hold = await _steer(kernel, procedure_ids=[p0, p1], results=results)
+
+    assert [s.choice for s in steps] == ["Continue", "Conclude"]
+    assert len(recorder.calls) == 2
+    for step, recorded in zip(steps, recorder.calls, strict=True):
+        assert step.decision_id is not None
+        assert recorded.trace.decision_id == step.decision_id
+        assert recorded.trace.event_id == uuid5(step.decision_id, "inference:0")
+
+
+@pytest.mark.unit
+def test_spend_agent_id_is_absent_from_the_conduct_wire_model() -> None:
+    """The attribution boundary: route and MCP callers must not be able
+    to charge an agent. DecideConfigRequest forbids extras, so absence
+    from model_fields means a 422 for any caller who tries."""
+    from cora.operation._advise_wire import DecideConfigRequest
+
+    assert "spend_agent_id" not in DecideConfigRequest.model_fields
+    assert DecideConfigRequest.model_config.get("extra") == "forbid"

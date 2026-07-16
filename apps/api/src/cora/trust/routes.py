@@ -51,6 +51,15 @@ from cora.trust.aggregates.policy import (
     PolicyAlreadyExistsError,
     PolicyNotFoundError,
 )
+from cora.trust.aggregates.ratification import (
+    InvalidConsequenceClassError,
+    InvalidRatificationReasonError,
+    RatificationAlreadyExistsError,
+    RatificationCannotDenyError,
+    RatificationCannotGrantError,
+    RatificationNotFoundError,
+    RatificationRequesterCannotSelfRatifyError,
+)
 from cora.trust.aggregates.surface import InvalidSurfaceNameError, SurfaceAlreadyExistsError
 from cora.trust.aggregates.visit import (
     InvalidVisitPlannedPeriodError,
@@ -85,8 +94,10 @@ from cora.trust.features import (
     define_policy,
     define_surface,
     define_zone,
+    deny_ratification,
     evaluate_policy,
     get_surface,
+    grant_ratification,
     hold_visit,
     list_conduits,
     list_permissions,
@@ -95,6 +106,7 @@ from cora.trust.features import (
     record_visit_arrival,
     register_visit,
     release_control_of_surface,
+    request_ratification,
     resume_visit,
     revoke_grant,
     start_visit,
@@ -214,6 +226,10 @@ def register_trust_routes(app: FastAPI) -> None:
     # Visit Surface-control slices.
     app.include_router(take_control_of_surface.router)
     app.include_router(release_control_of_surface.router)
+    # Ratification (consequence gate) slices.
+    app.include_router(request_ratification.router)
+    app.include_router(grant_ratification.router)
+    app.include_router(deny_ratification.router)
     for invalid_name_cls in (
         InvalidZoneNameError,
         InvalidConduitNameError,
@@ -229,6 +245,7 @@ def register_trust_routes(app: FastAPI) -> None:
         VisitAlreadyExistsError,
         # VisitAlreadyCheckedInError reuses 409 (semantically an exists-conflict).
         VisitAlreadyCheckedInError,
+        RatificationAlreadyExistsError,
     ):
         app.add_exception_handler(already_exists_cls, _handle_already_exists)
     for logbook_state_cls in (
@@ -244,6 +261,7 @@ def register_trust_routes(app: FastAPI) -> None:
         VisitActorNotCheckedInError,
         VisitParentNotFoundError,
         PolicyNotFoundError,
+        RatificationNotFoundError,
     ):
         app.add_exception_handler(not_found_cls, _handle_not_found)
     for invalid_400_cls in (
@@ -251,6 +269,8 @@ def register_trust_routes(app: FastAPI) -> None:
         InvalidPolicySurfaceError,
         InvalidVisitPlannedPeriodError,
         InvalidVisitReasonError,
+        InvalidConsequenceClassError,
+        InvalidRatificationReasonError,
     ):
         app.add_exception_handler(invalid_400_cls, _handle_invalid_400)
     for cannot_409_cls in (
@@ -266,6 +286,9 @@ def register_trust_routes(app: FastAPI) -> None:
         VisitCannotTakeControlError,
         VisitCannotVoidError,
         VisitParentMismatchedSurfaceError,
+        RatificationCannotGrantError,
+        RatificationCannotDenyError,
+        RatificationRequesterCannotSelfRatifyError,
     ):
         app.add_exception_handler(cannot_409_cls, _handle_visit_conflict_409)
     app.add_exception_handler(UnauthorizedError, _handle_unauthorized)

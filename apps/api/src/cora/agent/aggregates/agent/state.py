@@ -69,8 +69,8 @@ class AgentStatus(StrEnum):
     Four values:
 
       - `Defined`    -- registered as config; NOT yet ready for
-                        invocation (8f-b's subscriber filters on
-                        Versioned only).
+                        invocation (the LLM subscribers' lifecycle
+                        gate fires on Versioned only).
       - `Versioned`  -- promoted to ready-for-invocation; rainbow-
                         deploy-style signal. Multiple Versioned
                         Agents may exist concurrently (different
@@ -469,6 +469,24 @@ class AgentDeactivatedError(Exception):
         self.agent_id = agent_id
 
 
+class AgentSuspendedError(Exception):
+    """Cross-aggregate state-gate failure: the Agent is `Suspended`.
+
+    Raised by operator-triggered slices (the regenerate path) when the
+    target agent is under the reversible operator pause: suspension
+    means the agent takes no actions, LLM calls included, and driving
+    it through an on-demand slice would defeat the pause. Recovery is
+    operator-side: `resume_agent` first.
+
+    Mirrors the subscribers' lifecycle gate (only a Versioned agent
+    acts).
+    """
+
+    def __init__(self, agent_id: UUID) -> None:
+        super().__init__(f"Agent {agent_id} is suspended; resume via resume_agent before invoking")
+        self.agent_id = agent_id
+
+
 # ---------------------------------------------------------------------------
 # Bounded-text value objects
 # ---------------------------------------------------------------------------
@@ -660,7 +678,7 @@ class ToolName:
 
 @dataclass(frozen=True)
 class AgentBudget:
-    """Optional per-agent budget caps (declaration only at this layer).
+    """Optional per-agent budget caps, enforced at the coarse post-hoc tier.
 
     Both `monthly_usd_cap` and `daily_token_cap` are independently
     nullable so the same VO covers "set both", "set one, clear the
@@ -668,17 +686,17 @@ class AgentBudget:
     one must be non-None at construction (the no-budget shape is
     `Agent.budget = None` directly).
 
-    Enforcement is deferred to a future Budget BC (watch item in
-    [[project-agent-lifecycle-grants-design]]); these are
-    declaration-only fields today. Cost telemetry already lands on
-    `gen_ai.cost.usd` via the `gen_ai` observability helper so the
-    Budget BC can begin enforcement without further per-agent surface
-    work.
+    Enforcement: the coarse post-hoc gate (`cora.agent._budget_gate`,
+    consumed by the LLM subscribers) sums recorded spend from the
+    inference entries' `cost_usd` and refuses the next call once a cap
+    is exhausted; per-call telemetry also lands on the
+    `cora.agent.llm.cost.usd` histogram. Finer tiers (per-call
+    pre-estimate, reserve-post-void) and a full Budget BC remain
+    deferred (watch item in [[project-agent-lifecycle-grants-design]]).
 
-    Zero caps allowed: recorded as the "no spend" intent, but NOT
-    enforced today. A 0 cap blocks nothing (same as any other cap) until
-    the Budget BC lands; the future enforcement layer can treat zero as a
-    hard stop. Negative caps rejected.
+    Zero caps allowed and enforced as the recorded "no spend" intent:
+    the gate treats a 0 cap as a hard stop (zero spent >= zero cap
+    refuses every call). Negative caps rejected.
     """
 
     monthly_usd_cap: float | None

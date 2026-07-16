@@ -229,15 +229,16 @@ class AnthropicLLM:
 
             # `record_llm_call` returns the computed USD cost; the
             # adapter intentionally discards it here. The cost is
-            # already persisted on the `cora.agent.llm.cost.usd`
-            # histogram (where dashboards consume it), and surfacing
-            # it on `LLMResponse` would force every consumer to think
-            # about pricing semantics that are an observability
-            # concern, not a domain concern. Tests that want the
-            # cost value call `compute_cost_usd` directly.
+            # persisted on the `cora.agent.llm.cost.usd` histogram
+            # (where dashboards consume it), and durably by the LLM
+            # producers, which recompute it via `compute_cost_usd`
+            # (same pure function, same inputs) onto the inference
+            # entry's cost_usd. Surfacing it on `LLMResponse` would
+            # force every consumer to think about pricing semantics;
+            # consumers that want the value compute it from usage.
             record_llm_call(
                 span,
-                system="anthropic",
+                provider_name="anthropic",
                 request_model_ref=request.model_ref,
                 response_model_id=response_model_id,
                 usage=usage,

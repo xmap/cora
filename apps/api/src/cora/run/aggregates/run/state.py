@@ -871,6 +871,32 @@ class RunCannotStopError(Exception):
         self.current_status = current_status
 
 
+class RunRequiresRatificationError(Exception):
+    """Consequence gate (Gate IV): this command needs a second principal's co-sign.
+
+    Cross-BC gate: a command in the declared consequence class
+    (`cora.shared.consequence.COMMANDS_REQUIRING_RATIFICATION`, `StopRun` in v1)
+    is admitted only when a GRANTED Ratification covers `(run_id, command_name)`.
+    This fires when the command is in-scope AND no Granted coverage exists yet:
+    the operator must `request_ratification` for this action and a second,
+    independent principal must `grant_ratification` before the stop is admitted.
+    While the co-sign is pending, the run is parked in the shared hold (via the
+    RatificationHoldSubscriber). Kind-blind: a human and an agent are gated
+    identically.
+
+    Mapped to HTTP 409 (same family as the other Run cross-BC pre-flight gates).
+    """
+
+    def __init__(self, run_id: UUID, command_name: str) -> None:
+        super().__init__(
+            f"Run {run_id} cannot {command_name}: this action requires a second "
+            f"independent principal's co-signature. Request a ratification for "
+            f"this action and have it granted before retrying."
+        )
+        self.run_id = run_id
+        self.command_name = command_name
+
+
 class RunCannotTruncateError(Exception):
     """Attempted to truncate a Run not in `Running` or `Held`.
 

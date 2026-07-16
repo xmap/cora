@@ -14,7 +14,7 @@ import pytest
 import structlog
 
 from cora.api._inference_recorder import DelegatingInferenceRecorder
-from cora.decision.errors import UnauthorizedError
+from cora.decision.errors import InferenceAgentMismatchError, UnauthorizedError
 from cora.decision.features.append_inferences.command import AppendInferences
 from cora.infrastructure.ports import AgentInferenceTrace
 from cora.infrastructure.routing import NIL_SENTINEL_ID
@@ -67,6 +67,7 @@ def _trace() -> AgentInferenceTrace:
         finish_reasons=("tool_use",),
         input_tokens=1280,
         output_tokens=214,
+        cost_usd=0.00235,
         request_max_tokens=1024,
         agent_id="01900000-0000-7000-8000-0000000a0099",
         agent_name="RunDebriefer",
@@ -99,6 +100,7 @@ async def test_record_maps_trace_to_append_inferences_command() -> None:
     assert entry.finish_reasons == ("tool_use",)
     assert entry.input_tokens == 1280
     assert entry.output_tokens == 214
+    assert entry.cost_usd == 0.00235
     assert entry.request_max_tokens == 1024
     assert entry.agent_id == "01900000-0000-7000-8000-0000000a0099"
     assert entry.agent_name == "RunDebriefer"
@@ -140,6 +142,32 @@ async def test_record_warns_distinctly_on_authorization_denial() -> None:
     assert len(spy.commands) == 1
     events = [entry.get("event") for entry in logs]
     assert "inference_recorder.unauthorized" in events
+    assert "inference_recorder.failed" not in events
+
+
+@pytest.mark.unit
+async def test_record_warns_distinctly_on_agent_mismatch() -> None:
+    """An internal recorder is structurally self-reporting, so a
+    mismatch means a mis-wired agent whose spend is being dropped
+    (starving the budget gate's SUM). Loud and distinct, never the
+    generic failed bucket."""
+    spy = _SpyAppendInferences(
+        raises=InferenceAgentMismatchError(
+            entry_agent_id="someone-else", principal_id=str(_PRINCIPAL_ID)
+        )
+    )
+    recorder = DelegatingInferenceRecorder(spy)
+
+    with structlog.testing.capture_logs() as logs:
+        result = await recorder.record(
+            _trace(),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+            causation_id=_CAUSATION_ID,
+        )
+    assert result is None
+    events = [entry.get("event") for entry in logs]
+    assert "inference_recorder.agent_mismatch" in events
     assert "inference_recorder.failed" not in events
 
 

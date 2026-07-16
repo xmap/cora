@@ -26,6 +26,7 @@ from cora.access.aggregates.actor import event_type_name as actor_event_type_nam
 from cora.access.aggregates.actor import to_payload as actor_to_payload
 from cora.agent.seed_caution_drafter import (
     CAUTION_DRAFTER_AGENT_ID,
+    CAUTION_DRAFTER_AGENT_KIND,
     CAUTION_DRAFTER_AGENT_NAME,
 )
 from cora.agent.subscribers.caution_drafter import (
@@ -45,6 +46,7 @@ from cora.infrastructure.ports import (
     LLMServerError,
     LLMUsage,
 )
+from cora.infrastructure.ports.allocation_lookup import AllocationLookupResult
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.recipe.aggregates.plan import (
     PlanDefined,
@@ -63,7 +65,14 @@ from cora.run.aggregates.run.events import (
     RunCompleted,
 )
 from tests.unit._helpers import build_deps
-from tests.unit.agent._helpers import Ed25519FakeSigner, FakeInferenceRecorder
+from tests.unit.agent._helpers import (
+    Ed25519FakeSigner,
+    FakeAllocationLookup,
+    FakeInferenceRecorder,
+    FakeSpendLookup,
+    seed_suspended_agent,
+    seed_versioned_agent,
+)
 
 _NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
 _LATER = datetime(2026, 5, 17, 14, 47, 0, tzinfo=UTC)
@@ -238,12 +247,16 @@ async def _build_subscriber(
     event_store: InMemoryEventStore,
     llm: FakeLLM,
     inference_recorder: FakeInferenceRecorder | None = None,
+    spend_lookup: FakeSpendLookup | None = None,
+    allocation_lookup: FakeAllocationLookup | None = None,
 ) -> CautionDrafterSubscriber:
     return CautionDrafterSubscriber(
         event_store=event_store,
         llm=llm,
         caution_lookup=AlwaysQuietCautionLookup(),
         inference_recorder=inference_recorder,
+        spend_lookup=spend_lookup,
+        allocation_lookup=allocation_lookup,
     )
 
 
@@ -430,6 +443,213 @@ async def test_apply_writes_no_action_deferred_on_llm_failure() -> None:
     assert "LLM call failed with LLMServerError" in (decision.reasoning or "")
     assert decision.inputs is not None
     assert decision.inputs["failure_error_class"] == "LLMServerError"
+
+
+# ---------- Suspension gate + budget gate (mirror RunDebriefer) ----------
+
+
+@pytest.mark.unit
+async def test_apply_skips_entirely_when_agent_suspended() -> None:
+    """A Suspended agent takes no actions: no LLM call, no Decision."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store)
+    await seed_suspended_agent(
+        store,
+        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        suspend_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        suspended_at=_NOW,
+        reason="cost overrun",
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert await load_decision(store, _derive_decision_id(event.event_id)) is None
+    assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_apply_defers_noaction_when_monthly_usd_cap_exhausted() -> None:
+    """Cap reached: the LLM call is skipped and the refusal is recorded
+    as this Run's NoAction Decision (coarse post-hoc tier)."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    recorder = FakeInferenceRecorder()
+    await _seed_caution_drafter_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        monthly_usd_cap=120.0,
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(
+        store, llm, recorder, spend_lookup=FakeSpendLookup(usd_spent=121.3)
+    )
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "NoAction"
+    assert "Agent budget exhausted: monthly_usd_cap" in (decision.reasoning or "")
+    assert decision.inputs is not None
+    assert decision.inputs["failure_error_class"] == "AgentBudgetExhausted"
+    assert decision.inputs["budget_cap_kind"] == "monthly_usd_cap"
+    assert recorder.calls == []
+    assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_apply_defers_noaction_when_allocation_envelope_exhausted() -> None:
+    """The instrument-wide envelope stops the draft even though this
+    agent has no declared caps of its own; the refusal is this Run's
+    NoAction Decision with the AllocationExhausted marker (mirrors the
+    RunDebriefer arm)."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    recorder = FakeInferenceRecorder()
+    await _seed_caution_drafter_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    activated_at = datetime(2026, 5, 1, 8, 0, 0, tzinfo=UTC)
+    envelope = AllocationLookupResult(
+        allocation_id=uuid4(),
+        ceiling_usd=100.0,
+        activated_at=activated_at,
+        campaign_id=None,
+    )
+    spend_lookup = FakeSpendLookup(total_usd_spent=100.0)
+    subscriber = await _build_subscriber(
+        store,
+        llm,
+        recorder,
+        spend_lookup=spend_lookup,
+        allocation_lookup=FakeAllocationLookup(envelope),
+    )
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "NoAction"
+    assert "Allocation exhausted" in (decision.reasoning or "")
+    assert decision.inputs is not None
+    assert decision.inputs["failure_error_class"] == "AllocationExhausted"
+    assert decision.inputs["allocation_id"] == str(envelope.allocation_id)
+    assert recorder.calls == []
+    assert llm.received == []
+    assert spend_lookup.total_windows == [(activated_at, _LATER)]
+
+
+@pytest.mark.unit
+async def test_apply_agent_cap_breach_wins_over_the_envelope() -> None:
+    """Gate ordering: the per-agent cap is checked before the instrument
+    envelope, so a capped agent defers with AgentBudgetExhausted and the
+    envelope lookup is never consulted."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    recorder = FakeInferenceRecorder()
+    await _seed_caution_drafter_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        monthly_usd_cap=120.0,
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    envelope = AllocationLookupResult(
+        allocation_id=uuid4(),
+        ceiling_usd=100.0,
+        activated_at=datetime(2026, 5, 1, 8, 0, 0, tzinfo=UTC),
+        campaign_id=None,
+    )
+    allocation_lookup = FakeAllocationLookup(envelope)
+    spend_lookup = FakeSpendLookup(usd_spent=121.3, total_usd_spent=100.0)
+    subscriber = await _build_subscriber(
+        store, llm, recorder, spend_lookup=spend_lookup, allocation_lookup=allocation_lookup
+    )
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.inputs is not None
+    assert decision.inputs["failure_error_class"] == "AgentBudgetExhausted"
+    assert allocation_lookup.find_active_calls == 0
+    assert spend_lookup.total_windows == []
+    assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_apply_proceeds_normally_when_spend_is_under_cap() -> None:
+    """A declared budget with headroom never interferes with the
+    draft: the gate is invisible until a cap is exhausted."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    await _seed_caution_drafter_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=CAUTION_DRAFTER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        monthly_usd_cap=500.0,
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, spend_lookup=FakeSpendLookup(usd_spent=1.0))
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert len(llm.received) == 1
+    assert "failure_error_class" not in (decision.inputs or {})
 
 
 class _RaisingLLM:
@@ -879,6 +1099,10 @@ def test_make_caution_drafter_subscriber_constructs_when_llm_is_set() -> None:
     deps = build_deps(llm=FakeLLM())
     subscriber = make_caution_drafter_subscriber(deps)
     assert isinstance(subscriber, CautionDrafterSubscriber)
+    # The budget gate silently disables if the factory drops this wiring
+    # (the constructor default is the permissive AlwaysZeroSpendLookup).
+    assert subscriber.spend_lookup is deps.spend_lookup
+    assert subscriber.allocation_lookup is deps.allocation_lookup
 
 
 # ---------- Signer wiring ----------
@@ -1121,6 +1345,7 @@ async def test_apply_writes_caution_draft_conflicted_when_another_agent_holds_le
     pre_acquired, _ = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=CAUTION_DRAFTER_AGENT_KIND,
         debriefer_agent_id=foreign_agent_id,
         terminal_event=event,
         occurred_at=event.occurred_at,
@@ -1222,6 +1447,8 @@ async def test_apply_records_inference_on_proposal() -> None:
     assert call.trace.response_model == "claude-sonnet-4-6-20260201"
     assert call.trace.input_tokens == 2048
     assert call.trace.output_tokens == 320
+    # Sonnet 4.6 at $3/$15 per MTok: 2048 in + 320 out.
+    assert call.trace.cost_usd == pytest.approx(0.006144 + 0.0048)
     assert call.trace.finish_reasons == ("tool_use",)
     assert call.trace.agent_id == str(CAUTION_DRAFTER_AGENT_ID)
     assert call.trace.agent_name == CAUTION_DRAFTER_AGENT_NAME
@@ -1292,3 +1519,86 @@ async def test_apply_inference_recorder_failure_does_not_break_decision() -> Non
     decision = await load_decision(store, _derive_decision_id(event.event_id))
     assert decision is not None
     assert decision.choice.value == "ProposeCaution"
+
+
+# ---------------------------------------------------------------------------
+# Coexistence with RunDebriefer on the same terminal event
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+async def test_apply_coexists_with_run_debriefer_on_same_terminal_event() -> None:
+    """The two agents do DIFFERENT jobs (debrief vs caution proposal),
+    so both must act on the same terminal Run event: the debrief lease
+    scopes contention to agents of the same KIND, and a RunDebriefer
+    lease must not push the CautionDrafter into a Conflicted decision
+    (nor vice versa)."""
+    from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID
+    from cora.agent.subscribers.run_debriefer import (
+        RunDebrieferSubscriber,
+    )
+    from cora.agent.subscribers.run_debriefer import (
+        _derive_decision_id as derive_debrief_decision_id,
+    )
+
+    store = InMemoryEventStore()
+    await _seed_caution_drafter_actor(store)
+    debrief_actor = ActorRegistered(
+        actor_id=RUN_DEBRIEFER_AGENT_ID,
+        occurred_at=_NOW,
+        kind=ActorKind.AGENT,
+    )
+    await store.append(
+        stream_type="Actor",
+        stream_id=RUN_DEBRIEFER_AGENT_ID,
+        expected_version=0,
+        events=[
+            to_new_event(
+                event_type=actor_event_type_name(debrief_actor),
+                payload=actor_to_payload(debrief_actor),
+                occurred_at=_NOW,
+                event_id=uuid4(),
+                command_name="SeedTestAgent",
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                principal_id=_PRINCIPAL_ID,
+            )
+        ],
+    )
+    await _seed_plan(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+
+    canned_debrief = FakeLLMResponse(
+        parsed={
+            "choice": "NominalCompletion",
+            "confidence": 0.92,
+            "reasoning": (
+                "Synopsis: nominal single-Plan Run, completed cleanly. "
+                "What was supposed to happen matches what happened; no "
+                "parameter adjustments; nominal execution throughout."
+            ),
+        },
+        stop_reason="tool_use",
+        model_id="claude-haiku-4-5",
+    )
+    debriefer = RunDebrieferSubscriber(
+        event_store=store,
+        llm=FakeLLM(responses=[canned_debrief]),
+        logbook_mirror=None,
+    )
+    caution_llm = FakeLLM(responses=[_CANNED_NO_ACTION])
+    caution = await _build_subscriber(store, caution_llm)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await debriefer.apply(event, conn=None)
+    await caution.apply(event, conn=None)
+
+    debrief_decision = await load_decision(store, derive_debrief_decision_id(event.event_id))
+    assert debrief_decision is not None
+    assert debrief_decision.choice.value == "NominalCompletion"
+
+    caution_decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert caution_decision is not None
+    assert caution_decision.choice.value == "NoAction"
+    assert len(caution_llm.received) == 1

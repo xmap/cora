@@ -82,6 +82,19 @@
             "description": "Optional Decision id that justified this abort (most commonly an OperatorAbortDecision or EquipmentAbortDecision per RunDebrief's 5-value choice enum). Maps to `prov:wasInformedBy` at the future PROV-O export adapter. NOT verified at the write path (eventual-consistency stance). Operators can record ad-hoc / emergency aborts without a Decision (Decision\u2192Run linkage).",
             "title": "Decided By Decision Id"
           },
+          "justification": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Obligation gate (Gate III): AbortRun requires an admission justification accounting for why this consequential action is taken. Fail-closed (absent / blank / over-length -> 422). Distinct from `reason`, which is post-hoc text on the RunAborted event; the justification is the precondition of admission. Kind-blind (a human and an agent supply it identically).",
+            "title": "Justification"
+          },
           "reason": {
             "description": "Free-form reason for the abort (1-500 chars after trimming). Today the field is unstructured; structured taxonomy is future-additive.",
             "maxLength": 500,
@@ -668,7 +681,7 @@
         "type": "object"
       },
       "AgentStatus": {
-        "description": "The Agent's lifecycle state.\n\nFour values:\n\n  - `Defined`    -- registered as config; NOT yet ready for\n                    invocation (8f-b's subscriber filters on\n                    Versioned only).\n  - `Versioned`  -- promoted to ready-for-invocation; rainbow-\n                    deploy-style signal. Multiple Versioned\n                    Agents may exist concurrently (different\n                    `id`s sharing `kind`).\n  - `Suspended`  -- non-terminal operator-pause from\n                    `Versioned`. Returns to\n                    `Versioned` via `resume_agent`. Config\n                    changes (tools, budget) still permitted so\n                    the operator can fix permissions while\n                    paused. Cannot re-Version from Suspended\n                    (resume is its own dedicated verb).\n  - `Deprecated` -- terminal; cannot be re-Defined or re-\n                    Versioned. Future invocations must pick a\n                    non-Deprecated Agent of the same kind.\n                    Reachable from `Defined`, `Versioned`, or\n                    `Suspended`.",
+        "description": "The Agent's lifecycle state.\n\nFour values:\n\n  - `Defined`    -- registered as config; NOT yet ready for\n                    invocation (the LLM subscribers' lifecycle\n                    gate fires on Versioned only).\n  - `Versioned`  -- promoted to ready-for-invocation; rainbow-\n                    deploy-style signal. Multiple Versioned\n                    Agents may exist concurrently (different\n                    `id`s sharing `kind`).\n  - `Suspended`  -- non-terminal operator-pause from\n                    `Versioned`. Returns to\n                    `Versioned` via `resume_agent`. Config\n                    changes (tools, budget) still permitted so\n                    the operator can fix permissions while\n                    paused. Cannot re-Version from Suspended\n                    (resume is its own dedicated verb).\n  - `Deprecated` -- terminal; cannot be re-Defined or re-\n                    Versioned. Future invocations must pick a\n                    non-Deprecated Agent of the same kind.\n                    Reachable from `Defined`, `Versioned`, or\n                    `Suspended`.",
         "enum": [
           "Defined",
           "Versioned",
@@ -742,6 +755,22 @@
         ],
         "title": "AlternateIdentifierKind",
         "type": "string"
+      },
+      "AmendAllocationCeilingRequest": {
+        "description": "Body for `POST /allocations/{allocation_id}/ceiling`.",
+        "properties": {
+          "ceiling_usd": {
+            "description": "The post-amend USD ceiling (PUT semantics, not a delta). Finite and greater than 0.",
+            "exclusiveMinimum": 0.0,
+            "title": "Ceiling Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "ceiling_usd"
+        ],
+        "title": "AmendAllocationCeilingRequest",
+        "type": "object"
       },
       "AmendClearanceRequest": {
         "description": "Body for `POST /clearances/{parent_id}/amend`.\n\nMirrors `RegisterClearanceRequest`'s child-fields exactly. The\n`parent_id` comes from the URL path, not the body.",
@@ -881,6 +910,36 @@
           "clearance_id"
         ],
         "title": "AmendClearanceResponse",
+        "type": "object"
+      },
+      "AnnounceLanguageModelRetirementRequest": {
+        "description": "Body for `POST /language-models/{language_model_id}/announce-retirement`.",
+        "properties": {
+          "effective_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The vendor's announced cutoff. Pass null when the vendor gave a warning but no date.",
+            "title": "Effective At"
+          },
+          "reason": {
+            "description": "Vendor-sourced retirement reason (1-500 chars after trim). REQUIRED: the announcement always carries vendor context the audit log should keep.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "AnnounceLanguageModelRetirementRequest",
         "type": "object"
       },
       "AppendCalibrationRevisionRequest": {
@@ -1241,6 +1300,15 @@
         },
         "title": "ApproveClearanceRequest",
         "type": "object"
+      },
+      "ArchivabilityTier": {
+        "description": "Whether this model's identity outlives the vendor's lifecycle.\n\n- `Pinned` -- weights the facility holds and can serve\n              indefinitely; results stay re-executable.\n- `Alias`  -- an identity the provider may move onto new weights\n              or retire; results degrade to attributable-only\n              when it does.",
+        "enum": [
+          "Pinned",
+          "Alias"
+        ],
+        "title": "ArchivabilityTier",
+        "type": "string"
       },
       "ArgStyle": {
         "description": "Closed v1 vocabulary for how a named parameter renders into argv.",
@@ -1692,6 +1760,95 @@
           "value"
         ],
         "title": "AssignFixturePersistentIdResponse",
+        "type": "object"
+      },
+      "AtRiskResultResponse": {
+        "description": "One Decision whose recorded LLM calls touched the entry's model.\n\nValues come from the Decision's newest touching inference row:\n`request_model` / `response_model` show which arm matched (alias\nasked for vs dated snapshot answered with); `agent_id` is the OTel\nstring identity of the recording agent, null for\noperator-attributed rows.",
+        "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Id"
+          },
+          "decision_id": {
+            "format": "uuid",
+            "title": "Decision Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "request_model": {
+            "title": "Request Model",
+            "type": "string"
+          },
+          "response_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Model"
+          }
+        },
+        "required": [
+          "decision_id",
+          "occurred_at",
+          "request_model"
+        ],
+        "title": "AtRiskResultResponse",
+        "type": "object"
+      },
+      "AtRiskResultsResponse": {
+        "description": "Read-side DTO at the API boundary.\n\nCarries primitives, not domain VOs. `reproducibility_grade` is\n`ReExecutable` (Pinned weights the facility can serve indefinitely)\nor `AttributableOnly` (an Alias identity whose retirement leaves\nprovenance but not re-execution). `at_risk` is true only when the\ngrade is `AttributableOnly` AND the vendor lifecycle has moved\n(RetirementAnnounced or Retired); `results` is populated for any\nstatus so operators can triage exposure before an announcement.",
+        "properties": {
+          "archivability": {
+            "$ref": "#/components/schemas/ArchivabilityTier"
+          },
+          "at_risk": {
+            "title": "At Risk",
+            "type": "boolean"
+          },
+          "language_model_id": {
+            "format": "uuid",
+            "title": "Language Model Id",
+            "type": "string"
+          },
+          "reproducibility_grade": {
+            "title": "Reproducibility Grade",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/AtRiskResultResponse"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LanguageModelStatus"
+          }
+        },
+        "required": [
+          "language_model_id",
+          "status",
+          "archivability",
+          "reproducibility_grade",
+          "at_risk",
+          "results"
+        ],
+        "title": "AtRiskResultsResponse",
         "type": "object"
       },
       "AttachAssetToFixtureRequest": {
@@ -4788,6 +4945,16 @@
         "title": "CredentialSummaryDTO",
         "type": "object"
       },
+      "DataSensitivityTier": {
+        "description": "Which class of data may reach this model (the R3 axis).\n\nSmall on purpose: the facility's existing data-handling vocabulary\nmaps onto three rungs at v1, and adding rungs is an additive enum\nchange while pruning is expensive (the Caution category precedent).\n\n  - `Open`      -- public or publishable-now data only.\n  - `Internal`  -- non-public working data (prudent-to-protect,\n                   pre-publication).\n  - `Sensitive` -- data requiring an approved handling plan.",
+        "enum": [
+          "Open",
+          "Internal",
+          "Sensitive"
+        ],
+        "title": "DataSensitivityTier",
+        "type": "string"
+      },
       "DatasetListResponse": {
         "description": "Page of datasets plus opaque next-page cursor.",
         "properties": {
@@ -5856,6 +6023,116 @@
         "title": "DefineFamilyResponse",
         "type": "object"
       },
+      "DefineLanguageModelRequest": {
+        "description": "Body for `POST /language-models`.",
+        "properties": {
+          "archivability": {
+            "$ref": "#/components/schemas/ArchivabilityTier",
+            "description": "Reproducibility axis. One of: Pinned, Alias."
+          },
+          "cost_basis": {
+            "additionalProperties": true,
+            "description": "Discriminated cost-basis payload. Either kind=TokenPricing with input_per_mtok / output_per_mtok / cache_write_per_mtok / cache_read_per_mtok, or kind=GpuHourPricing with usd_per_gpu_hour. All rates are finite non-negative USD.",
+            "title": "Cost Basis",
+            "type": "object"
+          },
+          "data_tier": {
+            "$ref": "#/components/schemas/DataSensitivityTier",
+            "description": "Which class of data may reach this model. One of: Open, Internal, Sensitive."
+          },
+          "endpoint_note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional serving detail (pool name, broker route). A note, not an address: connection configuration lives with the serving layer.",
+            "title": "Endpoint Note"
+          },
+          "language_model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional caller-supplied id for configuration-seeded catalogs needing stable ids across environments. Omit (or pass null) to let the server mint a UUIDv7.",
+            "title": "Language Model Id"
+          },
+          "model": {
+            "description": "Provider-specific model identifier (`claude-sonnet-4-6`, etc.).",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "description": "Human-readable display name for the catalog entry.",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "provider": {
+            "description": "LLM provider name (`anthropic`, `openai`, `google`, etc.).",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Provider",
+            "type": "string"
+          },
+          "served_via": {
+            "$ref": "#/components/schemas/ServingRoute",
+            "description": "Serving route. One of: Direct, Argo, InHouse."
+          },
+          "snapshot_pin": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional provider-specific snapshot identifier (Anthropic snapshot string, OpenAI fingerprint, etc.) for reproducibility. Pass null to leave unpinned.",
+            "title": "Snapshot Pin"
+          }
+        },
+        "required": [
+          "name",
+          "provider",
+          "model",
+          "served_via",
+          "cost_basis",
+          "data_tier",
+          "archivability"
+        ],
+        "title": "DefineLanguageModelRequest",
+        "type": "object"
+      },
+      "DefineLanguageModelResponse": {
+        "description": "Response body for `POST /language-models`.",
+        "properties": {
+          "language_model_id": {
+            "format": "uuid",
+            "title": "Language Model Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "language_model_id"
+        ],
+        "title": "DefineLanguageModelResponse",
+        "type": "object"
+      },
       "DefineMethodRequest": {
         "description": "Body for `POST /methods`.\n\n`needed_family_ids` is required (use `[]` for procedural\nMethods that need no specific equipment family). Eventual-\nconsistency: each Family id is NOT verified against the\nFamily stream; mismatch surfaces at Plan binding.\n\n`needed_supplies` is optional; defaults to `[]` for\nbackward-compat (older clients keep working). Each element is\na Supply.kind STRING (1-50 chars), NOT a Supply instance UUID.\nAsymmetric vs needed_family_ids by design; see\n[[project_supply_design]] \u00a7\"Method.needed_supplies consumer\"\nfor the rationale (Family is TYPE registry,\nSupply is INSTANCE aggregate per facility sharing a `kind` label).\nEventual-consistency: kind strings are NOT verified against the\nSupply stream; mismatch surfaces at Plan binding.",
         "properties": {
@@ -6515,6 +6792,23 @@
         "title": "DemoteDatasetRequest",
         "type": "object"
       },
+      "DenyRatificationRequest": {
+        "description": "Body for `POST /ratifications/{ratification_id}/deny`.\n\n`reason` is operator-supplied free text (audit-log breadcrumb) explaining\nthe refusal. MUST NOT contain PII.",
+        "properties": {
+          "reason": {
+            "description": "Operator-supplied reason for the denial (audit-log breadcrumb; no PII).",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DenyRatificationRequest",
+        "type": "object"
+      },
       "DeprecateAgentRequest": {
         "description": "Body for `POST /agents/{agent_id}/deprecate`.",
         "properties": {
@@ -6571,6 +6865,23 @@
           }
         },
         "title": "DeprecateCapabilityRequest",
+        "type": "object"
+      },
+      "DeprecateLanguageModelRequest": {
+        "description": "Body for `POST /language-models/{language_model_id}/deprecate`.",
+        "properties": {
+          "reason": {
+            "description": "Operator-supplied deprecation reason (1-500 chars after trim). REQUIRED: withdrawing approval is a policy act the audit log must always carry context for.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DeprecateLanguageModelRequest",
         "type": "object"
       },
       "DeprecateModelRequest": {
@@ -7480,6 +7791,71 @@
         "title": "GhsDto",
         "type": "object"
       },
+      "GrantAllocationRequest": {
+        "description": "Body for `POST /allocations`.",
+        "properties": {
+          "allocation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional caller-supplied id for configuration-seeded envelopes needing stable ids across environments. Omit (or pass null) to let the server mint a UUIDv7.",
+            "title": "Allocation Id"
+          },
+          "campaign_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional Campaign binding for the award window. When set, the CampaignClosed subscriber seals this envelope beside the campaign's own books. Pass null for an unbound envelope.",
+            "title": "Campaign Id"
+          },
+          "ceiling_usd": {
+            "description": "USD spending ceiling for the envelope. Finite and greater than 0.",
+            "exclusiveMinimum": 0.0,
+            "title": "Ceiling Usd",
+            "type": "number"
+          },
+          "note": {
+            "description": "Operator-facing name for the envelope (award cycle, proposal block). The holder itself is implicitly this deployment's beamline.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ceiling_usd",
+          "note"
+        ],
+        "title": "GrantAllocationRequest",
+        "type": "object"
+      },
+      "GrantAllocationResponse": {
+        "description": "Response body for `POST /allocations`.",
+        "properties": {
+          "allocation_id": {
+            "format": "uuid",
+            "title": "Allocation Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "allocation_id"
+        ],
+        "title": "GrantAllocationResponse",
+        "type": "object"
+      },
       "GrantToolToAgentRequest": {
         "description": "Body for `POST /agents/{agent_id}/tools/grant`.",
         "properties": {
@@ -7867,6 +8243,18 @@
           "Nearest"
         ],
         "title": "InterpolationKind",
+        "type": "string"
+      },
+      "LanguageModelStatus": {
+        "description": "The catalog entry's lifecycle state.\n\n- `Defined`              -- registered as config; NOT yet approved for\n                            use (the define_agent gate requires\n                            Approved).\n- `Approved`             -- the facility's governance act: usable for\n                            the entry's declared data tier.\n- `RetirementAnnounced`  -- the VENDOR announced this model will cease\n                            to exist; still servable until retired,\n                            and the at-risk-results projection is\n                            live from this moment.\n- `Retired`              -- the model is no longer servable (vendor\n                            removed it, or the facility decommissioned\n                            the pool). Terminal.\n- `Deprecated`           -- the FACILITY withdrew approval (policy,\n                            security, cost), independent of the\n                            vendor's lifecycle. Terminal.",
+        "enum": [
+          "Defined",
+          "Approved",
+          "RetirementAnnounced",
+          "Retired",
+          "Deprecated"
+        ],
+        "title": "LanguageModelStatus",
         "type": "string"
       },
       "LaunchArgRequest": {
@@ -10724,6 +11112,7 @@
                 "type": "null"
               }
             ],
+            "description": "OTel gen_ai.agent.id. Principal-bound: when set, it MUST equal the calling principal's id (agent-attributed entries are the spend ledger the AgentBudget gate sums; self-reporting only). Mismatches reject the whole batch with 403.",
             "title": "Agent Id"
           },
           "agent_name": {
@@ -10749,6 +11138,20 @@
               }
             ],
             "title": "Conversation Id"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Actual call cost in USD computed from usage tokens and provider pricing (CORA custom; no OTel attribute exists for call cost). Upper bound 100000: no single LLM call costs six figures, and an unbounded value would let one poisoned entry exhaust any instrument envelope and permanently corrupt a sealed books figure.",
+            "title": "Cost Usd"
           },
           "duration": {
             "anyOf": [
@@ -10781,6 +11184,7 @@
           "input_tokens": {
             "anyOf": [
               {
+                "maximum": 1000000000.0,
                 "minimum": 0.0,
                 "type": "integer"
               },
@@ -10819,6 +11223,7 @@
           "output_tokens": {
             "anyOf": [
               {
+                "maximum": 1000000000.0,
                 "minimum": 0.0,
                 "type": "integer"
               },
@@ -13206,6 +13611,58 @@
         "title": "RemoveRunFromCampaignRequest",
         "type": "object"
       },
+      "RequestRatificationRequest": {
+        "description": "Body for `POST /ratifications`.",
+        "properties": {
+          "command_name": {
+            "description": "Canonical name of the gated command.",
+            "title": "Command Name",
+            "type": "string"
+          },
+          "consequence_class": {
+            "description": "Declared class that triggered the requirement (bare-str label).",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Consequence Class",
+            "type": "string"
+          },
+          "ratification_id": {
+            "description": "Caller-supplied UUID. A subscriber may mint a deterministic uuid5 for replay-safe ingest; operator-direct may use uuid4.",
+            "format": "uuid",
+            "title": "Ratification Id",
+            "type": "string"
+          },
+          "target_action_id": {
+            "description": "Opaque id of the action being gated (e.g. the run id whose consequential command is held). Not existence-checked at the decider.",
+            "format": "uuid",
+            "title": "Target Action Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ratification_id",
+          "target_action_id",
+          "command_name",
+          "consequence_class"
+        ],
+        "title": "RequestRatificationRequest",
+        "type": "object"
+      },
+      "RequestRatificationResponse": {
+        "description": "Response body for `POST /ratifications`.",
+        "properties": {
+          "ratification_id": {
+            "format": "uuid",
+            "title": "Ratification Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ratification_id"
+        ],
+        "title": "RequestRatificationResponse",
+        "type": "object"
+      },
       "RestoreAssetRequest": {
         "description": "Body for `POST /assets/{asset_id}/restore`.\n\n`reason` is operator-supplied free text (audit-log breadcrumb)\nexplaining the repair. Examples: \"replaced flat cable\", \"cleaned\nsample stage and recalibrated\", \"vacuum pump rebuild complete\".",
         "properties": {
@@ -13268,6 +13725,27 @@
           "reason"
         ],
         "title": "RetireCautionRequest",
+        "type": "object"
+      },
+      "RetireLanguageModelRequest": {
+        "description": "Body for `POST /language-models/{language_model_id}/retire`.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional vendor- or operator-sourced retirement reason (1-500 chars after trim). Pass null when an unannounced removal arrived with no vendor statement; any earlier announcement's reason is preserved on the folded state.",
+            "title": "Reason"
+          }
+        },
+        "title": "RetireLanguageModelRequest",
         "type": "object"
       },
       "ReviewStepResponse": {
@@ -13832,6 +14310,27 @@
         "title": "SchemeDTO",
         "type": "object"
       },
+      "SealAllocationRequest": {
+        "description": "Body for `POST /allocations/{allocation_id}/seal`.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional closing note (an early close usually carries context; a routine end-of-window seal needs none). Pass null to omit.",
+            "title": "Reason"
+          }
+        },
+        "title": "SealAllocationRequest",
+        "type": "object"
+      },
       "SealEditionRequest": {
         "additionalProperties": false,
         "description": "Optional overrides for `POST /editions/{edition_id}/seal`.",
@@ -14078,6 +14577,16 @@
         ],
         "title": "SealSummaryDTO",
         "type": "object"
+      },
+      "ServingRoute": {
+        "description": "Where calls to this model are served.\n\n- `Direct`  -- CORA's own LLM adapter against the provider API\n               (credentials live with the deployment's serving\n               layer, never on this entry).\n- `Argo`    -- the facility gateway (ANL's Argo) is the choke\n               point; CORA holds no provider credentials at all.\n- `InHouse` -- a facility GPU pool serves held weights.",
+        "enum": [
+          "Direct",
+          "Argo",
+          "InHouse"
+        ],
+        "title": "ServingRoute",
+        "type": "string"
       },
       "SetAgentTargetPlanRequest": {
         "description": "Body for `POST /agents/{agent_id}/target-plan`.",
@@ -15955,6 +16464,23 @@
         ],
         "title": "VisitType",
         "type": "string"
+      },
+      "VoidAllocationRequest": {
+        "description": "Body for `POST /allocations/{allocation_id}/void`.",
+        "properties": {
+          "reason": {
+            "description": "Why the grant is withdrawn. Required: voiding an award is a governance act the audit log must always carry context for.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "VoidAllocationRequest",
+        "type": "object"
       },
       "VoidVisitRequest": {
         "description": "Body for `POST /visits/{visit_id}/void`.",
@@ -18680,6 +19206,487 @@
         "summary": "Version a Defined Agent (Defined -> Versioned)",
         "tags": [
           "agent"
+        ]
+      }
+    },
+    "/allocations": {
+      "post": {
+        "operationId": "post_allocations_allocations_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantAllocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantAllocationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (non-finite ceiling, whitespace-only note)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The target Allocation stream already has events. Reachable in practice only with a caller-supplied allocation_id; essentially impossible for server-minted UUIDv7 ids."
+          },
+          "422": {
+            "description": "Request body failed schema validation (missing field, length out of bounds, non-positive ceiling, invalid UUID), OR Idempotency-Key was reused with a different request body."
+          }
+        },
+        "summary": "Grant a new spending envelope (lands in Granted, dormant)",
+        "tags": [
+          "budget"
+        ]
+      }
+    },
+    "/allocations/{allocation_id}/activate": {
+      "post": {
+        "operationId": "post_allocations_activate_allocations__allocation_id__activate_post",
+        "parameters": [
+          {
+            "description": "Target Allocation's id.",
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "description": "Target Allocation's id.",
+              "format": "uuid",
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Allocation exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Allocation is not in Granted status (activate_allocation is single-source from Granted only)."
+          },
+          "422": {
+            "description": "Path parameter failed schema validation."
+          }
+        },
+        "summary": "Activate a Granted Allocation (Granted -> Active)",
+        "tags": [
+          "budget"
+        ]
+      }
+    },
+    "/allocations/{allocation_id}/ceiling": {
+      "post": {
+        "operationId": "post_allocations_ceiling_allocations__allocation_id__ceiling_post",
+        "parameters": [
+          {
+            "description": "Target Allocation's id.",
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "description": "Target Allocation's id.",
+              "format": "uuid",
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AmendAllocationCeilingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (non-finite ceiling)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Allocation exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Allocation is not in Granted or Active status (amend_allocation_ceiling cannot rewrite a closed envelope)."
+          },
+          "422": {
+            "description": "Request body failed schema validation (missing field, non-positive ceiling) or path parameter is not a UUID."
+          }
+        },
+        "summary": "Amend an Allocation's USD ceiling (PUT semantics)",
+        "tags": [
+          "budget"
+        ]
+      }
+    },
+    "/allocations/{allocation_id}/seal": {
+      "post": {
+        "operationId": "post_allocations_seal_allocations__allocation_id__seal_post",
+        "parameters": [
+          {
+            "description": "Target Allocation's id.",
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "description": "Target Allocation's id.",
+              "format": "uuid",
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SealAllocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (whitespace-only reason)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Allocation exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Allocation is not in Active status (seal_allocation closes an open spend window; void a dormant grant instead)."
+          },
+          "422": {
+            "description": "Request body failed schema validation (reason length out of bounds) or path parameter is not a UUID."
+          }
+        },
+        "summary": "Seal an Active Allocation (Active -> Sealed, closing the books)",
+        "tags": [
+          "budget"
+        ]
+      }
+    },
+    "/allocations/{allocation_id}/void": {
+      "post": {
+        "operationId": "post_allocations_void_allocations__allocation_id__void_post",
+        "parameters": [
+          {
+            "description": "Target Allocation's id.",
+            "in": "path",
+            "name": "allocation_id",
+            "required": true,
+            "schema": {
+              "description": "Target Allocation's id.",
+              "format": "uuid",
+              "title": "Allocation Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidAllocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (whitespace-only reason)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Allocation exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Allocation is not in Granted or Active status (a sealed or voided envelope cannot be re-terminated)."
+          },
+          "422": {
+            "description": "Request body failed schema validation (missing or over-length reason) or path parameter is not a UUID."
+          }
+        },
+        "summary": "Void a Granted or Active Allocation (-> Voided)",
+        "tags": [
+          "budget"
         ]
       }
     },
@@ -28082,7 +29089,7 @@
                 }
               }
             },
-            "description": "Authorize port denied the command."
+            "description": "Authorize port denied the command, or an entry's agent_id does not match the calling principal (agent-attributed entries must be self-reported)."
           },
           "404": {
             "content": {
@@ -33278,6 +34285,564 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/language-models": {
+      "post": {
+        "operationId": "post_language_models_language_models_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefineLanguageModelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefineLanguageModelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (whitespace-only name, invalid provider / model / snapshot_pin, empty endpoint note, or malformed cost_basis: unknown kind, missing rate, negative or non-finite rate)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The target LanguageModel stream already has events. Reachable in practice only with a caller-supplied language_model_id; essentially impossible for server-minted UUIDv7 ids."
+          },
+          "422": {
+            "description": "Request body failed schema validation (missing field, length out of bounds, unknown served_via / data_tier / archivability value, invalid UUID), OR Idempotency-Key was reused with a different request body."
+          }
+        },
+        "summary": "Define a new LanguageModel catalog entry (lands in Defined)",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/language-models/{language_model_id}/announce-retirement": {
+      "post": {
+        "operationId": "post_language_models_announce_retirement_language_models__language_model_id__announce_retirement_post",
+        "parameters": [
+          {
+            "description": "Target LanguageModel's id.",
+            "in": "path",
+            "name": "language_model_id",
+            "required": true,
+            "schema": {
+              "description": "Target LanguageModel's id.",
+              "format": "uuid",
+              "title": "Language Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnounceLanguageModelRetirementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Reason is empty / whitespace-only / over-cap after trim."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No LanguageModel exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "LanguageModel is not in Approved status (announce_language_model_retirement is single-source from Approved only)."
+          },
+          "422": {
+            "description": "Request body or path parameter failed schema validation."
+          }
+        },
+        "summary": "Announce a LanguageModel's retirement (Approved -> RetirementAnnounced)",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/language-models/{language_model_id}/approve": {
+      "post": {
+        "operationId": "post_language_models_approve_language_models__language_model_id__approve_post",
+        "parameters": [
+          {
+            "description": "Target LanguageModel's id.",
+            "in": "path",
+            "name": "language_model_id",
+            "required": true,
+            "schema": {
+              "description": "Target LanguageModel's id.",
+              "format": "uuid",
+              "title": "Language Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No LanguageModel exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "LanguageModel is not in Defined status (approve_language_model is single-source from Defined only)."
+          },
+          "422": {
+            "description": "Path parameter failed schema validation."
+          }
+        },
+        "summary": "Approve a Defined LanguageModel (Defined -> Approved)",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/language-models/{language_model_id}/at-risk-results": {
+      "get": {
+        "operationId": "get_language_models_at_risk_results_language_models__language_model_id__at_risk_results_get",
+        "parameters": [
+          {
+            "description": "Target LanguageModel's id.",
+            "in": "path",
+            "name": "language_model_id",
+            "required": true,
+            "schema": {
+              "description": "Target LanguageModel's id.",
+              "format": "uuid",
+              "title": "Language Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AtRiskResultsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the query."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No LanguageModel exists with the given id."
+          },
+          "422": {
+            "description": "Path parameter failed schema validation."
+          }
+        },
+        "summary": "List the Decisions whose recorded LLM calls touched this model, graded",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/language-models/{language_model_id}/deprecate": {
+      "post": {
+        "operationId": "post_language_models_deprecate_language_models__language_model_id__deprecate_post",
+        "parameters": [
+          {
+            "description": "Target LanguageModel's id.",
+            "in": "path",
+            "name": "language_model_id",
+            "required": true,
+            "schema": {
+              "description": "Target LanguageModel's id.",
+              "format": "uuid",
+              "title": "Language Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeprecateLanguageModelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Reason is empty / whitespace-only / over-cap after trim."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No LanguageModel exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "LanguageModel is already terminal (Retired or Deprecated; strict-not-idempotent)."
+          },
+          "422": {
+            "description": "Request body or path parameter failed schema validation."
+          }
+        },
+        "summary": "Deprecate a LanguageModel (Defined | Approved | RetirementAnnounced -> Deprecated; terminal)",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/language-models/{language_model_id}/retire": {
+      "post": {
+        "operationId": "post_language_models_retire_language_models__language_model_id__retire_post",
+        "parameters": [
+          {
+            "description": "Target LanguageModel's id.",
+            "in": "path",
+            "name": "language_model_id",
+            "required": true,
+            "schema": {
+              "description": "Target LanguageModel's id.",
+              "format": "uuid",
+              "title": "Language Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetireLanguageModelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Reason is empty / whitespace-only / over-cap after trim."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No LanguageModel exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "LanguageModel is not in Approved or RetirementAnnounced status (already terminal, or not yet approved)."
+          },
+          "422": {
+            "description": "Request body or path parameter failed schema validation."
+          }
+        },
+        "summary": "Retire a LanguageModel (Approved | RetirementAnnounced -> Retired; terminal)",
+        "tags": [
+          "agent"
+        ]
       }
     },
     "/methods": {
@@ -39378,6 +40943,278 @@
         ]
       }
     },
+    "/ratifications": {
+      "post": {
+        "operationId": "post_ratifications_ratifications_post",
+        "parameters": [
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestRatificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestRatificationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (e.g. empty consequence_class)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Ratification with this id already exists."
+          },
+          "422": {
+            "description": "Request body failed schema validation."
+          }
+        },
+        "summary": "Request a second-principal co-signature for a consequential action",
+        "tags": [
+          "trust"
+        ]
+      }
+    },
+    "/ratifications/{ratification_id}/deny": {
+      "post": {
+        "operationId": "post_ratifications_deny_ratifications__ratification_id__deny_post",
+        "parameters": [
+          {
+            "description": "Target Ratification's id.",
+            "in": "path",
+            "name": "ratification_id",
+            "required": true,
+            "schema": {
+              "description": "Target Ratification's id.",
+              "format": "uuid",
+              "title": "Ratification Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DenyRatificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Domain invariant violated (whitespace-only reason)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Ratification exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Ratification is not in Requested status, or denier is the requester."
+          },
+          "422": {
+            "description": "Request body failed schema validation."
+          }
+        },
+        "summary": "Deny (refuse) a Requested Ratification (Requested -> Denied)",
+        "tags": [
+          "trust"
+        ]
+      }
+    },
+    "/ratifications/{ratification_id}/grant": {
+      "post": {
+        "operationId": "post_ratifications_grant_ratifications__ratification_id__grant_post",
+        "parameters": [
+          {
+            "description": "Target Ratification's id.",
+            "in": "path",
+            "name": "ratification_id",
+            "required": true,
+            "schema": {
+              "description": "Target Ratification's id.",
+              "format": "uuid",
+              "title": "Ratification Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Ratification exists with the given id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Ratification is not in Requested status, or grantor is the requester."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Grant (co-sign) a Requested Ratification (Requested -> Granted)",
+        "tags": [
+          "trust"
+        ]
+      }
+    },
     "/recipes": {
       "post": {
         "operationId": "post_recipes_recipes_post",
@@ -40251,7 +42088,14 @@
             "description": "Run is not in `Running` status (abort requires `Running` today; aborting a `Completed` or `Aborted` run raises), OR a concurrent write to the same run stream conflicted (optimistic concurrency)."
           },
           "422": {
-            "description": "Path parameter or request body failed schema validation."
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Path parameter or request body failed schema validation, OR the obligation gate (Gate III) refused the abort because no valid justification was supplied (absent / blank / over-length)."
           }
         },
         "summary": "Mark an existing Run as aborted (emergency-exit terminal)",

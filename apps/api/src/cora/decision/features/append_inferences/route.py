@@ -109,9 +109,32 @@ class ReasoningEntryRequest(BaseModel):
         max_length=16,
         description="OTel gen_ai.response.finish_reasons (multiple stops possible).",
     )
-    input_tokens: int | None = Field(default=None, ge=0)
-    output_tokens: int | None = Field(default=None, ge=0)
-    agent_id: str | None = Field(default=None, max_length=200)
+    input_tokens: int | None = Field(default=None, ge=0, le=1_000_000_000)
+    output_tokens: int | None = Field(default=None, ge=0, le=1_000_000_000)
+    cost_usd: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=100_000.0,
+        allow_inf_nan=False,
+        description=(
+            "Actual call cost in USD computed from usage tokens and provider "
+            "pricing (CORA custom; no OTel attribute exists for call cost). "
+            "Upper bound 100000: no single LLM call costs six figures, and "
+            "an unbounded value would let one poisoned entry exhaust any "
+            "instrument envelope and permanently corrupt a sealed books "
+            "figure."
+        ),
+    )
+    agent_id: str | None = Field(
+        default=None,
+        max_length=200,
+        description=(
+            "OTel gen_ai.agent.id. Principal-bound: when set, it MUST equal "
+            "the calling principal's id (agent-attributed entries are the "
+            "spend ledger the AgentBudget gate sums; self-reporting only). "
+            "Mismatches reject the whole batch with 403."
+        ),
+    )
     agent_name: str | None = Field(default=None, max_length=200)
     agent_description: str | None = Field(default=None, max_length=2000)
     conversation_id: str | None = Field(default=None, max_length=200)
@@ -176,7 +199,11 @@ router = APIRouter(tags=["decision"])
     responses={
         status.HTTP_403_FORBIDDEN: {
             "model": ErrorResponse,
-            "description": "Authorize port denied the command.",
+            "description": (
+                "Authorize port denied the command, or an entry's "
+                "agent_id does not match the calling principal "
+                "(agent-attributed entries must be self-reported)."
+            ),
         },
         status.HTTP_404_NOT_FOUND: {
             "model": ErrorResponse,
@@ -220,6 +247,7 @@ async def post_decisions_reasoning_entries(
             finish_reasons=tuple(e.finish_reasons),
             input_tokens=e.input_tokens,
             output_tokens=e.output_tokens,
+            cost_usd=e.cost_usd,
             agent_id=e.agent_id,
             agent_name=e.agent_name,
             agent_description=e.agent_description,

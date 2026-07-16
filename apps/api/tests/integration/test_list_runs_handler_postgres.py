@@ -248,7 +248,11 @@ async def test_every_lifecycle_transition_writes_a_check_constraint_accepted_sta
         correlation_id=_CORRELATION_ID,
     )
     await bind_abort(deps_4)(
-        AbortRun(run_id=run_aborted_id, reason="alignment lost"),
+        AbortRun(
+            run_id=run_aborted_id,
+            reason="alignment lost",
+            justification="operator: aborting for test",
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

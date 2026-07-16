@@ -35,20 +35,32 @@ Subject / Equipment / Supply / Safety / Caution:
                                  EventAlreadyDismissedError guard
                                  catches duplicate dismissals
                                  strict-not-idempotently)
+  - `define_language_model`   (create-style; idempotency-wrapped)
+  - `approve_language_model`  (transition; no idempotency wrap)
+  - `announce_language_model_retirement` (transition; no idempotency wrap)
+  - `retire_language_model`   (transition; no idempotency wrap)
+  - `deprecate_language_model` (transition; no idempotency wrap)
+  - `list_at_risk_results`    (query)
 """
 
 from dataclasses import dataclass
 from uuid import UUID
 
 from cora.agent.features import (
+    announce_language_model_retirement,
+    approve_language_model,
     define_agent,
+    define_language_model,
     deprecate_agent,
+    deprecate_language_model,
     dismiss_event_in_reaction,
     get_agent,
     grant_tool_to_agent,
+    list_at_risk_results,
     promote_caution_proposal,
     regenerate_run_debrief,
     resume_agent,
+    retire_language_model,
     revoke_tool_from_agent,
     set_agent_target_plan,
     suspend_agent,
@@ -79,6 +91,12 @@ class AgentHandlers:
     regenerate_run_debrief: regenerate_run_debrief.IdempotentHandler | None
     promote_caution_proposal: promote_caution_proposal.IdempotentHandler
     dismiss_event_in_reaction: dismiss_event_in_reaction.Handler
+    define_language_model: define_language_model.IdempotentHandler
+    approve_language_model: approve_language_model.Handler
+    announce_language_model_retirement: announce_language_model_retirement.Handler
+    retire_language_model: retire_language_model.Handler
+    deprecate_language_model: deprecate_language_model.Handler
+    list_at_risk_results: list_at_risk_results.Handler
 
 
 def wire_agent(deps: Kernel) -> AgentHandlers:
@@ -189,6 +207,45 @@ def wire_agent(deps: Kernel) -> AgentHandlers:
         dismiss_event_in_reaction=with_tracing(
             dismiss_event_in_reaction.bind(deps),
             command_name="DismissEventInReaction",
+            bc=_BC,
+        ),
+        define_language_model=with_tracing(
+            with_idempotency(
+                define_language_model.bind(deps),
+                deps.idempotency_store,
+                command_name="DefineLanguageModel",
+                # Handler returns UUID; cache as str (jsonb-friendly) and
+                # rebuild via UUID() on retrieval.
+                serialize_result=str,
+                deserialize_result=UUID,
+                lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
+            ),
+            command_name="DefineLanguageModel",
+            bc=_BC,
+        ),
+        approve_language_model=with_tracing(
+            approve_language_model.bind(deps),
+            command_name="ApproveLanguageModel",
+            bc=_BC,
+        ),
+        announce_language_model_retirement=with_tracing(
+            announce_language_model_retirement.bind(deps),
+            command_name="AnnounceLanguageModelRetirement",
+            bc=_BC,
+        ),
+        retire_language_model=with_tracing(
+            retire_language_model.bind(deps),
+            command_name="RetireLanguageModel",
+            bc=_BC,
+        ),
+        deprecate_language_model=with_tracing(
+            deprecate_language_model.bind(deps),
+            command_name="DeprecateLanguageModel",
+            bc=_BC,
+        ),
+        list_at_risk_results=with_tracing(
+            list_at_risk_results.bind(deps),
+            command_name="ListAtRiskResults",
             bc=_BC,
         ),
     )

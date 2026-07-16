@@ -10,7 +10,7 @@ shapes, codified in `docs/reference/conventions.md` under
     `proj_data_dataset_summary`).
   - `proj_<aggregate>_<rowtype>` for single-aggregate BCs whose name
     equals the aggregate name (e.g., `proj_run_summary`,
-    `proj_agent_summary`, `proj_supply_summary`).
+    `proj_caution_summary`, `proj_supply_summary`).
 
 This fitness function walks every projection registered via the
 `register_<bc>_projections` entry points, derives the BC from the
@@ -43,9 +43,11 @@ if TYPE_CHECKING:
 # `proj_<aggregate>_<rowtype>` (e.g., proj_run_summary, not
 # proj_run_run_summary). Add a BC here only after confirming it has
 # exactly one aggregate AND the BC name matches the aggregate name.
+# `agent` left this set when the LanguageModel aggregate landed: its
+# proj_agent_summary and proj_agent_language_model_summary both pass
+# via the prefix-present branch.
 _BCS_WITH_MATCHING_SINGLE_AGGREGATE: frozenset[str] = frozenset(
     {
-        "agent",
         "calibration",
         "campaign",
         "caution",

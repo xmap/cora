@@ -13,11 +13,13 @@ import pytest
 
 from cora.access.aggregates.actor import ActorKind
 from cora.agent.aggregates.agent import ModelRef
+from cora.agent.aggregates.language_model import LanguageModelNotApprovedError
 from cora.agent.errors import UnauthorizedError
 from cora.agent.features import define_agent
 from cora.agent.features.define_agent import DefineAgent
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.ports import LanguageModelLookupResult
 from tests.unit._helpers import build_deps as _build_deps_shared
 from tests.unit._helpers import make_profile_store
 
@@ -29,10 +31,29 @@ _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 
 
+class _FixedLanguageModelLookup:
+    """Gate stub: answers every identity with one fixed catalog result
+    and records the identities it was asked about."""
+
+    def __init__(self, result: LanguageModelLookupResult | None) -> None:
+        self._result = result
+        self.calls: list[tuple[str, str]] = []
+
+    async def find_by_model(
+        self,
+        *,
+        provider: str,
+        model: str,
+    ) -> LanguageModelLookupResult | None:
+        self.calls.append((provider, model))
+        return self._result
+
+
 def _build_deps(
     *,
     event_store: InMemoryEventStore | None = None,
     deny: bool = False,
+    language_model_lookup: _FixedLanguageModelLookup | None = None,
 ) -> Kernel:
     return _build_deps_shared(
         # define_agent consumes 3 ids: new agent_id + 1 event_id per stream.
@@ -40,6 +61,7 @@ def _build_deps(
         now=_NOW,
         event_store=event_store,
         deny=deny,
+        language_model_lookup=language_model_lookup,
     )
 
 
@@ -211,3 +233,89 @@ async def test_handler_denied_does_not_write_either_stream() -> None:
     assert actor_version == 0
     assert agent_events == []
     assert actor_events == []
+
+
+@pytest.mark.unit
+async def test_handler_gate_queries_exactly_the_commands_model_identity() -> None:
+    """The gate resolves the command's own model_ref (provider, model),
+    once: a drift to a hardcoded identity or a double lookup fails here."""
+    lookup = _FixedLanguageModelLookup(
+        LanguageModelLookupResult(
+            language_model_id=UUID("01900000-0000-7000-8000-00000000d002"),
+            status="Approved",
+            data_tier="Internal",
+            archivability="Alias",
+            snapshot_pin=None,
+        )
+    )
+    deps = _build_deps(language_model_lookup=lookup)
+    handler = define_agent.bind(deps, profile_store=make_profile_store())
+    await handler(
+        _command(),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert lookup.calls == [("anthropic", "claude-sonnet-4-6")]
+
+
+@pytest.mark.unit
+async def test_handler_uncataloged_model_raises_not_approved() -> None:
+    """A lookup miss (identity absent from the catalog) refuses the
+    registration with status None on the error."""
+    deps = _build_deps(language_model_lookup=_FixedLanguageModelLookup(None))
+    handler = define_agent.bind(deps, profile_store=make_profile_store())
+    with pytest.raises(LanguageModelNotApprovedError) as exc_info:
+        await handler(
+            _command(),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc_info.value.provider == "anthropic"
+    assert exc_info.value.model == "claude-sonnet-4-6"
+    assert exc_info.value.status is None
+
+
+@pytest.mark.unit
+async def test_handler_defined_but_unapproved_model_raises_not_approved() -> None:
+    """A Defined entry is registered but not yet usable: the gate
+    requires Approved, mirroring the bootstrap-then-promote ceremony."""
+    entry = LanguageModelLookupResult(
+        language_model_id=UUID("01900000-0000-7000-8000-00000000d001"),
+        status="Defined",
+        data_tier="Internal",
+        archivability="Alias",
+        snapshot_pin=None,
+    )
+    deps = _build_deps(language_model_lookup=_FixedLanguageModelLookup(entry))
+    handler = define_agent.bind(deps, profile_store=make_profile_store())
+    with pytest.raises(LanguageModelNotApprovedError) as exc_info:
+        await handler(
+            _command(),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert exc_info.value.status == "Defined"
+
+
+@pytest.mark.unit
+async def test_handler_gate_refusal_writes_neither_stream_nor_vault() -> None:
+    """The gate runs BEFORE the vault upsert and the atomic append, so a
+    refused registration leaves no orphan profile row and no events."""
+    store = InMemoryEventStore()
+    profile_store = make_profile_store()
+    deps = _build_deps(
+        event_store=store,
+        language_model_lookup=_FixedLanguageModelLookup(None),
+    )
+    handler = define_agent.bind(deps, profile_store=profile_store)
+    with pytest.raises(LanguageModelNotApprovedError):
+        await handler(
+            _command(),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    agent_events, _ = await store.load("Agent", _NEW_ID)
+    actor_events, _ = await store.load("Actor", _NEW_ID)
+    assert agent_events == []
+    assert actor_events == []
+    assert await profile_store.get(_NEW_ID) is None

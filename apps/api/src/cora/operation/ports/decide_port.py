@@ -75,13 +75,16 @@ ComputePort deferred its registry to a second.
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 from uuid import UUID
 
 from cora.operation.ports.compute_port import ArtifactRef
 from cora.operation.ports.control_port import ActuationKind
 from cora.operation.ports.measurement import Measurement
 from cora.shared.decision_signals import REASONING_MAX_LENGTH, DecisionConfidenceSource
+
+if TYPE_CHECKING:
+    from cora.infrastructure.ports.llm import LLMUsage
 
 # The steering INTENT value objects (objective + space + a proposed point) live
 # in cora.shared.steering because the Campaign aggregate also declares them and
@@ -188,6 +191,17 @@ class DecideNotAvailableError(Exception):
     def __init__(self, reason: str) -> None:
         super().__init__(f"Decider not available: {reason}")
         self.reason = reason
+
+
+class DecideSpendRefusedError(DecideNotAvailableError):
+    """The caller's budget refused the next steering call before it was made.
+
+    Raised by a budget-guarded brain when the pre-call estimate would
+    breach the calling agent's declared cap. Subclasses
+    `DecideNotAvailableError` so the conduct loop's existing fold turns
+    the refusal into a deferred steering decision with this class name
+    on the record; no call was made and no tokens were bought.
+    """
 
 
 class DecideTimeoutError(Exception):
@@ -356,6 +370,25 @@ def advice_to_audit_fields(advice: SteeringAdvice) -> AdviceAuditFields:
     )
 
 
+@dataclass(frozen=True)
+class SteeringLlmCall:
+    """Usage record for one LLM call a steering brain made.
+
+    Emitted by `LlmDecidePort` into the conduct loop's usage sink so the
+    composition root can post each call to the durable inference ledger
+    once the across-procedure Decision exists. Carries only what the
+    brain legitimately knows at the seam: the model it asked for, the
+    model that answered, and the provider-reported token usage. Cost is
+    computed by the consumer from `usage` and pricing, the same math as
+    every other metered caller.
+    """
+
+    provider: str
+    request_model: str
+    response_model: str | None
+    usage: "LLMUsage"
+
+
 def objective_is_satisfied(
     objective: SteeringObjective, measurements: tuple[Measurement, ...]
 ) -> bool:
@@ -430,11 +463,13 @@ __all__ = [
     "DecideEvidenceRejectedError",
     "DecideNotAvailableError",
     "DecidePort",
+    "DecideSpendRefusedError",
     "DecideTimeoutError",
     "SteeringAdvice",
     "SteeringAxis",
     "SteeringBudget",
     "SteeringEvidence",
+    "SteeringLlmCall",
     "SteeringObjective",
     "SteeringObjectiveKind",
     "SteeringObservation",

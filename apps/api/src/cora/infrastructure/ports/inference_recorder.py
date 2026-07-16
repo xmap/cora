@@ -57,6 +57,11 @@ class AgentInferenceTrace:
     `request_model` is what was sent (the agent's configured model); when the
     provider resolves a dated snapshot, `response_model` carries the exact
     model that answered (the load-bearing reproducibility field).
+
+    `cost_usd` is the call's actual dollar cost, computed by the producer from
+    usage tokens and pricing (`compute_cost_usd`), the same math behind the
+    `cora.agent.llm.cost.usd` histogram. Persisting it here is what turns the
+    ephemeral meter into a durable ledger fact a spend lookup can sum.
     """
 
     decision_id: UUID
@@ -69,6 +74,7 @@ class AgentInferenceTrace:
     finish_reasons: tuple[str, ...] = field(default_factory=tuple[str, ...])
     input_tokens: int | None = None
     output_tokens: int | None = None
+    cost_usd: float | None = None
     request_max_tokens: int | None = None
     agent_id: str | None = None
     agent_name: str | None = None

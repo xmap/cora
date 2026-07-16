@@ -28,6 +28,18 @@ from cora.trust.authorize import TrustAuthorize
 
 
 @pytest.mark.unit
+async def test_build_kernel_refuses_a_postgres_deployment_without_financial_lookups() -> None:
+    """The fail-loud financial control: a production-tier deployment that
+    omits the spend or allocation factory must stop at startup, not
+    silently meter zero and disarm the instrument envelope. The raise
+    fires before any pool is opened, so no real database is needed."""
+    settings = Settings(app_env="production")  # type: ignore[call-arg]
+
+    with pytest.raises(ValueError, match="financial lookup"):
+        await build_kernel(authorize_factory=build_authorize, settings=settings)
+
+
+@pytest.mark.unit
 async def test_build_kernel_uses_in_memory_stores_in_test_env(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

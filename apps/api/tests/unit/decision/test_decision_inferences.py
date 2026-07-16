@@ -46,6 +46,7 @@ def _row(**overrides: object) -> Inference:
         "finish_reasons": (),
         "input_tokens": None,
         "output_tokens": None,
+        "cost_usd": None,
         "agent_id": None,
         "agent_name": None,
         "agent_description": None,

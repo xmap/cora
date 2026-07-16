@@ -80,7 +80,10 @@ def _start_run_and_finish(client: TestClient, *, end_state: str) -> str:
     if end_state == "Completed":
         resp = client.post(f"/runs/{run_id}/complete", json={})
     elif end_state == "Aborted":
-        resp = client.post(f"/runs/{run_id}/abort", json={"reason": "operator stop"})
+        resp = client.post(
+            f"/runs/{run_id}/abort",
+            json={"reason": "operator stop", "justification": "operator: aborting for test"},
+        )
     elif end_state == "Stopped":
         resp = client.post(f"/runs/{run_id}/stop", json={"reason": "controlled exit"})
     elif end_state == "Truncated":

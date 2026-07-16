@@ -45,6 +45,7 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import (
     LLM,
+    AllocationLookup,
     Allow,
     AllowAllAuthorize,
     AssemblyLookup,
@@ -58,8 +59,11 @@ from cora.infrastructure.ports import (
     FakeClock,
     FamilyLookup,
     FixedIdGenerator,
+    LanguageModelLookup,
+    ModelUsageLookup,
     ProfileStore,
     RoleLookup,
+    SpendLookup,
 )
 from cora.recipe.aggregates.capability import (
     CapabilityCode,
@@ -131,6 +135,10 @@ def build_deps(
     family_lookup: FamilyLookup | None = None,
     assembly_lookup: AssemblyLookup | None = None,
     role_lookup: RoleLookup | None = None,
+    spend_lookup: SpendLookup | None = None,
+    language_model_lookup: LanguageModelLookup | None = None,
+    model_usage_lookup: ModelUsageLookup | None = None,
+    allocation_lookup: AllocationLookup | None = None,
 ) -> Kernel:
     """Build a Kernel for unit-test handler invocation.
 
@@ -186,6 +194,24 @@ def build_deps(
     the slice resolves at the handler edge. Each defaults to a fresh
     empty in-memory adapter per call; tests on the slice-1 family_id
     path never touch them.
+
+    `language_model_lookup` injects a catalog-lookup stub for
+    `define_agent` gate tests (typically a fake returning None or a
+    non-Approved entry). Defaults to the kernel's always-approved stub
+    via `make_inmemory_kernel`, so every non-gate test keeps the
+    pre-catalog behavior.
+
+    `model_usage_lookup` injects a usage-lookup fake for
+    `list_at_risk_results` handler tests (typically a fake returning
+    seeded `ModelUsageLookupResult` rows). Defaults to the kernel's
+    always-empty stub via `make_inmemory_kernel`, so tests that don't
+    exercise the at-risk surface see no touched Decisions.
+
+    `allocation_lookup` injects an envelope-lookup fake for the
+    budget-gate and allocation-sealer tests (typically a fake
+    returning a chosen `AllocationLookupResult`). Defaults to the kernel's
+    never-Active stub via `make_inmemory_kernel`, so tests that never
+    declared an allocation keep the envelope check disarmed.
     """
     if authz is None:
         authz = DenyAllAuthorize() if deny else AllowAllAuthorize()
@@ -229,6 +255,10 @@ def build_deps(
         publish_port=InMemoryPublishPort(),
         signature_port=InMemorySignaturePort(),
         permit_lookup=InMemoryPermitLookup(),
+        spend_lookup=spend_lookup,
+        language_model_lookup=language_model_lookup,
+        model_usage_lookup=model_usage_lookup,
+        allocation_lookup=allocation_lookup,
     )
 
 

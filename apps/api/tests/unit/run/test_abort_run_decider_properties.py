@@ -69,7 +69,15 @@ def test_abort_with_none_state_always_raises_not_found(
 ) -> None:
     """Empty stream always raises `RunNotFoundError` carrying command.run_id."""
     with pytest.raises(RunNotFoundError) as exc:
-        abort_run.decide(state=None, command=AbortRun(run_id=run_id, reason=reason), now=now)
+        abort_run.decide(
+            state=None,
+            command=AbortRun(
+                run_id=run_id,
+                reason=reason,
+                justification="operator: aborting for test",
+            ),
+            now=now,
+        )
     assert exc.value.run_id == run_id
 
 
@@ -91,7 +99,12 @@ def test_abort_from_permitted_source_emits_single_event(
     """Running and Held both emit one RunAborted with the threaded reason."""
     events = abort_run.decide(
         state=_run(run_id=run_id, status=source),
-        command=AbortRun(run_id=run_id, reason=reason, decided_by_decision_id=decision_id),
+        command=AbortRun(
+            run_id=run_id,
+            reason=reason,
+            decided_by_decision_id=decision_id,
+            justification="operator: aborting for test",
+        ),
         now=now,
     )
     assert events == [
@@ -125,7 +138,11 @@ def test_abort_from_terminal_source_always_raises_cannot_abort(
     with pytest.raises(RunCannotAbortError) as exc:
         abort_run.decide(
             state=_run(run_id=run_id, status=source),
-            command=AbortRun(run_id=run_id, reason=reason),
+            command=AbortRun(
+                run_id=run_id,
+                reason=reason,
+                justification="operator: aborting for test",
+            ),
             now=now,
         )
     assert exc.value.current_status is source
@@ -150,7 +167,11 @@ def test_abort_uses_state_id_not_command_run_id(
     assume(state_run_id != command_run_id)
     events = abort_run.decide(
         state=_run(run_id=state_run_id, status=source),
-        command=AbortRun(run_id=command_run_id, reason=reason),
+        command=AbortRun(
+            run_id=command_run_id,
+            reason=reason,
+            justification="operator: aborting for test",
+        ),
         now=now,
     )
     assert events[0].run_id == state_run_id
@@ -165,7 +186,11 @@ def test_abort_is_pure_same_input_same_output(
 ) -> None:
     """Two calls with identical args return equal events (no clock leakage)."""
     state = _run(run_id=run_id, status=RunStatus.RUNNING)
-    command = AbortRun(run_id=run_id, reason=reason)
+    command = AbortRun(
+        run_id=run_id,
+        reason=reason,
+        justification="operator: aborting for test",
+    )
     first = abort_run.decide(state=state, command=command, now=now)
     second = abort_run.decide(state=state, command=command, now=now)
     assert first == second

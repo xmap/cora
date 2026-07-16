@@ -50,6 +50,7 @@ from cora.access import (
 from cora.agent import (
     AgentHandlers,
     build_llm,
+    refresh_language_model_pricing,
     register_agent_projections,
     register_agent_routes,
     register_agent_subscribers,
@@ -62,12 +63,15 @@ from cora.agent import (
     seed_clearance_expirer_agent,
     seed_clearance_watcher_agent,
     seed_experiment_steerer_agent,
+    seed_language_models,
     seed_procedure_watcher_agent,
+    seed_ratification_enforcer_agent,
     seed_run_debriefer_agent,
     seed_run_initiator_agent,
     seed_run_supervisor_agent,
     wire_agent,
 )
+from cora.agent.adapters import BudgetSpendGuard, PostgresLanguageModelLookup
 from cora.api._calibration_watcher import calibration_watcher_lifespan
 from cora.api._campaign_watcher import campaign_watcher_lifespan
 from cora.api._clearance_expirer import clearance_expirer_lifespan
@@ -82,6 +86,15 @@ from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
+from cora.budget import (
+    BudgetHandlers,
+    register_budget_projections,
+    register_budget_routes,
+    register_budget_subscribers,
+    register_budget_tools,
+    wire_budget,
+)
+from cora.budget.adapters import PostgresAllocationLookup
 from cora.calibration import (
     CalibrationHandlers,
     register_calibration_projections,
@@ -123,6 +136,7 @@ from cora.decision import (
     register_decision_tools,
     wire_decision,
 )
+from cora.decision.adapters import PostgresModelUsageLookup, PostgresSpendLookup
 from cora.enclosure import (
     EnclosureHandlers,
     enclosure_permit_monitor_lifespan,
@@ -235,6 +249,7 @@ from cora.trust import (
     warn_if_verdict_log_dormant,
     wire_trust,
 )
+from cora.trust.adapters import PostgresConsequenceLookup
 
 
 def _settings_for_app() -> Settings:
@@ -582,6 +597,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
         handlers: CampaignHandlers = fastapi_app.state.campaign
         return handlers
 
+    def _get_budget_handlers() -> BudgetHandlers:
+        handlers: BudgetHandlers = fastapi_app.state.budget
+        return handlers
+
     def _get_agent_handlers() -> AgentHandlers:
         handlers: AgentHandlers = fastapi_app.state.agent
         return handlers
@@ -602,6 +621,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_caution_tools(mcp, get_handlers=_get_caution_handlers)
     register_calibration_tools(mcp, get_handlers=_get_calibration_handlers)
     register_campaign_tools(mcp, get_handlers=_get_campaign_handlers)
+    register_budget_tools(mcp, get_handlers=_get_budget_handlers)
     register_agent_tools(mcp, get_handlers=_get_agent_handlers)
     register_conduct_run_tools(mcp, get_runtime=_get_compute_run_driver, get_deps=_get_deps)
     mcp_app = mcp.streamable_http_app()
@@ -618,7 +638,20 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 caution_lookup_factory=PostgresCautionLookup,
                 capability_lookup_factory=PostgresCapabilityLookup,
                 supply_lookup_factory=PostgresSupplyLookup,
+                spend_lookup_factory=PostgresSpendLookup,
+                # LanguageModel catalog lookup for the define_agent gate
+                # and the at-risk-results usage lookup, both through the
+                # factory grammar. Test mode (app_env=test) skips the
+                # factories and keeps the always-approved / always-empty
+                # stubs, matching the ports' opt-in posture.
+                language_model_lookup_factory=PostgresLanguageModelLookup,
+                model_usage_lookup_factory=PostgresModelUsageLookup,
+                # Active-envelope lookup for the allocation gate stack and
+                # the CampaignClosed sealer; same opt-in posture (test mode
+                # keeps the never-Active stub).
+                allocation_lookup_factory=PostgresAllocationLookup,
                 run_actor_involvement_lookup_factory=PostgresRunActorInvolvementLookup,
+                consequence_lookup_factory=PostgresConsequenceLookup,
                 dataset_distribution_lookup_factory=PostgresDatasetDistributionLookup,
                 credential_lookup_factory=PostgresCredentialLookup,
                 facility_lookup_factory=PostgresFacilityLookup,
@@ -685,6 +718,15 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 "inference_recorder",
                 DelegatingInferenceRecorder(app.state.decision.append_inferences),
             )
+            object.__setattr__(
+                deps,
+                "spend_guard",
+                BudgetSpendGuard(
+                    event_store=deps.event_store,
+                    spend_lookup=deps.spend_lookup,
+                    allocation_lookup=deps.allocation_lookup,
+                ),
+            )
             app.state.supply = wire_supply(deps)
             app.state.enclosure = wire_enclosure(deps)
 
@@ -713,6 +755,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             app.state.caution = wire_caution(deps)
             app.state.calibration = wire_calibration(deps)
             app.state.campaign = wire_campaign(deps)
+            app.state.budget = wire_budget(deps)
             app.state.agent = wire_agent(deps)
 
             app.state.compute_run_driver = ComputeRunDriver(
@@ -804,6 +847,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             register_caution_projections(registry, deps)
             register_calibration_projections(registry, deps)
             register_campaign_projections(registry, deps)
+            # Budget BC's projection (proj_budget_allocation_summary):
+            # the read model the envelope gate's AllocationLookup and
+            # the CampaignClosed sealer answer from.
+            register_budget_projections(registry, deps)
             # Agent BC's projection (proj_agent_summary). Path C
             # lock — state-side lifecycle timestamps live on the
             # projection.
@@ -812,18 +859,43 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # (RunDebriefer). Conditional: only registered when
             # `kernel.llm` is wired (ANTHROPIC_API_KEY configured).
             register_agent_subscribers(registry, deps)
+            # budget BC's deterministic CampaignClosed -> seal reaction;
+            # unconditional (bookkeeping must not depend on an LLM key).
+            register_budget_subscribers(registry, deps)
             app.state.projections = registry
 
             # seed the AuthorityRevocationHolder Agent record FIRST: the
             # kill-switch subscriber (K3) registers unconditionally and must
             # resolve its `actor_id` at apply()-time. Idempotent across restarts.
             await seed_authority_revocation_holder_agent(deps)
+            # seed the RatificationEnforcer Agent record: the consequence-gate
+            # hold/release subscribers register unconditionally and must resolve
+            # their `actor_id` at apply()-time. Idempotent across restarts.
+            await seed_ratification_enforcer_agent(deps)
             # seed the RunDebriefer Agent record so
             # the subscriber can resolve `actor_id` at apply()-time.
             # Idempotent across restarts; safe to re-run forever.
             await seed_run_debriefer_agent(deps)
             # same shape for CautionDrafter.
             await seed_caution_drafter_agent(deps)
+            # LanguageModel catalog entries for the fleet's three default
+            # models, born Defined AND Approved so the define_agent gate
+            # never refuses the shipped fleet on a fresh deployment.
+            await seed_language_models(deps)
+            # Drain Agent-owned projections synchronously (the federation /
+            # enclosure drain shape below): first boot must not refuse
+            # define_agent for the models the seed just approved while the
+            # worker catches up, and PostgresLanguageModelLookup reads
+            # proj_agent_language_model_summary. Cheap no-op in-memory.
+            agent_only_registry = ProjectionRegistry()
+            register_agent_projections(agent_only_registry, deps)
+            if deps.pool is not None:
+                await drain_projections(deps.pool, agent_only_registry, deadline_seconds=5.0)
+                # Feed the observability pricing overlay from the catalog
+                # just drained. Day one the overlay equals the static table
+                # because the seeds mirror it; the bridge is what lets a
+                # facility's catalog pricing diverge deliberately.
+                await refresh_language_model_pricing(pool=deps.pool, event_store=deps.event_store)
             # same shape for RunSupervisor (deterministic in-loop agent).
             await seed_run_supervisor_agent(deps)
             # same shape for RunInitiator (deterministic agent that starts Runs;
@@ -1036,6 +1108,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     register_caution_routes(fastapi_app)
     register_calibration_routes(fastapi_app)
     register_campaign_routes(fastapi_app)
+    register_budget_routes(fastapi_app)
     register_agent_routes(fastapi_app)
     register_conduct_run_routes(fastapi_app)
     # RFC 9728 Protected Resource Metadata. Discoverable

@@ -21,8 +21,12 @@ from cora.access.aggregates.actor import (
 )
 from cora.access.aggregates.actor import event_type_name as actor_event_type_name
 from cora.access.aggregates.actor import to_payload as actor_to_payload
+from cora.agent.aggregates.agent import AgentDeprecated
+from cora.agent.aggregates.agent import event_type_name as agent_event_type_name
+from cora.agent.aggregates.agent import to_payload as agent_to_payload
 from cora.agent.seed import (
     RUN_DEBRIEFER_AGENT_ID,
+    RUN_DEBRIEFER_AGENT_KIND,
     RUN_DEBRIEFER_AGENT_NAME,
 )
 from cora.agent.subscribers._terminal_run_helpers import (
@@ -34,6 +38,7 @@ from cora.agent.subscribers._terminal_run_helpers import (
 from cora.agent.subscribers.run_debriefer import (
     RunDebrieferSubscriber,
     _derive_decision_id,
+    make_run_debriefer_subscriber,
     redact_secrets,
 )
 from cora.decision.aggregates.decision import load_decision
@@ -45,6 +50,7 @@ from cora.infrastructure.ports import (
     LLMServerError,
     LLMUsage,
 )
+from cora.infrastructure.ports.allocation_lookup import AllocationLookupResult
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.run.aggregates.run import (
     RunStarted,
@@ -61,7 +67,16 @@ from cora.run.aggregates.run.events import (
     RunStopped,
     RunTruncated,
 )
-from tests.unit.agent._helpers import Ed25519FakeSigner, FakeInferenceRecorder
+from tests.unit._helpers import build_deps
+from tests.unit.agent._helpers import (
+    Ed25519FakeSigner,
+    FakeAllocationLookup,
+    FakeInferenceRecorder,
+    FakeSpendLookup,
+    seed_defined_agent,
+    seed_suspended_agent,
+    seed_versioned_agent,
+)
 
 _NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
 _LATER = datetime(2026, 5, 17, 14, 47, 0, tzinfo=UTC)
@@ -218,12 +233,16 @@ async def _build_subscriber(
     event_store: InMemoryEventStore,
     llm: FakeLLM,
     inference_recorder: FakeInferenceRecorder | None = None,
+    spend_lookup: FakeSpendLookup | None = None,
+    allocation_lookup: FakeAllocationLookup | None = None,
 ) -> RunDebrieferSubscriber:
     return RunDebrieferSubscriber(
         event_store=event_store,
         llm=llm,
         logbook_mirror=None,
         inference_recorder=inference_recorder,
+        spend_lookup=spend_lookup,
+        allocation_lookup=allocation_lookup,
     )
 
 
@@ -395,6 +414,311 @@ async def test_apply_writes_debrief_deferred_on_llm_failure() -> None:
     assert "LLM call failed with LLMServerError" in (decision.reasoning or "")
     assert decision.inputs is not None
     assert decision.inputs["failure_error_class"] == "LLMServerError"
+
+
+# ---------- Suspension gate + budget gate ----------
+
+
+@pytest.mark.unit
+async def test_apply_skips_entirely_when_agent_suspended() -> None:
+    """A Suspended agent takes no actions: no LLM call, no Decision.
+    The per-apply suspension gate is what makes suspend_agent an
+    actual halt of LLM spend rather than a recorded intention."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store)
+    await seed_suspended_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        suspend_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        suspended_at=_NOW,
+        reason="cost overrun",
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert await load_decision(store, _derive_decision_id(event.event_id)) is None
+    assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_apply_defers_debrief_when_monthly_usd_cap_exhausted() -> None:
+    """Cap reached: the LLM call is skipped and the refusal is recorded
+    as this Run's DebriefDeferred Decision (coarse post-hoc tier)."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    recorder = FakeInferenceRecorder()
+    await _seed_run_debrief_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        monthly_usd_cap=120.0,
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    spend_lookup = FakeSpendLookup(usd_spent=121.3)
+    subscriber = await _build_subscriber(store, llm, recorder, spend_lookup=spend_lookup)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "DebriefDeferred"
+    assert "Agent budget exhausted: monthly_usd_cap" in (decision.reasoning or "")
+    assert decision.inputs is not None
+    assert decision.inputs["failure_error_class"] == "AgentBudgetExhausted"
+    assert decision.inputs["budget_cap_kind"] == "monthly_usd_cap"
+    assert recorder.calls == []
+    assert llm.received == []
+    # The window derives from the terminal event's occurred_at (_LATER,
+    # 2026-05-17), NOT wall clock: the replay-determinism invariant.
+    assert spend_lookup.windows == [
+        (
+            RUN_DEBRIEFER_AGENT_ID,
+            datetime(2026, 5, 1, tzinfo=UTC),
+            datetime(2026, 6, 1, tzinfo=UTC),
+        )
+    ]
+
+
+@pytest.mark.unit
+async def test_apply_defers_debrief_when_daily_token_cap_exhausted() -> None:
+    """The daily token cap gates end to end: the deferred Decision
+    carries the daily cap kind and the window is the event's UTC day."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        daily_token_cap=1_000_000,
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    spend_lookup = FakeSpendLookup(tokens_spent=1_000_000)
+    subscriber = await _build_subscriber(store, llm, spend_lookup=spend_lookup)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "DebriefDeferred"
+    assert decision.inputs is not None
+    assert decision.inputs["budget_cap_kind"] == "daily_token_cap"
+    assert llm.received == []
+    assert spend_lookup.windows == [
+        (
+            RUN_DEBRIEFER_AGENT_ID,
+            datetime(2026, 5, 17, tzinfo=UTC),
+            datetime(2026, 5, 18, tzinfo=UTC),
+        )
+    ]
+
+
+@pytest.mark.unit
+async def test_apply_defers_debrief_when_allocation_envelope_exhausted() -> None:
+    """The instrument-wide envelope stops the call even though this
+    agent has no declared caps of its own: instance-total spend over
+    [activated_at, event.occurred_at) has reached the Active ceiling,
+    and the refusal is recorded as this Run's DebriefDeferred with the
+    AllocationExhausted marker."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    recorder = FakeInferenceRecorder()
+    await _seed_run_debrief_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    activated_at = datetime(2026, 5, 1, 8, 0, 0, tzinfo=UTC)
+    envelope = AllocationLookupResult(
+        allocation_id=uuid4(),
+        ceiling_usd=100.0,
+        activated_at=activated_at,
+        campaign_id=None,
+    )
+    spend_lookup = FakeSpendLookup(total_usd_spent=100.0)
+    subscriber = await _build_subscriber(
+        store,
+        llm,
+        recorder,
+        spend_lookup=spend_lookup,
+        allocation_lookup=FakeAllocationLookup(envelope),
+    )
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "DebriefDeferred"
+    assert "Allocation exhausted" in (decision.reasoning or "")
+    assert decision.inputs is not None
+    assert decision.inputs["failure_error_class"] == "AllocationExhausted"
+    assert decision.inputs["allocation_id"] == str(envelope.allocation_id)
+    assert recorder.calls == []
+    assert llm.received == []
+    # The envelope window is its own lifecycle: activation to the
+    # terminal event's occurred_at (_LATER), never wall clock.
+    assert spend_lookup.total_windows == [(activated_at, _LATER)]
+
+
+@pytest.mark.unit
+async def test_apply_agent_cap_breach_wins_over_the_envelope() -> None:
+    """Gate ordering: the per-agent cap is checked before the instrument
+    envelope, so a capped agent defers with AgentBudgetExhausted and the
+    envelope lookup is never consulted (dropping the ordering would flip
+    the marker to AllocationExhausted)."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    recorder = FakeInferenceRecorder()
+    await _seed_run_debrief_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        monthly_usd_cap=120.0,
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    envelope = AllocationLookupResult(
+        allocation_id=uuid4(),
+        ceiling_usd=100.0,
+        activated_at=datetime(2026, 5, 1, 8, 0, 0, tzinfo=UTC),
+        campaign_id=None,
+    )
+    allocation_lookup = FakeAllocationLookup(envelope)
+    spend_lookup = FakeSpendLookup(usd_spent=121.3, total_usd_spent=100.0)
+    subscriber = await _build_subscriber(
+        store, llm, recorder, spend_lookup=spend_lookup, allocation_lookup=allocation_lookup
+    )
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.inputs is not None
+    assert decision.inputs["failure_error_class"] == "AgentBudgetExhausted"
+    assert allocation_lookup.find_active_calls == 0
+    assert spend_lookup.total_windows == []
+    assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_apply_skips_entirely_when_agent_deprecated() -> None:
+    """The lifecycle gate is Versioned-only: Deprecated is terminal
+    ("future invocations must pick a non-Deprecated Agent"), so a
+    retired agent makes no LLM calls and writes no Decisions."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store)
+    await seed_defined_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        occurred_at=_NOW,
+    )
+    deprecated = AgentDeprecated(
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        reason="model regression",
+        occurred_at=_NOW,
+    )
+    await store.append(
+        stream_type="Agent",
+        stream_id=RUN_DEBRIEFER_AGENT_ID,
+        expected_version=1,
+        events=[
+            to_new_event(
+                event_type=agent_event_type_name(deprecated),
+                payload=agent_to_payload(deprecated),
+                occurred_at=deprecated.occurred_at,
+                event_id=uuid4(),
+                command_name="DeprecateAgent",
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                principal_id=_PRINCIPAL_ID,
+            )
+        ],
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert await load_decision(store, _derive_decision_id(event.event_id)) is None
+    assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_apply_proceeds_normally_when_spend_is_under_cap() -> None:
+    """A declared budget with headroom never interferes with the
+    debrief: the gate is invisible until a cap is exhausted."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        monthly_usd_cap=500.0,
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm, spend_lookup=FakeSpendLookup(usd_spent=1.0))
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    decision = await load_decision(store, _derive_decision_id(event.event_id))
+    assert decision is not None
+    assert decision.choice.value == "NominalCompletion"
 
 
 @pytest.mark.unit
@@ -1167,10 +1491,11 @@ async def test_apply_appends_lease_event_to_run_stream_on_happy_path() -> None:
 
 @pytest.mark.unit
 async def test_apply_writes_debrief_conflicted_when_another_agent_holds_lease() -> None:
-    """When a different agent already holds the lease (lease event on
-    Run stream by a foreign debriefer_agent_id), the subscriber writes
-    DebriefConflicted on its own Decision stream WITHOUT invoking the
-    LLM. Per the design memo: losing agents pay zero LLM cost."""
+    """When a different agent OF THE SAME KIND (a rainbow-deploy
+    RunDebriefer variant) already holds the lease, the subscriber
+    writes DebriefConflicted on its own Decision stream WITHOUT
+    invoking the LLM. Per the design memo: losing agents pay zero
+    LLM cost."""
     from cora.agent._subscriber_lease import attempt_debrief_lease
 
     store = InMemoryEventStore()
@@ -1185,6 +1510,7 @@ async def test_apply_writes_debrief_conflicted_when_another_agent_holds_lease() 
     pre_acquired, _ = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=RUN_DEBRIEFER_AGENT_KIND,
         debriefer_agent_id=foreign_agent_id,
         terminal_event=event,
         occurred_at=event.occurred_at,
@@ -1229,6 +1555,7 @@ async def test_apply_after_prior_lease_by_same_agent_proceeds_to_llm_and_writes_
     pre_acquired, _ = await attempt_debrief_lease(
         store,
         run_id=run_id,
+        debriefer_kind=RUN_DEBRIEFER_AGENT_KIND,
         debriefer_agent_id=RUN_DEBRIEFER_AGENT_ID,
         terminal_event=event,
         occurred_at=event.occurred_at,
@@ -1317,6 +1644,8 @@ async def test_apply_records_inference_on_success() -> None:
     assert call.trace.response_model == "claude-haiku-4-5-20260201"
     assert call.trace.input_tokens == 1280
     assert call.trace.output_tokens == 214
+    # Haiku 4.5 at $1/$5 per MTok: 1280 in + 214 out.
+    assert call.trace.cost_usd == pytest.approx(0.00128 + 0.00107)
     assert call.trace.finish_reasons == ("tool_use",)
     assert call.trace.request_max_tokens == 1024
     assert call.trace.agent_id == str(RUN_DEBRIEFER_AGENT_ID)
@@ -1386,3 +1715,15 @@ async def test_apply_records_inference_with_stable_event_id_under_retry() -> Non
 
     assert len(recorder.calls) == 2
     assert recorder.calls[0].trace.event_id == recorder.calls[1].trace.event_id
+
+
+@pytest.mark.unit
+def test_make_run_debriefer_subscriber_wires_spend_lookup_from_kernel() -> None:
+    """Pin the factory wiring: the budget gate silently disables if the
+    factory drops `deps.spend_lookup` (the constructor default is the
+    permissive AlwaysZeroSpendLookup)."""
+    deps = build_deps(llm=FakeLLM())
+    subscriber = make_run_debriefer_subscriber(deps)
+    assert isinstance(subscriber, RunDebrieferSubscriber)
+    assert subscriber.spend_lookup is deps.spend_lookup
+    assert subscriber.allocation_lookup is deps.allocation_lookup

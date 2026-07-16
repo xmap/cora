@@ -47,7 +47,7 @@ from cora.operation.features.conduct_until_advised.command import (
     ConductUntilAdvised,
     ConductUntilAdvisedResult,
 )
-from cora.operation.ports.decide_port import SteeringPoint
+from cora.operation.ports.decide_port import SteeringLlmCall, SteeringPoint
 from cora.operation.ports.recipe_expander import RecipeExpander
 
 _COMMAND_NAME = "ConductUntilAdvised"
@@ -146,7 +146,14 @@ def bind(
             causation_id=causation_id,
         )
 
-        decide_port = build_decide_port(command.decide, llm=deps.llm)
+        llm_calls: list[SteeringLlmCall] = []
+        decide_port = build_decide_port(
+            command.decide,
+            llm=deps.llm,
+            usage_sink=llm_calls.append,
+            spend_guard=deps.spend_guard,
+            clock=deps.clock,
+        )
         try:
             result = await conductor.conduct_until_advised(
                 procedure_id=command.procedure_id,
@@ -189,6 +196,7 @@ def bind(
                 result.actuation_kind.value if result.actuation_kind is not None else None
             ),
             measurements=result.measurements,
+            llm_calls=tuple(llm_calls),
         )
 
     return handler

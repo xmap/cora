@@ -1,8 +1,10 @@
 """Agent bounded context.
 
-One aggregate, `Agent`. Genesis plus a lifecycle FSM
+Two aggregates. `Agent`: genesis plus a lifecycle FSM
 (`Defined -> Versioned -> Suspended? -> Deprecated`) with tool
-grants and budget envelopes.
+grants and budget envelopes. `LanguageModel`: the facility's
+catalog entry for one approved LLM, homed beside the fleet whose
+`Agent.model_ref` it governs.
 
 Production `AnthropicLLM` ships at
 `cora.agent.adapters.AnthropicLLM` and is wired into the
@@ -25,6 +27,7 @@ Public surface re-exported here:
   - `build_llm`                (LLMFactory for `build_kernel`)
 """
 
+from cora.agent._pricing_bridge import refresh_language_model_pricing
 from cora.agent._projections import register_agent_projections
 from cora.agent._subscribers import register_agent_subscribers
 from cora.agent.aggregates.agent import load_agent
@@ -67,9 +70,14 @@ from cora.agent.seed_experiment_steerer import (
     EXPERIMENT_STEERER_AGENT_ID,
     seed_experiment_steerer_agent,
 )
+from cora.agent.seed_language_models import seed_language_models
 from cora.agent.seed_procedure_watcher import (
     PROCEDURE_WATCHER_AGENT_ID,
     seed_procedure_watcher_agent,
+)
+from cora.agent.seed_ratification_enforcer import (
+    RATIFICATION_ENFORCER_AGENT_ID,
+    seed_ratification_enforcer_agent,
 )
 from cora.agent.seed_run_initiator import (
     RUN_INITIATOR_AGENT_ID,
@@ -91,6 +99,7 @@ __all__ = [
     "CLEARANCE_WATCHER_AGENT_ID",
     "EXPERIMENT_STEERER_AGENT_ID",
     "PROCEDURE_WATCHER_AGENT_ID",
+    "RATIFICATION_ENFORCER_AGENT_ID",
     "RUN_INITIATOR_AGENT_ID",
     "RUN_SUPERVISOR_AGENT_ID",
     "AgentHandlers",
@@ -101,6 +110,7 @@ __all__ = [
     "UnauthorizedError",
     "build_llm",
     "load_agent",
+    "refresh_language_model_pricing",
     "register_agent_projections",
     "register_agent_routes",
     "register_agent_subscribers",
@@ -113,7 +123,9 @@ __all__ = [
     "seed_clearance_expirer_agent",
     "seed_clearance_watcher_agent",
     "seed_experiment_steerer_agent",
+    "seed_language_models",
     "seed_procedure_watcher_agent",
+    "seed_ratification_enforcer_agent",
     "seed_run_debriefer_agent",
     "seed_run_initiator_agent",
     "seed_run_supervisor_agent",

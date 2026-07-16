@@ -80,6 +80,7 @@ def test_mcp_abort_run_tool_succeeds_on_happy_path() -> None:
                     "arguments": {
                         "run_id": run_id,
                         "reason": "detector overheating",
+                        "justification": "operator: aborting for test",
                     },
                 },
             },
@@ -87,6 +88,31 @@ def test_mcp_abort_run_tool_succeeds_on_happy_path() -> None:
         )
     body = parse_sse_data(response.text)
     assert body["result"]["isError"] is False
+
+
+@pytest.mark.contract
+def test_mcp_abort_run_tool_returns_iserror_when_justification_missing() -> None:
+    """Obligation gate (Gate III) fires through the MCP surface too: an abort with
+    no justification is refused (isError), kind-blind to the agent caller."""
+    with TestClient(create_app()) as client:
+        run_id = _setup_full_run(client)
+        headers = open_session(client)
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 6,
+                "method": "tools/call",
+                "params": {
+                    "name": "abort_run",
+                    "arguments": {"run_id": run_id, "reason": "detector overheating"},
+                },
+            },
+            headers=headers,
+        )
+    body = parse_sse_data(response.text)
+    assert body["result"]["isError"] is True
+    assert "justification" in body["result"]["content"][0]["text"].lower()
 
 
 @pytest.mark.contract
@@ -104,6 +130,7 @@ def test_mcp_abort_run_tool_returns_iserror_for_unknown_run() -> None:
                     "arguments": {
                         "run_id": str(uuid4()),
                         "reason": "X",
+                        "justification": "operator: aborting for test",
                     },
                 },
             },
@@ -118,7 +145,10 @@ def test_mcp_abort_run_tool_returns_iserror_for_unknown_run() -> None:
 def test_mcp_abort_run_tool_returns_iserror_when_already_aborted() -> None:
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        first = client.post(f"/runs/{run_id}/abort", json={"reason": "first"})
+        first = client.post(
+            f"/runs/{run_id}/abort",
+            json={"reason": "first", "justification": "operator: aborting for test"},
+        )
         assert first.status_code == 204
         headers = open_session(client)
         response = client.post(
@@ -132,6 +162,7 @@ def test_mcp_abort_run_tool_returns_iserror_when_already_aborted() -> None:
                     "arguments": {
                         "run_id": run_id,
                         "reason": "second",
+                        "justification": "operator: aborting for test",
                     },
                 },
             },

@@ -35,8 +35,11 @@ guarantees.
 
 Decision (own BC) is loaded. The producer's reasoning entries
 typically reference external concepts (model names, tool names,
-agent IDs) but those are stored as opaque strings, no
-cross-aggregate validation needed for the entries themselves.
+agent IDs) stored as opaque strings without cross-aggregate
+validation, with ONE exception: `agent_id` must equal the calling
+principal when set (agent-attributed rows are the budget ledger;
+see `InferenceAgentMismatchError`). No Agent aggregate is loaded,
+the check is a pure string comparison against the envelope.
 """
 
 from typing import Protocol
@@ -53,7 +56,7 @@ from cora.decision.aggregates.decision import (
     load_decision,
     to_payload,
 )
-from cora.decision.errors import UnauthorizedError
+from cora.decision.errors import InferenceAgentMismatchError, UnauthorizedError
 from cora.decision.features.append_inferences.command import (
     AppendInferences,
     ReasoningEntryInput,
@@ -136,6 +139,28 @@ def bind(deps: Kernel, *, inference_store: InferenceStore) -> Handler:
                 reason=authz.reason,
             )
             raise UnauthorizedError(authz.reason)
+
+        # Agent attribution is principal-bound: entry rows keyed by
+        # agent_id are the spend ledger the AgentBudget gate sums, so a
+        # producer may only record spend against itself. Reject the
+        # whole batch BEFORE any write (no logbook open, no partial
+        # append) so a spoofing request leaves no trace to clean up.
+        principal_str = str(principal_id)
+        for entry in command.entries:
+            if entry.agent_id is not None and entry.agent_id != principal_str:
+                _log.warning(
+                    "append_inferences.agent_mismatch",
+                    command_name=_COMMAND_NAME,
+                    decision_id=str(command.decision_id),
+                    entry_event_id=str(entry.event_id),
+                    entry_agent_id=entry.agent_id,
+                    principal_id=principal_str,
+                    correlation_id=str(correlation_id),
+                )
+                raise InferenceAgentMismatchError(
+                    entry_agent_id=entry.agent_id,
+                    principal_id=principal_str,
+                )
 
         # Resolve the reasoning logbook id, opening it lazily on the
         # first append. Retries on ConcurrencyError (a parallel writer
@@ -259,6 +284,7 @@ def _build_row(
         finish_reasons=entry.finish_reasons,
         input_tokens=entry.input_tokens,
         output_tokens=entry.output_tokens,
+        cost_usd=entry.cost_usd,
         agent_id=entry.agent_id,
         agent_name=entry.agent_name,
         agent_description=entry.agent_description,

@@ -18,6 +18,7 @@ from cora.infrastructure.routing import (
 )
 from cora.run.features.abort_run.command import AbortRun
 from cora.run.features.abort_run.handler import Handler
+from cora.shared.justification import JUSTIFICATION_MAX_LENGTH
 from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
@@ -32,6 +33,18 @@ class AbortRunRequest(BaseModel):
             "Free-form reason for the abort (1-500 chars after trimming). "
             "Today the field is unstructured; structured taxonomy is "
             "future-additive."
+        ),
+    )
+    justification: str | None = Field(
+        default=None,
+        max_length=JUSTIFICATION_MAX_LENGTH,
+        description=(
+            "Obligation gate (Gate III): AbortRun requires an admission "
+            "justification accounting for why this consequential action is "
+            "taken. Fail-closed (absent / blank / over-length -> 422). Distinct "
+            "from `reason`, which is post-hoc text on the RunAborted event; the "
+            "justification is the precondition of admission. Kind-blind (a human "
+            "and an agent supply it identically)."
         ),
     )
     decided_by_decision_id: UUID | None = Field(
@@ -82,7 +95,12 @@ router = APIRouter(tags=["run"])
             ),
         },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
-            "description": "Path parameter or request body failed schema validation.",
+            "model": ErrorResponse,
+            "description": (
+                "Path parameter or request body failed schema validation, OR the "
+                "obligation gate (Gate III) refused the abort because no valid "
+                "justification was supplied (absent / blank / over-length)."
+            ),
         },
     },
     summary="Mark an existing Run as aborted (emergency-exit terminal)",
@@ -99,6 +117,7 @@ async def post_runs_abort(
         AbortRun(
             run_id=run_id,
             reason=body.reason,
+            justification=body.justification,
             decided_by_decision_id=body.decided_by_decision_id,
         ),
         principal_id=principal_id,

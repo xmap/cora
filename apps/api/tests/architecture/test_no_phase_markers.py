@@ -116,6 +116,16 @@ _FORBIDDEN = re.compile(
     # this regex sees the line.
     r"\bStage[ -][0-9][a-z]?(?:-[a-z]+)?\b"
     r"|"
+    # Letter-only build-stage marker in prose (`stage-A`, `stage C`).
+    # The digit-first arm above requires a number, so a plan that labels
+    # its steps A/B/C instead of 1/2/3 slipped straight through. Bounded
+    # to a LOWERCASE `stage`: an inline build reference is written
+    # lowercase, whereas Title-Case `Stage` is the shape of real beamline
+    # device names (`Rotary Stage A`, an asset named `Stage-A`), so
+    # matching those would be a false positive. The lowercase form is
+    # false-positive-free across the tree.
+    r"\bstage[ -][A-D]\b"
+    r"|"
     # Implicit phase reference: prep word followed by a hyphenated phase
     # tag like `pre-7e`, `post-6g-c`, `from 6f-1`, `in 11a-c-3`,
     # `until 9b-b`. The first chunk is bounded to 1-2 letters so
@@ -211,6 +221,9 @@ def _violations_for_line(line: str) -> str | None:
         ("Stage 2c-credential lands the rotation slices.", "Stage 2c-credential"),
         # Stage arm: bare digit (no letter).
         ("Picked per Stage 0 corpus survey.", "Stage 0"),
+        # Stage arm: letter-only build marker (the shape that leaked).
+        ("The check (stage-A) reads the ceiling.", "stage-A"),
+        ("Wired in stage C.", "stage C"),
     ],
 )
 def test_stage_arm_matches_planning_markers(line: str, expected: str) -> None:
@@ -252,6 +265,11 @@ def test_new_arms_match_known_drift(line: str, expected: str) -> None:
         "Refer to [[project-control-port-design]] (no stage tag).",
         # Capitalized "Stage" outside the marker shape (no digit) is fine.
         "Stage left to drop off the prop.",
+        # Lowercase prose after "stage" (a physical stage, not a marker).
+        "the sample stage a technician aligns by hand",
+        # Title-Case device name with a space (e.g. `Rotary Stage A`) is
+        # a real beamline component, not a build marker.
+        'name="Rotary Stage A"',
         # Domain noun: ISA-88 Phase is allowed.
         "Phase IS a Procedure in ISA-88 terms.",
         # The substring "phase" inside a longer identifier should not trip:

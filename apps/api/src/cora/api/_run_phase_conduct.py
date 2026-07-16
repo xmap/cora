@@ -165,6 +165,9 @@ async def conduct_phase_then_complete_run(
                 AbortRun(
                     run_id=run_id,
                     reason=_abort_reason(result.failure),
+                    # Obligation gate (Gate III): kind-blind, so the phase
+                    # conductor justifies its abort with the mechanical cause.
+                    justification=f"run-phase-conduct: {_abort_reason(result.failure)}",
                     actuation_kind=result.actuation_kind,
                 ),
                 **envelope,

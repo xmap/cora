@@ -81,11 +81,16 @@ from cora.infrastructure.kernel import Kernel, Teardown
 from cora.infrastructure.logging import configure_logging
 from cora.infrastructure.ports import (
     LLM,
+    AllocationLookup,
     AllSatisfiedSupplyLookup,
+    AlwaysApprovedLanguageModelLookup,
     AlwaysCoveredClearanceLookup,
     AlwaysEmptyCapabilityLookup,
+    AlwaysEmptyModelUsageLookup,
     AlwaysPermittedEnclosureLookup,
     AlwaysQuietCautionLookup,
+    AlwaysRatifiedConsequenceLookup,
+    AlwaysZeroSpendLookup,
     AssemblyLookup,
     AssetLookup,
     Authorize,
@@ -95,6 +100,7 @@ from cora.infrastructure.ports import (
     ClearanceTemplateLookup,
     Clock,
     ComputeReachabilityLookup,
+    ConsequenceLookup,
     CredentialLookup,
     DatasetDistributionLookup,
     EnclosureLookup,
@@ -103,13 +109,17 @@ from cora.infrastructure.ports import (
     FamilyLookup,
     IdempotencyStore,
     IdGenerator,
+    LanguageModelLookup,
     LogbookMirror,
+    ModelUsageLookup,
+    NoActiveAllocationLookup,
     NoComputeReachabilityLookup,
     NoDatasetDistributionsLookup,
     NoInvolvementLookup,
     ProfileStore,
     RoleLookup,
     RunActorInvolvementLookup,
+    SpendLookup,
     SupplyLookup,
     SystemClock,
     TokenVerifier,
@@ -166,7 +176,9 @@ def make_postgres_kernel(
     caution_lookup: CautionLookup | None = None,
     capability_lookup: CapabilityLookup | None = None,
     supply_lookup: SupplyLookup | None = None,
+    spend_lookup: SpendLookup | None = None,
     run_actor_involvement_lookup: RunActorInvolvementLookup | None = None,
+    consequence_lookup: ConsequenceLookup | None = None,
     dataset_distribution_lookup: DatasetDistributionLookup | None = None,
     compute_reachability_lookup: ComputeReachabilityLookup | None = None,
     credential_lookup: CredentialLookup | None = None,
@@ -176,6 +188,9 @@ def make_postgres_kernel(
     assembly_lookup: AssemblyLookup | None = None,
     role_lookup: RoleLookup | None = None,
     enclosure_lookup: EnclosureLookup | None = None,
+    language_model_lookup: LanguageModelLookup | None = None,
+    model_usage_lookup: ModelUsageLookup | None = None,
+    allocation_lookup: AllocationLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
@@ -228,6 +243,14 @@ def make_postgres_kernel(
     injects the real `PostgresSupplyLookup` via the
     `supply_lookup_factory` argument; gate-specific tests override
     here explicitly. See [[project_supply_preflight_gate_design]].
+
+    `spend_lookup` and `allocation_lookup` default to the disarmed
+    stubs (`AlwaysZeroSpendLookup` / `NoActiveAllocationLookup`) here,
+    the same opt-in posture as every other lookup: an integration test
+    that does not exercise the envelope never meters or gates on it.
+    The fail-loud requirement lives one layer up, in `build_kernel`'s
+    Postgres branch, which raises when either financial factory is
+    missing so a real deployment can never silently meter zero.
 
     `run_actor_involvement_lookup` defaults to `NoInvolvementLookup`
     (returns `[]`) so existing tests don't have to seed runs.
@@ -294,6 +317,20 @@ def make_postgres_kernel(
     injects the real `PostgresRoleLookup` via the
     `role_lookup_factory` argument.
 
+    `language_model_lookup` defaults to `AlwaysApprovedLanguageModelLookup`
+    (every identity Approved) so integration tests that never stood up
+    a catalog keep the define_agent gate disarmed. Production's
+    `build_kernel` injects the real `PostgresLanguageModelLookup` via
+    the `language_model_lookup_factory` argument; gate-specific tests
+    override here explicitly.
+
+    `model_usage_lookup` defaults to `AlwaysEmptyModelUsageLookup` (no
+    recorded call touched any model) so tests that don't exercise the
+    at-risk-results surface stay inert. Production's `build_kernel`
+    injects the real `PostgresModelUsageLookup` via the
+    `model_usage_lookup_factory` argument; slice-specific tests
+    override here explicitly.
+
     `llm` defaults to `None` because most BCs and tests don't need
     an LLM; only Agent BC subscribers consume it. Production's
     `build_kernel` injects `AnthropicLLM` when
@@ -332,10 +369,16 @@ def make_postgres_kernel(
             capability_lookup if capability_lookup is not None else AlwaysEmptyCapabilityLookup()
         ),
         supply_lookup=(supply_lookup if supply_lookup is not None else AllSatisfiedSupplyLookup()),
+        spend_lookup=(spend_lookup if spend_lookup is not None else AlwaysZeroSpendLookup()),
         run_actor_involvement_lookup=(
             run_actor_involvement_lookup
             if run_actor_involvement_lookup is not None
             else NoInvolvementLookup()
+        ),
+        consequence_lookup=(
+            consequence_lookup
+            if consequence_lookup is not None
+            else AlwaysRatifiedConsequenceLookup()
         ),
         dataset_distribution_lookup=(
             dataset_distribution_lookup
@@ -361,6 +404,17 @@ def make_postgres_kernel(
         role_lookup=(role_lookup if role_lookup is not None else InMemoryRoleLookup()),
         enclosure_lookup=(
             enclosure_lookup if enclosure_lookup is not None else AlwaysPermittedEnclosureLookup()
+        ),
+        language_model_lookup=(
+            language_model_lookup
+            if language_model_lookup is not None
+            else AlwaysApprovedLanguageModelLookup()
+        ),
+        model_usage_lookup=(
+            model_usage_lookup if model_usage_lookup is not None else AlwaysEmptyModelUsageLookup()
+        ),
+        allocation_lookup=(
+            allocation_lookup if allocation_lookup is not None else NoActiveAllocationLookup()
         ),
         profile_store=(profile_store if profile_store is not None else PostgresProfileStore(pool)),
         canonicalization_registry=_build_default_canonicalization_registry(),
@@ -389,7 +443,9 @@ def make_inmemory_kernel(
     caution_lookup: CautionLookup | None = None,
     capability_lookup: CapabilityLookup | None = None,
     supply_lookup: SupplyLookup | None = None,
+    spend_lookup: SpendLookup | None = None,
     run_actor_involvement_lookup: RunActorInvolvementLookup | None = None,
+    consequence_lookup: ConsequenceLookup | None = None,
     dataset_distribution_lookup: DatasetDistributionLookup | None = None,
     compute_reachability_lookup: ComputeReachabilityLookup | None = None,
     credential_lookup: CredentialLookup | None = None,
@@ -399,6 +455,9 @@ def make_inmemory_kernel(
     assembly_lookup: AssemblyLookup | None = None,
     role_lookup: RoleLookup | None = None,
     enclosure_lookup: EnclosureLookup | None = None,
+    language_model_lookup: LanguageModelLookup | None = None,
+    model_usage_lookup: ModelUsageLookup | None = None,
+    allocation_lookup: AllocationLookup | None = None,
     profile_store: ProfileStore | None = None,
     llm: LLM | None = None,
     logbook_mirror: LogbookMirror | None = None,
@@ -500,6 +559,27 @@ def make_inmemory_kernel(
     adapter's `register(...)` helper; tests that don't touch a Role
     leave the dict empty (the default).
 
+    `language_model_lookup` defaults to `AlwaysApprovedLanguageModelLookup`
+    (every identity Approved) for the same reason: no projection worker,
+    no `proj_agent_language_model_summary` table to read from, and the
+    define_agent gate must stay disarmed for every existing test.
+    Gate-specific tests override with a fake returning None or a
+    non-Approved entry.
+
+    `model_usage_lookup` defaults to `AlwaysEmptyModelUsageLookup` (no
+    recorded call touched any model) for the same reason: no Postgres,
+    no `entries_decision_inferences` table to scan, and the at-risk
+    read slice must stay inert for every test that doesn't exercise
+    it. Slice-specific tests override with a fake returning seeded
+    `ModelUsageLookupResult` rows.
+
+    `allocation_lookup` defaults to `NoActiveAllocationLookup` (no
+    envelope Active) for the same reason: no projection worker, no
+    `proj_budget_allocation_summary` table to read from, and the
+    envelope check must stay disarmed for every test that never
+    declared an allocation. Envelope-gate tests override with a fake
+    returning a chosen `AllocationLookupResult`.
+
     `llm` defaults to `None`; the in-memory kernel is for unit /
     contract tests that don't exercise LLM subscribers. Subscriber
     tests that DO exercise the LLM path inject `FakeLLM`
@@ -538,10 +618,16 @@ def make_inmemory_kernel(
             capability_lookup if capability_lookup is not None else AlwaysEmptyCapabilityLookup()
         ),
         supply_lookup=(supply_lookup if supply_lookup is not None else AllSatisfiedSupplyLookup()),
+        spend_lookup=(spend_lookup if spend_lookup is not None else AlwaysZeroSpendLookup()),
         run_actor_involvement_lookup=(
             run_actor_involvement_lookup
             if run_actor_involvement_lookup is not None
             else NoInvolvementLookup()
+        ),
+        consequence_lookup=(
+            consequence_lookup
+            if consequence_lookup is not None
+            else AlwaysRatifiedConsequenceLookup()
         ),
         dataset_distribution_lookup=(
             dataset_distribution_lookup
@@ -567,6 +653,17 @@ def make_inmemory_kernel(
         role_lookup=(role_lookup if role_lookup is not None else InMemoryRoleLookup()),
         enclosure_lookup=(
             enclosure_lookup if enclosure_lookup is not None else AlwaysPermittedEnclosureLookup()
+        ),
+        language_model_lookup=(
+            language_model_lookup
+            if language_model_lookup is not None
+            else AlwaysApprovedLanguageModelLookup()
+        ),
+        model_usage_lookup=(
+            model_usage_lookup if model_usage_lookup is not None else AlwaysEmptyModelUsageLookup()
+        ),
+        allocation_lookup=(
+            allocation_lookup if allocation_lookup is not None else NoActiveAllocationLookup()
         ),
         profile_store=profile_store if profile_store is not None else InMemoryProfileStore(),
         canonicalization_registry=_build_default_canonicalization_registry(),
@@ -667,6 +764,82 @@ class SupplyLookupFactory(Protocol):
     ) -> SupplyLookup: ...
 
 
+class SpendLookupFactory(Protocol):
+    """Builds the production SpendLookup port for the Kernel.
+
+    Decision BC's `cora.decision.adapters.PostgresSpendLookup` is the
+    production factory; `cora.api.main` binds it. Same factory-
+    injection shape as the other lookup factories so
+    `cora.infrastructure.deps` doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to
+    `AlwaysZeroSpendLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> SpendLookup: ...
+
+
+class LanguageModelLookupFactory(Protocol):
+    """Builds the production LanguageModelLookup port for the Kernel.
+
+    Agent BC's `cora.agent.adapters.PostgresLanguageModelLookup` is the
+    production factory; `cora.api.main` binds it. Same factory-
+    injection shape as the other lookup factories so
+    `cora.infrastructure.deps` doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to
+    `AlwaysApprovedLanguageModelLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> LanguageModelLookup: ...
+
+
+class AllocationLookupFactory(Protocol):
+    """Builds the production AllocationLookup port for the Kernel.
+
+    Budget BC's `cora.budget.adapters.PostgresAllocationLookup` is the
+    production factory; `cora.api.main` binds it. Same factory-
+    injection shape as the other lookup factories so
+    `cora.infrastructure.deps` doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to
+    `NoActiveAllocationLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> AllocationLookup: ...
+
+
+class ModelUsageLookupFactory(Protocol):
+    """Builds the production ModelUsageLookup port for the Kernel.
+
+    Decision BC's `cora.decision.adapters.PostgresModelUsageLookup` is
+    the production factory; `cora.api.main` binds it. Same factory-
+    injection shape as the other lookup factories so
+    `cora.infrastructure.deps` doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to
+    `AlwaysEmptyModelUsageLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> ModelUsageLookup: ...
+
+
 class RunActorInvolvementLookupFactory(Protocol):
     """Builds the production RunActorInvolvementLookup port for the Kernel.
 
@@ -684,6 +857,25 @@ class RunActorInvolvementLookupFactory(Protocol):
         self,
         pool: asyncpg.Pool,
     ) -> RunActorInvolvementLookup: ...
+
+
+class ConsequenceLookupFactory(Protocol):
+    """Builds the production ConsequenceLookup port for the Kernel.
+
+    Trust BC's `cora.trust.adapters.PostgresConsequenceLookup` is the
+    production factory; `cora.api.main` binds it. Same factory-injection
+    shape as the other lookup factories so `cora.infrastructure.deps`
+    doesn't import from any BC.
+
+    `pool` is `None` only when `app_env=test`; the production factory
+    requires a real pool. Test mode falls back to
+    `AlwaysRatifiedConsequenceLookup` automatically.
+    """
+
+    def __call__(
+        self,
+        pool: asyncpg.Pool,
+    ) -> ConsequenceLookup: ...
 
 
 class DatasetDistributionLookupFactory(Protocol):
@@ -893,7 +1085,12 @@ async def build_kernel(
     caution_lookup_factory: CautionLookupFactory | None = None,
     capability_lookup_factory: CapabilityLookupFactory | None = None,
     supply_lookup_factory: SupplyLookupFactory | None = None,
+    spend_lookup_factory: SpendLookupFactory | None = None,
+    language_model_lookup_factory: LanguageModelLookupFactory | None = None,
+    model_usage_lookup_factory: ModelUsageLookupFactory | None = None,
+    allocation_lookup_factory: AllocationLookupFactory | None = None,
     run_actor_involvement_lookup_factory: RunActorInvolvementLookupFactory | None = None,
+    consequence_lookup_factory: ConsequenceLookupFactory | None = None,
     dataset_distribution_lookup_factory: DatasetDistributionLookupFactory | None = None,
     credential_lookup_factory: CredentialLookupFactory | None = None,
     facility_lookup_factory: FacilityLookupFactory | None = None,
@@ -968,6 +1165,18 @@ async def build_kernel(
         )
         return kernel, _noop_teardown
 
+    if spend_lookup_factory is None or allocation_lookup_factory is None:
+        # Fail loud, not open: a Postgres deployment that silently fell back
+        # to the zero-spend stub and the no-active-envelope stub would meter
+        # every call at $0 and disarm the instrument ceiling, and every seal
+        # would record $0 as the official closing figure. The financial
+        # lookups are the one place a missing binding must stop startup.
+        raise ValueError(
+            "build_kernel requires spend_lookup_factory and "
+            "allocation_lookup_factory in a Postgres deployment; a missing "
+            "financial lookup would silently meter zero and disarm the "
+            "spend envelope"
+        )
     pool = await create_pool(
         settings.database_url,
         min_size=settings.db_pool_min_size,
@@ -1002,10 +1211,29 @@ async def build_kernel(
         if supply_lookup_factory is not None
         else AllSatisfiedSupplyLookup()
     )
+    # Non-None guaranteed by the fail-loud guard above.
+    spend_lookup: SpendLookup = spend_lookup_factory(pool)
+    language_model_lookup: LanguageModelLookup = (
+        language_model_lookup_factory(pool)
+        if language_model_lookup_factory is not None
+        else AlwaysApprovedLanguageModelLookup()
+    )
+    model_usage_lookup: ModelUsageLookup = (
+        model_usage_lookup_factory(pool)
+        if model_usage_lookup_factory is not None
+        else AlwaysEmptyModelUsageLookup()
+    )
+    # Non-None guaranteed by the fail-loud guard above.
+    allocation_lookup: AllocationLookup = allocation_lookup_factory(pool)
     run_actor_involvement_lookup: RunActorInvolvementLookup = (
         run_actor_involvement_lookup_factory(pool)
         if run_actor_involvement_lookup_factory is not None
         else NoInvolvementLookup()
+    )
+    consequence_lookup: ConsequenceLookup = (
+        consequence_lookup_factory(pool)
+        if consequence_lookup_factory is not None
+        else AlwaysRatifiedConsequenceLookup()
     )
     dataset_distribution_lookup: DatasetDistributionLookup = (
         dataset_distribution_lookup_factory(pool)
@@ -1060,7 +1288,12 @@ async def build_kernel(
         caution_lookup=caution_lookup,
         capability_lookup=capability_lookup,
         supply_lookup=supply_lookup,
+        spend_lookup=spend_lookup,
+        language_model_lookup=language_model_lookup,
+        model_usage_lookup=model_usage_lookup,
+        allocation_lookup=allocation_lookup,
         run_actor_involvement_lookup=run_actor_involvement_lookup,
+        consequence_lookup=consequence_lookup,
         dataset_distribution_lookup=dataset_distribution_lookup,
         credential_lookup=credential_lookup,
         facility_lookup=facility_lookup,
@@ -1148,12 +1381,15 @@ __all__ = [
     "CautionLookupFactory",
     "ClearanceLookupFactory",
     "ClearanceTemplateLookupFactory",
+    "ConsequenceLookupFactory",
     "CredentialLookupFactory",
     "DatasetDistributionLookupFactory",
     "EnclosureLookupFactory",
     "FacilityLookupFactory",
     "FamilyLookupFactory",
     "LLMFactory",
+    "LanguageModelLookupFactory",
+    "ModelUsageLookupFactory",
     "RoleLookupFactory",
     "RunActorInvolvementLookupFactory",
     "SupplyLookupFactory",

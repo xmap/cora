@@ -34,6 +34,7 @@ from cora.operation.adapters.decide_port_config import DecidePortConfig
 from cora.operation.conductor import ConductorFailure
 from cora.operation.ports.decide_port import (
     SteeringBudget,
+    SteeringLlmCall,
     SteeringObjective,
     SteeringSpace,
 )
@@ -74,3 +75,8 @@ class ConductUntilAdvisedResult:
     failure: ConductorFailure | None = None
     actuation_kind: str | None = None
     measurements: tuple[Measurement, ...] = ()
+    llm_calls: tuple[SteeringLlmCall, ...] = ()
+    """Usage records for the LLM calls the brain made during this conduct,
+    in call order; empty for non-LLM substrates. In-process only (not on
+    the wire response): the steer_experiment driver posts these to the
+    durable inference ledger against its across-procedure Decision."""

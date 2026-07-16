@@ -144,6 +144,41 @@ EXEMPT_FROM_ENDPOINT_CONTRACT: frozenset[str] = frozenset(
         # remove_facility_trust_anchor_credential (Slice 6 Sub-Slice B):
         # same deferral as the add sibling.
         "cora.federation.features.remove_facility_trust_anchor_credential",
+        # LanguageModel catalog slices: REST contract tests deferred so
+        # the family's REST + MCP suite can be authored together (the
+        # Frame / Facility precedent). Decider + PBT + handler unit
+        # tests + projection apply tests pin behavior; the OpenAPI
+        # snapshot pins route paths and schemas only, so handler
+        # binding, MCP tool registration, and status-code mapping stay
+        # uncovered until the contract suite lands. Remove when it does.
+        "cora.agent.features.announce_language_model_retirement",
+        "cora.agent.features.approve_language_model",
+        "cora.agent.features.define_language_model",
+        "cora.agent.features.deprecate_language_model",
+        "cora.agent.features.retire_language_model",
+        # list_at_risk_results (LanguageModel catalog read slice): REST
+        # contract test deferred alongside the catalog family's contract
+        # suite (same deferral as the command slices above). Handler unit
+        # tests (test_list_at_risk_results_handler.py) + the Postgres
+        # adapter integration test (test_model_usage_lookup_postgres.py)
+        # pin behavior; the OpenAPI snapshot pins route paths and
+        # schemas only, so handler binding, MCP tool registration, and
+        # status-code mapping stay uncovered until the contract suite
+        # lands.
+        "cora.agent.features.list_at_risk_results",
+        # Allocation slices (budget BC): REST
+        # contract tests deferred so the family's REST + MCP suite can
+        # be authored together (the LanguageModel / Frame / Facility
+        # precedent). Decider + PBT + handler unit tests
+        # (tests/unit/budget/) pin behavior; the OpenAPI snapshot pins
+        # route paths and schemas only, so handler binding, MCP tool
+        # registration, and status-code mapping stay uncovered until
+        # the contract suite lands. Remove when it does.
+        "cora.budget.features.activate_allocation",
+        "cora.budget.features.amend_allocation_ceiling",
+        "cora.budget.features.grant_allocation",
+        "cora.budget.features.seal_allocation",
+        "cora.budget.features.void_allocation",
     }
 )
 
@@ -197,6 +232,26 @@ EXEMPT_FROM_MCP_CONTRACT: frozenset[str] = frozenset(
         # remove_facility_trust_anchor_credential (Slice 6 Sub-Slice B):
         # same deferral as the add sibling.
         "cora.federation.features.remove_facility_trust_anchor_credential",
+        # LanguageModel catalog slices: MCP contract tests deferred
+        # alongside the REST contract tests (same rationale as the
+        # endpoint allowlist entries above).
+        "cora.agent.features.announce_language_model_retirement",
+        "cora.agent.features.approve_language_model",
+        "cora.agent.features.define_language_model",
+        "cora.agent.features.deprecate_language_model",
+        "cora.agent.features.retire_language_model",
+        # list_at_risk_results: MCP contract test deferred alongside the
+        # REST contract test (same rationale as the catalog slices above).
+        "cora.agent.features.list_at_risk_results",
+        # Allocation slices (budget BC): MCP contract tests deferred
+        # alongside the REST contract tests (same rationale as the
+        # endpoint allowlist entries above). Remove when the family's
+        # contract suite lands.
+        "cora.budget.features.activate_allocation",
+        "cora.budget.features.amend_allocation_ceiling",
+        "cora.budget.features.grant_allocation",
+        "cora.budget.features.seal_allocation",
+        "cora.budget.features.void_allocation",
     }
 )
 
@@ -228,6 +283,12 @@ EXEMPT_FROM_INTEGRATION: frozenset[str] = frozenset(
         # integration tier deferred alongside Facility-family integration
         # suite. Decider + PBT + handler + projection apply cover behavior.
         "cora.federation.features.add_facility_trust_anchor_credential",
+        # define_language_model: integration tier deferred alongside the
+        # LanguageModel contract suite (same deferral shape as
+        # add_facility_trust_anchor_credential). Decider + PBT + handler
+        # unit tests + projection apply tests cover behavior; the
+        # migration's CHECK constraints pin the row shape.
+        "cora.agent.features.define_language_model",
         # The integration-tier rule only fires for create-style verbs
         # (`define_*` / `register_*` / `add_*`), so state-transition
         # slices like `decommission_*`, `remove_*`, and `observe_*` do

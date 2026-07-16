@@ -58,7 +58,7 @@ async def _read_entries_for_decision(
                 response_id, response_model,
                 request_temperature, request_top_p, request_max_tokens,
                 output_type, finish_reasons,
-                input_tokens, output_tokens,
+                input_tokens, output_tokens, cost_usd,
                 agent_id, agent_name, agent_description, conversation_id,
                 tool_name, tool_call_id, tool_type,
                 messages
@@ -146,7 +146,8 @@ async def test_append_inferences_full_lazy_open_and_jsonb_round_trip(
         finish_reasons=("end_turn",),
         input_tokens=512,
         output_tokens=256,
-        agent_id="agent-7e",
+        cost_usd=0.00896,
+        agent_id=str(_PRINCIPAL_ID),
         agent_name="ApprovalAgent",
         conversation_id="conv-abc",
         messages={
@@ -193,6 +194,8 @@ async def test_append_inferences_full_lazy_open_and_jsonb_round_trip(
     assert row_a["request_temperature"] == 0.7
     assert row_a["input_tokens"] == 512
     assert row_a["output_tokens"] == 256
+    assert row_a["cost_usd"] == pytest.approx(0.00896)
+    assert row_b["cost_usd"] is None
     assert row_a["finish_reasons"] == ["end_turn"]
     assert row_a["agent_name"] == "ApprovalAgent"
     assert row_a["conversation_id"] == "conv-abc"
@@ -313,6 +316,7 @@ async def test_postgres_reasoning_store_dedups_on_event_id(
         finish_reasons=(),
         input_tokens=None,
         output_tokens=None,
+        cost_usd=None,
         agent_id=None,
         agent_name=None,
         agent_description=None,
@@ -343,6 +347,7 @@ async def test_postgres_reasoning_store_dedups_on_event_id(
         finish_reasons=(),
         input_tokens=None,
         output_tokens=None,
+        cost_usd=None,
         agent_id=None,
         agent_name=None,
         agent_description=None,

@@ -55,8 +55,13 @@ from cora.operation.adapters.sobol_decide_port import SobolDecidePort
 from cora.operation.adapters.staged_decide_port import StagedDecidePort
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from uuid import UUID
+
+    from cora.infrastructure.ports.clock import Clock
     from cora.infrastructure.ports.llm import LLM
-    from cora.operation.ports.decide_port import DecidePort
+    from cora.infrastructure.ports.spend_guard import SpendGuard
+    from cora.operation.ports.decide_port import DecidePort, SteeringLlmCall
 
 DecideSubstrate = Literal["in_memory", "grid_walk", "sobol", "botorch", "staged", "llm"]
 """The full set of decider substrates `build_decide_port` can materialise.
@@ -97,6 +102,11 @@ class DecidePortConfig:
     """
 
     substrate: DecideSubstrate = "in_memory"
+    spend_agent_id: UUID | None = None
+    """The agent whose budget gates the llm substrate's calls, or None for
+    an ungated brain. Set in-process by agent drivers (steer_experiment);
+    deliberately NOT exposed on the conduct wire models, so route callers
+    cannot attribute their spend to an agent."""
     points_per_axis: int = 5
     min_observations: int = 5
     num_restarts: int = 10
@@ -109,6 +119,9 @@ def build_decide_port(
     config: DecidePortConfig | None = None,
     *,
     llm: LLM | None = None,
+    usage_sink: Callable[[SteeringLlmCall], None] | None = None,
+    spend_guard: SpendGuard | None = None,
+    clock: Clock | None = None,
 ) -> DecidePort:
     """Materialise the DecidePort the conduct loop talks to.
 
@@ -146,7 +159,13 @@ def build_decide_port(
                 "the 'llm' decide substrate requires an llm port; "
                 "pass build_decide_port(config, llm=deps.llm)"
             )
-        return LlmDecidePort(llm=llm)
+        return LlmDecidePort(
+            llm=llm,
+            usage_sink=usage_sink,
+            spend_guard=spend_guard,
+            spend_agent_id=resolved.spend_agent_id,
+            clock=clock,
+        )
     raise ValueError(  # pragma: no cover
         f"unsupported decide substrate: {resolved.substrate!r}"
     )

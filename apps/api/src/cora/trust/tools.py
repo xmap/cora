@@ -19,8 +19,10 @@ from cora.trust.features.define_conduit import tool as define_conduit_tool
 from cora.trust.features.define_policy import tool as define_policy_tool
 from cora.trust.features.define_surface import tool as define_surface_tool
 from cora.trust.features.define_zone import tool as define_zone_tool
+from cora.trust.features.deny_ratification import tool as deny_ratification_tool
 from cora.trust.features.evaluate_policy import tool as evaluate_policy_tool
 from cora.trust.features.get_surface import tool as get_surface_tool
+from cora.trust.features.grant_ratification import tool as grant_ratification_tool
 from cora.trust.features.hold_visit import tool as hold_visit_tool
 from cora.trust.features.list_conduits import tool as list_conduits_tool
 from cora.trust.features.list_permissions import tool as list_permissions_tool
@@ -29,6 +31,7 @@ from cora.trust.features.list_zones import tool as list_zones_tool
 from cora.trust.features.record_visit_arrival import tool as record_visit_arrival_tool
 from cora.trust.features.register_visit import tool as register_visit_tool
 from cora.trust.features.release_control_of_surface import tool as release_control_of_surface_tool
+from cora.trust.features.request_ratification import tool as request_ratification_tool
 from cora.trust.features.resume_visit import tool as resume_visit_tool
 from cora.trust.features.revoke_grant import tool as revoke_grant_tool
 from cora.trust.features.start_visit import tool as start_visit_tool
@@ -74,3 +77,7 @@ def register_trust_tools(
     release_control_of_surface_tool.register(
         mcp, get_handler=lambda: get_handlers().release_control_of_surface
     )
+    # Ratification (consequence gate) tools.
+    request_ratification_tool.register(mcp, get_handler=lambda: get_handlers().request_ratification)
+    grant_ratification_tool.register(mcp, get_handler=lambda: get_handlers().grant_ratification)
+    deny_ratification_tool.register(mcp, get_handler=lambda: get_handlers().deny_ratification)

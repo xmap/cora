@@ -124,6 +124,8 @@ class Inference:
     # --- OTel gen_ai.* token usage (NOT deprecated prompt/completion_tokens) ---
     input_tokens: int | None  # gen_ai.usage.input_tokens
     output_tokens: int | None  # gen_ai.usage.output_tokens
+    # --- CORA cost (custom; no OTel attribute exists for call cost) ---
+    cost_usd: float | None  # mirrors the cora.agent.llm.cost.usd histogram
     # --- OTel gen_ai.* agent context ---
     agent_id: str | None  # gen_ai.agent.id
     agent_name: str | None  # gen_ai.agent.name
@@ -167,6 +169,15 @@ INFERENCE_LOGBOOK_SCHEMA: LogbookSchema = LogbookSchema(
         "input_tokens": LogbookFieldSpec(type="int", description="OTel gen_ai.usage.input_tokens"),
         "output_tokens": LogbookFieldSpec(
             type="int", description="OTel gen_ai.usage.output_tokens"
+        ),
+        "cost_usd": LogbookFieldSpec(
+            type="float",
+            units="USD",
+            description=(
+                "Actual call cost computed from usage tokens and provider "
+                "pricing (CORA custom; mirrors the cora.agent.llm.cost.usd "
+                "histogram, no OTel attribute exists for call cost)"
+            ),
         ),
         "agent_id": LogbookFieldSpec(type="string", description="OTel gen_ai.agent.id"),
         "agent_name": LogbookFieldSpec(type="string", description="OTel gen_ai.agent.name"),
@@ -223,7 +234,8 @@ INSERT INTO entries_decision_inferences (
     input_tokens, output_tokens,
     agent_id, agent_name, agent_description, conversation_id,
     tool_name, tool_call_id, tool_type,
-    messages
+    messages,
+    cost_usd
 ) VALUES (
     $1, $2, $3, $4, $5,
     $6, $7,
@@ -234,7 +246,8 @@ INSERT INTO entries_decision_inferences (
     $18, $19,
     $20, $21, $22, $23,
     $24, $25, $26,
-    $27
+    $27,
+    $28
 )
 ON CONFLICT (event_id) DO NOTHING
 """
@@ -313,6 +326,7 @@ class PostgresInferenceStore:
                         row.tool_call_id,
                         row.tool_type,
                         json.dumps(row.messages) if row.messages is not None else None,
+                        row.cost_usd,
                     )
                     for row in rows
                 ],

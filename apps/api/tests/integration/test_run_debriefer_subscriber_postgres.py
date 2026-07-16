@@ -46,7 +46,7 @@ from cora.run.aggregates.run import RunStarted
 from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import to_payload as run_to_payload
 from cora.run.aggregates.run.events import RunCompleted
-from tests.integration._helpers import build_postgres_deps
+from tests.integration._helpers import build_postgres_deps, promote_seeded_agent
 
 _NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
 _LATER = datetime(2026, 5, 17, 14, 47, 0, tzinfo=UTC)
@@ -124,8 +124,22 @@ async def test_seed_and_subscriber_write_decision_end_to_end(
 
     # Bootstrap: seed RunDebriefer Agent + Actor.
     await seed_run_debriefer_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        RUN_DEBRIEFER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
     # Second call must be a no-op (idempotent on real PG).
     await seed_run_debriefer_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        RUN_DEBRIEFER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
 
     # Seed a Run.
     run_id = uuid4()
@@ -165,6 +179,13 @@ async def test_subscriber_retry_is_at_most_once_on_real_postgres(
     treated as no-op)."""
     deps = build_postgres_deps(db_pool, now=_NOW)
     await seed_run_debriefer_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        RUN_DEBRIEFER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
 
     run_id = uuid4()
     plan_id = UUID("01900000-0000-7000-8000-000000000401")
@@ -227,6 +248,13 @@ async def test_seed_does_not_collide_with_pre_existing_actor(
     # Now the seed runs. The Actor stream collides (rolls back the
     # whole append_streams batch), seed returns cleanly.
     await seed_run_debriefer_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        RUN_DEBRIEFER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
 
     # Agent stream never got written (the whole batch rolled back).
     # This is a documented edge case; future iteration can split the
@@ -298,6 +326,13 @@ async def test_subscriber_records_inference_row_end_to_end(
     the inference logbook on the Decision stream."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_LOGBOOK_IDS)
     await seed_run_debriefer_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        RUN_DEBRIEFER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
     run_id = uuid4()
     plan_id = UUID("01900000-0000-7000-8000-000000000401")
     await _seed_run(deps, run_id, plan_id)
@@ -336,6 +371,13 @@ async def test_subscriber_inference_write_is_idempotent_on_retry(
     event_id; the store's ON CONFLICT keeps exactly one row."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_LOGBOOK_IDS)
     await seed_run_debriefer_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        RUN_DEBRIEFER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
     run_id = uuid4()
     plan_id = UUID("01900000-0000-7000-8000-000000000401")
     await _seed_run(deps, run_id, plan_id)

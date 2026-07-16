@@ -45,6 +45,10 @@ from cora.infrastructure.config import Settings
 from cora.infrastructure.ports import (
     LLM,
     AllBeamOpenLookup,
+    AllocationLookup,
+    AlwaysApprovedLanguageModelLookup,
+    AlwaysEmptyModelUsageLookup,
+    AlwaysGrantedSpendGuard,
     AssemblyLookup,
     AssetLookup,
     Authorize,
@@ -55,6 +59,7 @@ from cora.infrastructure.ports import (
     ClearanceTemplateLookup,
     Clock,
     ComputeReachabilityLookup,
+    ConsequenceLookup,
     CredentialLookup,
     DatasetDistributionLookup,
     EnclosureLookup,
@@ -64,12 +69,17 @@ from cora.infrastructure.ports import (
     IdempotencyStore,
     IdGenerator,
     InferenceRecorder,
+    LanguageModelLookup,
     LogbookMirror,
+    ModelUsageLookup,
+    NoActiveAllocationLookup,
     NullInferenceRecorder,
     ProfileStore,
     RoleLookup,
     RunActorInvolvementLookup,
     Signer,
+    SpendGuard,
+    SpendLookup,
     SupplyLookup,
     TokenVerifier,
 )
@@ -154,6 +164,43 @@ class Kernel:
     the `ClearanceLookup` / `CautionLookup` test-default pattern.
     See [[project_supply_preflight_gate_design]].
 
+    `spend_guard`: the pre-call half of budget enforcement, consulted by
+    the steering brain before each LLM call; see the field docstring.
+
+    `spend_lookup`: cross-BC port consumed by the budget gate at the
+    LLM subscribers' seams (RunDebriefer / CautionDrafter) to sum an
+    agent's recorded spend in a cap window before permitting the next
+    call. Planned consumers, not wired today: the regenerate slice and
+    the Operation BC steering brain at the per-call pre-estimate tier.
+    Decision BC ships `PostgresSpendLookup` as the production adapter
+    (sums `entries_decision_inferences`). Test environments default
+    to `AlwaysZeroSpendLookup` (nothing spent) so a declared cap
+    never blocks tests that don't exercise budget gating.
+
+    `language_model_lookup`: cross-cutting port consumed by Agent BC's
+    `define_agent` handler to gate agent registration on the target
+    model identity holding an Approved catalog entry (the shipped
+    fleet's defaults are pinned against the seeds by a unit
+    consistency test, not by any startup check). Agent BC ships
+    `PostgresLanguageModelLookup` as the production adapter (reads
+    `proj_agent_language_model_summary`).
+    Defaults to `AlwaysApprovedLanguageModelLookup` (every identity
+    Approved) so tests and catalog-less deployments keep the
+    pre-catalog behavior; standing up a real catalog is what arms the
+    gate. Mirrors the `spend_lookup` opt-in posture.
+
+    `model_usage_lookup`: cross-BC port consumed by Agent BC's
+    `list_at_risk_results` read slice to enumerate the Decisions whose
+    recorded LLM calls touched a catalog entry's model identity (the
+    at-risk-results surface a vendor retirement announcement lights
+    up). Decision BC ships `PostgresModelUsageLookup` as the production
+    adapter (reads `entries_decision_inferences`, the same durable fact
+    `spend_lookup` sums). Test environments default to
+    `AlwaysEmptyModelUsageLookup` (no recorded call touched any model) so
+    tests that don't exercise the at-risk surface stay inert;
+    slice-specific tests inject a fake returning seeded rows or the
+    real adapter.
+
     `run_actor_involvement_lookup`: cross-BC port consumed by the
     authority-revocation holder subscriber (K3) to resolve the
     in-flight Runs a revoked principal drives and hold each. Run BC
@@ -162,6 +209,17 @@ class Kernel:
     `NoInvolvementLookup` (returns `[]`) so existing tests don't have
     to seed runs; kill-switch tests override with the real adapter.
     Mirrors the `ClearanceLookup` / `CautionLookup` test-default pattern.
+
+    `consequence_lookup`: cross-BC port consumed by Run BC's `stop_run`
+    handler for the consequence gate (Gate IV): is this action covered
+    by a GRANTED Ratification (a second, independent principal's
+    co-signature)? Trust BC ships `PostgresConsequenceLookup` as the
+    production adapter (reads `proj_trust_ratification_coverage`). Test
+    environments default to `AlwaysRatifiedConsequenceLookup` (coverage
+    always present) so existing stop_run tests stay green with stop_run
+    in the ratification allowlist; consequence-gate tests override with
+    `NeverRatifiedConsequenceLookup` (refuse-and-hold path) or the real
+    adapter (end-to-end).
 
     `dataset_distribution_lookup`: cross-BC port consumed by Run BC's
     `start_run` handler to gate a reconstruction Run on each declared
@@ -327,6 +385,7 @@ class Kernel:
     capability_lookup: CapabilityLookup
     supply_lookup: SupplyLookup
     run_actor_involvement_lookup: RunActorInvolvementLookup
+    consequence_lookup: ConsequenceLookup
     dataset_distribution_lookup: DatasetDistributionLookup
     compute_reachability_lookup: ComputeReachabilityLookup
     credential_lookup: CredentialLookup
@@ -336,6 +395,7 @@ class Kernel:
     assembly_lookup: AssemblyLookup
     role_lookup: RoleLookup
     enclosure_lookup: EnclosureLookup
+    spend_lookup: SpendLookup
     profile_store: ProfileStore
     canonicalization_registry: CanonicalizationRegistry
     signing_registry: SigningRegistry
@@ -364,6 +424,13 @@ class Kernel:
     `ControlPortBeamAvailabilityLookup` over the shared ControlPort when
     `BEAM_AVAILABILITY_PVS` is configured. Gate-specific tests likewise
     `replace` it with a stub returning the reading under test."""
+    spend_guard: SpendGuard = field(default_factory=AlwaysGrantedSpendGuard)
+    """Pre-call budget permission for an agent's next LLM call (the
+    per-call pre-estimate enforcement tier). Defaults to the always-pass
+    stub so tests and non-steering deployments are unaffected; the
+    composition root binds the Agent BC's `BudgetSpendGuard` in
+    production, which reads the caller's declared caps and the recorded
+    spend the `spend_lookup` sums."""
 
     inference_recorder: InferenceRecorder = field(default_factory=NullInferenceRecorder)
     """Cross-BC capability port the LLM-backed agents call to record one
@@ -379,6 +446,36 @@ class Kernel:
     with an implementor that delegates to the `append_inferences` handler once
     the Decision handlers are wired (mirrors the `beam_availability_lookup`
     post-construction override)."""
+
+    language_model_lookup: LanguageModelLookup = field(
+        default_factory=AlwaysApprovedLanguageModelLookup
+    )
+    """Resolve a model identity (provider + model) to its catalog entry.
+    Defaults to the always-approved stub so tests and deployments without
+    a catalog keep the pre-catalog `define_agent` behavior; the
+    composition root binds the Agent BC's `PostgresLanguageModelLookup`
+    over `proj_agent_language_model_summary` when a pool exists, arming
+    the Approved-entry gate."""
+
+    model_usage_lookup: ModelUsageLookup = field(default_factory=AlwaysEmptyModelUsageLookup)
+    """Enumerate the Decisions whose recorded LLM calls touched one
+    model identity (one row per Decision, newest touching call).
+    Defaults to the always-empty stub so tests and deployments without
+    an inference logbook see an empty at-risk list; the composition
+    root binds the Decision BC's `PostgresModelUsageLookup` over
+    `entries_decision_inferences` when a pool exists."""
+
+    allocation_lookup: AllocationLookup = field(default_factory=NoActiveAllocationLookup)
+    """Resolve the deployment's single Active spending envelope.
+    Consumed by the envelope arm of the budget gate stack (post-hoc
+    subscriber gate, pre-estimate `BudgetSpendGuard`) and by the
+    budget BC's CampaignClosed sealer. Defaults to the never-Active
+    stub so tests and deployments without a declared allocation keep
+    the unconstrained behavior; the composition root binds the budget
+    BC's `PostgresAllocationLookup` over
+    `proj_budget_allocation_summary` when a pool exists. Activating
+    an envelope is what arms the check (the `spend_lookup` opt-in
+    posture)."""
 
 
 Teardown = Callable[[], Awaitable[None]]

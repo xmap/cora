@@ -11,19 +11,27 @@ from collections.abc import Callable
 
 from mcp.server.fastmcp import FastMCP
 
+from cora.agent.features.announce_language_model_retirement import (
+    tool as announce_language_model_retirement_tool,
+)
+from cora.agent.features.approve_language_model import tool as approve_language_model_tool
 from cora.agent.features.define_agent import tool as define_agent_tool
+from cora.agent.features.define_language_model import tool as define_language_model_tool
 from cora.agent.features.deprecate_agent import tool as deprecate_agent_tool
+from cora.agent.features.deprecate_language_model import tool as deprecate_language_model_tool
 from cora.agent.features.dismiss_event_in_reaction import (
     tool as dismiss_event_in_reaction_tool,
 )
 from cora.agent.features.get_agent import tool as get_agent_tool
 from cora.agent.features.grant_tool_to_agent import tool as grant_tool_to_agent_tool
+from cora.agent.features.list_at_risk_results import tool as list_at_risk_results_tool
 from cora.agent.features.promote_caution_proposal import tool as promote_caution_proposal_tool
 from cora.agent.features.regenerate_run_debrief import tool as regenerate_run_debrief_tool
 from cora.agent.features.regenerate_run_debrief.handler import (
     IdempotentHandler as RegenerateRunDebriefHandler,
 )
 from cora.agent.features.resume_agent import tool as resume_agent_tool
+from cora.agent.features.retire_language_model import tool as retire_language_model_tool
 from cora.agent.features.revoke_tool_from_agent import tool as revoke_tool_from_agent_tool
 from cora.agent.features.set_agent_target_plan import tool as set_agent_target_plan_tool
 from cora.agent.features.suspend_agent import tool as suspend_agent_tool
@@ -95,6 +103,30 @@ def register_agent_tools(
     dismiss_event_in_reaction_tool.register(
         mcp,
         get_handler=lambda: get_handlers().dismiss_event_in_reaction,
+    )
+    define_language_model_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().define_language_model,
+    )
+    approve_language_model_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().approve_language_model,
+    )
+    announce_language_model_retirement_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().announce_language_model_retirement,
+    )
+    retire_language_model_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().retire_language_model,
+    )
+    deprecate_language_model_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().deprecate_language_model,
+    )
+    list_at_risk_results_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().list_at_risk_results,
     )
 
 

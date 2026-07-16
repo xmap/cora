@@ -21,7 +21,7 @@ swallowed.
 
 from uuid import UUID
 
-from cora.decision.errors import UnauthorizedError
+from cora.decision.errors import InferenceAgentMismatchError, UnauthorizedError
 from cora.decision.features.append_inferences.command import (
     AppendInferences,
     ReasoningEntryInput,
@@ -61,6 +61,7 @@ class DelegatingInferenceRecorder:
                     finish_reasons=trace.finish_reasons,
                     input_tokens=trace.input_tokens,
                     output_tokens=trace.output_tokens,
+                    cost_usd=trace.cost_usd,
                     agent_id=trace.agent_id,
                     agent_name=trace.agent_name,
                 ),
@@ -72,6 +73,18 @@ class DelegatingInferenceRecorder:
                 principal_id=principal_id,
                 correlation_id=correlation_id,
                 causation_id=causation_id,
+            )
+        except InferenceAgentMismatchError as exc:
+            # Loud like the 403 sibling below: an internal recorder should be
+            # structurally incapable of this (all callers self-report with the
+            # agent's own actor id as principal), so hitting it means a new
+            # agent was wired with a divergent seed/constant and its spend is
+            # being DROPPED, which starves the budget gate's SUM (fail-open).
+            _log.warning(
+                "inference_recorder.agent_mismatch",
+                decision_id=str(trace.decision_id),
+                entry_agent_id=exc.entry_agent_id,
+                principal_id=str(principal_id),
             )
         except UnauthorizedError as exc:
             # Loud, actionable: under a real Trust policy the agent principal

@@ -212,7 +212,11 @@ def test_post_adjust_run_returns_409_for_each_terminal_state(
         if transition == "complete":
             client.post(f"/runs/{run_id}/complete")
         else:
-            client.post(f"/runs/{run_id}/{transition}", json={"reason": "test"})
+            body = {"reason": "test"}
+            if transition == "abort":
+                # Obligation gate (Gate III): abort requires a justification.
+                body["justification"] = "operator: terminal-state setup"
+            client.post(f"/runs/{run_id}/{transition}", json=body)
 
         response = client.post(
             f"/runs/{run_id}/adjust",

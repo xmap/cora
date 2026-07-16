@@ -63,7 +63,7 @@ from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import to_payload as run_to_payload
 from cora.run.aggregates.run.events import RunAborted
 from cora.shared.identity import ActorId
-from tests.integration._helpers import build_postgres_deps
+from tests.integration._helpers import build_postgres_deps, promote_seeded_agent
 
 _NOW = datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)
 _LATER = datetime(2026, 5, 17, 14, 47, 0, tzinfo=UTC)
@@ -190,8 +190,22 @@ async def test_subscriber_writes_caution_proposal_decision_end_to_end(
     """Step 1-5 of the end-to-end walk: subscriber emits the Decision."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(10)])
     await seed_caution_drafter_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        CAUTION_DRAFTER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
     # Idempotent on real PG.
     await seed_caution_drafter_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        CAUTION_DRAFTER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
 
     plan_id = uuid4()
     run_id = uuid4()
@@ -235,6 +249,13 @@ async def test_end_to_end_cross_bc_promotion_registers_real_caution(
     promotes via Agent BC's slice, Caution lands in Caution BC's stream."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(10)])
     await seed_caution_drafter_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        CAUTION_DRAFTER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
 
     plan_id = uuid4()
     run_id = uuid4()
@@ -287,6 +308,13 @@ async def test_subscriber_is_at_most_once_on_real_postgres(
     (ConcurrencyError on the deterministic decision_id is caught)."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(10)])
     await seed_caution_drafter_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        CAUTION_DRAFTER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
 
     plan_id = uuid4()
     run_id = uuid4()
@@ -363,6 +391,13 @@ async def _seed_supersede_decision(
     from cora.decision.aggregates.decision import to_payload as decision_to_payload
 
     await seed_caution_drafter_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        CAUTION_DRAFTER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
 
     proposed = {
         "target_kind": "Asset",
@@ -608,6 +643,13 @@ async def test_subscriber_records_inference_row_end_to_end(
     carrying the CautionDrafter LLM call's provenance."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(10)])
     await seed_caution_drafter_agent(deps)
+    await promote_seeded_agent(
+        deps,
+        CAUTION_DRAFTER_AGENT_ID,
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+        occurred_at=_NOW,
+    )
     plan_id = uuid4()
     run_id = uuid4()
     await _seed_plan(deps, plan_id)

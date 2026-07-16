@@ -12,6 +12,7 @@ from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
 from cora.run.features.abort_run.command import AbortRun
 from cora.run.features.abort_run.handler import Handler
+from cora.shared.justification import JUSTIFICATION_MAX_LENGTH
 from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
@@ -42,6 +43,18 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                 description=("Free-form reason for the abort (1-500 chars after trimming)."),
             ),
         ],
+        justification: Annotated[
+            str | None,
+            Field(
+                max_length=JUSTIFICATION_MAX_LENGTH,
+                description=(
+                    "Obligation gate (Gate III): AbortRun requires an admission "
+                    "justification accounting for this consequential action. "
+                    "Fail-closed (absent / blank / over-length -> refused). "
+                    "Distinct from reason (post-hoc event text). Kind-blind."
+                ),
+            ),
+        ] = None,
         decided_by_decision_id: Annotated[
             UUID | None,
             Field(
@@ -60,6 +73,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             AbortRun(
                 run_id=run_id,
                 reason=reason,
+                justification=justification,
                 decided_by_decision_id=decided_by_decision_id,
             ),
             principal_id=get_mcp_principal_id(ctx),

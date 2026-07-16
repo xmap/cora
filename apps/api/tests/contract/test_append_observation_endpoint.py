@@ -158,7 +158,7 @@ def test_post_readings_returns_404_for_unknown_run() -> None:
     "terminal_call",
     [
         ("complete", {}),
-        ("abort", {"reason": "operator stop"}),
+        ("abort", {"reason": "operator stop", "justification": "operator: terminal-state setup"}),
         ("stop", {"reason": "controlled exit"}),
         ("truncate", {"reason": "process crashed"}),
     ],
