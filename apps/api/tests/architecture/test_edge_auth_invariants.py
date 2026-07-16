@@ -277,6 +277,7 @@ def test_bearer_auth_middleware_registered_exactly_once_after_body_size_limit() 
 _EXPECTED_UNAUTHENTICATED_PATHS: frozenset[str] = frozenset(
     {
         "/health",
+        "/readyz",
         "/metrics",
         "/.well-known/oauth-protected-resource",
     }

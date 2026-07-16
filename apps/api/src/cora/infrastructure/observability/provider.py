@@ -84,7 +84,7 @@ if TYPE_CHECKING:
 # proportional to the probe interval, not the request rate. Comma-
 # separated regex patterns per FastAPIInstrumentor's excluded_urls
 # contract; substring match is sufficient for these stable paths.
-_EXCLUDED_URLS = "health,metrics,docs,openapi.json,redoc"
+_EXCLUDED_URLS = "health,readyz,metrics,docs,openapi.json,redoc"
 
 _log = getLogger(__name__)
 

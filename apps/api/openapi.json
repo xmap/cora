@@ -34266,7 +34266,7 @@
     },
     "/health": {
       "get": {
-        "description": "Liveness probe.",
+        "description": "Liveness probe.\n\nChecks nothing, and must keep checking nothing. Every dependency\nit could check is one a restart cannot fix, and CORA is a worse\ncase than most: there is no boot retry, so a DB-checking liveness\nprobe would restart a pod into a DB outage that the restart\ncannot mend, turning one outage into a crash loop. Readiness is\nthe probe that reports dependencies; see `/readyz`.",
         "operationId": "health_health_get",
         "responses": {
           "200": {

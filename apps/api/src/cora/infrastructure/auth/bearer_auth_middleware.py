@@ -97,13 +97,16 @@ if TYPE_CHECKING:
 
 _log = get_logger(__name__)
 
-# Paths the middleware MUST never authenticate. Health and metrics
-# are unauthenticated by deployment convention (k8s probes, Prometheus
-# scrape). `/.well-known/oauth-protected-resource` (RFC 9728) is
-# unauthenticated by spec — clients discover where to get a token.
+# Paths the middleware MUST never authenticate. Health, readiness and
+# metrics are unauthenticated by deployment convention (k8s probes,
+# Prometheus scrape): a probe that has to hold a token is a probe that
+# reports an expired token as a dead process.
+# `/.well-known/oauth-protected-resource` (RFC 9728) is
+# unauthenticated by spec: clients discover where to get a token.
 _UNAUTHENTICATED_PATHS: frozenset[str] = frozenset(
     {
         "/health",
+        "/readyz",
         "/metrics",
         "/.well-known/oauth-protected-resource",
     }
@@ -113,7 +116,7 @@ _UNAUTHENTICATED_PATHS: frozenset[str] = frozenset(
 def _is_unauthenticated_path(path: str) -> bool:
     """Return True if `path` MUST be skipped by the bearer middleware.
 
-    Exact-match against the three unauthenticated paths only. MCP
+    Exact-match against the four unauthenticated paths only. MCP
     routes are verified with audience-per-Surface binding (see
     `_resolve_expected_audience`).
     """

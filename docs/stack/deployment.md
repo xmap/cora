@@ -67,6 +67,67 @@ set `CORA_ALLOW_RAW_CONDUCT=false` to close the caller-supplied path. The
 gates that do and do not apply to a submit are documented at the top of
 `cora.api._conduct_run_route`.
 
+## Probes
+
+Two endpoints, both unauthenticated (a probe that has to hold a token
+reports an expired token as a dead process) and both answering
+different questions.
+
+| Endpoint | Question | Checks | Point it at |
+| --- | --- | --- | --- |
+| `GET /health` | Is the process alive? | Nothing, deliberately | `livenessProbe` |
+| `GET /readyz` | Can it serve a correct request? | Postgres | `readinessProbe` |
+
+`/health` checks nothing and must keep checking nothing. Every
+dependency it could check is one a restart cannot fix, and CORA is a
+worse case than most: the pool is built once at startup with no retry,
+so Postgres being down at boot exits the process before it binds a
+socket. A liveness probe that checked the DB would therefore restart
+every pod into an outage the restart cannot mend, converting one
+database blip into a fleet-wide crash loop.
+
+`/readyz` returns 200 `{"status": "ready", ...}` or 503
+`{"status": "not_ready", "database": "..."}`. `database` is a fixed
+vocabulary: `ok`, `unreachable`, `saturated`, `closing`, `skipped`
+(this deployment has no pool, the in-memory kernel), `error`. The body
+carries no URLs, no driver error text, and no projection or bounded
+context names: it is unauthenticated, and none of that helps a probe
+while all of it describes the deployment to whoever can reach it. The
+logs carry the detail.
+
+Postgres is the only check, because readiness must report what can
+CHANGE after a successful boot rather than restate boot. Every config
+gate runs at import and every seed check at lifespan start, so a
+process alive enough to answer `/readyz` has already passed all of
+them. Postgres is the one thing that can fail afterwards.
+
+Projection health is deliberately not gated on. A wedged projection is
+a global condition: it would pull every replica at once, including the
+pod hosting the in-band repair tool. Watch projection lag with a metric
+and an alert, not with a traffic-routing signal.
+
+**Probe budget invariant.** The app bounds `/readyz` at 1.5s total.
+Set the orchestrator's own probe timeout ABOVE that (2s or more).
+Nothing enforces this. If the orchestrator gives up first, its
+disconnect rather than the app's timeout ends the request, and
+`/readyz` silently degrades from a diagnostic endpoint into a hang
+detector: the `{"database": "saturated"}` body that is the entire point
+never gets written. Suggested: `timeoutSeconds: 2`, `periodSeconds: 10`,
+`failureThreshold: 3`.
+
+Two limits worth knowing before the pilot:
+
+- **Readiness buys little at one replica**, which is the 2-BM pilot's
+  shape. Pulling the only pod from a Service gives callers
+  connection-refused instead of a 503 they can read. At one replica,
+  treat `/readyz` as a signal to scrape and alert on; its traffic-shifting
+  value arrives at replica two.
+- **There is no graceful drain.** Nothing flips `/readyz` to not_ready
+  before shutdown begins, so during a rolling deploy the endpoint still
+  answers ready while the app is tearing down. `database: closing` is
+  the symptom of that gap, not a substitute for fixing it. Expect
+  rolling deploys to drop in-flight requests until a drain lands.
+
 ### Startup boot gate
 
 If you set `TRUST_POLICY_ID` without `REQUIRE_AUTHENTICATED_PRINCIPAL=true`, `create_app()` raises `RuntimeError` at boot. Without the header check, anyone could send `X-Principal-Id: 00000000-…0` and impersonate SYSTEM under the configured policy, so the two must be set together.

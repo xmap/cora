@@ -33,7 +33,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import replace
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response, status
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from prometheus_client import CollectorRegistry
@@ -82,6 +82,7 @@ from cora.api._edge_conductor import ComputeRunDriver
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
 from cora.api._inference_recorder import DelegatingInferenceRecorder
 from cora.api._procedure_watcher import procedure_watcher_lifespan
+from cora.api._readiness import probe_database, readiness_body
 from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
@@ -1081,15 +1082,20 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     # - per-app CollectorRegistry so multiple create_app() calls in the
     #   test process don't double-register collectors against the global
     #   REGISTRY (which would crash the second TestClient).
-    # - excluded_handlers=["/metrics"] keeps the scrape endpoint out of
-    #   its own counters (otherwise each scrape pollutes its own metrics
-    #   with monitoring traffic).
+    # - excluded_handlers keeps monitoring traffic out of the counters:
+    #   /metrics would otherwise pollute its own series with each
+    #   scrape, and /readyz is probed on a fixed period, so its latency
+    #   would swamp the request histograms with traffic that reflects
+    #   the probe interval rather than the beamline's request rate.
+    #   /health is NOT excluded: test_metrics_endpoint asserts it is
+    #   counted, and it is the sample request that proves instrumentation
+    #   is live.
     # - include_in_schema=False hides /metrics from OpenAPI /docs (it's
     #   an operational endpoint, not part of the user-facing API).
     metrics_registry = CollectorRegistry()
     Instrumentator(
         registry=metrics_registry,
-        excluded_handlers=["/metrics"],
+        excluded_handlers=["/metrics", "/readyz"],
     ).instrument(fastapi_app).expose(fastapi_app, include_in_schema=False)
     # OTel FastAPI instrumentation runs after app construction so the
     # FastAPIInstrumentor sees every route registered above plus the
@@ -1128,8 +1134,40 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
 
     @fastapi_app.get("/health")
     async def health() -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
-        """Liveness probe."""
+        """Liveness probe.
+
+        Checks nothing, and must keep checking nothing. Every dependency
+        it could check is one a restart cannot fix, and CORA is a worse
+        case than most: there is no boot retry, so a DB-checking liveness
+        probe would restart a pod into a DB outage that the restart
+        cannot mend, turning one outage into a crash loop. Readiness is
+        the probe that reports dependencies; see `/readyz`.
+        """
         return {"status": "ok", "version": __version__}
+
+    @fastapi_app.get("/readyz", include_in_schema=False)
+    async def readyz(  # pyright: ignore[reportUnusedFunction]
+        request: Request, response: Response
+    ) -> dict[str, str]:
+        """Readiness probe: can this process serve a correct request.
+
+        Reports Postgres, the one dependency that can change after a
+        successful boot. See `cora.api._readiness` for why that is the
+        whole check, and why liveness must not make it.
+
+        The pool is read off `app.state` rather than closed over: the
+        lifespan builds the kernel, so it does not exist when this
+        route is registered.
+        """
+        request_deps = getattr(request.app.state, "deps", None)
+        database = await probe_database(request_deps.pool if request_deps else None)
+        body = readiness_body(database, settings)
+        if body["status"] != "ready":
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            # k8s ignores Retry-After on probes; it is here for humans
+            # and curl, and for consistency with the auth handlers.
+            response.headers["Retry-After"] = "5"
+        return body
 
     return fastapi_app
 
