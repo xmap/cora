@@ -124,6 +124,67 @@ def test_priced_call_leaves_the_unpriced_counter_untouched(
 
 
 @pytest.mark.unit
+def test_sequential_calls_are_never_counted_as_concurrent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A zero rate is the whole point of the signal: it is what would retire
+    the shared-envelope race's trigger on evidence. So calls that do not
+    overlap must never inflate it."""
+    spy = _SpyCounter()
+    monkeypatch.setattr(gen_ai, "_concurrent_call_counter", spy)
+    ref = ModelRef(provider="anthropic", model="claude-opus-4-8")
+
+    with gen_ai.track_in_flight_call(ref):
+        pass
+    with gen_ai.track_in_flight_call(ref):
+        pass
+
+    assert spy.adds == []
+    assert gen_ai._in_flight_calls == 0
+
+
+@pytest.mark.unit
+def test_call_starting_inside_another_is_counted_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The second caller opening its window inside the first's is exactly the
+    precondition for the stale read the post-hoc arm admits on."""
+    spy = _SpyCounter()
+    monkeypatch.setattr(gen_ai, "_concurrent_call_counter", spy)
+    ref = ModelRef(provider="anthropic", model="claude-opus-4-8")
+
+    with gen_ai.track_in_flight_call(ref), gen_ai.track_in_flight_call(ref):
+        pass
+
+    assert [amount for amount, _ in spy.adds] == [1]
+    assert spy.adds[0][1] == {
+        "gen_ai.provider.name": "anthropic",
+        "gen_ai.request.model": "claude-opus-4-8",
+    }
+    assert gen_ai._in_flight_calls == 0
+
+
+@pytest.mark.unit
+def test_in_flight_depth_unwinds_when_the_call_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A leaked depth would make every later call look concurrent forever,
+    turning the one signal that can retire the trigger into a permanent false
+    positive. Provider errors are the normal case, not the exotic one."""
+    spy = _SpyCounter()
+    monkeypatch.setattr(gen_ai, "_concurrent_call_counter", spy)
+    ref = ModelRef(provider="anthropic", model="claude-opus-4-8")
+
+    with pytest.raises(RuntimeError), gen_ai.track_in_flight_call(ref):
+        raise RuntimeError("provider refused the call")
+
+    assert gen_ai._in_flight_calls == 0
+    with gen_ai.track_in_flight_call(ref):
+        pass
+    assert spy.adds == []
+
+
+@pytest.mark.unit
 def test_pricing_table_covers_all_documented_models() -> None:
     """Each model named in CORA's docs / design memos must have a
     PRICING entry, or compute_cost_usd silently returns $0 and

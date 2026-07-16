@@ -40,6 +40,13 @@ warning logged once per process so it cannot flood, and the
 call so the condition is alertable rather than only visible as a
 flat $0 series someone has to notice at billing reconciliation.
 
+`cora.agent.llm.concurrent_calls` counts calls that begin while
+another is still in flight, via `track_in_flight_call`. It exists to
+answer one question the budget enforcement ladder cannot answer from
+the code alone: the shared-envelope race is characterized at its
+worst case, but its incidence is unmeasured. See that tracker's
+docstring for how to read a zero.
+
 The pricing table is intentionally a plain `dict` rather than a
 config file: cadence is too low for runtime overrides, and the
 git history of edits IS the audit trail. Update when Anthropic
@@ -68,6 +75,7 @@ register orphan instruments.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
 from logging import getLogger
 from typing import TYPE_CHECKING
@@ -75,7 +83,7 @@ from typing import TYPE_CHECKING
 from opentelemetry import metrics
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Generator, Mapping
 
     from opentelemetry.trace import Span
 
@@ -191,6 +199,54 @@ _unpriced_call_counter = _meter.create_counter(
     unit="{call}",
     description="LLM calls recorded at $0 because no catalog or static pricing entry resolved",
 )
+_concurrent_call_counter = _meter.create_counter(
+    name="cora.agent.llm.concurrent_calls",
+    unit="{call}",
+    description="LLM calls started while another was already in flight in this process",
+)
+
+# Process-local in-flight depth. A plain int is sound here because the LLM
+# callers share one event loop (the projection worker runs its subscribers as
+# concurrent tasks in a single TaskGroup) and nothing awaits between the read
+# and the increment in the tracker below.
+_in_flight_calls = 0
+
+
+@contextmanager
+def track_in_flight_call(model_ref: ModelRef) -> Generator[None]:
+    """Count LLM calls that begin while another is already in flight.
+
+    This measures the PRECONDITION for the shared-envelope race, which is the
+    one quantity the enforcement ladder could not supply. The allocation
+    gate's post-hoc arm reads recorded spend and admits; a caller reaching the
+    gate before an earlier caller has posted reads a stale total and is
+    admitted against spend already committed. The worst case is characterized
+    (two callers leak two calls through a ceiling that should have stopped
+    one). What was never known is how often the window actually opens.
+
+    A nonzero `cora.agent.llm.concurrent_calls` rate says the window opens and
+    the residual is real. A flat zero across a representative period says the
+    race is theoretical in this deployment, and the reserve-post-void tier's
+    trigger can then be retired on evidence rather than on argument.
+
+    Scope: process-local, which is the scope of the observed race. Calls
+    racing from separate replicas are not counted; seeing those would need
+    the ledger to carry a call start time, which it does not.
+    """
+    global _in_flight_calls
+    if _in_flight_calls > 0:
+        _concurrent_call_counter.add(
+            1,
+            {
+                "gen_ai.provider.name": model_ref.provider,
+                "gen_ai.request.model": model_ref.model,
+            },
+        )
+    _in_flight_calls += 1
+    try:
+        yield
+    finally:
+        _in_flight_calls -= 1
 
 
 @dataclass(frozen=True)
