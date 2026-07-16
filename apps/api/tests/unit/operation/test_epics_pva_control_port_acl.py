@@ -33,6 +33,7 @@ import pytest
 from p4p.client.asyncio import Disconnected, RemoteError
 
 from cora.operation.adapters.epics_pva_control_port import EpicsPvaControlPort
+from cora.operation.ports.control_address import EpicsPvAddress
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     ControlTimeoutError,
@@ -95,7 +96,7 @@ async def test_read_translates_asyncio_timeout_to_not_connected() -> None:
     port = EpicsPvaControlPort(default_timeout_s=0.05)
     _hijack_context(port, _FakeContext(get_raises=asyncio.TimeoutError))
     with pytest.raises(ControlNotConnectedError) as exc_info:
-        await port.read("test_pv")
+        await port.read(EpicsPvAddress("test_pv"))
     assert exc_info.value.address == "test_pv"
 
 
@@ -105,7 +106,7 @@ async def test_read_translates_disconnected_to_not_connected() -> None:
     port = EpicsPvaControlPort()
     _hijack_context(port, _FakeContext(get_raises=Disconnected))
     with pytest.raises(ControlNotConnectedError) as exc_info:
-        await port.read("test_pv")
+        await port.read(EpicsPvAddress("test_pv"))
     assert exc_info.value.address == "test_pv"
 
 
@@ -119,7 +120,7 @@ async def test_write_translates_asyncio_timeout_to_control_timeout_error() -> No
     port = EpicsPvaControlPort()
     _hijack_context(port, _FakeContext(put_raises=asyncio.TimeoutError))
     with pytest.raises(ControlTimeoutError) as exc_info:
-        await port.write("test_pv", 1.0, timeout_s=0.05)
+        await port.write(EpicsPvAddress("test_pv"), 1.0, timeout_s=0.05)
     assert exc_info.value.address == "test_pv"
     assert exc_info.value.timeout_s == 0.05
 
@@ -130,7 +131,7 @@ async def test_write_translates_remote_error_to_write_rejected() -> None:
     port = EpicsPvaControlPort()
     _hijack_context(port, _FakeContext(put_raises=RemoteError, raise_value="IOC says no"))
     with pytest.raises(ControlWriteRejectedError) as exc_info:
-        await port.write("test_pv", 1.0)
+        await port.write(EpicsPvAddress("test_pv"), 1.0)
     assert exc_info.value.address == "test_pv"
     assert "IOC says no" in exc_info.value.reason
 
@@ -144,7 +145,7 @@ async def test_write_translates_value_error_to_value_coercion() -> None:
         _FakeContext(put_raises=ValueError, raise_value="cannot coerce 'foo' to int"),
     )
     with pytest.raises(ControlValueCoercionError) as exc_info:
-        await port.write("test_pv", "foo")
+        await port.write(EpicsPvAddress("test_pv"), "foo")
     assert exc_info.value.address == "test_pv"
 
 
@@ -214,7 +215,7 @@ async def test_subscribe_mid_stream_disconnect_raises_through_iterator() -> None
     """
     port = EpicsPvaControlPort()
     _hijack_context(port, _MonitorContext(_FakeValue(1.0), Disconnected()))
-    iterator = port.subscribe("test_pv")
+    iterator = port.subscribe(EpicsPvAddress("test_pv"))
     first = await anext(iterator)
     assert first.value == 1.0
     with pytest.raises(ControlNotConnectedError) as exc_info:
@@ -234,7 +235,7 @@ async def test_subscribe_initial_disconnect_is_ignored_then_value_yields() -> No
     """
     port = EpicsPvaControlPort()
     _hijack_context(port, _MonitorContext(Disconnected(), _FakeValue(2.5)))
-    iterator = port.subscribe("test_pv")
+    iterator = port.subscribe(EpicsPvAddress("test_pv"))
     got = await anext(iterator)
     assert got.value == 2.5
     await iterator.aclose()

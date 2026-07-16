@@ -109,6 +109,8 @@ from cora.operation.ports.control_port import (
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+    from cora.operation.ports.control_address import EpicsPvAddress
+
 
 _log = get_logger(__name__)
 _DISPATCH_EVENT = "controlport.dispatch"
@@ -239,57 +241,59 @@ class CaprotoControlPort:
             raise ControlNotConnectedError(address) from exc
         return pv
 
-    async def read(self, address: str) -> Measurement:
-        pv = await self._connected_pv(address)
+    async def read(self, address: EpicsPvAddress) -> Measurement:
+        name = address.pv
+        pv = await self._connected_pv(name)
         try:
             response = await pv.read(data_type="time", timeout=self._default_timeout_s)
         except CaprotoTimeoutError as exc:
-            raise ControlTimeoutError(address, self._default_timeout_s) from exc
+            raise ControlTimeoutError(name, self._default_timeout_s) from exc
         return _to_reading(response)
 
     async def write(
         self,
-        address: str,
+        address: EpicsPvAddress,
         value: int | float | bool | str | tuple[Any, ...],
         *,
         wait: bool = True,
         timeout_s: float = 30.0,
     ) -> None:
+        name = address.pv
         correlation_id = get_dispatch_correlation_id()
         _log.info(
             _DISPATCH_EVENT,
-            address=address,
+            address=name,
             operation="write",
             correlation_id=str(correlation_id) if correlation_id is not None else None,
             status="started",
         )
         try:
-            pv = await self._connected_pv(address)
+            pv = await self._connected_pv(name)
             await pv.write(value, wait=wait, timeout=timeout_s)
         except CaprotoTimeoutError as exc:
             _log.info(
                 _DISPATCH_FAILED_EVENT,
-                address=address,
+                address=name,
                 operation="write",
                 correlation_id=str(correlation_id) if correlation_id is not None else None,
                 status="failed",
                 error_class=ControlTimeoutError.__name__,
             )
-            raise ControlTimeoutError(address, timeout_s) from exc
+            raise ControlTimeoutError(name, timeout_s) from exc
         except ErrorResponseReceived as exc:
             _log.info(
                 _DISPATCH_FAILED_EVENT,
-                address=address,
+                address=name,
                 operation="write",
                 correlation_id=str(correlation_id) if correlation_id is not None else None,
                 status="failed",
                 error_class=ControlWriteRejectedError.__name__,
             )
-            raise ControlWriteRejectedError(address, str(exc)) from exc
+            raise ControlWriteRejectedError(name, str(exc)) from exc
         except ControlNotConnectedError:
             _log.info(
                 _DISPATCH_FAILED_EVENT,
-                address=address,
+                address=name,
                 operation="write",
                 correlation_id=str(correlation_id) if correlation_id is not None else None,
                 status="failed",
@@ -298,13 +302,13 @@ class CaprotoControlPort:
             raise
         _log.info(
             _DISPATCH_COMPLETED_EVENT,
-            address=address,
+            address=name,
             operation="write",
             correlation_id=str(correlation_id) if correlation_id is not None else None,
             status="completed",
         )
 
-    def subscribe(self, address: str) -> AsyncGenerator[Measurement]:
+    def subscribe(self, address: EpicsPvAddress) -> AsyncGenerator[Measurement]:
         """Return type narrows the Protocol's `AsyncIterator` to `AsyncGenerator`.
 
         Covariant return lets tests close subscriptions via the
@@ -314,7 +318,7 @@ class CaprotoControlPort:
         + connect + `pv.subscribe`) runs on the generator's first
         `__anext__`.
         """
-        return self._drain(address)
+        return self._drain(address.pv)
 
     async def _drain(self, address: str) -> AsyncGenerator[Measurement]:
         pv = await self._connected_pv(address)

@@ -51,6 +51,7 @@ import asyncio
 import pytest
 
 from cora.operation.adapters.caproto_control_port import CaprotoControlPort
+from cora.operation.ports.control_address import EpicsPvAddress
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
     ControlPort,
@@ -71,8 +72,8 @@ async def test_read_double_scalar_returns_reading_with_good_quality(
     """DBR_DOUBLE scalar lands as Measurement(kind='Scalar', quality='Good', value=float)."""
     port = CaprotoControlPort()
     try:
-        await port.write(f"{softioc}double_value", 0.0, wait=True)
-        reading = await port.read(f"{softioc}double_value")
+        await port.write(EpicsPvAddress(f"{softioc}double_value"), 0.0, wait=True)
+        reading = await port.read(EpicsPvAddress(f"{softioc}double_value"))
         assert isinstance(reading, Measurement)
         assert reading.kind == "Scalar"
         assert reading.quality == "Good"
@@ -87,8 +88,8 @@ async def test_read_long_scalar_returns_int_value(softioc: str) -> None:
     """DBR_LONG scalar lands as Measurement(kind='Scalar', value=int)."""
     port = CaprotoControlPort()
     try:
-        await port.write(f"{softioc}long_value", 0, wait=True)
-        reading = await port.read(f"{softioc}long_value")
+        await port.write(EpicsPvAddress(f"{softioc}long_value"), 0, wait=True)
+        reading = await port.read(EpicsPvAddress(f"{softioc}long_value"))
         assert reading.kind == "Scalar"
         assert reading.value == 0
     finally:
@@ -100,8 +101,8 @@ async def test_read_string_scalar_returns_decoded_utf8(softioc: str) -> None:
     """DBR_STRING scalar lands decoded as Python `str`, not raw `bytes`."""
     port = CaprotoControlPort()
     try:
-        await port.write(f"{softioc}string_value", "initial", wait=True)
-        reading = await port.read(f"{softioc}string_value")
+        await port.write(EpicsPvAddress(f"{softioc}string_value"), "initial", wait=True)
+        reading = await port.read(EpicsPvAddress(f"{softioc}string_value"))
         assert reading.kind == "Scalar"
         assert reading.value == "initial"
         assert isinstance(reading.value, str)
@@ -114,8 +115,8 @@ async def test_read_waveform_returns_array_as_tuple(softioc: str) -> None:
     """DBR_DOUBLE count > 1 lands as Measurement(kind='Array', value=tuple)."""
     port = CaprotoControlPort()
     try:
-        await port.write(f"{softioc}waveform", (1.0, 2.0, 3.0, 4.0), wait=True)
-        reading = await port.read(f"{softioc}waveform")
+        await port.write(EpicsPvAddress(f"{softioc}waveform"), (1.0, 2.0, 3.0, 4.0), wait=True)
+        reading = await port.read(EpicsPvAddress(f"{softioc}waveform"))
         assert reading.kind == "Array"
         assert isinstance(reading.value, tuple)
         assert reading.value == (1.0, 2.0, 3.0, 4.0)
@@ -135,7 +136,7 @@ async def test_read_enum_returns_categorical_kind(softioc: str) -> None:
     """
     port = CaprotoControlPort()
     try:
-        reading = await port.read(f"{softioc}enum_value")
+        reading = await port.read(EpicsPvAddress(f"{softioc}enum_value"))
         assert reading.kind == "Categorical"
     finally:
         await port.aclose()
@@ -153,7 +154,7 @@ async def test_read_major_alarm_pv_returns_bad_quality(softioc: str) -> None:
     """
     port = CaprotoControlPort()
     try:
-        reading = await port.read(f"{softioc}bad_quality_value")
+        reading = await port.read(EpicsPvAddress(f"{softioc}bad_quality_value"))
         assert reading.kind == "Scalar"
         assert reading.value == 99.9
         assert reading.quality == "Bad"
@@ -168,8 +169,8 @@ async def test_write_scalar_then_read_observes_new_value(softioc: str) -> None:
     """caput-callback semantics: after `wait=True` write returns, read sees new value."""
     port = CaprotoControlPort()
     try:
-        await port.write(f"{softioc}double_value", 4.2, wait=True)
-        reading = await port.read(f"{softioc}double_value")
+        await port.write(EpicsPvAddress(f"{softioc}double_value"), 4.2, wait=True)
+        reading = await port.read(EpicsPvAddress(f"{softioc}double_value"))
         assert reading.value == 4.2
     finally:
         await port.aclose()
@@ -180,8 +181,8 @@ async def test_write_long_then_read_observes_new_value(softioc: str) -> None:
     """DBR_LONG write round-trip pin: integer survives caput-callback + read."""
     port = CaprotoControlPort()
     try:
-        await port.write(f"{softioc}long_value", 99, wait=True)
-        reading = await port.read(f"{softioc}long_value")
+        await port.write(EpicsPvAddress(f"{softioc}long_value"), 99, wait=True)
+        reading = await port.read(EpicsPvAddress(f"{softioc}long_value"))
         assert reading.value == 99
     finally:
         await port.aclose()
@@ -192,12 +193,12 @@ async def test_subscribe_yields_initial_value_then_writes(softioc: str) -> None:
     """Subscribe gets the current value first, then each write fans out as a Measurement."""
     port = CaprotoControlPort()
     try:
-        await port.write(f"{softioc}double_value", 0.0, wait=True)
-        iterator = port.subscribe(f"{softioc}double_value")
+        await port.write(EpicsPvAddress(f"{softioc}double_value"), 0.0, wait=True)
+        iterator = port.subscribe(EpicsPvAddress(f"{softioc}double_value"))
         first = await asyncio.wait_for(anext(iterator), timeout=2.0)
         assert first.value == 0.0
 
-        await port.write(f"{softioc}double_value", 7.7, wait=True)
+        await port.write(EpicsPvAddress(f"{softioc}double_value"), 7.7, wait=True)
         second = await asyncio.wait_for(anext(iterator), timeout=2.0)
         assert second.value == 7.7
 
@@ -211,7 +212,7 @@ async def test_consumer_cancellation_runs_generator_finally(softioc: str) -> Non
     """Cancellation mid-`anext` runs the generator's `finally` and unregisters."""
     port = CaprotoControlPort()
     try:
-        iterator = port.subscribe(f"{softioc}double_value")
+        iterator = port.subscribe(EpicsPvAddress(f"{softioc}double_value"))
         await asyncio.wait_for(anext(iterator), timeout=2.0)
         with pytest.raises(asyncio.TimeoutError):
             await asyncio.wait_for(anext(iterator), timeout=0.05)
@@ -226,7 +227,7 @@ async def test_read_on_nonexistent_pv_raises_not_connected(softioc: str) -> None
     port = CaprotoControlPort(default_timeout_s=0.3)
     try:
         with pytest.raises(ControlNotConnectedError) as exc_info:
-            await port.read(f"{softioc}nonexistent")
+            await port.read(EpicsPvAddress(f"{softioc}nonexistent"))
         assert exc_info.value.address == f"{softioc}nonexistent"
     finally:
         await port.aclose()
@@ -238,7 +239,7 @@ async def test_write_on_nonexistent_pv_raises_not_connected(softioc: str) -> Non
     port = CaprotoControlPort(default_timeout_s=0.3)
     try:
         with pytest.raises(ControlNotConnectedError):
-            await port.write(f"{softioc}nonexistent", 1.0)
+            await port.write(EpicsPvAddress(f"{softioc}nonexistent"), 1.0)
     finally:
         await port.aclose()
 
@@ -254,7 +255,7 @@ async def test_subscribe_on_nonexistent_pv_raises_not_connected(softioc: str) ->
     """
     port = CaprotoControlPort(default_timeout_s=0.3)
     try:
-        iterator = port.subscribe(f"{softioc}nonexistent")
+        iterator = port.subscribe(EpicsPvAddress(f"{softioc}nonexistent"))
         with pytest.raises(ControlNotConnectedError) as exc_info:
             await anext(iterator)
         assert exc_info.value.address == f"{softioc}nonexistent"
@@ -267,7 +268,7 @@ async def test_subscribe_on_nonexistent_pv_raises_not_connected(softioc: str) ->
 async def test_aclose_is_idempotent(softioc: str) -> None:
     """Second aclose() call is a no-op."""
     port = CaprotoControlPort()
-    await port.read(f"{softioc}double_value")
+    await port.read(EpicsPvAddress(f"{softioc}double_value"))
     await port.aclose()
     await port.aclose()
     assert port._context is None  # pyright: ignore[reportPrivateUsage]

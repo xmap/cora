@@ -31,6 +31,7 @@ from aioca import CANothing
 from epicscorelibs.ca import cadef
 
 from cora.operation.adapters.epics_ca_control_port import EpicsCaControlPort
+from cora.operation.ports.control_address import EpicsPvAddress
 from cora.operation.ports.control_port import (
     ControlAccessDeniedError,
     ControlNotConnectedError,
@@ -84,7 +85,7 @@ async def test_read_translates_eca_timeout_to_control_timeout_error(
     monkeypatch.setattr("cora.operation.adapters.epics_ca_control_port.caget", _raise_timeout)
     port = EpicsCaControlPort(default_timeout_s=0.5)
     with pytest.raises(ControlTimeoutError) as exc_info:
-        await port.read("test_pv")
+        await port.read(EpicsPvAddress("test_pv"))
     assert exc_info.value.address == "test_pv"
     assert exc_info.value.timeout_s == 0.5
 
@@ -98,7 +99,7 @@ async def test_write_translates_eca_timeout_to_control_timeout_error(
     monkeypatch.setattr("cora.operation.adapters.epics_ca_control_port.caput", _raise_timeout)
     port = EpicsCaControlPort()
     with pytest.raises(ControlTimeoutError) as exc_info:
-        await port.write("test_pv", 1.0, timeout_s=2.5)
+        await port.write(EpicsPvAddress("test_pv"), 1.0, timeout_s=2.5)
     assert exc_info.value.address == "test_pv"
     assert exc_info.value.timeout_s == 2.5
 
@@ -111,7 +112,7 @@ async def test_cainfo_eca_disconn_translates_to_not_connected(
     monkeypatch.setattr("cora.operation.adapters.epics_ca_control_port.cainfo", _raise_disconn)
     port = EpicsCaControlPort()
     with pytest.raises(ControlNotConnectedError) as exc_info:
-        await port.read("test_pv")
+        await port.read(EpicsPvAddress("test_pv"))
     assert exc_info.value.address == "test_pv"
 
 
@@ -126,7 +127,7 @@ async def test_write_translates_other_errorcode_to_write_rejected(
     )
     port = EpicsCaControlPort()
     with pytest.raises(ControlWriteRejectedError) as exc_info:
-        await port.write("test_pv", 1.0)
+        await port.write(EpicsPvAddress("test_pv"), 1.0)
     assert exc_info.value.address == "test_pv"
     assert "999" in exc_info.value.reason
 
@@ -145,7 +146,7 @@ async def test_read_translates_eca_nordaccess_to_access_denied(
     monkeypatch.setattr("cora.operation.adapters.epics_ca_control_port.caget", _raise_nordaccess)
     port = EpicsCaControlPort()
     with pytest.raises(ControlAccessDeniedError) as exc_info:
-        await port.read("test_pv")
+        await port.read(EpicsPvAddress("test_pv"))
     assert exc_info.value.address == "test_pv"
 
 
@@ -158,7 +159,7 @@ async def test_write_translates_eca_nowtaccess_to_access_denied(
     monkeypatch.setattr("cora.operation.adapters.epics_ca_control_port.caput", _raise_nowtaccess)
     port = EpicsCaControlPort()
     with pytest.raises(ControlAccessDeniedError) as exc_info:
-        await port.write("test_pv", 1.0)
+        await port.write(EpicsPvAddress("test_pv"), 1.0)
     assert exc_info.value.address == "test_pv"
 
 
@@ -193,7 +194,7 @@ async def test_subscribe_mid_stream_disconnect_raises_through_iterator(
     monkeypatch.setattr("cora.operation.adapters.epics_ca_control_port.cainfo", _ok_cainfo)
     monkeypatch.setattr("cora.operation.adapters.epics_ca_control_port.camonitor", _fake_camonitor)
     port = EpicsCaControlPort()
-    iterator = port.subscribe("test_pv")
+    iterator = port.subscribe(EpicsPvAddress("test_pv"))
     with pytest.raises(ControlNotConnectedError) as exc_info:
         await anext(iterator)
     assert exc_info.value.address == "test_pv"

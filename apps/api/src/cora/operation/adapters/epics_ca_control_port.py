@@ -135,6 +135,8 @@ from cora.operation.ports.control_port import (
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+    from cora.operation.ports.control_address import EpicsPvAddress
+
 
 _log = get_logger(__name__)
 _DISPATCH_EVENT = "controlport.dispatch"
@@ -291,45 +293,47 @@ class EpicsCaControlPort:
         if int(info.state) != cadef.cs_conn:
             raise ControlNotConnectedError(address)
 
-    async def read(self, address: str) -> Measurement:
-        await self._assert_connected(address)
+    async def read(self, address: EpicsPvAddress) -> Measurement:
+        pv = address.pv
+        await self._assert_connected(pv)
         try:
             augmented = await caget(
-                address,
+                pv,
                 format=FORMAT_TIME,
                 timeout=self._default_timeout_s,
             )
         except CANothing as exc:
-            raise _map_ca_error(address, exc, timeout_s=self._default_timeout_s) from exc
+            raise _map_ca_error(pv, exc, timeout_s=self._default_timeout_s) from exc
         labels: tuple[str, ...] | None = None
         if _kind_for(augmented.datatype, augmented.element_count) == "Categorical":
-            labels = await self._resolve_enum_labels(address)
+            labels = await self._resolve_enum_labels(pv)
         return _to_reading(augmented, labels)
 
     async def write(
         self,
-        address: str,
+        address: EpicsPvAddress,
         value: int | float | bool | str | tuple[Any, ...],
         *,
         wait: bool = True,
         timeout_s: float = 30.0,
     ) -> None:
+        pv = address.pv
         correlation_id = get_dispatch_correlation_id()
         _log.info(
             _DISPATCH_EVENT,
-            address=address,
+            address=pv,
             operation="write",
             correlation_id=str(correlation_id) if correlation_id is not None else None,
             status="started",
         )
         try:
-            await self._assert_connected(address)
-            await caput(address, value, wait=wait, timeout=timeout_s)
+            await self._assert_connected(pv)
+            await caput(pv, value, wait=wait, timeout=timeout_s)
         except CANothing as exc:
-            mapped = _map_ca_error(address, exc, timeout_s=timeout_s)
+            mapped = _map_ca_error(pv, exc, timeout_s=timeout_s)
             _log.info(
                 _DISPATCH_FAILED_EVENT,
-                address=address,
+                address=pv,
                 operation="write",
                 correlation_id=str(correlation_id) if correlation_id is not None else None,
                 status="failed",
@@ -339,7 +343,7 @@ class EpicsCaControlPort:
         except ControlNotConnectedError:
             _log.info(
                 _DISPATCH_FAILED_EVENT,
-                address=address,
+                address=pv,
                 operation="write",
                 correlation_id=str(correlation_id) if correlation_id is not None else None,
                 status="failed",
@@ -348,13 +352,13 @@ class EpicsCaControlPort:
             raise
         _log.info(
             _DISPATCH_COMPLETED_EVENT,
-            address=address,
+            address=pv,
             operation="write",
             correlation_id=str(correlation_id) if correlation_id is not None else None,
             status="completed",
         )
 
-    def subscribe(self, address: str) -> AsyncGenerator[Measurement]:
+    def subscribe(self, address: EpicsPvAddress) -> AsyncGenerator[Measurement]:
         """Return type narrows the Protocol's `AsyncIterator` to `AsyncGenerator`.
 
         Covariant return lets tests close subscriptions via the
@@ -362,7 +366,7 @@ class EpicsCaControlPort:
         ports. Setup (`_assert_connected` + `camonitor`) runs on the
         generator's first `__anext__`.
         """
-        return self._drain(address)
+        return self._drain(address.pv)
 
     async def _drain(self, address: str) -> AsyncGenerator[Measurement]:
         await self._assert_connected(address)

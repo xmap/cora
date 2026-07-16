@@ -23,6 +23,10 @@ from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.epics_ca_control_port import EpicsCaControlPort
 from cora.operation.adapters.epics_pva_control_port import EpicsPvaControlPort
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
+from cora.operation.ports.control_port import (
+    ControlNotConnectedError,
+    NoAdapterForAddressError,
+)
 
 
 @pytest.mark.unit
@@ -32,11 +36,18 @@ def test_build_control_port_with_empty_routes_returns_in_memory_port() -> None:
 
 
 @pytest.mark.unit
-def test_build_control_port_with_single_in_memory_route_returns_registry() -> None:
+async def test_build_control_port_with_single_in_memory_route_returns_registry() -> None:
     port = build_control_port([ControlPortRoute(prefix="2bma:", substrate="in_memory")])
     assert isinstance(port, ControlPortRegistry)
-    routed = port.route("2bma:rot:val")
-    assert isinstance(routed, InMemoryControlPort)
+    # in_memory routes ride the registry's str-port wrapper (an internal
+    # detail), so assert behaviour rather than the wrapper type: a matched
+    # address dispatches to the in-memory adapter, which raises
+    # ControlNotConnectedError (its response for an unseeded address), NOT the
+    # NoAdapterForAddressError an unrouted prefix would raise.
+    with pytest.raises(ControlNotConnectedError):
+        await port.read("2bma:rot:val")
+    with pytest.raises(NoAdapterForAddressError):
+        await port.read("7bma:rot:val")
 
 
 @pytest.mark.unit
@@ -80,7 +91,7 @@ def test_control_port_route_rejects_empty_prefix() -> None:
 @pytest.mark.unit
 def test_control_port_route_rejects_unknown_substrate() -> None:
     with pytest.raises(ValidationError):
-        ControlPortRoute.model_validate({"prefix": "x:", "substrate": "tango"})
+        ControlPortRoute.model_validate({"prefix": "x:", "substrate": "opc_ua"})
 
 
 @pytest.mark.unit

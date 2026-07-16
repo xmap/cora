@@ -124,6 +124,8 @@ from cora.operation.ports.control_port import (
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+    from cora.operation.ports.control_address import EpicsPvAddress
+
 
 _log = get_logger(__name__)
 _DISPATCH_EVENT = "controlport.dispatch"
@@ -272,31 +274,33 @@ class EpicsPvaControlPort:
             self._context = Context(provider="pva")
         return self._context
 
-    async def read(self, address: str) -> Measurement:
+    async def read(self, address: EpicsPvAddress) -> Measurement:
+        pv = address.pv
         ctx = self._ensure_context()
         try:
             value = await asyncio.wait_for(
-                ctx.get(address, request=_FIELD_REQUEST),
+                ctx.get(pv, request=_FIELD_REQUEST),
                 timeout=self._default_timeout_s,
             )
         except (TimeoutError, Disconnected) as exc:
-            raise ControlNotConnectedError(address) from exc
+            raise ControlNotConnectedError(pv) from exc
         except RemoteError as exc:
-            raise ControlWriteRejectedError(address, str(exc)) from exc
+            raise ControlWriteRejectedError(pv, str(exc)) from exc
         return _to_reading(value)
 
     async def write(
         self,
-        address: str,
+        address: EpicsPvAddress,
         value: int | float | bool | str | tuple[Any, ...],
         *,
         wait: bool = True,
         timeout_s: float = 30.0,
     ) -> None:
+        pv = address.pv
         correlation_id = get_dispatch_correlation_id()
         _log.info(
             _DISPATCH_EVENT,
-            address=address,
+            address=pv,
             operation="write",
             correlation_id=str(correlation_id) if correlation_id is not None else None,
             status="started",
@@ -304,60 +308,60 @@ class EpicsPvaControlPort:
         ctx = self._ensure_context()
         try:
             await asyncio.wait_for(
-                ctx.put(address, value, wait=wait),
+                ctx.put(pv, value, wait=wait),
                 timeout=timeout_s,
             )
         except TimeoutError as exc:
             _log.info(
                 _DISPATCH_FAILED_EVENT,
-                address=address,
+                address=pv,
                 operation="write",
                 correlation_id=str(correlation_id) if correlation_id is not None else None,
                 status="failed",
                 error_class=ControlTimeoutError.__name__,
             )
-            raise ControlTimeoutError(address, timeout_s) from exc
+            raise ControlTimeoutError(pv, timeout_s) from exc
         except Disconnected as exc:
             _log.info(
                 _DISPATCH_FAILED_EVENT,
-                address=address,
+                address=pv,
                 operation="write",
                 correlation_id=str(correlation_id) if correlation_id is not None else None,
                 status="failed",
                 error_class=ControlNotConnectedError.__name__,
             )
-            raise ControlNotConnectedError(address) from exc
+            raise ControlNotConnectedError(pv) from exc
         except RemoteError as exc:
             _log.info(
                 _DISPATCH_FAILED_EVENT,
-                address=address,
+                address=pv,
                 operation="write",
                 correlation_id=str(correlation_id) if correlation_id is not None else None,
                 status="failed",
                 error_class=ControlWriteRejectedError.__name__,
             )
-            raise ControlWriteRejectedError(address, str(exc)) from exc
+            raise ControlWriteRejectedError(pv, str(exc)) from exc
         except ValueError as exc:
             _log.info(
                 _DISPATCH_FAILED_EVENT,
-                address=address,
+                address=pv,
                 operation="write",
                 correlation_id=str(correlation_id) if correlation_id is not None else None,
                 status="failed",
                 error_class=ControlValueCoercionError.__name__,
             )
             raise ControlValueCoercionError(
-                address, raw_type=type(value).__name__, target_kind="pva put"
+                pv, raw_type=type(value).__name__, target_kind="pva put"
             ) from exc
         _log.info(
             _DISPATCH_COMPLETED_EVENT,
-            address=address,
+            address=pv,
             operation="write",
             correlation_id=str(correlation_id) if correlation_id is not None else None,
             status="completed",
         )
 
-    def subscribe(self, address: str) -> AsyncGenerator[Measurement]:
+    def subscribe(self, address: EpicsPvAddress) -> AsyncGenerator[Measurement]:
         """Return type narrows the Protocol's `AsyncIterator` to `AsyncGenerator`.
 
         Covariant return lets tests close subscriptions via the
@@ -365,7 +369,7 @@ class EpicsPvaControlPort:
         Setup (`_ensure_context` + `ctx.monitor`) runs on the
         generator's first `__anext__`.
         """
-        return self._drain(address)
+        return self._drain(address.pv)
 
     async def _drain(self, address: str) -> AsyncGenerator[Measurement]:
         ctx = self._ensure_context()
