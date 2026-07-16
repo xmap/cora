@@ -690,9 +690,12 @@ class AgentBudget:
     consumed by the LLM subscribers) sums recorded spend from the
     inference entries' `cost_usd` and refuses the next call once a cap
     is exhausted; per-call telemetry also lands on the
-    `cora.agent.llm.cost.usd` histogram. Finer tiers (per-call
-    pre-estimate, reserve-post-void) and a full Budget BC remain
-    deferred (watch item in [[project-agent-lifecycle-grants-design]]).
+    `cora.agent.llm.cost.usd` histogram. The per-call pre-estimate tier
+    ships too (`cora.agent.adapters.budget_spend_guard`, gating the
+    autonomous steering brain), as does the Budget BC's per-beamline
+    Allocation envelope layered above these per-agent caps. Only the
+    leak-free reserve-post-void tier remains unbuilt (Stage 0 at
+    [[project-reserve-post-void-stage0]]).
 
     Zero caps allowed and enforced as the recorded "no spend" intent:
     the gate treats a 0 cap as a hard stop (zero spent >= zero cap

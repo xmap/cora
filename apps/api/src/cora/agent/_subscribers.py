@@ -55,10 +55,10 @@ widened minimally: the `Reaction` Protocol was added as the sibling
 to `Projection` and per-subscriber `batch_size` enforcement landed
 so the docstring's `batch_size=1` claim became real.
 
-Further widening (separate `ReactionWorker` with its own pool
-budget, operator escape-hatch for wedged bookmarks via
-`dismiss_event_in_reaction`) stays deferred behind the next named
-triggers: 3rd Reaction OR first wedged-bookmark incident.
+The operator escape-hatch for wedged bookmarks has since shipped as
+the `dismiss_event_in_reaction` slice. Further widening (a separate
+`ReactionWorker` with its own pool budget) stays deferred behind the
+next named triggers: 3rd Reaction OR first wedged-bookmark incident.
 """
 
 from __future__ import annotations
