@@ -2,17 +2,21 @@
 
 The reactive agent subscribers (RunDebriefer, CautionDrafter) sign each
 agent-authored `DecisionRegistered` via their own `_maybe_sign` before appending,
-per the signing design lock: `DecisionRegistered` is in `SIGNED_EVENT_TYPES`, so
-an AI-agent row is signed at write time (an unsigned agent row would trip the
-strict audit sweep, `signing.verify_stream(strict=True)` raising
-`SignatureMissingError`). Human-actor rows from the operator-driven
-`register_decision` slice stay unsigned by design.
+per the signing design lock: `DecisionRegistered` is in `SIGNED_EVENT_TYPES`, and
+the paths producing agent-attributed rows are exactly the ones the composition
+root hands a `Signer`. Human-attributed rows from the operator-driven
+`register_decision` slice stay unsigned by design, which is why an audit sweep
+passes `verify_stream(must_be_signed=...)` and not a blanket flag: membership in
+`SIGNED_EVENT_TYPES` means "signed IF a Signer-wired path produced it", so only
+the caller can say which unsigned rows are findings.
 
 The proactive agent runtimes hosted at the composition root (`_run_initiator`,
-`_run_supervisor`) also compose `DecisionRegistered` directly (they cannot use
-`register_decision`, whose decider rejects AGENT principals), so they need the
-same signing step. This module hoists it to one helper both import, rather than
-each re-declaring a private `_maybe_sign`. Mirrors
+`_run_supervisor`) also compose `DecisionRegistered` directly, so they need the
+same signing step. They cannot route through `register_decision`: its decider
+refuses rows ATTRIBUTED to an agent-kind Actor, and theirs are. Note that is a
+guard on the Actor named by `decided_by`, not on the calling principal, whose
+kind no decider ever sees. This module hoists the signing step to one helper both
+import, rather than each re-declaring a private `_maybe_sign`. Mirrors
 `RunDebrieferSubscriber._maybe_sign` exactly.
 """
 

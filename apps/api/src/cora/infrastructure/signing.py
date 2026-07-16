@@ -58,11 +58,16 @@ Initial set per [[project_signed_events_design]] (errata 2026-05-24):
 
   - `DecisionRegistered`: produced by Agents AND by humans. Per the
     design lock the signing requirement applies only to the Agent-
-    produced rows; the subscriber tier (CautionDrafter and
-    RunDebriefer today) checks `actor_id` against the Agent BC's
-    stable-id rule before invoking `Signer.sign`. Human-actor
-    `DecisionRegistered` rows from the operator-driven
-    `register_decision` slice stay unsigned. Both AI-agent
+    produced rows. That split is achieved by WIRING, not by a branch:
+    the subscriber tier (CautionDrafter and RunDebriefer today) is
+    handed a `Signer` and signs every row of a type in this set, while
+    the operator-driven `register_decision` slice is handed none, so
+    its human-attributed rows stay unsigned. No signing site reads
+    `Actor.kind`; `tests/architecture/test_actor_kind_blindness.py`
+    pins that. Membership here therefore means "signed IF a
+    Signer-wired path produced it", which is why an audit sweep needs
+    `verify_stream`'s `must_be_signed` predicate to say whether a given
+    unsigned row is a finding. Both AI-agent
     subscribers route through this single entry: CautionDrafter
     emits `DecisionRegistered` with `context="CautionProposal"`
     (the Caution aggregate itself is created later via the
@@ -196,7 +201,7 @@ async def verify_stream(
     events: Sequence[StoredEvent],
     *,
     resolve_public_key: Callable[[str], Awaitable[bytes]],
-    strict: bool = False,
+    must_be_signed: Callable[[StoredEvent], Awaitable[bool]] | None = None,
 ) -> None:
     """Verify every signed event in a loaded stream. Raise on first failure.
 
@@ -207,34 +212,53 @@ async def verify_stream(
       - When `event.signature_kid is not None`, calls `verify_signature`
         with the event's payload, signature, and kid. Raises
         `SignatureInvalidError` on the first row that fails.
-      - When `event.signature_kid is None` AND `event.event_type` is in
-        `SIGNED_EVENT_TYPES` AND `strict=True`, raises
-        `SignatureMissingError` (audit-mode "no signed event went
-        unsigned" check).
-      - When `event.signature_kid is None` and either the event type
-        is NOT in `SIGNED_EVENT_TYPES` or `strict=False`, the event is
-        skipped silently. Pre-rollout events and human-actor rows are
-        legitimately unsigned per the design lock's "AI-agent events
-        signed, human-actor events not" stance.
+      - When `event.signature_kid is None`, the row is unsigned. Whether
+        that is a finding or a fact depends on who wrote it, and only the
+        caller knows: pass `must_be_signed` to say. It is awaited per
+        unsigned row and raises `SignatureMissingError` when it returns
+        True. Omit it (the default) and unsigned rows are skipped.
 
-    The function is event-type-agnostic at the call signature; the
-    `SIGNED_EVENT_TYPES` check is the registry-lookup that determines
-    which rows must carry a signature.
+    ## Why the caller owns the obligation rule
 
-    Kept as a standalone helper rather than an `EventStore.load` flag
-    so the port stays signing-unaware. Callers wanting opt-in
-    verification compose: `events, _ = await store.load(...);
-    await verify_stream(events, resolve_public_key=...)`.
+    This took a `strict: bool` flag meaning "raise on any unsigned row whose
+    type is in `SIGNED_EVENT_TYPES`". Event type is the wrong predicate.
+    `DecisionRegistered` is in that set, but only the rows a `Signer`-wired
+    path produced carry a signature: an operator recording a human decision
+    through `register_decision` legitimately produces an unsigned
+    `DecisionRegistered`, and the old flag raised on it. The docstring said
+    so, a few lines above the code that did the opposite.
 
-    `strict=True` is the audit-sweep default; production read paths
-    that just need bytes (projection rebuilds, decider folds) leave it
-    `False` so they don't pay the verify cost per row.
+    Event type alone cannot express "should this row have been signed",
+    because the answer depends on the Actor the row is attributed to. Rather
+    than teach this module to load Actors and read their kind, which would
+    put an authorship branch inside signing infrastructure, the obligation
+    moves to the caller, who already has a store to read and a reason to
+    care. An audit sweep supplies something like:
+
+        async def _must_be_signed(event: StoredEvent) -> bool:
+            if event.event_type not in SIGNED_EVENT_TYPES:
+                return False
+            actor = await load_actor(store, UUID(event.payload["decided_by"]))
+            return actor is not None and actor.kind is ActorKind.AGENT
+
+    That predicate is exact in both directions: `register_decision` refuses
+    agent-attributed rows, so an agent-attributed `DecisionRegistered` can
+    only have come from a `Signer`-wired path. Reading a kind there is
+    evidence-checking, not authorization, and no shipped caller needs it yet.
+
+    Kept as a standalone helper rather than an `EventStore.load` flag so the
+    port stays signing-unaware. Callers wanting opt-in verification compose:
+    `events, _ = await store.load(...); await verify_stream(events,
+    resolve_public_key=...)`.
+
+    Production read paths that just need bytes (projection rebuilds, decider
+    folds) omit `must_be_signed` so they never pay the predicate per row.
 
     Raises:
       - `SignatureInvalidError`: a signed event's signature failed
         verification (tampering, key rotation drift, key compromise).
-      - `SignatureMissingError`: only with `strict=True`, an event
-        whose type is in SIGNED_EVENT_TYPES has no signature.
+      - `SignatureMissingError`: `must_be_signed` returned True for a row
+        carrying no signature.
     """
     for event in events:
         if event.signature_kid is not None:
@@ -249,7 +273,7 @@ async def verify_stream(
                 kid=event.signature_kid,
                 resolve_public_key=resolve_public_key,
             )
-        elif strict and event.event_type in SIGNED_EVENT_TYPES:
+        elif must_be_signed is not None and await must_be_signed(event):
             raise SignatureMissingError(event.event_type)
 
 

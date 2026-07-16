@@ -455,6 +455,15 @@ def _stored(
     )
 
 
+async def _always_required(_event: StoredEvent) -> bool:
+    """Obligation rule that demands a signature on every unsigned row.
+
+    Stands in for a real audit rule, which reads the Actor a row is
+    attributed to. Tests that care only about the raise path use this.
+    """
+    return True
+
+
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_verify_stream_accepts_empty_sequence() -> None:
@@ -465,15 +474,15 @@ async def test_verify_stream_accepts_empty_sequence() -> None:
         calls.append(kid)
         return b"\x00" * 32
 
-    await verify_stream([], resolve_public_key=_resolver, strict=True)
+    await verify_stream([], resolve_public_key=_resolver, must_be_signed=_always_required)
     assert calls == []
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_verify_stream_skips_unsigned_events_in_non_strict_mode() -> None:
-    """Default non-strict mode: unsigned events pass through silently
-    (legitimate pre-rollout + human-actor rows)."""
+async def test_verify_stream_without_obligation_rule_skips_unsigned_events() -> None:
+    """No `must_be_signed`: unsigned rows pass through silently (pre-rollout
+    rows, and rows no Signer-wired path produced)."""
     events = [
         _stored(event_type="DecisionRegistered"),  # unsigned, in SIGNED_EVENT_TYPES
         _stored(event_type="RunStarted"),  # unsigned, not in SIGNED_EVENT_TYPES
@@ -490,33 +499,69 @@ async def test_verify_stream_skips_unsigned_events_in_non_strict_mode() -> None:
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_verify_stream_strict_mode_raises_on_unsigned_signed_event_type() -> None:
-    """Strict audit mode: an event with type in SIGNED_EVENT_TYPES that
-    lacks a signature is the canary for a misconfigured signer (no
-    signed event should ever land without a signature). Raises
-    SignatureMissingError so audit dashboards surface the gap."""
-    events = [_stored(event_type="DecisionRegistered")]  # in SIGNED_EVENT_TYPES, unsigned
+async def test_verify_stream_raises_when_obligation_rule_requires_a_signature() -> None:
+    """An unsigned row the caller's rule says should have been signed is the
+    canary for a stripped signature or a misconfigured signer."""
+    events = [_stored(event_type="DecisionRegistered")]
 
     async def _resolver(_kid: str) -> bytes:
         return b"\x00" * 32
 
     with pytest.raises(SignatureMissingError) as exc_info:
-        await verify_stream(events, resolve_public_key=_resolver, strict=True)
+        await verify_stream(events, resolve_public_key=_resolver, must_be_signed=_always_required)
     assert exc_info.value.event_type == "DecisionRegistered"
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_verify_stream_strict_mode_passes_unsigned_non_signed_type() -> None:
-    """Strict mode is a per-event check; events whose type is NOT in
-    SIGNED_EVENT_TYPES pass through unsigned even with strict=True
-    (they're legitimately unsigned by design)."""
-    events = [_stored(event_type="RunStarted")]
+async def test_verify_stream_honours_obligation_rule_declining_a_row() -> None:
+    """The regression the `strict: bool` flag could not express.
+
+    A human-recorded `DecisionRegistered` is legitimately unsigned even though
+    its type is in SIGNED_EVENT_TYPES. The old flag keyed on event type alone
+    and raised on exactly this row; a caller-supplied rule declines it.
+    """
+    events = [_stored(event_type="DecisionRegistered")]
+    seen: list[str] = []
 
     async def _resolver(_kid: str) -> bytes:
         return b"\x00" * 32
 
-    await verify_stream(events, resolve_public_key=_resolver, strict=True)
+    async def _only_agent_rows(event: StoredEvent) -> bool:
+        seen.append(event.event_type)
+        return False  # stands in for "this row is attributed to a human"
+
+    await verify_stream(events, resolve_public_key=_resolver, must_be_signed=_only_agent_rows)
+    assert seen == ["DecisionRegistered"]  # the rule was consulted, and declined
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_verify_stream_does_not_consult_obligation_rule_for_signed_rows() -> None:
+    """A row carrying a signature is verified, never asked about."""
+    signer = Ed25519PrivateKey.generate()
+    payload = {"x": 1}
+    signature = _sign_with_ed25519("DecisionRegistered", payload, signer)
+    pub = _public_bytes(signer)
+    events = [
+        _stored(
+            event_type="DecisionRegistered",
+            payload=payload,
+            signature=signature,
+            signature_kid="kid-A",
+        )
+    ]
+    consulted: list[str] = []
+
+    async def _resolver(_kid: str) -> bytes:
+        return pub
+
+    async def _rule(event: StoredEvent) -> bool:
+        consulted.append(event.event_type)
+        return True
+
+    await verify_stream(events, resolve_public_key=_resolver, must_be_signed=_rule)
+    assert consulted == []
 
 
 @pytest.mark.unit
@@ -584,27 +629,45 @@ async def test_verify_stream_raises_on_first_invalid_signature() -> None:
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_verify_stream_mixed_signed_and_unsigned_in_strict_mode() -> None:
-    """Realistic audit replay: a stream contains both pre-rollout
-    unsigned events (event_type not in SIGNED_EVENT_TYPES) and newly
-    signed Agent-emitted events. Strict mode verifies the signed
-    ones and allows the unsigned non-signed-type rows."""
+async def test_verify_stream_audit_replay_over_a_realistic_mixed_stream() -> None:
+    """Realistic audit replay over every row shape a live stream carries.
+
+    Pre-rollout rows whose type is not a signature target, a signed
+    agent-attributed Decision, and a human-attributed Decision that is
+    legitimately unsigned. That last row is the regression: its type IS in
+    SIGNED_EVENT_TYPES, so the old `strict: bool` flag raised on it even
+    though no Signer-wired path produced it and none should have. An
+    obligation rule that looks at attribution, as a real audit caller would,
+    tells the two Decisions apart.
+    """
     signer = Ed25519PrivateKey.generate()
-    payload = {"x": 1}
-    signature = _sign_with_ed25519("DecisionRegistered", payload, signer)
+    agent_id = uuid4()
+    human_id = uuid4()
+    agent_payload = {"decided_by": str(agent_id), "choice": "NominalCompletion"}
+    signature = _sign_with_ed25519("DecisionRegistered", agent_payload, signer)
     pub = _public_bytes(signer)
+
+    async def _agent_attributed(event: StoredEvent) -> bool:
+        if event.event_type not in SIGNED_EVENT_TYPES:
+            return False
+        return event.payload.get("decided_by") == str(agent_id)
+
     events = [
-        _stored(event_type="RunStarted"),  # legitimately unsigned
+        _stored(event_type="RunStarted"),  # not a signature target
         _stored(
-            event_type="DecisionRegistered",
-            payload=payload,
+            event_type="DecisionRegistered",  # agent, signed
+            payload=agent_payload,
             signature=signature,
             signature_kid="kid-A",
         ),
-        _stored(event_type="RunCompleted"),  # legitimately unsigned
+        _stored(
+            event_type="DecisionRegistered",  # human, correctly unsigned
+            payload={"decided_by": str(human_id), "choice": "OperatorAbort"},
+        ),
+        _stored(event_type="RunCompleted"),  # not a signature target
     ]
 
     async def _resolver(_kid: str) -> bytes:
         return pub
 
-    await verify_stream(events, resolve_public_key=_resolver, strict=True)
+    await verify_stream(events, resolve_public_key=_resolver, must_be_signed=_agent_attributed)
