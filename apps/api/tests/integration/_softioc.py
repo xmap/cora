@@ -248,8 +248,44 @@ record(mbbi, "$(P)cam1:DetectorState_RBV") {
 def free_localhost_port() -> int:
     """Allocate a free loopback port via bind-and-close.
 
-    The kernel never reissues an in-use port to a concurrent bind,
-    so each xdist worker gets a distinct port even under `-n 4+`.
+    What this DOES guarantee, and what xdist needs: the kernel will not
+    hand the same port to two binds that are live at the same moment, so
+    two workers calling this concurrently always get distinct ports, even
+    under `-n 4+`.
+
+    What it does NOT guarantee: a reservation. The socket is closed before
+    the number is returned, so the port is free again on return, and it
+    came from the ephemeral range the kernel draws `bind(0)` from
+    (49152-65535 on darwin, typically 32768-60999 on linux). Anything that
+    binds an ephemeral port afterwards can be handed it back.
+    `_pin_epics_env` calls this at SESSION start while the softIOC does not
+    bind until MODULE setup, so that gap can be minutes wide.
+
+    Measured consequence of losing the race (darwin, PyTango 10.3.0 era),
+    which is narrower than it looks. EPICS uses this one number for BOTH
+    its TCP server and its UDP name-search channel, and those are separate
+    port namespaces:
+
+      - A TCP thief is SURVIVABLE (6 of 6 forced trials): CAS falls back to
+        another TCP port and UDP name search still resolves the PV, so the
+        client is redirected and the fixture comes up green.
+      - A UDP thief is FATAL (2 of 2 forced trials): name search goes
+        unanswered, `wait_for_softioc_ready` times out, and every test in
+        the module ERRORs at setup.
+
+    So the exposure today is nil, and note the asymmetry before "fixing"
+    this: `socket.socket()` is SOCK_STREAM, so holding this socket open
+    would reserve the TCP number, which is the harmless case, and would
+    still leave the UDP number (the fatal one) unreserved. Nothing in the
+    test tier binds an ephemeral UDP port; `DeviceTestContext` in
+    `test_tango_control_port.py` binds TCP via omniORB, the survivable
+    case.
+
+    Revisit when something here starts binding ephemeral UDP. The fix then
+    is to reserve BOTH protocols on the number and hold them until the
+    consumer binds, which for the softIOC means releasing immediately
+    before `start_softioc` spawns the child that binds by number, and
+    re-reserving once it exits.
     """
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
