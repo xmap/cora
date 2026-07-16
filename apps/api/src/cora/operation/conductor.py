@@ -190,6 +190,7 @@ from cora.operation.ports.control_port import (
     ControlTimeoutError,
     ControlValueCoercionError,
     ControlWriteRejectedError,
+    ControlWritesDisabledError,
     Measurement,
     NoAdapterForAddressError,
 )
@@ -219,6 +220,7 @@ _CONTROL_ERRORS: tuple[type[Exception], ...] = (
     ControlWriteRejectedError,
     ControlValueCoercionError,
     ControlAccessDeniedError,
+    ControlWritesDisabledError,
     NoAdapterForAddressError,
     MalformedControlAddressError,
 )
@@ -238,7 +240,13 @@ Procedure in `Running`: `NoAdapterForAddressError` for an address no
 prefix matches, and `MalformedControlAddressError` for one that matches a
 route but does not satisfy that substrate's address syntax (a Tango TRL
 with no attribute segment, say). Both are recipe or configuration gaps an
-operator must see as a failed step, not as a dead conduct task."""
+operator must see as a failed step, not as a dead conduct task.
+
+`ControlWritesDisabledError` is included for the same reason from the
+other direction: an observe-only deployment refusing a write is a
+CONFIGURATION fact the operator should read as a recorded step failure
+naming the address, not an opaque crash. Omitting it would not permit
+the write, but it would strand the Procedure in `Running`."""
 
 
 _LIFECYCLE_RERAISE: tuple[type[Exception], ...] = (

@@ -471,6 +471,25 @@ class Settings(BaseSettings):
     # `cora.operation.adapters.control_port_config` for the factory.
     control_port_routes: list[ControlPortRoute] = []
 
+    # Deployment-wide control-write switch. False (default) means CORA
+    # may observe every configured route but drives none: every adapter
+    # `build_control_port` hands the registry is wrapped in a
+    # `ReadOnlyControlPort`, so a write raises
+    # `ControlWritesDisabledError` before any substrate is contacted.
+    #
+    # Default-deny is deliberate and is the safety mechanism behind an
+    # observe-only deployment (the APS 2-BM pilot posture). It cannot be
+    # partially applied: it admits no per-substrate or per-route
+    # exemption, so a config that forgets something fails closed rather
+    # than silently driving hardware. `ControlPortRoute.read_only` is
+    # the per-route counterpart, but it defaults to writable and so is
+    # expressiveness within a writable deployment, NOT a safety gate.
+    #
+    # A deployment that drives hardware sets `CONTROL_WRITES_ENABLED=true`
+    # once, on purpose. Local development and tests that exercise writes
+    # through Settings must set it too; that keystroke is the point.
+    control_writes_enabled: bool = False
+
     # ComputePort substrate selection for the conduct runtime.
     # `in_memory` (default) is the Simulated fake: the conduct surface
     # is reachable but every job is Simulated, so no real subprocess

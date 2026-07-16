@@ -682,7 +682,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # adapter (or, when BEAM_AVAILABILITY_PVS is empty, the same
             # stub) BEFORE wiring so wire_run / wire_operation close over
             # the right lookup.
-            shared_control_port = build_control_port(settings.control_port_routes)
+            shared_control_port = build_control_port(
+                settings.control_port_routes,
+                writes_enabled=settings.control_writes_enabled,
+            )
             deps = replace(
                 deps,
                 beam_availability_lookup=build_beam_availability_lookup(

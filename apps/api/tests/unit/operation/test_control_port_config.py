@@ -9,9 +9,17 @@ Covers:
     an EpicsCaControlPort (constructed; not exercised against EPICS)
   - epics_pva route -> ControlPortRegistry routing the prefix to
     an EpicsPvaControlPort
+  - tango route -> ControlPortRegistry routing the prefix to a
+    TangoControlPort (probe neutralised; PyTango absent in base env)
   - mixed routes -> registry picks the right adapter per prefix
   - route Pydantic validation: empty prefix rejected, unknown
     substrate rejected, extra fields rejected
+  - writes_enabled=False wraps every route so writes refuse, with no
+    per-substrate exemption; per-route read_only wraps only its route
+
+Every routing test passes `writes_enabled=True` so it observes the
+naked adapter: the write posture is orthogonal to which adapter a
+prefix resolves to, and stating it keeps the two concerns separable.
 """
 
 import pytest
@@ -23,9 +31,11 @@ from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.epics_ca_control_port import EpicsCaControlPort
 from cora.operation.adapters.epics_pva_control_port import EpicsPvaControlPort
 from cora.operation.adapters.in_memory_control_port import InMemoryControlPort
+from cora.operation.adapters.read_only_control_port import ReadOnlyControlPort
 from cora.operation.adapters.tango_control_port import TangoControlPort
 from cora.operation.ports.control_port import (
     ControlNotConnectedError,
+    ControlWritesDisabledError,
     NoAdapterForAddressError,
 )
 
@@ -36,13 +46,15 @@ def _no_tango_probe(_substrate: str) -> None:
 
 @pytest.mark.unit
 def test_build_control_port_with_empty_routes_returns_in_memory_port() -> None:
-    port = build_control_port([])
+    port = build_control_port([], writes_enabled=True)
     assert isinstance(port, InMemoryControlPort)
 
 
 @pytest.mark.unit
 async def test_build_control_port_with_single_in_memory_route_returns_registry() -> None:
-    port = build_control_port([ControlPortRoute(prefix="2bma:", substrate="in_memory")])
+    port = build_control_port(
+        [ControlPortRoute(prefix="2bma:", substrate="in_memory")], writes_enabled=True
+    )
     assert isinstance(port, ControlPortRegistry)
     # in_memory routes ride the registry's str-port wrapper (an internal
     # detail), so assert behaviour rather than the wrapper type: a matched
@@ -57,7 +69,9 @@ async def test_build_control_port_with_single_in_memory_route_returns_registry()
 
 @pytest.mark.unit
 def test_build_control_port_with_epics_ca_route_constructs_ca_adapter() -> None:
-    port = build_control_port([ControlPortRoute(prefix="2bma:", substrate="epics_ca")])
+    port = build_control_port(
+        [ControlPortRoute(prefix="2bma:", substrate="epics_ca")], writes_enabled=True
+    )
     assert isinstance(port, ControlPortRegistry)
     routed = port.route("2bma:rot:val")
     assert isinstance(routed, EpicsCaControlPort)
@@ -65,7 +79,9 @@ def test_build_control_port_with_epics_ca_route_constructs_ca_adapter() -> None:
 
 @pytest.mark.unit
 def test_build_control_port_with_epics_pva_route_constructs_pva_adapter() -> None:
-    port = build_control_port([ControlPortRoute(prefix="2bma:cam:image", substrate="epics_pva")])
+    port = build_control_port(
+        [ControlPortRoute(prefix="2bma:cam:image", substrate="epics_pva")], writes_enabled=True
+    )
     assert isinstance(port, ControlPortRegistry)
     routed = port.route("2bma:cam:image:data")
     assert isinstance(routed, EpicsPvaControlPort)
@@ -78,7 +94,8 @@ def test_build_control_port_with_mixed_routes_picks_right_adapter_per_prefix() -
         [
             ControlPortRoute(prefix="2bma:cam1:image", substrate="epics_pva"),
             ControlPortRoute(prefix="2bma:", substrate="epics_ca"),
-        ]
+        ],
+        writes_enabled=True,
     )
     assert isinstance(port, ControlPortRegistry)
     # Specific prefix wins for image addresses (longest-prefix-match).
@@ -102,7 +119,9 @@ def test_build_control_port_with_tango_route_constructs_tango_adapter(
         "cora.operation.adapters.tango_control_port.require_tango",
         _no_tango_probe,
     )
-    port = build_control_port([ControlPortRoute(prefix="id19/", substrate="tango")])
+    port = build_control_port(
+        [ControlPortRoute(prefix="id19/", substrate="tango")], writes_enabled=True
+    )
     assert isinstance(port, ControlPortRegistry)
     routed = port.route("id19/bsh/1/state")
     assert isinstance(routed, TangoControlPort)
@@ -131,7 +150,9 @@ def test_control_port_route_rejects_extra_fields() -> None:
 @pytest.mark.unit
 async def test_build_control_port_returned_registry_supports_aclose() -> None:
     """The registry's aclose() fans out to every constructed adapter."""
-    port = build_control_port([ControlPortRoute(prefix="x:", substrate="in_memory")])
+    port = build_control_port(
+        [ControlPortRoute(prefix="x:", substrate="in_memory")], writes_enabled=True
+    )
     assert isinstance(port, ControlPortRegistry)
     await port.aclose()  # no-op for InMemoryControlPort; should not raise
 
@@ -150,7 +171,8 @@ def test_build_control_port_threads_is_simulated_flag_to_registry() -> None:
     the gate this route is a simulator.
     """
     port = build_control_port(
-        [ControlPortRoute(prefix="2bma:", substrate="epics_ca", is_simulated=True)]
+        [ControlPortRoute(prefix="2bma:", substrate="epics_ca", is_simulated=True)],
+        writes_enabled=True,
     )
     assert isinstance(port, ControlPortRegistry)
     assert port.route_is_simulated("2bma:rot:val") is True
@@ -163,8 +185,114 @@ def test_build_control_port_mixed_simulated_and_physical_routes() -> None:
         [
             ControlPortRoute(prefix="2bma:sim:", substrate="in_memory", is_simulated=True),
             ControlPortRoute(prefix="2bma:", substrate="epics_ca", is_simulated=False),
-        ]
+        ],
+        writes_enabled=True,
     )
     assert isinstance(port, ControlPortRegistry)
     assert port.route_is_simulated("2bma:sim:rot") is True
     assert port.route_is_simulated("2bma:rot:val") is False
+
+
+@pytest.mark.unit
+def test_control_port_route_read_only_defaults_false() -> None:
+    assert ControlPortRoute(prefix="2bma:", substrate="epics_ca").read_only is False
+
+
+@pytest.mark.unit
+async def test_build_control_port_writes_disabled_refuses_write_on_every_route() -> None:
+    """The deployment switch is the observe-only safety mechanism.
+
+    No route declared `read_only`; the switch alone must still refuse, and
+    it must refuse on a real substrate route (the typed guard path), not
+    only the in-memory one.
+    """
+    port = build_control_port(
+        [ControlPortRoute(prefix="2bma:", substrate="epics_ca")], writes_enabled=False
+    )
+    with pytest.raises(ControlWritesDisabledError) as excinfo:
+        await port.write("2bma:rot:val", 90.0)
+    assert excinfo.value.address == "2bma:rot:val"
+    assert excinfo.value.scope == "deployment"
+    # Attribution follows scope: the route did not carry this refusal.
+    assert excinfo.value.prefix is None
+
+
+@pytest.mark.unit
+async def test_build_control_port_writes_disabled_refuses_write_on_in_memory_route() -> None:
+    """The str-surface guard path (in_memory) refuses too, through the shim."""
+    port = build_control_port(
+        [ControlPortRoute(prefix="2bma:", substrate="in_memory")], writes_enabled=False
+    )
+    with pytest.raises(ControlWritesDisabledError):
+        await port.write("2bma:rot:val", 90.0)
+
+
+@pytest.mark.unit
+async def test_build_control_port_writes_disabled_still_allows_read() -> None:
+    """Observe-only must still observe. The read reaches the inner adapter,
+    surfacing that adapter's own not-connected error rather than the guard's
+    refusal, which it could only do by passing through."""
+    port = build_control_port(
+        [ControlPortRoute(prefix="2bma:", substrate="in_memory")], writes_enabled=False
+    )
+    with pytest.raises(ControlNotConnectedError):
+        await port.read("2bma:rot:val")
+
+
+@pytest.mark.unit
+def test_build_control_port_writes_disabled_grants_no_substrate_exemption() -> None:
+    """in_memory is wrapped too: an exemption is a partial application."""
+    port = build_control_port([], writes_enabled=False)
+    assert isinstance(port, ReadOnlyControlPort)
+
+
+@pytest.mark.unit
+async def test_build_control_port_read_only_route_refuses_within_writable_deployment() -> None:
+    """Per-route expressiveness: drive the stage, never the shutter."""
+    port = build_control_port(
+        [
+            ControlPortRoute(prefix="2bma:shutter:", substrate="in_memory", read_only=True),
+            ControlPortRoute(prefix="2bma:", substrate="in_memory"),
+        ],
+        writes_enabled=True,
+    )
+    assert isinstance(port, ControlPortRegistry)
+    with pytest.raises(ControlWritesDisabledError) as excinfo:
+        await port.write("2bma:shutter:open", 1)
+    assert excinfo.value.scope == "route"
+    assert excinfo.value.prefix == "2bma:shutter:"
+    # The sibling route in the same registry stays writable: the write
+    # reaches the in-memory adapter and raises ITS not-connected error
+    # (the address was never seeded), NOT the guard's refusal. That it is
+    # not ControlWritesDisabledError is the point.
+    with pytest.raises(ControlNotConnectedError):
+        await port.write("2bma:rot:val", 90.0)
+
+
+@pytest.mark.unit
+def test_build_control_port_read_only_route_preserves_registry_provenance() -> None:
+    """The guard wraps BELOW the registry, so route_is_simulated survives.
+
+    Wrapping the registry itself would hide this from the Conductor's
+    `_ActuationObserver` getattr and silently disable the Dataset
+    provenance gate.
+    """
+    port = build_control_port(
+        [ControlPortRoute(prefix="2bma:", substrate="epics_ca", is_simulated=True, read_only=True)],
+        writes_enabled=True,
+    )
+    assert isinstance(port, ControlPortRegistry)
+    assert port.route_is_simulated("2bma:rot:val") is True
+
+
+@pytest.mark.unit
+def test_build_control_port_rejects_duplicate_prefixes() -> None:
+    """Last-wins registration would silently discard a read_only declaration."""
+    with pytest.raises(ValueError, match="more than once"):
+        build_control_port(
+            [
+                ControlPortRoute(prefix="2bma:", substrate="in_memory", read_only=True),
+                ControlPortRoute(prefix="2bma:", substrate="in_memory"),
+            ],
+            writes_enabled=True,
+        )

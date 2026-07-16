@@ -19,13 +19,30 @@ runtime itself does. It reads the runtime off `app.state`
 (no import coupling), mirroring how `conduct_procedure`'s route reads
 its handler off `app.state.operation`.
 
-## Caller-supplied job, Authorize-gated
+## Caller-supplied job, and what actually gates it
 
 Like `conduct_procedure` (which accepts a caller-supplied step list of
-control addresses + values), this accepts a caller-supplied job spec.
-The security boundary is the Authorize port + principal on the
-underlying `complete_run` / `abort_run` commands, not a restriction on
-the payload shape.
+control addresses + values), this accepts a caller-supplied job spec,
+with no restriction on the payload shape beyond argv length.
+
+Be precise about the boundary, because the obvious reading is wrong.
+The Authorize port gates `complete_run` / `abort_run`, and those run
+only AFTER the job reaches a terminal state: `EdgeConductor` submits to
+the ComputePort first (`_edge_conductor.py`, `start=None` means there is
+no pre-submit seam). So the Authorize port gates the RUN TRANSITION, not
+the submit. Under `COMPUTE_SUBSTRATE=local_process` the argv reaches
+`create_subprocess_exec` before any Trust policy is consulted, and a
+denied `complete_run` does not unspawn the process. The gates that do
+apply to the submit are edge AUTHENTICATION, `CORA_ALLOW_RAW_CONDUCT`
+(default True; a Method WITH a `launch_spec` always builds argv
+server-side and refuses a raw command regardless), and the choice of
+compute substrate itself.
+
+This matters for observe-only deployments: `COMPUTE_SUBSTRATE` defaults
+to `in_memory`, which never spawns anything, and that default is what
+keeps this path inert. It is NOT covered by `CONTROL_WRITES_ENABLED`,
+which gates the ControlPort only. Before setting `local_process` at a
+beamline, read `docs/stack/deployment.md` on observe-only deployments.
 
 ## Response code: always 200, failures in body
 

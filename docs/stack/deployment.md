@@ -14,6 +14,58 @@ The load-bearing auth vars (full list in `.env.example`):
 | `ALLOW_PERMISSIVE_AUTHZ` | `false` | Production-tier escape hatch: set `true` to run the permit-everyone `AllowAllAuthorize` stub on purpose in a `prod`/`production`/`staging` env (airgapped / single-operator pilot) |
 | `IDENTITY_PROVIDERS` | unset → legacy `X-Principal-Id` header mode | JSON list of `IdentityProviderConfig` entries (see [Auth](auth.md)); enables bearer-token mode at the HTTP edge |
 | `ANTHROPIC_API_KEY` | unset → AI subscribers log-and-skip | When you want RunDebriefer / CautionDrafter live |
+| `CONTROL_WRITES_ENABLED` | `false` → CORA never drives through the ControlPort | Set `true` only when this deployment is meant to actuate hardware (see below; it does not cover `COMPUTE_SUBSTRATE`) |
+| `CONTROL_PORT_ROUTES` | unset → `InMemoryControlPort` (no real substrate) | When CORA talks to a real control system. JSON list of `ControlPortRoute` |
+
+### Observe-only deployments
+
+`CONTROL_WRITES_ENABLED` defaults to `false`, and that default is the
+mechanism behind an observe-only deployment such as the APS 2-BM pilot.
+Every adapter the ControlPort factory builds is wrapped in a
+`ReadOnlyControlPort`: `read` and `subscribe` pass through, and `write`
+raises `ControlWritesDisabledError` before any substrate is contacted.
+The Conductor records that refusal as a step failure naming the address.
+
+Two properties are worth stating plainly, because they are what make the
+observe-only claim true rather than aspirational:
+
+- **It cannot be partially applied.** There is no per-substrate or
+  per-route exemption, not even for `in_memory`. Inferring safety from
+  the substrate is the mistake `is_simulated` exists to prevent: a soft
+  IOC speaks real Channel Access.
+- **It fails closed.** The refusal is decided when the port is built, not
+  consulted at write time, so there is no "flag could not be read" state
+  that silently permits a write.
+
+`ControlPortRoute.read_only` is the per-route counterpart, but it
+defaults to writable, so it is expressiveness within a *writable*
+deployment ("CORA may drive the sample stage but must never touch the
+shutter"), NOT the safety gate. To make a deployment observe-only, use
+the switch.
+
+Scope this honestly when describing the pilot: the switch closes CORA's
+*modeled* actuation path (`ControlPort`). It does not by itself make the
+host incapable of touching the beamline.
+
+The other path is `ComputePort`. With `COMPUTE_SUBSTRATE=local_process` a
+conduct job's argv runs as an OS subprocess under the API service
+account, so an argv like `["caput", ...]` reaches a control system
+without passing through any ControlPort, whatever
+`CONTROL_WRITES_ENABLED` says. Two properties make this sharper than it
+first looks: with `CORA_ALLOW_RAW_CONDUCT=true` (the current default) the
+argv can come straight from the request body for any Method with no
+`launch_spec`; and no Trust policy gates the spawn, because the Authorize
+port gates the run transition (`complete_run` / `abort_run`), which
+happens after the subprocess has already run.
+
+What keeps this inert today is the default: `compute_substrate` is
+`in_memory` (`cora.infrastructure.config`), which mints a Simulated
+result and spawns nothing. An observe-only deployment leaves it there.
+Before enabling `local_process` at a beamline, give every compute Method
+a `launch_spec` so argv is built server-side from the vetted recipe, then
+set `CORA_ALLOW_RAW_CONDUCT=false` to close the caller-supplied path. The
+gates that do and do not apply to a submit are documented at the top of
+`cora.api._conduct_run_route`.
 
 ### Startup boot gate
 

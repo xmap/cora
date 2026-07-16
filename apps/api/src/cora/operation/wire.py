@@ -290,7 +290,10 @@ def wire_operation(
     control_port = (
         control_port
         if control_port is not None
-        else build_control_port(deps.settings.control_port_routes)
+        else build_control_port(
+            deps.settings.control_port_routes,
+            writes_enabled=deps.settings.control_writes_enabled,
+        )
     )
     # Borrowed shared instance from the composition root (one aclose lives on
     # app.state.compute_port); fall back to the in-memory Simulated fake when

@@ -45,6 +45,7 @@ from cora.operation.ports.control_port import (
     ControlTimeoutError,
     ControlValueCoercionError,
     ControlWriteRejectedError,
+    ControlWritesDisabledError,
     NoAdapterForAddressError,
 )
 from cora.operation.ports.measurement import (
@@ -92,6 +93,7 @@ __all__ = [
     "ControlTimeoutError",
     "ControlValueCoercionError",
     "ControlWriteRejectedError",
+    "ControlWritesDisabledError",
     "InMemoryProcedureActivityLookup",
     "JobId",
     "JobSpec",

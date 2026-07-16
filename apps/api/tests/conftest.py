@@ -44,6 +44,17 @@ from tests._postgres import normalize_async_url
 
 os.environ.setdefault("APP_ENV", "test")
 
+# Control writes are OFF by default in production (the observe-only pilot
+# posture); the test environment turns them ON, the same way APP_ENV=test
+# relaxes the trust / auth / signing boot gates. Observe-only is a
+# deployment safety default, not a property of the system, so the suite
+# must exercise the full writable conduct surface. The default-is-safe
+# behaviour is covered at the unit tier (build_control_port with
+# writes_enabled=False), not by every app-level conduct test refusing.
+# A test that asserts the SAFE default must build Settings ignoring this
+# env override (e.g. Settings(_env_file=None) with the var cleared).
+os.environ.setdefault("CONTROL_WRITES_ENABLED", "true")
+
 # Hypothesis profiles for property-based testing.
 # `dev` (default locally): keep the example database on, allow shrinking, default
 #   max_examples — the fast feedback loop a developer wants.

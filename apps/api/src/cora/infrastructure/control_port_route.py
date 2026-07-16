@@ -55,6 +55,21 @@ class ControlPortRoute(BaseModel):
     deployment fact, never inferred from `substrate`, and feeds the
     Dataset provenance gate that blocks promoting simulator-origin
     data to Production.
+
+    `read_only` declares that CORA may observe this route but must
+    never drive it: `build_control_port` wraps the route's adapter in
+    a `ReadOnlyControlPort`, so a write refuses before any substrate
+    is contacted. Like `is_simulated` it is a declared deployment
+    fact, never inferred from `substrate`.
+
+    `read_only` is per-route EXPRESSIVENESS, for a writable deployment
+    that must pin specific prefixes ("CORA may drive the sample stage
+    but must never touch the shutter"). It is NOT the safety mechanism
+    for an observe-only deployment: it defaults to False, so a route
+    that omits it is writable. The deployment-wide safety switch is
+    `Settings.control_writes_enabled`, which cannot be partially
+    applied. Reach for the switch to make a deployment observe-only;
+    reach for this field only to carve a hole in a writable one.
     """
 
     prefix: str = Field(..., min_length=1)
@@ -64,6 +79,15 @@ class ControlPortRoute(BaseModel):
         description=(
             "True when this route drives a simulator (e.g. a soft IOC) rather "
             "than real hardware. Declared per deployment, not inferred from substrate."
+        ),
+    )
+    read_only: bool = Field(
+        default=False,
+        description=(
+            "True when CORA may read and subscribe on this route but must never "
+            "write to it. Refuses before contacting the substrate. Per-route "
+            "expressiveness within a writable deployment; to make a whole "
+            "deployment observe-only, set CONTROL_WRITES_ENABLED=false instead."
         ),
     )
 

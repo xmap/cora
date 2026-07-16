@@ -58,9 +58,11 @@ keep this one value-IO-only.
 
 ## Exceptions
 
-Six exception families mirror CORA's standard shape. `ControlPort` is
+Seven exception families mirror CORA's standard shape. `ControlPort` is
 not REST-accessible; the executor's decider captures these as
 event-payload metadata per [[project_non_determinism_principle]].
+Six report what the substrate did; `ControlWritesDisabledError` reports
+what CORA declined to do, before any substrate was contacted.
 
 ## Subscribe shape
 
@@ -77,7 +79,7 @@ through the iterator so silent stream pause is impossible.
 
 from collections.abc import AsyncIterator
 from enum import StrEnum
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import Any, Literal, Protocol, TypeVar, runtime_checkable
 
 from cora.operation.ports.control_address import ControlAddress
 from cora.operation.ports.measurement import Measurement, MeasurementKind, Quality
@@ -153,12 +155,61 @@ class ControlWriteRejectedError(Exception):
     `ControlAccessDeniedError` so adapters preserve the substrate's
     failure-mode distinction (e.g., EPICS IOC put-callback failure
     vs Channel Access security denial).
+
+    Note the two-tier read-only overlap: the "read-only address" case
+    here is a read-only RECORD on the IOC, discovered by attempting the
+    write. `ControlWritesDisabledError` is the CORA-side declaration
+    that refused before any write was attempted. The remedies are
+    opposite, so keep them apart when reading logs: this one means the
+    IOC or its access rules need changing, that one means CORA's
+    configuration does.
     """
 
     def __init__(self, address: str, reason: str) -> None:
         super().__init__(f"Control address {address!r} write rejected: {reason}")
         self.address = address
         self.reason = reason
+
+
+class ControlWritesDisabledError(Exception):
+    """CORA declares this address unwritable; no write was attempted.
+
+    Raised by `ReadOnlyControlPort` when a deployment has declared its
+    control writes off, either deployment-wide
+    (`CONTROL_WRITES_ENABLED=false`, `scope="deployment"`) or for the
+    one route carrying `ControlPortRoute.read_only` (`scope="route"`).
+    A declared deployment fact, never inferred from the substrate, and
+    settled before any IO: nothing reached the IOC.
+
+    The grammatical subject is what separates this from its siblings.
+    Here the subject is CORA's own configuration, which no substrate
+    knows exists: an EPICS IOC cannot raise this error. In
+    `ControlWriteRejectedError` the subject is the write, and the
+    verdict arrives FROM the substrate, which is why that one carries a
+    substrate-supplied `reason` and this one does not. No substrate
+    spoke.
+
+    `scope` names which declaration refused, so an operator knows
+    whether to change an env var or a route entry; `prefix` names the
+    route when one carried the declaration.
+    """
+
+    def __init__(
+        self,
+        address: str,
+        *,
+        scope: Literal["deployment", "route"],
+        prefix: str | None = None,
+    ) -> None:
+        detail = (
+            "control writes are disabled deployment-wide"
+            if scope == "deployment"
+            else f"route {prefix!r} is declared read-only"
+        )
+        super().__init__(f"Control address {address!r} write refused: {detail}")
+        self.address = address
+        self.scope = scope
+        self.prefix = prefix
 
 
 class ControlValueCoercionError(Exception):
@@ -282,7 +333,9 @@ class ControlPort(Protocol):
         Raises `ControlNotConnectedError`, `ControlTimeoutError`
         (when `wait=True` and confirmation does not fire in time),
         `ControlWriteRejectedError` (substrate rejected the write),
-        or `ControlAccessDeniedError` (substrate denied access).
+        `ControlAccessDeniedError` (substrate denied access), or
+        `ControlWritesDisabledError` (the deployment declares this
+        address unwritable, so no substrate was contacted).
         """
         ...
 
@@ -367,6 +420,7 @@ __all__ = [
     "ControlTimeoutError",
     "ControlValueCoercionError",
     "ControlWriteRejectedError",
+    "ControlWritesDisabledError",
     "Measurement",
     "MeasurementKind",
     "NoAdapterForAddressError",
