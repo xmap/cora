@@ -1,0 +1,19 @@
+# Build context hygiene. The image needs pyproject.toml, uv.lock, src/
+# and README.md; everything else only slows the build or risks baking a
+# local secret into a layer.
+.env
+.env.*
+!.env.example
+
+tests/
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+.ruff_cache/
+.mutmut-cache/
+**/__pycache__/
+**/*.pyc
+**/*.parked
+.venv/
+openapi.json

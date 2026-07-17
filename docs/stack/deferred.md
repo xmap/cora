@@ -10,7 +10,7 @@ For tracking what we haven't picked yet and why. Each row names a category, the 
 | Cache | Redis vs in-process | First read pattern that needs it |
 | Search index | Meilisearch vs Postgres FTS | First user-facing search query |
 | File / blob storage | filesystem vs S3-compatible (MinIO, R2, S3) | First non-local Dataset volume |
-| Container orchestration | Helm, Argo CD | First non-local deployment |
+| Container orchestration | Helm, Argo CD | First non-local deployment. The image itself has landed (`apps/api/Dockerfile`); what runs it has not. |
 | Snapshot store | In-events vs sidecar table | Fold-on-read becomes a measurable bottleneck |
 | Outbox | Table-based vs NOTIFY-only | First cross-process consumer needing at-least-once |
 | Background scheduler | in-process (current) vs APScheduler vs Temporal | First job that needs to outlive a process |

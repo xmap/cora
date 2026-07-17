@@ -67,6 +67,54 @@ set `CORA_ALLOW_RAW_CONDUCT=false` to close the caller-supplied path. The
 gates that do and do not apply to a submit are documented at the top of
 `cora.api._conduct_run_route`.
 
+## Container image
+
+`apps/api/Dockerfile`. Build from the repo root:
+
+```
+docker build -f apps/api/Dockerfile -t cora-api:<tag> apps/api
+```
+
+Three facts about this image are not negotiable, and each one is a
+property of the EPICS ecosystem rather than a preference:
+
+- **It is linux/amd64, pinned.** `epicscorelibs`, `pvxslibs` and `p4p`
+  publish x86_64 wheels only; there is no linux/aarch64 wheel for any of
+  them. On an arm64 host the build runs under emulation and is slow.
+  That is the cost of the wheels being what they are.
+- **The builder needs gcc/g++.** `aioca` publishes no linux wheel at
+  all, so it compiles its Channel Access extension against
+  `epicscorelibs` at install time. The compiler stays in the builder
+  stage and never reaches the runtime image.
+- **One process per container.** No `--workers`. The lifespan starts
+  in-process background workers (projection worker, subscribers,
+  watchers); forking N copies would run N of each against one database.
+  Scale with replicas, not workers.
+
+The image does not run migrations. Atlas applies them out of band
+(`make migrate-apply`) with a Go binary that is deliberately not
+installed here: migrations are forward-only and operator-sequenced, so
+an image that migrated itself on boot would let a rolling deploy race
+two schema versions against one database. Apply migrations first, then
+roll the image.
+
+The image carries no configuration. `create_app()` runs at import and
+its boot gates raise there, so a misconfigured container exits instead
+of serving: `APP_ENV=prod` with no `TRUST_POLICY_ID` dies at import
+rather than starting up permissive. Supply config as environment
+variables (see `.env.example`), and note that `APP_ENV=test` builds the
+in-memory kernel with no persistence, so it must never be set on a real
+deployment.
+
+The `HEALTHCHECK` probes `/health` (liveness) only, never `/readyz`.
+Docker restarts a container whose HEALTHCHECK fails, and restarting an
+app because its database is down is how one outage becomes a crash
+loop. Readiness belongs on the orchestrator's `readinessProbe`.
+
+Still deferred, and each now has a live trigger: an image registry, the
+orchestrator (k8s / Cloud Run / bare VM + systemd), TLS termination,
+and secrets management. See `docs/stack/deferred.md`.
+
 ## Probes
 
 Two endpoints, both unauthenticated (a probe that has to hold a token
@@ -275,7 +323,8 @@ This returns the sorted list of commands the named principal can run via the nam
 
 | Concern | Status | Trigger |
 | --- | --- | --- |
-| Container image + registry | Deferred | First non-local deployment |
+| Container image | SHIPPED | `apps/api/Dockerfile`; see "Container image" above |
+| Image registry | Deferred | Where the orchestrator pulls from; decided with the orchestrator |
 | Runtime orchestrator (k8s / Cloud Run / ECS / bare VMs) | Deferred | First non-local deployment |
 | Event-sourced `ActorIdpBindings` (JIT Actor provisioning) | Deferred | First case where adding an operator is too high-friction via config-time bindings |
 | `trust.check_others` permission separation | Watch item | When ABAC lands or first cross-tenant deploy |
