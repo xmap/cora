@@ -17,15 +17,26 @@ from cora.operation.adapters._tree_hash import sha256_tree
 from cora.operation.adapters.local_process_compute_port import LocalProcessComputePort
 from cora.operation.ports.compute_port import (
     ArtifactNotFoundError,
+    ComputeExecutableNotPermittedError,
     ComputeJobFailedError,
     ComputeNotAvailableError,
     ComputeStatus,
+    ComputeSubmitRejectedError,
     JobSpec,
     MeasurementNotFoundError,
 )
 from cora.operation.ports.control_port import ActuationKind
 
 _PAYLOAD = b"reconstructed-volume-bytes"
+
+# What these tests are permitted to spawn. The interpreter is here
+# because the suite is hermetic (a Python one-liner stands in for
+# tomopy); a real deployment allowlists the TOOL, never an
+# interpreter. `_MISSING_BINARY` is permitted on purpose: the
+# allowlist refuses before the spawn, so the missing-executable
+# branch is only reachable for a binary the deployment allows.
+_MISSING_BINARY = "cora-no-such-binary-xyz"
+_PERMITTED = frozenset({sys.executable, _MISSING_BINARY})
 
 
 def _write_file_spec(out: Path) -> JobSpec:
@@ -43,7 +54,7 @@ def _write_file_spec(out: Path) -> JobSpec:
 @pytest.mark.integration
 async def test_successful_subprocess_succeeds_with_real_artifact_checksum(tmp_path: Path) -> None:
     out = tmp_path / "recon.h5"
-    port = LocalProcessComputePort()
+    port = LocalProcessComputePort(permitted_executables=_PERMITTED)
     job_id = await port.submit(_write_file_spec(out))
 
     assert await port.await_terminal_state(job_id) is ComputeStatus.SUCCEEDED
@@ -58,7 +69,7 @@ async def test_successful_subprocess_succeeds_with_real_artifact_checksum(tmp_pa
 @pytest.mark.integration
 async def test_provenance_declares_physical_actuation(tmp_path: Path) -> None:
     out = tmp_path / "recon.h5"
-    port = LocalProcessComputePort()
+    port = LocalProcessComputePort(permitted_executables=_PERMITTED)
     job_id = await port.submit(_write_file_spec(out))
     status = await port.await_terminal_state(job_id)
     artifact = await port.fetch_artifact_ref(job_id)
@@ -70,7 +81,7 @@ async def test_provenance_declares_physical_actuation(tmp_path: Path) -> None:
 
 @pytest.mark.integration
 async def test_nonzero_exit_raises_job_failed_with_stderr_tail() -> None:
-    port = LocalProcessComputePort()
+    port = LocalProcessComputePort(permitted_executables=_PERMITTED)
     job_id = await port.submit(
         JobSpec(
             command=(sys.executable, "-c", "import sys; sys.stderr.write('boom'); sys.exit(3)"),
@@ -84,15 +95,15 @@ async def test_nonzero_exit_raises_job_failed_with_stderr_tail() -> None:
 
 @pytest.mark.integration
 async def test_missing_executable_raises_not_available() -> None:
-    port = LocalProcessComputePort()
+    port = LocalProcessComputePort(permitted_executables=_PERMITTED)
     with pytest.raises(ComputeNotAvailableError):
-        await port.submit(JobSpec(command=("cora-no-such-binary-xyz",)))
+        await port.submit(JobSpec(command=(_MISSING_BINARY,)))
 
 
 @pytest.mark.integration
 async def test_succeeded_but_missing_output_raises_artifact_not_found(tmp_path: Path) -> None:
     missing = tmp_path / "never_written.h5"
-    port = LocalProcessComputePort()
+    port = LocalProcessComputePort(permitted_executables=_PERMITTED)
     job_id = await port.submit(
         JobSpec(command=(sys.executable, "-c", "pass"), output_uri=missing.as_uri())
     )
@@ -107,7 +118,7 @@ async def test_fetch_measurements_raises_for_the_unimplemented_value_arm() -> No
     fetch_measurements RAISES rather than returning empty. Returning () would let
     a misrouted value conduct complete as a Physical terminal with zero
     measurements, silently writing an empty Calibration."""
-    port = LocalProcessComputePort()
+    port = LocalProcessComputePort(permitted_executables=_PERMITTED)
     job_id = await port.submit(JobSpec(command=(sys.executable, "-c", "pass")))
     assert await port.await_terminal_state(job_id) is ComputeStatus.SUCCEEDED
     with pytest.raises(MeasurementNotFoundError):
@@ -134,7 +145,7 @@ def _write_tiff_stack_spec(out_dir: Path, slices: int) -> JobSpec:
 @pytest.mark.integration
 async def test_directory_output_succeeds_with_tree_hash_artifact(tmp_path: Path) -> None:
     out_dir = tmp_path / "sample_rec"
-    port = LocalProcessComputePort()
+    port = LocalProcessComputePort(permitted_executables=_PERMITTED)
     job_id = await port.submit(_write_tiff_stack_spec(out_dir, slices=5))
 
     assert await port.await_terminal_state(job_id) is ComputeStatus.SUCCEEDED
@@ -151,7 +162,7 @@ async def test_directory_output_succeeds_with_tree_hash_artifact(tmp_path: Path)
 @pytest.mark.integration
 async def test_empty_directory_output_raises_artifact_not_found(tmp_path: Path) -> None:
     out_dir = tmp_path / "empty_rec"
-    port = LocalProcessComputePort()
+    port = LocalProcessComputePort(permitted_executables=_PERMITTED)
     job_id = await port.submit(
         JobSpec(
             command=(
@@ -169,7 +180,7 @@ async def test_empty_directory_output_raises_artifact_not_found(tmp_path: Path) 
 
 @pytest.mark.integration
 async def test_overrunning_job_times_out_and_is_killed() -> None:
-    port = LocalProcessComputePort(default_timeout_s=0.2)
+    port = LocalProcessComputePort(permitted_executables=_PERMITTED, default_timeout_s=0.2)
     job_id = await port.submit(
         JobSpec(command=(sys.executable, "-c", "import time; time.sleep(30)"))
     )
@@ -179,8 +190,56 @@ async def test_overrunning_job_times_out_and_is_killed() -> None:
 
 @pytest.mark.integration
 async def test_empty_command_is_rejected() -> None:
-    port = LocalProcessComputePort()
-    from cora.operation.ports.compute_port import ComputeSubmitRejectedError
-
+    port = LocalProcessComputePort(permitted_executables=_PERMITTED)
     with pytest.raises(ComputeSubmitRejectedError):
         await port.submit(JobSpec(command=()))
+
+
+@pytest.mark.integration
+async def test_unpermitted_executable_is_refused_before_it_spawns(tmp_path: Path) -> None:
+    """The guard: an argv the deployment never declared does not run.
+
+    Uses a real side effect (writing a file) as the witness, so this
+    fails loudly if the refusal ever lands AFTER the spawn rather than
+    before it.
+    """
+    witness = tmp_path / "should-never-exist"
+    port = LocalProcessComputePort(permitted_executables=frozenset({"/opt/tomopy"}))
+
+    with pytest.raises(ComputeExecutableNotPermittedError):
+        await port.submit(
+            JobSpec(
+                command=(
+                    sys.executable,
+                    "-c",
+                    f"import pathlib; pathlib.Path({str(witness)!r}).write_text('ran')",
+                )
+            )
+        )
+
+    assert not witness.exists(), "the refused command reached the substrate and ran"
+
+
+@pytest.mark.integration
+async def test_empty_allowlist_permits_nothing() -> None:
+    """Fail closed: enabling the substrate without declaring anything runs nothing.
+
+    The default a deployment gets by not thinking about it must be the
+    safe one, because not thinking about it is the realistic case.
+    """
+    port = LocalProcessComputePort(permitted_executables=frozenset())
+
+    with pytest.raises(ComputeExecutableNotPermittedError):
+        await port.submit(JobSpec(command=(sys.executable, "-c", "pass")))
+
+
+@pytest.mark.integration
+async def test_allowlist_matches_exactly_and_not_by_basename(tmp_path: Path) -> None:
+    """`/tmp/evil/tomopy` must not ride in on an allowlisted `tomopy`."""
+    impostor = tmp_path / "tomopy"
+    impostor.write_text("#!/bin/sh\necho hi\n")
+    impostor.chmod(0o755)
+    port = LocalProcessComputePort(permitted_executables=frozenset({"tomopy"}))
+
+    with pytest.raises(ComputeExecutableNotPermittedError):
+        await port.submit(JobSpec(command=(str(impostor),)))

@@ -66,10 +66,20 @@ class ComputePortConfig:
     deferred to the third real substrate. The `globus` substrate is built
     at the composition root and injected via `build_compute_port(prebuilt_port=...)`
     because its client + endpoint + artifact probe cannot ride a flat config.
+
+    `permitted_executables` is a declared deployment fact, never
+    inferred: it names exactly what the `local_process` substrate may
+    spawn. It defaults EMPTY, which permits nothing, so selecting
+    `local_process` without naming an executable yields a port that
+    refuses every job rather than one that runs any. It does not reach
+    the other substrates: the in-memory fake spawns nothing, and the
+    `globus` port runs on a remote endpoint whose own allowlisting is
+    that endpoint's concern, not this host's.
     """
 
     substrate: ComputeSubstrate = "in_memory"
     default_timeout_s: float = 3600.0
+    permitted_executables: frozenset[str] = frozenset()
 
 
 def build_compute_port(
@@ -81,10 +91,12 @@ def build_compute_port(
 
     None / `in_memory` returns an `InMemoryComputePort` (default + test
     convenience). `local_process` returns a `LocalProcessComputePort` with
-    the configured wall-clock ceiling. `globus` returns the `prebuilt_port`
-    `GlobusComputePort` the composition root constructed (its client +
-    endpoint + artifact probe cannot be built from the flat config); a
-    `globus` substrate with no `prebuilt_port` is a wiring error.
+    the configured wall-clock ceiling and the deployment's declared
+    executable allowlist (empty permits nothing; see the adapter). `globus`
+    returns the `prebuilt_port` `GlobusComputePort` the composition root
+    constructed (its client + endpoint + artifact probe cannot be built
+    from the flat config); a `globus` substrate with no `prebuilt_port` is
+    a wiring error.
     """
     if config is None or config.substrate == "in_memory":
         return InMemoryComputePort()
@@ -96,7 +108,10 @@ def build_compute_port(
             )
             raise ValueError(msg)
         return prebuilt_port
-    return LocalProcessComputePort(default_timeout_s=config.default_timeout_s)
+    return LocalProcessComputePort(
+        default_timeout_s=config.default_timeout_s,
+        permitted_executables=config.permitted_executables,
+    )
 
 
 __all__ = ["ComputePortConfig", "ComputeSubstrate", "build_compute_port"]

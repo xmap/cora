@@ -61,11 +61,45 @@ happens after the subprocess has already run.
 What keeps this inert today is the default: `compute_substrate` is
 `in_memory` (`cora.infrastructure.config`), which mints a Simulated
 result and spawns nothing. An observe-only deployment leaves it there.
-Before enabling `local_process` at a beamline, give every compute Method
-a `launch_spec` so argv is built server-side from the vetted recipe, then
-set `CORA_ALLOW_RAW_CONDUCT=false` to close the caller-supplied path. The
-gates that do and do not apply to a submit are documented at the top of
-`cora.api._conduct_run_route`.
+
+If you do enable `local_process`, `COMPUTE_PERMITTED_EXECUTABLES` bounds
+what it may spawn. The substrate refuses any `command[0]` outside the
+set, before the spawn. It is EMPTY by default and empty permits nothing,
+so enabling the substrate without naming an executable yields a port that
+refuses every job rather than one that runs any. Matching is exact: the
+check does no PATH resolution and no basename fallback, so
+`/tmp/evil/tomopy` does not ride in on an allowlisted `tomopy`.
+
+Two rules follow, and neither is optional:
+
+- **Allowlist tools, never interpreters.** Permitting `python` or `sh`
+  re-opens arbitrary execution through `-c`, and the check cannot tell
+  the difference. Permit the tomopy binary, not the thing that can run
+  it.
+- **Declare absolute paths.** The check is exact, but the spawn still
+  resolves a bare name against PATH afterwards, so allowlisting `tomopy`
+  permits whatever PATH finds at that moment. A request cannot reach
+  that (the conduct body carries no `env`), but a writable PATH entry on
+  the host would still decide what runs. An absolute path settles it.
+
+The allowlist is the belt, not the trousers: it bounds WHAT runs, it does
+not authorize the path. Nothing in Trust gates the spawn, so every gate
+here is authentication or configuration. The complementary fix is to give
+every compute Method a `launch_spec`, so argv builds server-side from the
+vetted, event-sourced recipe, and then set `CORA_ALLOW_RAW_CONDUCT=false`,
+which deletes the caller-supplied argv path instead of bounding it. The
+two compose: the allowlist bounds a `launch_spec`'s `base_command` at
+submit exactly as it bounds a raw one, so a Method author cannot name an
+executable this host does not permit either.
+
+The gates that do and do not apply to a submit are documented at the top
+of `cora.api._conduct_run_route`.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `COMPUTE_SUBSTRATE` | `in_memory` | `local_process` spawns subprocesses on this host |
+| `COMPUTE_PERMITTED_EXECUTABLES` | empty (permits nothing) | Exact-match allowlist for `command[0]` |
+| `CORA_ALLOW_RAW_CONDUCT` | `true` | `false` rejects request-supplied argv outright |
 
 ## Container image
 

@@ -41,6 +41,48 @@ The adapter does NOT interpret `job_spec.parameters` or
 `job_spec.resources`; the caller renders parameters into `command`
 argv, and a single-host subprocess takes whatever the box has. A
 scheduler adapter is where `resources` becomes `--gres` / `--mem`.
+
+## The executable allowlist
+
+`submit` refuses any `command[0]` outside `permitted_executables`,
+before the spawn. The constructor takes the set with NO default and an
+empty set permits NOTHING, so a deployment that enables this substrate
+without deciding what it may run gets a port that refuses everything
+rather than one that runs anything. That direction is the whole point:
+the failure this guards is not a malicious operator, it is a beamline
+someone pointed `COMPUTE_SUBSTRATE=local_process` at to run a
+reconstruction, on a path where an authenticated principal holding zero
+Trust permissions can choose the argv.
+
+Matching is EXACT against `command[0]`: the CHECK does no PATH
+resolution and no basename fallback. Both alternatives are worse: a
+basename match makes `/tmp/evil/tomopy` pass, and resolving PATH inside
+the check would make the verdict depend on the service account's
+environment rather than on a declared fact.
+
+Note precisely what that buys. The check is exact, but the spawn still
+resolves a BARE name against PATH afterwards, so allowlisting `tomopy`
+permits whatever PATH finds at that moment. A request cannot reach that
+knob (`ConductRunRequest` exposes no `env`, `build_job_spec` never sets
+one, and this adapter passes `env=None` when the spec's env is empty, so
+the child inherits the service account's environ), but a writable PATH
+entry on the host would still decide what runs. Declare ABSOLUTE paths
+and the question does not arise.
+
+Three limits to state plainly rather than let a reader assume away:
+
+  - **Allowlist tools, never interpreters.** Permitting `python` or `sh`
+    re-opens arbitrary execution through `-c`, and this check cannot
+    tell the difference. Permit `tomopy`, not the thing that can run it.
+  - **Prefer absolute paths.** A bare name defers the real choice to the
+    host's PATH at spawn time (above); an absolute path does not.
+  - **This is the belt, not the trousers.** It bounds WHAT runs; it does
+    not make the conduct path authorized. Nothing in Trust gates the
+    spawn: the Authorize port gates the run transition, which happens
+    after the process has already run. The real fix is a `launch_spec`
+    on every compute Method plus `CORA_ALLOW_RAW_CONDUCT=false`, which
+    deletes the caller-supplied-argv path instead of bounding it. See
+    `docs/stack/deployment.md`.
 """
 
 from __future__ import annotations
@@ -57,6 +99,7 @@ from cora.operation.adapters._tree_hash import sha256_tree
 from cora.operation.ports.compute_port import (
     ArtifactNotFoundError,
     ArtifactRef,
+    ComputeExecutableNotPermittedError,
     ComputeJobFailedError,
     ComputeNotAvailableError,
     ComputeResult,
@@ -80,7 +123,20 @@ _STDERR_TAIL_MAX = 300
 class LocalProcessComputePort:
     """`ComputePort` over `asyncio` subprocesses on the local host."""
 
-    def __init__(self, *, default_timeout_s: float = 3600.0) -> None:
+    def __init__(
+        self,
+        *,
+        permitted_executables: frozenset[str],
+        default_timeout_s: float = 3600.0,
+    ) -> None:
+        """Bind the adapter to the executables this deployment permits.
+
+        `permitted_executables` has NO default: every construction site
+        states what this host may run. An EMPTY set permits nothing,
+        which is the fail-closed posture a deployment that has not
+        thought about it should get. See the module docstring.
+        """
+        self._permitted_executables = permitted_executables
         self._default_timeout_s = default_timeout_s
         self._jobs: dict[JobId, tuple[asyncio.subprocess.Process, JobSpec]] = {}
         self._counter = 0
@@ -88,6 +144,9 @@ class LocalProcessComputePort:
     async def submit(self, job_spec: JobSpec) -> JobId:
         if not job_spec.command:
             raise ComputeSubmitRejectedError("job spec has an empty command")
+        executable = job_spec.command[0]
+        if executable not in self._permitted_executables:
+            raise ComputeExecutableNotPermittedError(executable)
         try:
             process = await asyncio.create_subprocess_exec(
                 *job_spec.command,

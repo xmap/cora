@@ -748,6 +748,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 ComputePortConfig(
                     substrate=settings.compute_substrate,
                     default_timeout_s=settings.compute_default_timeout_s,
+                    permitted_executables=settings.compute_permitted_executables,
                 )
             )
             app.state.compute_port = compute_port

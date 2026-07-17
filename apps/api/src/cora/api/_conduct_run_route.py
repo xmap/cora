@@ -35,8 +35,14 @@ the submit. Under `COMPUTE_SUBSTRATE=local_process` the argv reaches
 denied `complete_run` does not unspawn the process. The gates that do
 apply to the submit are edge AUTHENTICATION, `CORA_ALLOW_RAW_CONDUCT`
 (default True; a Method WITH a `launch_spec` always builds argv
-server-side and refuses a raw command regardless), and the choice of
-compute substrate itself.
+server-side and refuses a raw command regardless),
+`COMPUTE_PERMITTED_EXECUTABLES` (the local-process substrate refuses any
+`command[0]` outside it, before spawning; empty by default, and empty
+permits nothing), and the choice of compute substrate itself.
+
+Note what that list does NOT contain: a Trust policy. The allowlist
+bounds WHICH executable runs, not WHO may run it. Every gate above is
+authentication or configuration.
 
 This matters for observe-only deployments: `COMPUTE_SUBSTRATE` defaults
 to `in_memory`, which never spawns anything, and that default is what

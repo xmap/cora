@@ -503,6 +503,28 @@ class Settings(BaseSettings):
     compute_substrate: ComputeSubstrate = "in_memory"
     compute_default_timeout_s: float = 3600.0
 
+    # Exactly what the `local_process` substrate may spawn. Empty
+    # (default) permits NOTHING, so selecting local_process without
+    # naming an executable yields a port that refuses every job rather
+    # than one that runs any. The CHECK matches command[0] exactly: no
+    # PATH resolution, no basename fallback. Read from
+    # `COMPUTE_PERMITTED_EXECUTABLES` as JSON, for example:
+    #
+    #   COMPUTE_PERMITTED_EXECUTABLES='["/opt/conda/bin/tomopy"]'
+    #
+    # Declare ABSOLUTE paths. The check is exact, but the spawn still
+    # PATH-resolves a bare name afterwards, so allowlisting `tomopy`
+    # permits whatever PATH finds then. A request cannot reach that (the
+    # conduct body carries no env), but a writable PATH entry on the
+    # host would still decide what runs.
+    #
+    # Allowlist TOOLS, never interpreters: permitting `python` or `sh`
+    # re-opens arbitrary execution via `-c`, and the check cannot tell.
+    # This bounds WHAT runs; it does not authorize the conduct path (no
+    # Trust policy gates the spawn). See `cora_allow_raw_conduct` below
+    # and docs/stack/deployment.md.
+    compute_permitted_executables: frozenset[str] = frozenset()
+
     # When True (default, migration window), the conduct endpoint still
     # accepts a raw caller-supplied `command` for a Method that has NO
     # launch_spec. A Method WITH a launch_spec always builds its argv

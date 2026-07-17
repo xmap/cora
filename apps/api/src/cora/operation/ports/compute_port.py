@@ -96,11 +96,19 @@ event so simulator-origin data can never be promoted to Production.
 
 ## Exceptions
 
-Five exception families mirror CORA's standard shape and ControlPort's
+Six exception families mirror CORA's standard shape and ControlPort's
 posture: ComputePort is not REST-accessible; the conducting runtime
 captures these as event-payload metadata, never surfacing them as HTTP
 errors. A raised exception means the conduct failed; the runtime
 records an aborted Run with the failure detail.
+
+`ComputeExecutableNotPermittedError` subclasses
+`ComputeSubmitRejectedError` rather than standing beside it, so it
+reaches the runtime's closed catch tuples without either being edited.
+Prefer that shape for any future CORA-side refusal that is a NARROWING
+of an existing family: a sibling would have to be threaded into every
+`except` tuple by hand, and the one nobody remembers is the one that
+strands a Procedure in `Running`.
 """
 
 from collections.abc import Mapping
@@ -265,17 +273,51 @@ class ComputeResult:
 
 
 class ComputeSubmitRejectedError(Exception):
-    """The substrate refused to accept the job at submission time.
+    """The job was refused at submission time, before it ran.
 
-    Triggered when a scheduler rejects the spec (bad resource request,
-    quota exceeded) or a local launch is malformed. Distinct from
-    `ComputeNotAvailableError` (the substrate itself is reachable; it
-    is the specific job it rejected).
+    Covers both directions of refusal: a substrate saying no (a
+    scheduler rejecting the spec on a bad resource request or an
+    exhausted quota) and an adapter's own pre-flight saying no (a
+    malformed launch, an executable the deployment does not permit).
+    Distinct from `ComputeNotAvailableError` (the substrate itself is
+    reachable; it is the specific job it rejected).
+
+    `ComputeExecutableNotPermittedError` narrows the CORA-side arm; see
+    it for why the distinction is a subclass rather than a sibling.
     """
 
     def __init__(self, reason: str) -> None:
         super().__init__(f"Compute job submission rejected: {reason}")
         self.reason = reason
+
+
+class ComputeExecutableNotPermittedError(ComputeSubmitRejectedError):
+    """CORA refused to spawn this executable; no substrate was asked.
+
+    Raised by `LocalProcessComputePort.submit` when `command[0]` is
+    outside the deployment's declared `permitted_executables`. The
+    grammatical subject separates it from its parent: here the subject
+    is CORA's own configuration, and the refusal is settled before any
+    substrate is contacted. A scheduler cannot raise this, because a
+    scheduler has no concept of CORA's allowlist.
+
+    It is a SUBCLASS, not a sibling, and that is load-bearing. The
+    Conductor catches a closed `_COMPUTE_ERRORS` tuple and the
+    EdgeConductor an inline one; `except` catches subclasses, so this
+    class reaches both recorded-failure paths with no edit to either and
+    no risk of the silent escape a new sibling would invite. It buys the
+    operator a distinct name to filter on, at no threading cost.
+
+    `executable` carries the argv[0] that was refused, so a log line
+    names the thing to add to the allowlist or the thing to worry about.
+    """
+
+    def __init__(self, executable: str) -> None:
+        super().__init__(
+            f"executable {executable!r} is not in this deployment's "
+            f"COMPUTE_PERMITTED_EXECUTABLES allowlist"
+        )
+        self.executable = executable
 
 
 class ComputeNotAvailableError(Exception):
@@ -470,6 +512,7 @@ class ComputePort(Protocol):
 __all__ = [
     "ArtifactNotFoundError",
     "ArtifactRef",
+    "ComputeExecutableNotPermittedError",
     "ComputeJobFailedError",
     "ComputeNotAvailableError",
     "ComputePort",

@@ -134,6 +134,12 @@ from tests.integration._helpers import build_postgres_deps, seed_capability_post
 _NOW = datetime(2026, 5, 20, 9, 30, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-0000000c0de1")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000c0de2")
+
+# The scenario stands a Python one-liner in for tomopy, so the
+# interpreter is what this deployment-under-test permits. A real 2-BM
+# host allowlists the tomopy binary itself and never an interpreter,
+# which can run anything through `-c`.
+_PERMITTED_EXECUTABLES = frozenset({sys.executable})
 _SITE_ID = UUID("01900000-0000-7000-8000-0000000c0de3")
 
 # Compute Capability (no affordances; Method-shaped executor). Seeded
@@ -545,7 +551,7 @@ async def test_reconstruction_conducts_on_a_real_subprocess_and_is_promotable(
     # declares Physical actuation, so the output is promotable.
     output_path = tmp_path / "recon_sirt.h5"
     runtime = ComputeRunDriver(
-        compute_port=LocalProcessComputePort(),
+        compute_port=LocalProcessComputePort(permitted_executables=_PERMITTED_EXECUTABLES),
         complete_run=bind_complete_run(deps),
         abort_run=bind_abort_run(deps),
     )
@@ -639,7 +645,7 @@ async def test_reconstruction_conducts_directory_output_and_records_tree_hash(
     # default save-format=tiff), so fetch_artifact_ref folds the tree.
     output_dir = tmp_path / "recon_sirt_rec"
     runtime = ComputeRunDriver(
-        compute_port=LocalProcessComputePort(),
+        compute_port=LocalProcessComputePort(permitted_executables=_PERMITTED_EXECUTABLES),
         complete_run=bind_complete_run(deps),
         abort_run=bind_abort_run(deps),
     )
