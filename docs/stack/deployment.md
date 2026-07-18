@@ -169,13 +169,14 @@ every pod into an outage the restart cannot mend, converting one
 database blip into a fleet-wide crash loop.
 
 `/readyz` returns 200 `{"status": "ready", ...}` or 503
-`{"status": "not_ready", "database": "..."}`. `database` is a fixed
-vocabulary: `ok`, `unreachable`, `saturated`, `closing`, `skipped`
-(this deployment has no pool, the in-memory kernel), `error`. The body
-carries no URLs, no driver error text, and no projection or bounded
-context names: it is unauthenticated, and none of that helps a probe
-while all of it describes the deployment to whoever can reach it. The
-logs carry the detail.
+`{"status": "not_ready", "database": "..."}`, plus an `actuation` field
+on both (see below). `database` is a fixed vocabulary: `ok`,
+`unreachable`, `saturated`, `closing`, `skipped` (this deployment has no
+pool, the in-memory kernel), `error`. The body carries no URLs, no
+driver error text, and no projection or bounded context names: it is
+unauthenticated, and none of that helps a probe while all of it
+describes the deployment to whoever can reach it. The logs carry the
+detail.
 
 Postgres is the only check, because readiness must report what can
 CHANGE after a successful boot rather than restate boot. Every config
@@ -187,6 +188,43 @@ Projection health is deliberately not gated on. A wedged projection is
 a global condition: it would pull every replica at once, including the
 pod hosting the in-band repair tool. Watch projection lag with a metric
 and an alert, not with a traffic-routing signal.
+
+### Verifying the observe-only posture
+
+`/readyz` also carries `actuation`, either `inert` or `reachable`, and a
+matching `boot.actuation_posture` line lands in the startup log. This is
+the field that lets someone who will never hold credentials, a beamline
+manager or a controls engineer, curl the observe-only claim instead of
+trusting it. `inert` means CORA can observe but cannot move hardware;
+`reachable` means at least one actuation path is open.
+
+It is a REPORT, not a gate: it reads the settings the real gates already
+use and summarises them, deciding and refusing nothing. It folds in BOTH
+ways CORA can reach the beamline, and says `inert` only when both are
+shut:
+
+- the ControlPort write path (`CONTROL_WRITES_ENABLED`), and
+- the ComputePort exec path, where a compute job's argv could itself be
+  `caput ...`. Only `COMPUTE_SUBSTRATE=in_memory` is provably unable to
+  spawn anything, so any other substrate reads `reachable`.
+
+It errs toward `reachable` when uncertain: a false `reachable` is an
+alarm someone investigates, a false `inert` is a facility discovering
+CORA moved their stage after being told it could not. The boot log
+prints the raw inputs (`control_writes_enabled`, `compute_substrate`,
+`compute_permitted_executable_count`, `cora_allow_raw_conduct`, route
+count) beside the summary so it can be audited against its own sources.
+
+Scope, stated so it is not mistaken for more: `actuation` covers the
+hardware axis only. Sending data OUT (the LLM seam, remote transfers)
+and SPENDING money are separate promises with their own switches; when
+they gain summaries they slot in beside `actuation` rather than widening
+its meaning. Today the outbound transfer and remote-compute adapters
+exist but are wired nowhere, and a fitness test
+(`test_dormant_outbound_seams_unwired`) fails the build if one gets
+constructed without the actuation derivation being revisited. The
+trigger to build the spanning egress/spend summary is the first of those
+paths that gets wired at the composition root.
 
 **Probe budget invariant.** The app bounds `/readyz` at 1.5s total.
 Set the orchestrator's own probe timeout ABOVE that (2s or more).

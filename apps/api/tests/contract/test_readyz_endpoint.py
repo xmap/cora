@@ -31,6 +31,19 @@ def test_readyz_reports_ready_200_with_no_pool() -> None:
 
 
 @pytest.mark.contract
+def test_readyz_surfaces_the_actuation_posture() -> None:
+    """The observe-only claim a facility can curl without credentials.
+
+    The test env enables control writes (see conftest), so this app reports
+    `reachable`; the point under test is that the field is present and
+    end-to-end from settings through the route, not its value here.
+    """
+    with TestClient(create_app()) as client:
+        body = client.get("/readyz").json()
+    assert body["actuation"] in ("inert", "reachable")
+
+
+@pytest.mark.contract
 def test_readyz_reports_503_and_retry_after_when_database_faults(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

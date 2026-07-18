@@ -82,7 +82,7 @@ from cora.api._edge_conductor import ComputeRunDriver
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
 from cora.api._inference_recorder import DelegatingInferenceRecorder
 from cora.api._procedure_watcher import procedure_watcher_lifespan
-from cora.api._readiness import probe_database, readiness_body
+from cora.api._readiness import derive_actuation, probe_database, readiness_body
 from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
@@ -182,6 +182,7 @@ from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import build_kernel
 from cora.infrastructure.idempotency_pruner import idempotency_pruner_lifespan
 from cora.infrastructure.kernel import Kernel
+from cora.infrastructure.logging import get_logger
 from cora.infrastructure.observability import configure_tracing, instrument_app
 from cora.infrastructure.projection import (
     ProjectionRegistry,
@@ -270,6 +271,8 @@ def _settings_for_app() -> Settings:
 # still opt out per-check (ALLOW_PERMISSIVE_AUTHZ, etc.). Dev / test /
 # local and any other env name keep the permissive default.
 _PROD_LIKE_APP_ENVS = frozenset({"prod", "production", "staging"})
+
+_log = get_logger(__name__)
 
 
 def _enforce_production_principal_policy(settings: Settings) -> None:
@@ -756,6 +759,23 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             app.state.operation = wire_operation(
                 deps, control_port=shared_control_port, compute_port=compute_port
             )
+
+            # Boot posture. The derived `actuation` summary rides ALONGSIDE
+            # its own raw inputs, never instead of them, so the one-word
+            # answer can be audited against the settings it came from
+            # rather than trusted. `cora_allow_raw_conduct` is logged but
+            # excluded from the summary (it is read per-request and inert
+            # under compute_substrate=in_memory); see `derive_actuation`.
+            _log.info(
+                "boot.actuation_posture",
+                actuation=derive_actuation(settings),
+                control_writes_enabled=settings.control_writes_enabled,
+                control_port_route_count=len(settings.control_port_routes),
+                compute_substrate=settings.compute_substrate,
+                compute_permitted_executable_count=len(settings.compute_permitted_executables),
+                cora_allow_raw_conduct=settings.cora_allow_raw_conduct,
+            )
+
             app.state.safety = wire_safety(deps)
             app.state.caution = wire_caution(deps)
             app.state.calibration = wire_calibration(deps)

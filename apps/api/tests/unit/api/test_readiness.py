@@ -18,7 +18,7 @@ import asyncio
 import asyncpg
 import pytest
 
-from cora.api._readiness import probe_database, readiness_body
+from cora.api._readiness import derive_actuation, probe_database, readiness_body
 from cora.infrastructure.config import Settings
 
 
@@ -171,4 +171,56 @@ def test_readiness_body_carries_app_env() -> None:
 @pytest.mark.unit
 def test_readiness_body_leaks_no_deployment_detail() -> None:
     """Unauthenticated endpoint: fixed vocabulary, no free text, no topology."""
-    assert set(readiness_body("ok", _settings())) == {"status", "database", "app_env"}
+    assert set(readiness_body("ok", _settings())) == {"status", "database", "app_env", "actuation"}
+
+
+def _actuation_settings(*, writes: bool, substrate: str) -> Settings:
+    """Settings with the two actuation inputs pinned; init kwargs beat the env."""
+    return Settings(
+        app_env="test",
+        control_writes_enabled=writes,
+        compute_substrate=substrate,  # type: ignore[arg-type]
+    )
+
+
+@pytest.mark.unit
+def test_derive_actuation_reports_inert_when_both_paths_shut() -> None:
+    """The observe-only default: writes off and compute cannot spawn."""
+    assert derive_actuation(_actuation_settings(writes=False, substrate="in_memory")) == "inert"
+
+
+@pytest.mark.unit
+def test_derive_actuation_reachable_when_control_writes_on() -> None:
+    assert derive_actuation(_actuation_settings(writes=True, substrate="in_memory")) == "reachable"
+
+
+@pytest.mark.unit
+def test_derive_actuation_reachable_when_compute_can_spawn() -> None:
+    """The bypass path: local_process can run argv that reaches a control system."""
+    assert (
+        derive_actuation(_actuation_settings(writes=False, substrate="local_process"))
+        == "reachable"
+    )
+
+
+@pytest.mark.unit
+def test_derive_actuation_reachable_when_both_paths_open() -> None:
+    assert (
+        derive_actuation(_actuation_settings(writes=True, substrate="local_process")) == "reachable"
+    )
+
+
+@pytest.mark.unit
+def test_readiness_body_reports_the_derived_actuation() -> None:
+    inert = readiness_body("ok", _actuation_settings(writes=False, substrate="in_memory"))
+    assert inert["actuation"] == "inert"
+    reachable = readiness_body("ok", _actuation_settings(writes=True, substrate="in_memory"))
+    assert reachable["actuation"] == "reachable"
+
+
+@pytest.mark.unit
+def test_readiness_body_actuation_is_independent_of_database_status() -> None:
+    """A DB fault does not change the actuation posture; they are orthogonal."""
+    body = readiness_body("unreachable", _actuation_settings(writes=False, substrate="in_memory"))
+    assert body["status"] == "not_ready"
+    assert body["actuation"] == "inert"

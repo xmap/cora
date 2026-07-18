@@ -18,11 +18,22 @@ _ALLOWED_DATABASE_SCHEMES = ("postgresql://", "postgres://")
 
 OtelExporter = Literal["otlp", "console", "none"]
 
-# ComputePort substrate selector. Mirrors the operation-tier
-# `ComputeSubstrate` in `cora.operation.adapters.compute_port_config`
-# (a trivial 2-value Literal kept per tier rather than centralised in a
-# new infrastructure module, since there is no shared route model the
-# way ControlPort's `Substrate` rides `ControlPortRoute`).
+# ComputePort substrate selector. Deliberately NARROWER than the
+# operation-tier `ComputeSubstrate` in
+# `cora.operation.adapters.compute_port_config`, which is a 3-value
+# Literal (adds `globus`). `globus` is excluded here on purpose: it
+# cannot be built from a flat config string (it needs an authorized
+# client + endpoint id + a remote artifact probe), so it is injected as
+# a prebuilt port at the composition root, never selected via this env
+# var. This tier therefore names only the substrates a deployment can
+# actually pick with `COMPUTE_SUBSTRATE`. Kept per-tier rather than
+# centralised because there is no shared route model the way
+# ControlPort's `Substrate` rides `ControlPortRoute`.
+#
+# `derive_actuation` (cora.api._readiness) reads this as an allowlist
+# (`== "in_memory"` is the only provably-inert value), so if a real
+# selectable substrate is ever added here, it correctly reads as
+# actuation-reachable by default.
 ComputeSubstrate = Literal["in_memory", "local_process"]
 
 

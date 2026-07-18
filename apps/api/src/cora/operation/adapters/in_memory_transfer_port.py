@@ -3,9 +3,11 @@
 Dict-backed, no substrate. A test seeds the observation progression a begun
 move will report; the engine-under-test calls `begin` / `observe` / `cancel`
 against the same instance and walks the seeded snapshots toward a terminal.
-This is the only `TransferPort` adapter that exists: there is no production
-substrate adapter yet, because the build trigger has not fired (see
-`cora.operation.ports.transfer_port`). The fake serves the triage that asks
+This is the test double. Real substrate adapters (`FdtTransferPort`,
+`GlobusTransferPort`) now exist too, but none is constructed at the
+composition root, so no live egress path runs (see
+`cora.operation.ports.transfer_port` and
+`test_dormant_outbound_seams_unwired`). The fake serves the triage that asks
 whether a transfer is a conductor step or a long-running edge job.
 
 ## Seeding model

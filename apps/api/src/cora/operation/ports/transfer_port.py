@@ -21,13 +21,16 @@ so its surface is its own.
 
 ## Earned, not minted
 
-There is no production consumer yet. This port exists to finalize the design
-triage (is a transfer a step the conductor walks, or a long-running edge job
-with its own lifecycle?), and ships with a test double only. A real adapter
-(Globus first) and the executing aggregate land when the build trigger fires:
-a promote or publish rule that blocks on a transfer outcome, an in-path
-substrate with a native partial terminal, or a custody chain the existing
-`Attestation` path cannot carry. Until then this is a spike, not a merge.
+Adapters now exist (`InMemoryTransferPort` for tests; `FdtTransferPort` and
+`GlobusTransferPort` as real substrates), and `cora.api._distribution_materializer`
+consumes the port. But NONE of the real adapters is constructed at the
+composition root: `build_control_port`'s compute sibling does not wire them,
+and `test_dormant_outbound_seams_unwired` pins that they stay unwired. So the
+executing aggregate and the composition-root wiring still wait on the build
+trigger: a promote or publish rule that blocks on a transfer outcome, an
+in-path substrate with a native partial terminal, or a custody chain the
+existing `Attestation` path cannot carry. Until one fires, the real adapters
+are dormant code, not a live egress path.
 
 ## Why `begin` / `observe` / `cancel`, not blocking submit-and-await
 
