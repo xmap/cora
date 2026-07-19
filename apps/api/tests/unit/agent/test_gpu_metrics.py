@@ -52,7 +52,7 @@ def test_shadow_cost_of_one_gpu_hour_is_the_rate() -> None:
 
 
 @pytest.mark.unit
-def test_shadow_cost_scales_linearly_with_seconds() -> None:
+def test_shadow_cost_is_proportional_to_seconds() -> None:
     assert gpu_shadow_cost_usd(1800.0, 2.0) == pytest.approx(1.0)
     assert gpu_shadow_cost_usd(0.0, 2.0) == pytest.approx(0.0)
 
