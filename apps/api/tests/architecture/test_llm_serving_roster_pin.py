@@ -1,7 +1,7 @@
-"""The LLM serving roster stays external-only until GPU-hour pricing is wired.
+"""The LLM serving roster is pinned; a new adapter must first close the $0 hole.
 
-A tripwire rather than a rule: this test exists to fail the day a second LLM
-serving adapter lands, because the cost math is not ready for one.
+A tripwire rather than a rule: this test fails the day a new LLM serving adapter
+lands, so the cost math is checked before the adapter is admitted.
 
 CORA prices a call by resolving `(provider, model)` through the catalog overlay
 and then the static `PRICING` table. `compute_cost_usd` returns 0.0 when neither
@@ -12,18 +12,22 @@ to notice than an exception breaking the call.
 The trap is the BUILT path. `agent/_pricing_bridge.py` deliberately skips
 `GpuHourPricing` entries when it installs the overlay, because the overlay feeds
 per-token cost math only. A facility-hosted model approved on a GPU-hour basis
-therefore resolves to no price at all. Nothing bites today because nothing serves
-one: `AnthropicLLM` is the only class implementing the `LLM` port, and it is an
-external provider, so every metered call has been bought. The day an in-house
-adapter lands, its calls would record $0 forever and silently disable the USD arm
-of BOTH enforcement tiers (`_budget_gate.find_budget_breach` post-hoc and
+therefore resolves to no price at all. Nothing bit while `AnthropicLLM` was the
+only class implementing the `LLM` port:
+it is an external provider, so every metered call was bought. An in-house adapter
+priced only per GPU-hour would record $0 forever and silently disable the USD arm
+of both enforcement tiers (`_budget_gate.find_budget_breach` post-hoc and
 `BudgetSpendGuard` pre-estimate), while the daily token cap kept working and
 masked the hole.
 
-Before widening the allowlist below: wire the GPU-hour to USD conversion into the
-cost math, or make the cost path refuse an entry whose basis it cannot price.
-Then add the adapter. See [[project-reserve-post-void-stage0]] for the
-enforcement-ladder evaluation that surfaced this.
+`LocalLLM` is now on the roster, and that hole was closed before it was admitted,
+not after: `approve_language_model` refuses to approve a served in-house entry
+priced only per GPU-hour, the basis the cost math skips, so a metered-free
+in-house model carries a declared zero-rate token price rather than a silently
+unpriced one. That is the remedy this tripwire required, refuse an entry whose
+basis the cost path cannot price, before a second adapter could be admitted; see
+[[project-reserve-post-void-stage0]] and the built-path grounding. Before adding
+any FURTHER adapter, confirm the same of it.
 
 The `LLM` Protocol and its always-pass stub live in the port module and are
 excluded here: the house convention keeps both beside the port they serve.
@@ -42,7 +46,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 _PORT_MODULE = "infrastructure/ports/llm.py"
-_ALLOWED_SERVING_ADAPTERS = frozenset({"AnthropicLLM"})
+_ALLOWED_SERVING_ADAPTERS = frozenset({"AnthropicLLM", "LocalLLM"})
 
 
 def _classes_defining_async_chat(path: Path) -> set[str]:
