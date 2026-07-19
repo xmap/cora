@@ -74,7 +74,7 @@ from anthropic.types import (
 )
 from opentelemetry import trace
 
-from cora.infrastructure.observability.gen_ai import record_llm_call
+from cora.infrastructure.observability.gen_ai import record_llm_call, track_in_flight_call
 from cora.infrastructure.ports.llm import (
     CacheBreakpoint,
     LLMAuthenticationError,
@@ -191,7 +191,10 @@ class AnthropicLLM:
         extra_headers = _maybe_extended_cache_header(request)
         model_id = _resolve_model_id(request.model_ref)
 
-        with _tracer.start_as_current_span("llm.chat") as span:
+        with (
+            track_in_flight_call(request.model_ref),
+            _tracer.start_as_current_span("llm.chat") as span,
+        ):
             try:
                 message = await self._client.messages.create(
                     model=model_id,
