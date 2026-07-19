@@ -55,6 +55,35 @@ def test_compute_cost_sums_all_four_token_types() -> None:
 
 
 @pytest.mark.unit
+def test_zero_rate_overlay_prices_at_zero_and_shadows_static_table() -> None:
+    """A metered-free in-house model installs a zero-rate overlay entry: it must
+    price at exactly $0 WITHOUT the unpriced warning, and it must shadow the
+    static PRICING table so an entry whose identity collides with a priced static
+    row does not fall through to that nonzero rate. This is what keeps
+    "declared free" distinct from "silently unpriced"."""
+    # claude-opus-4-8 is priced nonzero in the static table ($5 / $25 per MTok).
+    ref = ModelRef(provider="anthropic", model="claude-opus-4-8")
+    set_pricing_overlay(
+        {
+            (ref.provider, ref.model): ModelPricing(
+                input_per_mtok=0.0,
+                output_per_mtok=0.0,
+                cache_write_per_mtok=0.0,
+                cache_read_per_mtok=0.0,
+            )
+        }
+    )
+    try:
+        cost = compute_cost_usd(
+            ref, LLMUsage(input_tokens=1_000_000, output_tokens=1_000_000)
+        )
+        assert cost == 0.0
+        assert (ref.provider, ref.model) not in _warned_missing_pricing
+    finally:
+        set_pricing_overlay({})
+
+
+@pytest.mark.unit
 def test_unknown_model_returns_zero_and_logs_once(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
