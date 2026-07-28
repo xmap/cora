@@ -44,3 +44,33 @@ the Globus collection `APS:DM:2BM` and archived to tape on a per-experiment time
 upstream tiers are transient, capacity-purged with no fixed schedule, so a dataset is briefly multi-homed and
 then collapses to the Sojourner copy; there is no continuous beamtime-long sync. The reconstruction compute
 resource itself is not yet pinned to a specific host or pool.
+
+### Inside the scan file
+
+Read from the upstream source rather than assumed: [tomoscan](https://github.com/decarlof/tomoscan)'s
+2-BM subclass and [dmagic](https://github.com/decarlof/dmagic). Every scan product is HDF5; no
+acquisition path writes TIFF.
+
+The layout is Data Exchange. `tomoscan_2bm.py` addresses the datasets by name when it post-processes a
+finished scan: `/exchange/data` (projections), `/exchange/data_white` (flats), `/exchange/data_dark`
+(darks), and `/exchange/theta` (rotation angles). Frame bookkeeping lives in `/defaults/NDArrayUniqueId`
+and `/defaults/HDF5FrameLocation`. Per-scan files follow the areaDetector template `%s%s_%3.3d.h5`, so a
+scan basename carries a three-digit counter, and `..._rec/` reconstruction directories are named from it.
+
+**A finished capture is not a finished file, and this is the fact an ingest reader must respect.** The
+end-of-scan sequence stops the file plugin (`FPCapture` to `Done`, then waits for `Capture_RBV` to reach
+0), and only *then* calls `add_theta()`, which REOPENS the file in append mode and creates
+`/exchange/theta`. A checksum taken when capture completes describes a file that is about to change.
+The file is final after the transfer step reports through `ScanStatus` (`fdt file transfer complete` or
+`scp file transfer complete`), which is also the point at which the copy on the analysis tier exists.
+
+`add_theta()` also compares the frames actually written against the angles commanded, and logs a warning
+naming the missing ones when they disagree. Dropped frames are therefore a known, detected, and
+non-fatal condition: a reader that records only what landed will silently under-describe such a scan.
+
+The experiment folder is computed, not conventional, which is what makes it derivable rather than
+guessable. `dmagic`'s `dm.py` formats it as `{year_month}-{pi_last_name}-{gup_number}` from APS
+scheduling data, and normalises the surname through `clean_entry()`: NFKD normalise, encode to ASCII
+discarding what will not encode, then keep only letters, digits, hyphen and underscore. Anything
+deriving that folder name independently must reproduce that normalisation exactly or it will miss on
+accented and punctuated surnames.

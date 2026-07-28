@@ -131,6 +131,19 @@ Confirmed design basis (SCHED-1/2/3a, #269): a scheduled beamtime window is **im
 | --- | --- | --- | --- | --- | --- |
 | SCHED-3b | `Nice-to-have` | Under APS data governance, is the APS badge number classified as personal data subject to deletion on request (so CORA scrubs it via the same forget-actor path as other PII)? The badge-reuse and identifier questions are settled (#269); only this classification routes to data-management. Confirmer: APS User Office / data-management contact. | treated as deletable personal data (PII-vault scrubbed), pending the governance ruling | not yet | [2-BM index](index.md) |
 
+## Inside the scan file
+
+The storage chain was settled by DATA-1 through DATA-7 (#270). What those answers did not cover, the file
+itself, is now read from the upstream source instead of asked: tomoscan's 2-BM subclass and dmagic give the
+Data Exchange layout, the file naming template, the end-of-scan ordering, and the experiment-folder
+derivation. Those are recorded in [Operations](operations.md#inside-the-scan-file). Only what the source
+cannot answer is left here.
+
+| ID | Priority | Question | CORA assumes | Already done? | Resolves |
+| --- | --- | --- | --- | --- | --- |
+| DATA-8 | `Nice-to-have` | How often do scans finish with dropped frames? `add_theta()` compares written frames against commanded angles and logs a warning when they disagree, so the condition is detected but not fatal. Knowing whether this is rare-and-alarming or routine decides whether a record of the scan should refuse to be written, or carry the shortfall as an ordinary recorded fact. | rare enough to treat as an exception worth surfacing, not a routine outcome to normalise | not yet | [Operations](operations.md) |
+| DATA-9 | `Nice-to-have` | Is the tomoscan running at 2-BM the same `tomoscan_2bm.py` as the public repository HEAD, or does the beamline run a local fork or pinned older version? The end-of-scan ordering and the Data Exchange dataset names are read from the public source; a local divergence would silently invalidate them. | the deployed code matches the public repository | not yet | [Operations](operations.md) |
+
 ## Not on this page
 
 Hardware CORA has deliberately not described yet (the wider sample-stage motor band, IOC-hosted devices, past high-speed cameras) raises questions here only once CORA starts describing it. The `Mirror` is the exception that proves the rule: it is a registered Asset ([Inventory](inventory.md#inventory)) and its coating-stripe sweep is now modelled (`Mirror_StripeReachX`); only the coordinated mirror-table X binding stays open (`MODE-3`), blocked on the IOC substitution fix.

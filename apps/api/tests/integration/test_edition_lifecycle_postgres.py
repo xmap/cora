@@ -72,7 +72,7 @@ _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
 _NOW = datetime(2026, 6, 10, 12, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
-_URI = "s3://aps-2bm/runs/abc/recon.h5"
+_URI = "file:///gdata/dm/2BM/2026-05/2026-05-Okafor-1012345/analysis/recon.h5"
 
 
 def _attach_data_namespace(deps: Kernel, pool: asyncpg.Pool) -> Kernel:

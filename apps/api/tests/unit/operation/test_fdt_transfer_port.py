@@ -16,8 +16,12 @@ from cora.operation.ports.transfer_port import (
     TransferState,
 )
 
-_SOURCE = "tomdet:/local1/2BM/2026-06/scan_001.h5"
-_DESTINATION = "tomo1:/data2/2BM/2026-06"
+# Experiment folders at 2-BM are `<yyyy-mm>-<PIlastname>-<GUP#>` (staff-confirmed,
+# DATA-1..7). The PI and proposal segments are load-bearing, not decoration: they
+# are what makes the folder derivable from scheduling data. A date-only fixture
+# reads as correct and teaches the wrong path shape.
+_SOURCE = "tomdet:/local1/2BM/2026-03-Pickering-1008279/scan_001.h5"
+_DESTINATION = "tomo1:/data2/2BM/2026-03-Pickering-1008279"
 _STAGE_IN = TransferRequest(source=_SOURCE, destination=_DESTINATION)
 
 
@@ -75,8 +79,8 @@ async def test_begin_builds_an_fdt_client_invocation_for_a_single_file() -> None
         "-c",
         "tomo1",
         "-d",
-        "/data2/2BM/2026-06",
-        "/local1/2BM/2026-06/scan_001.h5",
+        "/data2/2BM/2026-03-Pickering-1008279",
+        "/local1/2BM/2026-03-Pickering-1008279/scan_001.h5",
     )
 
 

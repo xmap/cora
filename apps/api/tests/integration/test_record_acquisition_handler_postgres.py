@@ -99,7 +99,7 @@ async def _seed_dataset(deps: Kernel) -> UUID:
     return await register_dataset.bind(deps)(
         RegisterDataset(
             name="recon.h5",
-            uri="s3://aps-2bm/recon.h5",
+            uri="file:///gdata/dm/2BM/2026-05/2026-05-Okafor-1012345/analysis/recon.h5",
             checksum_algorithm="sha256",
             checksum_value=_GOOD_SHA256,
             byte_size=1024,

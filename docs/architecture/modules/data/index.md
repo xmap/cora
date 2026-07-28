@@ -461,7 +461,7 @@ The examples below cover the canonical flow: register a Dataset, materialize it 
 
     {
       "name": "Catalyst pellet B-12, run 2026-05-19-007, raw projections",
-      "uri": "s3://aps-2bm-raw/2026-05-19/run-007/projections.h5",
+      "uri": "file:///gdata/dm/2BM/2026-05/2026-05-Okafor-1012345/data/projections.h5",
       "checksum": {
         "algorithm": "sha256",
         "value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
@@ -487,7 +487,7 @@ The examples below cover the canonical flow: register a Dataset, materialize it 
         "register_dataset",
         {
             "name": "Catalyst pellet B-12, run 2026-05-19-007, raw projections",
-            "uri": "s3://aps-2bm-raw/2026-05-19/run-007/projections.h5",
+            "uri": "file:///gdata/dm/2BM/2026-05/2026-05-Okafor-1012345/data/projections.h5",
             "checksum": {"algorithm": "sha256", "value": "0123...cdef"},
             "byte_size": 4831838208,
             "encoding": {

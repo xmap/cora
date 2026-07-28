@@ -24,12 +24,13 @@ _PRINCIPAL_ID = uuid4()
 _CORRELATION_ID = uuid4()
 
 _TRANSFER = TransferRequest(
-    source="tomdet:/local1/2BM/scan_001.h5", destination="tomo1:/data2/2BM/scan_001.h5"
+    source="tomdet:/local1/2BM/2026-03-Pickering-1008279/scan_001.h5",
+    destination="tomo1:/data2/2BM/2026-03-Pickering-1008279/scan_001.h5",
 )
 _REGISTRATION = RegisterDistribution(
     dataset_id=_DATASET_ID,
     supply_id=_SUPPLY_ID,
-    uri="file:///data2/2BM/scan_001.h5",
+    uri="file:///data2/2BM/2026-03-Pickering-1008279/scan_001.h5",
     checksum_algorithm="sha256",
     checksum_value="a" * 64,
     byte_size=4096,
