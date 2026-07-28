@@ -1,0 +1,115 @@
+# The restore-drill stack: a Postgres with WAL archiving switched on and
+# pgBackRest available, deliberately isolated from the dev database.
+#
+# ## Why this is a separate stack and not a change to infra/docker-compose.yml
+#
+# Two reasons, and the second is the important one.
+#
+# The drill DESTROYS its cluster. `scripts/restore_drill.py` deletes the
+# contents of PGDATA on purpose, because a restore drill that only
+# renames the data directory proves that renaming a directory is
+# reversible. Pointing that at the volume holding a developer's local
+# work would make the drill something nobody runs twice.
+#
+# And switching WAL archiving on changes how a database FAILS. When
+# archive_command cannot reach its repository, Postgres retains WAL
+# forever rather than dropping it, so a broken archive on a laptop fills
+# the disk instead of degrading quietly. That is the correct behaviour
+# for a system of record and the wrong default for a dev container.
+#
+# The published port defaults to 5433, clear of the dev database on 5432
+# and of the testcontainers Postgres, which binds an ephemeral port. It is
+# overridable because 5433 is a popular second choice and an unrelated
+# container holding it should not be a reason the drill goes unrun:
+#
+#   CORA_DRILL_PORT=5439 python scripts/restore_drill.py
+
+name: cora-backup-drill
+
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cora-postgres-pgbackrest:dev
+    container_name: cora-backup-drill-postgres
+    environment:
+      POSTGRES_USER: cora
+      POSTGRES_PASSWORD: cora
+      POSTGRES_DB: cora
+    ports:
+      - "${CORA_DRILL_PORT:-5433}:5432"
+    volumes:
+      # Mounted one level above PGDATA, matching infra/docker-compose.yml:
+      # the PG18 image places the cluster under /var/lib/postgresql/<major>/
+      # docker/ and its initdb wrapper needs to create that path itself.
+      - cora-drill-pg-data:/var/lib/postgresql
+      - cora-drill-pgbackrest-repo:/var/lib/pgbackrest
+      - ./pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+    # These are passed as command-line flags because a compose file is the
+    # natural place for them and the drill wants no extra mounted config.
+    # Do NOT copy that choice to a real host. Command-line settings outrank
+    # postgresql.conf AND ALTER SYSTEM, so on a cluster started this way
+    # `ALTER SYSTEM SET archive_command` succeeds, reloads, and changes
+    # nothing, which is the usual in-place fix when a full archive volume
+    # is taking the database down. It also silently defeats pgBackRest's
+    # `--archive-mode=off` restore option, which works by writing to
+    # postgresql.auto.conf. On a VM put these in postgresql.conf or a
+    # conf.d fragment. See pgbackrest.conf.
+    command:
+      - postgres
+      # archive_mode is the switch that makes point-in-time recovery
+      # possible at all. Without it a backup is a snapshot and the best
+      # any restore can do is return the database to the moment the
+      # backup ran. With it, every committed transaction between backups
+      # is recoverable, which is the difference between losing a night of
+      # beamtime and losing a scan.
+      - "-c"
+      - "archive_mode=on"
+      - "-c"
+      - "archive_command=pgbackrest --stanza=cora archive-push %p"
+      # archive_mode requires wal_level >= replica. It is already the
+      # PG18 default; stated explicitly because lowering it elsewhere
+      # would disable archiving silently.
+      - "-c"
+      - "wal_level=replica"
+      # This setting IS the recovery point objective, so it is worth
+      # reading as a number rather than a tunable. Postgres archives a
+      # WAL segment when it fills (16MB) or when archive_timeout expires,
+      # whichever comes first. CORA's event store is append-heavy but
+      # low-volume, so on a quiet beamline the fill condition may not
+      # arrive for a long time and the most recent events would sit
+      # unarchived until it did. At 60s the worst case is losing the last
+      # minute of events. Lower it if a minute of provenance is too much;
+      # the cost is one mostly-empty 16MB segment per interval.
+      - "-c"
+      - "archive_timeout=60"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cora -d cora"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # A one-shot container for the commands that must run while Postgres is
+  # STOPPED, which is every command in the restore path. It shares the
+  # data and repository volumes with the service above.
+  #
+  # Under `profiles` so `docker compose up` never starts it. Invoke as:
+  #   docker compose -f infra/backup/docker-compose.backup.yml \
+  #     run --rm pgbackrest --stanza=cora check
+  pgbackrest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cora-postgres-pgbackrest:dev
+    profiles: ["tools"]
+    user: postgres
+    volumes:
+      - cora-drill-pg-data:/var/lib/postgresql
+      - cora-drill-pgbackrest-repo:/var/lib/pgbackrest
+      - ./pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+    entrypoint: ["pgbackrest"]
+
+volumes:
+  cora-drill-pg-data:
+  cora-drill-pgbackrest-repo:

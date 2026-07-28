@@ -2,7 +2,7 @@
         test-noio test-db test-coverage store-durations diff-coverage fmt clean help \
         migrate-status migrate-apply migrate-new migrate-hash precommit precommit-run \
         arch-check arch-show docs-stage docs-build docs-serve openapi-snapshot \
-        mutmut-audit mutmut-browse
+        mutmut-audit mutmut-browse restore-drill
 
 API_DIR := apps/api
 COMPOSE := docker compose -f infra/docker-compose.yml
@@ -20,6 +20,7 @@ help:
 	@echo "  migrate-apply   Apply pending migrations to local DB"
 	@echo "  migrate-new     Generate a new migration skeleton (name=<short_name>)"
 	@echo "  migrate-hash    Recompute atlas.sum after editing migrations by hand"
+	@echo "  restore-drill   Destroy + restore a THROWAWAY cluster (:5433), verify the event store"
 	@echo "  lint            Run ruff check + format check"
 	@echo "  fmt             Run ruff format and auto-fix"
 	@echo "  typecheck       Run pyright (strict)"
@@ -193,6 +194,22 @@ migrate-new:
 
 migrate-hash:
 	cd $(ATLAS_DIR) && atlas migrate hash
+
+# Backup and point-in-time recovery drill. Stands up an ISOLATED cluster
+# (infra/backup/docker-compose.backup.yml, port 5433) with WAL archiving
+# on, destroys it, restores it to a chosen moment via pgBackRest, and
+# verifies the event store at the domain level: stream fold digests,
+# commit order, and the Atlas revision. The cluster it destroys is one it
+# created: the destructive step can reach only the drill's own volumes,
+# never `cora-pg-data` behind the dev database. Needs docker, atlas and
+# psql on PATH; takes a few minutes.
+#
+# Override the published port if 5433 is taken:
+#   CORA_DRILL_PORT=5439 make restore-drill
+#
+# See the Recovery section of docs/stack/deployment.md.
+restore-drill:
+	python3 scripts/restore_drill.py
 
 # `atlas migrate lint` was moved behind atlas-cloud login in v0.38; the
 # project deliberately skips that path. CI runs a narrow grep-based

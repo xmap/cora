@@ -386,6 +386,289 @@ The bootstrap seed stays on disk + in the event log forever; you can re-point at
 
 ## Recovery
 
+### Backup and point-in-time recovery
+
+CORA is described as the system of record for the experiment, and the
+Postgres event store is where that record physically lives: every Run,
+every provenance chain, every Decision. A system of record with no
+restore path is the one claim a facility reviewer can disprove in a
+single question, so this section describes a posture that has been
+executed rather than designed.
+
+**The tool is pgBackRest.** The candidates were pgBackRest, WAL-G, and a
+managed service. Managed Postgres is not available for an on-premises
+beamline deployment holding facility data, which leaves two, and the
+choice between them turns on who runs the restore. That person is a
+beamline scientist at an awkward hour, not a database administrator.
+
+| | pgBackRest | WAL-G |
+| --- | --- | --- |
+| Recovery configuration | Generated into `postgresql.auto.conf` by `restore` | Operator writes `recovery.signal` and `restore_command` by hand |
+| Point-in-time restore | One command with `--type=time --target=` | Assembled from several |
+| Verifying the setup | `check` forces a WAL segment through `archive_command` and confirms it reached the repository | `wal-verify` checks WAL history, not that `archive_command` works |
+| Repository targets | posix, cifs, sftp, s3, gcs, azure | Object stores, with local disk secondary |
+| Retention | Declared in config, applied automatically | Manual `delete` |
+
+The first row decides it. WAL-G asks a non-expert to hand-author Postgres
+recovery configuration at exactly the moment they are least equipped to,
+and a restore path that depends on remembering syntax is a restore path
+that fails when used. The last two rows matter for a different reason:
+retention that has to be remembered is retention that lapses, and the
+repository target is a single configuration key, so the backup
+destination can be decided later without changing one operator-facing
+command.
+
+`pg_dump` was not a candidate. It produces a snapshot, so the best any
+restore can do is return the database to the moment the dump ran. That is
+not point-in-time recovery, and for an append-only event store it means
+discarding every event since the last dump.
+
+#### What is configured
+
+Everything lives in `infra/backup/`: a Postgres image with pgBackRest
+installed (`Dockerfile`), the configuration (`pgbackrest.conf`), and an
+isolated stack used by the drill (`docker-compose.backup.yml`).
+
+The settings come in two halves, and an installation needs both. The
+first three belong to **PostgreSQL**, not to pgBackRest, so they are not
+in `pgbackrest.conf`: the drill stack sets them in its compose file, and a
+package-managed host sets them in `postgresql.conf` or a `conf.d`
+fragment. Copying `pgbackrest.conf` alone yields a cluster with no WAL
+archive, which is the one condition its own first row rules out.
+
+| Setting | Owner | Value | Why |
+| --- | --- | --- | --- |
+| `archive_mode` | PostgreSQL | `on` | Without it there is no point-in-time recovery, only snapshots |
+| `archive_command` | PostgreSQL | `pgbackrest --stanza=cora archive-push %p` | Ships each WAL segment as it closes |
+| `archive_timeout` | PostgreSQL | `60` | This is the recovery point objective. See below |
+| `repo1-retention-full` | pgBackRest | `4` | Roughly a month at the cadence below, chosen to outlive a beamtime cycle |
+| `compress-type` | pgBackRest | `zst` | jsonb payloads compress well, and zstd costs less CPU than gzip on the host running the beamline's record |
+
+Set the PostgreSQL three through a configuration file rather than the
+`postgres` command line. Command-line settings outrank both
+`postgresql.conf` and `ALTER SYSTEM`, so a cluster started that way
+cannot be adjusted without a restart, and pgBackRest's own
+`--archive-mode=off` restore option, which works by writing to
+`postgresql.auto.conf`, silently does nothing. The drill's compose file
+uses the command line anyway, for its own convenience, and says so.
+
+**`archive_timeout` is the recovery point objective, so read it as a
+number and not as a tunable.** Postgres ships a WAL segment when it fills
+(16MB) or when this timer expires, whichever comes first. CORA's event
+store is append-heavy but low-volume, so on a quiet beamline the fill
+condition may not arrive for a long time, and without a timer the newest
+events would sit unarchived until it did. A host loss at that point takes
+them. At 60 seconds the worst case is losing the last minute of events.
+The cost of lowering it is one mostly-empty 16MB segment per interval.
+
+Suggested cadence, which nothing currently automates (see the limits
+below): a full backup weekly, a differential daily.
+
+```bash
+pgbackrest --stanza=cora --type=full backup
+```
+
+```bash
+pgbackrest --stanza=cora --type=diff backup
+```
+
+#### Restoring
+
+Stop Postgres, run the command below, start Postgres. How you stop and
+start it depends on the host, which is why only the middle step is
+written out here. That middle step generates the recovery configuration
+itself, into `postgresql.auto.conf`, which is the reason this tool was
+chosen: there is nothing to hand-author while the beamline is down.
+
+```bash
+pgbackrest --stanza=cora --delta --type=time --target="2026-07-28 09:07:51+00" --target-action=promote restore
+```
+
+To recover everything rather than to a chosen moment, drop the `--type`
+and `--target` arguments. To see what is available first:
+
+```bash
+pgbackrest --stanza=cora info
+```
+
+**`--delta` is not optional in practice.** pgBackRest's own help says the
+data directory is "expected to be present but empty" without it, and a
+restore into a populated PGDATA aborts with `ERROR: [040]: unable to
+restore to path ... because it contains files`. Every real reason to
+reach for this runbook (corruption, a bad migration, a wrong-image
+deploy) leaves PGDATA fully populated, so a runbook without `--delta`
+fails at exactly the moment it is needed. `--delta` instead compares
+checksums and restores in place. It is also correct against an empty
+directory, which is why the drill runs this same command after wiping
+PGDATA; both paths are exercised.
+
+Two properties of the target are worth knowing before you need them.
+The backup set is selected by comparing its stop time to your target at
+**whole-second resolution**, and the stop time must be strictly earlier,
+so a target inside the same second as the backup finished is rejected
+with "unable to find backup set with stop time less than". Name a target
+at least a second later. And recovery stops at the first transaction that
+committed after the target, so the target should sit between the last
+event you want and the first you do not.
+
+#### After a point-in-time restore, before anything else
+
+`--target-action=promote` ends recovery and starts a **new timeline**,
+which branches from the target. Two consequences an operator has to act
+on, neither of which pgBackRest will prompt for:
+
+- **Take a full backup immediately.** The stanza now holds a branch
+  point, and later backups build on the new timeline.
+- **`recovery_target_timeline` defaults to `latest`.** So a SECOND
+  point-in-time restore after this one follows the branch by default,
+  not the original history. If you need to reach a moment on the
+  abandoned timeline, name it with `--target-timeline`. Its WAL is still
+  in the repository; it is just no longer the default path.
+
+And check the schema, which is the next subsection.
+
+#### The drill
+
+The restore path is exercised, not assumed:
+
+```bash
+make restore-drill
+```
+
+`scripts/restore_drill.py` stands up an isolated cluster on port 5433
+(override with `CORA_DRILL_PORT`), applies the real Atlas migrations,
+writes three known Run streams, deletes the contents of PGDATA, restores
+to a chosen moment, and verifies the result. It never touches the dev
+database on 5432.
+
+The three streams are what make the verification mean something:
+
+    Run A  ->  full backup  ->  Run B  ->  [target]  ->  Run C
+
+Run A is inside the base backup. Run B is written afterwards, so only
+replayed WAL can bring it back. Run C is written after the target and
+must not return. A snapshot-only strategy recovers Run A and fails both
+of the others.
+
+Verification is at the domain level, which event sourcing makes possible
+in a way most systems are not. "Postgres started" says nothing about
+whether the record survived, so for the two streams that should come back
+the drill hashes each one's ordered fold, in `version` order, the same
+order the evolver reads, and compares the digests across the restore. A
+restore that dropped, duplicated or reordered an event inside a stream
+changes the digest even when the row count does not move.
+
+Last executed 2026-07-28 against `pgvector/pgvector:pg18` and pgBackRest
+2.58.0, with all 8 checks passing: Run A and Run B recovered with
+matching fold digests and commit order intact, Run C absent, schema at
+revision `20260713000000`.
+
+Read the evidence at its real strength. Three of those checks carry the
+claim: Run B's event sequence and fold digest, which only replayed WAL
+can satisfy, and Run C's absence. The Run A pair would also pass under a
+snapshot-only strategy. The remaining three, the Atlas revision and the
+two commit-order checks, cannot fail in a state the drill constructs;
+they are regression guards, not evidence.
+
+The Run C check earns its place because the drill also asserts that Run
+C's WAL segment reached the repository before the restore. Without that,
+its later absence would be equally consistent with an archive that simply
+stopped early.
+
+#### Restoring an old backup under a newer image
+
+Migrations are applied out of band by Atlas (`make migrate-apply`), a Go
+binary that is deliberately not in the runtime image, and **nothing
+asserts the schema version at boot**. So restoring a backup taken before
+a migration, under an image built after it, starts a process that runs
+against a schema older than its code expects. There is no error at
+startup; the failure surfaces later as a missing column in whichever
+slice touches it first.
+
+Until a boot-time assertion exists, the restore procedure carries the
+check. After any restore, and before starting CORA against the restored
+database:
+
+```bash
+LOCAL_DB_URL="postgres://cora:cora@<restored-host>:<port>/cora?sslmode=disable" make migrate-status
+```
+
+The override matters: `make migrate-status` alone reads `LOCAL_DB_URL`,
+which defaults to the dev database on `localhost:5432`, so without it you
+would inspect the wrong cluster and learn nothing about the one you just
+restored.
+
+A restored database that is current reports `Migration Status: OK` with
+`Pending Files: 0`. One that predates a migration reports
+`Migration Status: PENDING` and counts the files it is missing, and the
+same override on `make migrate-apply` brings it forward. Migrations are
+forward-only, so this direction always works; a backup NEWER than the
+code has no equivalent remedy and means the wrong image is deployed.
+
+The drill checks the restored revision too, but scope that honestly: it
+migrates before it backs up, so its recovery targets all sit after every
+migration and that check cannot fail in a state the drill constructs. It
+confirms the schema came back with the data. It does not exercise the
+stale-schema case, which is why the command above is the real guard.
+Adding the assertion to the application's own boot path is the natural
+next step and is not done yet.
+
+#### Limits, stated plainly
+
+- **The repository target is not decided.** `repo1-type=posix` writes to
+  local disk, which survives a database being dropped, corrupted, or
+  wrongly migrated, and does not survive losing the host. It is the right
+  starting point and the wrong ending point. The tool does not change
+  when the target does: see the row in [Deferred](deferred.md).
+- **Deferring the target defers repository encryption, and that one has
+  a deadline.** Encryption is fixed when a stanza is created and cannot
+  be added afterwards without deleting the stanza and every backup in it.
+  Local disk on the database's own host is inside the same trust boundary
+  as PGDATA, so it is reasonable to run unencrypted today, but the
+  decision has to be made BEFORE the first backup at a shared or
+  off-site target, not after.
+- **Nothing schedules the backups, and that also means nothing expires
+  them.** There is no cron, timer, or operator in this repository, so the
+  cadence above is a recommendation and not a mechanism. Retention is
+  applied by pgBackRest when a backup FINISHES, not by a daemon, so a
+  deployment that never runs a backup also never reclaims anything and
+  the repository grows without bound. That lands on the next bullet by a
+  second route. Scheduling belongs with the orchestrator, which is also
+  still deferred.
+- **Nothing alerts on a failing archive.** When `archive_command` fails,
+  Postgres retains WAL rather than dropping it, so a broken archive
+  eventually fills the volume and takes the database down with it. Until
+  there is an alert, `pgbackrest --stanza=cora check` is the command that
+  answers whether archiving currently works, and it is worth running on a
+  schedule even before backups are.
+- **Nothing validates the repository.** pgBackRest checksums every file
+  it stores, but reading those checksums back is a separate command,
+  `pgbackrest --stanza=cora verify`, and nothing here runs it. Bit rot in
+  the repository would surface at the next restore, which is the worst
+  time to learn about it.
+- **The cluster's configuration files may not be in the backup.** pgBackRest
+  backs up PGDATA. In the container layout used here `postgresql.conf`
+  and `pg_hba.conf` live inside PGDATA and are included, but the
+  Debian and Ubuntu packaged layout puts them under `/etc/postgresql/`,
+  outside it. On that layout a host loss restores the data and loses the
+  configuration, `archive_command` included. Back up `/etc/postgresql/`
+  separately there.
+- **Postgres major versions are not interchangeable.** A PG18 cluster
+  will not start under a PG19 image, and the base image tag
+  (`pgvector/pgvector:pg18`) pins only the major. After any major
+  upgrade, `pgbackrest --stanza=cora stanza-upgrade` is required before
+  the next backup will succeed.
+- **The drill proves the mechanism, not the site.** It runs the real
+  tool, the real image, the real schema and a real destruction, but on a
+  Docker volume rather than on 2-BM's host and storage. Re-run it there
+  once the host is chosen; that run is what makes the claim local.
+- **Enable archiving and create the stanza together.** Postgres starts
+  archiving the moment it boots with `archive_mode=on`, so a cluster
+  brought up before `pgbackrest --stanza=cora stanza-create` logs a burst
+  of `FileMissingError` failures against `archive.info` and retains the
+  WAL it could not push. This is recoverable and looks alarming. Create
+  the stanza as part of bringing the cluster up.
+
 ### Bootstrap seed missing at startup
 
 If the boot gate succeeds but `TRUST_POLICY_ID` points at `SYSTEM_BOOTSTRAP_POLICY_ID` and the seed stream is missing, `create_app()` raises `RuntimeError` at lifespan start with a runbook pointer. Cause: stale DB, restored backup that missed the seed, manual SQL that deleted it.
@@ -427,6 +710,10 @@ This returns the sorted list of commands the named principal can run via the nam
 | Concern | Status | Trigger |
 | --- | --- | --- |
 | Container image | SHIPPED | `apps/api/Dockerfile`; see "Container image" above |
+| Backup and point-in-time recovery | SHIPPED | pgBackRest, `infra/backup/`, drill in `scripts/restore_drill.py`; see "Backup and point-in-time recovery" above |
+| Backup repository target | Deferred | Where the host can durably write. Carries two coupled decisions: a credential for the s3 and sftp targets (not for a mounted share), and repository encryption, which cannot be added after the first backup |
+| Backup scheduling and archive alerting | Deferred | Decided with the orchestrator, which is where a timer and an alert belong |
+| Schema-version assertion at boot | Deferred | Today the restore procedure carries this check, not the application. First restore of a backup that predates a migration |
 | Image registry | Deferred | Where the orchestrator pulls from; decided with the orchestrator |
 | Runtime orchestrator (k8s / Cloud Run / ECS / bare VMs) | Deferred | First non-local deployment |
 | Event-sourced `ActorIdpBindings` (JIT Actor provisioning) | Deferred | First case where adding an operator is too high-friction via config-time bindings |
