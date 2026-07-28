@@ -183,7 +183,29 @@ def test_readiness_body_leaks_no_deployment_detail() -> None:
         "app_env",
         "actuation",
         "llm",
+        "schema",
     }
+
+
+@pytest.mark.unit
+def test_readiness_body_defaults_schema_to_matched() -> None:
+    """The in-memory deployment runs no migrations and has nothing to
+    mismatch, so the absent argument must read as agreement rather than
+    as an unknown the probe reports."""
+    assert readiness_body("skipped", _settings())["schema"] == "matched"
+
+
+@pytest.mark.unit
+def test_readiness_body_reports_a_degraded_schema() -> None:
+    assert readiness_body("ok", _settings(), "degraded")["schema"] == "degraded"
+
+
+@pytest.mark.unit
+def test_degraded_schema_still_reports_ready() -> None:
+    """Reporting a degraded process unready would have an orchestrator
+    remove it from rotation, taking away the read access the override was
+    set to grant. Visible, not traffic-shaping."""
+    assert readiness_body("ok", _settings(), "degraded")["status"] == "ready"
 
 
 def _actuation_settings(*, writes: bool, substrate: str) -> Settings:

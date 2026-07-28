@@ -88,6 +88,7 @@ from cora.infrastructure.ports.federation import (
     PublishPort,
     SignaturePort,
 )
+from cora.infrastructure.schema_version import SchemaPosture
 
 
 @dataclass(frozen=True)
@@ -401,6 +402,14 @@ class Kernel:
     canonicalization_registry: CanonicalizationRegistry
     signing_registry: SigningRegistry
     pool: asyncpg.Pool | None = None
+    schema_posture: SchemaPosture = "matched"
+    """Whether the applied database schema is the one this build expects.
+
+    `degraded` means the process booted against a mismatched schema under
+    an explicit override and its `event_store` is a `ReadOnlyEventStore`.
+    Carried here so `/readyz` can report the posture: an operator who set
+    the override on one host should not have to remember they did.
+    """
     llm: LLM | None = None
     logbook_mirror: LogbookMirror | None = None
     token_verifier: TokenVerifier | None = None

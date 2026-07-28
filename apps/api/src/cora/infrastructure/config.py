@@ -126,6 +126,25 @@ class Settings(BaseSettings):
     # allowed, but only as a conscious one.
     allow_permissive_authz: bool = False
 
+    # Escape hatch for booting against a schema this build does not
+    # expect. Default false: `build_kernel` refuses to start when the
+    # applied migration version is not `EXPECTED_SCHEMA_VERSION`, which
+    # is the state a restore leaves behind (see
+    # `cora.infrastructure.schema_version`).
+    #
+    # Setting it True does NOT restore normal service. The process boots
+    # with its event store wrapped in `ReadOnlyEventStore`, so a restored
+    # database can be read and nothing can be appended to it. That
+    # asymmetry is the whole point: the event log is append-only, so a
+    # write against the wrong schema is history rather than a row to fix,
+    # while a read costs nothing.
+    #
+    # It does not cover a database with NO schema. An override meant for
+    # reading a restored database has nothing to offer an empty one, and
+    # letting it through would boot a process that reports an empty
+    # database as fine.
+    allow_schema_version_mismatch: bool = False
+
     # Federation / event-signing posture.
     # The signing seam ships with in-memory adapters by default: the
     # crypto-free `InMemorySignaturePort` (federation envelope sign /

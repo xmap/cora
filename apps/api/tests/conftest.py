@@ -40,6 +40,7 @@ import pytest_asyncio
 from hypothesis import HealthCheck, Verbosity, settings
 from testcontainers.postgres import PostgresContainer
 
+from cora.infrastructure.schema_version import parse_versions
 from tests._postgres import normalize_async_url
 
 os.environ.setdefault("APP_ENV", "test")
@@ -79,10 +80,34 @@ settings.load_profile("ci" if os.environ.get("CI") == "true" else "dev")
 _MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "infra" / "atlas" / "migrations"
 
 
+def _migration_files() -> list[Path]:
+    return sorted(_MIGRATIONS_DIR.glob("*.sql"))
+
+
 def _read_migration_statements() -> list[str]:
     """Read migration .sql files in order. Each file is executed as one batch."""
-    files = sorted(_MIGRATIONS_DIR.glob("*.sql"))
-    return [f.read_text() for f in files]
+    return [f.read_text() for f in _migration_files()]
+
+
+# Atlas's bookkeeping, which this fixture has to stand in for.
+#
+# The suite applies migrations by executing the .sql files directly and
+# never runs Atlas, so nothing here creates the revisions table Atlas
+# writes when IT applies them. That gap is invisible until something
+# reads the table: `build_kernel` checks the applied schema version at
+# boot, and without this the whole suite would take the never-migrated
+# branch and the check would ship never having run in its real mode.
+#
+# Only the column CORA reads is declared. A fuller replica of Atlas's
+# table would mean guessing at columns nothing here uses, and a wrong
+# guess is worse than an honest subset: test databases are built by this
+# fixture and never handed to Atlas.
+_ATLAS_REVISIONS_DDL = """
+CREATE SCHEMA IF NOT EXISTS atlas_schema_revisions;
+CREATE TABLE IF NOT EXISTS atlas_schema_revisions.atlas_schema_revisions (
+    version text PRIMARY KEY
+);
+"""
 
 
 @pytest.fixture(scope="session")
@@ -113,6 +138,11 @@ async def template_database(postgres_container: PostgresContainer) -> str:
     try:
         for sql in _read_migration_statements():
             await conn.execute(sql)
+        await conn.execute(_ATLAS_REVISIONS_DDL)
+        await conn.executemany(
+            "INSERT INTO atlas_schema_revisions.atlas_schema_revisions (version) VALUES ($1)",
+            [(version,) for version in parse_versions(_migration_files())],
+        )
     finally:
         await conn.close()
 

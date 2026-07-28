@@ -1199,7 +1199,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
         """
         request_deps = getattr(request.app.state, "deps", None)
         database = await probe_database(request_deps.pool if request_deps else None)
-        body = readiness_body(database, settings)
+        body = readiness_body(
+            database,
+            settings,
+            request_deps.schema_posture if request_deps else "matched",
+        )
         if body["status"] != "ready":
             response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
             # k8s ignores Retry-After on probes; it is here for humans

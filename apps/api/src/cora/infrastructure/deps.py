@@ -126,6 +126,8 @@ from cora.infrastructure.ports import (
     UUIDv7Generator,
 )
 from cora.infrastructure.postgres.pool import create_pool
+from cora.infrastructure.read_only_event_store import ReadOnlyEventStore
+from cora.infrastructure.schema_version import SchemaPosture, verify_schema_version
 
 
 class AuthorizeFactory(Protocol):
@@ -199,6 +201,7 @@ def make_postgres_kernel(
     publish_port: "PublishPort | None" = None,
     signature_port: "SignaturePort | None" = None,
     permit_lookup: "PermitLookup | None" = None,
+    schema_posture: SchemaPosture = "matched",
 ) -> Kernel:
     """Postgres-backed Kernel primitive.
 
@@ -215,6 +218,15 @@ def make_postgres_kernel(
     test convenience. Production passes the prebuilt instances so
     they're shared with the authorize_factory (chicken-and-egg:
     `authorize` needs `event_store` before the Kernel is constructed).
+
+    `schema_posture` REPORTS what the caller already decided; it does not
+    enforce anything here. `build_kernel` is what checks the applied
+    schema version and wraps the store in `ReadOnlyEventStore` before
+    handing it over, so passing `"degraded"` alongside the default
+    `event_store=None` yields a degraded posture over a WRITABLE store.
+    Nothing in production does that (build_kernel always passes both
+    together), and this parameter exists so the posture reaches
+    `/readyz`, not as a second way to turn writes off.
 
     `clearance_lookup` defaults to `AlwaysCoveredClearanceLookup` (the
     test-bypass stub) so existing Run integration tests don't have to
@@ -350,6 +362,7 @@ def make_postgres_kernel(
         clock=clock,
         id_generator=id_generator,
         authz=authz,
+        schema_posture=schema_posture,
         event_store=event_store if event_store is not None else PostgresEventStore(pool),
         idempotency_store=(
             idempotency_store if idempotency_store is not None else PostgresIdempotencyStore(pool)
@@ -1185,7 +1198,18 @@ async def build_kernel(
         min_size=settings.db_pool_min_size,
         max_size=settings.db_pool_max_size,
     )
+    # Before anything can write. A mismatched schema is what a restore
+    # leaves behind, and an append made against one is history rather
+    # than a row to correct later. Raising here fails the lifespan, which
+    # exits the process with the remedy on stderr.
+    schema = await verify_schema_version(
+        pool, allow_mismatch=settings.allow_schema_version_mismatch
+    )
     pg_event_store: EventStore = PostgresEventStore(pool)
+    if schema.posture == "degraded":
+        pg_event_store = ReadOnlyEventStore(
+            pg_event_store, applied=schema.applied, expected=schema.expected
+        )
     pg_idempotency_store: IdempotencyStore = PostgresIdempotencyStore(pool)
     authz = authorize_factory(
         settings,
@@ -1284,6 +1308,7 @@ async def build_kernel(
         clock=clock,
         id_generator=id_generator,
         authz=authz,
+        schema_posture=schema.posture,
         event_store=pg_event_store,
         idempotency_store=pg_idempotency_store,
         clearance_lookup=clearance_lookup,

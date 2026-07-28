@@ -12,6 +12,7 @@ The load-bearing auth vars (full list in `.env.example`):
 | `TRUST_POLICY_ID` | unset → `AllowAllAuthorize` | When you want real authz. In a production-tier env (`prod`/`production`/`staging`) it is required unless `ALLOW_PERMISSIVE_AUTHZ=true` (see below) |
 | `REQUIRE_AUTHENTICATED_PRINCIPAL` | `false` | Must be `true` whenever `TRUST_POLICY_ID` is set, and in any production-tier env (the boot gate refuses otherwise; see below) |
 | `ALLOW_PERMISSIVE_AUTHZ` | `false` | Production-tier escape hatch: set `true` to run the permit-everyone `AllowAllAuthorize` stub on purpose in a `prod`/`production`/`staging` env (airgapped / single-operator pilot) |
+| `ALLOW_SCHEMA_VERSION_MISMATCH` | `false` | Boot against a schema this build does not expect, with all writes refused, to read a restored database. Not a way to run a mismatched deployment: see [Restoring an old backup under a newer image](#restoring-an-old-backup-under-a-newer-image) |
 | `IDENTITY_PROVIDERS` | unset → legacy `X-Principal-Id` header mode | JSON list of `IdentityProviderConfig` entries (see [Auth](auth.md)); enables bearer-token mode at the HTTP edge |
 | `LLM_ENABLED` | `false` → CORA calls no external model | The switch for the egress + spend axis. Required (with the key) for RunDebriefer / CautionDrafter |
 | `ANTHROPIC_API_KEY` | unset → AI subscribers skipped | The credential. Setting it alone changes nothing; `LLM_ENABLED` decides |
@@ -578,16 +579,29 @@ stopped early.
 #### Restoring an old backup under a newer image
 
 Migrations are applied out of band by Atlas (`make migrate-apply`), a Go
-binary that is deliberately not in the runtime image, and **nothing
-asserts the schema version at boot**. So restoring a backup taken before
-a migration, under an image built after it, starts a process that runs
-against a schema older than its code expects. There is no error at
-startup; the failure surfaces later as a missing column in whichever
-slice touches it first.
+binary that is deliberately not in the runtime image. So restoring a
+backup taken before a migration, under an image built after it, leaves a
+database whose schema is older than the code expects.
 
-Until a boot-time assertion exists, the restore procedure carries the
-check. After any restore, and before starting CORA against the restored
-database:
+**CORA refuses to start in that state.** `build_kernel` reads the applied
+migration version out of Atlas's own bookkeeping before it constructs
+anything that can write, and compares it against the version the build
+was written for. A mismatch fails the lifespan, which exits the process
+with the two versions and the remedy on stderr. The two directions get
+different remedies, because only one of them has one: a database BEHIND
+the build is fixed by applying migrations, while a database AHEAD of it
+cannot be, since forward-only means there is nothing to apply and the
+answer is to run the right image.
+
+That check exists because the failure it prevents is quiet rather than
+loud. A missing column crashes and gets noticed. A migration that added a
+CONSTRAINT, absent after a restore, leaves every write succeeding and
+admits exactly the records the constraint existed to reject, into an
+append-only log where they become history rather than rows to correct.
+
+The check runs at boot, so the command below is now a way to see the same
+answer before starting, and to see WHICH files are pending rather than
+just that some are. After any restore:
 
 ```bash
 LOCAL_DB_URL="postgres://cora:cora@<restored-host>:<port>/cora?sslmode=disable" make migrate-status
@@ -608,10 +622,38 @@ code has no equivalent remedy and means the wrong image is deployed.
 The drill checks the restored revision too, but scope that honestly: it
 migrates before it backs up, so its recovery targets all sit after every
 migration and that check cannot fail in a state the drill constructs. It
-confirms the schema came back with the data. It does not exercise the
-stale-schema case, which is why the command above is the real guard.
-Adding the assertion to the application's own boot path is the natural
-next step and is not done yet.
+confirms the schema came back with the data. The stale-schema case it
+cannot reach is the one the boot gate covers.
+
+##### Reading a restored database without migrating it
+
+Sometimes the point of a restore is to look at old data, not to bring it
+forward. Setting `ALLOW_SCHEMA_VERSION_MISMATCH=true` boots against a
+mismatched schema instead of refusing, with the event store wrapped so
+that every append raises and reads still work. `/readyz` reports
+`"schema": "degraded"` for as long as the process runs that way.
+
+Scope that precisely: what the override protects is the **event log**,
+not every write. Each bounded context builds its own Postgres-backed
+stores from the pool (inferences, activities, outcomes, observations,
+and the projection workers), and those are not wrapped. The ordering is
+deliberate rather than accidental: the event log is the append-only
+record of truth and cannot be corrected once written, while everything
+else is derived state a rebuild reconstructs from it. Protect the
+irreversible thing first.
+
+The asymmetry is the point: reading a database with the wrong schema
+costs nothing, and writing to one cannot be undone. The override buys
+inspection and never damage, so it is not a way to run a mismatched
+deployment in production. `/readyz` keeps reporting `ready`, deliberately:
+a degraded process serves reads correctly, and marking it unready would
+have an orchestrator pull it from rotation and remove the access the
+override was set to grant.
+
+It does not cover a database with no schema at all. An override meant for
+reading a restored database has nothing to offer an empty one, and
+letting it through would boot a process that reports an empty database as
+serviceable.
 
 #### Limits, stated plainly
 

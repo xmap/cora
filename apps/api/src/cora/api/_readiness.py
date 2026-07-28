@@ -51,6 +51,7 @@ import asyncpg
 
 if TYPE_CHECKING:
     from cora.infrastructure.config import Settings
+    from cora.infrastructure.schema_version import SchemaPosture
 
 DatabaseStatus = Literal["ok", "unreachable", "saturated", "closing", "skipped", "error"]
 """What the probe learned about Postgres. `skipped` means this
@@ -227,7 +228,11 @@ def derive_llm(settings: Settings) -> LlmReach:
     return "live" if settings.llm_enabled and settings.anthropic_api_key is not None else "off"
 
 
-def readiness_body(database: DatabaseStatus, settings: Settings) -> dict[str, str]:
+def readiness_body(
+    database: DatabaseStatus,
+    settings: Settings,
+    schema: SchemaPosture = "matched",
+) -> dict[str, str]:
     """Render the probe result. Fixed vocabulary, no free text.
 
     `app_env` is here because `test` builds an in-memory kernel with no
@@ -244,6 +249,15 @@ def readiness_body(database: DatabaseStatus, settings: Settings) -> dict[str, st
     of it describes the deployment to anyone who can reach it. `actuation`
     is a scalar for exactly this reason: it says inert-or-reachable, not
     WHICH prefixes are writable. The logs carry the detail.
+
+    `schema` reports whether this process booted against the schema it
+    expects, and `degraded` deliberately does NOT make the status
+    `not_ready`. A degraded process serves reads correctly, which is the
+    entire reason it was allowed to start; reporting it unready would
+    have an orchestrator pull it from rotation and so remove the access
+    the override existed to grant. That is the same self-locking shape
+    the projection-health note above rejects. It is visible, and it is
+    not traffic-shaping.
     """
     return {
         "status": "ready" if database in ("ok", "skipped") else "not_ready",
@@ -251,6 +265,7 @@ def readiness_body(database: DatabaseStatus, settings: Settings) -> dict[str, st
         "app_env": settings.app_env,
         "actuation": derive_actuation(settings),
         "llm": derive_llm(settings),
+        "schema": schema,
     }
 
 
