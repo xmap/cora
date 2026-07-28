@@ -333,9 +333,9 @@ def make_postgres_kernel(
 
     `llm` defaults to `None` because most BCs and tests don't need
     an LLM; only Agent BC subscribers consume it. Production's
-    `build_kernel` injects `AnthropicLLM` when
-    `Settings.anthropic_api_key` is set; subscriber-level tests
-    inject `FakeLLM` explicitly.
+    `build_kernel` injects `AnthropicLLM` when both
+    `Settings.llm_enabled` and `Settings.anthropic_api_key` are
+    set; subscriber-level tests inject `FakeLLM` explicitly.
 
     `logbook_mirror` defaults to `None`; no production implementor
     exists yet. Subscribers short-circuit on `None`.
@@ -1056,7 +1056,8 @@ class LLMFactory(Protocol):
 
     Agent BC's `cora.agent.adapters.AnthropicLLM` is the
     only production factory today; `cora.api.main` binds it when
-    `Settings.anthropic_api_key` is set. Same factory-injection
+    BOTH `Settings.llm_enabled` (the switch, default off) and
+    `Settings.anthropic_api_key` (the credential) are set. Same factory-injection
     shape as `AuthorizeFactory` / `ClearanceLookupFactory` /
     `CautionLookupFactory` so `cora.infrastructure.deps` doesn't
     import from any BC (tach module rule:
@@ -1066,9 +1067,11 @@ class LLMFactory(Protocol):
     factory can read provider-specific options (timeouts,
     max_retries, base URL overrides) without growing the factory
     surface every time. The factory's `__call__` returns `None`
-    when settings indicate no LLM should be wired (eg.
-    `anthropic_api_key` unset) so the Kernel ends up with
-    `llm=None` and Agent subscribers fail-fast at registration.
+    when settings indicate no LLM should be wired (the switch off,
+    or no credential) so the Kernel ends up with `llm=None`. The
+    LLM-backed Agent subscribers then log a warning and SKIP
+    registration; they do not fail-fast, so a deployment may defer
+    Agent rollout without refusing to boot.
     """
 
     def __call__(

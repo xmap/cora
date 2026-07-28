@@ -14,10 +14,11 @@ carries `llm=None` and no external model is ever called.
 `llm=None` is a fully supported state, not a degraded one: every
 consumer already handles it because the key-absent case always
 produced it. The LLM-backed subscribers log-and-skip
-(`cora.agent._subscribers`), `regenerate_run_debrief` answers
-unavailable, and a conduct command that explicitly asks for the `llm`
-decide substrate gets a `ValueError` mapped to HTTP 422 at
-construction, before any FSM transition.
+(`cora.agent._subscribers`) and `regenerate_run_debrief` answers
+unavailable. The `llm` decide substrate cannot be selected by a remote
+caller at all (`WireDecideSubstrate` admits only `in_memory` and
+`grid_walk`), so `build_decide_port`'s `llm is None` guard is an
+internal-caller guard, not a request-reachable path.
 
 (An earlier version of this docstring claimed subscriber registration
 "fail-fasts" on `kernel.llm is None`. It does not, and never did:
@@ -59,4 +60,28 @@ def build_llm(settings: Settings) -> LLM | None:
     return AnthropicLLM(api_key=settings.anthropic_api_key.get_secret_value())
 
 
-__all__ = ["build_llm"]
+def llm_unwired_reason(settings: Settings) -> str:
+    """Say WHICH of the two settings left `kernel.llm` unwired.
+
+    One source of truth for every surface that has to explain the
+    unwired state: the subscriber-registration warning, the REST 503
+    body, and the MCP tool's error. They must agree, and each must send
+    the operator to the remedy that actually applies. Naming the
+    credential when the switch is simply off is the more likely mistake
+    now, because off is the default.
+
+    Callers are expected to have already established that the LLM is
+    unwired; this only explains why.
+    """
+    if not settings.llm_enabled:
+        return (
+            "LLM_ENABLED is false, so this deployment calls no external model. "
+            "Set LLM_ENABLED=true (and ANTHROPIC_API_KEY) to turn the LLM features on."
+        )
+    return (
+        "LLM_ENABLED is true but ANTHROPIC_API_KEY is not configured. "
+        "Supply the credential and restart."
+    )
+
+
+__all__ = ["build_llm", "llm_unwired_reason"]

@@ -898,7 +898,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             register_agent_projections(registry, deps)
             # side-effecting Agent BC subscribers
             # (RunDebriefer). Conditional: only registered when
-            # `kernel.llm` is wired (ANTHROPIC_API_KEY configured).
+            # `kernel.llm` is wired, which needs LLM_ENABLED (default
+            # off) AND ANTHROPIC_API_KEY.
             register_agent_subscribers(registry, deps)
             # budget BC's deterministic CampaignClosed -> seal reaction;
             # unconditional (bookkeeping must not depend on an LLM key).

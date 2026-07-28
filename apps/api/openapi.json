@@ -18383,7 +18383,7 @@
                 }
               }
             },
-            "description": "RunDebriefer subscriber is not wired (ANTHROPIC_API_KEY unset)."
+            "description": "RunDebriefer is not wired (LLM_ENABLED off, the default, or no ANTHROPIC_API_KEY). The body names which."
           }
         },
         "summary": "Re-invoke RunDebriefer on demand against a specific Run.",

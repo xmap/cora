@@ -94,8 +94,8 @@ def register_agent_tools(
     # regenerate_run_debrief handler is Optional in the bundle
     # (None when kernel.llm is unwired). The tool's lambda dereferences
     # at call time and raises a RuntimeError to surface as MCP isError;
-    # this matches the REST 503 semantics. Production deploys with
-    # ANTHROPIC_API_KEY set never hit the None branch.
+    # this matches the REST 503 semantics. Deploys reach the None branch
+    # whenever LLM_ENABLED is off (the default) or the key is unset.
     regenerate_run_debrief_tool.register(
         mcp,
         get_handler=lambda: _resolve_regenerate_run_debrief(get_handlers()),
@@ -134,9 +134,15 @@ def _resolve_regenerate_run_debrief(handlers: AgentHandlers) -> RegenerateRunDeb
     """Dereference the Optional regenerate_run_debrief handler with a loud
     failure when unwired. Mirrors the REST route's 503 path."""
     if handlers.regenerate_run_debrief is None:
+        # Names BOTH settings rather than deriving which one applies:
+        # this resolver has no Settings in scope (the tool registry is
+        # wired from handlers alone), and threading one through to word a
+        # message would widen the registration signature. The REST 503,
+        # which does have Settings, names the specific one.
         msg = (
-            "regenerate_run_debrief is unavailable: kernel.llm is not wired "
-            "(ANTHROPIC_API_KEY not configured)."
+            "regenerate_run_debrief is unavailable: kernel.llm is not wired. "
+            "It requires BOTH LLM_ENABLED=true (default false) and "
+            "ANTHROPIC_API_KEY."
         )
         raise RuntimeError(msg)
     return handlers.regenerate_run_debrief

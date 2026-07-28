@@ -170,8 +170,8 @@ every pod into an outage the restart cannot mend, converting one
 database blip into a fleet-wide crash loop.
 
 `/readyz` returns 200 `{"status": "ready", ...}` or 503
-`{"status": "not_ready", "database": "..."}`, plus an `actuation` field
-on both (see below). `database` is a fixed vocabulary: `ok`,
+`{"status": "not_ready", "database": "..."}`, plus `actuation` and `llm`
+fields on both (see below). `database` is a fixed vocabulary: `ok`,
 `unreachable`, `saturated`, `closing`, `skipped` (this deployment has no
 pool, the in-memory kernel), `error`. The body carries no URLs, no
 driver error text, and no projection or bounded context names: it is
@@ -226,6 +226,11 @@ promises, and they now have a switch and a summary of their own.
 credential. Both are required before CORA calls an external model, and
 `/readyz` reports the effective state as `llm`, either `off` or `live`,
 with a matching `boot.llm_posture` line at startup.
+
+**Upgrading:** a deployment that ran the LLM subscribers on
+`ANTHROPIC_API_KEY` alone must now also set `LLM_ENABLED=true`, or those
+two subscribers stop registering. Nothing breaks and nothing crashes; a
+boot warning names the switch, and `GET /readyz` reports `"llm": "off"`.
 
 The switch exists because the credential alone used to be enough. A key
 present in the environment for an unrelated reason silently registered

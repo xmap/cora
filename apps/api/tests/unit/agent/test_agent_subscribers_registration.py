@@ -146,8 +146,11 @@ def test_skip_warning_names_the_switch_when_the_llm_is_turned_off() -> None:
     not read a warning telling it a credential is missing."""
     reason = _skip_reason(_kernel(llm=None, llm_enabled=False))
 
-    assert "llm_enabled is False" in reason
-    assert "ANTHROPIC_API_KEY" not in reason
+    # Names the switch as the CAUSE. It may still mention the key as part
+    # of the remedy (turning the LLM on needs both), but it must not tell
+    # a deliberately-off deployment that its credential is missing.
+    assert "LLM_ENABLED is false" in reason
+    assert "ANTHROPIC_API_KEY is not configured" not in reason
 
 
 @pytest.mark.unit
@@ -156,3 +159,4 @@ def test_skip_warning_names_the_credential_when_the_switch_is_on() -> None:
     reason = _skip_reason(_kernel(llm=None, llm_enabled=True))
 
     assert "ANTHROPIC_API_KEY is not configured" in reason
+    assert "LLM_ENABLED is true" in reason

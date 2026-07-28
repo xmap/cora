@@ -68,6 +68,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cora.agent.build_llm import llm_unwired_reason
 from cora.agent.subscribers.authority_revocation_holder import (
     make_authority_revocation_holder_subscriber,
 )
@@ -136,19 +137,10 @@ def register_agent_subscribers(registry: ProjectionRegistry, deps: Kernel) -> No
         )
 
     if deps.llm is None:
-        # Name the ACTUAL reason. There are two, they call for opposite
-        # remedies (turn the switch on vs supply a credential), and a
-        # deployment that deliberately runs LLM-off should not read a
-        # warning telling it a key is missing.
-        reason = (
-            "llm_enabled is False (this deployment does not call an external model)"
-            if not deps.settings.llm_enabled
-            else "llm_enabled is True but ANTHROPIC_API_KEY is not configured"
-        )
         _log.warning(
             "agent_subscriber.skipped",
             subscribers=["run_debriefer", "caution_drafter"],
-            reason=reason,
+            reason=llm_unwired_reason(deps.settings),
         )
         return
 

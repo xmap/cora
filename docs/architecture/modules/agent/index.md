@@ -36,7 +36,7 @@ The runtime that drives an agent takes one of three host shapes:
 | ProcedureWatcher | deterministic | periodic loop | writes a `ProcedureProgress` (Stall) flag Decision (passive) |
 | CampaignWatcher | deterministic | periodic loop | writes a `CampaignProgress` (Stuck) flag Decision (passive) |
 
-The active runtimes (RunSupervisor, CautionPromoter, ClearanceExpirer) ship off by default, gate every actuation through the Authorize port like any principal, and stand down the moment their Actor is deactivated. None of them reaches past the spine onto the real-time floor: an active agent only issues a command the spine already exposes. ClearanceWatcher, CalibrationWatcher, ProcedureWatcher, and CampaignWatcher are passive (each records a flag Decision and issues no command) and likewise ship off by default. RunSupervisor additionally carries shadow observe-only rules (run-liveness, plus signal-quality and signal-stall against a live Run's observation channels) that log a would-flag and take no further action; each is a separate opt-in above the agent's own enable, and advise / act promotions are deferred.
+The active runtimes (RunSupervisor, CautionPromoter, ClearanceExpirer) ship off by default, gate every actuation through the Authorize port like any principal, and stand down the moment their Actor is deactivated. None of them reaches past the spine onto the real-time floor: an active agent only issues a command the spine already exposes. ClearanceWatcher, CalibrationWatcher, ProcedureWatcher, and CampaignWatcher are passive (each records a flag Decision and issues no command) and likewise ship off by default. The two LLM-backed reactions (RunDebriefer, CautionDrafter) also ship off by default, behind `LLM_ENABLED`: they are the seam that would send experiment metadata to an external model and spend on it, so the switch and a credential are both required before either registers. RunSupervisor additionally carries shadow observe-only rules (run-liveness, plus signal-quality and signal-stall against a live Run's observation channels) that log a would-flag and take no further action; each is a separate opt-in above the agent's own enable, and advise / act promotions are deferred.
 
 <div class="cora-aside cora-aside--deferred" markdown>
 
@@ -297,7 +297,7 @@ The four examples below follow the canonical path for one Agent: define it (atom
     }
     ```
 
-    Triggers a fresh RunDebriefer invocation against the named Run and returns `201 Created` with the new `decision_id`. When `parent_decision_id` is supplied, the new Decision links back to the prior debrief via PROV-O `wasInformedBy`. Returns `503 Service Unavailable` when the LLM adapter is not wired (development environment without an API key).
+    Triggers a fresh RunDebriefer invocation against the named Run and returns `201 Created` with the new `decision_id`. When `parent_decision_id` is supplied, the new Decision links back to the prior debrief via PROV-O `wasInformedBy`. Returns `503 Service Unavailable` when the LLM adapter is not wired (`LLM_ENABLED` off, the default, or no API key); the body names which one applies.
 
 === "MCP"
 

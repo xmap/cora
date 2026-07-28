@@ -86,7 +86,7 @@ Private `_*.py` modules stay flat at the BC root by default; the naming prefix (
 
 Both re-export their public surface, so consumers import from the package (`from cora.equipment._pidinst import PidinstRecord`), not the submodules. The canonical shared-pattern files (`_bootstrap.py`, `_projections.py`, `_<aggregate>_update_handler.py`) stay flat for cross-BC consistency. Grouping the DTOs by aggregate was rejected: the shared VOs have no single aggregate owner, so per-aggregate files would force false ownership.
 
-**Capability-dependent handlers.** When a slice depends on an external capability that may be unwired in some deployments (today: `regenerate_run_debrief` needs `kernel.llm`, which is `None` when `ANTHROPIC_API_KEY` isn't configured), the handler bundle types the field as `Handler | None`. The route guards on `None` and raises `HTTPException(503)` inline; this is the only documented exception to the "command-slice routes don't wrap handler calls" rule. Pinned by `test_route_no_inline_http_exception.py`'s `GRANDFATHERED_COMMAND_ROUTES` allowlist.
+**Capability-dependent handlers.** When a slice depends on an external capability that may be unwired in some deployments (today: `regenerate_run_debrief` needs `kernel.llm`, which is `None` unless both `LLM_ENABLED` and `ANTHROPIC_API_KEY` are set), the handler bundle types the field as `Handler | None`. The route guards on `None` and raises `HTTPException(503)` inline; this is the only documented exception to the "command-slice routes don't wrap handler calls" rule. Pinned by `test_route_no_inline_http_exception.py`'s `GRANDFATHERED_COMMAND_ROUTES` allowlist.
 
 ### Aggregate-internal shared modules
 

@@ -17,6 +17,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request, status
 from pydantic import BaseModel, Field
 
+from cora.agent.build_llm import llm_unwired_reason
 from cora.agent.features.regenerate_run_debrief.command import RegenerateRunDebrief
 from cora.agent.features.regenerate_run_debrief.handler import IdempotentHandler
 from cora.infrastructure.routing import (
@@ -53,9 +54,8 @@ def _get_handler(request: Request) -> IdempotentHandler:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=(
-                "regenerate_run_debrief is unavailable: kernel.llm is not wired "
-                "(ANTHROPIC_API_KEY not configured). Configure the API key "
-                "and restart, or use the test FakeLLM for non-prod."
+                f"regenerate_run_debrief is unavailable: kernel.llm is not wired. "
+                f"{llm_unwired_reason(request.app.state.deps.settings)}"
             ),
         )
     return handler
@@ -89,7 +89,10 @@ router = APIRouter(tags=["agent"])
         },
         status.HTTP_503_SERVICE_UNAVAILABLE: {
             "model": ErrorResponse,
-            "description": ("RunDebriefer subscriber is not wired (ANTHROPIC_API_KEY unset)."),
+            "description": (
+                "RunDebriefer is not wired (LLM_ENABLED off, the default, or no "
+                "ANTHROPIC_API_KEY). The body names which."
+            ),
         },
     },
     summary="Re-invoke RunDebriefer on demand against a specific Run.",

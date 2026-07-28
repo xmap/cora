@@ -188,9 +188,10 @@ class Settings(BaseSettings):
     # Turning this off is graceful, never a crash: `build_llm` returns
     # None, and every consumer already treats `llm=None` as a supported
     # state because the key-absent case always produced it. The
-    # LLM-backed subscribers log-and-skip, `regenerate_run_debrief`
-    # answers unavailable, and a conduct command that explicitly asks for
-    # the `llm` decide substrate gets a 422.
+    # LLM-backed subscribers log-and-skip and `regenerate_run_debrief`
+    # answers unavailable. The `llm` decide substrate is not selectable
+    # over the wire at all, so its factory guard is an internal-caller
+    # guard rather than a request-reachable path.
     llm_enabled: bool = False
 
     # LLM provider — Agent BC wiring
