@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 
 import cora.api.main as api_main
 from cora.api.main import create_app
+from cora.infrastructure.config import Settings
 
 
 @pytest.mark.contract
@@ -31,16 +32,30 @@ def test_readyz_reports_ready_200_with_no_pool() -> None:
 
 
 @pytest.mark.contract
-def test_readyz_surfaces_the_actuation_posture() -> None:
+def test_readyz_reports_inert_for_an_observe_only_deployment() -> None:
     """The observe-only claim a facility can curl without credentials.
 
-    The test env enables control writes (see conftest), so this app reports
-    `reachable`; the point under test is that the field is present and
-    end-to-end from settings through the route, not its value here.
+    Settings are INJECTED rather than read from the process env, for two
+    reasons: conftest enables control writes for the suite (so an
+    env-derived app would report `reachable` and could not show this), and
+    injection pins the value end-to-end from settings through the route,
+    which a vocabulary check could not distinguish from a hardcode.
     """
-    with TestClient(create_app()) as client:
+    observe_only = Settings(
+        app_env="test", control_writes_enabled=False, compute_substrate="in_memory"
+    )
+    with TestClient(create_app(settings=observe_only)) as client:
         body = client.get("/readyz").json()
-    assert body["actuation"] in ("inert", "reachable")
+    assert body["actuation"] == "inert"
+
+
+@pytest.mark.contract
+def test_readyz_reports_reachable_when_control_writes_are_enabled() -> None:
+    """The other direction, so a hardcoded `inert` cannot pass."""
+    writable = Settings(app_env="test", control_writes_enabled=True, compute_substrate="in_memory")
+    with TestClient(create_app(settings=writable)) as client:
+        body = client.get("/readyz").json()
+    assert body["actuation"] == "reachable"
 
 
 @pytest.mark.contract

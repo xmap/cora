@@ -56,34 +56,67 @@ def _qualified(path: Path) -> str:
     return str(path.relative_to(_API_ROOT))
 
 
-def _construction_lines(tree: ast.AST) -> dict[str, list[int]]:
-    """Line numbers where a dormant seam is CONSTRUCTED (a bare-Name call).
+def _alias_names(tree: ast.AST) -> dict[str, str]:
+    """Local name -> dormant class, for `from ... import X as Y` forms.
 
-    `FdtTransferPort(...)` counts; an import or a type annotation does not.
+    Without this an aliased import (`import GlobusComputePort as _G`, then
+    `_G(...)`) constructs a seam under a name the bare scan never sees.
     """
+    aliases: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom | ast.Import):
+            continue
+        for imported in node.names:
+            if imported.name in _DORMANT_OUTBOUND and imported.asname:
+                aliases[imported.asname] = imported.name
+    return aliases
+
+
+def _construction_lines(tree: ast.AST) -> dict[str, list[int]]:
+    """Line numbers where a dormant seam is CONSTRUCTED.
+
+    Counts three call shapes, because a guard that only sees the obvious
+    one is a guard someone routes around without meaning to:
+
+      - bare name: `FdtTransferPort(...)`
+      - attribute: `adapters.FdtTransferPort(...)`
+      - aliased import: `from ... import FdtTransferPort as _F` then `_F(...)`
+
+    An import alone, a type annotation, and a `class X:` definition do not
+    count; only a call does.
+    """
+    aliases = _alias_names(tree)
     hits: dict[str, list[int]] = {}
     for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id in _DORMANT_OUTBOUND
-        ):
-            hits.setdefault(node.func.id, []).append(node.lineno)
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name: str | None = None
+        if isinstance(func, ast.Name):
+            if func.id in _DORMANT_OUTBOUND:
+                name = func.id
+            elif func.id in aliases:
+                name = aliases[func.id]
+        elif isinstance(func, ast.Attribute) and func.attr in _DORMANT_OUTBOUND:
+            name = func.attr
+        if name is not None:
+            hits.setdefault(name, []).append(node.lineno)
     return hits
 
 
 def _candidate_files() -> list[Path]:
-    """Tracked src files that textually mention any dormant seam with a `(`.
+    """Tracked src files that textually mention any dormant seam.
 
-    Cheap heuristic; the AST scan below confirms a real call. The class
-    definition files themselves mention the name at `class X:` (no `X(`
-    call), so they do not become candidates.
+    Cheap heuristic; the AST scan confirms a real call. The needle is the
+    BARE class name, not `name(`, so a file that imports under an alias
+    and calls the alias still becomes a candidate. That admits the class
+    definition files themselves (`class FdtTransferPort:`), which is
+    harmless: the AST scan finds no call there.
     """
-    needles = tuple(f"{name}(" for name in _DORMANT_OUTBOUND)
     out: list[Path] = []
     for path in tracked_python_files():
         text = path.read_text(encoding="utf-8")
-        if any(needle in text for needle in needles):
+        if any(name in text for name in _DORMANT_OUTBOUND):
             out.append(path)
     return sorted(out)
 
@@ -122,3 +155,68 @@ def test_dormant_outbound_allowlist_has_no_stale_entries() -> None:
         f"_ALLOWLIST names {stale}, which no longer construct a dormant outbound "
         f"seam. Prune them from {Path(__file__).name}."
     )
+
+
+@pytest.mark.architecture
+def test_every_guarded_seam_still_names_a_real_class() -> None:
+    """A rename must break this build, not silently disarm the guard.
+
+    `_DORMANT_OUTBOUND` holds bare strings, so renaming `FdtTransferPort`
+    would leave the guard scanning for a name nothing defines: green, and
+    watching nothing. This pins each entry to a class that actually exists
+    in tracked source.
+    """
+    defined: set[str] = set()
+    for path in tracked_python_files():
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        defined.update(node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef))
+    missing = sorted(_DORMANT_OUTBOUND - defined)
+    assert missing == [], (
+        f"{missing} appear in _DORMANT_OUTBOUND but no tracked src file defines a "
+        f"class by that name. Either the seam was renamed (update the set, the "
+        f"guard is currently watching nothing) or it was deleted (drop the entry)."
+    )
+
+
+@pytest.mark.architecture
+def test_the_scan_enumerates_source_files() -> None:
+    """A blinded enumerator would make every scan vacuously green."""
+    assert tracked_python_files(), (
+        "tracked_python_files() returned nothing, so the dormant-seam scan "
+        "inspected no source at all and its silence means nothing."
+    )
+
+
+@pytest.mark.architecture
+@pytest.mark.parametrize(
+    ("source", "shape"),
+    [
+        ("port = FdtTransferPort()", "bare name"),
+        ("port = adapters.FdtTransferPort()", "module attribute"),
+        (
+            "from cora.operation.adapters.fdt_transfer_port import "
+            "FdtTransferPort as _F\nport = _F()",
+            "aliased import",
+        ),
+    ],
+)
+def test_the_detector_fires_on_each_construction_shape(source: str, shape: str) -> None:
+    """Positive control: the detector must actually detect.
+
+    Without this, an empty parameter set and a broken detector look
+    identical, and the guard's silence proves nothing.
+    """
+    hits = _construction_lines(ast.parse(source))
+    assert hits == {"FdtTransferPort": [hits["FdtTransferPort"][0]]}, (
+        f"the detector missed a {shape} construction, so a real one would pass unnoticed"
+    )
+
+
+@pytest.mark.architecture
+def test_the_detector_ignores_imports_and_annotations() -> None:
+    """Negative control: only a CALL counts, or the guard cries wolf."""
+    source = (
+        "from cora.operation.adapters.fdt_transfer_port import FdtTransferPort\n"
+        "def f(port: FdtTransferPort) -> None: ...\n"
+    )
+    assert _construction_lines(ast.parse(source)) == {}

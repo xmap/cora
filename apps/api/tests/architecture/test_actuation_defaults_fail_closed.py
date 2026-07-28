@@ -28,16 +28,21 @@ this asserts the property a real deployment gets, not the one the test env
 overrides.
 """
 
+import pytest
+
 from cora.infrastructure.config import Settings
 
 
+@pytest.mark.architecture
 def test_control_writes_default_is_off() -> None:
     assert Settings.model_fields["control_writes_enabled"].default is False
 
 
+@pytest.mark.architecture
 def test_compute_substrate_default_is_in_memory() -> None:
     assert Settings.model_fields["compute_substrate"].default == "in_memory"
 
 
+@pytest.mark.architecture
 def test_compute_permitted_executables_default_is_empty() -> None:
     assert Settings.model_fields["compute_permitted_executables"].default == frozenset()

@@ -23,14 +23,16 @@ so its surface is its own.
 
 Adapters now exist (`InMemoryTransferPort` for tests; `FdtTransferPort` and
 `GlobusTransferPort` as real substrates), and `cora.api._distribution_materializer`
-consumes the port. But NONE of the real adapters is constructed at the
-composition root: `build_control_port`'s compute sibling does not wire them,
-and `test_dormant_outbound_seams_unwired` pins that they stay unwired. So the
-executing aggregate and the composition-root wiring still wait on the build
-trigger: a promote or publish rule that blocks on a transfer outcome, an
-in-path substrate with a native partial terminal, or a custody chain the
-existing `Attestation` path cannot carry. Until one fires, the real adapters
-are dormant code, not a live egress path.
+consumes the port. But nothing constructs any of it: there is no transfer-port
+factory (no `build_transfer_port` sibling to `build_control_port`), the only
+consumer takes its port as an injected field, and that consumer is itself
+never constructed in `src`. `test_dormant_outbound_seams_unwired` pins the
+real adapters as unconstructed. So the executing aggregate and the
+composition-root wiring still wait on the build trigger: a promote or publish
+rule that blocks on a transfer outcome, an in-path substrate with a native
+partial terminal, or a custody chain the existing `Attestation` path cannot
+carry. Until one fires, the real adapters are dormant code, not a live egress
+path.
 
 ## Why `begin` / `observe` / `cancel`, not blocking submit-and-await
 
