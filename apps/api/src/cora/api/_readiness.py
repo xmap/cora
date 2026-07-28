@@ -57,6 +57,23 @@ DatabaseStatus = Literal["ok", "unreachable", "saturated", "closing", "skipped",
 deployment has no pool at all (the in-memory kernel), so there is
 nothing to report rather than nothing wrong."""
 
+LlmReach = Literal["off", "live"]
+"""Whether this deployment calls an external language model.
+
+`live` means both the switch (`llm_enabled`) and the credential
+(`anthropic_api_key`) are present, so the LLM-backed subscribers are
+registered and will call out on every terminal Run. `off` means no
+external model is called through this seam.
+
+Named `llm`, NOT `egress`, and the distinction is the honest part. This
+reports ONE outbound path. It is not a claim that nothing leaves the
+deployment: `HttpRangeChecksumAdapter` is wired unconditionally for
+http/https Distributions (`cora.data.wire`), so CORA can make outbound
+requests with the LLM entirely off. Calling this field `egress` would
+promise a perimeter this code does not enforce, which is exactly the
+overclaim `derive_actuation` is careful to avoid on its own axis.
+"""
+
 ActuationReach = Literal["inert", "reachable"]
 """Whether this deployment can drive a physical effect on the beamline.
 
@@ -194,6 +211,22 @@ def derive_actuation(settings: Settings) -> ActuationReach:
     return "inert"
 
 
+def derive_llm(settings: Settings) -> LlmReach:
+    """Report whether an external language model gets called.
+
+    `live` requires BOTH the switch and the credential, mirroring
+    `build_llm`'s two guards, so this answers the question an operator
+    actually has ("is CORA phoning out and spending?") rather than
+    restating one flag. A deployment that sets `llm_enabled` and forgets
+    the key reads `off`, which is the truth: nothing is called.
+
+    Like `derive_actuation` this is a REPORT, not a gate. It decides
+    nothing; `build_llm` is the thing that refuses. And it is scoped to
+    the LLM seam alone, not to egress in general (see `LlmReach`).
+    """
+    return "live" if settings.llm_enabled and settings.anthropic_api_key is not None else "off"
+
+
 def readiness_body(database: DatabaseStatus, settings: Settings) -> dict[str, str]:
     """Render the probe result. Fixed vocabulary, no free text.
 
@@ -217,13 +250,16 @@ def readiness_body(database: DatabaseStatus, settings: Settings) -> dict[str, st
         "database": database,
         "app_env": settings.app_env,
         "actuation": derive_actuation(settings),
+        "llm": derive_llm(settings),
     }
 
 
 __all__ = [
     "ActuationReach",
     "DatabaseStatus",
+    "LlmReach",
     "derive_actuation",
+    "derive_llm",
     "probe_database",
     "readiness_body",
 ]

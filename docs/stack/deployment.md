@@ -13,7 +13,8 @@ The load-bearing auth vars (full list in `.env.example`):
 | `REQUIRE_AUTHENTICATED_PRINCIPAL` | `false` | Must be `true` whenever `TRUST_POLICY_ID` is set, and in any production-tier env (the boot gate refuses otherwise; see below) |
 | `ALLOW_PERMISSIVE_AUTHZ` | `false` | Production-tier escape hatch: set `true` to run the permit-everyone `AllowAllAuthorize` stub on purpose in a `prod`/`production`/`staging` env (airgapped / single-operator pilot) |
 | `IDENTITY_PROVIDERS` | unset → legacy `X-Principal-Id` header mode | JSON list of `IdentityProviderConfig` entries (see [Auth](auth.md)); enables bearer-token mode at the HTTP edge |
-| `ANTHROPIC_API_KEY` | unset → AI subscribers log-and-skip | When you want RunDebriefer / CautionDrafter live |
+| `LLM_ENABLED` | `false` → CORA calls no external model | The switch for the egress + spend axis. Required (with the key) for RunDebriefer / CautionDrafter |
+| `ANTHROPIC_API_KEY` | unset → AI subscribers skipped | The credential. Setting it alone changes nothing; `LLM_ENABLED` decides |
 | `CONTROL_WRITES_ENABLED` | `false` → CORA never drives through the ControlPort | Set `true` only when this deployment is meant to actuate hardware (see below; it does not cover `COMPUTE_SUBSTRATE`) |
 | `CONTROL_PORT_ROUTES` | unset → `InMemoryControlPort` (no real substrate) | When CORA talks to a real control system. JSON list of `ControlPortRoute` |
 
@@ -216,15 +217,40 @@ prints the raw inputs (`control_writes_enabled`, `compute_substrate`,
 count) beside the summary so it can be audited against its own sources.
 
 Scope, stated so it is not mistaken for more: `actuation` covers the
-hardware axis only. Sending data OUT (the LLM seam, remote transfers)
-and SPENDING money are separate promises with their own switches; when
-they gain summaries they slot in beside `actuation` rather than widening
-its meaning. Today the outbound transfer and remote-compute adapters
-exist but are wired nowhere, and a fitness test
-(`test_dormant_outbound_seams_unwired`) fails the build if one gets
-constructed without the actuation derivation being revisited. The
-trigger to build the spanning egress/spend summary is the first of those
-paths that gets wired at the composition root.
+hardware axis only. Sending data OUT and SPENDING money are separate
+promises, and they now have a switch and a summary of their own.
+
+### The egress and spend axis
+
+`LLM_ENABLED` (default `false`) is the switch; `ANTHROPIC_API_KEY` is the
+credential. Both are required before CORA calls an external model, and
+`/readyz` reports the effective state as `llm`, either `off` or `live`,
+with a matching `boot.llm_posture` line at startup.
+
+The switch exists because the credential alone used to be enough. A key
+present in the environment for an unrelated reason silently registered
+the RunDebriefer and CautionDrafter subscribers, which call an external
+API on every terminal Run: experiment metadata leaving the facility, and
+money spent, because of a side effect. Every sibling subscriber already
+carried its own default-off flag; this seam was the outlier.
+
+Turning it off is graceful. The two LLM-backed subscribers are skipped
+with a warning naming which of the two settings is missing,
+`regenerate_run_debrief` answers unavailable, and a conduct command that
+explicitly asks for the `llm` decide substrate gets a 422 at
+construction, before any FSM transition.
+
+Read `llm` narrowly: it reports ONE outbound path, not a perimeter.
+CORA's HTTP checksum adapter is wired unconditionally for http/https
+Distributions, so the process can still make outbound requests with the
+LLM entirely off. That is why the field is named `llm` and not `egress`.
+
+Two adapter families remain dormant on this axis: the outbound transfer
+adapters and the remote-compute adapter exist but are wired nowhere, and
+a fitness test (`test_dormant_outbound_seams_unwired`) fails the build if
+one gets constructed without the derivation being revisited. The trigger
+to build a genuinely spanning egress summary is the first of those paths
+that gets wired at the composition root.
 
 **Probe budget invariant.** The app bounds `/readyz` at 1.5s total.
 Set the orchestrator's own probe timeout ABOVE that (2s or more).

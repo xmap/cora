@@ -82,7 +82,12 @@ from cora.api._edge_conductor import ComputeRunDriver
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
 from cora.api._inference_recorder import DelegatingInferenceRecorder
 from cora.api._procedure_watcher import procedure_watcher_lifespan
-from cora.api._readiness import derive_actuation, probe_database, readiness_body
+from cora.api._readiness import (
+    derive_actuation,
+    derive_llm,
+    probe_database,
+    readiness_body,
+)
 from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
@@ -774,6 +779,17 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 compute_substrate=settings.compute_substrate,
                 compute_permitted_executable_count=len(settings.compute_permitted_executables),
                 cora_allow_raw_conduct=settings.cora_allow_raw_conduct,
+            )
+
+            # The egress + spend axis, logged beside actuation because a
+            # facility hears both as one promise. `anthropic_api_key_present`
+            # is a BOOLEAN, never the key: SecretStr keeps the value out of
+            # every serialisation path and this line must not undo that.
+            _log.info(
+                "boot.llm_posture",
+                llm=derive_llm(settings),
+                llm_enabled=settings.llm_enabled,
+                anthropic_api_key_present=settings.anthropic_api_key is not None,
             )
 
             app.state.safety = wire_safety(deps)

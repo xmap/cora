@@ -5,6 +5,7 @@
 from datetime import UTC, datetime
 
 import pytest
+import structlog.testing
 
 from cora.agent import register_agent_subscribers
 from cora.infrastructure.config import Settings
@@ -18,8 +19,16 @@ from cora.infrastructure.ports import (
 from cora.infrastructure.projection.registry import ProjectionRegistry
 
 
-def _kernel(*, llm: object | None, caution_promoter_enabled: bool = False) -> object:
-    settings = Settings(caution_promoter_enabled=caution_promoter_enabled)  # type: ignore[call-arg]
+def _kernel(
+    *,
+    llm: object | None,
+    caution_promoter_enabled: bool = False,
+    llm_enabled: bool = False,
+) -> object:
+    settings = Settings(  # type: ignore[call-arg]
+        caution_promoter_enabled=caution_promoter_enabled,
+        llm_enabled=llm_enabled,
+    )
     return make_inmemory_kernel(
         settings=settings,
         clock=FakeClock(datetime(2026, 5, 17, 14, 0, 0, tzinfo=UTC)),
@@ -41,9 +50,9 @@ def test_registers_run_debrief_when_llm_configured() -> None:
 
 @pytest.mark.unit
 def test_skips_run_debrief_when_llm_is_none() -> None:
-    """If ANTHROPIC_API_KEY is unset, the subscriber would crash on
-    every apply() (no LLM to call). Skip registration cleanly with
-    a warning rather than crash at app boot."""
+    """With no LLM wired (the switch off, or no credential), the
+    subscriber would crash on every apply(). Skip registration cleanly
+    with a warning rather than crash at app boot."""
     registry = ProjectionRegistry()
     kernel = _kernel(llm=None)
 
@@ -119,3 +128,31 @@ def test_registration_is_idempotent_safe_for_one_registry() -> None:
 
     with pytest.raises(DuplicateProjectionError):
         register_agent_subscribers(registry, kernel)  # type: ignore[arg-type]
+
+
+def _skip_reason(kernel: object) -> str:
+    """The `reason` field of the LLM-subscriber skip warning."""
+    with structlog.testing.capture_logs() as captured:
+        register_agent_subscribers(ProjectionRegistry(), kernel)  # type: ignore[arg-type]
+    skips = [entry for entry in captured if entry.get("event") == "agent_subscriber.skipped"]
+    assert len(skips) == 1, f"expected exactly one skip warning, got {skips}"
+    return str(skips[0]["reason"])
+
+
+@pytest.mark.unit
+def test_skip_warning_names_the_switch_when_the_llm_is_turned_off() -> None:
+    """The two causes call for opposite remedies, so the warning must
+    distinguish them. A deployment that deliberately runs LLM-off should
+    not read a warning telling it a credential is missing."""
+    reason = _skip_reason(_kernel(llm=None, llm_enabled=False))
+
+    assert "llm_enabled is False" in reason
+    assert "ANTHROPIC_API_KEY" not in reason
+
+
+@pytest.mark.unit
+def test_skip_warning_names_the_credential_when_the_switch_is_on() -> None:
+    """Switched on but unconfigured is a real misconfiguration; say so."""
+    reason = _skip_reason(_kernel(llm=None, llm_enabled=True))
+
+    assert "ANTHROPIC_API_KEY is not configured" in reason

@@ -17,8 +17,14 @@ import asyncio
 
 import asyncpg
 import pytest
+from pydantic import SecretStr
 
-from cora.api._readiness import derive_actuation, probe_database, readiness_body
+from cora.api._readiness import (
+    derive_actuation,
+    derive_llm,
+    probe_database,
+    readiness_body,
+)
 from cora.infrastructure.config import Settings
 
 
@@ -171,7 +177,13 @@ def test_readiness_body_carries_app_env() -> None:
 @pytest.mark.unit
 def test_readiness_body_leaks_no_deployment_detail() -> None:
     """Unauthenticated endpoint: fixed vocabulary, no free text, no topology."""
-    assert set(readiness_body("ok", _settings())) == {"status", "database", "app_env", "actuation"}
+    assert set(readiness_body("ok", _settings())) == {
+        "status",
+        "database",
+        "app_env",
+        "actuation",
+        "llm",
+    }
 
 
 def _actuation_settings(*, writes: bool, substrate: str) -> Settings:
@@ -224,3 +236,50 @@ def test_readiness_body_actuation_is_independent_of_database_status() -> None:
     body = readiness_body("unreachable", _actuation_settings(writes=False, substrate="in_memory"))
     assert body["status"] == "not_ready"
     assert body["actuation"] == "inert"
+
+
+def _llm_settings(*, enabled: bool, key: str | None) -> Settings:
+    """Settings with both LLM inputs pinned; init kwargs beat the env."""
+    return Settings(
+        app_env="test",
+        llm_enabled=enabled,
+        anthropic_api_key=SecretStr(key) if key is not None else None,
+    )
+
+
+@pytest.mark.unit
+def test_derive_llm_reports_off_when_the_switch_is_off() -> None:
+    """The default posture: no external model is called."""
+    assert derive_llm(_llm_settings(enabled=False, key=None)) == "off"
+
+
+@pytest.mark.unit
+def test_derive_llm_reports_off_when_disabled_despite_a_credential() -> None:
+    """A key present for an unrelated reason must not read as live."""
+    assert derive_llm(_llm_settings(enabled=False, key="sk-test-fake")) == "off"
+
+
+@pytest.mark.unit
+def test_derive_llm_reports_off_when_enabled_without_a_credential() -> None:
+    """Switched on but nothing to call with: the truth is still `off`."""
+    assert derive_llm(_llm_settings(enabled=True, key=None)) == "off"
+
+
+@pytest.mark.unit
+def test_derive_llm_reports_live_when_switched_on_with_a_credential() -> None:
+    assert derive_llm(_llm_settings(enabled=True, key="sk-test-fake")) == "live"
+
+
+@pytest.mark.unit
+def test_readiness_body_reports_the_derived_llm_posture() -> None:
+    off = readiness_body("ok", _llm_settings(enabled=False, key="sk-test-fake"))
+    assert off["llm"] == "off"
+    live = readiness_body("ok", _llm_settings(enabled=True, key="sk-test-fake"))
+    assert live["llm"] == "live"
+
+
+@pytest.mark.unit
+def test_readiness_body_never_carries_the_api_key() -> None:
+    """The body is unauthenticated; a credential must not ride in it."""
+    body = readiness_body("ok", _llm_settings(enabled=True, key="sk-ant-secret-VALUE"))
+    assert "sk-ant-secret-VALUE" not in str(body)

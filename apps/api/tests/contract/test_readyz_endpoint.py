@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 import cora.api.main as api_main
 from cora.api.main import create_app
@@ -83,3 +84,29 @@ def test_readyz_is_not_in_the_openapi_schema() -> None:
     with TestClient(create_app()) as client:
         spec = client.get("/openapi.json").json()
     assert "/readyz" not in spec["paths"]
+
+
+@pytest.mark.contract
+def test_readyz_reports_llm_off_for_a_deployment_that_calls_no_model() -> None:
+    """The egress + spend claim, curl-able beside the actuation one.
+
+    A credential is injected to prove the SWITCH is what decides: this
+    app has a key and still reports `off`.
+    """
+    llm_off = Settings(
+        app_env="test", llm_enabled=False, anthropic_api_key=SecretStr("sk-test-fake")
+    )
+    with TestClient(create_app(settings=llm_off)) as client:
+        body = client.get("/readyz").json()
+    assert body["llm"] == "off"
+
+
+@pytest.mark.contract
+def test_readyz_reports_llm_live_when_switched_on_with_a_credential() -> None:
+    """The other direction, so a hardcoded `off` cannot pass."""
+    llm_live = Settings(
+        app_env="test", llm_enabled=True, anthropic_api_key=SecretStr("sk-test-fake")
+    )
+    with TestClient(create_app(settings=llm_live)) as client:
+        body = client.get("/readyz").json()
+    assert body["llm"] == "live"

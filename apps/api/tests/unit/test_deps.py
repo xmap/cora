@@ -138,23 +138,42 @@ def test_build_llm_returns_none_when_api_key_unset(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Agent BC's LLMFactory short-circuits cleanly when no
-    credential is configured; subscriber registration handles the
-    fail-fast at subscriber registration."""
+    credential is configured; the LLM-backed subscribers then
+    log-and-skip rather than refusing to boot."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("LLM_ENABLED", "true")
     settings = Settings()  # type: ignore[call-arg]
     assert build_llm(settings) is None
 
 
 @pytest.mark.unit
-def test_build_llm_returns_anthropic_adapter_when_api_key_set(
+def test_build_llm_returns_anthropic_adapter_when_enabled_and_api_key_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """When the operator wires ANTHROPIC_API_KEY, the production
-    AnthropicLLM lands in the Kernel."""
+    """The production AnthropicLLM lands in the Kernel only when the
+    operator wires BOTH the switch and the credential."""
+    monkeypatch.setenv("LLM_ENABLED", "true")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-fake")
     settings = Settings()  # type: ignore[call-arg]
     llm = build_llm(settings)
     assert isinstance(llm, AnthropicLLM)
+
+
+@pytest.mark.unit
+def test_build_llm_returns_none_when_disabled_despite_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The switch beats the credential, which is the whole point.
+
+    An API key is often present in an environment for an unrelated
+    reason. Before the switch existed its mere presence auto-registered
+    the LLM-backed subscribers, so experiment metadata left the facility
+    and tokens were spent on every terminal Run because of a side effect.
+    """
+    monkeypatch.delenv("LLM_ENABLED", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-fake")
+    settings = Settings()  # type: ignore[call-arg]
+    assert build_llm(settings) is None
 
 
 @pytest.mark.unit

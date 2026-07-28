@@ -165,17 +165,43 @@ class Settings(BaseSettings):
     # 0.1s prevents accidental tight-loop misconfiguration.
     projection_poll_interval_seconds: float = 5.0
 
+    # `llm_enabled` is the SWITCH; `anthropic_api_key` below is the
+    # CREDENTIAL. Both are required before CORA calls an external model,
+    # and this one defaults OFF.
+    #
+    # Why a switch at all, when a key is already needed: the key is often
+    # present in an environment for an unrelated reason, and its mere
+    # presence used to be enough to auto-register RunDebriefer +
+    # CautionDrafter, which call an external API on EVERY terminal Run.
+    # That is experiment metadata leaving the facility (EGRESS) and money
+    # being spent (SPEND), switched on by a side effect. Every one of the
+    # ~13 sibling subscribers carries its own `*_enabled` default-off
+    # flag; this seam was the outlier.
+    #
+    # Egress and spend are a DIFFERENT axis from actuation (the
+    # ControlPort write gate and the ComputePort exec allowlist, see
+    # `control_writes_enabled`). A facility told "read-only, CORA cannot
+    # touch my hardware" hears a claim about actuation, and would still
+    # be unhappy to discover CORA phoned its data out. Both promises
+    # belong to the observe-only posture; neither subsumes the other.
+    #
+    # Turning this off is graceful, never a crash: `build_llm` returns
+    # None, and every consumer already treats `llm=None` as a supported
+    # state because the key-absent case always produced it. The
+    # LLM-backed subscribers log-and-skip, `regenerate_run_debrief`
+    # answers unavailable, and a conduct command that explicitly asks for
+    # the `llm` decide substrate gets a 422.
+    llm_enabled: bool = False
+
     # LLM provider — Agent BC wiring
-    # When None, `build_kernel` wires no LLM and the Kernel
-    # carries `llm=None`; subscribers that depend on the LLM (the
-    # RunDebriefer subscriber) raise / log-and-skip when they
-    # try to use it. The dev / test default of None matches the
-    # `AllowAllAuthorize` / `AlwaysCoveredClearanceLookup` test-
-    # bypass convention: tests don't need real API credentials.
-    # Production deployments that ship RunDebriefer MUST set this;
-    # the wire-up adds a startup gate that refuses
-    # to register `run_debriefer_subscriber` when this is unset (so
-    # the agent never runs blind).
+    # When None (or when `llm_enabled` is False above), `build_kernel`
+    # wires no LLM and the Kernel carries `llm=None`; the LLM-backed
+    # subscribers log-and-skip rather than refusing to boot, so a
+    # deployment may defer Agent rollout. The dev / test default of None
+    # matches the `AllowAllAuthorize` / `AlwaysCoveredClearanceLookup`
+    # test-bypass convention: tests don't need real API credentials.
+    # Production deployments that ship RunDebriefer MUST set BOTH this
+    # and `llm_enabled`.
     #
     # Read from `ANTHROPIC_API_KEY` env var (case-insensitive per
     # pydantic-settings; matches the bare-field-name convention

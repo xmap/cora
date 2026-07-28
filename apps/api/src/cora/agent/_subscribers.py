@@ -17,9 +17,12 @@ side); it only owns SIDE-EFFECTING subscribers that emit new events.
 The deterministic subscribers (AuthorityRevocationHolder,
 CautionPromoter) register independently of `kernel.llm`. The
 LLM-backed subscribers (RunDebriefer, CautionDrafter) register only
-when `kernel.llm` is wired (`ANTHROPIC_API_KEY` set); if it is None
-they are skipped with a warning rather than refusing to boot a
-deployment that wants to defer Agent rollout.
+when `kernel.llm` is wired, which needs BOTH `llm_enabled` (the
+switch, default off) and `ANTHROPIC_API_KEY` (the credential); if it
+is None they are skipped with a warning rather than refusing to boot a
+deployment that wants to defer Agent rollout. These two are the seam
+through which experiment metadata would leave the facility and tokens
+would be spent, on every terminal Run, so the switch defaults off.
 
 ## Registered subscribers
 
@@ -133,10 +136,19 @@ def register_agent_subscribers(registry: ProjectionRegistry, deps: Kernel) -> No
         )
 
     if deps.llm is None:
+        # Name the ACTUAL reason. There are two, they call for opposite
+        # remedies (turn the switch on vs supply a credential), and a
+        # deployment that deliberately runs LLM-off should not read a
+        # warning telling it a key is missing.
+        reason = (
+            "llm_enabled is False (this deployment does not call an external model)"
+            if not deps.settings.llm_enabled
+            else "llm_enabled is True but ANTHROPIC_API_KEY is not configured"
+        )
         _log.warning(
             "agent_subscriber.skipped",
             subscribers=["run_debriefer", "caution_drafter"],
-            reason="kernel.llm is None (ANTHROPIC_API_KEY not configured)",
+            reason=reason,
         )
         return
 
