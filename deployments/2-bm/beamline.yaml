@@ -135,6 +135,13 @@ front-end:
       pv: { BIV: "2bm:BIV", gate_valves: [GV1, GV2, GV3] }
       new: true
       confirm: true
+      # BLEPS-1 (#562) confirms each valve fault belongs to exactly one valve
+      # (overall GVx_FAULTED + 9 per-cause sub-flags, via 2bmBLEPS:BLEPS:). CORA
+      # keeps reading them as Vacuum Supply status anyway: an Asset is registered
+      # when someone needs the valve's IDENTITY (serial, history, replacement), and
+      # what a run needs is whether the vacuum path is intact. The failing valve and
+      # its cause are named in the Supply transition's reason. Promote to Assets on
+      # the first question asked about one valve across time.
       note: valve open or closed state read as Supply status
 
 conditioning-optics:
@@ -708,10 +715,16 @@ resources:
     Continuously-available resources (the Supply BC) and the field-swappable parts
     inventory. Both described once here and referenced from the walk above.
   supplies:
-    - kind: PhotonBeam
-    - kind: CoolingWater          # observed via Flow1-Flow8 BLEPS channels
-    - kind: Vacuum                # observed via IP1-7, IG1-8, VS1-7, GV1-3
-    - kind: Power
+    # Cooling water and vacuum are beamline-scope, not facility utilities: both are
+    # cut into circuits named for the 2-BM optics they serve (BLEPS-1/2, #562/#563).
+    # One Supply each, not one per circuit: no 2-BM run-readiness decision yet turns
+    # on WHICH circuit failed, so the per-circuit PV names the failure inside the
+    # Supply's status rather than multiplying the Supply. Split when a readiness
+    # decision first differs by circuit.
+    - kind: PhotonBeam            # facility-scope: the storage ring, recorded at APS
+    - kind: CoolingWater          # 8 circuits, observed via 2bmBLEPS:BLEPS:FLOW1-8_TRIP
+    - kind: Vacuum                # 7 sections, observed via VS1-7_TRIP + IP1-7 + IG1-8
+    - kind: Power                 # facility-scope: BLEPS carries no beamline-power signal
     - kind: ComputePool
     - kind: LiquidNitrogen        # 2-BM detector LN2 dewar
   # No standing 2-BM gas-mix or compressed-air Supply (SUP-1/SUP-2, #268): sample

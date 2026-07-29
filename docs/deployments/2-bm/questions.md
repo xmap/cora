@@ -112,15 +112,6 @@ On an energy change the DMM monochromator, its Bragg arms, and the tracking slit
 | --- | --- | --- | --- | --- | --- |
 | MODE-3 | `Blocks-go-live` | The swept mirror coating stripe (`2bma:m3`) is now modelled as the `Mirror_StripeReachX` facet (held at stripe a in Mono, Pink curve 3.039 / 13 / 39 / 49 mm) with the named-stripe map recorded. What remains is the coordinated mirror-table X stages (`2bma:m1` / `m4`, Pink 8 / 10 / 10 / 29 mm): binding them is blocked by the `M1Y=2bma:m3` IOC substitution error ([2bm-docs#171](https://github.com/xray-imaging/2bm-docs/issues/171)). Please confirm that fix so the table-X surface can be bound. | m3 sweep modelled + stripe map on file; table-X values known, modeling deferred on the IOC substitution fix | partly | [Beam modes](procedures.md#beam-modes) |
 
-## Equipment protection
-
-BLEPS is the beamline equipment-protection interlock, separate from the PSS: BLEPS protects equipment, the PSS protects people. CORA does not model its logic; it would only observe outcomes, mapping utility faults to Supply status and device faults to an Asset's condition. These items confirm that mapping before any BLEPS signal is ingested.
-
-| ID | Priority | Question | CORA assumes | Already done? | Resolves |
-| --- | --- | --- | --- | --- | --- |
-| BLEPS-1 | `Nice-to-have` | Which BLEPS faults are utility-level (vacuum via IP/IG/GV, cooling-water via the Flow channels) versus tied to a specific device (for example a mirror or optics trip)? | utility faults map to Supply, device faults to Asset condition; CORA never models the interlock matrix | not yet | [Supplies](operations.md#supplies) |
-| BLEPS-2 | `Nice-to-have` | Are the BLEPS fault / status signals readable as Channel Access PVs for an external observer (the BLEPS EPICS transfer table lists tags such as `A_Fault_Exists`, `GV1.Faulted`, the Flow channels, `FES.Permit` / `SBS.Permit`)? If readable, which PV maps to which utility or device; if not, the integration path. | readable via the BLEPS PLC EPICS interface; exact PV-to-Supply/Asset mapping unknown | not yet | [Supplies](operations.md#supplies) |
-| BLEPS-3 | `Nice-to-have` | Is there a beamline-level "BLEPS tripped / armed / recovering" state that operators act on as a whole, distinct from the individual utility and device faults, that gates a run on its own? | no system-level state needed; decompose onto existing axes | not yet | [Supplies](operations.md#supplies) |
 ## Proposals, users and scheduling
 
 CORA will read proposal and user information from the APS scheduling system (the `beam-api` / DMagic data the beamline already uses) to label each run with its proposal and notify the right people. These help us get the design right before we build it.

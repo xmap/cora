@@ -24,15 +24,21 @@ facility-scope utilities live at [APS](../aps/index.md#what-this-site-provides).
 | Supply | Scope | Kind |
 | --- | --- | --- |
 | `2-BM detector LN2 dewar` | `Beamline` | `LiquidNitrogen` |
+| `2-BM cooling water` | `Beamline` | `CoolingWater` |
+| `2-BM beamline vacuum` | `Beamline` | `Vacuum` |
 
 2-BM keeps no standing gas-mix or compressed-air Supply: sample gas is per-experiment and ESAF-gated (a
 Run-level fact, not a beamline Supply), and compressed air is the APS facility shop-air line with no
 beamline-local spec.
 
-The photon beam, cooling water, vacuum, and electrical power are facility-scope utilities, observed through
-BLEPS and recorded at the [APS](../aps/index.md#what-this-site-provides) level rather than as beamline
-Supplies; the BLEPS-to-Supply mapping is tracked on
-[Open questions](questions.md#equipment-protection-bleps).
+Cooling water and vacuum are beamline-scope here, not facility utilities. Both are cut into circuits that
+belong to 2-BM and are named for the 2-BM optics they serve: eight cooling-water circuits and seven vacuum
+sections along this beam path, observed through [BLEPS](#equipment-protection). Each is modelled as one
+Supply rather than one per circuit, because a Supply exists to answer whether a run can draw on the
+resource, and no run-readiness decision at 2-BM yet turns on which circuit failed. The per-circuit signals
+name the failure inside that answer. The photon beam and electrical power stay facility-scope and are
+recorded at the [APS](../aps/index.md#what-this-site-provides) level: the source is the storage ring and
+the power is the site's, neither is cut to 2-BM's shape.
 
 Beyond the physical utilities, a run also draws on a compute pool (for reconstruction) and on data-transfer and
 storage tiers. These are modelled through the `ComputePort` and `TransferPort` (a Method plus a port, not a new
@@ -89,3 +95,68 @@ scheduling data, and normalises the surname through `clean_entry()`: NFKD normal
 discarding what will not encode, then keep only letters, digits, hyphen and underscore. Anything
 deriving that folder name independently must reproduce that normalisation exactly or it will miss on
 accented and punctuated surnames.
+
+## Equipment protection
+
+BLEPS is the beamline equipment-protection interlock, separate from the PSS: BLEPS protects equipment,
+the PSS protects people. CORA holds the same posture toward both, the one described for the
+[hutch permits](enclosures.md): it reads outcomes, never drives the chain, and never models the
+interlock matrix. BLEPS decides; CORA records what BLEPS decided.
+
+Every signal is readable over Channel Access under the prefix `2bmBLEPS:BLEPS:`. The PLC's tag names use
+dots and the EPICS names replace them with underscores, so the PLC tag `GV1.Faulted` is the PV
+`2bmBLEPS:BLEPS:GV1_FAULTED`.
+
+Every latching fault names either a shared utility or one device, which is the boundary CORA reads them
+across:
+
+| BLEPS channels | What they observe | CORA reads them as |
+| --- | --- | --- |
+| `FLOW1_TRIP` to `FLOW8_TRIP` | Cooling water, one circuit each: the filter and upstream slits, M1 and the DMM, the three window groups, the white-beam mask and SBS, the Station B slits, the Station B photon stop | `2-BM cooling water` [Supply](#supplies) status |
+| `VS1_TRIP` to `VS7_TRIP`, the seven ion-pump and eight ion-gauge channels | Vacuum, by section and by the instrument reading it | `2-BM beamline vacuum` [Supply](#supplies) status |
+| `BIV_*`, `GV1_*`, `GV2_*`, `GV3_*` | The isolation valve and the three gate valves, each with an overall faulted flag and nine per-cause flags | `2-BM beamline vacuum` [Supply](#supplies) status |
+| `TEMP1_TRIP` to `TEMP3_TRIP` | The M1 mirror tank running hot, at its lower, middle and upper thermocouples | `Mirror` Asset condition |
+| `FES_*`, `SBS_*` | The front-end and station shutters: whether each obeyed its close command, and its interlock permit | that shutter Asset's condition. BLEPS also publishes their open or closed state, but CORA reads that from the PSS, on [Enclosures](enclosures.md), so one fact keeps one source |
+| `COMMUNICATIONS_FAULT`, the PLC power and redundancy warnings | The BLEPS system's own health | evidence that a BLEPS reading cannot be trusted, not a fault of the beamline |
+
+Three of those rows are decisions rather than transcriptions, and each follows from what a CORA state is
+for rather than from where the PLC draws its own boundary.
+
+The valves are read as vacuum, not as devices of their own. BLEPS owns each valve fault unambiguously, but
+CORA registers a thing as an Asset when someone needs its identity: its serial, its history, the record
+that it was replaced. Nobody has needed a gate valve's identity here yet, and what a run does need, whether
+the vacuum path is intact, is exactly what the valve states say. So `GV2` failing to open degrades the
+vacuum Supply and names `GV2` and the cause in doing so. Promote the valves to Assets the first time a
+question is asked about one of them across time rather than right now.
+
+The mirror-tank thermocouples go the other way and sit with the device, because three thermocouples on one
+tank describe one Asset, not a resource that many Assets draw on. Reading them as the `Mirror`'s condition
+keeps the causal chain legible: `FLOW2` is the cooling circuit that serves M1 and the DMM, so a cooling
+failure appears as a Supply falling and then, separately, as the mirror it was cooling running hot. Those
+are two true facts at two layers, and collapsing them into one would lose which came first.
+
+A valve's nine per-cause flags are diagnostics, not states. The overall faulted flag moves the status; the
+sub-flag that latched, whether a limit switch disagreed with its twin or the valve never reached its stop,
+is the reason recorded with that move. Status vocabularies stay small enough to hold in the head, and the
+specifics travel as the reason on the transition.
+
+### The beamline-level state
+
+There is a state operators act on as a whole, and it latches. Three aggregates, `A_FAULT_EXISTS`,
+`A_TRIP_EXISTS` and `WARNING_EXISTS`, each go high when anything of that severity latches anywhere in
+BLEPS, and the warning stays high after its cause clears until someone resets it. They are the top row of
+the operator screen and the glance that decides whether it is worth opening a shutter.
+
+CORA reads them where it already asks that question: the pre-flight check a run makes before it starts.
+That check already folds BLEPS, through the composite upstream permit described on
+[Enclosures](enclosures.md), and the three aggregates refine it below the permit's threshold. A latched
+warning does not withdraw the permit, but it is the difference between a beamline that is ready and one
+that is merely allowed to run. The aggregates are read at that instant rather than kept as a state of
+their own, for the same reason the shutter states are: they change often, they are always re-readable,
+and a history of them would record the interlock's life rather than the experiment's.
+
+The reset commands stay on the floor. They are writes into the interlock, and CORA does not write there.
+What CORA does hold is the acknowledgement the reset stands for: a Supply that an observation drove down
+does not return to Available on its own, even once the signal reads clear. It waits in `Recovering` for a
+person to say it is back. That is the same gesture as the reset button, one layer up, and it is CORA's
+record of who accepted the recovery rather than the interlock's record of who cleared the latch.
