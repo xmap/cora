@@ -16,6 +16,7 @@ from cora.data.features.demote_dataset import tool as demote_dataset_tool
 from cora.data.features.discard_dataset import tool as discard_dataset_tool
 from cora.data.features.discard_distribution import tool as discard_distribution_tool
 from cora.data.features.get_dataset import tool as get_dataset_tool
+from cora.data.features.ingest_scan import tool as ingest_scan_tool
 from cora.data.features.list_datasets import tool as list_datasets_tool
 from cora.data.features.promote_dataset import tool as promote_dataset_tool
 from cora.data.features.publish_edition import tool as publish_edition_tool
@@ -65,6 +66,10 @@ def register_data_tools(
     record_acquisition_tool.register(
         mcp,
         get_handler=lambda: get_handlers().record_acquisition,
+    )
+    ingest_scan_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().ingest_scan,
     )
     register_distribution_tool.register(
         mcp,

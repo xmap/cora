@@ -36,8 +36,8 @@ from cora.infrastructure.projection.handler import ConnectionLike
 _INSERT_DATASET_SQL = """
 INSERT INTO proj_data_dataset_summary
     (dataset_id, name, uri, producing_run_id, subject_id, status,
-     created_at, used_calibration_ids)
-VALUES ($1, $2, $3, $4, $5, 'Registered', $6, $7::uuid[])
+     created_at, used_calibration_ids, checksum_algorithm, checksum_value)
+VALUES ($1, $2, $3, $4, $5, 'Registered', $6, $7::uuid[], $8, $9)
 ON CONFLICT (dataset_id) DO NOTHING
 """
 
@@ -70,6 +70,9 @@ class DatasetSummaryProjection:
                 # no used_calibration_ids key; .get(..., []) returns [] so
                 # legacy rows land with an empty UUID array.
                 used_calibration_ids = [UUID(c) for c in payload.get("used_calibration_ids", [])]
+                # Nested per to_payload's shape: {"checksum": {"algorithm",
+                # "value"}}; flat keys do not exist on the wire.
+                checksum = payload["checksum"]
                 await conn.execute(
                     _INSERT_DATASET_SQL,
                     UUID(payload["dataset_id"]),
@@ -79,6 +82,8 @@ class DatasetSummaryProjection:
                     subject_id,
                     datetime.fromisoformat(payload["occurred_at"]),
                     used_calibration_ids,
+                    checksum["algorithm"],
+                    checksum["value"],
                 )
             case "DatasetDiscarded":
                 await conn.execute(

@@ -28,7 +28,9 @@ from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 # Top-level keys that are not beam-path groups. Everything else at the top
 # level is a subsystem group, kept in file order (the authored beam-path order).
-KNOWN_TOP_KEYS: frozenset[str] = frozenset({"beamline", "enclosures", "controls", "resources"})
+KNOWN_TOP_KEYS: frozenset[str] = frozenset(
+    {"beamline", "enclosures", "controls", "resources", "data"}
+)
 
 # Mirror of the code's DrawingSystem enum; guarded by an enum-equality test.
 DRAWING_SYSTEMS: frozenset[str] = frozenset({"ICMS", "EDMS", "DOI"})
@@ -190,8 +192,6 @@ class Enclosure(BaseModel):
     permit_signal: str | dict[str, Any] | None = None
 
 
-
-
 class SourceRef(BaseModel):
     """The public source the beamline's facts were read from.
 
@@ -318,16 +318,36 @@ class Resources(BaseModel):
     replaceable_parts: dict[str, list[str]] = {}
 
 
+class Data(BaseModel):
+    """The beamline's scan-data choices on the ingest seam's axes.
+
+    Declares VERIFIED facts only (`layout`, `finality`); an open
+    assumption stays out of the descriptor rather than in it. Nothing
+    at runtime reads this section yet: the adapters are wired
+    unconditionally while one layout exists, and the first consumer is
+    the discovery slice (or a second layout adapter). Declaring it now
+    records the per-beamline choice where the docs and a future seeder
+    read from, without building selection machinery ahead of need.
+    """
+
+    model_config = _MODEL_CONFIG
+
+    intro: str | None = None
+    layout: str
+    finality: str
+
+
 @dataclass(frozen=True)
 class BeamlineDescriptor:
     """A validated descriptor: the beamline, its enclosures, the ordered
-    beam-path groups, and the two cross-cutting sections."""
+    beam-path groups, and the cross-cutting sections."""
 
     beamline: Beamline
     enclosures: list[Enclosure]
     groups: list[tuple[str, Group]]
     controls: Controls | None
     resources: Resources | None
+    data: Data | None
 
 
 def load(path: str | Path) -> BeamlineDescriptor:
@@ -358,6 +378,7 @@ def load(path: str | Path) -> BeamlineDescriptor:
         enclosures = [Enclosure.model_validate(e) for e in raw.get("enclosures", [])]
         controls = Controls.model_validate(raw["controls"]) if "controls" in raw else None
         resources = Resources.model_validate(raw["resources"]) if "resources" in raw else None
+        data = Data.model_validate(raw["data"]) if "data" in raw else None
         groups = [
             (key, Group.model_validate(value))
             for key, value in raw.items()
@@ -382,4 +403,5 @@ def load(path: str | Path) -> BeamlineDescriptor:
         groups=groups,
         controls=controls,
         resources=resources,
+        data=data,
     )

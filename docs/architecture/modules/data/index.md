@@ -1,4 +1,4 @@
-# Data module <span class="md-maturity md-maturity--stable" title="Five aggregates (Dataset, Distribution, Edition, Acquisition, Attestation); Dataset two-state lifecycle plus orthogonal three-state Intent; DCAT-3 Distribution materialization tier; citable Edition with DOI mint and tombstone; recorded-fact-chain Acquisition and Attestation; checksum-verifier, serializer, and DOI-minter ports.">stable</span>
+# Data module <span class="md-maturity md-maturity--stable" title="Five aggregates (Dataset, Distribution, Edition, Acquisition, Attestation); Dataset two-state lifecycle plus orthogonal three-state Intent; DCAT-3 Distribution materialization tier; citable Edition with DOI mint and tombstone; recorded-fact-chain Acquisition and Attestation; checksum-verifier, checksum-computer, scan-reader, serializer, and DOI-minter ports; ingest_scan composes the three registration deciders atomically.">stable</span>
 
 ## Purpose & Scope
 
@@ -202,7 +202,9 @@ The <!-- arch:count kind=aggregate bc=data spell=true -->five<!-- /arch:count --
 _Generated from the code at build time._
 <!-- /arch:slices-table -->
 
-The five create-style slices (`register_dataset`, `register_distribution`, `record_acquisition`, `register_edition`, `record_attestation`) are idempotency-wrapped (an `Idempotency-Key` header replays the prior result).
+The six create-style slices (`register_dataset`, `register_distribution`, `record_acquisition`, `ingest_scan`, `register_edition`, `record_attestation`) are idempotency-wrapped (an `Idempotency-Key` header replays the prior result).
+
+`ingest_scan` is the BC's one orchestration slice: it reads a scan file through the `ScanReader` port, digests it through `ChecksumComputer`, and composes the register_dataset, register_distribution, and record_acquisition DECIDERS into a single atomic `append_streams` write, so a mid-composition rejection leaves zero events rather than a Dataset stranded without its Acquisition. It refuses (400 `InvalidScanFile`) files that are unreadable, unrecognized, structurally incomplete, still changing between the structural read and the digest pass, or missing an acquisition timestamp with none supplied; it refuses (409 `DatasetAlreadyIngested`, naming the existing id) bytes whose digest is already registered, with the checksum rather than the uri as the natural key because the same bytes are legitimately multi-homed across storage tiers.
 
 **Errors per slice.** Beyond Pydantic boundary 422s, each slice raises (the Dataset slices unchanged from prior shape):
 
@@ -217,6 +219,9 @@ The five create-style slices (`register_dataset`, `register_distribution`, `reco
 
 `RecordAcquisition`
 : `AcquisitionAssetNotFound`, `AcquisitionRunNotFound` (404), `AcquisitionCannotRecordWithoutCapturing` (the producing Asset's Family does not declare the `CAPTURING` affordance), `AcquisitionAlreadyExists` (409), invalid `settings` / `evidence` / `captured_at` (400), `Unauthorized`
+
+`IngestScan`
+: `InvalidScanFile` (400: unreadable / unrecognized / structurally incomplete / timestamp policy / changed-under-read), `DatasetAlreadyIngested` (409, names the existing dataset id), plus every rejection of the composed deciders (`AcquisitionAssetNotFound`, `ProducingRunNotFound` (404), `DistributionSupplyNotFound` (404), `DistributionCannotRegisterOnNonStorageSupply`, `AcquisitionCannotRecordWithoutCapturing`, `InvalidAcquisitionCapturedAt`), all atomic: any rejection leaves zero events, `Unauthorized`
 
 `RegisterEdition`
 : `EmptyDatasetIdsAtRegistration`, boundary `Invalid<X>` (400), `Unauthorized`
@@ -240,7 +245,9 @@ The five create-style slices (`register_dataset`, `register_distribution`, `reco
 
 | Port | Kind | Adapter(s) | Used by |
 |---|---|---|---|
-| `ChecksumVerifierPort` | BC-local | `HttpRangeChecksumAdapter` | `record_attestation` (ChecksumVerified): fetches the bytes and recomputes the digest, returning `Match` / `Mismatch` / `Unreachable` |
+| `ChecksumVerifierPort` | BC-local | `HttpRangeChecksumAdapter`, `PosixChecksumAdapter` | `record_attestation` (ChecksumVerified): fetches the bytes and recomputes the digest, returning `Match` / `Mismatch` / `Unreachable` |
+| `ChecksumComputer` | BC-local | `PosixChecksumAdapter` (same class, second protocol) | `ingest_scan`: first-time digest production for bytes with no prior record, plus the after-walk stat snapshot for the live-file guard |
+| `ScanReader` | BC-local | `DataExchangeScanReader` | `ingest_scan`: reads frame roles, counts, angles, structural completeness, and the acquisition timestamp out of one scan file; format vocabulary dies at the adapter |
 | `DistributionLookup` | BC-local | `PostgresDistributionLookup`, `InMemoryDistributionLookup` | `seal_edition`: confirms each member Dataset has a canonical Distribution |
 | `EditionSerializerPort` | BC-local (per-kind) | `RoCrate12Adapter`, stub | `publish_edition`: serializes the citation manifest for the Edition's `kind` |
 | `PersistentIdentifierMinter` | shared (`cora/shared/ports`) | `StubPersistentIdentifierMinter` | `publish_edition` mints, `withdraw_edition` tombstones the DOI |

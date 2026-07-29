@@ -104,6 +104,12 @@ _DOMAIN_NOUN_ALLOWLIST: frozenset[str] = frozenset(
         # LLM output, graded for reproducibility by the model catalog's
         # ArchivabilityTier; the design's at-risk-results vocabulary)
         "result",
+        # Data: ingest_scan. A deliberate extension of the allowlist's
+        # bar: a scan is neither an aggregate nor a persisted value
+        # type, it is the EXTERNAL artifact (the beamline's scan file)
+        # this slice's whole subject is. Glossary entry lands with the
+        # slice; rationale in docs/reference/conventions.md.
+        "scan",
     }
 )
 

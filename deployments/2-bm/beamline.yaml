@@ -726,3 +726,16 @@ resources:
     recoatable: ["mirror coating stripes", "DMM multilayers"]
     swappable_with_identity: ["objectives", "camera", "scintillator", "rotary stage"]
     passive: ["fixed -10deg wedge", "filter foils", "Be windows", "vitreous-carbon window"]
+
+data:
+  intro: >
+    The scan-ingest seam's per-beamline choices, verified facts only.
+    The layout and its end-of-scan ordering are read from tomoscan's
+    2-BM subclass and the deployed areaDetector layout XML; the
+    finality signal is the ScanStatus transfer message, which marks
+    transfer INITIATION, so anything needing arrival verifies it
+    independently. The transport axis (mount vs fetch) is deliberately
+    NOT declared: it is the open HOST-2 staff question, and the
+    descriptor records answers, not assumptions.
+  layout: data_exchange
+  finality: transfer_status

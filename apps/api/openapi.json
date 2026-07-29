@@ -8025,6 +8025,87 @@
         "title": "HoldVisitRequest",
         "type": "object"
       },
+      "IngestScanRequest": {
+        "description": "Request body for `POST /scans/ingest`.",
+        "properties": {
+          "access_protocol": {
+            "description": "How a consumer reaches bytes at this Distribution, for example 'POSIX' for a mounted filesystem path.",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Access Protocol",
+            "type": "string"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Operator-asserted acquisition time, accepted ONLY when the file carries no parseable timestamp of its own; a parseable file value always wins, and supplying both is refused as ambiguous. Timezone-aware.",
+            "title": "Captured At"
+          },
+          "locator": {
+            "description": "Where the scan file is, as a URI the deployment's scan reader interprets (file:// against the configured roots today). Also recorded verbatim as the Dataset uri and the Distribution uri.",
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Locator",
+            "type": "string"
+          },
+          "producing_asset_id": {
+            "description": "Id of the capturing Asset. Its Family must declare the Capturing affordance.",
+            "format": "uuid",
+            "title": "Producing Asset Id",
+            "type": "string"
+          },
+          "producing_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional id of the Run context. Omit for calibration / standalone captures.",
+            "title": "Producing Run Id"
+          },
+          "supply_id": {
+            "description": "Id of the storage Supply holding the file at the locator (must be a registered Storage-kind Supply).",
+            "format": "uuid",
+            "title": "Supply Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "locator",
+          "producing_asset_id",
+          "supply_id",
+          "access_protocol"
+        ],
+        "title": "IngestScanRequest",
+        "type": "object"
+      },
+      "IngestScanResponse": {
+        "description": "Response body: the identities the ingest minted.",
+        "properties": {
+          "dataset_id": {
+            "description": "Identifier of the newly registered Dataset.",
+            "format": "uuid",
+            "title": "Dataset Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_id"
+        ],
+        "title": "IngestScanResponse",
+        "type": "object"
+      },
       "InitializeSealRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /federation/seals`.",
@@ -42875,6 +42956,119 @@
         "summary": "Cleanup terminal of an interrupted Run (Running | Held \u2192 Truncated)",
         "tags": [
           "run"
+        ]
+      }
+    },
+    "/scans/ingest": {
+      "post": {
+        "operationId": "post_scans_ingest_scans_ingest_post",
+        "parameters": [
+          {
+            "description": "Optional client-supplied unique key per logical request. Retries with the same key + same body return the cached response instead of re-ingesting.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional client-supplied unique key per logical request. Retries with the same key + same body return the cached response instead of re-ingesting.",
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestScanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The file cannot be ingested as commanded: unreadable or unrecognized bytes, structurally incomplete scan, missing acquisition timestamp with no captured_at supplied, captured_at supplied alongside a parseable file timestamp, the file changed while being read, or a domain field derived from it failed validation."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Cross-aggregate reference does not exist: producing_asset_id, supply_id, or producing_run_id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "These bytes are already ingested: a Dataset with the same checksum exists, and its id is named in the detail."
+          },
+          "422": {
+            "description": "Request body failed schema validation OR Idempotency-Key was reused with a different request body."
+          }
+        },
+        "summary": "Ingest a finished scan file",
+        "tags": [
+          "data"
         ]
       }
     },

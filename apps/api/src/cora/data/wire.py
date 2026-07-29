@@ -27,8 +27,10 @@ primitive and does no peer loads (no cross-BC cascade per
 from collections.abc import Mapping
 from dataclasses import dataclass
 from types import SimpleNamespace
+from typing import cast
 from uuid import UUID
 
+from cora.data.adapters.data_exchange_scan_reader import DataExchangeScanReader
 from cora.data.adapters.http_range_checksum import HttpRangeChecksumAdapter
 from cora.data.adapters.in_memory_distribution_lookup import (
     InMemoryDistributionLookup,
@@ -45,6 +47,7 @@ from cora.data.features import (
     discard_dataset,
     discard_distribution,
     get_dataset,
+    ingest_scan,
     list_datasets,
     promote_dataset,
     publish_edition,
@@ -57,6 +60,7 @@ from cora.data.features import (
     seal_edition,
     withdraw_edition,
 )
+from cora.data.features.ingest_scan.handler import DatasetByChecksumLookup
 from cora.data.ports.checksum_verifier import ChecksumVerifier
 from cora.data.ports.distribution_lookup import DistributionLookup
 from cora.data.ports.edition_serializer import EditionSerializer
@@ -82,6 +86,7 @@ class DataHandlers:
     get_dataset: get_dataset.Handler
     list_datasets: list_datasets.Handler
     record_acquisition: record_acquisition.IdempotentHandler
+    ingest_scan: ingest_scan.IdempotentHandler
     register_distribution: register_distribution.IdempotentHandler
     discard_distribution: discard_distribution.Handler
     register_edition: register_edition.IdempotentHandler
@@ -127,6 +132,41 @@ def _build_checksum_verifiers(deps: Kernel) -> Mapping[str, ChecksumVerifier]:
     if roots:
         verifiers["file"] = PosixChecksumAdapter(allowed_roots=roots)
     return verifiers
+
+
+def _build_dataset_by_checksum_lookup(deps: Kernel) -> DatasetByChecksumLookup:
+    """Digest-equality probe for ingest's natural-key refusal.
+
+    Postgres: reads the checksum columns on `proj_data_dataset_summary`,
+    matching Registered rows only, so a Discarded record (bytes
+    retracted) does not block re-ingesting bytes that reappear. The
+    in-memory deployment has no projection to probe, so it never
+    reports a duplicate; the test env exercises the refusal through an
+    injected lookup instead.
+    """
+    pool = deps.pool
+    if pool is None:
+
+        async def never_found(*, checksum_algorithm: str, checksum_value: str) -> UUID | None:
+            _ = checksum_algorithm, checksum_value
+            return None
+
+        return never_found
+
+    async def probe(*, checksum_algorithm: str, checksum_value: str) -> UUID | None:
+        row = cast(
+            "Mapping[str, UUID] | None",
+            await pool.fetchrow(  # pyright: ignore[reportUnknownMemberType]
+                "SELECT dataset_id FROM proj_data_dataset_summary "
+                "WHERE checksum_algorithm = $1 AND checksum_value = $2 "
+                "AND status = 'Registered' LIMIT 1",
+                checksum_algorithm,
+                checksum_value,
+            ),
+        )
+        return row["dataset_id"] if row is not None else None
+
+    return probe
 
 
 def wire_data(deps: Kernel) -> DataHandlers:
@@ -264,6 +304,32 @@ def wire_data(deps: Kernel) -> DataHandlers:
                 lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
             ),
             command_name="RecordAttestation",
+            bc=_BC,
+        ),
+        # The scan reader and the digest computer share one root
+        # allowlist (`posix_checksum_roots`): both are local-file
+        # readers over operator-supplied URIs, and one confinement rule
+        # for both is the point. Empty roots (the default) refuse every
+        # locator, so ingest is off until a deployment opts in.
+        ingest_scan=with_tracing(
+            with_idempotency(
+                ingest_scan.bind(
+                    deps,
+                    scan_reader=DataExchangeScanReader(
+                        allowed_roots=deps.settings.posix_checksum_roots
+                    ),
+                    checksum_computer=PosixChecksumAdapter(
+                        allowed_roots=deps.settings.posix_checksum_roots
+                    ),
+                    dataset_by_checksum_lookup=_build_dataset_by_checksum_lookup(deps),
+                ),
+                deps.idempotency_store,
+                command_name="IngestScan",
+                serialize_result=str,
+                deserialize_result=UUID,
+                lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
+            ),
+            command_name="IngestScan",
             bc=_BC,
         ),
     )

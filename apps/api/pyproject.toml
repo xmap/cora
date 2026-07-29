@@ -87,6 +87,7 @@ dependencies = [
     # EndpointUnreachable; `NetworkError` / connection / timeout -> the
     # transport families. Pin <4 to flag a future major SDK shift in CI.
     "globus-sdk>=4.8.1,<5",
+    "h5py>=3.16.0",
 ]
 
 [project.optional-dependencies]

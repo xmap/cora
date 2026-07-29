@@ -71,6 +71,7 @@ _COWRITE_HANDLERS: frozenset[str] = frozenset(
         "src/cora/campaign/features/add_run_to_campaign/handler.py",
         "src/cora/campaign/features/remove_run_from_campaign/handler.py",
         "src/cora/caution/features/supersede_caution/handler.py",
+        "src/cora/data/features/ingest_scan/handler.py",
         "src/cora/federation/features/define_permit/handler.py",
         "src/cora/federation/features/initialize_seal/handler.py",
         "src/cora/federation/features/register_credential/handler.py",

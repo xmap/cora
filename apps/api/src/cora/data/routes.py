@@ -68,6 +68,7 @@ from cora.data.aggregates.attestation import (
 )
 from cora.data.aggregates.dataset import (
     DatasetAlreadyExistsError,
+    DatasetAlreadyIngestedError,
     DatasetAlreadyPromotedError,
     DatasetAlreadyRetractedError,
     DatasetCannotDemoteError,
@@ -141,13 +142,14 @@ from cora.data.aggregates.edition import (
     InvalidSpdxIdentifierError,
     PersistentIdentifierMinterTombstoneError,
 )
-from cora.data.errors import UnauthorizedError
+from cora.data.errors import InvalidScanFileError, UnauthorizedError
 from cora.data.features import (
     add_dataset_to_edition,
     demote_dataset,
     discard_dataset,
     discard_distribution,
     get_dataset,
+    ingest_scan,
     list_datasets,
     promote_dataset,
     publish_edition,
@@ -265,6 +267,7 @@ def register_data_routes(app: FastAPI) -> None:
     app.include_router(get_dataset.router)
     app.include_router(list_datasets.router)
     app.include_router(record_acquisition.router)
+    app.include_router(ingest_scan.router)
     app.include_router(register_distribution.router)
     app.include_router(discard_distribution.router)
     app.include_router(register_edition.router)
@@ -326,6 +329,10 @@ def register_data_routes(app: FastAPI) -> None:
         AttestationKindNotYetSupportedError,
         AttestationTreeChecksumNotYetSupportedError,
         ChecksumVerifierUnsupportedSchemeError,
+        # ingest_scan 400 family: the file cannot be ingested as
+        # commanded (unreadable, unrecognized, incomplete, timestamp
+        # policy, changed-under-read). The message carries the remedy.
+        InvalidScanFileError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
     for not_found_cls in (
@@ -361,6 +368,9 @@ def register_data_routes(app: FastAPI) -> None:
         app.add_exception_handler(not_found_cls, _handle_not_found)
     for already_exists_cls in (
         DatasetAlreadyExistsError,
+        # ingest_scan natural-key refusal: bytes with this digest are
+        # already a Dataset; the detail names its id.
+        DatasetAlreadyIngestedError,
         AcquisitionAlreadyExistsError,
         DistributionAlreadyExistsError,
         # Edition defensive 409: same-stream-id race at register decider.

@@ -82,6 +82,12 @@ _ORCHESTRATION_SLICES: frozenset[str] = frozenset(
         # DECIDE-axis twin of conduct_from_procedure. See
         # [[project_resumable_conduct_design]].
         "cora.operation.features.conduct_until_advised_from",
+        # Ingest entry: composes the register_dataset /
+        # register_distribution / record_acquisition DECIDERS and
+        # persists all three genesis streams in one append_streams; no
+        # decider of its own, no direct event classes. See
+        # [[project_scan_ingest_design]].
+        "cora.data.features.ingest_scan",
         # Bulk-mint sweep: enumerates Assets missing a persistent id and
         # delegates each to the assign_asset_persistent_id handler; no direct
         # event emission. See [[project_asset_persistent_id_design]].

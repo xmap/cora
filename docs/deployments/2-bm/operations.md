@@ -57,12 +57,27 @@ finished scan: `/exchange/data` (projections), `/exchange/data_white` (flats), `
 and `/defaults/HDF5FrameLocation`. Per-scan files follow the areaDetector template `%s%s_%3.3d.h5`, so a
 scan basename carries a three-digit counter, and `..._rec/` reconstruction directories are named from it.
 
+The file has a second author besides tomoscan: the areaDetector layout XML configured in the detector
+IOC writes everything under `/process`, `/measurement`, and `/defaults` (public copy:
+[`data-exchange/dxfile/doc/demo/areadetector/2-BM/`](https://github.com/data-exchange/dxfile/tree/master/doc/demo/areadetector/2-BM)).
+Two of its facts matter to a reader. The commanded scan geometry
+(`/process/acquisition/rotation/num_angles`, the flat and dark field mode-and-count groups) is written
+`OnFileClose`, so it exists only in cleanly closed files, and it is what a shortfall check compares
+captured frames against; the `/defaults` frame ids alone can never show tail truncation, because a
+missed trigger never receives an id. The acquisition timestamp (`/process/acquisition/start_date`, from
+the PV `S:IOC:timeOfDayISO8601`) is written `OnFileOpen`, so a crashed file keeps its timestamp while
+losing its geometry.
+
 **A finished capture is not a finished file, and this is the fact an ingest reader must respect.** The
 end-of-scan sequence stops the file plugin (`FPCapture` to `Done`, then waits for `Capture_RBV` to reach
 0), and only *then* calls `add_theta()`, which REOPENS the file in append mode and creates
 `/exchange/theta`. A checksum taken when capture completes describes a file that is about to change.
-The file is final after the transfer step reports through `ScanStatus` (`fdt file transfer complete` or
-`scp file transfer complete`), which is also the point at which the copy on the analysis tier exists.
+The `ScanStatus` transfer messages (`fdt file transfer complete`, `scp file transfer complete`) mark the
+point at which the transfer is *started*, not finished: both paths are fire-and-forget (the scp path is
+backgrounded, the FDT path runs in a daemon thread), so the signal says nothing about whether the copy
+on the analysis tier exists yet, and a copy in flight dies silently if the tomoscan process exits.
+Anything that needs the file to have *arrived* must verify arrival independently, by size or checksum,
+rather than trust the status message.
 
 `add_theta()` also compares the frames actually written against the angles commanded, and logs a warning
 naming the missing ones when they disagree. Dropped frames are therefore a known, detected, and

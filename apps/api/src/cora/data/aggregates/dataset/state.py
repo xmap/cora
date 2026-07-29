@@ -350,6 +350,33 @@ class DatasetAlreadyExistsError(Exception):
         self.dataset_id = dataset_id
 
 
+class DatasetAlreadyIngestedError(Exception):
+    """Ingest refused: a Dataset with these bytes' digest already exists.
+
+    AlreadyExists family (409). Unlike its defensively-unreachable
+    sibling above, this one fires in practice: `register_dataset` mints
+    a fresh id per call, so nothing else stops pointing ingest at the
+    same file twice from silently duplicating the whole chain. The
+    checksum is the natural key rather than the uri because the same
+    bytes are legitimately multi-homed across storage tiers.
+
+    Carries the existing dataset id so the refusal is actionable:
+    whoever hits it is usually retrying an ingest they forgot succeeded,
+    and the id IS the answer they wanted.
+    """
+
+    def __init__(self, existing_dataset_id: UUID, checksum_value: str) -> None:
+        super().__init__(
+            f"These bytes are already ingested as Dataset {existing_dataset_id} "
+            f"(checksum {checksum_value}). Re-ingesting the same file would "
+            f"duplicate the record; registering the same bytes at a NEW "
+            f"location is a Distribution on the existing Dataset, not a new "
+            f"ingest."
+        )
+        self.existing_dataset_id = existing_dataset_id
+        self.checksum_value = checksum_value
+
+
 class DatasetNotFoundError(Exception):
     """Attempted an operation on a Dataset whose stream has no events."""
 

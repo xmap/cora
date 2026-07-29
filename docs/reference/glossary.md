@@ -32,6 +32,12 @@ For anyone reading CORA. Each term defined once and used the same way in code, c
 - **transaction_id (xid8).** PG18 transaction identifier on every event. Lets projection workers advance a cursor without skipping in-flight inserts.
 - **Projection.** A read model built by replaying events into a denormalized table. Workers tail the store and advance a bookmark.
 
+## Data
+
+*Scan ingest vocabulary. The Data BC's aggregate vocabulary (Dataset, Distribution, Acquisition, Attestation, Edition) is defined on the [Data module page](../architecture/modules/data/index.md).*
+
+- **Scan.** The acquisition act at a beamline, and by extension the file that act produced (a scan file). The word is overloaded in this domain, four ways in 2-BM context alone: the act, the file, the EPICS `sscan` record, and tomoscan the tool. CORA code therefore uses it only at the ingest seam (`ScanReader`, `ingest_scan`, `POST /scans/ingest`), where it always means the external product file being read. It is deliberately not Dataset or Acquisition: those name what CORA *registers from* the file, while the ingest slice's subject is the external artifact itself, before any record exists.
+
 ## Surfaces
 
 *REST, MCP, A2A, Surface aggregate.*
