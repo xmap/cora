@@ -45,6 +45,9 @@ APPROVED_OPERATION_NOUNS = frozenset(
         "reconstruction",
         "setting",
         "change",
+        "acquisition",  # the -tion operation noun for taking data; already the
+        # name of a Capability (cora.capability.acquisition) that flat_field
+        # realizes, so the vocabulary predates its use as a kind suffix.
         "xpcs",  # the XPCS technique (cora.capability.xpcs); an established acronym technique-noun
     }
 )
