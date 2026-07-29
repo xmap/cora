@@ -90,3 +90,23 @@ def test_parser_accepts_overrides() -> None:
 
 def test_asset_seed_namespace_is_the_locked_constant() -> None:
     assert UUID("6c1f4a52-8f2e-4bb0-9d59-1a4c9be1a23d") == ASSET_SEED_NAMESPACE
+
+
+def test_main_parses_argv_and_returns_the_ceremony_exit_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from cora.api import pilot_seed
+
+    received: dict[str, object] = {}
+
+    async def fake_ceremony(**kwargs: object) -> int:
+        received.update(kwargs)
+        return 2
+
+    monkeypatch.setattr(pilot_seed, "seed_pilot_beamline", fake_ceremony)
+
+    exit_code = pilot_seed.main(["--camera-name", "Oryx", "--dry-run"])
+
+    assert exit_code == 2
+    assert received["camera_name"] == "Oryx"
+    assert received["dry_run"] is True

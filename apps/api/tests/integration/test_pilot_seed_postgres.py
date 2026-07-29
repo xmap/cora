@@ -180,3 +180,67 @@ async def test_ingest_against_the_seeded_beamline_records_the_dataset(
     assert version == 1
     assert events[0].event_type == "DatasetRegistered"
     assert events[0].payload["name"] == "scan_001.h5"
+
+
+async def test_unknown_facility_code_reports_error_and_exit_one(
+    seed_database: SeedDatabase,
+) -> None:
+    """The facility guard is the loud alternative to registering under
+    the wrong facility; nothing else runs after it."""
+    _, url = seed_database
+
+    exit_code = await seed_pilot_beamline(
+        facility_code="nosuchfacility",
+        beamline=_BEAMLINE,
+        root_name="2-BM",
+        camera_name=_CAMERA,
+        camera_family_name="Camera",
+        supply_name="analysis-tier",
+        dry_run=False,
+        database_url=url,
+    )
+
+    assert exit_code == 1
+
+
+async def test_unknown_family_name_reports_error_and_exit_one(seed_database: SeedDatabase) -> None:
+    _, url = seed_database
+
+    exit_code = await seed_pilot_beamline(
+        facility_code=_FACILITY,
+        beamline=_BEAMLINE,
+        root_name="2-BM",
+        camera_name=_CAMERA,
+        camera_family_name="NoSuchFamily",
+        supply_name="analysis-tier",
+        dry_run=False,
+        database_url=url,
+    )
+
+    assert exit_code == 1
+
+
+async def test_mid_ceremony_exception_reports_error_and_exit_one(
+    seed_database: SeedDatabase, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The CLI catch: any unexpected failure becomes a named report line
+    and exit 1, never a traceback swallowed into a zero."""
+    _, url = seed_database
+
+    async def explode(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("synthetic mid-ceremony failure")
+
+    monkeypatch.setattr("cora.api.pilot_seed.verify_schema_version", explode)
+
+    exit_code = await seed_pilot_beamline(
+        facility_code=_FACILITY,
+        beamline=_BEAMLINE,
+        root_name="2-BM",
+        camera_name=_CAMERA,
+        camera_family_name="Camera",
+        supply_name="analysis-tier",
+        dry_run=False,
+        database_url=url,
+    )
+
+    assert exit_code == 1
