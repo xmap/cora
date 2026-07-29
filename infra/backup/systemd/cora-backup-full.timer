@@ -1,0 +1,12 @@
+[Unit]
+Description=Weekly full backup of the CORA event store
+
+[Timer]
+OnCalendar=Sun 02:00
+# Run a missed window after boot rather than skipping the week: a
+# beamline host that was down on Sunday still gets its full backup.
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

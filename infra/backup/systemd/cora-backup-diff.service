@@ -1,0 +1,16 @@
+# Daily differential against the most recent full. Cheap on an
+# append-mostly event store, and together with continuous WAL archiving
+# it bounds a restore's replay to at most one day of WAL.
+# Install notes: see cora-backup-full.service.
+
+[Unit]
+Description=CORA event store differential backup (pgBackRest)
+OnFailure=cora-backup-failure@%n.service
+
+[Service]
+Type=oneshot
+User=postgres
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+ExecStart=/usr/bin/pgbackrest --stanza=cora --type=diff backup

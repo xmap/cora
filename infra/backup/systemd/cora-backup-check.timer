@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly CORA WAL archive health check
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

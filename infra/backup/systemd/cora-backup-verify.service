@@ -1,0 +1,18 @@
+# Weekly repository verification. `pgbackrest verify` reads back every
+# stored file checksum, which is the only way a quietly corrupted
+# repository announces itself before a restore needs it. Scheduled on a
+# different day from the full backup so the two I/O-heavy jobs never
+# stack. Cost scales with repository size.
+# Install notes: see cora-backup-full.service.
+
+[Unit]
+Description=CORA backup repository verification (pgBackRest)
+OnFailure=cora-backup-failure@%n.service
+
+[Service]
+Type=oneshot
+User=postgres
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+ExecStart=/usr/bin/pgbackrest --stanza=cora verify

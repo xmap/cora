@@ -1,0 +1,17 @@
+# The single alert hook every backup unit fires on failure, carrying
+# the failing unit's name as %i. As shipped it writes a high-priority
+# journal line, which any log shipper or journald-watching monitor can
+# key on:
+#
+#   journalctl -p err -t cora-backup
+#
+# A deployment with a pager replaces or extends ExecStart with its own
+# notifier (mail, webhook, ntfy); keeping this template as the one
+# place to do that is the point of routing every unit through it.
+
+[Unit]
+Description=CORA backup failure alert for %i
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/logger -t cora-backup -p daemon.err "backup unit %i failed; see journalctl -u %i"

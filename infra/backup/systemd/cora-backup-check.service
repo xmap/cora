@@ -1,0 +1,16 @@
+# Hourly archive health check. `pgbackrest check` pushes a real WAL
+# segment through archive_command and confirms it reached the
+# repository: it is the one command that distinguishes a configured
+# archive from a working one. Its failure, through the OnFailure hook,
+# IS the alert for a broken archive, which otherwise announces itself
+# by retaining WAL until the disk fills.
+# Install notes: see cora-backup-full.service.
+
+[Unit]
+Description=CORA WAL archive health check (pgBackRest)
+OnFailure=cora-backup-failure@%n.service
+
+[Service]
+Type=oneshot
+User=postgres
+ExecStart=/usr/bin/pgbackrest --stanza=cora check

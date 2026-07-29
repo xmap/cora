@@ -13,7 +13,7 @@ For tracking what we haven't picked yet and why. Each row names a category, the 
 | Container orchestration | Helm, Argo CD | First non-local deployment. The image itself has landed (`apps/api/Dockerfile`); what runs it has not. |
 | Snapshot store | In-events vs sidecar table | Fold-on-read becomes a measurable bottleneck |
 | Outbox | Table-based vs NOTIFY-only | First cross-process consumer needing at-least-once |
-| Background scheduler | in-process (current) vs APScheduler vs Temporal | First job that needs to outlive a process |
+| Background scheduler | in-process (current) vs APScheduler vs Temporal | First job that needs to outlive a process. That trigger has FIRED once, for backups, and was answered at the host layer rather than in the application: `infra/backup/systemd/` ships the timers (inert until HOST-5 answers). This row remains open for the first APP-internal job needing to outlive a process |
 | Backup repository target | local disk vs facility share vs S3-compatible | Where the 2-BM host can durably write. The tool is picked and does not change with the answer (`repo1-type` in `infra/backup/pgbackrest.conf`), but two decisions ride along: a credential, for the S3 and SFTP targets though not for a mounted share, which ties this to secrets management; and repository encryption, which is fixed at stanza creation and cannot be added to an existing repository |
 | Secrets management | Vault, cloud, sealed-secrets | First non-local deployment |
 | TLS / load balancer | nginx vs Caddy vs cloud LB | Deployment chooses its proxy |

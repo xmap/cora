@@ -1,0 +1,32 @@
+# Weekly full backup of the CORA event store.
+#
+# Inert until installed: HOST-5 on the 2-BM questions page asks whether
+# the operating account may install system timers at all. When it may:
+#
+#   sudo cp infra/backup/systemd/cora-backup-*.{service,timer} /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now cora-backup-full.timer cora-backup-diff.timer \
+#        cora-backup-check.timer cora-backup-verify.timer
+#
+# Retention (repo1-retention-full in pgbackrest.conf) is applied when a
+# backup FINISHES, so this timer is also the expiry mechanism: until it
+# runs, nothing expires and the repository grows without bound.
+#
+# Assumes a package-managed pgbackrest on the host (the VM shape the
+# conf file documents). A docker deployment invokes the same command
+# through the compose tools profile instead; see docs/stack/deployment.md.
+
+[Unit]
+Description=CORA event store full backup (pgBackRest)
+OnFailure=cora-backup-failure@%n.service
+
+[Service]
+Type=oneshot
+User=postgres
+# The backup shares a host with the beamline's system of record; a
+# backup that saturates a core is a backup an operator learns to switch
+# off. Same reasoning as zstd in pgbackrest.conf.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+ExecStart=/usr/bin/pgbackrest --stanza=cora --type=full backup

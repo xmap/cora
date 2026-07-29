@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily differential backup of the CORA event store
+
+[Timer]
+# Monday through Saturday; Sunday belongs to the full.
+OnCalendar=Mon..Sat 02:00
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

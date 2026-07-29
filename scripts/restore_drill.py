@@ -474,6 +474,15 @@ def execute_drill() -> None:
             f"{run_c_segment}; the post-target check would be vacuous"
         )
     print("    Run C's segment reached the repository, so its later absence is the target's doing")
+    # `verify` reads back every stored file checksum in the repository.
+    # This is the moment it means the most: the WAL tail has been pushed
+    # and the next phase destroys the source, so what verify certifies
+    # here is the soundness of the only copy that is about to exist. A
+    # deployment runs this on the weekly cora-backup-verify.timer; the
+    # drill runs it once per exercise so the command's failure mode is a
+    # rehearsed one.
+    pgbackrest_live("verify")
+    print("    repository verify: every stored checksum read back clean")
 
     phase(9, "DESTROY the cluster")
     compose("stop", "postgres")

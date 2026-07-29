@@ -716,26 +716,32 @@ serviceable.
   Local disk on the database's own host is inside the same trust boundary
   as PGDATA, so it is reasonable to run unencrypted today, but the
   decision has to be made BEFORE the first backup at a shared or
-  off-site target, not after.
-- **Nothing schedules the backups, and that also means nothing expires
-  them.** There is no cron, timer, or operator in this repository, so the
-  cadence above is a recommendation and not a mechanism. Retention is
-  applied by pgBackRest when a backup FINISHES, not by a daemon, so a
-  deployment that never runs a backup also never reclaims anything and
-  the repository grows without bound. That lands on the next bullet by a
-  second route. Scheduling belongs with the orchestrator, which is also
-  still deferred.
-- **Nothing alerts on a failing archive.** When `archive_command` fails,
-  Postgres retains WAL rather than dropping it, so a broken archive
-  eventually fills the volume and takes the database down with it. Until
-  there is an alert, `pgbackrest --stanza=cora check` is the command that
-  answers whether archiving currently works, and it is worth running on a
-  schedule even before backups are.
-- **Nothing validates the repository.** pgBackRest checksums every file
-  it stores, but reading those checksums back is a separate command,
-  `pgbackrest --stanza=cora verify`, and nothing here runs it. Bit rot in
-  the repository would surface at the next restore, which is the worst
-  time to learn about it.
+  off-site target, not after. That deadline now has a mechanism, not
+  just a sentence: `tests/unit/deployments/test_pgbackrest_conf.py`
+  fails CI on any `repo1-type` other than `posix` that lacks a
+  `repo1-cipher-type`, so re-pointing the repository without deciding
+  encryption cannot merge.
+- **Scheduling, expiry, alerting, and verification now exist as
+  artifacts; installing them is the host's question.**
+  `infra/backup/systemd/` carries four timers and their services:
+  weekly full (Sun 02:00), daily differential (Mon..Sat 02:00), hourly
+  `check` (a real WAL segment pushed through the archive and confirmed,
+  which is the alert for a broken archive before it fills the volume),
+  and weekly `verify` (Wed 03:00, every stored checksum read back, so
+  bit rot surfaces on a timer rather than at the next restore, which is
+  the worst time to learn about it). Retention is applied when a backup
+  finishes, so the backup timers are also the expiry mechanism. Every
+  unit routes failure through one `cora-backup-failure@.service` hook,
+  which ships writing a high-priority journal line
+  (`journalctl -p err -t cora-backup`) and is the single place a
+  deployment attaches its pager. The units are INERT until copied to
+  `/etc/systemd/system/` and enabled; whether the operating account may
+  do that is HOST-5 on the 2-BM questions page, and a docker-shaped
+  deployment invokes the same four commands through the compose tools
+  profile on any scheduler it has. Until one of those happens, the
+  cadence remains a recommendation, the repository grows without
+  bound, and `pgbackrest --stanza=cora check` is the command an
+  operator runs by hand to ask whether archiving works today.
 - **The cluster's configuration files may not be in the backup.** pgBackRest
   backs up PGDATA. In the container layout used here `postgresql.conf`
   and `pg_hba.conf` live inside PGDATA and are included, but the
