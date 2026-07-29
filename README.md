@@ -245,6 +245,7 @@
 | src/cora/api/errors.py                                                                   |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/main.py                                                                     |      345 |        2 |       30 |        3 |     98.7% |367-\>366, 610-611, 1081-\>1086, 1088-\>1091 |
 | src/cora/api/middleware.py                                                               |       31 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/api/pilot\_seed.py                                                              |      197 |       12 |       40 |        5 |     92.8% |210-216, 226-227, 260-262, 300, 389, 393, 405-406 |
 | src/cora/api/protected\_resource\_metadata.py                                            |       30 |        0 |        8 |        1 |     97.4% | 127-\>125 |
 | src/cora/budget/\_\_init\_\_.py                                                          |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/budget/\_allocation\_update\_handler.py                                         |       17 |        0 |        0 |        0 |    100.0% |           |
@@ -1221,7 +1222,7 @@
 | src/cora/federation/adapters/in\_memory\_pull\_port.py                                   |       42 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/federation/adapters/in\_memory\_signature\_port.py                              |       33 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/federation/adapters/postgres\_credential\_lookup.py                             |       19 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/federation/adapters/postgres\_facility\_lookup.py                               |       39 |        8 |        8 |        3 |     72.3% |100-104, 110, 122, 124 |
+| src/cora/federation/adapters/postgres\_facility\_lookup.py                               |       39 |        7 |        8 |        2 |     76.6% |100-104, 122, 124 |
 | src/cora/federation/aggregates/\_\_init\_\_.py                                           |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/aggregates/\_value\_types.py                                         |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/federation/aggregates/credential/\_\_init\_\_.py                                |        5 |        0 |        0 |        0 |    100.0% |           |
@@ -2586,7 +2587,7 @@
 | src/cora/trust/routes.py                                                                 |       73 |        2 |       12 |        0 |     97.6% |   166-167 |
 | src/cora/trust/tools.py                                                                  |       58 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **55267** | **1237** | **7926** |  **362** | **97.3%** |           |
+| **TOTAL**                                                                                | **55464** | **1248** | **7966** |  **366** | **97.2%** |           |
 
 
 ## Setup coverage badge
