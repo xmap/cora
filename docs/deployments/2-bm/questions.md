@@ -144,6 +144,25 @@ cannot answer is left here.
 | DATA-8 | `Nice-to-have` | How often do scans finish with dropped frames? `add_theta()` compares written frames against commanded angles and logs a warning when they disagree, so the condition is detected but not fatal. Knowing whether this is rare-and-alarming or routine decides whether a record of the scan should refuse to be written, or carry the shortfall as an ordinary recorded fact. | rare enough to treat as an exception worth surfacing, not a routine outcome to normalise | not yet | [Operations](operations.md) |
 | DATA-9 | `Nice-to-have` | Is the tomoscan running at 2-BM the same `tomoscan_2bm.py` as the public repository HEAD, or does the beamline run a local fork or pinned older version? The end-of-scan ordering and the Data Exchange dataset names are read from the public source; a local divergence would silently invalidate them. | the deployed code matches the public repository | not yet | [Operations](operations.md) |
 
+## Where CORA runs
+
+CORA needs a machine at 2-BM to run on, and these are the facts about that machine that CORA cannot
+choose for itself. None of them change how CORA describes the beamline, so none block the description;
+all of them block pointing CORA at anything real. Whether the host is a virtual machine, a container, or
+bare metal is CORA's problem to accommodate and not a question for this page. What the host can reach,
+and what survives losing it, are not.
+
+These are likely controls, networking, or IT questions rather than floor questions. Routing them to the
+right person, or naming who that person is, is a complete answer to any row here.
+
+| ID | Priority | Question | CORA assumes | Already done? | Resolves |
+| --- | --- | --- | --- | --- | --- |
+| HOST-1 | `Blocks-go-live` | Is the host on the same network segment as the beamline IOCs, and if it is not, which Channel Access gateway or address list should it use? EPICS CA finds PVs by UDP broadcast on the local subnet by default, so a host one routed hop away sees nothing and reports it as a timeout rather than an error. Naming the gateway makes it a configuration line; leaving it unstated makes it a day of debugging that looks like a CORA fault. | the host can reach the IOCs, with an explicit address list rather than broadcast discovery | not yet | [Deployment](../../stack/deployment.md) |
+| HOST-2 | `Blocks-go-live` | Can the host read the scan files directly, as a mount of the analysis tier (`/data2`, `/data3`) or of the Sojourner experiment tree, and read-only is sufficient? If no mount is possible, what is the supported way for an off-host reader to fetch a finished file? The answer decides whether CORA reads a dataset in place or has to copy it first, which is a different design and not a setting. | a read-only mount of at least one tier holding finished scan files | not yet | [Operations](operations.md#inside-the-scan-file) |
+| HOST-3 | `Blocks-go-live` | What durable storage can the host write backups to that is not the host's own disk, and does the host's own disk survive the host being lost or rebuilt? A backup written beside the database protects against operator error and corruption and against nothing else. This row also carries a deadline: backup-repository encryption is fixed when the repository is first created and cannot be added afterwards, so the target has to be known before that step, not after. | a facility share or object store is reachable; local disk is an interim posture only | not yet | [Deployment](../../stack/deployment.md) |
+| HOST-4 | `Blocks-go-live` | Who needs to reach CORA's web interface, and from where: the beamline network only, anyone on the APS network, remote users over VPN, or remote users without one? This decides whether CORA sits behind an existing APS proxy or brings its own, and whether it needs a certificate and a resolvable name. | beamline and APS-network access, behind a facility-provided proxy that terminates TLS | not yet | [Deployment](../../stack/deployment.md) |
+| HOST-5 | `Nice-to-have` | Who administers the host, and does the operating account have rights to install a scheduled system job? CORA needs a timer to run backups and expire old ones. If that is not permitted, the schedule has to live inside the application instead, which is a different and slightly worse design worth choosing deliberately. | beamline-administered, with rights to install a system timer | not yet | [Deployment](../../stack/deployment.md) |
+
 ## Not on this page
 
 Hardware CORA has deliberately not described yet (the wider sample-stage motor band, IOC-hosted devices, past high-speed cameras) raises questions here only once CORA starts describing it. The `Mirror` is the exception that proves the rule: it is a registered Asset ([Inventory](inventory.md#inventory)) and its coating-stripe sweep is now modelled (`Mirror_StripeReachX`); only the coordinated mirror-table X binding stays open (`MODE-3`), blocked on the IOC substitution fix.
