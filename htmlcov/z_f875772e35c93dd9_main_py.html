@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_f875772e35c93dd9_middleware_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-07-28 13:07 +0000
+            created at 2026-07-29 05:01 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -1283,18 +1283,22 @@
     <p class="pln"><span class="n"><a id="t1199" href="#t1199">1199</a></span><span class="t"><span class="str">        """</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1200" href="#t1200">1200</a></span><span class="t">        <span class="nam">request_deps</span> <span class="op">=</span> <span class="nam">getattr</span><span class="op">(</span><span class="nam">request</span><span class="op">.</span><span class="nam">app</span><span class="op">.</span><span class="nam">state</span><span class="op">,</span> <span class="str">"deps"</span><span class="op">,</span> <span class="key">None</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1201" href="#t1201">1201</a></span><span class="t">        <span class="nam">database</span> <span class="op">=</span> <span class="key">await</span> <span class="nam">probe_database</span><span class="op">(</span><span class="nam">request_deps</span><span class="op">.</span><span class="nam">pool</span> <span class="key">if</span> <span class="nam">request_deps</span> <span class="key">else</span> <span class="key">None</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t1202" href="#t1202">1202</a></span><span class="t">        <span class="nam">body</span> <span class="op">=</span> <span class="nam">readiness_body</span><span class="op">(</span><span class="nam">database</span><span class="op">,</span> <span class="nam">settings</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t1203" href="#t1203">1203</a></span><span class="t">        <span class="key">if</span> <span class="nam">body</span><span class="op">[</span><span class="str">"status"</span><span class="op">]</span> <span class="op">!=</span> <span class="str">"ready"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t1204" href="#t1204">1204</a></span><span class="t">            <span class="nam">response</span><span class="op">.</span><span class="nam">status_code</span> <span class="op">=</span> <span class="nam">status</span><span class="op">.</span><span class="nam">HTTP_503_SERVICE_UNAVAILABLE</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1205" href="#t1205">1205</a></span><span class="t">            <span class="com"># k8s ignores Retry-After on probes; it is here for humans</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1206" href="#t1206">1206</a></span><span class="t">            <span class="com"># and curl, and for consistency with the auth handlers.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t1207" href="#t1207">1207</a></span><span class="t">            <span class="nam">response</span><span class="op">.</span><span class="nam">headers</span><span class="op">[</span><span class="str">"Retry-After"</span><span class="op">]</span> <span class="op">=</span> <span class="str">"5"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t1208" href="#t1208">1208</a></span><span class="t">        <span class="key">return</span> <span class="nam">body</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1209" href="#t1209">1209</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t1210" href="#t1210">1210</a></span><span class="t">    <span class="key">return</span> <span class="nam">fastapi_app</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1211" href="#t1211">1211</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t1212" href="#t1212">1212</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t1213" href="#t1213">1213</a></span><span class="t"><span class="nam">app</span> <span class="op">=</span> <span class="nam">create_app</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1202" href="#t1202">1202</a></span><span class="t">        <span class="nam">body</span> <span class="op">=</span> <span class="nam">readiness_body</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t1203" href="#t1203">1203</a></span><span class="t">            <span class="nam">database</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t1204" href="#t1204">1204</a></span><span class="t">            <span class="nam">settings</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t1205" href="#t1205">1205</a></span><span class="t">            <span class="nam">request_deps</span><span class="op">.</span><span class="nam">schema_posture</span> <span class="key">if</span> <span class="nam">request_deps</span> <span class="key">else</span> <span class="str">"matched"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t1206" href="#t1206">1206</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1207" href="#t1207">1207</a></span><span class="t">        <span class="key">if</span> <span class="nam">body</span><span class="op">[</span><span class="str">"status"</span><span class="op">]</span> <span class="op">!=</span> <span class="str">"ready"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1208" href="#t1208">1208</a></span><span class="t">            <span class="nam">response</span><span class="op">.</span><span class="nam">status_code</span> <span class="op">=</span> <span class="nam">status</span><span class="op">.</span><span class="nam">HTTP_503_SERVICE_UNAVAILABLE</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1209" href="#t1209">1209</a></span><span class="t">            <span class="com"># k8s ignores Retry-After on probes; it is here for humans</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1210" href="#t1210">1210</a></span><span class="t">            <span class="com"># and curl, and for consistency with the auth handlers.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1211" href="#t1211">1211</a></span><span class="t">            <span class="nam">response</span><span class="op">.</span><span class="nam">headers</span><span class="op">[</span><span class="str">"Retry-After"</span><span class="op">]</span> <span class="op">=</span> <span class="str">"5"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1212" href="#t1212">1212</a></span><span class="t">        <span class="key">return</span> <span class="nam">body</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1213" href="#t1213">1213</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1214" href="#t1214">1214</a></span><span class="t">    <span class="key">return</span> <span class="nam">fastapi_app</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1215" href="#t1215">1215</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1216" href="#t1216">1216</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1217" href="#t1217">1217</a></span><span class="t"><span class="nam">app</span> <span class="op">=</span> <span class="nam">create_app</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -1304,7 +1308,7 @@
             <a class="nav" href="z_f875772e35c93dd9_middleware_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-07-28 13:07 +0000
+            created at 2026-07-29 05:01 +0000
         </p>
     </div>
 </footer>

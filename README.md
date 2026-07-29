@@ -1423,16 +1423,16 @@
 | src/cora/infrastructure/auth/config.py                                                   |       56 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/exception\_handlers.py                                      |       44 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/idp\_registry.py                                            |       48 |        0 |       18 |        0 |    100.0% |           |
-| src/cora/infrastructure/config.py                                                        |      256 |        6 |       50 |        3 |     97.1% |770-774, 782-786, 795-799 |
+| src/cora/infrastructure/config.py                                                        |      257 |        6 |       50 |        3 |     97.1% |789-793, 801-805, 814-818 |
 | src/cora/infrastructure/control\_port\_route.py                                          |        9 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/deps.py                                                          |      123 |        0 |       16 |        1 |     99.3% |1371-\>1367 |
+| src/cora/infrastructure/deps.py                                                          |      128 |        1 |       18 |        2 |     97.9% |1210, 1396-\>1392 |
 | src/cora/infrastructure/edge\_runtime.py                                                 |       16 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/event\_envelope.py                                               |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/event\_payload.py                                                |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/evolver.py                                                       |        6 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/idempotency.py                                                   |       98 |        1 |       38 |        1 |     98.5% |115, 332-\>exit |
 | src/cora/infrastructure/idempotency\_pruner.py                                           |       34 |        1 |        4 |        0 |     97.4% |        95 |
-| src/cora/infrastructure/kernel.py                                                        |       33 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/kernel.py                                                        |       36 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/list\_query.py                                                   |       94 |        0 |       30 |        0 |    100.0% |           |
 | src/cora/infrastructure/logging.py                                                       |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/mcp\_principal.py                                                |       39 |        1 |       12 |        1 |     96.1% |       147 |
@@ -1502,7 +1502,9 @@
 | src/cora/infrastructure/published\_artifact/\_\_init\_\_.py                              |        3 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/published\_artifact/\_stages.py                                  |       64 |        3 |       28 |        0 |     96.7% |87-88, 238 |
 | src/cora/infrastructure/published\_artifact/orchestrator.py                              |       48 |        1 |       16 |        1 |     96.9% |       135 |
+| src/cora/infrastructure/read\_only\_event\_store.py                                      |       19 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/routing.py                                                       |       46 |        1 |       12 |        1 |     96.6% |       169 |
+| src/cora/infrastructure/schema\_version.py                                               |       60 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/infrastructure/signing.py                                                       |       56 |        1 |       12 |        1 |     97.1% |       119 |
 | src/cora/infrastructure/update\_handler.py                                               |       12 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/operation/\_\_init\_\_.py                                                       |        6 |        0 |        0 |        0 |    100.0% |           |
@@ -2574,7 +2576,7 @@
 | src/cora/trust/routes.py                                                                 |       73 |        2 |       12 |        0 |     97.6% |   166-167 |
 | src/cora/trust/tools.py                                                                  |       58 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **54784** | **1197** | **7850** |  **345** | **97.3%** |           |
+| **TOTAL**                                                                                | **54872** | **1198** | **7860** |  **346** | **97.3%** |           |
 
 
 ## Setup coverage badge
