@@ -385,6 +385,54 @@ The operator's bootstrap path:
 
 The bootstrap seed stays on disk + in the event log forever; you can re-point at it during recovery scenarios.
 
+### Seeding the beamline the pilot needs
+
+`ingest_scan` refuses to record until two things exist: a registered
+Asset whose family affordances include Capturing, and a registered
+Storage-kind Supply. Neither appears by itself. The pilot seed
+ceremony registers them, idempotently:
+
+```bash
+python -m cora.api.pilot_seed --dry-run
+```
+
+then the same command without `--dry-run` once the report reads right.
+It registers the beamline root Unit Asset, the camera Device Asset,
+its Camera family attachment (the Camera seed family carries
+Capturing), and one Storage Supply which it also marks Available (a
+merely-registered Supply satisfies neither the run-preflight gates nor
+the legacy-Distribution backfill). It prints one line per instance:
+`seeded`, `exists`, `retired` (a decommissioned stream is reported and
+never resurrected; decommission-then-re-register is an operator
+rebind, not a seeding concern), or `error`. Exit codes: 0 when
+everything already existed, 2 when anything was seeded (or would be,
+under `--dry-run`), 1 on any error. Re-running is always safe and
+changes nothing.
+
+The seeded supply's name (default `analysis-tier`) pairs with
+`SELF_FACILITY_DEFAULT_STORAGE_SUPPLY_CODE`: the lifespan-time
+Distribution backfill resolves that env var against the same supply
+name. A deployment that will ever hold legacy Datasets should set the
+env var to the seeded name in the same breath as running the ceremony.
+
+Two facts worth knowing before running it. The ceremony runs the same
+idempotent bootstrap hooks the app lifespan runs and drains the
+relevant projections itself, so it works against a never-booted
+database; and `--facility-code` must name the code this deployment
+self-seeds (`SELF_FACILITY_CODE`), or the run stops with a loud
+FacilityNotFound rather than registering under the wrong facility.
+
+A database seeded before the Camera family carried Capturing reports
+`error: family Camera lacks the Capturing affordance` and names the
+remedy (`version_family` adding it); the ceremony never mutates a
+family itself, because family definitions belong to the seed
+registry's graduation governance.
+
+This is deliberately NOT a descriptor import. The full
+beamline-descriptor onboarding is a later slice with its own trigger;
+the ceremony seeds exactly what the read-only pilot's ingest path
+exercises, with explicit arguments and no hidden inputs.
+
 ## Recovery
 
 ### Backup and point-in-time recovery

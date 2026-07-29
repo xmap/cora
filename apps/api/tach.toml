@@ -463,5 +463,11 @@ depends_on = [
     "cora.safety.aggregates",
     "cora.subject",
     "cora.supply",
+    # The pilot seed ceremony (cora.api.pilot_seed) composes Supply
+    # events the same way the RunSupervisor composes Decision events
+    # (blessed cross-BC aggregate access at the composition root): it
+    # folds the Supply stream and appends register + mark-available
+    # genesis/transition events through the real deciders.
+    "cora.supply.aggregates",
     "cora.trust",
 ]

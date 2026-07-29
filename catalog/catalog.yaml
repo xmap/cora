@@ -77,7 +77,7 @@ families:
     presents_as: [Positioner]
     note: "Limited-range rotational tilt-stage Family (a goniometer). Distinct from RotaryStage (it carries no PSO Following/Marking for fly-scans) and from LinearStage (the motion is rotational, not translation). 2-BM: the LaminographyPitch Kohzu goniometer, modelled in the SampleTower Assembly."
   - name: Camera
-    affordances: [Imageable, Binnable, Coolable, Triggerable, Streamable, Recording]
+    affordances: [Imageable, Binnable, Coolable, Triggerable, Streamable, Recording, Capturing]
     presents_as: [Detector]
   - name: Scintillator
     affordances: [Consumable]

@@ -101,6 +101,11 @@ _DETECTOR_AFFORDANCES = frozenset(
         # Pass 2: fleet cameras (Eiger / Pilatus) write HDF5 / TIFF to disk
         # (iss, xfm, cdi), so the Camera Family records, not only streams.
         Affordance.RECORDING,
+        # A camera's product IS a capture: the affordance's own contract
+        # ("produces a Data BC Acquisition fact on every capture") is what
+        # record_acquisition's Capturing gate checks, and the 2-BM pilot's
+        # detector must pass it for ingest to record anything.
+        Affordance.CAPTURING,
     }
 )
 # Batch 3 (Pass 1, Sensor cluster). Of the seven measurement/analyzer
