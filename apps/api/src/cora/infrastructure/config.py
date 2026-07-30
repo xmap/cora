@@ -8,7 +8,7 @@ environment variables directly.
 from typing import Literal
 from uuid import UUID
 
-from pydantic import SecretStr, ValidationInfo, field_validator
+from pydantic import BaseModel, SecretStr, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from cora.infrastructure.auth.config import IdentityProviderConfig
@@ -16,6 +16,26 @@ from cora.infrastructure.capture_scan_ingestor_binding import CaptureScanIngesto
 from cora.infrastructure.control_port_route import ControlPortRoute
 from cora.shared.capture_phase import CapturePhase
 from cora.shared.storage_root import normalize_storage_root, require_nonempty_absolute_root
+
+
+class BlepsSupplyChannelConfig(BaseModel):
+    """One BLEPS channel bound to the Supply it feeds.
+
+    Typed rather than a bare dict so a missing or misspelled key is a
+    startup validation error naming the field, instead of a `KeyError`
+    raised deep inside the lifespan with the whole boot failing around it.
+
+    `supply` is the Supply name this channel contributes to; `trip` is the
+    process-axis PV; `fault` is the optional trust-axis PV (that same
+    channel's instrumentation fault). `label` is what an operator reads in
+    the transition reason, and defaults to the trip PV when omitted.
+    """
+
+    supply: str
+    trip: str
+    fault: str = ""
+    label: str = ""
+
 
 _ALLOWED_DATABASE_SCHEMES = ("postgresql://", "postgres://")
 
@@ -763,6 +783,10 @@ class Settings(BaseSettings):
     #      "trip":"2bmBLEPS:BLEPS:VS1_TRIP"}
     #   ]'
     #
+    # A typed model rather than bare dicts, because a missing key used to
+    # surface as a `KeyError` inside the lifespan, which fails the whole
+    # boot with nothing naming the offending entry.
+    #
     # `trip` is the process axis: the measured value crossed its limit, or
     # a valve disobeyed. `fault` is the OPTIONAL trust axis, the same
     # channel's instrumentation fault; while it stands, that channel is
@@ -772,22 +796,45 @@ class Settings(BaseSettings):
     # reason. When empty (default) the supply monitor loop is a no-op, so
     # a generic boot is unaffected.
     #
-    # Every PV here is READ-ONLY. BLEPS write PVs (the fault and trip
-    # resets, the valve open/close commands, the shutter permits) are
-    # never bound: CORA reads the interlock's outcomes and never drives
-    # it. `test_bleps_binding_is_read_only` turns that into a build break.
-    # See `cora.api._bleps_supply_observer`.
-    bleps_supply_channels: list[dict[str, str]] = []
+    # Read-only is enforced STRUCTURALLY, not by naming discipline: the
+    # composition root wraps the observer's port in `ReadOnlyControlPort`,
+    # so it cannot write whatever the route table says. That matters
+    # because route-level `read_only` defaults False, so a `2bmBLEPS:`
+    # route in a writes-enabled deployment would otherwise accept writes.
+    # `test_bleps_binding_is_read_only` is a tripwire against an
+    # accidental hardcode of a BLEPS write PV; it greps names and makes
+    # nothing read-only. See `cora.api._bleps_supply_observer`.
+    bleps_supply_channels: list[BlepsSupplyChannelConfig] = []
 
-    # The BLEPS system's own comms flag (PLC to EtherNet/IP gateway).
-    # While it is asserted, or while it cannot be believably read, NO
-    # BLEPS observation is recorded: a reading we cannot trust must not
-    # overwrite a Supply's status with a guess. Read from
-    # BLEPS_COMMS_FAULT_PV, for example
+    # The BLEPS system's own communications flag (PLC to EtherNet/IP
+    # gateway). While it is asserted, or while it cannot be believably
+    # read, NO BLEPS observation is recorded: a reading we cannot trust
+    # must not overwrite a Supply's status with a guess. Read from
+    # BLEPS_COMMUNICATIONS_FAULT_PV, for example
     # `2bmBLEPS:BLEPS:COMMUNICATIONS_FAULT`. Empty (default) disables the
-    # system-wide trust gate, which is correct only when no BLEPS
-    # channels are configured either.
-    bleps_comms_fault_pv: str = ""
+    # system-wide trust gate, which is only correct when no BLEPS channels
+    # are configured either; `_require_communications_fault_pv_with_bleps_channels`
+    # enforces that pairing rather than leaving it as a comment.
+    bleps_communications_fault_pv: str = ""
+
+    @model_validator(mode="after")
+    def _require_communications_fault_pv_with_bleps_channels(self) -> "Settings":
+        """BLEPS channels without the comms flag would trust a dark feed.
+
+        The comms flag is the only signal that says the whole BLEPS
+        reading is stale. Configuring channels without it silently
+        disables the system-wide trust gate, which is the one failure
+        mode where CORA keeps asserting a Supply's status from readings
+        that stopped arriving.
+        """
+        if self.bleps_supply_channels and not self.bleps_communications_fault_pv:
+            raise ValueError(
+                "BLEPS_SUPPLY_CHANNELS is configured without "
+                "BLEPS_COMMUNICATIONS_FAULT_PV; the comms flag is what makes a "
+                "stale BLEPS feed detectable, so channels without it would be "
+                "trusted indefinitely"
+            )
+        return self
 
     # Beam-availability pre-flight (BEAM-1, beam-availability slice).
     # Role -> read-only PV for the run / procedure start gate. `fes` and

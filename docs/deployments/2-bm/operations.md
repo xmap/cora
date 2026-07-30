@@ -213,8 +213,15 @@ So the signals answer two separate questions:
 
 | The question | BLEPS classes | Where it lands in CORA |
 | --- | --- | --- |
-| How bad is the thing being measured? | warning, then trip | a status: `Degraded`, then `Unavailable` or `Faulted` |
+| How bad is the thing being measured? | warning, then trip | a status. For a Supply that is `Degraded`, then `Unavailable`; for an Asset's condition it is `Degraded`, then `Faulted`. The two vocabularies are separate, and no Supply is ever `Faulted` |
 | Can the reading be believed at all? | fault, on an instrument | not a status. The reading is set aside, and CORA declines to claim anything |
+
+A trip is what CORA reads today. The warning half of the first row is
+described here but not yet observed: it would drive a Supply to
+`Degraded`, and `Degraded` is currently a state an operator cannot leave
+without first declaring the resource unavailable, so wiring warnings
+waits on that being fixed deliberately. A latched warning at 2-BM
+therefore shows up nowhere in CORA yet.
 
 The second question is why no new status was added to match BLEPS's three classes. A broken flow sensor
 is not a worse version of low flow. During an instrumentation fault the honest answer about the cooling

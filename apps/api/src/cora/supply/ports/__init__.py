@@ -8,14 +8,14 @@ are not promoted to infrastructure.
 """
 
 from cora.supply.ports.supply_observer import (
-    AllAvailableSupplyObserver,
+    AlwaysQuietSupplyObserver,
     SupplyObservation,
     SupplyObserver,
     SupplyObserverScope,
 )
 
 __all__ = [
-    "AllAvailableSupplyObserver",
+    "AlwaysQuietSupplyObserver",
     "SupplyObservation",
     "SupplyObserver",
     "SupplyObserverScope",

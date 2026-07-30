@@ -34,7 +34,7 @@ from cora.supply.features.mark_supply_available import bind as bind_mark_availab
 from cora.supply.features.register_supply import RegisterSupply
 from cora.supply.features.register_supply import bind as bind_register_supply
 from cora.supply.ports.supply_observer import (
-    AllAvailableSupplyObserver,
+    AlwaysQuietSupplyObserver,
     SupplyObservation,
     SupplyObserver,
     SupplyObserverScope,
@@ -225,9 +225,7 @@ async def test_run_monitor_returns_immediately_when_nothing_is_mapped(
     """No configured supplies means no subscription, not an idle reconnect loop."""
     deps = _deps(db_pool)
     await asyncio.wait_for(
-        run_supply_status_monitor(
-            observer=AllAvailableSupplyObserver(), kernel=deps, code_to_id={}
-        ),
+        run_supply_status_monitor(observer=AlwaysQuietSupplyObserver(), kernel=deps, code_to_id={}),
         timeout=5,
     )
 
@@ -245,7 +243,7 @@ async def test_stub_observer_yields_nothing(db_pool: asyncpg.Pool) -> None:
     supply_id = await _available_supply(deps, code)
     scope = SupplyObserverScope(supply_codes=frozenset({code}))
 
-    observed = [obs async for obs in AllAvailableSupplyObserver().observe(scope)]
+    observed = [obs async for obs in AlwaysQuietSupplyObserver().observe(scope)]
 
     assert observed == []
     events, _ = await deps.event_store.load(stream_type="Supply", stream_id=supply_id)
@@ -280,3 +278,57 @@ async def test_lifespan_drives_an_observation_and_cancels_cleanly(
         await asyncio.sleep(0.05)
 
     assert len(await _transitions(deps, supply_id, "SupplyMarkedUnavailable")) == 1
+
+
+@pytest.mark.integration
+async def test_clear_on_a_healthy_supply_records_nothing(db_pool: asyncpg.Pool) -> None:
+    """Observers report levels; "clear" only means something for a downed supply.
+
+    This is the gate that replaced the adapter's edge memory. On a healthy
+    beamline every initial reading is clear, so without it the decider
+    would reject each one.
+    """
+    code = f"cooling-water-{uuid4().hex[:8]}"
+    deps = _deps(db_pool)
+    supply_id = await _available_supply(deps, code)
+
+    await record_observation(
+        deps, _obs(code, "Recovering", reason="BLEPS trips clear"), {code: supply_id}
+    )
+
+    events, _ = await deps.event_store.load(stream_type="Supply", stream_id=supply_id)
+    assert [e.event_type for e in events] == ["SupplyRegistered", "SupplyMarkedAvailable"]
+
+
+@pytest.mark.integration
+async def test_clear_on_a_downed_supply_records_recovering(db_pool: asyncpg.Pool) -> None:
+    """The same observation IS news once the supply is actually Unavailable."""
+    code = f"cooling-water-{uuid4().hex[:8]}"
+    deps = _deps(db_pool)
+    supply_id = await _available_supply(deps, code)
+    code_to_id = {code: supply_id}
+
+    await record_observation(deps, _obs(code, "Unavailable"), code_to_id)
+    await record_observation(deps, _obs(code, "Recovering", reason="BLEPS trips clear"), code_to_id)
+
+    assert len(await _transitions(deps, supply_id, "SupplyMarkedRecovering")) == 1
+
+
+@pytest.mark.integration
+async def test_a_re_asserted_clear_level_stays_silent(db_pool: asyncpg.Pool) -> None:
+    """Levels repeat; the record must not.
+
+    Once Recovering is recorded the supply is no longer Unavailable, so
+    every later clear reading is dropped by the gate rather than rejected
+    by the decider.
+    """
+    code = f"cooling-water-{uuid4().hex[:8]}"
+    deps = _deps(db_pool)
+    supply_id = await _available_supply(deps, code)
+    code_to_id = {code: supply_id}
+
+    await record_observation(deps, _obs(code, "Unavailable"), code_to_id)
+    for _ in range(4):
+        await record_observation(deps, _obs(code, "Recovering"), code_to_id)
+
+    assert len(await _transitions(deps, supply_id, "SupplyMarkedRecovering")) == 1

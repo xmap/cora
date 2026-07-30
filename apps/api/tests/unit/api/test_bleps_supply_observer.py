@@ -1,12 +1,20 @@
 """Unit tests for the composition-root BLEPS supply observer bridge.
 
-Three layers are pinned: the pure flag reading (`is_asserted`, where
-"unknown" must stay distinct from "low"), the many-channels-to-one-Supply
-aggregate, and the edge-triggered emission that keeps `Recovering`
-reachable.
+Three layers are pinned: the pure flag reading (`flag_state_from_reading`,
+where "unknown" must stay distinct from "low"), the many-channels-to-one-
+Supply verdict, and the asymmetry that makes it safe (any believable trip
+calls the resource down; only every channel believable and clear calls it
+clear).
 
 Scaffolding follows `test_enclosure_permit_observer.py`.
+
+The fail-open regression drives `_observations` directly: it needs a trip
+believed BEFORE its own instrument faults, and the scripted port drains
+one PV to completion before starting the next, so it cannot interleave
+two PVs of a single channel the way real ones do.
 """
+
+# pyright: reportPrivateUsage=false
 
 from collections.abc import AsyncGenerator, AsyncIterator
 from datetime import UTC, datetime
@@ -15,8 +23,8 @@ import pytest
 
 from cora.api._bleps_supply_observer import (
     BlepsChannel,
-    ControlPortBlepsSupplyObserver,
-    is_asserted,
+    BlepsSupplyObserver,
+    flag_state_from_reading,
 )
 from cora.infrastructure.ports.clock import FakeClock
 from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
@@ -54,24 +62,24 @@ def _reading(value: object, quality: str = "Good") -> Measurement:
 
 @pytest.mark.unit
 def test_asserted_flag_reads_high() -> None:
-    assert is_asserted(_reading(1)) is True
-    assert is_asserted(_reading("1")) is True
-    assert is_asserted(_reading(True)) is True
+    assert flag_state_from_reading(_reading(1)) is True
+    assert flag_state_from_reading(_reading("1")) is True
+    assert flag_state_from_reading(_reading(True)) is True
 
 
 @pytest.mark.unit
 def test_clear_flag_reads_low() -> None:
-    assert is_asserted(_reading(0)) is False
-    assert is_asserted(_reading("0")) is False
+    assert flag_state_from_reading(_reading(0)) is False
+    assert flag_state_from_reading(_reading("0")) is False
 
 
 @pytest.mark.unit
 def test_unreadable_flag_is_unknown_not_low() -> None:
     """A dead PV must never read as "no fault here"."""
-    assert is_asserted(_reading(1, quality="Bad")) is None
-    assert is_asserted(_reading(0, quality="Uncertain")) is None
-    assert is_asserted(_reading(None)) is None
-    assert is_asserted(_reading("tripped")) is None
+    assert flag_state_from_reading(_reading(1, quality="Bad")) is None
+    assert flag_state_from_reading(_reading(0, quality="Uncertain")) is None
+    assert flag_state_from_reading(_reading(None)) is None
+    assert flag_state_from_reading(_reading("tripped")) is None
 
 
 class _ScriptedControlPort:
@@ -100,19 +108,17 @@ def _observer(
     port: _ScriptedControlPort,
     channels: list[BlepsChannel],
     *,
-    comms_fault_pv: str | None = None,
-) -> ControlPortBlepsSupplyObserver:
-    return ControlPortBlepsSupplyObserver(
+    communications_fault_pv: str | None = None,
+) -> BlepsSupplyObserver:
+    return BlepsSupplyObserver(
         control_port=port,  # type: ignore[arg-type]
         channels=channels,
-        comms_fault_pv=comms_fault_pv,
+        communications_fault_pv=communications_fault_pv,
         clock=FakeClock(_T_CLOCK),
     )
 
 
-async def _collect(
-    observer: ControlPortBlepsSupplyObserver, codes: set[str]
-) -> list[SupplyObservation]:
+async def _collect(observer: BlepsSupplyObserver, codes: set[str]) -> list[SupplyObservation]:
     scope = SupplyObserverScope(supply_codes=frozenset(codes))
     return [observation async for observation in observer.observe(scope)]
 
@@ -138,12 +144,18 @@ async def test_scope_excludes_other_supplies() -> None:
 
 
 @pytest.mark.unit
-async def test_a_healthy_beamline_says_nothing() -> None:
-    """All clear on a first reading asserts nothing about an Available Supply."""
+async def test_a_healthy_beamline_reports_clear_as_recovering() -> None:
+    """Clear is reported as a level; the runtime decides whether it means anything.
+
+    The adapter holds no memory of where the Supply has been, so it
+    cannot know whether "clear" is news. It says what it sees and
+    `cora.supply._monitor` drops it unless the Supply is Unavailable.
+    """
     port = _ScriptedControlPort(
         readings={_FLOW2.trip_pv: [_reading(0)], _FLOW2.fault_pv or "": [_reading(0)]}
     )
-    assert await _collect(_observer(port, [_FLOW2]), {_WATER}) == []
+    observed = await _collect(_observer(port, [_FLOW2]), {_WATER})
+    assert [o.observed_status for o in observed] == ["Recovering"]
 
 
 @pytest.mark.unit
@@ -189,8 +201,13 @@ async def test_clearing_a_trip_emits_recovering_not_available() -> None:
 
 
 @pytest.mark.unit
-async def test_a_still_tripped_channel_is_not_re_announced() -> None:
-    """Edges, not levels: a latched flag republishing itself is silent."""
+async def test_a_still_tripped_channel_re_asserts_the_same_level() -> None:
+    """Levels, not edges: a latched flag republishing itself says so again.
+
+    Repetition is deliberate and is what makes a dropped append harmless,
+    since the next reading re-asserts the same verdict. The decider
+    collapses the repeats into one event.
+    """
     port = _ScriptedControlPort(
         readings={
             _FLOW2.trip_pv: [_reading(1), _reading(1), _reading(1)],
@@ -198,15 +215,15 @@ async def test_a_still_tripped_channel_is_not_re_announced() -> None:
         }
     )
     observed = await _collect(_observer(port, [_FLOW2]), {_WATER})
-    assert [o.observed_status for o in observed] == ["Unavailable"]
+    assert [o.observed_status for o in observed] == ["Unavailable"] * 3
 
 
 @pytest.mark.unit
-async def test_an_instrument_fault_removes_its_channel_from_the_aggregate() -> None:
-    """Flow2's sensor is lying, so its trip does not speak for the resource.
+async def test_an_instrument_fault_withholds_rather_than_clearing() -> None:
+    """Flow2's sensor is lying, so nothing can be concluded about the resource.
 
-    Flow6 is believable and clear, so the Supply has a trusted verdict
-    and Flow2's implausible trip is excluded rather than obeyed.
+    Flow6 being believable and clear is NOT enough. Clear requires every
+    channel, because a blind channel might be the one that is tripped.
     """
     port = _ScriptedControlPort(
         readings={
@@ -256,7 +273,7 @@ async def test_comms_fault_suppresses_every_supply() -> None:
             _VS1.trip_pv: [_reading(1)],
         }
     )
-    observer = _observer(port, [_FLOW2, _VS1], comms_fault_pv=_COMMS)
+    observer = _observer(port, [_FLOW2, _VS1], communications_fault_pv=_COMMS)
     assert await _collect(observer, {_WATER, _VACUUM}) == []
 
 
@@ -266,7 +283,7 @@ async def test_an_unread_comms_flag_also_suppresses() -> None:
     port = _ScriptedControlPort(
         readings={_FLOW2.trip_pv: [_reading(1)], _FLOW2.fault_pv or "": [_reading(0)]}
     )
-    observer = _observer(port, [_FLOW2], comms_fault_pv=_COMMS)
+    observer = _observer(port, [_FLOW2], communications_fault_pv=_COMMS)
     assert await _collect(observer, {_WATER}) == []
 
 
@@ -279,7 +296,7 @@ async def test_comms_clear_then_a_trip_is_reported() -> None:
             _FLOW2.fault_pv or "": [_reading(0)],
         }
     )
-    observer = _observer(port, [_FLOW2], comms_fault_pv=_COMMS)
+    observer = _observer(port, [_FLOW2], communications_fault_pv=_COMMS)
     observed = await _collect(observer, {_WATER})
     assert [o.observed_status for o in observed] == ["Unavailable"]
 
@@ -341,3 +358,97 @@ async def test_available_is_never_emitted() -> None:
     observed = await _collect(_observer(port, [_FLOW2, _VS1]), {_WATER, _VACUUM})
     assert observed
     assert {o.observed_status for o in observed} <= {"Unavailable", "Recovering"}
+
+
+@pytest.mark.unit
+def test_losing_the_tripped_channel_does_not_read_as_the_trip_clearing() -> None:
+    """The fail-open bug gate review caught, pinned as a regression.
+
+    Flow2 carries a standing trip; then Flow2's own instrument faults
+    while Flow6 still reads clear. The earlier "no trips among the
+    channels I trust" rule concluded the trip had cleared and emitted
+    Recovering with a reason saying so, which invites an operator to
+    restore a resource that is still down. The trip did not clear, it
+    became unobservable, and those are opposite facts.
+
+    Driven through `_observations` rather than a scripted stream because
+    the ordering matters: the trip has to be believed BEFORE its
+    instrument faults, and the scripted port drains one PV to completion
+    before starting the next, so it cannot interleave two PVs of one
+    channel. Real PVs update independently, which is exactly when this
+    bites.
+    """
+    observer = _observer(_ScriptedControlPort(readings={}), [_FLOW2, _FLOW6])
+    channels = [_FLOW2, _FLOW6]
+    latest: dict[str, bool | None] = {
+        _FLOW2.fault_pv or "": False,
+        _FLOW2.trip_pv: True,
+        _FLOW6.fault_pv or "": False,
+        _FLOW6.trip_pv: False,
+    }
+
+    while_believed = observer._observations(channels, latest)
+    assert [o.observed_status for o in while_believed] == ["Unavailable"]
+
+    # Flow2's own sensor goes over-range. Its trip never cleared.
+    latest[_FLOW2.fault_pv or ""] = True
+    after_going_blind = observer._observations(channels, latest)
+
+    assert [o.observed_status for o in after_going_blind] == [], (
+        "losing sight of the tripped channel must withhold, not report clear"
+    )
+
+
+@pytest.mark.unit
+async def test_a_blind_channel_blocks_clear_even_when_siblings_are_clear() -> None:
+    """Clear needs every channel, because the unseen one might be the tripped one."""
+    port = _ScriptedControlPort(
+        readings={
+            _FLOW6.fault_pv or "": [_reading(0)],
+            _FLOW6.trip_pv: [_reading(0)],
+            _FLOW2.fault_pv or "": [_reading(1)],
+            _FLOW2.trip_pv: [_reading(0)],
+        }
+    )
+    assert await _collect(_observer(port, [_FLOW6, _FLOW2]), {_WATER}) == []
+
+
+@pytest.mark.unit
+async def test_monitor_ref_names_the_culprit_channel() -> None:
+    """The audited "which sensor said so" must be the one that tripped.
+
+    It previously pointed at the first configured channel regardless, so
+    with eight circuits behind one Supply it named a healthy one on every
+    event, and the culprit survived only in free text.
+    """
+    port = _ScriptedControlPort(
+        readings={
+            _FLOW6.fault_pv or "": [_reading(0)],
+            _FLOW6.trip_pv: [_reading(1)],
+            _FLOW2.fault_pv or "": [_reading(0)],
+            _FLOW2.trip_pv: [_reading(0)],
+        }
+    )
+    observed = await _collect(_observer(port, [_FLOW2, _FLOW6]), {_WATER})
+    tripped = [o for o in observed if o.observed_status == "Unavailable"]
+    assert tripped
+    assert tripped[-1].source_id == _FLOW6.trip_pv
+    assert "Flow6" in tripped[-1].reason
+
+
+@pytest.mark.unit
+def test_an_enum_label_is_uninterpretable_not_low() -> None:
+    """A `bi` record surfaces its FORMAT_CTRL label, not an integer.
+
+    `EpicsCaControlPort` resolves DBR_ENUM to the label string, so a BLEPS
+    flag declared as `bi`/`mbbi` arrives as "TRIP" or "OK". Reading that
+    as low would be catastrophic and guessing the vocabulary would be
+    fabrication, so it is unbelievable and the caller logs it. Whether
+    2-BM's records are enums is an open question for staff.
+    """
+    assert flag_state_from_reading(_reading("TRIP")) is None
+    assert flag_state_from_reading(_reading("OK")) is None
+    assert flag_state_from_reading(_reading("MAJOR")) is None
+    # The cold-label-cache fallback stringifies the index, which parses.
+    assert flag_state_from_reading(_reading("1")) is True
+    assert flag_state_from_reading(_reading("0")) is False

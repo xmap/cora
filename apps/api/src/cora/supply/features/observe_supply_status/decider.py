@@ -197,6 +197,11 @@ def decide(
             )
         ]
 
-    # UNKNOWN is reachable only via genesis (SupplyRegistered), never
-    # via a Monitor transition. Defensive guard.
-    raise MonitorTriggerNotPermittedError(state.id, command.new_status, state.status)
+    # Unreachable today, and kept as enum-growth insurance: the forbidden
+    # set plus the three handled targets exhaust `SupplyStatus`, so this
+    # line only fires if a seventh member is added without a branch here.
+    # It used to catch the UNKNOWN target, which now sits in the forbidden
+    # set so the status-change-only return cannot swallow it.
+    raise MonitorTriggerNotPermittedError(  # pragma: no cover
+        state.id, command.new_status, state.status
+    )

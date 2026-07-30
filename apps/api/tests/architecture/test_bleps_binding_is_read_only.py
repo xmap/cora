@@ -61,9 +61,18 @@ _THIS_FILE = "test_bleps_binding_is_read_only.py"
 
 
 def _descriptor_files() -> list[Path]:
-    """Deployment descriptors, where a PV binding would otherwise hide."""
-    root = Path(__file__).resolve().parents[3] / "deployments"
-    return sorted(root.rglob("*.yaml"))
+    """Deployment descriptors, where a PV binding would otherwise hide.
+
+    `parents[4]` is the repository root: this file sits at
+    `apps/api/tests/architecture/`, so parents run architecture, tests,
+    api, apps, root. An earlier `parents[3]` pointed at `apps/deployments`,
+    which does not exist, and `rglob` on a missing directory yields
+    nothing, so the descriptor scan passed while reading zero files. Hence
+    `test_the_descriptor_scan_reads_files` below: a guard that cannot tell
+    "nothing to find" from "nowhere to look" is not a guard.
+    """
+    root = Path(__file__).resolve().parents[4] / "deployments"
+    return sorted(root.rglob("*.yaml")) + sorted(root.rglob("*.yml"))
 
 
 @pytest.mark.architecture
@@ -100,3 +109,22 @@ def test_the_write_pv_roster_is_not_silently_emptied() -> None:
     assert len(_WRITE_PV_LEAVES) >= 11
     assert "A_FAULT_RESET" in _WRITE_PV_LEAVES
     assert "TRIP_RESET" in _WRITE_PV_LEAVES
+
+
+@pytest.mark.architecture
+def test_the_descriptor_scan_reads_files() -> None:
+    """Guards the other half: a wrong root made the descriptor scan vacuous.
+
+    This is the check that was missing when `_descriptor_files()` pointed
+    at a directory that does not exist. Asserting on the roster alone said
+    nothing about whether anything was ever opened.
+    """
+    found = _descriptor_files()
+    assert len(found) > 50, f"expected the deployments tree, found {len(found)} files"
+    assert any(p.parent.name == "2-bm" for p in found)
+
+
+@pytest.mark.architecture
+def test_the_source_scan_reads_files() -> None:
+    """Same guard for the source half, which shares the vacuous-scan risk."""
+    assert len(tracked_python_files()) > 500

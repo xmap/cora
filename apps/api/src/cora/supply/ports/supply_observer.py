@@ -41,15 +41,15 @@ a resource looking healthy again therefore emits `Recovering`, not
 
 ## Stub roster
 
-`AllAvailableSupplyObserver` ships inline at the bottom of this module:
-the zero-substrate stub for tests and the "no observer wired" boot
-path. It yields NOTHING rather than yielding `Available` observations,
-because `Available` is exactly the status a monitor may not drive; a
-stub that tried would raise `MonitorTriggerNotPermittedError` on every
-tick. The name states the always-pass posture it stands in for, matching
-the `AllBeamOpenLookup` / `AlwaysPermittedEnclosureObserver` family;
-the empty stream is how that posture is expressed on a seam whose
-happy path is silence.
+`AlwaysQuietSupplyObserver` ships inline at the bottom of this module:
+the zero-substrate stub for tests, standing in for a beamline where
+nothing is wrong. It yields NOTHING, and the name says so, following
+`AlwaysQuietCautionLookup` rather than the `All<Predicate>Lookup`
+family: those quantify over a set, this one describes a stream's
+posture. An earlier name said `AllAvailable`, which was worse than
+imprecise, because `Available` is the one status a monitor may never
+drive, so the name promised the forbidden thing and then spent a
+paragraph unsaying it.
 
 ## Subscribe shape
 
@@ -151,18 +151,15 @@ class SupplyObserver(Protocol):
         ...
 
 
-class AllAvailableSupplyObserver:
+class AlwaysQuietSupplyObserver:
     """Stub `SupplyObserver` that observes nothing.
 
-    The zero-substrate observer for tests and the "no observer wired"
-    boot path, standing in for a beamline where every resource is fine.
-
-    It yields an EMPTY stream rather than `Available` observations, and
-    that is the whole point of the stub: `Available` is fenced out of
-    the monitor path (only an operator restores a Supply), so a stub
-    that yielded it would raise on every tick. A beamline with nothing
-    wrong produces no observations, so silence is the faithful
-    always-pass posture here.
+    The zero-substrate observer for tests, standing in for a beamline
+    where every resource is fine. A beamline with nothing wrong produces
+    no readings, so silence is the faithful representation, and it is
+    also the only safe one: `Available` is fenced out of the monitor path
+    (only an operator restores a Supply), so a stub that yielded it would
+    raise on every tick.
     """
 
     def observe(self, scope: SupplyObserverScope) -> AsyncGenerator[SupplyObservation]:
@@ -174,7 +171,7 @@ class AllAvailableSupplyObserver:
 
 
 __all__ = [
-    "AllAvailableSupplyObserver",
+    "AlwaysQuietSupplyObserver",
     "SupplyObservation",
     "SupplyObserver",
     "SupplyObserverScope",

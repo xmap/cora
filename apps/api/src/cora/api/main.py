@@ -81,10 +81,7 @@ from cora.agent import (
     wire_agent,
 )
 from cora.agent.adapters import BudgetSpendGuard, PostgresLanguageModelLookup
-from cora.api._bleps_supply_observer import (
-    BlepsChannel,
-    ControlPortBlepsSupplyObserver,
-)
+from cora.api._bleps_supply_observer import BlepsChannel, BlepsSupplyObserver
 from cora.api._calibration_watcher import calibration_watcher_lifespan
 from cora.api._campaign_watcher import campaign_watcher_lifespan
 from cora.api._capture_observer import ControlPortCaptureObserver
@@ -225,6 +222,7 @@ from cora.operation.adapters.control_port_beam_availability_lookup import (
     build_beam_availability_lookup,
 )
 from cora.operation.adapters.control_port_config import build_control_port
+from cora.operation.adapters.read_only_control_port import ReadOnlyControlPort
 from cora.recipe import (
     RecipeHandlers,
     register_recipe_projections,
@@ -269,7 +267,7 @@ from cora.supply import (
     wire_supply,
 )
 from cora.supply._monitor import supply_status_monitor_lifespan
-from cora.supply._supply_seed import seed_bleps_supplies
+from cora.supply._supply_seed import seed_observed_supplies
 from cora.supply.adapters import PostgresSupplyLookup
 from cora.trust import (
     TrustHandlers,
@@ -1302,19 +1300,33 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             register_supply_projections(supply_only_registry, deps)
             if deps.pool is not None:
                 await drain_projections(deps.pool, supply_only_registry, deadline_seconds=5.0)
-            bleps_supply_ids = await seed_bleps_supplies(deps)
-            bleps_supply_observer = ControlPortBlepsSupplyObserver(
-                control_port=app.state.operation.control_port,
+            bleps_supply_ids = await seed_observed_supplies(
+                deps,
+                supply_names=frozenset(
+                    channel.supply for channel in settings.bleps_supply_channels
+                ),
+            )
+            bleps_supply_observer = BlepsSupplyObserver(
+                # Wrapped, not merely trusted. Route-level read_only
+                # defaults False, so once a deployment enables writes (2-BM
+                # must, to drive the stage) the 2bmBLEPS route this feature
+                # requires would otherwise be writable. CORA never drives
+                # the interlock (#564), and that is a structural guarantee
+                # here rather than a reviewed one: this port cannot write
+                # whatever the route table says.
+                control_port=ReadOnlyControlPort(
+                    app.state.operation.control_port, scope="deployment"
+                ),
                 channels=[
                     BlepsChannel(
-                        supply_code=channel["supply"],
-                        label=channel.get("label", channel["trip"]),
-                        trip_pv=channel["trip"],
-                        fault_pv=channel.get("fault") or None,
+                        supply_code=channel.supply,
+                        label=channel.label or channel.trip,
+                        trip_pv=channel.trip,
+                        fault_pv=channel.fault or None,
                     )
                     for channel in settings.bleps_supply_channels
                 ],
-                comms_fault_pv=settings.bleps_comms_fault_pv or None,
+                communications_fault_pv=settings.bleps_communications_fault_pv or None,
                 clock=deps.clock,
             )
 

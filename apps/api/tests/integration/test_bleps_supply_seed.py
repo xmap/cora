@@ -17,41 +17,53 @@ from uuid import uuid4
 import asyncpg
 import pytest
 
-from cora.infrastructure.config import Settings
+from cora.infrastructure.config import BlepsSupplyChannelConfig, Settings
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.supply._projections import register_supply_projections
-from cora.supply._supply_seed import kind_for_supply_name, seed_bleps_supplies
+from cora.supply._supply_seed import seed_observed_supplies, supply_kind_from_name
 from cora.supply.adapters.postgres_supply_lookup import PostgresSupplyLookup
 from cora.supply.aggregates.supply import SupplyStatus, fold, from_stored
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 7, 29, 12, 0, 0, tzinfo=UTC)
+_COMMS = "2bmBLEPS:BLEPS:COMMUNICATIONS_FAULT"
 _WATER = "2-BM cooling water"
 _VACUUM = "2-BM beamline vacuum"
 
 
-def _channels(*supplies: str) -> list[dict[str, str]]:
+def _channels(*supplies: str) -> list[BlepsSupplyChannelConfig]:
     return [
-        {
-            "supply": supply,
-            "label": f"{supply} channel",
-            "trip": f"2bmBLEPS:BLEPS:{i}_TRIP",
-        }
+        BlepsSupplyChannelConfig(
+            supply=supply,
+            label=f"{supply} channel",
+            trip=f"2bmBLEPS:BLEPS:{i}_TRIP",
+        )
         for i, supply in enumerate(supplies)
     ]
 
 
-def _deps_with(db_pool: asyncpg.Pool, channels: list[dict[str, str]]) -> Kernel:
+def _deps_with(db_pool: asyncpg.Pool, channels: list[BlepsSupplyChannelConfig]) -> Kernel:
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4() for _ in range(12)])
     return dataclasses.replace(
         deps,
-        settings=Settings(app_env="test", bleps_supply_channels=channels),  # type: ignore[call-arg]
+        settings=Settings(  # type: ignore[call-arg]
+            app_env="test",
+            bleps_supply_channels=channels,
+            # Required whenever channels are configured: without the
+            # comms flag a stale BLEPS feed would be trusted forever.
+            bleps_communications_fault_pv=_COMMS if channels else "",
+        ),
         # The default is the synthetic AllSatisfiedSupplyLookup; the
         # seeder's re-boot pre-check reads real projection rows, which is
         # what production wires.
         supply_lookup=PostgresSupplyLookup(db_pool),
     )
+
+
+def _names(deps: Kernel) -> frozenset[str]:
+    """What the composition root computes and hands the seeder."""
+    return frozenset(channel.supply for channel in deps.settings.bleps_supply_channels)
 
 
 async def _status(deps: Kernel, supply_id: object) -> SupplyStatus | None:
@@ -63,14 +75,14 @@ async def _status(deps: Kernel, supply_id: object) -> SupplyStatus | None:
 @pytest.mark.integration
 async def test_no_channels_seeds_nothing(db_pool: asyncpg.Pool) -> None:
     """A generic boot configures no channels and must register no Supplies."""
-    assert await seed_bleps_supplies(_deps_with(db_pool, [])) == {}
+    assert await seed_observed_supplies(_deps_with(db_pool, []), supply_names=frozenset()) == {}
 
 
 @pytest.mark.integration
 async def test_each_configured_supply_is_registered_once(db_pool: asyncpg.Pool) -> None:
     deps = _deps_with(db_pool, _channels(_WATER, _VACUUM))
 
-    seeded = await seed_bleps_supplies(deps)
+    seeded = await seed_observed_supplies(deps, supply_names=_names(deps))
 
     assert sorted(seeded) == sorted([_WATER, _VACUUM])
     for supply_id in seeded.values():
@@ -82,10 +94,14 @@ async def test_each_configured_supply_is_registered_once(db_pool: asyncpg.Pool) 
 async def test_many_channels_on_one_supply_seed_one_supply(db_pool: asyncpg.Pool) -> None:
     """Eight cooling circuits are eight channels and one resource."""
     channels = [
-        {"supply": _WATER, "label": f"Flow{n}", "trip": f"2bmBLEPS:BLEPS:FLOW{n}_TRIP"}
+        BlepsSupplyChannelConfig(
+            supply=_WATER, label=f"Flow{n}", trip=f"2bmBLEPS:BLEPS:FLOW{n}_TRIP"
+        )
         for n in range(1, 9)
     ]
-    seeded = await seed_bleps_supplies(_deps_with(db_pool, channels))
+    seeded = await seed_observed_supplies(
+        _deps_with(db_pool, channels), supply_names=frozenset({_WATER})
+    )
     assert list(seeded) == [_WATER]
 
 
@@ -94,7 +110,7 @@ async def test_a_seeded_supply_is_registered_but_not_available(db_pool: asyncpg.
     """Unknown is what "no observation yet" means; Available is a person's word."""
     deps = _deps_with(db_pool, _channels(_WATER))
 
-    seeded = await seed_bleps_supplies(deps)
+    seeded = await seed_observed_supplies(deps, supply_names=_names(deps))
 
     assert await _status(deps, seeded[_WATER]) is SupplyStatus.UNKNOWN
 
@@ -103,14 +119,14 @@ async def test_a_seeded_supply_is_registered_but_not_available(db_pool: asyncpg.
 async def test_an_unknown_supply_name_is_skipped_not_guessed(db_pool: asyncpg.Pool) -> None:
     """A guessed kind would never match a Method's needed_supplies."""
     deps = _deps_with(db_pool, _channels("not a supply CORA knows"))
-    assert await seed_bleps_supplies(deps) == {}
+    assert await seed_observed_supplies(deps, supply_names=_names(deps)) == {}
 
 
 @pytest.mark.unit
 def test_the_kind_table_covers_both_bleps_resources() -> None:
-    assert kind_for_supply_name(_WATER) == "CoolingWater"
-    assert kind_for_supply_name(_VACUUM) == "Vacuum"
-    assert kind_for_supply_name("something else") is None
+    assert supply_kind_from_name(_WATER) == "CoolingWater"
+    assert supply_kind_from_name(_VACUUM) == "Vacuum"
+    assert supply_kind_from_name("something else") is None
 
 
 @pytest.mark.integration
@@ -125,11 +141,11 @@ async def test_a_second_boot_reuses_the_seeded_supplies(db_pool: asyncpg.Pool) -
     """
     deps = _deps_with(db_pool, _channels(_WATER, _VACUUM))
 
-    first = await seed_bleps_supplies(deps)
+    first = await seed_observed_supplies(deps, supply_names=_names(deps))
     registry = ProjectionRegistry()
     register_supply_projections(registry, deps)
     await drain_projections(db_pool, registry, deadline_seconds=5.0)
-    second = await seed_bleps_supplies(deps)
+    second = await seed_observed_supplies(deps, supply_names=_names(deps))
 
     assert second == first
     for supply_id in first.values():

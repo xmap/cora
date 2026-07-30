@@ -49,6 +49,18 @@ Reconnect is also why the decider's status-change-only rule matters
 here rather than being a nicety: a latched substrate republishes every
 still-true fault on every re-subscribe, and under the strict contract
 this loop would log an exception per channel per reconnect.
+
+## Where "the signals are clear" becomes a transition
+
+Observers report levels and hold no memory of where a Supply has been
+(see `cora.api._bleps_supply_observer`). That memory lives in the
+aggregate, and this is the only place both the observation and the
+aggregate are in hand, so the translation happens here: a `Recovering`
+observation is recorded only when the Supply is actually `Unavailable`,
+and dropped otherwise. Without that, a healthy beamline's first readings
+would each be a rejected transition, and with an adapter-side memory
+instead, a re-subscribe or a hand-moved Supply would silently disagree
+with the record.
 """
 
 from __future__ import annotations
@@ -127,6 +139,21 @@ async def record_observation(
     stored, version = await kernel.event_store.load(stream_type=_STREAM_TYPE, stream_id=supply_id)
     history: list[SupplyEvent] = [from_stored(s) for s in stored]
     state = fold(history)
+
+    # A monitor's `Recovering` means "the signals read clear", which is
+    # only a fact worth recording about a resource that was down. The
+    # observer reports levels and holds no memory, so this is where
+    # "clear" becomes either a transition or nothing, read against the
+    # aggregate's real status rather than an adapter's recollection of
+    # it. Skipping early also keeps the decider from rejecting the
+    # common case: on a healthy beamline every initial reading is clear.
+    if (
+        new_status is SupplyStatus.RECOVERING
+        and state is not None
+        and state.status is not SupplyStatus.UNAVAILABLE
+    ):
+        return
+
     domain_events = decide(
         state=state,
         command=command,
@@ -169,12 +196,20 @@ async def run_supply_status_monitor(
     scope = SupplyObserverScope(supply_codes=frozenset(code_to_id))
     while True:
         try:
+            # No `aclosing`: the port promises only `AsyncIterator`, which
+            # has no `aclose`, and stubs are free to return a plain
+            # iterator. Generator finalization is therefore left to the
+            # event loop, bounded by process shutdown, same as the
+            # enclosure precedent.
             async for observation in observer.observe(scope):
                 try:
                     await record_observation(kernel, observation, code_to_id)
                 except asyncio.CancelledError:
                     raise
                 except Exception:
+                    # A dropped observation is not lost: observers report
+                    # levels, so the next reading re-asserts the same
+                    # verdict. That is why the adapter holds no edge state.
                     _log.exception(
                         "supply_monitor.record_failed",
                         supply_code=observation.supply_code,
@@ -195,13 +230,19 @@ async def supply_status_monitor_lifespan(
     reconnect_delay_seconds: float = _RECONNECT_DELAY_SECONDS,
 ) -> AsyncGenerator[None]:
     """Run the monitor for the lifetime of the context, cancelling on exit."""
+    if not code_to_id:
+        # No configured supplies: spawn nothing rather than a task that
+        # exists only to return, on every generic boot.
+        yield
+        return
     task = asyncio.create_task(
         run_supply_status_monitor(
             observer=observer,
             kernel=kernel,
             code_to_id=code_to_id,
             reconnect_delay_seconds=reconnect_delay_seconds,
-        )
+        ),
+        name="supply-status-monitor",
     )
     try:
         yield

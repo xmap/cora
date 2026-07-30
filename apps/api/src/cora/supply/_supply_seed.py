@@ -1,11 +1,18 @@
-"""Supply BC lifespan hook: seed the Supplies the BLEPS monitor observes.
+"""Supply BC lifespan hook: seed the Supplies a monitor observes.
 
-Config-driven: one Supply per distinct `supply` in
-`Settings.bleps_supply_channels`, registered under `self_facility_code`.
-Empty config (the default) is a no-op, so a generic boot registers
-nothing; only a deployment that configures `BLEPS_SUPPLY_CHANNELS` seeds
-these. Mirrors `cora.enclosure._enclosure_seed` in shape and shares its
+Caller-driven: one Supply per name handed in, registered under
+`self_facility_code`. An empty set is a no-op, so a generic boot registers
+nothing. Mirrors `cora.enclosure._enclosure_seed` in shape and shares its
 constraints.
+
+## The caller names the resources, not this module
+
+The names arrive as an argument rather than being read from a
+substrate-specific setting. An earlier version read
+`Settings.bleps_supply_channels` directly, which put a BLEPS token inside
+`cora.supply` and broke this BC's own rule that "the runtime never
+touches substrate-specific symbols" (`ports/supply_observer.py`). The
+composition root knows about BLEPS; the Supply BC knows about Supplies.
 
 ## Registered, deliberately NOT marked Available
 
@@ -95,7 +102,7 @@ _KIND_BY_NAME: dict[str, str] = {
 _log = get_logger(__name__)
 
 
-def kind_for_supply_name(name: str) -> str | None:
+def supply_kind_from_name(name: str) -> str | None:
     """The `Supply.kind` for a configured supply name, or None if unknown.
 
     An unknown name is a configuration error, not a reason to invent a
@@ -105,15 +112,15 @@ def kind_for_supply_name(name: str) -> str | None:
     return _KIND_BY_NAME.get(name)
 
 
-async def seed_bleps_supplies(deps: Kernel) -> dict[str, UUID]:
-    """Register each configured BLEPS-observed Supply; return name -> id."""
-    names = sorted({channel["supply"] for channel in deps.settings.bleps_supply_channels})
+async def seed_observed_supplies(deps: Kernel, *, supply_names: frozenset[str]) -> dict[str, UUID]:
+    """Register each named Supply if absent; return name -> id for all of them."""
+    names: list[str] = sorted(supply_names)
     if not names:
         return {}
 
     facility_code = deps.settings.self_facility_code
     wanted_kinds = frozenset(
-        kind for kind in (kind_for_supply_name(name) for name in names) if kind is not None
+        kind for kind in (supply_kind_from_name(name) for name in names) if kind is not None
     )
     existing_by_kind: Mapping[str, Sequence[SupplyLookupResult]] = (
         await deps.supply_lookup.find_supplies_by_kind(kinds=wanted_kinds) if wanted_kinds else {}
@@ -121,7 +128,7 @@ async def seed_bleps_supplies(deps: Kernel) -> dict[str, UUID]:
 
     seeded: dict[str, UUID] = {}
     for name in names:
-        kind = kind_for_supply_name(name)
+        kind = supply_kind_from_name(name)
         if kind is None:
             _log.warning("supply_seed.unknown_supply_name", supply_name=name)
             continue
@@ -172,4 +179,4 @@ async def seed_bleps_supplies(deps: Kernel) -> dict[str, UUID]:
     return seeded
 
 
-__all__ = ["kind_for_supply_name", "seed_bleps_supplies"]
+__all__ = ["seed_observed_supplies", "supply_kind_from_name"]
