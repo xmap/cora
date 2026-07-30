@@ -1,4 +1,4 @@
-# Operation module <span class="md-maturity md-maturity--stable" title="Aggregate, FSM, nine events, thirteen slices, two projections, and per-step entry table all locked.">stable</span>
+# Operation module <span class="md-maturity md-maturity--stable" title="Aggregate, FSM, events, slices, projections, and per-step entry table all locked; the Held pause state and the pinned-step-list resume path have shipped on top.">stable</span>
 
 ## Purpose & Scope
 
@@ -8,16 +8,18 @@ A Procedure is distinct from a Run by what it leaves of record: a Run exists to 
 
 **Execution.** Walking a Procedure step by step, applying each setpoint, running each action, verifying each check, is an optional edge runtime CORA offers for facilities that choose it. The `Conductor` dispatches steps through a substrate-neutral `ControlPort`, with EPICS Channel Access and PVA adapters shipped; a facility may use it or keep its own tooling. Its lower bound is the deterministic real-time loop, which stays in the control system. See [the recording spine and the optional execution edge](../../standards.md#the-recording-spine-and-the-optional-execution-edge).
 
+**Pause and resume.** A halted conduct can be re-established and resumed rather than aborted and reseeded. `hold_procedure` pauses `Running` to `Held` and `resume_procedure` returns `Held` to `Running`; the pair is bidirectional and unlimited-cycle within one conduct, each hold requiring an intervening resume. The hold `reason` is REQUIRED (1-500 chars), unlike the slim `RunHeld`, because pausing a halted conduct is a deliberate, high-information operator act. Resume carries a `re_establishment_boundary`, the index in the PINNED resolved step list from which it re-drives setpoints and re-runs checks. That is deliberately a re-establishment boundary and not a continuity proof: the aggregate owns no verified-continuity claim. The pinning is what makes replay honest. `ResolvedStepsRecorded` captures the final resolved list before any step executes, after recipe re-expansion and pseudoaxis resolution, so resume replays that exact list rather than re-deriving it from live `Plan.wires`, partition rules, and calibrations, which could yield a different list and silently skip or mis-target a step. Two conduct entry points ride on this. `conduct_or_hold_procedure` differs from `conduct_procedure` only in failure posture: a RECOVERABLE step failure (a setpoint or a check, re-drivable on resume) pauses to `Held` instead of aborting, while a non-recoverable failure (an action, an interrupted acquisition), a lifecycle failure, and a mid-execute cancellation keep the abort posture. `conduct_from_procedure` then resumes and replays the pinned tail, auto-completing on a clean tail, leaving the Procedure `Running` on an acquisition halt that needs an operator decision (redo fresh versus reseed), and best-effort aborting on a genuine step failure. `Held` accepts no step appends, and `complete_procedure` does not accept `Held`, so a paused Procedure must resume before it can reach the happy-path terminal; abort and truncate accept it directly. One off-diagonal guard: a `Held` Procedure whose parent Run is itself `Held` cannot resume and walk real setpoints while the Run is paused. There is no cascade the other way, from Run-resume into Procedure-resume; that is a Layer-3 saga and stays deferred.
+
 **Iteration.** Many procedures converge over repeated passes: an optical alignment nudges a mirror, re-measures, and repeats until the beam is centered. CORA models each pass as a first-class iteration through the `ProcedureIterationStarted` / `ProcedureIterationEnded` boundary pair, recording per-pass timing and a convergence verdict (`converged` true, false, or no-verdict, plus an optional `reason`). Iteration is orthogonal to the lifecycle FSM: it is a counter and a per-pass read model on a `Running` Procedure, not a status. An optional `max_consecutive_unconverged_iterations` cap, set at register time (the "patience" of early-stopping vocabulary), lets the loop give up: once that many consecutive passes end without `converged=true`, `start_iteration` refuses with `ProcedureIterationLimitReachedError` and the operator or agent decides whether to abort, truncate, or complete. A `converged=true` pass resets the streak. Before iteration was first-class, alignment scenarios smuggled the pass number into a free-form `evidence['iteration']` key; that ad-hoc convention is now retired and banned by a fitness test.
 
-**Steering.** A convergence loop follows a fixed recipe; a steered loop asks a brain where to look next. `conduct_until_advised` is the decide-axis twin of the convergence loop: after each pass it hands the accumulated evidence to a `DecidePort` and seeds the next pass from the point the brain advises, until the brain advises stop. The seam is deliberately optimizer- and action-neutral, expressed as six nouns: an objective (what "good" means, named by a measurement), a search space of axes, the evidence so far, one observation, the advice returned, and a budget. Optimizer internals (kernel, acquisition, surrogate) never cross the seam; a next point is coordinates keyed by axis name, never a command, so translating a point into steps stays the loop's job. The brain is handed the full history every call and is assumed to hold no memory between calls, which keeps a pure-function brain and a stateful one behind one surface. Shipped brains: an in-memory fake, a deterministic `grid_walk` sweep, a `sobol` low-discrepancy initial-design seeder, a `botorch` Gaussian-process Bayesian-optimization brain, and a `staged` composite that seeds with Sobol then hands off to the GP once enough successful observations exist. The GP brain and Sobol seeder need the optional `bo` dependency group (BoTorch, on PyTorch); the base install stays lean. When a learning brain decides a pass, the fitted model's summary scalars (per-axis lengthscales, observation noise, acquisition value) are captured for audit as one row per iteration in a per-Procedure diagnostics logbook (a `Diagnostic` entry kind alongside the `Activity` step log; a side table that does not fold into aggregate state), so a reviewer can later reconstruct why the brain advised a given point. Because a Gaussian-process fit is not bit-reproducible across environments even with a fixed seed, a GP-steered run cannot be reconstructed by re-asking the brain. Instead the loop records the coordinate the brain advised each pass (`advised_next_point` on the iteration event), surfaced alongside the verdict and deciding brain in the per-iteration read model, so a finished GP-steered run is reconstructable by reading the recorded decision trail. The run stays classified "forward-only" (meaning not re-ask-reproducible, distinct from not-recorded and, now, distinct from not-resumable). A crashed GP-steered run resumes through `reconduct_until_advised`: it rebuilds the brain's history from the record, the measured value of each closed pass from a per-Procedure outcome logbook (an `Outcome` entry kind, sibling to the diagnostics log) and the advised coordinate from the iteration trail, then consults the brain only at the open frontier. Resume neither re-asks the brain for a pass already done nor re-drives hardware to a past position: the next move is an absolute one issued from wherever the instrument now sits, which reaches the same commanded point regardless of the current position, and direction-of-approach consistency (anti-backlash) is a per-move concern of the motion controller, not of resume. True sample path-dependence (thermal or radiation history, mechanical creep) is shaped by the whole trajectory rather than any single point, so it belongs in provenance, not in a resume-time re-drive; re-establishing one historical setpoint would neither be necessary nor sufficient. See [the recording spine and the optional execution edge](../../standards.md#the-recording-spine-and-the-optional-execution-edge).
+**Steering.** A convergence loop follows a fixed recipe; a steered loop asks a brain where to look next. `conduct_until_advised` is the decide-axis twin of the convergence loop: after each pass it hands the accumulated evidence to a `DecidePort` and seeds the next pass from the point the brain advises, until the brain advises stop. The seam is deliberately optimizer- and action-neutral, expressed as six nouns: an objective (what "good" means, named by a measurement), a search space of axes, the evidence so far, one observation, the advice returned, and a budget. Optimizer internals (kernel, acquisition, surrogate) never cross the seam; a next point is coordinates keyed by axis name, never a command, so translating a point into steps stays the loop's job. The brain is handed the full history every call and is assumed to hold no memory between calls, which keeps a pure-function brain and a stateful one behind one surface. Shipped brains: an in-memory fake, a deterministic `grid_walk` sweep, a `sobol` low-discrepancy initial-design seeder, a `botorch` Gaussian-process Bayesian-optimization brain, and a `staged` composite that seeds with Sobol then hands off to the GP once enough successful observations exist. The GP brain and Sobol seeder need the optional `bo` dependency group (BoTorch, on PyTorch); the base install stays lean. When a learning brain decides a pass, the fitted model's summary scalars (per-axis lengthscales, observation noise, acquisition value) are captured for audit as one row per iteration in a per-Procedure diagnostics logbook (a `Diagnostic` entry kind alongside the `Activity` step log; a side table that does not fold into aggregate state), so a reviewer can later reconstruct why the brain advised a given point. Because a Gaussian-process fit is not bit-reproducible across environments even with a fixed seed, a GP-steered run cannot be reconstructed by re-asking the brain. Instead the loop records the coordinate the brain advised each pass (`advised_next_point` on the iteration event), surfaced alongside the verdict and deciding brain in the per-iteration read model, so a finished GP-steered run is reconstructable by reading the recorded decision trail. The run stays classified "forward-only" (meaning not re-ask-reproducible, distinct from not-recorded and, now, distinct from not-resumable). A crashed GP-steered run resumes through `conduct_until_advised_from`: it rebuilds the brain's history from the record, the measured value of each closed pass from a per-Procedure outcome logbook (an `Outcome` entry kind, sibling to the diagnostics log) and the advised coordinate from the iteration trail, then consults the brain only at the open frontier. Resume neither re-asks the brain for a pass already done nor re-drives hardware to a past position: the next move is an absolute one issued from wherever the instrument now sits, which reaches the same commanded point regardless of the current position, and direction-of-approach consistency (anti-backlash) is a per-move concern of the motion controller, not of resume. True sample path-dependence (thermal or radiation history, mechanical creep) is shaped by the whole trajectory rather than any single point, so it belongs in provenance, not in a resume-time re-drive; re-establishing one historical setpoint would neither be necessary nor sufficient. See [the recording spine and the optional execution edge](../../standards.md#the-recording-spine-and-the-optional-execution-edge).
 
 <div class="cora-aside cora-aside--deferred" markdown>
 
 Out of scope
 {: .cora-kicker }
 
-- **Held / Resumed transitions.** No pause-and-resume cycle today. The pilot will surface whether operators need it; the additive-state pattern keeps the door open.
+- **Cross-aggregate resume cascade.** Pause and resume ship on the Procedure itself (see above), but resuming a parent Run does NOT cascade into its held phase Procedures; the off-diagonal guard only refuses the illegal direction. Coordinating both is a Layer-3 saga, deferred.
 - **Verifying as a first-class FSM state.** Per-step Check happens inside Running synchronously; the standards corpus does not bless a separate Verifying state.
 - **Per-kind payload validation at the API.** The step `payload` body is `dict[str, Any]` today; per-kind Pydantic models land once pilot vocabulary settles.
 - **Asset-existence verification at register time.** `target_asset_ids` is taken at face value; existence and decommission-state gating runs at start-procedure time.
@@ -29,7 +31,7 @@ Out of scope
 
 | Name | Identity | State summary | FSM |
 |---|---|---|---|
-| `Procedure` | `id: UUID` (opaque) | name, kind, target asset ids, status, optional `parent_run_id`, optional `activity_logbook_id`, optional `capability_id`, optional `recipe_id`, `iteration_count`, optional `current_iteration_index`, `consecutive_unconverged_iterations`, optional `max_consecutive_unconverged_iterations` | yes |
+| `Procedure` | `id: UUID` (opaque) | name, kind, target asset ids, status, optional `parent_run_id`, the three lazily-opened logbook ids (`activity_logbook_id`, `diagnostic_logbook_id`, `outcome_logbook_id`), optional `capability_id`, optional `recipe_id`, `iteration_count`, optional `current_iteration_index`, `consecutive_unconverged_iterations`, optional `max_consecutive_unconverged_iterations`, optional `actuation_kind` | yes |
 
 ## Value Objects
 
@@ -38,8 +40,8 @@ Out of scope
 | `ProcedureName` | trimmed bounded text, 1-200 chars | `Procedure.name` |
 | `ProcedureAbortReason` | trimmed bounded text, 1-500 chars; decider-input only | `abort_procedure` body |
 | `ProcedureTruncateReason` | trimmed bounded text, 1-500 chars; decider-input only | `truncate_procedure` body |
-| `ProcedureStatus` | closed StrEnum `{Defined, Running, Completed, Aborted, Truncated}` | `Procedure.status` |
-| `StepKind` | closed `Literal["setpoint", "action", "check"]` | per-step entry rows |
+| `ProcedureStatus` | closed StrEnum `{Defined, Running, Held, Completed, Aborted, Truncated}`; `Held` is the operator-pause state (`Running` to `Held` via `hold_procedure`, back via `resume_procedure`), mirroring `RunStatus.HELD` | `Procedure.status` |
+| `StepKind` | closed `Literal["setpoint", "action", "check", "capture", "compute"]`; the setpoint / action / check core renames ISA-106's Command / Perform / Verify triplet, and capture (a runtime value read) plus compute (a `ComputePort` job submission) extend it for the conduct-path runtimes | per-step entry rows |
 
 `Procedure.kind` is a bare `str` (1-50 chars, validated at the decider) rather than a VO, mirroring the `Supply.kind` precedent: pilot vocabulary will settle and the field will graduate to a closed `ProcedureKind` StrEnum later. Documented starter vocabulary: `bakeout`, `characterization`, `alignment`, `recovery`, `beam_mode_change`, `id_maintenance`, `kb_switching`, `optical_alignment`, `vacuum_regeneration`.
 
@@ -60,9 +62,13 @@ Narrow carve-out: capture-and-store procedures use `<condition>_field` (`dark_fi
 stateDiagram-v2
     [*] --> Defined: register_procedure
     Defined --> Running: start_procedure
+    Running --> Held: hold_procedure
+    Held --> Running: resume_procedure
     Running --> Completed: complete_procedure
     Running --> Aborted: abort_procedure
+    Held --> Aborted: abort_procedure
     Running --> Truncated: truncate_procedure
+    Held --> Truncated: truncate_procedure
     Completed --> [*]
     Aborted --> [*]
     Truncated --> [*]
@@ -72,9 +78,13 @@ stateDiagram-v2
 |---|---|---|---|
 | `[*]` | `Defined` | `register_procedure` | `ProcedureRegistered` |
 | `Defined` | `Running` | `start_procedure` | `ProcedureStarted` |
+| `Running` | `Held` | `hold_procedure` | `ProcedureHeld` |
+| `Held` | `Running` | `resume_procedure` | `ProcedureResumed` |
 | `Running` | `Completed` | `complete_procedure` | `ProcedureCompleted` |
-| `Running` | `Aborted` | `abort_procedure` | `ProcedureAborted` |
-| `Running` | `Truncated` | `truncate_procedure` | `ProcedureTruncated` |
+| `Running` \| `Held` | `Aborted` | `abort_procedure` | `ProcedureAborted` |
+| `Running` \| `Held` | `Truncated` | `truncate_procedure` | `ProcedureTruncated` |
+
+**The pause state is not a terminal waiting room.** `complete_procedure` is `Running`-only, so a `Held` Procedure must resume before it can reach the happy-path terminal, while abort and truncate accept `Held` directly (an operator who has decided the paused conduct is not worth resuming does not have to resume it first). Hold and resume are both strict-not-idempotent: re-holding a `Held` Procedure and re-resuming a `Running` one each raise.
 
 **Iteration is orthogonal to the FSM.** `start_iteration` and `end_iteration` open and close a convergence pass on a `Running` Procedure. They emit `ProcedureIterationStarted` / `ProcedureIterationEnded` and bump counters, but do NOT change `status`, so they are not rows in the table above. `start_iteration` is rejected unless the Procedure is `Running`, no iteration is already open, and the supplied `iteration_index` is the strict successor of `iteration_count` (`ProcedureCannotStartIterationError`); it also enforces the optional patience cap (`ProcedureIterationLimitReachedError`). `end_iteration` requires the supplied index to match the open iteration (`ProcedureCannotEndIterationError`) and records the convergence verdict.
 
@@ -86,22 +96,35 @@ stateDiagram-v2
 `abort_procedure` / `truncate_procedure`
 : `reason` is REQUIRED, trimmed, 1-500 chars. `truncate_procedure` accepts an optional `interrupted_at` (operator's best guess at the actual interruption time); validated to be not later than `now`.
 
+`hold_procedure`
+: `reason` is REQUIRED, trimmed, 1-500 chars (via the `ProcedureHoldReason` VO). Source state must be `Running`, otherwise `ProcedureCannotHoldError` naming the current status.
+
+`resume_procedure`
+: Source state must be `Held`, otherwise `ProcedureCannotResumeError`. `re_establishment_boundary` must be `>= 0`. The off-diagonal guard also refuses when the parent Run is itself `Held`; the handler derives that fact from a one-directional Operation to Run read, and a standalone Procedure passes it as False.
+
 `append_activities`
-: Status must be `Running`. Appending to a `Defined`, `Completed`, `Aborted`, or `Truncated` Procedure raises `ProcedureStepsLogbookClosedError` (the steps logbook is implicitly closed on every terminal). `step_kind` must be one of `setpoint`, `action`, `check`. Producer-supplied `event_id` deduplicates retries silently via `ON CONFLICT (event_id) DO NOTHING`.
+: Status must be `Running`. Appending to a `Defined`, `Held`, `Completed`, `Aborted`, or `Truncated` Procedure raises `ProcedureStepsLogbookClosedError` (the steps logbook is implicitly closed on every terminal, and a paused conduct is not advancing). `step_kind` must be one of `setpoint`, `action`, `check`, `capture`, `compute` (the `STEP_KIND_VALUES` set). Producer-supplied `event_id` deduplicates retries silently via `ON CONFLICT (event_id) DO NOTHING`.
 
 ## Events
+
+The aggregate emits <!-- arch:count kind=event bc=operation spell=true -->fourteen<!-- /arch:count --> event types. Seven carry a lifecycle transition (the FSM rows above, pause and resume included), two are the iteration boundary pair, three are lazily-opened logbook envelopes, and two are provenance-only.
 
 | Event | Payload sketch | When emitted |
 |---|---|---|
 | `ProcedureRegistered` | `procedure_id, name, kind, target_asset_ids, parent_run_id?, capability_id?, max_consecutive_unconverged_iterations?, occurred_at` | `register_procedure` accepted; status implicitly `Defined`. |
 | `ProcedureStarted` | `procedure_id, occurred_at` | `start_procedure` accepted (Defined → Running). |
 | `ProcedureActivitiesLogbookOpened` | `procedure_id, logbook_id, kind="steps", schema, occurred_at` | First `append_activities` call for the Procedure (lazy open). |
+| `ProcedureDiagnosticLogbookOpened` | `procedure_id, logbook_id, kind, schema, occurred_at` | First `append_diagnostics` call (lazy open); the second logbook kind, carrying a learning brain's per-pass fit provenance on its own state field. |
+| `ProcedureOutcomeLogbookOpened` | `procedure_id, logbook_id, kind, schema, occurred_at` | First `append_outcomes` call (lazy open); the third logbook kind, carrying the measured value each steered pass produced so a resume rebuilds the history without re-measuring. |
+| `ProcedureHeld` | `procedure_id, reason, decided_by_decision_id?, actuation_kind?, occurred_at` | `hold_procedure` accepted (Running → Held). `reason` is required. `actuation_kind` snapshots what the Conductor observed up to the pause, so a later resume folds pre-hold provenance rather than letting a replay past a simulated prefix complete as `Physical`. |
+| `ProcedureResumed` | `procedure_id, re_establishment_boundary, decided_by_decision_id?, occurred_at` | `resume_procedure` accepted (Held → Running). The boundary is the index in the pinned step list from which replay re-drives, not a continuity claim. |
 | `ProcedureIterationStarted` | `procedure_id, iteration_index, occurred_at` | `start_iteration` accepted; opens a convergence pass on a `Running` Procedure. Bumps `iteration_count`, does not change `status`. |
 | `ProcedureIterationEnded` | `procedure_id, iteration_index, converged?, reason?, occurred_at` | `end_iteration` accepted; closes the open pass with its convergence verdict. Resets the unconverged streak on `converged=true`, otherwise increments it. |
 | `ProcedureCompleted` | `procedure_id, occurred_at` | `complete_procedure` accepted (Running → Completed). |
 | `ProcedureAborted` | `procedure_id, reason, occurred_at` | `abort_procedure` accepted (Running → Aborted). |
 | `ProcedureTruncated` | `procedure_id, reason, interrupted_at?, occurred_at` | `truncate_procedure` accepted (Running → Truncated). |
 | `RecipeExpansionRecorded` | `procedure_id, recipe_id, recipe_version?, capability_id, capability_version?, bindings, expansion_port_version, steps_hash, bindings_hash, step_count, occurred_at` | `register_procedure_from_recipe` accepted; written alongside `ProcedureRegistered` to record the Recipe-to-steps expansion provenance. No-op fold on Procedure state. |
+| `ResolvedStepsRecorded` | `procedure_id, resolved_steps, step_count, occurred_at` | Pinned at conduct start, before any step executes, after recipe re-expansion and pseudoaxis resolution. Complementary to `RecipeExpansionRecorded`: that one is registration-time and stores hashes for cheap re-derivation, this one is conduct-time and stores the full list for verbatim replay. No-op fold on Procedure state. |
 
 Per-step records (one row per setpoint, action, or check) write directly to the `entries_operation_procedure_activities` table via the ActivityStore port, NOT as events on the Procedure stream. No `ProcedureStepsLogbookClosed` event is emitted; the FSM terminal IS the close signal.
 
@@ -123,7 +146,16 @@ _Generated from the code at build time._
 : `ProcedureNotFoundError`, `ProcedureStepsLogbookClosedError`, `InvalidStepKindError`, `Unauthorized`
 
 `CompleteProcedure` / `AbortProcedure` / `TruncateProcedure`
-: `ProcedureNotFoundError`, `ProcedureCannot<Verb>Error` (single-source from `Running`), `Unauthorized`. Abort additionally raises `InvalidProcedureAbortReasonError`; Truncate additionally raises `InvalidProcedureTruncateReasonError` and `InvalidProcedureInterruptedAtError`.
+: `ProcedureNotFoundError`, `ProcedureCannot<Verb>Error` (Complete is single-source from `Running`; Abort and Truncate accept `Running` or `Held`), `Unauthorized`. Abort additionally raises `InvalidProcedureAbortReasonError`; Truncate additionally raises `InvalidProcedureTruncateReasonError` and `InvalidProcedureInterruptedAtError`.
+
+`HoldProcedure`
+: `ProcedureNotFoundError`, `InvalidProcedureHoldReasonError`, `ProcedureCannotHoldError` (not `Running`, including a re-hold of an already-`Held` Procedure), `Unauthorized`
+
+`ResumeProcedure`
+: `ProcedureNotFoundError`, `InvalidProcedureReEstablishmentBoundaryError`, `ProcedureCannotResumeError` (not `Held`, or the parent Run is itself `Held`), `Unauthorized`
+
+`ConductProcedure` / `ConductOrHoldProcedure` / `ConductFromProcedure`
+: Orchestration entry points with a failures-in-body contract: a step failure comes back on the result (`succeeded`, `failure`, plus `held` on conduct-or-hold and `acquisition_halt` on conduct-from) rather than as an exception, so one client code path covers every outcome. Only a closed lifecycle set is re-raised for the route mappers: `UnauthorizedError` (403), `ProcedureNotFoundError` (404), `ConcurrencyError` (409). `ConductFromProcedure` adds a status guard ahead of the step-list lookup, so a non-`Held` Procedure is a `ProcedureCannotResumeError` (409) rather than a misleading 500, plus `InvalidProcedureReEstablishmentBoundaryError` and `ResolvedStepsRecordNotFoundError` (500; a conducted `Held` Procedure always has exactly one pinned record, so its absence is corruption).
 
 `StartIteration`
 : `ProcedureNotFoundError`, `ProcedureCannotStartIterationError` (not `Running`, an iteration is already open, or the supplied index is not the strict successor of `iteration_count`), `ProcedureIterationLimitReachedError` (the patience cap was reached; 409), `Unauthorized`
@@ -149,7 +181,7 @@ CREATE TABLE proj_operation_procedure_summary (
     target_asset_ids       UUID[]      NOT NULL DEFAULT '{}',
     parent_run_id          UUID,
     status                 TEXT        NOT NULL CHECK (
-        status IN ('Defined', 'Running', 'Completed', 'Aborted', 'Truncated')
+        status IN ('Defined', 'Running', 'Held', 'Completed', 'Aborted', 'Truncated')
     ),
     activity_logbook_id       UUID,
     registered_at          TIMESTAMPTZ NOT NULL,
@@ -166,7 +198,7 @@ CREATE INDEX proj_operation_procedure_summary_target_assets_gin_idx
     ON proj_operation_procedure_summary USING GIN (target_asset_ids);
 ```
 
-`last_status_changed_at` updates on every transition out of Defined; `last_status_reason` is populated by Aborted and Truncated only (Completed is happy-path, no reason). `interrupted_at` is Truncated-only and carries the operator's best guess at when the actual interruption happened (distinct from `last_status_changed_at`, which is when the truncate command was processed). `activity_logbook_id` is NULL until the first step is appended and is set by `ProcedureActivitiesLogbookOpened` independently of any lifecycle transition. `iteration_count` is the single-row denorm of how many iterations the Procedure has begun, folded from `ProcedureIterationStarted`; "how many passes did this alignment take" is then a plain column read rather than a per-kind dig into the free-form step evidence.
+`last_status_changed_at` updates on every transition out of Defined; `last_status_reason` is populated by Aborted, Truncated, and Held (Completed is happy-path, no reason), and Resumed clears it back to NULL, so the column always carries the reason for the CURRENT status rather than a stale one from a pause the operator has since lifted. `interrupted_at` is Truncated-only and carries the operator's best guess at when the actual interruption happened (distinct from `last_status_changed_at`, which is when the truncate command was processed). `activity_logbook_id` is NULL until the first step is appended and is set by `ProcedureActivitiesLogbookOpened` independently of any lifecycle transition. `iteration_count` is the single-row denorm of how many iterations the Procedure has begun, folded from `ProcedureIterationStarted`; "how many passes did this alignment take" is then a plain column read rather than a per-kind dig into the free-form step evidence.
 
 `proj_operation_procedure_iterations`:
 
