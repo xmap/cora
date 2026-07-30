@@ -2305,7 +2305,7 @@
 | src/cora/supply/adapters/postgres\_supply\_lookup.py                                     |       33 |        1 |        6 |        1 |     94.9% |       133 |
 | src/cora/supply/aggregates/\_\_init\_\_.py                                               |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/supply/aggregates/supply/\_\_init\_\_.py                                        |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/supply/aggregates/supply/events.py                                              |      103 |        7 |       32 |        2 |     90.4% |446, 477-485 |
+| src/cora/supply/aggregates/supply/events.py                                              |      103 |        7 |       32 |        2 |     90.4% |453, 484-492 |
 | src/cora/supply/aggregates/supply/evolver.py                                             |       30 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/supply/aggregates/supply/read.py                                                |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/supply/aggregates/supply/state.py                                               |      106 |        0 |        0 |        0 |    100.0% |           |
