@@ -1,9 +1,14 @@
-"""Pure-decider tests for `restore_supply` slice (10a-b).
+"""Pure-decider tests for the `restore_supply` slice.
 
-Single-source guard: source set `{Recovering}` only. Distinct from
-`mark_supply_available` (which exits Unknown -> Available); the
-two slices target the same Available status with different audit
-semantics per the Phoebus latched-alarm precedent.
+Multi-source guard: `{Recovering, Degraded} -> Available`, an operator
+declaring a resource back to nominal. Distinct from
+`mark_supply_available` (which exits `Unknown -> Available`); the two
+slices reach the same status with different audit semantics per the
+Phoebus latched-alarm precedent.
+
+`from_status` is asserted on both permitted sources, because it is what
+lets one event class carry two facts and is therefore the reason the
+source set could widen without a second event.
 """
 
 from datetime import UTC, datetime
@@ -66,17 +71,24 @@ def test_decide_emits_event_from_recovering() -> None:
     [
         SupplyStatus.UNKNOWN,
         SupplyStatus.AVAILABLE,
-        SupplyStatus.DEGRADED,
         SupplyStatus.UNAVAILABLE,
+        SupplyStatus.DECOMMISSIONED,
     ],
 )
 @pytest.mark.unit
-def test_decide_rejects_from_any_non_recovering_status(
+def test_decide_rejects_from_a_disqualifying_status(
     current_status: SupplyStatus,
 ) -> None:
-    """Restore is exclusively the Recovering -> Available exit. Notably,
-    Unknown -> Available exits via mark_supply_available (distinct audit
-    semantics)."""
+    """Restore accepts Recovering and Degraded; these four are the rest.
+
+    `Unknown` exits via mark_supply_available instead (distinct audit
+    semantics: first observation, not a return to nominal). `Available`
+    is already there and this slice is strict-not-idempotent.
+    `Unavailable` has to pass through `Recovering` first, because a
+    resource that was down deserves the intermediate step where a
+    monitor can say it looks better before a person says it is.
+    `Decommissioned` is the lifecycle terminal.
+    """
     with pytest.raises(SupplyCannotRestoreError) as exc_info:
         restore_supply.decide(
             state=_supply(current_status),
@@ -129,3 +141,55 @@ def test_decide_rejects_empty_reason() -> None:
             now=_NOW,
             triggered_by=_ACTOR_ID,
         )
+
+
+@pytest.mark.unit
+def test_decide_emits_event_from_degraded() -> None:
+    """The transition the FSM documented and nothing could perform.
+
+    Before this, a degraded resource could only go deeper: the exit ran
+    through `mark_supply_unavailable`, which meant appending "this was
+    unavailable" about a resource that was never down.
+    """
+    events = restore_supply.decide(
+        state=_supply(SupplyStatus.DEGRADED),
+        command=RestoreSupply(supply_id=_SUPPLY_ID, reason="flow back above set point"),
+        now=_NOW,
+        triggered_by=_ACTOR_ID,
+    )
+    assert events == [
+        SupplyRestored(
+            supply_id=_SUPPLY_ID,
+            from_status="Degraded",
+            reason="flow back above set point",
+            trigger="Operator",
+            triggered_by=_ACTOR_ID,
+            occurred_at=_NOW,
+        )
+    ]
+
+
+@pytest.mark.unit
+def test_from_status_distinguishes_the_two_permitted_sources() -> None:
+    """One event class, two readable facts. This is the whole design.
+
+    If `from_status` did not carry the source, "restored after an outage"
+    and "restored after a shortfall" would be indistinguishable in the
+    record and the widening would have needed a second event class.
+    """
+    command = RestoreSupply(supply_id=_SUPPLY_ID, reason="back to nominal")
+    from_recovering = restore_supply.decide(
+        state=_supply(SupplyStatus.RECOVERING),
+        command=command,
+        now=_NOW,
+        triggered_by=_ACTOR_ID,
+    )
+    from_degraded = restore_supply.decide(
+        state=_supply(SupplyStatus.DEGRADED),
+        command=command,
+        now=_NOW,
+        triggered_by=_ACTOR_ID,
+    )
+    assert from_recovering[0].from_status == "Recovering"
+    assert from_degraded[0].from_status == "Degraded"
+    assert type(from_recovering[0]) is type(from_degraded[0])

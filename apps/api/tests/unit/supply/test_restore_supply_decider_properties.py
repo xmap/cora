@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 _REASON = printable_ascii_text(min_size=1, max_size=500)
 _FACILITY_CODE = FacilityCode("aps")
 
-_PERMITTED_SOURCES = (SupplyStatus.RECOVERING,)
+_PERMITTED_SOURCES = (SupplyStatus.RECOVERING, SupplyStatus.DEGRADED)
 _DISALLOWED_SOURCES = tuple(s for s in SupplyStatus if s not in frozenset(_PERMITTED_SOURCES))
 
 

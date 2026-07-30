@@ -278,15 +278,22 @@ class SupplyMarkedRecovering:
 
 @dataclass(frozen=True)
 class SupplyRestored:
-    """The Supply transitioned from Recovering back to Available (10a-b).
+    """The Supply was declared back to Available by an operator.
 
-    Single-source: `{Recovering} -> Available`. This is the
-    recovery-acknowledgement event, distinct from
-    `SupplyMarkedAvailable` (first-observation declaration). Per the
-    Phoebus latched-alarm and PackML CLEARING -> RESETTING -> IDLE
-    convention, explicit operator gesture is required (auto-timer-
-    confirmed restore is deferred-with-trigger per Watch item 1 in
+    `{Recovering, Degraded} -> Available`, distinct from
+    `SupplyMarkedAvailable` (the first-observation declaration out of
+    `Unknown`). Per the Phoebus latched-alarm and PackML
+    CLEARING -> RESETTING -> IDLE convention, an explicit operator
+    gesture is required (auto-timer-confirmed restore is
+    deferred-with-trigger per Watch item 1 in
     [[project_supply_design]]).
+
+    `from_status` is load-bearing here rather than merely informational:
+    it is what makes "restored after an outage" and "restored after a
+    shortfall" two readable facts under one event class, which is why
+    widening the source set needed no second class. Anything that
+    summarises restorations should partition on it. See
+    [[project_supply_degraded_restore_design]].
 
     Same payload shape as `SupplyMarkedAvailable`.
     """

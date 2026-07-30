@@ -466,25 +466,35 @@ class SupplyCannotDeregisterError(Exception):
 
 
 class SupplyCannotRestoreError(Exception):
-    """Attempted `restore_supply` from a disqualifying status (10a-b).
+    """Attempted `restore_supply` from a disqualifying status.
 
-    Single-source guard: source set is `{Recovering}` only. Restore is
-    the operator-acknowledgement that the supply is fully back; it
-    only makes sense from `Recovering`. The `Unknown -> Available`
-    transition has distinct audit semantics (first-observation
-    declaration) and exits exclusively via `mark_supply_available`.
-    Strict-not-idempotent. Per the Phoebus latched-alarm precedent
-    and PackML CLEARING -> STOPPED -> RESETTING -> IDLE convention:
-    explicit operator gesture required for full recovery
-    (auto-timer-confirmed restore is deferred-with-trigger per Watch
-    item 1 in [[project_supply_design]]).
+    Multi-source guard: source set is `{Recovering, Degraded}`. Restore
+    is the operator declaring a resource back to nominal, which is
+    meaningful both after an outage (`Recovering`) and after a capacity
+    or quality shortfall (`Degraded`). `SupplyRestored.from_status`
+    keeps the two tellable apart, so one event serves both.
+
+    `Degraded` joined the set because it was the only transition the
+    `SupplyStatus` FSM listed with nothing to perform it, leaving a
+    degraded supply able to go deeper but never back. See
+    [[project_supply_degraded_restore_design]].
+
+    The disqualifying sources are therefore `Unknown` (which exits via
+    `mark_supply_available`, the first-observation declaration, with
+    distinct audit semantics), `Available` (already there;
+    strict-not-idempotent), and `Decommissioned` (the lifecycle
+    terminal). Per the Phoebus latched-alarm precedent and PackML
+    CLEARING -> STOPPED -> RESETTING -> IDLE convention, an explicit
+    operator gesture is required either way (auto-timer-confirmed
+    restore is deferred-with-trigger per Watch item 1 in
+    [[project_supply_design]]).
     """
 
     def __init__(self, supply_id: UUID, current_status: "SupplyStatus") -> None:
         super().__init__(
             f"Supply {supply_id} cannot be restored: currently in status "
             f"{current_status.value}, restore_supply requires "
-            f"{SupplyStatus.RECOVERING.value}"
+            f"{SupplyStatus.RECOVERING.value} or {SupplyStatus.DEGRADED.value}"
         )
         self.supply_id = supply_id
         self.current_status = current_status

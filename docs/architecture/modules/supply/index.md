@@ -12,7 +12,7 @@ Out of scope
 {: .cora-kicker }
 
 - **Capacity and quantity tracking.** No `capacity` field today. Will land additively when a real consumer needs quantity, not before.
-- **Auto-restore on observation.** `Recovering → Available` requires an explicit operator `restore_supply` gesture. `Monitor` cannot drive this transition either (the latched-alarm fence at the `observe_supply_status` decider). Timer-based `Auto` recovery is deferred.
+- **Auto-restore on observation.** Reaching `Available` requires an explicit operator gesture, from `Recovering` or from `Degraded`. `Monitor` cannot drive it from either (the latched-alarm fence at the `observe_supply_status` decider). Timer-based `Auto` recovery is deferred.
 - **Monitor trigger Port A (EPICS subscriber).** Port B (the Supply-side inbound `observe_supply_status` slice) has shipped; Port A (the EPICS subscriber that calls Port B with PV updates) defers to the 2-BM controls adapter discovery work.
 - **REST or MCP surface for `observe_supply_status`.** In-process-only by design (operators have buttons, machines have ports). Adapters call `SupplyHandlers.observe_supply_status(...)` directly.
 
@@ -47,6 +47,7 @@ stateDiagram-v2
     Unknown --> Unavailable: mark_supply_unavailable
     Available --> Degraded: degrade_supply
     Available --> Unavailable: mark_supply_unavailable
+    Degraded --> Available: restore_supply
     Degraded --> Unavailable: mark_supply_unavailable
     Unavailable --> Recovering: mark_supply_recovering
     Recovering --> Available: restore_supply
@@ -67,13 +68,15 @@ stateDiagram-v2
 | `Unknown`, `Available`, `Recovering` | `Degraded` | `degrade_supply` *or* `observe_supply_status` | `SupplyDegraded` |
 | `Unknown`, `Available`, `Degraded`, `Recovering` | `Unavailable` | `mark_supply_unavailable` *or* `observe_supply_status` | `SupplyMarkedUnavailable` |
 | `Unavailable` | `Recovering` | `mark_supply_recovering` *or* `observe_supply_status` | `SupplyMarkedRecovering` |
-| `Recovering` | `Available` | `restore_supply` (operator-only; Monitor is fenced out) | `SupplyRestored` |
+| `Recovering`, `Degraded` | `Available` | `restore_supply` (operator-only; Monitor is fenced out) | `SupplyRestored` |
 | any non-`Decommissioned` | `Decommissioned` | `deregister_supply` (operator-only) | `SupplyDeregistered` |
 
 **Guards.** Beyond the source-state check, each transition enforces:
 
 `mark_supply_available` / `restore_supply`
-: Two distinct paths to `Available` with distinct audit semantics. `mark_supply_available` is the first-observation declaration out of `Unknown`; `restore_supply` is the operator-acknowledgement that confirms a `Recovering` Supply is fully back. Re-using the wrong slice on the wrong source state raises (strict-not-idempotent on both). Mirrors the Phoebus latched-alarm precedent: first-observation and recovery-confirmation are two different operator gestures.
+: Two distinct paths to `Available` with distinct audit semantics. `mark_supply_available` is the first-observation declaration out of `Unknown`; `restore_supply` is the operator declaring a resource back to nominal, whether it was down (`Recovering`) or merely below par (`Degraded`). Re-using the wrong slice on the wrong source state raises (strict-not-idempotent on both). Mirrors the Phoebus latched-alarm precedent: first-observation and return-to-nominal are two different operator gestures.
+
+    `SupplyRestored.from_status` is what lets one event class carry both of the latter cases, so reading the record still tells "restored after an outage" from "restored after a shortfall". `Degraded → Available` was documented in the `SupplyStatus` FSM but performed by nothing until the source set widened; `test_supply_fsm_transitions_are_all_reachable` now fails the build if any documented transition loses its performer.
 
 `degrade_supply` / `mark_supply_unavailable` / `mark_supply_recovering`
 : All carry a REQUIRED `reason` (1-500 chars after trim). The operator-gesture slices hardcode `trigger=Operator`; the same source-state allowlists apply when these transitions are driven by `observe_supply_status` (in which case `trigger=Monitor` and an audit `monitor_ref` lands on the event). `Auto` is reserved for the future timer-driven recovery slice.
