@@ -196,19 +196,45 @@ Every signal is readable over Channel Access under the prefix `2bmBLEPS:BLEPS:`.
 dots and the EPICS names replace them with underscores, so the PLC tag `GV1.Faulted` is the PV
 `2bmBLEPS:BLEPS:GV1_FAULTED`.
 
-Every latching fault names either a shared utility or one device, which is the boundary CORA reads them
-across:
+### Two questions, not one severity scale
+
+BLEPS sorts its signals into warnings, trips and faults, and the PLC ranks them in that order of
+loudness. That ranking is not a single scale, which the flow channels show plainly: each of the eight
+publishes all three at once. `Flow2.Under_Range_Warning`, `Flow2.Below_Set_Point_Trip` and
+`Flow2.Over_Range_Fault` are the same sensor answering different questions.
+
+What separates them is direction. Cooling water is dangerous when it runs low, so a reading off-scale low
+is a warning, because it might be true. A reading off-scale high is a fault, because it cannot be: the
+transducer is lying. Temperature is the mirror image. Danger is high, so off-scale high warns and
+off-scale low faults, since a water-cooled optic cannot read colder than its sensor's span and an
+open thermocouple is the likelier explanation.
+
+So the signals answer two separate questions:
+
+| The question | BLEPS classes | Where it lands in CORA |
+| --- | --- | --- |
+| How bad is the thing being measured? | warning, then trip | a status: `Degraded`, then `Unavailable` or `Faulted` |
+| Can the reading be believed at all? | fault, on an instrument | not a status. The reading is set aside, and CORA declines to claim anything |
+
+The second question is why no new status was added to match BLEPS's three classes. A broken flow sensor
+is not a worse version of low flow. During an instrumentation fault the honest answer about the cooling
+water is that CORA does not know, and "I do not know" is not a rung on a scale that runs from fine to
+failed. It is the same fail-closed posture the run pre-flight check already takes when a PV reads back
+with bad quality.
+
+### What reads as what
 
 | BLEPS channels | What they observe | CORA reads them as |
 | --- | --- | --- |
-| `FLOW1_TRIP` to `FLOW8_TRIP` | Cooling water, one circuit each: the filter and upstream slits, M1 and the DMM, the three window groups, the white-beam mask and SBS, the Station B slits, the Station B photon stop | `2-BM cooling water` [Supply](#supplies) status |
-| `VS1_TRIP` to `VS7_TRIP`, the seven ion-pump and eight ion-gauge channels | Vacuum, by section and by the instrument reading it | `2-BM beamline vacuum` [Supply](#supplies) status |
-| `BIV_*`, `GV1_*`, `GV2_*`, `GV3_*` | The isolation valve and the three gate valves, each with an overall faulted flag and nine per-cause flags | `2-BM beamline vacuum` [Supply](#supplies) status |
-| `TEMP1_TRIP` to `TEMP3_TRIP` | The M1 mirror tank running hot, at its lower, middle and upper thermocouples | `Mirror` Asset condition |
-| `FES_*`, `SBS_*` | The front-end and station shutters: whether each obeyed its close command, and its interlock permit | that shutter Asset's condition. BLEPS also publishes their open or closed state, but CORA reads that from the PSS, on [Enclosures](enclosures.md), so one fact keeps one source |
-| `COMMUNICATIONS_FAULT`, the PLC power and redundancy warnings | The BLEPS system's own health | evidence that a BLEPS reading cannot be trusted, not a fault of the beamline |
+| `Flow1..8.Below_Set_Point_Trip`, `Flow1..8.Under_Range_Warning` | Cooling water, one circuit each: the filter and upstream slits, M1 and the DMM, the three window groups, the white-beam mask and SBS, the Station B slits, the Station B photon stop | `2-BM cooling water` [Supply](#supplies) status |
+| `VS1..7.Trip`, the seven ion-pump and eight ion-gauge warnings | Vacuum, by section and by the instrument reading it | `2-BM beamline vacuum` [Supply](#supplies) status |
+| `BIV.Fail_to_Close`, `GV1..3.Faulted` and their nine per-cause flags each | The isolation valve and the three gate valves failing to obey | `2-BM beamline vacuum` [Supply](#supplies) status |
+| `Temp1..3.Above_Set_Point_Trip`, `Temp1..3.Over_Range_Warning` | The M1 mirror tank running hot, at its lower, middle and upper thermocouples | `Mirror` Asset condition |
+| `FES.Fail_to_Close`, `SBS.Fail_to_Close` | Whether each shutter obeyed its close command | that shutter Asset's condition. BLEPS also publishes their open or closed state, but CORA reads that from the PSS, on [Enclosures](enclosures.md), so one fact keeps one source |
+| `Flow1..8.Over_Range_Fault`, `Temp1..3.Under_Range_Fault` | That sensor has stopped making sense | nothing, on purpose. That channel's readings are set aside while the fault stands. A dead tank thermocouple does not mean the mirror is faulty; it means the mirror has lost its over-temperature protection, which is a fact about the sensor |
+| `Communications_Fault`, the PLC power and redundancy warnings | The BLEPS system's own health | nothing about the beamline. Every BLEPS reading is set aside while this stands |
 
-Three of those rows are decisions rather than transcriptions, and each follows from what a CORA state is
+Four of those rows are decisions rather than transcriptions, and each follows from what a CORA state is
 for rather than from where the PLC draws its own boundary.
 
 The valves are read as vacuum, not as devices of their own. BLEPS owns each valve fault unambiguously, but
@@ -219,10 +245,17 @@ vacuum Supply and names `GV2` and the cause in doing so. Promote the valves to A
 question is asked about one of them across time rather than right now.
 
 The mirror-tank thermocouples go the other way and sit with the device, because three thermocouples on one
-tank describe one Asset, not a resource that many Assets draw on. Reading them as the `Mirror`'s condition
-keeps the causal chain legible: `FLOW2` is the cooling circuit that serves M1 and the DMM, so a cooling
-failure appears as a Supply falling and then, separately, as the mirror it was cooling running hot. Those
-are two true facts at two layers, and collapsing them into one would lose which came first.
+tank describe one Asset, not a resource that many Assets draw on. Reading a tank over-temperature as the
+`Mirror`'s condition keeps the causal chain legible: `Flow2` is the cooling circuit that serves M1 and the
+DMM, so a cooling failure appears as a Supply falling and then, separately, as the mirror it was cooling
+running hot. Those are two true facts at two layers, and collapsing them into one would lose which came
+first.
+
+Their fault channel is a third fact again, and not a fact about the mirror. `Temp2.Under_Range_Fault` says
+the middle thermocouple has stopped reporting a believable number, which usually means an open circuit.
+The mirror may be perfectly cold. What has actually happened is that this tank has lost one of its three
+over-temperature guards, so CORA sets that channel's readings aside rather than claiming anything about
+the optic.
 
 A valve's nine per-cause flags are diagnostics, not states. The overall faulted flag moves the status; the
 sub-flag that latched, whether a limit switch disagreed with its twin or the valve never reached its stop,
