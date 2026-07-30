@@ -749,6 +749,46 @@ class Settings(BaseSettings):
     # both.
     enclosure_permit_monitor_startup_timeout_seconds: float = 8.0
 
+    # BLEPS supply observer (BLEPS-1/2/3, #562-#564). Equipment-protection
+    # channels whose trips drive a Supply's status. Each entry binds one
+    # BLEPS channel to the Supply it feeds:
+    #
+    #   BLEPS_SUPPLY_CHANNELS='[
+    #     {"supply":"2-BM cooling water",
+    #      "label":"Flow2 (M1 and DMM circuit)",
+    #      "trip":"2bmBLEPS:BLEPS:FLOW2_BELOW_SET_POINT_TRIP",
+    #      "fault":"2bmBLEPS:BLEPS:FLOW2_OVER_RANGE_FAULT"},
+    #     {"supply":"2-BM beamline vacuum",
+    #      "label":"Vacuum section 1",
+    #      "trip":"2bmBLEPS:BLEPS:VS1_TRIP"}
+    #   ]'
+    #
+    # `trip` is the process axis: the measured value crossed its limit, or
+    # a valve disobeyed. `fault` is the OPTIONAL trust axis, the same
+    # channel's instrumentation fault; while it stands, that channel is
+    # excluded from its Supply's verdict rather than obeyed. Many channels
+    # per Supply is the normal case (eight cooling circuits, seven vacuum
+    # sections); the failing channel's `label` lands in the transition
+    # reason. When empty (default) the supply monitor loop is a no-op, so
+    # a generic boot is unaffected.
+    #
+    # Every PV here is READ-ONLY. BLEPS write PVs (the fault and trip
+    # resets, the valve open/close commands, the shutter permits) are
+    # never bound: CORA reads the interlock's outcomes and never drives
+    # it. `test_bleps_binding_is_read_only` turns that into a build break.
+    # See `cora.api._bleps_supply_observer`.
+    bleps_supply_channels: list[dict[str, str]] = []
+
+    # The BLEPS system's own comms flag (PLC to EtherNet/IP gateway).
+    # While it is asserted, or while it cannot be believably read, NO
+    # BLEPS observation is recorded: a reading we cannot trust must not
+    # overwrite a Supply's status with a guess. Read from
+    # BLEPS_COMMS_FAULT_PV, for example
+    # `2bmBLEPS:BLEPS:COMMUNICATIONS_FAULT`. Empty (default) disables the
+    # system-wide trust gate, which is correct only when no BLEPS
+    # channels are configured either.
+    bleps_comms_fault_pv: str = ""
+
     # Beam-availability pre-flight (BEAM-1, beam-availability slice).
     # Role -> read-only PV for the run / procedure start gate. `fes` and
     # `sbs` are the front-end and station-shutter BeamBlockingM PVs

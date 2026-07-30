@@ -81,6 +81,10 @@ from cora.agent import (
     wire_agent,
 )
 from cora.agent.adapters import BudgetSpendGuard, PostgresLanguageModelLookup
+from cora.api._bleps_supply_observer import (
+    BlepsChannel,
+    ControlPortBlepsSupplyObserver,
+)
 from cora.api._calibration_watcher import calibration_watcher_lifespan
 from cora.api._campaign_watcher import campaign_watcher_lifespan
 from cora.api._capture_observer import ControlPortCaptureObserver
@@ -264,6 +268,8 @@ from cora.supply import (
     register_supply_tools,
     wire_supply,
 )
+from cora.supply._monitor import supply_status_monitor_lifespan
+from cora.supply._supply_seed import seed_bleps_supplies
 from cora.supply.adapters import PostgresSupplyLookup
 from cora.trust import (
     TrustHandlers,
@@ -1283,6 +1289,35 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         ),
                     )
 
+            # Supply BC: seed the Supplies the BLEPS equipment-protection
+            # channels feed and run the status monitor. Same drain-then-
+            # pre-check ordering as the enclosure hook above, for the same
+            # reason (a missed pre-check appends a duplicate genesis every
+            # boot). All no-ops when bleps_supply_channels is unset. The
+            # observer bridges the Operation BC's ControlPort to the Supply
+            # BC's observer port at this composition root; CORA reads these
+            # PVs and never writes one, per #564 and enforced by
+            # test_bleps_binding_is_read_only.
+            supply_only_registry = ProjectionRegistry()
+            register_supply_projections(supply_only_registry, deps)
+            if deps.pool is not None:
+                await drain_projections(deps.pool, supply_only_registry, deadline_seconds=5.0)
+            bleps_supply_ids = await seed_bleps_supplies(deps)
+            bleps_supply_observer = ControlPortBlepsSupplyObserver(
+                control_port=app.state.operation.control_port,
+                channels=[
+                    BlepsChannel(
+                        supply_code=channel["supply"],
+                        label=channel.get("label", channel["trip"]),
+                        trip_pv=channel["trip"],
+                        fault_pv=channel.get("fault") or None,
+                    )
+                    for channel in settings.bleps_supply_channels
+                ],
+                comms_fault_pv=settings.bleps_comms_fault_pv or None,
+                clock=deps.clock,
+            )
+
             try:
                 async with (
                     projection_worker_lifespan(deps, registry, settings),
@@ -1296,6 +1331,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         startup_timeout_seconds=(
                             settings.enclosure_permit_monitor_startup_timeout_seconds
                         ),
+                    ),
+                    supply_status_monitor_lifespan(
+                        observer=bleps_supply_observer,
+                        kernel=deps,
+                        code_to_id=bleps_supply_ids,
                     ),
                     run_supervisor_lifespan(
                         deps,
