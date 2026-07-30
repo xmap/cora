@@ -28,12 +28,14 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from cora.run.aggregates.run import (
+    HOLD_CAUSE_OPERATOR,
     Run,
     RunCannotHoldError,
     RunHeld,
     RunName,
     RunNotFoundError,
     RunStatus,
+    derive_claim_id,
 )
 from cora.run.features import hold_run
 from cora.run.features.hold_run import HoldRun
@@ -45,7 +47,9 @@ if TYPE_CHECKING:
 _PLAN_ID = UUID(int=1)
 _SUBJECT_ID = UUID(int=2)
 
-_HOLDABLE_SOURCES = (RunStatus.RUNNING,)
+# Held joined Running as a holdable source: a second concern must be able to
+# claim a run another concern already holds.
+_HOLDABLE_SOURCES = (RunStatus.RUNNING, RunStatus.HELD)
 _DISALLOWED_SOURCES = tuple(s for s in RunStatus if s not in frozenset(_HOLDABLE_SOURCES))
 
 
@@ -74,13 +78,20 @@ def test_hold_with_none_state_always_raises_not_found(
 @pytest.mark.unit
 @given(run_id=st.uuids(), now=aware_datetimes())
 def test_hold_from_running_emits_single_event(run_id: UUID, now: datetime) -> None:
-    """Running is the only holdable source; emits one RunHeld."""
+    """Running emits exactly one RunHeld, carrying the operator claim."""
     events = hold_run.decide(
         state=_run(run_id=run_id, status=RunStatus.RUNNING),
         command=HoldRun(run_id=run_id),
         now=now,
     )
-    assert events == [RunHeld(run_id=run_id, occurred_at=now)]
+    assert events == [
+        RunHeld(
+            run_id=run_id,
+            occurred_at=now,
+            claim_id=derive_claim_id(run_id, HOLD_CAUSE_OPERATOR),
+            cause=HOLD_CAUSE_OPERATOR,
+        )
+    ]
 
 
 @pytest.mark.unit
@@ -94,7 +105,8 @@ def test_hold_from_disallowed_source_always_raises_cannot_hold(
     source: RunStatus,
     now: datetime,
 ) -> None:
-    """Any source other than Running raises, carrying the current status."""
+    """Any TERMINAL source raises, carrying the current status. Held is no longer
+    disallowed: a second concern must be able to claim an already-held run."""
     with pytest.raises(RunCannotHoldError) as exc:
         hold_run.decide(
             state=_run(run_id=run_id, status=source),

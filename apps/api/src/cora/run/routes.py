@@ -42,7 +42,7 @@ InvalidRunInterruptedAtError).
   - 409 (Run transition guards, 6f-2): RunCannotCompleteError,
     RunCannotAbortError
   - 409 (Run transition guards, 6f-3): RunCannotHoldError,
-    RunCannotResumeError, RunCannotStopError
+    RunCannotResumeError, RunCannotStopError, RunHoldClaimsRemainError
   - 409 (Run transition guards, 6f-4): RunCannotTruncateError
   - 409 (observation logbook guard, 6f-5b): RunObservationLogbookClosedError
   - 400 (Run adjust validation guards, 6j): InvalidRunAdjustPatchError,
@@ -87,6 +87,7 @@ from cora.run.aggregates.run import (
     RunClearanceCoverageMismatchError,
     RunComputeResourceUnknownError,
     RunEnclosureCoverageMismatchError,
+    RunHoldClaimsRemainError,
     RunInputNotReachableError,
     RunInputNotVerifiedError,
     RunNotFoundError,
@@ -277,6 +278,9 @@ def register_run_routes(app: FastAPI) -> None:
         RunCannotHoldError,
         RunCannotResumeError,
         RunCannotStopError,
+        # Cause-scoped holds: resume refused because other concerns still hold
+        # the Run. Each holding concern discharges its own claim.
+        RunHoldClaimsRemainError,
         # Consequence gate (Gate IV): stop needs a second principal's co-sign.
         RunRequiresRatificationError,
         # Run transition guards (6f-4).

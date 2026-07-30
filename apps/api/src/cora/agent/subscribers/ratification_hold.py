@@ -25,12 +25,13 @@ from cora.agent.subscribers._ratification_shared import (
     HOLD_COMMAND_NAME,
     RUN_STREAM_TYPE,
     enforcer_standing_down,
+    ratification_claim_id,
 )
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError, Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
-from cora.run.aggregates.run import RunHeld, RunStatus
+from cora.run.aggregates.run import HOLD_CAUSE_RATIFICATION, RunHeld, RunStatus
 from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import fold as fold_run
 from cora.run.aggregates.run import from_stored as run_from_stored
@@ -43,6 +44,9 @@ if TYPE_CHECKING:
     from cora.infrastructure.projection.handler import ConnectionLike
 
 _log = get_logger(__name__)
+
+# Terminal runs cannot be held; an already-HELD run can, under a distinct claim.
+_HOLDABLE_STATUSES = (RunStatus.RUNNING, RunStatus.HELD)
 
 
 class RatificationHoldSubscriber:
@@ -86,8 +90,19 @@ class RatificationHoldSubscriber:
             _log.info("ratification_hold.run_not_found", run_id=str(run_id))
             return
         state = fold_run([run_from_stored(s) for s in stored])
-        if state is None or state.status is not RunStatus.RUNNING:
-            _log.info("ratification_hold.not_running", run_id=str(run_id))
+        if state is None or state.status not in _HOLDABLE_STATUSES:
+            # Terminal only. An ALREADY-HELD run is holdable: another concern
+            # may be holding it, and this gate must still record its own claim
+            # or its cause goes unenforced when that concern releases. Guarding
+            # on RUNNING alone is what made the reproduced ordering fault
+            # possible.
+            _log.info("ratification_hold.not_holdable", run_id=str(run_id))
+            return
+        claim_id = ratification_claim_id(run_id)
+        if any(active_id == claim_id for active_id, _ in state.hold_claims):
+            # This gate already holds it (re-delivery, or a second concurrent
+            # ratification on the same run). Idempotent no-op.
+            _log.info("ratification_hold.already_claimed", run_id=str(run_id))
             return
         authz = await self.authz.authorize(
             principal_id=RATIFICATION_ENFORCER_AGENT_ID,
@@ -99,7 +114,13 @@ class RatificationHoldSubscriber:
             _log.info("ratification_hold.unauthorized", run_id=str(run_id))
             return
         now = self.clock.now()
-        held = RunHeld(run_id=run_id, decided_by_decision_id=None, occurred_at=now)
+        held = RunHeld(
+            run_id=run_id,
+            decided_by_decision_id=None,
+            claim_id=claim_id,
+            cause=HOLD_CAUSE_RATIFICATION,
+            occurred_at=now,
+        )
         envelope = to_new_event(
             event_type=run_event_type_name(held),
             payload=run_to_payload(held),

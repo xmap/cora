@@ -23,17 +23,18 @@ Lifecycle events:
     future-additive structured taxonomy is documented at
     `InvalidRunAbortReasonError` along with its re-evaluation
     triggers.
-  - `RunHeld` — pause transition (Running → Held). Payload is
-    `run_id` + `occurred_at` only. No reason field — matches PackML
-    / Bluesky precedent (Hold / pause carries no domain reason in
-    either standard). Holds are routine (alignment, brief beam
-    dropout, operator break); a reason field would be friction
-    without audit value at this layer. Future-additive on the same
-    triggers as RunAborted's reason if vocabulary / Decision BC
-    integration / compliance demand crystallize.
-  - `RunResumed` — resume transition (Held → Running). Payload is
-    `run_id` + `occurred_at` only. Resume is just permission to
-    proceed; no reason field.
+  - `RunHeld` — pause transition (Running | Held → Held), carrying
+    ONE hold claim (`claim_id` + `cause`). Was slim and reason-free on
+    PackML / Bluesky precedent, which held while a hold had a single
+    author; it stopped holding once independent governance concerns
+    could each hold the same Run. See the class docstring.
+  - `HoldClaimReleased` — one claim discharged while OTHERS remain
+    active. Audit-only on the fold: the Run stays Held. This is the
+    event that lets a concern stop holding without deciding for the
+    concerns that still are.
+  - `RunResumed` — resume transition (Held → Running), discharging the
+    LAST active claim (`released_claim_id`). Illegal while any other
+    claim is active; use `HoldClaimReleased` instead.
   - `RunStopped` — controlled-exit terminal (Running | Held → Stopped).
     Payload carries `run_id` + free-form `reason: str` (1-500 chars)
     + `occurred_at`. Mirrors RunAborted shape — controlled-but-early
@@ -48,6 +49,12 @@ event stream may interleave [RunStarted, RunHeld, RunResumed, RunHeld,
 RunResumed, RunCompleted] with arbitrary cycle counts. The fold
 preserves only the latest status; per-cycle audit lives in the
 event stream itself.
+
+Holds also NEST: [RunHeld(a), RunHeld(b), HoldClaimReleased(a),
+RunResumed(b)] is a legal stream in which the Run stays Held across
+the middle two events. `status` alone cannot express that, so the set
+of active claims is a separate fold (`active_hold_claims`) over the
+same stream rather than a field on `Run`. Nothing stores it.
 
 `RunTruncated` — cleanup terminal (Running | Held → Truncated).
 Payload carries `run_id` + free-form `reason: str` (1-500 chars)
@@ -86,6 +93,33 @@ from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.shared.identity import ActorId
 from cora.shared.logbook import LogbookSchema
+
+# --- Hold-claim vocabulary -------------------------------------------------
+# `RunHeld.cause` names WHICH governance concern is holding a Run, not a
+# free-text reason. Deliberately coarse and closed: the set is what makes
+# "no concern is holding this Run" a checkable statement, and an open string
+# would let a new holder invent a cause no releaser knows how to reason about.
+# Additive — a new concern that can hold a Run adds a member here.
+HOLD_CAUSE_RATIFICATION = "ratification"
+HOLD_CAUSE_AUTHORITY_REVOCATION = "authority-revocation"
+HOLD_CAUSE_OPERATOR = "operator"
+HOLD_CAUSE_SUPERVISOR = "supervisor-envelope"
+
+HOLD_CAUSES: frozenset[str] = frozenset(
+    {
+        HOLD_CAUSE_RATIFICATION,
+        HOLD_CAUSE_AUTHORITY_REVOCATION,
+        HOLD_CAUSE_OPERATOR,
+        HOLD_CAUSE_SUPERVISOR,
+    }
+)
+
+# The single anonymous claim a legacy `RunHeld` (no `claim_id`) folds to, so
+# pre-claim streams replay with exactly the old one-bit semantics: one hold,
+# cleared by any bare `RunResumed`. Fixed sentinel rather than a per-event id
+# so repeated legacy holds collapse to one claim instead of accumulating.
+LEGACY_CLAIM_ID = UUID("01900000-0000-7000-8000-00000000dead")
+LEGACY_CAUSE = "legacy-unscoped"
 
 
 @dataclass(frozen=True)
@@ -317,13 +351,7 @@ class DecisionDebriefRequested:
 
 @dataclass(frozen=True)
 class RunHeld:
-    """A Run was held (Running → Held).
-
-    Slim payload — no reason field. Matches PackML / Bluesky
-    precedent: Hold / pause is a routine operation (alignment,
-    brief dropout, operator break) that doesn't reify a domain
-    reason. Future-additive if the same re-evaluation triggers
-    documented for RunAborted's reason field crystallize.
+    """A Run was held (Running → Held), as one named hold claim.
 
     `decided_by_decision_id` (mirrors RunAborted + RunAdjusted +
     RunStarted): optional Decision-causation link to the Decision BC
@@ -332,18 +360,46 @@ class RunHeld:
     hold. NO existence check per the cross-BC eventual-consistency
     stance. Forward-compat via `payload.get("decided_by_decision_id")`
     returning None for legacy pre-supervisor streams.
+
+    ## `claim_id` / `cause`: why the payload stopped being slim
+
+    This event WAS slim by design (no reason field, PackML / Bluesky
+    precedent: hold is a routine pause that doesn't reify a domain
+    reason). That held while `HELD` had one author. It stopped holding
+    once independent concerns could each hold the same Run: the
+    consequence gate awaiting a co-signature, the kill-switch on a
+    revoked grant, an operator, the RunSupervisor on an envelope
+    breach. With `HELD` as a single bit, a second holder arriving at an
+    already-held Run could not record its intent at all, and the FIRST
+    holder's release then resumed the Run with the second's cause
+    unenforced. See [[project-hold-claim-ordering-fault]].
+
+    So a hold now carries its own identity and cause:
+
+      - `claim_id` — this claim's identity, discharged by exactly one
+        later `RunResumed(released_claim_id=...)` or
+        `HoldClaimReleased(claim_id=...)`.
+      - `cause` — the concern that placed it, one of
+        `HOLD_CAUSES`. Coarse on purpose: it names WHICH governance
+        concern is holding, not a free-text reason.
+
+    Both are optional for replay of legacy streams, where a `RunHeld`
+    with no `claim_id` folds to the single anonymous legacy claim
+    (`LEGACY_CLAIM_ID`) and a bare `RunResumed` clears everything —
+    exactly the old one-bit semantics. New writers MUST set both;
+    `active_hold_claims` is what reads them.
     """
 
     run_id: UUID
     occurred_at: datetime
     decided_by_decision_id: UUID | None = None
+    claim_id: UUID | None = None
+    cause: str | None = None
 
 
 @dataclass(frozen=True)
 class RunResumed:
-    """A held Run was resumed (Held → Running).
-
-    Slim payload by design — resume is just permission to proceed.
+    """A held Run was resumed (Held → Running) — the LAST claim cleared.
 
     `decided_by_decision_id` (mirrors RunHeld): optional Decision-
     causation link to the Decision BC record that justified this resume.
@@ -352,10 +408,48 @@ class RunResumed:
     check per the cross-BC eventual-consistency stance. Forward-compat
     via `payload.get("decided_by_decision_id")` returning None for legacy
     pre-supervisor streams.
+
+    `released_claim_id` names the one hold claim this resume discharges.
+    A resume is legal ONLY when that claim is the last active one:
+    clearing a claim while others remain is `HoldClaimReleased`, which
+    leaves the Run held. That split is what makes the transition to
+    RUNNING mean "no concern is holding this Run" rather than "whoever
+    spoke last is done". `None` on legacy streams, where a bare resume
+    clears every claim (the old one-bit semantics).
     """
 
     run_id: UUID
     occurred_at: datetime
+    decided_by_decision_id: UUID | None = None
+    released_claim_id: UUID | None = None
+
+
+@dataclass(frozen=True)
+class HoldClaimReleased:
+    """One hold claim was discharged while other claims remain active.
+
+    Audit-only on the Run aggregate: the evolver returns prior state
+    unchanged, so the Run stays `HELD`. Same treatment as the debriefer
+    lease event — the event's existence on the stream IS the fact.
+
+    This is the event that makes the hold algebra compositional. Without
+    it a concern has exactly two ways to stop holding, both wrong when it
+    is not the only holder: append `RunResumed` and resume a Run other
+    concerns still want held, or append nothing and hold forever. A
+    releaser therefore picks by folding `active_hold_claims`:
+
+      - own claim is the ONLY active one  -> `RunResumed(released_claim_id)`
+      - other claims remain               -> `HoldClaimReleased(claim_id)`
+
+    `claim_id` must name an active claim; releasing an unknown or
+    already-released claim is a no-op at the fold and is rejected by the
+    deciders rather than silently absorbed.
+    """
+
+    run_id: UUID
+    claim_id: UUID
+    occurred_at: datetime
+    cause: str | None = None
     decided_by_decision_id: UUID | None = None
 
 
@@ -616,6 +710,7 @@ class RunTruncated:
 RunEvent = (
     RunStarted
     | RunHeld
+    | HoldClaimReleased
     | RunResumed
     | RunCompleted
     | RunAborted
@@ -698,10 +793,33 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
         case RunHeld(
             run_id=run_id,
             decided_by_decision_id=decided_by_decision_id,
+            claim_id=claim_id,
+            cause=cause,
             occurred_at=occurred_at,
         ):
             return {
                 "run_id": str(run_id),
+                "decided_by_decision_id": (
+                    str(decided_by_decision_id) if decided_by_decision_id is not None else None
+                ),
+                # Hold claim. Null only on legacy streams written before holds
+                # were cause-scoped; `active_hold_claims` maps those to
+                # LEGACY_CLAIM_ID.
+                "claim_id": str(claim_id) if claim_id is not None else None,
+                "cause": cause,
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case HoldClaimReleased(
+            run_id=run_id,
+            claim_id=claim_id,
+            cause=cause,
+            decided_by_decision_id=decided_by_decision_id,
+            occurred_at=occurred_at,
+        ):
+            return {
+                "run_id": str(run_id),
+                "claim_id": str(claim_id),
+                "cause": cause,
                 "decided_by_decision_id": (
                     str(decided_by_decision_id) if decided_by_decision_id is not None else None
                 ),
@@ -710,12 +828,18 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
         case RunResumed(
             run_id=run_id,
             decided_by_decision_id=decided_by_decision_id,
+            released_claim_id=released_claim_id,
             occurred_at=occurred_at,
         ):
             return {
                 "run_id": str(run_id),
                 "decided_by_decision_id": (
                     str(decided_by_decision_id) if decided_by_decision_id is not None else None
+                ),
+                # The one claim this resume discharges. Null on legacy streams,
+                # where a bare resume clears every active claim.
+                "released_claim_id": (
+                    str(released_claim_id) if released_claim_id is not None else None
                 ),
                 "occurred_at": occurred_at.isoformat(),
             }
@@ -922,15 +1046,38 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                 # legacy pre-supervisor streams replay without the key via
                 # `.get(..., None)`.
                 raw_decided_by_held = payload.get("decided_by_decision_id")
+                # `claim_id` / `cause` added when holds became cause-scoped.
+                # Absent on every pre-claim stream; `active_hold_claims` folds a
+                # claimless hold to the single LEGACY_CLAIM_ID claim.
+                raw_claim_id = payload.get("claim_id")
                 return RunHeld(
                     run_id=UUID(payload["run_id"]),
                     decided_by_decision_id=(
                         UUID(raw_decided_by_held) if raw_decided_by_held is not None else None
                     ),
+                    claim_id=UUID(raw_claim_id) if raw_claim_id is not None else None,
+                    cause=payload.get("cause"),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 )
 
             return deserialize_or_raise("RunHeld", _build_run_held)
+        case "HoldClaimReleased":
+
+            def _build_hold_claim_released() -> HoldClaimReleased:
+                raw_decided_by_released = payload.get("decided_by_decision_id")
+                return HoldClaimReleased(
+                    run_id=UUID(payload["run_id"]),
+                    claim_id=UUID(payload["claim_id"]),
+                    cause=payload.get("cause"),
+                    decided_by_decision_id=(
+                        UUID(raw_decided_by_released)
+                        if raw_decided_by_released is not None
+                        else None
+                    ),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                )
+
+            return deserialize_or_raise("HoldClaimReleased", _build_hold_claim_released)
         case "RunResumed":
 
             def _build_run_resumed() -> RunResumed:
@@ -938,10 +1085,17 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                 # legacy pre-supervisor streams replay without the key via
                 # `.get(..., None)`.
                 raw_decided_by_resumed = payload.get("decided_by_decision_id")
+                # `released_claim_id` added when holds became cause-scoped. Absent
+                # on every pre-claim stream, where a bare resume clears every
+                # active claim (the old one-bit semantics).
+                raw_released_claim = payload.get("released_claim_id")
                 return RunResumed(
                     run_id=UUID(payload["run_id"]),
                     decided_by_decision_id=(
                         UUID(raw_decided_by_resumed) if raw_decided_by_resumed is not None else None
+                    ),
+                    released_claim_id=(
+                        UUID(raw_released_claim) if raw_released_claim is not None else None
                     ),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 )
@@ -1093,8 +1247,16 @@ def from_stored(stored: StoredEvent) -> RunEvent:
 
 
 __all__ = [
+    "HOLD_CAUSES",
+    "HOLD_CAUSE_AUTHORITY_REVOCATION",
+    "HOLD_CAUSE_OPERATOR",
+    "HOLD_CAUSE_RATIFICATION",
+    "HOLD_CAUSE_SUPERVISOR",
+    "LEGACY_CAUSE",
+    "LEGACY_CLAIM_ID",
     "CautionAcknowledgement",
     "DecisionDebriefRequested",
+    "HoldClaimReleased",
     "RunAborted",
     "RunAddedToCampaign",
     "RunAdjusted",

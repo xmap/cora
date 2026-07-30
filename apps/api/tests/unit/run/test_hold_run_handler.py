@@ -9,8 +9,10 @@ from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStor
 from cora.infrastructure.event_envelope import to_new_event
 from cora.run import RunHandlers, UnauthorizedError, wire_run
 from cora.run.aggregates.run import (
+    HOLD_CAUSE_OPERATOR,
     RunCannotHoldError,
     RunNotFoundError,
+    derive_claim_id,
 )
 from cora.run.aggregates.run.events import (
     RunHeld,
@@ -49,9 +51,17 @@ async def _seed_run_started(store: InMemoryEventStore, run_id: UUID) -> None:
     await store.append(stream_type="Run", stream_id=run_id, expected_version=0, events=[new_event])
 
 
-async def _seed_run_held(store: InMemoryEventStore, run_id: UUID) -> None:
+async def _seed_run_held(
+    store: InMemoryEventStore, run_id: UUID, *, cause: str | None = None
+) -> None:
+    """Seed a Run held by `cause`; `None` seeds a legacy claimless hold."""
     await _seed_run_started(store, run_id)
-    held = RunHeld(run_id=run_id, occurred_at=_NOW)
+    held = RunHeld(
+        run_id=run_id,
+        occurred_at=_NOW,
+        claim_id=derive_claim_id(run_id, cause) if cause is not None else None,
+        cause=cause,
+    )
     new_event = to_new_event(
         event_type=event_type_name(held),
         payload=to_payload(held),
@@ -112,10 +122,10 @@ async def test_handler_raises_run_not_found_when_run_does_not_exist() -> None:
 
 
 @pytest.mark.unit
-async def test_handler_raises_cannot_hold_when_already_held() -> None:
-    """Strict-not-idempotent: re-holding raises."""
+async def test_handler_raises_cannot_hold_when_this_cause_already_holds() -> None:
+    """Alternation is per claim: the same concern cannot hold twice."""
     store = InMemoryEventStore()
-    await _seed_run_held(store, _RUN_ID)
+    await _seed_run_held(store, _RUN_ID, cause=HOLD_CAUSE_OPERATOR)
     deps = build_deps(ids=[_HELD_EVENT_ID], now=_NOW, event_store=store)
 
     with pytest.raises(RunCannotHoldError):

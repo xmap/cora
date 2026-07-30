@@ -8,6 +8,8 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.run.aggregates.run import (
+    LEGACY_CAUSE,
+    LEGACY_CLAIM_ID,
     Run,
     RunName,
     RunStatus,
@@ -165,7 +167,13 @@ def test_evolve_run_held_transitions_to_held_preserving_other_fields() -> None:
     started = _run_started()
     state = evolve(None, started)
     held = evolve(state, RunHeld(run_id=started.run_id, occurred_at=_NOW))
-    assert held == replace(state, status=RunStatus.HELD)
+    # A claimless hold folds to the single legacy unscoped claim, so `hold_claims`
+    # moves alongside `status`; every other field is preserved.
+    assert held == replace(
+        state,
+        status=RunStatus.HELD,
+        hold_claims=((LEGACY_CLAIM_ID, LEGACY_CAUSE),),
+    )
     assert held.status is RunStatus.HELD
 
 
@@ -176,8 +184,9 @@ def test_evolve_run_resumed_transitions_held_back_to_running() -> None:
     held = evolve(running, RunHeld(run_id=started.run_id, occurred_at=_NOW))
     resumed = evolve(held, RunResumed(run_id=started.run_id, occurred_at=_NOW))
     assert resumed.status is RunStatus.RUNNING
-    # The Run identity / plan / subject survive the round trip.
-    assert resumed == replace(held, status=RunStatus.RUNNING)
+    # The Run identity / plan / subject survive the round trip. A bare resume
+    # clears every claim, which is the one-bit semantics it was written under.
+    assert resumed == replace(held, status=RunStatus.RUNNING, hold_claims=())
 
 
 @pytest.mark.unit

@@ -45,6 +45,8 @@ from cora.infrastructure.ports import (
 )
 from cora.infrastructure.ports.event_store import EventStore, StoredEvent
 from cora.run.aggregates.run import (
+    HOLD_CAUSE_AUTHORITY_REVOCATION,
+    RunCompleted,
     RunHeld,
     RunStarted,
     RunStatus,
@@ -114,6 +116,24 @@ async def _seed_held_run(store: EventStore, *, starter: UUID) -> UUID:
         occurred_at=_NOW,
         event_id=uuid4(),
         command_name="HoldRun",
+        correlation_id=uuid4(),
+        causation_id=None,
+        principal_id=starter,
+    )
+    await store.append("Run", run_id, 1, [envelope])
+    return run_id
+
+
+async def _seed_completed_run(store: EventStore, *, starter: UUID) -> UUID:
+    """Append RunStarted + RunCompleted so the run folds to a terminal status."""
+    run_id = await _seed_running_run(store, starter=starter)
+    completed = RunCompleted(run_id=run_id, occurred_at=_NOW)
+    envelope = to_new_event(
+        event_type=run_event_type_name(completed),
+        payload=run_to_payload(completed),
+        occurred_at=_NOW,
+        event_id=uuid4(),
+        command_name="CompleteRun",
         correlation_id=uuid4(),
         causation_id=None,
         principal_id=starter,
@@ -203,7 +223,10 @@ async def test_asks_lookup_for_the_revoked_principal() -> None:
 
 
 @pytest.mark.unit
-async def test_already_held_run_folds_to_hold_deferred() -> None:
+async def test_already_held_run_still_records_the_revocation_claim() -> None:
+    """The safety fix. A run held by ANOTHER concern must still take the
+    kill-switch's claim: deferring wrote a Decision but no Run event, so the other
+    concern's release resumed the run with the revocation unenforced."""
     kernel = _kernel()
     await seed_authority_revocation_holder_agent(kernel)
     revoked = uuid4()
@@ -216,7 +239,30 @@ async def test_already_held_run_folds_to_hold_deferred() -> None:
     state = await load_run(kernel.event_store, run_id)
     assert state is not None
     assert state.status is RunStatus.HELD
+    assert HOLD_CAUSE_AUTHORITY_REVOCATION in [cause for _, cause in state.hold_claims]
     decision = await load_decision(kernel.event_store, _derive_decision_id(event.event_id, run_id))
+    assert decision is not None
+    assert decision.choice.value == "Held"
+
+
+@pytest.mark.unit
+async def test_run_already_held_by_this_killswitch_folds_to_hold_deferred() -> None:
+    """Re-delivery is idempotent: the derived claim is already active, so the
+    second delivery records HoldDeferred and appends no second RunHeld."""
+    kernel = _kernel()
+    await seed_authority_revocation_holder_agent(kernel)
+    revoked = uuid4()
+    run_id = await _seed_running_run(kernel.event_store, starter=revoked)
+    sub = _build(kernel, run_ids=[run_id])
+
+    first = _revocation_event(revoked_principal_id=revoked)
+    await sub.apply(first, conn=None)  # type: ignore[arg-type]
+    second = _revocation_event(revoked_principal_id=revoked)
+    await sub.apply(second, conn=None)  # type: ignore[arg-type]
+
+    stored, _ = await kernel.event_store.load("Run", run_id)
+    assert sum(1 for e in stored if e.event_type == "RunHeld") == 1
+    decision = await load_decision(kernel.event_store, _derive_decision_id(second.event_id, run_id))
     assert decision is not None
     assert decision.choice.value == "HoldDeferred"
 
@@ -342,20 +388,23 @@ async def test_ignores_non_trigger_event_types() -> None:
 
 @pytest.mark.unit
 async def test_mixed_fan_out_continues_past_a_deferred_run() -> None:
-    """A deferred run (already Held) must not stop the loop: a Running sibling is
-    still held. Pins per-run independence in the fan-out."""
+    """A deferred run (terminal) must not stop the loop: a Running sibling is
+    still held. Pins per-run independence in the fan-out.
+
+    Uses a COMPLETED run as the deferred case. An already-Held run is no longer
+    deferred: it takes the revocation claim like any other."""
     kernel = _kernel()
     await seed_authority_revocation_holder_agent(kernel)
     revoked = uuid4()
-    already_held = await _seed_held_run(kernel.event_store, starter=revoked)
+    terminal = await _seed_completed_run(kernel.event_store, starter=revoked)
     running = await _seed_running_run(kernel.event_store, starter=revoked)
-    sub = _build(kernel, run_ids=[already_held, running])
+    sub = _build(kernel, run_ids=[terminal, running])
 
     event = _revocation_event(revoked_principal_id=revoked)
     await sub.apply(event, conn=None)  # type: ignore[arg-type]
 
     held_decision = await load_decision(
-        kernel.event_store, _derive_decision_id(event.event_id, already_held)
+        kernel.event_store, _derive_decision_id(event.event_id, terminal)
     )
     running_decision = await load_decision(
         kernel.event_store, _derive_decision_id(event.event_id, running)

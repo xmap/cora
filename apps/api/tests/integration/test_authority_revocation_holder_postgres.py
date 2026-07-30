@@ -45,10 +45,18 @@ from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.define_plan import DefinePlan
 from cora.recipe.features.define_practice import DefinePractice
 from cora.run.adapters import PostgresRunActorInvolvementLookup
-from cora.run.aggregates.run import RunStatus, load_run
+from cora.run.aggregates.run import (
+    HOLD_CAUSE_AUTHORITY_REVOCATION,
+    HOLD_CAUSE_OPERATOR,
+    RunHoldClaimsRemainError,
+    RunStatus,
+    load_run,
+)
 from cora.run.features import start_run
 from cora.run.features.hold_run import HoldRun
 from cora.run.features.hold_run import bind as bind_hold_run
+from cora.run.features.resume_run import ResumeRun
+from cora.run.features.resume_run import bind as bind_resume_run
 from cora.run.features.start_run import StartRun
 from cora.run.projections import RunActorInvolvementProjection
 from cora.subject.features import mount_subject, register_subject
@@ -226,13 +234,21 @@ async def test_revoke_leaves_other_principals_run_running(db_pool: asyncpg.Pool)
 
 
 @pytest.mark.integration
-async def test_already_held_run_folds_to_hold_deferred(db_pool: asyncpg.Pool) -> None:
+async def test_operator_held_run_still_takes_the_revocation_claim(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Over a real database: an operator hold does NOT absorb the revocation.
+
+    The holder used to defer on any non-Running status, writing a Decision but no
+    Run event, so the operator's later resume dropped the revocation with it. It
+    now records its own cause-scoped claim alongside the operator's.
+    """
     deps = _deps(db_pool)
     await seed_authority_revocation_holder_agent(deps)
 
     revoked = uuid4()
     run_id = await _start_run_as(deps, starter=revoked, tag="held")
-    # Operator-hold it first, so the holder's own hold hits the Running-only guard.
+    # Operator-hold it first: the run is Held before the revocation arrives.
     await bind_hold_run(deps)(
         HoldRun(run_id=run_id),
         principal_id=revoked,
@@ -245,6 +261,49 @@ async def test_already_held_run_folds_to_hold_deferred(db_pool: asyncpg.Pool) ->
 
     state = await load_run(deps.event_store, run_id)
     assert state is not None and state.status is RunStatus.HELD
+    assert [cause for _, cause in state.hold_claims] == [
+        HOLD_CAUSE_OPERATOR,
+        HOLD_CAUSE_AUTHORITY_REVOCATION,
+    ]
     decision = await load_decision(deps.event_store, _derive_decision_id(event.event_id, run_id))
     assert decision is not None
-    assert decision.choice.value == "HoldDeferred"
+    assert decision.choice.value == "Held"
+
+
+@pytest.mark.integration
+async def test_operator_cannot_resume_past_the_revocation_claim(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """The safety property, end to end over Postgres: the operator discharges its
+    own claim and the run stays Held for the revocation."""
+    deps = _deps(db_pool)
+    await seed_authority_revocation_holder_agent(deps)
+
+    revoked = uuid4()
+    run_id = await _start_run_as(deps, starter=revoked, tag="held")
+    await bind_hold_run(deps)(
+        HoldRun(run_id=run_id),
+        principal_id=revoked,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain_involvement(db_pool)
+    await _run_holder(deps, _revocation_event(revoked_principal_id=revoked))
+
+    # The operator resume releases only the operator claim.
+    await bind_resume_run(deps)(
+        ResumeRun(run_id=run_id),
+        principal_id=revoked,
+        correlation_id=_CORRELATION_ID,
+    )
+    state = await load_run(deps.event_store, run_id)
+    assert state is not None
+    assert state.status is RunStatus.HELD, "the revocation hold must survive"
+    assert [cause for _, cause in state.hold_claims] == [HOLD_CAUSE_AUTHORITY_REVOCATION]
+
+    # A second operator resume cannot clear the revocation's claim either.
+    with pytest.raises(RunHoldClaimsRemainError):
+        await bind_resume_run(deps)(
+            ResumeRun(run_id=run_id),
+            principal_id=revoked,
+            correlation_id=_CORRELATION_ID,
+        )

@@ -27,12 +27,19 @@ append fails, the run is still safely held (the RunHeld event + its envelope
 principal are themselves an audit trail); a re-delivery re-derives the same
 Decision id and no-ops on ConcurrencyError.
 
-## Running-only guard
+## Holdable-status guard, and why it is no longer Running-only
 
-Per the design the holder acts on Running runs only. It loads the Run and holds
-only when `status == Running`; an already-Held / terminal / missing run records
-`HoldDeferred` (no event), never raised, so a stale K2 projection row cannot
-wedge the shared bookmark. The load-then-append is guarded by optimistic
+The holder acted on Running runs only, deferring on anything else. That dropped
+the revocation on the floor whenever the run was already held by another concern:
+`HoldDeferred` writes a Decision but NO Run event, so when that concern released
+its hold the run resumed with the revoked principal's runs unpaused, and the
+kill-switch never fired again (one `PolicyGrantRevoked`, idempotent re-delivery,
+no sweep). See [[project-hold-claim-ordering-fault]].
+
+It now holds a Running OR already-Held run, recording its own cause-scoped claim.
+A terminal or missing run still records `HoldDeferred` (no event), never raised,
+so a stale K2 projection row cannot wedge the shared bookmark. Re-delivery is
+idempotent via the derived claim id. The load-then-append is guarded by optimistic
 concurrency: if the Run advanced between the read and the write, the append's
 ConcurrencyError is caught and folded to HoldDeferred (the next delivery, if any,
 re-evaluates fresh).
@@ -82,8 +89,10 @@ from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import ConcurrencyError, Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.aggregates.run import (
+    HOLD_CAUSE_AUTHORITY_REVOCATION,
     RunHeld,
     RunStatus,
+    derive_claim_id,
 )
 from cora.run.aggregates.run import (
     event_type_name as run_event_type_name,
@@ -117,6 +126,11 @@ _TRIGGER_EVENT_TYPE = "PolicyGrantRevoked"
 # cf. aaaa0002 / bbbb0002 / dddd0002) in the holder's own b111 block; distinct
 # from every other agent's namespace.
 _HOLDER_NAMESPACE = UUID("01900000-0000-7000-8000-0000b1110002")
+
+# Terminal runs cannot be held. An already-HELD run CAN: another concern may be
+# holding it, and a safety hold that declines to record itself is a safety hold
+# that silently expires when that concern releases.
+_HOLDABLE_STATUSES = (RunStatus.RUNNING, RunStatus.HELD)
 
 _log = get_logger(__name__)
 
@@ -236,8 +250,17 @@ class AuthorityRevocationHolderSubscriber:
         if not stored:
             return "HoldDeferred", "run not found (stale involvement projection row)"
         state = fold_run([run_from_stored(s) for s in stored])
-        if state is None or state.status is not RunStatus.RUNNING:
-            return "HoldDeferred", "run had already left Running (already held or terminal)"
+        if state is None or state.status not in _HOLDABLE_STATUSES:
+            return "HoldDeferred", "run is terminal"
+        # An already-HELD run is HOLDABLE. This is the fix: the kill-switch used
+        # to defer on any non-Running status, so a run held by the consequence
+        # gate awaiting a co-signature absorbed the revocation without recording
+        # it, and the gate's later release resumed the run with the revocation
+        # unenforced. The safety hold now records its own claim and outlives that
+        # release. See [[project-hold-claim-ordering-fault]].
+        claim_id = derive_claim_id(run_id, HOLD_CAUSE_AUTHORITY_REVOCATION)
+        if any(active_id == claim_id for active_id, _ in state.hold_claims):
+            return "HoldDeferred", "already held by this kill-switch (re-delivery)"
 
         authz = await self.authz.authorize(
             principal_id=AUTHORITY_REVOCATION_HOLDER_AGENT_ID,
@@ -249,7 +272,13 @@ class AuthorityRevocationHolderSubscriber:
             return "HoldDeferred", "not authorized to hold (Authorize denied)"
 
         now = self.clock.now()
-        held = RunHeld(run_id=run_id, decided_by_decision_id=decision_id, occurred_at=now)
+        held = RunHeld(
+            run_id=run_id,
+            decided_by_decision_id=decision_id,
+            claim_id=claim_id,
+            cause=HOLD_CAUSE_AUTHORITY_REVOCATION,
+            occurred_at=now,
+        )
         envelope = to_new_event(
             event_type=run_event_type_name(held),
             payload=run_to_payload(held),

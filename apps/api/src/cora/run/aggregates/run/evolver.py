@@ -7,8 +7,11 @@ is added to `RunEvent` without a matching match arm here.
 Status mapping per event type:
   - `RunStarted`            -> RUNNING   (genesis; the start-event puts the
                                           Run into the active steady-state)
-  - `RunHeld`               -> HELD      (pause)
-  - `RunResumed`            -> RUNNING   (un-pause; back to the active steady-state)
+  - `RunHeld`               -> HELD      (pause; one hold claim placed)
+  - `HoldClaimReleased`     -> status preserved (audit-only: one claim
+                                          discharged while others remain, so
+                                          the Run stays HELD)
+  - `RunResumed`            -> RUNNING   (un-pause; the LAST claim discharged)
   - `RunCompleted`          -> COMPLETED (happy-path terminal)
   - `RunAborted`            -> ABORTED   (emergency-exit terminal)
   - `RunStopped`            -> STOPPED   (controlled-exit terminal)
@@ -88,10 +91,14 @@ the 11th identical copy landed).
 
 from collections.abc import Sequence
 from typing import assert_never
+from uuid import UUID
 
 from cora.infrastructure.evolver import require_state
 from cora.run.aggregates.run.events import (
+    LEGACY_CAUSE,
+    LEGACY_CLAIM_ID,
     DecisionDebriefRequested,
+    HoldClaimReleased,
     RunAborted,
     RunAddedToCampaign,
     RunAdjusted,
@@ -107,6 +114,39 @@ from cora.run.aggregates.run.events import (
 )
 from cora.run.aggregates.run.state import Run, RunName, RunStatus
 from cora.shared.identifier import Identifier
+
+
+def _with_claim(
+    claims: tuple[tuple[UUID, str], ...],
+    claim_id: UUID | None,
+    cause: str | None,
+) -> tuple[tuple[UUID, str], ...]:
+    """Add one hold claim, idempotent on an already-active claim id.
+
+    A `RunHeld` written before holds were cause-scoped carries no `claim_id`;
+    it folds to the single `LEGACY_CLAIM_ID` claim so repeated legacy holds
+    collapse to one rather than accumulating, which is what makes a legacy
+    stream replay to its original one-bit meaning.
+    """
+    key = claim_id if claim_id is not None else LEGACY_CLAIM_ID
+    if any(existing == key for existing, _ in claims):
+        return claims
+    return (*claims, (key, cause if cause is not None else LEGACY_CAUSE))
+
+
+def _without_claim(
+    claims: tuple[tuple[UUID, str], ...],
+    claim_id: UUID | None,
+) -> tuple[tuple[UUID, str], ...]:
+    """Drop one hold claim; `None` clears every claim (legacy bare resume).
+
+    Dropping a claim that is not active is a no-op rather than an error: the
+    evolver folds whatever the stream says and leaves rejection to the deciders,
+    which is what keeps replay total over any historical stream.
+    """
+    if claim_id is None:
+        return ()
+    return tuple((cid, cause) for cid, cause in claims if cid != claim_id)
 
 
 def evolve(state: Run | None, event: RunEvent) -> Run:
@@ -157,8 +197,10 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 input_dataset_ids=frozenset(input_dataset_ids),
                 # No conduct provenance at genesis; a terminal event sets it.
                 actuation_kind=None,
+                # Nothing holds a Run at genesis.
+                hold_claims=(),
             )
-        case RunHeld():
+        case RunHeld(claim_id=held_claim_id, cause=held_cause):
             prior = require_state(state, "RunHeld")
             return Run(
                 id=prior.id,
@@ -182,8 +224,14 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
+                # This hold's claim joins the active set. Re-holding under a
+                # claim id that is already active is idempotent (no duplicate,
+                # cause unchanged); a claimless legacy hold folds to the single
+                # LEGACY_CLAIM_ID claim so pre-claim streams keep one-bit
+                # semantics.
+                hold_claims=_with_claim(prior.hold_claims, held_claim_id, held_cause),
             )
-        case RunResumed():
+        case RunResumed(released_claim_id=released_claim_id):
             prior = require_state(state, "RunResumed")
             return Run(
                 id=prior.id,
@@ -207,6 +255,12 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
+                # The resume discharges the claim it names. A bare legacy
+                # resume clears everything, matching the one-bit semantics it
+                # was written under. The deciders are what refuse a resume while
+                # OTHER claims remain; the evolver stays a pure fold and does
+                # not adjudicate.
+                hold_claims=_without_claim(prior.hold_claims, released_claim_id),
             )
         case RunCompleted(actuation_kind=actuation_kind):
             prior = require_state(state, "RunCompleted")
@@ -234,6 +288,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 # observed kind for a conducted Run; None for a normal
                 # complete issued outside a conduct.
                 actuation_kind=actuation_kind,
+                # Terminal: nothing can still be holding a finished Run.
+                hold_claims=(),
             )
         case RunAborted(actuation_kind=actuation_kind):
             prior = require_state(state, "RunAborted")
@@ -261,6 +317,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 # (the kind rides the abort event); None for operator
                 # aborts.
                 actuation_kind=actuation_kind,
+                # Terminal: nothing can still be holding a finished Run.
+                hold_claims=(),
             )
         case RunStopped():
             prior = require_state(state, "RunStopped")
@@ -286,6 +344,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
+                # Claims survive every non-hold transition.
+                hold_claims=prior.hold_claims,
             )
         case RunTruncated():
             prior = require_state(state, "RunTruncated")
@@ -311,6 +371,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
+                # Claims survive every non-hold transition.
+                hold_claims=prior.hold_claims,
             )
         case RunAdjusted(
             effective_parameters=effective_parameters,
@@ -350,6 +412,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across mid-flight steering.
                 actuation_kind=prior.actuation_kind,
+                # Claims survive every non-hold transition.
+                hold_claims=prior.hold_claims,
             )
         case RunObservationLogbookOpened(logbook_id=logbook_id):
             # Lazy open-on-first-write: preserve all
@@ -378,6 +442,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
+                # Claims survive every non-hold transition.
+                hold_claims=prior.hold_claims,
             )
         case RunAddedToCampaign(campaign_id=campaign_id):
             # post-hoc membership assignment from
@@ -408,6 +474,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
+                # Claims survive every non-hold transition.
+                hold_claims=prior.hold_claims,
             )
         case RunRemovedFromCampaign():
             # post-hoc membership removal from
@@ -438,6 +506,8 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 input_dataset_ids=prior.input_dataset_ids,
                 # Conduct provenance preserved across non-terminal arms.
                 actuation_kind=prior.actuation_kind,
+                # Claims survive every non-hold transition.
+                hold_claims=prior.hold_claims,
             )
         case DecisionDebriefRequested():
             # Audit-only lease marker appended by an Agent BC subscriber
@@ -447,6 +517,43 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
             # field. Returns prior state unchanged. See
             # [[project-run-debriefer-lease-design]].
             return require_state(state, "DecisionDebriefRequested")
+        case HoldClaimReleased(claim_id=released_only_claim_id):
+            # ONE concern stopped holding while others still are: the claim
+            # leaves the active set and `status` does NOT move, so the Run stays
+            # HELD on behalf of whoever remains. This is the arm that makes the
+            # algebra compositional — without it a releaser's only options are
+            # to resume a Run others want held or to hold forever.
+            #
+            # The transition out of HELD is `RunResumed`, legal only when the
+            # claim it discharges is the last active one. That rule lives in the
+            # hold/resume deciders, which can see `hold_claims`; the evolver
+            # stays a pure per-event fold and does not adjudicate.
+            prior = require_state(state, "HoldClaimReleased")
+            return Run(
+                id=prior.id,
+                name=prior.name,
+                plan_id=prior.plan_id,
+                subject_id=prior.subject_id,
+                raid=prior.raid,
+                # Status deliberately unchanged: still HELD if it was.
+                status=prior.status,
+                override_parameters=prior.override_parameters,
+                effective_parameters=prior.effective_parameters,
+                trigger_source=prior.trigger_source,
+                observation_logbook_id=prior.observation_logbook_id,
+                external_refs=prior.external_refs,
+                campaign_id=prior.campaign_id,
+                last_adjusted_at=prior.last_adjusted_at,
+                last_adjusted_by=prior.last_adjusted_by,
+                adjustment_count=prior.adjustment_count,
+                # AsShot invariant: never change after start.
+                pinned_calibration_ids=prior.pinned_calibration_ids,
+                # Input Dataset refs preserved verbatim across this arm.
+                input_dataset_ids=prior.input_dataset_ids,
+                # Conduct provenance preserved across non-terminal arms.
+                actuation_kind=prior.actuation_kind,
+                hold_claims=_without_claim(prior.hold_claims, released_only_claim_id),
+            )
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
 

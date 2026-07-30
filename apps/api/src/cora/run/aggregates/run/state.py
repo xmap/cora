@@ -850,6 +850,33 @@ class RunCannotResumeError(Exception):
         self.current_status = current_status
 
 
+class RunHoldClaimsRemainError(Exception):
+    """Attempted to resume a Held Run that OTHER concerns are still holding.
+
+    The Run is in `Held` and the caller's own hold claim is discharged, but at
+    least one other claim is active, so resuming would clear a hold the caller
+    never placed. That is the fault this class exists to make impossible: a
+    consequence-gate co-signature must not resume a Run the kill-switch is
+    holding, and an operator must not resume past a revocation by accident.
+
+    `blocking_causes` names the concerns still holding, so the caller learns
+    which gate to address rather than only that it was refused. Clearing another
+    concern's claim is that concern's business — the revocation clears when the
+    grant is restored, the ratification when it settles.
+
+    Mapped to HTTP 409.
+    """
+
+    def __init__(self, run_id: UUID, blocking_causes: tuple[str, ...]) -> None:
+        causes = ", ".join(blocking_causes) if blocking_causes else "unknown"
+        super().__init__(
+            f"Run {run_id} cannot be resumed: still held by {causes}. "
+            f"Each holding concern must discharge its own claim."
+        )
+        self.run_id = run_id
+        self.blocking_causes = blocking_causes
+
+
 class RunCannotStopError(Exception):
     """Attempted to stop a Run not in `Running` or `Held`.
 
@@ -1349,6 +1376,21 @@ class Run:
     # promotion-gate-relevant kind. Defaults to None so legacy streams
     # fold cleanly via `payload.get("actuation_kind")`.
     actuation_kind: str | None = None
+    # Undischarged hold claims as ((claim_id, cause), ...), oldest first.
+    #
+    # On a non-terminal Run, `status is HELD` iff this is non-empty. The pair
+    # exists because HELD had to stop being one bit: independent governance
+    # concerns (the consequence gate awaiting a co-signature, the kill-switch
+    # on a revoked grant, an operator, the RunSupervisor on an envelope
+    # breach) can each hold the SAME Run, and a release that cannot tell whose
+    # hold it is clears somebody else's.
+    #
+    # Tuple rather than frozenset: the order records which concern held first,
+    # and a `dict` would break the frozen dataclass's equality-by-value
+    # semantics that the per-transition preserve-fields tests rely on. Terminal
+    # arms clear it — a finished Run holds nothing. Defaults to empty so legacy
+    # pre-claim streams fold cleanly.
+    hold_claims: tuple[tuple[UUID, str], ...] = ()
 
 
 class InvalidRunParametersError(ValueError):

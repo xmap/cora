@@ -26,7 +26,16 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import AllowAllAuthorize, FakeClock, UUIDv7Generator
 from cora.infrastructure.ports.event_store import EventStore, StoredEvent
-from cora.run.aggregates.run import RunHeld, RunStarted, RunStatus, load_run
+from cora.run.aggregates.run import (
+    HOLD_CAUSE_AUTHORITY_REVOCATION,
+    HOLD_CAUSE_RATIFICATION,
+    RunCompleted,
+    RunHeld,
+    RunStarted,
+    RunStatus,
+    derive_claim_id,
+    load_run,
+)
 from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import to_payload as run_to_payload
 from cora.trust.aggregates.ratification import event_type_name as rat_event_type_name
@@ -70,13 +79,28 @@ async def _seed_running_run(store: EventStore) -> UUID:
     return run_id
 
 
-async def _seed_held_run(store: EventStore, *, held_by: UUID | None = None) -> UUID:
-    """Seed a Running run then a RunHeld. `held_by` is the hold's envelope principal
-    (who placed the hold); defaults to the enforcer, so the release's correlation
-    guard treats it as its own hold. Pass a foreign id to simulate a kill-switch /
-    operator hold the release must NOT clear."""
+async def _seed_held_run(
+    store: EventStore,
+    *,
+    held_by: UUID | None = None,
+    cause: str | None = None,
+) -> UUID:
+    """Seed a Running run then a RunHeld.
+
+    `held_by` is the hold's envelope principal and `cause` the hold claim's cause;
+    both default to this enforcer, so the release's correlation guard treats it as
+    its own hold. Pass a foreign id + cause to simulate a kill-switch / operator
+    hold the release must NOT clear.
+    """
     run_id = await _seed_running_run(store)
-    held = RunHeld(run_id=run_id, decided_by_decision_id=None, occurred_at=_NOW)
+    claim_cause = cause if cause is not None else HOLD_CAUSE_RATIFICATION
+    held = RunHeld(
+        run_id=run_id,
+        decided_by_decision_id=None,
+        claim_id=derive_claim_id(run_id, claim_cause),
+        cause=claim_cause,
+        occurred_at=_NOW,
+    )
     await store.append(
         "Run",
         run_id,
@@ -210,10 +234,11 @@ async def test_hold_subscriber_holds_the_target_running_run() -> None:
 
 
 @pytest.mark.unit
-async def test_hold_subscriber_noop_when_run_not_running() -> None:
+async def test_hold_subscriber_noop_when_it_already_holds_the_run() -> None:
+    """Idempotent on re-delivery: this gate's claim is already active."""
     kernel = _kernel()
     await seed_ratification_enforcer_agent(kernel)
-    run_id = await _seed_held_run(kernel.event_store)  # already Held
+    run_id = await _seed_held_run(kernel.event_store)  # already Held BY THIS GATE
     sub = make_ratification_hold_subscriber(kernel)
 
     await sub.apply(_requested_event(target_run_id=run_id), conn=None)  # type: ignore[arg-type]
@@ -221,6 +246,58 @@ async def test_hold_subscriber_noop_when_run_not_running() -> None:
     # Still exactly one RunHeld (no second hold appended).
     stored, _ = await kernel.event_store.load("Run", run_id)
     assert sum(1 for s in stored if s.event_type == "RunHeld") == 1
+
+
+@pytest.mark.unit
+async def test_hold_subscriber_claims_a_run_held_by_another_concern() -> None:
+    """The safety fix, from this gate's side: a run held by the kill-switch must
+    still take this gate's claim, or the co-signature requirement is dropped."""
+    kernel = _kernel()
+    await seed_ratification_enforcer_agent(kernel)
+    run_id = await _seed_held_run(
+        kernel.event_store, held_by=uuid4(), cause=HOLD_CAUSE_AUTHORITY_REVOCATION
+    )
+    sub = make_ratification_hold_subscriber(kernel)
+
+    await sub.apply(_requested_event(target_run_id=run_id), conn=None)  # type: ignore[arg-type]
+
+    state = await load_run(kernel.event_store, run_id)
+    assert state is not None
+    assert [cause for _, cause in state.hold_claims] == [
+        HOLD_CAUSE_AUTHORITY_REVOCATION,
+        HOLD_CAUSE_RATIFICATION,
+    ]
+
+
+@pytest.mark.unit
+async def test_hold_subscriber_noop_when_run_is_terminal() -> None:
+    kernel = _kernel()
+    await seed_ratification_enforcer_agent(kernel)
+    run_id = await _seed_running_run(kernel.event_store)
+    completed = RunCompleted(run_id=run_id, occurred_at=_NOW)
+    await kernel.event_store.append(
+        "Run",
+        run_id,
+        1,
+        [
+            to_new_event(
+                event_type=run_event_type_name(completed),
+                payload=run_to_payload(completed),
+                occurred_at=_NOW,
+                event_id=uuid4(),
+                command_name="CompleteRun",
+                correlation_id=uuid4(),
+                causation_id=None,
+                principal_id=uuid4(),
+            )
+        ],
+    )
+    sub = make_ratification_hold_subscriber(kernel)
+
+    await sub.apply(_requested_event(target_run_id=run_id), conn=None)  # type: ignore[arg-type]
+
+    stored, _ = await kernel.event_store.load("Run", run_id)
+    assert sum(1 for s in stored if s.event_type == "RunHeld") == 0
 
 
 @pytest.mark.unit
@@ -300,7 +377,11 @@ async def test_release_does_not_clear_a_foreign_hold() -> None:
     kernel = _kernel()
     await seed_ratification_enforcer_agent(kernel)
     foreign_holder = uuid4()  # e.g. the kill-switch's authority_revocation_holder
-    run_id = await _seed_held_run(kernel.event_store, held_by=foreign_holder)
+    run_id = await _seed_held_run(
+        kernel.event_store,
+        held_by=foreign_holder,
+        cause=HOLD_CAUSE_AUTHORITY_REVOCATION,
+    )
     ratification_id = await _seed_ratification(kernel.event_store, target_run_id=run_id)
     sub = make_ratification_release_subscriber(kernel)
 

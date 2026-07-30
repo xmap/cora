@@ -678,6 +678,10 @@ def test_to_payload_serializes_run_held_to_primitives() -> None:
     assert to_payload(event) == {
         "run_id": str(run_id),
         "decided_by_decision_id": None,
+        # A hold with no explicit claim serializes both claim keys as null; the
+        # fold maps that to the single legacy unscoped claim.
+        "claim_id": None,
+        "cause": None,
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -762,6 +766,9 @@ def test_to_payload_serializes_run_resumed_to_primitives() -> None:
     assert to_payload(event) == {
         "run_id": str(run_id),
         "decided_by_decision_id": None,
+        # A bare resume names no claim; the fold reads that as clearing every
+        # active claim (legacy one-bit semantics).
+        "released_claim_id": None,
         "occurred_at": _NOW.isoformat(),
     }
 
