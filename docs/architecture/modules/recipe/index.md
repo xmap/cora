@@ -35,7 +35,7 @@ The scan itself is a `Run` (science track), `Capability` down to `Run`:
 | `Plan` | binds the Practice to that facility's actual detector and positioner Assets, wires their ports, and sets default parameter values. |
 | `Run` | one operator-started execution of the Plan, one afternoon against one sample, producing a Dataset and recording what actually happened. |
 
-The prep that readies the instrument is the operational track (`Procedure`): homing the motors and recovering a stuck controller ([`hexapod_reboot`](../../../deployments/2-bm/recipes.md#hexapod_reboot)) are state changes that leave no Dataset, and aligning the rotation center leaves a `rotation_center` `Calibration`, not a Dataset (a measured calibration can only be sourced from a Procedure). Each conducts Setpoint / Action / Check steps and records a step log. A Procedure may also run as a phase of a Run (`parent_run_id`, an alignment performed mid-scan).
+The prep that readies the instrument is the operational track (`Procedure`): homing the motors and recovering a stuck controller ([`hexapod_reboot`](../../../deployments/2-bm/recipes.md#hexapod_reboot)) are state changes that leave no Dataset, and aligning the rotation center leaves a `rotation_center` `Calibration`, not a Dataset (a measured calibration can only be sourced from a Procedure). Each conducts setpoint / action / check steps, plus the capture and compute steps the conduct-path runtimes add, and records a step log. A Procedure may also run as a phase of a Run (`parent_run_id`, an alignment performed mid-scan).
 
 The split is data-of-record vs not, not read-versus-actuate. Aligning rotates the stage and reads frames (heavy actuation and reads) yet is a Procedure, because its output of record is the `rotation_center` value and the frames are transient working data; a reconstruction does no actuation at all yet is a Run, because it leaves a reconstructed Dataset. A separate, orthogonal axis decides who drives the act: CORA's conducting engine over the relevant port (control over `ControlPort`, compute over `ComputePort`), or a facility tool that CORA only records (at 2-BM, TomoScan owns the scan loop). See the [Run vs Procedure boundary](../../../reference/modeling.md#run-vs-procedure-boundary) rule.
 
@@ -82,7 +82,11 @@ Out of scope
 | `PlanStatus` | closed StrEnum: `Defined` \| `Versioned` \| `Deprecated` | `Plan.status` |
 | `RecipeName` | trimmed string, 1-200 chars | `Recipe.name` |
 | `RecipeStatus` | closed StrEnum: `Defined` \| `Versioned` \| `Deprecated` | `Recipe.status` |
-| `RecipeStep` | closed union: `RecipeSetpointStep` \| `RecipeActionStep` \| `RecipeCheckStep`; each carries templated fields with `BindingRef` sentinels resolved at expansion | members of `Recipe.steps` (non-empty) |
+| `RecipeStep` | closed union: `RecipeSetpointStep` \| `RecipeActionStep` \| `RecipeCheckStep` \| `RecipeCaptureStep` \| `RecipeComputeStep`; parallels the Conductor's `Step` union arm-for-arm. See [Step kinds and value substitution](#step-kinds-and-value-substitution) | members of `Recipe.steps` (non-empty) |
+| `BindingRef` | sentinel `(name)`; `name` must match a property the referenced `Capability.parameters_schema` declares | `RecipeSetpointStep.value`, per-key `RecipeActionStep.params` values |
+| `CaptureRef` | sentinel `(capture_name)`; the name must be declared by an earlier declaring step in the same Recipe | `RecipeSetpointStep.value` |
+| `SteeringRef` | sentinel `(steering_axis_name)`; matches a `SteeringAxis.name` in the `conduct_until_advised` space | `RecipeSetpointStep.value` |
+| `OutputRef` | sentinel `(output_name)`; must be declared by an earlier file-arm `RecipeComputeStep.output_ref_name` | elements of `RecipeComputeStep.input_uris` |
 | `Wire` | 4-tuple `(source_asset_id, source_port_name, target_asset_id, target_port_name)`; port names 1-100 chars after trim | `Plan.wires` |
 | `RoleName` | trimmed string, 1-50 chars; Method-local positional role label | `RoleRequirement.role_name`, `RoleBinding.role_name` |
 | `PortRequirement` | 3-tuple `(port_name, direction, signal_type)`; `direction` is the Equipment `PortDirection` enum; port name + signal type bounds mirror Asset.ports | `RoleRequirement.required_ports` |
@@ -97,6 +101,35 @@ Version tags (`version_tag`) are operator-supplied free text, 1-50 chars after t
 `RoleRequirement` carries either `role_kind` (the federation-portable path: any Asset whose bound Family advertises `role_kind` in its `presents_as` and whose affordances superset the Role's `required_affordances` satisfies it) or `family_id` (the slice-1 anatomical escape hatch: direct family-id membership). The XOR is enforced in the `RoleRequirement.__post_init__` (both-set raises `RoleRequirementBindingDuplicateError`, neither-set raises `InvalidRoleRequirementTargetError`) and again at the wire layer. The `MethodRequiredRoleAdded` payload evolved additively to carry `role_kind` (no new event class); `Method.content_subset` renders `role_kind` only when non-None so pre-`role_kind` Methods keep their `content_hash` byte-stable.
 
 The `Affordance` enum used in `Capability.required_affordances` is owned by the [Equipment module](../equipment/index.md) and imported here; Capability's required-affordance set is the contract any implementer's bound Family.affordances must cover.
+
+### Step kinds and value substitution
+
+`Recipe.steps` is an ordered tuple over five templated shapes, each the recipe-template twin of one Conductor `Step` arm:
+
+| Arm | Carries | Notes |
+|---|---|---|
+| `RecipeSetpointStep` | `address`, `value`, `verify` | `value` is the only bindable position; `verify` mirrors `SetpointStep.verify` |
+| `RecipeActionStep` | `name`, `params` | `name` is the registered action-body name; per-key `params` values may be `BindingRef` |
+| `RecipeCheckStep` | `address`, `criterion` | `criterion` is the wire-format dict (`equals`, `within_tolerance`), translated to the typed union at expansion so Recipe BC imports nothing from Operation |
+| `RecipeCaptureStep` | `address`, `capture_name` | reads at execute time into the named captures slot; carries no bindable value, because the read IS the value |
+| `RecipeComputeStep` | `command`, `input_uris`, `output_uri`, `parameters`, `capture_name`, `output_ref_name` | `output_uri` set selects the FILE arm (surfaces an `ArtifactRef`), None the VALUE arm (surfaces a `Measurement`) |
+
+Four sentinel value objects stand in for a value the Recipe does not itself hold. They differ in WHEN they resolve and WHO produces the value:
+
+| Sentinel | Resolves | Produced by |
+|---|---|---|
+| `BindingRef` | expansion time, against the frozen operator `bindings` | the operator, at `register_procedure_from_recipe` |
+| `CaptureRef` | execute time, against the Conductor's per-conduct `captures` bus | an earlier `RecipeCaptureStep`, or a value-arm `RecipeComputeStep` whose `capture_name` is set |
+| `SteeringRef` | execute time, against the same `captures` bus | the decide loop, which seeds the brain-advised coordinate before each pass |
+| `OutputRef` | execute time, against the per-conduct `outputs` bus | an earlier file-arm `RecipeComputeStep` whose `output_ref_name` declared the name |
+
+Only `BindingRef` is resolved by `expand`. The other three ride through expansion unchanged, into the pinned conduct step list and the determinism hash, as opaque sentinels the Conductor alone resolves. That is what lets a steered or chained routine be authored as a Recipe at all: a value that does not exist until execute time still has a stable authored identity.
+
+Substitution is typed, not textual. `BindingRef(name="dwell")` is a structurally distinct sentinel from the string `"dwell"`, and expansion dispatches on the type rather than scanning for `${var}` markers. On the wire each sentinel is a single-key dict (`__binding__`, `__capture__`, `__steering__`, `__output__`); at v1 the format has no escape, so a literal dict value must not carry one of those keys.
+
+At v1 values bind and addresses do not. Every `address`, the action-body `name`, the check criterion thresholds, and a compute step's `command` argv and `parameters` stay literal. Widening address binding is a deferred trigger that fires when a deployment ships two near-identical Recipes differing only in PV prefix; binding a compute parameter waits for the first deployment that needs an operator-tunable one. `CaptureRef` is likewise not supported in `RecipeActionStep.params` yet.
+
+Two structural checks run at both `define_recipe` and `version_recipe` time, before any event is emitted. `validate_capture_refs` walks the steps in order against one shared ordered set of declared names, so a duplicate across either declaring kind raises `DuplicateRecipeCaptureError` and a forward or missing reference raises `UnboundRecipeCaptureError`; `SteeringRef` is exempt, because the loop rather than a step is its producer. `validate_output_refs` is the compute-branch twin over its own separate namespace, and adds one ambiguity guard: a Recipe that declares any output must leave EXACTLY ONE of them unconsumed. That rejects a stray post-terminal file-arm step which would otherwise make the by-name selection of the Dataset-of-record ambiguous. A Recipe declaring no output at all is exempt from the one-sink rule.
 
 ## FSM
 
@@ -276,10 +309,10 @@ _Generated from the code at build time._
 : `PracticeNotFoundError`, `MethodNotFoundError`, `AssetNotFoundError`, `CapabilityNotFoundError`, `FamilyNotFoundError`, `Unauthorized` (same NotFound set as `DefinePlan` since both share the load fan-out)
 
 `DefineRecipe`
-: `RecipeAlreadyExistsError`, `InvalidRecipeNameError`, `EmptyRecipeStepsError`, `CapabilityNotFoundError` (handler-load), `RecipeRequiresCapabilityParametersSchemaError`, `RecipeBindingReferencesUnknownParameterError` (a step `BindingRef` names a parameter the Capability schema does not declare), `Unauthorized`
+: `RecipeAlreadyExistsError`, `InvalidRecipeNameError`, `EmptyRecipeStepsError`, `CapabilityNotFoundError` (handler-load), `RecipeRequiresCapabilityParametersSchemaError`, `RecipeBindingReferencesUnknownParameterError` (a step `BindingRef` names a parameter the Capability schema does not declare), `UnboundRecipeCaptureError` / `DuplicateRecipeCaptureError` (the `validate_capture_refs` walk), `UnboundRecipeOutputError` / `DuplicateRecipeOutputError` and `InvalidRecipeStepShapeError` (the `validate_output_refs` walk, the last one carrying the one-sink violation), `Unauthorized`
 
 `VersionRecipe`
-: `RecipeNotFoundError`, `InvalidRecipeVersionTagError`, `EmptyRecipeStepsError`, `RecipeCannotVersionError` (Deprecated), the same binding-validation errors as `DefineRecipe`, `Unauthorized`
+: `RecipeNotFoundError`, `InvalidRecipeVersionTagError`, `EmptyRecipeStepsError`, `RecipeCannotVersionError` (Deprecated), the same step-validation errors as `DefineRecipe` (binding, capture-ref, and output-ref), `Unauthorized`
 
 `DeprecateRecipe`
 : `RecipeNotFoundError`, `RecipeCannotDeprecateError`, `Unauthorized`
