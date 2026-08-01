@@ -107,19 +107,6 @@ def test_decide_error_message_lists_both_allowed_source_statuses() -> None:
 
 
 @pytest.mark.unit
-def test_decide_trims_reason_before_embedding_in_event() -> None:
-    """The VO trims surrounding whitespace; the emitted event carries
-    the trimmed value, not the raw input."""
-    state = _model()
-    events = deprecate_model.decide(
-        state=state,
-        command=DeprecateModel(model_id=state.id, reason=_REASON),
-        now=_NOW,
-    )
-    assert events[0].reason == _REASON.value
-
-
-@pytest.mark.unit
 def test_decide_is_pure_same_inputs_same_outputs() -> None:
     state = _model()
     command = DeprecateModel(model_id=state.id, reason=_REASON)

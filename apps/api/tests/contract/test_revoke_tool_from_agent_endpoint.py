@@ -101,3 +101,20 @@ def test_post_revoke_422_on_over_cap_tool_name() -> None:
             },
         )
     assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_revoke_empty_reason_returns_422() -> None:
+    """`min_length=1` rejects the empty string at the schema.
+
+    Revoking a tool narrows what an autonomous Agent may do mid-campaign, so
+    the reason is required for the same cause as `PolicyGrantRevoked`.
+    """
+    with TestClient(create_app()) as client:
+        define = client.post("/agents", json=_define_body())
+        agent_id = define.json()["agent_id"]
+        response = client.post(
+            f"/agents/{agent_id}/tools/revoke",
+            json={"tool_name": "read_run", "reason": ""},
+        )
+    assert response.status_code == 422

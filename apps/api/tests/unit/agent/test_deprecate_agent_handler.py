@@ -1,7 +1,7 @@
 """Application-handler tests for the `deprecate_agent` slice."""
 
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -12,7 +12,11 @@ from cora.agent.aggregates.agent import (
     event_type_name,
     to_payload,
 )
-from cora.agent.aggregates.agent.events import AgentDefined, AgentDeprecated
+from cora.agent.aggregates.agent.events import (
+    AgentDefined,
+    AgentDeprecated,
+    AgentVersioned,
+)
 from cora.agent.errors import UnauthorizedError
 from cora.agent.features import deprecate_agent
 from cora.agent.features.deprecate_agent import DeprecateAgent
@@ -76,6 +80,30 @@ async def _seed_defined_agent(store: InMemoryEventStore) -> None:
     )
 
 
+async def _seed_versioned_agent(store: InMemoryEventStore) -> None:
+    """Defined -> Versioned, so `deprecate` is exercised from the OTHER
+    permitted source rather than repeating the Defined path."""
+    await _seed_defined_agent(store)
+    versioned = AgentVersioned(agent_id=_AGENT_ID, version="v2", occurred_at=_T0)
+    await store.append(
+        stream_type="Agent",
+        stream_id=_AGENT_ID,
+        expected_version=1,
+        events=[
+            to_new_event(
+                event_type=event_type_name(versioned),
+                payload=to_payload(versioned),
+                occurred_at=versioned.occurred_at,
+                event_id=uuid4(),
+                command_name="VersionAgent",
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                principal_id=_PRINCIPAL_ID,
+            )
+        ],
+    )
+
+
 @pytest.mark.unit
 async def test_handler_deprecates_a_defined_agent_with_reason() -> None:
     store = InMemoryEventStore()
@@ -96,7 +124,7 @@ async def test_handler_deprecates_a_defined_agent_with_reason() -> None:
 @pytest.mark.unit
 async def test_handler_deprecates_a_versioned_agent() -> None:
     store = InMemoryEventStore()
-    await _seed_defined_agent(store)
+    await _seed_versioned_agent(store)
     deps = _build_deps(event_store=store)
     handler = deprecate_agent.bind(deps)
     await handler(

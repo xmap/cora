@@ -182,3 +182,22 @@ def test_post_decommission_returns_409_when_still_bound_to_fixture() -> None:
     body = response.json()
     assert fixture_id in body["detail"]
     assert "detach" in body["detail"].lower()
+
+
+@pytest.mark.contract
+def test_post_decommission_missing_reason_returns_422() -> None:
+    """`reason` is required: retiring a unit is somebody's decision and the
+    log should say whose and why."""
+    with TestClient(create_app()) as client:
+        asset_id = _register_asset(client)
+        response = client.post(f"/assets/{asset_id}/decommission", json={})
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_decommission_empty_reason_returns_422() -> None:
+    """`min_length=1` rejects the empty string at the schema."""
+    with TestClient(create_app()) as client:
+        asset_id = _register_asset(client)
+        response = client.post(f"/assets/{asset_id}/decommission", json={"reason": ""})
+    assert response.status_code == 422
