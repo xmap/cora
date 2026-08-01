@@ -37,7 +37,7 @@ def test_post_suspend_returns_204_on_versioned_agent() -> None:
         agent_id = _define_and_version(client)
         response = client.post(
             f"/agents/{agent_id}/suspend",
-            json={"reason": "cost overrun observed"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204, response.text
 
@@ -49,7 +49,7 @@ def test_post_suspend_409_on_defined_agent() -> None:
         agent_id = define.json()["agent_id"]
         response = client.post(
             f"/agents/{agent_id}/suspend",
-            json={"reason": "noop"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 409
 
@@ -58,16 +58,16 @@ def test_post_suspend_409_on_defined_agent() -> None:
 def test_post_suspend_409_when_already_suspended() -> None:
     with TestClient(create_app()) as client:
         agent_id = _define_and_version(client)
-        first = client.post(f"/agents/{agent_id}/suspend", json={"reason": "first"})
+        first = client.post(f"/agents/{agent_id}/suspend", json={"reason": "Superseded"})
         assert first.status_code == 204
-        second = client.post(f"/agents/{agent_id}/suspend", json={"reason": "second"})
+        second = client.post(f"/agents/{agent_id}/suspend", json={"reason": "Superseded"})
     assert second.status_code == 409
 
 
 @pytest.mark.contract
 def test_post_suspend_404_on_unknown_id() -> None:
     with TestClient(create_app()) as client:
-        response = client.post(f"/agents/{uuid4()}/suspend", json={"reason": "x"})
+        response = client.post(f"/agents/{uuid4()}/suspend", json={"reason": "Superseded"})
     assert response.status_code == 404
 
 
@@ -85,6 +85,6 @@ def test_post_suspend_422_on_over_cap_reason() -> None:
         agent_id = _define_and_version(client)
         response = client.post(
             f"/agents/{agent_id}/suspend",
-            json={"reason": "x" * (REASON_MAX_LENGTH + 1)},
+            json={"reason": "Superseded" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422

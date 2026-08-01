@@ -33,6 +33,7 @@ from cora.equipment.features.define_model import DefineModel
 from cora.equipment.features.deprecate_model import DeprecateModel
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.kernel import Kernel
+from cora.shared.deprecation import DeprecationReason
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
@@ -51,7 +52,7 @@ _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 _FAMILY_A_ID = UUID("01900000-0000-7000-8000-00000000fad1")
 
-_REASON = "Vendor end-of-life 2026-Q3"
+_REASON = DeprecationReason.SUPERSEDED
 
 
 def _build_deps(
@@ -150,7 +151,7 @@ async def test_handler_appends_model_deprecated_event(
     assert deprecated.event_id == _DEPRECATED_EVENT_ID
     assert deprecated.metadata == {"command": "DeprecateModel"}
     assert deprecated.payload["model_id"] == str(_MODEL_ID)
-    assert deprecated.payload["reason"] == _REASON
+    assert deprecated.payload["reason"] == _REASON.value
 
 
 @pytest.mark.unit

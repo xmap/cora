@@ -25,6 +25,7 @@ from cora.equipment.features import (
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.deprecate_family import DeprecateFamily
 from cora.equipment.features.version_family import VersionFamily
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -62,7 +63,7 @@ async def test_deprecate_family_persists_and_preserves_version_through_fold(
         correlation_id=_CORRELATION_ID,
     )
     await deprecate_family.bind(deps)(
-        DeprecateFamily(family_id=family_id),
+        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

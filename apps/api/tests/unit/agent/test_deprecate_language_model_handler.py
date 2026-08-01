@@ -121,7 +121,7 @@ async def test_handler_raises_cannot_deprecate_when_already_deprecated() -> None
     store = InMemoryEventStore()
     await _seed_defined_language_model(store)
     deprecated = LanguageModelDeprecated(
-        language_model_id=_LANGUAGE_MODEL_ID, reason="earlier withdrawal", occurred_at=_T1
+        language_model_id=_LANGUAGE_MODEL_ID, reason="Superseded", occurred_at=_T1
     )
     await store.append(
         stream_type="LanguageModel",

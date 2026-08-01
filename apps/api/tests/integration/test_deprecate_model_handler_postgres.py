@@ -31,12 +31,13 @@ from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_model import DefineModel
 from cora.equipment.features.deprecate_model import DeprecateModel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
-_REASON = "Vendor end-of-life 2026-Q3"
+_REASON = DeprecationReason.SUPERSEDED
 
 
 async def _drain_equipment_projections(db_pool: asyncpg.Pool) -> None:
@@ -197,7 +198,7 @@ async def test_deprecate_model_raises_cannot_deprecate_after_first_deprecation(
 
     with pytest.raises(ModelCannotDeprecateError):
         await deprecate_model.bind(deps)(
-            DeprecateModel(model_id=model_id, reason="another reason"),
+            DeprecateModel(model_id=model_id, reason=DeprecationReason.SUPERSEDED),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

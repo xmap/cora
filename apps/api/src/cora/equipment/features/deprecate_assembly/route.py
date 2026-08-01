@@ -19,20 +19,19 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.shared.text_bounds import REASON_MAX_LENGTH
+from cora.shared.deprecation import DeprecationReason
 
 
 class DeprecateAssemblyRequest(BaseModel):
     """Body for `POST /assemblies/{assembly_id}/deprecate`."""
 
-    reason: str = Field(
+    reason: DeprecationReason = Field(
         ...,
-        min_length=1,
-        max_length=REASON_MAX_LENGTH,
         description=(
-            "Operator-supplied reason for the deprecation (audit-log "
-            "breadcrumb). REQUIRED. Mirrors decommission_mount's "
-            "reason field shape."
+            "Why the template is no longer recommended. `Superseded`: a "
+            "newer version replaces it, prior use stands. `Defective`: it "
+            "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+            "no longer exists."
         ),
     )
 

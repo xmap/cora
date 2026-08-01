@@ -22,27 +22,25 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.shared.text_bounds import REASON_MAX_LENGTH
+from cora.shared.deprecation import DeprecationReason
 
 
 class DeprecateModelRequest(BaseModel):
     """Body for `POST /models/{model_id}/deprecation`.
 
-    `reason` is operator free text recording why the catalog entry is
-    being retired (for example "superseded by part RV120CCHL", "vendor
-    EOL 2026"). Trimmed and length-validated at the
-    `ModelDeprecationReason` VO; whitespace-only is rejected as a
-    domain invariant violation (400).
+    `reason` is the closed `DeprecationReason` enum. An unknown value is
+    rejected by Pydantic as a 422 before the handler runs. Vendor detail
+    that used to ride in free text (a part number, an EOL date) belongs
+    on the Model's own fields or a Caution, not on the terminal event.
     """
 
-    reason: str = Field(
+    reason: DeprecationReason = Field(
         ...,
-        min_length=1,
-        max_length=REASON_MAX_LENGTH,
         description=(
-            "Operator-supplied rationale for retiring this Model "
-            "(for example 'superseded by RV120CCHL', 'vendor EOL 2026'). "
-            "Free text; trimmed server-side."
+            "Why the template is no longer recommended. `Superseded`: a "
+            "newer version replaces it, prior use stands. `Defective`: it "
+            "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+            "no longer exists."
         ),
     )
 

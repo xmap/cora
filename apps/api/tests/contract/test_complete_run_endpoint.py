@@ -102,7 +102,7 @@ def test_post_complete_run_returns_409_when_aborted() -> None:
         run_id = _setup_full_run(client)
         abort = client.post(
             f"/runs/{run_id}/abort",
-            json={"reason": "early test abort", "justification": "operator: aborting for test"},
+            json={"reason": "Superseded", "justification": "operator: aborting for test"},
         )
         assert abort.status_code == 204
         response = client.post(f"/runs/{run_id}/complete")

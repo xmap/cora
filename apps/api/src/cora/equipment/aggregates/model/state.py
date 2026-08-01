@@ -53,7 +53,7 @@ enum change at a future migration boundary.
 ## Bounded-name VOs
 
 `ModelName`, `PartNumber`, `ManufacturerName`, `ManufacturerIdentifier`,
-`ModelVersionTag`, and `ModelDeprecationReason` follow the
+and `ModelVersionTag` follow the
 trimmed-bounded-text VO pattern via the shared
 `validate_bounded_text` helper. Part numbers are NOT case-folded
 because vendor SKUs are case-sensitive (`RV120CCHL` and `rv120cchl`
@@ -65,7 +65,6 @@ from enum import StrEnum
 from uuid import UUID
 
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
-from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 MODEL_NAME_MAX_LENGTH = 200
 MODEL_PART_NUMBER_MAX_LENGTH = 100
@@ -174,17 +173,6 @@ class InvalidModelVersionTagError(ValueError):
         super().__init__(
             f"Model version tag must be 1-{MODEL_VERSION_TAG_MAX_LENGTH} chars after trimming "
             f"(got: {value!r})"
-        )
-        self.value = value
-
-
-class InvalidModelDeprecationReasonError(ValueError):
-    """The supplied deprecation reason is empty, whitespace-only, or too long."""
-
-    def __init__(self, value: str) -> None:
-        super().__init__(
-            f"Model deprecation reason must be 1-{REASON_MAX_LENGTH} chars "
-            f"after trimming (got: {value!r})"
         )
         self.value = value
 
@@ -400,21 +388,6 @@ class ModelVersionTag:
             self.value,
             max_length=MODEL_VERSION_TAG_MAX_LENGTH,
             error_class=InvalidModelVersionTagError,
-        )
-        object.__setattr__(self, "value", trimmed)
-
-
-@dataclass(frozen=True)
-class ModelDeprecationReason:
-    """Operator-supplied deprecation rationale. Trimmed; 1-500 chars."""
-
-    value: str
-
-    def __post_init__(self) -> None:
-        trimmed = validate_bounded_text(
-            self.value,
-            max_length=REASON_MAX_LENGTH,
-            error_class=InvalidModelDeprecationReasonError,
         )
         object.__setattr__(self, "value", trimmed)
 

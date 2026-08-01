@@ -84,7 +84,7 @@ def test_evolve_carries_sub_assemblies_through_genesis_and_lifecycle() -> None:
     )
     deprecated = AssemblyDeprecated(
         assembly_id=assembly_id,
-        reason="end of life",
+        reason="Superseded",
         occurred_at=_NOW,
     )
     state = fold([defined, deprecated])
@@ -251,7 +251,7 @@ def test_evolve_deprecated_preserves_structural_fields_and_sets_status() -> None
     )
     deprecated = AssemblyDeprecated(
         assembly_id=assembly_id,
-        reason="superseded",
+        reason="Superseded",
         occurred_at=_NOW,
     )
     final = fold([defined, deprecated])
@@ -318,7 +318,7 @@ def test_fold_preserves_immutable_id_across_lifecycle() -> None:
             previous_content_hash="a" * 64,
             occurred_at=_NOW,
         ),
-        AssemblyDeprecated(assembly_id=assembly_id, reason="r", occurred_at=_NOW),
+        AssemblyDeprecated(assembly_id=assembly_id, reason="Superseded", occurred_at=_NOW),
     ]
     final = fold(events)
     assert isinstance(final, Assembly)

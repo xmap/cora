@@ -932,7 +932,7 @@ async def test_apply_ignores_non_terminal_event_defensively() -> None:
         version=2,
         event_type="RunHeld",
         schema_version=1,
-        payload={"run_id": str(uuid4()), "reason": "x"},
+        payload={"run_id": str(uuid4()), "reason": "Superseded"},
         correlation_id=_CORRELATION_ID,
         causation_id=None,
         occurred_at=_LATER,

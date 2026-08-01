@@ -87,7 +87,7 @@ def test_mcp_deprecate_model_tool_returns_iserror_for_unknown_model() -> None:
                     "name": "deprecate_model",
                     "arguments": {
                         "model_id": unknown_id,
-                        "reason": "Vendor EOL 2026-Q3",
+                        "reason": "Superseded",
                     },
                 },
             },

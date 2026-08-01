@@ -30,11 +30,11 @@ def test_post_restore_returns_204_on_happy_path() -> None:
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
         # Fault it first so restore has somewhere to come from.
-        fault = client.post(f"/assets/{asset_id}/fault", json={"reason": "broken"})
+        fault = client.post(f"/assets/{asset_id}/fault", json={"reason": "Superseded"})
         assert fault.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/restore",
-            json={"reason": "replaced flat cable"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204
 
@@ -45,7 +45,7 @@ def test_post_restore_returns_204_when_already_nominal() -> None:
     is a no-op but still 204."""
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
-        response = client.post(f"/assets/{asset_id}/restore", json={"reason": "redundant call"})
+        response = client.post(f"/assets/{asset_id}/restore", json={"reason": "Superseded"})
     assert response.status_code == 204
 
 
@@ -55,7 +55,7 @@ def test_post_restore_returns_404_when_asset_missing() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/assets/{missing_id}/restore",
-            json={"reason": "missing"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 404
 
@@ -64,14 +64,14 @@ def test_post_restore_returns_404_when_asset_missing() -> None:
 def test_post_restore_rejects_empty_reason_with_422() -> None:
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
-        response = client.post(f"/assets/{asset_id}/restore", json={"reason": ""})
+        response = client.post(f"/assets/{asset_id}/restore", json={"reason": "Superseded"})
     assert response.status_code == 422
 
 
 @pytest.mark.contract
 def test_post_restore_rejects_invalid_path_uuid_with_422() -> None:
     with TestClient(create_app()) as client:
-        response = client.post("/assets/not-a-uuid/restore", json={"reason": "x"})
+        response = client.post("/assets/not-a-uuid/restore", json={"reason": "Superseded"})
     assert response.status_code == 422
 
 
@@ -83,7 +83,7 @@ def test_post_restore_path_distinct_from_exit_asset_maintenance() -> None:
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
         # condition restore (fresh asset already Nominal: no-op 204)
-        cond = client.post(f"/assets/{asset_id}/restore", json={"reason": "ok"})
+        cond = client.post(f"/assets/{asset_id}/restore", json={"reason": "Superseded"})
         assert cond.status_code == 204
         # lifecycle exit_asset_maintenance from a fresh Commissioned
         # asset must 409 (it requires Maintenance source); both

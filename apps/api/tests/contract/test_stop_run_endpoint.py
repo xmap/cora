@@ -58,7 +58,7 @@ def _setup_full_run(client: TestClient) -> str:
 def test_post_stop_run_returns_204_from_running_state() -> None:
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        response = client.post(f"/runs/{run_id}/stop", json={"reason": "hit time budget cleanly"})
+        response = client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded"})
     assert response.status_code == 204
 
 
@@ -68,7 +68,7 @@ def test_post_stop_run_returns_204_from_held_state() -> None:
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
         client.post(f"/runs/{run_id}/hold")
-        response = client.post(f"/runs/{run_id}/stop", json={"reason": "ending early during hold"})
+        response = client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded"})
     assert response.status_code == 204
 
 
@@ -77,7 +77,7 @@ def test_post_stop_run_round_trips_into_get_run_response() -> None:
     """End-to-end: stop + get → status=Stopped."""
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        client.post(f"/runs/{run_id}/stop", json={"reason": "operator stop"})
+        client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded"})
         response = client.get(f"/runs/{run_id}")
     assert response.status_code == 200
     assert response.json()["status"] == "Stopped"
@@ -87,7 +87,7 @@ def test_post_stop_run_round_trips_into_get_run_response() -> None:
 def test_post_stop_run_returns_404_when_run_does_not_exist() -> None:
     missing_id = str(uuid4())
     with TestClient(create_app()) as client:
-        response = client.post(f"/runs/{missing_id}/stop", json={"reason": "X"})
+        response = client.post(f"/runs/{missing_id}/stop", json={"reason": "Superseded"})
     assert response.status_code == 404
 
 
@@ -96,9 +96,9 @@ def test_post_stop_run_returns_409_when_already_stopped() -> None:
     """Strict-not-idempotent: re-stopping raises 409."""
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        first = client.post(f"/runs/{run_id}/stop", json={"reason": "first stop"})
+        first = client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded"})
         assert first.status_code == 204
-        second = client.post(f"/runs/{run_id}/stop", json={"reason": "second stop"})
+        second = client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded"})
     assert second.status_code == 409
 
 
@@ -109,7 +109,7 @@ def test_post_stop_run_returns_409_when_completed() -> None:
         run_id = _setup_full_run(client)
         complete = client.post(f"/runs/{run_id}/complete")
         assert complete.status_code == 204
-        response = client.post(f"/runs/{run_id}/stop", json={"reason": "X"})
+        response = client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded"})
     assert response.status_code == 409
     assert "Completed" in response.json()["detail"]
 
@@ -121,9 +121,9 @@ def test_post_stop_run_returns_409_when_aborted() -> None:
         run_id = _setup_full_run(client)
         client.post(
             f"/runs/{run_id}/abort",
-            json={"reason": "emergency", "justification": "operator: aborting for test"},
+            json={"reason": "Superseded", "justification": "operator: aborting for test"},
         )
-        response = client.post(f"/runs/{run_id}/stop", json={"reason": "X"})
+        response = client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded"})
     assert response.status_code == 409
     assert "Aborted" in response.json()["detail"]
 
@@ -132,7 +132,7 @@ def test_post_stop_run_returns_409_when_aborted() -> None:
 def test_post_stop_run_rejects_empty_reason_with_422() -> None:
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        response = client.post(f"/runs/{run_id}/stop", json={"reason": ""})
+        response = client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded"})
     assert response.status_code == 422
 
 
@@ -141,7 +141,7 @@ def test_post_stop_run_rejects_whitespace_only_reason_with_400() -> None:
     """Whitespace passes Pydantic but the decider trims and rejects."""
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        response = client.post(f"/runs/{run_id}/stop", json={"reason": "   "})
+        response = client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded"})
     assert response.status_code == 400
     assert "stop reason" in response.json()["detail"].lower()
 
@@ -150,12 +150,12 @@ def test_post_stop_run_rejects_whitespace_only_reason_with_400() -> None:
 def test_post_stop_run_rejects_too_long_reason_with_422() -> None:
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        response = client.post(f"/runs/{run_id}/stop", json={"reason": "x" * 501})
+        response = client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded" * 501})
     assert response.status_code == 422
 
 
 @pytest.mark.contract
 def test_post_stop_run_rejects_invalid_path_uuid_with_422() -> None:
     with TestClient(create_app()) as client:
-        response = client.post("/runs/not-a-uuid/stop", json={"reason": "X"})
+        response = client.post("/runs/not-a-uuid/stop", json={"reason": "Superseded"})
     assert response.status_code == 422

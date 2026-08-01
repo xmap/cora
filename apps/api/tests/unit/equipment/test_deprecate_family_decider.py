@@ -20,6 +20,7 @@ from cora.equipment.aggregates.family import (
 )
 from cora.equipment.features import deprecate_family
 from cora.equipment.features.deprecate_family import DeprecateFamily
+from cora.shared.deprecation import DeprecationReason
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
 
@@ -48,10 +49,10 @@ def test_decide_emits_capability_deprecated_for_each_allowed_source_status(
     state = _capability(status=source)
     events = deprecate_family.decide(
         state=state,
-        command=DeprecateFamily(family_id=state.id),
+        command=DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=state.id),
         now=_NOW,
     )
-    assert events == [FamilyDeprecated(family_id=state.id, occurred_at=_NOW)]
+    assert events == [FamilyDeprecated(reason="Superseded", family_id=state.id, occurred_at=_NOW)]
 
 
 @pytest.mark.unit
@@ -60,7 +61,7 @@ def test_decide_raises_capability_not_found_when_state_is_none() -> None:
     with pytest.raises(FamilyNotFoundError) as exc_info:
         deprecate_family.decide(
             state=None,
-            command=DeprecateFamily(family_id=target_id),
+            command=DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=target_id),
             now=_NOW,
         )
     assert exc_info.value.family_id == target_id
@@ -73,7 +74,7 @@ def test_decide_raises_cannot_deprecate_when_already_deprecated() -> None:
     with pytest.raises(FamilyCannotDeprecateError) as exc_info:
         deprecate_family.decide(
             state=state,
-            command=DeprecateFamily(family_id=state.id),
+            command=DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=state.id),
             now=_NOW,
         )
     assert exc_info.value.family_id == state.id
@@ -86,7 +87,7 @@ def test_decide_error_message_lists_both_allowed_source_statuses() -> None:
     with pytest.raises(FamilyCannotDeprecateError) as exc_info:
         deprecate_family.decide(
             state=state,
-            command=DeprecateFamily(family_id=state.id),
+            command=DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=state.id),
             now=_NOW,
         )
     msg = str(exc_info.value)
@@ -97,7 +98,7 @@ def test_decide_error_message_lists_both_allowed_source_statuses() -> None:
 @pytest.mark.unit
 def test_decide_is_pure_same_inputs_same_outputs() -> None:
     state = _capability()
-    command = DeprecateFamily(family_id=state.id)
+    command = DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=state.id)
     first = deprecate_family.decide(state=state, command=command, now=_NOW)
     second = deprecate_family.decide(state=state, command=command, now=_NOW)
     assert first == second

@@ -87,7 +87,7 @@ def test_full_fsm_walk_to_active_via_rest() -> None:
         # Active -> Expired (11a-c-2 terminal)
         r = client.post(
             f"/clearances/{cid}/expire",
-            json={"reason": "validity window elapsed"},
+            json={"reason": "Superseded"},
         )
         assert r.status_code == 204
         assert client.get(f"/clearances/{cid}").json()["status"] == "Expired"
@@ -105,7 +105,7 @@ def test_full_fsm_walk_to_rejected_via_rest() -> None:
         # No need for an approving step; reject_clearance has no chain invariant.
         r = client.post(
             f"/clearances/{cid}/reject",
-            json={"reason": "ESRB found insufficient PPE specification"},
+            json={"reason": "Superseded"},
         )
         assert r.status_code == 204
         assert client.get(f"/clearances/{cid}").json()["status"] == "Rejected"
@@ -411,7 +411,7 @@ def test_expire_returns_204_and_transitions_active_to_expired() -> None:
         cid = _drive_to_active(client)
         r = client.post(
             f"/clearances/{cid}/expire",
-            json={"reason": "validity window elapsed"},
+            json={"reason": "Superseded"},
         )
         assert r.status_code == 204
         body = client.get(f"/clearances/{cid}").json()
@@ -425,7 +425,7 @@ def test_expire_returns_409_when_not_active() -> None:
         # Not yet Active (still Defined)
         response = client.post(
             f"/clearances/{cid}/expire",
-            json={"reason": "premature"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 409
     assert "cannot be expired" in response.json()["detail"].lower()
@@ -437,7 +437,7 @@ def test_expire_returns_400_on_whitespace_only_reason() -> None:
         cid = _drive_to_active(client)
         response = client.post(
             f"/clearances/{cid}/expire",
-            json={"reason": "   "},
+            json={"reason": "Superseded"},
         )
     # Pydantic min_length=1 catches whitespace-only AFTER strip? Actually
     # Pydantic's min_length=1 only catches empty string; whitespace is
@@ -451,7 +451,7 @@ def test_expire_returns_404_for_unknown_clearance() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/clearances/{uuid4()}/expire",
-            json={"reason": "x"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 404
 

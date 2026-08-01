@@ -78,7 +78,7 @@ def test_post_version_family_returns_409_when_deprecated() -> None:
     """Deprecated capabilities cannot be re-versioned."""
     with TestClient(create_app()) as client:
         family_id = _define_family(client)
-        deprecate = client.post(f"/families/{family_id}/deprecate")
+        deprecate = client.post(f"/families/{family_id}/deprecate", json={"reason": "Superseded"})
         assert deprecate.status_code == 204
         response = client.post(
             f"/families/{family_id}/version", json={"version_tag": "v2", "affordances": []}

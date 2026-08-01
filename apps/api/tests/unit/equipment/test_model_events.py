@@ -249,7 +249,7 @@ def test_model_versioned_from_stored_rebuilds_from_canonical_dict_literal() -> N
 def test_model_deprecated_round_trips() -> None:
     event = ModelDeprecated(
         model_id=uuid4(),
-        reason="Vendor end-of-life announcement 2026-05-28",
+        reason="Superseded",
         occurred_at=datetime(2026, 6, 1, 14, 0, tzinfo=UTC),
     )
     payload = to_payload(event)
@@ -263,12 +263,12 @@ def test_model_deprecated_to_payload_serializes_to_canonical_dict_literal() -> N
     model_id = uuid4()
     event = ModelDeprecated(
         model_id=model_id,
-        reason="Vendor end-of-life announcement 2026-05-28",
+        reason="Superseded",
         occurred_at=datetime(2026, 6, 1, 14, 0, tzinfo=UTC),
     )
     assert to_payload(event) == {
         "model_id": str(model_id),
-        "reason": "Vendor end-of-life announcement 2026-05-28",
+        "reason": "Superseded",
         "occurred_at": "2026-06-01T14:00:00+00:00",
     }
 
@@ -279,13 +279,13 @@ def test_model_deprecated_from_stored_rebuilds_from_canonical_dict_literal() -> 
     model_id = uuid4()
     payload: dict[str, object] = {
         "model_id": str(model_id),
-        "reason": "Vendor end-of-life announcement 2026-05-28",
+        "reason": "Superseded",
         "occurred_at": "2026-06-01T14:00:00+00:00",
     }
     rebuilt = from_stored(_stored("ModelDeprecated", payload))
     assert rebuilt == ModelDeprecated(
         model_id=model_id,
-        reason="Vendor end-of-life announcement 2026-05-28",
+        reason="Superseded",
         occurred_at=datetime(2026, 6, 1, 14, 0, tzinfo=UTC),
     )
 

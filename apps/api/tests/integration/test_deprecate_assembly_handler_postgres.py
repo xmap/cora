@@ -22,6 +22,7 @@ from cora.equipment.features.define_assembly import DefineAssembly
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.deprecate_assembly import DeprecateAssembly
 from cora.equipment.features.version_assembly import VersionAssembly
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 3, 14, 0, 0, tzinfo=UTC)
@@ -60,7 +61,7 @@ async def test_deprecate_assembly_appends_deprecated_event_to_postgres(
     )
 
     await deprecate_assembly.bind(deps)(
-        DeprecateAssembly(assembly_id=assembly_id, reason="superseded by rev2"),
+        DeprecateAssembly(assembly_id=assembly_id, reason=DeprecationReason.SUPERSEDED),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -73,7 +74,7 @@ async def test_deprecate_assembly_appends_deprecated_event_to_postgres(
     assert deprecated.event_id == _DEPRECATED_EVENT_ID
     assert deprecated.payload == {
         "assembly_id": str(assembly_id),
-        "reason": "superseded by rev2",
+        "reason": "Superseded",
         "occurred_at": _NOW.isoformat(),
     }
     assert deprecated.correlation_id == _CORRELATION_ID
@@ -128,7 +129,7 @@ async def test_deprecate_assembly_persists_through_versioned_arm(
         correlation_id=_CORRELATION_ID,
     )
     await deprecate_assembly.bind(deps)(
-        DeprecateAssembly(assembly_id=assembly_id, reason="end-of-life"),
+        DeprecateAssembly(assembly_id=assembly_id, reason=DeprecationReason.SUPERSEDED),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

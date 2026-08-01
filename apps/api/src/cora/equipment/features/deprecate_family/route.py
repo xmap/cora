@@ -7,7 +7,8 @@ No body. 204 No Content on success.
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Request, status
+from fastapi import APIRouter, Body, Depends, Path, Request, status
+from pydantic import BaseModel, Field
 
 from cora.equipment.features.deprecate_family.command import DeprecateFamily
 from cora.equipment.features.deprecate_family.handler import Handler
@@ -17,6 +18,21 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.deprecation import DeprecationReason
+
+
+class DeprecateFamilyRequest(BaseModel):
+    """Body for `POST /families/{family_id}/deprecate`."""
+
+    reason: DeprecationReason = Field(
+        ...,
+        description=(
+            "Why the template is no longer recommended. `Superseded`: a "
+            "newer version replaces it, prior use stands. `Defective`: it "
+            "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+            "no longer exists."
+        ),
+    )
 
 
 def _get_handler(request: Request) -> Handler:
@@ -53,6 +69,7 @@ router = APIRouter(tags=["equipment"])
     summary="Mark an existing family as deprecated",
 )
 async def post_families_deprecate(
+    body: Annotated[DeprecateFamilyRequest, Body()],
     family_id: Annotated[UUID, Path(description="Target family's id.")],
     handler: Annotated[Handler, Depends(_get_handler)],
     cid: Annotated[UUID, Depends(get_correlation_id)],
@@ -60,7 +77,7 @@ async def post_families_deprecate(
     surface_id: Annotated[UUID, Depends(get_surface_id)],
 ) -> None:
     await handler(
-        DeprecateFamily(family_id=family_id),
+        DeprecateFamily(family_id=family_id, reason=body.reason),
         principal_id=principal_id,
         correlation_id=cid,
         surface_id=surface_id,

@@ -60,7 +60,7 @@ def test_mcp_deprecate_agent_returns_structured_agent_id() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_agent",
-                    "arguments": {"agent_id": agent_id, "reason": "model retired"},
+                    "arguments": {"agent_id": agent_id, "reason": "Superseded"},
                 },
             },
             headers=session_headers,

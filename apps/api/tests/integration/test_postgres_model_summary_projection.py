@@ -59,6 +59,7 @@ from cora.equipment.features.remove_model_family import RemoveModelFamily
 from cora.equipment.features.version_model import VersionModel
 from cora.equipment.projections.model import ModelSummaryProjection
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._equipment_helpers import drain_equipment_projections
 from tests.integration._helpers import build_postgres_deps
 
@@ -316,7 +317,7 @@ async def test_model_deprecated_sets_reason_and_preserves_vendor_key(
         correlation_id=_CORRELATION_ID,
     )
     await deprecate_model.bind(deps)(
-        DeprecateModel(model_id=model_id, reason="superseded by ANT130-LZS"),
+        DeprecateModel(model_id=model_id, reason=DeprecationReason.SUPERSEDED),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

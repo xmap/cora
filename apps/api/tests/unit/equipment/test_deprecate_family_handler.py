@@ -25,6 +25,7 @@ from cora.equipment.features.deprecate_family import DeprecateFamily
 from cora.equipment.features.version_family import VersionFamily
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.kernel import Kernel
+from cora.shared.deprecation import DeprecationReason
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -68,7 +69,7 @@ async def test_handler_returns_none_on_success() -> None:
     family_id = await _define_family_helper(deps)
 
     result = await deprecate_family.bind(deps)(
-        DeprecateFamily(family_id=family_id),
+        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -83,7 +84,7 @@ async def test_handler_appends_capability_deprecated_event_from_defined() -> Non
     family_id = await _define_family_helper(deps)
 
     await deprecate_family.bind(deps)(
-        DeprecateFamily(family_id=family_id),
+        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -115,7 +116,7 @@ async def test_handler_appends_capability_deprecated_event_from_versioned() -> N
         correlation_id=_CORRELATION_ID,
     )
     await deprecate_family.bind(deps)(
-        DeprecateFamily(family_id=family_id),
+        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -138,7 +139,7 @@ async def test_handler_raises_capability_not_found_when_capability_does_not_exis
 
     with pytest.raises(FamilyNotFoundError):
         await handler(
-            DeprecateFamily(family_id=_CAPABILITY_ID),
+            DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=_CAPABILITY_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -153,13 +154,13 @@ async def test_handler_raises_cannot_deprecate_when_already_deprecated() -> None
 
     handler = deprecate_family.bind(deps)
     await handler(
-        DeprecateFamily(family_id=family_id),
+        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     with pytest.raises(FamilyCannotDeprecateError):
         await handler(
-            DeprecateFamily(family_id=family_id),
+            DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -174,7 +175,7 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
     deny_deps = _build_deps(event_store=store, deny=True)
     with pytest.raises(UnauthorizedError) as exc_info:
         await deprecate_family.bind(deny_deps)(
-            DeprecateFamily(family_id=family_id),
+            DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -189,7 +190,7 @@ async def test_handler_propagates_causation_id_to_appended_event() -> None:
     family_id = await _define_family_helper(deps)
 
     await deprecate_family.bind(deps)(
-        DeprecateFamily(family_id=family_id),
+        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         causation_id=causation,

@@ -28,7 +28,7 @@ def test_post_degrade_returns_204_on_happy_path() -> None:
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/degrade",
-            json={"reason": "hot pixel detected"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204
     assert response.content == b""
@@ -40,9 +40,9 @@ def test_post_degrade_returns_204_when_already_degraded() -> None:
     returns [] but the route happily reports success)."""
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
-        first = client.post(f"/assets/{asset_id}/degrade", json={"reason": "first"})
+        first = client.post(f"/assets/{asset_id}/degrade", json={"reason": "Superseded"})
         assert first.status_code == 204
-        second = client.post(f"/assets/{asset_id}/degrade", json={"reason": "second"})
+        second = client.post(f"/assets/{asset_id}/degrade", json={"reason": "Superseded"})
     assert second.status_code == 204
 
 
@@ -52,7 +52,7 @@ def test_post_degrade_returns_404_when_asset_missing() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/assets/{missing_id}/degrade",
-            json={"reason": "missing"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 404
     assert missing_id in response.json()["detail"]
@@ -64,7 +64,7 @@ def test_post_degrade_rejects_empty_reason_with_422() -> None:
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/degrade",
-            json={"reason": ""},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 422
 
@@ -75,7 +75,7 @@ def test_post_degrade_rejects_oversized_reason_with_422() -> None:
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/degrade",
-            json={"reason": "x" * 501},
+            json={"reason": "Superseded" * 501},
         )
     assert response.status_code == 422
 
@@ -85,7 +85,7 @@ def test_post_degrade_rejects_invalid_path_uuid_with_422() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/assets/not-a-uuid/degrade",
-            json={"reason": "x"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 422
 
@@ -101,6 +101,6 @@ def test_post_degrade_works_in_decommissioned_lifecycle() -> None:
         assert decom.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/degrade",
-            json={"reason": "discovered fault on inventory check"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204

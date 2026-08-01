@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient
 from cora.api.main import create_app
 
 _FIXED_FAMILY_ID = UUID("01900000-0000-7000-8000-00000000fad1")
-_REASON = "Vendor end-of-life 2026-Q3; replaced by ANT130-LZS"
+_REASON = "Superseded"
 
 
 @pytest.fixture
@@ -75,25 +75,21 @@ def test_post_deprecate_model_missing_reason_returns_422(accept_family: UUID) ->
     _ = accept_family
     with TestClient(create_app()) as client:
         model_id = _seed_model(client)
-        response = client.post(
-            f"/models/{model_id}/deprecation",
-            json={},
-        )
+        response = client.post(f"/models/{model_id}/deprecation", json={})
     assert response.status_code == 422
 
 
 @pytest.mark.contract
-def test_post_deprecate_model_whitespace_only_reason_returns_400(accept_family: UUID) -> None:
-    """Domain `InvalidModelDeprecationReasonError` after Pydantic min_length=1 passes."""
+def test_post_deprecate_model_unknown_reason_returns_422(accept_family: UUID) -> None:
+    """`reason` is a closed enum, so vendor prose is rejected at the schema."""
     _ = accept_family
     with TestClient(create_app()) as client:
         model_id = _seed_model(client)
         response = client.post(
             f"/models/{model_id}/deprecation",
-            json=_deprecate_body(reason="   "),
+            json=_deprecate_body(reason="vendor EOL 2026"),
         )
-    assert response.status_code == 400
-    assert "reason" in response.json()["detail"].lower()
+    assert response.status_code == 422
 
 
 @pytest.mark.contract

@@ -37,6 +37,7 @@ from cora.equipment.aggregates.family import (
 )
 from cora.equipment.features import deprecate_family
 from cora.equipment.features.deprecate_family import DeprecateFamily
+from cora.shared.deprecation import DeprecationReason
 from tests._strategies import aware_datetimes
 
 if TYPE_CHECKING:
@@ -66,7 +67,7 @@ def test_deprecate_with_none_state_always_raises_not_found(
     with pytest.raises(FamilyNotFoundError) as exc:
         deprecate_family.decide(
             state=None,
-            command=DeprecateFamily(family_id=family_id),
+            command=DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id),
             now=now,
         )
     assert exc.value.family_id == family_id
@@ -86,10 +87,10 @@ def test_deprecate_from_allowed_source_emits_single_event(
     """Each deprecatable source emits exactly one FamilyDeprecated."""
     events = deprecate_family.decide(
         state=_family(family_id=family_id, status=source),
-        command=DeprecateFamily(family_id=family_id),
+        command=DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id),
         now=now,
     )
-    assert events == [FamilyDeprecated(family_id=family_id, occurred_at=now)]
+    assert events == [FamilyDeprecated(reason="Superseded", family_id=family_id, occurred_at=now)]
 
 
 @pytest.mark.unit
@@ -107,7 +108,7 @@ def test_deprecate_from_disallowed_source_always_raises_cannot_deprecate(
     with pytest.raises(FamilyCannotDeprecateError) as exc:
         deprecate_family.decide(
             state=_family(family_id=family_id, status=source),
-            command=DeprecateFamily(family_id=family_id),
+            command=DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id),
             now=now,
         )
     assert exc.value.current_status is source
@@ -124,7 +125,7 @@ def test_deprecate_emits_event_with_state_id_not_command_id(
     assume(state_id != command_id)
     events = deprecate_family.decide(
         state=_family(family_id=state_id, status=FamilyStatus.DEFINED),
-        command=DeprecateFamily(family_id=command_id),
+        command=DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=command_id),
         now=now,
     )
     assert events[0].family_id == state_id
@@ -138,7 +139,7 @@ def test_deprecate_is_pure_same_input_same_output(
 ) -> None:
     """Two calls with identical args return equal events (no clock leak)."""
     state = _family(family_id=family_id, status=FamilyStatus.DEFINED)
-    command = DeprecateFamily(family_id=family_id)
+    command = DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id)
     first = deprecate_family.decide(state=state, command=command, now=now)
     second = deprecate_family.decide(state=state, command=command, now=now)
     assert first == second

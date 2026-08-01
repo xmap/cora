@@ -193,7 +193,7 @@ async def test_model_deprecated_updates_status_and_sets_reason() -> None:
         "ModelDeprecated",
         {
             "model_id": str(_MODEL_ID),
-            "reason": "Superseded by ANT130-LZS",
+            "reason": "Superseded",
             "occurred_at": _NOW.isoformat(),
         },
     )
@@ -212,7 +212,7 @@ async def test_model_deprecated_updates_status_and_sets_reason() -> None:
     assert "declared_family_ids" not in sql
     assert "version_tag" not in sql
     assert args.args[1] == _MODEL_ID
-    assert args.args[2] == "Superseded by ANT130-LZS"
+    assert args.args[2] == "Superseded"
 
 
 @pytest.mark.unit

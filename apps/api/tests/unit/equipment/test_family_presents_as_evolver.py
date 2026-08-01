@@ -116,7 +116,7 @@ def test_presents_as_preserved_across_deprecation() -> None:
         [
             _defined(fid),
             FamilyPresentsAsAdded(family_id=fid, role_id=rid, occurred_at=_NOW),
-            FamilyDeprecated(family_id=fid, occurred_at=_NOW),
+            FamilyDeprecated(reason="Superseded", family_id=fid, occurred_at=_NOW),
         ]
     )
     assert state is not None

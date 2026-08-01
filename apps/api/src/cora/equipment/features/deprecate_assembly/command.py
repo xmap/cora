@@ -15,10 +15,12 @@ AssemblyCannotDeprecateError carrying the current status).
 from dataclasses import dataclass
 from uuid import UUID
 
+from cora.shared.deprecation import DeprecationReason
+
 
 @dataclass(frozen=True)
 class DeprecateAssembly:
     """Mark an existing Assembly as deprecated."""
 
     assembly_id: UUID
-    reason: str
+    reason: DeprecationReason

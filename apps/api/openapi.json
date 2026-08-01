@@ -6818,11 +6818,8 @@
         "description": "Body for `POST /assemblies/{assembly_id}/deprecate`.",
         "properties": {
           "reason": {
-            "description": "Operator-supplied reason for the deprecation (audit-log breadcrumb). REQUIRED. Mirrors decommission_mount's reason field shape.",
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Reason",
-            "type": "string"
+            "$ref": "#/components/schemas/DeprecationReason",
+            "description": "Why the template is no longer recommended. `Superseded`: a newer version replaces it, prior use stands. `Defective`: it was wrong, prior use is suspect. `Obsolete`: what it targeted no longer exists."
           }
         },
         "required": [
@@ -6858,6 +6855,20 @@
         "title": "DeprecateCapabilityRequest",
         "type": "object"
       },
+      "DeprecateFamilyRequest": {
+        "description": "Body for `POST /families/{family_id}/deprecate`.",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/DeprecationReason",
+            "description": "Why the template is no longer recommended. `Superseded`: a newer version replaces it, prior use stands. `Defective`: it was wrong, prior use is suspect. `Obsolete`: what it targeted no longer exists."
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DeprecateFamilyRequest",
+        "type": "object"
+      },
       "DeprecateLanguageModelRequest": {
         "description": "Body for `POST /language-models/{language_model_id}/deprecate`.",
         "properties": {
@@ -6890,14 +6901,11 @@
         "type": "object"
       },
       "DeprecateModelRequest": {
-        "description": "Body for `POST /models/{model_id}/deprecation`.\n\n`reason` is operator free text recording why the catalog entry is\nbeing retired (for example \"superseded by part RV120CCHL\", \"vendor\nEOL 2026\"). Trimmed and length-validated at the\n`ModelDeprecationReason` VO; whitespace-only is rejected as a\ndomain invariant violation (400).",
+        "description": "Body for `POST /models/{model_id}/deprecation`.\n\n`reason` is the closed `DeprecationReason` enum. An unknown value is\nrejected by Pydantic as a 422 before the handler runs. Vendor detail\nthat used to ride in free text (a part number, an EOL date) belongs\non the Model's own fields or a Caution, not on the terminal event.",
         "properties": {
           "reason": {
-            "description": "Operator-supplied rationale for retiring this Model (for example 'superseded by RV120CCHL', 'vendor EOL 2026'). Free text; trimmed server-side.",
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Reason",
-            "type": "string"
+            "$ref": "#/components/schemas/DeprecationReason",
+            "description": "Why the template is no longer recommended. `Superseded`: a newer version replaces it, prior use stands. `Defective`: it was wrong, prior use is suspect. `Obsolete`: what it targeted no longer exists."
           }
         },
         "required": [
@@ -30812,6 +30820,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeprecateFamilyRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "204": {
             "description": "Successful Response"

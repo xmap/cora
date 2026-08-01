@@ -154,7 +154,7 @@ async def test_assembly_deprecated_updates_status_to_deprecated() -> None:
         "AssemblyDeprecated",
         {
             "assembly_id": str(_ASSEMBLY_ID),
-            "reason": "superseded",
+            "reason": "Superseded",
             "occurred_at": _NOW.isoformat(),
         },
     )

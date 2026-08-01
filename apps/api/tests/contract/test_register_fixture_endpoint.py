@@ -111,7 +111,7 @@ def test_post_fixtures_returns_409_for_deprecated_assembly() -> None:
         assembly_id = _define_assembly_with_one_camera_slot(client, family_id)
         deprecate = client.post(
             f"/assemblies/{assembly_id}/deprecate",
-            json={"reason": "end-of-life"},
+            json={"reason": "Superseded"},
         )
         assert deprecate.status_code == 204, deprecate.text
         response = client.post(

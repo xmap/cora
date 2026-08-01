@@ -42,4 +42,4 @@ def decide(
         raise FamilyNotFoundError(command.family_id)
     if state.status not in _DEPRECATABLE_STATUSES:
         raise FamilyCannotDeprecateError(state.id, current_status=state.status)
-    return [FamilyDeprecated(family_id=state.id, occurred_at=now)]
+    return [FamilyDeprecated(family_id=state.id, reason=command.reason.value, occurred_at=now)]

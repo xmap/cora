@@ -6,10 +6,9 @@ Re-deprecating an already-Deprecated model raises (strict-not-
 idempotent; mirrors deprecate_family).
 
 Source-state guard uses tuple-membership (same precedent as
-deprecate_family and version_model). The decider validates the
-bounded-text `reason` defensively via `ModelDeprecationReason` so
-direct in-process callers get the same protection as API-boundary
-callers.
+deprecate_family and version_model). `reason` is a closed
+`DeprecationReason` enum, so membership is enforced by the type
+itself and Pydantic rejects an unknown value at the edge.
 
 Once Deprecated, no further `ModelVersioned`, `ModelFamilyAdded`, or
 `ModelFamilyRemoved` events are accepted (enforced by the relevant
@@ -21,8 +20,6 @@ Invariants:
   - State must not be None -> ModelNotFoundError
   - State.status must be in {Defined, Versioned}
     -> ModelCannotDeprecateError(current_status=...)
-  - reason must be valid -> InvalidModelDeprecationReasonError
-    (via ModelDeprecationReason VO)
 """
 
 from datetime import datetime
@@ -31,7 +28,6 @@ from cora.equipment.aggregates.model import (
     Model,
     ModelCannotDeprecateError,
     ModelDeprecated,
-    ModelDeprecationReason,
     ModelNotFoundError,
     ModelStatus,
 )
@@ -54,11 +50,10 @@ def decide(
         raise ModelNotFoundError(command.model_id)
     if state.status not in _DEPRECATABLE_STATUSES:
         raise ModelCannotDeprecateError(state.id, current_status=state.status)
-    reason = ModelDeprecationReason(command.reason)
     return [
         ModelDeprecated(
             model_id=state.id,
-            reason=reason.value,
+            reason=command.reason.value,
             occurred_at=now,
         )
     ]

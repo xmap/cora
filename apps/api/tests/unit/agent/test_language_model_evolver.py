@@ -152,7 +152,7 @@ def test_deprecated_folds_to_deprecated_with_end_reason() -> None:
     e2 = LanguageModelApproved(language_model_id=language_model_id, occurred_at=_T1)
     e3 = LanguageModelDeprecated(
         language_model_id=language_model_id,
-        reason="Facility withdrew approval on cost",
+        reason="Superseded",
         occurred_at=_T2,
     )
     state = fold([e1, e2, e3])

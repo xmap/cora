@@ -58,7 +58,7 @@ def test_mcp_get_family_tool_returns_structured_capability_for_known_id() -> Non
                 "method": "tools/call",
                 "params": {
                     "name": "get_family",
-                    "arguments": {"family_id": str(family_id)},
+                    "arguments": {"family_id": str(family_id), "reason": "Superseded"},
                 },
             },
             headers=headers,
@@ -87,7 +87,7 @@ def test_mcp_get_family_tool_returns_iserror_for_unknown_id() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "get_family",
-                    "arguments": {"family_id": str(uuid4())},
+                    "arguments": {"family_id": str(uuid4()), "reason": "Superseded"},
                 },
             },
             headers=headers,

@@ -20,12 +20,13 @@ from cora.equipment.aggregates.assembly import (
 )
 from cora.equipment.features import deprecate_assembly
 from cora.equipment.features.deprecate_assembly import DeprecateAssembly
-from tests._strategies import aware_datetimes, printable_ascii_text
+from cora.shared.deprecation import DeprecationReason
+from tests._strategies import aware_datetimes
 
 if TYPE_CHECKING:
     from datetime import datetime
 
-_REASON = printable_ascii_text(min_size=1, max_size=500)
+_REASON = st.sampled_from(DeprecationReason)
 _DEPRECATABLE_STATUS = st.sampled_from((AssemblyStatus.DEFINED, AssemblyStatus.VERSIONED))
 
 
@@ -41,7 +42,7 @@ def _state(assembly_id: UUID, status: AssemblyStatus) -> Assembly:
 @pytest.mark.unit
 @given(reason=_REASON, status=_DEPRECATABLE_STATUS, now=aware_datetimes())
 def test_decide_deprecatable_state_emits_deprecated_event(
-    reason: str,
+    reason: DeprecationReason,
     status: AssemblyStatus,
     now: datetime,
 ) -> None:
@@ -56,14 +57,14 @@ def test_decide_deprecatable_state_emits_deprecated_event(
     event = events[0]
     assert isinstance(event, AssemblyDeprecated)
     assert event.assembly_id == assembly_id
-    assert event.reason == reason
+    assert event.reason == reason.value
     assert event.occurred_at == now
 
 
 @pytest.mark.unit
 @given(reason=_REASON, now=aware_datetimes())
 def test_decide_none_state_always_raises_not_found(
-    reason: str,
+    reason: DeprecationReason,
     now: datetime,
 ) -> None:
     target_id = uuid4()
@@ -79,7 +80,7 @@ def test_decide_none_state_always_raises_not_found(
 @pytest.mark.unit
 @given(reason=_REASON, now=aware_datetimes())
 def test_decide_deprecated_state_always_raises_cannot_deprecate(
-    reason: str,
+    reason: DeprecationReason,
     now: datetime,
 ) -> None:
     assembly_id = uuid4()
@@ -96,7 +97,7 @@ def test_decide_deprecated_state_always_raises_cannot_deprecate(
 @pytest.mark.unit
 @given(reason=_REASON, status=_DEPRECATABLE_STATUS, now=aware_datetimes())
 def test_decide_is_pure_same_inputs_yield_same_events(
-    reason: str,
+    reason: DeprecationReason,
     status: AssemblyStatus,
     now: datetime,
 ) -> None:

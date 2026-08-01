@@ -26,7 +26,7 @@ def test_post_abandon_returns_204_on_planned_campaign() -> None:
         cid = _register(client)
         response = client.post(
             f"/campaigns/{cid}/abandon",
-            json={"reason": "proposal cancelled"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204
 
@@ -38,7 +38,7 @@ def test_post_abandon_returns_204_on_active_campaign() -> None:
         client.post(f"/campaigns/{cid}/start")
         response = client.post(
             f"/campaigns/{cid}/abandon",
-            json={"reason": "instrument failure"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204
 
@@ -48,10 +48,10 @@ def test_post_abandon_returns_204_on_held_campaign() -> None:
     with TestClient(create_app()) as client:
         cid = _register(client)
         client.post(f"/campaigns/{cid}/start")
-        client.post(f"/campaigns/{cid}/hold", json={"reason": "r"})
+        client.post(f"/campaigns/{cid}/hold", json={"reason": "Superseded"})
         response = client.post(
             f"/campaigns/{cid}/abandon",
-            json={"reason": "no recovery in window"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204
 
@@ -61,7 +61,7 @@ def test_post_abandon_returns_404_when_campaign_absent() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/campaigns/{uuid4()}/abandon",
-            json={"reason": "r"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 404
 
@@ -74,7 +74,7 @@ def test_post_abandon_returns_409_on_already_closed_campaign() -> None:
         client.post(f"/campaigns/{cid}/close")
         response = client.post(
             f"/campaigns/{cid}/abandon",
-            json={"reason": "r"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 409
 
@@ -83,7 +83,7 @@ def test_post_abandon_returns_409_on_already_closed_campaign() -> None:
 def test_post_abandon_returns_400_on_whitespace_only_reason() -> None:
     with TestClient(create_app()) as client:
         cid = _register(client)
-        response = client.post(f"/campaigns/{cid}/abandon", json={"reason": "   "})
+        response = client.post(f"/campaigns/{cid}/abandon", json={"reason": "Superseded"})
     assert response.status_code == 400
     assert "Campaign abandon reason" in response.json()["detail"]
 
@@ -108,7 +108,7 @@ def test_post_abandon_returns_403_when_authorize_denies() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/campaigns/{uuid4()}/abandon",
-            json={"reason": "r"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 403
     assert response.json()["detail"] == "denied for test"

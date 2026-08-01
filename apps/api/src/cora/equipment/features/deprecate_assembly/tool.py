@@ -12,7 +12,7 @@ from cora.equipment.features.deprecate_assembly.handler import Handler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
-from cora.shared.text_bounds import REASON_MAX_LENGTH
+from cora.shared.deprecation import DeprecationReason
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
@@ -36,11 +36,14 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             Field(description="Target Assembly's id."),
         ],
         reason: Annotated[
-            str,
+            DeprecationReason,
             Field(
-                min_length=1,
-                max_length=REASON_MAX_LENGTH,
-                description="Operator-supplied audit-log breadcrumb.",
+                description=(
+                    "Why the template is no longer recommended. `Superseded`: a "
+                    "newer version replaces it, prior use stands. `Defective`: it "
+                    "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+                    "no longer exists."
+                ),
             ),
         ],
     ) -> None:

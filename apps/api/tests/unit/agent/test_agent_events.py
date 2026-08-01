@@ -249,7 +249,7 @@ def test_to_payload_serializes_agent_deprecated_with_reason() -> None:
     e = AgentDeprecated(agent_id=agent_id, reason="model retired", occurred_at=_NOW)
     assert to_payload(e) == {
         "agent_id": str(agent_id),
-        "reason": "model retired",
+        "reason": "Superseded",
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -287,7 +287,7 @@ def test_to_payload_serializes_agent_suspended() -> None:
     )
     assert to_payload(e) == {
         "agent_id": str(agent_id),
-        "reason": "cost overrun",
+        "reason": "Superseded",
         "suspended_by": str(suspended_by),
         "occurred_at": _NOW.isoformat(),
     }

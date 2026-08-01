@@ -13,7 +13,6 @@ from cora.equipment.aggregates.model import (
     InvalidManufacturerIdentifierError,
     InvalidManufacturerIdentifierPairingError,
     InvalidManufacturerNameError,
-    InvalidModelDeprecationReasonError,
     InvalidModelNameError,
     InvalidModelVersionTagError,
     InvalidPartNumberError,
@@ -22,13 +21,11 @@ from cora.equipment.aggregates.model import (
     ManufacturerIdentifierType,
     ManufacturerName,
     Model,
-    ModelDeprecationReason,
     ModelName,
     ModelStatus,
     ModelVersionTag,
     PartNumber,
 )
-from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 @pytest.mark.unit
@@ -163,14 +160,6 @@ def test_model_version_tag_rejects_empty_and_too_long() -> None:
         ModelVersionTag("")
     with pytest.raises(InvalidModelVersionTagError):
         ModelVersionTag("X" * (MODEL_VERSION_TAG_MAX_LENGTH + 1))
-
-
-@pytest.mark.unit
-def test_model_deprecation_reason_rejects_empty_and_too_long() -> None:
-    with pytest.raises(InvalidModelDeprecationReasonError):
-        ModelDeprecationReason("")
-    with pytest.raises(InvalidModelDeprecationReasonError):
-        ModelDeprecationReason("X" * (REASON_MAX_LENGTH + 1))
 
 
 @pytest.mark.unit

@@ -57,7 +57,7 @@ def test_deprecates_a_defined_language_model() -> None:
     assert events == [
         LanguageModelDeprecated(
             language_model_id=entry.id,
-            reason="policy change",
+            reason="Superseded",
             occurred_at=_NOW,
         )
     ]

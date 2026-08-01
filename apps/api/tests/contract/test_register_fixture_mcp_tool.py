@@ -198,7 +198,7 @@ def test_mcp_register_fixture_tool_returns_iserror_for_deprecated_assembly() -> 
                     "name": "deprecate_assembly",
                     "arguments": {
                         "assembly_id": str(assembly_id),
-                        "reason": "end-of-life",
+                        "reason": "Superseded",
                     },
                 },
             },

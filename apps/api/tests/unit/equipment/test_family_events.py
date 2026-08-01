@@ -142,7 +142,7 @@ def test_to_payload_then_from_stored_round_trips_for_capability_versioned() -> N
 
 @pytest.mark.unit
 def test_event_type_name_returns_capability_deprecated_class_name() -> None:
-    event = FamilyDeprecated(family_id=uuid4(), occurred_at=_NOW)
+    event = FamilyDeprecated(reason="Superseded", family_id=uuid4(), occurred_at=_NOW)
     assert event_type_name(event) == "FamilyDeprecated"
 
 
@@ -152,10 +152,11 @@ def test_to_payload_serializes_capability_deprecated_to_primitives() -> None:
     Pinned because adding a `status` field would be an additive change
     that must be deliberate."""
     family_id = uuid4()
-    event = FamilyDeprecated(family_id=family_id, occurred_at=_NOW)
+    event = FamilyDeprecated(reason="Superseded", family_id=family_id, occurred_at=_NOW)
     payload = to_payload(event)
     assert payload == {
         "family_id": str(family_id),
+        "reason": "Superseded",
         "occurred_at": _NOW.isoformat(),
     }
     assert "status" not in payload
@@ -168,16 +169,17 @@ def test_from_stored_rebuilds_capability_deprecated() -> None:
         "FamilyDeprecated",
         {
             "family_id": str(family_id),
+            "reason": "Superseded",
             "occurred_at": _NOW.isoformat(),
         },
     )
     rebuilt = from_stored(stored)
-    assert rebuilt == FamilyDeprecated(family_id=family_id, occurred_at=_NOW)
+    assert rebuilt == FamilyDeprecated(reason="Superseded", family_id=family_id, occurred_at=_NOW)
 
 
 @pytest.mark.unit
 def test_to_payload_then_from_stored_round_trips_for_capability_deprecated() -> None:
-    original = FamilyDeprecated(family_id=uuid4(), occurred_at=_NOW)
+    original = FamilyDeprecated(reason="Superseded", family_id=uuid4(), occurred_at=_NOW)
     stored = _stored("FamilyDeprecated", to_payload(original))
     assert from_stored(stored) == original
 

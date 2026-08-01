@@ -31,7 +31,7 @@ def test_post_deprecate_returns_204_on_defined_agent_with_reason() -> None:
         agent_id = define.json()["agent_id"]
         response = client.post(
             f"/agents/{agent_id}/deprecate",
-            json={"reason": "model fingerprint changed"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204, response.text
 
@@ -81,6 +81,6 @@ def test_post_deprecate_422_on_over_cap_reason() -> None:
         agent_id = define.json()["agent_id"]
         response = client.post(
             f"/agents/{agent_id}/deprecate",
-            json={"reason": "x" * (REASON_MAX_LENGTH + 1)},
+            json={"reason": "Superseded" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422

@@ -40,6 +40,7 @@ from cora.equipment.features import (
 from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.define_model import DefineModel
 from cora.equipment.features.deprecate_model import DeprecateModel
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._equipment_helpers import drain_equipment_projections
 from tests.integration._helpers import build_postgres_deps
 
@@ -117,7 +118,7 @@ async def test_list_model_ids_excludes_deprecated_models(
             correlation_id=_CORRELATION_ID,
         )
     await deprecate_model.bind(deps)(
-        DeprecateModel(model_id=model_b_id, reason="superseded"),
+        DeprecateModel(model_id=model_b_id, reason=DeprecationReason.SUPERSEDED),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

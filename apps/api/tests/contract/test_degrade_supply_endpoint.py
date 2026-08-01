@@ -27,7 +27,7 @@ def _register_and_mark_available(client: TestClient) -> UUID:
     supply_id = UUID(response.json()["supply_id"])
     mark = client.post(
         f"/supplies/{supply_id}/mark-available",
-        json={"reason": "walkdown"},
+        json={"reason": "Superseded"},
     )
     assert mark.status_code == 204
     return supply_id
@@ -39,7 +39,7 @@ def test_post_degrade_returns_204_for_available_supply() -> None:
         supply_id = _register_and_mark_available(client)
         response = client.post(
             f"/supplies/{supply_id}/degrade",
-            json={"reason": "half-current"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204
 
@@ -47,7 +47,7 @@ def test_post_degrade_returns_204_for_available_supply() -> None:
 @pytest.mark.contract
 def test_post_degrade_returns_404_for_unknown_id() -> None:
     with TestClient(create_app()) as client:
-        response = client.post(f"/supplies/{uuid4()}/degrade", json={"reason": "r"})
+        response = client.post(f"/supplies/{uuid4()}/degrade", json={"reason": "Superseded"})
     assert response.status_code == 404
 
 
@@ -56,9 +56,9 @@ def test_post_degrade_returns_409_when_already_degraded() -> None:
     """Strict-not-idempotent: re-degrading raises."""
     with TestClient(create_app()) as client:
         supply_id = _register_and_mark_available(client)
-        first = client.post(f"/supplies/{supply_id}/degrade", json={"reason": "first"})
+        first = client.post(f"/supplies/{supply_id}/degrade", json={"reason": "Superseded"})
         assert first.status_code == 204
-        second = client.post(f"/supplies/{supply_id}/degrade", json={"reason": "second"})
+        second = client.post(f"/supplies/{supply_id}/degrade", json={"reason": "Superseded"})
     assert second.status_code == 409
     assert "cannot be degraded" in second.json()["detail"].lower()
 
@@ -77,7 +77,7 @@ def test_post_degrade_rejects_too_long_reason_with_422() -> None:
         supply_id = _register_and_mark_available(client)
         response = client.post(
             f"/supplies/{supply_id}/degrade",
-            json={"reason": "a" * (REASON_MAX_LENGTH + 1)},
+            json={"reason": "Superseded" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422
 
@@ -86,7 +86,7 @@ def test_post_degrade_rejects_too_long_reason_with_422() -> None:
 def test_post_degrade_rejects_whitespace_only_reason_with_400() -> None:
     with TestClient(create_app()) as client:
         supply_id = _register_and_mark_available(client)
-        response = client.post(f"/supplies/{supply_id}/degrade", json={"reason": "   "})
+        response = client.post(f"/supplies/{supply_id}/degrade", json={"reason": "Superseded"})
     assert response.status_code == 400
 
 
@@ -103,5 +103,5 @@ def test_post_degrade_returns_403_when_authorize_denies() -> None:
 
     app.dependency_overrides[_get_degrade_supply_handler] = _override
     with TestClient(app) as client:
-        response = client.post(f"/supplies/{uuid4()}/degrade", json={"reason": "r"})
+        response = client.post(f"/supplies/{uuid4()}/degrade", json={"reason": "Superseded"})
     assert response.status_code == 403

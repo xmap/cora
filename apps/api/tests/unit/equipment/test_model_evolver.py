@@ -117,7 +117,7 @@ def test_model_deprecated_transitions_from_defined() -> None:
     defined = _defined()
     deprecated = ModelDeprecated(
         model_id=defined.model_id,
-        reason="EOL",
+        reason="Superseded",
         occurred_at=_now(),
     )
     state = fold([defined, deprecated])
@@ -139,7 +139,7 @@ def test_model_deprecated_transitions_from_versioned() -> None:
         version_tag="rev-B",
         occurred_at=_now(),
     )
-    deprecated = ModelDeprecated(model_id=defined.model_id, reason="r", occurred_at=_now())
+    deprecated = ModelDeprecated(model_id=defined.model_id, reason="Superseded", occurred_at=_now())
     state = fold([defined, versioned, deprecated])
     assert state is not None
     assert state.status is ModelStatus.DEPRECATED

@@ -89,7 +89,7 @@ async def _append_deprecated_event(app: FastAPI, model_id: UUID) -> None:
     deps = app.state.deps
     deprecated = ModelDeprecated(
         model_id=model_id,
-        reason="superseded",
+        reason="Superseded",
         occurred_at=_NOW,
     )
     new_event = to_new_event(

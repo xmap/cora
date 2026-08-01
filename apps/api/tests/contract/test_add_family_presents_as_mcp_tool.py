@@ -65,7 +65,11 @@ def test_mcp_add_family_presents_as_tool_call_succeeds() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "add_family_presents_as",
-                    "arguments": {"family_id": family_id, "role_id": role_id},
+                    "arguments": {
+                        "family_id": family_id,
+                        "role_id": role_id,
+                        "reason": "Superseded",
+                    },
                 },
             },
             headers=session_headers,

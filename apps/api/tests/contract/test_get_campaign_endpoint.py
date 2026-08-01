@@ -77,7 +77,7 @@ def test_get_campaigns_reflects_held_state_and_reason_after_hold() -> None:
     with TestClient(create_app()) as client:
         cid, _ = _seed(client)
         client.post(f"/campaigns/{cid}/start")
-        client.post(f"/campaigns/{cid}/hold", json={"reason": "beam down"})
+        client.post(f"/campaigns/{cid}/hold", json={"reason": "Superseded"})
         response = client.get(f"/campaigns/{cid}")
     body = response.json()
     assert body["status"] == "Held"
@@ -90,7 +90,7 @@ def test_get_campaigns_preserves_last_status_reason_after_resume() -> None:
     with TestClient(create_app()) as client:
         cid, _ = _seed(client)
         client.post(f"/campaigns/{cid}/start")
-        client.post(f"/campaigns/{cid}/hold", json={"reason": "beam down"})
+        client.post(f"/campaigns/{cid}/hold", json={"reason": "Superseded"})
         client.post(f"/campaigns/{cid}/resume")
         response = client.get(f"/campaigns/{cid}")
     body = response.json()

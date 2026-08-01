@@ -117,7 +117,7 @@ def test_deprecate_from_permitted_source_emits_single_event(
     assert events == [
         LanguageModelDeprecated(
             language_model_id=language_model_id,
-            reason="policy change",
+            reason="Superseded",
             occurred_at=now,
         )
     ]

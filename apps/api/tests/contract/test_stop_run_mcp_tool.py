@@ -117,7 +117,7 @@ def test_mcp_stop_run_tool_returns_iserror_for_unknown_run() -> None:
 def test_mcp_stop_run_tool_returns_iserror_when_already_stopped() -> None:
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        first = client.post(f"/runs/{run_id}/stop", json={"reason": "first"})
+        first = client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded"})
         assert first.status_code == 204
         headers = open_session(client)
         response = client.post(

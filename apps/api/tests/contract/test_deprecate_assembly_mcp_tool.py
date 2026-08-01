@@ -91,7 +91,7 @@ def test_mcp_deprecate_assembly_tool_succeeds_for_defined_assembly() -> None:
                     "name": "deprecate_assembly",
                     "arguments": {
                         "assembly_id": str(assembly_id),
-                        "reason": "superseded",
+                        "reason": "Superseded",
                     },
                 },
             },
@@ -115,7 +115,7 @@ def test_mcp_deprecate_assembly_tool_returns_iserror_for_unknown_assembly() -> N
                     "name": "deprecate_assembly",
                     "arguments": {
                         "assembly_id": str(uuid4()),
-                        "reason": "r",
+                        "reason": "Superseded",
                     },
                 },
             },
@@ -143,7 +143,7 @@ def test_mcp_deprecate_assembly_tool_returns_iserror_for_re_deprecate() -> None:
                     "name": "deprecate_assembly",
                     "arguments": {
                         "assembly_id": str(assembly_id),
-                        "reason": "first",
+                        "reason": "Superseded",
                     },
                 },
             },
@@ -160,7 +160,7 @@ def test_mcp_deprecate_assembly_tool_returns_iserror_for_re_deprecate() -> None:
                     "name": "deprecate_assembly",
                     "arguments": {
                         "assembly_id": str(assembly_id),
-                        "reason": "second",
+                        "reason": "Superseded",
                     },
                 },
             },

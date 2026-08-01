@@ -34,7 +34,7 @@ def _register_dataset(client: TestClient, *, name: str = "ds") -> str:
 def _promote_dataset(client: TestClient, dataset_id: str) -> None:
     response = client.post(
         f"/datasets/{dataset_id}/promote",
-        json={"reason": "for publication"},
+        json={"reason": "Superseded"},
     )
     assert response.status_code in {200, 204}, response.text
 

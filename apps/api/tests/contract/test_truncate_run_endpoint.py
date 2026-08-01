@@ -79,7 +79,7 @@ def test_post_truncate_run_returns_204_from_held_state() -> None:
         client.post(f"/runs/{run_id}/hold")
         response = client.post(
             f"/runs/{run_id}/truncate",
-            json={"reason": "interrupted while held", "interrupted_at": None},
+            json={"reason": "Superseded", "interrupted_at": None},
         )
     assert response.status_code == 204
 
@@ -90,7 +90,7 @@ def test_post_truncate_run_accepts_null_interrupted_at() -> None:
         run_id = _setup_full_run(client)
         response = client.post(
             f"/runs/{run_id}/truncate",
-            json={"reason": "found dangling Run; interruption time unknown"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204
 
@@ -100,7 +100,7 @@ def test_post_truncate_run_round_trips_into_get_run_response() -> None:
     """End-to-end: truncate + get → status=Truncated."""
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        client.post(f"/runs/{run_id}/truncate", json={"reason": "operator truncation"})
+        client.post(f"/runs/{run_id}/truncate", json={"reason": "Superseded"})
         response = client.get(f"/runs/{run_id}")
     assert response.status_code == 200
     assert response.json()["status"] == "Truncated"
@@ -110,7 +110,7 @@ def test_post_truncate_run_round_trips_into_get_run_response() -> None:
 def test_post_truncate_run_returns_404_when_run_does_not_exist() -> None:
     missing_id = str(uuid4())
     with TestClient(create_app()) as client:
-        response = client.post(f"/runs/{missing_id}/truncate", json={"reason": "X"})
+        response = client.post(f"/runs/{missing_id}/truncate", json={"reason": "Superseded"})
     assert response.status_code == 404
 
 
@@ -119,9 +119,9 @@ def test_post_truncate_run_returns_409_when_already_truncated() -> None:
     """Strict-not-idempotent: re-truncating raises 409."""
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        first = client.post(f"/runs/{run_id}/truncate", json={"reason": "first"})
+        first = client.post(f"/runs/{run_id}/truncate", json={"reason": "Superseded"})
         assert first.status_code == 204
-        second = client.post(f"/runs/{run_id}/truncate", json={"reason": "second"})
+        second = client.post(f"/runs/{run_id}/truncate", json={"reason": "Superseded"})
     assert second.status_code == 409
 
 
@@ -132,7 +132,7 @@ def test_post_truncate_run_returns_409_when_completed() -> None:
         run_id = _setup_full_run(client)
         complete = client.post(f"/runs/{run_id}/complete")
         assert complete.status_code == 204
-        response = client.post(f"/runs/{run_id}/truncate", json={"reason": "X"})
+        response = client.post(f"/runs/{run_id}/truncate", json={"reason": "Superseded"})
     assert response.status_code == 409
     assert "Completed" in response.json()["detail"]
 
@@ -144,9 +144,9 @@ def test_post_truncate_run_returns_409_when_aborted() -> None:
         run_id = _setup_full_run(client)
         client.post(
             f"/runs/{run_id}/abort",
-            json={"reason": "emergency", "justification": "operator: aborting for test"},
+            json={"reason": "Superseded", "justification": "operator: aborting for test"},
         )
-        response = client.post(f"/runs/{run_id}/truncate", json={"reason": "X"})
+        response = client.post(f"/runs/{run_id}/truncate", json={"reason": "Superseded"})
     assert response.status_code == 409
     assert "Aborted" in response.json()["detail"]
 
@@ -156,8 +156,8 @@ def test_post_truncate_run_returns_409_when_stopped() -> None:
     """Cannot truncate a Stopped Run."""
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        client.post(f"/runs/{run_id}/stop", json={"reason": "controlled exit"})
-        response = client.post(f"/runs/{run_id}/truncate", json={"reason": "X"})
+        client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded"})
+        response = client.post(f"/runs/{run_id}/truncate", json={"reason": "Superseded"})
     assert response.status_code == 409
     assert "Stopped" in response.json()["detail"]
 
@@ -166,7 +166,7 @@ def test_post_truncate_run_returns_409_when_stopped() -> None:
 def test_post_truncate_run_rejects_empty_reason_with_422() -> None:
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        response = client.post(f"/runs/{run_id}/truncate", json={"reason": ""})
+        response = client.post(f"/runs/{run_id}/truncate", json={"reason": "Superseded"})
     assert response.status_code == 422
 
 
@@ -175,7 +175,7 @@ def test_post_truncate_run_rejects_whitespace_only_reason_with_400() -> None:
     """Whitespace passes Pydantic but the decider trims and rejects."""
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        response = client.post(f"/runs/{run_id}/truncate", json={"reason": "   "})
+        response = client.post(f"/runs/{run_id}/truncate", json={"reason": "Superseded"})
     assert response.status_code == 400
     assert "truncate reason" in response.json()["detail"].lower()
 
@@ -184,7 +184,7 @@ def test_post_truncate_run_rejects_whitespace_only_reason_with_400() -> None:
 def test_post_truncate_run_rejects_too_long_reason_with_422() -> None:
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        response = client.post(f"/runs/{run_id}/truncate", json={"reason": "x" * 501})
+        response = client.post(f"/runs/{run_id}/truncate", json={"reason": "Superseded" * 501})
     assert response.status_code == 422
 
 
@@ -196,7 +196,7 @@ def test_post_truncate_run_rejects_future_interrupted_at_with_400() -> None:
         run_id = _setup_full_run(client)
         response = client.post(
             f"/runs/{run_id}/truncate",
-            json={"reason": "X", "interrupted_at": future_iso},
+            json={"reason": "Superseded", "interrupted_at": future_iso},
         )
     assert response.status_code == 400
     assert "future" in response.json()["detail"].lower()
@@ -209,7 +209,7 @@ def test_post_truncate_run_rejects_invalid_interrupted_at_format_with_422() -> N
         run_id = _setup_full_run(client)
         response = client.post(
             f"/runs/{run_id}/truncate",
-            json={"reason": "X", "interrupted_at": "not-a-datetime"},
+            json={"reason": "Superseded", "interrupted_at": "not-a-datetime"},
         )
     assert response.status_code == 422
 
@@ -217,5 +217,5 @@ def test_post_truncate_run_rejects_invalid_interrupted_at_format_with_422() -> N
 @pytest.mark.contract
 def test_post_truncate_run_rejects_invalid_path_uuid_with_422() -> None:
     with TestClient(create_app()) as client:
-        response = client.post("/runs/not-a-uuid/truncate", json={"reason": "X"})
+        response = client.post("/runs/not-a-uuid/truncate", json={"reason": "Superseded"})
     assert response.status_code == 422

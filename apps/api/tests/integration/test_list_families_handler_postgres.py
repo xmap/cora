@@ -32,6 +32,7 @@ from cora.equipment.features.version_family import VersionFamily
 from cora.equipment.features.version_family import bind as bind_version
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 12, 14, 0, 0, tzinfo=UTC)
@@ -122,7 +123,7 @@ async def test_deprecate_preserves_version_tag(db_pool: asyncpg.Pool) -> None:
         correlation_id=_CORRELATION_ID,
     )
     await bind_deprecate(deps)(
-        DeprecateFamily(family_id=cap_id),
+        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=cap_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -152,7 +153,7 @@ async def test_deprecate_without_version_keeps_version_tag_null(
         correlation_id=_CORRELATION_ID,
     )
     await bind_deprecate(deps)(
-        DeprecateFamily(family_id=cap_id),
+        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=cap_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -208,7 +209,7 @@ async def test_status_filter_returns_only_matching_rows(
         correlation_id=_CORRELATION_ID,
     )
     await bind_deprecate(deps)(
-        DeprecateFamily(family_id=deprecated_id),
+        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=deprecated_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

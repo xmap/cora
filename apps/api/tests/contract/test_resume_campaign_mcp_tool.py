@@ -16,7 +16,7 @@ def _seed_held_via_rest(client: TestClient) -> str:
     )
     cid = str(response.json()["campaign_id"])
     client.post(f"/campaigns/{cid}/start")
-    client.post(f"/campaigns/{cid}/hold", json={"reason": "beam down"})
+    client.post(f"/campaigns/{cid}/hold", json={"reason": "Superseded"})
     return cid
 
 

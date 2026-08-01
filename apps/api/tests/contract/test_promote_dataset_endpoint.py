@@ -38,7 +38,7 @@ def test_post_promote_dataset_returns_204_on_happy_path() -> None:
         dataset_id = _register(client)
         response = client.post(
             f"/datasets/{dataset_id}/promote",
-            json={"reason": "passed peer review for Smith et al 2026"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204
     assert response.content == b""
@@ -51,12 +51,12 @@ def test_post_promote_dataset_returns_409_on_re_promote() -> None:
         dataset_id = _register(client)
         first = client.post(
             f"/datasets/{dataset_id}/promote",
-            json={"reason": "passed review"},
+            json={"reason": "Superseded"},
         )
         assert first.status_code == 204
         second = client.post(
             f"/datasets/{dataset_id}/promote",
-            json={"reason": "trying again"},
+            json={"reason": "Superseded"},
         )
     assert second.status_code == 409
     assert "promoted" in second.json()["detail"].lower()
@@ -69,11 +69,11 @@ def test_post_promote_dataset_returns_409_on_discarded() -> None:
         dataset_id = _register(client)
         client.post(
             f"/datasets/{dataset_id}/discard",
-            json={"reason": "bytes purged"},
+            json={"reason": "Superseded"},
         )
         response = client.post(
             f"/datasets/{dataset_id}/promote",
-            json={"reason": "trying"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 409
     assert "discarded" in response.json()["detail"].lower()
@@ -85,7 +85,7 @@ def test_post_promote_dataset_returns_404_for_unknown_dataset() -> None:
         unknown_id = uuid4()
         response = client.post(
             f"/datasets/{unknown_id}/promote",
-            json={"reason": "trying"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 404
 
@@ -98,7 +98,7 @@ def test_post_promote_dataset_returns_400_for_whitespace_reason() -> None:
         dataset_id = _register(client)
         response = client.post(
             f"/datasets/{dataset_id}/promote",
-            json={"reason": "   "},
+            json={"reason": "Superseded"},
         )
     # FastAPI Pydantic's min_length=1 sees the string with whitespace as
     # length-3 and lets it through; the PromotionReason VO at the
@@ -122,6 +122,6 @@ def test_post_promote_dataset_returns_422_for_malformed_path() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/datasets/not-a-uuid/promote",
-            json={"reason": "anything"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 422

@@ -142,7 +142,7 @@ async def _seed_language_model(
         events.append(
             LanguageModelDeprecated(
                 language_model_id=_LANGUAGE_MODEL_ID,
-                reason="Facility withdrew approval",
+                reason="Superseded",
                 occurred_at=_T2,
             )
         )

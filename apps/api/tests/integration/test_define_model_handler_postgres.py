@@ -41,6 +41,7 @@ from cora.equipment.features.define_model import DefineModel
 from cora.equipment.features.deprecate_family import DeprecateFamily
 from cora.equipment.wire import wire_equipment
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 31, 12, 0, 0, tzinfo=UTC)
@@ -329,7 +330,7 @@ async def test_define_model_succeeds_when_declared_family_is_deprecated(
         correlation_id=_CORRELATION_ID,
     )
     await deprecate_family.bind(deps)(
-        DeprecateFamily(family_id=family_id),
+        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=family_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

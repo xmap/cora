@@ -16,6 +16,7 @@ from cora.equipment.aggregates.assembly import (
 )
 from cora.equipment.features import deprecate_assembly
 from cora.equipment.features.deprecate_assembly import DeprecateAssembly
+from cora.shared.deprecation import DeprecationReason
 
 _NOW = datetime(2026, 6, 3, 12, 0, 0, tzinfo=UTC)
 
@@ -41,7 +42,7 @@ def test_decide_emits_assembly_deprecated_from_defined_state() -> None:
         state=state,
         command=DeprecateAssembly(
             assembly_id=assembly_id,
-            reason="superseded by Detector-rev3",
+            reason=DeprecationReason.SUPERSEDED,
         ),
         now=_NOW,
     )
@@ -49,7 +50,7 @@ def test_decide_emits_assembly_deprecated_from_defined_state() -> None:
     event = events[0]
     assert isinstance(event, AssemblyDeprecated)
     assert event.assembly_id == assembly_id
-    assert event.reason == "superseded by Detector-rev3"
+    assert event.reason == "Superseded"
     assert event.occurred_at == _NOW
 
 
@@ -60,7 +61,7 @@ def test_decide_emits_assembly_deprecated_from_versioned_state() -> None:
     state = _state(assembly_id, status=AssemblyStatus.VERSIONED)
     events = deprecate_assembly.decide(
         state=state,
-        command=DeprecateAssembly(assembly_id=assembly_id, reason="r"),
+        command=DeprecateAssembly(assembly_id=assembly_id, reason=DeprecationReason.SUPERSEDED),
         now=_NOW,
     )
     assert len(events) == 1
@@ -73,7 +74,7 @@ def test_decide_rejects_none_state_with_assembly_not_found() -> None:
     with pytest.raises(AssemblyNotFoundError) as exc_info:
         deprecate_assembly.decide(
             state=None,
-            command=DeprecateAssembly(assembly_id=target_id, reason="r"),
+            command=DeprecateAssembly(assembly_id=target_id, reason=DeprecationReason.SUPERSEDED),
             now=_NOW,
         )
     assert exc_info.value.assembly_id == target_id
@@ -87,7 +88,7 @@ def test_decide_rejects_deprecated_state_with_cannot_deprecate() -> None:
     with pytest.raises(AssemblyCannotDeprecateError) as exc_info:
         deprecate_assembly.decide(
             state=state,
-            command=DeprecateAssembly(assembly_id=assembly_id, reason="r"),
+            command=DeprecateAssembly(assembly_id=assembly_id, reason=DeprecationReason.SUPERSEDED),
             now=_NOW,
         )
     assert exc_info.value.assembly_id == assembly_id
@@ -98,7 +99,7 @@ def test_decide_rejects_deprecated_state_with_cannot_deprecate() -> None:
 def test_decide_is_pure_same_inputs_yield_same_events() -> None:
     assembly_id = uuid4()
     state = _state(assembly_id)
-    command = DeprecateAssembly(assembly_id=assembly_id, reason="end-of-life")
+    command = DeprecateAssembly(assembly_id=assembly_id, reason=DeprecationReason.SUPERSEDED)
     events_a = deprecate_assembly.decide(state, command, now=_NOW)
     events_b = deprecate_assembly.decide(state, command, now=_NOW)
     assert events_a == events_b

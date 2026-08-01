@@ -60,7 +60,7 @@ def test_post_assembly_deprecate_returns_204_for_defined_state() -> None:
         assembly_id = _define_assembly(client, family_id)
         response = client.post(
             f"/assemblies/{assembly_id}/deprecate",
-            json={"reason": "superseded"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204, response.text
 
@@ -74,7 +74,7 @@ def test_post_assembly_deprecate_returns_204_for_versioned_state() -> None:
         _version_assembly(client, assembly_id, family_id)
         response = client.post(
             f"/assemblies/{assembly_id}/deprecate",
-            json={"reason": "end-of-life"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204, response.text
 
@@ -84,7 +84,7 @@ def test_post_assembly_deprecate_returns_404_for_unknown_assembly() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/assemblies/{uuid4()}/deprecate",
-            json={"reason": "r"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 404, response.text
 
@@ -97,12 +97,12 @@ def test_post_assembly_deprecate_returns_409_for_already_deprecated() -> None:
         assembly_id = _define_assembly(client, family_id)
         first = client.post(
             f"/assemblies/{assembly_id}/deprecate",
-            json={"reason": "first"},
+            json={"reason": "Superseded"},
         )
         assert first.status_code == 204, first.text
         second = client.post(
             f"/assemblies/{assembly_id}/deprecate",
-            json={"reason": "second"},
+            json={"reason": "Superseded"},
         )
     assert second.status_code == 409, second.text
     assert "Deprecated" in second.json()["detail"]
@@ -118,13 +118,14 @@ def test_post_assembly_deprecate_returns_422_for_missing_reason() -> None:
 
 
 @pytest.mark.contract
-def test_post_assembly_deprecate_returns_422_for_empty_reason() -> None:
+def test_post_assembly_deprecate_returns_422_for_unknown_reason() -> None:
+    """`reason` is a closed enum: prose that used to be accepted is now a 422."""
     with TestClient(create_app()) as client:
         family_id = _define_family(client)
         assembly_id = _define_assembly(client, family_id)
         response = client.post(
             f"/assemblies/{assembly_id}/deprecate",
-            json={"reason": ""},
+            json={"reason": "superseded by Detector-rev3"},
         )
     assert response.status_code == 422
 
@@ -137,7 +138,7 @@ def test_post_assembly_deprecate_blocks_subsequent_version() -> None:
         assembly_id = _define_assembly(client, family_id)
         deprecate_response = client.post(
             f"/assemblies/{assembly_id}/deprecate",
-            json={"reason": "superseded"},
+            json={"reason": "Superseded"},
         )
         assert deprecate_response.status_code == 204, deprecate_response.text
         version_response = client.post(

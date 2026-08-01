@@ -133,7 +133,7 @@ async def _seed_deprecated_model(deps: Kernel, store: InMemoryEventStore) -> Non
     await _seed_model(deps)
     deprecated = ModelDeprecated(
         model_id=_MODEL_ID,
-        reason="superseded by next-gen part",
+        reason="Superseded",
         occurred_at=_NOW,
     )
     new_event = to_new_event(

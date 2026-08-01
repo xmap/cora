@@ -151,7 +151,7 @@ def test_evolve_capability_deprecated_flips_status_and_preserves_version() -> No
     )
     deprecated = evolve(
         versioned,
-        FamilyDeprecated(family_id=family_id, occurred_at=_NOW),
+        FamilyDeprecated(reason="Superseded", family_id=family_id, occurred_at=_NOW),
     )
     assert deprecated.status is FamilyStatus.DEPRECATED
     assert deprecated.version == "v3"
@@ -168,7 +168,7 @@ def test_evolve_capability_deprecated_from_defined_preserves_null_version() -> N
     )
     deprecated = evolve(
         defined,
-        FamilyDeprecated(family_id=defined.id, occurred_at=_NOW),
+        FamilyDeprecated(reason="Superseded", family_id=defined.id, occurred_at=_NOW),
     )
     assert deprecated.status is FamilyStatus.DEPRECATED
     assert deprecated.version is None
@@ -177,7 +177,7 @@ def test_evolve_capability_deprecated_from_defined_preserves_null_version() -> N
 @pytest.mark.unit
 def test_evolve_capability_deprecated_on_empty_state_raises() -> None:
     with pytest.raises(ValueError, match="cannot be applied to empty state"):
-        evolve(None, FamilyDeprecated(family_id=uuid4(), occurred_at=_NOW))
+        evolve(None, FamilyDeprecated(reason="Superseded", family_id=uuid4(), occurred_at=_NOW))
 
 
 @pytest.mark.unit
@@ -216,7 +216,7 @@ def test_fold_define_deprecate_yields_deprecated_capability() -> None:
     state = fold(
         [
             FamilyDefined(family_id=family_id, name="X", occurred_at=_NOW),
-            FamilyDeprecated(family_id=family_id, occurred_at=_NOW),
+            FamilyDeprecated(reason="Superseded", family_id=family_id, occurred_at=_NOW),
         ]
     )
     assert state is not None
@@ -232,7 +232,7 @@ def test_fold_define_version_deprecate_preserves_version_through_deprecation() -
         [
             FamilyDefined(family_id=family_id, name="X", occurred_at=_NOW),
             FamilyVersioned(family_id=family_id, version_tag="v2", occurred_at=_NOW),
-            FamilyDeprecated(family_id=family_id, occurred_at=_NOW),
+            FamilyDeprecated(reason="Superseded", family_id=family_id, occurred_at=_NOW),
         ]
     )
     assert state is not None
@@ -337,7 +337,7 @@ def test_settings_schema_preserved_across_deprecation() -> None:
                 settings_schema=_TEST_SCHEMA,
                 occurred_at=_NOW,
             ),
-            FamilyDeprecated(family_id=family_id, occurred_at=_NOW),
+            FamilyDeprecated(reason="Superseded", family_id=family_id, occurred_at=_NOW),
         ]
     )
     assert state is not None
@@ -430,7 +430,7 @@ def test_family_deprecated_preserves_affordances() -> None:
     )
     deprecated = evolve(
         initial,
-        FamilyDeprecated(family_id=family_id, occurred_at=_NOW),
+        FamilyDeprecated(reason="Superseded", family_id=family_id, occurred_at=_NOW),
     )
     assert deprecated.affordances == frozenset({Affordance.ROTATABLE, Affordance.HOMEABLE})
 

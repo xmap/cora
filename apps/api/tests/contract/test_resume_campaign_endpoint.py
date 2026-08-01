@@ -19,7 +19,7 @@ def _register_start_hold(client: TestClient) -> str:
     )
     cid = str(response.json()["campaign_id"])
     client.post(f"/campaigns/{cid}/start")
-    client.post(f"/campaigns/{cid}/hold", json={"reason": "beam down"})
+    client.post(f"/campaigns/{cid}/hold", json={"reason": "Superseded"})
     return cid
 
 

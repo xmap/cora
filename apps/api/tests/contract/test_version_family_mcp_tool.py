@@ -108,7 +108,7 @@ def test_mcp_version_family_tool_returns_iserror_when_deprecated() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_family",
-                    "arguments": {"family_id": str(family_id)},
+                    "arguments": {"family_id": str(family_id), "reason": "Superseded"},
                 },
             },
             headers=headers,

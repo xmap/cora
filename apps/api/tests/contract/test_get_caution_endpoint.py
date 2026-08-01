@@ -69,7 +69,7 @@ def test_get_cautions_returns_422_for_malformed_uuid_path_param() -> None:
 def test_get_cautions_reflects_retired_state_after_retire() -> None:
     with TestClient(create_app()) as client:
         cid, _ = _seed(client)
-        retire = client.post(f"/cautions/{cid}/retire", json={"reason": "Resolved"})
+        retire = client.post(f"/cautions/{cid}/retire", json={"reason": "Superseded"})
         assert retire.status_code == 204
         response = client.get(f"/cautions/{cid}")
     assert response.status_code == 200

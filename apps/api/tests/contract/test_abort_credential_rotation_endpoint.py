@@ -39,7 +39,7 @@ def test_post_abort_credential_rotation_returns_204_via_handler_override() -> No
     with TestClient(app) as client:
         response = client.post(
             f"/federation/credentials/{uuid4()}/rotation/abort",
-            json={"reason": "peer refused new material"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 204, response.text
 
@@ -75,7 +75,7 @@ def test_post_abort_credential_rotation_returns_404_on_unknown_credential() -> N
     with TestClient(app) as client:
         response = client.post(
             f"/federation/credentials/{uuid4()}/rotation/abort",
-            json={"reason": "x"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 404
 
@@ -97,7 +97,7 @@ def test_post_abort_credential_rotation_returns_409_when_active() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/federation/credentials/{uuid4()}/rotation/abort",
-            json={"reason": "x"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 409
     assert "cannot abort_rotation" in response.json()["detail"].lower()
@@ -137,7 +137,7 @@ def test_post_abort_credential_rotation_returns_403_when_authorize_denies() -> N
     with TestClient(app) as client:
         response = client.post(
             f"/federation/credentials/{uuid4()}/rotation/abort",
-            json={"reason": "x"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 403
     assert response.json()["detail"] == "denied for test"
@@ -149,7 +149,7 @@ def test_post_abort_credential_rotation_rejects_overlong_reason_with_422() -> No
     with TestClient(create_app()) as client:
         response = client.post(
             f"/federation/credentials/{uuid4()}/rotation/abort",
-            json={"reason": "x" * (REASON_MAX_LENGTH + 1)},
+            json={"reason": "Superseded" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422
 
@@ -160,6 +160,6 @@ def test_post_abort_credential_rotation_rejects_invalid_uuid_path_with_422() -> 
     with TestClient(create_app()) as client:
         response = client.post(
             "/federation/credentials/not-a-uuid/rotation/abort",
-            json={"reason": "x"},
+            json={"reason": "Superseded"},
         )
     assert response.status_code == 422

@@ -62,6 +62,7 @@ class FamilyDeprecated:
     """
 
     family_id: UUID
+    reason: str
     occurred_at: datetime
 
 
@@ -158,9 +159,14 @@ def to_payload(event: FamilyEvent) -> dict[str, Any]:
                 "occurred_at": occurred_at.isoformat(),
                 "affordances": sorted(a.value for a in affordances),
             }
-        case FamilyDeprecated(family_id=family_id, occurred_at=occurred_at):
+        case FamilyDeprecated(
+            family_id=family_id,
+            reason=reason,
+            occurred_at=occurred_at,
+        ):
             return {
                 "family_id": str(family_id),
+                "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
             }
         case FamilySettingsSchemaUpdated(
@@ -231,6 +237,7 @@ def from_stored(stored: StoredEvent) -> FamilyEvent:
                 "FamilyDeprecated",
                 lambda: FamilyDeprecated(
                     family_id=UUID(payload["family_id"]),
+                    reason=payload["reason"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )

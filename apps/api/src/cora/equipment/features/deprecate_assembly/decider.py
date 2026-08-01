@@ -55,7 +55,7 @@ def decide(
     return [
         AssemblyDeprecated(
             assembly_id=state.id,
-            reason=command.reason,
+            reason=command.reason.value,
             occurred_at=now,
         )
     ]

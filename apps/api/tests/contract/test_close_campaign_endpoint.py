@@ -34,7 +34,7 @@ def test_post_close_returns_204_on_active_campaign() -> None:
 def test_post_close_returns_204_on_held_campaign() -> None:
     with TestClient(create_app()) as client:
         cid = _register_and_start(client)
-        client.post(f"/campaigns/{cid}/hold", json={"reason": "r"})
+        client.post(f"/campaigns/{cid}/hold", json={"reason": "Superseded"})
         response = client.post(f"/campaigns/{cid}/close")
     assert response.status_code == 204
 

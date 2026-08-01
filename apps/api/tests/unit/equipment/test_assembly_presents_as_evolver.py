@@ -114,7 +114,7 @@ def test_presents_as_preserved_across_deprecation() -> None:
         [
             _defined(aid),
             AssemblyPresentsAsAdded(assembly_id=aid, role_id=rid, occurred_at=_NOW),
-            AssemblyDeprecated(assembly_id=aid, reason="retired", occurred_at=_NOW),
+            AssemblyDeprecated(assembly_id=aid, reason="Superseded", occurred_at=_NOW),
         ]
     )
     assert state is not None

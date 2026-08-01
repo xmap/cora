@@ -223,7 +223,7 @@ async def test_version_model_raises_cannot_version_after_deprecation(
 
     deprecated = ModelDeprecated(
         model_id=model_id,
-        reason="superseded by next-gen part",
+        reason="Superseded",
         occurred_at=_NOW,
     )
     await deps.event_store.append(

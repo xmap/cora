@@ -27,7 +27,7 @@ def test_post_resume_returns_204_on_suspended_agent() -> None:
         define = client.post("/agents", json=_define_body())
         agent_id = define.json()["agent_id"]
         client.post(f"/agents/{agent_id}/version")
-        client.post(f"/agents/{agent_id}/suspend", json={"reason": "x"})
+        client.post(f"/agents/{agent_id}/suspend", json={"reason": "Superseded"})
         response = client.post(f"/agents/{agent_id}/resume")
     assert response.status_code == 204, response.text
 
@@ -57,9 +57,9 @@ def test_suspend_then_resume_then_suspend_cycle_succeeds() -> None:
         define = client.post("/agents", json=_define_body())
         agent_id = define.json()["agent_id"]
         client.post(f"/agents/{agent_id}/version")
-        first_suspend = client.post(f"/agents/{agent_id}/suspend", json={"reason": "first"})
+        first_suspend = client.post(f"/agents/{agent_id}/suspend", json={"reason": "Superseded"})
         first_resume = client.post(f"/agents/{agent_id}/resume")
-        second_suspend = client.post(f"/agents/{agent_id}/suspend", json={"reason": "second"})
+        second_suspend = client.post(f"/agents/{agent_id}/suspend", json={"reason": "Superseded"})
     assert first_suspend.status_code == 204
     assert first_resume.status_code == 204
     assert second_suspend.status_code == 204
