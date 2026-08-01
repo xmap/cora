@@ -14,7 +14,6 @@ re-deprecating a Deprecated entry raises
     `RetirementAnnounced` -> `LanguageModelCannotDeprecateError`
   - `reason` is the closed `DeprecationReason` enum; Pydantic rejects
     an unknown value at the edge before the handler runs.
-    1-500 chars after trim -> `InvalidLanguageModelReasonError`.
 """
 
 from datetime import datetime

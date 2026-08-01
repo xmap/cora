@@ -124,3 +124,40 @@ def test_post_deprecate_clearance_template_path_uuid_round_trip() -> None:
         )
     assert response.status_code == 204, response.text
     assert captured["template_id"] == template_id
+
+
+@pytest.mark.contract
+def test_post_deprecate_missing_reason_returns_422() -> None:
+    """`reason` is required: an empty body is a schema rejection."""
+
+    async def _stub_handler(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    template_id = uuid4()
+    with TestClient(create_app()) as client:
+        client.app.state.safety = replace(  # type: ignore[attr-defined]
+            client.app.state.safety,  # type: ignore[attr-defined]
+            deprecate_clearance_template=_stub_handler,
+        )
+        response = client.post(f"/clearance-templates/{template_id}/deprecate", json={})
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_deprecate_unknown_reason_returns_422() -> None:
+    """`reason` is a closed enum: prose is rejected at the schema."""
+
+    async def _stub_handler(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    template_id = uuid4()
+    with TestClient(create_app()) as client:
+        client.app.state.safety = replace(  # type: ignore[attr-defined]
+            client.app.state.safety,  # type: ignore[attr-defined]
+            deprecate_clearance_template=_stub_handler,
+        )
+        response = client.post(
+            f"/clearance-templates/{template_id}/deprecate",
+            json={"reason": "superseded by a newer one"},
+        )
+    assert response.status_code == 422

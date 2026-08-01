@@ -1,7 +1,8 @@
 """The `DeprecatePractice` command — intent dataclass for this slice.
 
 Multi-source transition: Defined | Versioned -> Deprecated. Single-
-field command (just practice_id); no body at the API layer. Mirrors
+Carries practice_id plus a required closed
+`DeprecationReason`. Mirrors
 `DeprecateMethod` / `DeprecateFamily`.
 """
 

@@ -1,6 +1,7 @@
 """MCP tool for the `decommission_asset` slice.
 
-Mirror of `activate_asset` MCP tool. Single asset_id argument,
+Mirror of `activate_asset` MCP tool. Takes asset_id plus a required
+free-text `reason`,
 no structured content on success. Domain / application errors
 propagate to FastMCP, which wraps them as `isError: true`.
 """

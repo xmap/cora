@@ -52,6 +52,7 @@ def decide(
 
     return [
         ClearanceTemplateWithdrawn(
+            reason=command.reason,
             template_id=state.id,
             occurred_at=now,
             withdrawn_by=withdrawn_by,

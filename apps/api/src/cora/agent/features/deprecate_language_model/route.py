@@ -2,8 +2,8 @@
 
 Action endpoint at
 `POST /language-models/{language_model_id}/deprecate`. Body carries
-REQUIRED `reason` (1-500 chars after trim). 204 No Content on
-success.
+REQUIRED `reason`, a closed `DeprecationReason` (Superseded /
+Defective / Obsolete). 204 No Content on success.
 """
 
 from typing import Annotated
@@ -49,10 +49,6 @@ router = APIRouter(tags=["agent"])
     "/language-models/{language_model_id}/deprecate",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
-        status.HTTP_400_BAD_REQUEST: {
-            "model": ErrorResponse,
-            "description": "Reason is empty / whitespace-only / over-cap after trim.",
-        },
         status.HTTP_403_FORBIDDEN: {
             "model": ErrorResponse,
             "description": "Authorize port denied the command.",

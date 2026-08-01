@@ -142,4 +142,4 @@ async def test_deprecate_assembly_persists_through_versioned_arm(
         "AssemblyDeprecated",
     ]
     assert events[2].event_id == _DEPRECATED_EVENT_ID_V
-    assert events[2].payload["reason"] == "end-of-life"
+    assert events[2].payload["reason"] == "Superseded"

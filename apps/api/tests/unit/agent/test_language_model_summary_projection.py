@@ -127,7 +127,7 @@ async def test_retirement_announced_updates_status_and_both_retirement_timestamp
         "LanguageModelRetirementAnnounced",
         {
             "language_model_id": str(_LANGUAGE_MODEL_ID),
-            "reason": "Superseded",
+            "reason": "Provider EOL notice",
             "effective_at": effective.isoformat(),
             "occurred_at": _NOW.isoformat(),
         },
@@ -157,7 +157,7 @@ async def test_retirement_announced_without_date_writes_null_effective_at() -> N
         "LanguageModelRetirementAnnounced",
         {
             "language_model_id": str(_LANGUAGE_MODEL_ID),
-            "reason": "Superseded",
+            "reason": "Provider EOL notice, no date yet",
             "effective_at": None,
             "occurred_at": _NOW.isoformat(),
         },

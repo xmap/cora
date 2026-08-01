@@ -59,7 +59,7 @@ def _template(
 def test_decide_emits_withdrawn_event_when_status_is_draft() -> None:
     template_id = uuid4()
     state = _template(template_id=template_id, status=ClearanceTemplateStatus.DRAFT)
-    command = WithdrawClearanceTemplate(template_id=template_id)
+    command = WithdrawClearanceTemplate(reason="policy change", template_id=template_id)
 
     events = decide(
         state=state,
@@ -70,6 +70,7 @@ def test_decide_emits_withdrawn_event_when_status_is_draft() -> None:
 
     assert events == [
         ClearanceTemplateWithdrawn(
+            reason="policy change",
             template_id=template_id,
             occurred_at=_NOW,
             withdrawn_by=_WITHDRAWER_ID,
@@ -81,7 +82,7 @@ def test_decide_emits_withdrawn_event_when_status_is_draft() -> None:
 def test_decide_emits_withdrawn_event_when_status_is_active() -> None:
     template_id = uuid4()
     state = _template(template_id=template_id, status=ClearanceTemplateStatus.ACTIVE)
-    command = WithdrawClearanceTemplate(template_id=template_id)
+    command = WithdrawClearanceTemplate(reason="policy change", template_id=template_id)
 
     events = decide(
         state=state,
@@ -92,6 +93,7 @@ def test_decide_emits_withdrawn_event_when_status_is_active() -> None:
 
     assert events == [
         ClearanceTemplateWithdrawn(
+            reason="policy change",
             template_id=template_id,
             occurred_at=_NOW,
             withdrawn_by=_WITHDRAWER_ID,
@@ -103,7 +105,7 @@ def test_decide_emits_withdrawn_event_when_status_is_active() -> None:
 def test_decide_emits_withdrawn_event_when_status_is_deprecated() -> None:
     template_id = uuid4()
     state = _template(template_id=template_id, status=ClearanceTemplateStatus.DEPRECATED)
-    command = WithdrawClearanceTemplate(template_id=template_id)
+    command = WithdrawClearanceTemplate(reason="policy change", template_id=template_id)
 
     events = decide(
         state=state,
@@ -114,6 +116,7 @@ def test_decide_emits_withdrawn_event_when_status_is_deprecated() -> None:
 
     assert events == [
         ClearanceTemplateWithdrawn(
+            reason="policy change",
             template_id=template_id,
             occurred_at=_NOW,
             withdrawn_by=_WITHDRAWER_ID,
@@ -124,7 +127,7 @@ def test_decide_emits_withdrawn_event_when_status_is_deprecated() -> None:
 @pytest.mark.unit
 def test_decide_rejects_when_state_is_none() -> None:
     template_id = uuid4()
-    command = WithdrawClearanceTemplate(template_id=template_id)
+    command = WithdrawClearanceTemplate(reason="policy change", template_id=template_id)
 
     with pytest.raises(ClearanceTemplateNotFoundError) as exc_info:
         decide(
@@ -140,7 +143,7 @@ def test_decide_rejects_when_state_is_none() -> None:
 def test_decide_rejects_when_status_is_withdrawn() -> None:
     template_id = uuid4()
     state = _template(template_id=template_id, status=ClearanceTemplateStatus.WITHDRAWN)
-    command = WithdrawClearanceTemplate(template_id=template_id)
+    command = WithdrawClearanceTemplate(reason="policy change", template_id=template_id)
 
     with pytest.raises(ClearanceTemplateCannotWithdrawError) as exc_info:
         decide(
@@ -157,7 +160,7 @@ def test_decide_rejects_when_status_is_withdrawn() -> None:
 def test_decide_threads_withdrawn_by_onto_event() -> None:
     template_id = uuid4()
     state = _template(template_id=template_id, status=ClearanceTemplateStatus.ACTIVE)
-    command = WithdrawClearanceTemplate(template_id=template_id)
+    command = WithdrawClearanceTemplate(reason="policy change", template_id=template_id)
     distinct_actor = ActorId(UUID("00000000-0000-0000-0000-0000000000aa"))
 
     events = decide(

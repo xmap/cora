@@ -209,4 +209,4 @@ async def test_deprecate_from_suspended_persists(db_pool: asyncpg.Pool) -> None:
     assert final is not None
     assert final.status is AgentStatus.DEPRECATED
     assert final.deprecation_reason is not None
-    assert final.deprecation_reason == "retired while paused"
+    assert final.deprecation_reason == "Superseded"

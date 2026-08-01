@@ -48,10 +48,6 @@ router = APIRouter(tags=["agent"])
     "/agents/{agent_id}/deprecate",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
-        status.HTTP_400_BAD_REQUEST: {
-            "model": ErrorResponse,
-            "description": "Reason is empty / whitespace-only / over-cap after trim.",
-        },
         status.HTTP_403_FORBIDDEN: {
             "model": ErrorResponse,
             "description": "Authorize port denied the command.",

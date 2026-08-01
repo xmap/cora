@@ -19,7 +19,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.agent.features.update_agent_target_plan import UpdateAgentTargetPlan
-from cora.agent.features.update_agent_target_plan import bind as bind_set_target_plan
+from cora.agent.features.update_agent_target_plan import bind as bind_update_target_plan
 from cora.agent.seed_run_initiator import RUN_INITIATOR_AGENT_ID, seed_run_initiator_agent
 from cora.api._run_initiator import _resolve_active_plan, run_initiator_lifespan
 from cora.infrastructure.config import Settings
@@ -157,7 +157,7 @@ async def test_lifespan_with_runtime_designation_drains_without_fallback() -> No
     the designated Plan each tick and drains. Proves designation drives the daemon."""
     kernel = _kernel(enabled=True, plan_id=None)
     await seed_run_initiator_agent(kernel)
-    await bind_set_target_plan(kernel)(
+    await bind_update_target_plan(kernel)(
         UpdateAgentTargetPlan(agent_id=RUN_INITIATOR_AGENT_ID, target_plan_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -184,7 +184,7 @@ async def test_resolve_active_plan_prefers_designation_over_fallback() -> None:
     designated = uuid4()
     kernel = _kernel(enabled=True, plan_id=fallback)
     await seed_run_initiator_agent(kernel)
-    await bind_set_target_plan(kernel)(
+    await bind_update_target_plan(kernel)(
         UpdateAgentTargetPlan(agent_id=RUN_INITIATOR_AGENT_ID, target_plan_id=designated),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

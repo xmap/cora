@@ -23,7 +23,7 @@ design lock for CORA-vocabulary-alignment and Actor-collision risk.
 `AgentKind` (1-100 chars), `AgentName` (1-100 chars), `AgentDescription`
 (1-2000 chars), `AgentVersion` (1-50 chars), `AgentCanonicalUri` (1-2000
 chars, must start with https://), `AgentCapability` (1-100 chars per
-entry, cardinality cap 32), `AgentDeprecationReason` (1-500 chars).
+entry, cardinality cap 32).
 All follow the `validate_bounded_text` + `object.__setattr__` pattern
 from the shared `cora.shared.bounded_text` helper.
 
@@ -186,21 +186,10 @@ class InvalidAgentCapabilitiesError(ValueError):
         self.count = count
 
 
-class InvalidAgentDeprecationReasonError(ValueError):
-    """The supplied deprecation reason is empty, whitespace-only, or too long."""
-
-    def __init__(self, value: str) -> None:
-        super().__init__(
-            f"Agent deprecation reason must be 1-{REASON_MAX_LENGTH} chars "
-            f"after trimming (got: {value!r})"
-        )
-        self.value = value
-
-
 class InvalidAgentSuspensionReasonError(ValueError):
     """The supplied suspension reason is empty, whitespace-only, or too long.
 
-    Mirrors `InvalidAgentDeprecationReasonError` shape. Suspension
+    Mirrors `InvalidAgentSuspensionReasonError` shape. Suspension
     reason carries operator-supplied free text (cost-overrun,
     output-spike, model-regression context) that operators reading
     the audit log later need.
@@ -616,25 +605,10 @@ class AgentCapability:
 
 
 @dataclass(frozen=True)
-class AgentDeprecationReason:
-    """Optional operator-supplied deprecation reason. Trimmed; 1-500 chars."""
-
-    value: str
-
-    def __post_init__(self) -> None:
-        trimmed = validate_bounded_text(
-            self.value,
-            max_length=REASON_MAX_LENGTH,
-            error_class=InvalidAgentDeprecationReasonError,
-        )
-        object.__setattr__(self, "value", trimmed)
-
-
-@dataclass(frozen=True)
 class AgentSuspensionReason:
     """Operator-supplied reason at suspension time. Trimmed; 1-500 chars.
 
-    Mirrors `AgentDeprecationReason` shape; carries cost-overrun /
+    Bounded operator text; carries cost-overrun /
     output-spike / model-regression context operators reading the
     audit log later need.
     """

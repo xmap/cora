@@ -31,6 +31,27 @@ state records those fact-acts as `<verb>_at` / `<verb>_by` pairs per
 [[project_fold_symmetry_design]]; `AllocationCeilingUpdated` and
 `AllocationVoided` fold no timestamp, so their actor lives only on
 the envelope (`StoredEvent.principal_id`).
+
+## Schema-evolution deviation, 2026-08-01
+
+`docs/reference/modeling.md` says breaking changes get a NEW event type and
+the evolver reads both forever. This module deviates twice and the deviation
+is deliberate, not an oversight:
+
+  - `reason` was added as a REQUIRED field, and `from_stored` reads
+    `payload["reason"]` rather than `payload.get(...)`, so a payload written
+    before 2026-08-01 raises instead of folding.
+  - `AllocationCeilingAmended` was renamed to `AllocationCeilingUpdated`. The
+    stored discriminator is `type(event).__name__`, so it moved with the class
+    and no legacy `case "AllocationCeilingAmended":` arm was added.
+
+Justification: no such payload exists. The only events any migration ever
+seeds are `PolicyDefined` and `SurfaceDefined`; the old discriminator appears
+nowhere in the tree; `tests/fixtures/event_corpus/` holds no fixture for it.
+A compat arm would be dead code guarding data that was never written, which
+the corpus README explicitly discourages. This note is the record the policy
+asks for. If a deployment ever accumulates real streams, this deviation is
+spent and the next breaking change follows the policy.
 """
 
 from dataclasses import dataclass

@@ -309,11 +309,10 @@ async def test_agent_tool_lifecycle_plays_out_end_to_end(
     actor_payload = actor_events[0].payload
     assert actor_payload["kind"] == "agent"
 
-    # ----- Assert: deprecate reason captured verbatim for audit -----
+    # ----- Assert: deprecate reason is the closed vocabulary, not prose -----
 
     deprecate_event = next(e for e in agent_events if e.event_type == "AgentDeprecated")
-    assert "successor" in deprecate_event.payload["reason"].lower()
-    assert "v2" in deprecate_event.payload["reason"]
+    assert deprecate_event.payload["reason"] == "Superseded"
 
     # ----- Assert: grant event payload carries the tool name -----
 

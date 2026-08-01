@@ -103,7 +103,7 @@ def test_decide_emits_single_withdrawn_event_on_non_terminal_state(
         status=status,
         version=version,
     )
-    command = WithdrawClearanceTemplate(template_id=template_id)
+    command = WithdrawClearanceTemplate(reason="policy change", template_id=template_id)
     actor = ActorId(withdrawn_by)
 
     events = decide(
@@ -143,7 +143,7 @@ def test_decide_rejects_already_withdrawn_status(
         status=ClearanceTemplateStatus.WITHDRAWN,
         version=version,
     )
-    command = WithdrawClearanceTemplate(template_id=template_id)
+    command = WithdrawClearanceTemplate(reason="policy change", template_id=template_id)
 
     with pytest.raises(ClearanceTemplateCannotWithdrawError):
         decide(
@@ -167,7 +167,7 @@ def test_decide_rejects_when_state_is_none(
     withdrawn_by: UUID,
 ) -> None:
     """A None state ALWAYS raises NotFound."""
-    command = WithdrawClearanceTemplate(template_id=template_id)
+    command = WithdrawClearanceTemplate(reason="policy change", template_id=template_id)
 
     with pytest.raises(ClearanceTemplateNotFoundError):
         decide(

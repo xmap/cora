@@ -35,7 +35,9 @@ def test_post_withdraw_clearance_template_returns_204_with_no_body() -> None:
             client.app.state.safety,  # type: ignore[attr-defined]
             withdraw_clearance_template=_stub_handler,
         )
-        response = client.post(f"/clearance-templates/{template_id}/withdraw")
+        response = client.post(
+            f"/clearance-templates/{template_id}/withdraw", json={"reason": "policy change"}
+        )
     assert response.status_code == 204, response.text
     assert response.content == b""
 
@@ -50,7 +52,9 @@ def test_post_withdraw_clearance_template_returns_403_when_authorize_denies() ->
             client.app.state.safety,  # type: ignore[attr-defined]
             withdraw_clearance_template=_denying_handler,
         )
-        response = client.post(f"/clearance-templates/{uuid4()}/withdraw")
+        response = client.post(
+            f"/clearance-templates/{uuid4()}/withdraw", json={"reason": "policy change"}
+        )
     assert response.status_code == 403
     assert response.json()["detail"] == "denied for test"
 
@@ -67,7 +71,9 @@ def test_post_withdraw_clearance_template_returns_404_when_template_unknown() ->
             client.app.state.safety,  # type: ignore[attr-defined]
             withdraw_clearance_template=_missing_handler,
         )
-        response = client.post(f"/clearance-templates/{template_id}/withdraw")
+        response = client.post(
+            f"/clearance-templates/{template_id}/withdraw", json={"reason": "policy change"}
+        )
     assert response.status_code == 404
 
 
@@ -83,14 +89,18 @@ def test_post_withdraw_clearance_template_returns_409_when_already_withdrawn() -
             client.app.state.safety,  # type: ignore[attr-defined]
             withdraw_clearance_template=_conflict_handler,
         )
-        response = client.post(f"/clearance-templates/{template_id}/withdraw")
+        response = client.post(
+            f"/clearance-templates/{template_id}/withdraw", json={"reason": "policy change"}
+        )
     assert response.status_code == 409
 
 
 @pytest.mark.contract
 def test_post_withdraw_clearance_template_returns_422_for_malformed_path_uuid() -> None:
     with TestClient(create_app()) as client:
-        response = client.post("/clearance-templates/not-a-uuid/withdraw")
+        response = client.post(
+            "/clearance-templates/not-a-uuid/withdraw", json={"reason": "policy change"}
+        )
     assert response.status_code == 422
 
 
@@ -109,6 +119,8 @@ def test_post_withdraw_clearance_template_path_uuid_round_trip() -> None:
             client.app.state.safety,  # type: ignore[attr-defined]
             withdraw_clearance_template=_capturing_handler,
         )
-        response = client.post(f"/clearance-templates/{template_id}/withdraw")
+        response = client.post(
+            f"/clearance-templates/{template_id}/withdraw", json={"reason": "policy change"}
+        )
     assert response.status_code == 204, response.text
     assert captured["template_id"] == template_id

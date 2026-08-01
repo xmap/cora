@@ -178,6 +178,7 @@ async def _seed_withdrawn(
     """Append a ClearanceTemplateWithdrawn event so the aggregate folds
     to Withdrawn status (stream version 3)."""
     event = ClearanceTemplateWithdrawn(
+        reason="policy change",
         template_id=template_id,
         occurred_at=_NOW,
         withdrawn_by=_PRINCIPAL_ID,
@@ -209,7 +210,7 @@ async def test_handler_appends_withdrawn_event_from_draft_at_expected_version_on
     handler = withdraw_clearance_template.bind(deps)
 
     result = await handler(
-        WithdrawClearanceTemplate(template_id=template_id),
+        WithdrawClearanceTemplate(reason="policy change", template_id=template_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -239,7 +240,7 @@ async def test_handler_appends_withdrawn_event_from_active_at_expected_version_t
     handler = withdraw_clearance_template.bind(deps)
 
     await handler(
-        WithdrawClearanceTemplate(template_id=template_id),
+        WithdrawClearanceTemplate(reason="policy change", template_id=template_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -262,7 +263,7 @@ async def test_handler_appends_withdrawn_event_from_deprecated_at_expected_versi
     handler = withdraw_clearance_template.bind(deps)
 
     await handler(
-        WithdrawClearanceTemplate(template_id=template_id),
+        WithdrawClearanceTemplate(reason="policy change", template_id=template_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -283,7 +284,7 @@ async def test_handler_threads_principal_id_onto_withdrawn_by() -> None:
     handler = withdraw_clearance_template.bind(deps)
 
     await handler(
-        WithdrawClearanceTemplate(template_id=template_id),
+        WithdrawClearanceTemplate(reason="policy change", template_id=template_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -304,7 +305,7 @@ async def test_handler_raises_cannot_withdraw_when_already_withdrawn() -> None:
 
     with pytest.raises(ClearanceTemplateCannotWithdrawError):
         await handler(
-            WithdrawClearanceTemplate(template_id=template_id),
+            WithdrawClearanceTemplate(reason="policy change", template_id=template_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -325,7 +326,7 @@ async def test_handler_raises_not_found_when_stream_is_empty() -> None:
     missing_template_id = uuid4()
     with pytest.raises(ClearanceTemplateNotFoundError):
         await handler(
-            WithdrawClearanceTemplate(template_id=missing_template_id),
+            WithdrawClearanceTemplate(reason="policy change", template_id=missing_template_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -345,7 +346,7 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
 
     with pytest.raises(UnauthorizedError) as exc_info:
         await handler(
-            WithdrawClearanceTemplate(template_id=template_id),
+            WithdrawClearanceTemplate(reason="policy change", template_id=template_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -363,7 +364,7 @@ async def test_handler_does_not_append_when_denied() -> None:
 
     with pytest.raises(UnauthorizedError):
         await handler(
-            WithdrawClearanceTemplate(template_id=template_id),
+            WithdrawClearanceTemplate(reason="policy change", template_id=template_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

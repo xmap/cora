@@ -326,7 +326,7 @@ async def test_model_deprecated_sets_reason_and_preserves_vendor_key(
     row = await _fetch_summary(db_pool, model_id)
     assert row is not None
     assert row["status"] == "Deprecated"
-    assert row["deprecation_reason"] == "superseded by ANT130-LZS"
+    assert row["deprecation_reason"] == "Superseded"
     assert row["manufacturer_name"] == "Aerotech"
     assert row["part_number"] == "ANT130-L"
     assert _decode_jsonb_array(row["declared_family_ids"]) == [str(family_id)]

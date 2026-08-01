@@ -9,6 +9,7 @@ class WithdrawClearanceTemplate:
     """Withdraw a clearance template (`Draft | Active | Deprecated -> Withdrawn`)."""
 
     template_id: UUID
+    reason: str
 
 
 __all__ = ["WithdrawClearanceTemplate"]

@@ -1,7 +1,8 @@
 """The `DeprecateFamily` command — intent dataclass for this slice.
 
 Multi-source transition: Defined | Versioned -> Deprecated. Single-
-field command (just family_id); no body at the API layer.
+Carries family_id plus a required closed
+`DeprecationReason`.
 """
 
 from dataclasses import dataclass

@@ -14,6 +14,7 @@ from cora.safety.features.withdraw_clearance_template.command import (
     WithdrawClearanceTemplate,
 )
 from cora.safety.features.withdraw_clearance_template.handler import Handler
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class WithdrawClearanceTemplateOutput(BaseModel):
@@ -37,10 +38,24 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
     async def withdraw_clearance_template_tool(  # pyright: ignore[reportUnusedFunction]
         ctx: Context[Any, Any, Any],
         template_id: Annotated[UUID, Field(description="Target template's id.")],
+        reason: Annotated[
+            str,
+            Field(
+                min_length=1,
+                max_length=REASON_MAX_LENGTH,
+                description=(
+                    "Why the template is being withdrawn. Free text: withdrawal "
+                    "causes are open-ended (superseded by a facility policy "
+                    "change, drafted in error, the hazard class no longer "
+                    "applies), unlike deprecation, where the reason decides "
+                    "whether prior data is trustworthy and the set is closed."
+                ),
+            ),
+        ],
     ) -> WithdrawClearanceTemplateOutput:
         handler = get_handler()
         await handler(
-            WithdrawClearanceTemplate(template_id=template_id),
+            WithdrawClearanceTemplate(template_id=template_id, reason=reason),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),
             surface_id=get_mcp_surface_id(),

@@ -612,7 +612,6 @@ def test_from_stored_prefers_new_families_snapshot_over_legacy_key() -> None:
         "PlanDefined",
         {
             "plan_id": str(plan_id),
-            "reason": "Superseded",
             "name": "DualKeyPlan",
             "practice_id": str(practice_id),
             "asset_ids": [str(asset_id)],

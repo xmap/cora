@@ -93,11 +93,21 @@ class ClearanceTemplateWithdrawn:
     Lifecycle terminal: no transition exits Withdrawn. Existing Clearance
     bindings unaffected; the PARTIAL UNIQUE INDEX on (facility_code, code)
     `WHERE status != 'Withdrawn'` lets a Withdrawn code be redefined.
+
+    `reason` is REQUIRED free text. Withdrawal is the harder of this
+    aggregate's two endings: `Deprecated` only stops recommending the
+    template, while this removes it from the address space and frees its
+    code for something else to claim. Under the terminal-reason rule
+    (expected endings stay quiet, interventions explain themselves) the
+    harder act cannot be the silent one. Free text rather than the closed
+    `DeprecationReason` because withdrawal causes are open-ended, the same
+    call made for `AssetDecommissioned`.
     """
 
     template_id: UUID
     occurred_at: datetime
     withdrawn_by: UUID
+    reason: str
 
 
 ClearanceTemplateEvent = (
@@ -181,11 +191,13 @@ def to_payload(event: ClearanceTemplateEvent) -> dict[str, Any]:
             template_id=template_id,
             occurred_at=occurred_at,
             withdrawn_by=withdrawn_by,
+            reason=reason,
         ):
             return {
                 "template_id": str(template_id),
                 "occurred_at": occurred_at.isoformat(),
                 "withdrawn_by": str(withdrawn_by),
+                "reason": reason,
             }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
@@ -249,6 +261,7 @@ def from_stored(stored: StoredEvent) -> ClearanceTemplateEvent:
                     template_id=UUID(payload["template_id"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                     withdrawn_by=UUID(payload["withdrawn_by"]),
+                    reason=payload["reason"],
                 ),
             )
         case _:

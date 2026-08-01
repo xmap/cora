@@ -2,7 +2,7 @@
 
 Deprecates an Agent (Defined or Versioned). Terminal: deprecated
 Agents cannot be revived. `reason` is a closed
-operator-supplied explanation (1-500 chars after trim if provided).
+required a closed `DeprecationReason` (Superseded / Defective / Obsolete).
 
 The deprecating actor's identity lives on the event envelope
 (`StoredEvent.principal_id`); no actor field on the command/event.

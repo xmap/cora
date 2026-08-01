@@ -2,7 +2,7 @@
 
 Pauses a `Versioned` Agent. Non-terminal: returns via
 `resume_agent`. `reason` is REQUIRED (1-500 chars after trim);
-mirrors `AgentDeprecationReason` validation bound.
+mirrors the shared `REASON_MAX_LENGTH` bound.
 
 The suspending actor's identity lives on the event envelope
 (`StoredEvent.principal_id`); no actor field on the command/event.

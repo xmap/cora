@@ -2,7 +2,7 @@
 
 Multi-source transition: Defined | Versioned -> Deprecated (terminal).
 Carries the target `assembly_id` plus an operator-supplied `reason`
-free-text breadcrumb (audit-log evidence; mirrors decommission_mount's
+closed `DeprecationReason` (audit-log evidence; unlike decommission_mount's
 reason field).
 
 Once Deprecated, the Assembly stream rejects further mutations:

@@ -1,10 +1,12 @@
-"""Why a versionable template stopped being recommended.
+"""Why something stopped being recommended.
 
-Kept in `cora.shared` (neutral) because the ten versionable templates span
-five BCs (Agent, Equipment, Recipe, Safety) and all answer the same question
-with the same closed vocabulary. Mirrors how bounded-text limits live in
-`cora.shared.text_bounds` and the consequence gate in
-`cora.shared.consequence`.
+Kept in `cora.shared` (neutral) because the eleven commands that carry it
+span four BCs (Agent, Equipment, Recipe, Safety) and all answer the same
+question with the same closed vocabulary. Ten are the versionable
+templates; the eleventh is `LanguageModel`, a catalog entry the facility
+withdraws approval for without ever being able to version it. Mirrors how
+bounded-text limits live in `cora.shared.text_bounds` and the consequence
+gate in `cora.shared.consequence`.
 
 ## Why closed, not operator free text
 
@@ -26,22 +28,32 @@ rejected: operators already pick from a small mental list."
 
 ## The three values
 
-The set is deliberately small and partitions on the consequence for prior
-data, not on the operator's narrative:
+The axis is WHAT HAPPENED to the thing. Each value also states what that
+means for data already produced under it, because that is what a reader
+needs, but the consequence is the payload of the answer rather than the
+question the set partitions on:
 
   - `Superseded`: a newer version of the same thing replaces it. Prior use
-    stands. This is the routine case and the expected default.
+    stands. The routine case and the expected default.
   - `Defective`: it was wrong. Prior use is suspect and may need review.
-    This is the value the whole enum exists to make findable.
+    The value the whole enum exists to make findable.
   - `Obsolete`: what it targeted no longer exists (the device class was
     retired, the facility stopped offering the technique). Prior use stands;
-    the template simply has nothing left to bind to.
+    there is simply nothing left to bind to.
+
+`Superseded` and `Obsolete` agree on the consequence and differ on the act,
+which is exactly why the axis is the act. An earlier draft of this docstring
+claimed the set partitioned on consequence and then listed two members with
+the same one; the 2026-08-01 gate review caught the contradiction. If the
+partition really were consequence, this would be a two-value enum and a
+retired device class would have to be reported as `Superseded`, which is a
+lie the operator would have to tell.
 
 Narrative detail beyond this belongs on a Caution or a Decision, both of
 which are built to carry prose and neither of which is load-bearing for
-replay. Extending this enum needs a new consequence-for-prior-data case, not
-a new shade of narrative; if two candidate values would leave a reader
-treating old data identically, they are one value.
+replay. Extending this enum needs a new ACT that a reader would treat
+differently, stated together with its consequence; a new shade of narrative
+on an existing act is not a new value.
 """
 
 from enum import StrEnum

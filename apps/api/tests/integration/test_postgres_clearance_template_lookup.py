@@ -106,7 +106,7 @@ async def _withdraw_template(db_pool: asyncpg.Pool, template_id: UUID) -> None:
     """Append a `ClearanceTemplateWithdrawn` event (any -> Withdrawn)."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4()])
     await withdraw_clearance_template.bind(deps)(
-        WithdrawClearanceTemplate(template_id=template_id),
+        WithdrawClearanceTemplate(reason="policy change", template_id=template_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

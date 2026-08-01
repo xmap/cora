@@ -31,7 +31,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             "RetirementAnnounced -> Deprecated). Terminal: the FACILITY "
             "withdrew its approval (policy, security, cost), independent of "
             "the vendor's lifecycle; deprecated entries cannot be revived. "
-            "`reason` is REQUIRED (1-500 chars): withdrawing approval is a "
+            "`reason` is REQUIRED and closed: withdrawing approval is a "
             "policy act the audit log must always carry context for."
         ),
     )

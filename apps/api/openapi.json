@@ -16737,6 +16737,23 @@
         "title": "WiredAssetItem",
         "type": "object"
       },
+      "WithdrawClearanceTemplateRequest": {
+        "description": "Body for `POST /clearance-templates/{template_id}/withdraw`.",
+        "properties": {
+          "reason": {
+            "description": "Why the template is being withdrawn. Free text: withdrawal causes are open-ended (superseded by a facility policy change, drafted in error, the hazard class no longer applies), unlike deprecation, where the reason decides whether prior data is trustworthy and the set is closed.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "WithdrawClearanceTemplateRequest",
+        "type": "object"
+      },
       "WithdrawEditionRequest": {
         "description": "Request body for `POST /editions/{edition_id}/withdraw`.",
         "properties": {
@@ -18793,16 +18810,6 @@
           "204": {
             "description": "Successful Response"
           },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Reason is empty / whitespace-only / over-cap after trim."
-          },
           "403": {
             "content": {
               "application/json": {
@@ -19025,7 +19032,7 @@
     },
     "/agents/{agent_id}/target-plan": {
       "post": {
-        "operationId": "post_agents_set_target_plan_agents__agent_id__target_plan_post",
+        "operationId": "post_agents_update_target_plan_agents__agent_id__target_plan_post",
         "parameters": [
           {
             "description": "Target agent's id.",
@@ -26740,6 +26747,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawClearanceTemplateRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "204": {
             "description": "Successful Response"
@@ -34909,16 +34926,6 @@
           "204": {
             "description": "Successful Response"
           },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Reason is empty / whitespace-only / over-cap after trim."
-          },
           "403": {
             "content": {
               "application/json": {
@@ -36158,16 +36165,6 @@
         "responses": {
           "204": {
             "description": "Successful Response"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Domain invariant violated (for example whitespace-only reason after trimming)."
           },
           "403": {
             "content": {

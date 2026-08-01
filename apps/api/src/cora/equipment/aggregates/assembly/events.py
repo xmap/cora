@@ -196,7 +196,7 @@ class AssemblyDeprecated:
     calls reject. New revisions must fork via `define_assembly` with
     a fresh id.
 
-    `reason` is operator-supplied free text (audit-log breadcrumb).
+    `reason` is a required `DeprecationReason` (closed vocabulary).
     """
 
     assembly_id: UUID

@@ -8,8 +8,9 @@ Distinct from `retire_language_model` because the two terminals
 answer different audit questions (who ended this model's service
 life, the vendor or us?).
 
-`reason` is REQUIRED (1-500 chars after trim): withdrawing approval
-is a policy act the audit log must always carry context for.
+`reason` is REQUIRED, a closed `DeprecationReason` (Superseded /
+Defective / Obsolete): withdrawing approval is a policy act the
+audit log must always carry context for.
 
 The deprecating actor's identity lives on the event envelope
 (`StoredEvent.principal_id`); no actor field on the command/event.

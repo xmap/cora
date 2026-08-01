@@ -66,7 +66,7 @@ router = APIRouter(tags=["agent"])
     },
     summary="Update or clear an autonomous Agent's target Plan (PUT semantics; null clears)",
 )
-async def post_agents_set_target_plan(
+async def post_agents_update_target_plan(
     agent_id: Annotated[UUID, Path(description="Target agent's id.")],
     body: UpdateAgentTargetPlanRequest,
     handler: Annotated[Handler, Depends(_get_handler)],

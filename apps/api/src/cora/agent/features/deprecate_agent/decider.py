@@ -11,8 +11,6 @@ deprecating an already-Deprecated Agent raises
   - State must not be None -> `AgentNotFoundError`
   - Current status must be `Defined`, `Versioned`, or `Suspended` ->
     `AgentCannotDeprecateError`
-    1-500 chars after trim -> `InvalidAgentDeprecationReasonError`.
-    None is allowed.
 """
 
 from datetime import datetime

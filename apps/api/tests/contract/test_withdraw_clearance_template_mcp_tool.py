@@ -71,7 +71,7 @@ def _withdraw_template_via_tool(
             "method": "tools/call",
             "params": {
                 "name": "withdraw_clearance_template",
-                "arguments": {"template_id": str(template_id)},
+                "arguments": {"template_id": str(template_id), "reason": "policy change"},
             },
         },
         headers=session_headers,

@@ -41,7 +41,7 @@ SET status = 'Active',
 WHERE allocation_id = $1
 """
 
-_UPDATE_CEILING_UPDATED_SQL = """
+_UPDATE_CEILING_SQL = """
 UPDATE proj_budget_allocation_summary
 SET ceiling_usd = $2,
     updated_at = now()
@@ -103,7 +103,7 @@ class AllocationSummaryProjection:
                 )
             case "AllocationCeilingUpdated":
                 await conn.execute(
-                    _UPDATE_CEILING_UPDATED_SQL,
+                    _UPDATE_CEILING_SQL,
                     UUID(event.payload["allocation_id"]),
                     event.payload["ceiling_usd"],
                 )

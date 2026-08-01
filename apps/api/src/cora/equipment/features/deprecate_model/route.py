@@ -1,7 +1,7 @@
 """HTTP route for the `deprecate_model` slice.
 
 Action endpoint at `POST /models/{model_id}/deprecation`. Body carries
-the operator-supplied `reason` (1-500 chars, trimmed at the VO).
+the required `reason`, a closed `DeprecationReason` (Superseded / Defective / Obsolete).
 204 No Content on success. Once deprecated the Model rejects further
 versioning or family edits at the decider; existing Assets bound to
 the Model continue to function (deprecation is an authoring signal,
@@ -57,12 +57,6 @@ router = APIRouter(tags=["equipment"])
     "/models/{model_id}/deprecation",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
-        status.HTTP_400_BAD_REQUEST: {
-            "model": ErrorResponse,
-            "description": (
-                "Domain invariant violated (for example whitespace-only reason after trimming)."
-            ),
-        },
         status.HTTP_403_FORBIDDEN: {
             "model": ErrorResponse,
             "description": "Authorize port denied the command.",

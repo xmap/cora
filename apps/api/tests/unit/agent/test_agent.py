@@ -19,7 +19,6 @@ from cora.agent.aggregates.agent import (
     Agent,
     AgentCanonicalUri,
     AgentCapability,
-    AgentDeprecationReason,
     AgentDescription,
     AgentKind,
     AgentName,
@@ -27,7 +26,6 @@ from cora.agent.aggregates.agent import (
     AgentVersion,
     InvalidAgentCanonicalUriError,
     InvalidAgentCapabilityError,
-    InvalidAgentDeprecationReasonError,
     InvalidAgentDescriptionError,
     InvalidAgentKindError,
     InvalidAgentNameError,
@@ -165,7 +163,7 @@ def test_agent_canonical_uri_rejects_over_cap() -> None:
         AgentCanonicalUri("https://" + "x" * AGENT_CANONICAL_URI_MAX_LENGTH)
 
 
-# ---------- AgentCapability + AgentDeprecationReason ----------
+# ---------- AgentCapability ----------
 
 
 @pytest.mark.unit
@@ -183,26 +181,6 @@ def test_agent_capability_rejects_empty() -> None:
 def test_agent_capability_rejects_over_cap() -> None:
     with pytest.raises(InvalidAgentCapabilityError):
         AgentCapability("x" * (AGENT_CAPABILITY_MAX_LENGTH + 1))
-
-
-@pytest.mark.unit
-def test_agent_deprecation_reason_accepts_normal_string() -> None:
-    assert AgentDeprecationReason("model fingerprint changed").value == "model fingerprint changed"
-
-
-@pytest.mark.unit
-def test_agent_deprecation_reason_rejects_empty() -> None:
-    with pytest.raises(InvalidAgentDeprecationReasonError):
-        AgentDeprecationReason("")
-
-
-@pytest.mark.unit
-def test_agent_deprecation_reason_rejects_over_cap() -> None:
-    with pytest.raises(InvalidAgentDeprecationReasonError):
-        AgentDeprecationReason("x" * (REASON_MAX_LENGTH + 1))
-
-
-# ---------- ModelRef ----------
 
 
 @pytest.mark.unit
