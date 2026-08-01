@@ -28,6 +28,7 @@ from cora.recipe.aggregates.plan.events import (
 )
 from cora.recipe.features import deprecate_plan
 from cora.recipe.features.deprecate_plan import DeprecatePlan
+from cora.shared.deprecation import DeprecationReason
 from tests.unit._helpers import build_deps
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -64,7 +65,7 @@ async def _seed_plan(store: InMemoryEventStore, plan_id: UUID) -> None:
 
 async def _seed_plan_deprecated(store: InMemoryEventStore, plan_id: UUID) -> None:
     await _seed_plan(store, plan_id)
-    deprecated = PlanDeprecated(plan_id=plan_id, occurred_at=_NOW)
+    deprecated = PlanDeprecated(reason="Superseded", plan_id=plan_id, occurred_at=_NOW)
     new_event = to_new_event(
         event_type=event_type_name(deprecated),
         payload=to_payload(deprecated),
@@ -86,7 +87,7 @@ async def test_handler_returns_none_on_success() -> None:
     deps = build_deps(ids=[_DEPRECATED_EVENT_ID], now=_NOW, event_store=store)
 
     result = await deprecate_plan.bind(deps)(
-        DeprecatePlan(plan_id=_PLAN_ID),
+        DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=_PLAN_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -100,7 +101,7 @@ async def test_handler_appends_plan_deprecated_event() -> None:
     deps = build_deps(ids=[_DEPRECATED_EVENT_ID], now=_NOW, event_store=store)
 
     await deprecate_plan.bind(deps)(
-        DeprecatePlan(plan_id=_PLAN_ID),
+        DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=_PLAN_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -120,7 +121,7 @@ async def test_handler_raises_plan_not_found_when_plan_does_not_exist() -> None:
 
     with pytest.raises(PlanNotFoundError):
         await handler(
-            DeprecatePlan(plan_id=_PLAN_ID),
+            DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=_PLAN_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -135,7 +136,7 @@ async def test_handler_raises_cannot_deprecate_when_already_deprecated() -> None
 
     with pytest.raises(PlanCannotDeprecateError):
         await deprecate_plan.bind(deps)(
-            DeprecatePlan(plan_id=_PLAN_ID),
+            DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=_PLAN_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -149,7 +150,7 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
 
     with pytest.raises(UnauthorizedError) as exc_info:
         await deprecate_plan.bind(deny_deps)(
-            DeprecatePlan(plan_id=_PLAN_ID),
+            DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=_PLAN_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -164,7 +165,7 @@ async def test_handler_propagates_causation_id_to_appended_event() -> None:
     deps = build_deps(ids=[_DEPRECATED_EVENT_ID], now=_NOW, event_store=store)
 
     await deprecate_plan.bind(deps)(
-        DeprecatePlan(plan_id=_PLAN_ID),
+        DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=_PLAN_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         causation_id=causation,

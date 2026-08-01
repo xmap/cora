@@ -17,6 +17,7 @@ from cora.recipe.aggregates.recipe import (
 )
 from cora.recipe.features import deprecate_recipe
 from cora.recipe.features.deprecate_recipe import DeprecateRecipe
+from cora.shared.deprecation import DeprecationReason
 from tests.unit._helpers import build_deps
 
 _NOW = datetime(2026, 6, 2, 12, 0, 0, tzinfo=UTC)
@@ -62,7 +63,7 @@ async def test_handler_appends_recipe_deprecated_event() -> None:
     handler = deprecate_recipe.bind(deps)
 
     await handler(
-        DeprecateRecipe(recipe_id=_RECIPE_ID),
+        DeprecateRecipe(reason=DeprecationReason.SUPERSEDED, recipe_id=_RECIPE_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -81,7 +82,11 @@ async def test_handler_passes_through_replaced_by_recipe_id() -> None:
 
     successor = UUID("01900000-0000-7000-8000-aceaceaceace")
     await handler(
-        DeprecateRecipe(recipe_id=_RECIPE_ID, replaced_by_recipe_id=successor),
+        DeprecateRecipe(
+            reason=DeprecationReason.SUPERSEDED,
+            recipe_id=_RECIPE_ID,
+            replaced_by_recipe_id=successor,
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -99,7 +104,7 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
 
     with pytest.raises(UnauthorizedError):
         await handler(
-            DeprecateRecipe(recipe_id=_RECIPE_ID),
+            DeprecateRecipe(reason=DeprecationReason.SUPERSEDED, recipe_id=_RECIPE_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -113,7 +118,7 @@ async def test_handler_raises_not_found_when_recipe_stream_empty() -> None:
 
     with pytest.raises(RecipeNotFoundError):
         await handler(
-            DeprecateRecipe(recipe_id=_RECIPE_ID),
+            DeprecateRecipe(reason=DeprecationReason.SUPERSEDED, recipe_id=_RECIPE_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

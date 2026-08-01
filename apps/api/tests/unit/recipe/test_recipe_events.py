@@ -56,7 +56,7 @@ def test_event_type_name_returns_class_name_for_each_arm() -> None:
     rid, cid = uuid4(), uuid4()
     defn = _make_defined(rid, cid)
     ver = RecipeVersioned(recipe_id=rid, version_tag="v1", steps=_steps(), occurred_at=_NOW)
-    dep = RecipeDeprecated(recipe_id=rid, occurred_at=_NOW)
+    dep = RecipeDeprecated(reason="Superseded", recipe_id=rid, occurred_at=_NOW)
     assert event_type_name(defn) == "RecipeDefined"
     assert event_type_name(ver) == "RecipeVersioned"
     assert event_type_name(dep) == "RecipeDeprecated"
@@ -88,8 +88,10 @@ def test_to_payload_recipe_versioned_serializes_version_tag_and_steps() -> None:
 @pytest.mark.unit
 def test_to_payload_recipe_deprecated_serializes_replaced_by_or_none() -> None:
     rid, succ = uuid4(), uuid4()
-    dep_none = RecipeDeprecated(recipe_id=rid, occurred_at=_NOW)
-    dep_with = RecipeDeprecated(recipe_id=rid, replaced_by_recipe_id=succ, occurred_at=_NOW)
+    dep_none = RecipeDeprecated(reason="Superseded", recipe_id=rid, occurred_at=_NOW)
+    dep_with = RecipeDeprecated(
+        reason="Superseded", recipe_id=rid, replaced_by_recipe_id=succ, occurred_at=_NOW
+    )
     assert to_payload(dep_none)["replaced_by_recipe_id"] is None
     assert to_payload(dep_with)["replaced_by_recipe_id"] == str(succ)
 
@@ -115,7 +117,9 @@ def test_from_stored_round_trips_recipe_versioned() -> None:
 @pytest.mark.unit
 def test_from_stored_round_trips_recipe_deprecated_with_replacement() -> None:
     rid, succ = uuid4(), uuid4()
-    original = RecipeDeprecated(recipe_id=rid, replaced_by_recipe_id=succ, occurred_at=_NOW)
+    original = RecipeDeprecated(
+        reason="Superseded", recipe_id=rid, replaced_by_recipe_id=succ, occurred_at=_NOW
+    )
     stored = _stored("RecipeDeprecated", to_payload(original))
     rebuilt = from_stored(stored)
     assert rebuilt == original
@@ -124,7 +128,7 @@ def test_from_stored_round_trips_recipe_deprecated_with_replacement() -> None:
 @pytest.mark.unit
 def test_from_stored_round_trips_recipe_deprecated_without_replacement() -> None:
     rid = uuid4()
-    original = RecipeDeprecated(recipe_id=rid, occurred_at=_NOW)
+    original = RecipeDeprecated(reason="Superseded", recipe_id=rid, occurred_at=_NOW)
     stored = _stored("RecipeDeprecated", to_payload(original))
     rebuilt = from_stored(stored)
     assert rebuilt == original

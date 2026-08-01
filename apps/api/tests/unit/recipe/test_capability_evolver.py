@@ -117,6 +117,7 @@ def test_capability_deprecated_preserves_declarative_contract() -> None:
     deprecated = evolve(
         initial,
         CapabilityDeprecated(
+            reason="Superseded",
             capability_id=cid,
             replaced_by_capability_id=None,
             occurred_at=_NOW,
@@ -137,6 +138,7 @@ def test_capability_deprecated_with_replaced_by_pointer() -> None:
     deprecated = evolve(
         initial,
         CapabilityDeprecated(
+            reason="Superseded",
             capability_id=cid,
             replaced_by_capability_id=successor,
             occurred_at=_NOW,
@@ -182,6 +184,7 @@ def test_fold_full_lifecycle_chain() -> None:
                 occurred_at=_NOW,
             ),
             CapabilityDeprecated(
+                reason="Superseded",
                 capability_id=cid,
                 replaced_by_capability_id=None,
                 occurred_at=_NOW,
@@ -215,5 +218,5 @@ def test_deprecated_event_on_empty_state_raises() -> None:
     with pytest.raises(ValueError, match="CapabilityDeprecated"):
         evolve(
             None,
-            CapabilityDeprecated(capability_id=uuid4(), occurred_at=_NOW),
+            CapabilityDeprecated(reason="Superseded", capability_id=uuid4(), occurred_at=_NOW),
         )

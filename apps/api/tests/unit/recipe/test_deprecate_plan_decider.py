@@ -20,6 +20,7 @@ from cora.recipe.aggregates.plan import (
 )
 from cora.recipe.features import deprecate_plan
 from cora.recipe.features.deprecate_plan import DeprecatePlan
+from cora.shared.deprecation import DeprecationReason
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
 
@@ -50,10 +51,10 @@ def test_decide_emits_plan_deprecated_for_each_allowed_source_status(
     state = _plan(status=source)
     events = deprecate_plan.decide(
         state=state,
-        command=DeprecatePlan(plan_id=state.id),
+        command=DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=state.id),
         now=_NOW,
     )
-    assert events == [PlanDeprecated(plan_id=state.id, occurred_at=_NOW)]
+    assert events == [PlanDeprecated(reason="Superseded", plan_id=state.id, occurred_at=_NOW)]
 
 
 @pytest.mark.unit
@@ -62,7 +63,7 @@ def test_decide_raises_plan_not_found_when_state_is_none() -> None:
     with pytest.raises(PlanNotFoundError) as exc_info:
         deprecate_plan.decide(
             state=None,
-            command=DeprecatePlan(plan_id=target_id),
+            command=DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=target_id),
             now=_NOW,
         )
     assert exc_info.value.plan_id == target_id
@@ -75,7 +76,7 @@ def test_decide_raises_cannot_deprecate_when_already_deprecated() -> None:
     with pytest.raises(PlanCannotDeprecateError) as exc_info:
         deprecate_plan.decide(
             state=state,
-            command=DeprecatePlan(plan_id=state.id),
+            command=DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=state.id),
             now=_NOW,
         )
     assert exc_info.value.plan_id == state.id
@@ -88,7 +89,7 @@ def test_decide_error_message_lists_both_allowed_source_statuses() -> None:
     with pytest.raises(PlanCannotDeprecateError) as exc_info:
         deprecate_plan.decide(
             state=state,
-            command=DeprecatePlan(plan_id=state.id),
+            command=DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=state.id),
             now=_NOW,
         )
     msg = str(exc_info.value)
@@ -99,7 +100,7 @@ def test_decide_error_message_lists_both_allowed_source_statuses() -> None:
 @pytest.mark.unit
 def test_decide_is_pure_same_inputs_same_outputs() -> None:
     state = _plan()
-    command = DeprecatePlan(plan_id=state.id)
+    command = DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=state.id)
     first = deprecate_plan.decide(state=state, command=command, now=_NOW)
     second = deprecate_plan.decide(state=state, command=command, now=_NOW)
     assert first == second

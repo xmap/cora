@@ -129,7 +129,7 @@ def test_role_bindings_preserved_through_plan_deprecated() -> None:
         [
             _genesis(plan_id, a1),
             PlanRoleBound(plan_id=plan_id, role_name="detector", asset_id=a1, occurred_at=_NOW),
-            PlanDeprecated(plan_id=plan_id, occurred_at=_NOW),
+            PlanDeprecated(reason="Superseded", plan_id=plan_id, occurred_at=_NOW),
         ]
     )
     assert state is not None

@@ -263,7 +263,7 @@ def test_evolve_method_deprecated_flips_status_and_preserves_version() -> None:
     )
     deprecated = evolve(
         versioned,
-        MethodDeprecated(method_id=method_id, occurred_at=_NOW),
+        MethodDeprecated(reason="Superseded", method_id=method_id, occurred_at=_NOW),
     )
     assert deprecated.status is MethodStatus.DEPRECATED
     assert deprecated.version == "v3"
@@ -281,7 +281,7 @@ def test_evolve_method_deprecated_from_defined_preserves_null_version() -> None:
     )
     deprecated = evolve(
         defined,
-        MethodDeprecated(method_id=defined.id, occurred_at=_NOW),
+        MethodDeprecated(reason="Superseded", method_id=defined.id, occurred_at=_NOW),
     )
     assert deprecated.status is MethodStatus.DEPRECATED
     assert deprecated.version is None
@@ -290,7 +290,7 @@ def test_evolve_method_deprecated_from_defined_preserves_null_version() -> None:
 @pytest.mark.unit
 def test_evolve_method_deprecated_on_empty_state_raises() -> None:
     with pytest.raises(ValueError, match="cannot be applied to empty state"):
-        evolve(None, MethodDeprecated(method_id=uuid4(), occurred_at=_NOW))
+        evolve(None, MethodDeprecated(reason="Superseded", method_id=uuid4(), occurred_at=_NOW))
 
 
 @pytest.mark.unit
@@ -329,7 +329,7 @@ def test_fold_define_deprecate_yields_deprecated_method() -> None:
     state = fold(
         [
             MethodDefined(method_id=method_id, name="X", needed_family_ids=(), occurred_at=_NOW),
-            MethodDeprecated(method_id=method_id, occurred_at=_NOW),
+            MethodDeprecated(reason="Superseded", method_id=method_id, occurred_at=_NOW),
         ]
     )
     assert state is not None
@@ -345,7 +345,7 @@ def test_fold_define_version_deprecate_preserves_version_through_deprecation() -
         [
             MethodDefined(method_id=method_id, name="X", needed_family_ids=(), occurred_at=_NOW),
             MethodVersioned(method_id=method_id, version_tag="v2", occurred_at=_NOW),
-            MethodDeprecated(method_id=method_id, occurred_at=_NOW),
+            MethodDeprecated(reason="Superseded", method_id=method_id, occurred_at=_NOW),
         ]
     )
     assert state is not None
@@ -407,7 +407,9 @@ def test_evolve_method_deprecated_preserves_content_hash() -> None:
         version="v2",
         content_hash=h,
     )
-    deprecated = evolve(versioned, MethodDeprecated(method_id=method_id, occurred_at=_NOW))
+    deprecated = evolve(
+        versioned, MethodDeprecated(reason="Superseded", method_id=method_id, occurred_at=_NOW)
+    )
     assert deprecated.content_hash == h
 
 
@@ -583,7 +585,9 @@ def test_evolve_method_deprecated_preserves_parameters_schema() -> None:
         version="v1",
         parameters_schema=_SCHEMA_A,
     )
-    deprecated = evolve(state, MethodDeprecated(method_id=state.id, occurred_at=_NOW))
+    deprecated = evolve(
+        state, MethodDeprecated(reason="Superseded", method_id=state.id, occurred_at=_NOW)
+    )
     assert deprecated.parameters_schema == _SCHEMA_A
 
 
@@ -691,7 +695,9 @@ def test_evolve_method_versioned_preserves_compute_classification() -> None:
 def test_evolve_method_deprecated_preserves_compute_classification() -> None:
     method_id = uuid4()
     prior = _defined_with_compute(method_id, status=MethodStatus.VERSIONED, version="v1")
-    deprecated = evolve(prior, MethodDeprecated(method_id=method_id, occurred_at=_NOW))
+    deprecated = evolve(
+        prior, MethodDeprecated(reason="Superseded", method_id=method_id, occurred_at=_NOW)
+    )
     assert deprecated.execution_pattern is ExecutionPattern.ITERATIVE
     assert deprecated.monotone_quality is True
     assert deprecated.resumable_from_checkpoint is True
@@ -795,7 +801,9 @@ def test_evolve_method_versioned_preserves_needed_input_kinds() -> None:
 def test_evolve_method_deprecated_preserves_needed_input_kinds() -> None:
     method_id = uuid4()
     prior = _defined_with_input_kinds(method_id, status=MethodStatus.VERSIONED, version="v1")
-    deprecated = evolve(prior, MethodDeprecated(method_id=method_id, occurred_at=_NOW))
+    deprecated = evolve(
+        prior, MethodDeprecated(reason="Superseded", method_id=method_id, occurred_at=_NOW)
+    )
     assert deprecated.needed_input_kinds == _INPUT_KINDS
 
 

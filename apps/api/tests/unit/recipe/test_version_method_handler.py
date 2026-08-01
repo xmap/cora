@@ -22,6 +22,7 @@ from cora.recipe.features import define_method, deprecate_method, version_method
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.deprecate_method import DeprecateMethod
 from cora.recipe.features.version_method import VersionMethod
+from cora.shared.deprecation import DeprecationReason
 from tests.unit._helpers import build_deps, seed_capability
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -164,7 +165,7 @@ async def test_handler_raises_cannot_version_when_deprecated() -> None:
     method_id = await _define_method_helper(deps)
 
     await deprecate_method.bind(deps)(
-        DeprecateMethod(method_id=method_id),
+        DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

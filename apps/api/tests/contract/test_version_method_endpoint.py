@@ -78,7 +78,7 @@ def test_post_version_method_returns_404_when_method_does_not_exist() -> None:
 def test_post_version_method_returns_409_when_deprecated() -> None:
     with TestClient(create_app()) as client:
         method_id = _define_method(client)
-        deprecate = client.post(f"/methods/{method_id}/deprecate")
+        deprecate = client.post(f"/methods/{method_id}/deprecate", json={"reason": "Superseded"})
         assert deprecate.status_code == 204
         response = client.post(f"/methods/{method_id}/version", json={"version_tag": "v2"})
     assert response.status_code == 409

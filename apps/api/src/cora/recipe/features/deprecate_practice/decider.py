@@ -42,4 +42,4 @@ def decide(
         raise PracticeNotFoundError(command.practice_id)
     if state.status not in _DEPRECATABLE_STATUSES:
         raise PracticeCannotDeprecateError(state.id, current_status=state.status)
-    return [PracticeDeprecated(practice_id=state.id, occurred_at=now)]
+    return [PracticeDeprecated(practice_id=state.id, reason=command.reason.value, occurred_at=now)]

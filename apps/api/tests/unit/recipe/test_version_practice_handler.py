@@ -25,6 +25,7 @@ from cora.recipe.features import (
 from cora.recipe.features.define_practice import DefinePractice
 from cora.recipe.features.deprecate_practice import DeprecatePractice
 from cora.recipe.features.version_practice import VersionPractice
+from cora.shared.deprecation import DeprecationReason
 from tests.unit._helpers import build_deps
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -166,7 +167,7 @@ async def test_handler_raises_cannot_version_when_deprecated() -> None:
     practice_id = await _define_practice_helper(deps)
 
     await deprecate_practice.bind(deps)(
-        DeprecatePractice(practice_id=practice_id),
+        DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -20,6 +20,7 @@ from cora.recipe.features import define_method, deprecate_method, version_method
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.deprecate_method import DeprecateMethod
 from cora.recipe.features.version_method import VersionMethod
+from cora.shared.deprecation import DeprecationReason
 from tests.unit._helpers import build_deps, seed_capability
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -64,7 +65,7 @@ async def test_handler_returns_none_on_success() -> None:
     method_id = await _define_method_helper(deps)
 
     result = await deprecate_method.bind(deps)(
-        DeprecateMethod(method_id=method_id),
+        DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -83,7 +84,7 @@ async def test_handler_appends_method_deprecated_event_from_defined() -> None:
     method_id = await _define_method_helper(deps)
 
     await deprecate_method.bind(deps)(
-        DeprecateMethod(method_id=method_id),
+        DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -116,7 +117,7 @@ async def test_handler_appends_method_deprecated_event_from_versioned() -> None:
         correlation_id=_CORRELATION_ID,
     )
     await deprecate_method.bind(deps)(
-        DeprecateMethod(method_id=method_id),
+        DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -141,7 +142,7 @@ async def test_handler_raises_method_not_found_when_method_does_not_exist() -> N
 
     with pytest.raises(MethodNotFoundError):
         await handler(
-            DeprecateMethod(method_id=_METHOD_ID),
+            DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=_METHOD_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -160,13 +161,13 @@ async def test_handler_raises_cannot_deprecate_when_already_deprecated() -> None
 
     handler = deprecate_method.bind(deps)
     await handler(
-        DeprecateMethod(method_id=method_id),
+        DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     with pytest.raises(MethodCannotDeprecateError):
         await handler(
-            DeprecateMethod(method_id=method_id),
+            DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -190,7 +191,7 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
     )
     with pytest.raises(UnauthorizedError) as exc_info:
         await deprecate_method.bind(deny_deps)(
-            DeprecateMethod(method_id=method_id),
+            DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -209,7 +210,7 @@ async def test_handler_propagates_causation_id_to_appended_event() -> None:
     method_id = await _define_method_helper(deps)
 
     await deprecate_method.bind(deps)(
-        DeprecateMethod(method_id=method_id),
+        DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         causation_id=causation,

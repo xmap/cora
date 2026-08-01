@@ -108,7 +108,7 @@ def test_mcp_version_practice_tool_returns_iserror_when_deprecated() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_practice",
-                    "arguments": {"practice_id": str(practice_id)},
+                    "arguments": {"practice_id": str(practice_id), "reason": "Superseded"},
                 },
             },
             headers=headers,

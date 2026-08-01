@@ -130,6 +130,7 @@ class PlanDeprecated:
     """
 
     plan_id: UUID
+    reason: str
     occurred_at: datetime
 
 
@@ -323,9 +324,14 @@ def to_payload(event: PlanEvent) -> dict[str, Any]:
             if content_hash is not None:
                 payload["content_hash"] = content_hash
             return payload
-        case PlanDeprecated(plan_id=plan_id, occurred_at=occurred_at):
+        case PlanDeprecated(
+            plan_id=plan_id,
+            reason=reason,
+            occurred_at=occurred_at,
+        ):
             return {
                 "plan_id": str(plan_id),
+                "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
             }
         case PlanDefaultParametersUpdated(
@@ -453,6 +459,7 @@ def from_stored(stored: StoredEvent) -> PlanEvent:
                 "PlanDeprecated",
                 lambda: PlanDeprecated(
                     plan_id=UUID(payload["plan_id"]),
+                    reason=payload["reason"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )

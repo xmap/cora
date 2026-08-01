@@ -14,10 +14,13 @@ time when binding to a Deprecated Capability.
 from dataclasses import dataclass
 from uuid import UUID
 
+from cora.shared.deprecation import DeprecationReason
+
 
 @dataclass(frozen=True)
 class DeprecateCapability:
     """Mark an existing Capability as Deprecated, optionally pointing at a successor."""
 
     capability_id: UUID
+    reason: DeprecationReason
     replaced_by_capability_id: UUID | None = None

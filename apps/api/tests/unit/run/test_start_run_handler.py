@@ -256,7 +256,7 @@ async def _seed_plan(
         command_name="DefinePlan",
     )
     if deprecated:
-        deprecated_event = PlanDeprecated(plan_id=plan_id, occurred_at=_NOW)
+        deprecated_event = PlanDeprecated(reason="Superseded", plan_id=plan_id, occurred_at=_NOW)
         await _append(
             store,
             stream_type="Plan",

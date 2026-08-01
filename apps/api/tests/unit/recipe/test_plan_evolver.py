@@ -225,7 +225,7 @@ def test_evolve_plan_deprecated_flips_status_and_preserves_version() -> None:
     )
     deprecated = evolve(
         versioned,
-        PlanDeprecated(plan_id=plan_id, occurred_at=_NOW),
+        PlanDeprecated(reason="Superseded", plan_id=plan_id, occurred_at=_NOW),
     )
     assert deprecated.status is PlanStatus.DEPRECATED
     assert deprecated.version == "v3"
@@ -243,7 +243,9 @@ def test_evolve_plan_deprecated_from_defined_preserves_null_version() -> None:
         asset_ids=frozenset({uuid4()}),
         status=PlanStatus.DEFINED,
     )
-    deprecated = evolve(defined, PlanDeprecated(plan_id=defined.id, occurred_at=_NOW))
+    deprecated = evolve(
+        defined, PlanDeprecated(reason="Superseded", plan_id=defined.id, occurred_at=_NOW)
+    )
     assert deprecated.status is PlanStatus.DEPRECATED
     assert deprecated.version is None
 
@@ -251,7 +253,7 @@ def test_evolve_plan_deprecated_from_defined_preserves_null_version() -> None:
 @pytest.mark.unit
 def test_evolve_plan_deprecated_on_empty_state_raises() -> None:
     with pytest.raises(ValueError, match="cannot be applied to empty state"):
-        evolve(None, PlanDeprecated(plan_id=uuid4(), occurred_at=_NOW))
+        evolve(None, PlanDeprecated(reason="Superseded", plan_id=uuid4(), occurred_at=_NOW))
 
 
 @pytest.mark.unit
@@ -293,7 +295,7 @@ def test_fold_define_version_deprecate_preserves_version_through_deprecation() -
         [
             _plan_defined(plan_id=plan_id),
             PlanVersioned(plan_id=plan_id, version_tag="v2", occurred_at=_NOW),
-            PlanDeprecated(plan_id=plan_id, occurred_at=_NOW),
+            PlanDeprecated(reason="Superseded", plan_id=plan_id, occurred_at=_NOW),
         ]
     )
     assert state is not None
@@ -447,7 +449,9 @@ def test_evolve_plan_deprecated_preserves_method_id_and_default_parameters() -> 
         method_id=method_id,
         default_parameters=_DEFAULTS_A,
     )
-    deprecated = evolve(state, PlanDeprecated(plan_id=state.id, occurred_at=_NOW))
+    deprecated = evolve(
+        state, PlanDeprecated(reason="Superseded", plan_id=state.id, occurred_at=_NOW)
+    )
     assert deprecated.method_id == method_id
     assert deprecated.default_parameters == _DEFAULTS_A
 

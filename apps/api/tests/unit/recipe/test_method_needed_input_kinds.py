@@ -334,7 +334,7 @@ def test_evolve_method_versioned_preserves_needed_input_kinds() -> None:
 @pytest.mark.unit
 def test_evolve_method_deprecated_preserves_needed_input_kinds() -> None:
     seed = _seed_state(frozenset({"raw-projections", "flat-field"}))
-    after = evolve(seed, MethodDeprecated(method_id=seed.id, occurred_at=_NOW))
+    after = evolve(seed, MethodDeprecated(reason="Superseded", method_id=seed.id, occurred_at=_NOW))
     assert after.needed_input_kinds == frozenset({"raw-projections", "flat-field"})
     assert after.status is MethodStatus.DEPRECATED
 
@@ -374,7 +374,7 @@ def test_fold_full_lifecycle_preserves_needed_input_kinds() -> None:
                 parameters_schema={"type": "object"},
                 occurred_at=_NOW,
             ),
-            MethodDeprecated(method_id=method_id, occurred_at=_NOW),
+            MethodDeprecated(reason="Superseded", method_id=method_id, occurred_at=_NOW),
         ]
     )
     assert state is not None

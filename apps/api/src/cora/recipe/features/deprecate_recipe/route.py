@@ -14,6 +14,7 @@ from cora.infrastructure.routing import (
 )
 from cora.recipe.features.deprecate_recipe.command import DeprecateRecipe
 from cora.recipe.features.deprecate_recipe.handler import Handler
+from cora.shared.deprecation import DeprecationReason
 
 
 class DeprecateRecipeRequest(BaseModel):
@@ -23,6 +24,15 @@ class DeprecateRecipeRequest(BaseModel):
     Recipe. Omit entirely for deprecated-without-replacement.
     """
 
+    reason: DeprecationReason = Field(
+        ...,
+        description=(
+            "Why the template is no longer recommended. `Superseded`: a "
+            "newer version replaces it, prior use stands. `Defective`: it "
+            "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+            "no longer exists."
+        ),
+    )
     replaced_by_recipe_id: UUID | None = Field(
         default=None,
         description=(
@@ -73,6 +83,7 @@ async def post_recipes_deprecate(
     await handler(
         DeprecateRecipe(
             recipe_id=recipe_id,
+            reason=body.reason,
             replaced_by_recipe_id=body.replaced_by_recipe_id,
         ),
         principal_id=principal_id,

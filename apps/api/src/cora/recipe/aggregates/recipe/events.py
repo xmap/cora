@@ -102,6 +102,7 @@ class RecipeDeprecated:
     """
 
     recipe_id: UUID
+    reason: str
     occurred_at: datetime
     replaced_by_recipe_id: UUID | None = None
 
@@ -150,11 +151,13 @@ def to_payload(event: RecipeEvent) -> dict[str, Any]:
             }
         case RecipeDeprecated(
             recipe_id=recipe_id,
+            reason=reason,
             replaced_by_recipe_id=replaced_by_recipe_id,
             occurred_at=occurred_at,
         ):
             return {
                 "recipe_id": str(recipe_id),
+                "reason": reason,
                 "replaced_by_recipe_id": (
                     str(replaced_by_recipe_id) if replaced_by_recipe_id is not None else None
                 ),
@@ -206,6 +209,7 @@ def from_stored(stored: StoredEvent) -> RecipeEvent:
                 replaced_raw = payload.get("replaced_by_recipe_id")
                 return RecipeDeprecated(
                     recipe_id=UUID(payload["recipe_id"]),
+                    reason=payload["reason"],
                     replaced_by_recipe_id=(
                         UUID(replaced_raw) if replaced_raw is not None else None
                     ),

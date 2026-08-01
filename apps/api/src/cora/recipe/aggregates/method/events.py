@@ -152,6 +152,7 @@ class MethodDeprecated:
     """
 
     method_id: UUID
+    reason: str
     occurred_at: datetime
 
 
@@ -335,9 +336,14 @@ def to_payload(event: MethodEvent) -> dict[str, Any]:
             if content_hash is not None:
                 payload["content_hash"] = content_hash
             return payload
-        case MethodDeprecated(method_id=method_id, occurred_at=occurred_at):
+        case MethodDeprecated(
+            method_id=method_id,
+            reason=reason,
+            occurred_at=occurred_at,
+        ):
             return {
                 "method_id": str(method_id),
+                "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
             }
         case MethodParametersSchemaUpdated(
@@ -478,6 +484,7 @@ def from_stored(stored: StoredEvent) -> MethodEvent:
                 "MethodDeprecated",
                 lambda: MethodDeprecated(
                     method_id=UUID(payload["method_id"]),
+                    reason=payload["reason"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )

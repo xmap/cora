@@ -41,6 +41,7 @@ from cora.recipe.aggregates.method import (
 )
 from cora.recipe.features import deprecate_method
 from cora.recipe.features.deprecate_method import DeprecateMethod
+from cora.shared.deprecation import DeprecationReason
 from tests._strategies import aware_datetimes
 
 if TYPE_CHECKING:
@@ -70,7 +71,7 @@ def test_deprecate_with_none_state_always_raises_not_found(
     with pytest.raises(MethodNotFoundError) as exc:
         deprecate_method.decide(
             state=None,
-            command=DeprecateMethod(method_id=method_id),
+            command=DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id),
             now=now,
         )
     assert exc.value.method_id == method_id
@@ -90,10 +91,10 @@ def test_deprecate_from_allowed_source_emits_single_event(
     """Every allowed source emits exactly one MethodDeprecated at now."""
     events = deprecate_method.decide(
         state=_method(method_id=method_id, status=source),
-        command=DeprecateMethod(method_id=method_id),
+        command=DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id),
         now=now,
     )
-    assert events == [MethodDeprecated(method_id=method_id, occurred_at=now)]
+    assert events == [MethodDeprecated(reason="Superseded", method_id=method_id, occurred_at=now)]
 
 
 @pytest.mark.unit
@@ -111,7 +112,7 @@ def test_deprecate_from_disallowed_source_always_raises_cannot_deprecate(
     with pytest.raises(MethodCannotDeprecateError) as exc:
         deprecate_method.decide(
             state=_method(method_id=method_id, status=source),
-            command=DeprecateMethod(method_id=method_id),
+            command=DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id),
             now=now,
         )
     assert exc.value.current_status is source
@@ -129,7 +130,7 @@ def test_deprecate_emits_event_with_state_id_not_command_id(
     assume(state_method_id != command_method_id)
     events = deprecate_method.decide(
         state=_method(method_id=state_method_id, status=MethodStatus.DEFINED),
-        command=DeprecateMethod(method_id=command_method_id),
+        command=DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=command_method_id),
         now=now,
     )
     assert events[0].method_id == state_method_id
@@ -143,7 +144,7 @@ def test_deprecate_is_pure_same_input_returns_equal_output(
 ) -> None:
     """Two calls with identical args return equal events (no clock leakage)."""
     state = _method(method_id=method_id, status=MethodStatus.DEFINED)
-    command = DeprecateMethod(method_id=method_id)
+    command = DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id)
     first = deprecate_method.decide(state=state, command=command, now=now)
     second = deprecate_method.decide(state=state, command=command, now=now)
     assert first == second

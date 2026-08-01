@@ -32,7 +32,9 @@ def test_post_deprecate_recipe_204_emits_deprecated_event() -> None:
     with TestClient(create_app()) as client:
         cap = client.post("/capabilities", json=_capability()).json()
         recipe = client.post("/recipes", json=_recipe_for(cap["capability_id"])).json()
-        response = client.post(f"/recipes/{recipe['recipe_id']}/deprecate", json={})
+        response = client.post(
+            f"/recipes/{recipe['recipe_id']}/deprecate", json={"reason": "Superseded"}
+        )
     assert response.status_code == 204
 
 
@@ -44,7 +46,7 @@ def test_post_deprecate_recipe_accepts_replaced_by_recipe_id() -> None:
         recipe = client.post("/recipes", json=_recipe_for(cap["capability_id"])).json()
         response = client.post(
             f"/recipes/{recipe['recipe_id']}/deprecate",
-            json={"replaced_by_recipe_id": successor["recipe_id"]},
+            json={"reason": "Superseded", "replaced_by_recipe_id": successor["recipe_id"]},
         )
     assert response.status_code == 204
 
@@ -53,7 +55,7 @@ def test_post_deprecate_recipe_accepts_replaced_by_recipe_id() -> None:
 def test_post_deprecate_recipe_404_when_recipe_missing() -> None:
     with TestClient(create_app()) as client:
         bogus = "01900000-0000-7000-8000-deadbeefcafe"
-        response = client.post(f"/recipes/{bogus}/deprecate", json={})
+        response = client.post(f"/recipes/{bogus}/deprecate", json={"reason": "Superseded"})
     assert response.status_code == 404
 
 
@@ -63,6 +65,8 @@ def test_post_deprecate_recipe_409_on_re_deprecate() -> None:
     with TestClient(create_app()) as client:
         cap = client.post("/capabilities", json=_capability()).json()
         recipe = client.post("/recipes", json=_recipe_for(cap["capability_id"])).json()
-        client.post(f"/recipes/{recipe['recipe_id']}/deprecate", json={})
-        response = client.post(f"/recipes/{recipe['recipe_id']}/deprecate", json={})
+        client.post(f"/recipes/{recipe['recipe_id']}/deprecate", json={"reason": "Superseded"})
+        response = client.post(
+            f"/recipes/{recipe['recipe_id']}/deprecate", json={"reason": "Superseded"}
+        )
     assert response.status_code == 409

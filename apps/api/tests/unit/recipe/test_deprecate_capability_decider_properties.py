@@ -41,6 +41,7 @@ from cora.recipe.aggregates.capability import (
     ExecutorShape,
 )
 from cora.recipe.features.deprecate_capability import DeprecateCapability, decide
+from cora.shared.deprecation import DeprecationReason
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -74,7 +75,9 @@ def test_deprecate_with_none_state_always_raises_not_found(
     with pytest.raises(CapabilityNotFoundError) as exc:
         decide(
             state=None,
-            command=DeprecateCapability(capability_id=capability_id),
+            command=DeprecateCapability(
+                reason=DeprecationReason.SUPERSEDED, capability_id=capability_id
+            ),
             now=now,
         )
     assert exc.value.capability_id == capability_id
@@ -94,11 +97,14 @@ def test_deprecate_from_deprecatable_source_emits_single_event(
     """Defined and Versioned are the deprecatable sources; each emits one event."""
     events = decide(
         state=_state(capability_id=capability_id, status=source),
-        command=DeprecateCapability(capability_id=capability_id),
+        command=DeprecateCapability(
+            reason=DeprecationReason.SUPERSEDED, capability_id=capability_id
+        ),
         now=now,
     )
     assert events == [
         CapabilityDeprecated(
+            reason="Superseded",
             capability_id=capability_id,
             occurred_at=now,
             replaced_by_capability_id=None,
@@ -121,7 +127,9 @@ def test_deprecate_from_disallowed_source_always_raises_cannot_deprecate(
     with pytest.raises(CapabilityCannotDeprecateError) as exc:
         decide(
             state=_state(capability_id=capability_id, status=source),
-            command=DeprecateCapability(capability_id=capability_id),
+            command=DeprecateCapability(
+                reason=DeprecationReason.SUPERSEDED, capability_id=capability_id
+            ),
             now=now,
         )
     assert exc.value.current_status is source
@@ -138,7 +146,7 @@ def test_deprecate_emits_event_with_state_id_not_command_id(
     assume(state_id != command_id)
     events = decide(
         state=_state(capability_id=state_id, status=CapabilityStatus.DEFINED),
-        command=DeprecateCapability(capability_id=command_id),
+        command=DeprecateCapability(reason=DeprecationReason.SUPERSEDED, capability_id=command_id),
         now=now,
     )
     assert events[0].capability_id == state_id
@@ -155,6 +163,7 @@ def test_deprecate_emits_event_threading_replaced_by_pointer(
     events = decide(
         state=_state(capability_id=capability_id, status=CapabilityStatus.VERSIONED),
         command=DeprecateCapability(
+            reason=DeprecationReason.SUPERSEDED,
             capability_id=capability_id,
             replaced_by_capability_id=successor_id,
         ),
@@ -171,7 +180,7 @@ def test_deprecate_is_pure_same_input_same_output(
 ) -> None:
     """Two calls with identical args return equal events (no clock leakage)."""
     state = _state(capability_id=capability_id, status=CapabilityStatus.DEFINED)
-    command = DeprecateCapability(capability_id=capability_id)
+    command = DeprecateCapability(reason=DeprecationReason.SUPERSEDED, capability_id=capability_id)
     first = decide(state=state, command=command, now=now)
     second = decide(state=state, command=command, now=now)
     assert first == second

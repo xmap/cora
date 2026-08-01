@@ -63,7 +63,9 @@ def test_event_type_names() -> None:
         == "CapabilityVersioned"
     )
     assert (
-        event_type_name(CapabilityDeprecated(capability_id=cid, occurred_at=_NOW))
+        event_type_name(
+            CapabilityDeprecated(reason="Superseded", capability_id=cid, occurred_at=_NOW)
+        )
         == "CapabilityDeprecated"
     )
 
@@ -129,6 +131,7 @@ def test_round_trip_capability_versioned() -> None:
 @pytest.mark.unit
 def test_round_trip_capability_deprecated_without_replacement() -> None:
     original = CapabilityDeprecated(
+        reason="Superseded",
         capability_id=uuid4(),
         replaced_by_capability_id=None,
         occurred_at=_NOW,
@@ -141,6 +144,7 @@ def test_round_trip_capability_deprecated_without_replacement() -> None:
 def test_round_trip_capability_deprecated_with_replacement() -> None:
     replaced_by = uuid4()
     original = CapabilityDeprecated(
+        reason="Superseded",
         capability_id=uuid4(),
         replaced_by_capability_id=replaced_by,
         occurred_at=_NOW,

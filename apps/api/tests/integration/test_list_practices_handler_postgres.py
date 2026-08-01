@@ -27,6 +27,7 @@ from cora.recipe.features.list_practices import ListPractices
 from cora.recipe.features.list_practices import bind as bind_list
 from cora.recipe.features.version_practice import VersionPractice
 from cora.recipe.features.version_practice import bind as bind_version
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 
 _NOW = datetime(2026, 5, 12, 14, 0, 0, tzinfo=UTC)
@@ -162,7 +163,7 @@ async def test_lifecycle_deprecate_preserves_method_and_site(
         correlation_id=_CORRELATION_ID,
     )
     await bind_deprecate(deps)(
-        DeprecatePractice(practice_id=practice_id),
+        DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -58,7 +58,7 @@ def test_mcp_deprecate_practice_tool_succeeds_on_happy_path() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_practice",
-                    "arguments": {"practice_id": str(practice_id)},
+                    "arguments": {"practice_id": str(practice_id), "reason": "Superseded"},
                 },
             },
             headers=headers,
@@ -79,7 +79,7 @@ def test_mcp_deprecate_practice_tool_returns_iserror_for_unknown_practice() -> N
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_practice",
-                    "arguments": {"practice_id": str(uuid4())},
+                    "arguments": {"practice_id": str(uuid4()), "reason": "Superseded"},
                 },
             },
             headers=headers,
@@ -102,7 +102,7 @@ def test_mcp_deprecate_practice_tool_returns_iserror_when_already_deprecated() -
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_practice",
-                    "arguments": {"practice_id": str(practice_id)},
+                    "arguments": {"practice_id": str(practice_id), "reason": "Superseded"},
                 },
             },
             headers=headers,
@@ -116,7 +116,7 @@ def test_mcp_deprecate_practice_tool_returns_iserror_when_already_deprecated() -
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_practice",
-                    "arguments": {"practice_id": str(practice_id)},
+                    "arguments": {"practice_id": str(practice_id), "reason": "Superseded"},
                 },
             },
             headers=headers,

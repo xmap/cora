@@ -12,6 +12,7 @@ from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
 from cora.recipe.features.deprecate_capability.command import DeprecateCapability
 from cora.recipe.features.deprecate_capability.handler import Handler
+from cora.shared.deprecation import DeprecationReason
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
@@ -34,6 +35,17 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             UUID,
             Field(description="Target Capability's id."),
         ],
+        reason: Annotated[
+            DeprecationReason,
+            Field(
+                description=(
+                    "Why the template is no longer recommended. `Superseded`: a "
+                    "newer version replaces it, prior use stands. `Defective`: it "
+                    "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+                    "no longer exists."
+                ),
+            ),
+        ],
         replaced_by_capability_id: Annotated[
             UUID | None,
             Field(
@@ -49,6 +61,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         await handler(
             DeprecateCapability(
                 capability_id=capability_id,
+                reason=reason,
                 replaced_by_capability_id=replaced_by_capability_id,
             ),
             principal_id=get_mcp_principal_id(ctx),

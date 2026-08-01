@@ -44,6 +44,7 @@ def decide(
     return [
         CapabilityDeprecated(
             capability_id=state.id,
+            reason=command.reason.value,
             replaced_by_capability_id=command.replaced_by_capability_id,
             occurred_at=now,
         )

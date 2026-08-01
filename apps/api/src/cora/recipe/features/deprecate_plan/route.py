@@ -7,7 +7,8 @@ No Content on success.
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Request, status
+from fastapi import APIRouter, Body, Depends, Path, Request, status
+from pydantic import BaseModel, Field
 
 from cora.infrastructure.routing import (
     ErrorResponse,
@@ -17,6 +18,21 @@ from cora.infrastructure.routing import (
 )
 from cora.recipe.features.deprecate_plan.command import DeprecatePlan
 from cora.recipe.features.deprecate_plan.handler import Handler
+from cora.shared.deprecation import DeprecationReason
+
+
+class DeprecatePlanRequest(BaseModel):
+    """Body for `POST /plans/{plan_id}/deprecate`."""
+
+    reason: DeprecationReason = Field(
+        ...,
+        description=(
+            "Why the template is no longer recommended. `Superseded`: a "
+            "newer version replaces it, prior use stands. `Defective`: it "
+            "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+            "no longer exists."
+        ),
+    )
 
 
 def _get_handler(request: Request) -> Handler:
@@ -52,6 +68,7 @@ router = APIRouter(tags=["recipe"])
     summary="Mark an existing plan as deprecated",
 )
 async def post_plans_deprecate(
+    body: Annotated[DeprecatePlanRequest, Body()],
     plan_id: Annotated[UUID, Path(description="Target plan's id.")],
     handler: Annotated[Handler, Depends(_get_handler)],
     cid: Annotated[UUID, Depends(get_correlation_id)],
@@ -59,7 +76,7 @@ async def post_plans_deprecate(
     surface_id: Annotated[UUID, Depends(get_surface_id)],
 ) -> None:
     await handler(
-        DeprecatePlan(plan_id=plan_id),
+        DeprecatePlan(plan_id=plan_id, reason=body.reason),
         principal_id=principal_id,
         correlation_id=cid,
         surface_id=surface_id,

@@ -67,7 +67,7 @@ def test_mcp_deprecate_plan_tool_succeeds_on_happy_path() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_plan",
-                    "arguments": {"plan_id": plan_id},
+                    "arguments": {"plan_id": plan_id, "reason": "Superseded"},
                 },
             },
             headers=headers,
@@ -88,7 +88,7 @@ def test_mcp_deprecate_plan_tool_returns_iserror_for_unknown_plan() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_plan",
-                    "arguments": {"plan_id": str(uuid4())},
+                    "arguments": {"plan_id": str(uuid4()), "reason": "Superseded"},
                 },
             },
             headers=headers,
@@ -102,7 +102,7 @@ def test_mcp_deprecate_plan_tool_returns_iserror_for_unknown_plan() -> None:
 def test_mcp_deprecate_plan_tool_returns_iserror_when_already_deprecated() -> None:
     with TestClient(create_app()) as client:
         plan_id = _setup_plan(client)
-        first = client.post(f"/plans/{plan_id}/deprecate")
+        first = client.post(f"/plans/{plan_id}/deprecate", json={"reason": "Superseded"})
         assert first.status_code == 204
         headers = open_session(client)
         response = client.post(
@@ -113,7 +113,7 @@ def test_mcp_deprecate_plan_tool_returns_iserror_when_already_deprecated() -> No
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_plan",
-                    "arguments": {"plan_id": plan_id},
+                    "arguments": {"plan_id": plan_id, "reason": "Superseded"},
                 },
             },
             headers=headers,

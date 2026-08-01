@@ -567,6 +567,7 @@ async def _seed_capability(
     ]
     if deprecated:
         deprecated_event = CapabilityDeprecated(
+            reason="Superseded",
             capability_id=capability_id,
             replaced_by_capability_id=None,
             occurred_at=_NOW,

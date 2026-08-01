@@ -8,9 +8,12 @@ field command (just practice_id); no body at the API layer. Mirrors
 from dataclasses import dataclass
 from uuid import UUID
 
+from cora.shared.deprecation import DeprecationReason
+
 
 @dataclass(frozen=True)
 class DeprecatePractice:
     """Mark an existing practice as deprecated."""
 
     practice_id: UUID
+    reason: DeprecationReason

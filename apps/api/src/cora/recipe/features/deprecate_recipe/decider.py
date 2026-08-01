@@ -44,6 +44,7 @@ def decide(
     return [
         RecipeDeprecated(
             recipe_id=state.id,
+            reason=command.reason.value,
             replaced_by_recipe_id=command.replaced_by_recipe_id,
             occurred_at=now,
         )

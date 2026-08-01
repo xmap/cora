@@ -98,7 +98,7 @@ def test_post_version_plan_returns_404_when_plan_does_not_exist() -> None:
 def test_post_version_plan_returns_409_when_deprecated() -> None:
     with TestClient(create_app()) as client:
         plan_id = _setup_plan(client)
-        deprecate = client.post(f"/plans/{plan_id}/deprecate")
+        deprecate = client.post(f"/plans/{plan_id}/deprecate", json={"reason": "Superseded"})
         assert deprecate.status_code == 204
         response = client.post(
             f"/plans/{plan_id}/version", json={"version_tag": "v2", "affordances": []}

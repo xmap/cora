@@ -69,7 +69,7 @@ async def _seed_plan(store: InMemoryEventStore, plan_id: UUID) -> None:
 async def _seed_plan_deprecated(store: InMemoryEventStore, plan_id: UUID) -> None:
     """Seed a Plan in the Deprecated state."""
     await _seed_plan(store, plan_id)
-    deprecated = PlanDeprecated(plan_id=plan_id, occurred_at=_NOW)
+    deprecated = PlanDeprecated(reason="Superseded", plan_id=plan_id, occurred_at=_NOW)
     new_event = to_new_event(
         event_type=event_type_name(deprecated),
         payload=to_payload(deprecated),

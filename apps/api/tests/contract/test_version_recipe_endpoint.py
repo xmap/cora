@@ -63,7 +63,7 @@ def test_post_version_recipe_409_when_recipe_already_deprecated() -> None:
     with TestClient(create_app()) as client:
         cap = client.post("/capabilities", json=_capability()).json()
         recipe = client.post("/recipes", json=_recipe_for(cap["capability_id"])).json()
-        client.post(f"/recipes/{recipe['recipe_id']}/deprecate", json={})
+        client.post(f"/recipes/{recipe['recipe_id']}/deprecate", json={"reason": "Superseded"})
         response = client.post(f"/recipes/{recipe['recipe_id']}/version", json=_version_body())
     assert response.status_code == 409
 

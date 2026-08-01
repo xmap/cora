@@ -39,6 +39,7 @@ from cora.recipe.aggregates.practice import (
 )
 from cora.recipe.features import deprecate_practice
 from cora.recipe.features.deprecate_practice import DeprecatePractice
+from cora.shared.deprecation import DeprecationReason
 from tests._strategies import aware_datetimes
 
 if TYPE_CHECKING:
@@ -71,7 +72,7 @@ def test_deprecate_with_none_state_always_raises_not_found(
     with pytest.raises(PracticeNotFoundError) as exc:
         deprecate_practice.decide(
             state=None,
-            command=DeprecatePractice(practice_id=practice_id),
+            command=DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id),
             now=now,
         )
     assert exc.value.practice_id == practice_id
@@ -91,10 +92,12 @@ def test_deprecate_from_allowed_source_emits_single_event(
     """Defined and Versioned both emit exactly one PracticeDeprecated."""
     events = deprecate_practice.decide(
         state=_practice(practice_id=practice_id, status=source),
-        command=DeprecatePractice(practice_id=practice_id),
+        command=DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id),
         now=now,
     )
-    assert events == [PracticeDeprecated(practice_id=practice_id, occurred_at=now)]
+    assert events == [
+        PracticeDeprecated(reason="Superseded", practice_id=practice_id, occurred_at=now)
+    ]
 
 
 @pytest.mark.unit
@@ -112,7 +115,7 @@ def test_deprecate_from_disallowed_source_always_raises_cannot_deprecate(
     with pytest.raises(PracticeCannotDeprecateError) as exc:
         deprecate_practice.decide(
             state=_practice(practice_id=practice_id, status=source),
-            command=DeprecatePractice(practice_id=practice_id),
+            command=DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id),
             now=now,
         )
     assert exc.value.current_status is source
@@ -135,7 +138,9 @@ def test_deprecate_emits_event_with_state_id_not_command_id(
     assume(state_practice_id != command_practice_id)
     events = deprecate_practice.decide(
         state=_practice(practice_id=state_practice_id, status=source),
-        command=DeprecatePractice(practice_id=command_practice_id),
+        command=DeprecatePractice(
+            reason=DeprecationReason.SUPERSEDED, practice_id=command_practice_id
+        ),
         now=now,
     )
     assert events[0].practice_id == state_practice_id
@@ -154,7 +159,7 @@ def test_deprecate_is_pure_same_input_returns_equal_output(
 ) -> None:
     """Two calls with identical args return equal events (no clock leakage)."""
     state = _practice(practice_id=practice_id, status=source)
-    command = DeprecatePractice(practice_id=practice_id)
+    command = DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id)
     first = deprecate_practice.decide(state=state, command=command, now=now)
     second = deprecate_practice.decide(state=state, command=command, now=now)
     assert first == second

@@ -41,6 +41,7 @@ from cora.recipe.aggregates.recipe import (
 )
 from cora.recipe.features import deprecate_recipe
 from cora.recipe.features.deprecate_recipe import DeprecateRecipe
+from cora.shared.deprecation import DeprecationReason
 from tests._strategies import aware_datetimes, printable_ascii_text
 
 if TYPE_CHECKING:
@@ -72,7 +73,7 @@ def test_deprecate_with_none_state_always_raises_not_found(
     with pytest.raises(RecipeNotFoundError) as exc:
         deprecate_recipe.decide(
             state=None,
-            command=DeprecateRecipe(recipe_id=recipe_id),
+            command=DeprecateRecipe(reason=DeprecationReason.SUPERSEDED, recipe_id=recipe_id),
             now=now,
         )
     assert exc.value.recipe_id == recipe_id
@@ -92,10 +93,10 @@ def test_deprecate_from_deprecatable_source_emits_single_event(
     """Defined and Versioned each emit exactly one RecipeDeprecated."""
     events = deprecate_recipe.decide(
         state=_recipe(recipe_id=recipe_id, status=source),
-        command=DeprecateRecipe(recipe_id=recipe_id),
+        command=DeprecateRecipe(reason=DeprecationReason.SUPERSEDED, recipe_id=recipe_id),
         now=now,
     )
-    assert events == [RecipeDeprecated(recipe_id=recipe_id, occurred_at=now)]
+    assert events == [RecipeDeprecated(reason="Superseded", recipe_id=recipe_id, occurred_at=now)]
 
 
 @pytest.mark.unit
@@ -113,7 +114,7 @@ def test_deprecate_from_disallowed_source_always_raises_cannot_deprecate(
     with pytest.raises(RecipeCannotDeprecateError) as exc:
         deprecate_recipe.decide(
             state=_recipe(recipe_id=recipe_id, status=source),
-            command=DeprecateRecipe(recipe_id=recipe_id),
+            command=DeprecateRecipe(reason=DeprecationReason.SUPERSEDED, recipe_id=recipe_id),
             now=now,
         )
     assert exc.value.current_status is source
@@ -136,7 +137,7 @@ def test_deprecate_emits_event_with_state_id_not_command_recipe_id(
     assume(state_recipe_id != command_recipe_id)
     events = deprecate_recipe.decide(
         state=_recipe(recipe_id=state_recipe_id, status=source),
-        command=DeprecateRecipe(recipe_id=command_recipe_id),
+        command=DeprecateRecipe(reason=DeprecationReason.SUPERSEDED, recipe_id=command_recipe_id),
         now=now,
     )
     assert events[0].recipe_id == state_recipe_id
@@ -159,6 +160,7 @@ def test_deprecate_emits_event_threading_replaced_by_recipe_id(
     events = deprecate_recipe.decide(
         state=_recipe(recipe_id=recipe_id, status=source),
         command=DeprecateRecipe(
+            reason=DeprecationReason.SUPERSEDED,
             recipe_id=recipe_id,
             replaced_by_recipe_id=successor_id,
         ),
@@ -187,7 +189,7 @@ def test_deprecate_is_pure_same_input_returns_equal_events(
         steps=(RecipeSetpointStep(address="dev:x", value=1.0),),
         status=RecipeStatus.DEFINED,
     )
-    command = DeprecateRecipe(recipe_id=recipe_id)
+    command = DeprecateRecipe(reason=DeprecationReason.SUPERSEDED, recipe_id=recipe_id)
     first = deprecate_recipe.decide(state=state, command=command, now=now)
     second = deprecate_recipe.decide(state=state, command=command, now=now)
     assert first == second

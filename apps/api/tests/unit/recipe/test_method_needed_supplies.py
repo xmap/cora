@@ -328,7 +328,7 @@ def test_evolve_method_versioned_preserves_needed_supplies() -> None:
 @pytest.mark.unit
 def test_evolve_method_deprecated_preserves_needed_supplies() -> None:
     seed = _seed_state(frozenset({"PhotonBeam", "LiquidNitrogen"}))
-    after = evolve(seed, MethodDeprecated(method_id=seed.id, occurred_at=_NOW))
+    after = evolve(seed, MethodDeprecated(reason="Superseded", method_id=seed.id, occurred_at=_NOW))
     assert after.needed_supplies == frozenset({"PhotonBeam", "LiquidNitrogen"})
     assert after.status is MethodStatus.DEPRECATED
 
@@ -368,7 +368,7 @@ def test_fold_full_lifecycle_preserves_needed_supplies() -> None:
                 parameters_schema={"type": "object"},
                 occurred_at=_NOW,
             ),
-            MethodDeprecated(method_id=method_id, occurred_at=_NOW),
+            MethodDeprecated(reason="Superseded", method_id=method_id, occurred_at=_NOW),
         ]
     )
     assert state is not None

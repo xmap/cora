@@ -23,6 +23,7 @@ from cora.recipe.features import (
 from cora.recipe.features.define_practice import DefinePractice
 from cora.recipe.features.deprecate_practice import DeprecatePractice
 from cora.recipe.features.version_practice import VersionPractice
+from cora.shared.deprecation import DeprecationReason
 from tests.unit._helpers import build_deps
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -59,7 +60,7 @@ async def test_handler_returns_none_on_success() -> None:
     practice_id = await _define_practice_helper(deps)
 
     result = await deprecate_practice.bind(deps)(
-        DeprecatePractice(practice_id=practice_id),
+        DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -78,7 +79,7 @@ async def test_handler_appends_practice_deprecated_event_from_defined() -> None:
     practice_id = await _define_practice_helper(deps)
 
     await deprecate_practice.bind(deps)(
-        DeprecatePractice(practice_id=practice_id),
+        DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -108,7 +109,7 @@ async def test_handler_appends_practice_deprecated_event_from_versioned() -> Non
         correlation_id=_CORRELATION_ID,
     )
     await deprecate_practice.bind(deps)(
-        DeprecatePractice(practice_id=practice_id),
+        DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -133,7 +134,7 @@ async def test_handler_raises_practice_not_found_when_practice_does_not_exist() 
 
     with pytest.raises(PracticeNotFoundError):
         await handler(
-            DeprecatePractice(practice_id=_PRACTICE_ID),
+            DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=_PRACTICE_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -152,13 +153,13 @@ async def test_handler_raises_cannot_deprecate_when_already_deprecated() -> None
 
     handler = deprecate_practice.bind(deps)
     await handler(
-        DeprecatePractice(practice_id=practice_id),
+        DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     with pytest.raises(PracticeCannotDeprecateError):
         await handler(
-            DeprecatePractice(practice_id=practice_id),
+            DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -182,7 +183,7 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
     )
     with pytest.raises(UnauthorizedError) as exc_info:
         await deprecate_practice.bind(deny_deps)(
-            DeprecatePractice(practice_id=practice_id),
+            DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -201,7 +202,7 @@ async def test_handler_propagates_causation_id_to_appended_event() -> None:
     practice_id = await _define_practice_helper(deps)
 
     await deprecate_practice.bind(deps)(
-        DeprecatePractice(practice_id=practice_id),
+        DeprecatePractice(reason=DeprecationReason.SUPERSEDED, practice_id=practice_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         causation_id=causation,

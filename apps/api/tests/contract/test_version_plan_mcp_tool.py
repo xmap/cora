@@ -102,7 +102,7 @@ def test_mcp_version_plan_tool_returns_iserror_for_unknown_plan() -> None:
 def test_mcp_version_plan_tool_returns_iserror_when_deprecated() -> None:
     with TestClient(create_app()) as client:
         plan_id = _setup_plan(client)
-        client.post(f"/plans/{plan_id}/deprecate")
+        client.post(f"/plans/{plan_id}/deprecate", json={"reason": "Superseded"})
         headers = open_session(client)
         response = client.post(
             "/mcp",

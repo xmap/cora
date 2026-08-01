@@ -84,6 +84,7 @@ class PracticeDeprecated:
     """
 
     practice_id: UUID
+    reason: str
     occurred_at: datetime
 
 
@@ -126,9 +127,14 @@ def to_payload(event: PracticeEvent) -> dict[str, Any]:
                 "version_tag": version_tag,
                 "occurred_at": occurred_at.isoformat(),
             }
-        case PracticeDeprecated(practice_id=practice_id, occurred_at=occurred_at):
+        case PracticeDeprecated(
+            practice_id=practice_id,
+            reason=reason,
+            occurred_at=occurred_at,
+        ):
             return {
                 "practice_id": str(practice_id),
+                "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
             }
         case _:  # pragma: no cover  # exhaustiveness guard
@@ -169,6 +175,7 @@ def from_stored(stored: StoredEvent) -> PracticeEvent:
                 "PracticeDeprecated",
                 lambda: PracticeDeprecated(
                     practice_id=UUID(payload["practice_id"]),
+                    reason=payload["reason"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )

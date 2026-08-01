@@ -37,6 +37,7 @@ from cora.recipe.aggregates.plan import (
 )
 from cora.recipe.features import deprecate_plan
 from cora.recipe.features.deprecate_plan import DeprecatePlan
+from cora.shared.deprecation import DeprecationReason
 from tests._strategies import aware_datetimes
 
 if TYPE_CHECKING:
@@ -67,7 +68,11 @@ def test_deprecate_with_none_state_always_raises_not_found(
 ) -> None:
     """Empty stream always raises `PlanNotFoundError` carrying command.plan_id."""
     with pytest.raises(PlanNotFoundError) as exc:
-        deprecate_plan.decide(state=None, command=DeprecatePlan(plan_id=plan_id), now=now)
+        deprecate_plan.decide(
+            state=None,
+            command=DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=plan_id),
+            now=now,
+        )
     assert exc.value.plan_id == plan_id
 
 
@@ -85,10 +90,10 @@ def test_deprecate_from_allowed_source_emits_single_event(
     """Each allowed source emits exactly one PlanDeprecated at now."""
     events = deprecate_plan.decide(
         state=_plan(plan_id=plan_id, status=source),
-        command=DeprecatePlan(plan_id=plan_id),
+        command=DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=plan_id),
         now=now,
     )
-    assert events == [PlanDeprecated(plan_id=plan_id, occurred_at=now)]
+    assert events == [PlanDeprecated(reason="Superseded", plan_id=plan_id, occurred_at=now)]
 
 
 @pytest.mark.unit
@@ -106,7 +111,7 @@ def test_deprecate_from_disallowed_source_always_raises_cannot_deprecate(
     with pytest.raises(PlanCannotDeprecateError) as exc:
         deprecate_plan.decide(
             state=_plan(plan_id=plan_id, status=source),
-            command=DeprecatePlan(plan_id=plan_id),
+            command=DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=plan_id),
             now=now,
         )
     assert exc.value.current_status is source
@@ -123,7 +128,7 @@ def test_deprecate_emits_event_with_state_id_not_command_plan_id(
     assume(state_plan_id != command_plan_id)
     events = deprecate_plan.decide(
         state=_plan(plan_id=state_plan_id, status=PlanStatus.DEFINED),
-        command=DeprecatePlan(plan_id=command_plan_id),
+        command=DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=command_plan_id),
         now=now,
     )
     assert events[0].plan_id == state_plan_id
@@ -134,7 +139,7 @@ def test_deprecate_emits_event_with_state_id_not_command_plan_id(
 def test_deprecate_is_pure_same_input_same_output(plan_id: UUID, now: datetime) -> None:
     """Two calls with identical args return equal events (no clock leakage)."""
     state = _plan(plan_id=plan_id, status=PlanStatus.DEFINED)
-    command = DeprecatePlan(plan_id=plan_id)
+    command = DeprecatePlan(reason=DeprecationReason.SUPERSEDED, plan_id=plan_id)
     first = deprecate_plan.decide(state=state, command=command, now=now)
     second = deprecate_plan.decide(state=state, command=command, now=now)
     assert first == second

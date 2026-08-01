@@ -67,7 +67,9 @@ def test_post_version_practice_returns_404_when_practice_does_not_exist() -> Non
 def test_post_version_practice_returns_409_when_deprecated() -> None:
     with TestClient(create_app()) as client:
         practice_id = _define_practice(client)
-        deprecate = client.post(f"/practices/{practice_id}/deprecate")
+        deprecate = client.post(
+            f"/practices/{practice_id}/deprecate", json={"reason": "Superseded"}
+        )
         assert deprecate.status_code == 204
         response = client.post(f"/practices/{practice_id}/version", json={"version_tag": "v2"})
     assert response.status_code == 409

@@ -161,7 +161,9 @@ async def _seed_method(
         command_name="DefineMethod",
     )
     if deprecated:
-        deprecated_event = MethodDeprecatedEvent(method_id=method_id, occurred_at=_NOW)
+        deprecated_event = MethodDeprecatedEvent(
+            method_id=method_id, reason="Superseded", occurred_at=_NOW
+        )
         await _append(
             store,
             stream_type="Method",
@@ -198,7 +200,9 @@ async def _seed_practice(
         command_name="DefinePractice",
     )
     if deprecated:
-        deprecated_event = PracticeDeprecatedEvent(practice_id=practice_id, occurred_at=_NOW)
+        deprecated_event = PracticeDeprecatedEvent(
+            practice_id=practice_id, reason="Superseded", occurred_at=_NOW
+        )
         await _append(
             store,
             stream_type="Practice",

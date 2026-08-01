@@ -64,7 +64,7 @@ def test_mcp_deprecate_method_tool_succeeds_on_happy_path() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_method",
-                    "arguments": {"method_id": str(method_id)},
+                    "arguments": {"method_id": str(method_id), "reason": "Superseded"},
                 },
             },
             headers=headers,
@@ -85,7 +85,7 @@ def test_mcp_deprecate_method_tool_returns_iserror_for_unknown_method() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_method",
-                    "arguments": {"method_id": str(uuid4())},
+                    "arguments": {"method_id": str(uuid4()), "reason": "Superseded"},
                 },
             },
             headers=headers,
@@ -108,7 +108,7 @@ def test_mcp_deprecate_method_tool_returns_iserror_when_already_deprecated() -> 
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_method",
-                    "arguments": {"method_id": str(method_id)},
+                    "arguments": {"method_id": str(method_id), "reason": "Superseded"},
                 },
             },
             headers=headers,
@@ -122,7 +122,7 @@ def test_mcp_deprecate_method_tool_returns_iserror_when_already_deprecated() -> 
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_method",
-                    "arguments": {"method_id": str(method_id)},
+                    "arguments": {"method_id": str(method_id), "reason": "Superseded"},
                 },
             },
             headers=headers,

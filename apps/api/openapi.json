@@ -6834,6 +6834,10 @@
       "DeprecateCapabilityRequest": {
         "description": "Body for `POST /capabilities/{capability_id}/deprecate`.\n\nOptional `replaced_by_capability_id` pointer for the successor\nCapability. Omit entirely for deprecated-without-replacement.",
         "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/DeprecationReason",
+            "description": "Why the template is no longer recommended. `Superseded`: a newer version replaces it, prior use stands. `Defective`: it was wrong, prior use is suspect. `Obsolete`: what it targeted no longer exists."
+          },
           "replaced_by_capability_id": {
             "anyOf": [
               {
@@ -6848,6 +6852,9 @@
             "title": "Replaced By Capability Id"
           }
         },
+        "required": [
+          "reason"
+        ],
         "title": "DeprecateCapabilityRequest",
         "type": "object"
       },
@@ -6868,6 +6875,20 @@
         "title": "DeprecateLanguageModelRequest",
         "type": "object"
       },
+      "DeprecateMethodRequest": {
+        "description": "Body for `POST /methods/{method_id}/deprecate`.",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/DeprecationReason",
+            "description": "Why the template is no longer recommended. `Superseded`: a newer version replaces it, prior use stands. `Defective`: it was wrong, prior use is suspect. `Obsolete`: what it targeted no longer exists."
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DeprecateMethodRequest",
+        "type": "object"
+      },
       "DeprecateModelRequest": {
         "description": "Body for `POST /models/{model_id}/deprecation`.\n\n`reason` is operator free text recording why the catalog entry is\nbeing retired (for example \"superseded by part RV120CCHL\", \"vendor\nEOL 2026\"). Trimmed and length-validated at the\n`ModelDeprecationReason` VO; whitespace-only is rejected as a\ndomain invariant violation (400).",
         "properties": {
@@ -6885,9 +6906,41 @@
         "title": "DeprecateModelRequest",
         "type": "object"
       },
+      "DeprecatePlanRequest": {
+        "description": "Body for `POST /plans/{plan_id}/deprecate`.",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/DeprecationReason",
+            "description": "Why the template is no longer recommended. `Superseded`: a newer version replaces it, prior use stands. `Defective`: it was wrong, prior use is suspect. `Obsolete`: what it targeted no longer exists."
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DeprecatePlanRequest",
+        "type": "object"
+      },
+      "DeprecatePracticeRequest": {
+        "description": "Body for `POST /practices/{practice_id}/deprecate`.",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/DeprecationReason",
+            "description": "Why the template is no longer recommended. `Superseded`: a newer version replaces it, prior use stands. `Defective`: it was wrong, prior use is suspect. `Obsolete`: what it targeted no longer exists."
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DeprecatePracticeRequest",
+        "type": "object"
+      },
       "DeprecateRecipeRequest": {
         "description": "Body for `POST /recipes/{recipe_id}/deprecate`.\n\nOptional `replaced_by_recipe_id` pointer for the successor\nRecipe. Omit entirely for deprecated-without-replacement.",
         "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/DeprecationReason",
+            "description": "Why the template is no longer recommended. `Superseded`: a newer version replaces it, prior use stands. `Defective`: it was wrong, prior use is suspect. `Obsolete`: what it targeted no longer exists."
+          },
           "replaced_by_recipe_id": {
             "anyOf": [
               {
@@ -6902,8 +6955,21 @@
             "title": "Replaced By Recipe Id"
           }
         },
+        "required": [
+          "reason"
+        ],
         "title": "DeprecateRecipeRequest",
         "type": "object"
+      },
+      "DeprecationReason": {
+        "description": "Closed reason for deprecating a versionable template.",
+        "enum": [
+          "Superseded",
+          "Defective",
+          "Obsolete"
+        ],
+        "title": "DeprecationReason",
+        "type": "string"
       },
       "DeregisterSupplyRequest": {
         "description": "Body for `POST /supplies/{supply_id}/deregister`.\n\n`reason` is operator-supplied free text (audit-log breadcrumb)\nexplaining why the supply is being deregistered. Examples:\n\"typo on scope at registration; re-registering correctly\",\n\"beamline retired\", \"duplicate of supply <id>\".",
@@ -35335,6 +35401,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeprecateMethodRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "204": {
             "description": "Successful Response"
@@ -37562,6 +37638,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeprecatePlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "204": {
             "description": "Successful Response"
@@ -38751,6 +38837,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeprecatePracticeRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "204": {
             "description": "Successful Response"

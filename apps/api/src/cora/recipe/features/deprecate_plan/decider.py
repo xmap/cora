@@ -43,4 +43,4 @@ def decide(
         raise PlanNotFoundError(command.plan_id)
     if state.status not in _DEPRECATABLE_STATUSES:
         raise PlanCannotDeprecateError(state.id, current_status=state.status)
-    return [PlanDeprecated(plan_id=state.id, occurred_at=now)]
+    return [PlanDeprecated(plan_id=state.id, reason=command.reason.value, occurred_at=now)]

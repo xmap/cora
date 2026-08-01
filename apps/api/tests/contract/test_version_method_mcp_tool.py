@@ -114,7 +114,7 @@ def test_mcp_version_method_tool_returns_iserror_when_deprecated() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_method",
-                    "arguments": {"method_id": str(method_id)},
+                    "arguments": {"method_id": str(method_id), "reason": "Superseded"},
                 },
             },
             headers=headers,

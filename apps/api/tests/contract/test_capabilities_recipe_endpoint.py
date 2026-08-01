@@ -231,7 +231,7 @@ def test_deprecate_capability_with_replaced_by_pointer() -> None:
 
         deprecate_resp = client.post(
             f"/capabilities/{original_id}/deprecate",
-            json={"replaced_by_capability_id": successor_id},
+            json={"reason": "Superseded", "replaced_by_capability_id": successor_id},
         )
         assert deprecate_resp.status_code == 204
 
@@ -254,7 +254,11 @@ def test_deprecate_capability_rejects_re_deprecation_with_409() -> None:
             },
         )
         capability_id = post.json()["capability_id"]
-        first = client.post(f"/capabilities/{capability_id}/deprecate", json={})
+        first = client.post(
+            f"/capabilities/{capability_id}/deprecate", json={"reason": "Superseded"}
+        )
         assert first.status_code == 204
-        second = client.post(f"/capabilities/{capability_id}/deprecate", json={})
+        second = client.post(
+            f"/capabilities/{capability_id}/deprecate", json={"reason": "Superseded"}
+        )
     assert second.status_code == 409

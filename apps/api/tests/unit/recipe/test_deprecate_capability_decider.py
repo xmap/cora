@@ -16,6 +16,7 @@ from cora.recipe.aggregates.capability import (
     ExecutorShape,
 )
 from cora.recipe.features.deprecate_capability import DeprecateCapability, decide
+from cora.shared.deprecation import DeprecationReason
 
 _NOW = datetime(2026, 5, 18, 12, 0, 0, tzinfo=UTC)
 
@@ -35,7 +36,7 @@ def test_decide_deprecates_from_defined() -> None:
     state = _state(CapabilityStatus.DEFINED)
     events = decide(
         state=state,
-        command=DeprecateCapability(capability_id=state.id),
+        command=DeprecateCapability(reason=DeprecationReason.SUPERSEDED, capability_id=state.id),
         now=_NOW,
     )
     assert len(events) == 1
@@ -48,7 +49,7 @@ def test_decide_deprecates_from_versioned() -> None:
     state = _state(CapabilityStatus.VERSIONED)
     events = decide(
         state=state,
-        command=DeprecateCapability(capability_id=state.id),
+        command=DeprecateCapability(reason=DeprecationReason.SUPERSEDED, capability_id=state.id),
         now=_NOW,
     )
     assert len(events) == 1
@@ -60,7 +61,11 @@ def test_decide_with_replaced_by_pointer() -> None:
     successor = uuid4()
     events = decide(
         state=state,
-        command=DeprecateCapability(capability_id=state.id, replaced_by_capability_id=successor),
+        command=DeprecateCapability(
+            reason=DeprecationReason.SUPERSEDED,
+            capability_id=state.id,
+            replaced_by_capability_id=successor,
+        ),
         now=_NOW,
     )
     assert events[0].replaced_by_capability_id == successor
@@ -72,7 +77,7 @@ def test_decide_raises_not_found_when_state_is_none() -> None:
     with pytest.raises(CapabilityNotFoundError) as exc:
         decide(
             state=None,
-            command=DeprecateCapability(capability_id=cap_id),
+            command=DeprecateCapability(reason=DeprecationReason.SUPERSEDED, capability_id=cap_id),
             now=_NOW,
         )
     assert exc.value.capability_id == cap_id
@@ -85,7 +90,9 @@ def test_decide_raises_cannot_deprecate_when_already_deprecated() -> None:
     with pytest.raises(CapabilityCannotDeprecateError) as exc:
         decide(
             state=state,
-            command=DeprecateCapability(capability_id=state.id),
+            command=DeprecateCapability(
+                reason=DeprecationReason.SUPERSEDED, capability_id=state.id
+            ),
             now=_NOW,
         )
     assert exc.value.current_status == CapabilityStatus.DEPRECATED

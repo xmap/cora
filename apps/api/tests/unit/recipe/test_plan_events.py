@@ -293,7 +293,7 @@ def test_to_payload_then_from_stored_round_trips_for_plan_versioned() -> None:
 
 @pytest.mark.unit
 def test_event_type_name_returns_plan_deprecated_class_name() -> None:
-    event = PlanDeprecated(plan_id=uuid4(), occurred_at=_NOW)
+    event = PlanDeprecated(reason="Superseded", plan_id=uuid4(), occurred_at=_NOW)
     assert event_type_name(event) == "PlanDeprecated"
 
 
@@ -301,10 +301,11 @@ def test_event_type_name_returns_plan_deprecated_class_name() -> None:
 def test_to_payload_serializes_plan_deprecated_to_primitives() -> None:
     """Status NOT in payload — event TYPE encodes the state change."""
     plan_id = uuid4()
-    event = PlanDeprecated(plan_id=plan_id, occurred_at=_NOW)
+    event = PlanDeprecated(reason="Superseded", plan_id=plan_id, occurred_at=_NOW)
     payload = to_payload(event)
     assert payload == {
         "plan_id": str(plan_id),
+        "reason": "Superseded",
         "occurred_at": _NOW.isoformat(),
     }
     assert "status" not in payload
@@ -317,16 +318,17 @@ def test_from_stored_rebuilds_plan_deprecated() -> None:
         "PlanDeprecated",
         {
             "plan_id": str(plan_id),
+            "reason": "Superseded",
             "occurred_at": _NOW.isoformat(),
         },
     )
     rebuilt = from_stored(stored)
-    assert rebuilt == PlanDeprecated(plan_id=plan_id, occurred_at=_NOW)
+    assert rebuilt == PlanDeprecated(reason="Superseded", plan_id=plan_id, occurred_at=_NOW)
 
 
 @pytest.mark.unit
 def test_to_payload_then_from_stored_round_trips_for_plan_deprecated() -> None:
-    original = PlanDeprecated(plan_id=uuid4(), occurred_at=_NOW)
+    original = PlanDeprecated(reason="Superseded", plan_id=uuid4(), occurred_at=_NOW)
     stored = _stored("PlanDeprecated", to_payload(original))
     assert from_stored(stored) == original
 
@@ -610,6 +612,7 @@ def test_from_stored_prefers_new_families_snapshot_over_legacy_key() -> None:
         "PlanDefined",
         {
             "plan_id": str(plan_id),
+            "reason": "Superseded",
             "name": "DualKeyPlan",
             "practice_id": str(practice_id),
             "asset_ids": [str(asset_id)],

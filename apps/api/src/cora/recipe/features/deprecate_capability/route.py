@@ -14,6 +14,7 @@ from cora.infrastructure.routing import (
 )
 from cora.recipe.features.deprecate_capability.command import DeprecateCapability
 from cora.recipe.features.deprecate_capability.handler import Handler
+from cora.shared.deprecation import DeprecationReason
 
 
 class DeprecateCapabilityRequest(BaseModel):
@@ -23,6 +24,15 @@ class DeprecateCapabilityRequest(BaseModel):
     Capability. Omit entirely for deprecated-without-replacement.
     """
 
+    reason: DeprecationReason = Field(
+        ...,
+        description=(
+            "Why the template is no longer recommended. `Superseded`: a "
+            "newer version replaces it, prior use stands. `Defective`: it "
+            "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+            "no longer exists."
+        ),
+    )
     replaced_by_capability_id: UUID | None = Field(
         default=None,
         description=(
@@ -73,6 +83,7 @@ async def post_capabilities_deprecate(
     await handler(
         DeprecateCapability(
             capability_id=capability_id,
+            reason=body.reason,
             replaced_by_capability_id=body.replaced_by_capability_id,
         ),
         principal_id=principal_id,

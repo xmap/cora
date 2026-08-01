@@ -166,6 +166,7 @@ async def test_load_recipe_at_version_folds_deprecated_event_before_matching_ver
         recipe_id,
         1,
         RecipeDeprecated(
+            reason="Superseded",
             recipe_id=recipe_id,
             replaced_by_recipe_id=None,
             occurred_at=_NOW,

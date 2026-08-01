@@ -76,7 +76,7 @@ def test_mcp_deprecate_recipe_tool_succeeds_after_define() -> None:
             client,
             session_headers,
             "deprecate_recipe",
-            {"recipe_id": recipe_id},
+            {"recipe_id": recipe_id, "reason": "Superseded"},
             4,
         )
     assert result["isError"] is False

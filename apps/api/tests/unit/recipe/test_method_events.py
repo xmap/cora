@@ -411,7 +411,7 @@ def test_round_trip_with_content_hash_preserved() -> None:
 
 @pytest.mark.unit
 def test_event_type_name_returns_method_deprecated_class_name() -> None:
-    event = MethodDeprecated(method_id=uuid4(), occurred_at=_NOW)
+    event = MethodDeprecated(reason="Superseded", method_id=uuid4(), occurred_at=_NOW)
     assert event_type_name(event) == "MethodDeprecated"
 
 
@@ -419,10 +419,11 @@ def test_event_type_name_returns_method_deprecated_class_name() -> None:
 def test_to_payload_serializes_method_deprecated_to_primitives() -> None:
     """Status NOT in payload — event TYPE encodes the state change."""
     method_id = uuid4()
-    event = MethodDeprecated(method_id=method_id, occurred_at=_NOW)
+    event = MethodDeprecated(reason="Superseded", method_id=method_id, occurred_at=_NOW)
     payload = to_payload(event)
     assert payload == {
         "method_id": str(method_id),
+        "reason": "Superseded",
         "occurred_at": _NOW.isoformat(),
     }
     assert "status" not in payload
@@ -435,16 +436,17 @@ def test_from_stored_rebuilds_method_deprecated() -> None:
         "MethodDeprecated",
         {
             "method_id": str(method_id),
+            "reason": "Superseded",
             "occurred_at": _NOW.isoformat(),
         },
     )
     rebuilt = from_stored(stored)
-    assert rebuilt == MethodDeprecated(method_id=method_id, occurred_at=_NOW)
+    assert rebuilt == MethodDeprecated(reason="Superseded", method_id=method_id, occurred_at=_NOW)
 
 
 @pytest.mark.unit
 def test_to_payload_then_from_stored_round_trips_for_method_deprecated() -> None:
-    original = MethodDeprecated(method_id=uuid4(), occurred_at=_NOW)
+    original = MethodDeprecated(reason="Superseded", method_id=uuid4(), occurred_at=_NOW)
     stored = _stored("MethodDeprecated", to_payload(original))
     assert from_stored(stored) == original
 

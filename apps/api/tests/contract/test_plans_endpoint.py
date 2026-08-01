@@ -226,7 +226,9 @@ def test_post_plans_returns_404_when_any_bound_asset_does_not_exist() -> None:
 def test_post_plans_returns_409_when_practice_is_deprecated() -> None:
     with TestClient(create_app()) as client:
         practice_id, asset_id, _ = _setup_chain(client)
-        deprecate_resp = client.post(f"/practices/{practice_id}/deprecate")
+        deprecate_resp = client.post(
+            f"/practices/{practice_id}/deprecate", json={"reason": "Superseded"}
+        )
         assert deprecate_resp.status_code == 204
         response = client.post(
             "/plans",
@@ -269,7 +271,9 @@ def test_post_plans_returns_409_when_method_is_deprecated() -> None:
         ).json()["asset_id"]
         client.post(f"/assets/{asset_id}/add-family", json={"family_id": cap_id})
         # Deprecate Method AFTER Practice has been bound to it.
-        deprecate_resp = client.post(f"/methods/{method_id}/deprecate")
+        deprecate_resp = client.post(
+            f"/methods/{method_id}/deprecate", json={"reason": "Superseded"}
+        )
         assert deprecate_resp.status_code == 204
         response = client.post(
             "/plans",

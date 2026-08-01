@@ -15,6 +15,7 @@ from cora.recipe.features import define_method, deprecate_method, version_method
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.deprecate_method import DeprecateMethod
 from cora.recipe.features.version_method import VersionMethod
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -54,7 +55,7 @@ async def test_deprecate_method_persists_and_preserves_version_through_fold(
         correlation_id=_CORRELATION_ID,
     )
     await deprecate_method.bind(deps)(
-        DeprecateMethod(method_id=method_id),
+        DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=method_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

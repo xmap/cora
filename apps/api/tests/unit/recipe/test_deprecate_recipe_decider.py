@@ -15,6 +15,7 @@ from cora.recipe.aggregates.recipe import (
     RecipeStatus,
 )
 from cora.recipe.features.deprecate_recipe import DeprecateRecipe, decide
+from cora.shared.deprecation import DeprecationReason
 
 _NOW = datetime(2026, 6, 2, 12, 0, 0, tzinfo=UTC)
 
@@ -32,7 +33,11 @@ def _state(status: RecipeStatus = RecipeStatus.DEFINED) -> Recipe:
 @pytest.mark.unit
 def test_decide_emits_recipe_deprecated_when_state_defined() -> None:
     state = _state(RecipeStatus.DEFINED)
-    events = decide(state=state, command=DeprecateRecipe(recipe_id=state.id), now=_NOW)
+    events = decide(
+        state=state,
+        command=DeprecateRecipe(reason=DeprecationReason.SUPERSEDED, recipe_id=state.id),
+        now=_NOW,
+    )
     assert len(events) == 1
     event = events[0]
     assert isinstance(event, RecipeDeprecated)
@@ -46,7 +51,9 @@ def test_decide_emits_recipe_deprecated_when_state_versioned() -> None:
     succ = uuid4()
     events = decide(
         state=state,
-        command=DeprecateRecipe(recipe_id=state.id, replaced_by_recipe_id=succ),
+        command=DeprecateRecipe(
+            reason=DeprecationReason.SUPERSEDED, recipe_id=state.id, replaced_by_recipe_id=succ
+        ),
         now=_NOW,
     )
     assert events[0].replaced_by_recipe_id == succ
@@ -56,7 +63,11 @@ def test_decide_emits_recipe_deprecated_when_state_versioned() -> None:
 def test_decide_raises_not_found_when_state_none() -> None:
     rid = uuid4()
     with pytest.raises(RecipeNotFoundError) as exc:
-        decide(state=None, command=DeprecateRecipe(recipe_id=rid), now=_NOW)
+        decide(
+            state=None,
+            command=DeprecateRecipe(reason=DeprecationReason.SUPERSEDED, recipe_id=rid),
+            now=_NOW,
+        )
     assert exc.value.recipe_id == rid
 
 
@@ -65,5 +76,9 @@ def test_decide_raises_cannot_deprecate_when_already_deprecated() -> None:
     """Strict-not-idempotent: re-deprecating raises."""
     state = _state(RecipeStatus.DEPRECATED)
     with pytest.raises(RecipeCannotDeprecateError) as exc:
-        decide(state=state, command=DeprecateRecipe(recipe_id=state.id), now=_NOW)
+        decide(
+            state=state,
+            command=DeprecateRecipe(reason=DeprecationReason.SUPERSEDED, recipe_id=state.id),
+            now=_NOW,
+        )
     assert exc.value.current_status == RecipeStatus.DEPRECATED

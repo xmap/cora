@@ -88,6 +88,7 @@ class CapabilityDeprecated:
     """
 
     capability_id: UUID
+    reason: str
     occurred_at: datetime
     replaced_by_capability_id: UUID | None = None
 
@@ -172,11 +173,13 @@ def to_payload(event: CapabilityEvent) -> dict[str, Any]:
             }
         case CapabilityDeprecated(
             capability_id=capability_id,
+            reason=reason,
             replaced_by_capability_id=replaced_by_capability_id,
             occurred_at=occurred_at,
         ):
             return {
                 "capability_id": str(capability_id),
+                "reason": reason,
                 "replaced_by_capability_id": (
                     str(replaced_by_capability_id)
                     if replaced_by_capability_id is not None
@@ -265,6 +268,7 @@ def from_stored(stored: StoredEvent) -> CapabilityEvent:
                 replaced_raw = payload.get("replaced_by_capability_id")
                 return CapabilityDeprecated(
                     capability_id=UUID(payload["capability_id"]),
+                    reason=payload["reason"],
                     replaced_by_capability_id=(
                         UUID(replaced_raw) if replaced_raw is not None else None
                     ),

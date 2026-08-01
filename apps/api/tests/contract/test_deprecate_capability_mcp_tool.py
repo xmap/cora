@@ -61,7 +61,7 @@ def test_mcp_deprecate_capability_succeeds_on_happy_path() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_capability",
-                    "arguments": {"capability_id": str(cap_id)},
+                    "arguments": {"capability_id": str(cap_id), "reason": "Superseded"},
                 },
             },
             headers=session_headers,
@@ -88,6 +88,7 @@ def test_mcp_deprecate_capability_with_replaced_by_pointer() -> None:
                     "name": "deprecate_capability",
                     "arguments": {
                         "capability_id": str(original),
+                        "reason": "Superseded",
                         "replaced_by_capability_id": str(successor),
                     },
                 },
@@ -110,7 +111,7 @@ def test_mcp_deprecate_capability_returns_iserror_for_unknown_id() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_capability",
-                    "arguments": {"capability_id": str(uuid4())},
+                    "arguments": {"capability_id": str(uuid4()), "reason": "Superseded"},
                 },
             },
             headers=session_headers,

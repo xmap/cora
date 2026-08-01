@@ -26,6 +26,7 @@ from cora.recipe.aggregates.capability import ExecutorShape
 from cora.recipe.features import define_capability, deprecate_capability
 from cora.recipe.features.define_capability import DefineCapability
 from cora.recipe.features.deprecate_capability import DeprecateCapability
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 4, 12, 0, 0, tzinfo=UTC)
@@ -144,7 +145,7 @@ async def test_deprecated_capability_never_returned(db_pool: asyncpg.Pool) -> No
     )
     deps_dep = build_postgres_deps(db_pool, now=_LATER, ids=[uuid4()])
     await deprecate_capability.bind(deps_dep)(
-        DeprecateCapability(capability_id=cap_id),
+        DeprecateCapability(reason=DeprecationReason.SUPERSEDED, capability_id=cap_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

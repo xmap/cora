@@ -239,7 +239,7 @@ def test_post_runs_returns_404_when_subject_does_not_exist() -> None:
 def test_post_runs_returns_409_when_plan_is_deprecated() -> None:
     with TestClient(create_app()) as client:
         plan_id, subject_id = _setup_full_chain(client)
-        deprecate = client.post(f"/plans/{plan_id}/deprecate")
+        deprecate = client.post(f"/plans/{plan_id}/deprecate", json={"reason": "Superseded"})
         assert deprecate.status_code == 204
         response = client.post(
             "/runs",

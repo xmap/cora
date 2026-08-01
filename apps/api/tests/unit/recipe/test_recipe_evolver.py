@@ -88,7 +88,9 @@ def test_recipe_deprecated_preserves_steps_and_capability_id_for_audit() -> None
     state = evolve(None, _defined(recipe_id=rid, capability_id=cid))
     state2 = evolve(
         state,
-        RecipeDeprecated(recipe_id=rid, replaced_by_recipe_id=succ, occurred_at=_NOW),
+        RecipeDeprecated(
+            reason="Superseded", recipe_id=rid, replaced_by_recipe_id=succ, occurred_at=_NOW
+        ),
     )
     assert state2.status == RecipeStatus.DEPRECATED
     assert state2.replaced_by_recipe_id == succ
@@ -100,7 +102,7 @@ def test_recipe_deprecated_preserves_steps_and_capability_id_for_audit() -> None
 def test_recipe_deprecated_without_replacement_carries_none_pointer() -> None:
     rid = uuid4()
     state = evolve(None, _defined(recipe_id=rid))
-    state2 = evolve(state, RecipeDeprecated(recipe_id=rid, occurred_at=_NOW))
+    state2 = evolve(state, RecipeDeprecated(reason="Superseded", recipe_id=rid, occurred_at=_NOW))
     assert state2.status == RecipeStatus.DEPRECATED
     assert state2.replaced_by_recipe_id is None
 
@@ -113,7 +115,9 @@ def test_recipe_versioned_preserves_replaced_by_pointer_if_set() -> None:
     state = evolve(None, _defined(recipe_id=rid))
     state = evolve(
         state,
-        RecipeDeprecated(recipe_id=rid, replaced_by_recipe_id=succ, occurred_at=_NOW),
+        RecipeDeprecated(
+            reason="Superseded", recipe_id=rid, replaced_by_recipe_id=succ, occurred_at=_NOW
+        ),
     )
     state2 = evolve(
         state,
@@ -144,7 +148,7 @@ def test_evolve_versioned_on_empty_state_raises() -> None:
 @pytest.mark.unit
 def test_evolve_deprecated_on_empty_state_raises() -> None:
     with pytest.raises(ValueError):
-        evolve(None, RecipeDeprecated(recipe_id=uuid4(), occurred_at=_NOW))
+        evolve(None, RecipeDeprecated(reason="Superseded", recipe_id=uuid4(), occurred_at=_NOW))
 
 
 @pytest.mark.unit
@@ -165,7 +169,7 @@ def test_fold_replays_defined_versioned_deprecated_chain() -> None:
             steps=(RecipeSetpointStep(address="dev:x", value=2.0),),
             occurred_at=_NOW,
         ),
-        RecipeDeprecated(recipe_id=rid, occurred_at=_NOW),
+        RecipeDeprecated(reason="Superseded", recipe_id=rid, occurred_at=_NOW),
     ]
     state = fold(events)
     assert state is not None

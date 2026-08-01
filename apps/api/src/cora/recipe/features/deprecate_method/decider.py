@@ -42,4 +42,4 @@ def decide(
         raise MethodNotFoundError(command.method_id)
     if state.status not in _DEPRECATABLE_STATUSES:
         raise MethodCannotDeprecateError(state.id, current_status=state.status)
-    return [MethodDeprecated(method_id=state.id, occurred_at=now)]
+    return [MethodDeprecated(method_id=state.id, reason=command.reason.value, occurred_at=now)]

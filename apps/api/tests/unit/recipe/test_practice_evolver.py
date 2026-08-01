@@ -191,7 +191,7 @@ def test_evolve_practice_deprecated_flips_status_and_preserves_version() -> None
     )
     deprecated = evolve(
         versioned,
-        PracticeDeprecated(practice_id=practice_id, occurred_at=_NOW),
+        PracticeDeprecated(reason="Superseded", practice_id=practice_id, occurred_at=_NOW),
     )
     assert deprecated.status is PracticeStatus.DEPRECATED
     assert deprecated.version == "v3"
@@ -211,7 +211,7 @@ def test_evolve_practice_deprecated_from_defined_preserves_null_version() -> Non
     )
     deprecated = evolve(
         defined,
-        PracticeDeprecated(practice_id=defined.id, occurred_at=_NOW),
+        PracticeDeprecated(reason="Superseded", practice_id=defined.id, occurred_at=_NOW),
     )
     assert deprecated.status is PracticeStatus.DEPRECATED
     assert deprecated.version is None
@@ -220,7 +220,7 @@ def test_evolve_practice_deprecated_from_defined_preserves_null_version() -> Non
 @pytest.mark.unit
 def test_evolve_practice_deprecated_on_empty_state_raises() -> None:
     with pytest.raises(ValueError, match="cannot be applied to empty state"):
-        evolve(None, PracticeDeprecated(practice_id=uuid4(), occurred_at=_NOW))
+        evolve(None, PracticeDeprecated(reason="Superseded", practice_id=uuid4(), occurred_at=_NOW))
 
 
 @pytest.mark.unit
@@ -258,7 +258,7 @@ def test_fold_define_version_deprecate_preserves_version() -> None:
                 occurred_at=_NOW,
             ),
             PracticeVersioned(practice_id=practice_id, version_tag="v2", occurred_at=_NOW),
-            PracticeDeprecated(practice_id=practice_id, occurred_at=_NOW),
+            PracticeDeprecated(reason="Superseded", practice_id=practice_id, occurred_at=_NOW),
         ]
     )
     assert state is not None

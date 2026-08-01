@@ -7,7 +7,8 @@ body. 204 No Content on success.
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Request, status
+from fastapi import APIRouter, Body, Depends, Path, Request, status
+from pydantic import BaseModel, Field
 
 from cora.infrastructure.routing import (
     ErrorResponse,
@@ -17,6 +18,21 @@ from cora.infrastructure.routing import (
 )
 from cora.recipe.features.deprecate_practice.command import DeprecatePractice
 from cora.recipe.features.deprecate_practice.handler import Handler
+from cora.shared.deprecation import DeprecationReason
+
+
+class DeprecatePracticeRequest(BaseModel):
+    """Body for `POST /practices/{practice_id}/deprecate`."""
+
+    reason: DeprecationReason = Field(
+        ...,
+        description=(
+            "Why the template is no longer recommended. `Superseded`: a "
+            "newer version replaces it, prior use stands. `Defective`: it "
+            "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+            "no longer exists."
+        ),
+    )
 
 
 def _get_handler(request: Request) -> Handler:
@@ -53,6 +69,7 @@ router = APIRouter(tags=["recipe"])
     summary="Mark an existing practice as deprecated",
 )
 async def post_practices_deprecate(
+    body: Annotated[DeprecatePracticeRequest, Body()],
     practice_id: Annotated[UUID, Path(description="Target practice's id.")],
     handler: Annotated[Handler, Depends(_get_handler)],
     cid: Annotated[UUID, Depends(get_correlation_id)],
@@ -60,7 +77,7 @@ async def post_practices_deprecate(
     surface_id: Annotated[UUID, Depends(get_surface_id)],
 ) -> None:
     await handler(
-        DeprecatePractice(practice_id=practice_id),
+        DeprecatePractice(practice_id=practice_id, reason=body.reason),
         principal_id=principal_id,
         correlation_id=cid,
         surface_id=surface_id,

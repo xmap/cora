@@ -21,6 +21,7 @@ from cora.recipe.aggregates.method import (
 )
 from cora.recipe.features import deprecate_method
 from cora.recipe.features.deprecate_method import DeprecateMethod
+from cora.shared.deprecation import DeprecationReason
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
 
@@ -50,10 +51,10 @@ def test_decide_emits_method_deprecated_for_each_allowed_source_status(
     state = _method(status=source)
     events = deprecate_method.decide(
         state=state,
-        command=DeprecateMethod(method_id=state.id),
+        command=DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=state.id),
         now=_NOW,
     )
-    assert events == [MethodDeprecated(method_id=state.id, occurred_at=_NOW)]
+    assert events == [MethodDeprecated(reason="Superseded", method_id=state.id, occurred_at=_NOW)]
 
 
 @pytest.mark.unit
@@ -62,7 +63,7 @@ def test_decide_raises_method_not_found_when_state_is_none() -> None:
     with pytest.raises(MethodNotFoundError) as exc_info:
         deprecate_method.decide(
             state=None,
-            command=DeprecateMethod(method_id=target_id),
+            command=DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=target_id),
             now=_NOW,
         )
     assert exc_info.value.method_id == target_id
@@ -75,7 +76,7 @@ def test_decide_raises_cannot_deprecate_when_already_deprecated() -> None:
     with pytest.raises(MethodCannotDeprecateError) as exc_info:
         deprecate_method.decide(
             state=state,
-            command=DeprecateMethod(method_id=state.id),
+            command=DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=state.id),
             now=_NOW,
         )
     assert exc_info.value.method_id == state.id
@@ -88,7 +89,7 @@ def test_decide_error_message_lists_both_allowed_source_statuses() -> None:
     with pytest.raises(MethodCannotDeprecateError) as exc_info:
         deprecate_method.decide(
             state=state,
-            command=DeprecateMethod(method_id=state.id),
+            command=DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=state.id),
             now=_NOW,
         )
     msg = str(exc_info.value)
@@ -99,7 +100,7 @@ def test_decide_error_message_lists_both_allowed_source_statuses() -> None:
 @pytest.mark.unit
 def test_decide_is_pure_same_inputs_same_outputs() -> None:
     state = _method()
-    command = DeprecateMethod(method_id=state.id)
+    command = DeprecateMethod(reason=DeprecationReason.SUPERSEDED, method_id=state.id)
     first = deprecate_method.decide(state=state, command=command, now=_NOW)
     second = deprecate_method.decide(state=state, command=command, now=_NOW)
     assert first == second

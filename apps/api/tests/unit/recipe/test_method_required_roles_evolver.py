@@ -192,7 +192,7 @@ def test_evolve_method_deprecated_preserves_required_roles() -> None:
                 optional=False,
                 occurred_at=_NOW,
             ),
-            MethodDeprecated(method_id=method_id, occurred_at=_NOW),
+            MethodDeprecated(reason="Superseded", method_id=method_id, occurred_at=_NOW),
         ]
     )
     assert state is not None
