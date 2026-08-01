@@ -28,6 +28,8 @@ from hypothesis import strategies as st
 
 from cora.agent.aggregates.agent import (
     Agent,
+    AgentCannotDeprecateError,
+    AgentDeprecated,
     AgentKind,
     AgentName,
     AgentNotFoundError,
@@ -44,7 +46,7 @@ if TYPE_CHECKING:
     from datetime import datetime
     from uuid import UUID
 
-_REASON_MAX = 500
+_REASON = st.sampled_from(DeprecationReason)
 
 _DEPRECATABLE_SOURCES = (
     AgentStatus.DEFINED,
@@ -107,3 +109,53 @@ def test_deprecate_is_pure_same_input_same_output(agent_id: UUID, now: datetime)
     first = decide(state=state, command=command, now=now)
     second = decide(state=state, command=command, now=now)
     assert first == second
+
+
+@pytest.mark.unit
+@given(
+    agent_id=st.uuids(),
+    source=st.sampled_from(_DEPRECATABLE_SOURCES),
+    reason=_REASON,
+    now=aware_datetimes(),
+)
+def test_deprecate_from_permitted_source_emits_single_event(
+    agent_id: UUID,
+    source: AgentStatus,
+    reason: DeprecationReason,
+    now: datetime,
+) -> None:
+    """Every permitted source emits exactly one AgentDeprecated with state.id.
+
+    Source-state TOTALITY: the point is that no member of the permitted set
+    silently falls through, so a future `AgentStatus` value added to
+    `_DEPRECATABLE_SOURCES` without a decider arm fails here.
+    """
+    events = decide(
+        state=_agent(agent_id=agent_id, status=source),
+        command=DeprecateAgent(agent_id=agent_id, reason=reason),
+        now=now,
+    )
+    assert events == [AgentDeprecated(agent_id=agent_id, reason=reason.value, occurred_at=now)]
+
+
+@pytest.mark.unit
+@given(
+    agent_id=st.uuids(),
+    source=st.sampled_from(_DISALLOWED_SOURCES),
+    reason=_REASON,
+    now=aware_datetimes(),
+)
+def test_deprecate_from_disallowed_source_always_raises_cannot_deprecate(
+    agent_id: UUID,
+    source: AgentStatus,
+    reason: DeprecationReason,
+    now: datetime,
+) -> None:
+    """Any source outside the permitted set raises, carrying the current status."""
+    with pytest.raises(AgentCannotDeprecateError) as exc:
+        decide(
+            state=_agent(agent_id=agent_id, status=source),
+            command=DeprecateAgent(agent_id=agent_id, reason=reason),
+            now=now,
+        )
+    assert exc.value.current_status is source

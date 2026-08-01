@@ -111,6 +111,36 @@ def _deprecated_events() -> dict[str, tuple[str, str | None]]:
     return out
 
 
+@cache
+def _deprecate_command_files() -> frozenset[str]:
+    """Every `<bc>/features/deprecate_*/command.py` git is tracking."""
+    return frozenset(
+        str(path)
+        for path in tracked_python_files()
+        if path.name == "command.py" and path.parent.name.startswith("deprecate_")
+    )
+
+
+def _command_reason_annotation(path: Path) -> str:
+    """The annotation on the command class's `reason` field, or a marker."""
+    tree = ast.parse(path.read_text())
+    expected = "".join(word.capitalize() for word in path.parent.name.split("_"))
+    candidates = [n for n in tree.body if isinstance(n, ast.ClassDef)]
+    chosen = next((n for n in candidates if n.name == expected), None) or next(
+        (n for n in candidates if n.name.startswith("Deprecate")), None
+    )
+    if chosen is None:
+        return "<no command class>"
+    for stmt in chosen.body:
+        if (
+            isinstance(stmt, ast.AnnAssign)
+            and isinstance(stmt.target, ast.Name)
+            and stmt.target.id == "reason"
+        ):
+            return ast.unparse(stmt.annotation)
+    return "<missing>"
+
+
 @pytest.mark.architecture
 def test_the_shared_deprecation_reason_enum_exists() -> None:
     assert _ENUM_MODULE in tracked_python_files(), (
@@ -125,6 +155,42 @@ def test_the_shared_deprecation_reason_enum_exists() -> None:
     }
     assert "DeprecationReason" in names, (
         f"cora/shared/deprecation.py declares {sorted(names)}, not `DeprecationReason`."
+    )
+
+
+@pytest.mark.architecture
+def test_the_corpus_still_has_deprecated_events_to_pin() -> None:
+    """Vacuity guard: an empty collection would make every pin below trivially pass.
+
+    The parametrized tests collect zero cases if `_deprecated_events()` returns
+    `{}` (a moved directory, a changed union shape, a broken walker), and pytest
+    reports that as success. This is the one thing the pins cannot check about
+    themselves.
+    """
+    found = _deprecated_events()
+    assert len(found) >= 11, (
+        f"Expected at least the 11 known `<X>Deprecated` events, found {len(found)}: "
+        f"{sorted(found)}. Either the AST walker stopped matching, or events were "
+        "removed. If a deprecation event was legitimately deleted, lower the floor "
+        "here deliberately rather than letting the pins go quiet."
+    )
+
+
+@pytest.mark.architecture
+@pytest.mark.parametrize("path", sorted(_deprecate_command_files()))
+def test_deprecate_command_annotates_the_closed_enum(path: str) -> None:
+    """The event holds a primitive; the COMMAND is where the vocabulary is closed.
+
+    Pinning only the event field leaves the real guarantee unguarded: a new
+    `deprecate_*` slice could take a free-text `reason: str` on its command,
+    emit it into a `reason: str` event, and pass every other check here.
+    """
+    annotation = _command_reason_annotation(Path(path))
+    assert annotation == "DeprecationReason", (
+        f"{path}: the command's `reason` is {annotation!r}, expected "
+        "`DeprecationReason`. The event field is deliberately a primitive, so the "
+        "command annotation is the only thing that closes the vocabulary and gives "
+        "Pydantic something to reject an unknown value against at the edge."
     )
 
 

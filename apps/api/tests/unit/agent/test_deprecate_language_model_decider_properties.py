@@ -35,6 +35,8 @@ from cora.agent.aggregates.language_model import (
     ArchivabilityTier,
     DataSensitivityTier,
     LanguageModel,
+    LanguageModelCannotDeprecateError,
+    LanguageModelDeprecated,
     LanguageModelName,
     LanguageModelNotFoundError,
     LanguageModelStatus,
@@ -50,7 +52,7 @@ if TYPE_CHECKING:
     from datetime import datetime
     from uuid import UUID
 
-_REASON_MAX = 500
+_REASON = st.sampled_from(DeprecationReason)
 
 _DEPRECATABLE_SOURCES = (
     LanguageModelStatus.DEFINED,
@@ -128,3 +130,58 @@ def test_deprecate_is_pure_same_input_same_output(language_model_id: UUID, now: 
     first = decide(state=state, command=command, now=now)
     second = decide(state=state, command=command, now=now)
     assert first == second
+
+
+@pytest.mark.unit
+@given(
+    language_model_id=st.uuids(),
+    source=st.sampled_from(_DEPRECATABLE_SOURCES),
+    reason=_REASON,
+    now=aware_datetimes(),
+)
+def test_deprecate_from_permitted_source_emits_single_event(
+    language_model_id: UUID,
+    source: LanguageModelStatus,
+    reason: DeprecationReason,
+    now: datetime,
+) -> None:
+    """Every permitted source emits exactly one LanguageModelDeprecated.
+
+    Source-state TOTALITY: a future `LanguageModelStatus` added to
+    `_DEPRECATABLE_SOURCES` without a decider arm fails here.
+    """
+    events = decide(
+        state=_language_model(language_model_id=language_model_id, status=source),
+        command=DeprecateLanguageModel(language_model_id=language_model_id, reason=reason),
+        now=now,
+    )
+    assert events == [
+        LanguageModelDeprecated(
+            language_model_id=language_model_id,
+            reason=reason.value,
+            occurred_at=now,
+        )
+    ]
+
+
+@pytest.mark.unit
+@given(
+    language_model_id=st.uuids(),
+    source=st.sampled_from(_DISALLOWED_SOURCES),
+    reason=_REASON,
+    now=aware_datetimes(),
+)
+def test_deprecate_from_disallowed_source_always_raises_cannot_deprecate(
+    language_model_id: UUID,
+    source: LanguageModelStatus,
+    reason: DeprecationReason,
+    now: datetime,
+) -> None:
+    """Any source outside the permitted set raises, carrying the current status."""
+    with pytest.raises(LanguageModelCannotDeprecateError) as exc:
+        decide(
+            state=_language_model(language_model_id=language_model_id, status=source),
+            command=DeprecateLanguageModel(language_model_id=language_model_id, reason=reason),
+            now=now,
+        )
+    assert exc.value.current_status is source

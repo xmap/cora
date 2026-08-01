@@ -25,7 +25,10 @@ from cora.equipment.aggregates.model import (
     Manufacturer,
     ManufacturerName,
     Model,
+    ModelCannotDeprecateError,
+    ModelDeprecated,
     ModelName,
+    ModelNotFoundError,
     ModelStatus,
     PartNumber,
 )
@@ -81,3 +84,57 @@ def test_deprecate_model_is_pure_same_input_same_output(
     first = deprecate_model.decide(state=state, command=command, now=now)
     second = deprecate_model.decide(state=state, command=command, now=now)
     assert first == second
+
+
+@pytest.mark.unit
+@given(
+    model_id=st.uuids(),
+    status=_DEPRECATABLE_STATUS,
+    reason=_REASON,
+    now=aware_datetimes(),
+)
+def test_deprecate_model_emits_exactly_one_event_with_injected_fields(
+    model_id: UUID,
+    status: ModelStatus,
+    reason: DeprecationReason,
+    now: datetime,
+) -> None:
+    """Deprecatable source + valid command -> single ModelDeprecated carrying
+    the reason value and the injected `now`."""
+    state = _model(model_id, status=status)
+    command = DeprecateModel(model_id=model_id, reason=reason)
+    events = deprecate_model.decide(state=state, command=command, now=now)
+    assert events == [ModelDeprecated(model_id=model_id, reason=reason.value, occurred_at=now)]
+
+
+@pytest.mark.unit
+@given(model_id=st.uuids(), reason=_REASON, now=aware_datetimes())
+def test_deprecate_model_on_empty_state_always_raises_not_found(
+    model_id: UUID,
+    reason: DeprecationReason,
+    now: datetime,
+) -> None:
+    """Empty stream always raises `ModelNotFoundError`."""
+    with pytest.raises(ModelNotFoundError):
+        deprecate_model.decide(
+            state=None,
+            command=DeprecateModel(model_id=model_id, reason=reason),
+            now=now,
+        )
+
+
+@pytest.mark.unit
+@given(model_id=st.uuids(), reason=_REASON, now=aware_datetimes())
+def test_deprecate_model_on_deprecated_state_always_raises_cannot_deprecate(
+    model_id: UUID,
+    reason: DeprecationReason,
+    now: datetime,
+) -> None:
+    """Re-deprecating is strict-not-idempotent from the terminal state."""
+    state = _model(model_id, status=ModelStatus.DEPRECATED)
+    with pytest.raises(ModelCannotDeprecateError):
+        deprecate_model.decide(
+            state=state,
+            command=DeprecateModel(model_id=model_id, reason=reason),
+            now=now,
+        )

@@ -3,7 +3,12 @@
 `RegisterAsset` emits `AssetRegistered`. `UpdateAssetSettings` emits
 `AssetSettingsUpdated`. `BindPlanRole` emits `PlanRoleBound`. The rule
 behind all three: move the leading verb to the end, put it in the past
-participle, keep every other token unchanged.
+participle, keep every other token unchanged AND IN ORDER.
+
+Order matters and the comparison is positional. This repo's R3 rule is
+noun-LAST, and a prior audit was burned reading it backwards, so a check
+that accepted `AgentPlanTargetUpdated` for `UpdateAgentTargetPlan` would
+be blind to exactly the mistake it exists to catch.
 
     <Verb><Subject...>   ->   <Subject...><VerbPastParticiple>
 
@@ -90,7 +95,6 @@ _IRREGULAR_STEMS: dict[str, str] = {
     "held": "hold",
     "bound": "bind",
     "unbound": "unbind",
-    "set": "set",
     "withdrawn": "withdraw",
     "taken": "take",
     "forgotten": "forget",
@@ -131,6 +135,13 @@ _SANCTIONED_DEVIATIONS: dict[str, str] = {
     # Same split: the Visit owns the stream, the Surface is the object.
     "trust/take_control_of_surface": "event names the Visit stream, command names the object",
     "trust/release_control_of_surface": "event names the Visit stream, command names the object",
+    # Phrasal verbs. `CheckInVisit` -> `VisitCheckedIn` splits the verb from
+    # its preposition and moves the preposition to the end, so the trailing
+    # tokens genuinely reorder. `test_event_class_name_shape.py` sanctions the
+    # same pair for the same reason. Surfaced by tightening this check from a
+    # set comparison to a positional one, which is the point of the tightening.
+    "trust/check_in_visit": "phrasal verb, preposition moves to the end",
+    "trust/check_out_visit": "phrasal verb, preposition moves to the end",
     # Adjudicated by the 2026-06-22 slice naming audit (PR #318), which
     # renamed `arrive_visit` to `record_visit_arrival` because `arrive`
     # was the one intransitive verb in the Visit lifecycle family, and
@@ -180,11 +191,11 @@ def _derives(command: str, event: str) -> bool:
     event_tokens = _TOKEN_RE.findall(event)
     if not command_tokens or not event_tokens:
         return False
-    verb, rest = command_tokens[0], sorted(command_tokens[1:])
+    verb, rest = command_tokens[0], command_tokens[1:]
     verb_stems = _stems(verb)
     for index, token in enumerate(event_tokens):
         remainder = event_tokens[:index] + event_tokens[index + 1 :]
-        if _stems(token) & verb_stems and sorted(remainder) == rest:
+        if _stems(token) & verb_stems and remainder == rest:
             return True
     return False
 

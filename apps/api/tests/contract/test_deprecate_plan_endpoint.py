@@ -105,3 +105,23 @@ def test_post_deprecate_plan_rejects_invalid_path_uuid_with_422() -> None:
     with TestClient(create_app()) as client:
         response = client.post("/plans/not-a-uuid/deprecate", json={"reason": "Superseded"})
     assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_deprecate_missing_reason_returns_422() -> None:
+    """`reason` is required: an empty body is a schema rejection."""
+    with TestClient(create_app()) as client:
+        plan_id = _setup_plan(client)
+        response = client.post(f"/plans/{plan_id}/deprecate", json={})
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_deprecate_unknown_reason_returns_422() -> None:
+    """`reason` is a closed enum: prose is rejected at the schema."""
+    with TestClient(create_app()) as client:
+        plan_id = _setup_plan(client)
+        response = client.post(
+            f"/plans/{plan_id}/deprecate", json={"reason": "superseded by a newer one"}
+        )
+    assert response.status_code == 422

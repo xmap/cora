@@ -70,3 +70,26 @@ def test_post_deprecate_recipe_409_on_re_deprecate() -> None:
             f"/recipes/{recipe['recipe_id']}/deprecate", json={"reason": "Superseded"}
         )
     assert response.status_code == 409
+
+
+@pytest.mark.contract
+def test_post_deprecate_missing_reason_returns_422() -> None:
+    """`reason` is required: an empty body is a schema rejection."""
+    with TestClient(create_app()) as client:
+        cap = client.post("/capabilities", json=_capability()).json()
+        recipe = client.post("/recipes", json=_recipe_for(cap["capability_id"])).json()
+        response = client.post(f"/recipes/{recipe['recipe_id']}/deprecate", json={})
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_deprecate_unknown_reason_returns_422() -> None:
+    """`reason` is a closed enum: prose is rejected at the schema."""
+    with TestClient(create_app()) as client:
+        cap = client.post("/capabilities", json=_capability()).json()
+        recipe = client.post("/recipes", json=_recipe_for(cap["capability_id"])).json()
+        response = client.post(
+            f"/recipes/{recipe['recipe_id']}/deprecate",
+            json={"reason": "superseded by a newer one"},
+        )
+    assert response.status_code == 422
