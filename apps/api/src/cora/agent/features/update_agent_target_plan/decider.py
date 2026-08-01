@@ -1,15 +1,15 @@
-"""Pure decider for the `SetAgentTargetPlan` command.
+"""Pure decider for the `UpdateAgentTargetPlan` command.
 
-PUT-semantics: the supplied `target_plan_id` IS the post-set target.
+PUT-semantics: the supplied `target_plan_id` IS the post-update target.
 Source set is `{Defined, Versioned, Suspended}` (Deprecated is the only
-blocking state, mirroring update_agent_budget). Idempotent: setting the
+blocking state, mirroring update_agent_budget). Idempotent: updating to the
 target to its current value returns `[]`.
 
 ## Validation
 
   - State must not be None -> `AgentNotFoundError`
   - Current status must not be `Deprecated`
-    -> `AgentCannotSetTargetPlanError`
+    -> `AgentCannotUpdateTargetPlanError`
   - No cross-BC Plan-existence check (eventual-consistency stance).
 """
 
@@ -17,37 +17,37 @@ from datetime import datetime
 
 from cora.agent.aggregates.agent import (
     Agent,
-    AgentCannotSetTargetPlanError,
+    AgentCannotUpdateTargetPlanError,
     AgentNotFoundError,
     AgentStatus,
-    AgentTargetPlanSet,
+    AgentTargetPlanUpdated,
 )
-from cora.agent.features.set_agent_target_plan.command import SetAgentTargetPlan
+from cora.agent.features.update_agent_target_plan.command import UpdateAgentTargetPlan
 
 
 def decide(
     state: Agent | None,
-    command: SetAgentTargetPlan,
+    command: UpdateAgentTargetPlan,
     *,
     now: datetime,
-) -> list[AgentTargetPlanSet]:
-    """Decide the events produced by setting an Agent's target Plan.
+) -> list[AgentTargetPlanUpdated]:
+    """Decide the events produced by updating an Agent's target Plan.
 
     Invariants:
       - State must not be None -> AgentNotFoundError
-      - Current status must not be Deprecated -> AgentCannotSetTargetPlanError
+      - Current status must not be Deprecated -> AgentCannotUpdateTargetPlanError
       - Idempotent: target unchanged -> no event
     """
     if state is None:
         raise AgentNotFoundError(command.agent_id)
     if state.status is AgentStatus.DEPRECATED:
-        raise AgentCannotSetTargetPlanError(state.id, state.status)
+        raise AgentCannotUpdateTargetPlanError(state.id, state.status)
 
     if command.target_plan_id == state.target_plan_id:
         return []
 
     return [
-        AgentTargetPlanSet(
+        AgentTargetPlanUpdated(
             agent_id=state.id,
             target_plan_id=command.target_plan_id,
             occurred_at=now,

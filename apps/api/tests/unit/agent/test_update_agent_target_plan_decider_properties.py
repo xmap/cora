@@ -1,20 +1,20 @@
-"""Property-based tests for `set_agent_target_plan.decide` (Agent BC).
+"""Property-based tests for `update_agent_target_plan.decide` (Agent BC).
 
-Complements the example-based `test_set_agent_target_plan_decider.py` with
+Complements the example-based `test_update_agent_target_plan_decider.py` with
 universal claims across generated inputs. The decider is a pure target-Plan
 PUT transition with no actor kwarg (setting identity lives on the event
 envelope):
 
-    (state, command, now) -> list[AgentTargetPlanSet]
+    (state, command, now) -> list[AgentTargetPlanUpdated]
 
 Load-bearing properties:
 
   - state=None always raises `AgentNotFoundError` carrying command.agent_id.
   - The source-state partition is total over `AgentStatus`: only `Deprecated`
-    is disallowed (raising `AgentCannotSetTargetPlanError` carrying the current
+    is disallowed (raising `AgentCannotUpdateTargetPlanError` carrying the current
     status); `{Defined, Versioned, Suspended}` are settable.
   - From a settable source, a target CHANGE emits exactly one
-    `AgentTargetPlanSet` (agent_id=state.id, occurred_at=now, target threaded
+    `AgentTargetPlanUpdated` (agent_id=state.id, occurred_at=now, target threaded
     from the command).
   - The emitted event's agent_id is `state.id`, never command.agent_id.
   - Idempotent: setting the target the Agent already holds returns `[]`.
@@ -32,17 +32,17 @@ from hypothesis import strategies as st
 
 from cora.agent.aggregates.agent import (
     Agent,
-    AgentCannotSetTargetPlanError,
+    AgentCannotUpdateTargetPlanError,
     AgentKind,
     AgentName,
     AgentNotFoundError,
     AgentStatus,
-    AgentTargetPlanSet,
+    AgentTargetPlanUpdated,
     AgentVersion,
     ModelRef,
 )
-from cora.agent.features.set_agent_target_plan.command import SetAgentTargetPlan
-from cora.agent.features.set_agent_target_plan.decider import decide
+from cora.agent.features.update_agent_target_plan.command import UpdateAgentTargetPlan
+from cora.agent.features.update_agent_target_plan.decider import decide
 from tests._strategies import aware_datetimes
 
 if TYPE_CHECKING:
@@ -73,7 +73,7 @@ def test_state_none_always_raises_not_found(now: datetime, target: UUID | None) 
     with pytest.raises(AgentNotFoundError):
         decide(
             state=None,
-            command=SetAgentTargetPlan(agent_id=agent_id, target_plan_id=target),
+            command=UpdateAgentTargetPlan(agent_id=agent_id, target_plan_id=target),
             now=now,
         )
 
@@ -83,10 +83,10 @@ def test_deprecated_always_raises_cannot_set(
     now: datetime, current: UUID | None, target: UUID | None
 ) -> None:
     agent = _agent(AgentStatus.DEPRECATED, target_plan_id=current)
-    with pytest.raises(AgentCannotSetTargetPlanError):
+    with pytest.raises(AgentCannotUpdateTargetPlanError):
         decide(
             state=agent,
-            command=SetAgentTargetPlan(agent_id=agent.id, target_plan_id=target),
+            command=UpdateAgentTargetPlan(agent_id=agent.id, target_plan_id=target),
             now=now,
         )
 
@@ -99,12 +99,12 @@ def test_settable_source_with_changed_target_emits_one_event(
     agent = _agent(status, target_plan_id=None)
     events = decide(
         state=agent,
-        command=SetAgentTargetPlan(agent_id=agent.id, target_plan_id=target),
+        command=UpdateAgentTargetPlan(agent_id=agent.id, target_plan_id=target),
         now=now,
     )
     assert len(events) == 1
     event = events[0]
-    assert isinstance(event, AgentTargetPlanSet)
+    assert isinstance(event, AgentTargetPlanUpdated)
     assert event.agent_id == agent.id
     assert event.target_plan_id == target
     assert event.occurred_at == now
@@ -117,7 +117,7 @@ def test_idempotent_set_to_current_target_returns_empty(
     agent = _agent(status, target_plan_id=current)
     events = decide(
         state=agent,
-        command=SetAgentTargetPlan(agent_id=agent.id, target_plan_id=current),
+        command=UpdateAgentTargetPlan(agent_id=agent.id, target_plan_id=current),
         now=now,
     )
     assert events == []
@@ -126,7 +126,7 @@ def test_idempotent_set_to_current_target_returns_empty(
 @given(status=st.sampled_from(_SETTABLE), now=aware_datetimes(), target=_optional_plan)
 def test_decider_is_pure(status: AgentStatus, now: datetime, target: UUID | None) -> None:
     agent = _agent(status, target_plan_id=None)
-    command = SetAgentTargetPlan(agent_id=agent.id, target_plan_id=target)
+    command = UpdateAgentTargetPlan(agent_id=agent.id, target_plan_id=target)
     assert decide(state=agent, command=command, now=now) == decide(
         state=agent, command=command, now=now
     )

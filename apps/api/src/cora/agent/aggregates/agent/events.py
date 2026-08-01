@@ -245,7 +245,7 @@ class AgentBudgetUpdated:
 
 
 @dataclass(frozen=True)
-class AgentTargetPlanSet:
+class AgentTargetPlanUpdated:
     """The Agent's runtime target Plan was set or cleared.
 
     `target_plan_id` is the recipe Plan an autonomous agent (the RunInitiator)
@@ -271,7 +271,7 @@ AgentEvent = (
     | AgentToolGranted
     | AgentToolRevoked
     | AgentBudgetUpdated
-    | AgentTargetPlanSet
+    | AgentTargetPlanUpdated
 )
 
 
@@ -378,7 +378,7 @@ def to_payload(event: AgentEvent) -> dict[str, Any]:
                 "daily_token_cap": daily_token_cap,
                 "occurred_at": occurred_at.isoformat(),
             }
-        case AgentTargetPlanSet(
+        case AgentTargetPlanUpdated(
             agent_id=agent_id,
             target_plan_id=target_plan_id,
             occurred_at=occurred_at,
@@ -493,10 +493,10 @@ def from_stored(stored: StoredEvent) -> AgentEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
-        case "AgentTargetPlanSet":
+        case "AgentTargetPlanUpdated":
             return deserialize_or_raise(
-                "AgentTargetPlanSet",
-                lambda: AgentTargetPlanSet(
+                "AgentTargetPlanUpdated",
+                lambda: AgentTargetPlanUpdated(
                     agent_id=UUID(payload["agent_id"]),
                     target_plan_id=(
                         UUID(raw) if (raw := payload.get("target_plan_id")) is not None else None
@@ -516,7 +516,7 @@ __all__ = [
     "AgentEvent",
     "AgentResumed",
     "AgentSuspended",
-    "AgentTargetPlanSet",
+    "AgentTargetPlanUpdated",
     "AgentToolGranted",
     "AgentToolRevoked",
     "AgentVersioned",

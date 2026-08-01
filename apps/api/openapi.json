@@ -14669,26 +14669,6 @@
         "title": "ServingRoute",
         "type": "string"
       },
-      "SetAgentTargetPlanRequest": {
-        "description": "Body for `POST /agents/{agent_id}/target-plan`.",
-        "properties": {
-          "target_plan_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The recipe Plan this autonomous agent starts for each ready Subject. Pass null to clear the target (the agent initiates nothing until a Plan is set again).",
-            "title": "Target Plan Id"
-          }
-        },
-        "title": "SetAgentTargetPlanRequest",
-        "type": "object"
-      },
       "SignSealPointerRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /federation/seals/{facility_code}/pointer/sign`.",
@@ -15956,6 +15936,26 @@
           }
         },
         "title": "UpdateAgentBudgetRequest",
+        "type": "object"
+      },
+      "UpdateAgentTargetPlanRequest": {
+        "description": "Body for `POST /agents/{agent_id}/target-plan`.",
+        "properties": {
+          "target_plan_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The recipe Plan this autonomous agent starts for each ready Subject. Pass null to clear the target (the agent initiates nothing until a Plan is supplied again).",
+            "title": "Target Plan Id"
+          }
+        },
+        "title": "UpdateAgentTargetPlanRequest",
         "type": "object"
       },
       "UpdateAssetPartitionRuleRequest": {
@@ -18960,7 +18960,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SetAgentTargetPlanRequest"
+                "$ref": "#/components/schemas/UpdateAgentTargetPlanRequest"
               }
             }
           },
@@ -19004,7 +19004,7 @@
             "description": "Request body or path parameter failed schema validation."
           }
         },
-        "summary": "Set or clear an autonomous Agent's target Plan (PUT semantics; null clears)",
+        "summary": "Update or clear an autonomous Agent's target Plan (PUT semantics; null clears)",
         "tags": [
           "agent"
         ]

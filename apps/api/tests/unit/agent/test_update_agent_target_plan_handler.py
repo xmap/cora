@@ -1,4 +1,4 @@
-"""Application-handler tests for the `set_agent_target_plan` slice."""
+"""Application-handler tests for the `update_agent_target_plan` slice."""
 
 from datetime import UTC, datetime
 from uuid import UUID
@@ -7,13 +7,13 @@ import pytest
 
 from cora.agent.aggregates.agent import (
     AgentNotFoundError,
-    AgentTargetPlanSet,
+    AgentTargetPlanUpdated,
     event_type_name,
     to_payload,
 )
 from cora.agent.errors import UnauthorizedError
-from cora.agent.features import set_agent_target_plan
-from cora.agent.features.set_agent_target_plan import SetAgentTargetPlan
+from cora.agent.features import update_agent_target_plan
+from cora.agent.features.update_agent_target_plan import UpdateAgentTargetPlan
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
@@ -48,8 +48,8 @@ def _build_deps(
 
 
 async def _append_initial_target(store: InMemoryEventStore) -> None:
-    """Append a baseline AgentTargetPlanSet event at version 2."""
-    was_set = AgentTargetPlanSet(agent_id=_AGENT_ID, target_plan_id=_PLAN_A, occurred_at=_T1)
+    """Append a baseline AgentTargetPlanUpdated event at version 2."""
+    was_set = AgentTargetPlanUpdated(agent_id=_AGENT_ID, target_plan_id=_PLAN_A, occurred_at=_T1)
     await store.append(
         stream_type="Agent",
         stream_id=_AGENT_ID,
@@ -60,7 +60,7 @@ async def _append_initial_target(store: InMemoryEventStore) -> None:
                 payload=to_payload(was_set),
                 occurred_at=was_set.occurred_at,
                 event_id=_FIRST_SET_EVENT_ID,
-                command_name="SetAgentTargetPlan",
+                command_name="UpdateAgentTargetPlan",
                 correlation_id=_CORRELATION_ID,
                 causation_id=None,
                 principal_id=_PRINCIPAL_ID,
@@ -87,15 +87,15 @@ async def test_handler_sets_target_plan_on_a_versioned_agent() -> None:
     store = InMemoryEventStore()
     await _seed(store)
     deps = _build_deps(event_store=store)
-    handler = set_agent_target_plan.bind(deps)
+    handler = update_agent_target_plan.bind(deps)
     await handler(
-        SetAgentTargetPlan(agent_id=_AGENT_ID, target_plan_id=_PLAN_A),
+        UpdateAgentTargetPlan(agent_id=_AGENT_ID, target_plan_id=_PLAN_A),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     events, version = await store.load("Agent", _AGENT_ID)
     assert version == 3
-    assert events[-1].event_type == "AgentTargetPlanSet"
+    assert events[-1].event_type == "AgentTargetPlanUpdated"
     assert events[-1].payload["target_plan_id"] == str(_PLAN_A)
 
 
@@ -105,9 +105,9 @@ async def test_handler_idempotent_set_to_same_plan_does_not_append() -> None:
     await _seed(store)
     await _append_initial_target(store)
     deps = _build_deps(event_store=store)
-    handler = set_agent_target_plan.bind(deps)
+    handler = update_agent_target_plan.bind(deps)
     await handler(
-        SetAgentTargetPlan(agent_id=_AGENT_ID, target_plan_id=_PLAN_A),
+        UpdateAgentTargetPlan(agent_id=_AGENT_ID, target_plan_id=_PLAN_A),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -121,9 +121,9 @@ async def test_handler_changes_to_a_different_plan() -> None:
     await _seed(store)
     await _append_initial_target(store)
     deps = _build_deps(event_store=store)
-    handler = set_agent_target_plan.bind(deps)
+    handler = update_agent_target_plan.bind(deps)
     await handler(
-        SetAgentTargetPlan(agent_id=_AGENT_ID, target_plan_id=_PLAN_B),
+        UpdateAgentTargetPlan(agent_id=_AGENT_ID, target_plan_id=_PLAN_B),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -138,9 +138,9 @@ async def test_handler_clears_target_plan() -> None:
     await _seed(store)
     await _append_initial_target(store)
     deps = _build_deps(event_store=store)
-    handler = set_agent_target_plan.bind(deps)
+    handler = update_agent_target_plan.bind(deps)
     await handler(
-        SetAgentTargetPlan(agent_id=_AGENT_ID, target_plan_id=None),
+        UpdateAgentTargetPlan(agent_id=_AGENT_ID, target_plan_id=None),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -152,10 +152,10 @@ async def test_handler_clears_target_plan() -> None:
 @pytest.mark.unit
 async def test_handler_raises_not_found_for_unknown_agent() -> None:
     deps = _build_deps()
-    handler = set_agent_target_plan.bind(deps)
+    handler = update_agent_target_plan.bind(deps)
     with pytest.raises(AgentNotFoundError):
         await handler(
-            SetAgentTargetPlan(agent_id=_AGENT_ID, target_plan_id=_PLAN_A),
+            UpdateAgentTargetPlan(agent_id=_AGENT_ID, target_plan_id=_PLAN_A),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -166,10 +166,10 @@ async def test_handler_denied_does_not_write_to_stream() -> None:
     store = InMemoryEventStore()
     await _seed(store)
     deps = _build_deps(event_store=store, deny=True)
-    handler = set_agent_target_plan.bind(deps)
+    handler = update_agent_target_plan.bind(deps)
     with pytest.raises(UnauthorizedError):
         await handler(
-            SetAgentTargetPlan(agent_id=_AGENT_ID, target_plan_id=_PLAN_A),
+            UpdateAgentTargetPlan(agent_id=_AGENT_ID, target_plan_id=_PLAN_A),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

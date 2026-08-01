@@ -15,7 +15,7 @@ Status mapping per event type:
   - `AgentToolGranted`   -> status unchanged (additive set mutation)
   - `AgentToolRevoked`   -> status unchanged (subtractive set mutation)
   - `AgentBudgetUpdated` -> status unchanged (budget field replace)
-  - `AgentTargetPlanSet` -> status unchanged (target_plan_id field replace)
+  - `AgentTargetPlanUpdated` -> status unchanged (target_plan_id field replace)
 
 Source-state guards live at the decider, NOT here; the evolver trusts
 the event log (folded events have already passed their decider).
@@ -39,7 +39,7 @@ from cora.agent.aggregates.agent.events import (
     AgentEvent,
     AgentResumed,
     AgentSuspended,
-    AgentTargetPlanSet,
+    AgentTargetPlanUpdated,
     AgentToolGranted,
     AgentToolRevoked,
     AgentVersioned,
@@ -282,8 +282,8 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 resumed_by=prior.resumed_by,
                 target_plan_id=prior.target_plan_id,
             )
-        case AgentTargetPlanSet(target_plan_id=target_plan_id, occurred_at=_):
-            prior = require_state(state, "AgentTargetPlanSet")
+        case AgentTargetPlanUpdated(target_plan_id=target_plan_id, occurred_at=_):
+            prior = require_state(state, "AgentTargetPlanUpdated")
             return Agent(
                 id=prior.id,
                 kind=prior.kind,

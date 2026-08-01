@@ -325,7 +325,7 @@ async def _resolve_active_plan(deps: Kernel) -> UUID | None:
     """Resolve the recipe Plan the loop should run THIS tick.
 
     The runtime designation on the RunInitiator Agent (`target_plan_id`, set by
-    `set_agent_target_plan`) wins; the `run_initiator_plan_id` setting is the
+    `update_agent_target_plan`) wins; the `run_initiator_plan_id` setting is the
     boot-time fallback for a deployment that has not designated one at runtime.
     None (no designation, no fallback, or the agent not seeded) means the loop
     has no recipe and stands down this tick."""

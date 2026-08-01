@@ -1,8 +1,8 @@
-"""HTTP route for the `set_agent_target_plan` slice.
+"""HTTP route for the `update_agent_target_plan` slice.
 
 Action endpoint at `POST /agents/{agent_id}/target-plan`. Body carries
 `target_plan_id` (nullable). PUT-semantics: the supplied value IS the
-post-set target; null clears it.
+post-update target; null clears it.
 
 204 No Content on success (including the idempotent no-op case).
 """
@@ -13,8 +13,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.agent.features.set_agent_target_plan.command import SetAgentTargetPlan
-from cora.agent.features.set_agent_target_plan.handler import Handler
+from cora.agent.features.update_agent_target_plan.command import UpdateAgentTargetPlan
+from cora.agent.features.update_agent_target_plan.handler import Handler
 from cora.infrastructure.routing import (
     ErrorResponse,
     get_correlation_id,
@@ -23,7 +23,7 @@ from cora.infrastructure.routing import (
 )
 
 
-class SetAgentTargetPlanRequest(BaseModel):
+class UpdateAgentTargetPlanRequest(BaseModel):
     """Body for `POST /agents/{agent_id}/target-plan`."""
 
     target_plan_id: UUID | None = Field(
@@ -31,13 +31,13 @@ class SetAgentTargetPlanRequest(BaseModel):
         description=(
             "The recipe Plan this autonomous agent starts for each ready "
             "Subject. Pass null to clear the target (the agent initiates "
-            "nothing until a Plan is set again)."
+            "nothing until a Plan is supplied again)."
         ),
     )
 
 
 def _get_handler(request: Request) -> Handler:
-    handler: Handler = request.app.state.agent.set_agent_target_plan
+    handler: Handler = request.app.state.agent.update_agent_target_plan
     return handler
 
 
@@ -64,18 +64,18 @@ router = APIRouter(tags=["agent"])
             "description": "Request body or path parameter failed schema validation.",
         },
     },
-    summary="Set or clear an autonomous Agent's target Plan (PUT semantics; null clears)",
+    summary="Update or clear an autonomous Agent's target Plan (PUT semantics; null clears)",
 )
 async def post_agents_set_target_plan(
     agent_id: Annotated[UUID, Path(description="Target agent's id.")],
-    body: SetAgentTargetPlanRequest,
+    body: UpdateAgentTargetPlanRequest,
     handler: Annotated[Handler, Depends(_get_handler)],
     cid: Annotated[UUID, Depends(get_correlation_id)],
     principal_id: Annotated[UUID, Depends(get_principal_id)],
     surface_id: Annotated[UUID, Depends(get_surface_id)],
 ) -> None:
     await handler(
-        SetAgentTargetPlan(
+        UpdateAgentTargetPlan(
             agent_id=agent_id,
             target_plan_id=body.target_plan_id,
         ),

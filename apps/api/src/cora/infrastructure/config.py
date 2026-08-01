@@ -342,7 +342,7 @@ class Settings(BaseSettings):
     # cadence (>= 0.1s); `run_initiator_max_in_flight` caps how many Runs may be
     # in flight at once (>= 1; one-stage CT keeps it at 1). `run_initiator_plan_id`
     # is the BOOT-TIME FALLBACK recipe Plan: the loop prefers the runtime
-    # designation on the agent (`target_plan_id`, set by set_agent_target_plan)
+    # designation on the agent (`target_plan_id`, set by update_agent_target_plan)
     # and falls back to this when none is designated. None here just means no
     # fallback; the loop still runs when enabled and idles until a Plan is
     # designated at runtime.

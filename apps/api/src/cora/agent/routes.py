@@ -35,9 +35,9 @@ from cora.agent.aggregates.agent import (
     AgentCannotGrantToolError,
     AgentCannotResumeError,
     AgentCannotRevokeToolError,
-    AgentCannotSetTargetPlanError,
     AgentCannotSuspendError,
     AgentCannotUpdateBudgetError,
+    AgentCannotUpdateTargetPlanError,
     AgentCannotVersionError,
     AgentDeactivatedError,
     AgentNotFoundError,
@@ -98,9 +98,9 @@ from cora.agent.features import (
     resume_agent,
     retire_language_model,
     revoke_tool_from_agent,
-    set_agent_target_plan,
     suspend_agent,
     update_agent_budget,
+    update_agent_target_plan,
     version_agent,
 )
 
@@ -182,7 +182,7 @@ def register_agent_routes(app: FastAPI) -> None:
     app.include_router(grant_tool_to_agent.router)
     app.include_router(revoke_tool_from_agent.router)
     app.include_router(update_agent_budget.router)
-    app.include_router(set_agent_target_plan.router)
+    app.include_router(update_agent_target_plan.router)
     app.include_router(get_agent.router)
     app.include_router(regenerate_run_debrief.router)
     app.include_router(promote_caution_proposal.router)
@@ -251,7 +251,7 @@ def register_agent_routes(app: FastAPI) -> None:
         AgentCannotGrantToolError,
         AgentCannotRevokeToolError,
         AgentCannotUpdateBudgetError,
-        AgentCannotSetTargetPlanError,
+        AgentCannotUpdateTargetPlanError,
         EventAlreadyDismissedError,
         LanguageModelCannotApproveError,
         LanguageModelCannotAnnounceRetirementError,

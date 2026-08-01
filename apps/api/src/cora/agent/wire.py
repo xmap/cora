@@ -62,9 +62,9 @@ from cora.agent.features import (
     resume_agent,
     retire_language_model,
     revoke_tool_from_agent,
-    set_agent_target_plan,
     suspend_agent,
     update_agent_budget,
+    update_agent_target_plan,
     version_agent,
 )
 from cora.infrastructure.idempotency import with_idempotency
@@ -86,7 +86,7 @@ class AgentHandlers:
     grant_tool_to_agent: grant_tool_to_agent.Handler
     revoke_tool_from_agent: revoke_tool_from_agent.Handler
     update_agent_budget: update_agent_budget.Handler
-    set_agent_target_plan: set_agent_target_plan.Handler
+    update_agent_target_plan: update_agent_target_plan.Handler
     get_agent: get_agent.Handler
     regenerate_run_debrief: regenerate_run_debrief.IdempotentHandler | None
     promote_caution_proposal: promote_caution_proposal.IdempotentHandler
@@ -180,9 +180,9 @@ def wire_agent(deps: Kernel) -> AgentHandlers:
             command_name="UpdateAgentBudget",
             bc=_BC,
         ),
-        set_agent_target_plan=with_tracing(
-            set_agent_target_plan.bind(deps),
-            command_name="SetAgentTargetPlan",
+        update_agent_target_plan=with_tracing(
+            update_agent_target_plan.bind(deps),
+            command_name="UpdateAgentTargetPlan",
             bc=_BC,
         ),
         get_agent=with_tracing(

@@ -1,4 +1,4 @@
-"""Contract tests for the `set_agent_target_plan` MCP tool."""
+"""Contract tests for the `update_agent_target_plan` MCP tool."""
 
 from uuid import uuid4
 
@@ -23,7 +23,7 @@ def _define_args() -> dict[str, object]:
 
 
 @pytest.mark.contract
-def test_mcp_lists_set_agent_target_plan_tool() -> None:
+def test_mcp_lists_update_agent_target_plan_tool() -> None:
     with TestClient(create_app()) as client:
         session_headers = open_session(client)
         response = client.post(
@@ -34,11 +34,11 @@ def test_mcp_lists_set_agent_target_plan_tool() -> None:
     assert response.status_code == 200
     body = parse_sse_data(response.text)
     tool_names = [t["name"] for t in body["result"]["tools"]]
-    assert "set_agent_target_plan" in tool_names
+    assert "update_agent_target_plan" in tool_names
 
 
 @pytest.mark.contract
-def test_mcp_set_agent_target_plan_returns_structured_output() -> None:
+def test_mcp_update_agent_target_plan_returns_structured_output() -> None:
     plan_id = str(uuid4())
     with TestClient(create_app()) as client:
         session_headers = open_session(client)
@@ -60,7 +60,7 @@ def test_mcp_set_agent_target_plan_returns_structured_output() -> None:
                 "id": 4,
                 "method": "tools/call",
                 "params": {
-                    "name": "set_agent_target_plan",
+                    "name": "update_agent_target_plan",
                     "arguments": {"agent_id": agent_id, "target_plan_id": plan_id},
                 },
             },
@@ -74,7 +74,7 @@ def test_mcp_set_agent_target_plan_returns_structured_output() -> None:
 
 
 @pytest.mark.contract
-def test_mcp_set_agent_target_plan_returns_iserror_on_unknown_id() -> None:
+def test_mcp_update_agent_target_plan_returns_iserror_on_unknown_id() -> None:
     with TestClient(create_app()) as client:
         session_headers = open_session(client)
         response = client.post(
@@ -84,7 +84,7 @@ def test_mcp_set_agent_target_plan_returns_iserror_on_unknown_id() -> None:
                 "id": 4,
                 "method": "tools/call",
                 "params": {
-                    "name": "set_agent_target_plan",
+                    "name": "update_agent_target_plan",
                     "arguments": {"agent_id": str(uuid4()), "target_plan_id": str(uuid4())},
                 },
             },

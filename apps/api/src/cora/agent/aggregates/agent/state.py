@@ -408,8 +408,8 @@ class AgentCannotUpdateBudgetError(Exception):
         self.current_status = current_status
 
 
-class AgentCannotSetTargetPlanError(Exception):
-    """Attempted `set_agent_target_plan` against a `Deprecated` agent.
+class AgentCannotUpdateTargetPlanError(Exception):
+    """Attempted `update_agent_target_plan` against a `Deprecated` agent.
 
     Same source-set rule as `AgentCannotUpdateBudgetError`.
     """
@@ -855,8 +855,8 @@ class Agent:
     suspended_by: ActorId | None = None
     resumed_by: ActorId | None = None
     # Runtime-mutable target Plan for an autonomous agent (the recipe the
-    # RunInitiator starts for each ready Subject), set by `set_agent_target_plan`
-    # and folded from `AgentTargetPlanSet`. Optional (None = unset); only the
+    # RunInitiator starts for each ready Subject), set by `update_agent_target_plan`
+    # and folded from `AgentTargetPlanUpdated`. Optional (None = unset); only the
     # consuming agent (RunInitiator) reads it, so it stays None for every other
     # agent kind. Additive-state default keeps legacy reconstruction clean.
     target_plan_id: UUID | None = None

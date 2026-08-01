@@ -52,9 +52,9 @@ from cora.agent.features import (
     regenerate_run_debrief,
     resume_agent,
     revoke_tool_from_agent,
-    set_agent_target_plan,
     suspend_agent,
     update_agent_budget,
+    update_agent_target_plan,
     version_agent,
 )
 
@@ -68,8 +68,8 @@ __all__ = [
     "regenerate_run_debrief",
     "resume_agent",
     "revoke_tool_from_agent",
-    "set_agent_target_plan",
     "suspend_agent",
     "update_agent_budget",
+    "update_agent_target_plan",
     "version_agent",
 ]
