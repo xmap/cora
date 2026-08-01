@@ -63,7 +63,7 @@ def _setup_full_chain(client: TestClient) -> tuple[str, str]:
     ]
     mount_asset_id = register_active_asset(client)
     mount_resp = client.post(
-        f"/subjects/{subject_id}/mount", json={"asset_id": mount_asset_id, "reason": "Superseded"}
+        f"/subjects/{subject_id}/mount", json={"asset_id": mount_asset_id, "reason": "test"}
     )
     assert mount_resp.status_code == 204
     return plan_id, subject_id

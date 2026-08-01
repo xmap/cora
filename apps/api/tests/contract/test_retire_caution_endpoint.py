@@ -42,7 +42,7 @@ def test_post_retire_returns_404_when_caution_absent() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/cautions/{uuid4()}/retire",
-            json={"reason": "Superseded"},
+            json={"reason": "Resolved"},
         )
     assert response.status_code == 404
 
@@ -51,9 +51,9 @@ def test_post_retire_returns_404_when_caution_absent() -> None:
 def test_post_retire_returns_409_on_already_retired_caution() -> None:
     with TestClient(create_app()) as client:
         cid = _seed(client)
-        first = client.post(f"/cautions/{cid}/retire", json={"reason": "Superseded"})
+        first = client.post(f"/cautions/{cid}/retire", json={"reason": "Resolved"})
         assert first.status_code == 204
-        second = client.post(f"/cautions/{cid}/retire", json={"reason": "Superseded"})
+        second = client.post(f"/cautions/{cid}/retire", json={"reason": "Resolved"})
     assert second.status_code == 409
 
 
@@ -61,7 +61,7 @@ def test_post_retire_returns_409_on_already_retired_caution() -> None:
 def test_post_retire_returns_422_on_unknown_reason() -> None:
     with TestClient(create_app()) as client:
         cid = _seed(client)
-        response = client.post(f"/cautions/{cid}/retire", json={"reason": "Superseded"})
+        response = client.post(f"/cautions/{cid}/retire", json={"reason": "MadeUp"})
     assert response.status_code == 422
 
 
@@ -85,7 +85,7 @@ def test_post_retire_returns_403_when_authorize_denies() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/cautions/{uuid4()}/retire",
-            json={"reason": "Superseded"},
+            json={"reason": "Resolved"},
         )
     assert response.status_code == 403
     assert response.json()["detail"] == "denied for test"

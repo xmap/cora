@@ -31,7 +31,7 @@ def test_post_truncate_returns_204_for_running_procedure() -> None:
         pid = _register_and_start(client)
         response = client.post(
             f"/procedures/{pid}/truncate",
-            json={"reason": "Superseded"},
+            json={"reason": "weekend power loss"},
         )
     assert response.status_code == 204
 
@@ -40,7 +40,7 @@ def test_post_truncate_returns_204_for_running_procedure() -> None:
 def test_post_truncate_marks_status_truncated_visible_via_get() -> None:
     with TestClient(create_app()) as client:
         pid = _register_and_start(client)
-        client.post(f"/procedures/{pid}/truncate", json={"reason": "Superseded"})
+        client.post(f"/procedures/{pid}/truncate", json={"reason": "vacuum loss"})
         response = client.get(f"/procedures/{pid}")
     assert response.json()["status"] == "Truncated"
 
@@ -52,7 +52,7 @@ def test_post_truncate_accepts_optional_interrupted_at() -> None:
         pid = _register_and_start(client)
         response = client.post(
             f"/procedures/{pid}/truncate",
-            json={"reason": "Superseded", "interrupted_at": interrupted_at},
+            json={"reason": "weekend crash", "interrupted_at": interrupted_at},
         )
     assert response.status_code == 204
 
@@ -60,7 +60,7 @@ def test_post_truncate_accepts_optional_interrupted_at() -> None:
 @pytest.mark.contract
 def test_post_truncate_returns_404_for_unknown_id() -> None:
     with TestClient(create_app()) as client:
-        response = client.post(f"/procedures/{uuid4()}/truncate", json={"reason": "Superseded"})
+        response = client.post(f"/procedures/{uuid4()}/truncate", json={"reason": "x"})
     assert response.status_code == 404
 
 
@@ -70,7 +70,7 @@ def test_post_truncate_returns_409_for_defined_procedure() -> None:
     with TestClient(create_app()) as client:
         body: dict[str, Any] = {"name": "X", "kind": "bakeout"}
         pid = UUID(client.post("/procedures", json=body).json()["procedure_id"])
-        response = client.post(f"/procedures/{pid}/truncate", json={"reason": "Superseded"})
+        response = client.post(f"/procedures/{pid}/truncate", json={"reason": "test"})
     assert response.status_code == 409
 
 
@@ -78,8 +78,8 @@ def test_post_truncate_returns_409_for_defined_procedure() -> None:
 def test_post_truncate_returns_409_when_re_truncating() -> None:
     with TestClient(create_app()) as client:
         pid = _register_and_start(client)
-        first = client.post(f"/procedures/{pid}/truncate", json={"reason": "Superseded"})
-        second = client.post(f"/procedures/{pid}/truncate", json={"reason": "Superseded"})
+        first = client.post(f"/procedures/{pid}/truncate", json={"reason": "first"})
+        second = client.post(f"/procedures/{pid}/truncate", json={"reason": "second"})
     assert first.status_code == 204
     assert second.status_code == 409
 
@@ -88,7 +88,7 @@ def test_post_truncate_returns_409_when_re_truncating() -> None:
 def test_post_truncate_returns_400_for_whitespace_only_reason() -> None:
     with TestClient(create_app()) as client:
         pid = _register_and_start(client)
-        response = client.post(f"/procedures/{pid}/truncate", json={"reason": "Superseded"})
+        response = client.post(f"/procedures/{pid}/truncate", json={"reason": "   "})
     assert response.status_code == 400
 
 
@@ -100,7 +100,7 @@ def test_post_truncate_returns_400_for_future_interrupted_at() -> None:
         pid = _register_and_start(client)
         response = client.post(
             f"/procedures/{pid}/truncate",
-            json={"reason": "Superseded", "interrupted_at": future},
+            json={"reason": "x", "interrupted_at": future},
         )
     assert response.status_code == 400
 
@@ -117,12 +117,12 @@ def test_post_truncate_returns_422_for_missing_reason() -> None:
 def test_post_truncate_returns_422_for_too_long_reason() -> None:
     with TestClient(create_app()) as client:
         pid = _register_and_start(client)
-        response = client.post(f"/procedures/{pid}/truncate", json={"reason": "Superseded" * 501})
+        response = client.post(f"/procedures/{pid}/truncate", json={"reason": "x" * 501})
     assert response.status_code == 422
 
 
 @pytest.mark.contract
 def test_post_truncate_returns_422_for_malformed_id() -> None:
     with TestClient(create_app()) as client:
-        response = client.post("/procedures/not-a-uuid/truncate", json={"reason": "Superseded"})
+        response = client.post("/procedures/not-a-uuid/truncate", json={"reason": "x"})
     assert response.status_code == 422

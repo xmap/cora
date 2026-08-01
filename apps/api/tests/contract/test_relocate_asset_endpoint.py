@@ -133,7 +133,7 @@ def test_post_relocate_rejects_missing_to_parent_id_with_422() -> None:
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/relocate",
-            json={"reason": "Superseded"},
+            json={"reason": "moved"},
         )
     assert response.status_code == 422
 

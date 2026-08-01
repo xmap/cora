@@ -104,7 +104,7 @@ def test_post_edition_datasets_returns_409_when_dataset_discarded() -> None:
         second = _register_dataset(client, name="second")
         discard = client.post(
             f"/datasets/{second}/discard",
-            json={"reason": "Superseded"},
+            json={"reason": "bytes purged"},
         )
         assert discard.status_code == 204, discard.text
         response = client.post(f"/editions/{edition_id}/datasets/{second}")

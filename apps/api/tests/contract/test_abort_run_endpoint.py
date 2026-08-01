@@ -20,7 +20,7 @@ def test_post_abort_run_returns_204_from_running_state() -> None:
         run_id = seed_run_upstream_chain(client)
         response = client.post(
             f"/runs/{run_id}/abort",
-            json={"reason": "Superseded", "justification": "operator: aborting for test"},
+            json={"reason": "detector overheating", "justification": "operator: aborting for test"},
         )
     assert response.status_code == 204
 
@@ -65,7 +65,7 @@ def test_post_abort_run_returns_404_when_run_does_not_exist() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/runs/{missing_id}/abort",
-            json={"reason": "Superseded", "justification": "operator: aborting for test"},
+            json={"reason": "X", "justification": "operator: aborting for test"},
         )
     assert response.status_code == 404
 
@@ -77,12 +77,12 @@ def test_post_abort_run_returns_409_when_already_aborted() -> None:
         run_id = seed_run_upstream_chain(client)
         first = client.post(
             f"/runs/{run_id}/abort",
-            json={"reason": "Superseded", "justification": "operator: aborting for test"},
+            json={"reason": "first abort", "justification": "operator: aborting for test"},
         )
         assert first.status_code == 204
         second = client.post(
             f"/runs/{run_id}/abort",
-            json={"reason": "Superseded", "justification": "operator: aborting for test"},
+            json={"reason": "second abort", "justification": "operator: aborting for test"},
         )
     assert second.status_code == 409
     assert "Running" in second.json()["detail"]
@@ -97,7 +97,7 @@ def test_post_abort_run_returns_409_when_completed() -> None:
         assert complete.status_code == 204
         response = client.post(
             f"/runs/{run_id}/abort",
-            json={"reason": "Superseded", "justification": "operator: aborting for test"},
+            json={"reason": "X", "justification": "operator: aborting for test"},
         )
     assert response.status_code == 409
     assert "Completed" in response.json()["detail"]
@@ -109,7 +109,7 @@ def test_post_abort_run_without_justification_returns_422() -> None:
     (fail-closed), even on an otherwise-valid Running run."""
     with TestClient(create_app()) as client:
         run_id = seed_run_upstream_chain(client)
-        response = client.post(f"/runs/{run_id}/abort", json={"reason": "Superseded"})
+        response = client.post(f"/runs/{run_id}/abort", json={"reason": "detector overheating"})
     assert response.status_code == 422
 
 
@@ -121,7 +121,7 @@ def test_post_abort_run_with_blank_justification_returns_422() -> None:
         run_id = seed_run_upstream_chain(client)
         response = client.post(
             f"/runs/{run_id}/abort",
-            json={"reason": "Superseded", "justification": "   "},
+            json={"reason": "detector overheating", "justification": "   "},
         )
     assert response.status_code == 422
 
@@ -131,9 +131,7 @@ def test_post_abort_run_rejects_empty_reason_with_422() -> None:
     with TestClient(create_app()) as client:
         run_id = seed_run_upstream_chain(client)
         # Valid justification so this isolates the reason validation, not the gate.
-        response = client.post(
-            f"/runs/{run_id}/abort", json={"reason": "Superseded", "justification": "j"}
-        )
+        response = client.post(f"/runs/{run_id}/abort", json={"reason": "", "justification": "j"})
     assert response.status_code == 422
 
 
@@ -144,7 +142,7 @@ def test_post_abort_run_rejects_whitespace_only_reason_with_400() -> None:
         run_id = seed_run_upstream_chain(client)
         response = client.post(
             f"/runs/{run_id}/abort",
-            json={"reason": "Superseded", "justification": "operator: aborting for test"},
+            json={"reason": "   ", "justification": "operator: aborting for test"},
         )
     assert response.status_code == 400
     assert "abort reason" in response.json()["detail"].lower()
@@ -155,7 +153,7 @@ def test_post_abort_run_rejects_too_long_reason_with_422() -> None:
     with TestClient(create_app()) as client:
         run_id = seed_run_upstream_chain(client)
         response = client.post(
-            f"/runs/{run_id}/abort", json={"reason": "Superseded" * 501, "justification": "j"}
+            f"/runs/{run_id}/abort", json={"reason": "x" * 501, "justification": "j"}
         )
     assert response.status_code == 422
 
@@ -163,7 +161,5 @@ def test_post_abort_run_rejects_too_long_reason_with_422() -> None:
 @pytest.mark.contract
 def test_post_abort_run_rejects_invalid_path_uuid_with_422() -> None:
     with TestClient(create_app()) as client:
-        response = client.post(
-            "/runs/not-a-uuid/abort", json={"reason": "Superseded", "justification": "j"}
-        )
+        response = client.post("/runs/not-a-uuid/abort", json={"reason": "X", "justification": "j"})
     assert response.status_code == 422

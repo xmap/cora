@@ -19,7 +19,9 @@ def _register_start_hold(client: TestClient) -> UUID:
     body: dict[str, Any] = {"name": "Vessel-A bakeout", "kind": "bakeout"}
     pid = UUID(client.post("/procedures", json=body).json()["procedure_id"])
     assert client.post(f"/procedures/{pid}/start").status_code == 204
-    assert client.post(f"/procedures/{pid}/hold", json={"reason": "Superseded"}).status_code == 204
+    assert (
+        client.post(f"/procedures/{pid}/hold", json={"reason": "beam dropped"}).status_code == 204
+    )
     return pid
 
 

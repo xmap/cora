@@ -90,7 +90,7 @@ def test_mcp_discard_dataset_tool_returns_iserror_for_unknown_dataset() -> None:
 def test_mcp_discard_dataset_tool_returns_iserror_when_already_discarded() -> None:
     with TestClient(create_app()) as client:
         dataset_id = _register(client)
-        first = client.post(f"/datasets/{dataset_id}/discard", json={"reason": "Superseded"})
+        first = client.post(f"/datasets/{dataset_id}/discard", json={"reason": "first"})
         assert first.status_code == 204
         headers = open_session(client)
         response = client.post(

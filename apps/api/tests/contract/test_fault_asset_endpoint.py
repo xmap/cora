@@ -28,7 +28,7 @@ def test_post_fault_returns_204_on_happy_path() -> None:
         asset_id = _register_asset(client)
         response = client.post(
             f"/assets/{asset_id}/fault",
-            json={"reason": "Superseded"},
+            json={"reason": "vacuum pump seized"},
         )
     assert response.status_code == 204
 
@@ -37,9 +37,9 @@ def test_post_fault_returns_204_on_happy_path() -> None:
 def test_post_fault_returns_204_when_already_faulted() -> None:
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
-        first = client.post(f"/assets/{asset_id}/fault", json={"reason": "Superseded"})
+        first = client.post(f"/assets/{asset_id}/fault", json={"reason": "first"})
         assert first.status_code == 204
-        second = client.post(f"/assets/{asset_id}/fault", json={"reason": "Superseded"})
+        second = client.post(f"/assets/{asset_id}/fault", json={"reason": "second"})
     assert second.status_code == 204
 
 
@@ -49,7 +49,7 @@ def test_post_fault_returns_404_when_asset_missing() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/assets/{missing_id}/fault",
-            json={"reason": "Superseded"},
+            json={"reason": "missing"},
         )
     assert response.status_code == 404
 
@@ -58,14 +58,14 @@ def test_post_fault_returns_404_when_asset_missing() -> None:
 def test_post_fault_rejects_empty_reason_with_422() -> None:
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
-        response = client.post(f"/assets/{asset_id}/fault", json={"reason": "Superseded"})
+        response = client.post(f"/assets/{asset_id}/fault", json={"reason": ""})
     assert response.status_code == 422
 
 
 @pytest.mark.contract
 def test_post_fault_rejects_invalid_path_uuid_with_422() -> None:
     with TestClient(create_app()) as client:
-        response = client.post("/assets/not-a-uuid/fault", json={"reason": "Superseded"})
+        response = client.post("/assets/not-a-uuid/fault", json={"reason": "x"})
     assert response.status_code == 422
 
 
@@ -74,10 +74,10 @@ def test_post_fault_after_degrade_succeeds() -> None:
     """Worsening: Degraded -> Faulted via fault_asset."""
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
-        deg = client.post(f"/assets/{asset_id}/degrade", json={"reason": "Superseded"})
+        deg = client.post(f"/assets/{asset_id}/degrade", json={"reason": "warning"})
         assert deg.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/fault",
-            json={"reason": "Superseded"},
+            json={"reason": "got worse, total failure"},
         )
     assert response.status_code == 204

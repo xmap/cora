@@ -69,11 +69,7 @@ def test_mcp_remove_family_presents_as_tool_call_succeeds() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "remove_family_presents_as",
-                    "arguments": {
-                        "family_id": family_id,
-                        "role_id": role_id,
-                        "reason": "Superseded",
-                    },
+                    "arguments": {"family_id": family_id, "role_id": role_id},
                 },
             },
             headers=session_headers,
@@ -113,11 +109,7 @@ def test_mcp_remove_family_presents_as_tool_returns_iserror_on_not_advertised() 
                 "method": "tools/call",
                 "params": {
                     "name": "remove_family_presents_as",
-                    "arguments": {
-                        "family_id": family_id,
-                        "role_id": role_id,
-                        "reason": "Superseded",
-                    },
+                    "arguments": {"family_id": family_id, "role_id": role_id},
                 },
             },
             headers=session_headers,

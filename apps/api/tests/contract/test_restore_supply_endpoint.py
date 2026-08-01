@@ -34,13 +34,13 @@ def _register_then_mark_recovering(client: TestClient) -> UUID:
     supply_id = UUID(response.json()["supply_id"])
     assert (
         client.post(
-            f"/supplies/{supply_id}/mark-unavailable", json={"reason": "Superseded"}
+            f"/supplies/{supply_id}/mark-unavailable", json={"reason": "beam dump"}
         ).status_code
         == 204
     )
     assert (
         client.post(
-            f"/supplies/{supply_id}/mark-recovering", json={"reason": "Superseded"}
+            f"/supplies/{supply_id}/mark-recovering", json={"reason": "beam returning"}
         ).status_code
         == 204
     )
@@ -53,7 +53,7 @@ def test_post_restore_returns_204_for_recovering_supply() -> None:
         supply_id = _register_then_mark_recovering(client)
         response = client.post(
             f"/supplies/{supply_id}/restore",
-            json={"reason": "Superseded"},
+            json={"reason": "ops confirms stable"},
         )
     assert response.status_code == 204
 
@@ -61,7 +61,7 @@ def test_post_restore_returns_204_for_recovering_supply() -> None:
 @pytest.mark.contract
 def test_post_restore_returns_404_for_unknown_id() -> None:
     with TestClient(create_app()) as client:
-        response = client.post(f"/supplies/{uuid4()}/restore", json={"reason": "Superseded"})
+        response = client.post(f"/supplies/{uuid4()}/restore", json={"reason": "r"})
     assert response.status_code == 404
 
 
@@ -79,7 +79,7 @@ def test_post_restore_returns_409_when_supply_is_unknown() -> None:
             },
         )
         supply_id = UUID(register.json()["supply_id"])
-        response = client.post(f"/supplies/{supply_id}/restore", json={"reason": "Superseded"})
+        response = client.post(f"/supplies/{supply_id}/restore", json={"reason": "r"})
     assert response.status_code == 409
 
 
@@ -97,7 +97,7 @@ def test_post_restore_rejects_too_long_reason_with_422() -> None:
         supply_id = _register_then_mark_recovering(client)
         response = client.post(
             f"/supplies/{supply_id}/restore",
-            json={"reason": "Superseded" * (REASON_MAX_LENGTH + 1)},
+            json={"reason": "a" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422
 
@@ -105,7 +105,7 @@ def test_post_restore_rejects_too_long_reason_with_422() -> None:
 @pytest.mark.contract
 def test_post_restore_rejects_malformed_supply_id_with_422() -> None:
     with TestClient(create_app()) as client:
-        response = client.post("/supplies/not-a-uuid/restore", json={"reason": "Superseded"})
+        response = client.post("/supplies/not-a-uuid/restore", json={"reason": "r"})
     assert response.status_code == 422
 
 
@@ -113,7 +113,7 @@ def test_post_restore_rejects_malformed_supply_id_with_422() -> None:
 def test_post_restore_rejects_whitespace_only_reason_with_400() -> None:
     with TestClient(create_app()) as client:
         supply_id = _register_then_mark_recovering(client)
-        response = client.post(f"/supplies/{supply_id}/restore", json={"reason": "Superseded"})
+        response = client.post(f"/supplies/{supply_id}/restore", json={"reason": "   "})
     assert response.status_code == 400
 
 
@@ -130,5 +130,5 @@ def test_post_restore_returns_403_when_authorize_denies() -> None:
 
     app.dependency_overrides[_get_restore_supply_handler] = _override
     with TestClient(app) as client:
-        response = client.post(f"/supplies/{uuid4()}/restore", json={"reason": "Superseded"})
+        response = client.post(f"/supplies/{uuid4()}/restore", json={"reason": "r"})
     assert response.status_code == 403

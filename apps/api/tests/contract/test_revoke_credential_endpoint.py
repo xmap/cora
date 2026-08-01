@@ -40,7 +40,7 @@ def test_post_revoke_credential_returns_204_via_handler_override() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/federation/credentials/{uuid4()}/revoke",
-            json={"reason": "Superseded"},
+            json={"reason": "compromised secret being retired"},
         )
     assert response.status_code == 204, response.text
 
@@ -91,7 +91,7 @@ def test_post_revoke_credential_returns_404_on_unknown_credential() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/federation/credentials/{uuid4()}/revoke",
-            json={"reason": "Superseded"},
+            json={"reason": "x"},
         )
     assert response.status_code == 404
 
@@ -129,7 +129,7 @@ def test_post_revoke_credential_returns_403_when_authorize_denies() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/federation/credentials/{uuid4()}/revoke",
-            json={"reason": "Superseded"},
+            json={"reason": "x"},
         )
     assert response.status_code == 403
     assert response.json()["detail"] == "denied for test"
@@ -141,7 +141,7 @@ def test_post_revoke_credential_rejects_invalid_uuid_path_with_422() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/federation/credentials/not-a-uuid/revoke",
-            json={"reason": "Superseded"},
+            json={"reason": "x"},
         )
     assert response.status_code == 422
 
@@ -164,7 +164,7 @@ def test_post_revoke_credential_rejects_extra_body_field_with_422() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/federation/credentials/{uuid4()}/revoke",
-            json={"reason": "Superseded", "unknown_field": "y"},
+            json={"reason": "x", "unknown_field": "y"},
         )
     # Body model in the slice today does not enforce extra='forbid'; this
     # test accepts either 204 (extra silently ignored) or 422 (extra forbidden).

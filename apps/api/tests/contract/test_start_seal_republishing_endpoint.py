@@ -36,7 +36,7 @@ def test_post_start_seal_republishing_returns_204_via_handler_override() -> None
     with TestClient(app) as client:
         response = client.post(
             "/federation/seals/aps-2bm/republishing/start",
-            json={"reason": "Superseded"},
+            json={"reason": "root rotation drill"},
         )
     assert response.status_code == 204, response.text
 
@@ -138,7 +138,7 @@ def test_post_start_seal_republishing_rejects_extra_field_with_422() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/federation/seals/aps-2bm/republishing/start",
-            json={"reason": "Superseded", "unexpected_field": "boom"},
+            json={"reason": "root rotation drill", "unexpected_field": "boom"},
         )
     assert response.status_code == 422
 

@@ -42,7 +42,7 @@ def test_post_dismiss_event_returns_422_for_missing_event_id() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/agent/reactions/run_debriefer/dismiss-event",
-            json={"reason": "Superseded"},
+            json={"reason": "missing event_id"},
         )
     assert response.status_code == 422
 

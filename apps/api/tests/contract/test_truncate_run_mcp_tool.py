@@ -144,7 +144,7 @@ def test_mcp_truncate_run_tool_returns_iserror_for_unknown_run() -> None:
 def test_mcp_truncate_run_tool_returns_iserror_when_already_truncated() -> None:
     with TestClient(create_app()) as client:
         run_id = _setup_full_run(client)
-        first = client.post(f"/runs/{run_id}/truncate", json={"reason": "Superseded"})
+        first = client.post(f"/runs/{run_id}/truncate", json={"reason": "first"})
         assert first.status_code == 204
         headers = open_session(client)
         response = client.post(

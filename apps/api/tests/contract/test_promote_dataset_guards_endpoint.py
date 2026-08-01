@@ -82,14 +82,14 @@ def _start_run_and_finish(client: TestClient, *, end_state: str) -> str:
     elif end_state == "Aborted":
         resp = client.post(
             f"/runs/{run_id}/abort",
-            json={"reason": "Superseded", "justification": "operator: aborting for test"},
+            json={"reason": "operator stop", "justification": "operator: aborting for test"},
         )
     elif end_state == "Stopped":
-        resp = client.post(f"/runs/{run_id}/stop", json={"reason": "Superseded"})
+        resp = client.post(f"/runs/{run_id}/stop", json={"reason": "controlled exit"})
     elif end_state == "Truncated":
         resp = client.post(
             f"/runs/{run_id}/truncate",
-            json={"reason": "Superseded"},
+            json={"reason": "process crashed"},
         )
     else:
         raise ValueError(f"Unknown end_state: {end_state!r}")
@@ -116,7 +116,7 @@ def test_post_promote_dataset_returns_409_when_lineage_has_trial() -> None:
         ).json()["dataset_id"]
         response = client.post(
             f"/datasets/{downstream_id}/promote",
-            json={"reason": "Superseded"},
+            json={"reason": "trying to promote with trial lineage"},
         )
     assert response.status_code == 409
     detail = response.json()["detail"].lower()
@@ -148,7 +148,7 @@ def test_post_promote_dataset_returns_409_when_producing_run_not_completed(
         ).json()["dataset_id"]
         response = client.post(
             f"/datasets/{dataset_id}/promote",
-            json={"reason": "Superseded"},
+            json={"reason": "trying despite non-Completed Run"},
         )
     assert response.status_code == 409
     assert end_state in response.json()["detail"]
@@ -167,7 +167,7 @@ def test_post_promote_dataset_returns_204_when_producing_run_completed() -> None
         ).json()["dataset_id"]
         response = client.post(
             f"/datasets/{dataset_id}/promote",
-            json={"reason": "Superseded"},
+            json={"reason": "production run, ready to publish"},
         )
     assert response.status_code == 204
 
@@ -221,7 +221,7 @@ def test_p2_gets_403_when_promoting_p1s_dataset(
 
     response = client.post(
         f"/datasets/{dataset_id}/promote",
-        json={"reason": "Superseded"},
+        json={"reason": "trying as P2"},
         headers={"X-Principal-Id": str(p2)},
     )
     assert response.status_code == 403, response.text
@@ -243,7 +243,7 @@ def test_p1_can_still_promote_their_own_dataset(
 
     response = client.post(
         f"/datasets/{dataset_id}/promote",
-        json={"reason": "Superseded"},
+        json={"reason": "my own dataset"},
         headers={"X-Principal-Id": str(p1)},
     )
     assert response.status_code == 204, response.text

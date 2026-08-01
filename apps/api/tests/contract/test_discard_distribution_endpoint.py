@@ -39,7 +39,7 @@ def test_post_discard_distribution_returns_404_when_distribution_missing() -> No
     with TestClient(create_app()) as client:
         response = client.post(
             f"/distributions/{missing}/discard",
-            json={"reason": "Superseded"},
+            json={"reason": "bytes reclaimed from cold tier"},
         )
     assert response.status_code == 404
     assert missing in response.json()["detail"]
@@ -50,7 +50,7 @@ def test_post_discard_distribution_rejects_empty_reason_with_422() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/distributions/{uuid4()}/discard",
-            json={"reason": "Superseded"},
+            json={"reason": ""},
         )
     assert response.status_code == 422
 
@@ -60,7 +60,7 @@ def test_post_discard_distribution_rejects_too_long_reason_with_422() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/distributions/{uuid4()}/discard",
-            json={"reason": "Superseded" * 501},
+            json={"reason": "x" * 501},
         )
     assert response.status_code == 422
 
@@ -70,7 +70,7 @@ def test_post_discard_distribution_rejects_invalid_uuid_with_422() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/distributions/not-a-uuid/discard",
-            json={"reason": "Superseded"},
+            json={"reason": "X"},
         )
     assert response.status_code == 422
 

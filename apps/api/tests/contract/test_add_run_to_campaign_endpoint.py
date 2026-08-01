@@ -164,7 +164,7 @@ def test_post_add_run_returns_409_when_campaign_abandoned() -> None:
         cid = _register_and_start_campaign(client)
         abandon = client.post(
             f"/campaigns/{cid}/abandon",
-            json={"reason": "Superseded"},
+            json={"reason": "test-abandon"},
         )
         assert abandon.status_code == 204
         run_id = uuid4()

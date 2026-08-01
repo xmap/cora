@@ -147,7 +147,7 @@ def test_mcp_abort_run_tool_returns_iserror_when_already_aborted() -> None:
         run_id = _setup_full_run(client)
         first = client.post(
             f"/runs/{run_id}/abort",
-            json={"reason": "Superseded", "justification": "operator: aborting for test"},
+            json={"reason": "first", "justification": "operator: aborting for test"},
         )
         assert first.status_code == 204
         headers = open_session(client)

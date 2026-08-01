@@ -35,7 +35,7 @@ def test_post_decommission_returns_204_for_active_enclosure() -> None:
         enclosure_id = _register_enclosure(client)
         response = client.post(
             f"/enclosures/{enclosure_id}/decommission",
-            json={"reason": "Superseded"},
+            json={"reason": "end-of-life"},
         )
     assert response.status_code == 204
 
@@ -45,7 +45,7 @@ def test_post_decommission_returns_404_for_unknown_id() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/enclosures/{uuid4()}/decommission",
-            json={"reason": "Superseded"},
+            json={"reason": "r"},
         )
     assert response.status_code == 404
 
@@ -57,12 +57,12 @@ def test_post_decommission_returns_409_when_already_decommissioned() -> None:
         enclosure_id = _register_enclosure(client)
         first = client.post(
             f"/enclosures/{enclosure_id}/decommission",
-            json={"reason": "Superseded"},
+            json={"reason": "first"},
         )
         assert first.status_code == 204
         second = client.post(
             f"/enclosures/{enclosure_id}/decommission",
-            json={"reason": "Superseded"},
+            json={"reason": "second"},
         )
     assert second.status_code == 409
     assert "is already decommissioned" in second.json()["detail"]
@@ -82,7 +82,7 @@ def test_post_decommission_rejects_too_long_reason_with_422() -> None:
         enclosure_id = _register_enclosure(client)
         response = client.post(
             f"/enclosures/{enclosure_id}/decommission",
-            json={"reason": "Superseded" * (REASON_MAX_LENGTH + 1)},
+            json={"reason": "a" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422
 
@@ -92,7 +92,7 @@ def test_post_decommission_rejects_malformed_enclosure_id_with_422() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/enclosures/not-a-uuid/decommission",
-            json={"reason": "Superseded"},
+            json={"reason": "r"},
         )
     assert response.status_code == 422
 
@@ -104,7 +104,7 @@ def test_post_decommission_rejects_whitespace_only_reason_with_400() -> None:
         enclosure_id = _register_enclosure(client)
         response = client.post(
             f"/enclosures/{enclosure_id}/decommission",
-            json={"reason": "Superseded"},
+            json={"reason": "   "},
         )
     assert response.status_code == 400
 
@@ -124,6 +124,6 @@ def test_post_decommission_returns_403_when_authorize_denies() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/enclosures/{uuid4()}/decommission",
-            json={"reason": "Superseded"},
+            json={"reason": "r"},
         )
     assert response.status_code == 403

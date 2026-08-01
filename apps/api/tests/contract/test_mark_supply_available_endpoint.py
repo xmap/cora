@@ -35,7 +35,7 @@ def test_post_mark_available_returns_204_for_unknown_supply() -> None:
         supply_id = _register_supply(client)
         response = client.post(
             f"/supplies/{supply_id}/mark-available",
-            json={"reason": "Superseded"},
+            json={"reason": "operator walkdown confirms LN2 flowing"},
         )
     assert response.status_code == 204
     assert response.text == ""
@@ -46,7 +46,7 @@ def test_post_mark_available_returns_404_for_unknown_supply_id() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/supplies/{uuid4()}/mark-available",
-            json={"reason": "Superseded"},
+            json={"reason": "r"},
         )
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
@@ -57,9 +57,9 @@ def test_post_mark_available_returns_409_when_re_marking() -> None:
     """Strict-not-idempotent: second call raises SupplyCannotMarkAvailableError."""
     with TestClient(create_app()) as client:
         supply_id = _register_supply(client)
-        first = client.post(f"/supplies/{supply_id}/mark-available", json={"reason": "Superseded"})
+        first = client.post(f"/supplies/{supply_id}/mark-available", json={"reason": "first"})
         assert first.status_code == 204
-        second = client.post(f"/supplies/{supply_id}/mark-available", json={"reason": "Superseded"})
+        second = client.post(f"/supplies/{supply_id}/mark-available", json={"reason": "second"})
     assert second.status_code == 409
     assert "cannot be marked available" in second.json()["detail"].lower()
 
@@ -76,9 +76,7 @@ def test_post_mark_available_rejects_missing_reason_with_422() -> None:
 def test_post_mark_available_rejects_empty_reason_with_422() -> None:
     with TestClient(create_app()) as client:
         supply_id = _register_supply(client)
-        response = client.post(
-            f"/supplies/{supply_id}/mark-available", json={"reason": "Superseded"}
-        )
+        response = client.post(f"/supplies/{supply_id}/mark-available", json={"reason": ""})
     assert response.status_code == 422
 
 
@@ -88,7 +86,7 @@ def test_post_mark_available_rejects_too_long_reason_with_422() -> None:
         supply_id = _register_supply(client)
         response = client.post(
             f"/supplies/{supply_id}/mark-available",
-            json={"reason": "Superseded" * (REASON_MAX_LENGTH + 1)},
+            json={"reason": "a" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422
 
@@ -98,9 +96,7 @@ def test_post_mark_available_rejects_whitespace_only_reason_with_400() -> None:
     """Whitespace-only passes Pydantic min_length=1 but trips SupplyReason VO."""
     with TestClient(create_app()) as client:
         supply_id = _register_supply(client)
-        response = client.post(
-            f"/supplies/{supply_id}/mark-available", json={"reason": "Superseded"}
-        )
+        response = client.post(f"/supplies/{supply_id}/mark-available", json={"reason": "   "})
     assert response.status_code == 400
     assert "Supply transition reason" in response.json()["detail"]
 
@@ -108,7 +104,7 @@ def test_post_mark_available_rejects_whitespace_only_reason_with_400() -> None:
 @pytest.mark.contract
 def test_post_mark_available_rejects_malformed_supply_id_with_422() -> None:
     with TestClient(create_app()) as client:
-        response = client.post("/supplies/not-a-uuid/mark-available", json={"reason": "Superseded"})
+        response = client.post("/supplies/not-a-uuid/mark-available", json={"reason": "r"})
     assert response.status_code == 422
 
 
@@ -126,6 +122,6 @@ def test_post_mark_available_returns_403_when_authorize_denies() -> None:
 
     app.dependency_overrides[_get_mark_available_handler] = _override
     with TestClient(app) as client:
-        response = client.post(f"/supplies/{uuid4()}/mark-available", json={"reason": "Superseded"})
+        response = client.post(f"/supplies/{uuid4()}/mark-available", json={"reason": "r"})
     assert response.status_code == 403
     assert response.json()["detail"] == "denied for test"

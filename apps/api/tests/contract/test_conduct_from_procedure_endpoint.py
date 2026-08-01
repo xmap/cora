@@ -123,9 +123,7 @@ def test_post_conduct_from_returns_500_for_held_procedure_without_resolved_steps
     with TestClient(create_app()) as client:
         pid = _register(client)
         assert client.post(f"/procedures/{pid}/start").status_code == 204
-        assert (
-            client.post(f"/procedures/{pid}/hold", json={"reason": "Superseded"}).status_code == 204
-        )
+        assert client.post(f"/procedures/{pid}/hold", json={"reason": "pause"}).status_code == 204
         response = client.post(
             f"/procedures/{pid}/conduct-from", json={"re_establishment_boundary": 0}
         )

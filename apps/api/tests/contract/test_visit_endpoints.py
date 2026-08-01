@@ -115,7 +115,7 @@ def test_full_lifecycle_walk_returns_204_at_each_step() -> None:
         vid = _register_visit(client)
         assert client.post(f"/visits/{vid}/record-arrival").status_code == 204
         assert client.post(f"/visits/{vid}/start").status_code == 204
-        assert client.post(f"/visits/{vid}/hold", json={"reason": "Superseded"}).status_code == 204
+        assert client.post(f"/visits/{vid}/hold", json={"reason": "beam dump"}).status_code == 204
         assert client.post(f"/visits/{vid}/resume").status_code == 204
         assert client.post(f"/visits/{vid}/complete").status_code == 204
 
@@ -159,7 +159,7 @@ def test_cancel_returns_409_when_visit_is_in_progress_must_use_abort() -> None:
         vid = _register_visit(client)
         client.post(f"/visits/{vid}/record-arrival")
         client.post(f"/visits/{vid}/start")
-        response = client.post(f"/visits/{vid}/cancel", json={"reason": "Superseded"})
+        response = client.post(f"/visits/{vid}/cancel", json={"reason": "r"})
     assert response.status_code == 409
 
 
@@ -167,7 +167,7 @@ def test_cancel_returns_409_when_visit_is_in_progress_must_use_abort() -> None:
 def test_abort_returns_409_when_visit_is_planned_must_use_cancel() -> None:
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
-        response = client.post(f"/visits/{vid}/abort", json={"reason": "Superseded"})
+        response = client.post(f"/visits/{vid}/abort", json={"reason": "r"})
     assert response.status_code == 409
 
 
@@ -182,7 +182,7 @@ def test_hold_returns_400_on_whitespace_only_reason() -> None:
         vid = _register_visit(client)
         client.post(f"/visits/{vid}/record-arrival")
         client.post(f"/visits/{vid}/start")
-        response = client.post(f"/visits/{vid}/hold", json={"reason": "Superseded"})
+        response = client.post(f"/visits/{vid}/hold", json={"reason": "   "})
     assert response.status_code == 400
 
 
@@ -210,7 +210,7 @@ def test_hold_returns_422_when_reason_missing() -> None:
 def test_void_returns_204_from_planned_status() -> None:
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
-        response = client.post(f"/visits/{vid}/void", json={"reason": "Superseded"})
+        response = client.post(f"/visits/{vid}/void", json={"reason": "BSS duplicate"})
     assert response.status_code == 204
 
 
@@ -221,7 +221,7 @@ def test_void_returns_409_when_visit_is_already_completed() -> None:
         client.post(f"/visits/{vid}/record-arrival")
         client.post(f"/visits/{vid}/start")
         client.post(f"/visits/{vid}/complete")
-        response = client.post(f"/visits/{vid}/void", json={"reason": "Superseded"})
+        response = client.post(f"/visits/{vid}/void", json={"reason": "oops"})
     assert response.status_code == 409
 
 

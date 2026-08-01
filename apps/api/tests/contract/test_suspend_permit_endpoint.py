@@ -53,7 +53,7 @@ def test_post_suspend_permit_returns_204_on_active_permit() -> None:
         permit_id = _register_and_activate(client)
         response = client.post(
             f"/federation/permits/{permit_id}/suspend",
-            json={"reason": "Superseded"},
+            json={"reason": "peer paused outbound sharing pending PII review"},
         )
     assert response.status_code == 204, response.text
 
@@ -79,7 +79,7 @@ def test_post_suspend_permit_returns_409_on_defined_permit() -> None:
         permit_id = register.json()["permit_id"]
         response = client.post(
             f"/federation/permits/{permit_id}/suspend",
-            json={"reason": "Superseded"},
+            json={"reason": "x"},
         )
     assert response.status_code == 409
 
@@ -91,12 +91,12 @@ def test_post_suspend_permit_returns_409_when_already_suspended() -> None:
         permit_id = _register_and_activate(client)
         first = client.post(
             f"/federation/permits/{permit_id}/suspend",
-            json={"reason": "Superseded"},
+            json={"reason": "first"},
         )
         assert first.status_code == 204
         second = client.post(
             f"/federation/permits/{permit_id}/suspend",
-            json={"reason": "Superseded"},
+            json={"reason": "second"},
         )
     assert second.status_code == 409
 
@@ -106,7 +106,7 @@ def test_post_suspend_permit_returns_404_on_unknown_id() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/federation/permits/{uuid4()}/suspend",
-            json={"reason": "Superseded"},
+            json={"reason": "x"},
         )
     assert response.status_code == 404
 
@@ -118,7 +118,7 @@ def test_post_suspend_permit_rejects_overlong_reason_with_422() -> None:
         permit_id = _register_and_activate(client)
         response = client.post(
             f"/federation/permits/{permit_id}/suspend",
-            json={"reason": "Superseded" * (REASON_MAX_LENGTH + 1)},
+            json={"reason": "x" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422
 
@@ -129,7 +129,7 @@ def test_post_suspend_permit_rejects_invalid_uuid_path_with_422() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             "/federation/permits/not-a-uuid/suspend",
-            json={"reason": "Superseded"},
+            json={"reason": "x"},
         )
     assert response.status_code == 422
 
@@ -147,7 +147,7 @@ def test_post_suspend_permit_returns_404_via_dependency_override() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/federation/permits/{uuid4()}/suspend",
-            json={"reason": "Superseded"},
+            json={"reason": "x"},
         )
     assert response.status_code == 404
 
@@ -167,7 +167,7 @@ def test_post_suspend_permit_returns_409_via_dependency_override() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/federation/permits/{uuid4()}/suspend",
-            json={"reason": "Superseded"},
+            json={"reason": "x"},
         )
     assert response.status_code == 409
     assert "cannot be suspended" in response.json()["detail"].lower()
@@ -185,7 +185,7 @@ def test_post_suspend_permit_returns_403_when_authorize_denies() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/federation/permits/{uuid4()}/suspend",
-            json={"reason": "Superseded"},
+            json={"reason": "x"},
         )
     assert response.status_code == 403
     assert response.json()["detail"] == "denied for test"

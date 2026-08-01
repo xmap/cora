@@ -302,7 +302,7 @@ def test_post_adjust_run_returns_422_when_patch_missing() -> None:
         )
         response = client.post(
             f"/runs/{run_id}/adjust",
-            json={"reason": "Superseded"},
+            json={"reason": "x"},
         )
     assert response.status_code == 422
 

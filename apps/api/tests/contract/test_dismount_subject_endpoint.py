@@ -35,7 +35,7 @@ def test_post_dismount_returns_204_from_mounted() -> None:
         _mount(client, subject_id, asset_id)
         response = client.post(
             f"/subjects/{subject_id}/dismount",
-            json={"reason": "Superseded"},
+            json={"reason": "run complete"},
         )
     assert response.status_code == 204
     assert response.content == b""
@@ -51,7 +51,7 @@ def test_post_dismount_returns_204_from_measured() -> None:
         assert measure.status_code == 204
         response = client.post(
             f"/subjects/{subject_id}/dismount",
-            json={"reason": "Superseded"},
+            json={"reason": "moving to next stage"},
         )
     assert response.status_code == 204
 
@@ -63,7 +63,7 @@ def test_post_dismount_returns_409_when_subject_only_received() -> None:
         subject_id = _register_subject(client)
         response = client.post(
             f"/subjects/{subject_id}/dismount",
-            json={"reason": "Superseded"},
+            json={"reason": "x"},
         )
     assert response.status_code == 409
     body = response.json()
@@ -77,7 +77,7 @@ def test_post_dismount_returns_404_when_subject_missing() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/subjects/{missing}/dismount",
-            json={"reason": "Superseded"},
+            json={"reason": "x"},
         )
     assert response.status_code == 404
 
@@ -96,7 +96,7 @@ def test_post_dismount_returns_422_when_reason_empty() -> None:
         subject_id = _register_subject(client)
         response = client.post(
             f"/subjects/{subject_id}/dismount",
-            json={"reason": "Superseded"},
+            json={"reason": ""},
         )
     assert response.status_code == 422
 
@@ -118,7 +118,7 @@ def test_dismount_then_remount_cycle() -> None:
 
         dismount = client.post(
             f"/subjects/{subject_id}/dismount",
-            json={"reason": "Superseded"},
+            json={"reason": "moving to detector"},
         )
         assert dismount.status_code == 204
 
@@ -143,7 +143,7 @@ def test_dismounted_subject_can_be_removed_directly() -> None:
         subject_id = _register_subject(client)
         asset_id = register_active_asset(client)
         _mount(client, subject_id, asset_id)
-        client.post(f"/subjects/{subject_id}/dismount", json={"reason": "Superseded"})
+        client.post(f"/subjects/{subject_id}/dismount", json={"reason": "done"})
         # Subject is now Received; remove should succeed directly.
         response = client.post(f"/subjects/{subject_id}/remove")
     assert response.status_code == 204

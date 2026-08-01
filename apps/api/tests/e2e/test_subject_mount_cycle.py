@@ -54,7 +54,7 @@ async def test_mount_then_dismount_clears_mounted_on_asset_id(
 
     dismount = await e2e_client.post(
         f"/subjects/{subject_id}/dismount",
-        json={"reason": "Superseded"},
+        json={"reason": "scan complete"},
     )
     assert dismount.status_code == 204
 

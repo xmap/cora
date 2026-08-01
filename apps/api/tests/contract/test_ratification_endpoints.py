@@ -168,7 +168,7 @@ def test_deny_returns_204_for_independent_principal_with_reason() -> None:
         rid = _request_ratification(client)
         response = client.post(
             f"/ratifications/{rid}/deny",
-            json={"reason": "Superseded"},
+            json={"reason": "unsafe first-of-kind action"},
             headers={"X-Principal-Id": _OTHER_PRINCIPAL},
         )
     assert response.status_code == 204, response.text
@@ -179,7 +179,7 @@ def test_deny_returns_409_when_requester_self_signs() -> None:
     """Four-eyes: same principal (no header) denies -> 409."""
     with TestClient(create_app()) as client:
         rid = _request_ratification(client)
-        response = client.post(f"/ratifications/{rid}/deny", json={"reason": "Superseded"})
+        response = client.post(f"/ratifications/{rid}/deny", json={"reason": "no"})
     assert response.status_code == 409
 
 
@@ -188,7 +188,7 @@ def test_deny_returns_404_when_ratification_absent() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/ratifications/{uuid4()}/deny",
-            json={"reason": "Superseded"},
+            json={"reason": "no"},
             headers={"X-Principal-Id": _OTHER_PRINCIPAL},
         )
     assert response.status_code == 404
@@ -202,7 +202,7 @@ def test_deny_returns_409_when_already_granted() -> None:
         client.post(f"/ratifications/{rid}/grant", headers={"X-Principal-Id": _OTHER_PRINCIPAL})
         response = client.post(
             f"/ratifications/{rid}/deny",
-            json={"reason": "Superseded"},
+            json={"reason": "too late"},
             headers={"X-Principal-Id": _OTHER_PRINCIPAL},
         )
     assert response.status_code == 409
@@ -214,7 +214,7 @@ def test_deny_returns_400_on_whitespace_only_reason() -> None:
         rid = _request_ratification(client)
         response = client.post(
             f"/ratifications/{rid}/deny",
-            json={"reason": "Superseded"},
+            json={"reason": "   "},
             headers={"X-Principal-Id": _OTHER_PRINCIPAL},
         )
     assert response.status_code == 400

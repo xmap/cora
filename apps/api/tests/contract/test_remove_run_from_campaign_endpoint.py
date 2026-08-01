@@ -80,7 +80,7 @@ def test_post_remove_run_returns_204_on_happy_path() -> None:
         run_id = _add_member(client, app, cid)
         response = client.post(
             f"/campaigns/{cid}/runs/{run_id}/remove",
-            json={"reason": "Superseded"},
+            json={"reason": "reassigned"},
         )
     assert response.status_code == 204, response.text
 
@@ -91,7 +91,7 @@ def test_post_remove_run_returns_404_when_campaign_absent() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/campaigns/{uuid4()}/runs/{uuid4()}/remove",
-            json={"reason": "Superseded"},
+            json={"reason": "r"},
         )
     assert response.status_code == 404
 
@@ -105,7 +105,7 @@ def test_post_remove_run_returns_409_when_not_member() -> None:
         _seed_run(app, run_id)  # Run exists but never added
         response = client.post(
             f"/campaigns/{cid}/runs/{run_id}/remove",
-            json={"reason": "Superseded"},
+            json={"reason": "r"},
         )
     assert response.status_code == 409
 
@@ -118,7 +118,7 @@ def test_post_remove_run_returns_400_on_whitespace_only_reason() -> None:
         run_id = _add_member(client, app, cid)
         response = client.post(
             f"/campaigns/{cid}/runs/{run_id}/remove",
-            json={"reason": "Superseded"},
+            json={"reason": "   "},
         )
     assert response.status_code == 400
     assert "Campaign run remove reason" in response.json()["detail"]
@@ -154,7 +154,7 @@ def test_post_remove_run_returns_409_when_campaign_closed() -> None:
         # membership-mutation is frozen.
         response = client.post(
             f"/campaigns/{cid}/runs/{run_id}/remove",
-            json={"reason": "Superseded"},
+            json={"reason": "post-close attempt"},
         )
     assert response.status_code == 409, response.text
 
@@ -171,7 +171,7 @@ def test_post_remove_run_returns_403_when_authorize_denies() -> None:
     with TestClient(app) as client:
         response = client.post(
             f"/campaigns/{uuid4()}/runs/{uuid4()}/remove",
-            json={"reason": "Superseded"},
+            json={"reason": "r"},
         )
     assert response.status_code == 403
     assert response.json()["detail"] == "denied for test"

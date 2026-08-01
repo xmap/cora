@@ -33,7 +33,7 @@ def test_post_mark_unavailable_returns_204_for_unknown_supply() -> None:
     with TestClient(create_app()) as client:
         supply_id = _register_supply(client)
         response = client.post(
-            f"/supplies/{supply_id}/mark-unavailable", json={"reason": "Superseded"}
+            f"/supplies/{supply_id}/mark-unavailable", json={"reason": "beam dump"}
         )
     assert response.status_code == 204
 
@@ -41,9 +41,7 @@ def test_post_mark_unavailable_returns_204_for_unknown_supply() -> None:
 @pytest.mark.contract
 def test_post_mark_unavailable_returns_404_for_unknown_id() -> None:
     with TestClient(create_app()) as client:
-        response = client.post(
-            f"/supplies/{uuid4()}/mark-unavailable", json={"reason": "Superseded"}
-        )
+        response = client.post(f"/supplies/{uuid4()}/mark-unavailable", json={"reason": "r"})
     assert response.status_code == 404
 
 
@@ -52,13 +50,9 @@ def test_post_mark_unavailable_returns_409_when_already_unavailable() -> None:
     """Strict-not-idempotent."""
     with TestClient(create_app()) as client:
         supply_id = _register_supply(client)
-        first = client.post(
-            f"/supplies/{supply_id}/mark-unavailable", json={"reason": "Superseded"}
-        )
+        first = client.post(f"/supplies/{supply_id}/mark-unavailable", json={"reason": "first"})
         assert first.status_code == 204
-        second = client.post(
-            f"/supplies/{supply_id}/mark-unavailable", json={"reason": "Superseded"}
-        )
+        second = client.post(f"/supplies/{supply_id}/mark-unavailable", json={"reason": "second"})
     assert second.status_code == 409
 
 
@@ -76,7 +70,7 @@ def test_post_mark_unavailable_rejects_too_long_reason_with_422() -> None:
         supply_id = _register_supply(client)
         response = client.post(
             f"/supplies/{supply_id}/mark-unavailable",
-            json={"reason": "Superseded" * (REASON_MAX_LENGTH + 1)},
+            json={"reason": "a" * (REASON_MAX_LENGTH + 1)},
         )
     assert response.status_code == 422
 
@@ -84,9 +78,7 @@ def test_post_mark_unavailable_rejects_too_long_reason_with_422() -> None:
 @pytest.mark.contract
 def test_post_mark_unavailable_rejects_malformed_supply_id_with_422() -> None:
     with TestClient(create_app()) as client:
-        response = client.post(
-            "/supplies/not-a-uuid/mark-unavailable", json={"reason": "Superseded"}
-        )
+        response = client.post("/supplies/not-a-uuid/mark-unavailable", json={"reason": "r"})
     assert response.status_code == 422
 
 
@@ -94,9 +86,7 @@ def test_post_mark_unavailable_rejects_malformed_supply_id_with_422() -> None:
 def test_post_mark_unavailable_rejects_whitespace_only_reason_with_400() -> None:
     with TestClient(create_app()) as client:
         supply_id = _register_supply(client)
-        response = client.post(
-            f"/supplies/{supply_id}/mark-unavailable", json={"reason": "Superseded"}
-        )
+        response = client.post(f"/supplies/{supply_id}/mark-unavailable", json={"reason": "   "})
     assert response.status_code == 400
 
 
@@ -113,7 +103,5 @@ def test_post_mark_unavailable_returns_403_when_authorize_denies() -> None:
 
     app.dependency_overrides[_get_mark_supply_unavailable_handler] = _override
     with TestClient(app) as client:
-        response = client.post(
-            f"/supplies/{uuid4()}/mark-unavailable", json={"reason": "Superseded"}
-        )
+        response = client.post(f"/supplies/{uuid4()}/mark-unavailable", json={"reason": "r"})
     assert response.status_code == 403
