@@ -36,7 +36,7 @@ def test_post_deprecate_method_returns_204_from_defined_state() -> None:
     """Direct deprecation (no prior versioning)."""
     with TestClient(create_app()) as client:
         method_id = _define_method(client)
-        response = client.post(f"/methods/{method_id}/deprecate", json={"reason": "Superseded"})
+        response = client.post(f"/methods/{method_id}/deprecate", json={"reason": "Defective"})
     assert response.status_code == 204
 
 

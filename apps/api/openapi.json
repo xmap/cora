@@ -601,13 +601,12 @@
           "deprecation_reason": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/DeprecationReason"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Deprecation Reason"
+            ]
           },
           "description": {
             "anyOf": [

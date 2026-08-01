@@ -46,6 +46,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.deprecation import DeprecationReason
 from cora.shared.identity import ActorId
 from cora.shared.text_bounds import REASON_MAX_LENGTH
 
@@ -813,7 +814,7 @@ class Agent:
     prompt_template_id: UUID | None = None
     capabilities: frozenset[AgentCapability] = field(default_factory=frozenset[AgentCapability])
     status: AgentStatus = AgentStatus.DEFINED
-    deprecation_reason: str | None = None
+    deprecation_reason: DeprecationReason | None = None
     # ToolGrant + Suspended + AgentBudget
     tools: frozenset[ToolName] = field(default_factory=frozenset[ToolName])
     budget: AgentBudget | None = None

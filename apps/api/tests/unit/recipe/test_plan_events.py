@@ -24,6 +24,7 @@ from cora.recipe.aggregates.plan.events import (
     from_stored,
     to_payload,
 )
+from cora.shared.deprecation import DeprecationReason
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
 
@@ -327,10 +328,21 @@ def test_from_stored_rebuilds_plan_deprecated() -> None:
 
 
 @pytest.mark.unit
-def test_to_payload_then_from_stored_round_trips_for_plan_deprecated() -> None:
-    original = PlanDeprecated(reason="Superseded", plan_id=uuid4(), occurred_at=_NOW)
+@pytest.mark.parametrize("reason", list(DeprecationReason))
+def test_to_payload_then_from_stored_round_trips_for_plan_deprecated(
+    reason: DeprecationReason,
+) -> None:
+    """Every member of the closed vocabulary survives the wire, not just the
+    common one.
+
+    `Superseded` accounted for every use in the corpus when this was written;
+    `Defective` had none, and it is the value the enum exists to make findable.
+    A member that failed to round-trip would therefore have been invisible.
+    """
+    original = PlanDeprecated(reason=reason.value, plan_id=uuid4(), occurred_at=_NOW)
     stored = _stored("PlanDeprecated", to_payload(original))
     assert from_stored(stored) == original
+    assert stored.payload["reason"] == reason.value
 
 
 # ---------- PlanDefaultParametersUpdated ----------

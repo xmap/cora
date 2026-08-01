@@ -58,6 +58,7 @@ from cora.agent.aggregates.agent.state import (
     ToolName,
 )
 from cora.infrastructure.evolver import require_state
+from cora.shared.deprecation import DeprecationReason
 
 
 def evolve(state: Agent | None, event: AgentEvent) -> Agent:
@@ -139,7 +140,7 @@ def evolve(state: Agent | None, event: AgentEvent) -> Agent:
                 prompt_template_id=prior.prompt_template_id,
                 capabilities=prior.capabilities,
                 status=AgentStatus.DEPRECATED,
-                deprecation_reason=reason,
+                deprecation_reason=DeprecationReason(reason),
                 tools=prior.tools,
                 budget=prior.budget,
                 suspended_at=prior.suspended_at,
