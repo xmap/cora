@@ -37,6 +37,7 @@ from cora.safety.features.deprecate_clearance_template.command import (
     DeprecateClearanceTemplate,
 )
 from cora.safety.features.deprecate_clearance_template.decider import decide
+from cora.shared.deprecation import DeprecationReason
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 from tests._strategies import aware_datetimes
@@ -103,7 +104,9 @@ def test_decide_emits_single_deprecated_event_on_active_state(
         status=ClearanceTemplateStatus.ACTIVE,
         version=version,
     )
-    command = DeprecateClearanceTemplate(template_id=template_id)
+    command = DeprecateClearanceTemplate(
+        reason=DeprecationReason.SUPERSEDED, template_id=template_id
+    )
     actor = ActorId(deprecated_by)
 
     events = decide(
@@ -145,7 +148,9 @@ def test_decide_rejects_non_active_status(
         status=status,
         version=version,
     )
-    command = DeprecateClearanceTemplate(template_id=template_id)
+    command = DeprecateClearanceTemplate(
+        reason=DeprecationReason.SUPERSEDED, template_id=template_id
+    )
 
     with pytest.raises(ClearanceTemplateCannotDeprecateError):
         decide(
@@ -169,7 +174,9 @@ def test_decide_rejects_when_state_is_none(
     deprecated_by: UUID,
 ) -> None:
     """A None state ALWAYS raises NotFound."""
-    command = DeprecateClearanceTemplate(template_id=template_id)
+    command = DeprecateClearanceTemplate(
+        reason=DeprecationReason.SUPERSEDED, template_id=template_id
+    )
 
     with pytest.raises(ClearanceTemplateNotFoundError):
         decide(

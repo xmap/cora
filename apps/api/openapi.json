@@ -6797,20 +6797,13 @@
         "description": "Body for `POST /agents/{agent_id}/deprecate`.",
         "properties": {
           "reason": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Optional operator-supplied deprecation reason (1-500 chars after trim). Pass null to omit.",
-            "title": "Reason"
+            "$ref": "#/components/schemas/DeprecationReason",
+            "description": "Why the template is no longer recommended. `Superseded`: a newer version replaces it, prior use stands. `Defective`: it was wrong, prior use is suspect. `Obsolete`: what it targeted no longer exists."
           }
         },
+        "required": [
+          "reason"
+        ],
         "title": "DeprecateAgentRequest",
         "type": "object"
       },
@@ -6855,6 +6848,20 @@
         "title": "DeprecateCapabilityRequest",
         "type": "object"
       },
+      "DeprecateClearanceTemplateRequest": {
+        "description": "Body for `POST /clearance-templates/{template_id}/deprecate`.",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/DeprecationReason",
+            "description": "Why the template is no longer recommended. `Superseded`: a newer version replaces it, prior use stands. `Defective`: it was wrong, prior use is suspect. `Obsolete`: what it targeted no longer exists."
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DeprecateClearanceTemplateRequest",
+        "type": "object"
+      },
       "DeprecateFamilyRequest": {
         "description": "Body for `POST /families/{family_id}/deprecate`.",
         "properties": {
@@ -6873,11 +6880,8 @@
         "description": "Body for `POST /language-models/{language_model_id}/deprecate`.",
         "properties": {
           "reason": {
-            "description": "Operator-supplied deprecation reason (1-500 chars after trim). REQUIRED: withdrawing approval is a policy act the audit log must always carry context for.",
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Reason",
-            "type": "string"
+            "$ref": "#/components/schemas/DeprecationReason",
+            "description": "Why the template is no longer recommended. `Superseded`: a newer version replaces it, prior use stands. `Defective`: it was wrong, prior use is suspect. `Obsolete`: what it targeted no longer exists."
           }
         },
         "required": [
@@ -26497,6 +26501,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeprecateClearanceTemplateRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "204": {
             "description": "Successful Response"

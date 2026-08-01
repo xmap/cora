@@ -9,7 +9,6 @@ from cora.agent.aggregates.agent import ModelRef
 from cora.agent.aggregates.language_model import (
     ArchivabilityTier,
     DataSensitivityTier,
-    InvalidLanguageModelReasonError,
     LanguageModel,
     LanguageModelCannotDeprecateError,
     LanguageModelDeprecated,
@@ -21,7 +20,7 @@ from cora.agent.aggregates.language_model import (
 )
 from cora.agent.features.deprecate_language_model.command import DeprecateLanguageModel
 from cora.agent.features.deprecate_language_model.decider import decide
-from cora.shared.text_bounds import REASON_MAX_LENGTH
+from cora.shared.deprecation import DeprecationReason
 
 _NOW = datetime(2026, 7, 10, 12, 0, 0, tzinfo=UTC)
 
@@ -51,7 +50,9 @@ def test_deprecates_a_defined_language_model() -> None:
     entry = _language_model(LanguageModelStatus.DEFINED)
     events = decide(
         state=entry,
-        command=DeprecateLanguageModel(language_model_id=entry.id, reason="policy change"),
+        command=DeprecateLanguageModel(
+            language_model_id=entry.id, reason=DeprecationReason.SUPERSEDED
+        ),
         now=_NOW,
     )
     assert events == [
@@ -75,11 +76,13 @@ def test_deprecates_from_every_later_pre_terminal_status(status: LanguageModelSt
     entry = _language_model(status)
     events = decide(
         state=entry,
-        command=DeprecateLanguageModel(language_model_id=entry.id, reason="cost review"),
+        command=DeprecateLanguageModel(
+            language_model_id=entry.id, reason=DeprecationReason.SUPERSEDED
+        ),
         now=_NOW,
     )
     assert isinstance(events[0], LanguageModelDeprecated)
-    assert events[0].reason == "cost review"
+    assert events[0].reason == "Superseded"
 
 
 @pytest.mark.unit
@@ -87,7 +90,9 @@ def test_not_found_when_state_is_none() -> None:
     with pytest.raises(LanguageModelNotFoundError):
         decide(
             state=None,
-            command=DeprecateLanguageModel(language_model_id=uuid4(), reason="x"),
+            command=DeprecateLanguageModel(
+                language_model_id=uuid4(), reason=DeprecationReason.SUPERSEDED
+            ),
             now=_NOW,
         )
 
@@ -102,42 +107,8 @@ def test_cannot_deprecate_a_terminal_language_model(status: LanguageModelStatus)
     with pytest.raises(LanguageModelCannotDeprecateError):
         decide(
             state=entry,
-            command=DeprecateLanguageModel(language_model_id=entry.id, reason="x"),
-            now=_NOW,
-        )
-
-
-@pytest.mark.unit
-def test_reason_trims_via_value_object() -> None:
-    entry = _language_model(LanguageModelStatus.APPROVED)
-    events = decide(
-        state=entry,
-        command=DeprecateLanguageModel(language_model_id=entry.id, reason="  security posture  "),
-        now=_NOW,
-    )
-    assert events[0].reason == "security posture"
-
-
-@pytest.mark.unit
-def test_reason_empty_raises() -> None:
-    entry = _language_model(LanguageModelStatus.APPROVED)
-    with pytest.raises(InvalidLanguageModelReasonError):
-        decide(
-            state=entry,
-            command=DeprecateLanguageModel(language_model_id=entry.id, reason="   "),
-            now=_NOW,
-        )
-
-
-@pytest.mark.unit
-def test_reason_over_cap_raises() -> None:
-    entry = _language_model(LanguageModelStatus.APPROVED)
-    with pytest.raises(InvalidLanguageModelReasonError):
-        decide(
-            state=entry,
             command=DeprecateLanguageModel(
-                language_model_id=entry.id,
-                reason="x" * (REASON_MAX_LENGTH + 1),
+                language_model_id=entry.id, reason=DeprecationReason.SUPERSEDED
             ),
             now=_NOW,
         )

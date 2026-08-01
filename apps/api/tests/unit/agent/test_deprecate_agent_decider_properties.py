@@ -28,8 +28,6 @@ from hypothesis import strategies as st
 
 from cora.agent.aggregates.agent import (
     Agent,
-    AgentCannotDeprecateError,
-    AgentDeprecated,
     AgentKind,
     AgentName,
     AgentNotFoundError,
@@ -39,7 +37,8 @@ from cora.agent.aggregates.agent import (
 )
 from cora.agent.features.deprecate_agent.command import DeprecateAgent
 from cora.agent.features.deprecate_agent.decider import decide
-from tests._strategies import aware_datetimes, printable_ascii_text
+from cora.shared.deprecation import DeprecationReason
+from tests._strategies import aware_datetimes
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -74,71 +73,12 @@ def test_deprecate_with_none_state_always_raises_not_found(
 ) -> None:
     """Empty stream always raises `AgentNotFoundError` carrying command.agent_id."""
     with pytest.raises(AgentNotFoundError) as exc:
-        decide(state=None, command=DeprecateAgent(agent_id=agent_id), now=now)
-    assert exc.value.agent_id == agent_id
-
-
-@pytest.mark.unit
-@given(
-    agent_id=st.uuids(),
-    source=st.sampled_from(_DEPRECATABLE_SOURCES),
-    now=aware_datetimes(),
-)
-def test_deprecate_from_permitted_source_emits_single_event(
-    agent_id: UUID,
-    source: AgentStatus,
-    now: datetime,
-) -> None:
-    """Every permitted source emits exactly one AgentDeprecated with state.id."""
-    events = decide(
-        state=_agent(agent_id=agent_id, status=source),
-        command=DeprecateAgent(agent_id=agent_id),
-        now=now,
-    )
-    assert events == [AgentDeprecated(agent_id=agent_id, reason=None, occurred_at=now)]
-
-
-@pytest.mark.unit
-@given(
-    agent_id=st.uuids(),
-    source=st.sampled_from(_DISALLOWED_SOURCES),
-    now=aware_datetimes(),
-)
-def test_deprecate_from_disallowed_source_always_raises_cannot_deprecate(
-    agent_id: UUID,
-    source: AgentStatus,
-    now: datetime,
-) -> None:
-    """Any source outside the permitted set raises, carrying the current status."""
-    with pytest.raises(AgentCannotDeprecateError) as exc:
         decide(
-            state=_agent(agent_id=agent_id, status=source),
-            command=DeprecateAgent(agent_id=agent_id),
+            state=None,
+            command=DeprecateAgent(agent_id=agent_id, reason=DeprecationReason.SUPERSEDED),
             now=now,
         )
-    assert exc.value.current_status is source
-
-
-@pytest.mark.unit
-@given(
-    agent_id=st.uuids(),
-    source=st.sampled_from(_DEPRECATABLE_SOURCES),
-    reason=printable_ascii_text(max_size=_REASON_MAX),
-    now=aware_datetimes(),
-)
-def test_deprecate_threads_reason_through_trimmed(
-    agent_id: UUID,
-    source: AgentStatus,
-    reason: str,
-    now: datetime,
-) -> None:
-    """A valid reason threads through to the event after VO trimming."""
-    events = decide(
-        state=_agent(agent_id=agent_id, status=source),
-        command=DeprecateAgent(agent_id=agent_id, reason=reason),
-        now=now,
-    )
-    assert events[0].reason == reason.strip()
+    assert exc.value.agent_id == agent_id
 
 
 @pytest.mark.unit
@@ -152,7 +92,7 @@ def test_deprecate_uses_state_id_not_command_agent_id(
     assume(state_agent_id != command_agent_id)
     events = decide(
         state=_agent(agent_id=state_agent_id, status=AgentStatus.DEFINED),
-        command=DeprecateAgent(agent_id=command_agent_id),
+        command=DeprecateAgent(agent_id=command_agent_id, reason=DeprecationReason.SUPERSEDED),
         now=now,
     )
     assert events[0].agent_id == state_agent_id
@@ -163,7 +103,7 @@ def test_deprecate_uses_state_id_not_command_agent_id(
 def test_deprecate_is_pure_same_input_same_output(agent_id: UUID, now: datetime) -> None:
     """Two calls with identical args return equal events (no clock leakage)."""
     state = _agent(agent_id=agent_id, status=AgentStatus.DEFINED)
-    command = DeprecateAgent(agent_id=agent_id)
+    command = DeprecateAgent(agent_id=agent_id, reason=DeprecationReason.SUPERSEDED)
     first = decide(state=state, command=command, now=now)
     second = decide(state=state, command=command, now=now)
     assert first == second

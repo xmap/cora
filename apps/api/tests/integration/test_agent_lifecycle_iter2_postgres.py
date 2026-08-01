@@ -48,6 +48,7 @@ from cora.agent.features.revoke_tool_from_agent import RevokeToolFromAgent
 from cora.agent.features.suspend_agent import SuspendAgent
 from cora.agent.features.update_agent_budget import UpdateAgentBudget
 from cora.agent.features.version_agent import VersionAgent
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
@@ -198,7 +199,7 @@ async def test_deprecate_from_suspended_persists(db_pool: asyncpg.Pool) -> None:
         correlation_id=_CORRELATION_ID,
     )
     await deprecate_agent.bind(deps)(
-        DeprecateAgent(agent_id=agent_id, reason="retired while paused"),
+        DeprecateAgent(agent_id=agent_id, reason=DeprecationReason.SUPERSEDED),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -206,4 +207,4 @@ async def test_deprecate_from_suspended_persists(db_pool: asyncpg.Pool) -> None:
     assert final is not None
     assert final.status is AgentStatus.DEPRECATED
     assert final.deprecation_reason is not None
-    assert final.deprecation_reason.value == "retired while paused"
+    assert final.deprecation_reason == "retired while paused"

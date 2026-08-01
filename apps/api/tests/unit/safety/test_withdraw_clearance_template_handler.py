@@ -147,6 +147,7 @@ async def _seed_deprecated(
     """Append a ClearanceTemplateDeprecated event so the aggregate folds
     to Deprecated status (stream version 3)."""
     event = ClearanceTemplateDeprecated(
+        reason="Superseded",
         template_id=template_id,
         occurred_at=_NOW,
         deprecated_by=_PRINCIPAL_ID,

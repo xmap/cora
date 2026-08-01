@@ -32,6 +32,7 @@ from cora.safety.aggregates.clearance_template import (
 from cora.safety.errors import UnauthorizedError
 from cora.safety.features import deprecate_clearance_template
 from cora.safety.features.deprecate_clearance_template import DeprecateClearanceTemplate
+from cora.shared.deprecation import DeprecationReason
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _NOW = datetime(2026, 6, 10, 12, 0, 0, tzinfo=UTC)
@@ -125,7 +126,7 @@ async def test_handler_appends_deprecated_event_at_expected_version_two() -> Non
     handler = deprecate_clearance_template.bind(deps)
 
     result = await handler(
-        DeprecateClearanceTemplate(template_id=template_id),
+        DeprecateClearanceTemplate(reason=DeprecationReason.SUPERSEDED, template_id=template_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -154,7 +155,7 @@ async def test_handler_threads_principal_id_onto_deprecated_by() -> None:
     handler = deprecate_clearance_template.bind(deps)
 
     await handler(
-        DeprecateClearanceTemplate(template_id=template_id),
+        DeprecateClearanceTemplate(reason=DeprecationReason.SUPERSEDED, template_id=template_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -172,7 +173,9 @@ async def test_handler_raises_not_found_when_stream_is_empty() -> None:
     missing_template_id = uuid4()
     with pytest.raises(ClearanceTemplateNotFoundError):
         await handler(
-            DeprecateClearanceTemplate(template_id=missing_template_id),
+            DeprecateClearanceTemplate(
+                reason=DeprecationReason.SUPERSEDED, template_id=missing_template_id
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -192,7 +195,9 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
 
     with pytest.raises(UnauthorizedError) as exc_info:
         await handler(
-            DeprecateClearanceTemplate(template_id=template_id),
+            DeprecateClearanceTemplate(
+                reason=DeprecationReason.SUPERSEDED, template_id=template_id
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -210,7 +215,9 @@ async def test_handler_does_not_append_when_denied() -> None:
 
     with pytest.raises(UnauthorizedError):
         await handler(
-            DeprecateClearanceTemplate(template_id=template_id),
+            DeprecateClearanceTemplate(
+                reason=DeprecationReason.SUPERSEDED, template_id=template_id
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

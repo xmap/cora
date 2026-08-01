@@ -81,6 +81,7 @@ class ClearanceTemplateDeprecated:
     """
 
     template_id: UUID
+    reason: str
     occurred_at: datetime
     deprecated_by: UUID
 
@@ -166,11 +167,13 @@ def to_payload(event: ClearanceTemplateEvent) -> dict[str, Any]:
             }
         case ClearanceTemplateDeprecated(
             template_id=template_id,
+            reason=reason,
             occurred_at=occurred_at,
             deprecated_by=deprecated_by,
         ):
             return {
                 "template_id": str(template_id),
+                "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
                 "deprecated_by": str(deprecated_by),
             }
@@ -234,6 +237,7 @@ def from_stored(stored: StoredEvent) -> ClearanceTemplateEvent:
                 "ClearanceTemplateDeprecated",
                 lambda: ClearanceTemplateDeprecated(
                     template_id=UUID(payload["template_id"]),
+                    reason=payload["reason"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                     deprecated_by=UUID(payload["deprecated_by"]),
                 ),

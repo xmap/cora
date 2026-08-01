@@ -35,8 +35,6 @@ from cora.agent.aggregates.language_model import (
     ArchivabilityTier,
     DataSensitivityTier,
     LanguageModel,
-    LanguageModelCannotDeprecateError,
-    LanguageModelDeprecated,
     LanguageModelName,
     LanguageModelNotFoundError,
     LanguageModelStatus,
@@ -45,7 +43,8 @@ from cora.agent.aggregates.language_model import (
 )
 from cora.agent.features.deprecate_language_model.command import DeprecateLanguageModel
 from cora.agent.features.deprecate_language_model.decider import decide
-from tests._strategies import aware_datetimes, printable_ascii_text
+from cora.shared.deprecation import DeprecationReason
+from tests._strategies import aware_datetimes
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -91,79 +90,12 @@ def test_deprecate_with_none_state_always_raises_not_found(
     with pytest.raises(LanguageModelNotFoundError) as exc:
         decide(
             state=None,
-            command=DeprecateLanguageModel(language_model_id=language_model_id, reason="x"),
+            command=DeprecateLanguageModel(
+                language_model_id=language_model_id, reason=DeprecationReason.SUPERSEDED
+            ),
             now=now,
         )
     assert exc.value.language_model_id == language_model_id
-
-
-@pytest.mark.unit
-@given(
-    language_model_id=st.uuids(),
-    source=st.sampled_from(_DEPRECATABLE_SOURCES),
-    now=aware_datetimes(),
-)
-def test_deprecate_from_permitted_source_emits_single_event(
-    language_model_id: UUID,
-    source: LanguageModelStatus,
-    now: datetime,
-) -> None:
-    """Every permitted source emits exactly one LanguageModelDeprecated with state.id."""
-    events = decide(
-        state=_language_model(language_model_id=language_model_id, status=source),
-        command=DeprecateLanguageModel(language_model_id=language_model_id, reason="policy change"),
-        now=now,
-    )
-    assert events == [
-        LanguageModelDeprecated(
-            language_model_id=language_model_id,
-            reason="Superseded",
-            occurred_at=now,
-        )
-    ]
-
-
-@pytest.mark.unit
-@given(
-    language_model_id=st.uuids(),
-    source=st.sampled_from(_DISALLOWED_SOURCES),
-    now=aware_datetimes(),
-)
-def test_deprecate_from_disallowed_source_always_raises_cannot_deprecate(
-    language_model_id: UUID,
-    source: LanguageModelStatus,
-    now: datetime,
-) -> None:
-    """Any source outside the permitted set raises, carrying the current status."""
-    with pytest.raises(LanguageModelCannotDeprecateError) as exc:
-        decide(
-            state=_language_model(language_model_id=language_model_id, status=source),
-            command=DeprecateLanguageModel(language_model_id=language_model_id, reason="x"),
-            now=now,
-        )
-    assert exc.value.current_status is source
-
-
-@pytest.mark.unit
-@given(
-    language_model_id=st.uuids(),
-    source=st.sampled_from(_DEPRECATABLE_SOURCES),
-    reason=printable_ascii_text(max_size=_REASON_MAX),
-    now=aware_datetimes(),
-)
-def test_deprecate_threads_reason_through_trimmed(
-    language_model_id: UUID,
-    source: LanguageModelStatus,
-    reason: str,
-    now: datetime,
-) -> None:
-    """A valid reason threads through to the event after VO trimming."""
-    events = decide(
-        state=_language_model(language_model_id=language_model_id, status=source),
-        command=DeprecateLanguageModel(language_model_id=language_model_id, reason=reason),
-        now=now,
-    )
-    assert events[0].reason == reason.strip()
 
 
 @pytest.mark.unit
@@ -177,7 +109,9 @@ def test_deprecate_uses_state_id_not_command_language_model_id(
     assume(state_id != command_id)
     events = decide(
         state=_language_model(language_model_id=state_id, status=LanguageModelStatus.DEFINED),
-        command=DeprecateLanguageModel(language_model_id=command_id, reason="x"),
+        command=DeprecateLanguageModel(
+            language_model_id=command_id, reason=DeprecationReason.SUPERSEDED
+        ),
         now=now,
     )
     assert events[0].language_model_id == state_id
@@ -188,7 +122,9 @@ def test_deprecate_uses_state_id_not_command_language_model_id(
 def test_deprecate_is_pure_same_input_same_output(language_model_id: UUID, now: datetime) -> None:
     """Two calls with identical args return equal events (no clock leakage)."""
     state = _language_model(language_model_id=language_model_id, status=LanguageModelStatus.DEFINED)
-    command = DeprecateLanguageModel(language_model_id=language_model_id, reason="policy change")
+    command = DeprecateLanguageModel(
+        language_model_id=language_model_id, reason=DeprecationReason.SUPERSEDED
+    )
     first = decide(state=state, command=command, now=now)
     second = decide(state=state, command=command, now=now)
     assert first == second

@@ -12,7 +12,7 @@ from cora.agent.features.deprecate_agent.handler import Handler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
-from cora.shared.text_bounds import REASON_MAX_LENGTH
+from cora.shared.deprecation import DeprecationReason
 
 
 class DeprecateAgentOutput(BaseModel):
@@ -28,22 +28,24 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         name="deprecate_agent",
         description=(
             "Deprecate an Agent (Defined | Versioned -> Deprecated). Terminal: "
-            "deprecated Agents cannot be revived. Optional `reason` (1-500 "
-            "chars) carries an operator-supplied explanation."
+            "deprecated Agents cannot be revived. `reason` is a closed "
+            "enum recording whether prior use of this Agent still stands."
         ),
     )
     async def deprecate_agent_tool(  # pyright: ignore[reportUnusedFunction]
         ctx: Context[Any, Any, Any],
         agent_id: Annotated[UUID, Field(description="Identifier of the Agent to deprecate.")],
         reason: Annotated[
-            str | None,
+            DeprecationReason,
             Field(
-                default=None,
-                min_length=1,
-                max_length=REASON_MAX_LENGTH,
-                description="Optional deprecation reason.",
+                description=(
+                    "Why the template is no longer recommended. `Superseded`: a "
+                    "newer version replaces it, prior use stands. `Defective`: it "
+                    "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+                    "no longer exists."
+                ),
             ),
-        ] = None,
+        ],
     ) -> DeprecateAgentOutput:
         handler = get_handler()
         await handler(

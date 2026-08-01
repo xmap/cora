@@ -58,7 +58,7 @@ def test_post_grant_409_on_deprecated_agent() -> None:
     with TestClient(create_app()) as client:
         define = client.post("/agents", json=_define_body())
         agent_id = define.json()["agent_id"]
-        client.post(f"/agents/{agent_id}/deprecate", json={})
+        client.post(f"/agents/{agent_id}/deprecate", json={"reason": "Superseded"})
         response = client.post(f"/agents/{agent_id}/tools/grant", json={"tool_name": "read_run"})
     assert response.status_code == 409
 

@@ -83,7 +83,7 @@ def test_mcp_deprecate_agent_returns_iserror_on_unknown_id() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "deprecate_agent",
-                    "arguments": {"agent_id": str(uuid4())},
+                    "arguments": {"agent_id": str(uuid4()), "reason": "Superseded"},
                 },
             },
             headers=session_headers,

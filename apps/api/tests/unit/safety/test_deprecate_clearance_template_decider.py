@@ -27,6 +27,7 @@ from cora.safety.features.deprecate_clearance_template import (
     DeprecateClearanceTemplate,
     decide,
 )
+from cora.shared.deprecation import DeprecationReason
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 
@@ -57,7 +58,9 @@ def _template(
 def test_decide_emits_deprecated_event_on_happy_path() -> None:
     template_id = uuid4()
     state = _template(template_id=template_id, status=ClearanceTemplateStatus.ACTIVE)
-    command = DeprecateClearanceTemplate(template_id=template_id)
+    command = DeprecateClearanceTemplate(
+        reason=DeprecationReason.SUPERSEDED, template_id=template_id
+    )
 
     events = decide(
         state=state,
@@ -68,6 +71,7 @@ def test_decide_emits_deprecated_event_on_happy_path() -> None:
 
     assert events == [
         ClearanceTemplateDeprecated(
+            reason="Superseded",
             template_id=template_id,
             occurred_at=_NOW,
             deprecated_by=_DEPRECATOR_ID,
@@ -78,7 +82,9 @@ def test_decide_emits_deprecated_event_on_happy_path() -> None:
 @pytest.mark.unit
 def test_decide_rejects_when_state_is_none() -> None:
     template_id = uuid4()
-    command = DeprecateClearanceTemplate(template_id=template_id)
+    command = DeprecateClearanceTemplate(
+        reason=DeprecationReason.SUPERSEDED, template_id=template_id
+    )
 
     with pytest.raises(ClearanceTemplateNotFoundError) as exc_info:
         decide(
@@ -94,7 +100,9 @@ def test_decide_rejects_when_state_is_none() -> None:
 def test_decide_rejects_when_status_is_draft() -> None:
     template_id = uuid4()
     state = _template(template_id=template_id, status=ClearanceTemplateStatus.DRAFT)
-    command = DeprecateClearanceTemplate(template_id=template_id)
+    command = DeprecateClearanceTemplate(
+        reason=DeprecationReason.SUPERSEDED, template_id=template_id
+    )
 
     with pytest.raises(ClearanceTemplateCannotDeprecateError) as exc_info:
         decide(
@@ -111,7 +119,9 @@ def test_decide_rejects_when_status_is_draft() -> None:
 def test_decide_rejects_when_status_is_deprecated() -> None:
     template_id = uuid4()
     state = _template(template_id=template_id, status=ClearanceTemplateStatus.DEPRECATED)
-    command = DeprecateClearanceTemplate(template_id=template_id)
+    command = DeprecateClearanceTemplate(
+        reason=DeprecationReason.SUPERSEDED, template_id=template_id
+    )
 
     with pytest.raises(ClearanceTemplateCannotDeprecateError) as exc_info:
         decide(
@@ -128,7 +138,9 @@ def test_decide_rejects_when_status_is_deprecated() -> None:
 def test_decide_rejects_when_status_is_withdrawn() -> None:
     template_id = uuid4()
     state = _template(template_id=template_id, status=ClearanceTemplateStatus.WITHDRAWN)
-    command = DeprecateClearanceTemplate(template_id=template_id)
+    command = DeprecateClearanceTemplate(
+        reason=DeprecationReason.SUPERSEDED, template_id=template_id
+    )
 
     with pytest.raises(ClearanceTemplateCannotDeprecateError) as exc_info:
         decide(
@@ -145,7 +157,9 @@ def test_decide_rejects_when_status_is_withdrawn() -> None:
 def test_decide_threads_deprecated_by_onto_event() -> None:
     template_id = uuid4()
     state = _template(template_id=template_id, status=ClearanceTemplateStatus.ACTIVE)
-    command = DeprecateClearanceTemplate(template_id=template_id)
+    command = DeprecateClearanceTemplate(
+        reason=DeprecationReason.SUPERSEDED, template_id=template_id
+    )
     distinct_actor = ActorId(UUID("00000000-0000-0000-0000-0000000000aa"))
 
     events = decide(

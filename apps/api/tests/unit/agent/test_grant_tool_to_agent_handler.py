@@ -164,7 +164,7 @@ async def test_handler_cannot_grant_after_deprecation() -> None:
         defined_at=_T0,
         versioned_at=_T1,
     )
-    deprecated = AgentDeprecated(agent_id=_AGENT_ID, reason=None, occurred_at=_T2)
+    deprecated = AgentDeprecated(agent_id=_AGENT_ID, reason="Superseded", occurred_at=_T2)
     await store.append(
         stream_type="Agent",
         stream_id=_AGENT_ID,

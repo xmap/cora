@@ -140,7 +140,7 @@ class AgentDeprecated:
     """
 
     agent_id: UUID
-    reason: str | None
+    reason: str
     occurred_at: datetime
 
 
@@ -442,7 +442,7 @@ def from_stored(stored: StoredEvent) -> AgentEvent:
                 "AgentDeprecated",
                 lambda: AgentDeprecated(
                     agent_id=UUID(payload["agent_id"]),
-                    reason=payload.get("reason"),
+                    reason=payload["reason"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )

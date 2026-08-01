@@ -159,7 +159,7 @@ def test_deprecated_folds_to_deprecated_with_end_reason() -> None:
     assert state is not None
     assert state.status is LanguageModelStatus.DEPRECATED
     assert state.end_reason is not None
-    assert state.end_reason.value == "Facility withdrew approval on cost"
+    assert state.end_reason.value == "Superseded"
 
 
 @pytest.mark.unit

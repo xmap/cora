@@ -47,6 +47,7 @@ def decide(
     return [
         ClearanceTemplateDeprecated(
             template_id=state.id,
+            reason=command.reason.value,
             occurred_at=now,
             deprecated_by=deprecated_by,
         )

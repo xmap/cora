@@ -123,7 +123,7 @@ async def test_deprecate_preserves_version_tag(db_pool: asyncpg.Pool) -> None:
         correlation_id=_CORRELATION_ID,
     )
     await bind_deprecate(deps)(
-        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=cap_id),
+        DeprecateFamily(family_id=cap_id, reason=DeprecationReason.SUPERSEDED),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -153,7 +153,7 @@ async def test_deprecate_without_version_keeps_version_tag_null(
         correlation_id=_CORRELATION_ID,
     )
     await bind_deprecate(deps)(
-        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=cap_id),
+        DeprecateFamily(family_id=cap_id, reason=DeprecationReason.SUPERSEDED),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -209,7 +209,7 @@ async def test_status_filter_returns_only_matching_rows(
         correlation_id=_CORRELATION_ID,
     )
     await bind_deprecate(deps)(
-        DeprecateFamily(reason=DeprecationReason.SUPERSEDED, family_id=deprecated_id),
+        DeprecateFamily(family_id=deprecated_id, reason=DeprecationReason.SUPERSEDED),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

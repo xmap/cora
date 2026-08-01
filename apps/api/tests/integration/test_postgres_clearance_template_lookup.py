@@ -44,6 +44,7 @@ from cora.safety.features.define_clearance_template import DefineClearanceTempla
 from cora.safety.features.deprecate_clearance_template import DeprecateClearanceTemplate
 from cora.safety.features.version_clearance_template import VersionClearanceTemplate
 from cora.safety.features.withdraw_clearance_template import WithdrawClearanceTemplate
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 10, 12, 0, 0, tzinfo=UTC)
@@ -95,7 +96,7 @@ async def _deprecate_template(db_pool: asyncpg.Pool, template_id: UUID) -> None:
     """Append a `ClearanceTemplateDeprecated` event (Active -> Deprecated)."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4()])
     await deprecate_clearance_template.bind(deps)(
-        DeprecateClearanceTemplate(template_id=template_id),
+        DeprecateClearanceTemplate(reason=DeprecationReason.SUPERSEDED, template_id=template_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

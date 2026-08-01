@@ -246,7 +246,7 @@ def test_round_trip_agent_versioned() -> None:
 @pytest.mark.unit
 def test_to_payload_serializes_agent_deprecated_with_reason() -> None:
     agent_id = uuid4()
-    e = AgentDeprecated(agent_id=agent_id, reason="model retired", occurred_at=_NOW)
+    e = AgentDeprecated(agent_id=agent_id, reason="Superseded", occurred_at=_NOW)
     assert to_payload(e) == {
         "agent_id": str(agent_id),
         "reason": "Superseded",
@@ -255,12 +255,12 @@ def test_to_payload_serializes_agent_deprecated_with_reason() -> None:
 
 
 @pytest.mark.unit
-def test_to_payload_serializes_agent_deprecated_without_reason() -> None:
+def test_to_payload_serializes_agent_deprecated() -> None:
     agent_id = uuid4()
-    e = AgentDeprecated(agent_id=agent_id, reason=None, occurred_at=_NOW)
+    e = AgentDeprecated(agent_id=agent_id, reason="Superseded", occurred_at=_NOW)
     assert to_payload(e) == {
         "agent_id": str(agent_id),
-        "reason": None,
+        "reason": "Superseded",
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -287,7 +287,7 @@ def test_to_payload_serializes_agent_suspended() -> None:
     )
     assert to_payload(e) == {
         "agent_id": str(agent_id),
-        "reason": "Superseded",
+        "reason": "cost overrun",
         "suspended_by": str(suspended_by),
         "occurred_at": _NOW.isoformat(),
     }

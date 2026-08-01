@@ -55,7 +55,7 @@ def test_post_version_409_when_deprecated() -> None:
     with TestClient(create_app()) as client:
         define = client.post("/agents", json=_define_body())
         agent_id = define.json()["agent_id"]
-        deprecate = client.post(f"/agents/{agent_id}/deprecate", json={})
+        deprecate = client.post(f"/agents/{agent_id}/deprecate", json={"reason": "Superseded"})
         assert deprecate.status_code == 204
         response = client.post(f"/agents/{agent_id}/version")
     assert response.status_code == 409

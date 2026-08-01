@@ -96,7 +96,7 @@ def _deprecate_template_via_tool(
             "method": "tools/call",
             "params": {
                 "name": "deprecate_clearance_template",
-                "arguments": {"template_id": str(template_id)},
+                "arguments": {"template_id": str(template_id), "reason": "Superseded"},
             },
         },
         headers=session_headers,

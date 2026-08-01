@@ -18,10 +18,12 @@ The deprecating actor's identity lives on the event envelope
 from dataclasses import dataclass
 from uuid import UUID
 
+from cora.shared.deprecation import DeprecationReason
+
 
 @dataclass(frozen=True)
 class DeprecateLanguageModel:
     """Deprecate a LanguageModel (`Defined | Approved | RetirementAnnounced -> Deprecated`)."""
 
     language_model_id: UUID
-    reason: str
+    reason: DeprecationReason

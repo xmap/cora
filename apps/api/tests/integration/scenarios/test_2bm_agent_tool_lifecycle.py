@@ -132,6 +132,7 @@ from cora.agent.features.revoke_tool_from_agent import RevokeToolFromAgent
 from cora.agent.features.revoke_tool_from_agent import bind as bind_revoke_tool
 from cora.agent.features.version_agent import VersionAgent
 from cora.agent.features.version_agent import bind as bind_version_agent
+from cora.shared.deprecation import DeprecationReason
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 from tests.integration.scenarios._facility_fixture import operator_for
 
@@ -270,11 +271,7 @@ async def test_agent_tool_lifecycle_plays_out_end_to_end(
     await bind_deprecate_agent(deps)(
         DeprecateAgent(
             agent_id=_AUDITOR_AGENT_ID,
-            reason=(
-                "Replaced by successor DatasetIntegrityAuditor v2 with better "
-                "false-positive handling on small-Dataset checksums; the v1 "
-                "agent is no longer the canonical auditor for new Runs."
-            ),
+            reason=DeprecationReason.SUPERSEDED,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

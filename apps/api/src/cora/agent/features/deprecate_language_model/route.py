@@ -20,19 +20,19 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.shared.text_bounds import REASON_MAX_LENGTH
+from cora.shared.deprecation import DeprecationReason
 
 
 class DeprecateLanguageModelRequest(BaseModel):
     """Body for `POST /language-models/{language_model_id}/deprecate`."""
 
-    reason: str = Field(
-        min_length=1,
-        max_length=REASON_MAX_LENGTH,
+    reason: DeprecationReason = Field(
+        ...,
         description=(
-            "Operator-supplied deprecation reason (1-500 chars after trim). "
-            "REQUIRED: withdrawing approval is a policy act the audit log "
-            "must always carry context for."
+            "Why the template is no longer recommended. `Superseded`: a "
+            "newer version replaces it, prior use stands. `Defective`: it "
+            "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+            "no longer exists."
         ),
     )
 

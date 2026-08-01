@@ -110,7 +110,5 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             capabilities=sorted(c.value for c in agent.capabilities),
             versioned_at=timestamps.versioned_at if timestamps is not None else None,
             deprecated_at=timestamps.deprecated_at if timestamps is not None else None,
-            deprecation_reason=(
-                agent.deprecation_reason.value if agent.deprecation_reason is not None else None
-            ),
+            deprecation_reason=agent.deprecation_reason,
         )

@@ -1,7 +1,7 @@
 """HTTP route for the `deprecate_agent` slice.
 
 Action endpoint at `POST /agents/{agent_id}/deprecate`. Body
-optionally carries `reason` (1-500 chars after trim). 204 No
+carries a closed `DeprecationReason`. 204 No
 Content on success.
 """
 
@@ -19,19 +19,19 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
-from cora.shared.text_bounds import REASON_MAX_LENGTH
+from cora.shared.deprecation import DeprecationReason
 
 
 class DeprecateAgentRequest(BaseModel):
     """Body for `POST /agents/{agent_id}/deprecate`."""
 
-    reason: str | None = Field(
-        default=None,
-        min_length=1,
-        max_length=REASON_MAX_LENGTH,
+    reason: DeprecationReason = Field(
+        ...,
         description=(
-            "Optional operator-supplied deprecation reason (1-500 chars after "
-            "trim). Pass null to omit."
+            "Why the template is no longer recommended. `Superseded`: a "
+            "newer version replaces it, prior use stands. `Defective`: it "
+            "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+            "no longer exists."
         ),
     )
 

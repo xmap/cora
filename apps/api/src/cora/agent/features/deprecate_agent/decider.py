@@ -11,7 +11,6 @@ deprecating an already-Deprecated Agent raises
   - State must not be None -> `AgentNotFoundError`
   - Current status must be `Defined`, `Versioned`, or `Suspended` ->
     `AgentCannotDeprecateError`
-  - `reason` wrapped via `AgentDeprecationReason(...)` when not None;
     1-500 chars after trim -> `InvalidAgentDeprecationReasonError`.
     None is allowed.
 """
@@ -22,7 +21,6 @@ from cora.agent.aggregates.agent import (
     Agent,
     AgentCannotDeprecateError,
     AgentDeprecated,
-    AgentDeprecationReason,
     AgentNotFoundError,
     AgentStatus,
 )
@@ -47,23 +45,16 @@ def decide(
       - State must not be None -> AgentNotFoundError
       - Current status must be Defined, Versioned, or Suspended
         -> AgentCannotDeprecateError
-      - Reason (when set) must be valid
-        -> InvalidAgentDeprecationReasonError
-        (via AgentDeprecationReason VO)
     """
     if state is None:
         raise AgentNotFoundError(command.agent_id)
     if state.status not in _DEPRECATABLE_STATUSES:
         raise AgentCannotDeprecateError(state.id, state.status)
 
-    reason: AgentDeprecationReason | None = None
-    if command.reason is not None:
-        reason = AgentDeprecationReason(command.reason)
-
     return [
         AgentDeprecated(
             agent_id=state.id,
-            reason=reason.value if reason is not None else None,
+            reason=command.reason.value,
             occurred_at=now,
         )
     ]

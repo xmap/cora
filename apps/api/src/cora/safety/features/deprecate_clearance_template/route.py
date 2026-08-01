@@ -7,7 +7,8 @@ body fields. 204 No Content on success.
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Request, status
+from fastapi import APIRouter, Body, Depends, Path, Request, status
+from pydantic import BaseModel, Field
 
 from cora.infrastructure.routing import (
     ErrorResponse,
@@ -19,6 +20,21 @@ from cora.safety.features.deprecate_clearance_template.command import (
     DeprecateClearanceTemplate,
 )
 from cora.safety.features.deprecate_clearance_template.handler import Handler
+from cora.shared.deprecation import DeprecationReason
+
+
+class DeprecateClearanceTemplateRequest(BaseModel):
+    """Body for `POST /clearance-templates/{template_id}/deprecate`."""
+
+    reason: DeprecationReason = Field(
+        ...,
+        description=(
+            "Why the template is no longer recommended. `Superseded`: a "
+            "newer version replaces it, prior use stands. `Defective`: it "
+            "was wrong, prior use is suspect. `Obsolete`: what it targeted "
+            "no longer exists."
+        ),
+    )
 
 
 def _get_handler(request: Request) -> Handler:
@@ -52,6 +68,7 @@ router = APIRouter(tags=["safety"])
     summary="Deprecate an Active clearance template (Active -> Deprecated)",
 )
 async def post_clearance_templates_deprecate(
+    body: Annotated[DeprecateClearanceTemplateRequest, Body()],
     template_id: Annotated[UUID, Path(description="Target clearance template's id.")],
     handler: Annotated[Handler, Depends(_get_handler)],
     cid: Annotated[UUID, Depends(get_correlation_id)],
@@ -59,7 +76,7 @@ async def post_clearance_templates_deprecate(
     surface_id: Annotated[UUID, Depends(get_surface_id)],
 ) -> None:
     await handler(
-        DeprecateClearanceTemplate(template_id=template_id),
+        DeprecateClearanceTemplate(template_id=template_id, reason=body.reason),
         principal_id=principal_id,
         correlation_id=cid,
         surface_id=surface_id,

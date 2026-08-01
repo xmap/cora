@@ -88,13 +88,13 @@ def test_genesis_then_versioned_folds_to_versioned_state() -> None:
 def test_genesis_then_deprecated_folds_to_deprecated_state() -> None:
     agent_id = uuid4()
     e1 = _genesis(agent_id=agent_id)
-    e2 = AgentDeprecated(agent_id=agent_id, reason="model retired", occurred_at=_T1)
+    e2 = AgentDeprecated(agent_id=agent_id, reason="Superseded", occurred_at=_T1)
     state = fold([e1, e2])
     assert state is not None
     assert state.status is AgentStatus.DEPRECATED
     # Lifecycle timestamps moved to projection.
     assert state.deprecation_reason is not None
-    assert state.deprecation_reason.value == "model retired"
+    assert state.deprecation_reason == "Superseded"
 
 
 @pytest.mark.unit
@@ -103,12 +103,12 @@ def test_full_lifecycle_folds_to_deprecated_state() -> None:
     agent_id = uuid4()
     e1 = _genesis(agent_id=agent_id)
     e2 = AgentVersioned(agent_id=agent_id, version="v1", occurred_at=_T1)
-    e3 = AgentDeprecated(agent_id=agent_id, reason=None, occurred_at=_T2)
+    e3 = AgentDeprecated(agent_id=agent_id, reason="Superseded", occurred_at=_T2)
     state = fold([e1, e2, e3])
     assert state is not None
     assert state.status is AgentStatus.DEPRECATED
     # Lifecycle timestamps moved to projection.
-    assert state.deprecation_reason is None
+    assert state.deprecation_reason == "Superseded"
 
 
 @pytest.mark.unit
@@ -121,7 +121,7 @@ def test_versioned_applied_to_empty_state_raises() -> None:
 
 @pytest.mark.unit
 def test_deprecated_applied_to_empty_state_raises() -> None:
-    e = AgentDeprecated(agent_id=uuid4(), reason=None, occurred_at=_T0)
+    e = AgentDeprecated(agent_id=uuid4(), reason="Superseded", occurred_at=_T0)
     with pytest.raises(ValueError, match="AgentDeprecated"):
         fold([e])
 
@@ -195,7 +195,7 @@ def test_suspended_then_deprecated_folds_to_deprecated_state() -> None:
         occurred_at=_T2,
     )
     e4 = AgentDeprecated(
-        agent_id=agent_id, reason="retired while paused", occurred_at=_T2 + timedelta(minutes=10)
+        agent_id=agent_id, reason="Superseded", occurred_at=_T2 + timedelta(minutes=10)
     )
     state = fold([e1, e2, e3, e4])
     assert state is not None

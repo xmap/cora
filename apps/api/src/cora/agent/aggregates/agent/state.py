@@ -839,7 +839,7 @@ class Agent:
     prompt_template_id: UUID | None = None
     capabilities: frozenset[AgentCapability] = field(default_factory=frozenset[AgentCapability])
     status: AgentStatus = AgentStatus.DEFINED
-    deprecation_reason: AgentDeprecationReason | None = None
+    deprecation_reason: str | None = None
     # ToolGrant + Suspended + AgentBudget
     tools: frozenset[ToolName] = field(default_factory=frozenset[ToolName])
     budget: AgentBudget | None = None

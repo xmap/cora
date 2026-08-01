@@ -58,7 +58,7 @@ def test_post_revoke_409_on_deprecated_agent() -> None:
     with TestClient(create_app()) as client:
         define = client.post("/agents", json=_define_body())
         agent_id = define.json()["agent_id"]
-        client.post(f"/agents/{agent_id}/deprecate", json={})
+        client.post(f"/agents/{agent_id}/deprecate", json={"reason": "Superseded"})
         response = client.post(f"/agents/{agent_id}/tools/revoke", json={"tool_name": "x"})
     assert response.status_code == 409
 

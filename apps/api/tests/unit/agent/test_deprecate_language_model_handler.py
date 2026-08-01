@@ -23,6 +23,7 @@ from cora.agent.features.deprecate_language_model import DeprecateLanguageModel
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
+from cora.shared.deprecation import DeprecationReason
 from tests.unit._helpers import build_deps as _build_deps_shared
 
 _T0 = datetime(2026, 7, 10, 11, 0, 0, tzinfo=UTC)
@@ -94,14 +95,16 @@ async def test_handler_deprecates_a_defined_language_model_with_reason() -> None
     deps = _build_deps(event_store=store)
     handler = deprecate_language_model.bind(deps)
     await handler(
-        DeprecateLanguageModel(language_model_id=_LANGUAGE_MODEL_ID, reason="policy change"),
+        DeprecateLanguageModel(
+            language_model_id=_LANGUAGE_MODEL_ID, reason=DeprecationReason.SUPERSEDED
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     events, version = await store.load("LanguageModel", _LANGUAGE_MODEL_ID)
     assert version == 2
     assert events[-1].event_type == "LanguageModelDeprecated"
-    assert events[-1].payload["reason"] == "policy change"
+    assert events[-1].payload["reason"] == "Superseded"
 
 
 @pytest.mark.unit
@@ -110,7 +113,9 @@ async def test_handler_raises_not_found_for_unknown_language_model() -> None:
     handler = deprecate_language_model.bind(deps)
     with pytest.raises(LanguageModelNotFoundError):
         await handler(
-            DeprecateLanguageModel(language_model_id=_LANGUAGE_MODEL_ID, reason="x"),
+            DeprecateLanguageModel(
+                language_model_id=_LANGUAGE_MODEL_ID, reason=DeprecationReason.SUPERSEDED
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -144,7 +149,9 @@ async def test_handler_raises_cannot_deprecate_when_already_deprecated() -> None
     handler = deprecate_language_model.bind(deps)
     with pytest.raises(LanguageModelCannotDeprecateError):
         await handler(
-            DeprecateLanguageModel(language_model_id=_LANGUAGE_MODEL_ID, reason="x"),
+            DeprecateLanguageModel(
+                language_model_id=_LANGUAGE_MODEL_ID, reason=DeprecationReason.SUPERSEDED
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -156,7 +163,9 @@ async def test_handler_denies_via_authorize_port() -> None:
     handler = deprecate_language_model.bind(deps)
     with pytest.raises(UnauthorizedError):
         await handler(
-            DeprecateLanguageModel(language_model_id=_LANGUAGE_MODEL_ID, reason="x"),
+            DeprecateLanguageModel(
+                language_model_id=_LANGUAGE_MODEL_ID, reason=DeprecationReason.SUPERSEDED
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -175,7 +184,9 @@ async def test_handler_denied_does_not_write_to_stream() -> None:
     handler = deprecate_language_model.bind(deps)
     with pytest.raises(UnauthorizedError):
         await handler(
-            DeprecateLanguageModel(language_model_id=_LANGUAGE_MODEL_ID, reason="x"),
+            DeprecateLanguageModel(
+                language_model_id=_LANGUAGE_MODEL_ID, reason=DeprecationReason.SUPERSEDED
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

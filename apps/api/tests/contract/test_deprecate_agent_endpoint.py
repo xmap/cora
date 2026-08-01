@@ -41,7 +41,7 @@ def test_post_deprecate_returns_204_with_no_reason() -> None:
     with TestClient(create_app()) as client:
         define = client.post("/agents", json=_define_body())
         agent_id = define.json()["agent_id"]
-        response = client.post(f"/agents/{agent_id}/deprecate", json={})
+        response = client.post(f"/agents/{agent_id}/deprecate", json={"reason": "Superseded"})
     assert response.status_code == 204
 
 
@@ -52,14 +52,14 @@ def test_post_deprecate_on_versioned_agent_succeeds() -> None:
         define = client.post("/agents", json=_define_body())
         agent_id = define.json()["agent_id"]
         client.post(f"/agents/{agent_id}/version")
-        response = client.post(f"/agents/{agent_id}/deprecate", json={})
+        response = client.post(f"/agents/{agent_id}/deprecate", json={"reason": "Superseded"})
     assert response.status_code == 204
 
 
 @pytest.mark.contract
 def test_post_deprecate_404_on_unknown_id() -> None:
     with TestClient(create_app()) as client:
-        response = client.post(f"/agents/{uuid4()}/deprecate", json={})
+        response = client.post(f"/agents/{uuid4()}/deprecate", json={"reason": "Superseded"})
     assert response.status_code == 404
 
 
@@ -68,9 +68,9 @@ def test_post_deprecate_409_when_already_deprecated() -> None:
     with TestClient(create_app()) as client:
         define = client.post("/agents", json=_define_body())
         agent_id = define.json()["agent_id"]
-        first = client.post(f"/agents/{agent_id}/deprecate", json={})
+        first = client.post(f"/agents/{agent_id}/deprecate", json={"reason": "Superseded"})
         assert first.status_code == 204
-        second = client.post(f"/agents/{agent_id}/deprecate", json={})
+        second = client.post(f"/agents/{agent_id}/deprecate", json={"reason": "Superseded"})
     assert second.status_code == 409
 
 
