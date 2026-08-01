@@ -131,6 +131,13 @@ _SANCTIONED_DEVIATIONS: dict[str, str] = {
     # Same split: the Visit owns the stream, the Surface is the object.
     "trust/take_control_of_surface": "event names the Visit stream, command names the object",
     "trust/release_control_of_surface": "event names the Visit stream, command names the object",
+    # Adjudicated by the 2026-06-22 slice naming audit (PR #318), which
+    # renamed `arrive_visit` to `record_visit_arrival` because `arrive`
+    # was the one intransitive verb in the Visit lifecycle family, and
+    # KEPT `VisitArrived` on purpose: the event states the arrival fact,
+    # the command states the act of recording it. Same shape as
+    # `StartRun` emitting `RunStarted`. Do not "fix" this pair.
+    "trust/record_visit_arrival": "PR #318 kept the arrival-fact event over the recording verb",
 }
 
 _KNOWN_DRIFT: dict[str, str] = {
@@ -142,10 +149,6 @@ _KNOWN_DRIFT: dict[str, str] = {
     "equipment/bind_asset_to_facility": (
         "verb changes mid-flight (bind vs assign); rename toward "
         "`AssignAssetFacilityCode` to match its two `Assign*` siblings"
-    ),
-    "trust/record_visit_arrival": (
-        "verb changes mid-flight (record-an-arrival vs arrived); rename toward "
-        "`ArriveVisit` or rename the event toward `VisitArrivalRecorded`"
     ),
 }
 
