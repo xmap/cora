@@ -218,7 +218,9 @@ def test_tool_revoked_removes_from_tools_set() -> None:
     agent_id = uuid4()
     e1 = _genesis(agent_id=agent_id)
     e2 = AgentToolGranted(agent_id=agent_id, tool_name="read_run", occurred_at=_T1)
-    e3 = AgentToolRevoked(agent_id=agent_id, tool_name="read_run", occurred_at=_T2)
+    e3 = AgentToolRevoked(
+        reason="tool no longer needed", agent_id=agent_id, tool_name="read_run", occurred_at=_T2
+    )
     state = fold([e1, e2, e3])
     assert state is not None
     assert state.tools == frozenset()
@@ -352,7 +354,9 @@ def test_tool_revoked_preserves_unrelated_fields() -> None:
         daily_token_cap=None,
         occurred_at=_T1,
     )
-    e4 = AgentToolRevoked(agent_id=agent_id, tool_name="read_run", occurred_at=_T2)
+    e4 = AgentToolRevoked(
+        reason="tool no longer needed", agent_id=agent_id, tool_name="read_run", occurred_at=_T2
+    )
     state = fold([e1, e2, e3, e4])
     assert state is not None
     assert state.tools == frozenset()
@@ -409,7 +413,9 @@ def test_tool_granted_applied_to_empty_state_raises() -> None:
 
 @pytest.mark.unit
 def test_tool_revoked_applied_to_empty_state_raises() -> None:
-    e = AgentToolRevoked(agent_id=uuid4(), tool_name="x", occurred_at=_T0)
+    e = AgentToolRevoked(
+        reason="tool no longer needed", agent_id=uuid4(), tool_name="x", occurred_at=_T0
+    )
     with pytest.raises(ValueError, match="AgentToolRevoked"):
         fold([e])
 

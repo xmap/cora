@@ -129,7 +129,9 @@ async def test_grant_then_revoke_round_trip_persists(db_pool: asyncpg.Pool) -> N
     assert after_grants.tools == frozenset({ToolName("read_run"), ToolName("read_dataset")})
 
     await revoke_tool_from_agent.bind(deps)(
-        RevokeToolFromAgent(agent_id=agent_id, tool_name="read_run"),
+        RevokeToolFromAgent(
+            reason="tool no longer needed", agent_id=agent_id, tool_name="read_run"
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

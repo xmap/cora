@@ -20,6 +20,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class RevokeToolFromAgentRequest(BaseModel):
@@ -29,6 +30,17 @@ class RevokeToolFromAgentRequest(BaseModel):
         min_length=1,
         max_length=AGENT_TOOL_NAME_MAX_LENGTH,
         description="MCP tool name to remove from the Agent's allowlist (1-100 chars).",
+    )
+    reason: str = Field(
+        ...,
+        min_length=1,
+        max_length=REASON_MAX_LENGTH,
+        description=(
+            "Operator-supplied reason for the revocation (audit-log "
+            "breadcrumb; no PII). Taking a tool away narrows what an "
+            "autonomous Agent may do mid-campaign, so the record "
+            "should say why."
+        ),
     )
 
 
@@ -75,7 +87,7 @@ async def post_agents_revoke_tool(
     surface_id: Annotated[UUID, Depends(get_surface_id)],
 ) -> None:
     await handler(
-        RevokeToolFromAgent(agent_id=agent_id, tool_name=body.tool_name),
+        RevokeToolFromAgent(agent_id=agent_id, tool_name=body.tool_name, reason=body.reason),
         principal_id=principal_id,
         correlation_id=cid,
         surface_id=surface_id,

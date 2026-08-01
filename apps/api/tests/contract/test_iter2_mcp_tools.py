@@ -107,14 +107,14 @@ def test_mcp_grant_then_revoke_cycle_returns_structured_output() -> None:
             headers,
             3,
             "grant_tool_to_agent",
-            {"agent_id": agent_id, "tool_name": "read_run"},
+            {"agent_id": agent_id, "tool_name": "read_run", "reason": "tool no longer needed"},
         )
         revoke = _call(
             client,
             headers,
             4,
             "revoke_tool_from_agent",
-            {"agent_id": agent_id, "tool_name": "read_run"},
+            {"agent_id": agent_id, "tool_name": "read_run", "reason": "tool no longer needed"},
         )
     assert grant["result"]["isError"] is False
     assert grant["result"]["structuredContent"]["tool_name"] == "read_run"

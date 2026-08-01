@@ -13,6 +13,7 @@ from cora.agent.features.revoke_tool_from_agent.handler import Handler
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
+from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 
 class RevokeToolFromAgentOutput(BaseModel):
@@ -48,10 +49,23 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                 description="MCP tool name to remove (1-100 chars).",
             ),
         ],
+        reason: Annotated[
+            str,
+            Field(
+                min_length=1,
+                max_length=REASON_MAX_LENGTH,
+                description=(
+                    "Operator-supplied reason for the revocation (audit-log "
+                    "breadcrumb; no PII). Taking a tool away narrows what an "
+                    "autonomous Agent may do mid-campaign, so the record "
+                    "should say why."
+                ),
+            ),
+        ],
     ) -> RevokeToolFromAgentOutput:
         handler = get_handler()
         await handler(
-            RevokeToolFromAgent(agent_id=agent_id, tool_name=tool_name),
+            RevokeToolFromAgent(agent_id=agent_id, tool_name=tool_name, reason=reason),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),
             surface_id=get_mcp_surface_id(),

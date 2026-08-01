@@ -69,7 +69,9 @@ def _agent(*, agent_id: UUID, status: AgentStatus, tools: frozenset[ToolName]) -
 
 
 def _command(*, agent_id: UUID, tool_name: str) -> RevokeToolFromAgent:
-    return RevokeToolFromAgent(agent_id=agent_id, tool_name=tool_name)
+    return RevokeToolFromAgent(
+        reason="tool no longer needed", agent_id=agent_id, tool_name=tool_name
+    )
 
 
 @pytest.mark.unit
@@ -101,7 +103,11 @@ def test_revoke_present_tool_from_permitted_source_emits_single_event(
         command=_command(agent_id=agent_id, tool_name=_TOOL_NAME),
         now=now,
     )
-    assert events == [AgentToolRevoked(agent_id=agent_id, tool_name=_TOOL_NAME, occurred_at=now)]
+    assert events == [
+        AgentToolRevoked(
+            reason="tool no longer needed", agent_id=agent_id, tool_name=_TOOL_NAME, occurred_at=now
+        )
+    ]
 
 
 @pytest.mark.unit

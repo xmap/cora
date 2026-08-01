@@ -218,10 +218,17 @@ class AgentToolRevoked:
     """One MCP tool was revoked from an Agent.
 
     Idempotent: re-revoking an already-revoked tool emits NO event.
+
+    `reason` is operator free text (audit denorm on the immutable log).
+    Required for the same cause as `PolicyGrantRevoked`: this removes a
+    live capability from an autonomous principal, which is a governance
+    act rather than the structural set-editing its `*Removed` siblings
+    do. Adding a tool stays silent; taking one away does not.
     """
 
     agent_id: UUID
     tool_name: str
+    reason: str
     occurred_at: datetime
 
 
@@ -360,10 +367,16 @@ def to_payload(event: AgentEvent) -> dict[str, Any]:
                 "tool_name": tool_name,
                 "occurred_at": occurred_at.isoformat(),
             }
-        case AgentToolRevoked(agent_id=agent_id, tool_name=tool_name, occurred_at=occurred_at):
+        case AgentToolRevoked(
+            agent_id=agent_id,
+            tool_name=tool_name,
+            reason=reason,
+            occurred_at=occurred_at,
+        ):
             return {
                 "agent_id": str(agent_id),
                 "tool_name": tool_name,
+                "reason": reason,
                 "occurred_at": occurred_at.isoformat(),
             }
         case AgentBudgetUpdated(
@@ -480,6 +493,7 @@ def from_stored(stored: StoredEvent) -> AgentEvent:
                 lambda: AgentToolRevoked(
                     agent_id=UUID(payload["agent_id"]),
                     tool_name=payload["tool_name"],
+                    reason=payload["reason"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )

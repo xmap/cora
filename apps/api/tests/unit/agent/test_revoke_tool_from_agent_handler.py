@@ -65,7 +65,9 @@ async def test_handler_revokes_an_existing_tool() -> None:
     deps = _build_deps(event_store=store)
     handler = revoke_tool_from_agent.bind(deps)
     await handler(
-        RevokeToolFromAgent(agent_id=_AGENT_ID, tool_name="read_run"),
+        RevokeToolFromAgent(
+            reason="tool no longer needed", agent_id=_AGENT_ID, tool_name="read_run"
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -92,7 +94,9 @@ async def test_handler_idempotent_revoke_of_non_granted_does_not_append() -> Non
     deps = _build_deps(event_store=store)
     handler = revoke_tool_from_agent.bind(deps)
     await handler(
-        RevokeToolFromAgent(agent_id=_AGENT_ID, tool_name="read_run"),
+        RevokeToolFromAgent(
+            reason="tool no longer needed", agent_id=_AGENT_ID, tool_name="read_run"
+        ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -106,7 +110,9 @@ async def test_handler_raises_not_found_for_unknown_agent() -> None:
     handler = revoke_tool_from_agent.bind(deps)
     with pytest.raises(AgentNotFoundError):
         await handler(
-            RevokeToolFromAgent(agent_id=_AGENT_ID, tool_name="read_run"),
+            RevokeToolFromAgent(
+                reason="tool no longer needed", agent_id=_AGENT_ID, tool_name="read_run"
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -139,7 +145,9 @@ async def test_handler_denied_does_not_write_to_stream() -> None:
     handler = revoke_tool_from_agent.bind(deps)
     with pytest.raises(UnauthorizedError):
         await handler(
-            RevokeToolFromAgent(agent_id=_AGENT_ID, tool_name="read_run"),
+            RevokeToolFromAgent(
+                reason="tool no longer needed", agent_id=_AGENT_ID, tool_name="read_run"
+            ),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

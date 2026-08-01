@@ -17,3 +17,4 @@ class RevokeToolFromAgent:
 
     agent_id: UUID
     tool_name: str
+    reason: str

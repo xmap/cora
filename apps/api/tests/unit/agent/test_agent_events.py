@@ -349,17 +349,22 @@ def test_round_trip_agent_tool_granted() -> None:
 @pytest.mark.unit
 def test_to_payload_serializes_agent_tool_revoked() -> None:
     agent_id = uuid4()
-    e = AgentToolRevoked(agent_id=agent_id, tool_name="read_run", occurred_at=_NOW)
+    e = AgentToolRevoked(
+        reason="tool no longer needed", agent_id=agent_id, tool_name="read_run", occurred_at=_NOW
+    )
     assert to_payload(e) == {
         "agent_id": str(agent_id),
         "tool_name": "read_run",
+        "reason": "tool no longer needed",
         "occurred_at": _NOW.isoformat(),
     }
 
 
 @pytest.mark.unit
 def test_round_trip_agent_tool_revoked() -> None:
-    original = AgentToolRevoked(agent_id=uuid4(), tool_name="read_run", occurred_at=_NOW)
+    original = AgentToolRevoked(
+        reason="tool no longer needed", agent_id=uuid4(), tool_name="read_run", occurred_at=_NOW
+    )
     stored = _stored("AgentToolRevoked", to_payload(original))
     assert from_stored(stored) == original
 

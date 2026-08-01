@@ -51,7 +51,9 @@ def test_revokes_an_existing_tool_in_each_allowed_source_state(
     agent = _agent(status, tools=frozenset({ToolName("read_run")}))
     events = decide(
         state=agent,
-        command=RevokeToolFromAgent(agent_id=agent.id, tool_name="read_run"),
+        command=RevokeToolFromAgent(
+            reason="tool no longer needed", agent_id=agent.id, tool_name="read_run"
+        ),
         now=_NOW,
     )
     assert len(events) == 1
@@ -64,7 +66,9 @@ def test_idempotent_revoke_of_non_granted_emits_no_event() -> None:
     agent = _agent(AgentStatus.VERSIONED, tools=frozenset())
     events = decide(
         state=agent,
-        command=RevokeToolFromAgent(agent_id=agent.id, tool_name="read_run"),
+        command=RevokeToolFromAgent(
+            reason="tool no longer needed", agent_id=agent.id, tool_name="read_run"
+        ),
         now=_NOW,
     )
     assert events == []
@@ -75,7 +79,9 @@ def test_not_found_when_state_is_none() -> None:
     with pytest.raises(AgentNotFoundError):
         decide(
             state=None,
-            command=RevokeToolFromAgent(agent_id=uuid4(), tool_name="read_run"),
+            command=RevokeToolFromAgent(
+                reason="tool no longer needed", agent_id=uuid4(), tool_name="read_run"
+            ),
             now=_NOW,
         )
 
@@ -86,7 +92,9 @@ def test_cannot_revoke_when_deprecated() -> None:
     with pytest.raises(AgentCannotRevokeToolError):
         decide(
             state=agent,
-            command=RevokeToolFromAgent(agent_id=agent.id, tool_name="read_run"),
+            command=RevokeToolFromAgent(
+                reason="tool no longer needed", agent_id=agent.id, tool_name="read_run"
+            ),
             now=_NOW,
         )
 
@@ -97,6 +105,8 @@ def test_invalid_tool_name_raises() -> None:
     with pytest.raises(InvalidToolNameError):
         decide(
             state=agent,
-            command=RevokeToolFromAgent(agent_id=agent.id, tool_name="   "),
+            command=RevokeToolFromAgent(
+                reason="tool no longer needed", agent_id=agent.id, tool_name="   "
+            ),
             now=_NOW,
         )

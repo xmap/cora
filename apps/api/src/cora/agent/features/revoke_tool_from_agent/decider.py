@@ -53,6 +53,7 @@ def decide(
         AgentToolRevoked(
             agent_id=state.id,
             tool_name=tool_name.value,
+            reason=command.reason,
             occurred_at=now,
         )
     ]

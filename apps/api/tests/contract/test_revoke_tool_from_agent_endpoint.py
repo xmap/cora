@@ -30,7 +30,10 @@ def test_post_revoke_returns_204_when_tool_was_granted() -> None:
         client.post(f"/agents/{agent_id}/tools/grant", json={"tool_name": "read_run"})
         response = client.post(
             f"/agents/{agent_id}/tools/revoke",
-            json={"tool_name": "read_run"},
+            json={
+                "tool_name": "read_run",
+                "reason": "tool no longer needed",
+            },
         )
     assert response.status_code == 204, response.text
 
@@ -41,7 +44,11 @@ def test_post_revoke_idempotent_returns_204_when_tool_was_not_granted() -> None:
         define = client.post("/agents", json=_define_body())
         agent_id = define.json()["agent_id"]
         response = client.post(
-            f"/agents/{agent_id}/tools/revoke", json={"tool_name": "never_granted"}
+            f"/agents/{agent_id}/tools/revoke",
+            json={
+                "tool_name": "never_granted",
+                "reason": "tool no longer needed",
+            },
         )
     assert response.status_code == 204
 
@@ -49,7 +56,10 @@ def test_post_revoke_idempotent_returns_204_when_tool_was_not_granted() -> None:
 @pytest.mark.contract
 def test_post_revoke_404_on_unknown_id() -> None:
     with TestClient(create_app()) as client:
-        response = client.post(f"/agents/{uuid4()}/tools/revoke", json={"tool_name": "x"})
+        response = client.post(
+            f"/agents/{uuid4()}/tools/revoke",
+            json={"tool_name": "x", "reason": "tool no longer needed"},
+        )
     assert response.status_code == 404
 
 
@@ -59,7 +69,13 @@ def test_post_revoke_409_on_deprecated_agent() -> None:
         define = client.post("/agents", json=_define_body())
         agent_id = define.json()["agent_id"]
         client.post(f"/agents/{agent_id}/deprecate", json={"reason": "Superseded"})
-        response = client.post(f"/agents/{agent_id}/tools/revoke", json={"tool_name": "x"})
+        response = client.post(
+            f"/agents/{agent_id}/tools/revoke",
+            json={
+                "tool_name": "x",
+                "reason": "tool no longer needed",
+            },
+        )
     assert response.status_code == 409
 
 
@@ -79,6 +95,9 @@ def test_post_revoke_422_on_over_cap_tool_name() -> None:
         agent_id = define.json()["agent_id"]
         response = client.post(
             f"/agents/{agent_id}/tools/revoke",
-            json={"tool_name": "x" * (AGENT_TOOL_NAME_MAX_LENGTH + 1)},
+            json={
+                "tool_name": "x" * (AGENT_TOOL_NAME_MAX_LENGTH + 1),
+                "reason": "tool no longer needed",
+            },
         )
     assert response.status_code == 422

@@ -14106,6 +14106,13 @@
       "RevokeToolFromAgentRequest": {
         "description": "Body for `POST /agents/{agent_id}/tools/revoke`.",
         "properties": {
+          "reason": {
+            "description": "Operator-supplied reason for the revocation (audit-log breadcrumb; no PII). Taking a tool away narrows what an autonomous Agent may do mid-campaign, so the record should say why.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
           "tool_name": {
             "description": "MCP tool name to remove from the Agent's allowlist (1-100 chars).",
             "maxLength": 100,
@@ -14115,7 +14122,8 @@
           }
         },
         "required": [
-          "tool_name"
+          "tool_name",
+          "reason"
         ],
         "title": "RevokeToolFromAgentRequest",
         "type": "object"

@@ -253,6 +253,7 @@ async def test_agent_tool_lifecycle_plays_out_end_to_end(
 
     await bind_revoke_tool(deps)(
         RevokeToolFromAgent(
+            reason="tool no longer needed",
             agent_id=_AUDITOR_AGENT_ID,
             tool_name="validate_checksum",
         ),
