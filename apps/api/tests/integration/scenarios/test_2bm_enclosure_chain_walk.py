@@ -289,7 +289,7 @@ async def test_decommissioned_ancestor_with_active_notpermitted_enclosure_still_
 
     # Retire the located-in Unit. Its Enclosure is untouched (Active + NotPermitted).
     await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=unit_id),
+        DecommissionAsset(reason="retired from service", asset_id=unit_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

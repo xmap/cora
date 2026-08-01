@@ -157,7 +157,7 @@ async def test_handler_raises_cannot_update_when_asset_is_decommissioned() -> No
     asset_id, _ = await _setup_pseudoaxis_asset(deps)
 
     await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

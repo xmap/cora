@@ -303,7 +303,7 @@ def test_post_runs_returns_409_when_asset_decommissioned_after_plan_bind() -> No
         ).json()["plan_id"]
         # Now Activate then Decommission the Asset (simulating drift).
         client.post(f"/assets/{asset_id}/activate")
-        client.post(f"/assets/{asset_id}/decommission")
+        client.post(f"/assets/{asset_id}/decommission", json={"reason": "retired from service"})
         response = client.post("/runs", json={"name": "X", "plan_id": plan_id})
     assert response.status_code == 409
 

@@ -735,7 +735,10 @@ def test_to_payload_then_from_stored_round_trips_for_asset_activated() -> None:
 @pytest.mark.unit
 def test_event_type_name_returns_asset_decommissioned_class_name() -> None:
     event = AssetDecommissioned(
-        asset_id=uuid4(), occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+        reason="retired from service",
+        asset_id=uuid4(),
+        occurred_at=_NOW,
+        decommissioned_by=_TEST_ACTOR_ID,
     )
     assert event_type_name(event) == "AssetDecommissioned"
 
@@ -748,13 +751,17 @@ def test_to_payload_serializes_asset_decommissioned_to_primitives() -> None:
     Subject's SubjectRemoved (also multi-source-to-single-target)."""
     asset_id = uuid4()
     event = AssetDecommissioned(
-        asset_id=asset_id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+        reason="retired from service",
+        asset_id=asset_id,
+        occurred_at=_NOW,
+        decommissioned_by=_TEST_ACTOR_ID,
     )
     payload = to_payload(event)
     assert payload == {
         "asset_id": str(asset_id),
         "occurred_at": _NOW.isoformat(),
         "decommissioned_by": str(_TEST_ACTOR_ID),
+        "reason": "retired from service",
     }
     assert "lifecycle" not in payload
     assert "from_lifecycle" not in payload
@@ -769,18 +776,25 @@ def test_from_stored_rebuilds_asset_decommissioned() -> None:
             "asset_id": str(asset_id),
             "occurred_at": _NOW.isoformat(),
             "decommissioned_by": str(_TEST_ACTOR_ID),
+            "reason": "retired from service",
         },
     )
     rebuilt = from_stored(stored)
     assert rebuilt == AssetDecommissioned(
-        asset_id=asset_id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+        reason="retired from service",
+        asset_id=asset_id,
+        occurred_at=_NOW,
+        decommissioned_by=_TEST_ACTOR_ID,
     )
 
 
 @pytest.mark.unit
 def test_to_payload_then_from_stored_round_trips_for_asset_decommissioned() -> None:
     original = AssetDecommissioned(
-        asset_id=uuid4(), occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+        reason="retired from service",
+        asset_id=uuid4(),
+        occurred_at=_NOW,
+        decommissioned_by=_TEST_ACTOR_ID,
     )
     stored = _stored("AssetDecommissioned", to_payload(original))
     assert from_stored(stored) == original

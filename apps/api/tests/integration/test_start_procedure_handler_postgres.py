@@ -133,7 +133,7 @@ async def test_start_procedure_rejects_decommissioned_target_asset_in_postgres(
         correlation_id=_CORRELATION_ID,
     )
     await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

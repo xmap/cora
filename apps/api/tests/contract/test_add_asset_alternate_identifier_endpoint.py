@@ -78,7 +78,9 @@ def test_post_add_alternate_identifier_returns_409_when_asset_decommissioned() -
     is out of inventory; identifier changes are not allowed."""
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
-        decom = client.post(f"/assets/{asset_id}/decommission")
+        decom = client.post(
+            f"/assets/{asset_id}/decommission", json={"reason": "retired from service"}
+        )
         assert decom.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/add-alternate-identifier",

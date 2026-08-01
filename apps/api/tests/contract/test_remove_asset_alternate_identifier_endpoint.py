@@ -79,7 +79,9 @@ def test_post_remove_alternate_identifier_returns_409_when_asset_decommissioned(
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
         _add_alternate_identifier(client, asset_id)
-        decom = client.post(f"/assets/{asset_id}/decommission")
+        decom = client.post(
+            f"/assets/{asset_id}/decommission", json={"reason": "retired from service"}
+        )
         assert decom.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/remove-alternate-identifier",

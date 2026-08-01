@@ -52,7 +52,9 @@ def _add_family(client: TestClient, asset_id: UUID, family_id: UUID) -> None:
 
 
 def _decommission(client: TestClient, asset_id: UUID) -> None:
-    response = client.post(f"/assets/{asset_id}/decommission")
+    response = client.post(
+        f"/assets/{asset_id}/decommission", json={"reason": "retired from service"}
+    )
     assert response.status_code == 204, response.text
 
 

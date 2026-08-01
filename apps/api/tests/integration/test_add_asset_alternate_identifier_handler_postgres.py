@@ -108,7 +108,7 @@ async def test_add_asset_alternate_identifier_rejects_when_decommissioned(
         correlation_id=_CORRELATION_ID,
     )
     await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

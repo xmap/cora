@@ -58,7 +58,9 @@ def test_post_add_port_returns_409_when_name_already_exists() -> None:
 def test_post_add_port_returns_409_when_asset_decommissioned() -> None:
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
-        decom = client.post(f"/assets/{asset_id}/decommission")
+        decom = client.post(
+            f"/assets/{asset_id}/decommission", json={"reason": "retired from service"}
+        )
         assert decom.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/add-port",

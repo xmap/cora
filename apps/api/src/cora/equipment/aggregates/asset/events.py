@@ -257,11 +257,21 @@ class AssetDecommissioned:
     `decommissioned_by` records the principal that issued the
     decommission_asset command; folded onto `Asset.decommissioned_by`
     by the evolver per [[project-fold-symmetry-design]].
+
+    `reason` is operator free text (1-500 chars, validated at the API
+    edge). Retiring a unit is somebody's decision and the log should
+    say why: broke, sold, obsolete, moved to another beamline. Free
+    text rather than a closed set because those causes are open-ended,
+    unlike deprecation, where the reason decides whether prior data is
+    still trustworthy and the vocabulary is therefore closed. Matches
+    the Enclosure / Facility / Frame / Mount siblings, which have
+    carried a reason since they shipped.
     """
 
     asset_id: UUID
     occurred_at: datetime
     decommissioned_by: ActorId
+    reason: str
 
 
 @dataclass(frozen=True)
@@ -794,11 +804,13 @@ def to_payload(event: AssetEvent) -> dict[str, Any]:
             asset_id=asset_id,
             occurred_at=occurred_at,
             decommissioned_by=decommissioned_by,
+            reason=reason,
         ):
             return {
                 "asset_id": str(asset_id),
                 "occurred_at": occurred_at.isoformat(),
                 "decommissioned_by": str(decommissioned_by),
+                "reason": reason,
             }
         case AssetRelocated(
             asset_id=asset_id,
@@ -1079,6 +1091,7 @@ def from_stored(stored: StoredEvent) -> AssetEvent:
                     asset_id=UUID(payload["asset_id"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                     decommissioned_by=ActorId(UUID(payload["decommissioned_by"])),
+                    reason=payload["reason"],
                 ),
             )
         case "AssetRelocated":

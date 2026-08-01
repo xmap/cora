@@ -88,7 +88,7 @@ async def test_decommission_asset_persists_event_from_commissioned_state(
         correlation_id=_CORRELATION_ID,
     )
     await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -131,7 +131,7 @@ async def test_decommission_asset_persists_event_from_active_state(
         correlation_id=_CORRELATION_ID,
     )
     await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -187,7 +187,7 @@ async def test_decommission_asset_persists_event_from_maintenance_state(
         correlation_id=_CORRELATION_ID,
     )
     await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -269,7 +269,7 @@ async def test_decommission_asset_rejects_when_still_bound_to_fixture(
 
     with pytest.raises(AssetHasFixtureBindingError) as exc_info:
         await decommission_asset.bind(deps)(
-            DecommissionAsset(asset_id=asset_id),
+            DecommissionAsset(reason="retired from service", asset_id=asset_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -343,7 +343,7 @@ async def test_decommission_asset_rejects_when_still_installed_in_mount(
     deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4()])
     with pytest.raises(AssetIsInstalledError) as exc_info:
         await decommission_asset.bind(deps)(
-            DecommissionAsset(asset_id=asset_id),
+            DecommissionAsset(reason="retired from service", asset_id=asset_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

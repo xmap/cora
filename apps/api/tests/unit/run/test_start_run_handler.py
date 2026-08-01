@@ -214,7 +214,10 @@ async def _seed_asset(
         from cora.equipment.aggregates.asset.events import AssetDecommissioned
 
         dc_event = AssetDecommissioned(
-            asset_id=asset_id, occurred_at=_NOW, decommissioned_by=ActorId(uuid4())
+            reason="retired from service",
+            asset_id=asset_id,
+            occurred_at=_NOW,
+            decommissioned_by=ActorId(uuid4()),
         )
         await _append(
             store,

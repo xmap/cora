@@ -140,7 +140,7 @@ async def test_decommission_terminal(db_pool: asyncpg.Pool) -> None:
         correlation_id=_CORRELATION_ID,
     )
     await bind_decommission(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

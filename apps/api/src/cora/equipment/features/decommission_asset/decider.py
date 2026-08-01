@@ -77,6 +77,7 @@ def decide(
         raise AssetCannotDecommissionError(state.id, current_lifecycle=state.lifecycle)
     return [
         AssetDecommissioned(
+            reason=command.reason,
             asset_id=state.id,
             occurred_at=now,
             decommissioned_by=decommissioned_by,

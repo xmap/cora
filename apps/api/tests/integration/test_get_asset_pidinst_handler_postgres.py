@@ -394,7 +394,7 @@ async def test_pidinst_route_returns_200_for_asset_with_decommissioned_at_set(
     decommission_event_id = uuid4()
     decommission_deps = _build_deps(db_pool, ids=[decommission_event_id], now=_LATER)
     await decommission_asset.bind(decommission_deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -49,7 +49,9 @@ def test_remove_asset_owner_route_404_when_owner_not_found() -> None:
 def test_remove_asset_owner_route_409_when_decommissioned() -> None:
     with TestClient(create_app()) as client:
         asset_id = _register_asset_with_owner(client)
-        decom = client.post(f"/assets/{asset_id}/decommission")
+        decom = client.post(
+            f"/assets/{asset_id}/decommission", json={"reason": "retired from service"}
+        )
         assert decom.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/remove-owner",

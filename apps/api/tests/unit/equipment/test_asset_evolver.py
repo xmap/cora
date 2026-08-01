@@ -67,7 +67,7 @@ def _extra_kwargs_for(transition: type) -> dict[str, object]:
     """Inject required fold-symmetry attribution kwargs for transitions
     that carry them. Returns {} for transitions without attribution."""
     if transition is AssetDecommissioned:
-        return {"decommissioned_by": _TEST_ACTOR_ID}
+        return {"decommissioned_by": _TEST_ACTOR_ID, "reason": "retired from service"}
     return {}
 
 
@@ -349,7 +349,12 @@ def test_evolve_asset_decommissioned_from_commissioned_flips_to_decommissioned()
     )
     decommed = evolve(
         commissioned,
-        AssetDecommissioned(asset_id=asset_id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID),
+        AssetDecommissioned(
+            reason="retired from service",
+            asset_id=asset_id,
+            occurred_at=_NOW,
+            decommissioned_by=_TEST_ACTOR_ID,
+        ),
     )
     assert decommed.lifecycle is AssetLifecycle.DECOMMISSIONED
 
@@ -369,7 +374,12 @@ def test_evolve_asset_decommissioned_from_active_flips_to_decommissioned() -> No
     )
     decommed = evolve(
         active,
-        AssetDecommissioned(asset_id=asset_id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID),
+        AssetDecommissioned(
+            reason="retired from service",
+            asset_id=asset_id,
+            occurred_at=_NOW,
+            decommissioned_by=_TEST_ACTOR_ID,
+        ),
     )
     assert decommed.lifecycle is AssetLifecycle.DECOMMISSIONED
 
@@ -380,7 +390,10 @@ def test_evolve_asset_decommissioned_on_empty_state_raises() -> None:
         evolve(
             None,
             AssetDecommissioned(
-                asset_id=uuid4(), occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+                reason="retired from service",
+                asset_id=uuid4(),
+                occurred_at=_NOW,
+                decommissioned_by=_TEST_ACTOR_ID,
             ),
         )
 
@@ -403,7 +416,10 @@ def test_fold_register_activate_decommission_yields_decommissioned_asset() -> No
             ),
             AssetActivated(asset_id=asset_id, occurred_at=_NOW),
             AssetDecommissioned(
-                asset_id=asset_id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+                reason="retired from service",
+                asset_id=asset_id,
+                occurred_at=_NOW,
+                decommissioned_by=_TEST_ACTOR_ID,
             ),
         ]
     )
@@ -430,7 +446,10 @@ def test_fold_register_decommission_yields_decommissioned_asset() -> None:
                 commissioned_by=_TEST_ACTOR_ID,
             ),
             AssetDecommissioned(
-                asset_id=asset_id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+                reason="retired from service",
+                asset_id=asset_id,
+                occurred_at=_NOW,
+                decommissioned_by=_TEST_ACTOR_ID,
             ),
         ]
     )
@@ -747,7 +766,10 @@ def test_fold_register_activate_enter_decommission_yields_decommissioned_asset()
             AssetActivated(asset_id=asset_id, occurred_at=_NOW),
             AssetMaintenanceEntered(asset_id=asset_id, occurred_at=_NOW),
             AssetDecommissioned(
-                asset_id=asset_id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+                reason="retired from service",
+                asset_id=asset_id,
+                occurred_at=_NOW,
+                decommissioned_by=_TEST_ACTOR_ID,
             ),
         ]
     )
@@ -1917,7 +1939,10 @@ def test_fold_register_with_model_id_then_lifecycle_transitions_preserves_model_
             AssetMaintenanceEntered(asset_id=asset_id, occurred_at=_NOW),
             AssetMaintenanceExited(asset_id=asset_id, occurred_at=_NOW),
             AssetDecommissioned(
-                asset_id=asset_id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+                reason="retired from service",
+                asset_id=asset_id,
+                occurred_at=_NOW,
+                decommissioned_by=_TEST_ACTOR_ID,
             ),
         ]
     )
@@ -2328,7 +2353,10 @@ def test_fold_register_with_seed_then_lifecycle_transitions_preserves_alternate_
             AssetMaintenanceEntered(asset_id=asset_id, occurred_at=_NOW),
             AssetMaintenanceExited(asset_id=asset_id, occurred_at=_NOW),
             AssetDecommissioned(
-                asset_id=asset_id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+                reason="retired from service",
+                asset_id=asset_id,
+                occurred_at=_NOW,
+                decommissioned_by=_TEST_ACTOR_ID,
             ),
         ]
     )
@@ -2608,7 +2636,10 @@ def test_fold_register_with_controller_id_then_lifecycle_transitions_preserves_c
             AssetMaintenanceEntered(asset_id=asset_id, occurred_at=_NOW),
             AssetMaintenanceExited(asset_id=asset_id, occurred_at=_NOW),
             AssetDecommissioned(
-                asset_id=asset_id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+                reason="retired from service",
+                asset_id=asset_id,
+                occurred_at=_NOW,
+                decommissioned_by=_TEST_ACTOR_ID,
             ),
         ]
     )
@@ -2786,7 +2817,10 @@ def test_fold_register_with_located_in_enclosure_id_survives_lifecycle_path() ->
             AssetMaintenanceEntered(asset_id=asset_id, occurred_at=_NOW),
             AssetMaintenanceExited(asset_id=asset_id, occurred_at=_NOW),
             AssetDecommissioned(
-                asset_id=asset_id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+                reason="retired from service",
+                asset_id=asset_id,
+                occurred_at=_NOW,
+                decommissioned_by=_TEST_ACTOR_ID,
             ),
         ]
     )

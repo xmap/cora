@@ -82,7 +82,7 @@ def test_mcp_decommission_asset_tool_succeeds_from_commissioned() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "decommission_asset",
-                    "arguments": {"asset_id": str(asset_id)},
+                    "arguments": {"asset_id": str(asset_id), "reason": "retired from service"},
                 },
             },
             headers=headers,
@@ -106,7 +106,7 @@ def test_mcp_decommission_asset_tool_succeeds_from_active() -> None:
                 "method": "tools/call",
                 "params": {
                     "name": "decommission_asset",
-                    "arguments": {"asset_id": str(asset_id)},
+                    "arguments": {"asset_id": str(asset_id), "reason": "retired from service"},
                 },
             },
             headers=headers,
@@ -127,7 +127,7 @@ def test_mcp_decommission_asset_tool_returns_iserror_for_unknown_asset() -> None
                 "method": "tools/call",
                 "params": {
                     "name": "decommission_asset",
-                    "arguments": {"asset_id": str(uuid4())},
+                    "arguments": {"asset_id": str(uuid4()), "reason": "retired from service"},
                 },
             },
             headers=headers,
@@ -155,7 +155,7 @@ def test_mcp_decommission_asset_tool_returns_iserror_when_already_decommissioned
                 "method": "tools/call",
                 "params": {
                     "name": "decommission_asset",
-                    "arguments": {"asset_id": str(asset_id)},
+                    "arguments": {"asset_id": str(asset_id), "reason": "retired from service"},
                 },
             },
             headers=headers,
@@ -170,7 +170,7 @@ def test_mcp_decommission_asset_tool_returns_iserror_when_already_decommissioned
                 "method": "tools/call",
                 "params": {
                     "name": "decommission_asset",
-                    "arguments": {"asset_id": str(asset_id)},
+                    "arguments": {"asset_id": str(asset_id), "reason": "retired from service"},
                 },
             },
             headers=headers,

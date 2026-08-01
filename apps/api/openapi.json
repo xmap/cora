@@ -5446,6 +5446,23 @@
         "title": "DeclareCampaignSteeringRequest",
         "type": "object"
       },
+      "DecommissionAssetRequest": {
+        "description": "Body for `POST /assets/{asset_id}/decommission`.",
+        "properties": {
+          "reason": {
+            "description": "Operator-supplied free-text reason for the audit log.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "DecommissionAssetRequest",
+        "type": "object"
+      },
       "DecommissionEnclosureRequest": {
         "additionalProperties": false,
         "description": "Body for `POST /enclosures/{enclosure_id}/decommission`.\n\n`reason` is operator-supplied free text (audit-log breadcrumb)\nexplaining why the enclosure is being decommissioned. Examples:\n\"hutch retired\", \"interlock chain replaced; re-registering\",\n\"duplicate of enclosure <id>\".",
@@ -21679,6 +21696,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecommissionAssetRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "204": {
             "description": "Successful Response"

@@ -80,7 +80,9 @@ def test_post_relocate_returns_409_when_asset_is_root() -> None:
 def test_post_relocate_returns_409_when_asset_is_decommissioned() -> None:
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
-        decom = client.post(f"/assets/{asset_id}/decommission")
+        decom = client.post(
+            f"/assets/{asset_id}/decommission", json={"reason": "retired from service"}
+        )
         assert decom.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/relocate",

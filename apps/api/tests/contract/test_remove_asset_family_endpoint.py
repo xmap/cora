@@ -85,7 +85,9 @@ def test_post_remove_family_returns_409_when_asset_is_decommissioned() -> None:
     cap = str(uuid4())
     with TestClient(create_app()) as client:
         asset_id = _register_and_add_family(client, cap)
-        decom = client.post(f"/assets/{asset_id}/decommission")
+        decom = client.post(
+            f"/assets/{asset_id}/decommission", json={"reason": "retired from service"}
+        )
         assert decom.status_code == 204
         response = client.post(f"/assets/{asset_id}/remove-family", json={"family_id": cap})
     assert response.status_code == 409

@@ -272,7 +272,10 @@ def test_evolve_asset_decommissioned_sets_decommissioned_at_and_preserves_commis
                 commissioned_by=_TEST_ACTOR_ID,
             ),
             AssetDecommissioned(
-                asset_id=asset_id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID
+                reason="retired from service",
+                asset_id=asset_id,
+                occurred_at=_NOW,
+                decommissioned_by=_TEST_ACTOR_ID,
             ),
         ]
     )

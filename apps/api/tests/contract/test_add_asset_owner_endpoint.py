@@ -50,7 +50,9 @@ def test_add_asset_owner_route_409_when_name_already_present() -> None:
 def test_add_asset_owner_route_409_when_decommissioned() -> None:
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
-        decom = client.post(f"/assets/{asset_id}/decommission")
+        decom = client.post(
+            f"/assets/{asset_id}/decommission", json={"reason": "retired from service"}
+        )
         assert decom.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/add-owner",

@@ -97,7 +97,9 @@ def test_post_degrade_works_in_decommissioned_lifecycle() -> None:
     device-state-in-storage)."""
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
-        decom = client.post(f"/assets/{asset_id}/decommission")
+        decom = client.post(
+            f"/assets/{asset_id}/decommission", json={"reason": "retired from service"}
+        )
         assert decom.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/degrade",

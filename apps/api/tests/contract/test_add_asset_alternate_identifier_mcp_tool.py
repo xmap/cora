@@ -110,7 +110,7 @@ def test_mcp_add_asset_alternate_identifier_returns_iserror_when_decommissioned(
                 "method": "tools/call",
                 "params": {
                     "name": "decommission_asset",
-                    "arguments": {"asset_id": str(asset_id)},
+                    "arguments": {"asset_id": str(asset_id), "reason": "retired from service"},
                 },
             },
             headers=headers,

@@ -77,7 +77,7 @@ async def test_handler_returns_none_on_success() -> None:
     asset_id = await _register_and_activate(deps)
 
     result = await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -93,7 +93,7 @@ async def test_handler_appends_asset_decommissioned_event_from_commissioned() ->
     asset_id = await _register_asset_helper(deps)
 
     await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -117,7 +117,7 @@ async def test_handler_appends_asset_decommissioned_event_from_active() -> None:
     asset_id = await _register_and_activate(deps)
 
     await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -140,7 +140,7 @@ async def test_handler_raises_asset_not_found_when_asset_does_not_exist() -> Non
 
     with pytest.raises(AssetNotFoundError):
         await handler(
-            DecommissionAsset(asset_id=uuid4()),
+            DecommissionAsset(reason="retired from service", asset_id=uuid4()),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -155,13 +155,13 @@ async def test_handler_raises_cannot_decommission_when_already_decommissioned() 
 
     handler = decommission_asset.bind(deps)
     await handler(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     with pytest.raises(AssetCannotDecommissionError) as exc_info:
         await handler(
-            DecommissionAsset(asset_id=asset_id),
+            DecommissionAsset(reason="retired from service", asset_id=asset_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -180,7 +180,7 @@ async def test_handler_raises_unauthorized_on_deny() -> None:
 
     with pytest.raises(UnauthorizedError) as exc_info:
         await handler(
-            DecommissionAsset(asset_id=asset_id),
+            DecommissionAsset(reason="retired from service", asset_id=asset_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -196,7 +196,7 @@ async def test_handler_does_not_append_when_denied() -> None:
     deny_deps = _build_deps(event_store=store, deny=True)
     with pytest.raises(UnauthorizedError):
         await decommission_asset.bind(deny_deps)(
-            DecommissionAsset(asset_id=asset_id),
+            DecommissionAsset(reason="retired from service", asset_id=asset_id),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -214,7 +214,7 @@ async def test_handler_propagates_causation_id_to_appended_event() -> None:
     asset_id = await _register_asset_helper(deps)
 
     await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         causation_id=causation,
@@ -242,7 +242,7 @@ async def test_wired_handler_propagates_causation_id_through_full_composition() 
 
     handlers = wire_equipment(deps)
     await handlers.decommission_asset(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
         causation_id=causation,

@@ -293,7 +293,9 @@ def test_post_plans_returns_409_when_asset_is_decommissioned() -> None:
         # Activate then Decommission the Asset.
         activate_resp = client.post(f"/assets/{asset_id}/activate")
         assert activate_resp.status_code == 204
-        dc_resp = client.post(f"/assets/{asset_id}/decommission")
+        dc_resp = client.post(
+            f"/assets/{asset_id}/decommission", json={"reason": "retired from service"}
+        )
         assert dc_resp.status_code == 204
         response = client.post(
             "/plans",

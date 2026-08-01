@@ -80,13 +80,18 @@ def test_decide_emits_asset_decommissioned_for_each_allowed_source_lifecycle(
     state = _asset(lifecycle=source)
     events = decommission_asset.decide(
         state=state,
-        command=DecommissionAsset(asset_id=state.id),
+        command=DecommissionAsset(reason="retired from service", asset_id=state.id),
         context=_EMPTY_CONTEXT,
         now=_NOW,
         decommissioned_by=_TEST_ACTOR_ID,
     )
     assert events == [
-        AssetDecommissioned(asset_id=state.id, occurred_at=_NOW, decommissioned_by=_TEST_ACTOR_ID)
+        AssetDecommissioned(
+            reason="retired from service",
+            asset_id=state.id,
+            occurred_at=_NOW,
+            decommissioned_by=_TEST_ACTOR_ID,
+        )
     ]
 
 
@@ -96,7 +101,7 @@ def test_decide_raises_asset_not_found_when_state_is_none() -> None:
     with pytest.raises(AssetNotFoundError) as exc_info:
         decommission_asset.decide(
             state=None,
-            command=DecommissionAsset(asset_id=target_id),
+            command=DecommissionAsset(reason="retired from service", asset_id=target_id),
             context=_EMPTY_CONTEXT,
             now=_NOW,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -125,7 +130,7 @@ def test_decide_raises_cannot_decommission_for_every_disallowed_source(
     with pytest.raises(AssetCannotDecommissionError) as exc_info:
         decommission_asset.decide(
             state=state,
-            command=DecommissionAsset(asset_id=state.id),
+            command=DecommissionAsset(reason="retired from service", asset_id=state.id),
             context=_EMPTY_CONTEXT,
             now=_NOW,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -144,7 +149,7 @@ def test_decide_error_message_lists_all_three_allowed_source_lifecycles() -> Non
     with pytest.raises(AssetCannotDecommissionError) as exc_info:
         decommission_asset.decide(
             state=state,
-            command=DecommissionAsset(asset_id=state.id),
+            command=DecommissionAsset(reason="retired from service", asset_id=state.id),
             context=_EMPTY_CONTEXT,
             now=_NOW,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -170,7 +175,7 @@ def test_decide_raises_has_fixture_binding_when_fixture_id_non_none() -> None:
     with pytest.raises(AssetHasFixtureBindingError) as exc_info:
         decommission_asset.decide(
             state=state,
-            command=DecommissionAsset(asset_id=state.id),
+            command=DecommissionAsset(reason="retired from service", asset_id=state.id),
             context=_EMPTY_CONTEXT,
             now=_NOW,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -192,7 +197,7 @@ def test_decide_raises_is_installed_when_currently_at_mount_non_none() -> None:
     with pytest.raises(AssetIsInstalledError) as exc_info:
         decommission_asset.decide(
             state=state,
-            command=DecommissionAsset(asset_id=state.id),
+            command=DecommissionAsset(reason="retired from service", asset_id=state.id),
             context=context,
             now=_NOW,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -214,7 +219,7 @@ def test_decide_fixture_binding_guard_fires_before_mount_installed_guard() -> No
     with pytest.raises(AssetHasFixtureBindingError):
         decommission_asset.decide(
             state=state,
-            command=DecommissionAsset(asset_id=state.id),
+            command=DecommissionAsset(reason="retired from service", asset_id=state.id),
             context=context,
             now=_NOW,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -233,7 +238,7 @@ def test_decide_cross_aggregate_guards_fire_before_lifecycle_guard() -> None:
     with pytest.raises(AssetHasFixtureBindingError):
         decommission_asset.decide(
             state=state,
-            command=DecommissionAsset(asset_id=state.id),
+            command=DecommissionAsset(reason="retired from service", asset_id=state.id),
             context=_EMPTY_CONTEXT,
             now=_NOW,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -243,7 +248,7 @@ def test_decide_cross_aggregate_guards_fire_before_lifecycle_guard() -> None:
 @pytest.mark.unit
 def test_decide_is_pure_same_inputs_same_outputs() -> None:
     state = _asset(lifecycle=AssetLifecycle.ACTIVE)
-    command = DecommissionAsset(asset_id=state.id)
+    command = DecommissionAsset(reason="retired from service", asset_id=state.id)
     first = decommission_asset.decide(
         state=state,
         command=command,

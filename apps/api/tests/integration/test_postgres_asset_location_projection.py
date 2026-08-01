@@ -412,7 +412,7 @@ async def test_install_rejects_non_active_asset(
     )
     deps = _build_deps(db_pool, [uuid4()], now=_NOW)
     await bind_decommission_asset(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

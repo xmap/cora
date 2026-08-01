@@ -54,7 +54,7 @@ _NOW = datetime(2026, 6, 5, 12, 0, 0, tzinfo=UTC)
 
 def _extra_kwargs_for(transition: type) -> dict[str, object]:
     if transition is AssetDecommissioned:
-        return {"decommissioned_by": _TEST_ACTOR_ID}
+        return {"decommissioned_by": _TEST_ACTOR_ID, "reason": "retired from service"}
     return {}
 
 

@@ -163,7 +163,9 @@ def test_post_assign_persistent_id_with_unknown_asset_returns_404() -> None:
 def test_post_assign_persistent_id_with_decommissioned_asset_returns_409() -> None:
     with TestClient(create_app()) as client:
         asset_id = _register_asset(client)
-        decom = client.post(f"/assets/{asset_id}/decommission")
+        decom = client.post(
+            f"/assets/{asset_id}/decommission", json={"reason": "retired from service"}
+        )
         assert decom.status_code == 204
         response = client.post(
             f"/assets/{asset_id}/assign-persistent-identifier",

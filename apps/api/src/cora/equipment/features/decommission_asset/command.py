@@ -15,3 +15,4 @@ class DecommissionAsset:
     """Decommission an existing asset, retiring it from service."""
 
     asset_id: UUID
+    reason: str

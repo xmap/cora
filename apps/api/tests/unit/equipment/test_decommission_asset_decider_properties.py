@@ -101,13 +101,18 @@ def test_decommission_asset_decommissionable_source_emits_decommissioned_event(
     state = _asset(asset_id=asset_id, name=name, lifecycle=source)
     events = decommission_asset.decide(
         state=state,
-        command=DecommissionAsset(asset_id=asset_id),
+        command=DecommissionAsset(reason="retired from service", asset_id=asset_id),
         context=_EMPTY_CONTEXT,
         now=now,
         decommissioned_by=_TEST_ACTOR_ID,
     )
     assert events == [
-        AssetDecommissioned(asset_id=asset_id, occurred_at=now, decommissioned_by=_TEST_ACTOR_ID)
+        AssetDecommissioned(
+            reason="retired from service",
+            asset_id=asset_id,
+            occurred_at=now,
+            decommissioned_by=_TEST_ACTOR_ID,
+        )
     ]
 
 
@@ -121,7 +126,7 @@ def test_decommission_asset_missing_state_raises_not_found(
     with pytest.raises(AssetNotFoundError) as exc:
         decommission_asset.decide(
             state=None,
-            command=DecommissionAsset(asset_id=asset_id),
+            command=DecommissionAsset(reason="retired from service", asset_id=asset_id),
             context=_EMPTY_CONTEXT,
             now=now,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -149,7 +154,7 @@ def test_decommission_asset_with_fixture_binding_raises_has_fixture_binding(
     with pytest.raises(AssetHasFixtureBindingError) as exc:
         decommission_asset.decide(
             state=state,
-            command=DecommissionAsset(asset_id=asset_id),
+            command=DecommissionAsset(reason="retired from service", asset_id=asset_id),
             context=_EMPTY_CONTEXT,
             now=now,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -179,7 +184,7 @@ def test_decommission_asset_installed_at_mount_raises_is_installed(
     with pytest.raises(AssetIsInstalledError) as exc:
         decommission_asset.decide(
             state=state,
-            command=DecommissionAsset(asset_id=asset_id),
+            command=DecommissionAsset(reason="retired from service", asset_id=asset_id),
             context=context,
             now=now,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -206,7 +211,7 @@ def test_decommission_asset_disallowed_lifecycle_raises_cannot_decommission(
     with pytest.raises(AssetCannotDecommissionError) as exc:
         decommission_asset.decide(
             state=state,
-            command=DecommissionAsset(asset_id=asset_id),
+            command=DecommissionAsset(reason="retired from service", asset_id=asset_id),
             context=_EMPTY_CONTEXT,
             now=now,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -238,7 +243,7 @@ def test_decommission_asset_both_cross_aggregate_guards_raises_fixture_first(
     with pytest.raises(AssetHasFixtureBindingError):
         decommission_asset.decide(
             state=state,
-            command=DecommissionAsset(asset_id=asset_id),
+            command=DecommissionAsset(reason="retired from service", asset_id=asset_id),
             context=context,
             now=now,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -265,7 +270,7 @@ def test_decommission_asset_cross_aggregate_guard_raises_before_lifecycle_guard(
     with pytest.raises(AssetHasFixtureBindingError):
         decommission_asset.decide(
             state=state,
-            command=DecommissionAsset(asset_id=asset_id),
+            command=DecommissionAsset(reason="retired from service", asset_id=asset_id),
             context=_EMPTY_CONTEXT,
             now=now,
             decommissioned_by=_TEST_ACTOR_ID,
@@ -285,7 +290,7 @@ def test_decommission_asset_is_pure_same_input_same_output(
 ) -> None:
     """Two calls with identical args return equal results (no clock leakage)."""
     state = _asset(asset_id=asset_id, name=name, lifecycle=AssetLifecycle.ACTIVE)
-    command = DecommissionAsset(asset_id=asset_id)
+    command = DecommissionAsset(reason="retired from service", asset_id=asset_id)
     first = decommission_asset.decide(
         state=state,
         command=command,

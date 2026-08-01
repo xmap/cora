@@ -187,7 +187,7 @@ async def test_handler_raises_cannot_remove_when_asset_decommissioned() -> None:
     await _add_identifier(deps, asset_id)
 
     await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

@@ -132,7 +132,9 @@ def test_post_attach_returns_409_for_decommissioned_asset() -> None:
         asset_id = _register_asset(client, family_id)
         assembly_id = _define_assembly_with_one_camera_slot(client, family_id)
         fixture_id = _register_fixture(client, assembly_id, asset_id)
-        decom = client.post(f"/assets/{asset_id}/decommission")
+        decom = client.post(
+            f"/assets/{asset_id}/decommission", json={"reason": "retired from service"}
+        )
         assert decom.status_code == 204, decom.text
         response = client.post(
             f"/assets/{asset_id}/attach-to-fixture",

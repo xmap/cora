@@ -123,7 +123,7 @@ async def _register_seed_asset(db_pool: asyncpg.Pool, *, asset_id: UUID) -> None
 async def _decommission_seed_asset(db_pool: asyncpg.Pool, *, asset_id: UUID) -> None:
     deps = _build_deps(db_pool, ids=[uuid4()], now=_LATER)
     await decommission_asset.bind(deps)(
-        DecommissionAsset(asset_id=asset_id),
+        DecommissionAsset(reason="retired from service", asset_id=asset_id),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

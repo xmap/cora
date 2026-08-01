@@ -141,7 +141,7 @@ def test_mcp_remove_asset_alternate_identifier_returns_iserror_when_decommission
                 "method": "tools/call",
                 "params": {
                     "name": "decommission_asset",
-                    "arguments": {"asset_id": str(asset_id)},
+                    "arguments": {"asset_id": str(asset_id), "reason": "retired from service"},
                 },
             },
             headers=headers,
