@@ -175,7 +175,7 @@ EXEMPT_FROM_ENDPOINT_CONTRACT: frozenset[str] = frozenset(
         # registration, and status-code mapping stay uncovered until
         # the contract suite lands. Remove when it does.
         "cora.budget.features.activate_allocation",
-        "cora.budget.features.amend_allocation_ceiling",
+        "cora.budget.features.update_allocation_ceiling",
         "cora.budget.features.grant_allocation",
         "cora.budget.features.seal_allocation",
         "cora.budget.features.void_allocation",
@@ -248,7 +248,7 @@ EXEMPT_FROM_MCP_CONTRACT: frozenset[str] = frozenset(
         # endpoint allowlist entries above). Remove when the family's
         # contract suite lands.
         "cora.budget.features.activate_allocation",
-        "cora.budget.features.amend_allocation_ceiling",
+        "cora.budget.features.update_allocation_ceiling",
         "cora.budget.features.grant_allocation",
         "cora.budget.features.seal_allocation",
         "cora.budget.features.void_allocation",

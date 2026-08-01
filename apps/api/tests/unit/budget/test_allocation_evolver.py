@@ -7,7 +7,7 @@ import pytest
 
 from cora.budget.aggregates.allocation.events import (
     AllocationActivated,
-    AllocationCeilingAmended,
+    AllocationCeilingUpdated,
     AllocationGranted,
     AllocationSealed,
     AllocationVoided,
@@ -91,15 +91,15 @@ def test_activated_folds_to_active_with_window_start() -> None:
 
 
 @pytest.mark.unit
-def test_ceiling_amended_overwrites_ceiling_and_keeps_status() -> None:
-    """PUT semantics fold: the amended ceiling replaces the prior one
+def test_ceiling_updated_overwrites_ceiling_and_keeps_status() -> None:
+    """PUT semantics fold: the updated ceiling replaces the prior one
     while every other field (status included) carries forward."""
     allocation_id = uuid4()
     e1 = _genesis(allocation_id=allocation_id)
     e2 = AllocationActivated(
         allocation_id=allocation_id, activated_by=_ACTIVATED_BY, occurred_at=_T1
     )
-    e3 = AllocationCeilingAmended(allocation_id=allocation_id, ceiling_usd=18000.0, occurred_at=_T2)
+    e3 = AllocationCeilingUpdated(allocation_id=allocation_id, ceiling_usd=18000.0, occurred_at=_T2)
     state = fold([e1, e2, e3])
     assert state is not None
     assert state.ceiling_usd == 18000.0
@@ -108,10 +108,10 @@ def test_ceiling_amended_overwrites_ceiling_and_keeps_status() -> None:
 
 
 @pytest.mark.unit
-def test_ceiling_amended_while_granted_keeps_dormant_status() -> None:
+def test_ceiling_updated_while_granted_keeps_dormant_status() -> None:
     allocation_id = uuid4()
     e1 = _genesis(allocation_id=allocation_id)
-    e2 = AllocationCeilingAmended(allocation_id=allocation_id, ceiling_usd=30000.0, occurred_at=_T1)
+    e2 = AllocationCeilingUpdated(allocation_id=allocation_id, ceiling_usd=30000.0, occurred_at=_T1)
     state = fold([e1, e2])
     assert state is not None
     assert state.ceiling_usd == 30000.0

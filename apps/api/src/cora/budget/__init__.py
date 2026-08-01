@@ -16,7 +16,7 @@ instance-total ledger fold over that window.
 
 Lifecycle slices: `grant_allocation` (genesis -> Granted, dormant),
 `activate_allocation` (Granted -> Active; opens the spend window),
-`amend_allocation_ceiling` (Granted | Active; PUT semantics, the
+`update_allocation_ceiling` (Granted | Active; PUT semantics, the
 cost-overrun tighten lever), `seal_allocation` (Active -> Sealed;
 closing the books with a server-computed final-spend snapshot),
 `void_allocation` (Granted | Active -> Voided; operator withdraws a

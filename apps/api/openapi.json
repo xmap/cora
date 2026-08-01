@@ -756,22 +756,6 @@
         "title": "AlternateIdentifierKind",
         "type": "string"
       },
-      "AmendAllocationCeilingRequest": {
-        "description": "Body for `POST /allocations/{allocation_id}/ceiling`.",
-        "properties": {
-          "ceiling_usd": {
-            "description": "The post-amend USD ceiling (PUT semantics, not a delta). Finite and greater than 0.",
-            "exclusiveMinimum": 0.0,
-            "title": "Ceiling Usd",
-            "type": "number"
-          }
-        },
-        "required": [
-          "ceiling_usd"
-        ],
-        "title": "AmendAllocationCeilingRequest",
-        "type": "object"
-      },
       "AmendClearanceRequest": {
         "description": "Body for `POST /clearances/{parent_id}/amend`.\n\nMirrors `RegisterClearanceRequest`'s child-fields exactly. The\n`parent_id` comes from the URL path, not the body.",
         "properties": {
@@ -15958,6 +15942,22 @@
         "title": "UpdateAgentTargetPlanRequest",
         "type": "object"
       },
+      "UpdateAllocationCeilingRequest": {
+        "description": "Body for `POST /allocations/{allocation_id}/ceiling`.",
+        "properties": {
+          "ceiling_usd": {
+            "description": "The post-update USD ceiling (PUT semantics, not a delta). Finite and greater than 0.",
+            "exclusiveMinimum": 0.0,
+            "title": "Ceiling Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "ceiling_usd"
+        ],
+        "title": "UpdateAllocationCeilingRequest",
+        "type": "object"
+      },
       "UpdateAssetPartitionRuleRequest": {
         "description": "Body for `POST /assets/{asset_id}/partition-rule`.\n\n`partition_rule` is a discriminated-union Pydantic model covering\nthe 5 PartitionRule shapes (Affine, Aggregation, LookupTable,\nCompositePartition, SolverReference), or null to clear the rule.\n\nThe route converts the Pydantic model to the frozen-dataclass union\nbefore invoking the handler. Pydantic 422 fires on shape mismatch\n(unknown kind, missing required field for kind, etc.).",
         "properties": {
@@ -19511,7 +19511,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AmendAllocationCeilingRequest"
+                "$ref": "#/components/schemas/UpdateAllocationCeilingRequest"
               }
             }
           },
@@ -19559,13 +19559,13 @@
                 }
               }
             },
-            "description": "Allocation is not in Granted or Active status (amend_allocation_ceiling cannot rewrite a closed envelope)."
+            "description": "Allocation is not in Granted or Active status (update_allocation_ceiling cannot rewrite a closed envelope)."
           },
           "422": {
             "description": "Request body failed schema validation (missing field, non-positive ceiling) or path parameter is not a UUID."
           }
         },
-        "summary": "Amend an Allocation's USD ceiling (PUT semantics)",
+        "summary": "Update an Allocation's USD ceiling (PUT semantics)",
         "tags": [
           "budget"
         ]

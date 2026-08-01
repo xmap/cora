@@ -24,7 +24,7 @@ pattern:
   - 404 (load miss): AllocationNotFound
   - 409 (defensive guard for AlreadyExists): AllocationAlreadyExists
   - 409 (transition guards): AllocationCannotActivate,
-    AllocationCannotAmend, AllocationCannotSeal, AllocationCannotVoid
+    AllocationCannotUpdate, AllocationCannotSeal, AllocationCannotVoid
 """
 
 from fastapi import FastAPI, Request, status
@@ -34,8 +34,8 @@ from cora.budget.aggregates.allocation import (
     AllocationAlreadyActiveError,
     AllocationAlreadyExistsError,
     AllocationCannotActivateError,
-    AllocationCannotAmendCeilingError,
     AllocationCannotSealError,
+    AllocationCannotUpdateCeilingError,
     AllocationCannotVoidError,
     AllocationNotFoundError,
     InvalidAllocationCeilingError,
@@ -45,9 +45,9 @@ from cora.budget.aggregates.allocation import (
 from cora.budget.errors import UnauthorizedError
 from cora.budget.features import (
     activate_allocation,
-    amend_allocation_ceiling,
     grant_allocation,
     seal_allocation,
+    update_allocation_ceiling,
     void_allocation,
 )
 
@@ -97,7 +97,7 @@ async def _handle_already_exists(request: Request, exc: Exception) -> JSONRespon
 async def _handle_cannot_transition(request: Request, exc: Exception) -> JSONResponse:
     """Shared 409 handler for state-transition guards.
 
-    Covers the `AllocationCannot<Verb>Error` family: Activate, Amend,
+    Covers the `AllocationCannot<Verb>Error` family: Activate, Update,
     Seal, Void. Same pattern as Campaign / Supply / Safety
     `_handle_cannot_transition`.
     """
@@ -112,7 +112,7 @@ def register_budget_routes(app: FastAPI) -> None:
     """Attach budget slice routers and exception handlers to the FastAPI app."""
     app.include_router(grant_allocation.router)
     app.include_router(activate_allocation.router)
-    app.include_router(amend_allocation_ceiling.router)
+    app.include_router(update_allocation_ceiling.router)
     app.include_router(seal_allocation.router)
     app.include_router(void_allocation.router)
     for validation_cls in (
@@ -130,7 +130,7 @@ def register_budget_routes(app: FastAPI) -> None:
         app.add_exception_handler(already_exists_cls, _handle_already_exists)
     for cannot_transition_cls in (
         AllocationCannotActivateError,
-        AllocationCannotAmendCeilingError,
+        AllocationCannotUpdateCeilingError,
         AllocationCannotSealError,
         AllocationCannotVoidError,
     ):

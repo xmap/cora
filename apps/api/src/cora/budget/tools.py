@@ -12,9 +12,9 @@ from collections.abc import Callable
 from mcp.server.fastmcp import FastMCP
 
 from cora.budget.features.activate_allocation import tool as activate_allocation_tool
-from cora.budget.features.amend_allocation_ceiling import tool as amend_allocation_ceiling_tool
 from cora.budget.features.grant_allocation import tool as grant_allocation_tool
 from cora.budget.features.seal_allocation import tool as seal_allocation_tool
+from cora.budget.features.update_allocation_ceiling import tool as update_allocation_ceiling_tool
 from cora.budget.features.void_allocation import tool as void_allocation_tool
 from cora.budget.wire import BudgetHandlers
 
@@ -33,9 +33,9 @@ def register_budget_tools(
         mcp,
         get_handler=lambda: get_handlers().activate_allocation,
     )
-    amend_allocation_ceiling_tool.register(
+    update_allocation_ceiling_tool.register(
         mcp,
-        get_handler=lambda: get_handlers().amend_allocation_ceiling,
+        get_handler=lambda: get_handlers().update_allocation_ceiling,
     )
     seal_allocation_tool.register(
         mcp,

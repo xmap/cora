@@ -11,9 +11,9 @@ Five genesis-and-lifecycle events:
                                   Defined/Registered genesis convention
   - `AllocationActivated`      -- transition (Granted -> Active); opens
                                   the spend window
-  - `AllocationCeilingAmended` -- non-transition amendment (Granted |
+  - `AllocationCeilingUpdated` -- non-transition update (Granted |
                                   Active); PUT semantics, the supplied
-                                  ceiling IS the post-amend ceiling
+                                  ceiling IS the post-update ceiling
   - `AllocationSealed`         -- transition (Active -> Sealed);
                                   terminal, carries the final-spend
                                   snapshot
@@ -28,7 +28,7 @@ from VO validation churn.
 `granted_by` / `activated_by` / `sealed_by` carry the acting
 principal on the PAYLOAD (not only the envelope) because the folded
 state records those fact-acts as `<verb>_at` / `<verb>_by` pairs per
-[[project_fold_symmetry_design]]; `AllocationCeilingAmended` and
+[[project_fold_symmetry_design]]; `AllocationCeilingUpdated` and
 `AllocationVoided` fold no timestamp, so their actor lives only on
 the envelope (`StoredEvent.principal_id`).
 """
@@ -84,13 +84,13 @@ class AllocationActivated:
 
 
 @dataclass(frozen=True)
-class AllocationCeilingAmended:
-    """The ceiling was amended (Granted | Active; PUT semantics).
+class AllocationCeilingUpdated:
+    """The ceiling was updated (Granted | Active; PUT semantics).
 
-    The supplied ceiling IS the post-amend ceiling, not a delta: the
+    The supplied ceiling IS the post-update ceiling, not a delta: the
     cost-overrun tighten lever must land at an exact number the
     operator chose, and a delta would compound across retries.
-    No status change; amendment is not a lifecycle step.
+    No status change; an update is not a lifecycle step.
     """
 
     allocation_id: UUID
@@ -136,7 +136,7 @@ class AllocationVoided:
 AllocationEvent = (
     AllocationGranted
     | AllocationActivated
-    | AllocationCeilingAmended
+    | AllocationCeilingUpdated
     | AllocationSealed
     | AllocationVoided
 )
@@ -180,7 +180,7 @@ def to_payload(event: AllocationEvent) -> dict[str, Any]:
                 "activated_by": str(activated_by),
                 "occurred_at": occurred_at.isoformat(),
             }
-        case AllocationCeilingAmended(
+        case AllocationCeilingUpdated(
             allocation_id=allocation_id,
             ceiling_usd=ceiling_usd,
             occurred_at=occurred_at,
@@ -258,10 +258,10 @@ def from_stored(stored: StoredEvent) -> AllocationEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
-        case "AllocationCeilingAmended":
+        case "AllocationCeilingUpdated":
             return deserialize_or_raise(
-                "AllocationCeilingAmended",
-                lambda: AllocationCeilingAmended(
+                "AllocationCeilingUpdated",
+                lambda: AllocationCeilingUpdated(
                     allocation_id=UUID(payload["allocation_id"]),
                     ceiling_usd=payload["ceiling_usd"],
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
@@ -294,7 +294,7 @@ def from_stored(stored: StoredEvent) -> AllocationEvent:
 
 __all__ = [
     "AllocationActivated",
-    "AllocationCeilingAmended",
+    "AllocationCeilingUpdated",
     "AllocationEvent",
     "AllocationGranted",
     "AllocationSealed",

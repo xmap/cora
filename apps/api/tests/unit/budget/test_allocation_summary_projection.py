@@ -48,7 +48,7 @@ def test_projection_metadata() -> None:
         {
             "AllocationGranted",
             "AllocationActivated",
-            "AllocationCeilingAmended",
+            "AllocationCeilingUpdated",
             "AllocationSealed",
             "AllocationVoided",
         }
@@ -136,11 +136,11 @@ async def test_allocation_activated_updates_status_and_activated_at() -> None:
 
 
 @pytest.mark.unit
-async def test_ceiling_amended_overwrites_ceiling_without_status_change() -> None:
+async def test_ceiling_updated_overwrites_ceiling_without_status_change() -> None:
     proj = AllocationSummaryProjection()
     conn = AsyncMock()
     event = _stored(
-        "AllocationCeilingAmended",
+        "AllocationCeilingUpdated",
         {
             "allocation_id": str(_ALLOCATION_ID),
             "ceiling_usd": 12000.0,

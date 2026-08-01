@@ -19,7 +19,7 @@ Supply / Safety / Caution:
 
   - `grant_allocation`         (create-style; idempotency-wrapped)
   - `activate_allocation`      (transition; no idempotency wrap)
-  - `amend_allocation_ceiling` (amendment; no idempotency wrap)
+  - `update_allocation_ceiling` (update; no idempotency wrap)
   - `seal_allocation`          (transition; no idempotency wrap)
   - `void_allocation`          (transition; no idempotency wrap)
 
@@ -37,9 +37,9 @@ from uuid import UUID
 
 from cora.budget.features import (
     activate_allocation,
-    amend_allocation_ceiling,
     grant_allocation,
     seal_allocation,
+    update_allocation_ceiling,
     void_allocation,
 )
 from cora.budget.features.seal_allocation import make_ledger_total_spend
@@ -56,7 +56,7 @@ class BudgetHandlers:
 
     grant_allocation: grant_allocation.IdempotentHandler
     activate_allocation: activate_allocation.Handler
-    amend_allocation_ceiling: amend_allocation_ceiling.Handler
+    update_allocation_ceiling: update_allocation_ceiling.Handler
     seal_allocation: seal_allocation.Handler
     void_allocation: void_allocation.Handler
 
@@ -83,9 +83,9 @@ def wire_budget(deps: Kernel) -> BudgetHandlers:
             command_name="ActivateAllocation",
             bc=_BC,
         ),
-        amend_allocation_ceiling=with_tracing(
-            amend_allocation_ceiling.bind(deps),
-            command_name="AmendAllocationCeiling",
+        update_allocation_ceiling=with_tracing(
+            update_allocation_ceiling.bind(deps),
+            command_name="UpdateAllocationCeiling",
             bc=_BC,
         ),
         seal_allocation=with_tracing(

@@ -12,7 +12,7 @@ Status mapping per event type:
                                   sets `activated_at` +
                                   `activated_by`, the spend-window
                                   start)
-  - `AllocationCeilingAmended` -> no status change (source: Granted |
+  - `AllocationCeilingUpdated` -> no status change (source: Granted |
                                   Active; overwrites `ceiling_usd`,
                                   PUT semantics)
   - `AllocationSealed`         -> SEALED (single-source: Active; sets
@@ -41,7 +41,7 @@ from typing import assert_never
 
 from cora.budget.aggregates.allocation.events import (
     AllocationActivated,
-    AllocationCeilingAmended,
+    AllocationCeilingUpdated,
     AllocationEvent,
     AllocationGranted,
     AllocationSealed,
@@ -84,8 +84,8 @@ def evolve(state: Allocation | None, event: AllocationEvent) -> Allocation:
                 activated_at=occurred_at,
                 activated_by=activated_by,
             )
-        case AllocationCeilingAmended(ceiling_usd=ceiling_usd):
-            prior = require_state(state, "AllocationCeilingAmended")
+        case AllocationCeilingUpdated(ceiling_usd=ceiling_usd):
+            prior = require_state(state, "AllocationCeilingUpdated")
             return replace(prior, ceiling_usd=ceiling_usd)
         case AllocationSealed(
             spent_usd=spent_usd,

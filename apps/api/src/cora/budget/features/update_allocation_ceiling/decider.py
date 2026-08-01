@@ -1,7 +1,7 @@
-"""Pure decider for the `AmendAllocationCeiling` command.
+"""Pure decider for the `UpdateAllocationCeiling` command.
 
-PUT semantics: the supplied ceiling IS the post-amend ceiling.
-Source set is `{Granted, Active}`. Idempotent: an amendment that
+PUT semantics: the supplied ceiling IS the post-update ceiling.
+Source set is `{Granted, Active}`. Idempotent: an update that
 matches the current ceiling returns `[]` (the update_agent_budget
 precedent; a retried PUT must not append a second identical fact).
 
@@ -9,7 +9,7 @@ precedent; a retried PUT must not append a second identical fact).
 
   - State must not be None -> `AllocationNotFoundError`
   - Current status must be Granted or Active
-    -> `AllocationCannotAmendCeilingError`
+    -> `AllocationCannotUpdateCeilingError`
   - `ceiling_usd` must be finite and strictly positive
     -> `InvalidAllocationCeilingError`
 """
@@ -18,15 +18,15 @@ from datetime import datetime
 
 from cora.budget.aggregates.allocation import (
     Allocation,
-    AllocationCannotAmendCeilingError,
-    AllocationCeilingAmended,
+    AllocationCannotUpdateCeilingError,
+    AllocationCeilingUpdated,
     AllocationNotFoundError,
     AllocationStatus,
     validate_allocation_ceiling,
 )
-from cora.budget.features.amend_allocation_ceiling.command import AmendAllocationCeiling
+from cora.budget.features.update_allocation_ceiling.command import UpdateAllocationCeiling
 
-_AMENDABLE_STATUSES: tuple[AllocationStatus, ...] = (
+_UPDATABLE_STATUSES: tuple[AllocationStatus, ...] = (
     AllocationStatus.GRANTED,
     AllocationStatus.ACTIVE,
 )
@@ -34,23 +34,23 @@ _AMENDABLE_STATUSES: tuple[AllocationStatus, ...] = (
 
 def decide(
     state: Allocation | None,
-    command: AmendAllocationCeiling,
+    command: UpdateAllocationCeiling,
     *,
     now: datetime,
-) -> list[AllocationCeilingAmended]:
-    """Decide the events produced by amending an Allocation's ceiling.
+) -> list[AllocationCeilingUpdated]:
+    """Decide the events produced by updating an Allocation's ceiling.
 
     Invariants:
       - State must not be None -> AllocationNotFoundError
       - Current status must be Granted or Active
-        -> AllocationCannotAmendCeilingError
+        -> AllocationCannotUpdateCeilingError
       - Ceiling must be finite and strictly positive
         -> InvalidAllocationCeilingError
     """
     if state is None:
         raise AllocationNotFoundError(command.allocation_id)
-    if state.status not in _AMENDABLE_STATUSES:
-        raise AllocationCannotAmendCeilingError(state.id, state.status)
+    if state.status not in _UPDATABLE_STATUSES:
+        raise AllocationCannotUpdateCeilingError(state.id, state.status)
 
     # Validate BEFORE the idempotency short-circuit so a bad ceiling
     # fires even when it happens to equal the stored value shape-wise.
@@ -60,7 +60,7 @@ def decide(
         return []
 
     return [
-        AllocationCeilingAmended(
+        AllocationCeilingUpdated(
             allocation_id=state.id,
             ceiling_usd=command.ceiling_usd,
             occurred_at=now,

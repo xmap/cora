@@ -1,8 +1,8 @@
-"""HTTP route for the `amend_allocation_ceiling` slice.
+"""HTTP route for the `update_allocation_ceiling` slice.
 
 Action endpoint at `POST /allocations/{allocation_id}/ceiling`. Body
 carries `ceiling_usd`. PUT semantics: the supplied ceiling IS the
-post-amend ceiling. 204 No Content on success (including the
+post-update ceiling. 204 No Content on success (including the
 idempotent no-op case), the update_agent_budget shape.
 """
 
@@ -12,8 +12,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path, Request, status
 from pydantic import BaseModel, Field
 
-from cora.budget.features.amend_allocation_ceiling.command import AmendAllocationCeiling
-from cora.budget.features.amend_allocation_ceiling.handler import Handler
+from cora.budget.features.update_allocation_ceiling.command import UpdateAllocationCeiling
+from cora.budget.features.update_allocation_ceiling.handler import Handler
 from cora.infrastructure.routing import (
     ErrorResponse,
     get_correlation_id,
@@ -22,20 +22,20 @@ from cora.infrastructure.routing import (
 )
 
 
-class AmendAllocationCeilingRequest(BaseModel):
+class UpdateAllocationCeilingRequest(BaseModel):
     """Body for `POST /allocations/{allocation_id}/ceiling`."""
 
     ceiling_usd: float = Field(
         ...,
         gt=0.0,
         description=(
-            "The post-amend USD ceiling (PUT semantics, not a delta). Finite and greater than 0."
+            "The post-update USD ceiling (PUT semantics, not a delta). Finite and greater than 0."
         ),
     )
 
 
 def _get_handler(request: Request) -> Handler:
-    handler: Handler = request.app.state.budget.amend_allocation_ceiling
+    handler: Handler = request.app.state.budget.update_allocation_ceiling
     return handler
 
 
@@ -62,7 +62,7 @@ router = APIRouter(tags=["budget"])
             "model": ErrorResponse,
             "description": (
                 "Allocation is not in Granted or Active status "
-                "(amend_allocation_ceiling cannot rewrite a closed envelope)."
+                "(update_allocation_ceiling cannot rewrite a closed envelope)."
             ),
         },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
@@ -72,18 +72,18 @@ router = APIRouter(tags=["budget"])
             ),
         },
     },
-    summary="Amend an Allocation's USD ceiling (PUT semantics)",
+    summary="Update an Allocation's USD ceiling (PUT semantics)",
 )
 async def post_allocations_ceiling(
     allocation_id: Annotated[UUID, Path(description="Target Allocation's id.")],
-    body: AmendAllocationCeilingRequest,
+    body: UpdateAllocationCeilingRequest,
     handler: Annotated[Handler, Depends(_get_handler)],
     cid: Annotated[UUID, Depends(get_correlation_id)],
     principal_id: Annotated[UUID, Depends(get_principal_id)],
     surface_id: Annotated[UUID, Depends(get_surface_id)],
 ) -> None:
     await handler(
-        AmendAllocationCeiling(allocation_id=allocation_id, ceiling_usd=body.ceiling_usd),
+        UpdateAllocationCeiling(allocation_id=allocation_id, ceiling_usd=body.ceiling_usd),
         principal_id=principal_id,
         correlation_id=cid,
         surface_id=surface_id,

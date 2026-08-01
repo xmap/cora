@@ -504,7 +504,7 @@ class RunDebrieferSubscriber:
                 reasoning=(
                     f"Allocation exhausted: {envelope_breach.describe()}; LLM "
                     "call skipped. Raise the ceiling via "
-                    "amend_allocation_ceiling, or seal or void this envelope "
+                    "update_allocation_ceiling, or seal or void this envelope "
                     "and activate a new one, then re-trigger the debrief."
                 ),
                 extra_inputs={

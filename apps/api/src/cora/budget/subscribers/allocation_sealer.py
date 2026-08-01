@@ -33,7 +33,7 @@ CampaignClosed event's `occurred_at`, not wall clock, so a replayed
 delivery derives the same event (the subscribers' determinism rule).
 The seal event's `event_id` is a UUIDv5 of (trigger event, allocation)
 and the append is guarded by the loaded stream version. A benign
-concurrent write (an operator `amend_allocation_ceiling` landing
+concurrent write (an operator `update_allocation_ceiling` landing
 between load and append) bumps the version while the envelope is
 still Active, so instead of forfeiting the automatic seal the sealer
 re-loads and retries the append at the fresh version (bounded, a few
@@ -102,7 +102,7 @@ _ALLOCATION_SEALER_NAMESPACE = UUID("01900000-0000-7000-8000-0000a10c0002")
 
 _MAX_SEAL_ATTEMPTS = 3
 """Bounded reload-and-retry on a lost seal race. A benign concurrent
-writer (an operator amend while the envelope is still Active) bumps the
+writer (an operator update while the envelope is still Active) bumps the
 stream version; rather than forfeit the automatic seal, the sealer
 re-loads and retries at the fresh version. Three attempts covers the
 realistic burst; beyond it the seal is deferred to the manual slice."""
@@ -240,7 +240,7 @@ class AllocationSealerSubscriber:
                 )
             except ConcurrencyError:
                 # The stream advanced between load and append. If a benign
-                # writer (an operator amend) bumped the version while the
+                # writer (an operator update) bumped the version while the
                 # envelope is still Active, re-load and retry; the
                 # deterministic event id keeps this idempotent. A concurrent
                 # seal or void lands the next iteration on the non-Active

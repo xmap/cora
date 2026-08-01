@@ -10,7 +10,7 @@ against the schema rather than an AsyncMock:
   - AllocationGranted (again) -> ON CONFLICT DO NOTHING (no duplicate,
                                  no second row)
   - AllocationActivated      -> UPDATE status=Active, activated_at
-  - AllocationCeilingAmended -> UPDATE ceiling_usd (PUT semantics)
+  - AllocationCeilingUpdated -> UPDATE ceiling_usd (PUT semantics)
   - AllocationSealed         -> UPDATE status=Sealed, sealed_at,
                                 spent_usd_at_seal
   - AllocationVoided (own row) -> UPDATE status=Voided
@@ -111,7 +111,7 @@ async def test_lifecycle_arms_land_in_the_summary_table(db_pool: asyncpg.Pool) -
         )
         await proj.apply(
             _event(
-                "AllocationCeilingAmended",
+                "AllocationCeilingUpdated",
                 {"allocation_id": aid, "ceiling_usd": 300.0, "occurred_at": _NOW.isoformat()},
             ),
             conn,
@@ -125,7 +125,7 @@ async def test_lifecycle_arms_land_in_the_summary_table(db_pool: asyncpg.Pool) -
         )
         row = await _fetch(conn, allocation_id)
         assert row["status"] == "Sealed"
-        assert float(row["ceiling_usd"]) == 300.0  # the amend won
+        assert float(row["ceiling_usd"]) == 300.0  # the update won
         assert row["activated_at"] is not None
         assert row["sealed_at"] == _LATER
         assert float(row["spent_usd_at_seal"]) == 275.5

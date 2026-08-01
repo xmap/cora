@@ -2,7 +2,7 @@
 
 `load_allocation(event_store, allocation_id) -> Allocation | None`
 mirrors `load_language_model` / `load_campaign`. Used by the
-update-style handlers (activate / amend / seal / void load the target
+update-style handlers (activate / update / seal / void load the target
 envelope before the decider) and by the grant handler's
 caller-supplied-id collision check.
 """

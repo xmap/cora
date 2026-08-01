@@ -6,21 +6,21 @@ package docstring for the module-as-namespace surface.
 
 Slices: `grant_allocation` (genesis), the window lifecycle
 (`activate_allocation`, `seal_allocation`), the cost-overrun lever
-(`amend_allocation_ceiling`), and the withdrawal (`void_allocation`).
+(`update_allocation_ceiling`), and the withdrawal (`void_allocation`).
 """
 
 from cora.budget.features import (
     activate_allocation,
-    amend_allocation_ceiling,
     grant_allocation,
     seal_allocation,
+    update_allocation_ceiling,
     void_allocation,
 )
 
 __all__ = [
     "activate_allocation",
-    "amend_allocation_ceiling",
     "grant_allocation",
     "seal_allocation",
+    "update_allocation_ceiling",
     "void_allocation",
 ]

@@ -313,7 +313,7 @@ async def test_non_trigger_event_type_is_ignored(monkeypatch: Any) -> None:
 
 class _ConflictOnceStore:
     """Wraps a store to raise ConcurrencyError on the FIRST append only,
-    simulating a benign concurrent write (an operator amend) landing
+    simulating a benign concurrent write (an operator update) landing
     between the sealer's load and its append."""
 
     def __init__(self, delegate: InMemoryEventStore) -> None:
@@ -349,7 +349,7 @@ class _ConflictOnceStore:
 
 @pytest.mark.unit
 async def test_seal_retries_past_a_benign_concurrent_write() -> None:
-    """A concurrent amend bumps the version between load and append; the
+    """A concurrent update bumps the version between load and append; the
     sealer re-loads and retries rather than forfeiting the automatic
     seal. The envelope ends Sealed after the retry."""
     store = InMemoryEventStore()

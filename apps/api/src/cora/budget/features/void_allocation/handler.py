@@ -1,7 +1,7 @@
 """Application handler for the `void_allocation` slice.
 
 Built on the hoisted `make_allocation_update_handler` factory along
-with `amend_allocation_ceiling`. The voiding actor's identity lives
+with `update_allocation_ceiling`. The voiding actor's identity lives
 on the event envelope only (the fold records no voided_at timestamp,
 so there is no attribution half to stamp), keeping the thin
 fold-NEITHER factory. Source set `{Granted, Active}` is enforced by

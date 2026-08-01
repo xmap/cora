@@ -180,19 +180,19 @@ class AllocationAlreadyActiveError(Exception):
         self.active_allocation_id = active_allocation_id
 
 
-class AllocationCannotAmendCeilingError(Exception):
-    """Attempted `amend_allocation_ceiling` from a disqualifying status.
+class AllocationCannotUpdateCeilingError(Exception):
+    """Attempted `update_allocation_ceiling` from a disqualifying status.
 
     Source set is `{Granted, Active}`: the ceiling is the cost-overrun
-    tighten lever and stays amendable while the envelope can still
-    spend, but a terminal envelope's books are closed and amending
+    tighten lever and stays updatable while the envelope can still
+    spend, but a terminal envelope's books are closed and updating
     them would rewrite audit history.
     """
 
     def __init__(self, allocation_id: UUID, current_status: "AllocationStatus") -> None:
         super().__init__(
-            f"Allocation {allocation_id} cannot amend its ceiling: currently in status "
-            f"{current_status.value}, amend_allocation_ceiling requires "
+            f"Allocation {allocation_id} cannot update its ceiling: currently in status "
+            f"{current_status.value}, update_allocation_ceiling requires "
             f"{AllocationStatus.GRANTED.value} or {AllocationStatus.ACTIVE.value}"
         )
         self.allocation_id = allocation_id
@@ -280,7 +280,7 @@ class AllocationReason:
 def validate_allocation_ceiling(value: float) -> None:
     """Reject a ceiling that is not finite and strictly positive.
 
-    Shared by the grant and amend deciders so both entry points to
+    Shared by the grant and update deciders so both entry points to
     `ceiling_usd` enforce one rule; a bare float (not a VO) because
     the ceiling participates in arithmetic at the gate and a wrapper
     would be unwrapped at every comparison site.

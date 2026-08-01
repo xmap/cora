@@ -2,7 +2,7 @@
 
 Mirrors `cora.agent._language_model_update_handler` per the
 per-aggregate factory convention. Two transition slices bind through
-the thin wrapper (`amend_allocation_ceiling`, `void_allocation`);
+the thin wrapper (`update_allocation_ceiling`, `void_allocation`);
 `activate_allocation` binds through the actor-stamping variant
 because the fold records `(activated_at, activated_by)` per
 [[project_fold_symmetry_design]]. `seal_allocation` stays longhand:
