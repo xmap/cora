@@ -114,9 +114,7 @@ def test_mcp_lifecycle_tool_returns_iserror_when_visit_not_found(tool_name: str)
     arguments: dict[str, str] = {"visit_id": str(uuid4())}
     if tool_name in {"hold_visit", "cancel_visit", "abort_visit", "void_visit"}:
         arguments["reason"] = "r"
-    # Presence tools carry actor_id (and check_in_visit also mode).
-    if tool_name in {"check_in_visit", "check_out_visit"}:
-        arguments["actor_id"] = str(uuid4())
+    # Presence tools name no actor: the caller checks itself in or out.
     if tool_name == "check_in_visit":
         arguments["mode"] = "physical"
     # Surface-control tools carry surface_id.

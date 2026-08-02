@@ -3133,39 +3133,24 @@
         "type": "object"
       },
       "CheckInVisitRequest": {
-        "description": "Body for `POST /visits/{visit_id}/check-in`.",
+        "additionalProperties": false,
+        "description": "Body for `POST /visits/{visit_id}/check-in`.\n\nCarries no actor: a caller checks itself in, and the actor is taken from\nthe authenticated principal. `extra=\"forbid\"` so a client still sending\n`actor_id` gets a 422 rather than a 204 that silently recorded the caller\ninstead of the actor it named.",
         "properties": {
-          "actor_id": {
-            "description": "Actor checking in to the Visit.",
-            "format": "uuid",
-            "title": "Actor Id",
-            "type": "string"
-          },
           "mode": {
             "$ref": "#/components/schemas/PresenceMode",
             "description": "physical (on-site) or remote (e.g., PI driving via API)."
           }
         },
         "required": [
-          "actor_id",
           "mode"
         ],
         "title": "CheckInVisitRequest",
         "type": "object"
       },
       "CheckOutVisitRequest": {
-        "description": "Body for `POST /visits/{visit_id}/check-out`.",
-        "properties": {
-          "actor_id": {
-            "description": "Actor checking out of the Visit.",
-            "format": "uuid",
-            "title": "Actor Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "actor_id"
-        ],
+        "additionalProperties": false,
+        "description": "Body for `POST /visits/{visit_id}/check-out`.\n\nCarries no actor: a caller checks itself out, and the actor is taken from\nthe authenticated principal. `extra=\"forbid\"` so a client still sending\n`actor_id` gets a 422 rather than a 204 that silently closed the caller's\nown entry instead of the one it named.",
+        "properties": {},
         "title": "CheckOutVisitRequest",
         "type": "object"
       },
@@ -45643,7 +45628,7 @@
             "description": "Request body failed schema validation."
           }
         },
-        "summary": "Check an actor in to a Visit (physical or remote)",
+        "summary": "Check the calling principal in to a Visit (physical or remote)",
         "tags": [
           "trust"
         ]

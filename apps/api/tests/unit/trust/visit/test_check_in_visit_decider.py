@@ -1,11 +1,12 @@
 """Decider tests for `check_in_visit` (presence + status guard)."""
 
-from dataclasses import replace
+from dataclasses import fields, replace
 from datetime import timedelta
 from uuid import uuid4
 
 import pytest
 
+from cora.shared.identity import ActorId
 from cora.trust.aggregates.visit import (
     PresenceEntry,
     PresenceMode,
@@ -31,8 +32,9 @@ def test_check_in_from_permitted_statuses_emits_visit_checked_in(
     actor_id = uuid4()
     events = decide(
         state=make_visit(from_status),
-        command=CheckInVisit(visit_id=VISIT_ID, actor_id=actor_id, mode=PresenceMode.PHYSICAL),
+        command=CheckInVisit(visit_id=VISIT_ID, mode=PresenceMode.PHYSICAL),
         now=NOW,
+        checked_in_by=ActorId(actor_id),
     )
     [e] = events
     assert isinstance(e, VisitCheckedIn)
@@ -42,21 +44,25 @@ def test_check_in_from_permitted_statuses_emits_visit_checked_in(
 
 @pytest.mark.unit
 def test_check_in_carries_remote_mode_through_to_event() -> None:
+    actor_id = uuid4()
     events = decide(
         state=make_visit(VisitStatus.IN_PROGRESS),
-        command=CheckInVisit(visit_id=VISIT_ID, actor_id=uuid4(), mode=PresenceMode.REMOTE),
+        command=CheckInVisit(visit_id=VISIT_ID, mode=PresenceMode.REMOTE),
         now=NOW,
+        checked_in_by=ActorId(actor_id),
     )
     assert events[0].mode == "remote"
 
 
 @pytest.mark.unit
 def test_check_in_raises_not_found_on_empty_state() -> None:
+    actor_id = uuid4()
     with pytest.raises(VisitNotFoundError):
         decide(
             state=None,
-            command=CheckInVisit(visit_id=VISIT_ID, actor_id=uuid4(), mode=PresenceMode.PHYSICAL),
+            command=CheckInVisit(visit_id=VISIT_ID, mode=PresenceMode.PHYSICAL),
             now=NOW,
+            checked_in_by=ActorId(actor_id),
         )
 
 
@@ -64,11 +70,13 @@ def test_check_in_raises_not_found_on_empty_state() -> None:
 def test_check_in_rejects_planned_status_does_not_auto_arrive() -> None:
     """V6 explicit-gesture lock: presence does NOT auto-transition Planned
     -> Arrived. Operator must record_visit_arrival first."""
+    actor_id = uuid4()
     with pytest.raises(VisitCannotCheckInError):
         decide(
             state=make_visit(VisitStatus.PLANNED),
-            command=CheckInVisit(visit_id=VISIT_ID, actor_id=uuid4(), mode=PresenceMode.PHYSICAL),
+            command=CheckInVisit(visit_id=VISIT_ID, mode=PresenceMode.PHYSICAL),
             now=NOW,
+            checked_in_by=ActorId(actor_id),
         )
 
 
@@ -92,8 +100,9 @@ def test_check_in_rejects_duplicate_open_entry_for_same_actor() -> None:
     with pytest.raises(VisitAlreadyCheckedInError) as exc_info:
         decide(
             state=state_with_open_entry,
-            command=CheckInVisit(visit_id=VISIT_ID, actor_id=actor_id, mode=PresenceMode.REMOTE),
+            command=CheckInVisit(visit_id=VISIT_ID, mode=PresenceMode.REMOTE),
             now=NOW,
+            checked_in_by=ActorId(actor_id),
         )
     assert exc_info.value.actor_id == actor_id
 
@@ -119,7 +128,55 @@ def test_check_in_allows_same_actor_after_check_out_multi_shift() -> None:
     )
     events = decide(
         state=state_with_closed_entry,
-        command=CheckInVisit(visit_id=VISIT_ID, actor_id=actor_id, mode=PresenceMode.REMOTE),
+        command=CheckInVisit(visit_id=VISIT_ID, mode=PresenceMode.REMOTE),
         now=NOW,
+        checked_in_by=ActorId(actor_id),
     )
     assert len(events) == 1
+
+
+@pytest.mark.unit
+def test_check_in_visit_command_carries_no_actor_field() -> None:
+    """The command's field set is exactly (visit_id, mode).
+
+    Structural rather than behavioural on purpose. Re-adding a caller-supplied
+    actor is the realistic regression, and it is invisible to every behavioural
+    test as long as the caller still wins when the field is unset. Comparing
+    the whole field set also catches a rename.
+    """
+    assert {f.name for f in fields(CheckInVisit)} == {"visit_id", "mode"}
+
+
+@pytest.mark.unit
+def test_check_in_ignores_another_actors_open_entry_and_admits_the_caller() -> None:
+    """Another actor's open entry does not block the caller's check-in.
+
+    The duplicate guard is keyed on the actor, and no other test in this file
+    puts an entry belonging to somebody else into state, so dropping the actor
+    comparison from that guard passes the whole suite. This is the test that
+    fails when it is dropped.
+    """
+    caller = uuid4()
+    someone_else = uuid4()
+    base = make_visit(VisitStatus.IN_PROGRESS)
+    state_with_other_actor_present = replace(
+        base,
+        presence_entries=frozenset(
+            {
+                PresenceEntry(
+                    actor_id=someone_else,
+                    mode=PresenceMode.PHYSICAL,
+                    check_in_at=NOW,
+                    check_out_at=None,
+                )
+            }
+        ),
+    )
+    events = decide(
+        state=state_with_other_actor_present,
+        command=CheckInVisit(visit_id=VISIT_ID, mode=PresenceMode.PHYSICAL),
+        now=NOW,
+        checked_in_by=ActorId(caller),
+    )
+    [e] = events
+    assert e.actor_id == caller

@@ -30,6 +30,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from cora.shared.identity import ActorId
 from cora.trust.aggregates.visit import (
     PresenceEntry,
     PresenceMode,
@@ -112,8 +113,9 @@ def test_check_out_none_state_always_raises_not_found(
     with pytest.raises(VisitNotFoundError):
         decide(
             state=None,
-            command=CheckOutVisit(visit_id=visit_id, actor_id=actor_id),
+            command=CheckOutVisit(visit_id=visit_id),
             now=now,
+            checked_out_by=ActorId(actor_id),
         )
 
 
@@ -133,8 +135,9 @@ def test_check_out_actor_with_no_entry_always_raises_not_checked_in(
     with pytest.raises(VisitActorNotCheckedInError) as exc:
         decide(
             state=state,
-            command=CheckOutVisit(visit_id=VISIT_ID, actor_id=actor_id),
+            command=CheckOutVisit(visit_id=VISIT_ID),
             now=now,
+            checked_out_by=ActorId(actor_id),
         )
     assert exc.value.visit_id == state.id
     assert exc.value.actor_id == actor_id
@@ -161,8 +164,9 @@ def test_check_out_already_closed_actor_always_raises_not_checked_in(
     with pytest.raises(VisitActorNotCheckedInError) as exc:
         decide(
             state=state,
-            command=CheckOutVisit(visit_id=VISIT_ID, actor_id=actor_id),
+            command=CheckOutVisit(visit_id=VISIT_ID),
             now=now,
+            checked_out_by=ActorId(actor_id),
         )
     assert exc.value.visit_id == state.id
     assert exc.value.actor_id == actor_id
@@ -187,8 +191,9 @@ def test_check_out_open_entry_emits_checked_out_threading_id_actor_and_now(
     )
     result = decide(
         state=state,
-        command=CheckOutVisit(visit_id=VISIT_ID, actor_id=actor_id),
+        command=CheckOutVisit(visit_id=VISIT_ID),
         now=now,
+        checked_out_by=ActorId(actor_id),
     )
     assert result == [VisitCheckedOut(visit_id=state.id, actor_id=actor_id, occurred_at=now)]
 
@@ -201,7 +206,7 @@ def test_check_out_is_pure_same_input_same_output(
 ) -> None:
     """Two calls with identical args return equal results (no clock leakage)."""
     state = _state_with_open_entry(actor_id=actor_id, check_in_at=now - timedelta(hours=1))
-    command = CheckOutVisit(visit_id=VISIT_ID, actor_id=actor_id)
-    first = decide(state=state, command=command, now=now)
-    second = decide(state=state, command=command, now=now)
+    command = CheckOutVisit(visit_id=VISIT_ID)
+    first = decide(state=state, command=command, now=now, checked_out_by=ActorId(actor_id))
+    second = decide(state=state, command=command, now=now, checked_out_by=ActorId(actor_id))
     assert first == second

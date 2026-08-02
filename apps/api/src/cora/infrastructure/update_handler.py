@@ -45,6 +45,16 @@ Asset's eight-plus) compile unchanged.
     default) means no extras and matches the
     pure-single-id-only behaviour of the original Subject /
     Equipment factories.
+  - `actor_kwarg: str | None` — OPTIONAL name of the decider keyword
+    argument that receives the calling principal as `ActorId`, matching
+    the decider's `<verb>ed_by` parameter. Set it when the decider must
+    know WHO is acting and that fact must not be forgeable through a
+    command field. Same name and same meaning as the `actor_kwarg` knob
+    on the BC-local factories in Federation, Agent, Subject and Budget;
+    those exist ONLY because this core could not thread the principal,
+    and each duplicates this body to do it. Collapsing them onto this
+    parameter is the follow-up this knob enables. None (the default)
+    passes nothing extra and leaves every existing slice unchanged.
 
 The `reason` from `Deny` decisions and the `event_count` /
 `new_version` on success lines are appended AFTER `extras` so the
@@ -85,6 +95,7 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.identity import ActorId
 
 
 class _DomainEvent(Protocol):
@@ -137,6 +148,7 @@ def make_update_handler[TEvent: _DomainEvent](
     log_prefix: str,
     decide_fn: Callable[..., Sequence[TEvent]],
     extra_log_fields: Callable[[Any], dict[str, Any]] | None = None,
+    actor_kwarg: str | None = None,
 ) -> _UpdateHandler:
     """Build a single-stream update handler for one slice.
 
@@ -193,7 +205,10 @@ def make_update_handler[TEvent: _DomainEvent](
         history: list[TEvent] = [from_stored(s) for s in stored]
         state = fold(history)
 
-        domain_events = decide_fn(state=state, command=command, now=now)
+        principal_kwarg: dict[str, ActorId] = (
+            {actor_kwarg: ActorId(principal_id)} if actor_kwarg is not None else {}
+        )
+        domain_events = decide_fn(state=state, command=command, now=now, **principal_kwarg)
 
         new_events = [
             to_new_event(

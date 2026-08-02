@@ -237,7 +237,7 @@ def test_check_in_returns_204_after_arrival() -> None:
         client.post(f"/visits/{vid}/record-arrival")
         response = client.post(
             f"/visits/{vid}/check-in",
-            json={"actor_id": str(uuid4()), "mode": "physical"},
+            json={"mode": "physical"},
         )
     assert response.status_code == 204, response.text
 
@@ -249,21 +249,20 @@ def test_check_in_returns_409_when_visit_still_planned() -> None:
         vid = _register_visit(client)
         response = client.post(
             f"/visits/{vid}/check-in",
-            json={"actor_id": str(uuid4()), "mode": "physical"},
+            json={"mode": "physical"},
         )
     assert response.status_code == 409
 
 
 @pytest.mark.contract
 def test_check_in_returns_409_when_actor_already_checked_in() -> None:
-    actor_id = str(uuid4())
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
         client.post(f"/visits/{vid}/record-arrival")
-        client.post(f"/visits/{vid}/check-in", json={"actor_id": actor_id, "mode": "physical"})
+        client.post(f"/visits/{vid}/check-in", json={"mode": "physical"})
         response = client.post(
             f"/visits/{vid}/check-in",
-            json={"actor_id": actor_id, "mode": "remote"},
+            json={"mode": "remote"},
         )
     assert response.status_code == 409
 
@@ -273,7 +272,7 @@ def test_check_in_returns_404_when_visit_absent() -> None:
     with TestClient(create_app()) as client:
         response = client.post(
             f"/visits/{uuid4()}/check-in",
-            json={"actor_id": str(uuid4()), "mode": "physical"},
+            json={"mode": "physical"},
         )
     assert response.status_code == 404
 
@@ -285,19 +284,18 @@ def test_check_in_returns_422_when_mode_invalid() -> None:
         client.post(f"/visits/{vid}/record-arrival")
         response = client.post(
             f"/visits/{vid}/check-in",
-            json={"actor_id": str(uuid4()), "mode": "telepresence"},
+            json={"mode": "telepresence"},
         )
     assert response.status_code == 422
 
 
 @pytest.mark.contract
 def test_check_out_returns_204_after_check_in() -> None:
-    actor_id = str(uuid4())
     with TestClient(create_app()) as client:
         vid = _register_visit(client)
         client.post(f"/visits/{vid}/record-arrival")
-        client.post(f"/visits/{vid}/check-in", json={"actor_id": actor_id, "mode": "physical"})
-        response = client.post(f"/visits/{vid}/check-out", json={"actor_id": actor_id})
+        client.post(f"/visits/{vid}/check-in", json={"mode": "physical"})
+        response = client.post(f"/visits/{vid}/check-out", json={})
     assert response.status_code == 204, response.text
 
 
@@ -308,7 +306,7 @@ def test_check_out_returns_404_when_actor_not_checked_in() -> None:
         client.post(f"/visits/{vid}/record-arrival")
         response = client.post(
             f"/visits/{vid}/check-out",
-            json={"actor_id": str(uuid4())},
+            json={},
         )
     assert response.status_code == 404
 
@@ -430,3 +428,36 @@ def test_release_control_returns_404_when_visit_absent() -> None:
             json={"surface_id": str(uuid4())},
         )
     assert response.status_code == 404
+
+
+@pytest.mark.contract
+def test_check_in_rejects_a_body_naming_another_actor() -> None:
+    """A stale client sending `actor_id` gets 422, not a silently reassigned row.
+
+    The vulnerability this closes lived in the request body, so the guard has to
+    be pinned at the wire. Without `extra="forbid"` Pydantic drops the unknown
+    field and returns 204, and the caller believes it recorded somebody else's
+    presence when it recorded its own.
+    """
+    with TestClient(create_app()) as client:
+        vid = _register_visit(client)
+        client.post(f"/visits/{vid}/record-arrival")
+        response = client.post(
+            f"/visits/{vid}/check-in",
+            json={"actor_id": str(uuid4()), "mode": "physical"},
+        )
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_check_out_rejects_a_body_naming_another_actor() -> None:
+    """Same guard on the closing half; presence must not be closable by name."""
+    with TestClient(create_app()) as client:
+        vid = _register_visit(client)
+        client.post(f"/visits/{vid}/record-arrival")
+        client.post(f"/visits/{vid}/check-in", json={"mode": "physical"})
+        response = client.post(
+            f"/visits/{vid}/check-out",
+            json={"actor_id": str(uuid4())},
+        )
+    assert response.status_code == 422

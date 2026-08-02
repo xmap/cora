@@ -52,6 +52,7 @@ def make_visit_update_handler(
     command_name: str,
     log_prefix: str,
     decide_fn: Callable[..., Sequence[VisitEvent]],
+    actor_kwarg: str | None = None,
 ):
     """Build an update-style handler for one Visit transition slice."""
     return make_update_handler(
@@ -66,6 +67,7 @@ def make_visit_update_handler(
         command_name=command_name,
         log_prefix=log_prefix,
         decide_fn=decide_fn,
+        actor_kwarg=actor_kwarg,
     )
 
 

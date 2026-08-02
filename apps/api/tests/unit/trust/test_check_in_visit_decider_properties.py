@@ -6,7 +6,7 @@ two-part-guard transition
 
     (state, command, now) -> list[VisitCheckedIn]
 
-that adds one open presence entry for `command.actor_id`.
+that adds one open presence entry for the calling principal.
 
 Load-bearing properties:
 
@@ -33,6 +33,7 @@ import pytest
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
+from cora.shared.identity import ActorId
 from cora.trust.aggregates.visit import (
     PresenceEntry,
     PresenceMode,
@@ -95,8 +96,9 @@ def test_check_in_with_none_state_always_raises_not_found(
     with pytest.raises(VisitNotFoundError) as exc:
         decide(
             state=None,
-            command=CheckInVisit(visit_id=visit_id, actor_id=actor_id, mode=PresenceMode.PHYSICAL),
+            command=CheckInVisit(visit_id=visit_id, mode=PresenceMode.PHYSICAL),
             now=now,
+            checked_in_by=ActorId(actor_id),
         )
     assert exc.value.visit_id == visit_id
 
@@ -119,8 +121,9 @@ def test_check_in_from_permitted_source_emits_single_event(
     """A permitted status with no open entry emits one VisitCheckedIn keyed on state.id."""
     events = decide(
         state=_visit(visit_id=visit_id, status=source),
-        command=CheckInVisit(visit_id=visit_id, actor_id=actor_id, mode=mode),
+        command=CheckInVisit(visit_id=visit_id, mode=mode),
         now=now,
+        checked_in_by=ActorId(actor_id),
     )
     assert events == [
         VisitCheckedIn(visit_id=visit_id, actor_id=actor_id, mode=mode.value, occurred_at=now)
@@ -144,8 +147,9 @@ def test_check_in_from_disallowed_source_always_raises_cannot_check_in(
     with pytest.raises(VisitCannotCheckInError) as exc:
         decide(
             state=_visit(visit_id=visit_id, status=source),
-            command=CheckInVisit(visit_id=visit_id, actor_id=actor_id, mode=PresenceMode.PHYSICAL),
+            command=CheckInVisit(visit_id=visit_id, mode=PresenceMode.PHYSICAL),
             now=now,
+            checked_in_by=ActorId(actor_id),
         )
     assert exc.value.current_status is source
 
@@ -171,8 +175,9 @@ def test_check_in_with_open_entry_always_raises_already_checked_in(
                 status=source,
                 presence_entries=frozenset({_open_entry(actor_id)}),
             ),
-            command=CheckInVisit(visit_id=visit_id, actor_id=actor_id, mode=PresenceMode.REMOTE),
+            command=CheckInVisit(visit_id=visit_id, mode=PresenceMode.REMOTE),
             now=now,
+            checked_in_by=ActorId(actor_id),
         )
     assert exc.value.actor_id == actor_id
 
@@ -194,10 +199,9 @@ def test_check_in_uses_state_id_not_command_visit_id(
     assume(state_visit_id != command_visit_id)
     events = decide(
         state=_visit(visit_id=state_visit_id, status=VisitStatus.IN_PROGRESS),
-        command=CheckInVisit(
-            visit_id=command_visit_id, actor_id=actor_id, mode=PresenceMode.PHYSICAL
-        ),
+        command=CheckInVisit(visit_id=command_visit_id, mode=PresenceMode.PHYSICAL),
         now=now,
+        checked_in_by=ActorId(actor_id),
     )
     assert events[0].visit_id == state_visit_id
 
@@ -211,7 +215,17 @@ def test_check_in_is_pure_same_input_same_output(
 ) -> None:
     """Two calls with identical args return equal events (no clock leakage)."""
     state = _visit(visit_id=visit_id, status=VisitStatus.IN_PROGRESS)
-    command = CheckInVisit(visit_id=visit_id, actor_id=actor_id, mode=PresenceMode.PHYSICAL)
-    first = decide(state=state, command=command, now=now)
-    second = decide(state=state, command=command, now=now)
+    command = CheckInVisit(visit_id=visit_id, mode=PresenceMode.PHYSICAL)
+    first = decide(
+        state=state,
+        command=command,
+        now=now,
+        checked_in_by=ActorId(actor_id),
+    )
+    second = decide(
+        state=state,
+        command=command,
+        now=now,
+        checked_in_by=ActorId(actor_id),
+    )
     assert first == second

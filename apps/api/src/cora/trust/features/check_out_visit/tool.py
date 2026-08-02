@@ -36,13 +36,13 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
     async def check_out_visit_tool(  # pyright: ignore[reportUnusedFunction]
         ctx: Context[Any, Any, Any],
         visit_id: Annotated[UUID, Field(description="Target Visit's id.")],
-        actor_id: Annotated[UUID, Field(description="Actor checking out.")],
     ) -> CheckOutVisitOutput:
+        principal_id = get_mcp_principal_id(ctx)
         handler = get_handler()
         await handler(
-            CheckOutVisit(visit_id=visit_id, actor_id=actor_id),
-            principal_id=get_mcp_principal_id(ctx),
+            CheckOutVisit(visit_id=visit_id),
+            principal_id=principal_id,
             correlation_id=current_correlation_id(),
             surface_id=get_mcp_surface_id(),
         )
-        return CheckOutVisitOutput(visit_id=visit_id, actor_id=actor_id)
+        return CheckOutVisitOutput(visit_id=visit_id, actor_id=principal_id)

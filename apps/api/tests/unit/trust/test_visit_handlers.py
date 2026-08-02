@@ -333,11 +333,8 @@ async def test_check_in_visit_handler_appends_visit_checked_in() -> None:
     await _seed_to(store, VisitStatus.ARRIVED)
     deps = build_deps(ids=[_TRANSITION_EVENT_ID], now=_NOW, event_store=store)
     handler = check_in_visit.bind(deps)
-    actor_id = uuid4()
     await handler(
-        check_in_visit.CheckInVisit(
-            visit_id=_VISIT_ID, actor_id=actor_id, mode=PresenceMode.PHYSICAL
-        ),
+        check_in_visit.CheckInVisit(visit_id=_VISIT_ID, mode=PresenceMode.PHYSICAL),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -346,8 +343,40 @@ async def test_check_in_visit_handler_appends_visit_checked_in() -> None:
     assert folded is not None
     assert len(folded.presence_entries) == 1
     [entry] = folded.presence_entries
-    assert entry.actor_id == actor_id
+    assert entry.actor_id == _PRINCIPAL_ID
     assert entry.check_out_at is None
+
+
+@pytest.mark.unit
+async def test_check_in_visit_handler_records_each_caller_separately() -> None:
+    """Two principals checking in produce two entries, one per caller.
+
+    Driving the handler twice with DIFFERENT principals is what proves the
+    injected identity is per-call rather than a constant. A single-principal
+    test passes even if the factory wired a fixed value.
+    """
+    store = InMemoryEventStore()
+    await _seed_to(store, VisitStatus.ARRIVED)
+    second_principal = uuid4()
+    deps = build_deps(ids=[_TRANSITION_EVENT_ID, uuid4()], now=_NOW, event_store=store)
+    handler = check_in_visit.bind(deps)
+    await handler(
+        check_in_visit.CheckInVisit(visit_id=_VISIT_ID, mode=PresenceMode.PHYSICAL),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await handler(
+        check_in_visit.CheckInVisit(visit_id=_VISIT_ID, mode=PresenceMode.REMOTE),
+        principal_id=second_principal,
+        correlation_id=_CORRELATION_ID,
+    )
+    events, _ = await store.load("Visit", _VISIT_ID)
+    folded = fold([from_stored(s) for s in events])
+    assert folded is not None
+    assert {e.actor_id for e in folded.presence_entries} == {
+        _PRINCIPAL_ID,
+        second_principal,
+    }
 
 
 @pytest.mark.unit
@@ -357,9 +386,7 @@ async def test_check_in_visit_handler_raises_not_found_when_visit_absent() -> No
     handler = check_in_visit.bind(deps)
     with pytest.raises(VisitNotFoundError):
         await handler(
-            check_in_visit.CheckInVisit(
-                visit_id=_VISIT_ID, actor_id=uuid4(), mode=PresenceMode.PHYSICAL
-            ),
+            check_in_visit.CheckInVisit(visit_id=_VISIT_ID, mode=PresenceMode.PHYSICAL),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )
@@ -367,10 +394,14 @@ async def test_check_in_visit_handler_raises_not_found_when_visit_absent() -> No
 
 @pytest.mark.unit
 async def test_check_out_visit_handler_closes_open_entry_via_frozen_replace() -> None:
-    """Seed a check-in then close: frozen-replace populates check_out_at."""
+    """Seed the caller's check-in then close: frozen-replace sets check_out_at.
+
+    The seeded entry must belong to `_PRINCIPAL_ID`, because a caller now closes
+    only its own presence entry.
+    """
     store = InMemoryEventStore()
     await _seed_to(store, VisitStatus.ARRIVED)
-    actor_id = uuid4()
+    actor_id = _PRINCIPAL_ID
     _, current_version = await store.load("Visit", _VISIT_ID)
     seed_event = VisitCheckedIn(
         visit_id=_VISIT_ID,
@@ -398,7 +429,7 @@ async def test_check_out_visit_handler_closes_open_entry_via_frozen_replace() ->
     deps = build_deps(ids=[_TRANSITION_EVENT_ID], now=_NOW, event_store=store)
     handler = check_out_visit.bind(deps)
     await handler(
-        check_out_visit.CheckOutVisit(visit_id=_VISIT_ID, actor_id=actor_id),
+        check_out_visit.CheckOutVisit(visit_id=_VISIT_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
@@ -417,7 +448,7 @@ async def test_check_out_visit_handler_raises_when_actor_not_checked_in() -> Non
     handler = check_out_visit.bind(deps)
     with pytest.raises(VisitActorNotCheckedInError):
         await handler(
-            check_out_visit.CheckOutVisit(visit_id=_VISIT_ID, actor_id=uuid4()),
+            check_out_visit.CheckOutVisit(visit_id=_VISIT_ID),
             principal_id=_PRINCIPAL_ID,
             correlation_id=_CORRELATION_ID,
         )

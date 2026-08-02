@@ -1,7 +1,7 @@
 """HTTP route for the `check_in_visit` slice.
 
-Action endpoint at `POST /visits/{visit_id}/check-in`. Body carries
-`actor_id` + `mode`. 204 on success.
+Action endpoint at `POST /visits/{visit_id}/check-in`. Body carries `mode`
+only; the actor is the authenticated principal. 204 on success.
 """
 
 from typing import Annotated
@@ -22,9 +22,16 @@ from cora.trust.features.check_in_visit.handler import Handler
 
 
 class CheckInVisitRequest(BaseModel):
-    """Body for `POST /visits/{visit_id}/check-in`."""
+    """Body for `POST /visits/{visit_id}/check-in`.
 
-    actor_id: UUID = Field(..., description="Actor checking in to the Visit.")
+    Carries no actor: a caller checks itself in, and the actor is taken from
+    the authenticated principal. `extra="forbid"` so a client still sending
+    `actor_id` gets a 422 rather than a 204 that silently recorded the caller
+    instead of the actor it named.
+    """
+
+    model_config = {"extra": "forbid"}
+
     mode: PresenceMode = Field(
         ..., description="physical (on-site) or remote (e.g., PI driving via API)."
     )
@@ -61,7 +68,7 @@ router = APIRouter(tags=["trust"])
             "description": "Request body failed schema validation.",
         },
     },
-    summary="Check an actor in to a Visit (physical or remote)",
+    summary="Check the calling principal in to a Visit (physical or remote)",
 )
 async def post_visits_check_in(
     visit_id: Annotated[UUID, Path(description="Target Visit's id.")],
@@ -72,7 +79,7 @@ async def post_visits_check_in(
     surface_id: Annotated[UUID, Depends(get_surface_id)],
 ) -> None:
     await handler(
-        CheckInVisit(visit_id=visit_id, actor_id=body.actor_id, mode=body.mode),
+        CheckInVisit(visit_id=visit_id, mode=body.mode),
         principal_id=principal_id,
         correlation_id=cid,
         surface_id=surface_id,

@@ -41,7 +41,7 @@ second instance.
 
 ## Why a separate body (not delegation)
 
-The factory CANNOT delegate to `make_update_handler` because the
+The factory once could not delegate to `make_update_handler` because the
 decider call needs to include `**{actor_kwarg: principal_id}` and
 `principal_id` enters scope per-call, not at factory build. The body
 below is a literal copy of `make_update_handler`'s body with one
@@ -54,6 +54,12 @@ Same carve-out as the cross-BC factory: slices that need to load or
 append additional streams (revoke_credential, rotate_seal_online_key,
 initialize_seal write a Decision audit stream alongside the aggregate)
 cannot use this factory and stay longhand.
+
+NOTE (superseded): `make_update_handler` now takes an optional
+`actor_kwarg` and threads the principal itself, so this body no longer
+HAS to be a copy. Collapsing this factory onto the shared core is a
+recorded follow-up, deliberately not done in the commit that added the
+parameter so that change stayed reviewable.
 """
 
 from collections.abc import Callable, Sequence

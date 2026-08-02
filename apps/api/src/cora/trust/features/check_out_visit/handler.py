@@ -1,4 +1,8 @@
-"""Application handler for the `check_out_visit` slice."""
+"""Application handler for the `check_out_visit` slice.
+
+Passes the calling principal to the decider as `checked_out_by`, so a caller
+can only close its own presence entry.
+"""
 
 from typing import Protocol
 from uuid import UUID
@@ -31,4 +35,5 @@ def bind(deps: Kernel) -> Handler:
         command_name="CheckOutVisit",
         log_prefix="check_out_visit",
         decide_fn=decide,
+        actor_kwarg="checked_out_by",
     )

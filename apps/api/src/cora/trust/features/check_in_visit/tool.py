@@ -28,26 +28,27 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
     @mcp.tool(
         name="check_in_visit",
         description=(
-            "Check an actor in to a Visit (physical on-site or remote). "
+            "Check YOURSELF in to a Visit (physical on-site or remote). The "
+            "actor is the calling principal and cannot be nominated. "
             "Visit must be Arrived / InProgress / OnHold (presence is "
             "orthogonal to lifecycle; operator must record_visit_arrival first). "
-            "Actor cannot have an existing open presence entry."
+            "Caller cannot have an existing open presence entry."
         ),
     )
     async def check_in_visit_tool(  # pyright: ignore[reportUnusedFunction]
         ctx: Context[Any, Any, Any],
         visit_id: Annotated[UUID, Field(description="Target Visit's id.")],
-        actor_id: Annotated[UUID, Field(description="Actor checking in.")],
         mode: Annotated[
             PresenceMode,
             Field(description="physical (on-site) or remote (e.g., remote API driver)."),
         ],
     ) -> CheckInVisitOutput:
+        principal_id = get_mcp_principal_id(ctx)
         handler = get_handler()
         await handler(
-            CheckInVisit(visit_id=visit_id, actor_id=actor_id, mode=mode),
-            principal_id=get_mcp_principal_id(ctx),
+            CheckInVisit(visit_id=visit_id, mode=mode),
+            principal_id=principal_id,
             correlation_id=current_correlation_id(),
             surface_id=get_mcp_surface_id(),
         )
-        return CheckInVisitOutput(visit_id=visit_id, actor_id=actor_id)
+        return CheckInVisitOutput(visit_id=visit_id, actor_id=principal_id)

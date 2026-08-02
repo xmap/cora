@@ -4,7 +4,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from cora.infrastructure.routing import (
     ErrorResponse,
@@ -17,9 +17,15 @@ from cora.trust.features.check_out_visit.handler import Handler
 
 
 class CheckOutVisitRequest(BaseModel):
-    """Body for `POST /visits/{visit_id}/check-out`."""
+    """Body for `POST /visits/{visit_id}/check-out`.
 
-    actor_id: UUID = Field(..., description="Actor checking out of the Visit.")
+    Carries no actor: a caller checks itself out, and the actor is taken from
+    the authenticated principal. `extra="forbid"` so a client still sending
+    `actor_id` gets a 422 rather than a 204 that silently closed the caller's
+    own entry instead of the one it named.
+    """
+
+    model_config = {"extra": "forbid"}
 
 
 def _get_handler(request: Request) -> Handler:
@@ -59,7 +65,7 @@ async def post_visits_check_out(
     surface_id: Annotated[UUID, Depends(get_surface_id)],
 ) -> None:
     await handler(
-        CheckOutVisit(visit_id=visit_id, actor_id=body.actor_id),
+        CheckOutVisit(visit_id=visit_id),
         principal_id=principal_id,
         correlation_id=cid,
         surface_id=surface_id,

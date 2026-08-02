@@ -44,6 +44,12 @@ attribution half. Mirrors
 byte-for-byte modulo the Subject-specific defaults; the body
 duplicates `make_update_handler`'s flow because `principal_id` only
 enters scope at handler-call time, not at factory-build time.
+
+NOTE (superseded): `make_update_handler` now takes an optional
+`actor_kwarg` and threads the principal itself, so this body no longer
+HAS to be a copy. Collapsing this factory onto the shared core is a
+recorded follow-up, deliberately not done in the commit that added the
+parameter so that change stayed reviewable.
 """
 
 from collections.abc import Callable, Sequence

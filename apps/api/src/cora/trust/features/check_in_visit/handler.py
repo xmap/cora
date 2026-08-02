@@ -1,4 +1,8 @@
-"""Application handler for the `check_in_visit` slice."""
+"""Application handler for the `check_in_visit` slice.
+
+Passes the calling principal to the decider as `checked_in_by`, so presence
+names who actually checked in rather than whoever the caller nominated.
+"""
 
 from typing import Protocol
 from uuid import UUID
@@ -31,4 +35,5 @@ def bind(deps: Kernel) -> Handler:
         command_name="CheckInVisit",
         log_prefix="check_in_visit",
         decide_fn=decide,
+        actor_kwarg="checked_in_by",
     )
