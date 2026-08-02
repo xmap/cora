@@ -53,6 +53,7 @@ from cora.recipe.features.define_plan import DefinePlan
 from cora.recipe.features.define_plan import bind as bind_define_plan
 from cora.recipe.features.define_practice import DefinePractice
 from cora.recipe.features.define_practice import bind as bind_define_practice
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import (
     build_postgres_deps,
     make_pg_profile_store,
@@ -175,7 +176,7 @@ def _postgres_step_store(db_pool: asyncpg.Pool):
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_operation_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _read_steps(db_pool: asyncpg.Pool, procedure_id: UUID) -> list[asyncpg.Record]:

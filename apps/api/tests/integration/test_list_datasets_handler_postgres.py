@@ -36,6 +36,7 @@ from cora.data.features.register_dataset import RegisterDataset
 from cora.data.features.register_dataset import bind as bind_register
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 14, 16, 0, 0, tzinfo=UTC)
@@ -51,7 +52,7 @@ def _build_deps(db_pool: asyncpg.Pool, ids: list[UUID]) -> Kernel:
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_data_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _register_command(name: str) -> RegisterDataset:

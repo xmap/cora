@@ -55,6 +55,7 @@ from cora.subject.features.mount_subject import MountSubject
 from cora.subject.features.mount_subject import bind as bind_mount_subject
 from cora.trust.authorize import TrustAuthorize
 from tests._authz import seed_policy
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 from tests.integration.scenarios._beamtime_fixture import (
     BeamtimeSpec,
@@ -174,7 +175,7 @@ def _setup_id_queue() -> list[UUID]:
 async def _drain_run(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_run_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _setup_ready_to_start(deps: Kernel, db_pool: asyncpg.Pool) -> None:

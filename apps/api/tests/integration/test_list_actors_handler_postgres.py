@@ -35,6 +35,7 @@ from cora.access.features.register_actor import RegisterActor
 from cora.access.features.register_actor import bind as bind_register
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 
 _NOW = datetime(2026, 5, 12, 14, 0, 0, tzinfo=UTC)
@@ -86,7 +87,7 @@ async def _seed_actors_and_drain(
 
     registry = ProjectionRegistry()
     register_access_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     return ids, deps
 
@@ -281,7 +282,7 @@ async def test_register_service_account_actor_appears_in_list_with_kind(
 
     registry = ProjectionRegistry()
     register_access_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     handler = bind_list(deps)
     page = await handler(

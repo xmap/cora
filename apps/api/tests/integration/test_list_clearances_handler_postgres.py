@@ -34,6 +34,7 @@ from cora.safety.features import (
 from cora.safety.features.list_clearances import ListClearances
 from cora.safety.features.register_clearance import RegisterClearance
 from cora.safety.features.submit_clearance import SubmitClearance
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 16, 12, 0, 0, tzinfo=UTC)
@@ -44,7 +45,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_safety_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 @pytest.mark.integration

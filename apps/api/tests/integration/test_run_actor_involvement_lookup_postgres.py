@@ -36,6 +36,7 @@ from cora.infrastructure.ports.event_store import NewEvent
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.run.adapters import PostgresRunActorInvolvementLookup
 from cora.run.projections import RunActorInvolvementProjection
+from tests._drain import drain_deadline_s
 
 _NOW = datetime(2026, 7, 5, 12, 0, 0, tzinfo=UTC)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
@@ -44,7 +45,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     registry.register(RunActorInvolvementProjection())
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _append(

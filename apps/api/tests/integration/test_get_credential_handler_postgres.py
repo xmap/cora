@@ -30,6 +30,7 @@ from cora.federation.features import get_credential, register_credential
 from cora.federation.features.get_credential import GetCredential
 from cora.federation.features.register_credential import RegisterCredential
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 31, 12, 0, 0, tzinfo=UTC)
@@ -43,7 +44,7 @@ _PUBLIC_REF = "vault://kv/cora/federation/aps-2bm/signing/pub#v1"
 async def _drain_federation(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_federation_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _register_command(audience: str) -> RegisterCredential:

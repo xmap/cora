@@ -20,6 +20,7 @@ from cora.recipe.aggregates.method import ExecutionPattern, MethodName, MethodSt
 from cora.recipe.features import define_method, get_method
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.get_method import GetMethod
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -68,7 +69,7 @@ async def test_get_method_loads_state_from_real_postgres(
     # Post-drain: projection catches up, lifecycle-timestamps surface.
     registry = ProjectionRegistry()
     register_recipe_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     view = await get_method.bind(deps)(
         GetMethod(method_id=method_id),

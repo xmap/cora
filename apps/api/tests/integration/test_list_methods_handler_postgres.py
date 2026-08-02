@@ -29,6 +29,7 @@ from cora.recipe.features.list_methods import bind as bind_list
 from cora.recipe.features.version_method import VersionMethod
 from cora.recipe.features.version_method import bind as bind_version
 from cora.shared.deprecation import DeprecationReason
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 
 _NOW = datetime(2026, 5, 12, 14, 0, 0, tzinfo=UTC)
@@ -52,7 +53,7 @@ async def _build_seeded_deps(db_pool: asyncpg.Pool, ids: list[UUID]) -> Kernel:
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_recipe_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 @pytest.mark.integration

@@ -67,6 +67,7 @@ from cora.shared.identity import MonitorSourceId
 from cora.subject.features import mount_subject, register_subject
 from cora.subject.features.mount_subject import MountSubject
 from cora.subject.features.register_subject import RegisterSubject
+from tests._drain import drain_deadline_s
 from tests.integration._equipment_helpers import drain_equipment_projections
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 from tests.unit.subject._helpers import seed_active_asset
@@ -84,7 +85,7 @@ _FACILITY_CODE = "cora"
 async def _drain_enclosure(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_enclosure_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _seed_enclosure(db_pool: asyncpg.Pool) -> UUID:

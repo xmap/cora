@@ -53,6 +53,7 @@ from cora.supply._projections import register_supply_projections
 from cora.supply.adapters import PostgresSupplyLookup
 from cora.supply.features import register_supply
 from cora.supply.features.register_supply import RegisterSupply
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _GOOD_SHA = "a" * 64
@@ -67,13 +68,13 @@ _HTTPS_URI = "https://store.example/runs/recon.h5"
 async def _drain_supply(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_supply_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _drain_data(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_data_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _with_postgres_supply_lookup(deps: Kernel, pool: asyncpg.Pool) -> Kernel:

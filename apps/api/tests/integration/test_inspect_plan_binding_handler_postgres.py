@@ -51,6 +51,7 @@ from cora.recipe.features.inspect_plan_binding import (
     BindingStatus,
     InspectPlanBinding,
 )
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 27, 14, 0, 0, tzinfo=UTC)
@@ -244,7 +245,7 @@ async def test_inspect_plan_binding_enumerates_candidates_for_missing_affordance
     # + the family summary rows it iterates.
     registry = ProjectionRegistry()
     register_equipment_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     view = await inspect_plan_binding.bind(deps)(
         InspectPlanBinding(
@@ -354,7 +355,7 @@ async def test_inspect_plan_binding_enumerates_candidates_for_multiple_missing_a
 
     registry = ProjectionRegistry()
     register_equipment_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     view = await inspect_plan_binding.bind(deps)(
         InspectPlanBinding(
@@ -440,7 +441,7 @@ async def test_inspect_plan_binding_returns_empty_candidates_when_no_facility_fa
 
     registry = ProjectionRegistry()
     register_equipment_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     view = await inspect_plan_binding.bind(deps)(
         InspectPlanBinding(
@@ -536,7 +537,7 @@ async def test_inspect_plan_binding_surfaces_degraded_candidate_state(
 
     registry = ProjectionRegistry()
     register_equipment_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     view = await inspect_plan_binding.bind(deps)(
         InspectPlanBinding(

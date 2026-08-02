@@ -54,6 +54,7 @@ from cora.supply.features.list_supplies import ListSupplies
 from cora.supply.features.list_supplies import bind as bind_list
 from cora.supply.features.register_supply import RegisterSupply
 from cora.supply.features.register_supply import bind as bind_register
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _T0 = datetime(2026, 5, 27, 10, 0, 0, tzinfo=UTC)
@@ -70,7 +71,7 @@ def _build_deps(db_pool: asyncpg.Pool, ids: list[UUID], now: datetime) -> Kernel
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_supply_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 @pytest.mark.integration

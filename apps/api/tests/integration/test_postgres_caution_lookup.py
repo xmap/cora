@@ -32,6 +32,7 @@ from cora.caution.features.register_caution import RegisterCaution
 from cora.caution.features.retire_caution import RetireCaution
 from cora.caution.features.supersede_caution import SupersedeCaution
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
@@ -48,7 +49,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-00000000d002")
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_caution_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _register_command(

@@ -33,6 +33,7 @@ from cora.decision.features.register_decision import bind as bind_register
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.shared.identity import ActorId
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 
 _NOW = datetime(2026, 5, 13, 12, 0, 0, tzinfo=UTC)
@@ -51,7 +52,7 @@ async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_access_projections(registry)
     register_decision_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _seed_actor(deps: Kernel, db_pool: asyncpg.Pool) -> UUID:

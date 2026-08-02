@@ -76,6 +76,7 @@ from cora.safety.features.submit_clearance import bind as bind_submit_clearance
 from cora.shared.identity import ActorId
 from cora.subject.features.mount_subject import MountSubject
 from cora.subject.features.mount_subject import bind as bind_mount_subject
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 from tests.integration.scenarios._beamtime_fixture import (
     BeamtimeSpec,
@@ -227,13 +228,13 @@ class _BeamOpen:
 async def _drain_safety(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_safety_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _drain_run(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_run_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _setup_running_run(deps: Kernel, db_pool: asyncpg.Pool) -> None:

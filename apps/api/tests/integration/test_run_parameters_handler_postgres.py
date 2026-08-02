@@ -23,6 +23,7 @@ from cora.run._projections import register_run_projections
 from cora.run.aggregates.run import InvalidRunParametersError, load_run
 from cora.run.features import start_run
 from cora.run.features.start_run import StartRun
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, seed_run_upstream_chain_postgres
 
 _NOW = datetime(2026, 5, 14, 12, 0, 0, tzinfo=UTC)
@@ -34,7 +35,7 @@ _DRAFT = "https://json-schema.org/draft/2020-12/schema"
 async def _drain_run_projections(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_run_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _energy_schema() -> dict[str, Any]:

@@ -110,6 +110,7 @@ from cora.run.features.complete_run import CompleteRun
 from cora.run.features.complete_run import bind as bind_complete_run
 from cora.run.features.start_run import StartRun
 from cora.run.features.start_run import bind as bind_start_run
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import (
     build_postgres_deps,
     make_pg_profile_store,
@@ -271,7 +272,7 @@ def _check_stack(
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_operation_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _postgres_step_store(db_pool: asyncpg.Pool):

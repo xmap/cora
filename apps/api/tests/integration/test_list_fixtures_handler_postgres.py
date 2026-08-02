@@ -28,6 +28,7 @@ from cora.equipment.features.register_fixture import RegisterFixture
 from cora.equipment.features.register_fixture import bind as bind_register_fixture
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._equipment_helpers import seed_installed_asset
 from tests.integration._helpers import build_postgres_deps
 
@@ -43,7 +44,7 @@ def _build_deps(db_pool: asyncpg.Pool, ids: list[UUID]) -> Kernel:
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_equipment_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _seed_fixture(

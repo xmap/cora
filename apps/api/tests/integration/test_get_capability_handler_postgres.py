@@ -28,6 +28,7 @@ from cora.recipe.aggregates.capability import (
 from cora.recipe.features import define_capability, get_capability
 from cora.recipe.features.define_capability import DefineCapability
 from cora.recipe.features.get_capability import GetCapability
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -72,7 +73,7 @@ async def test_get_capability_loads_state_from_real_postgres(
     # Post-drain: projection catches up, lifecycle-timestamps surface.
     registry = ProjectionRegistry()
     register_recipe_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     view = await get_capability.bind(deps)(
         GetCapability(capability_id=capability_id),

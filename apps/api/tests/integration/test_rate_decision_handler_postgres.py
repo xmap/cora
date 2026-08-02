@@ -41,6 +41,7 @@ from cora.infrastructure.adapters.postgres_event_store import PostgresEventStore
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.shared.identity import ActorId
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
@@ -51,7 +52,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-00000009900a")
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_decision_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _seed_actor(db_pool: asyncpg.Pool, actor_id: UUID) -> None:

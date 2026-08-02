@@ -24,6 +24,7 @@ from cora.enclosure.adapters import PostgresEnclosureLookup
 from cora.infrastructure.config import Settings
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _T0 = datetime(2026, 6, 17, 10, 0, 0, tzinfo=UTC)
@@ -32,7 +33,7 @@ _T0 = datetime(2026, 6, 17, 10, 0, 0, tzinfo=UTC)
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_enclosure_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _deps_with(db_pool: asyncpg.Pool, *, permit_pvs: dict[str, str]) -> Kernel:

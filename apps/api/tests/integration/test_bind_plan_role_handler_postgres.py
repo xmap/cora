@@ -48,6 +48,7 @@ from cora.recipe.features.define_plan import DefinePlan
 from cora.recipe.features.define_practice import DefinePractice
 from cora.recipe.features.unbind_plan_role import UnbindPlanRole
 from cora.recipe.features.version_plan import VersionPlan
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 6, 12, 0, 0, tzinfo=UTC)
@@ -166,7 +167,7 @@ async def test_bind_plan_role_writes_jsonb_array(db_pool: asyncpg.Pool) -> None:
     )
     registry = ProjectionRegistry()
     register_recipe_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
             "SELECT role_bindings FROM proj_recipe_plan_summary WHERE plan_id = $1",
@@ -203,7 +204,7 @@ async def test_unbind_plan_role_filters_jsonb_array(db_pool: asyncpg.Pool) -> No
     )
     registry = ProjectionRegistry()
     register_recipe_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
             "SELECT role_bindings FROM proj_recipe_plan_summary WHERE plan_id = $1",
@@ -223,7 +224,7 @@ async def test_plan_defined_alone_projects_empty_role_bindings(db_pool: asyncpg.
     plan_id, _ = await _seed_plan_with_required_role(db_pool)
     registry = ProjectionRegistry()
     register_recipe_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
             "SELECT role_bindings FROM proj_recipe_plan_summary WHERE plan_id = $1",

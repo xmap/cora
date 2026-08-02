@@ -57,6 +57,7 @@ from cora.run.features.stop_run import StopRun
 from cora.run.features.stop_run import bind as bind_stop
 from cora.run.features.truncate_run import TruncateRun
 from cora.run.features.truncate_run import bind as bind_truncate
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 
 _NOW = datetime(2026, 5, 13, 12, 0, 0, tzinfo=UTC)
@@ -76,7 +77,7 @@ async def _drain(db_pool: asyncpg.Pool) -> None:
     register_equipment_projections(registry)
     register_recipe_projections(registry)
     register_run_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _seed_plan(deps: Kernel, family_name: str = "Tomography") -> UUID:
@@ -431,7 +432,7 @@ async def test_campaign_id_filter_narrows_results(db_pool: asyncpg.Pool) -> None
     register_recipe_projections(registry)
     register_run_projections(registry)
     register_campaign_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     handler = bind_list(deps_member)
     page = await handler(

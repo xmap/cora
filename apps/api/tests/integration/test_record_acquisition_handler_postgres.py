@@ -43,6 +43,7 @@ from cora.equipment.features.define_family import DefineFamily
 from cora.equipment.features.register_asset import RegisterAsset
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
@@ -71,7 +72,7 @@ async def _drain(db_pool: asyncpg.Pool) -> None:
 
     registry = ProjectionRegistry()
     register_equipment_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _seed_capturing_asset(deps: Kernel, *, family_affordances: frozenset[Affordance]) -> UUID:
@@ -156,7 +157,7 @@ async def test_record_acquisition_happy_path_round_trip(db_pool: asyncpg.Pool) -
     from cora.data._projections import register_data_projections
 
     register_data_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
             "SELECT acquisition_id, dataset_id, producing_asset_id, captured_at, "

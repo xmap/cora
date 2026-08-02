@@ -27,6 +27,7 @@ from cora.recipe.features import define_capability, deprecate_capability
 from cora.recipe.features.define_capability import DefineCapability
 from cora.recipe.features.deprecate_capability import DeprecateCapability
 from cora.shared.deprecation import DeprecationReason
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 4, 12, 0, 0, tzinfo=UTC)
@@ -38,7 +39,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-00000000c002")
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_recipe_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _define_command(

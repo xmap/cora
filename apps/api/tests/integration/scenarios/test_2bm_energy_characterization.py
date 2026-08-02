@@ -97,6 +97,7 @@ from cora.operation.features.register_procedure import (
 from cora.operation.features.start_procedure import StartProcedure
 from cora.operation.features.start_procedure import bind as bind_start
 from cora.shared.identity import ActorId
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import (
     build_postgres_deps,
     make_pg_profile_store,
@@ -192,7 +193,7 @@ async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_operation_projections(registry)
     register_calibration_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _postgres_step_store(db_pool: asyncpg.Pool):

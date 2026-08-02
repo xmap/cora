@@ -35,6 +35,7 @@ from cora.equipment.features.relocate_asset import RelocateAsset
 from cora.equipment.features.relocate_asset import bind as bind_relocate
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 12, 14, 0, 0, tzinfo=UTC)
@@ -49,7 +50,7 @@ def _build_deps(db_pool: asyncpg.Pool, ids: list[UUID]) -> Kernel:
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_equipment_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _register_root(db_pool: asyncpg.Pool) -> tuple[UUID, Kernel]:

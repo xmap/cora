@@ -49,6 +49,7 @@ from cora.supply.adapters import PostgresSupplyLookup
 from cora.supply.features import deregister_supply, register_supply
 from cora.supply.features.deregister_supply import DeregisterSupply
 from cora.supply.features.register_supply import RegisterSupply
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
@@ -61,13 +62,13 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 async def _drain_supply(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_supply_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _drain_data(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_data_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _with_postgres_supply_lookup(deps: Kernel, pool: asyncpg.Pool) -> Kernel:

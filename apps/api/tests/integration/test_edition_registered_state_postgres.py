@@ -33,6 +33,7 @@ from cora.data.features.register_dataset import RegisterDataset
 from cora.data.features.register_edition import CreatorEntry, RegisterEdition
 from cora.data.features.remove_dataset_from_edition import RemoveDatasetFromEdition
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
@@ -44,7 +45,7 @@ _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 async def _drain_data(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_data_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _register_dataset(

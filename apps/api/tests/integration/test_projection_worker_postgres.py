@@ -32,6 +32,7 @@ from cora.access.features.register_actor import RegisterActor
 from cora.access.features.register_actor import bind as bind_register
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 
 _NOW = datetime(2026, 5, 12, 14, 0, 0, tzinfo=UTC)
@@ -67,7 +68,7 @@ async def test_register_actor_event_advances_into_proj_table(
     )
 
     registry = _build_registry()
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -103,7 +104,7 @@ async def test_deactivate_after_register_flips_status(
     )
 
     registry = _build_registry()
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -121,7 +122,7 @@ async def test_drain_with_no_events_advances_bookmark_to_zero(
     """Empty event store: bookmark stays at sentinel, drain returns
     immediately, no rows in the projection."""
     registry = _build_registry()
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         # Bookmark row exists (from migration) at sentinel zero.
@@ -167,7 +168,7 @@ async def test_bookmark_advances_when_subscribed_event_arrives(
     )
 
     registry = _build_registry()
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -195,8 +196,8 @@ async def test_idempotent_re_application(
     )
 
     registry = _build_registry()
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         count = await conn.fetchval(
@@ -230,7 +231,7 @@ async def test_bookmark_advances_across_multiple_actors(
         )
 
     registry = _build_registry()
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         count = await conn.fetchval(
@@ -270,7 +271,7 @@ async def test_forget_actor_event_rewrites_cached_name_to_tombstone(
     # forget event would advance the bookmark past the register
     # without the projection ever seeing the live name.)
     registry = _build_registry()
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         live = await conn.fetchrow(
@@ -286,7 +287,7 @@ async def test_forget_actor_event_rewrites_cached_name_to_tombstone(
         correlation_id=_CORRELATION_ID,
     )
 
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         forgotten = await conn.fetchrow(

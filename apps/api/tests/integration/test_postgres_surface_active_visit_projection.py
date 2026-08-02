@@ -40,6 +40,7 @@ from cora.trust.features import (
     take_control_of_surface,
 )
 from cora.trust.projections.surface_active_visit import SurfaceActiveVisitProjection
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
@@ -57,7 +58,7 @@ def _deps(pool: asyncpg.Pool, ids: list[UUID], now: datetime) -> Kernel:
 async def _drain(pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_trust_projections(registry)
-    await drain_projections(pool, registry, deadline_seconds=2.0)
+    await drain_projections(pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _seed_in_progress_visit(

@@ -33,6 +33,7 @@ from cora.subject.features.remove_subject import RemoveSubject
 from cora.subject.features.remove_subject import bind as bind_remove
 from cora.subject.features.return_subject import ReturnSubject
 from cora.subject.features.return_subject import bind as bind_return
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 from tests.unit.subject._helpers import seed_active_asset
 
@@ -72,7 +73,7 @@ async def _seed_subjects(db_pool: asyncpg.Pool, count: int) -> tuple[list[UUID],
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_subject_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 @pytest.mark.integration

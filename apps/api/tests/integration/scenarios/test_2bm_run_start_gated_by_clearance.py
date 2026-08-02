@@ -145,6 +145,7 @@ from cora.safety.features.submit_clearance import SubmitClearance
 from cora.safety.features.submit_clearance import bind as bind_submit_clearance
 from cora.subject.features.mount_subject import MountSubject
 from cora.subject.features.mount_subject import bind as bind_mount_subject
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 from tests.integration.scenarios._beamtime_fixture import (
     BeamtimeSpec,
@@ -301,7 +302,7 @@ async def _drain_safety_projections(db_pool: asyncpg.Pool) -> None:
     can see Active rows."""
     registry = ProjectionRegistry()
     register_safety_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 @pytest.mark.integration

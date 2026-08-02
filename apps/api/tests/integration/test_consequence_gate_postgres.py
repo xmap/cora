@@ -54,6 +54,7 @@ from cora.trust.features.deny_ratification import DenyRatification
 from cora.trust.features.grant_ratification import GrantRatification
 from cora.trust.features.request_ratification import RequestRatification
 from cora.trust.projections import RatificationCoverageProjection
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 from tests.unit.subject._helpers import seed_active_asset
 
@@ -146,7 +147,7 @@ async def _drain(db_pool: asyncpg.Pool, deps: Kernel) -> None:
     registry.register(make_ratification_hold_subscriber(deps))
     registry.register(make_ratification_release_subscriber(deps))
     await ensure_bookmarks(db_pool, registry.names())
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _status(deps: Kernel, run_id: UUID) -> RunStatus:

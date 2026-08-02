@@ -42,6 +42,7 @@ from cora.recipe.features.define_capability import DefineCapability
 from cora.recipe.features.define_method import DefineMethod
 from cora.recipe.features.remove_method_required_role import RemoveMethodRequiredRole
 from cora.recipe.features.version_method import VersionMethod
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 6, 12, 0, 0, tzinfo=UTC)
@@ -104,7 +105,7 @@ async def test_add_method_required_role_writes_jsonb_array(
 
     registry = ProjectionRegistry()
     register_recipe_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -147,7 +148,7 @@ async def test_add_two_required_roles_yields_sorted_jsonb_array(
 
     registry = ProjectionRegistry()
     register_recipe_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -190,7 +191,7 @@ async def test_remove_method_required_role_filters_jsonb_array(
 
     registry = ProjectionRegistry()
     register_recipe_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -216,7 +217,7 @@ async def test_method_defined_alone_projects_empty_required_roles_array(
 
     registry = ProjectionRegistry()
     register_recipe_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(

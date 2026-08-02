@@ -28,6 +28,7 @@ from cora.federation.features import register_credential
 from cora.federation.features.register_credential import RegisterCredential
 from cora.federation.projections import CredentialSummaryProjection
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
@@ -144,7 +145,7 @@ async def test_register_credential_projection_lands_row(
 
     registry = ProjectionRegistry()
     registry.register(CredentialSummaryProjection())
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(

@@ -22,6 +22,7 @@ from cora.calibration.features.define_calibration import DefineCalibration
 from cora.calibration.projections import CalibrationSummaryProjection
 from cora.calibration.quantities import CalibrationQuantity
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 18, 12, 0, 0, tzinfo=UTC)
@@ -97,7 +98,7 @@ async def test_define_calibration_projection_lands_row_with_canonical_operating_
     # Drain the projection so the row lands.
     registry = ProjectionRegistry()
     registry.register(CalibrationSummaryProjection())
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     # Query the projection by the canonical op-point form (keys in any
     # order; Postgres jsonb `=` normalises both sides).
@@ -176,7 +177,7 @@ async def test_define_calibration_projection_rejects_duplicate_identity(
     registry = ProjectionRegistry()
     registry.register(CalibrationSummaryProjection())
     with pytest.raises(Exception) as excinfo:  # asyncpg.UniqueViolationError
-        await drain_projections(db_pool, registry, deadline_seconds=2.0)
+        await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
     msg = str(excinfo.value).lower()
     assert "unique" in msg or "constraint" in msg or "duplicate" in msg
 

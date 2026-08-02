@@ -42,6 +42,7 @@ from cora.equipment.features.deprecate_family import DeprecateFamily
 from cora.equipment.wire import wire_equipment
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.shared.deprecation import DeprecationReason
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 31, 12, 0, 0, tzinfo=UTC)
@@ -58,7 +59,7 @@ async def _drain_equipment_projections(db_pool: asyncpg.Pool) -> None:
     """
     registry = ProjectionRegistry()
     register_equipment_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 @pytest.mark.integration

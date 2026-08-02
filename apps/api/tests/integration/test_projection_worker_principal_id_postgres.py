@@ -37,6 +37,7 @@ from cora.infrastructure.adapters.postgres_event_store import PostgresEventStore
 from cora.infrastructure.ports.event_store import NewEvent, StoredEvent
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.infrastructure.projection.handler import ConnectionLike
+from tests._drain import drain_deadline_s
 
 
 class _CapturingProjection:
@@ -113,7 +114,7 @@ async def test_worker_delivers_non_null_principal_id_to_subscriber(
 
     registry = ProjectionRegistry()
     registry.register(projection)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     assert len(projection.captured) == 1, (
         f"Expected 1 captured event, got {len(projection.captured)}. "
@@ -159,7 +160,7 @@ async def test_worker_delivers_null_principal_id_to_subscriber(
 
     registry = ProjectionRegistry()
     registry.register(projection)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     assert len(projection.captured) == 1
     assert projection.captured[0].principal_id is None

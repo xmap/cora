@@ -51,6 +51,7 @@ from cora.infrastructure.adapters.in_memory_facility_lookup import (
 )
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.shared.facility_code import FacilityCode
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 30, 12, 0, 0, tzinfo=UTC)
@@ -213,7 +214,7 @@ async def test_initialize_seal_projection_lands_row(
 
     registry = ProjectionRegistry()
     registry.register(SealSummaryProjection())
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -264,11 +265,11 @@ async def test_initialize_seal_projection_upsert_is_idempotent_on_replay(
 
     registry = ProjectionRegistry()
     registry.register(SealSummaryProjection())
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
     # Second drain: bookmark has already advanced past the
     # SealInitialized event, so this is a no-op for the
     # projection; the row count and contents must stay unchanged.
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         count = await conn.fetchval(

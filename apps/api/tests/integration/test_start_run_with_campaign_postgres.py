@@ -54,6 +54,7 @@ from cora.run.features.start_run import StartRun
 from cora.subject.features import mount_subject, register_subject
 from cora.subject.features.mount_subject import MountSubject
 from cora.subject.features.register_subject import RegisterSubject
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 from tests.unit.subject._helpers import seed_active_asset
 
@@ -66,7 +67,7 @@ _CAPABILITY_ID = UUID("01900000-0000-7000-8000-000000c0dc85")
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_campaign_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 @pytest.mark.integration

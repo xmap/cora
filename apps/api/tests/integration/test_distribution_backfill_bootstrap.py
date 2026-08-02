@@ -45,6 +45,7 @@ from cora.supply.adapters import PostgresSupplyLookup
 from cora.supply.features import deregister_supply, register_supply
 from cora.supply.features.deregister_supply import DeregisterSupply
 from cora.supply.features.register_supply import RegisterSupply
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
@@ -58,7 +59,7 @@ _STORAGE_SUPPLY_NAME = "primary-store"
 async def _drain_supply(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_supply_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _drain_dataset(db_pool: asyncpg.Pool) -> None:
@@ -72,7 +73,7 @@ async def _drain_dataset(db_pool: asyncpg.Pool) -> None:
     """
     registry = ProjectionRegistry()
     registry.register(DatasetSummaryProjection())
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _bootstrap_deps(deps: Kernel, supply_code: str | None) -> Kernel:

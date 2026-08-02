@@ -41,6 +41,7 @@ from cora.subject.features.mount_subject import MountSubject
 from cora.subject.features.mount_subject import bind as bind_mount_subject
 from cora.subject.features.register_subject import RegisterSubject
 from cora.subject.features.register_subject import bind as bind_register_subject
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 from tests.integration.scenarios._beamtime_fixture import (
     BeamtimeSpec,
@@ -167,13 +168,13 @@ def _id_queue(*, with_subjects: bool) -> list[UUID]:
 async def _drain_run(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_run_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _drain_subjects(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_subject_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _setup(

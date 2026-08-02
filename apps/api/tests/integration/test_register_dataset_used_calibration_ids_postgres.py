@@ -30,6 +30,7 @@ from cora.data.aggregates.dataset import DATASET_CHECKSUM_SHA256_HEX_LENGTH
 from cora.data.features import register_dataset
 from cora.data.features.register_dataset import RegisterDataset
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 19, 12, 0, 0, tzinfo=UTC)
@@ -41,7 +42,7 @@ _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
 async def _drain_data_projections(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_data_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _good_register(

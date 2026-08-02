@@ -40,6 +40,7 @@ from cora.equipment.features.define_model import DefineModel
 from cora.equipment.features.get_model import GetModel
 from cora.equipment.features.version_model import VersionModel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
@@ -53,7 +54,7 @@ async def _drain_equipment_projections(db_pool: asyncpg.Pool) -> None:
     `add_model_family.handler` sees the seed."""
     registry = ProjectionRegistry()
     register_equipment_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 @pytest.mark.integration

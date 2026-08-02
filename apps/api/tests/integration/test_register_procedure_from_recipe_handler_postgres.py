@@ -39,6 +39,7 @@ from cora.recipe.aggregates.recipe import (
     event_type_name,
     to_payload,
 )
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 
 _NOW = datetime(2026, 6, 2, 12, 0, 0, tzinfo=UTC)
@@ -130,7 +131,7 @@ async def test_register_procedure_from_recipe_persists_two_event_genesis_block(
 
     registry = ProjectionRegistry()
     register_operation_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
             "SELECT recipe_id FROM proj_operation_procedure_summary WHERE procedure_id = $1",

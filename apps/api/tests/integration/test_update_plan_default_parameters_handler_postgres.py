@@ -37,6 +37,7 @@ from cora.recipe.features import update_plan_default_parameters
 from cora.recipe.features.update_plan_default_parameters import (
     UpdatePlanDefaultParameters,
 )
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 14, 12, 0, 0, tzinfo=UTC)
@@ -52,7 +53,7 @@ def _build_deps(db_pool: asyncpg.Pool, ids: list[UUID]) -> Kernel:
 async def _drain(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_recipe_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _example_schema() -> dict[str, Any]:

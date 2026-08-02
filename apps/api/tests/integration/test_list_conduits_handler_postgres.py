@@ -25,6 +25,7 @@ from cora.trust.features.define_conduit import DefineConduit
 from cora.trust.features.define_conduit import bind as bind_define_conduit
 from cora.trust.features.list_conduits import ListConduits
 from cora.trust.features.list_conduits import bind as bind_list
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 13, 12, 0, 0, tzinfo=UTC)
@@ -40,7 +41,7 @@ async def _drain(db_pool: asyncpg.Pool) -> None:
     """Drain Trust projections."""
     registry = ProjectionRegistry()
     register_trust_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 def _conduit_ids(conduit_id: UUID) -> list[UUID]:

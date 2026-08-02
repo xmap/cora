@@ -62,6 +62,7 @@ from cora.run.projections import RunActorInvolvementProjection
 from cora.subject.features import mount_subject, register_subject
 from cora.subject.features.mount_subject import MountSubject
 from cora.subject.features.register_subject import RegisterSubject
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 from tests.unit.subject._helpers import seed_active_asset
 
@@ -183,7 +184,7 @@ def _revocation_event(*, revoked_principal_id: UUID) -> StoredEvent:
 async def _drain_involvement(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     registry.register(RunActorInvolvementProjection())
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _run_holder(deps: Kernel, event: StoredEvent) -> None:

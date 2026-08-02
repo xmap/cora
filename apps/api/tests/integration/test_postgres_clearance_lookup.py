@@ -42,6 +42,7 @@ from cora.safety.features.define_clearance_template import DefineClearanceTempla
 from cora.safety.features.register_clearance import RegisterClearance
 from cora.safety.features.start_clearance_review import StartClearanceReview
 from cora.safety.features.submit_clearance import SubmitClearance
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 5, 15, 12, 0, 0, tzinfo=UTC)
@@ -145,7 +146,7 @@ def _build_deps_with_pg_template_lookup(db_pool: asyncpg.Pool, *, ids: list[UUID
 async def _drain_safety(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_safety_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 @pytest.mark.integration

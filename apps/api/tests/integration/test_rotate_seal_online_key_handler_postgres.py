@@ -47,6 +47,7 @@ from cora.infrastructure.adapters.in_memory_facility_lookup import (
 )
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.shared.facility_code import FacilityCode
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _INITIALIZED_AT = datetime(2026, 5, 30, 10, 0, 0, tzinfo=UTC)
@@ -289,7 +290,7 @@ async def test_rotate_seal_online_key_projection_lands_new_online_ref(
 
     registry = ProjectionRegistry()
     registry.register(SealSummaryProjection())
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(

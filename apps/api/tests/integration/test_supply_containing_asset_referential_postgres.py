@@ -80,6 +80,7 @@ from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.supply._projections import register_supply_projections
 from cora.supply.features.register_supply import RegisterSupply
 from cora.supply.features.register_supply import bind as bind_register_supply
+from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps
 
 _NOW = datetime(2026, 6, 9, 12, 0, 0, tzinfo=UTC)
@@ -101,13 +102,13 @@ WHERE s.containing_asset_id IS NOT NULL
 async def _drain_supply(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_supply_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 async def _drain_equipment(db_pool: asyncpg.Pool) -> None:
     registry = ProjectionRegistry()
     register_equipment_projections(registry)
-    await drain_projections(db_pool, registry, deadline_seconds=2.0)
+    await drain_projections(db_pool, registry, deadline_seconds=drain_deadline_s())
 
 
 @pytest.mark.integration
