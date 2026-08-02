@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_202672a979ef35b9_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-07-30 13:50 +0000
+            created at 2026-08-02 05:12 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -117,7 +117,7 @@
     <p class="pln"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t"><span class="str">delivery derives the same event (the subscribers' determinism rule).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t"><span class="str">The seal event's `event_id` is a UUIDv5 of (trigger event, allocation)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t"><span class="str">and the append is guarded by the loaded stream version. A benign</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">concurrent write (an operator `amend_allocation_ceiling` landing</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="str">concurrent write (an operator `update_allocation_ceiling` landing</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="str">between load and append) bumps the version while the envelope is</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t"><span class="str">still Active, so instead of forfeiting the automatic seal the sealer</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t"><span class="str">re-loads and retries the append at the fresh version (bounded, a few</span>&nbsp;</span><span class="r"></span></p>
@@ -186,7 +186,7 @@
     <p class="pln"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t"><span class="nam">_MAX_SEAL_ATTEMPTS</span> <span class="op">=</span> <span class="num">3</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t"><span class="str">"""Bounded reload-and-retry on a lost seal race. A benign concurrent</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t"><span class="str">writer (an operator amend while the envelope is still Active) bumps the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t"><span class="str">writer (an operator update while the envelope is still Active) bumps the</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t"><span class="str">stream version; rather than forfeit the automatic seal, the sealer</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t"><span class="str">re-loads and retries at the fresh version. Three attempts covers the</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t"><span class="str">realistic burst; beyond it the seal is deferred to the manual slice."""</span>&nbsp;</span><span class="r"></span></p>
@@ -324,7 +324,7 @@
     <p class="run run2"><span class="n"><a id="t240" href="#t240">240</a></span><span class="t">                <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t241" href="#t241">241</a></span><span class="t">            <span class="key">except</span> <span class="nam">ConcurrencyError</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t242" href="#t242">242</a></span><span class="t">                <span class="com"># The stream advanced between load and append. If a benign</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t243" href="#t243">243</a></span><span class="t">                <span class="com"># writer (an operator amend) bumped the version while the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t243" href="#t243">243</a></span><span class="t">                <span class="com"># writer (an operator update) bumped the version while the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t244" href="#t244">244</a></span><span class="t">                <span class="com"># envelope is still Active, re-load and retry; the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t245" href="#t245">245</a></span><span class="t">                <span class="com"># deterministic event id keeps this idempotent. A concurrent</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t246" href="#t246">246</a></span><span class="t">                <span class="com"># seal or void lands the next iteration on the non-Active</span>&nbsp;</span><span class="r"></span></p>
@@ -372,7 +372,7 @@
             <a class="nav" href="z_202672a979ef35b9_tools_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-07-30 13:50 +0000
+            created at 2026-08-02 05:12 +0000
         </p>
     </div>
 </footer>

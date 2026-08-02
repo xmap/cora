@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_4a2e56f38aeabd4b_read_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-07-30 13:50 +0000
+            created at 2026-08-02 05:12 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -96,7 +96,7 @@
     <p class="pln"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="str">                                  sets `activated_at` +</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="str">                                  `activated_by`, the spend-window</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">                                  start)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">  - `AllocationCeilingAmended` -> no status change (source: Granted |</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">  - `AllocationCeilingUpdated` -> no status change (source: Granted |</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">                                  Active; overwrites `ceiling_usd`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">                                  PUT semantics)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">  - `AllocationSealed`         -> SEALED (single-source: Active; sets</span>&nbsp;</span><span class="r"></span></p>
@@ -125,7 +125,7 @@
     <p class="pln"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">budget</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">allocation</span><span class="op">.</span><span class="nam">events</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t">    <span class="nam">AllocationActivated</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t">    <span class="nam">AllocationCeilingAmended</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t">    <span class="nam">AllocationCeilingUpdated</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t">    <span class="nam">AllocationEvent</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t">    <span class="nam">AllocationGranted</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t">    <span class="nam">AllocationSealed</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -168,8 +168,8 @@
     <p class="run run2"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">                <span class="nam">activated_at</span><span class="op">=</span><span class="nam">occurred_at</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">                <span class="nam">activated_by</span><span class="op">=</span><span class="nam">activated_by</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">        <span class="key">case</span> <span class="nam">AllocationCeilingAmended</span><span class="op">(</span><span class="nam">ceiling_usd</span><span class="op">=</span><span class="nam">ceiling_usd</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">            <span class="nam">prior</span> <span class="op">=</span> <span class="nam">require_state</span><span class="op">(</span><span class="nam">state</span><span class="op">,</span> <span class="str">"AllocationCeilingAmended"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">        <span class="key">case</span> <span class="nam">AllocationCeilingUpdated</span><span class="op">(</span><span class="nam">ceiling_usd</span><span class="op">=</span><span class="nam">ceiling_usd</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">            <span class="nam">prior</span> <span class="op">=</span> <span class="nam">require_state</span><span class="op">(</span><span class="nam">state</span><span class="op">,</span> <span class="str">"AllocationCeilingUpdated"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">            <span class="key">return</span> <span class="nam">replace</span><span class="op">(</span><span class="nam">prior</span><span class="op">,</span> <span class="nam">ceiling_usd</span><span class="op">=</span><span class="nam">ceiling_usd</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">        <span class="key">case</span> <span class="nam">AllocationSealed</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">            <span class="nam">spent_usd</span><span class="op">=</span><span class="nam">spent_usd</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -212,7 +212,7 @@
             <a class="nav" href="z_4a2e56f38aeabd4b_read_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-07-30 13:50 +0000
+            created at 2026-08-02 05:12 +0000
         </p>
     </div>
 </footer>
