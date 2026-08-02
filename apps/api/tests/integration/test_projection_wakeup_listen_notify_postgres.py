@@ -41,27 +41,46 @@ async def _send_notify(pool: asyncpg.Pool, payload: str = "test") -> None:
         await conn.execute(f"NOTIFY {NOTIFY_CHANNEL}, '{payload}'")
 
 
+# Hang guards, not timing assertions: the test's conclusion comes from
+# `_event`, so these only need to be comfortably larger than any
+# plausible contention delay and comfortably under the 60s per-test cap.
+_WAIT_TIMEOUT_S = 20.0
+_READY_DEADLINE_S = 20.0
+
+
 @pytest.mark.integration
 async def test_wait_returns_immediately_on_notify(db_pool: asyncpg.Pool) -> None:
+    """`wait()` is woken by the NOTIFY, not by its own timeout expiring.
+
+    Both halves used to be wall-clock guesses: a fixed 50ms sleep hoping
+    `add_listener` had completed, and an `elapsed < 1.0` assertion standing in
+    for "it was the notify". Under `-n 4` both are unsound, and the first is
+    silently so: a NOTIFY sent before the listener registers is delivered to
+    nobody and dropped, so the test fails on the timeout it was trying to rule
+    out. Now readiness is awaited on the flag `_ensure_listening` sets, and the
+    conclusion is drawn from `_event`, which `wait()` clears before waiting and
+    `_on_notify` sets. Set means the notify woke it; clear means the timeout did.
+    """
     wakeup = ListenNotifyWakeup(db_pool)
     loop = asyncio.get_event_loop()
     try:
-        wait_task = asyncio.create_task(wakeup.wait(5.0))
-        # Yield once so the listener is registered before we NOTIFY,
-        # otherwise the notification can arrive before add_listener and
-        # be dropped. The wait() coroutine awaits _ensure_listening
-        # first, so a single sleep(0) lets it run to the add_listener
-        # call.
-        await asyncio.sleep(0.05)
+        wait_task = asyncio.create_task(wakeup.wait(_WAIT_TIMEOUT_S))
 
-        start = loop.time()
+        registered_by = loop.time() + _READY_DEADLINE_S
+        while not wakeup._listening:
+            assert loop.time() < registered_by, (
+                "listener never registered; a NOTIFY now would be dropped and the "
+                "test would fail on wait()'s timeout rather than on delivery"
+            )
+            await asyncio.sleep(0.01)
+
         await _send_notify(db_pool, "wakeup-test")
-        await asyncio.wait_for(wait_task, timeout=2.0)
-        elapsed = loop.time() - start
+        await asyncio.wait_for(wait_task, timeout=_WAIT_TIMEOUT_S)
 
-        # NOTIFY delivery is typically tens of ms; well below the 5s
-        # timeout we passed to wait(). Generous slack for CI variance.
-        assert elapsed < 1.0
+        assert wakeup._event.is_set(), (
+            "wait() returned with the event clear, so it fell through its own "
+            "timeout instead of being woken by the NOTIFY"
+        )
     finally:
         await wakeup.close()
 
