@@ -160,3 +160,59 @@ def test_mcp_record_visit_arrival_tool_returns_structured_visit_id_on_happy_path
     result = body["result"]
     assert result["isError"] is False, result
     assert result["structuredContent"]["visit_id"] == visit_id
+
+
+@pytest.mark.contract
+def test_mcp_presence_tools_report_the_calling_principal_as_the_actor() -> None:
+    """Check-in and check-out echo back the CALLER, not a caller-named actor.
+
+    The tools take no `actor_id`, so the only actor they can report is the
+    authenticated principal. This drives the success path of both tools, which
+    the not-found parametrization above never reaches, and pins the value the
+    caller is told was recorded.
+    """
+    with TestClient(create_app()) as client:
+        visit_id = _register_visit_via_rest(client)
+        client.post(f"/visits/{visit_id}/record-arrival")
+        session_headers = open_session(client)
+
+        checked_in = parse_sse_data(
+            client.post(
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 10,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "check_in_visit",
+                        "arguments": {"visit_id": visit_id, "mode": "physical"},
+                    },
+                },
+                headers=session_headers,
+            ).text
+        )["result"]
+
+        checked_out = parse_sse_data(
+            client.post(
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 11,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "check_out_visit",
+                        "arguments": {"visit_id": visit_id},
+                    },
+                },
+                headers=session_headers,
+            ).text
+        )["result"]
+
+    assert checked_in["isError"] is False, checked_in
+    assert checked_out["isError"] is False, checked_out
+    assert checked_in["structuredContent"]["visit_id"] == visit_id
+    assert checked_out["structuredContent"]["visit_id"] == visit_id
+    # Both halves must name the same actor: whoever called them.
+    assert (
+        checked_in["structuredContent"]["actor_id"] == checked_out["structuredContent"]["actor_id"]
+    )
