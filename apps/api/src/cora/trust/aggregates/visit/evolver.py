@@ -13,6 +13,7 @@ else. `last_status_reason` from VisitHeld / VisitCancelled / VisitAborted
 
 from collections.abc import Sequence
 from dataclasses import replace
+from datetime import datetime
 from typing import assert_never
 
 from cora.trust.aggregates.visit.events import (
@@ -24,6 +25,7 @@ from cora.trust.aggregates.visit.events import (
     VisitCompleted,
     VisitEvent,
     VisitHeld,
+    VisitPresenceClosed,
     VisitRegistered,
     VisitResumed,
     VisitStarted,
@@ -38,6 +40,27 @@ from cora.trust.aggregates.visit.state import (
     VisitStatus,
     VisitType,
 )
+
+
+def _closed_at(
+    entries: frozenset[PresenceEntry], occurred_at: datetime
+) -> frozenset[PresenceEntry]:
+    """Close every open presence entry at `occurred_at`.
+
+    A Visit reaching a terminal state ends presence by implication: nobody is
+    at a beamline for a Visit that has completed, been cancelled, aborted, or
+    voided. Deriving that here rather than emitting per-actor close events
+    keeps the terminal deciders ignorant of presence, and means the closing
+    timestamp is exactly the transition's own, with no second clock reading.
+
+    Same frozen-replace shape as the `VisitCheckedOut` arm. Returns `entries`
+    unchanged when nothing is open, so the common case allocates nothing.
+    """
+    open_entries = {e for e in entries if e.check_out_at is None}
+    if not open_entries:
+        return entries
+    closed = {replace(e, check_out_at=occurred_at) for e in open_entries}
+    return (entries - open_entries) | closed
 
 
 def evolve(state: Visit | None, event: VisitEvent) -> Visit:
@@ -79,18 +102,37 @@ def evolve(state: Visit | None, event: VisitEvent) -> Visit:
             assert state is not None, "VisitResumed requires prior state"
             # Preserve last_status_reason audit breadcrumb across resume.
             return replace(state, status=VisitStatus.IN_PROGRESS)
-        case VisitCompleted():
+        case VisitCompleted(occurred_at=occurred_at):
             assert state is not None, "VisitCompleted requires prior state"
-            return replace(state, status=VisitStatus.COMPLETED)
-        case VisitCancelled(reason=reason):
+            return replace(
+                state,
+                status=VisitStatus.COMPLETED,
+                presence_entries=_closed_at(state.presence_entries, occurred_at),
+            )
+        case VisitCancelled(reason=reason, occurred_at=occurred_at):
             assert state is not None, "VisitCancelled requires prior state"
-            return replace(state, status=VisitStatus.CANCELLED, last_status_reason=reason)
-        case VisitAborted(reason=reason):
+            return replace(
+                state,
+                status=VisitStatus.CANCELLED,
+                last_status_reason=reason,
+                presence_entries=_closed_at(state.presence_entries, occurred_at),
+            )
+        case VisitAborted(reason=reason, occurred_at=occurred_at):
             assert state is not None, "VisitAborted requires prior state"
-            return replace(state, status=VisitStatus.ABORTED, last_status_reason=reason)
-        case VisitVoided(reason=reason):
+            return replace(
+                state,
+                status=VisitStatus.ABORTED,
+                last_status_reason=reason,
+                presence_entries=_closed_at(state.presence_entries, occurred_at),
+            )
+        case VisitVoided(reason=reason, occurred_at=occurred_at):
             assert state is not None, "VisitVoided requires prior state"
-            return replace(state, status=VisitStatus.VOIDED, last_status_reason=reason)
+            return replace(
+                state,
+                status=VisitStatus.VOIDED,
+                last_status_reason=reason,
+                presence_entries=_closed_at(state.presence_entries, occurred_at),
+            )
         case VisitCheckedIn(actor_id=actor_id, mode=mode, occurred_at=occurred_at):
             assert state is not None, "VisitCheckedIn requires prior state"
             # Set-union add. Decider has already guarded against open-entry duplicates;
@@ -102,8 +144,13 @@ def evolve(state: Visit | None, event: VisitEvent) -> Visit:
                 check_out_at=None,
             )
             return replace(state, presence_entries=state.presence_entries | {new_entry})
-        case VisitCheckedOut(actor_id=actor_id, occurred_at=occurred_at):
-            assert state is not None, "VisitCheckedOut requires prior state"
+        case (
+            VisitCheckedOut(actor_id=actor_id, occurred_at=occurred_at)
+            | VisitPresenceClosed(actor_id=actor_id, occurred_at=occurred_at)
+        ):
+            # One arm for both: the state change is identical and only the
+            # cause differs, which the event TYPE already carries.
+            assert state is not None, "presence-closing event requires prior state"
             # Frozen-replace: find the actor's OPEN entry, remove it, insert a new
             # entry with check_out_at populated. Old + new are distinct frozenset
             # members because PresenceEntry's hash covers all 4 fields. Decider

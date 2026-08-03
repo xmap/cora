@@ -1,9 +1,9 @@
-"""HTTP contract tests for the 13 Visit endpoints.
+"""HTTP contract tests for the 14 Visit endpoints.
 
 Consolidated coverage file: covers `register_visit`, `record_visit_arrival`,
 `start_visit`, `hold_visit`, `resume_visit`, `complete_visit`,
 `cancel_visit`, `abort_visit`, `void_visit`, `check_in_visit`,
-`check_out_visit`, `take_control_of_surface`,
+`check_out_visit`, `close_visit_presence`, `take_control_of_surface`,
 `release_control_of_surface` per the arch-fitness substring-match
 rule. Pins the REST surface: status codes, body shapes, FSM-walk
 happy path, 404 / 409 / 400 error mappings.
@@ -460,4 +460,41 @@ def test_check_out_rejects_a_body_naming_another_actor() -> None:
             f"/visits/{vid}/check-out",
             json={"actor_id": str(uuid4())},
         )
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_close_presence_returns_204_for_another_actor() -> None:
+    """The one thing check-out cannot do: end somebody else's presence."""
+    with TestClient(create_app()) as client:
+        vid = _register_visit(client)
+        client.post(f"/visits/{vid}/record-arrival")
+        client.post(f"/visits/{vid}/check-in", json={"mode": "physical"})
+        # The caller is the test principal, so its own entry is the open one.
+        response = client.post(
+            f"/visits/{vid}/close-presence",
+            json={"actor_id": "00000000-0000-0000-0000-000000000000"},
+        )
+    assert response.status_code == 204
+
+
+@pytest.mark.contract
+def test_close_presence_returns_404_when_named_actor_has_no_open_entry() -> None:
+    with TestClient(create_app()) as client:
+        vid = _register_visit(client)
+        client.post(f"/visits/{vid}/record-arrival")
+        response = client.post(
+            f"/visits/{vid}/close-presence",
+            json={"actor_id": str(uuid4())},
+        )
+    assert response.status_code == 404
+
+
+@pytest.mark.contract
+def test_close_presence_requires_an_actor_id() -> None:
+    """Unlike check-in and check-out, naming the actor IS the intent here."""
+    with TestClient(create_app()) as client:
+        vid = _register_visit(client)
+        client.post(f"/visits/{vid}/record-arrival")
+        response = client.post(f"/visits/{vid}/close-presence", json={})
     assert response.status_code == 422

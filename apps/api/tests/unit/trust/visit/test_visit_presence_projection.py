@@ -40,7 +40,17 @@ def _stored(event_type: str, payload: dict[str, Any]) -> StoredEvent:
 def test_projection_metadata() -> None:
     proj = VisitPresenceProjection()
     assert proj.name == "proj_trust_visit_presence"
-    assert proj.subscribed_event_types == frozenset({"VisitCheckedIn", "VisitCheckedOut"})
+    assert proj.subscribed_event_types == frozenset(
+        {
+            "VisitCheckedIn",
+            "VisitCheckedOut",
+            "VisitPresenceClosed",
+            "VisitCompleted",
+            "VisitCancelled",
+            "VisitAborted",
+            "VisitVoided",
+        }
+    )
 
 
 @pytest.mark.unit
@@ -114,6 +124,71 @@ async def test_visit_checked_out_updates_open_entry_only() -> None:
     sql: str = args.args[0]
     assert "UPDATE proj_trust_visit_presence" in sql
     assert "check_out_at = $3" in sql
+    assert "check_out_at IS NULL" in sql
+    assert args.args[1] == _VID
+    assert args.args[2] == _AID
+    assert args.args[3] == _NOW
+
+
+@pytest.mark.parametrize(
+    "terminal_type",
+    ["VisitCompleted", "VisitCancelled", "VisitAborted", "VisitVoided"],
+)
+@pytest.mark.unit
+async def test_terminal_event_closes_every_open_row_for_the_visit(
+    terminal_type: str,
+) -> None:
+    """The read model must agree with the aggregate on terminal closure.
+
+    `_closed_at` in the evolver closes every open entry when a Visit reaches a
+    terminal state. If this projection did not do the same, a Visit would fold
+    to "nobody present" while the table still showed open rows, and presence
+    would be unusable as evidence for exactly the queries it exists to answer.
+    """
+    proj = VisitPresenceProjection()
+    conn = AsyncMock()
+    event = _stored(terminal_type, {"visit_id": str(_VID), "occurred_at": _NOW.isoformat()})
+    await proj.apply(event, conn)
+    conn.execute.assert_awaited_once()
+    sql, *args = conn.execute.await_args.args
+    assert "check_out_at IS NULL" in sql
+    assert args == [_VID, _NOW]
+
+
+@pytest.mark.unit
+async def test_terminal_event_needs_no_actor_id_in_its_payload() -> None:
+    """Terminal payloads carry no actor, so the handler must not read one."""
+    proj = VisitPresenceProjection()
+    conn = AsyncMock()
+    event = _stored("VisitCompleted", {"visit_id": str(_VID), "occurred_at": _NOW.isoformat()})
+    await proj.apply(event, conn)
+    conn.execute.assert_awaited_once()
+
+
+@pytest.mark.unit
+async def test_presence_closed_updates_the_same_row_as_a_check_out() -> None:
+    """The two closing events differ in cause, not in effect on the row.
+
+    They are separate event types so the stream can be queried for one or the
+    other, but the read model must not diverge: both close the named actor's
+    open entry with the same UPDATE.
+    """
+    proj = VisitPresenceProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "VisitPresenceClosed",
+        {
+            "visit_id": str(_VID),
+            "actor_id": str(_AID),
+            "occurred_at": _NOW.isoformat(),
+        },
+    )
+    await proj.apply(event, conn)
+    conn.execute.assert_awaited_once()
+    args = conn.execute.await_args
+    assert args is not None
+    sql: str = args.args[0]
+    assert "UPDATE proj_trust_visit_presence" in sql
     assert "check_out_at IS NULL" in sql
     assert args.args[1] == _VID
     assert args.args[2] == _AID

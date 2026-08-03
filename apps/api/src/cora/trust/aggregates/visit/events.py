@@ -13,7 +13,8 @@ Lifecycle events (8 transitions + 1 voided terminal):
   - `VisitVoided`       -- any non-terminal -> Voided (+ reason)
                           FHIR `entered-in-error` analog.
 
-Presence events: `VisitCheckedIn` / `VisitCheckedOut`. Surface-control
+Presence events: `VisitCheckedIn` / `VisitCheckedOut` /
+`VisitPresenceClosed`. Surface-control
 events: `VisitSurfaceControlTaken` / `VisitSurfaceControlReleased`.
 
 `VisitRegistered.permitted_*` lists become `frozenset` on state in the
@@ -179,6 +180,31 @@ class VisitCheckedOut:
 
 
 @dataclass(frozen=True)
+class VisitPresenceClosed:
+    """Somebody else ended this actor's presence on the Visit.
+
+    Structurally identical to `VisitCheckedOut`: the open `PresenceEntry`
+    gains a `check_out_at` by the same frozen-replace, and the evolver
+    handles both in one arm. A distinct type because the two acts differ in
+    CAUSE, the way `VisitCancelled` / `VisitAborted` / `VisitVoided` all
+    reach a terminal status and stay separate events.
+
+    That distinction has to survive in the event TYPE rather than only in
+    the envelope's `command_name`, because presence is read as evidence of
+    who was at a beamline: "did this person leave, or did somebody close
+    their record for them" should be one predicate over the stream, not a
+    join against envelope metadata.
+
+    The actor who did the closing is the envelope's `principal_id` and is
+    deliberately not duplicated into the payload.
+    """
+
+    visit_id: UUID
+    actor_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class VisitSurfaceControlTaken:
     """The Visit took operational control of the Surface.
 
@@ -228,6 +254,7 @@ VisitEvent = (
     | VisitVoided
     | VisitCheckedIn
     | VisitCheckedOut
+    | VisitPresenceClosed
     | VisitSurfaceControlTaken
     | VisitSurfaceControlReleased
 )
@@ -329,7 +356,10 @@ def to_payload(event: VisitEvent) -> dict[str, Any]:
                 "mode": mode,
                 "occurred_at": occurred_at.isoformat(),
             }
-        case VisitCheckedOut(visit_id=visit_id, actor_id=actor_id, occurred_at=occurred_at):
+        case (
+            VisitCheckedOut(visit_id=visit_id, actor_id=actor_id, occurred_at=occurred_at)
+            | VisitPresenceClosed(visit_id=visit_id, actor_id=actor_id, occurred_at=occurred_at)
+        ):
             return {
                 "visit_id": str(visit_id),
                 "actor_id": str(actor_id),
@@ -463,6 +493,15 @@ def from_stored(stored: StoredEvent) -> VisitEvent:
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 ),
             )
+        case "VisitPresenceClosed":
+            return deserialize_or_raise(
+                "VisitPresenceClosed",
+                lambda: VisitPresenceClosed(
+                    visit_id=UUID(payload["visit_id"]),
+                    actor_id=UUID(payload["actor_id"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+            )
         case "VisitSurfaceControlTaken":
             return deserialize_or_raise(
                 "VisitSurfaceControlTaken",
@@ -495,6 +534,7 @@ __all__ = [
     "VisitCompleted",
     "VisitEvent",
     "VisitHeld",
+    "VisitPresenceClosed",
     "VisitRegistered",
     "VisitResumed",
     "VisitStarted",

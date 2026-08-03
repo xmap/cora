@@ -1,9 +1,9 @@
-"""Application-handler unit tests for the 13 Visit slices.
+"""Application-handler unit tests for the 14 Visit slices.
 
 Consolidated coverage file: covers `register_visit`, `record_visit_arrival`,
 `start_visit`, `hold_visit`, `resume_visit`, `complete_visit`,
 `cancel_visit`, `abort_visit`, `void_visit`, `check_in_visit`,
-`check_out_visit`, `take_control_of_surface`,
+`check_out_visit`, `close_visit_presence`, `take_control_of_surface`,
 `release_control_of_surface` per the arch-fitness substring-match
 rule. Pure-decider behavior is exercised in the per-slice files under
 `tests/unit/trust/visit/`; here we pin the handler-level concerns:
@@ -38,6 +38,7 @@ from cora.trust.features import (
     cancel_visit,
     check_in_visit,
     check_out_visit,
+    close_visit_presence,
     complete_visit,
     hold_visit,
     record_visit_arrival,
@@ -696,3 +697,103 @@ async def test_release_control_handler_rejects_when_pool_reports_other_holder() 
         )
     events, _ = await store.load("Visit", _VISIT_ID)
     assert not any(e.event_type == "VisitSurfaceControlReleased" for e in events)
+
+
+@pytest.mark.unit
+async def test_close_visit_presence_handler_closes_a_third_partys_entry() -> None:
+    """The one capability check-out cannot supply.
+
+    Seeds a check-in for somebody who is NOT the caller, then closes it as the
+    caller. Under `check_out_visit` this is impossible by construction, which
+    is why the slice exists.
+    """
+    store = InMemoryEventStore()
+    await _seed_to(store, VisitStatus.ARRIVED)
+    absent_actor = uuid4()
+    _, current_version = await store.load("Visit", _VISIT_ID)
+    seed_event = VisitCheckedIn(
+        visit_id=_VISIT_ID,
+        actor_id=absent_actor,
+        mode=PresenceMode.PHYSICAL.value,
+        occurred_at=_NOW,
+    )
+    await store.append(
+        stream_type="Visit",
+        stream_id=_VISIT_ID,
+        expected_version=current_version,
+        events=[
+            to_new_event(
+                event_type=event_type_name(seed_event),
+                payload=to_payload(seed_event),
+                occurred_at=seed_event.occurred_at,
+                event_id=uuid4(),
+                command_name="SeedCheckIn",
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                principal_id=absent_actor,
+            )
+        ],
+    )
+    deps = build_deps(ids=[_TRANSITION_EVENT_ID], now=_NOW, event_store=store)
+    handler = close_visit_presence.bind(deps)
+    await handler(
+        close_visit_presence.CloseVisitPresence(visit_id=_VISIT_ID, actor_id=absent_actor),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    events, _ = await store.load("Visit", _VISIT_ID)
+    folded = fold([from_stored(s) for s in events])
+    assert folded is not None
+    [entry] = folded.presence_entries
+    assert entry.actor_id == absent_actor
+    assert entry.check_out_at is not None
+
+
+@pytest.mark.unit
+async def test_close_visit_presence_records_the_caller_on_the_envelope() -> None:
+    """The stream distinguishes this from a self-checkout twice over.
+
+    By TYPE, because `VisitPresenceClosed` is not `VisitCheckedOut`, which is
+    what makes "was this person's record closed for them" one predicate. And by
+    ENVELOPE, which names the caller as principal while the payload names the
+    actor whose presence ended, so no `closed_by` payload field is needed."""
+    store = InMemoryEventStore()
+    await _seed_to(store, VisitStatus.ARRIVED)
+    absent_actor = uuid4()
+    _, current_version = await store.load("Visit", _VISIT_ID)
+    seed_event = VisitCheckedIn(
+        visit_id=_VISIT_ID,
+        actor_id=absent_actor,
+        mode=PresenceMode.PHYSICAL.value,
+        occurred_at=_NOW,
+    )
+    await store.append(
+        stream_type="Visit",
+        stream_id=_VISIT_ID,
+        expected_version=current_version,
+        events=[
+            to_new_event(
+                event_type=event_type_name(seed_event),
+                payload=to_payload(seed_event),
+                occurred_at=seed_event.occurred_at,
+                event_id=uuid4(),
+                command_name="SeedCheckIn",
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                principal_id=absent_actor,
+            )
+        ],
+    )
+    deps = build_deps(ids=[_TRANSITION_EVENT_ID], now=_NOW, event_store=store)
+    handler = close_visit_presence.bind(deps)
+    await handler(
+        close_visit_presence.CloseVisitPresence(visit_id=_VISIT_ID, actor_id=absent_actor),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    events, _ = await store.load("Visit", _VISIT_ID)
+    closed = [e for e in events if e.event_type == "VisitPresenceClosed"]
+    assert len(closed) == 1
+    assert closed[0].principal_id == _PRINCIPAL_ID
+    assert closed[0].metadata == {"command": "CloseVisitPresence"}
+    assert UUID(closed[0].payload["actor_id"]) == absent_actor

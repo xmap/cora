@@ -3688,6 +3688,23 @@
         "title": "ClearanceTemplateSummaryDTO",
         "type": "object"
       },
+      "CloseVisitPresenceRequest": {
+        "additionalProperties": false,
+        "description": "Body for `POST /visits/{visit_id}/close-presence`.\n\nUnlike check-in and check-out, this one DOES name an actor, because\nclosing somebody else's record is the whole point of the command. The\ncaller is still the envelope's `principal_id`, so the record shows both\nwho was present and who ended it.",
+        "properties": {
+          "actor_id": {
+            "description": "Actor whose open presence entry is closed.",
+            "format": "uuid",
+            "title": "Actor Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_id"
+        ],
+        "title": "CloseVisitPresenceRequest",
+        "type": "object"
+      },
       "CompleteSealRepublishingBody": {
         "additionalProperties": false,
         "description": "Optional complete-seal-republishing request body.",
@@ -45709,6 +45726,86 @@
           }
         },
         "summary": "Check an actor out of a Visit",
+        "tags": [
+          "trust"
+        ]
+      }
+    },
+    "/visits/{visit_id}/close-presence": {
+      "post": {
+        "operationId": "post_visits_close_presence_visits__visit_id__close_presence_post",
+        "parameters": [
+          {
+            "description": "Target Visit's id.",
+            "in": "path",
+            "name": "visit_id",
+            "required": true,
+            "schema": {
+              "description": "Target Visit's id.",
+              "format": "uuid",
+              "title": "Visit Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+            "in": "header",
+            "name": "X-Principal-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
+              "title": "X-Principal-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseVisitPresenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Authorize port denied the command."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No Visit exists with the given id, OR the named actor has no open presence entry."
+          },
+          "422": {
+            "description": "Request body failed schema validation."
+          }
+        },
+        "summary": "Close another actor's presence entry on a Visit",
         "tags": [
           "trust"
         ]

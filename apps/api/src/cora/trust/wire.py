@@ -28,6 +28,7 @@ from cora.trust.features import (
     cancel_visit,
     check_in_visit,
     check_out_visit,
+    close_visit_presence,
     complete_visit,
     define_conduit,
     define_policy,
@@ -85,6 +86,7 @@ class TrustHandlers:
     void_visit: void_visit.Handler
     check_in_visit: check_in_visit.Handler
     check_out_visit: check_out_visit.Handler
+    close_visit_presence: close_visit_presence.Handler
     take_control_of_surface: take_control_of_surface.Handler
     release_control_of_surface: release_control_of_surface.Handler
     revoke_grant: revoke_grant.Handler
@@ -210,6 +212,11 @@ def wire_trust(deps: Kernel) -> TrustHandlers:
         check_out_visit=with_tracing(
             check_out_visit.bind(deps),
             command_name="CheckOutVisit",
+            bc=_BC,
+        ),
+        close_visit_presence=with_tracing(
+            close_visit_presence.bind(deps),
+            command_name="CloseVisitPresence",
             bc=_BC,
         ),
         take_control_of_surface=with_tracing(

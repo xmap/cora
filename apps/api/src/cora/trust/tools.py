@@ -14,6 +14,7 @@ from cora.trust.features.abort_visit import tool as abort_visit_tool
 from cora.trust.features.cancel_visit import tool as cancel_visit_tool
 from cora.trust.features.check_in_visit import tool as check_in_visit_tool
 from cora.trust.features.check_out_visit import tool as check_out_visit_tool
+from cora.trust.features.close_visit_presence import tool as close_visit_presence_tool
 from cora.trust.features.complete_visit import tool as complete_visit_tool
 from cora.trust.features.define_conduit import tool as define_conduit_tool
 from cora.trust.features.define_policy import tool as define_policy_tool
@@ -70,6 +71,7 @@ def register_trust_tools(
     # Visit presence tools.
     check_in_visit_tool.register(mcp, get_handler=lambda: get_handlers().check_in_visit)
     check_out_visit_tool.register(mcp, get_handler=lambda: get_handlers().check_out_visit)
+    close_visit_presence_tool.register(mcp, get_handler=lambda: get_handlers().close_visit_presence)
     # Visit Surface-control tools.
     take_control_of_surface_tool.register(
         mcp, get_handler=lambda: get_handlers().take_control_of_surface
