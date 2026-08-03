@@ -41,7 +41,7 @@ second instance.
 
 ## Why a separate body (not delegation)
 
-The factory once could not delegate to `make_update_handler` because the
+This factory does not delegate to `make_update_handler` because the
 decider call needs to include `**{actor_kwarg: principal_id}` and
 `principal_id` enters scope per-call, not at factory build. The body
 below is a literal copy of `make_update_handler`'s body with one
@@ -55,11 +55,17 @@ append additional streams (revoke_credential, rotate_seal_online_key,
 initialize_seal write a Decision audit stream alongside the aggregate)
 cannot use this factory and stay longhand.
 
-NOTE (superseded): `make_update_handler` now takes an optional
-`actor_kwarg` and threads the principal itself, so this body no longer
-HAS to be a copy. Collapsing this factory onto the shared core is a
-recorded follow-up, deliberately not done in the commit that added the
-parameter so that change stayed reviewable.
+NOT COLLAPSED, and here is why. `make_update_handler` now takes an optional
+`actor_kwarg` and threads the principal itself, which removed the ONLY reason
+Agent, Subject and Budget duplicated this body; those three collapsed on
+2026-08-03. Federation cannot follow yet for a SECOND, unrelated reason: the
+Seal aggregate is a per-facility singleton whose stream id is derived from
+`command.facility_code` rather than read off a command attribute, so this
+factory also carries `resolve_stream_id`, which the cross-BC core has no
+equivalent for. Collapsing Federation therefore means adding a second knob to
+the shared core, which is its own decision with its own blast radius and is
+deliberately not bundled with the actor work. Trigger: a second aggregate
+anywhere that needs a derived stream id.
 """
 
 from collections.abc import Callable, Sequence
