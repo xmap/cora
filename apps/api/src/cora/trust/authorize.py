@@ -1,11 +1,17 @@
 """TrustAuthorize: production adapter for the cross-BC `Authorize` port.
 
 Implements `cora.infrastructure.ports.Authorize` by loading a single
-configured Policy aggregate and delegating to the pure
-`evaluate(policy, ...)` function from `aggregates/policy/state.py`.
-This is the structural moment where the Trust BC's pure domain logic
-(Zone / Conduit / Policy + define + evaluate) gates real commands
+configured Policy aggregate and delegating to `decide_authorization`
+in `cora.trust._authorization_decision`, the one place a decision is
+reached. This is the structural moment where the Trust BC's pure domain
+logic (Zone / Conduit / Policy + define + evaluate) gates real commands
 across every BC.
+
+This adapter supplies a `ResolvedContext`: it resolved every input the
+decision consults, so the answer is the system's real one. The query
+slices supply a `PolicyOnlyContext` for hypotheticals and get an answer
+stamped as partial. Adding a conjunct means changing the decision
+module, not this adapter, which is the point of routing through it.
 
 ## Shape: single configured policy
 
@@ -116,13 +122,18 @@ from cora.infrastructure.ports import (
     IdGenerator,
 )
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.trust._authorization_decision import (
+    AuthorizationRequest,
+    ResolvedContext,
+    decide_authorization,
+)
 from cora.trust.aggregates.conduit import LOGBOOK_KIND_VERDICT, load_conduit
 from cora.trust.aggregates.conduit.entries import (
     Verdict,
     VerdictDecision,
     VerdictStore,
 )
-from cora.trust.aggregates.policy import evaluate, load_policy
+from cora.trust.aggregates.policy import load_policy
 
 _log = get_logger(__name__)
 
@@ -178,12 +189,14 @@ class TrustAuthorize:
             # another instead of being evaluated as if it were governing.
             # Forward surface_id; defaults to nil where the route
             # layer hasn't been swept to inject the real Surface ID.
-            result = evaluate(
-                policy,
-                principal_id=principal_id,
-                command_name=command_name,
-                conduit_id=conduit_id,
-                surface_id=surface_id,
+            result = decide_authorization(
+                AuthorizationRequest(
+                    principal_id=principal_id,
+                    command_name=command_name,
+                    conduit_id=conduit_id,
+                    surface_id=surface_id,
+                ),
+                ResolvedContext(policy=policy),
             )
             if isinstance(result, Allow):
                 _log.info(

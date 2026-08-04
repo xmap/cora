@@ -29,7 +29,12 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
 from cora.infrastructure.ports import AuthzResult, Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
-from cora.trust.aggregates.policy import evaluate, load_policy
+from cora.trust._authorization_decision import (
+    AuthorizationRequest,
+    PolicyOnlyContext,
+    decide_authorization,
+)
+from cora.trust.aggregates.policy import load_policy
 from cora.trust.errors import UnauthorizedError
 from cora.trust.features.evaluate_policy.query import EvaluatePolicy
 
@@ -98,12 +103,14 @@ def bind(deps: Kernel) -> Handler:
             )
             return None
 
-        result = evaluate(
-            policy,
-            principal_id=query.evaluated_principal_id,
-            command_name=query.evaluated_command_name,
-            conduit_id=query.evaluated_conduit_id,
-            surface_id=query.evaluated_surface_id,
+        result = decide_authorization(
+            AuthorizationRequest(
+                principal_id=query.evaluated_principal_id,
+                command_name=query.evaluated_command_name,
+                conduit_id=query.evaluated_conduit_id,
+                surface_id=query.evaluated_surface_id,
+            ),
+            PolicyOnlyContext(policy=policy),
         )
 
         _log.info(

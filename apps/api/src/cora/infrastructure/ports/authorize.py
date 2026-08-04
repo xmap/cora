@@ -31,22 +31,59 @@ documented bootstrap workflow; `TrustAuthorize`
 """
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 
 
+class Conjunct(StrEnum):
+    """A named input an authorization decision consulted.
+
+    Stamped on every result as `evaluated`, so a decision reports which
+    questions it actually answered instead of leaving that to the
+    reader's assumption. A caller that consults fewer conjuncts than the
+    gate produces a partial answer, and this set is what makes the
+    partiality legible in a log, a test, or an API response rather than
+    a convention someone has to remember.
+
+      - `Policy` -- the Policy aggregate's conduit, surface,
+                    permitted-principal, and permitted-command predicate
+
+    Members are added as conjuncts land, never ahead of them. An
+    unpopulated member would let a result claim it evaluated something
+    no code checks, which is the one failure this vocabulary exists to
+    make impossible.
+    """
+
+    POLICY = "Policy"
+
+
 @dataclass(frozen=True)
 class Allow:
-    """Authorization granted."""
+    """Authorization granted.
+
+    `evaluated` names the conjuncts the decision consulted to get here.
+    It defaults to empty because a stand-in that decides on nothing
+    (`AllowAllAuthorize`) should say so: an empty set is the honest
+    report for a permissive fallback, and it is what distinguishes that
+    fallback from a real grant in a verdict record.
+    """
+
+    evaluated: frozenset[Conjunct] = frozenset()
 
 
 @dataclass(frozen=True)
 class Deny:
-    """Authorization denied with a reason."""
+    """Authorization denied with a reason.
+
+    `evaluated` carries the same meaning as on `Allow`: the conjuncts
+    consulted, including the one that refused.
+    """
 
     reason: str
+    evaluated: frozenset[Conjunct] = frozenset()
 
 
 type AuthzResult = Allow | Deny

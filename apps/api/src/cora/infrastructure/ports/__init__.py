@@ -23,6 +23,7 @@ from cora.infrastructure.ports.authorize import (
     AllowAllAuthorize,
     Authorize,
     AuthzResult,
+    Conjunct,
     Deny,
 )
 from cora.infrastructure.ports.beam_availability_lookup import (
@@ -229,6 +230,7 @@ __all__ = [
     "Clock",
     "ComputeReachabilityLookup",
     "ConcurrencyError",
+    "Conjunct",
     "ConsequenceLookup",
     "CredentialLookup",
     "CredentialLookupResult",

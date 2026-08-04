@@ -38,9 +38,10 @@ temporarily revoking access without deleting the policy.
 """
 
 from dataclasses import dataclass
+from typing import Final
 from uuid import UUID
 
-from cora.infrastructure.ports import Allow, AuthzResult, Deny
+from cora.infrastructure.ports import Allow, AuthzResult, Conjunct, Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.shared.bounded_text import bounded_name
 from cora.shared.text_bounds import REASON_MAX_LENGTH
@@ -134,6 +135,9 @@ class Policy:
     surface_id: UUID = NIL_SENTINEL_ID
 
 
+_POLICY_EVALUATED: Final[frozenset[Conjunct]] = frozenset({Conjunct.POLICY})
+
+
 def evaluate(
     policy: Policy,
     *,
@@ -164,14 +168,22 @@ def evaluate(
     """
     if conduit_id != policy.conduit_id:
         return Deny(
-            reason=(f"Policy {policy.id} governs conduit {policy.conduit_id}, not {conduit_id}")
+            reason=(f"Policy {policy.id} governs conduit {policy.conduit_id}, not {conduit_id}"),
+            evaluated=_POLICY_EVALUATED,
         )
     if surface_id != policy.surface_id:
         return Deny(
-            reason=(f"Policy {policy.id} governs surface {policy.surface_id}, not {surface_id}")
+            reason=(f"Policy {policy.id} governs surface {policy.surface_id}, not {surface_id}"),
+            evaluated=_POLICY_EVALUATED,
         )
     if principal_id not in policy.permitted_principal_ids:
-        return Deny(reason=f"Principal {principal_id} not in policy {policy.id}'s permitted set")
+        return Deny(
+            reason=f"Principal {principal_id} not in policy {policy.id}'s permitted set",
+            evaluated=_POLICY_EVALUATED,
+        )
     if command_name not in policy.permitted_commands:
-        return Deny(reason=(f"Command {command_name!r} not in policy {policy.id}'s permitted set"))
-    return Allow()
+        return Deny(
+            reason=(f"Command {command_name!r} not in policy {policy.id}'s permitted set"),
+            evaluated=_POLICY_EVALUATED,
+        )
+    return Allow(evaluated=_POLICY_EVALUATED)
