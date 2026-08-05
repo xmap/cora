@@ -73,6 +73,27 @@ class ActorDeactivated:
 
 
 @dataclass(frozen=True)
+class ActorReactivated:
+    """A deactivated actor was returned to service: `Actor.active`
+    flips back to True.
+
+    The inverse of `ActorDeactivated`, and deliberately so. An Agent
+    carries a reversible operator pause (`suspend_agent` /
+    `resume_agent`); before this event an Actor's pause was one-way,
+    so a mis-issued deactivation had no remedy inside the system. The
+    two principal kinds now hold the same availability switch.
+
+    Reactivation restores availability only. It confers no authority
+    the actor did not already hold: Policy membership, grants, and
+    every other narrowing are untouched, and an actor reactivated
+    into a Policy that no longer names them stays unable to act.
+    """
+
+    actor_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class ActorProfileForgotten:
     """Audit event for PII erasure (GDPR / PIPL / LGPD / CCPA "right to
     be forgotten").
@@ -94,7 +115,7 @@ class ActorProfileForgotten:
 
 # Discriminated union of every event the Actor aggregate emits. Add new
 # event classes above and extend this alias when new slices land.
-ActorEvent = ActorRegistered | ActorDeactivated | ActorProfileForgotten
+ActorEvent = ActorRegistered | ActorDeactivated | ActorReactivated | ActorProfileForgotten
 
 
 def event_type_name(event: ActorEvent) -> str:
@@ -123,6 +144,11 @@ def to_payload(event: ActorEvent) -> dict[str, Any]:
                 "kind": kind.value,
             }
         case ActorDeactivated(actor_id=actor_id, occurred_at=occurred_at):
+            return {
+                "actor_id": str(actor_id),
+                "occurred_at": occurred_at.isoformat(),
+            }
+        case ActorReactivated(actor_id=actor_id, occurred_at=occurred_at):
             return {
                 "actor_id": str(actor_id),
                 "occurred_at": occurred_at.isoformat(),
@@ -193,6 +219,15 @@ def from_stored(stored: StoredEvent) -> ActorEvent:
                 ),
                 extra=(ValueError,),
             )
+        case "ActorReactivated":
+            return deserialize_or_raise(
+                "ActorReactivated",
+                lambda: ActorReactivated(
+                    actor_id=UUID(payload["actor_id"]),
+                    occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                ),
+                extra=(ValueError,),
+            )
         case "ActorProfileForgotten":
             return deserialize_or_raise(
                 "ActorProfileForgotten",
@@ -211,6 +246,7 @@ __all__ = [
     "ActorDeactivated",
     "ActorEvent",
     "ActorProfileForgotten",
+    "ActorReactivated",
     "ActorRegistered",
     "event_type_name",
     "from_stored",

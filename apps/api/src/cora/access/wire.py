@@ -35,6 +35,7 @@ from cora.access.features import (
     forget_actor,
     get_actor,
     list_actors,
+    reactivate_actor,
     register_actor,
 )
 from cora.infrastructure.idempotency import with_idempotency
@@ -58,6 +59,7 @@ class AccessHandlers:
 
     register_actor: register_actor.IdempotentHandler
     deactivate_actor: deactivate_actor.Handler
+    reactivate_actor: reactivate_actor.Handler
     forget_actor: forget_actor.IdempotentHandler
     get_actor: get_actor.Handler
     list_actors: list_actors.Handler
@@ -90,6 +92,11 @@ def wire_access(deps: Kernel) -> AccessHandlers:
         deactivate_actor=with_tracing(
             deactivate_actor.bind(deps),
             command_name="DeactivateActor",
+            bc=_BC,
+        ),
+        reactivate_actor=with_tracing(
+            reactivate_actor.bind(deps),
+            command_name="ReactivateActor",
             bc=_BC,
         ),
         forget_actor=with_tracing(

@@ -52,6 +52,7 @@ def test_projection_metadata() -> None:
             "ActorRegistered",
             "ActorRegisteredV2",
             "ActorDeactivated",
+            "ActorReactivated",
             "ActorProfileForgotten",
         }
     )
@@ -165,6 +166,23 @@ async def test_actor_registered_v1_payload_without_kind_falls_back_to_human() ->
     args = conn.execute.await_args
     assert args is not None
     assert args.args[3] == "human"
+
+
+@pytest.mark.unit
+async def test_actor_reactivated_restores_active_status() -> None:
+    proj = ActorSummaryProjection()
+    conn = AsyncMock()
+    event = _stored(
+        "ActorReactivated",
+        {"actor_id": str(_ACTOR_ID), "occurred_at": _NOW.isoformat()},
+    )
+
+    await proj.apply(event, conn)
+
+    conn.execute.assert_awaited_once()
+    sql = conn.execute.await_args.args[0]
+    assert "status = 'active'" in sql
+    assert conn.execute.await_args.args[1] == _ACTOR_ID
 
 
 @pytest.mark.unit

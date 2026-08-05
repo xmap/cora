@@ -114,6 +114,14 @@ class ActorCannotDeactivateError(Exception):
         self.actor_id = actor_id
 
 
+class ActorCannotReactivateError(Exception):
+    """Attempted to reactivate an actor that is already active."""
+
+    def __init__(self, actor_id: UUID) -> None:
+        super().__init__(f"Actor {actor_id} is already active")
+        self.actor_id = actor_id
+
+
 @bounded_name(max_length=ACTOR_NAME_MAX_LENGTH, error_class=InvalidActorNameError)
 @dataclass(frozen=True)
 class ActorName:

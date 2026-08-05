@@ -32,6 +32,7 @@ from fastapi.responses import JSONResponse
 from cora.access.aggregates.actor import (
     ActorAlreadyExistsError,
     ActorCannotDeactivateError,
+    ActorCannotReactivateError,
     ActorNotFoundError,
     InvalidActorKindError,
     InvalidActorNameError,
@@ -42,6 +43,7 @@ from cora.access.features import (
     forget_actor,
     get_actor,
     list_actors,
+    reactivate_actor,
     register_actor,
 )
 from cora.infrastructure.idempotency import classify_error_status
@@ -181,6 +183,7 @@ def register_access_routes(app: FastAPI) -> None:
     """Attach Access slice routers and exception handlers to the FastAPI app."""
     app.include_router(register_actor.router)
     app.include_router(deactivate_actor.router)
+    app.include_router(reactivate_actor.router)
     app.include_router(forget_actor.router)
     app.include_router(get_actor.router)
     app.include_router(list_actors.router)
@@ -190,7 +193,7 @@ def register_access_routes(app: FastAPI) -> None:
         app.add_exception_handler(not_found_cls, _handle_not_found)
     for already_exists_cls in (ActorAlreadyExistsError,):
         app.add_exception_handler(already_exists_cls, _handle_already_exists)
-    for cannot_transition_cls in (ActorCannotDeactivateError,):
+    for cannot_transition_cls in (ActorCannotDeactivateError, ActorCannotReactivateError):
         app.add_exception_handler(cannot_transition_cls, _handle_cannot_transition)
     app.add_exception_handler(UnauthorizedError, _handle_unauthorized)
     # Infrastructure errors (cross-BC; Access registers them globally — see module docstring).

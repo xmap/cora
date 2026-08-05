@@ -19,6 +19,7 @@ from cora.access.aggregates.actor.events import (
     ActorDeactivated,
     ActorEvent,
     ActorProfileForgotten,
+    ActorReactivated,
     ActorRegistered,
 )
 from cora.access.aggregates.actor.state import Actor
@@ -48,6 +49,14 @@ def evolve(state: Actor | None, event: ActorEvent) -> Actor:
                 msg = "ActorDeactivated cannot be applied to empty state"  # pragma: no cover  # pragma: no mutate  # noqa: E501
                 raise ValueError(msg)  # pragma: no cover  # pragma: no mutate
             return Actor(id=state.id, active=False, kind=state.kind)
+        case ActorReactivated():
+            # Corruption guard mirrors ActorDeactivated: unreachable in a
+            # well-formed stream, where registration always precedes any
+            # availability flip.
+            if state is None:  # pragma: no cover  # pragma: no mutate
+                msg = "ActorReactivated cannot be applied to empty state"  # pragma: no cover  # pragma: no mutate  # noqa: E501
+                raise ValueError(msg)  # pragma: no cover  # pragma: no mutate
+            return Actor(id=state.id, active=True, kind=state.kind)
         case ActorProfileForgotten():
             # PII erasure event: aggregate state is unchanged. The
             # event records the audit fact ("operator scrubbed this

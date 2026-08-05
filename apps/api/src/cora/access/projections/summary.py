@@ -9,6 +9,9 @@ Subscribed events:
     the profile row BEFORE appending the V2 event, so the row is
     always visible by the time the projection applies).
   - ActorDeactivated -> UPDATE status to 'deactivated'.
+  - ActorReactivated -> UPDATE status back to 'active'. The
+    inverse of the line above, so a deactivation that was issued
+    in error leaves no permanent mark on the read model.
   - ActorProfileForgotten -> UPDATE the cached display name to the
     tombstone literal so list reads see "<deleted user>" without
     a JOIN against actor_profile. The audit event records WHEN the
@@ -63,6 +66,12 @@ SET status = 'deactivated', updated_at = now()
 WHERE actor_id = $1
 """
 
+_REACTIVATE_ACTOR_SQL = """
+UPDATE proj_access_actor_summary
+SET status = 'active', updated_at = now()
+WHERE actor_id = $1
+"""
+
 # Post-erasure tombstone: overwrite the cached display name with the
 # locale-neutral English literal. Idempotent: repeated applies set the
 # same value. WHERE actor_id = $1 makes it a no-op if the row is
@@ -91,6 +100,7 @@ class ActorSummaryProjection:
             "ActorRegistered",
             "ActorRegisteredV2",
             "ActorDeactivated",
+            "ActorReactivated",
             "ActorProfileForgotten",
         }
     )
@@ -135,6 +145,11 @@ class ActorSummaryProjection:
             case "ActorDeactivated":
                 await conn.execute(
                     _DEACTIVATE_ACTOR_SQL,
+                    UUID(event.payload["actor_id"]),
+                )
+            case "ActorReactivated":
+                await conn.execute(
+                    _REACTIVATE_ACTOR_SQL,
                     UUID(event.payload["actor_id"]),
                 )
             case "ActorProfileForgotten":
