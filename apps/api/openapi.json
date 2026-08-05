@@ -38365,7 +38365,7 @@
                 }
               }
             },
-            "description": "Authorize port denied the query."
+            "description": "Authorize port denied the query, either the caller's right to ask at all or, when `evaluated_principal_id` is not the caller, the separate `EvaluatePolicyOfOthers` permission, which is denied by default."
           },
           "404": {
             "content": {

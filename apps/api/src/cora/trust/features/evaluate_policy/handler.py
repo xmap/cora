@@ -4,9 +4,20 @@ Cross-BC query-handler shape — same as `get_actor`:
 
     1. authorize(principal_id, query_name, conduit) -> Allow | Deny
        (caller authz; no-op under AllowAllAuthorize until TrustAuthorize is wired)
-    2. load_policy(...)             -> Policy | None  (fold-on-read)
-    3. if None -> return None        (route maps to 404)
-       else    -> evaluate(...)      (pure PDP from aggregate)
+    2. authorize(..., EvaluatePolicyOfOthers) when the subject is not
+       the caller (on-behalf gate; fails closed under the bootstrap policy)
+    3. load_policy(...)             -> Policy | None  (fold-on-read)
+    4. if None -> return None        (route maps to 404)
+       else    -> decide_authorization(..., PolicyOnlyContext)
+
+The decision runs through `cora.trust._authorization_decision` rather
+than calling `evaluate` directly, so this slice cannot drift from the
+gate as conjuncts are added. It supplies a `PolicyOnlyContext` because
+the question is a hypothetical about another principal, whose standing
+and beamtime the decision point cannot resolve without either leaking
+that principal's state or trusting the caller's assertion of it. The
+returned result names the conjuncts it consulted, so the answer carries
+its own "necessary, not sufficient".
 
 Returns `AuthzResult | None`:
     - `None`  -> the Policy doesn't exist; route layer maps to 404
@@ -39,6 +50,7 @@ from cora.trust.errors import UnauthorizedError
 from cora.trust.features.evaluate_policy.query import EvaluatePolicy
 
 _QUERY_NAME = "EvaluatePolicy"
+_ON_BEHALF_QUERY_NAME = "EvaluatePolicyOfOthers"
 
 _log = get_logger(__name__)
 
@@ -90,6 +102,33 @@ def bind(deps: Kernel) -> Handler:
                 reason=decision.reason,
             )
             raise UnauthorizedError(decision.reason)
+
+        # On-behalf gate, mirroring list_permissions. Asking whether
+        # SOMEONE ELSE may act is a different question from asking about
+        # yourself: answered freely it is a permission oracle over the
+        # whole policy, one command per request. The bootstrap policy
+        # permits EvaluatePolicy but NOT EvaluatePolicyOfOthers, so
+        # on-behalf probing fails closed until an operator grants it
+        # explicitly. AWS SimulatePrincipalPolicy precedent, same as the
+        # sibling slice.
+        if query.evaluated_principal_id != principal_id:
+            on_behalf_decision = await deps.authz.authorize(
+                principal_id=principal_id,
+                command_name=_ON_BEHALF_QUERY_NAME,
+                conduit_id=NIL_SENTINEL_ID,
+                surface_id=surface_id,
+            )
+            if isinstance(on_behalf_decision, Deny):
+                _log.info(
+                    "evaluate_policy.on_behalf_denied",
+                    query_name=_ON_BEHALF_QUERY_NAME,
+                    policy_id=str(query.policy_id),
+                    principal_id=str(principal_id),
+                    evaluated_principal_id=str(query.evaluated_principal_id),
+                    correlation_id=str(correlation_id),
+                    reason=on_behalf_decision.reason,
+                )
+                raise UnauthorizedError(on_behalf_decision.reason)
 
         policy = await load_policy(deps.event_store, query.policy_id)
         if policy is None:

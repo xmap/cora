@@ -8,6 +8,8 @@ import pytest
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.ports import (
     Allow,
+    AuthzResult,
+    Conjunct,
     Deny,
 )
 from cora.infrastructure.routing import SYSTEM_HTTP_SURFACE_ID
@@ -54,6 +56,27 @@ async def _seed_policy(
         surface_id=surface_id,
         occurred_at=_NOW,
     )
+
+
+class _AllowEvaluatePolicyDenyOthers:
+    """Authorize stub: allow `EvaluatePolicy`, deny `EvaluatePolicyOfOthers`.
+
+    Models the bootstrap policy's posture. Mirrors the stub the sibling
+    `list_permissions` tests use, because the two slices answer the same
+    on-behalf question and must fail closed the same way.
+    """
+
+    async def authorize(
+        self,
+        principal_id: UUID,
+        command_name: str,
+        conduit_id: UUID,
+        surface_id: UUID = UUID(int=0),  # noqa: B008
+    ) -> AuthzResult:
+        _ = (principal_id, conduit_id, surface_id)
+        if command_name == "EvaluatePolicyOfOthers":
+            return Deny(reason="on-behalf not permitted")
+        return Allow()
 
 
 def _query(
@@ -256,3 +279,92 @@ async def test_wired_handler_evaluates_through_full_composition() -> None:
         correlation_id=_CORRELATION_ID,
     )
     assert isinstance(result, Allow)
+
+
+@pytest.mark.unit
+async def test_on_behalf_query_denied_when_caller_lacks_evaluate_policy_of_others() -> None:
+    """Asking whether SOMEONE ELSE may act needs its own grant.
+
+    Without this the slice is a permission oracle over the whole policy,
+    one command per request, for anyone permitted to evaluate at all.
+    The sibling `list_permissions` closed this; the two now match.
+    """
+    store = InMemoryEventStore()
+    deps = build_deps(
+        ids=[uuid4() for _ in range(8)],
+        now=_NOW,
+        event_store=store,
+        authz=_AllowEvaluatePolicyDenyOthers(),
+    )
+    await _seed_policy(store)
+    handler = evaluate_policy.bind(deps)
+
+    with pytest.raises(UnauthorizedError) as exc_info:
+        await handler(
+            _query(evaluated_principal_id=_ALLOWED_PRINCIPAL),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert "on-behalf" in exc_info.value.reason.lower()
+
+
+@pytest.mark.unit
+async def test_self_query_allowed_even_when_evaluate_policy_of_others_denied() -> None:
+    """The common case, "may I do this?", survives the strictest posture."""
+    store = InMemoryEventStore()
+    deps = build_deps(
+        ids=[uuid4() for _ in range(8)],
+        now=_NOW,
+        event_store=store,
+        authz=_AllowEvaluatePolicyDenyOthers(),
+    )
+    await _seed_policy(store, principals=frozenset({_PRINCIPAL_ID}))
+    handler = evaluate_policy.bind(deps)
+
+    result = await handler(
+        _query(evaluated_principal_id=_PRINCIPAL_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert isinstance(result, Allow)
+
+
+@pytest.mark.unit
+async def test_on_behalf_gate_fires_before_the_policy_is_loaded() -> None:
+    """A denied probe must not become a policy-existence oracle."""
+    store = InMemoryEventStore()
+    deps = build_deps(
+        ids=[uuid4() for _ in range(8)],
+        now=_NOW,
+        event_store=store,
+        authz=_AllowEvaluatePolicyDenyOthers(),
+    )
+    handler = evaluate_policy.bind(deps)
+
+    # No policy seeded at all: a 404-shaped None would tell the caller
+    # the policy does not exist. The on-behalf denial must win.
+    with pytest.raises(UnauthorizedError):
+        await handler(
+            _query(policy_id=uuid4(), evaluated_principal_id=_ALLOWED_PRINCIPAL),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+
+@pytest.mark.unit
+async def test_the_answer_reports_that_it_consulted_the_policy_alone() -> None:
+    """Partiality rides on the result, so callers cannot mistake it for the gate."""
+    store = InMemoryEventStore()
+    deps = build_deps(ids=[uuid4() for _ in range(8)], now=_NOW, event_store=store)
+    await _seed_policy(store)
+    handler = evaluate_policy.bind(deps)
+
+    result = await handler(
+        _query(),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert result is not None
+    assert result.evaluated == frozenset({Conjunct.POLICY})

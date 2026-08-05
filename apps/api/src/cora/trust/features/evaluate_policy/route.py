@@ -65,7 +65,11 @@ router = APIRouter(tags=["trust"])
         },
         status.HTTP_403_FORBIDDEN: {
             "model": ErrorResponse,
-            "description": "Authorize port denied the query.",
+            "description": (
+                "Authorize port denied the query, either the caller's right to ask at all "
+                "or, when `evaluated_principal_id` is not the caller, the separate "
+                "`EvaluatePolicyOfOthers` permission, which is denied by default."
+            ),
         },
         status.HTTP_422_UNPROCESSABLE_CONTENT: {
             "description": "Path or query parameter failed schema validation.",
