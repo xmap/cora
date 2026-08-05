@@ -25,6 +25,13 @@ class ListPermissionsOutput(BaseModel):
     policy_id: UUID
     evaluated_principal_id: UUID
     evaluated_conduit_id: UUID
+    surface_id: UUID = Field(
+        description=(
+            "Arrival surface the listing is scoped to. The Policy matches its surface by "
+            "strict equality, so it permits nothing on any other surface and "
+            "`permitted_commands` must not be read as holding everywhere."
+        ),
+    )
     permitted_commands: list[str]
     incomplete: bool = Field(
         description=("True if some permissions could not be enumerated (always False at v1)."),
@@ -74,6 +81,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             policy_id=result.policy_id,
             evaluated_principal_id=result.evaluated_principal_id,
             evaluated_conduit_id=result.evaluated_conduit_id,
+            surface_id=result.surface_id,
             permitted_commands=result.permitted_commands,
             incomplete=result.incomplete,
         )

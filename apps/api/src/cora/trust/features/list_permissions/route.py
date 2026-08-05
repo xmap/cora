@@ -37,6 +37,16 @@ class ListPermissionsResponse(BaseModel):
     policy_id: UUID
     evaluated_principal_id: UUID
     evaluated_conduit_id: UUID
+    surface_id: Annotated[
+        UUID,
+        Field(
+            description=(
+                "Arrival surface the listing is scoped to. The Policy matches its surface by "
+                "strict equality, so it permits nothing on any other surface and "
+                "`permitted_commands` must not be read as holding everywhere."
+            ),
+        ),
+    ]
     permitted_commands: list[str]
     incomplete: bool = Field(
         description=("True if some permissions could not be enumerated (always False at v1)."),
@@ -71,8 +81,11 @@ router = APIRouter(tags=["trust"])
     summary="List a Policy's permitted commands for (principal, conduit)",
     description=(
         "Enumerates the commands a principal can execute against a Policy via a conduit. "
-        "Returns the sorted set plus the `incomplete: bool` flag (always False at v1; future "
-        "ABAC may flip it). **Do NOT use the returned set to drive authorization decisions**: "
+        "Returns the sorted set, the `surface_id` that set is scoped to, plus the "
+        "`incomplete: bool` flag (always False at v1; future ABAC may flip it). The Policy "
+        "matches its surface by strict equality, so the commands are permitted on that "
+        "surface and on no other; read the two fields together. "
+        "**Do NOT use the returned set to drive authorization decisions**: "
         "this is for UX / debugging only; only `Kernel.authorize` (the PEP) authorizes. "
         "On-behalf queries (evaluated_principal_id != caller) require a separate "
         "`ListPermissionsOfOthers` permission, denied by default."
@@ -112,6 +125,7 @@ async def get_policies_permissions(
         policy_id=result.policy_id,
         evaluated_principal_id=result.evaluated_principal_id,
         evaluated_conduit_id=result.evaluated_conduit_id,
+        surface_id=result.surface_id,
         permitted_commands=result.permitted_commands,
         incomplete=result.incomplete,
     )

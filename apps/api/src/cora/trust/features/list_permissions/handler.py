@@ -38,8 +38,13 @@ from uuid import UUID
 
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.logging import get_logger
-from cora.infrastructure.ports import Deny
+from cora.infrastructure.ports import Allow, Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.trust._authorization_decision import (
+    AuthorizationRequest,
+    PolicyOnlyContext,
+    decide_authorization,
+)
 from cora.trust.aggregates.policy import load_policy
 from cora.trust.errors import UnauthorizedError
 from cora.trust.features.list_permissions.query import ListPermissions, PermissionListing
@@ -136,18 +141,38 @@ def bind(deps: Kernel) -> Handler:
             )
             return None
 
-        # Principal eligibility + conduit match: if either fails, the
-        # principal can't execute ANY command under this policy.
-        eligible = (
-            query.evaluated_principal_id in policy.permitted_principal_ids
-            and query.evaluated_conduit_id == policy.conduit_id
+        # Ask the shared decision once per candidate command rather than
+        # re-deriving the predicate here. The inline version checked
+        # principal and conduit but not surface, so it listed commands as
+        # permitted for arrivals the gate refuses; anything this slice
+        # reimplements is something it can get wrong on its own.
+        #
+        # The surface comes from the Policy, not from the caller: a
+        # Policy matches its surface by strict equality, so it is the
+        # only surface on which the answer is anything but empty. The
+        # listing reports it so the set cannot be read as universal.
+        permitted_commands = sorted(
+            command_name
+            for command_name in policy.permitted_commands
+            if isinstance(
+                decide_authorization(
+                    AuthorizationRequest(
+                        principal_id=query.evaluated_principal_id,
+                        command_name=command_name,
+                        conduit_id=query.evaluated_conduit_id,
+                        surface_id=policy.surface_id,
+                    ),
+                    PolicyOnlyContext(policy=policy),
+                ),
+                Allow,
+            )
         )
-        permitted_commands = sorted(policy.permitted_commands) if eligible else []
 
         result = PermissionListing(
             policy_id=query.policy_id,
             evaluated_principal_id=query.evaluated_principal_id,
             evaluated_conduit_id=query.evaluated_conduit_id,
+            surface_id=policy.surface_id,
             permitted_commands=permitted_commands,
             incomplete=False,
         )
@@ -159,7 +184,7 @@ def bind(deps: Kernel) -> Handler:
             principal_id=str(principal_id),
             correlation_id=str(correlation_id),
             found=True,
-            eligible=eligible,
+            surface_id=str(policy.surface_id),
             permitted_command_count=len(permitted_commands),
         )
         return result

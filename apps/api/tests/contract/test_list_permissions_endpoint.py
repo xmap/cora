@@ -33,8 +33,8 @@ _SURFACE = str(SYSTEM_HTTP_SURFACE_ID)
 def _define_policy(client: TestClient) -> str:
     """Create a Policy via the real define_policy endpoint and return
     its id. Same in-memory app backs both endpoints. The policy binds
-    the HTTP Surface (required by define_policy); list_permissions does
-    not evaluate the surface, so it doesn't affect these assertions."""
+    the HTTP Surface (required by define_policy), and list_permissions
+    reports that surface back as the scope its command set holds on."""
     response = client.post(
         "/policies",
         json={
@@ -76,6 +76,9 @@ def test_get_permissions_returns_200_with_sorted_commands_when_eligible() -> Non
     assert body["evaluated_conduit_id"] == _CONDUIT
     assert body["permitted_commands"] == ["DefinePolicy", "RegisterActor"]  # sorted
     assert body["incomplete"] is False
+    # The set is scoped, and the response says to what. Reading the
+    # commands without this field is reading half the answer.
+    assert body["surface_id"] == _SURFACE
 
 
 @pytest.mark.contract

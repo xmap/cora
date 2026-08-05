@@ -112,6 +112,9 @@ def test_mcp_list_permissions_returns_sorted_commands_when_eligible() -> None:
     output = result["structuredContent"]
     assert output["permitted_commands"] == ["DefinePolicy", "RegisterActor"]
     assert output["incomplete"] is False
+    # An agent reading this tool's output must be able to see the scope
+    # too, not just the command set.
+    assert output["surface_id"] == _SURFACE
 
 
 @pytest.mark.contract

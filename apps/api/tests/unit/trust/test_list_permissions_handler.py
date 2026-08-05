@@ -13,7 +13,14 @@ import pytest
 
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.ports import Allow, AuthzResult, Deny
+from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.trust import TrustHandlers, UnauthorizedError, wire_trust
+from cora.trust._authorization_decision import (
+    AuthorizationRequest,
+    PolicyOnlyContext,
+    decide_authorization,
+)
+from cora.trust.aggregates.policy import load_policy
 from cora.trust.features import list_permissions
 from cora.trust.features.list_permissions import ListPermissions
 from tests._authz import seed_policy
@@ -57,6 +64,7 @@ async def _seed_policy(
     conduit_id: UUID = _CONDUIT_ID,
     principals: frozenset[UUID] = frozenset({_ALLOWED_PRINCIPAL}),
     commands: frozenset[str] = frozenset({"RegisterActor", "DefinePolicy", "DefineZone"}),
+    surface_id: UUID = NIL_SENTINEL_ID,
 ) -> None:
     await seed_policy(
         store,
@@ -64,6 +72,7 @@ async def _seed_policy(
         permitted_principal_ids=principals,
         permitted_commands=commands,
         conduit_id=conduit_id,
+        surface_id=surface_id,
         occurred_at=_NOW,
     )
 
@@ -287,3 +296,95 @@ async def test_wired_handler_runs_through_full_composition() -> None:
     )
     assert result is not None
     assert "RegisterActor" in result.permitted_commands
+
+
+_BOUND_SURFACE = UUID("01900000-0000-7000-8000-0000000005f1")
+_OTHER_SURFACE = UUID("01900000-0000-7000-8000-0000000005f2")
+
+
+@pytest.mark.unit
+async def test_listing_names_the_surface_it_is_scoped_to() -> None:
+    """The set alone is half an answer; the surface is the other half."""
+    store = InMemoryEventStore()
+    deps = build_deps(ids=[uuid4() for _ in range(8)], now=_NOW, event_store=store)
+    await _seed_policy(store, surface_id=_BOUND_SURFACE)
+    handler = list_permissions.bind(deps)
+
+    result = await handler(
+        _query(),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert result is not None
+    assert result.surface_id == _BOUND_SURFACE
+
+
+@pytest.mark.unit
+async def test_every_listed_command_is_permitted_by_the_gate_on_that_surface() -> None:
+    """The listing agrees with the decision it claims to describe."""
+    store = InMemoryEventStore()
+    deps = build_deps(ids=[uuid4() for _ in range(8)], now=_NOW, event_store=store)
+    await _seed_policy(store, surface_id=_BOUND_SURFACE)
+    handler = list_permissions.bind(deps)
+
+    result = await handler(
+        _query(),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert result is not None
+    assert result.permitted_commands
+    policy = await load_policy(store, _POLICY_ID)
+    assert policy is not None
+    for command_name in result.permitted_commands:
+        decision = decide_authorization(
+            AuthorizationRequest(
+                principal_id=result.evaluated_principal_id,
+                command_name=command_name,
+                conduit_id=result.evaluated_conduit_id,
+                surface_id=result.surface_id,
+            ),
+            PolicyOnlyContext(policy=policy),
+        )
+        assert isinstance(decision, Allow), f"{command_name} listed but refused"
+
+
+@pytest.mark.unit
+async def test_listed_commands_are_refused_on_any_other_surface() -> None:
+    """Why the field exists.
+
+    The same principal and the same command are permitted on the
+    reported surface and refused everywhere else. Without `surface_id`
+    on the response a reader had no way to know which of those two
+    answers the listing described, and the natural reading, "these
+    commands work", was wrong for every arrival elsewhere.
+    """
+    store = InMemoryEventStore()
+    deps = build_deps(ids=[uuid4() for _ in range(8)], now=_NOW, event_store=store)
+    await _seed_policy(store, surface_id=_BOUND_SURFACE)
+    handler = list_permissions.bind(deps)
+
+    result = await handler(
+        _query(),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert result is not None
+    assert result.permitted_commands
+    policy = await load_policy(store, _POLICY_ID)
+    assert policy is not None
+    for command_name in result.permitted_commands:
+        decision = decide_authorization(
+            AuthorizationRequest(
+                principal_id=result.evaluated_principal_id,
+                command_name=command_name,
+                conduit_id=result.evaluated_conduit_id,
+                surface_id=_OTHER_SURFACE,
+            ),
+            PolicyOnlyContext(policy=policy),
+        )
+        assert isinstance(decision, Deny)
+        assert "surface" in decision.reason.lower()

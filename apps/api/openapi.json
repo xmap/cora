@@ -8549,12 +8549,19 @@
             "format": "uuid",
             "title": "Policy Id",
             "type": "string"
+          },
+          "surface_id": {
+            "description": "Arrival surface the listing is scoped to. The Policy matches its surface by strict equality, so it permits nothing on any other surface and `permitted_commands` must not be read as holding everywhere.",
+            "format": "uuid",
+            "title": "Surface Id",
+            "type": "string"
           }
         },
         "required": [
           "policy_id",
           "evaluated_principal_id",
           "evaluated_conduit_id",
+          "surface_id",
           "permitted_commands",
           "incomplete"
         ],
@@ -38389,7 +38396,7 @@
     },
     "/policies/{policy_id}/permissions": {
       "get": {
-        "description": "Enumerates the commands a principal can execute against a Policy via a conduit. Returns the sorted set plus the `incomplete: bool` flag (always False at v1; future ABAC may flip it). **Do NOT use the returned set to drive authorization decisions**: this is for UX / debugging only; only `Kernel.authorize` (the PEP) authorizes. On-behalf queries (evaluated_principal_id != caller) require a separate `ListPermissionsOfOthers` permission, denied by default.",
+        "description": "Enumerates the commands a principal can execute against a Policy via a conduit. Returns the sorted set, the `surface_id` that set is scoped to, plus the `incomplete: bool` flag (always False at v1; future ABAC may flip it). The Policy matches its surface by strict equality, so the commands are permitted on that surface and on no other; read the two fields together. **Do NOT use the returned set to drive authorization decisions**: this is for UX / debugging only; only `Kernel.authorize` (the PEP) authorizes. On-behalf queries (evaluated_principal_id != caller) require a separate `ListPermissionsOfOthers` permission, denied by default.",
         "operationId": "get_policies_permissions_policies__policy_id__permissions_get",
         "parameters": [
           {
