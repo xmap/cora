@@ -11,7 +11,7 @@ from uuid import UUID
 
 import pytest
 
-from cora.infrastructure.ports import Allow, Conjunct, Deny
+from cora.infrastructure.ports import Allow, Conjunct, Deny, PrincipalLiveness
 from cora.trust._authorization_decision import (
     AuthorizationRequest,
     PolicyOnlyContext,
@@ -137,3 +137,107 @@ def test_a_result_with_no_stated_conjuncts_decided_on_nothing() -> None:
     """The permissive fallback's honest report, pinned so it stays true."""
     assert Allow().evaluated == frozenset()
     assert Deny(reason="denied").evaluated == frozenset()
+
+
+@pytest.mark.unit
+def test_unwired_liveness_leaves_the_conjunct_unevaluated() -> None:
+    """No lookup means the question was never asked, and the verdict says so.
+
+    The distinction this pins is between "asked and passed" and "never
+    asked". A deployment with no lookup wired must not produce a verdict
+    that names Liveness, or the audit record claims a check that did not
+    run.
+    """
+    result = decide_authorization(_request(), ResolvedContext(policy=_policy()))
+
+    assert isinstance(result, Allow)
+    assert result.evaluated == frozenset({Conjunct.POLICY})
+
+
+@pytest.mark.unit
+def test_active_principal_is_permitted_and_liveness_is_named() -> None:
+    result = decide_authorization(
+        _request(),
+        ResolvedContext(policy=_policy(), liveness=PrincipalLiveness.ACTIVE),
+    )
+
+    assert isinstance(result, Allow)
+    assert result.evaluated == frozenset({Conjunct.POLICY, Conjunct.LIVENESS})
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("liveness", "remedy"),
+    [
+        (PrincipalLiveness.DEACTIVATED, "reactivate_actor"),
+        (PrincipalLiveness.UNREGISTERED, "register_actor"),
+    ],
+)
+def test_switched_off_principal_is_refused_with_its_remedy(
+    liveness: PrincipalLiveness, remedy: str
+) -> None:
+    """A denial names the cause AND the command that clears it.
+
+    A gate that says only "no" costs a beamtime shift to diagnose, so
+    both refusal paths are pinned to keep carrying their own fix.
+    """
+    result = decide_authorization(
+        _request(),
+        ResolvedContext(policy=_policy(), liveness=liveness),
+    )
+
+    assert isinstance(result, Deny)
+    assert remedy in result.reason
+    assert result.evaluated == frozenset({Conjunct.POLICY, Conjunct.LIVENESS})
+
+
+@pytest.mark.unit
+def test_policy_denial_hides_liveness_from_an_unpermitted_principal() -> None:
+    """Policy runs first so the gate is not a liveness oracle.
+
+    A principal the Policy refuses learns nothing about whether it also
+    exists or has been switched off. Were the order reversed, anyone able
+    to provoke a denial could enumerate which principals are registered
+    and which an operator has disabled.
+    """
+    result = decide_authorization(
+        _request(principal_id=_STRANGER),
+        ResolvedContext(policy=_policy(), liveness=PrincipalLiveness.DEACTIVATED),
+    )
+
+    assert isinstance(result, Deny)
+    assert "deactivated" not in result.reason.lower()
+    assert result.evaluated == frozenset({Conjunct.POLICY})
+
+
+@pytest.mark.unit
+def test_liveness_never_turns_a_policy_denial_into_a_grant() -> None:
+    """Liveness only ever narrows. Pinned as a property, not an example.
+
+    Every liveness value is run against a request the Policy refuses, so
+    a future edit that returns Allow from the liveness arm fails here
+    rather than in production.
+    """
+    for liveness in PrincipalLiveness:
+        result = decide_authorization(
+            _request(command_name="StopRun"),
+            ResolvedContext(policy=_policy(), liveness=liveness),
+        )
+
+        assert isinstance(result, Deny), liveness
+
+
+@pytest.mark.unit
+def test_policy_only_context_ignores_liveness_entirely() -> None:
+    """The hypothetical arm cannot carry liveness, by construction.
+
+    `PolicyOnlyContext` has no liveness field, so the query slices cannot
+    start disclosing whether another principal is switched off. This test
+    pins the shape rather than the behaviour: if someone adds the field,
+    the constructor call below still compiles and this test is the place
+    that argues why they should not.
+    """
+    result = decide_authorization(_request(), PolicyOnlyContext(policy=_policy()))
+
+    assert isinstance(result, Allow)
+    assert result.evaluated == frozenset({Conjunct.POLICY})

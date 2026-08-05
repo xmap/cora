@@ -95,6 +95,12 @@ class _CarveOut:
 # one fails as a stale entry.
 _REACH_LEDGER: dict[Conjunct, _PrincipalReach] = {
     Conjunct.POLICY: _PrincipalReach.EVERY_PRINCIPAL,
+    # Reads `Actor.active`. Every principal HAS an Actor, agents included:
+    # `define_agent` writes the agent's Actor at the same id in one
+    # cross-BC transaction, so `Agent.id == Actor.id` and one field
+    # describes both kinds. Not "symmetric because we were careful", but
+    # symmetric because there is only one fact to read.
+    Conjunct.LIVENESS: _PrincipalReach.EVERY_PRINCIPAL,
 }
 
 # Carve-outs for the conjuncts classified `SOME_PRINCIPALS`. Empty is the

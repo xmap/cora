@@ -161,29 +161,33 @@ class TrustAuthorize:
         self._verdict_store = verdict_store
         self._clock = clock
         self._id_generator = id_generator
-        # Observation only. Wiring this changes no decision: liveness is
-        # resolved and logged so a deployment can measure how many requests
-        # arrive from principals that are unregistered or switched off BEFORE
-        # any of them start being refused. Deliberately absent from `Conjunct`
-        # and from `evaluated` until it decides something, because that
-        # vocabulary promises a result consulted every member it names.
+        # Wiring this turns liveness enforcement ON for the deployment: a
+        # principal that is deactivated or was never registered is refused
+        # even where the Policy permits it. Left None, the conjunct is not
+        # evaluated and no verdict claims it was. Opt-in rather than default
+        # because it should follow the measurement (how many live requests
+        # would this have refused), not precede it.
         self._liveness_lookup = liveness_lookup
 
-    async def _observe_liveness(self, principal_id: UUID, command_name: str) -> None:
-        """Resolve and log the caller's liveness. Decides nothing.
+    async def _resolve_liveness(
+        self, principal_id: UUID, command_name: str
+    ) -> PrincipalLiveness | None:
+        """Resolve the caller's liveness, or None when it cannot be.
 
-        Emits only for the two values worth acting on, so the log answers
-        "how much would enforcement have refused, and which remedy would
-        each case have needed" without a line per permitted request.
+        None means the conjunct is not evaluated: either no lookup is
+        wired (enforcement off for this deployment) or the read failed.
 
-        A lookup failure is swallowed on purpose. This is a measurement
-        and it must not be able to fail a request that policy permits;
-        an observation that can deny is not an observation.
+        A failed read FAILS OPEN, loudly. Fail-closed here would mean a
+        transient event-store hiccup locks every principal out of a live
+        beamline at once, which is a worse outcome than briefly not
+        enforcing a switch an operator flips by hand. The warning is the
+        compensating control, and the verdict records the absence
+        because `evaluated` will not name a conjunct that never ran.
         """
         if self._liveness_lookup is None:
-            return
+            return None
         try:
-            liveness = await self._liveness_lookup.liveness_of(principal_id)
+            return await self._liveness_lookup.liveness_of(principal_id)
         except Exception:
             _log.warning(
                 "trust_authorize.liveness_unresolved",
@@ -192,21 +196,7 @@ class TrustAuthorize:
                 correlation_id=str(current_correlation_id()),
                 exc_info=True,
             )
-            return
-        if liveness is PrincipalLiveness.ACTIVE:
-            return
-        _log.info(
-            "trust_authorize.liveness_would_deny",
-            principal_id=str(principal_id),
-            command_name=command_name,
-            liveness=liveness.value,
-            remedy=(
-                "register_actor"
-                if liveness is PrincipalLiveness.UNREGISTERED
-                else "reactivate_actor"
-            ),
-            correlation_id=str(current_correlation_id()),
-        )
+            return None
 
     async def authorize(
         self,
@@ -215,7 +205,7 @@ class TrustAuthorize:
         conduit_id: UUID,
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> AuthzResult:
-        await self._observe_liveness(principal_id, command_name)
+        liveness = await self._resolve_liveness(principal_id, command_name)
         policy = await load_policy(self._event_store, self._policy_id)
         if policy is None:
             _log.warning(
@@ -246,7 +236,7 @@ class TrustAuthorize:
                     conduit_id=conduit_id,
                     surface_id=surface_id,
                 ),
-                ResolvedContext(policy=policy),
+                ResolvedContext(policy=policy, liveness=liveness),
             )
             if isinstance(result, Allow):
                 _log.info(

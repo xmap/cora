@@ -19,9 +19,11 @@ from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStor
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.ports import (
     Allow,
+    Conjunct,
     Deny,
     FakeClock,
     FixedIdGenerator,
+    PrincipalLiveness,
 )
 from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
 from cora.trust.aggregates.conduit import (
@@ -368,3 +370,102 @@ async def test_skips_traversal_when_verdict_logbook_was_closed() -> None:
     result = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", _TARGET_CONDUIT_ID)
     assert isinstance(result, Allow)
     assert verdicts.all() == []
+
+
+class _FixedLivenessLookup:
+    """Returns one liveness value for every principal."""
+
+    def __init__(self, liveness: PrincipalLiveness) -> None:
+        self._liveness = liveness
+
+    async def liveness_of(self, principal_id: UUID) -> PrincipalLiveness:
+        _ = principal_id
+        return self._liveness
+
+
+class _FailingLivenessLookup:
+    """Raises, standing in for an event-store hiccup mid-beamtime."""
+
+    async def liveness_of(self, principal_id: UUID) -> PrincipalLiveness:
+        _ = principal_id
+        msg = "event store unreachable"
+        raise RuntimeError(msg)
+
+
+@pytest.mark.unit
+async def test_unwired_liveness_lookup_leaves_the_gate_unchanged() -> None:
+    """The default wiring must not start refusing anything.
+
+    Enforcement is opt-in, so every deployment and every test that does
+    not wire a lookup keeps exactly the behaviour it had before liveness
+    existed.
+    """
+    store = InMemoryEventStore()
+    await _seed_policy(store)
+    authorize = TrustAuthorize(store, policy_id=_POLICY_ID)
+
+    result = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Allow)
+    assert result.evaluated == frozenset({Conjunct.POLICY})
+
+
+@pytest.mark.unit
+async def test_deactivated_principal_is_refused_though_the_policy_permits_it() -> None:
+    """The whole point of the slice, in one test.
+
+    The Policy still names this principal and still permits the command.
+    Deactivation alone turns the Allow into a Deny, which is what it
+    already does for an agent and has never done for a person.
+    """
+    store = InMemoryEventStore()
+    await _seed_policy(store)
+    authorize = TrustAuthorize(
+        store,
+        policy_id=_POLICY_ID,
+        liveness_lookup=_FixedLivenessLookup(PrincipalLiveness.DEACTIVATED),
+    )
+
+    result = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Deny)
+    assert "reactivate_actor" in result.reason
+
+
+@pytest.mark.unit
+async def test_active_principal_still_permitted_with_liveness_wired() -> None:
+    store = InMemoryEventStore()
+    await _seed_policy(store)
+    authorize = TrustAuthorize(
+        store,
+        policy_id=_POLICY_ID,
+        liveness_lookup=_FixedLivenessLookup(PrincipalLiveness.ACTIVE),
+    )
+
+    result = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Allow)
+    assert result.evaluated == frozenset({Conjunct.POLICY, Conjunct.LIVENESS})
+
+
+@pytest.mark.unit
+async def test_liveness_read_failure_fails_open_without_naming_the_conjunct() -> None:
+    """A broken lookup must not lock out a live beamline.
+
+    Fail-closed here would turn a transient event-store fault into a
+    site-wide outage, which is worse than briefly not enforcing a switch
+    an operator flips by hand. The verdict still tells the truth: the
+    conjunct is absent from `evaluated`, so nothing claims a check ran.
+    """
+    store = InMemoryEventStore()
+    await _seed_policy(store)
+    authorize = TrustAuthorize(
+        store,
+        policy_id=_POLICY_ID,
+        liveness_lookup=_FailingLivenessLookup(),
+    )
+
+    result = await authorize.authorize(_ALLOWED_PRINCIPAL, "RegisterActor", UUID(int=0))
+
+    assert isinstance(result, Allow)
+    assert result.evaluated == frozenset({Conjunct.POLICY})
