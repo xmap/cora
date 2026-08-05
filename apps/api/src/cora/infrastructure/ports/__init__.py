@@ -147,6 +147,11 @@ from cora.infrastructure.ports.model_usage_lookup import (
     ModelUsageLookup,
     ModelUsageLookupResult,
 )
+from cora.infrastructure.ports.principal_liveness_lookup import (
+    AlwaysLivePrincipalLivenessLookup,
+    PrincipalLiveness,
+    PrincipalLivenessLookup,
+)
 from cora.infrastructure.ports.profile_store import Profile, ProfileStore
 from cora.infrastructure.ports.role_lookup import (
     RoleLookup,
@@ -200,6 +205,7 @@ __all__ = [
     "AlwaysEmptyCapabilityLookup",
     "AlwaysEmptyModelUsageLookup",
     "AlwaysGrantedSpendGuard",
+    "AlwaysLivePrincipalLivenessLookup",
     "AlwaysPermittedEnclosureLookup",
     "AlwaysQuietCautionLookup",
     "AlwaysRatifiedConsequenceLookup",
@@ -287,6 +293,8 @@ __all__ = [
     "NoSuppliesRegisteredLookup",
     "NullInferenceRecorder",
     "PrincipalKind",
+    "PrincipalLiveness",
+    "PrincipalLivenessLookup",
     "Profile",
     "ProfileStore",
     "RoleLookup",
