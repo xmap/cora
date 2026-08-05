@@ -2517,7 +2517,7 @@
 | src/cora/trust/features/list\_permissions/handler.py                                     |       35 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/trust/features/list\_permissions/query.py                                       |        6 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/list\_permissions/route.py                                       |       19 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/trust/features/list\_permissions/tool.py                                        |       21 |        0 |        2 |        0 |    100.0% |           |
+| src/cora/trust/features/list\_permissions/tool.py                                        |       22 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/trust/features/list\_policies/\_\_init\_\_.py                                   |        4 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/list\_policies/handler.py                                        |       22 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/features/list\_policies/query.py                                          |       10 |        0 |        0 |        0 |    100.0% |           |
@@ -2596,7 +2596,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **55701** | **1254** | **8018** |  **367** | **97.2%** |           |
+| **TOTAL**                                                                                | **55702** | **1254** | **8018** |  **367** | **97.2%** |           |
 
 
 ## Setup coverage badge
