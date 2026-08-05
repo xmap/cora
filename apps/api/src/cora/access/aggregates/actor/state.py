@@ -41,15 +41,35 @@ class ActorKind(StrEnum):
       - `service_account` -- registered via `register_actor(kind=...)`
                    for machine callers (CI bridges, autonomous agent
                    runtime processes, future TomoScan/EPICS bridges).
-                   Aligns with the closed set on
-                   `cora.infrastructure.ports.token_verifier.PrincipalKind`
-                   which carries the same closed set on the edge-auth
-                   side. Service-account Actors are functionally
-                   identical to humans at the Authorize port; the
-                   discriminator exists for forensic logging + policy
-                   shapes that want to scope machine callers separately
-                   (for example "this Policy allows only kind=service_account
-                   callers from issuer=internal-ci.example.com").
+                   Service-account Actors are functionally identical to
+                   humans at the Authorize port.
+
+    The edge-auth set is NOT the same set. `PrincipalKind` in
+    `cora.infrastructure.ports.token_verifier` is
+    `Literal["human", "service_account"]`, two values, and the absence
+    of `agent` there is correct rather than drift: that enum names how a
+    caller AUTHENTICATED (an interactive session versus a machine
+    credential), and "agent" is not a credential shape. An earlier
+    version of this docstring claimed the two sets were identical; they
+    are not, and no fitness test compares them (the sync test pins the
+    port against its own local mirror in `infrastructure.auth.config`).
+
+    Do NOT justify this discriminator by policy scoping. `Policy`
+    carries no kind field, and `test_authorize_port_signature_omits_actor_kind`
+    structurally pins that the decision point can never receive a kind,
+    so "a Policy that admits only service-account callers" is barred by
+    a shipped lock, not merely unbuilt. What the value is good for today
+    is forensic reading of the record, nothing else: of the two
+    allowlisted `ActorKind` branches in the tree, both concern `agent`
+    and neither reads this value.
+
+    Known modelling gap, kept deliberately rather than deleted. A
+    service account is not a kind of PARTY; it is a standing credential
+    OPERATED BY a party, and that relationship is unmodelled. Deleting
+    the value would force a CI bridge to register as `human`, which is
+    false in the record, so the placeholder is more honest than its
+    removal until the issuer chain lands. See
+    [[project_conjunct_symmetry_design]].
 
     Decision.actor_id semantics survive the split: humans, agents, and
     service accounts are all first-class principals through the same
