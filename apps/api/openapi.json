@@ -42944,6 +42944,18 @@
             }
           },
           {
+            "description": "Which concern's hold claim this resume discharges. Must match the cause the hold was placed under. Defaults to `operator`, the routine case. A Run held by the kill-switch carries `authority-revocation` and cannot be resumed as `operator`.",
+            "in": "query",
+            "name": "cause",
+            "required": false,
+            "schema": {
+              "default": "operator",
+              "description": "Which concern's hold claim this resume discharges. Must match the cause the hold was placed under. Defaults to `operator`, the routine case. A Run held by the kill-switch carries `authority-revocation` and cannot be resumed as `operator`.",
+              "title": "Cause",
+              "type": "string"
+            }
+          },
+          {
             "description": "Legacy principal-id header (trust-the-proxy shape). When IDENTITY_PROVIDERS is configured (bearer-auth mode), this header is IGNORED and the verified bearer token from `BearerAuthMiddleware` (Authorization: Bearer) sets the principal. When no IdPs are configured (legacy mode), the application TRUSTS this header (no cryptographic verification) -- production deployments in legacy mode MUST front the API with an auth proxy that strips any client-supplied X-Principal-Id and sets it to the verified principal UUID. Behavior when absent: see Settings.require_authenticated_principal.",
             "in": "header",
             "name": "X-Principal-Id",

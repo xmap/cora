@@ -10,6 +10,7 @@ from pydantic import Field
 from cora.infrastructure.mcp_principal import get_mcp_principal_id
 from cora.infrastructure.observability import current_correlation_id
 from cora.infrastructure.routing import get_mcp_surface_id
+from cora.run.aggregates.run import HOLD_CAUSE_OPERATOR
 from cora.run.features.resume_run.command import ResumeRun
 from cora.run.features.resume_run.handler import Handler
 
@@ -30,10 +31,20 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             UUID,
             Field(description="Target run's id."),
         ],
+        cause: Annotated[
+            str,
+            Field(
+                description=(
+                    "Which concern's hold claim this resume discharges. Must match the "
+                    "cause the hold was placed under. Defaults to `operator`. A Run held "
+                    "by the kill-switch carries `authority-revocation`."
+                ),
+            ),
+        ] = HOLD_CAUSE_OPERATOR,
     ) -> None:
         handler = get_handler()
         await handler(
-            ResumeRun(run_id=run_id),
+            ResumeRun(run_id=run_id, cause=cause),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),
             surface_id=get_mcp_surface_id(),

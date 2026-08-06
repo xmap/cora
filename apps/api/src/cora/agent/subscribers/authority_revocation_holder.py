@@ -29,10 +29,22 @@ or missing run, concurrency folding) stay shared rather than duplicated, and
 `apply` guards on the SAME map that extracts the id so the subscription and
 the guard cannot drift apart.
 
-Deactivation is REVERSIBLE (`reactivate_actor`), and reactivation deliberately
-does NOT release these holds. A hold is released by the concern that placed it,
-and an operator who switches someone back on has said they may drive again, not
-that whatever was paused should resume unattended.
+Deactivation is REVERSIBLE (`reactivate_actor`) and reactivation does NOT
+release these holds, which was very nearly a trap. The claim placed here is
+`authority-revocation`, and until the resume surfaces exposed `cause` there was
+no way to discharge it: `ResumeRun` defaults to `operator`, every route and
+tool omitted the field, and the decider refuses while another concern's claim
+stands. So a mis-clicked deactivation followed instantly by a reactivation left
+every run that principal drove permanently held, with `abort_run` and its
+destroyed beamtime as the only exit.
+
+The principle survives the fix: a hold is released by a deliberate act naming
+the concern that placed it, not as a side effect of switching someone back on,
+because reinstating a person says they may drive again and not that whatever
+was paused should resume unattended. What was wrong was shipping that principle
+with no act available to perform. An automatic release on `ActorReactivated`,
+mirroring `ratification_release`, is the better ergonomics and is a follow-on;
+the operator remedy has to exist either way.
 
 ## Cross-BC write via Pattern C (not the hold_run handler)
 

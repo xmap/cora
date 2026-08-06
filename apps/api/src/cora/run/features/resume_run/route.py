@@ -7,7 +7,7 @@ No Content on success.
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Request, status
+from fastapi import APIRouter, Depends, Path, Query, Request, status
 
 from cora.infrastructure.routing import (
     ErrorResponse,
@@ -15,6 +15,7 @@ from cora.infrastructure.routing import (
     get_principal_id,
     get_surface_id,
 )
+from cora.run.aggregates.run import HOLD_CAUSE_OPERATOR
 from cora.run.features.resume_run.command import ResumeRun
 from cora.run.features.resume_run.handler import Handler
 
@@ -57,9 +58,20 @@ async def post_runs_resume(
     cid: Annotated[UUID, Depends(get_correlation_id)],
     principal_id: Annotated[UUID, Depends(get_principal_id)],
     surface_id: Annotated[UUID, Depends(get_surface_id)],
+    cause: Annotated[
+        str,
+        Query(
+            description=(
+                "Which concern's hold claim this resume discharges. Must match the "
+                "cause the hold was placed under. Defaults to `operator`, the routine "
+                "case. A Run held by the kill-switch carries `authority-revocation` "
+                "and cannot be resumed as `operator`."
+            ),
+        ),
+    ] = HOLD_CAUSE_OPERATOR,
 ) -> None:
     await handler(
-        ResumeRun(run_id=run_id),
+        ResumeRun(run_id=run_id, cause=cause),
         principal_id=principal_id,
         correlation_id=cid,
         surface_id=surface_id,
