@@ -14,7 +14,10 @@ the composition root wires BCs into the kernel.
 ## Adapter selection
 
   - `Settings.trust_policy_id is None` -> `AllowAllAuthorize`
-    (permissive default; matches dev/test posture).
+    (permissive default; matches dev/test posture). Only reachable
+    when `liveness_posture` is "off": asking for liveness while no
+    real gate exists raises instead, because AllowAll consults no
+    conjunct and would report zero would-be denials.
   - `Settings.trust_policy_id` set -> `TrustAuthorize` gates every
     command through that single Policy aggregate. See
     `cora/trust/authorize.py` for the bootstrap workflow when

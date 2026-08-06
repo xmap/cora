@@ -187,10 +187,14 @@ class TrustAuthorize:
         principal's switch, so `test_liveness_is_resolved_for_the_caller`
         pins the argument rather than trusting the call site.
 
-        None means the conjunct is not evaluated, for any of three
-        reasons: no lookup wired, the command is exempt, or the read
-        failed. All three must leave `Conjunct.LIVENESS` absent from
-        `evaluated` so no verdict claims a check that did not run.
+        None means the conjunct is not evaluated, for any of FOUR
+        reasons: no lookup wired, the command is exempt, the read
+        failed, or the posture is "shadow" (resolved and logged, then
+        deliberately withheld from the decision). All four must leave
+        `Conjunct.LIVENESS` absent from `evaluated` so no verdict claims
+        a check that did not run. Shadow is the easy one to forget when
+        editing this, because it is the only case that DOES resolve a
+        value and then discards it.
 
         A failed read FAILS OPEN, loudly. Fail-closed would turn a
         transient event-store fault into a site-wide lockout mid-beamtime,

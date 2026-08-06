@@ -22,6 +22,7 @@ replaced by a both-directions check.
 """
 
 import ast
+from typing import Final
 
 import pytest
 
@@ -67,4 +68,47 @@ def test_liveness_exempt_set_is_not_empty() -> None:
         "`LIVENESS_EXEMPT_COMMANDS` is empty, so liveness can refuse a stop, an "
         "abort, a completion, or an append. A deactivated principal mid-scan would "
         "strand the Procedure in Running with its own abort denied."
+    )
+
+
+# Verbs that begin or resume work. An exemption naming one hands a
+# principal an operator deliberately switched off the power to set the
+# system going again, which is the inverse of both justifications the
+# set rests on.
+_STARTING_VERBS: Final[frozenset[str]] = frozenset(
+    {"Start", "Resume", "Reactivate", "Restore", "Activate", "Conduct", "Reopen"}
+)
+
+
+@pytest.mark.architecture
+def test_liveness_exemption_for_work_starting_command_is_rejected() -> None:
+    """The regression guard for the mistake this set has already made once.
+
+    `ResumeProcedure` shipped in an earlier version of this set, copied
+    from a design memo whose list was written for a WINDOW conjunct: a
+    twelve-hour scan crossing a beamtime boundary, where the principal is
+    entirely legitimate and only the clock moved. Liveness is an operator
+    deliberately reaching for a switch, and a resumed Procedure walks
+    real setpoints, so the inherited exemption let a revoked principal
+    restart beam motion.
+
+    A name check cannot decide semantics, and this one deliberately does
+    not try. It catches the specific, repeatable error of adding a
+    start-shaped verb to a set justified entirely by stopping and
+    recording. If a genuinely start-shaped command ever belongs here,
+    that needs an argument in the module docstring, not a quiet append.
+    """
+    starting = sorted(
+        name
+        for name in LIVENESS_EXEMPT_COMMANDS
+        if any(name.startswith(verb) for verb in _STARTING_VERBS)
+    )
+    assert not starting, (
+        "`LIVENESS_EXEMPT_COMMANDS` names command(s) that start or resume work:\n  "
+        + "\n  ".join(starting)
+        + "\n\nThe set exempts exactly two things: stopping work already running, and "
+        "recording what already happened. A principal an operator switched off must not "
+        "be able to set the system going again. This exact mistake shipped once, as "
+        "ResumeProcedure, because a list written for a window conjunct was reused for a "
+        "deliberate switch."
     )

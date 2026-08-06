@@ -18,6 +18,7 @@ posture setting governs nothing.
 """
 
 import ast
+from pathlib import Path
 
 import pytest
 
@@ -31,10 +32,18 @@ _FACTORY_KWARG = "principal_liveness_lookup_factory"
 _LOOKUP_KWARG = "liveness_lookup"
 
 
-def _keywords_passed(path: object, func_name: str) -> frozenset[str]:
-    """Keyword names passed to any call of `func_name` in `path`."""
-    tree = ast.parse(_read(path))
-    found: set[str] = set()
+def _calls_of(path: Path, func_name: str) -> list[frozenset[str]]:
+    """Keyword names for EACH call of `func_name`, one entry per call site.
+
+    Per call rather than unioned across calls. `build_kernel` invokes
+    `authorize_factory` twice, once for the in-memory test arm and once
+    for the postgres arm, and a union would let the production arm drop
+    the kwarg while the test arm kept it green. That is the shape of the
+    original P0 (wired somewhere, unreachable where it counts), so the
+    pin has to see every site separately.
+    """
+    tree = ast.parse(path.read_text())
+    calls: list[frozenset[str]] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
@@ -48,17 +57,15 @@ def _keywords_passed(path: object, func_name: str) -> frozenset[str]:
         )
         if name != func_name:
             continue
-        found.update(kw.arg for kw in node.keywords if kw.arg is not None)
-    return frozenset(found)
-
-
-def _read(path: object) -> str:
-    return path.read_text()  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType, reportUnknownVariableType]
+        calls.append(frozenset(kw.arg for kw in node.keywords if kw.arg is not None))
+    return calls
 
 
 @pytest.mark.architecture
 def test_composition_root_binds_the_liveness_lookup_factory() -> None:
-    assert _FACTORY_KWARG in _keywords_passed(_MAIN, "build_kernel"), (
+    calls = _calls_of(_MAIN, "build_kernel")
+    assert calls, "no build_kernel call found in cora/api/main.py"
+    assert all(_FACTORY_KWARG in kwargs for kwargs in calls), (
         f"`cora/api/main.py` does not pass `{_FACTORY_KWARG}` to build_kernel.\n\n"
         "Without it no deployment can enable liveness at all: `Settings.liveness_posture` "
         "would govern nothing, `Conjunct.LIVENESS` would never be evaluated, and "
@@ -69,17 +76,22 @@ def test_composition_root_binds_the_liveness_lookup_factory() -> None:
 
 @pytest.mark.architecture
 def test_kernel_builder_forwards_the_lookup_to_the_authorize_factory() -> None:
-    passed = _keywords_passed(_DEPS, "authorize_factory")
-    assert _LOOKUP_KWARG in passed, (
-        f"`build_kernel` does not forward `{_LOOKUP_KWARG}` to authorize_factory.\n\n"
-        "The factory would be constructed and then dropped, which reads as wired and "
-        "enforces nothing."
+    calls = _calls_of(_DEPS, "authorize_factory")
+    assert len(calls) >= 2, (
+        f"expected both the test-arm and postgres-arm authorize_factory calls, saw {len(calls)}"
+    )
+    missing = [i for i, kwargs in enumerate(calls) if _LOOKUP_KWARG not in kwargs]
+    assert not missing, (
+        f"authorize_factory call site(s) {missing} do not forward `{_LOOKUP_KWARG}`.\n\n"
+        "Every arm must forward it. A factory constructed and then dropped on the "
+        "production path reads as wired and enforces nothing, which is exactly how "
+        "the original P0 passed every test."
     )
 
 
 @pytest.mark.architecture
 def test_authorize_factory_accepts_the_lookup() -> None:
-    tree = ast.parse(_read(_BUILD_AUTHORIZE))
+    tree = ast.parse(_BUILD_AUTHORIZE.read_text())
     params: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name == "build_authorize":

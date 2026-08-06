@@ -15,6 +15,7 @@ from a Subject or Trust 403 in logs / aggregator filters
 Cross-BC consumers catching authorization failures import per-BC.
 """
 
+from typing import ClassVar
 from uuid import UUID
 
 
@@ -45,6 +46,14 @@ class ActorSelfReactivationRefusedError(Exception):
     reinstate colleagues; self-reinstatement is a different power and
     nobody would expect it to ride along.
     """
+
+    # Without this the idempotency layer's `classify_error_status` would
+    # fall through to its 409 default, because the old name was in the
+    # `<X>Cannot<Verb>Error` state-conflict family and this one matches no
+    # branch. Inert today (`reactivate_actor` is not idempotency-wrapped),
+    # declared anyway so wrapping it later cannot quietly downgrade an
+    # authority refusal into a state conflict.
+    idempotency_http_status: ClassVar[int] = 403
 
     def __init__(self, actor_id: UUID) -> None:
         super().__init__(f"Actor {actor_id} cannot reactivate itself")
