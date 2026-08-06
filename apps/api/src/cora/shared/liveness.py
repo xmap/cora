@@ -50,13 +50,46 @@ Deliberately NOT here, having been considered:
     and `CompleteVisit` are not exempt either, and an exemption that
     covers one of a family and not the rest reads as an oversight.
 
-## Scope limit, stated so nobody assumes otherwise
+## Scope limit: no target scoping, and that is deliberate
 
-Membership is by COMMAND NAME with no target scoping, so a switched-off
-principal who is still in a Policy's permitted set may brake or append
-against ANY Run or Procedure, not only their own. Narrowing that needs
-per-target authority, which Policy does not model. Recorded rather than
-silently accepted.
+Membership is by COMMAND NAME. A switched-off principal still in a
+Policy's permitted set may brake or append against ANY Run or Procedure,
+not only their own. A security review flagged this; the decision is to
+accept it here and fix the real cause elsewhere, for four reasons.
+
+**The gap is Policy's, not this set's.** `Policy` carries
+`permitted_principal_ids` and `permitted_commands`, both flat, and no
+target dimension whatsoever. An ACTIVE principal permitted `AbortRun` can
+already abort any run at the facility. This set inherits that absence; it
+does not create it, and it grants a switched-off principal nothing they
+did not have a moment earlier.
+
+**Scoping only the switched-off would invent a narrowing that exists for
+nobody.** What instrument does a facility issue that binds a scientist's
+brake to their own scans? None. Authoring one here would make a withdrawn
+principal MORE constrained than a permitted one on the identical command,
+which is a new asymmetry in the opposite direction rather than a fix for
+the old one.
+
+**The design rule points the other way for brakes.** For commands that
+move the system toward a safer state the eligible set must be strictly
+WIDER than for routine work, never narrower. Someone hitting the brake on
+a runaway scan is the system working, whatever an operator has since done
+to their account.
+
+**The sharpest edge is already blunted.** `StopRun` is the sole member of
+`COMMANDS_REQUIRING_RATIFICATION`, so the most consequential brake needs a
+second principal regardless. And since `ActorDeactivated` began cascading
+into `authority_revocation_holder`, a switched-off principal's OWN runs
+are held the moment they are withdrawn, so the residual reach is over
+other people's work only.
+
+What stays uncomfortable, honestly: a principal an operator withdrew is
+likelier to be acting badly than one who was not, so preserving their
+reach is worse than preserving anyone else's, even though the reach is
+identical. That argues for giving Policy a target dimension, which would
+bind every principal at once. It does not argue for a partial fix wired
+through the liveness door.
 
 HAND-MAINTAINED, DELIBERATELY TEMPORARY. When the OperationClass map
 lands this becomes derived (every Halt-class and Record-class command)
