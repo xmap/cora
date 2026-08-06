@@ -423,6 +423,24 @@ class Settings(BaseSettings):
     # regardless. No-op under a permissive Authorize (dev/test).
     watcher_authz_strict: bool = False
 
+    # `liveness_posture` governs whether the authorization gate reads
+    # `Actor.active` for the calling principal, the switch an operator flips
+    # with deactivate_actor / reactivate_actor. Three states, because
+    # measuring must be possible without refusing:
+    #   - "off"     (default) the gate performs no liveness read at all, and
+    #               `Conjunct.LIVENESS` never appears in a result.
+    #   - "shadow"  resolve and log every non-active caller WITHOUT denying.
+    #               This is the adoption measurement: how many live requests
+    #               would enforcement have refused, and which remedy each
+    #               would have needed. Run it for a full beamtime cycle
+    #               before "enforce".
+    #   - "enforce" a deactivated or unregistered principal is denied even
+    #               where the Policy permits it.
+    # Default "off" because turning this on refuses requests that succeed
+    # today, and the human-envelope design requires the measurement to
+    # precede the enforcement rather than follow it.
+    liveness_posture: Literal["off", "shadow", "enforce"] = "off"
+
     # Edge auth
     # `identity_providers` is the list of IdPs CORA accepts tokens
     # from. Empty (default) keeps the legacy X-Principal-Id-with-

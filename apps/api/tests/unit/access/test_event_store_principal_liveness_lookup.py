@@ -17,6 +17,7 @@ from uuid import UUID
 import pytest
 
 from cora.access.adapters import EventStorePrincipalLivenessLookup
+from cora.access.aggregates.actor import ActorKind
 from cora.access.features import (
     deactivate_actor,
     forget_actor,
@@ -28,6 +29,7 @@ from cora.access.features.forget_actor import ForgetActor
 from cora.access.features.reactivate_actor import ReactivateActor
 from cora.access.features.register_actor import RegisterActor
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
+from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports import PrincipalLiveness
 from tests.unit._helpers import build_deps, make_profile_store
@@ -138,3 +140,49 @@ async def test_forgotten_profile_leaves_liveness_active() -> None:
     lookup = EventStorePrincipalLivenessLookup(store)
 
     assert await lookup.liveness_of(actor_id) is PrincipalLiveness.ACTIVE
+
+
+@pytest.mark.unit
+async def test_agent_kind_actor_resolves_active_like_a_human() -> None:
+    """The claim the whole conjunct rests on, exercised rather than asserted.
+
+    `Conjunct.LIVENESS` classifies EVERY_PRINCIPAL because `Agent.id ==
+    Actor.id`: `define_agent` writes the agent's Actor in the same
+    cross-BC transaction, so one `Actor.active` describes both kinds. If
+    that co-write ever stopped, every agent would resolve UNREGISTERED
+    and be denied the moment enforcement turned on, and no test that
+    registers only humans would notice.
+
+    Written through the Actor stream directly rather than through
+    `define_agent`, because the Agent BC's genesis path is not importable
+    from an Access unit test; what is pinned here is that the adapter
+    treats an agent-kind Actor exactly as it treats a human one.
+    """
+    store = InMemoryEventStore()
+    agent_actor_id = UUID("01900000-0000-7000-8000-0000000000a9")
+
+    await store.append(
+        stream_type="Actor",
+        stream_id=agent_actor_id,
+        expected_version=0,
+        events=[
+            to_new_event(
+                event_type="ActorRegisteredV2",
+                payload={
+                    "actor_id": str(agent_actor_id),
+                    "occurred_at": _NOW.isoformat(),
+                    "kind": ActorKind.AGENT.value,
+                },
+                occurred_at=_NOW,
+                event_id=UUID("01900000-0000-7000-8000-0000000000f1"),
+                command_name="DefineAgent",
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                principal_id=_PRINCIPAL_ID,
+            )
+        ],
+    )
+
+    lookup = EventStorePrincipalLivenessLookup(store)
+
+    assert await lookup.liveness_of(agent_actor_id) is PrincipalLiveness.ACTIVE

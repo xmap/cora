@@ -116,6 +116,7 @@ from cora.infrastructure.ports import (
     NoComputeReachabilityLookup,
     NoDatasetDistributionsLookup,
     NoInvolvementLookup,
+    PrincipalLivenessLookup,
     ProfileStore,
     RoleLookup,
     RunActorInvolvementLookup,
@@ -146,6 +147,7 @@ class AuthorizeFactory(Protocol):
         pool: asyncpg.Pool | None,
         clock: Clock,
         id_generator: IdGenerator,
+        liveness_lookup: PrincipalLivenessLookup | None = None,
     ) -> Authorize: ...
 
 
@@ -872,6 +874,23 @@ class RunActorInvolvementLookupFactory(Protocol):
     ) -> RunActorInvolvementLookup: ...
 
 
+class PrincipalLivenessLookupFactory(Protocol):
+    """Builds the production PrincipalLivenessLookup port for the Kernel.
+
+    Access BC's `cora.access.adapters.EventStorePrincipalLivenessLookup` is
+    the production factory; `cora.api.main` binds it. Injected rather than
+    imported for the usual reason: `cora.infrastructure` stays BC-free, and
+    `cora.trust` (which consumes the port at the gate) may not import Access
+    at all.
+
+    Takes only the event store because liveness is a fold of the principal's
+    Actor stream, not a projection read; see the adapter for why the lagging
+    projection is refused.
+    """
+
+    def __call__(self, event_store: EventStore) -> PrincipalLivenessLookup: ...
+
+
 class ConsequenceLookupFactory(Protocol):
     """Builds the production ConsequenceLookup port for the Kernel.
 
@@ -1107,6 +1126,7 @@ async def build_kernel(
     allocation_lookup_factory: AllocationLookupFactory | None = None,
     run_actor_involvement_lookup_factory: RunActorInvolvementLookupFactory | None = None,
     consequence_lookup_factory: ConsequenceLookupFactory | None = None,
+    principal_liveness_lookup_factory: PrincipalLivenessLookupFactory | None = None,
     dataset_distribution_lookup_factory: DatasetDistributionLookupFactory | None = None,
     credential_lookup_factory: CredentialLookupFactory | None = None,
     facility_lookup_factory: FacilityLookupFactory | None = None,
@@ -1165,6 +1185,11 @@ async def build_kernel(
             pool=None,
             clock=clock,
             id_generator=id_generator,
+            liveness_lookup=(
+                principal_liveness_lookup_factory(event_store)
+                if principal_liveness_lookup_factory is not None
+                else None
+            ),
         )
         kernel = make_inmemory_kernel(
             settings=settings,
@@ -1217,6 +1242,11 @@ async def build_kernel(
         pool=pool,
         clock=clock,
         id_generator=id_generator,
+        liveness_lookup=(
+            principal_liveness_lookup_factory(pg_event_store)
+            if principal_liveness_lookup_factory is not None
+            else None
+        ),
     )
     clearance_lookup: ClearanceLookup = (
         clearance_lookup_factory(pool)

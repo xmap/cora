@@ -33,6 +33,7 @@ from cora.access.aggregates.actor import (
     ActorAlreadyExistsError,
     ActorCannotDeactivateError,
     ActorCannotReactivateError,
+    ActorCannotSelfReactivateError,
     ActorNotFoundError,
     InvalidActorKindError,
     InvalidActorNameError,
@@ -195,6 +196,10 @@ def register_access_routes(app: FastAPI) -> None:
         app.add_exception_handler(already_exists_cls, _handle_already_exists)
     for cannot_transition_cls in (ActorCannotDeactivateError, ActorCannotReactivateError):
         app.add_exception_handler(cannot_transition_cls, _handle_cannot_transition)
+    # 403 not 409: self-reactivation is an authority refusal, not a state
+    # conflict. The actor genuinely IS deactivated; what is refused is who
+    # asked to undo it.
+    app.add_exception_handler(ActorCannotSelfReactivateError, _handle_unauthorized)
     app.add_exception_handler(UnauthorizedError, _handle_unauthorized)
     # Infrastructure errors (cross-BC; Access registers them globally — see module docstring).
     app.add_exception_handler(ConcurrencyError, _handle_concurrency_conflict)

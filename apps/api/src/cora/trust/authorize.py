@@ -125,6 +125,7 @@ from cora.infrastructure.ports import (
 )
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.trust._authorization_decision import (
+    LIVENESS_EXEMPT_COMMANDS,
     AuthorizationRequest,
     ResolvedContext,
     decide_authorization,
@@ -152,7 +153,11 @@ class TrustAuthorize:
         clock: Clock | None = None,
         id_generator: IdGenerator | None = None,
         liveness_lookup: PrincipalLivenessLookup | None = None,
+        liveness_enforced: bool = False,
     ) -> None:
+        if liveness_enforced and liveness_lookup is None:
+            msg = "TrustAuthorize: liveness_enforced requires a liveness_lookup to be wired"
+            raise ValueError(msg)
         if verdict_store is not None and (clock is None or id_generator is None):
             msg = "TrustAuthorize: verdict_store requires both clock and id_generator to be wired"
             raise ValueError(msg)
@@ -161,33 +166,43 @@ class TrustAuthorize:
         self._verdict_store = verdict_store
         self._clock = clock
         self._id_generator = id_generator
-        # Wiring this turns liveness enforcement ON for the deployment: a
-        # principal that is deactivated or was never registered is refused
-        # even where the Policy permits it. Left None, the conjunct is not
-        # evaluated and no verdict claims it was. Opt-in rather than default
-        # because it should follow the measurement (how many live requests
-        # would this have refused), not precede it.
+        # Two knobs, not one, because measuring must be possible without
+        # refusing. A wired lookup with `liveness_enforced=False` is SHADOW
+        # mode: every non-active caller is logged and none is denied, which
+        # is the adoption measurement the human-envelope design requires
+        # before any conjunct depends on it. Enforcement without a lookup is
+        # rejected at construction rather than silently degrading to "off",
+        # because a deployment that asked for enforcement and got none is
+        # exactly the failure this arrangement exists to prevent.
         self._liveness_lookup = liveness_lookup
+        self._liveness_enforced = liveness_enforced
 
     async def _resolve_liveness(
         self, principal_id: UUID, command_name: str
     ) -> PrincipalLiveness | None:
-        """Resolve the caller's liveness, or None when it cannot be.
+        """Resolve the CALLER's liveness, or None when the conjunct cannot run.
 
-        None means the conjunct is not evaluated: either no lookup is
-        wired (enforcement off for this deployment) or the read failed.
+        `principal_id` is the caller, never a command target. Passing the
+        wrong id here would silently authorize against a different
+        principal's switch, so `test_liveness_is_resolved_for_the_caller`
+        pins the argument rather than trusting the call site.
 
-        A failed read FAILS OPEN, loudly. Fail-closed here would mean a
-        transient event-store hiccup locks every principal out of a live
-        beamline at once, which is a worse outcome than briefly not
-        enforcing a switch an operator flips by hand. The warning is the
-        compensating control, and the verdict records the absence
-        because `evaluated` will not name a conjunct that never ran.
+        None means the conjunct is not evaluated, for any of three
+        reasons: no lookup wired, the command is exempt, or the read
+        failed. All three must leave `Conjunct.LIVENESS` absent from
+        `evaluated` so no verdict claims a check that did not run.
+
+        A failed read FAILS OPEN, loudly. Fail-closed would turn a
+        transient event-store fault into a site-wide lockout mid-beamtime,
+        which is worse than briefly not enforcing a switch an operator
+        flips by hand. The warning is the ONLY compensating control: the
+        `Verdict` row carries no conjunct column, so a reader of the
+        logbook cannot tell a fail-open request from an enforced one.
         """
-        if self._liveness_lookup is None:
+        if self._liveness_lookup is None or command_name in LIVENESS_EXEMPT_COMMANDS:
             return None
         try:
-            return await self._liveness_lookup.liveness_of(principal_id)
+            liveness = await self._liveness_lookup.liveness_of(principal_id)
         except Exception:
             _log.warning(
                 "trust_authorize.liveness_unresolved",
@@ -197,6 +212,20 @@ class TrustAuthorize:
                 exc_info=True,
             )
             return None
+        if liveness is not PrincipalLiveness.ACTIVE:
+            # Emitted in BOTH postures. In shadow this is the entire
+            # deliverable (how much would enforcement have refused, and
+            # which remedy each case needed); under enforcement it is the
+            # operator-facing record of a refusal that already happened.
+            _log.info(
+                "trust_authorize.liveness_not_active",
+                principal_id=str(principal_id),
+                command_name=command_name,
+                liveness=liveness.value,
+                enforced=self._liveness_enforced,
+                correlation_id=str(current_correlation_id()),
+            )
+        return liveness if self._liveness_enforced else None
 
     async def authorize(
         self,

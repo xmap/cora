@@ -20,18 +20,22 @@ inferred from the decider's return value.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 import pytest
-from hypothesis import given
+from hypothesis import assume, given
 from hypothesis import strategies as st
 
 if TYPE_CHECKING:
     from datetime import datetime
-    from uuid import UUID
+
+from datetime import UTC
+from datetime import datetime as _dt
 
 from cora.access.aggregates.actor import (
     Actor,
     ActorCannotReactivateError,
+    ActorCannotSelfReactivateError,
     ActorDeactivated,
     ActorKind,
     ActorNotFoundError,
@@ -41,7 +45,13 @@ from cora.access.aggregates.actor import (
 )
 from cora.access.features import reactivate_actor
 from cora.access.features.reactivate_actor import ReactivateActor
+from cora.access.features.reactivate_actor.decider import decide
 
+_NOW = _dt(2026, 5, 9, 12, 0, 0, tzinfo=UTC)
+# A caller distinct from the actor under test. The decider refuses
+# self-reactivation, so every property here must be asked by somebody
+# else; `assume` keeps the generated actor id from colliding with it.
+_OPERATOR_ID = UUID("01900000-0000-7000-8000-00000000d001")
 _KIND = st.sampled_from(list(ActorKind))
 _DATETIME = st.datetimes()
 
@@ -58,11 +68,13 @@ def _actor(
 @pytest.mark.unit
 @given(actor_id=st.uuids(), now=_DATETIME)
 def test_reactivate_with_none_state_always_raises_not_found(actor_id: UUID, now: datetime) -> None:
+    assume(actor_id != _OPERATOR_ID)
     with pytest.raises(ActorNotFoundError) as exc:
         reactivate_actor.decide(
             state=None,
             command=ReactivateActor(actor_id=actor_id),
             now=now,
+            principal_id=_OPERATOR_ID,
         )
     assert exc.value.actor_id == actor_id
 
@@ -78,11 +90,13 @@ def test_reactivate_active_state_always_raises_already_active(
     actor_id: UUID, command_id: UUID, kind: ActorKind, now: datetime
 ) -> None:
     """Already-active state rejects regardless of which id the command targets."""
+    assume(actor_id != _OPERATOR_ID)
     with pytest.raises(ActorCannotReactivateError) as exc:
         reactivate_actor.decide(
             state=_actor(actor_id, active=True, kind=kind),
             command=ReactivateActor(actor_id=command_id),
             now=now,
+            principal_id=_OPERATOR_ID,
         )
     assert exc.value.actor_id == actor_id
 
@@ -98,10 +112,12 @@ def test_reactivate_inactive_actor_emits_event_with_state_id(
     actor_id: UUID, command_id: UUID, kind: ActorKind, now: datetime
 ) -> None:
     """Emitted event uses STATE.id, not command.actor_id."""
+    assume(actor_id != _OPERATOR_ID)
     events = reactivate_actor.decide(
         state=_actor(actor_id, active=False, kind=kind),
         command=ReactivateActor(actor_id=command_id),
         now=now,
+        principal_id=_OPERATOR_ID,
     )
     assert events == [ActorReactivated(actor_id=actor_id, occurred_at=now)]
 
@@ -115,10 +131,15 @@ def test_reactivate_inactive_actor_emits_event_with_state_id(
 def test_reactivate_is_pure_same_input_same_output(
     actor_id: UUID, kind: ActorKind, now: datetime
 ) -> None:
+    assume(actor_id != _OPERATOR_ID)
     state = _actor(actor_id, active=False, kind=kind)
     command = ReactivateActor(actor_id=actor_id)
-    first = reactivate_actor.decide(state=state, command=command, now=now)
-    second = reactivate_actor.decide(state=state, command=command, now=now)
+    first = reactivate_actor.decide(
+        state=state, command=command, now=now, principal_id=_OPERATOR_ID
+    )
+    second = reactivate_actor.decide(
+        state=state, command=command, now=now, principal_id=_OPERATOR_ID
+    )
     assert first == second
 
 
@@ -144,3 +165,42 @@ def test_deactivate_then_reactivate_restores_the_registered_actor(
         ]
     )
     assert round_tripped == registered
+
+
+@pytest.mark.unit
+def test_self_reactivation_is_refused_before_the_already_active_check() -> None:
+    """Nobody reinstates themselves, and the order of the two guards matters.
+
+    The self check runs BEFORE the already-active one so the refusal is
+    the same whatever state the caller's own Actor is in. Were it second,
+    a deactivated principal asking about itself would get
+    `ActorCannotSelfReactivateError` while an active one got
+    `ActorCannotReactivateError`, turning the error type into a probe for
+    your own switch.
+    """
+    actor_id = UUID("01900000-0000-7000-8000-0000000000c1")
+
+    for active in (True, False):
+        with pytest.raises(ActorCannotSelfReactivateError):
+            decide(
+                Actor(id=actor_id, active=active),
+                ReactivateActor(actor_id=actor_id),
+                now=_NOW,
+                principal_id=actor_id,
+            )
+
+
+@pytest.mark.unit
+def test_another_principal_may_reactivate_a_deactivated_actor() -> None:
+    """The guard must not break the case the slice exists for."""
+    actor_id = UUID("01900000-0000-7000-8000-0000000000c1")
+    operator_id = UUID("01900000-0000-7000-8000-0000000000c2")
+
+    events = decide(
+        Actor(id=actor_id, active=False),
+        ReactivateActor(actor_id=actor_id),
+        now=_NOW,
+        principal_id=operator_id,
+    )
+
+    assert [e.actor_id for e in events] == [actor_id]

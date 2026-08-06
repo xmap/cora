@@ -34,10 +34,12 @@ legible denial: an UNREGISTERED principal and a DEACTIVATED one need
 different remedies (register them versus reactivate them). A gate that
 says only "no" teaches an operator nothing at 3am.
 
-Nothing decides on this yet. It is resolved and logged so a deployment
-can measure how many requests arrive from principals that are not
-registered or not active BEFORE any of them start being refused, per
-the observe-then-enforce discipline the human-envelope design requires.
+`Settings.liveness_posture` governs what the gate does with the answer:
+"off" never reads it, "shadow" resolves and logs without denying, and
+"enforce" refuses a principal that is not active. Shadow exists so the
+measurement (how many live requests would enforcement have refused, and
+which remedy each needed) can precede the refusals, per the
+observe-then-enforce discipline the human-envelope design requires.
 """
 
 from enum import StrEnum

@@ -82,6 +82,58 @@ from cora.infrastructure.ports import (
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.trust.aggregates.policy import Policy, evaluate
 
+# Commands liveness may never refuse, whatever the caller's switch says.
+#
+# The human-envelope design states the rule this encodes: a lifecycle
+# conjunct may deny work that STARTS or WIDENS, never work that FINISHES
+# or RECORDS what already happened, and for commands that move the system
+# toward a safer state the eligible set must be strictly WIDER than for
+# routine ones. Liveness is a lifecycle conjunct, so both halves bind it.
+#
+# Without this set the failures are concrete and are the ones that design
+# fitness-tests against: a principal deactivated mid-scan cannot
+# `complete_procedure`, stranding the Procedure in Running with its
+# best-effort abort denied by the same conjunct; and a deactivated
+# operator cannot `abort_run` or `hold_run`, so switching someone off
+# silences the brake at the moment you most want it.
+#
+# Membership is the design memo's closing-and-recording set plus its brake
+# set, UNION the brake commands the memo's own four-name list missed. That
+# omission is why this is a set rather than a list in prose: the memo named
+# `stop_run`, `hold_run`, `abort_run`, `hold_visit` while the tree carries
+# eleven brake-shaped commands, so a hand-maintained list was already stale
+# when it was written.
+#
+# HAND-MAINTAINED, DELIBERATELY TEMPORARY. When the OperationClass map
+# lands this becomes derived (`the exempt set is every Halt-class and
+# Record-class command`) and stops being something a new slice can forget
+# to join. `test_liveness_exempt_commands_exist` pins that every name here
+# is a real command so the set cannot rot into a list of typos.
+LIVENESS_EXEMPT_COMMANDS: Final[frozenset[str]] = frozenset(
+    {
+        # Brake: moves the system toward a safer state.
+        "StopRun",
+        "HoldRun",
+        "AbortRun",
+        "TruncateRun",
+        "HoldProcedure",
+        "AbortProcedure",
+        "TruncateProcedure",
+        "HoldVisit",
+        "AbortVisit",
+        "HoldCampaign",
+        # Closing and recording: states what already happened.
+        "CompleteRun",
+        "CompleteProcedure",
+        "ResumeProcedure",
+        "EndProcedureIteration",
+        "AppendProcedureActivities",
+        "AppendProcedureOutcomes",
+        "AppendProcedureDiagnostics",
+        "AppendObservations",
+    }
+)
+
 # Cause class plus the remedy the denied principal's operator can issue.
 # The human-envelope design requires a denial to name both, because a
 # refusal that says only "no" costs a beamtime shift to diagnose. No
@@ -214,6 +266,7 @@ def decide_authorization(
 
 
 __all__ = [
+    "LIVENESS_EXEMPT_COMMANDS",
     "AuthorizationRequest",
     "DecisionContext",
     "PolicyOnlyContext",

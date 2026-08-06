@@ -117,7 +117,7 @@ def bind(deps: Kernel) -> Handler:
         history: list[ActorEvent] = [from_stored(s) for s in stored]
         state = fold(history)
 
-        domain_events = decide(state=state, command=command, now=now)
+        domain_events = decide(state=state, command=command, now=now, principal_id=principal_id)
 
         # One event_id per emitted event, generated via the IdGenerator
         # port (UUIDv7 in production). See register_actor.handler for

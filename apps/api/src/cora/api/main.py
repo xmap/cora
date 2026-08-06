@@ -47,6 +47,7 @@ from cora.access import (
     register_access_tools,
     wire_access,
 )
+from cora.access.adapters import EventStorePrincipalLivenessLookup
 from cora.agent import (
     AgentHandlers,
     build_llm,
@@ -642,6 +643,12 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
         async with mcp_app.router.lifespan_context(app):
             deps, teardown = await build_kernel(
                 authorize_factory=build_authorize,
+                # Liveness is a fold of the caller's Actor stream, so the
+                # Access BC owns the adapter and the composition root binds
+                # it. Whether it is read at all, and whether it denies, is
+                # Settings.liveness_posture; build_authorize refuses to boot
+                # if a posture other than 'off' finds no lookup here.
+                principal_liveness_lookup_factory=EventStorePrincipalLivenessLookup,
                 clearance_lookup_factory=PostgresClearanceLookup,
                 clearance_template_lookup_factory=PostgresClearanceTemplateLookup,
                 caution_lookup_factory=PostgresCautionLookup,

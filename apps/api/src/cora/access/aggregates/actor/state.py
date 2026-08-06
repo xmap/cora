@@ -134,6 +134,26 @@ class ActorCannotDeactivateError(Exception):
         self.actor_id = actor_id
 
 
+class ActorCannotSelfReactivateError(Exception):
+    """A principal attempted to reinstate its own deactivated Actor.
+
+    Refused structurally rather than by Policy configuration. The gate's
+    liveness conjunct fails OPEN on a lookup error, so without this the
+    only barrier to self-reinstatement is a check that is designed to
+    yield under fault. Granting `ReactivateActor` means the power to
+    reinstate colleagues; self-reinstatement is a different power and
+    nobody would expect it to ride along.
+
+    Maps to HTTP 403 via the route layer: this is an authority refusal,
+    not a state conflict, which is why it is not a sibling 409 of
+    `ActorCannotReactivateError`.
+    """
+
+    def __init__(self, actor_id: UUID) -> None:
+        super().__init__(f"Actor {actor_id} cannot reactivate itself")
+        self.actor_id = actor_id
+
+
 class ActorCannotReactivateError(Exception):
     """Attempted to reactivate an actor that is already active."""
 

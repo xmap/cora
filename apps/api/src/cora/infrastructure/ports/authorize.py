@@ -61,9 +61,15 @@ class Conjunct(StrEnum):
     make impossible.
 
     A member appearing in `evaluated` means the decision CONSULTED it,
-    not that the deployment has it wired. `Liveness` is absent when no
-    lookup is configured, which is how a verdict distinguishes "asked
-    and passed" from "never asked".
+    not that the deployment has it wired. `Liveness` is absent when the
+    posture is "off" or "shadow", when the command is exempt, or when
+    the read failed, so an absence distinguishes "never asked" from
+    "asked and passed".
+
+    That distinction lives on the RESULT and nowhere else today: the
+    `Verdict` entry row has no conjunct column, so `evaluated` is not
+    persisted. Do not describe the verdict logbook as recording which
+    conjuncts ran until it carries them.
     """
 
     POLICY = "Policy"

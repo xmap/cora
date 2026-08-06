@@ -39,6 +39,7 @@ from cora.infrastructure.ports import (
     Clock,
     EventStore,
     IdGenerator,
+    PrincipalLivenessLookup,
 )
 from cora.trust.aggregates.conduit.entries import (
     InMemoryVerdictStore,
@@ -55,10 +56,24 @@ def build_authorize(
     pool: asyncpg.Pool | None,
     clock: Clock,
     id_generator: IdGenerator,
+    liveness_lookup: PrincipalLivenessLookup | None = None,
 ) -> Authorize:
     """Construct the production Authorize port for the Kernel."""
     if settings.trust_policy_id is None:
         return AllowAllAuthorize()
+
+    posture = settings.liveness_posture
+    if posture != "off" and liveness_lookup is None:
+        # Refuse to boot rather than serve a deployment that asked for a
+        # security control and silently got none. The composition root owns
+        # the adapter (this module cannot import the Access BC), so a
+        # missing lookup here is unwired plumbing, not operator error, and
+        # it must not degrade quietly to "off".
+        msg = (
+            f"liveness_posture={posture!r} requires a PrincipalLivenessLookup, "
+            "but the composition root supplied none"
+        )
+        raise ValueError(msg)
 
     verdict_store: VerdictStore = (
         PostgresVerdictStore(pool) if pool is not None else InMemoryVerdictStore()
@@ -69,6 +84,8 @@ def build_authorize(
         verdict_store=verdict_store,
         clock=clock,
         id_generator=id_generator,
+        liveness_lookup=liveness_lookup if posture != "off" else None,
+        liveness_enforced=posture == "enforce",
     )
 
 

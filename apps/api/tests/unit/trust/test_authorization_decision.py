@@ -113,15 +113,21 @@ def test_every_decision_names_the_conjuncts_it_consulted() -> None:
         pytest.param({"surface_id": _OTHER_SURFACE}, id="surface-mismatch"),
     ],
 )
-def test_both_contexts_agree_while_policy_is_the_only_conjunct(
+def test_both_contexts_agree_when_the_resolved_arm_adds_nothing(
     request_override: dict[str, object],
 ) -> None:
-    """The divergence guard.
+    """The divergence guard, rebuilt after it failed to fire.
 
-    Today the arms must agree, because the Policy is all either can
-    consult. When a conjunct lands on the resolved arm this test is
-    expected to fail, and that failure is the prompt to state what the
-    hypothetical arm does instead of letting it silently fall behind.
+    It was written to fail the moment a conjunct landed on the resolved
+    arm, and it did not: liveness landed with a `None` default, so
+    `ResolvedContext(policy=...)` kept consulting the Policy alone and
+    the guard stayed green through the very change it was watching for.
+
+    A default-valued field cannot be the trip wire, so the assertion is
+    now about a stated condition rather than about construction: when the
+    resolved arm consults nothing extra, the two arms must agree. The
+    NEXT conjunct is caught by its own divergence test below, which is
+    the pattern each new conjunct must follow.
     """
     request = _request(**request_override)  # pyright: ignore[reportArgumentType]
 
@@ -130,6 +136,31 @@ def test_both_contexts_agree_while_policy_is_the_only_conjunct(
 
     assert type(resolved) is type(policy_only)
     assert resolved.evaluated == policy_only.evaluated
+
+
+@pytest.mark.unit
+def test_resolved_arm_diverges_from_the_hypothetical_once_liveness_is_known() -> None:
+    """The arms MUST differ here, and that difference is the design.
+
+    A deactivated principal is refused on the live request path and
+    reported as permitted by the hypothetical one, because the query
+    slices deliberately do not disclose another principal's switch. The
+    asymmetry is safe only because `evaluated` says which questions each
+    answer actually asked, so this pins the divergence AND the label that
+    makes it honest.
+    """
+    request = _request()
+
+    resolved = decide_authorization(
+        request,
+        ResolvedContext(policy=_policy(), liveness=PrincipalLiveness.DEACTIVATED),
+    )
+    policy_only = decide_authorization(request, PolicyOnlyContext(policy=_policy()))
+
+    assert isinstance(resolved, Deny)
+    assert isinstance(policy_only, Allow)
+    assert Conjunct.LIVENESS in resolved.evaluated
+    assert Conjunct.LIVENESS not in policy_only.evaluated
 
 
 @pytest.mark.unit

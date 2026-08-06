@@ -5,8 +5,15 @@ the loaded event stream) and returns the events to append. No I/O.
 
 Invariants:
   - State must not be None (actor must exist) -> ActorNotFoundError
+  - Caller must not be the target (nobody reinstates themselves)
+    -> ActorCannotSelfReactivateError
   - State must be inactive (no reactivating a live actor)
     -> ActorCannotReactivateError
+
+The self check is ordered BEFORE the already-active one on purpose. Were
+it second, asking about your own Actor would return a different error
+depending on whether you were switched off, turning the error type into
+a probe for your own liveness.
 
 ## Why this slice exists
 
@@ -44,10 +51,12 @@ which remains the hard end-of-life signal.
 """
 
 from datetime import datetime
+from uuid import UUID
 
 from cora.access.aggregates.actor import (
     Actor,
     ActorCannotReactivateError,
+    ActorCannotSelfReactivateError,
     ActorNotFoundError,
     ActorReactivated,
 )
@@ -59,10 +68,28 @@ def decide(
     command: ReactivateActor,
     *,
     now: datetime,
+    principal_id: UUID,
 ) -> list[ActorReactivated]:
-    """Decide the events produced by reactivating a deactivated actor."""
+    """Decide the events produced by reactivating a deactivated actor.
+
+    `principal_id` is here for one refusal: nobody reinstates themselves.
+    Without it, the only thing standing between a deactivated principal
+    and its own reinstatement is the liveness conjunct at the gate, and
+    that conjunct fails OPEN on a lookup error by design. One induced
+    read failure would then be enough to persist `ActorReactivated` on
+    your own stream, and an event already written is not undone by the
+    warning that accompanied it.
+
+    Structural rather than delegated to Policy: an operator who grants
+    `ReactivateActor` to a team is granting the power to reinstate
+    colleagues, and would not expect it to include self-reinstatement.
+    Making that unrepresentable is cheaper than expecting every
+    deployment's policy to carve it out correctly.
+    """
     if state is None:
         raise ActorNotFoundError(command.actor_id)
+    if state.id == principal_id:
+        raise ActorCannotSelfReactivateError(state.id)
     if state.active:
         raise ActorCannotReactivateError(state.id)
     return [ActorReactivated(actor_id=state.id, occurred_at=now)]

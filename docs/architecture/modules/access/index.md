@@ -11,7 +11,7 @@ Access handles authentication identity only. It is the **who you are** layer; au
 Out of scope
 
 - **Personal data vault.** Today `Actor.name` lives on the aggregate state and inside `ActorRegistered`. The right-to-erasure design moves display name and any future contact field into a mutable `profile` table referenced by `actor_id`, leaving the events carrying only the id. The convention is documented under [Personal data](../../../reference/conventions.md#personal-data); the migration ships when the first non-greenfield data lands.
-- **Reactivation.** The lifecycle has no `reactivate_actor` slice. Once deactivated an Actor stays deactivated; a returning operator gets a new Actor stream with a fresh id and a cross-system note where reconciliation is needed.
+- **Reactivation.** `reactivate_actor` lifts a deactivation, so the switch turns both ways for a person exactly as `suspend_agent` / `resume_agent` already do for an agent. Nobody reinstates themselves: the decider refuses when the caller is the target, so the power to reinstate colleagues never includes reinstating yourself.
 - **Authorisation and ReBAC.** "What can this Actor do" is a Policy question owned by Trust. The Authorize port carries `actor_id` but resolves rules against `Zone`, `Conduit`, `Surface`, and `Policy`.
 - **Cross-facility federation.** Identity reconciliation across facilities (the same physical operator at APS and MAX IV) is deferred. Today each deployment owns its own Actor stream.
 - **Profile fields beyond the display name.** Email, phone, ORCID, affiliation, organisational unit are not on the aggregate today. They land on the future `profile` table when they arrive.
@@ -39,6 +39,7 @@ Out of scope
 stateDiagram-v2
     [*] --> Active: register_actor
     Active --> Deactivated: deactivate_actor
+    Deactivated --> Active: reactivate_actor
     Deactivated --> [*]
 ```
 
@@ -47,7 +48,7 @@ stateDiagram-v2
 | `[*]` | `Active` | `register_actor` | `ActorRegistered` |
 | `Active` | `Deactivated` | `deactivate_actor` | `ActorDeactivated` |
 
-The state is carried by the `active` boolean on the aggregate; `Active` and `Deactivated` are read in the FSM sense from that flag plus the existence of the genesis event. `Deactivated` is terminal: there is no command that flips `active` back to True. References to a deactivated Actor remain valid for audit and read paths; downstream modules that need to gate new work on an Actor's active status check `active` at the Authorize port.
+The state is carried by the `active` boolean on the aggregate; `Active` and `Deactivated` are read in the FSM sense from that flag plus the existence of the genesis event. `Deactivated` is reversible: `reactivate_actor` flips `active` back to True, refusing self-reinstatement and refusing an Actor that is already active. Reversibility is load-bearing rather than a convenience, because the Authorize port's liveness conjunct can refuse a deactivated principal, and a one-way switch would make a mis-click unrecoverable through the API. References to a deactivated Actor remain valid for audit and read paths; downstream modules that need to gate new work on an Actor's active status check `active` at the Authorize port.
 
 ## Events
 
