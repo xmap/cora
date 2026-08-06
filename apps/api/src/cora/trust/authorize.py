@@ -124,8 +124,8 @@ from cora.infrastructure.ports import (
     PrincipalLivenessLookup,
 )
 from cora.infrastructure.routing import NIL_SENTINEL_ID
+from cora.shared.liveness import is_liveness_exempt
 from cora.trust._authorization_decision import (
-    LIVENESS_EXEMPT_COMMANDS,
     AuthorizationRequest,
     ResolvedContext,
     decide_authorization,
@@ -199,7 +199,7 @@ class TrustAuthorize:
         `Verdict` row carries no conjunct column, so a reader of the
         logbook cannot tell a fail-open request from an enforced one.
         """
-        if self._liveness_lookup is None or command_name in LIVENESS_EXEMPT_COMMANDS:
+        if self._liveness_lookup is None or is_liveness_exempt(command_name):
             return None
         try:
             liveness = await self._liveness_lookup.liveness_of(principal_id)

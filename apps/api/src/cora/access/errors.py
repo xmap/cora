@@ -15,6 +15,8 @@ from a Subject or Trust 403 in logs / aggregator filters
 Cross-BC consumers catching authorization failures import per-BC.
 """
 
+from uuid import UUID
+
 
 class UnauthorizedError(Exception):
     """The Authorize port denied the command."""
@@ -22,3 +24,28 @@ class UnauthorizedError(Exception):
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
+
+
+class ActorSelfReactivationRefusedError(Exception):
+    """A principal attempted to reinstate its own deactivated Actor.
+
+    Lives here, beside `UnauthorizedError`, rather than in the Actor
+    aggregate's error block. The `<X>Cannot<Verb>Error` names there are
+    the 409 state-transition family (`ActorCannotDeactivateError`,
+    `ActorCannotReactivateError`): they mean the aggregate is in the
+    wrong state for the command. This one is a 403. The aggregate is in
+    exactly the right state to be reactivated; what is refused is WHO
+    asked. Filing it with the transition errors would have put an
+    authority refusal in the family a reader scans for state conflicts.
+
+    Refused structurally rather than by Policy configuration. The gate's
+    liveness conjunct fails OPEN on a lookup error by design, so without
+    this the only barrier to self-reinstatement is a check built to
+    yield under fault. Granting `ReactivateActor` means the power to
+    reinstate colleagues; self-reinstatement is a different power and
+    nobody would expect it to ride along.
+    """
+
+    def __init__(self, actor_id: UUID) -> None:
+        super().__init__(f"Actor {actor_id} cannot reactivate itself")
+        self.actor_id = actor_id

@@ -35,7 +35,6 @@ from datetime import datetime as _dt
 from cora.access.aggregates.actor import (
     Actor,
     ActorCannotReactivateError,
-    ActorCannotSelfReactivateError,
     ActorDeactivated,
     ActorKind,
     ActorNotFoundError,
@@ -43,6 +42,7 @@ from cora.access.aggregates.actor import (
     ActorRegistered,
     fold,
 )
+from cora.access.errors import ActorSelfReactivationRefusedError
 from cora.access.features import reactivate_actor
 from cora.access.features.reactivate_actor import ReactivateActor
 from cora.access.features.reactivate_actor.decider import decide
@@ -174,14 +174,14 @@ def test_self_reactivation_is_refused_before_the_already_active_check() -> None:
     The self check runs BEFORE the already-active one so the refusal is
     the same whatever state the caller's own Actor is in. Were it second,
     a deactivated principal asking about itself would get
-    `ActorCannotSelfReactivateError` while an active one got
+    `ActorSelfReactivationRefusedError` while an active one got
     `ActorCannotReactivateError`, turning the error type into a probe for
     your own switch.
     """
     actor_id = UUID("01900000-0000-7000-8000-0000000000c1")
 
     for active in (True, False):
-        with pytest.raises(ActorCannotSelfReactivateError):
+        with pytest.raises(ActorSelfReactivationRefusedError):
             decide(
                 Actor(id=actor_id, active=active),
                 ReactivateActor(actor_id=actor_id),

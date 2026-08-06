@@ -47,6 +47,7 @@ stateDiagram-v2
 |---|---|---|---|
 | `[*]` | `Active` | `register_actor` | `ActorRegistered` |
 | `Active` | `Deactivated` | `deactivate_actor` | `ActorDeactivated` |
+| `Deactivated` | `Active` | `reactivate_actor` | `ActorReactivated` |
 
 The state is carried by the `active` boolean on the aggregate; `Active` and `Deactivated` are read in the FSM sense from that flag plus the existence of the genesis event. `Deactivated` is reversible: `reactivate_actor` flips `active` back to True, refusing self-reinstatement and refusing an Actor that is already active. Reversibility is load-bearing rather than a convenience, because the Authorize port's liveness conjunct can refuse a deactivated principal, and a one-way switch would make a mis-click unrecoverable through the API. References to a deactivated Actor remain valid for audit and read paths; downstream modules that need to gate new work on an Actor's active status check `active` at the Authorize port.
 
@@ -56,6 +57,7 @@ The state is carried by the `active` boolean on the aggregate; `Active` and `Dea
 |---|---|---|
 | `ActorRegistered` | `actor_id`, `kind`, `occurred_at` | `register_actor` succeeds (genesis); also emitted atomically by Agent module's `define_agent` with `kind="agent"`. Display name lives in the `actor_profile` table per the PII vault pattern; legacy V1 writes carried `name` in the payload and are dropped on replay. |
 | `ActorDeactivated` | `actor_id`, `occurred_at` | `deactivate_actor` succeeds on an Actor that was active |
+| `ActorReactivated` | `actor_id`, `occurred_at` | `reactivate_actor` succeeds on an Actor that was deactivated and whose reinstatement was requested by somebody else |
 | `ActorProfileForgotten` | `actor_id`, `occurred_at` | `forget_actor` succeeds; PII-erasure audit marker carrying no personal data. Aggregate state is unchanged; the projection swaps the cached display name for a tombstone literal, and the `actor_profile` row is scrubbed and deleted in the same transaction |
 
 ## Slices
@@ -71,6 +73,9 @@ _Generated from the code at build time._
 
 `DeactivateActor`
 : `ActorNotFound`, `ActorAlreadyDeactivated`, `Unauthorized`
+
+`ReactivateActor`
+: `ActorNotFound`, `ActorSelfReactivationRefused` (403; the caller is the target, and reinstating colleagues does not include reinstating yourself), `ActorAlreadyActive`, `Unauthorized`
 
 `ForgetActor`
 : `ActorNotFound`, `Unauthorized`
@@ -101,7 +106,7 @@ CREATE INDEX proj_access_actor_summary_keyset_idx
     ON proj_access_actor_summary (created_at, actor_id);
 ```
 
-One row per Actor; the lifecycle collapses to a single mutable row by `ON CONFLICT` semantics in the projection. `status` flips from `active` to `deactivated` on `ActorDeactivated`; `kind` is backfilled to `human` for any pre-existing row that predated the addition of the column and never moves once set.
+One row per Actor; the lifecycle collapses to a single mutable row by `ON CONFLICT` semantics in the projection. `status` flips from `active` to `deactivated` on `ActorDeactivated` and back on `ActorReactivated`; `kind` is backfilled to `human` for any pre-existing row that predated the addition of the column and never moves once set.
 
 `GET /actors/{id}` folds the event stream so the response reflects the latest committed write without projection lag. `GET /actors` reads from `proj_access_actor_summary` with keyset pagination over `(created_at, actor_id)` and filters on `status` and `kind`.
 

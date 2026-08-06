@@ -25,7 +25,7 @@ import ast
 
 import pytest
 
-from cora.trust._authorization_decision import LIVENESS_EXEMPT_COMMANDS
+from cora.shared.liveness import LIVENESS_EXEMPT_COMMANDS
 from tests.architecture.conftest import tracked_python_files
 
 

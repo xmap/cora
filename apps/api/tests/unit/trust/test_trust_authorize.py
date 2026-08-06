@@ -25,8 +25,8 @@ from cora.infrastructure.ports import (
     FixedIdGenerator,
     PrincipalLiveness,
 )
+from cora.shared.liveness import LIVENESS_EXEMPT_COMMANDS
 from cora.shared.logbook import LogbookFieldSpec, LogbookSchema
-from cora.trust._authorization_decision import LIVENESS_EXEMPT_COMMANDS
 from cora.trust.aggregates.conduit import (
     LOGBOOK_KIND_VERDICT,
     ConduitDefined,

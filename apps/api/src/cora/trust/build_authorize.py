@@ -59,21 +59,33 @@ def build_authorize(
     liveness_lookup: PrincipalLivenessLookup | None = None,
 ) -> Authorize:
     """Construct the production Authorize port for the Kernel."""
-    if settings.trust_policy_id is None:
-        return AllowAllAuthorize()
-
     posture = settings.liveness_posture
+
+    # Both guards run BEFORE the AllowAll early return, and that ordering is
+    # the whole point. An earlier version checked the lookup after it, so a
+    # deployment setting liveness_posture=enforce with no trust_policy_id
+    # booted permitting every command, with no liveness and no error: the
+    # exact "asked for a control and silently got none" degradation the
+    # guard exists to prevent, reachable by the one misconfiguration most
+    # likely to occur while enabling authz for the first time.
     if posture != "off" and liveness_lookup is None:
-        # Refuse to boot rather than serve a deployment that asked for a
-        # security control and silently got none. The composition root owns
-        # the adapter (this module cannot import the Access BC), so a
-        # missing lookup here is unwired plumbing, not operator error, and
-        # it must not degrade quietly to "off".
+        # Unwired plumbing rather than operator error: the composition root
+        # owns the adapter because this module cannot import the Access BC.
         msg = (
             f"liveness_posture={posture!r} requires a PrincipalLivenessLookup, "
             "but the composition root supplied none"
         )
         raise ValueError(msg)
+    if posture != "off" and settings.trust_policy_id is None:
+        msg = (
+            f"liveness_posture={posture!r} has no effect without trust_policy_id: "
+            "AllowAllAuthorize permits every command and consults no conjunct. "
+            "Set trust_policy_id, or set liveness_posture=off to say so deliberately."
+        )
+        raise ValueError(msg)
+
+    if settings.trust_policy_id is None:
+        return AllowAllAuthorize()
 
     verdict_store: VerdictStore = (
         PostgresVerdictStore(pool) if pool is not None else InMemoryVerdictStore()

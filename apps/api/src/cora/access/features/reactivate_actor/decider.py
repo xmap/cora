@@ -6,7 +6,7 @@ the loaded event stream) and returns the events to append. No I/O.
 Invariants:
   - State must not be None (actor must exist) -> ActorNotFoundError
   - Caller must not be the target (nobody reinstates themselves)
-    -> ActorCannotSelfReactivateError
+    -> ActorSelfReactivationRefusedError
   - State must be inactive (no reactivating a live actor)
     -> ActorCannotReactivateError
 
@@ -56,10 +56,10 @@ from uuid import UUID
 from cora.access.aggregates.actor import (
     Actor,
     ActorCannotReactivateError,
-    ActorCannotSelfReactivateError,
     ActorNotFoundError,
     ActorReactivated,
 )
+from cora.access.errors import ActorSelfReactivationRefusedError
 from cora.access.features.reactivate_actor.command import ReactivateActor
 
 
@@ -89,7 +89,7 @@ def decide(
     if state is None:
         raise ActorNotFoundError(command.actor_id)
     if state.id == principal_id:
-        raise ActorCannotSelfReactivateError(state.id)
+        raise ActorSelfReactivationRefusedError(state.id)
     if state.active:
         raise ActorCannotReactivateError(state.id)
     return [ActorReactivated(actor_id=state.id, occurred_at=now)]
