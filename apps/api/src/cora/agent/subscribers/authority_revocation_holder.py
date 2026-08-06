@@ -42,9 +42,16 @@ The principle survives the fix: a hold is released by a deliberate act naming
 the concern that placed it, not as a side effect of switching someone back on,
 because reinstating a person says they may drive again and not that whatever
 was paused should resume unattended. What was wrong was shipping that principle
-with no act available to perform. An automatic release on `ActorReactivated`,
-mirroring `ratification_release`, is the better ergonomics and is a follow-on;
-the operator remedy has to exist either way.
+with no act available to perform. An automatic release on `ActorReactivated`, mirroring
+`ratification_release`, was proposed in review and is REFUSED. Releasing the
+last active claim does not merely clear a flag: `resume_run`'s decider emits
+`RunResumed` and the Run goes Held -> Running, so an auto-release would
+restart beam motion as a side effect of an account-shaped gesture, possibly
+hours after the work was paused and with nobody watching. The ratification
+precedent does resume automatically, and correctly, because a granted
+ratification IS the decision to proceed; reinstating a person is not. The
+operator remedy is `resume_run` naming the cause, exposed on the route and
+tool for exactly this.
 
 ## Cross-BC write via Pattern C (not the hold_run handler)
 
@@ -247,9 +254,32 @@ class AuthorityRevocationHolderSubscriber:
         revoked_principal_id = UUID(event.payload[_TRIGGER_PRINCIPAL_FIELD[event.event_type]])
         run_ids = await self.run_actor_involvement_lookup.runs_driven_by(revoked_principal_id)
         if not run_ids:
-            _log.info(
+            # AMBIGUOUS, and deliberately logged as such. "No in-flight runs"
+            # is either the ordinary case (this principal was driving nothing)
+            # or a silent kill-switch failure: `proj_run_actor_involvement`
+            # carries its own bookmark, so a withdrawal that lands before the
+            # matching RunStarted has drained sees an empty result, advances
+            # this subscriber's bookmark, and never sweeps. Withdrawal is the
+            # incident-time gesture, which makes that the hottest path for the
+            # race rather than a remote one.
+            #
+            # WARNING not INFO because the two readings cannot be told apart
+            # here and one of them is a safety control that did nothing. The
+            # trigger position is emitted so an operator or an alert can
+            # compare it against the projection's own progress after the fact.
+            #
+            # Comparing the bookmarks inline was considered and rejected:
+            # `read_bookmark` takes a FOR UPDATE lock, so this subscriber would
+            # be locking another projection's row on every withdrawal, trading
+            # a rare missed hold for a routine deadlock risk. Closing it
+            # properly needs a retry or sweep the subscriber framework does not
+            # offer yet.
+            _log.warning(
                 "authority_revocation_holder.no_in_flight_runs",
                 revoked_principal_id=str(revoked_principal_id),
+                trigger_event_type=event.event_type,
+                trigger_position=event.position,
+                note="ambiguous: principal drove nothing, or K2 projection lagged",
             )
             return
 
