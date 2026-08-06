@@ -524,5 +524,78 @@ async def test_make_subscriber_from_kernel_wires_deps() -> None:
     kernel = _kernel()
     sub = make_authority_revocation_holder_subscriber(kernel)
     assert sub.name == "authority_revocation_holder"
-    assert sub.subscribed_event_types == frozenset({"PolicyGrantRevoked"})
+    assert sub.subscribed_event_types == frozenset({"PolicyGrantRevoked", "ActorDeactivated"})
     assert sub.batch_size == 1
+
+
+def _deactivation_event(*, deactivated_actor_id: UUID) -> StoredEvent:
+    """The second withdrawal gesture, which names the principal `actor_id`."""
+    return StoredEvent(
+        position=1,
+        event_id=uuid4(),
+        stream_type="Actor",
+        stream_id=deactivated_actor_id,
+        version=2,
+        event_type="ActorDeactivated",
+        schema_version=1,
+        payload={
+            "actor_id": str(deactivated_actor_id),
+            "occurred_at": _NOW.isoformat(),
+        },
+        correlation_id=uuid4(),
+        causation_id=None,
+        occurred_at=_NOW,
+        recorded_at=_NOW,
+        principal_id=uuid4(),
+    )
+
+
+@pytest.mark.unit
+async def test_deactivating_a_principal_holds_the_runs_it_drives() -> None:
+    """The gap this subscription closes.
+
+    Revoking a grant paused a principal's runs; deactivating them, the more
+    total gesture, left the same runs going. Both mean "may no longer drive
+    this", so both must pause the work. Asserted through the identical path
+    the revocation trigger uses, because the whole point of widening the
+    existing subscriber rather than writing a sibling is that the careful
+    parts stay shared.
+    """
+    kernel = _kernel()
+    await seed_authority_revocation_holder_agent(kernel)
+    deactivated = uuid4()
+    run_id = await _seed_running_run(kernel.event_store, starter=deactivated)
+    sub = _build(kernel, run_ids=[run_id])
+
+    await sub.apply(
+        _deactivation_event(deactivated_actor_id=deactivated),
+        conn=None,  # type: ignore[arg-type]
+    )
+
+    state = await load_run(kernel.event_store, run_id)
+    assert state is not None
+    assert state.status is RunStatus.HELD
+
+
+@pytest.mark.unit
+async def test_deactivation_trigger_reads_actor_id_not_principal_id() -> None:
+    """The two gestures name the principal differently.
+
+    `PolicyGrantRevoked` carries `principal_id`; `ActorDeactivated` carries
+    `actor_id`. Reading the wrong key would raise a KeyError inside the
+    reaction and drop the kill-switch on the floor, so the field map is
+    pinned by asking the lookup what it was actually given.
+    """
+    kernel = _kernel()
+    await seed_authority_revocation_holder_agent(kernel)
+    deactivated = uuid4()
+    run_id = await _seed_running_run(kernel.event_store, starter=deactivated)
+    lookup = _FakeInvolvementLookup([run_id])
+    sub = _build(kernel, run_ids=[run_id], lookup=lookup)
+
+    await sub.apply(
+        _deactivation_event(deactivated_actor_id=deactivated),
+        conn=None,  # type: ignore[arg-type]
+    )
+
+    assert lookup.asked_for == [deactivated]
