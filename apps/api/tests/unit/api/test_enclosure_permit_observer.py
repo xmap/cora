@@ -31,6 +31,11 @@ def _reading(value: object, quality: str = "Good") -> Measurement:
     return Measurement(value=value, kind="Scalar", quality=quality, produced_at=_T)  # type: ignore[arg-type]
 
 
+def _enum_reading(label: str, quality: str = "Good") -> Measurement:
+    """A DBR_ENUM reading as `EpicsCaControlPort` delivers it: label, no index."""
+    return Measurement(value=label, kind="Categorical", quality=quality, produced_at=_T)  # type: ignore[arg-type]
+
+
 @pytest.mark.unit
 def test_secure_maps_to_permitted() -> None:
     assert permit_status_from_reading(_reading(1)) == "Permitted"
@@ -56,6 +61,45 @@ def test_unexpected_value_flattens_to_unknown() -> None:
     assert permit_status_from_reading(_reading(2)) == "Unknown"
     assert permit_status_from_reading(_reading(None)) == "Unknown"
     assert permit_status_from_reading(_reading("secure")) == "Unknown"
+
+
+@pytest.mark.unit
+def test_enum_label_on_maps_to_permitted() -> None:
+    # The shape a real bi record delivers: 2-BM's StaA:SecureM reads 'ON'.
+    assert permit_status_from_reading(_enum_reading("ON")) == "Permitted"
+
+
+@pytest.mark.unit
+def test_enum_label_off_maps_to_not_permitted() -> None:
+    assert permit_status_from_reading(_enum_reading("OFF")) == "NotPermitted"
+
+
+@pytest.mark.unit
+def test_conventional_binary_labels_map_both_ways() -> None:
+    for permitted, not_permitted in (("TRUE", "FALSE"), ("YES", "NO"), ("1", "0")):
+        assert permit_status_from_reading(_enum_reading(permitted)) == "Permitted"
+        assert permit_status_from_reading(_enum_reading(not_permitted)) == "NotPermitted"
+
+
+@pytest.mark.unit
+def test_enum_label_matching_ignores_case_and_padding() -> None:
+    assert permit_status_from_reading(_enum_reading(" on ")) == "Permitted"
+    assert permit_status_from_reading(_enum_reading("Off")) == "NotPermitted"
+
+
+@pytest.mark.unit
+def test_renamed_enum_label_flattens_to_unknown() -> None:
+    # A facility that renames ZNAM / ONAM fails the gate closed rather
+    # than guessing which of its own words means secured.
+    assert permit_status_from_reading(_enum_reading("SEARCHED")) == "Unknown"
+    assert permit_status_from_reading(_enum_reading("NOT SEARCHED")) == "Unknown"
+
+
+@pytest.mark.unit
+def test_enum_label_under_non_good_quality_still_unknown() -> None:
+    # 2-BM's StaB:SecureM reads 'OFF' with a designed STATE / MAJOR alarm.
+    # Quality still wins; see the alarm-vs-fault question on this slice.
+    assert permit_status_from_reading(_enum_reading("OFF", quality="Bad")) == "Unknown"
 
 
 class _ScriptedControlPort:
