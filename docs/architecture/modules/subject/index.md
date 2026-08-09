@@ -179,7 +179,7 @@ The Subject aggregate is the authoritative source of "where is sample X right no
 
 ## Examples
 
-The five examples below cover the canonical Subject lifecycle: register a sample, mount it on a sample-environment Asset, measure it, dismount it for re-use, and run it through a terminal disposition. The caller's principal goes on the `X-Principal-Id` header. For the REST and MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The five examples below cover the canonical Subject lifecycle: register a sample, mount it on a sample-environment Asset, measure it, dismount it for re-use, and run it through a terminal disposition. The caller's principal goes on the `X-Principal-Id` header. For the REST and MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 ### Register a Subject
 

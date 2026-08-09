@@ -28,7 +28,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from tests.architecture.conftest import tracked_python_files, tracked_test_files
+from tests.architecture.conftest import (
+    tracked_markdown_files,
+    tracked_python_files,
+    tracked_test_files,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -656,3 +660,32 @@ def test_em_dash_allowlist_entries_actually_contain_em_dashes() -> None:
             msg_lines.append(f"  ... and {len(stale) - 10} more")
     if msg_lines:
         pytest.fail("\n".join(msg_lines))
+
+
+def test_no_em_dashes_in_published_markdown() -> None:
+    """Every tracked .md under docs/ is em-dash-free.
+
+    The no-em-dash rule is a rule about USER-FACING prose, and the site is
+    where the prose actually faces users. Until now the ratchet covered only
+    Python, so the published pages were the one place the rule was not
+    enforced. Three of them had drifted: 66 em dashes, all table cells
+    standing in for "not applicable", now written as `n/a`.
+
+    No allowlist on purpose. The Python side carries one because it was
+    retrofitted onto a large corpus; markdown starts clean, so any hit here
+    is new and should be fixed rather than recorded.
+
+    Not covered: the ~750 generated pages, which never exist on disk. Their
+    renderers assert em-dash-free output themselves (see
+    `test_beamline_descriptor` and `test_architecture_introspect`).
+    """
+    violators: list[str] = []
+    for path in sorted(tracked_markdown_files()):
+        text = path.read_text(encoding="utf-8")
+        if _EM_DASH in text:
+            violators.append(f"{path.name} ({text.count(_EM_DASH)})")
+    if violators:
+        pytest.fail(
+            "em dash in published markdown; use a comma, a colon, 'n/a' in a "
+            "table cell, or rephrase:\n" + "\n".join(f"  {v}" for v in violators)
+        )

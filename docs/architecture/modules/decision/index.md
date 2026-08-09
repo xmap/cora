@@ -248,7 +248,7 @@ There is no foreign key from `entries_decision_inferences` to the Decision aggre
 |---|---|---|
 | Access | reads-from | `Decision.actor_id` is an `Actor.id`; the handler pre-loads the Actor at registration to confirm existence |
 | Trust | shared-vocabulary-with | `Decision.context = "PolicyGrant"` Decisions are written by the Authorize port path when a policy decision is consequential enough to record; `alternatives` carries the determining-policy ids in those Decisions |
-| Agent | writes-into | all five agents author Decisions in their own contexts (`RunDebrief`, `CautionProposal`, `RunSupervision`, `CautionPromotion`, `ClearanceExpiry`); each composes `DecisionRegistered` inline rather than through `register_decision`, and most derive a deterministic decision_id from the entity acted on (run_id, proposal id, clearance id) for idempotent re-delivery |
+| Agent | writes-into | the seeded agents author Decisions in twelve contexts (`RunDebrief`, `CautionProposal`, `RunSupervision`, `CautionPromotion`, `ClearanceExpiry`, `ClearanceProgress`, `CalibrationVerification`, `ProcedureProgress`, `CampaignProgress`, `AuthorityRevocationHold`, `ExperimentSteering`, `RunInitiation`); each composes `DecisionRegistered` inline rather than through `register_decision`, and most derive a deterministic decision_id from the entity acted on (run_id, proposal id, clearance id) for idempotent re-delivery |
 | Run | reads-from | `RunAbort`, `RunStop`, `RunTruncate`, and `RunDebrief` Decisions reference a Run id either in `inputs` or in the context vocabulary; the link is by value, not stored on Run |
 | Recipe | reads-from | `RecipeApproval` Decisions cite a Recipe id in `inputs`; the link is by value |
 | Data | reads-from | `DatasetDiscard` Decisions cite a Dataset id, and `invalidation`-kind chains pair with the `demote_dataset` slice on the Data module so an authorized retract has a citable rule |
@@ -257,11 +257,11 @@ There is no foreign key from `entries_decision_inferences` to the Decision aggre
 
 The `actor_id` reference is pre-loaded at the registration handler, but no status check is run. A Decision made by an Actor who is later deactivated is still a valid historical fact, and its audit value does not diminish. The `parent_id` reference is also pre-loaded; the cross-Run and cross-context guards on operator re-invocations of agent debriefs are the only structural checks beyond existence.
 
-Decisions are read by many modules and written by few. CORA's five agents are the only non-human authors: the two LLM subscribers (`RunDebriefer`, `CautionDrafter`) plus the three deterministic runtimes (`RunSupervisor`, `CautionPromoter`, `ClearanceExpirer`); everything else is human or operator path. The Authorize port does not write Decisions for every authorization; the per-decision audit log lives in `entries_conduit_verdicts`, and a `PolicyGrant` Decision is reserved for the small subset of policy decisions consequential enough to record at the Decision-aggregate level.
+Decisions are read by many modules and written by few. CORA's seeded agents are the only non-human authors: the two LLM subscribers (`RunDebriefer`, `CautionDrafter`) plus the deterministic runtimes, which between them write twelve distinct contexts; everything else is human or operator path. The Authorize port does not write Decisions for every authorization; the per-decision audit log lives in `entries_conduit_verdicts`, and a `PolicyGrant` Decision is reserved for the small subset of policy decisions consequential enough to record at the Decision-aggregate level.
 
 ## Examples
 
-The five examples below cover the canonical Decision authoring and read flow: register a Decision for an operator-approved Recipe, get one back by id, list with a confidence-band filter, rate a Decision, and append one reasoning entry to an open logbook. The caller's principal goes on the `X-Principal-Id` header. For the REST and MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The five examples below cover the canonical Decision authoring and read flow: register a Decision for an operator-approved Recipe, get one back by id, list with a confidence-band filter, rate a Decision, and append one reasoning entry to an open logbook. The caller's principal goes on the `X-Principal-Id` header. For the REST and MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 ### Register a Decision for an approved Recipe
 
@@ -274,7 +274,7 @@ The five examples below cover the canonical Decision authoring and read flow: re
     X-Principal-Id: 11111111-2222-3333-4444-555555555555
 
     {
-      "actor_id": "11111111-2222-3333-4444-555555555555",
+      "decided_by": "11111111-2222-3333-4444-555555555555",
       "context": "RecipeApproval",
       "choice": "Approve",
       "rule": "cora:policy:recipe_approval:v1",
@@ -296,7 +296,7 @@ The five examples below cover the canonical Decision authoring and read flow: re
     mcp.call_tool(
         "register_decision",
         {
-            "actor_id": "11111111-2222-3333-4444-555555555555",
+            "decided_by": "11111111-2222-3333-4444-555555555555",
             "context": "RecipeApproval",
             "choice": "Approve",
             "rule": "cora:policy:recipe_approval:v1",
@@ -352,7 +352,7 @@ The five examples below cover the canonical Decision authoring and read flow: re
         "list_decisions",
         {
             "confidence_band": "Certain",
-            "actor_id": "22222222-3333-4444-5555-666666666666",
+            "decided_by": "22222222-3333-4444-5555-666666666666",
             "limit": 50,
         },
     )
@@ -403,24 +403,28 @@ The five examples below cover the canonical Decision authoring and read flow: re
     X-Principal-Id: 33333333-4444-5555-6666-777777777777
 
     {
-      "logbook_id": "5a6b7c8d-9e0f-1a2b-3c4d-5e6f7a8b9c0d",
-      "occurred_at": "2026-05-20T18:42:11.314Z",
-      "operation_name": "chat",
-      "provider_name": "anthropic",
-      "request_model": "claude-haiku-4-5",
-      "response_model": "claude-haiku-4-5",
-      "request_temperature": 0.2,
-      "request_max_tokens": 4096,
-      "input_tokens": 1842,
-      "output_tokens": 612,
-      "finish_reasons": ["end_turn"],
-      "agent_name": "RunDebriefer",
-      "conversation_id": "run-debrief:42f7b1a0-...",
-      "messages_jsonb": null
+      "entries": [
+        {
+          "event_id": "5a6b7c8d-9e0f-1a2b-3c4d-5e6f7a8b9c0d",
+          "occurred_at": "2026-05-20T18:42:11.314Z",
+          "operation_name": "chat",
+          "provider_name": "anthropic",
+          "request_model": "claude-haiku-4-5",
+          "response_model": "claude-haiku-4-5",
+          "request_temperature": 0.2,
+          "request_max_tokens": 4096,
+          "input_tokens": 1842,
+          "output_tokens": 612,
+          "finish_reasons": ["end_turn"],
+          "agent_name": "RunDebriefer",
+          "conversation_id": "run-debrief:42f7b1a0-...",
+          "messages": null
+        }
+      ]
     }
     ```
 
-    Returns `200 OK` with the `event_id` that becomes the entries-table primary key. The handler raises `409 Conflict` with `DecisionLogbookNotOpen` if no logbook with the supplied `logbook_id` is currently open on the Decision. The `messages_jsonb` field is opt-in for PII gating and may be null.
+    Entries are appended in a batch, and each carries its own caller-supplied `event_id`, which becomes the entries-table primary key and makes the append idempotent under retry. `event_id`, `occurred_at`, `operation_name`, `provider_name`, and `request_model` are required per entry; the rest are optional. The `messages` field is opt-in for PII gating and may be null.
 
 === "MCP"
 
@@ -429,20 +433,24 @@ The five examples below cover the canonical Decision authoring and read flow: re
         "append_inferences",
         {
             "decision_id": "9c2a8e4f-3b5d-6c7e-8f9a-0b1c2d3e4f5a",
-            "logbook_id": "5a6b7c8d-9e0f-1a2b-3c4d-5e6f7a8b9c0d",
-            "occurred_at": "2026-05-20T18:42:11.314Z",
-            "operation_name": "chat",
-            "provider_name": "anthropic",
-            "request_model": "claude-haiku-4-5",
-            "response_model": "claude-haiku-4-5",
-            "request_temperature": 0.2,
-            "request_max_tokens": 4096,
-            "input_tokens": 1842,
-            "output_tokens": 612,
-            "finish_reasons": ["end_turn"],
-            "agent_name": "RunDebriefer",
-            "conversation_id": "run-debrief:42f7b1a0-...",
-            "messages_jsonb": None,
+            "entries": [
+                {
+                    "event_id": "5a6b7c8d-9e0f-1a2b-3c4d-5e6f7a8b9c0d",
+                    "occurred_at": "2026-05-20T18:42:11.314Z",
+                    "operation_name": "chat",
+                    "provider_name": "anthropic",
+                    "request_model": "claude-haiku-4-5",
+                    "response_model": "claude-haiku-4-5",
+                    "request_temperature": 0.2,
+                    "request_max_tokens": 4096,
+                    "input_tokens": 1842,
+                    "output_tokens": 612,
+                    "finish_reasons": ["end_turn"],
+                    "agent_name": "RunDebriefer",
+                    "conversation_id": "run-debrief:42f7b1a0-...",
+                    "messages": None,
+                }
+            ],
         },
     )
     ```

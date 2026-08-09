@@ -2,7 +2,7 @@
 
 *What CORA needs the SIX team to confirm before the model can be trusted.*
 
-SIX was reverse-engineered from the beamline's own bluesky profile collection ([NSLS2/six-profile-collection](https://github.com/NSLS2/six-profile-collection)), so the control handles in the [Inventory](index.md) are the beamline's real PVs, read from the `startup/*.py` files rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet), including the new loose families). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
+SIX was reverse-engineered from the beamline's own bluesky profile collection ([NSLS2/six-profile-collection](https://github.com/NSLS2/six-profile-collection)), so the control handles on the [device pages](index.md) are the beamline's real PVs, read from the `startup/*.py` files rather than confirmed by staff. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are on [Model](model.md#deliberately-not-here-yet), including the new loose families). It is a delete-on-answer queue. Priorities are `Blocks-build`, `Blocks-go-live`, and `Nice-to-have`.
 
 ## Topology and scope
 

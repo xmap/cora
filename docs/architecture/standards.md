@@ -13,7 +13,7 @@ Borrowed names and structure, not wire formats. A reader fluent in any of these 
 | ISA-88 | equipment tiers (`AssetTier`: Unit / Component / Device) | `equipment` |
 | ISA-95 | facility-envelope scope (`FacilityKind`: Site / Area) | `federation` (Facility) |
 | ISA-88 | episodic procedures (recipe ladder: Method / Practice / Plan / Run) | `recipe`, `run` |
-| ISA-106 | continuous operations | `operation`, `supply` (planned) |
+| ISA-106 | continuous operations | `operation`, `supply` |
 | ISA-99 / IEC 62443 | trust topology (Zones, Conduits, Surfaces, Policies) | `trust` |
 | ISO/IEC 42001 + NIST AI RMF | AI governance frameworks | `decision`, `agent`, `strategy` (planned) |
 | W3C PROV-O | provenance vocabulary (Activity, Entity, Agent, used, wasGeneratedBy) | outbound API payloads |
@@ -53,7 +53,7 @@ Only the spine and the floor are fixed. The line between them is a per-deploymen
 Standards already shaping internal designs but not yet landed in shipped code. Listed here so a reader who knows them recognises the direction.
 
 - **AAS Capability Submodel (IDTA 02020), OPC UA DI / LADS**: driver and equipment-integration vocabulary; will land alongside the first multi-vendor integration.
-- **JWS-detached + DSSE PAE + Sigstore + SCITT**: signed-event vocabulary for AI-agent decisions; design locked, implementation pending.
+- **JWS-detached + Sigstore + SCITT**: the remaining signed-event vocabulary for AI-agent decisions; design locked, implementation pending. DSSE PAE is no longer on this list because it shipped: `infrastructure/signing` signs `PAE(payload_type, canonical_body_bytes(payload))` with Ed25519, and the agent-authored `DecisionRegistered` path signs through it.
 - **EPICS V4 Normative Types**: wire vocabulary for Asset ports.
 - **EPCIS 5-W invariant**: advisory check on event payloads (Who / What / When / Where / Why).
 - **PIDINST profile and DataCite Instrument resourceType**: Asset persistent identifiers for external citation. CORA reserves the capacity on `equipment` Assets and decides the minting profile when the first Asset needs to be cited externally. See [Deferred](../stack/deferred.md).

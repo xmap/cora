@@ -809,7 +809,7 @@ This returns the sorted list of commands the named principal can run via the nam
 | Backup and point-in-time recovery | SHIPPED | pgBackRest, `infra/backup/`, drill in `scripts/restore_drill.py`; see "Backup and point-in-time recovery" above |
 | Backup repository target | Deferred | Where the host can durably write. Carries two coupled decisions: a credential for the s3 and sftp targets (not for a mounted share), and repository encryption, which cannot be added after the first backup |
 | Backup scheduling and archive alerting | Deferred | Decided with the orchestrator, which is where a timer and an alert belong |
-| Schema-version assertion at boot | Deferred | Today the restore procedure carries this check, not the application. First restore of a backup that predates a migration |
+| Schema-version assertion at boot | SHIPPED | `build_kernel` calls `verify_schema_version(pool, allow_mismatch=settings.allow_schema_version_mismatch)` immediately after creating the pool, before anything that can write exists; `ALLOW_SCHEMA_VERSION_MISMATCH` is the documented escape hatch. See "Restoring an old backup under a newer image" above |
 | Image registry | Deferred | Where the orchestrator pulls from; decided with the orchestrator |
 | Runtime orchestrator (k8s / Cloud Run / ECS / bare VMs) | Deferred | First non-local deployment |
 | Event-sourced `ActorIdpBindings` (JIT Actor provisioning) | Deferred | First case where adding an operator is too high-friction via config-time bindings |

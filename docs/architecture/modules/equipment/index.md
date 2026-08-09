@@ -12,7 +12,7 @@ Out of scope
 {: .cora-kicker }
 
 - **High-frequency telemetry.** Motor positions during a scan, frame-trigger timestamps, sub-microsecond timing edges. Those are substream records keyed on the Run plus the Asset, not Asset state.
-- **DataCite minting and the persistent-id write path.** The PIDINST serializer (`to_pidinst_record`) lives at the module root and is reachable over HTTP / MCP through `get_asset_pidinst`. The DataCite mint surface that posts the serialized record, plus the slice that writes the resulting persistent id back onto Asset state, are deferred to follow-on slices.
+- **DataCite minting and the persistent-id write path.** The PIDINST serializer (`to_pidinst_record`) lives in the private `_pidinst/` package and is reachable over HTTP / MCP through `get_asset_pidinst` for an Asset and `get_fixture_pidinst` for a Fixture. The DataCite mint surface that posts the serialized record, plus the slice that writes the resulting persistent id back onto Asset state, are deferred to follow-on slices.
 - **Hierarchy descendant projection.** The asset-summary table answers direct-parent queries. Transitive-closure queries ("every device under this beamline") are deferred until the use case lands.
 - **Per-Family settings-schema versioning history.** The current schema replaces the prior schema on every `update_family_settings_schema`; the event log carries the history, but no separate projection exposes "schema at time T".
 - **Wiring at the Plan tier.** Which Asset port connects to which other Asset port across the whole experiment lives in `Plan.wiring` in the [Recipe](../recipe/index.md) module. Assembly carries the wiring that is INTRINSIC to one composition blueprint; Plan layers experiment-specific wiring on top.
@@ -95,7 +95,7 @@ Addressability wins ties: if any other module references the sub-component by id
 
 `AssetPort` declares what ports the equipment HAS. The connection between two ports lives in `Plan.wiring` for whole-experiment wiring, or in `Assembly.required_wires` for wiring that is intrinsic to a composition blueprint.
 
-`AssetOwner` and `AlternateIdentifier` are sortable VOs whose ordering follows the field that uniquely keys them (`owner_name` for owners, `(kind, value)` for alternate identifiers). Both feed the PIDINST serializer (`to_pidinst_record` at the module root) that maps Asset state into the external PIDINST record shape, which the `get_asset_pidinst` slice exposes at `GET /assets/{asset_id}/pidinst`. The PIDINST property numbers are: 5 for owners, 13 for alternate identifiers.
+`AssetOwner` and `AlternateIdentifier` are sortable VOs whose ordering follows the field that uniquely keys them (`owner_name` for owners, `(kind, value)` for alternate identifiers). Both feed the PIDINST serializer (`to_pidinst_record` in the `_pidinst/` package) that maps Asset state into the external PIDINST record shape, which the `get_asset_pidinst` slice exposes at `GET /assets/{asset_id}/pidinst`. The PIDINST property numbers are: 5 for owners, 13 for alternate identifiers.
 
 `Assembly.content_hash` is a SHA-256 over the canonical serialization of the structural content (`name`, `presents_as`, `required_slots`, `required_wires`, `required_sub_assemblies`, `parameter_overrides_schema`); engineering metadata (drawing, version label) is intentionally excluded so two Assemblies with the same structural intent share a hash even when sourced from different facilities. A pinned child's `content_hash` is folded into the parent's, so a structural change deep in a composition ripples up one deliberate re-pin at a time. This cross-facility convergence holds because both the ids the hash folds in are deterministic: the Role ids in `presents_as` (the Role-contract set) come from `role_stream_id`, and each slot's `required_family_ids` come from `family_stream_id`, each deriving its id as `uuid5` over the lowercased name. So two facilities that define the same-named Role and the same-named Family arrive at the same ids and therefore the same hash. (Until these ids were made deterministic, the hash silently did NOT converge, the random per-facility ids broke it even though the canonical serialization was identical.) `Fixture.assembly_content_hash` snapshots that hash at registration time, decoupling the materialization from any later Assembly revision.
 
@@ -362,6 +362,8 @@ The <!-- arch:count kind=aggregate bc=equipment spell=true -->eight<!-- /arch:co
 | `AssetPortAdded` | `asset_id`, `port_name`, `direction`, `signal_type`, `occurred_at` | `add_asset_port` succeeds |
 | `AssetPortRemoved` | `asset_id`, `port_name`, `occurred_at` | `remove_asset_port` succeeds |
 | `AssetSettingsUpdated` | `asset_id`, `settings`, `occurred_at` | `update_asset_settings` succeeds; payload carries the post-merge settings dict |
+| `AssetPartitionRuleUpdated` | `asset_id`, `partition_rule?`, `occurred_at` | `update_asset_partition_rule` succeeds. One event covers set, change, and clear, matching the `AssetSettingsUpdated` precedent; `partition_rule` is null when the operator cleared it, otherwise the serialized typed VO with its `kind` discriminator |
+| `AssetPersistentIdAssigned` | `asset_id`, `persistent_id_scheme`, `persistent_id_value`, `occurred_at` | a persistent identifier is minted for the Asset. Scheme and value ride as two primitives so `from_stored` can rebuild the VO without reading prior state. Set-once: no withdrawal event ships today |
 | `AssetDegraded` | `asset_id`, `reason`, `occurred_at` | `degrade_asset` succeeds; `reason` is operator free text (for example "hot pixel detected") |
 | `AssetFaulted` | `asset_id`, `reason`, `occurred_at` | `fault_asset` succeeds |
 | `AssetRestored` | `asset_id`, `reason`, `occurred_at` | `restore_asset` succeeds |
@@ -506,7 +508,7 @@ _Generated from the code at build time._
 
 `GetAssetIntegrationView` is a read-time composition slice that joins the Asset's current state with the schema declarations of its assigned Families, the Capabilities those Families' affordances satisfy, and the active Cautions targeting the Asset. The composition runs at query time; there is no integration-view projection today. The view is the read-side primitive that integration code (a control-system adapter, a measurement broker) uses to discover "what can this Asset actually do". The response carries `asset_id`, `name`, `tier`, `lifecycle`, `condition`, `parent_id`, `families` (each with its settings schema), `ports`, `settings`, `active_cautions`, `applicable_capabilities`, and an `incomplete` boolean that flags partial composition when a referenced Family failed to load (eventual-consistency tolerance).
 
-`GetAssetPidinst` is a read-time serializer slice at `GET /assets/{asset_id}/pidinst`. A feature-local view assembler loads the Asset, its bound `Model`, the Families behind the Model, the Asset's owners, and its alternate identifiers, then hands the assembled view to the `to_pidinst_record` pure function at the module root (`_pidinst_serializer.py` plus `_pidinst_types.py`). The response body is the PIDINST record shape used by external persistent-identifier registries, returned directly so a downstream caller can post it to DataCite or another mint surface without further transformation. Errors map: `AssetNotFound` to 404, `PidinstRecordInvariant` to 422 (the assembled view violated a PIDINST schema invariant), the four pre-construction subclasses (`AssetNameMissing`, `LandingPageMissing`, `OwnerStateNotAvailable`, `ManufacturerStateNotAvailable`) to 409 (the input view was loaded but failed serializer preconditions), and any unexpected failure to 500.
+`GetAssetPidinst` is a read-time serializer slice at `GET /assets/{asset_id}/pidinst`. A feature-local view assembler loads the Asset, its bound `Model`, the Families behind the Model, the Asset's owners, and its alternate identifiers, then hands the assembled view to the `to_pidinst_record` pure function in the private `_pidinst/` package (`_serializer.py` plus `_types.py`). The response body is the PIDINST record shape used by external persistent-identifier registries, returned directly so a downstream caller can post it to DataCite or another mint surface without further transformation. Errors map: `AssetNotFound` to 404, `PidinstRecordInvariant` to 422 (the assembled view violated a PIDINST schema invariant), the four pre-construction subclasses (`AssetNameMissing`, `LandingPageMissing`, `OwnerStateNotAvailable`, `ManufacturerStateNotAvailable`) to 409 (the input view was loaded but failed serializer preconditions), and any unexpected failure to 500.
 
 ## Cross-aggregate invariants
 
@@ -876,7 +878,7 @@ Two attachment paths exist for binding Assets to a Fixture. `register_fixture` w
 
 ## Examples
 
-The five examples below cover the canonical lifecycle of one beamline's installation flow: define the Family classes the equipment fits, register the Asset under a parent, install it into a provisioned Mount, compose it into an Assembly with its peers, and materialize that Assembly as a Fixture on a Trust Surface. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The five examples below cover the canonical lifecycle of one beamline's installation flow: define the Family classes the equipment fits, register the Asset under a parent, install it into a provisioned Mount, compose it into an Assembly with its peers, and materialize that Assembly as a Fixture on a Trust Surface. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 <!-- extracted from tests/contract/test_families_endpoint.py and siblings -->
 
@@ -892,7 +894,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
 
     {
       "name": "RotaryStage",
-      "affordances": ["Move.Continuous", "Move.Step", "Signal.PositionFeedback"]
+      "affordances": ["Rotatable", "Homeable", "Limitable"]
     }
     ```
 
@@ -905,7 +907,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
         "define_family",
         {
             "name": "RotaryStage",
-            "affordances": ["Move.Continuous", "Move.Step", "Signal.PositionFeedback"],
+            "affordances": ["Rotatable", "Homeable", "Limitable"],
         },
     )
     ```
@@ -1002,10 +1004,10 @@ The five examples below cover the canonical lifecycle of one beamline's installa
       ],
       "required_wires": [
         {
-          "source_slot": "rotary_stage",
-          "source_port": "trigger_out",
-          "target_slot": "camera",
-          "target_port": "trigger_in"
+          "source_slot_name": "rotary_stage",
+          "source_port_name": "trigger_out",
+          "target_slot_name": "camera",
+          "target_port_name": "trigger_in"
         }
       ]
     }
@@ -1027,8 +1029,8 @@ The five examples below cover the canonical lifecycle of one beamline's installa
                 {"slot_name": "scintillator", "required_family_ids": ["cccc3333-3333-3333-3333-333333333333"], "cardinality": "Exactly1"},
             ],
             "required_wires": [
-                {"source_slot": "rotary_stage", "source_port": "trigger_out",
-                 "target_slot": "camera",       "target_port": "trigger_in"},
+                {"source_slot_name": "rotary_stage", "source_port_name": "trigger_out",
+                 "target_slot_name": "camera",       "target_port_name": "trigger_in"},
             ],
         },
     )

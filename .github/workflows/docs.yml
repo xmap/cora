@@ -4,7 +4,12 @@ on:
   push:
     branches: [main]
     paths:
+      # Staged into docs/ at build time by scripts/stage_docs.py, so an edit
+      # here changes published pages without touching docs/.
       - "CONTRIBUTING.md"
+      - "SECURITY.md"
+      - "README.md"
+      - "CITATION.cff"
       - "docs/**"
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
@@ -23,6 +28,23 @@ on:
       - "talks/**"
       # The Architecture pages render their factual tables from the code via AST
       # introspection, so a BC / aggregate / event / slice change must redeploy docs.
+      - "apps/api/src/cora/**"
+  # Build (do not deploy) on PRs touching the same paths, so a dead anchor, an
+  # un-navved page or a raising hook fails review instead of landing on main.
+  # The CI workflow runs the tests; this one is the only thing that runs mkdocs.
+  pull_request:
+    branches: [main]
+    paths:
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
+      - "README.md"
+      - "CITATION.cff"
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".github/workflows/docs.yml"
+      - "scripts/**"
+      - "deployments/**"
+      - "catalog/**"
       - "apps/api/src/cora/**"
   workflow_dispatch:
 
@@ -58,7 +80,11 @@ jobs:
       - name: Build site
         run: mkdocs build --strict
 
+      # The decks are slow to build (npm install plus a chromium download per
+      # deck) and nothing deploys from a PR, so skip them there. The mkdocs
+      # build above is the part a PR needs to prove.
       - name: Set up Node
+        if: github.event_name != 'pull_request'
         uses: actions/setup-node@v7
         with:
           node-version: "22"
@@ -66,6 +92,7 @@ jobs:
           cache-dependency-path: "talks/*/package-lock.json"
 
       - name: Build talks
+        if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -94,6 +121,7 @@ jobs:
           done
 
       - name: Upload artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5
         with:
           path: site
@@ -101,6 +129,10 @@ jobs:
   deploy:
     name: Deploy to GitHub Pages
     needs: build
+    # Load-bearing. The build now also runs on pull_request so a docs break is
+    # caught before it lands; without this guard that would publish every PR's
+    # build straight to the live site.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

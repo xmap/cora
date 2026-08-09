@@ -163,6 +163,8 @@ def _count_value(model: ArchModel, args: dict[str, str]) -> int:
         return sum(len(a.events) for b in model.bcs for a in b.aggregates)
     if kind == "slice":
         return len(model.bc(bc).slices) if bc else sum(len(b.slices) for b in model.bcs)
+    if kind == "planned-bc":
+        return len(_PLANNED_ROWS)
     raise ArchMarkerError(f"arch:count unknown kind={kind!r}")
 
 

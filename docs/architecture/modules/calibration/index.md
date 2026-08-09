@@ -143,7 +143,7 @@ Source-id targets are validated for UUID shape at the API boundary but not for e
 
 ## Examples
 
-The four examples below follow the canonical path for one Calibration: define an identity, append a Provisional revision from a measurement Procedure, append a Verified revision computed from a Dataset that supersedes the first, and query the projection. The caller's principal becomes `defined_by_actor_id` at definition and `established_by_actor_id` on each revision. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The four examples below follow the canonical path for one Calibration: define an identity, append a Provisional revision from a measurement Procedure, append a Verified revision computed from a Dataset that supersedes the first, and query the projection. The caller's principal becomes `defined_by_actor_id` at definition and `established_by_actor_id` on each revision. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 <!-- extracted from tests/contract/calibration/test_define_calibration.py -->
 

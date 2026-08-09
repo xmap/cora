@@ -454,7 +454,7 @@ Cross-aggregate state mutation stays inside the BC: a `ChecksumVerified` Attesta
 
 ## Examples
 
-The examples below cover the canonical flow: register a Dataset, materialize it as a Distribution, record how it was acquired, verify its bytes, and publish a citable Edition; plus the original Dataset trust-axis transitions. For the REST and MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The examples below cover the canonical flow: register a Dataset, materialize it as a Distribution, record how it was acquired, verify its bytes, and publish a citable Edition; plus the original Dataset trust-axis transitions. For the REST and MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 ### Register a Dataset against a producing Run
 

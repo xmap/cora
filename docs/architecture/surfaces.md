@@ -11,8 +11,8 @@ The Trust BC carries a `Surface` aggregate that names the ingress shape each cal
 | Surface | Kind | Default policy binding |
 | --- | --- | --- |
 | HTTP | `HTTP` | V2 bootstrap policy |
-| MCP stdio | `MCP_STDIO` | — |
-| MCP streamable HTTP | `MCP_STREAMABLE_HTTP` | — |
+| MCP stdio | `MCP_STDIO` | n/a |
+| MCP streamable HTTP | `MCP_STREAMABLE_HTTP` | n/a |
 
 `surface_id` threads through every command + query handler, the `Authorize` port, Policy evaluation, and the idempotency-cache key namespace (so the same `Idempotency-Key` on different surfaces does not collide). The composition root injects the resolved `surface_id` per-request; tests use a canonical `NIL_SENTINEL_ID` from `cora.infrastructure.routing`.
 

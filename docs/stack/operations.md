@@ -7,7 +7,7 @@ For implementers picking deployment and developer tooling. Each row names a role
 | Role | Pick | Why | Swap trigger |
 | --- | --- | --- | --- |
 | Build backend | hatchling | Standard PEP 517, uv-friendly | Workspace tool requiring different backend |
-| Container image | Deferred | First non-local deployment defines base image and layering | First non-local deployment |
+| Container image | SHIPPED | `apps/api/Dockerfile`; the build command and the three non-negotiable image facts are on the [Deployment page](deployment.md#container-image) | Registry and orchestrator remain deferred |
 | Runtime target | Deferred (Kubernetes, Cloud Run, ECS, bare VMs) | Not deployed beyond local dev | First non-local deployment |
 | Image registry | Deferred (ghcr, Docker Hub) | Tied to runtime-target pick | Locked alongside runtime target |
 
@@ -25,4 +25,4 @@ For implementers picking deployment and developer tooling. Each row names a role
 | Pre-commit | pre-commit | Hooks for lint, format, and type-check on commit |
 | Local container runtime | Docker + docker-compose | Postgres + pgvector for local dev |
 | CI | GitHub Actions | Repo on GitHub; standard |
-| Docs site generator | MkDocs Material (`mkdocs-material==9.5.49`) | Renders these docs; pinned and built in `.github/workflows/docs.yml`, published to GitHub Pages | Authoring needs MkDocs cannot meet (versioned docs, heavy JS components) |
+| Docs site generator | MkDocs Material | Renders these docs, published to GitHub Pages. The version is pinned in exactly two places that must agree, `.github/workflows/docs.yml` and the `MKDOCS` variable in the `Makefile`; this row deliberately names no number, because a third copy is a third thing to drift | Authoring needs MkDocs cannot meet (versioned docs, heavy JS components) |

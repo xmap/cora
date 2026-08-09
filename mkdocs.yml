@@ -6,6 +6,10 @@ site_author: Doga Gursoy
 repo_url: https://github.com/xmap/cora
 repo_name: xmap/cora
 edit_uri: edit/main/docs/
+# Absolute URLs only: mkdocs does not depth-rewrite links in the copyright, so
+# a relative one resolves against the current page and 404s everywhere but root.
+copyright: >
+  <a href="https://github.com/xmap/cora/blob/main/LICENSE">Apache-2.0</a> licensed.
 
 docs_dir: docs
 
@@ -74,8 +78,10 @@ nav:
       - Decision: architecture/modules/decision/index.md
       - Federation: architecture/modules/federation/index.md
       - Enclosure: architecture/modules/enclosure/index.md
+      - Budget: architecture/modules/budget/index.md
   - Stack:
     - stack/index.md
+    - Run it locally: stack/run.md
     - Backend: stack/backend.md
     - Frontend: stack/frontend.md
     - Data: stack/data.md
@@ -956,6 +962,8 @@ nav:
     - Runtime: reference/runtime.md
     - Glossary: reference/glossary.md
     - Contributing: reference/contributing.md
+    - Security: reference/security.md
+    - Cite CORA: reference/cite.md
 
 markdown_extensions:
   - admonition
@@ -992,7 +1000,10 @@ extra_javascript:
   - javascripts/section-reveal.js
   - javascripts/nav-theme.js
   - javascripts/toc-active.js
-  - javascripts/scrubber-demo.js
+  # Loaded by the hidden scrubber demo only; it returns immediately when the
+  # page has no #cora-scrubber element, so it was 29 KB of inert weight on all
+  # 802 pages. Comes back with the Papers tab and its demo page.
+  # - javascripts/scrubber-demo.js
 
 plugins:
   - search
@@ -1004,8 +1015,11 @@ plugins:
 hooks:
   - scripts/mkdocs_hooks.py
 
-not_in_nav: |
-  architecture/modules/_template.md
+# The module-page authoring template moved to scripts/templates/module_page.md.
+# not_in_nav only hides a page from the nav: it still builds, still enters the
+# sitemap, and still enters the search index, which is how a placeholder
+# skeleton ended up publicly searchable.
+not_in_nav: ""
 
 # Kept in the repo, kept off the published site. Dropping these lines (and
 # uncommenting the nav entries plus the blog plugin above) brings them back.
@@ -1014,9 +1028,18 @@ exclude_docs: |
   papers.md
   papers/
   scrubber.md
+  projects/
+  javascripts/scrubber-demo.js
+  javascripts/lights_out_run.json
 
 # Note: contributing.md is staged into docs/ at build time from the repo
 # root CONTRIBUTING.md by .github/workflows/docs.yml (see scripts/stage_docs.py).
 # For local `mkdocs serve` it is absent and mkdocs will warn; build with
 # `make docs-build` to stage it first. index.md is hand-crafted and lives in docs/.
 strict: false
+
+validation:
+  nav:
+    omitted_files: warn
+  links:
+    anchors: warn

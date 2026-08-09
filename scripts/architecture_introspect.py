@@ -11,7 +11,8 @@ the source. Detection rules mirror the architecture fitness tests
 (apps/api/tests/architecture/): a BC is a top-level package excluding the
 infrastructure trio, an aggregate is an aggregates/<name>/ dir with state.py and
 events.py, events are the members of the <Aggregate>Event union, slices are
-features/<name>/ dirs with command.py or query.py.
+features/<name>/ dirs with command.py or query.py, or with route.py plus
+handler.py for a read slice too thin to need a query.
 """
 
 from __future__ import annotations
@@ -296,7 +297,11 @@ def _slices(bc_dir: Path) -> list[SliceInfo]:
             continue
         has_command = (child / "command.py").is_file()
         has_query = (child / "query.py").is_file()
-        if not (has_command or has_query):
+        # A read slice thin enough to need no query.py still has a public
+        # surface, so discover it from route.py + handler.py rather than
+        # dropping it silently (get_fixture_pidinst went missing that way).
+        has_bare_route = (child / "route.py").is_file() and (child / "handler.py").is_file()
+        if not (has_command or has_query or has_bare_route):
             continue
         method, path, command = _route_surface(child / "route.py")
         out.append(

@@ -174,7 +174,7 @@ stateDiagram-v2
 
 ## Events
 
-`Permit` emits <!-- arch:count kind=event bc=federation agg=permit spell=true -->five<!-- /arch:count --> event types. `Credential` emits <!-- arch:count kind=event bc=federation agg=credential spell=true -->five<!-- /arch:count -->. `Seal` emits <!-- arch:count kind=event bc=federation agg=seal spell=true -->five<!-- /arch:count -->. Every event carries `occurred_at` and a `<verb>_by_actor_id` denorm of the envelope `principal_id` so projection consumers do not need to join the envelope table for the most common per-event queries. Status is not carried in event payloads; the event type IS the state-change indicator.
+`Permit` emits <!-- arch:count kind=event bc=federation agg=permit spell=true -->five<!-- /arch:count --> event types. `Credential` emits <!-- arch:count kind=event bc=federation agg=credential spell=true -->five<!-- /arch:count -->. `Seal` emits <!-- arch:count kind=event bc=federation agg=seal spell=true -->five<!-- /arch:count -->. `Facility` emits <!-- arch:count kind=event bc=federation agg=facility spell=true -->five<!-- /arch:count -->. Every event carries `occurred_at` and a `<verb>_by_actor_id` denorm of the envelope `principal_id` so projection consumers do not need to join the envelope table for the most common per-event queries. Status is not carried in event payloads; the event type IS the state-change indicator.
 
 | Event | Payload sketch | When emitted |
 |---|---|---|
@@ -183,6 +183,9 @@ stateDiagram-v2
 | `PermitSuspended` | `permit_id`, `suspended_by_actor_id`, `reason?`, `occurred_at` | `suspend_permit` succeeds |
 | `PermitResumed` | `permit_id`, `resumed_by_actor_id`, `occurred_at` | `resume_permit` succeeds |
 | `PermitRevoked` | `permit_id`, `revoked_by_actor_id`, `reason?`, `occurred_at` | `revoke_permit` succeeds from any non-revoked status |
+| `PublicationReceiptRecorded` | `permit_id`, `content_hash`, `home_stream_type`, `home_stream_id`, `home_artifact_id`, `receipt_id`, `occurred_at` | a per-BC publish slice recorded a receipt against this outbound Permit. The matching `<Artifact>Published` event on the home BC's stream lands atomically in the same `append_streams` call. No status transition: recording a receipt is orthogonal to the Permit FSM, and the decider enforces Active-only before emitting |
+| `FacilityTrustAnchorCredentialAdded` | `facility_id`, `credential_id`, `added_by`, `occurred_at` | a credential is added to the peer Facility's trust-anchor set |
+| `FacilityTrustAnchorCredentialRemoved` | `facility_id`, `credential_id`, `removed_by`, `reason?`, `occurred_at` | a credential is removed from that set |
 | `CredentialRegistered` | `credential_id`, `facility_id`, `audience`, `purpose`, `secret_ref`, `public_material_ref?`, `expires_at?`, `registered_by_actor_id`, `occurred_at` | `register_credential` succeeds (genesis); status starts at `Active` |
 | `CredentialRotationStarted` | `credential_id`, `pending_secret_ref`, `pending_public_material_ref?`, `rotation_started_by_actor_id`, `occurred_at` | `start_credential_rotation` succeeds |
 | `CredentialRotationCompleted` | `credential_id`, `rotation_completed_by_actor_id`, `occurred_at` | `complete_credential_rotation` succeeds; pending refs promoted to current |
@@ -381,7 +384,7 @@ The federation module also ships a BC-local helper at `cora.federation._actor_up
 
 ## Examples
 
-The four examples below cover the canonical Federation flow: register two Credentials with seal-specific purposes, initialize the per-facility Seal binding them, sign the first head pointer, and define an Outbound Permit that names one of those Credentials as carrier. The caller's principal goes on the `X-Principal-Id` header. For the REST and MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The four examples below cover the canonical Federation flow: register two Credentials with seal-specific purposes, initialize the per-facility Seal binding them, sign the first head pointer, and define an Outbound Permit that names one of those Credentials as carrier. The caller's principal goes on the `X-Principal-Id` header. For the REST and MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 ### Register a seal-online-signing Credential
 
@@ -465,12 +468,11 @@ The four examples below cover the canonical Federation flow: register two Creden
 
     {
       "new_head_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-      "new_sequence_number": 1,
-      "signed_at": "2026-06-01T14:30:00Z"
+      "new_sequence_number": 1
     }
     ```
 
-    Returns `204 No Content`. `new_sequence_number` must be strictly greater than the prior value (seeded to 0 at initialization); the decider rejects regressions and re-signs at the same sequence as `SealSequenceNumberRegressionError`. `signed_at` is the domain wall-clock of signature, distinct from the event envelope's `occurred_at`; the projection's `last_signed_at` column reflects this field so cross-facility consumers see signing time rather than append time.
+    Returns `204 No Content`. `new_sequence_number` must be strictly greater than the prior value (seeded to 0 at initialization); the decider rejects regressions and re-signs at the same sequence as `SealSequenceNumberRegressionError`. The caller does not supply the signing time: the handler stamps `SealPointerSigned.signed_at` from the clock port, and the projection's `last_signed_at` column reflects that payload field, so cross-facility consumers see domain signing time rather than append time.
 
 === "MCP"
 
@@ -481,7 +483,6 @@ The four examples below cover the canonical Federation flow: register two Creden
             "facility_code": "aps",
             "new_head_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
             "new_sequence_number": 1,
-            "signed_at": "2026-06-01T14:30:00Z",
         },
     )
     ```
@@ -506,7 +507,7 @@ The four examples below cover the canonical Federation flow: register two Creden
       "expires_at": "2027-05-31T00:00:00Z",
       "terms": {
         "kind": "Outbound",
-        "scope_set": [
+        "scopes": [
           {"kind": "beamline", "name": "aps-2bm", "qualifier": "public"}
         ],
         "read_scope": "ReadAllArtifacts",
@@ -532,7 +533,7 @@ The four examples below cover the canonical Federation flow: register two Creden
             "expires_at": "2027-05-31T00:00:00Z",
             "terms": {
                 "kind": "Outbound",
-                "scope_set": [
+                "scopes": [
                     {"kind": "beamline", "name": "aps-2bm", "qualifier": "public"}
                 ],
                 "read_scope": "ReadAllArtifacts",

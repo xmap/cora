@@ -63,6 +63,8 @@ logs/
 # MkDocs site (built output + staged copy of CONTRIBUTING)
 /site/
 /docs/reference/contributing.md
+/docs/reference/security.md
+/docs/stack/run.md
 
 # Hero source PNGs (regenerated via scripts/generate_hero_images.py).
 # Only the .webp variants are served by the site and committed.

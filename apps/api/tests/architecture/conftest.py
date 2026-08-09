@@ -109,6 +109,34 @@ def _tracked_python_files_under(subdir: str) -> frozenset[Path]:
 
 
 @cache
+def tracked_markdown_files() -> frozenset[Path]:
+    """Absolute paths to git-tracked `.md` files under `docs/`.
+
+    Rooted at the repo root rather than `apps/api`, because docs/ sits
+    outside the API package. Keeps the GIT_DIR / GIT_INDEX_FILE strip that
+    `_tracked_python_files_under` does and `tracked_migration_files` omits:
+    without it, a pre-commit run reads the parent repo's staging area
+    instead of this worktree and silently checks the wrong file set.
+
+    Generated pages (deployment, catalog, site, architecture markers) are
+    NOT covered: they never exist on disk. Their own renderers assert no
+    em dash in their output.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in {"GIT_DIR", "GIT_INDEX_FILE"}}
+    result = subprocess.run(
+        ["git", "ls-files", "docs"],
+        cwd=_REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+        env=env,
+    )
+    return frozenset(
+        _REPO_ROOT / line for line in result.stdout.splitlines() if line.endswith(".md")
+    )
+
+
+@cache
 def tracked_migration_files() -> tuple[Path, ...]:
     """Absolute paths to git-tracked `.sql` files under `infra/atlas/migrations/`,
     sorted lexicographically (timestamp-prefixed filenames give chronological order).

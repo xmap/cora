@@ -30,6 +30,14 @@ For humans and LLM agents writing CORA code, and for code reviewers. Not a tutor
 
     [Read →](modeling.md)
 
+-   :material-hand-back-right-outline:{ .lg .middle } __Affordances__
+
+    ---
+
+    The closed 30-value vocabulary of device primitives, and the two naming patterns behind it.
+
+    [Read →](affordances.md)
+
 -   :material-puzzle-outline:{ .lg .middle } __Patterns__
 
     ---
@@ -45,6 +53,14 @@ For humans and LLM agents writing CORA code, and for code reviewers. Not a tutor
     Identifiers, units of measurement, personal data, schema-validated values.
 
     [Read →](conventions.md)
+
+-   :material-tag-text-outline:{ .lg .middle } __Naming__
+
+    ---
+
+    The R1-R6 rules for naming aggregates, events, commands, slices, and Families.
+
+    [Read →](naming.md)
 
 -   :material-rocket-launch-outline:{ .lg .middle } __Runtime__
 

@@ -62,7 +62,7 @@ Only the spine and the floor are fixed. How far the edge reaches between them is
 
 ## What CORA governs
 
-The recipe chain is the spine. Around it, CORA models the rest of what a single facility decision actually depends on: the instruments, the resources they draw on, the people and agents who act, the rules that gate them, and what gets produced. Seventeen bounded contexts, one event log.
+The recipe chain is the spine. Around it, CORA models the rest of what a single facility decision actually depends on: the instruments, the resources they draw on, the people and agents who act, the rules that gate them, and what gets produced. <!-- arch:count kind=bc spell=true cap=true -->Eighteen<!-- /arch:count --> bounded contexts, one event log.
 
 <div class="grid cards" markdown>
 
@@ -81,11 +81,12 @@ The recipe chain is the spine. Around it, CORA models the rest of what a single 
 
     ---
 
-    The instruments themselves, the continuously-available resources they draw on, the permit-gated spaces that contain them, and the empirical values that keep them honest.
+    The instruments themselves, the continuously-available resources they draw on, the permit-gated spaces that contain them, the spending envelope that bounds them, and the empirical values that keep them honest.
 
     [Equipment](architecture/modules/equipment/index.md) ·
     [Supply](architecture/modules/supply/index.md) ·
     [Enclosure](architecture/modules/enclosure/index.md) ·
+    [Budget](architecture/modules/budget/index.md) ·
     [Calibration](architecture/modules/calibration/index.md)
 
 -   :material-account-group-outline:{ .lg .middle } __People and agents__
