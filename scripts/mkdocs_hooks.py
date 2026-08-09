@@ -195,7 +195,8 @@ def on_page_markdown(
     src_uri = page.file.src_uri
     # Architecture pages carry arch:* markers whose bodies are rendered from the
     # live code model (expand before link-rewrite so generated links resolve too).
-    if src_uri.startswith("architecture/") and "<!-- arch:" in markdown:
+    # The home page quotes the same counts, so it is expanded on the same path.
+    if (src_uri.startswith("architecture/") or src_uri == "index.md") and "<!-- arch:" in markdown:
         import architecture_pages
 
         markdown = architecture_pages.expand_markers(markdown, model=_arch_model(), src_uri=src_uri)
