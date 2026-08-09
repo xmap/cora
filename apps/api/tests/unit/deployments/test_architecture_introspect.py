@@ -147,7 +147,7 @@ def test_count_renderer() -> None:
     assert ap.render_count(_MODEL, {"kind": "aggregate", "spell": "true"}) == "forty-three"
     assert ap.render_count(_MODEL, {"kind": "bc"}) == "18"
     assert ap.render_count(_MODEL, {"kind": "event", "bc": "decision"}) == "4"
-    assert ap.render_count(_MODEL, {"kind": "slice", "bc": "equipment"}) == "60"
+    assert ap.render_count(_MODEL, {"kind": "slice", "bc": "equipment"}) == "61"
     assert ap.render_count(_MODEL, {"kind": "planned-bc"}) == "1"
     assert ap.render_count(_MODEL, {"kind": "planned-bc", "spell": "true"}) == "one"
 
@@ -161,6 +161,15 @@ def test_decision_slices_table_uses_real_surface() -> None:
     assert "`append_inferences`" in table
     assert "append_reasoning_entry" not in table
     assert "AppendReasoningEntry" not in table
+
+
+def test_slice_with_route_but_no_query_is_discovered() -> None:
+    # get_fixture_pidinst registers a REST route and an MCP tool but has no
+    # command.py or query.py, so the old rule dropped it from the equipment
+    # table with no build error: a shipped public surface, invisible on the site.
+    table = ap.render_slices_table(_MODEL, {"bc": "equipment"})
+    assert "`get_fixture_pidinst`" in table
+    assert "/fixtures/{fixture_id}/pidinst" in table
 
 
 def test_bc_aggregates_renderer() -> None:
