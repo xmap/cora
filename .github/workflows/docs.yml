@@ -61,7 +61,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: "talks/*/package-lock.json"
 
@@ -79,7 +79,10 @@ jobs:
               # Belt-and-suspenders: playwright-chromium's postinstall sometimes
               # skips the binary download in CI. Force it before exporting.
               npx --yes playwright install chromium
-              npm run build -- --base "/cora/talks/$slug/"
+              # Hash routing is required here: Pages serves the deck from a
+              # subdirectory and honours only the site-root 404.html, so a
+              # history-mode slide URL 404s on reload or when shared.
+              npm run build -- --base "/cora/talks/$slug/" --router-mode hash
               npm run export || echo "::warning::PDF export failed for $slug; deck will ship without PDF"
             )
             mkdir -p "site/talks/$slug"

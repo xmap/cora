@@ -28,6 +28,27 @@ updates:
           - "minor"
           - "patch"
 
+  # Slidev decks, one package-lock.json per deck. Without this entry only
+  # security advisories ever reached them, so a deck could sit on a stale
+  # Slidev for months and inherit fixed upstream bugs. Dependabot resolves
+  # on linux, which keeps the platform-optional native bindings intact.
+  - package-ecosystem: "npm"
+    directories:
+      - "/talks/*"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      deck:
+        patterns:
+          - "*"
+
   # GitHub Actions used by .github/workflows/*.yml
   - package-ecosystem: "github-actions"
     directory: "/"
