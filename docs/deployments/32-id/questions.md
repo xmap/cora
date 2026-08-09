@@ -2,7 +2,7 @@
 
 *What CORA needs the 32-ID team to confirm before the model can be trusted.*
 
-32-ID is a design-phase scaffold built from the published [32-ID docs](https://github.com/decarlof/32id-docs), which mix pre-APS-U and current values, so almost every value in the [Inventory](index.md) is carried as a fact still to confirm. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are recorded on [Model](model.md#deliberately-not-here-yet) instead). It is a delete-on-answer queue: when an item is answered, the answer lands in the descriptor and the row is removed, with the reason in the commit. Priorities are `Blocks-build` (the answer changes the structure of the model, so CORA cannot finalize the shape without it), `Blocks-go-live` (a placeholder is fine for the description, but the real value is needed before CORA observes or drives the hardware), and `Nice-to-have`.
+32-ID is a design-phase scaffold built from the published [32-ID docs](https://github.com/decarlof/32id-docs), which mix pre-APS-U and current values, so almost every value on the [device pages](index.md) is carried as a fact still to confirm. Each row below is a fact the beamline team owns, not a CORA modelling choice (those are recorded on [Model](model.md#deliberately-not-here-yet) instead). It is a delete-on-answer queue: when an item is answered, the answer lands in the descriptor and the row is removed, with the reason in the commit. Priorities are `Blocks-build` (the answer changes the structure of the model, so CORA cannot finalize the shape without it), `Blocks-go-live` (a placeholder is fine for the description, but the real value is needed before CORA observes or drives the hardware), and `Nice-to-have`.
 
 ## Topology and scope
 

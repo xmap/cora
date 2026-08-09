@@ -552,6 +552,20 @@ def _render_index(
         )
         blocks.append("## Walk the beam\n\n" + walk_sentence)
 
+    # Every non-pilot beamline's model page closes by pointing here to explain
+    # why it has no runbook and no live experiment view. The section was lost
+    # when these index pages became generated, orphaning that link on 56 pages.
+    if beamline.maturity != "pilot":
+        blocks.append("## Not yet documented")
+        blocks.append(
+            "This beamline has no Operations runbook and no live Experiment view, "
+            "because CORA does not drive it yet. Both pages describe what an operator "
+            "does with a running system, so writing them for a beamline CORA only "
+            "models would be invention rather than documentation. The pilot at "
+            "[2-BM](../2-bm/index.md) carries both, and shows the shape they take "
+            "once a deployment goes live."
+        )
+
     blocks.append("## More")
     blocks.append(
         "- [Techniques](techniques.md): what the beamline is for.\n"
