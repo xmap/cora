@@ -143,7 +143,7 @@ Trigger and step signals are modelled as typed ports plus wires resolved at Plan
 
 - `ApertureFineDrive` = two Piezosystem Jena NV200D/NET single-channel controllers (staff item_028), one per axis (X `10.54.113.126`, Y `10.54.113.125`), EPICS IOC `JenaNV200D` on host `arcturus`. They fine-position the `Aperture` coded-mask via a nanoSXY 120 CAP XY flexure stage (part `T-223-06D`, 120 um nominal / 100 um closed-loop per axis, 12.5 mm clear aperture); the axes step under FPGA trigger for compressive-sensing dithered sampling (PIEZO-1/2/4).
 - The Jena NV100D (formerly the provisional `OpticsFineDrive`, IOC `JenaNV100D`) is physically present but not in operational use at 2-BM: it lacks the external trigger mode tomoscan fly-scan needs, so no Run drives it. Recorded as provenance, not modelled as an active controller.
-- The driven X/Y `LinearStage` axis Assets and the `Aperture` identity registration are deferred to a follow-up slice; the FPGA `out2`/`out3` -> X/Y cable map needs operator confirmation (PIEZO-5).
+- The driven X/Y `LinearStage` axis Assets and the `Aperture` identity registration are deferred to a follow-up slice. The FPGA `out2`/`out3` -> X/Y cable map is confirmed (PIEZO-5, see below).
 
 ### NV200D trigger wiring
 
@@ -152,8 +152,15 @@ Trigger and step signals are modelled as typed ports plus wires resolved at Plan
 | `Timing` | `out2`, `out3` | OUTPUT | `step_trigger_ttl` |
 | `ApertureFineDrive` | `step_x_in`, `step_y_in` | INPUT | `step_trigger_ttl` |
 
-- Wires: `Timing.out2 -> ApertureFineDrive.step_x_in`, `Timing.out3 -> ApertureFineDrive.step_y_in` (JenaX/JenaY land on FPGA `out2`/`out3`, item_028); up to 1024 positions/axis.
-- Gate-delay PVs: `2bmbMZ1:SG:GateDly-3_DLY` (labelled "X axis delay"), `2bmbMZ1:SG:GateDly-2_DLY` (labelled "Y axis delay"); the label-to-cable map appears crossed, recorded verbatim and flagged for confirmation.
+- Wires: `Timing.out2 -> ApertureFineDrive.step_x_in`, `Timing.out3 -> ApertureFineDrive.step_y_in`; up to 1024 positions/axis.
+- Per-axis chain, confirmed end to end by a physical patch-panel trace on 2026-07-28 (PIEZO-5, staff [item_020](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html)):
+
+| Axis | FPGA out | softGlue signal | Gate-delay PV | NV200D `TRG IN` |
+| --- | --- | --- | --- | --- |
+| X | `out2` | `JenaX` | `2bmbMZ1:SG:GateDly-2_DLY` | `10.54.113.126` |
+| Y | `out3` | `JenaY` | `2bmbMZ1:SG:GateDly-3_DLY` | `10.54.113.125` |
+
+- CORA previously recorded the two gate-delay PVs with their axes reversed and flagged the result as a cable-map contradiction. There was no contradiction: the axis comments in staff `item_028` were themselves wrong, and the same trace corrected them ([2bm-docs `a3aa6be0`](https://github.com/xray-imaging/2bm-docs/commit/a3aa6be03efd)). The cable map was right throughout, so the wires above are unchanged; only the delay-PV association moved. An operator screen still carrying the old annotation would point at the wrong axis's delay, which is why the binding is recorded per axis rather than as a PV list.
 - Ports sit on the controller box today; they migrate onto per-axis Assets when registered.
 
 ### Camera trigger wiring

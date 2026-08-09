@@ -92,11 +92,11 @@ The softGlueZynq box is registered and its trigger outputs are wired to the came
 
 ## Fine-positioning piezo controllers
 
-The NV200D/NET piezo (now `ApertureFineDrive`) fine-positions the coded `Aperture` mask via FPGA-triggered stepping; the NV100D is present but not in operational use. One row remains: confirming which FPGA output drives which axis.
+The NV200D/NET piezo (now `ApertureFineDrive`) fine-positions the coded `Aperture` mask via FPGA-triggered stepping; the NV100D is present but not in operational use. The axis mapping is settled (PIEZO-5): your 2026-07-28 patch-panel trace confirmed `out2` = X and `out3` = Y, and the same trace corrected the delay-PV axis comments in `item_028`. One row is left, and it is about a screen rather than a cable.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| PIEZO-5 | `Nice-to-have` | Confirm the NV200D FPGA trigger mapping and its purpose. item_028 routes the JenaX / JenaY cables to FPGA `out2` / `out3`, but labels the delay PVs `GateDly-3_DLY` = "X axis delay" and `GateDly-2_DLY` = "Y axis delay", which crosses that cable map; which axis is on which output? And what is the 1024-position triggered-step mode used for (interlaced / dithered tomographic sampling)? | wired `Timing.out2 -> X`, `Timing.out3 -> Y` per the cable map, with the delay-PV labels recorded as the apparent cross; step use-case assumed fine-sampling during tomography | yes | [NV200D trigger wiring](inventory.md#nv200d-trigger-wiring) |
+| PIEZO-6 | `Nice-to-have` | The delay-PV axis comments in `item_028` were corrected on 2026-07-28 so that `GateDly-2` is X and `GateDly-3` is Y. Does the softGlueZynq operator screen (`softGlueZynqAll.adl`) carry its own axis annotation next to those two blocks, and if so does it now agree? We ask because the delay is set by hand per scan: a screen still reading the old way sends that edit to the other axis, and the scan still completes. | screen either carries no axis annotation or agrees with the corrected `item_028` | yes (the corrected mapping is recorded per axis) | [NV200D trigger wiring](inventory.md#nv200d-trigger-wiring) |
 
 ## Energy and the optics
 
