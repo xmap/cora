@@ -23,6 +23,6 @@ For implementers wiring authentication and authorization. Each row names a role,
 | Role | Pick | Why | Swap trigger |
 | --- | --- | --- | --- |
 | `Authorize` port | Single `authorize(subject, command_name, conduit_id, surface_id) → AuthorizeDecision` | Surface_id threading lets one Policy bind to one surface (HTTP / MCP stdio / MCP streamable-http) | Stays |
-| Policy engine | Trust BC `evaluate()` over current Policy aggregate | Inline; no external engine yet | First non-Cedar rule forces SpiceDB or OpenFGA |
-| Authz model (planned) | ReBAC (SpiceDB or OpenFGA) | Multi-stakeholder ownership in shared facilities | Locked when first non-Cedar authz rule lands |
-| Decision-BC policy language | Cedar | Used in Decision predicates (`has_determining_policies`) | Stays |
+| Policy engine | Trust BC `evaluate()` over current Policy aggregate | Inline; no external engine yet | First rule the inline evaluate() cannot express forces SpiceDB or OpenFGA |
+| Authz model (planned) | ReBAC (SpiceDB or OpenFGA) | Multi-stakeholder ownership in shared facilities | Locked when the first rule the inline evaluator cannot express lands |
+| Decision-BC policy vocabulary | Cedar-style naming, no Cedar engine | `determining_policies` is the canonical noun, borrowed from Cedar's response shape; `has_determining_policies` is a plain Python predicate. There is no `cedar` dependency and no policy file to author | Stays |

@@ -53,6 +53,7 @@ def _capabilities(catalog: Catalog) -> str:
         [
             f"`{c.code}`",
             c.name,
+            _codes(c.executor_shapes),
             _codes(sorted(binds.get(c.code, []))),
             c.description or "",
         ]
@@ -62,9 +63,12 @@ def _capabilities(catalog: Catalog) -> str:
         [
             "# Capabilities",
             "The operations-layer templates that declare what an operation provides. "
-            "Each Method binds to one Capability.",
+            "Each Method binds to one Capability. Executor shapes say how a Capability "
+            "may be executed: as a Method, as a Procedure, or both.",
             _banner(),
-            _table(["Code", "Name", "Binds methods", "Description"], rows),
+            _table(
+                ["Code", "Name", "Executor shapes", "Binds methods", "Description"], rows
+            ),
         ]
     )
 
@@ -77,6 +81,7 @@ def _methods(catalog: Catalog) -> str:
             _codes(m.needed_families),
             _codes(m.required_roles),
             m.purpose or "",
+            m.note or "",
         ]
         for m in catalog.methods
     ]
@@ -90,7 +95,14 @@ def _methods(catalog: Catalog) -> str:
             "fits, and by Family (anatomical) where a specific device class is meant.",
             _banner(),
             _table(
-                ["Method", "Capability", "Needed families", "Required roles", "Purpose"],
+                [
+                    "Method",
+                    "Capability",
+                    "Needed families",
+                    "Required roles",
+                    "Purpose",
+                    "Note",
+                ],
                 rows,
             ),
         ]

@@ -39,13 +39,25 @@ For implementers picking the server-side runtime. Each row names a role, the cur
 
 ## Control and actuation
 
-The `ControlPort` behind the Operation BC speaks EPICS. Production reads and writes go through the asyncio EPICS clients; tests drive a real softIOC subprocess rather than the production clients.
+The `ControlPort` behind the Operation BC speaks EPICS or Tango, selected per control route. Production reads and writes go through the asyncio EPICS clients; tests drive a real softIOC subprocess rather than the production clients.
 
 | Role | Pick | Why | Swap trigger |
 | --- | --- | --- | --- |
 | EPICS Channel Access | aioca | Production asyncio CA client behind `EpicsCaControlPort`; Diamond Light Source-maintained | CA workload outgrowing the client |
 | EPICS pvAccess | p4p | Production asyncio PVA client behind `EpicsPvaControlPort`; carries Normative Types (NTNDArray image streams CA cannot) | PVA workload outgrowing the client |
 | EPICS test IOC | caproto + epicscorelibs | Test-only: `epicscorelibs.ioc` spawns a real softIOC subprocess; caproto backs the test-only `CaprotoControlPort`. caproto's own README warns against production use | Stays test-only; production CA/PVA go through aioca / p4p |
+| Tango device attributes | pytango | Production Tango client behind `TangoControlPort`, the ESRF / MAX IV / Elettra / ALBA control-plane family; ships in the optional `tango` extra so an EPICS-only deployment does not carry it | Tango workload outgrowing the client |
+
+## Data movement, compute, and search
+
+The three remaining substrate-bearing ports behind the Operation BC. Each ships a production adapter alongside an in-memory one, and the two heavyweight ones sit in optional extras so a deployment that does not use them does not install them.
+
+| Role | Pick | Why | Swap trigger |
+| --- | --- | --- | --- |
+| Bulk data transfer | globus-sdk | Production Globus Transfer client behind `GlobusTransferPort`; the facility-to-facility movement path most light sources already operate. A base dependency, not an extra | A facility whose data path Globus does not reach |
+| Remote compute submission | globus-sdk | `GlobusComputePort` submits jobs to a Globus Compute endpoint; `FdtTransferPort` and the in-memory adapter cover the other shapes | An HPC scheduler seam Globus Compute cannot express |
+| HDF5 reads | h5py | Reads the detector-side HDF5 the acquisition path writes | Stays |
+| Bayesian-optimization search | botorch (with torch, gpytorch) | Backs `BoTorchDecidePort` for steered experiments; `SobolDecidePort` covers the quasi-random baseline. Ships in the optional `bo` extra, MIT and BSD-3 licensed, and the adapters import it lazily so a deployment without the extra still boots | A search problem BoTorch's acquisition functions cannot express |
 
 ## Signing
 

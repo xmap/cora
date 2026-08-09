@@ -55,7 +55,7 @@ For anyone reading CORA. Each term defined once and used the same way in code, c
 - **ISA-88.** Batch control. Footnote lens on the **Procedure** group (Method / Practice / Plan / Run).
 - **ISA-106.** Continuous-process operations. Footnote lens on the **Resource** group.
 - **ISA-99 / IEC 62443.** Industrial cybersecurity. Footnote lens on the **Authority** group: Zones, Conduits, Policies (`trust` BC).
-- **ISO/IEC 42001 + NIST AI RMF.** AI governance frameworks. Inform Decision and Strategy BCs.
+- **ISO/IEC 42001 + NIST AI RMF.** AI governance frameworks. Inform the Decision BC, and the Strategy BC once it ships (it is the one BC still reserved and unimplemented).
 - **W3C PROV-O.** Provenance ontology. Borrowed at API boundaries (Activity, Entity, Agent, used, wasGeneratedBy). W3C Provenance Working Group is closed; PROV-O is frozen 2013 bedrock vocabulary, not a moving spec. Community momentum lives in downstream consumers (RO-Crate, FAIRSCAPE).
 - **RAiD (ISO 23527).** Research Activity Identifier. Forward-compat field on `RunStarted`.
 
@@ -69,7 +69,7 @@ Watch-only (not adopted as a glossary term, see [Deferred](../stack/deferred.md)
 
 - **ReBAC.** Relationship-based access control (planned: SpiceDB or OpenFGA). For multi-stakeholder ownership common in shared facilities.
 - **BOLA.** Broken Object-Level Authorization (OWASP API #1). Covered by a parametrized cross-principal contract test on every read endpoint (12 aggregates today).
-- **Cedar.** Policy language used in `decision` BC predicates.
+- **Cedar.** AWS policy language. Not embedded: CORA evaluates no Cedar policies and pins no Cedar dependency. It borrows Cedar's `determining_policies` response convention as the canonical noun in `decision` BC predicates.
 - **Principal.** Authenticated identity attached to every command and event envelope. Required in production via `REQUIRE_AUTHENTICATED_PRINCIPAL=true`.
 - **Actor vs Profile.** `Actor` is the immutable identity in events; `Profile` is the mutable PII row, separately stored and erasable. GDPR-shaped. `Actor.kind ∈ {human, agent, service_account}`.
 - **`Authorize` port.** Single seam: `authorize(principal_id, command_name, conduit_id, surface_id) → AuthzResult`. Exposed on the kernel as `Kernel.authz`. Every command and query passes through it.
