@@ -48,7 +48,8 @@ carrying `data` (numpy array, shape `(count,)` even for scalars),
     is non-NO_ALARM (forensic breadcrumb; matches EpicsCa + EpicsPva
     format so consumers can parse one shape across CA / PVA / future
     substrates without per-adapter casing)
-  - `produced_at` from `metadata.stamp.as_datetime()`, UTC-coerced
+  - `produced_at` from `metadata.stamp.as_datetime()`, UTC-coerced,
+    or None when the stamp is missing or sits at the EPICS epoch
 
 ## Error mapping
 
@@ -178,6 +179,36 @@ def _unpack_value(data: Any, kind: MeasurementKind) -> Any:
     return scalar
 
 
+_EPICS_EPOCH = datetime(1990, 1, 1, tzinfo=UTC)
+"""Where EPICS starts counting. caproto hands back a datetime, not
+Unix seconds, so the CA adapter's numeric boundary is expressed here
+as the equivalent instant."""
+
+
+def _produced_at_for(stamp: Any) -> datetime | None:
+    """Substrate time from a caproto stamp, or None when there is none.
+
+    Two ways a time can be absent, and both now answer None rather
+    than inventing one. The metadata may carry no stamp at all, which
+    previously fell back to `datetime.now()`: that made an ingest time
+    indistinguishable from a substrate time, which is precisely the
+    confusion this port is trying to remove. Or the record may carry
+    EPICS stamp zero, which surfaces as 1990-01-01 and reads as a real
+    date.
+
+    See `epics_ca_control_port._produced_at_for` for the reasoning and
+    the live 2-BM measurement behind it.
+    """
+    if stamp is None or not hasattr(stamp, "as_datetime"):
+        return None
+    produced_at = stamp.as_datetime()
+    if produced_at.tzinfo is None:
+        produced_at = produced_at.replace(tzinfo=UTC)
+    if produced_at <= _EPICS_EPOCH:
+        return None
+    return produced_at
+
+
 def _to_reading(response: Any) -> Measurement:
     """Translate a caproto `ReadNotifyResponse` (or subscription update) to `Measurement`."""
     kind = _kind_for(response.data_type, response.data_count)
@@ -193,13 +224,7 @@ def _to_reading(response: Any) -> Measurement:
         if status is not None:
             quality_detail = f"alarm_status={int(status)}"
 
-    stamp = getattr(metadata, "stamp", None)
-    if stamp is not None and hasattr(stamp, "as_datetime"):
-        produced_at = stamp.as_datetime()
-        if produced_at.tzinfo is None:
-            produced_at = produced_at.replace(tzinfo=UTC)
-    else:
-        produced_at = datetime.now(tz=UTC)
+    produced_at = _produced_at_for(getattr(metadata, "stamp", None))
 
     return Measurement(
         value=value,

@@ -54,7 +54,8 @@ integer index for DBR_ENUM), `.datatype` (CA DBR type code),
   - `quality`: severity 0 -> Good, 1/2 -> Uncertain, 3 -> Bad
   - `quality_detail`: integer status code surfaced as a breadcrumb
     string when severity != NO_ALARM
-  - `produced_at`: `datetime.fromtimestamp(.timestamp, tz=UTC)`
+  - `produced_at`: `datetime.fromtimestamp(.timestamp, tz=UTC)`, or
+    None when the record supplied no stamp (see `_produced_at_for`)
 
 For DBR_ENUM specifically, FORMAT_TIME carries only the integer
 index; the adapter widens to FORMAT_CTRL on first encounter to grab
@@ -245,6 +246,40 @@ def _quality_detail_for(severity: int, status: int) -> str:
     return f"alarm_status={int(status)}"
 
 
+_EPICS_EPOCH_UNIX_SECONDS = 631152000.0
+"""1990-01-01T00:00:00Z, where EPICS starts counting, as Unix seconds.
+
+aioca reports `timestamp` already shifted into the Unix epoch, so a
+record whose EPICS stamp is zero arrives here as exactly this value
+rather than as zero."""
+
+
+def _produced_at_for(timestamp: float) -> datetime | None:
+    """Substrate time for an EPICS stamp, or None when it supplied none.
+
+    A record that has never processed carries EPICS stamp zero, which
+    aioca surfaces as `_EPICS_EPOCH_UNIX_SECONDS`. That is not a
+    reading taken in 1990; it is the absence of a time wearing a
+    time's clothes, and `datetime.fromtimestamp` converts it into a
+    date that parses and sorts like any other. Nothing downstream
+    could then tell a stamped reading from an unstamped one, so the
+    absence is surfaced as None here instead.
+
+    The boundary is the epoch itself: no reading can predate the
+    clock that stamps it, so anything at or before 1990 is impossible
+    rather than merely old. This catches a MISSING time, not a WRONG
+    one; an IOC whose clock is set to the wrong year still reports a
+    plausible stamp and no adapter can detect that.
+
+    Measured at APS 2-BM on 2026-08-09: both `S02BM-PSS:Sta[AB]:SecureM`
+    report an undefined stamp on the subscribe path, every update, so
+    this is the everyday case there and not an edge.
+    """
+    if timestamp <= _EPICS_EPOCH_UNIX_SECONDS:
+        return None
+    return datetime.fromtimestamp(timestamp, tz=UTC)
+
+
 def _to_reading(augmented: Any, enum_labels: tuple[str, ...] | None) -> Measurement:
     """Translate an aioca `AugmentedValue` (FORMAT_TIME) to `Measurement`."""
     kind = _kind_for(augmented.datatype, augmented.element_count)
@@ -252,7 +287,7 @@ def _to_reading(augmented: Any, enum_labels: tuple[str, ...] | None) -> Measurem
     severity = int(getattr(augmented, "severity", 0))
     status = int(getattr(augmented, "status", 0))
     timestamp = float(getattr(augmented, "timestamp", 0.0))
-    produced_at = datetime.fromtimestamp(timestamp, tz=UTC)
+    produced_at = _produced_at_for(timestamp)
     return Measurement(
         value=value,
         kind=kind,

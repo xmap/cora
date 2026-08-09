@@ -30,11 +30,19 @@ fields needed to record a sensor-driven Enclosure permit transition.
     enforces structural absence of operator-trigger semantics by
     typing `monitor_source_id` as `MonitorSourceId`.
 
-`observed_at` is NOT on the command: the handler injects it from the
-Clock port at call time (cross-BC non-determinism principle). The
-adapter's wall-clock at observation crosses the seam on the
-`EnclosureObservation` envelope at the port surface, not through the
-command.
+`observed_at` is NOT on the command. The handler stamps the event
+from the Clock port at call time (cross-BC non-determinism
+principle), so what the recorded event carries is CORA's ingest
+time.
+
+The substrate's own observation time reaches the seam on the
+`EnclosureObservation` envelope and is then DROPPED here: nothing
+carries it onto the command or the payload. That is a known gap, not
+a design choice, and the port docstring on
+`enclosure_observer.EnclosureObservation` used to claim the opposite.
+Closing it is the next slice of [[project-source-timestamp-design]];
+the field will arrive as `datetime | None`, since a substrate that
+stamps nothing is the ordinary case at 2-BM rather than a fault.
 """
 
 from dataclasses import dataclass

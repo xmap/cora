@@ -4245,13 +4245,18 @@ def _measurement_to_dict(reading: Measurement) -> dict[str, Any]:
     Includes the substrate metadata fields a post-hoc inspector needs
     (quality + quality_detail + ISO-8601 produced_at) so a check entry
     is self-contained without joining back to a separate stream.
+
+    `sampled_at` is null when the substrate stamped nothing. A null
+    reads as the open question it is, where the previous epoch
+    sentinel read as a confident answer that happened to be wrong; the
+    entry's own `occurred_at` still says when CORA took the reading.
     """
     return {
         "value": reading.value,
         "kind": reading.kind,
         "quality": reading.quality,
         "quality_detail": reading.quality_detail,
-        "sampled_at": reading.produced_at.isoformat(),
+        "sampled_at": reading.produced_at.isoformat() if reading.produced_at else None,
     }
 
 
@@ -4271,7 +4276,7 @@ def _outcome_measurement_to_dict(measurement: Measurement) -> dict[str, Any]:
         "quality": measurement.quality,
         "quality_detail": measurement.quality_detail,
         "units": measurement.units,
-        "produced_at": measurement.produced_at.isoformat(),
+        "produced_at": (measurement.produced_at.isoformat() if measurement.produced_at else None),
     }
 
 

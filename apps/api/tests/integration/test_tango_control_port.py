@@ -196,6 +196,7 @@ async def test_read_double_scalar_returns_good_scalar_measurement(
         assert reading.value == 2.5
         assert reading.quality_detail == ""
         assert reading.name == "double_scalar"
+        assert reading.produced_at is not None
         assert reading.produced_at.tzinfo is not None
     finally:
         await port.aclose()

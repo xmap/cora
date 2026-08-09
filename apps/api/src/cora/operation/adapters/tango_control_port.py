@@ -58,7 +58,8 @@ unpacks:
     `ATTR_ALARM` / `ATTR_INVALID` -> Bad.
   - `quality_detail`: the raw `AttrQuality` name as a forensic breadcrumb when
     quality is not VALID; empty string when VALID (matches the EPICS adapters).
-  - `produced_at`: `datetime.fromtimestamp(attr.time.totime(), tz=UTC)`.
+  - `produced_at`: `datetime.fromtimestamp(attr.time.totime(), tz=UTC)`,
+    or None when the attribute carried no time (see `_produced_at_for`).
 
 ## Error mapping
 
@@ -226,6 +227,29 @@ def _unpack_value(attr: Any, kind: MeasurementKind, enum_labels: tuple[str, ...]
     return scalar
 
 
+def _produced_at_for(time_val: Any) -> datetime | None:
+    """Substrate time from a Tango `TimeVal`, or None when absent.
+
+    Tango counts from the Unix epoch, not the EPICS one, so the
+    impossible boundary sits at 1970 rather than 1990: an attribute
+    that was never stamped reports zero, and `fromtimestamp(0)` would
+    render that as 1970-01-01. Same failure as the EPICS adapters, one
+    epoch apart. Missing `time` entirely is the same absence and
+    answers the same way.
+
+    Unlike `epics_ca_control_port._produced_at_for` this rule has no
+    live measurement behind it; it follows from Tango's epoch, and
+    matching behaviour across substrates is what the shared unit test
+    holds in place.
+    """
+    if time_val is None:
+        return None
+    timestamp = float(time_val.totime())
+    if timestamp <= 0.0:
+        return None
+    return datetime.fromtimestamp(timestamp, tz=UTC)
+
+
 def _to_reading(attr: Any, enum_labels: tuple[str, ...] | None = None) -> Measurement:
     """Translate a Tango `DeviceAttribute` to `Measurement`.
 
@@ -237,8 +261,7 @@ def _to_reading(attr: Any, enum_labels: tuple[str, ...] | None = None) -> Measur
     value = _unpack_value(attr, kind, enum_labels)
     quality = getattr(attr, "quality", None)
     time_val = getattr(attr, "time", None)
-    timestamp = time_val.totime() if time_val is not None else 0.0
-    produced_at = datetime.fromtimestamp(float(timestamp), tz=UTC)
+    produced_at = _produced_at_for(time_val)
     return Measurement(
         value=value,
         kind=kind,

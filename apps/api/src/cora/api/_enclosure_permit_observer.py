@@ -181,7 +181,7 @@ class ControlPortEnclosureObserver:
             queue.put_nowait(_PUMP_DONE)
 
     def _observation(
-        self, code: str, pv: str, status: str, observed_at: datetime
+        self, code: str, pv: str, status: str, observed_at: datetime | None
     ) -> EnclosureObservation:
         return EnclosureObservation(
             enclosure_code=code,

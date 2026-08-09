@@ -244,6 +244,25 @@ def _unpack_value(value: Any, kind: MeasurementKind) -> Any:
     return raw_value
 
 
+_EPICS_EPOCH_UNIX_SECONDS = 631152000.0
+"""1990-01-01T00:00:00Z as Unix seconds; p4p reports Unix-epoch times."""
+
+
+def _produced_at_for(timestamp: float) -> datetime | None:
+    """Same absent-stamp rule the CA adapter applies.
+
+    See `epics_ca_control_port._produced_at_for` for why an EPICS
+    stamp at or before the epoch is an absent time rather than an old
+    one. Unlike CA, this path has no live measurement behind it; the
+    rule is inherited from the shared EPICS convention, and
+    `tests/unit/operation/test_absent_timestamp_mapping.py` is what
+    keeps the three adapters from drifting apart.
+    """
+    if timestamp <= _EPICS_EPOCH_UNIX_SECONDS:
+        return None
+    return datetime.fromtimestamp(timestamp, tz=UTC)
+
+
 def _to_reading(value: Any) -> Measurement:
     """Translate a p4p NT-augmented value to `Measurement`."""
     kind = _classify_kind(value)
@@ -251,7 +270,7 @@ def _to_reading(value: Any) -> Measurement:
     severity = int(getattr(value, "severity", 0))
     status = int(getattr(value, "status", 0))
     timestamp = float(getattr(value, "timestamp", 0.0))
-    produced_at = datetime.fromtimestamp(timestamp, tz=UTC)
+    produced_at = _produced_at_for(timestamp)
     return Measurement(
         value=payload,
         kind=kind,

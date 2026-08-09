@@ -12,8 +12,9 @@ result record, a transfer manifest) into this CORA-owned vocabulary.
 
 - **`Measurement`** is the typed value-plus-metadata a consumer sees.
   Fields are domain-owned: `value`, `kind: MeasurementKind`,
-  `quality: Quality`, `produced_at: datetime`, `quality_detail: str`,
-  plus the substrate-neutral `name` and `units` annotations.
+  `quality: Quality`, `produced_at: datetime | None`,
+  `quality_detail: str`, plus the substrate-neutral `name` and
+  `units` annotations.
 - **`MeasurementKind`** is a closed 5-value enum (`Scalar | Array |
   Image | Categorical | Tabular`). Maps to EPICS V4 NT kinds + Tango
   `AttrDataFormat` + OPC UA Variant types via adapter-side ACL, and
@@ -106,9 +107,24 @@ class Measurement:
     `produced_at` is the time the substrate produced or observed the
     value (EPICS source timestamp, Tango `time`, OPC UA
     `SourceTimestamp`, a compute job's completion time, a transfer's
-    observation time). `quality_detail` is adapter-specific and opaque
-    at the port layer; treat it as a forensic breadcrumb, not a value
-    to branch on.
+    observation time). It is `None` when the substrate supplied no
+    usable time, which is a normal condition rather than an error:
+    plenty of real equipment reports a value without ever stamping
+    it. Consumers must decide what an absent source time means for
+    them; a consumer that needs SOME time should use its own
+    ingest-time rather than inventing one here.
+
+    Absence is decided by each adapter, never at this port, because
+    every substrate spells "no timestamp" differently. What adapters
+    MUST NOT do is substitute a wall-clock reading, which would make
+    an ingest time indistinguishable from a substrate time, or pass
+    through the substrate's zero, which parses as a real date and so
+    lies more convincingly than a gap. See
+    [[project-source-timestamp-design]].
+
+    `quality_detail` is adapter-specific and opaque at the port
+    layer; treat it as a forensic breadcrumb, not a value to branch
+    on.
 
     `name` is an optional substrate-neutral key naming the output or
     quantity the value carries (the channel / output / quantity label);
@@ -120,7 +136,7 @@ class Measurement:
     value: Any
     kind: MeasurementKind
     quality: Quality
-    produced_at: datetime
+    produced_at: datetime | None
     quality_detail: str = ""
     name: str = ""
     units: str | None = None

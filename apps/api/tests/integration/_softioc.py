@@ -30,6 +30,7 @@ state without trying to call the unsafe `ca_context_destroy`.
     -> `Measurement(quality="Uncertain")`
   - `invalid_alarm_value` (`ao` with HIHI threshold tripped, HHSV=INVALID)
     -> `Measurement(quality="Bad")`
+  - `unstamped_value` (`ao` with NO `PINI`) -> `Measurement(produced_at=None)`
 
 ## areaDetector ADCore-shaped PVs for the acquisition action bodies
 
@@ -62,6 +63,15 @@ needed (softIOC doesn't have caproto-style decorators); the alarm is a
 declarative consequence of the field values. The pair exists because
 the two severities land on opposite sides of the quality trichotomy
 (Uncertain vs Bad), so one record cannot pin both arms.
+
+`unstamped_value` is the ONLY record here without `PINI`, and the
+omission is the whole point: a record that never processes keeps
+EPICS `TIME` at zero, which is what an undefined timestamp looks like
+on the wire. Every other record processes at init and carries a real
+stamp. Do not add `PINI` to it. This reproduces the live APS 2-BM
+condition where both PSS permit signals report an undefined stamp on
+every update, which the adapters used to render as a real-looking
+1990-01-01. Reading VAL still works; only the time is missing.
 
 ## Slow / timeout PV is intentionally absent
 
@@ -154,6 +164,12 @@ record(ao, "$(P)invalid_alarm_value") {
   field(PINI, "YES")
 }
 
+record(ao, "$(P)unstamped_value") {
+  field(DESC, "No PINI: TIME stays undefined")
+  field(DTYP, "Soft Channel")
+  field(VAL, 7.5)
+}
+
 # NTNDArray Q:group for the PVA adapter (EpicsPvaControlPort). Exposes a 2x3
 # uint8 image at $(P)image via PVA. CA cannot carry NTNDArray.
 #
@@ -163,6 +179,17 @@ record(ao, "$(P)invalid_alarm_value") {
 #  - $(P)image:dim1_size (longout)  -> NTNDArray.dimension[1].size
 # +putorder enforces composition before the value field triggers a
 # monitor; mirrors the ophyd-async test_records_pva.db pattern.
+#
+# The `""` target on the meta mapping is deliberate and easy to get
+# wrong. `+type:"meta"` contributes the record's alarm AND time to
+# the NT structure, so it must be aimed at the structure ROOT. Aiming
+# it at named subfields (`"alarm"`, `"timeStamp"`) nests them one
+# level too deep, at `image.timeStamp.timeStamp`, where p4p's unwrap
+# does not look: `.severity` then silently defaults to 0 and
+# `.timestamp` to 0.0, so every image read reported NO_ALARM and
+# 1970-01-01 regardless of the record. That was the shape here until
+# 2026-08-09 and no test caught it, because the alarm default matched
+# the expected value and the time was only asserted to be timezone-aware.
 
 record(longout, "$(P)image:dim0_size") {
   field(DESC, "NTNDArray dim 0 size")
@@ -198,8 +225,7 @@ record(waveform, "$(P)image:data") {
     "$(P)image": {
       +id:"epics:nt/NTNDArray:1.0",
       "value": {+type:"any", +channel:"VAL", +putorder:2, +trigger:"*"},
-      "alarm": {+type:"meta", +channel:"SEVR"},
-      "timeStamp": {+type:"meta", +channel:"TIME"}
+      "": {+type:"meta", +channel:"VAL"}
     }
   })
 }
