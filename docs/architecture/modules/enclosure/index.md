@@ -166,7 +166,7 @@ The pre-flight gate is `Permitted`-only by design: `Unknown` does not pass, `Not
 
 ## Examples
 
-The three examples below follow the canonical Enclosure path: register a hutch Enclosure anchored to its containing Facility (the Site or Area it sits within, by `facility_code`), observe it `Permitted` once the search-and-secure sequence completes, then decommission it cleanly. The `observe_enclosure_status` slice is in-process only and has no public-surface example: substrate adapters invoke the handler directly. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The three examples below follow the canonical Enclosure path: register a hutch Enclosure anchored to its containing Facility (the Site or Area it sits within, by `facility_code`), observe it `Permitted` once the search-and-secure sequence completes, then decommission it cleanly. The `observe_enclosure_status` slice is in-process only and has no public-surface example: substrate adapters invoke the handler directly. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 <!-- extracted from tests/contract/enclosure/test_*.py -->
 

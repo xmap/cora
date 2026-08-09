@@ -2,11 +2,13 @@
 
 Each module is a bounded area of CORA's domain with its own aggregates, events, and slices. Every module page follows the same shape: purpose, maturity, aggregates, value objects, FSM, events, slices, storage, cross-module boundaries, and runnable examples.
 
+## Reading the examples
+
 <div class="cora-aside" markdown>
 
 - **Two surfaces, same behavior.** Every slice exposes a **REST** path for human operators and integration callers (hit it with `curl`, `httpx`, `HTTPie`, or any HTTP client) and an **MCP** tool for agent callers via the Model Context Protocol SDK. The MCP tool name matches the slice verb, and the argument keys mirror the REST JSON body 1-to-1. Same payload, same errors, same events: pick whichever fits the caller.
 - **Auth.** Every call carries the calling actor's identity. In bearer mode (`IDENTITY_PROVIDERS` configured) the same `BearerAuthMiddleware` verifies tokens for both REST and MCP streamable-HTTP, with audience bound per Surface; in legacy mode an `X-Principal-Id: <uuid>` header from a verifying proxy carries it instead. Either way, REST and MCP land on the same `principal_id` at the handler. See the [Auth page](../../stack/auth.md).
-- **Idempotency.** Slices marked *required* in the Idempotency column of each module's Slices table accept an `Idempotency-Key: <uuid>` header. Resending the same key with the same body returns the cached response, so operator retries after network blips are safe.
+- **Idempotency.** Genesis slices accept an `Idempotency-Key: <uuid>` header, and the examples that take one show it. Resending the same key with the same body returns the cached response, so operator retries after network blips are safe. The rule and its scope live on the [Surfaces page](../surfaces.md) under Cross-cutting.
 
 </div>
 
@@ -66,7 +68,7 @@ The **Cross-Module boundaries** table on each module page uses a fixed set of ve
 
     ---
 
-    Typed configuration for CORA's five agents: two LLM (RunDebriefer, CautionDrafter) and three deterministic (RunSupervisor, CautionPromoter, ClearanceExpirer). Four-state lifecycle with Suspended pause, shared id with Access Actor, MCP tool allowlist, declarative budgets, and passive plus active runtimes.
+    Typed configuration for CORA's thirteen seeded agents: two LLM (RunDebriefer, CautionDrafter) and eleven deterministic. Four-state lifecycle with Suspended pause, shared id with Access Actor, MCP tool allowlist, enforced budget caps, and passive plus active runtimes. Also owns `LanguageModel`, the catalog of models an agent may name.
 
     [Read →](agent/index.md)
 
@@ -150,7 +152,7 @@ The **Cross-Module boundaries** table on each module page uses a fixed set of ve
 
     [Read →](decision/index.md)
 
--   :material-link-variant-outline:{ .lg .middle } __Federation__ <span class="md-maturity md-maturity--beta">beta</span>
+-   :material-link-variant:{ .lg .middle } __Federation__ <span class="md-maturity md-maturity--beta">beta</span>
 
     ---
 

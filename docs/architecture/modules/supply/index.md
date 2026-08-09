@@ -188,7 +188,7 @@ The pre-flight gate is `Available`-only by design: `Degraded` does NOT pass. The
 
 ## Examples
 
-The four examples below follow the canonical Supply path: register a beamline-local LN2 supply, mark it Available for the first time, mark it Unavailable on a dewar-empty incident, then progress through Recovering and Restore back to Available. Reasons on every transition are operator-supplied audit breadcrumbs. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The four examples below follow the canonical Supply path: register a beamline-local LN2 supply, mark it Available for the first time, mark it Unavailable on a dewar-empty incident, then progress through Recovering and Restore back to Available. Reasons on every transition are operator-supplied audit breadcrumbs. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 <!-- extracted from tests/contract/supply/test_*.py -->
 

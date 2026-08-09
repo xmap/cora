@@ -175,7 +175,7 @@ Target references are validated for UUID shape at the API boundary but not for e
 
 ## Examples
 
-The four examples below follow the canonical path for one Caution: register an Asset quirk, supersede it with a revised workaround, retire it once the underlying issue is fixed, and query the projection. The caller's principal becomes the `author_actor_id` at registration; subsequent supersede and retire actions carry the actor only on the event envelope. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The four examples below follow the canonical path for one Caution: register an Asset quirk, supersede it with a revised workaround, retire it once the underlying issue is fixed, and query the projection. The caller's principal becomes the `author_actor_id` at registration; subsequent supersede and retire actions carry the actor only on the event envelope. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 <!-- extracted from tests/contract/caution/test_register_caution.py -->
 

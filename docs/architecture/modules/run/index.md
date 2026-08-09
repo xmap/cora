@@ -103,6 +103,7 @@ stateDiagram-v2
 | `RunStarted` | `run_id`, `name`, `plan_id`, `subject_id?`, `raid?`, `override_parameters`, `effective_parameters`, `trigger_source?`, `external_refs`, `acknowledged_cautions`, `campaign_id?`, `decided_by_decision_id?`, `pinned_calibration_ids`, `occurred_at` | `start_run` succeeds |
 | `RunHeld` | `run_id`, `occurred_at` | `hold_run` succeeds |
 | `RunResumed` | `run_id`, `occurred_at` | `resume_run` succeeds |
+| `HoldClaimReleased` | `run_id`, `claim_id`, `occurred_at` | one hold claim was discharged while other claims remain active. Audit-only: the evolver returns prior state unchanged, so the Run stays `Held` and the event's existence on the stream is the fact. This is what makes the hold algebra compositional: a releaser folds `active_hold_claims` and emits `RunResumed` only when its own claim is the last one, otherwise this event. Without it a concern that is not the sole holder can only resume a Run others still want held, or hold forever |
 | `RunCompleted` | `run_id`, `occurred_at` | `complete_run` succeeds |
 | `RunAborted` | `run_id`, `reason`, `decided_by_decision_id?`, `occurred_at` | `abort_run` succeeds |
 | `RunStopped` | `run_id`, `reason`, `occurred_at` | `stop_run` succeeds |
@@ -232,7 +233,7 @@ Clock skew between the sensor (`sampled_at`) and the handler (`occurred_at`) is 
 
 ## Examples
 
-The four examples below follow the happy path for one Run: start it, steer it mid-flight, append a sensor reading, end it. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The four examples below follow the happy path for one Run: start it, steer it mid-flight, append a sensor reading, end it. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 <!-- extracted from tests/contract/run/test_start_run.py -->
 
@@ -262,7 +263,7 @@ The four examples below follow the happy path for one Run: start it, steer it mi
     }
     ```
 
-    A successful call returns `201 Created` with the newly-assigned `run_id` and the resolved `effective_parameters` (Plan defaults merged with the overrides above).
+    A successful call returns `201 Created` with the newly-assigned `run_id`, and nothing else: the resolved `effective_parameters` (Plan defaults merged with the overrides above) are recorded on the `RunStarted` event, not returned in the response.
 
 === "MCP"
 
@@ -321,7 +322,7 @@ The four examples below follow the happy path for one Run: start it, steer it mi
     )
     ```
 
-The response carries the post-merge `effective_parameters` so the caller can confirm what the Run is now executing against.
+The call returns `204 No Content`. The post-merge `effective_parameters` are carried on the `RunAdjusted` event rather than in a response body, so a caller that needs to confirm what the Run is now executing against reads the Run back.
 
 ### Append a baseline reading
 

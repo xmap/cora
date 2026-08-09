@@ -129,7 +129,7 @@ The table above lists only modules that hold a **named domain reference** to an 
 
 ## Examples
 
-The four examples below cover the canonical Actor lifecycle: register a human, deactivate that human, fetch a single Actor, and page through the directory. The caller's principal goes on the `X-Principal-Id` header and, for `register_actor`, becomes the Actor id when the server generates a fresh one. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The four examples below cover the canonical Actor lifecycle: register a human, deactivate that human, fetch a single Actor, and page through the directory. The caller's principal goes on the `X-Principal-Id` header and, for `register_actor`, becomes the Actor id when the server generates a fresh one. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 ### Register a human Actor
 

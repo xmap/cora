@@ -2,7 +2,9 @@
 
 ## Purpose & Scope
 
-The Trust module owns CORA's authorization topology. Every command that crosses the system is evaluated against this topology before it reaches a decider, and the evaluator that performs that check is a pure function on Policy state. <!-- arch:count kind=aggregate bc=trust spell=true cap=true -->Five<!-- /arch:count --> aggregates carry the responsibility: `Zone` groups principals and assets that share a trust posture, `Conduit` is a governed communications path between two Zones, `Surface` is the process-level arrival point through which a request entered CORA, `Policy` is an authorization rule attached to a specific Conduit and Surface, and `Visit` tracks a principal's session-scoped presence on a Surface: the beamtime session with its planned period, arrival, presence check-in and check-out, and surface-control handover.
+The Trust module owns CORA's authorization topology. Every command that crosses the system is evaluated against this topology before it reaches a decider, and the evaluator that performs that check is a pure function on Policy state. <!-- arch:count kind=aggregate bc=trust spell=true cap=true -->Five<!-- /arch:count --> aggregates carry the responsibility: `Zone` groups principals and assets that share a trust posture, `Conduit` is a governed communications path between two Zones, `Surface` is the process-level arrival point through which a request entered CORA, `Policy` is an authorization rule attached to a specific Conduit and Surface, `Visit` tracks a principal's session-scoped presence on a Surface (the beamtime session with its planned period, arrival, presence check-in and check-out, and surface-control handover), and `Ratification` records whether a consequential action has received a second independent principal's co-signature.
+
+Policy and Ratification are the two halves of the governance-gate family, and they ask different questions. Policy is the permission gate: may this principal issue this command at all? Ratification is the co-action gate: this principal may, but must someone else agree first?
 
 Trust is the **what you may do** layer. Identity (who you are) lives in [Access](../access/index.md); agent-specific configuration (tool allowlists, budgets, suspended state) lives in [Agent](../agent/index.md). The cross-module Authorize port carries an Actor id resolved by Access, a Conduit id resolved by the entry adapter, and a Surface id resolved by the transport adapter, and answers Allow or Deny by consulting Policy state.
 
@@ -28,6 +30,7 @@ Out of scope
 | `Surface` | `id: UUID` | `id`, `name: SurfaceName`, `kind: SurfaceKind`, `status: SurfaceStatus` | additive, only `Defined` emitted today |
 | `Policy` | `id: UUID` | `id`, `name: PolicyName`, `conduit_id`, `permitted_principal_ids: frozenset[UUID]`, `permitted_commands: frozenset[str]`, `surface_id` | additive, no transitions today |
 | `Visit` | `id: UUID` | `id`, `policy_id`, `surface_id`, `type: VisitType`, `planned_start_at`, `planned_end_at`, `parent_id?`, `external_refs: frozenset[Identifier]`, `presence_entries: frozenset[PresenceEntry]`, `status: VisitStatus`, `last_status_reason?` | yes (8-state session lifecycle) |
+| `Ratification` | `id: UUID` | `id`, `target_action_id`, `command_name`, `consequence_class`, `requested_by`, `status`, `reason?` | yes (3-state) |
 
 A `Zone` is a trust-requirement-homogeneous grouping of principals and assets, defined by trust posture rather than physical location. A `Conduit` is the governed comms path between two Zones; the source-target naming is for clarity at the API layer, since the conduit itself is undirected per the topology standard. A `Surface` is the process-level arrival socket the request crossed: the protocol-bound endpoint, not the inter-zone path. A `Policy` is the explicit allow-list that gates a `(principal, command)` pair on a specific Conduit and Surface.
 
@@ -121,9 +124,22 @@ stateDiagram-v2
 
 Two pairs of commands are orthogonal to the lifecycle (they do not change `status`): `check_in_visit` / `check_out_visit` open and close a `PresenceEntry` for an actor (allowed while `Arrived`, `InProgress`, or `OnHold`), and `take_control_of_surface` / `release_control_of_surface` move surface-control between Visits on the same Surface (tracked in the `proj_trust_surface_active_visit` projection, not on aggregate state).
 
+### Ratification
+
+```mermaid
+stateDiagram-v2
+    [*] --> Requested: request_ratification
+    Requested --> Granted: grant_ratification
+    Requested --> Denied: deny_ratification
+    Granted --> [*]
+    Denied --> [*]
+```
+
+The target action is parked in the shared reversible hold while the ratification is `Requested`; a grant releases the hold and lets the action proceed. The co-signer must be a different, independent principal from the requester. Both terminals are final, with no re-open: a denied request is followed by a fresh one if warranted, the same strict-not-idempotent stance the sibling FSMs take. The aggregate ships dormant, so nothing gates on it yet; the consequence-class declaration and the decider gate that will consult it are a later increment.
+
 ## Events
 
-`Zone` emits <!-- arch:count kind=event bc=trust agg=zone spell=true -->one<!-- /arch:count --> event type. `Conduit` emits <!-- arch:count kind=event bc=trust agg=conduit spell=true -->three<!-- /arch:count -->. `Surface` emits <!-- arch:count kind=event bc=trust agg=surface spell=true -->one<!-- /arch:count -->. `Policy` emits <!-- arch:count kind=event bc=trust agg=policy spell=true -->one<!-- /arch:count -->. `Visit` emits <!-- arch:count kind=event bc=trust agg=visit spell=true -->thirteen<!-- /arch:count -->.
+`Zone` emits <!-- arch:count kind=event bc=trust agg=zone spell=true -->one<!-- /arch:count --> event type. `Conduit` emits <!-- arch:count kind=event bc=trust agg=conduit spell=true -->three<!-- /arch:count -->. `Surface` emits <!-- arch:count kind=event bc=trust agg=surface spell=true -->one<!-- /arch:count -->. `Policy` emits <!-- arch:count kind=event bc=trust agg=policy spell=true -->two<!-- /arch:count -->. `Visit` emits <!-- arch:count kind=event bc=trust agg=visit spell=true -->fourteen<!-- /arch:count -->. `Ratification` emits <!-- arch:count kind=event bc=trust agg=ratification spell=true -->three<!-- /arch:count -->.
 
 | Event | Payload sketch | When emitted |
 |---|---|---|
@@ -155,6 +171,11 @@ The <!-- arch:count kind=event bc=trust agg=visit spell=true -->thirteen<!-- /ar
 | `VisitCheckedOut` | `visit_id`, `actor_id`, `occurred_at` | `check_out_visit` closes the actor's open entry |
 | `VisitSurfaceControlTaken` | `visit_id`, `surface_id`, `occurred_at` | `take_control_of_surface` succeeds (projection-only) |
 | `VisitSurfaceControlReleased` | `visit_id`, `surface_id`, `occurred_at` | `release_control_of_surface` succeeds (projection-only) |
+| `VisitPresenceClosed` | `visit_id`, `actor_id`, `occurred_at` | somebody else closed this actor's open `PresenceEntry`. Structurally identical to `VisitCheckedOut` and handled by the same evolver arm, kept a distinct type because presence is read as evidence of who was at a beamline, so "did they leave, or did someone close their record" must be one predicate over the stream rather than a join against envelope metadata |
+| `PolicyGrantRevoked` | `policy_id`, `principal_id`, `revoked_by`, `reason`, `occurred_at` | `revoke_policy_grant` succeeds; drops one principal from the allow-list. This is the kill-switch trigger: a separate subscriber reacts by holding that principal's in-flight Runs, kept out of the emitting handler per the no-cascade rule |
+| `RatificationRequested` | `ratification_id`, `target_action_id`, `command_name`, `consequence_class`, `requested_by`, `occurred_at` | `request_ratification` succeeds (genesis) |
+| `RatificationGranted` | `ratification_id`, `occurred_at` | `grant_ratification` succeeds; terminal |
+| `RatificationDenied` | `ratification_id`, `reason`, `occurred_at` | `deny_ratification` succeeds; terminal |
 
 ## Slices
 
@@ -378,7 +399,7 @@ Cross-aggregate references inside Trust are bare UUIDs and are not verified at w
 
 ## Examples
 
-The five examples below cover the canonical Trust authoring and evaluation flow: define a Zone, define a Conduit between two Zones, define a Policy that gates one command on that Conduit, evaluate that Policy for a `(principal, command)` pair, and enumerate the commands a principal may execute. The caller's principal goes on the `X-Principal-Id` header. For the REST and MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The five examples below cover the canonical Trust authoring and evaluation flow: define a Zone, define a Conduit between two Zones, define a Policy that gates one command on that Conduit, evaluate that Policy for a `(principal, command)` pair, and enumerate the commands a principal may execute. The caller's principal goes on the `X-Principal-Id` header. For the REST and MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 ### Define a Zone
 

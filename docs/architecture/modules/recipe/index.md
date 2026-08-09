@@ -456,7 +456,7 @@ Cross-aggregate references inside Recipe (Practice → Method, Plan → Practice
 
 ## Examples
 
-The four examples below cover a typical declaration walk: a universal Capability, a Method that realizes it, a Plan that binds the Method (via a Practice) to specific Assets, and a wire added to the Plan to connect two ports. Practice definition follows the same shape as Method and is omitted for brevity. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The four examples below cover a typical declaration walk: a universal Capability, a Method that realizes it, a Plan that binds the Method (via a Practice) to specific Assets, and a wire added to the Plan to connect two ports. Practice definition follows the same shape as Method and is omitted for brevity. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 ### Define a Capability
 

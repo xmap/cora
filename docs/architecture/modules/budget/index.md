@@ -85,7 +85,7 @@ Every one of the five commands bounds the whole instrument's LLM spend, so a rea
 
 ## Examples
 
-The two examples below follow the canonical envelope path: grant a dormant award, then activate it to open the spend window. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The two examples below follow the canonical envelope path: grant a dormant award, then activate it to open the spend window. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 ### Grant an Allocation
 
