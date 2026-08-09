@@ -132,11 +132,11 @@ front-end:
       note: >
         Front-end safety shutter, gated by the personnel safety system; opened
         at session start and kept open throughout for optics thermal stability,
-        not toggled per scan (BEAM-1). The pv above is the PSS record PREFIX,
-        not a readable channel: state is read from the `:BeamBlockingM` leaf
-        (1 = blocked, inverted), and the exact leaf names are CORA-proposed and
-        await APS PSS gateway sign-off. See enclosures.md for the full signal
-        set and the read semantics.
+        not toggled per scan (BEAM-1). The pv above is the full record: the
+        `:BeamBlockingM` leaf reads inverted, 1 = blocked = CLOSED, so open is
+        == 0. The leaf name is still CORA-proposed against the post-migration
+        staff screens and awaits APS PSS gateway sign-off, so treat the string
+        as unconfirmed. See enclosures.md for the full signal set.
     - name: vacuum_isolation
       family: Vacuum             # Supply(kind=Vacuum) observation, not a separate asset
       pv: { BIV: "2bmBLEPS:BLEPS:BIV_CLOSED", gate_valves: [GV1, GV2, GV3] }
@@ -337,10 +337,10 @@ beam-defining-and-safety:
             white (flat) fields and open for projections, many times per scan;
             open before a run starts (operator-opened at session start). No
             separate FastShutter Asset is modelled (BEAM-1). The pv above is the
-            PSS record PREFIX, not a readable channel: state is read from the
-            `:BeamBlockingM` leaf (1 = blocked, inverted), and the exact leaf
-            names are CORA-proposed and await APS PSS gateway sign-off. See
-            enclosures.md for the full signal set and the read semantics.
+            full record: the `:BeamBlockingM` leaf reads inverted, 1 = blocked
+            = CLOSED, so open is == 0. The leaf name is still CORA-proposed and
+            awaits APS PSS gateway sign-off, so treat the string as
+            unconfirmed. See enclosures.md for the full signal set.
         - name: BeamStop
           family: BeamStop
           passive: true

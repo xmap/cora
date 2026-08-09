@@ -21,7 +21,7 @@ The four recipes below are 2-BM's operational arc, each realizing one [Capabilit
 
 Both baselines are calibration captures that feed reconstruction, and both reuse the registered `collect` action body (acquire a frame stack, poll until done), so they are conductible today. The pixel-wise baseline math (mean / std) is downstream data reduction, not a recipe step (per the catalog convention: pixel-wise baseline reduction stays in external pipelines, while a heavier compute step like reconstruction is a recorded compute Method); the captured stack becomes a baseline [Dataset](experiment.md), which makes each capture a [Run](experiment.md) (a Dataset-of-record makes the act a Run; see the [Run vs Procedure boundary](../../reference/modeling.md#run-vs-procedure-boundary) rule). The recipe is the as-data form of the capture sequence the Run conducts.
 
-The `S02BM-PSS:SBS` address in both step tables names the station shutter at the device level, not a bindable channel. The concrete PSS record leaf, and therefore the exact address a conducted step would write and read, is still unconfirmed; see [Enclosures](enclosures.md) for the proposed signal set and its inverted read semantics.
+The `S02BM-PSS:SBS` address in both step tables names the station shutter at the device level. The descriptor now carries the full record, `S02BM-PSS:SBS:BeamBlockingM`, which reads inverted: 1 means blocked, so the `open` and `closed` values in these tables are the operator's words for `== 0` and `== 1`. The leaf name is still CORA-proposed and awaits APS PSS sign-off; see [Enclosures](enclosures.md) for the full signal set.
 
 ### `dark_field`
 
