@@ -102,6 +102,12 @@ papers/*/_minted*/
 papers/*/
 !papers/2026-vaxautosci-scrubber/
 
+# Local scratch. Reviewing a paper render rasterizes its PDF to page images
+# under tmp/pdfs/, and those pages are unpublished paper content sitting
+# outside the papers/ tree that ignores it. Untracked is not enough: a
+# git add -A would stage them into a public repo.
+tmp/
+
 # Mutmut working tree (regenerated per audit; holds the AST-mutated copy
 # of src/ + tests/ under apps/api/mutants/). Never committed.
 apps/api/mutants/
