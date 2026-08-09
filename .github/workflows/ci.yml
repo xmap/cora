@@ -372,3 +372,36 @@ jobs:
             exit 1
           fi
           echo "Safety scan passed."
+
+  # Single aggregate context for branch protection. Two things make the test
+  # lanes unrequirable on their own: protection matches names by exact string,
+  # and the matrix lanes expand to names that move whenever a shard count is
+  # retuned ("Tests (contract shard 6)"). Requiring `coverage` instead does
+  # not stand in for them either, because GitHub accepts a SKIPPED required
+  # check as satisfied, and `coverage` is deliberately skipped rather than
+  # failed when a lane fails (see its note above). A red test run therefore
+  # satisfied protection. This job is the one context that cannot: it reports
+  # on every run and is green only if every lane actually succeeded.
+  ci-gate:
+    # NOTE: this job's name is a required status check in branch protection
+    # for main, matched by exact string. Same rule as `migrations` above: do
+    # not rename it without updating the protection rule first.
+    name: CI gate
+    # Without `always()` this job would itself be skipped when an upstream
+    # lane fails, which is precisely the hole it exists to close.
+    if: always()
+    needs: [lint, test-fast, test-contract, test-db, coverage, migrations]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Every upstream lane must have succeeded
+        run: |
+          results="${{ join(needs.*.result, ' ') }}"
+          echo "Upstream lane results: $results"
+          for r in $results; do
+            if [ "$r" != "success" ]; then
+              echo "::error::A CI lane did not succeed (results: $results)." >&2
+              exit 1
+            fi
+          done
+          echo "OK: every CI lane succeeded."
