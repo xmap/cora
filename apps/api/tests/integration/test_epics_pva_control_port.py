@@ -168,8 +168,8 @@ async def test_read_image_returns_image_kind_with_3x2_shape(softioc: str) -> Non
 
 
 @pytest.mark.integration
-async def test_read_major_alarm_pv_returns_bad_quality(softioc: str) -> None:
-    """MAJOR_ALARM severity translates to Quality='Bad' on the PVA wire too.
+async def test_read_major_alarm_pv_returns_uncertain_quality(softioc: str) -> None:
+    """MAJOR_ALARM severity translates to Quality='Uncertain' on the PVA wire too.
 
     Pins the full Measurement shape for a non-Good reading: value + kind +
     quality + `alarm_status=<int>` quality_detail format + tz-aware
@@ -177,12 +177,24 @@ async def test_read_major_alarm_pv_returns_bad_quality(softioc: str) -> None:
     """
     port = EpicsPvaControlPort()
     try:
-        reading = await port.read(EpicsPvAddress(f"{softioc}bad_quality_value"))
+        reading = await port.read(EpicsPvAddress(f"{softioc}major_alarm_value"))
         assert reading.kind == "Scalar"
         assert float(reading.value) == 99.9
-        assert reading.quality == "Bad"
+        assert reading.quality == "Uncertain"
         assert reading.quality_detail.startswith("alarm_status=")
         assert reading.produced_at.tzinfo is not None
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_read_invalid_alarm_pv_returns_bad_quality(softioc: str) -> None:
+    """INVALID_ALARM severity is the one severity that reaches Quality='Bad'."""
+    port = EpicsPvaControlPort()
+    try:
+        reading = await port.read(EpicsPvAddress(f"{softioc}invalid_alarm_value"))
+        assert reading.quality == "Bad"
+        assert reading.quality_detail.startswith("alarm_status=")
     finally:
         await port.aclose()
 
