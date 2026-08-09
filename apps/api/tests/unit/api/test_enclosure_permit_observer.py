@@ -51,9 +51,22 @@ def test_insecure_maps_to_not_permitted() -> None:
 
 
 @pytest.mark.unit
-def test_non_good_quality_flattens_to_unknown() -> None:
+def test_bad_quality_flattens_to_unknown() -> None:
     assert permit_status_from_reading(_reading(1, quality="Bad")) == "Unknown"
-    assert permit_status_from_reading(_reading(0, quality="Uncertain")) == "Unknown"
+    assert permit_status_from_reading(_reading(0, quality="Bad")) == "Unknown"
+
+
+@pytest.mark.unit
+def test_uncertain_quality_is_still_read_both_ways() -> None:
+    """Uncertain says the process is in alarm, not that the value is wrong.
+
+    The floor for this consumer is `Bad`, so an alarmed permit signal is
+    read rather than discarded. Pinned both ways because the loosening
+    is one-directional: `0` under alarm still closes the gate, `1` under
+    alarm now opens it.
+    """
+    assert permit_status_from_reading(_reading(0, quality="Uncertain")) == "NotPermitted"
+    assert permit_status_from_reading(_reading(1, quality="Uncertain")) == "Permitted"
 
 
 @pytest.mark.unit
@@ -96,10 +109,19 @@ def test_renamed_enum_label_flattens_to_unknown() -> None:
 
 
 @pytest.mark.unit
-def test_enum_label_under_non_good_quality_still_unknown() -> None:
-    # 2-BM's StaB:SecureM reads 'OFF' with a designed STATE / MAJOR alarm.
-    # Quality still wins; see the alarm-vs-fault question on this slice.
+def test_enum_label_under_alarm_is_read_not_discarded() -> None:
+    # The live 2-BM case this exists for: StaB:SecureM reads 'OFF' with a
+    # designed STATE alarm, which the CA adapter reports as Uncertain.
+    # An unsecured hutch should record as NotPermitted, not Unknown.
+    assert permit_status_from_reading(_enum_reading("OFF", quality="Uncertain")) == "NotPermitted"
+
+
+@pytest.mark.unit
+def test_enum_label_under_bad_quality_still_unknown() -> None:
+    # Bad is the one severity saying the value itself is untrustworthy,
+    # so the label carries no weight and the gate fails closed.
     assert permit_status_from_reading(_enum_reading("OFF", quality="Bad")) == "Unknown"
+    assert permit_status_from_reading(_enum_reading("ON", quality="Bad")) == "Unknown"
 
 
 class _ScriptedControlPort:
