@@ -42,8 +42,8 @@ carrying `data` (numpy array, shape `(count,)` even for scalars),
     outside the declared 6-exception family; tuple for arrays)
   - `quality` from `metadata.severity`:
       NO_ALARM -> "Good"
-      MINOR_ALARM -> "Uncertain"
-      MAJOR_ALARM / INVALID_ALARM -> "Bad"
+      MINOR_ALARM / MAJOR_ALARM -> "Uncertain"
+      INVALID_ALARM -> "Bad"
   - `quality_detail` as `f"alarm_status={int(status)}"` when severity
     is non-NO_ALARM (forensic breadcrumb; matches EpicsCa + EpicsPva
     format so consumers can parse one shape across CA / PVA / future
@@ -128,9 +128,12 @@ deployment-appropriate defaults."""
 _SEVERITY_TO_QUALITY: dict[AlarmSeverity, Quality] = {
     AlarmSeverity.NO_ALARM: "Good",
     AlarmSeverity.MINOR_ALARM: "Uncertain",
-    AlarmSeverity.MAJOR_ALARM: "Bad",
+    AlarmSeverity.MAJOR_ALARM: "Uncertain",
     AlarmSeverity.INVALID_ALARM: "Bad",
 }
+"""Same severity trichotomy the CA adapter uses; see
+`epics_ca_control_port._SEVERITY_TO_QUALITY` for why MAJOR is
+Uncertain rather than Bad."""
 
 
 def _quality_for(severity: AlarmSeverity | int) -> Quality:

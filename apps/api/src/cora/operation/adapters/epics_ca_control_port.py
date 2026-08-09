@@ -51,7 +51,7 @@ integer index for DBR_ENUM), `.datatype` (CA DBR type code),
     else "Scalar"
   - `value`: numpy scalars via `.item()`; arrays via
     `tuple(.tolist())`; bytes UTF-8 decoded with `errors="replace"`
-  - `quality`: severity 0 -> Good, 1 -> Uncertain, 2/3 -> Bad
+  - `quality`: severity 0 -> Good, 1/2 -> Uncertain, 3 -> Bad
   - `quality_detail`: integer status code surfaced as a breadcrumb
     string when severity != NO_ALARM
   - `produced_at`: `datetime.fromtimestamp(.timestamp, tz=UTC)`
@@ -165,9 +165,23 @@ declaratively instead of with magic numbers."""
 _SEVERITY_TO_QUALITY: dict[int, Quality] = {
     0: "Good",  # NO_ALARM
     1: "Uncertain",  # MINOR_ALARM
-    2: "Bad",  # MAJOR_ALARM
+    2: "Uncertain",  # MAJOR_ALARM
     3: "Bad",  # INVALID_ALARM
 }
+"""EPICS alarm severity to the domain quality trichotomy.
+
+EPICS separates "the value is fine but the process it describes is
+in alarm" (MINOR / MAJOR) from "the value itself is not trustworthy"
+(INVALID). Only INVALID says the reading cannot be believed; a MAJOR
+reading is a correctly-read value reporting a serious process
+condition, which is exactly OPC UA's Uncertain and NAMUR's
+maintenance-required band, not Bad. An interlocked shutter left
+closed with a designed MAJOR STATE alarm is the everyday case: the
+IOC knows the position, and collapsing that to Bad would discard a
+reading the floor considers authoritative.
+
+An unmapped severity falls to Bad, since a severity CORA cannot name
+is a reading CORA cannot vouch for."""
 
 
 def _quality_for(severity: int) -> Quality:

@@ -26,7 +26,10 @@ state without trying to call the unsafe `ca_context_destroy`.
   - `string_value` (DBR_STRING, `stringout`) -> `Measurement(kind="Scalar")`
   - `waveform`     (DBR_DOUBLE x 4, `waveform`) -> `Measurement(kind="Array")`
   - `enum_value`   (DBR_ENUM,   `mbbo` with 3 strings) -> `Measurement(kind="Categorical")`
-  - `bad_quality_value` (`ao` with HIHI threshold tripped) -> `Measurement(quality="Bad")`
+  - `major_alarm_value` (`ao` with HIHI threshold tripped, HHSV=MAJOR)
+    -> `Measurement(quality="Uncertain")`
+  - `invalid_alarm_value` (`ao` with HIHI threshold tripped, HHSV=INVALID)
+    -> `Measurement(quality="Bad")`
 
 ## areaDetector ADCore-shaped PVs for the acquisition action bodies
 
@@ -52,10 +55,13 @@ Writability: all records use the `*o` (output) variant so tests can
 caput. `ao`/`longout`/`stringout`/`mbbo` are the EPICS-canonical
 writable records; `waveform` is bidirectional by default.
 
-`bad_quality_value`: VAL=99.9, HIHI=50, HHSV=MAJOR. Reading VAL > HIHI
-trips MAJOR_ALARM naturally on every read. No startup hook needed
-(softIOC doesn't have caproto-style decorators); the alarm is a
-declarative consequence of the field values.
+`major_alarm_value` and `invalid_alarm_value`: both VAL=99.9, HIHI=50,
+differing only in HHSV (MAJOR vs INVALID). Reading VAL > HIHI trips
+the configured severity naturally on every read. No startup hook
+needed (softIOC doesn't have caproto-style decorators); the alarm is a
+declarative consequence of the field values. The pair exists because
+the two severities land on opposite sides of the quality trichotomy
+(Uncertain vs Bad), so one record cannot pin both arms.
 
 ## Slow / timeout PV is intentionally absent
 
@@ -130,12 +136,21 @@ record(mbbo, "$(P)enum_value") {
   field(PINI, "YES")
 }
 
-record(ao, "$(P)bad_quality_value") {
+record(ao, "$(P)major_alarm_value") {
   field(DESC, "MAJOR via HIHI tripped")
   field(DTYP, "Soft Channel")
   field(VAL, 99.9)
   field(HIHI, 50.0)
   field(HHSV, "MAJOR")
+  field(PINI, "YES")
+}
+
+record(ao, "$(P)invalid_alarm_value") {
+  field(DESC, "INVALID via HIHI tripped")
+  field(DTYP, "Soft Channel")
+  field(VAL, 99.9)
+  field(HIHI, 50.0)
+  field(HHSV, "INVALID")
   field(PINI, "YES")
 }
 
