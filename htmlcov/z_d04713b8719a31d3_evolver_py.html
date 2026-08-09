@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_d04713b8719a31d3_read_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-08-09 11:56 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
+            created at 2026-08-09 16:00 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -82,12 +82,12 @@
     </div>
 </header>
 <main id="source">
-    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""Evolver: replay events to reconstruct Surface state.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">&quot;&quot;&quot;Evolver: replay events to reconstruct Surface state.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">Mirror of `cora/trust/aggregates/zone/evolver.py`. Future</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">SurfaceVersioned / SurfaceDeprecated events extend the match;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">exhaustiveness guard catches missed arms.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">&quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="key">from</span> <span class="nam">collections</span><span class="op">.</span><span class="nam">abc</span> <span class="key">import</span> <span class="nam">Sequence</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t"><span class="key">from</span> <span class="nam">typing</span> <span class="key">import</span> <span class="nam">assert_never</span>&nbsp;</span><span class="r"></span></p>
@@ -96,15 +96,15 @@
     <p class="run"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">trust</span><span class="op">.</span><span class="nam">aggregates</span><span class="op">.</span><span class="nam">surface</span><span class="op">.</span><span class="nam">state</span> <span class="key">import</span> <span class="nam">Surface</span><span class="op">,</span> <span class="nam">SurfaceName</span><span class="op">,</span> <span class="nam">SurfaceStatus</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="key">def</span> <span class="nam">evolve</span><span class="op">(</span><span class="nam">state</span><span class="op">:</span> <span class="nam">Surface</span> <span class="op">|</span> <span class="key">None</span><span class="op">,</span> <span class="nam">event</span><span class="op">:</span> <span class="nam">SurfaceEvent</span><span class="op">)</span> <span class="op">-></span> <span class="nam">Surface</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t">    <span class="str">"""Apply one event to the current state."""</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="key">def</span> <span class="nam">evolve</span><span class="op">(</span><span class="nam">state</span><span class="op">:</span> <span class="nam">Surface</span> <span class="op">|</span> <span class="key">None</span><span class="op">,</span> <span class="nam">event</span><span class="op">:</span> <span class="nam">SurfaceEvent</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="nam">Surface</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t">    <span class="str">&quot;&quot;&quot;Apply one event to the current state.&quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t">    <span class="key">match</span> <span class="nam">event</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t">        <span class="key">case</span> <span class="nam">SurfaceDefined</span><span class="op">(</span><span class="nam">surface_id</span><span class="op">=</span><span class="nam">surface_id</span><span class="op">,</span> <span class="nam">name</span><span class="op">=</span><span class="nam">name</span><span class="op">,</span> <span class="nam">kind</span><span class="op">=</span><span class="nam">kind</span><span class="op">,</span> <span class="nam">occurred_at</span><span class="op">=</span><span class="nam">_</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t">            <span class="nam">_</span> <span class="op">=</span> <span class="nam">state</span>  <span class="com"># SurfaceDefined is genesis; prior state ignored</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t">            <span class="com"># Path C: lifecycle timestamps removed from state &#8212; Surface</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t">            <span class="com"># is a singleton-ish aggregate (3 hardcoded instances, no LIST,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t">            <span class="com"># no operator-defined Surfaces) so `defined_at` carried no</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">            <span class="com"># observable read value and is dropped entirely. Event payload's</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">            <span class="com"># observable read value and is dropped entirely. Event payload&#x27;s</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">            <span class="com"># `occurred_at` is still in the immutable event log if a future</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t">            <span class="com"># audit slice ever needs it.</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t">            <span class="key">return</span> <span class="nam">Surface</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -117,8 +117,8 @@
     <p class="exc show_exc"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">            <span class="nam">assert_never</span><span class="op">(</span><span class="nam">event</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="key">def</span> <span class="nam">fold</span><span class="op">(</span><span class="nam">events</span><span class="op">:</span> <span class="nam">Sequence</span><span class="op">[</span><span class="nam">SurfaceEvent</span><span class="op">]</span><span class="op">)</span> <span class="op">-></span> <span class="nam">Surface</span> <span class="op">|</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">    <span class="str">"""Replay a stream of events from the empty initial state."""</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t"><span class="key">def</span> <span class="nam">fold</span><span class="op">(</span><span class="nam">events</span><span class="op">:</span> <span class="nam">Sequence</span><span class="op">[</span><span class="nam">SurfaceEvent</span><span class="op">]</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="nam">Surface</span> <span class="op">|</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t">    <span class="str">&quot;&quot;&quot;Replay a stream of events from the empty initial state.&quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">    <span class="nam">state</span><span class="op">:</span> <span class="nam">Surface</span> <span class="op">|</span> <span class="key">None</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">    <span class="key">for</span> <span class="nam">event</span> <span class="key">in</span> <span class="nam">events</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">        <span class="nam">state</span> <span class="op">=</span> <span class="nam">evolve</span><span class="op">(</span><span class="nam">state</span><span class="op">,</span> <span class="nam">event</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -131,8 +131,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_d04713b8719a31d3_read_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-08-09 11:56 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
+            created at 2026-08-09 16:00 +0000
         </p>
     </div>
 </footer>

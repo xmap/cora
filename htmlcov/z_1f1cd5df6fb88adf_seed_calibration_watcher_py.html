@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_1f1cd5df6fb88adf_seed_campaign_watcher_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-08-09 11:56 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
+            created at 2026-08-09 16:00 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -82,9 +82,9 @@
     </div>
 </header>
 <main id="source">
-    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""Bootstrap-time seed for the CalibrationWatcher Agent.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">&quot;&quot;&quot;Bootstrap-time seed for the CalibrationWatcher Agent.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">The CalibrationWatcher runtime (CORA's 7th seeded agent, a composition-root</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">The CalibrationWatcher runtime (CORA&#x27;s 7th seeded agent, a composition-root</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">periodic loop, deterministic flag-only) needs an Agent record (and its</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">co-registered Actor) at the pinned `CALIBRATION_WATCHER_AGENT_ID` so it can</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">author CalibrationVerification Decisions</span>&nbsp;</span><span class="r"></span></p>
@@ -98,7 +98,7 @@
     <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="str">    `cccc00XX`, CautionPromoter `dddd00XX`, ClearanceExpirer `eeee00XX`,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="str">    ClearanceWatcher `ffff00XX`); deployment-stable forever.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="str">  - DETERMINISTIC agent (rule-based, NOT LLM): no prompt template and a sentinel</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">    `ModelRef` (`provider="deterministic"`), never used to build an LLM (the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="str">    `ModelRef` (`provider=&quot;deterministic&quot;`), never used to build an LLM (the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="str">    runtime is a periodic staleness comparison).</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="str">  - FLAG-ONLY: the runtime issues NO write command. It records one</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t"><span class="str">    Decision(context=CalibrationVerification, choice=Stale) per stale-calibration</span>&nbsp;</span><span class="r"></span></p>
@@ -107,7 +107,7 @@
     <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="str">    and so no per-command Policy grant to seed, though it does issue an</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t"><span class="str">    authz-gated ListCalibrations read each tick (under a real Authorize policy the</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t"><span class="str">    agent principal needs that read grant or the drain is denied).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="str">&quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t"><span class="key">from</span> <span class="nam">__future__</span> <span class="key">import</span> <span class="nam">annotations</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -129,15 +129,15 @@
     <p class="pln"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t"><span class="com"># agents: changing this orphans every prior CalibrationWatcher-authored Decision</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t"><span class="com"># (their actor_id pointers go stale). UUID is in the deployment-controlled</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t"><span class="com"># `ca11` block (seventh seeded identity).</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="nam">CALIBRATION_WATCHER_AGENT_ID</span> <span class="op">=</span> <span class="nam">UUID</span><span class="op">(</span><span class="str">"01900000-0000-7000-8000-0000ca110010"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t"><span class="nam">CALIBRATION_WATCHER_AGENT_NAME</span> <span class="op">=</span> <span class="str">"CalibrationWatcher"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t"><span class="nam">CALIBRATION_WATCHER_AGENT_KIND</span> <span class="op">=</span> <span class="str">"CalibrationWatcher"</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t"><span class="nam">CALIBRATION_WATCHER_AGENT_VERSION</span> <span class="op">=</span> <span class="str">"1.0.0"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="nam">CALIBRATION_WATCHER_AGENT_ID</span> <span class="op">=</span> <span class="nam">UUID</span><span class="op">(</span><span class="str">&quot;01900000-0000-7000-8000-0000ca110010&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t"><span class="nam">CALIBRATION_WATCHER_AGENT_NAME</span> <span class="op">=</span> <span class="str">&quot;CalibrationWatcher&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t50" href="#t50">50</a></span><span class="t"><span class="nam">CALIBRATION_WATCHER_AGENT_KIND</span> <span class="op">=</span> <span class="str">&quot;CalibrationWatcher&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t"><span class="nam">CALIBRATION_WATCHER_AGENT_VERSION</span> <span class="op">=</span> <span class="str">&quot;1.0.0&quot;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t"><span class="nam">CALIBRATION_WATCHER_AGENT_DESCRIPTION</span> <span class="op">=</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">    <span class="str">"Deterministic in-loop agent: watches the calibration-verification lifecycle "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">    <span class="str">"and records one Decision(context=CalibrationVerification, choice=Stale) per "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">    <span class="str">"Provisional calibration whose newest revision has sat unverified past the "</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">    <span class="str">"staleness window. Flag-only (advise a human); issues no command."</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t">    <span class="str">&quot;Deterministic in-loop agent: watches the calibration-verification lifecycle &quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t">    <span class="str">&quot;and records one Decision(context=CalibrationVerification, choice=Stale) per &quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">    <span class="str">&quot;Provisional calibration whose newest revision has sat unverified past the &quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">    <span class="str">&quot;staleness window. Flag-only (advise a human); issues no command.&quot;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -145,8 +145,8 @@
     <p class="pln"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t"><span class="com"># Agent aggregate requires a ModelRef; this value is never used to build an LLM</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t"><span class="com"># (the runtime is a periodic staleness comparison, no build_llm call).</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t"><span class="nam">_DETERMINISTIC_MODEL_REF</span> <span class="op">=</span> <span class="nam">ModelRef</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="nam">provider</span><span class="op">=</span><span class="str">"deterministic"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">    <span class="nam">model</span><span class="op">=</span><span class="str">"agent:CalibrationWatcher:v1"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="nam">provider</span><span class="op">=</span><span class="str">&quot;deterministic&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">    <span class="nam">model</span><span class="op">=</span><span class="str">&quot;agent:CalibrationWatcher:v1&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">    <span class="nam">snapshot_pin</span><span class="op">=</span><span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -155,13 +155,13 @@
     <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t"><span class="com"># Deterministic IDs for the bootstrap write envelope</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t"><span class="com"># ---------------------------------------------------------------------------</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t"><span class="nam">_AGENT_EVENT_ID</span> <span class="op">=</span> <span class="nam">UUID</span><span class="op">(</span><span class="str">"01900000-0000-7000-8000-0000ca110012"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t"><span class="nam">_ACTOR_EVENT_ID</span> <span class="op">=</span> <span class="nam">UUID</span><span class="op">(</span><span class="str">"01900000-0000-7000-8000-0000ca110013"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t"><span class="nam">_BOOTSTRAP_CORRELATION_ID</span> <span class="op">=</span> <span class="nam">UUID</span><span class="op">(</span><span class="str">"01900000-0000-7000-8000-0000ca110014"</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t"><span class="nam">_AGENT_EVENT_ID</span> <span class="op">=</span> <span class="nam">UUID</span><span class="op">(</span><span class="str">&quot;01900000-0000-7000-8000-0000ca110012&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t"><span class="nam">_ACTOR_EVENT_ID</span> <span class="op">=</span> <span class="nam">UUID</span><span class="op">(</span><span class="str">&quot;01900000-0000-7000-8000-0000ca110013&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t"><span class="nam">_BOOTSTRAP_CORRELATION_ID</span> <span class="op">=</span> <span class="nam">UUID</span><span class="op">(</span><span class="str">&quot;01900000-0000-7000-8000-0000ca110014&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="key">async</span> <span class="key">def</span> <span class="nam">seed_calibration_watcher_agent</span><span class="op">(</span><span class="nam">kernel</span><span class="op">:</span> <span class="nam">Kernel</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="str">"""Seed the CalibrationWatcher Agent + co-registered Actor (idempotent)."""</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="key">async</span> <span class="key">def</span> <span class="nam">seed_calibration_watcher_agent</span><span class="op">(</span><span class="nam">kernel</span><span class="op">:</span> <span class="nam">Kernel</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="str">&quot;&quot;&quot;Seed the CalibrationWatcher Agent + co-registered Actor (idempotent).&quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">    <span class="nam">identity</span> <span class="op">=</span> <span class="nam">AgentSeedIdentity</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">        <span class="nam">agent_id</span><span class="op">=</span><span class="nam">CALIBRATION_WATCHER_AGENT_ID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">        <span class="nam">name</span><span class="op">=</span><span class="nam">CALIBRATION_WATCHER_AGENT_NAME</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -173,18 +173,18 @@
     <p class="run run2"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">        <span class="nam">agent_event_id</span><span class="op">=</span><span class="nam">_AGENT_EVENT_ID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">        <span class="nam">actor_event_id</span><span class="op">=</span><span class="nam">_ACTOR_EVENT_ID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">        <span class="nam">correlation_id</span><span class="op">=</span><span class="nam">_BOOTSTRAP_CORRELATION_ID</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">        <span class="nam">command_name</span><span class="op">=</span><span class="str">"SeedCalibrationWatcherAgent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">        <span class="nam">command_name</span><span class="op">=</span><span class="str">&quot;SeedCalibrationWatcherAgent&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">    <span class="key">await</span> <span class="nam">seed_agent</span><span class="op">(</span><span class="nam">kernel</span><span class="op">,</span> <span class="nam">identity</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">    <span class="str">"CALIBRATION_WATCHER_AGENT_DESCRIPTION"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">    <span class="str">"CALIBRATION_WATCHER_AGENT_ID"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">    <span class="str">"CALIBRATION_WATCHER_AGENT_KIND"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">    <span class="str">"CALIBRATION_WATCHER_AGENT_NAME"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">    <span class="str">"CALIBRATION_WATCHER_AGENT_VERSION"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">    <span class="str">"seed_calibration_watcher_agent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">    <span class="str">&quot;CALIBRATION_WATCHER_AGENT_DESCRIPTION&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">    <span class="str">&quot;CALIBRATION_WATCHER_AGENT_ID&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">    <span class="str">&quot;CALIBRATION_WATCHER_AGENT_KIND&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">    <span class="str">&quot;CALIBRATION_WATCHER_AGENT_NAME&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">    <span class="str">&quot;CALIBRATION_WATCHER_AGENT_VERSION&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">    <span class="str">&quot;seed_calibration_watcher_agent&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
@@ -194,8 +194,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_1f1cd5df6fb88adf_seed_campaign_watcher_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-08-09 11:56 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
+            created at 2026-08-09 16:00 +0000
         </p>
     </div>
 </footer>

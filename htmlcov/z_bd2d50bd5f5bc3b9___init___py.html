@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_bd2d50bd5f5bc3b9_allocation_lookup_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-08-09 11:56 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
+            created at 2026-08-09 16:00 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -82,12 +82,12 @@
     </div>
 </header>
 <main id="source">
-    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">"""Port `Protocol`s &#8212; contracts the application layer depends on.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">&quot;&quot;&quot;Port `Protocol`s &#8212; contracts the application layer depends on.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">Adapters implementing these ports live alongside (in `infrastructure/`) and are</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">wired into `Kernel` at startup. Domain and application code imports only</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">from `ports/`, never from adapter modules.</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">&quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="key">from</span> <span class="nam">cora</span><span class="op">.</span><span class="nam">infrastructure</span><span class="op">.</span><span class="nam">ports</span><span class="op">.</span><span class="nam">allocation_lookup</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t">    <span class="nam">AllocationLookup</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -276,132 +276,132 @@
     <p class="run run2"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t193" href="#t193">193</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t194" href="#t194">194</a></span><span class="t"><span class="nam">__all__</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t195" href="#t195">195</a></span><span class="t">    <span class="str">"LLM"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t196" href="#t196">196</a></span><span class="t">    <span class="str">"AgentInferenceTrace"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t197" href="#t197">197</a></span><span class="t">    <span class="str">"AllBeamOpenLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t198" href="#t198">198</a></span><span class="t">    <span class="str">"AllSatisfiedSupplyLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t">    <span class="str">"AllocationLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t">    <span class="str">"AllocationLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t">    <span class="str">"Allow"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t">    <span class="str">"AllowAllAuthorize"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t">    <span class="str">"AlwaysApprovedLanguageModelLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t204" href="#t204">204</a></span><span class="t">    <span class="str">"AlwaysCoveredClearanceLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t">    <span class="str">"AlwaysEmptyCapabilityLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t">    <span class="str">"AlwaysEmptyModelUsageLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t207" href="#t207">207</a></span><span class="t">    <span class="str">"AlwaysGrantedSpendGuard"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t208" href="#t208">208</a></span><span class="t">    <span class="str">"AlwaysLivePrincipalLivenessLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t209" href="#t209">209</a></span><span class="t">    <span class="str">"AlwaysPermittedEnclosureLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t210" href="#t210">210</a></span><span class="t">    <span class="str">"AlwaysQuietCautionLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t211" href="#t211">211</a></span><span class="t">    <span class="str">"AlwaysRatifiedConsequenceLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t212" href="#t212">212</a></span><span class="t">    <span class="str">"AlwaysZeroSpendLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t213" href="#t213">213</a></span><span class="t">    <span class="str">"AssemblyLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t">    <span class="str">"AssemblyLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t">    <span class="str">"AssetLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t">    <span class="str">"AssetLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t">    <span class="str">"Authorize"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t218" href="#t218">218</a></span><span class="t">    <span class="str">"AuthzResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t219" href="#t219">219</a></span><span class="t">    <span class="str">"BeamAvailabilityLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t220" href="#t220">220</a></span><span class="t">    <span class="str">"BeamAvailabilityLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t">    <span class="str">"CacheBreakpoint"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t222" href="#t222">222</a></span><span class="t">    <span class="str">"CacheTTL"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t223" href="#t223">223</a></span><span class="t">    <span class="str">"CachedError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t224" href="#t224">224</a></span><span class="t">    <span class="str">"CachedHandlerError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t225" href="#t225">225</a></span><span class="t">    <span class="str">"CachedSuccess"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t226" href="#t226">226</a></span><span class="t">    <span class="str">"CapabilityLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t227" href="#t227">227</a></span><span class="t">    <span class="str">"CapabilityLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t228" href="#t228">228</a></span><span class="t">    <span class="str">"CautionLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t229" href="#t229">229</a></span><span class="t">    <span class="str">"CautionLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t230" href="#t230">230</a></span><span class="t">    <span class="str">"ClaimOutcome"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t231" href="#t231">231</a></span><span class="t">    <span class="str">"Claimed"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t232" href="#t232">232</a></span><span class="t">    <span class="str">"ClearanceLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t233" href="#t233">233</a></span><span class="t">    <span class="str">"ClearanceLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t234" href="#t234">234</a></span><span class="t">    <span class="str">"ClearanceTemplateLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t235" href="#t235">235</a></span><span class="t">    <span class="str">"ClearanceTemplateLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t236" href="#t236">236</a></span><span class="t">    <span class="str">"Clock"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t237" href="#t237">237</a></span><span class="t">    <span class="str">"ComputeReachabilityLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t238" href="#t238">238</a></span><span class="t">    <span class="str">"ConcurrencyError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t239" href="#t239">239</a></span><span class="t">    <span class="str">"Conjunct"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t240" href="#t240">240</a></span><span class="t">    <span class="str">"ConsequenceLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t241" href="#t241">241</a></span><span class="t">    <span class="str">"CredentialLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t242" href="#t242">242</a></span><span class="t">    <span class="str">"CredentialLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t243" href="#t243">243</a></span><span class="t">    <span class="str">"DatasetDistributionLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t244" href="#t244">244</a></span><span class="t">    <span class="str">"DatasetDistributionLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t245" href="#t245">245</a></span><span class="t">    <span class="str">"Deny"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t246" href="#t246">246</a></span><span class="t">    <span class="str">"EnclosureLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t247" href="#t247">247</a></span><span class="t">    <span class="str">"EnclosureLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t248" href="#t248">248</a></span><span class="t">    <span class="str">"EventStore"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t249" href="#t249">249</a></span><span class="t">    <span class="str">"FacilityLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t250" href="#t250">250</a></span><span class="t">    <span class="str">"FacilityLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t251" href="#t251">251</a></span><span class="t">    <span class="str">"FakeClock"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t252" href="#t252">252</a></span><span class="t">    <span class="str">"FakeLLM"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t253" href="#t253">253</a></span><span class="t">    <span class="str">"FakeLLMExhaustedError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t254" href="#t254">254</a></span><span class="t">    <span class="str">"FakeLLMResponse"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t255" href="#t255">255</a></span><span class="t">    <span class="str">"FamilyLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t">    <span class="str">"FamilyLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t257" href="#t257">257</a></span><span class="t">    <span class="str">"FixedIdGenerator"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t">    <span class="str">"FixedIdGeneratorExhaustedError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t259" href="#t259">259</a></span><span class="t">    <span class="str">"HashConflict"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t260" href="#t260">260</a></span><span class="t">    <span class="str">"IdGenerator"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t261" href="#t261">261</a></span><span class="t">    <span class="str">"IdempotencyClaimLostError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t262" href="#t262">262</a></span><span class="t">    <span class="str">"IdempotencyConflictError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t263" href="#t263">263</a></span><span class="t">    <span class="str">"IdempotencyStore"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t264" href="#t264">264</a></span><span class="t">    <span class="str">"InferenceRecorder"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t265" href="#t265">265</a></span><span class="t">    <span class="str">"IntrospectionUnavailableError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t266" href="#t266">266</a></span><span class="t">    <span class="str">"InvalidTokenError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t">    <span class="str">"LLMAuthenticationError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t268" href="#t268">268</a></span><span class="t">    <span class="str">"LLMChatRequest"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t269" href="#t269">269</a></span><span class="t">    <span class="str">"LLMContentBlock"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t270" href="#t270">270</a></span><span class="t">    <span class="str">"LLMError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t271" href="#t271">271</a></span><span class="t">    <span class="str">"LLMInvalidRequestError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t272" href="#t272">272</a></span><span class="t">    <span class="str">"LLMRateLimitError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t273" href="#t273">273</a></span><span class="t">    <span class="str">"LLMResponse"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t274" href="#t274">274</a></span><span class="t">    <span class="str">"LLMSchemaValidationError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t275" href="#t275">275</a></span><span class="t">    <span class="str">"LLMServerError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t276" href="#t276">276</a></span><span class="t">    <span class="str">"LLMSystemPrompt"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t277" href="#t277">277</a></span><span class="t">    <span class="str">"LLMTimeoutError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t278" href="#t278">278</a></span><span class="t">    <span class="str">"LLMUsage"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t279" href="#t279">279</a></span><span class="t">    <span class="str">"LanguageModelLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t280" href="#t280">280</a></span><span class="t">    <span class="str">"LanguageModelLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t281" href="#t281">281</a></span><span class="t">    <span class="str">"LockedRecent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t282" href="#t282">282</a></span><span class="t">    <span class="str">"LogbookMirror"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t283" href="#t283">283</a></span><span class="t">    <span class="str">"MinSeverity"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t284" href="#t284">284</a></span><span class="t">    <span class="str">"ModelRef"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t285" href="#t285">285</a></span><span class="t">    <span class="str">"ModelUsageLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t286" href="#t286">286</a></span><span class="t">    <span class="str">"ModelUsageLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t287" href="#t287">287</a></span><span class="t">    <span class="str">"NeverRatifiedConsequenceLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t288" href="#t288">288</a></span><span class="t">    <span class="str">"NewEvent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t">    <span class="str">"NoActiveAllocationLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t">    <span class="str">"NoComputeReachabilityLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t291" href="#t291">291</a></span><span class="t">    <span class="str">"NoDatasetDistributionsLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t">    <span class="str">"NoInvolvementLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t293" href="#t293">293</a></span><span class="t">    <span class="str">"NoSuppliesRegisteredLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t294" href="#t294">294</a></span><span class="t">    <span class="str">"NullInferenceRecorder"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t295" href="#t295">295</a></span><span class="t">    <span class="str">"PrincipalKind"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t296" href="#t296">296</a></span><span class="t">    <span class="str">"PrincipalLiveness"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t297" href="#t297">297</a></span><span class="t">    <span class="str">"PrincipalLivenessLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t298" href="#t298">298</a></span><span class="t">    <span class="str">"Profile"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t299" href="#t299">299</a></span><span class="t">    <span class="str">"ProfileStore"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t300" href="#t300">300</a></span><span class="t">    <span class="str">"RoleLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t301" href="#t301">301</a></span><span class="t">    <span class="str">"RoleLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t302" href="#t302">302</a></span><span class="t">    <span class="str">"RunActorInvolvementLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t303" href="#t303">303</a></span><span class="t">    <span class="str">"SeededComputeReachabilityLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t304" href="#t304">304</a></span><span class="t">    <span class="str">"SeededDatasetDistributionLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t305" href="#t305">305</a></span><span class="t">    <span class="str">"Signer"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t306" href="#t306">306</a></span><span class="t">    <span class="str">"SignerKeyInactiveError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t307" href="#t307">307</a></span><span class="t">    <span class="str">"SignerKeyNotFoundError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t308" href="#t308">308</a></span><span class="t">    <span class="str">"SignerUnavailableError"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t309" href="#t309">309</a></span><span class="t">    <span class="str">"SpendGuard"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t310" href="#t310">310</a></span><span class="t">    <span class="str">"SpendLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t311" href="#t311">311</a></span><span class="t">    <span class="str">"SpendLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t312" href="#t312">312</a></span><span class="t">    <span class="str">"StoredEvent"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t313" href="#t313">313</a></span><span class="t">    <span class="str">"StreamAppend"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t314" href="#t314">314</a></span><span class="t">    <span class="str">"SupplyLookup"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t315" href="#t315">315</a></span><span class="t">    <span class="str">"SupplyLookupResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t316" href="#t316">316</a></span><span class="t">    <span class="str">"SystemClock"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t317" href="#t317">317</a></span><span class="t">    <span class="str">"TokenVerifier"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t318" href="#t318">318</a></span><span class="t">    <span class="str">"TotalSpendResult"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t319" href="#t319">319</a></span><span class="t">    <span class="str">"UUIDv7Generator"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t320" href="#t320">320</a></span><span class="t">    <span class="str">"VerifiedPrincipal"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t195" href="#t195">195</a></span><span class="t">    <span class="str">&quot;LLM&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t196" href="#t196">196</a></span><span class="t">    <span class="str">&quot;AgentInferenceTrace&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t197" href="#t197">197</a></span><span class="t">    <span class="str">&quot;AllBeamOpenLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t198" href="#t198">198</a></span><span class="t">    <span class="str">&quot;AllSatisfiedSupplyLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t">    <span class="str">&quot;AllocationLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t">    <span class="str">&quot;AllocationLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t">    <span class="str">&quot;Allow&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t">    <span class="str">&quot;AllowAllAuthorize&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t203" href="#t203">203</a></span><span class="t">    <span class="str">&quot;AlwaysApprovedLanguageModelLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t204" href="#t204">204</a></span><span class="t">    <span class="str">&quot;AlwaysCoveredClearanceLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t205" href="#t205">205</a></span><span class="t">    <span class="str">&quot;AlwaysEmptyCapabilityLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t206" href="#t206">206</a></span><span class="t">    <span class="str">&quot;AlwaysEmptyModelUsageLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t207" href="#t207">207</a></span><span class="t">    <span class="str">&quot;AlwaysGrantedSpendGuard&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t208" href="#t208">208</a></span><span class="t">    <span class="str">&quot;AlwaysLivePrincipalLivenessLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t209" href="#t209">209</a></span><span class="t">    <span class="str">&quot;AlwaysPermittedEnclosureLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t210" href="#t210">210</a></span><span class="t">    <span class="str">&quot;AlwaysQuietCautionLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t211" href="#t211">211</a></span><span class="t">    <span class="str">&quot;AlwaysRatifiedConsequenceLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t212" href="#t212">212</a></span><span class="t">    <span class="str">&quot;AlwaysZeroSpendLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t213" href="#t213">213</a></span><span class="t">    <span class="str">&quot;AssemblyLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t214" href="#t214">214</a></span><span class="t">    <span class="str">&quot;AssemblyLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t215" href="#t215">215</a></span><span class="t">    <span class="str">&quot;AssetLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t216" href="#t216">216</a></span><span class="t">    <span class="str">&quot;AssetLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t217" href="#t217">217</a></span><span class="t">    <span class="str">&quot;Authorize&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t218" href="#t218">218</a></span><span class="t">    <span class="str">&quot;AuthzResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t219" href="#t219">219</a></span><span class="t">    <span class="str">&quot;BeamAvailabilityLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t220" href="#t220">220</a></span><span class="t">    <span class="str">&quot;BeamAvailabilityLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t221" href="#t221">221</a></span><span class="t">    <span class="str">&quot;CacheBreakpoint&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t222" href="#t222">222</a></span><span class="t">    <span class="str">&quot;CacheTTL&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t223" href="#t223">223</a></span><span class="t">    <span class="str">&quot;CachedError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t224" href="#t224">224</a></span><span class="t">    <span class="str">&quot;CachedHandlerError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t225" href="#t225">225</a></span><span class="t">    <span class="str">&quot;CachedSuccess&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t226" href="#t226">226</a></span><span class="t">    <span class="str">&quot;CapabilityLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t227" href="#t227">227</a></span><span class="t">    <span class="str">&quot;CapabilityLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t228" href="#t228">228</a></span><span class="t">    <span class="str">&quot;CautionLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t229" href="#t229">229</a></span><span class="t">    <span class="str">&quot;CautionLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t230" href="#t230">230</a></span><span class="t">    <span class="str">&quot;ClaimOutcome&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t231" href="#t231">231</a></span><span class="t">    <span class="str">&quot;Claimed&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t232" href="#t232">232</a></span><span class="t">    <span class="str">&quot;ClearanceLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t233" href="#t233">233</a></span><span class="t">    <span class="str">&quot;ClearanceLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t234" href="#t234">234</a></span><span class="t">    <span class="str">&quot;ClearanceTemplateLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t235" href="#t235">235</a></span><span class="t">    <span class="str">&quot;ClearanceTemplateLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t236" href="#t236">236</a></span><span class="t">    <span class="str">&quot;Clock&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t237" href="#t237">237</a></span><span class="t">    <span class="str">&quot;ComputeReachabilityLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t238" href="#t238">238</a></span><span class="t">    <span class="str">&quot;ConcurrencyError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t239" href="#t239">239</a></span><span class="t">    <span class="str">&quot;Conjunct&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t240" href="#t240">240</a></span><span class="t">    <span class="str">&quot;ConsequenceLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t241" href="#t241">241</a></span><span class="t">    <span class="str">&quot;CredentialLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t242" href="#t242">242</a></span><span class="t">    <span class="str">&quot;CredentialLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t243" href="#t243">243</a></span><span class="t">    <span class="str">&quot;DatasetDistributionLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t244" href="#t244">244</a></span><span class="t">    <span class="str">&quot;DatasetDistributionLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t245" href="#t245">245</a></span><span class="t">    <span class="str">&quot;Deny&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t246" href="#t246">246</a></span><span class="t">    <span class="str">&quot;EnclosureLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t247" href="#t247">247</a></span><span class="t">    <span class="str">&quot;EnclosureLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t248" href="#t248">248</a></span><span class="t">    <span class="str">&quot;EventStore&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t249" href="#t249">249</a></span><span class="t">    <span class="str">&quot;FacilityLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t250" href="#t250">250</a></span><span class="t">    <span class="str">&quot;FacilityLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t251" href="#t251">251</a></span><span class="t">    <span class="str">&quot;FakeClock&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t252" href="#t252">252</a></span><span class="t">    <span class="str">&quot;FakeLLM&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t253" href="#t253">253</a></span><span class="t">    <span class="str">&quot;FakeLLMExhaustedError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t254" href="#t254">254</a></span><span class="t">    <span class="str">&quot;FakeLLMResponse&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t255" href="#t255">255</a></span><span class="t">    <span class="str">&quot;FamilyLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t256" href="#t256">256</a></span><span class="t">    <span class="str">&quot;FamilyLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t257" href="#t257">257</a></span><span class="t">    <span class="str">&quot;FixedIdGenerator&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t258" href="#t258">258</a></span><span class="t">    <span class="str">&quot;FixedIdGeneratorExhaustedError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t259" href="#t259">259</a></span><span class="t">    <span class="str">&quot;HashConflict&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t260" href="#t260">260</a></span><span class="t">    <span class="str">&quot;IdGenerator&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t261" href="#t261">261</a></span><span class="t">    <span class="str">&quot;IdempotencyClaimLostError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t262" href="#t262">262</a></span><span class="t">    <span class="str">&quot;IdempotencyConflictError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t263" href="#t263">263</a></span><span class="t">    <span class="str">&quot;IdempotencyStore&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t264" href="#t264">264</a></span><span class="t">    <span class="str">&quot;InferenceRecorder&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t265" href="#t265">265</a></span><span class="t">    <span class="str">&quot;IntrospectionUnavailableError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t266" href="#t266">266</a></span><span class="t">    <span class="str">&quot;InvalidTokenError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t267" href="#t267">267</a></span><span class="t">    <span class="str">&quot;LLMAuthenticationError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t268" href="#t268">268</a></span><span class="t">    <span class="str">&quot;LLMChatRequest&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t269" href="#t269">269</a></span><span class="t">    <span class="str">&quot;LLMContentBlock&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t270" href="#t270">270</a></span><span class="t">    <span class="str">&quot;LLMError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t271" href="#t271">271</a></span><span class="t">    <span class="str">&quot;LLMInvalidRequestError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t272" href="#t272">272</a></span><span class="t">    <span class="str">&quot;LLMRateLimitError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t273" href="#t273">273</a></span><span class="t">    <span class="str">&quot;LLMResponse&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t274" href="#t274">274</a></span><span class="t">    <span class="str">&quot;LLMSchemaValidationError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t275" href="#t275">275</a></span><span class="t">    <span class="str">&quot;LLMServerError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t276" href="#t276">276</a></span><span class="t">    <span class="str">&quot;LLMSystemPrompt&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t277" href="#t277">277</a></span><span class="t">    <span class="str">&quot;LLMTimeoutError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t278" href="#t278">278</a></span><span class="t">    <span class="str">&quot;LLMUsage&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t279" href="#t279">279</a></span><span class="t">    <span class="str">&quot;LanguageModelLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t280" href="#t280">280</a></span><span class="t">    <span class="str">&quot;LanguageModelLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t281" href="#t281">281</a></span><span class="t">    <span class="str">&quot;LockedRecent&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t282" href="#t282">282</a></span><span class="t">    <span class="str">&quot;LogbookMirror&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t283" href="#t283">283</a></span><span class="t">    <span class="str">&quot;MinSeverity&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t284" href="#t284">284</a></span><span class="t">    <span class="str">&quot;ModelRef&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t285" href="#t285">285</a></span><span class="t">    <span class="str">&quot;ModelUsageLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t286" href="#t286">286</a></span><span class="t">    <span class="str">&quot;ModelUsageLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t287" href="#t287">287</a></span><span class="t">    <span class="str">&quot;NeverRatifiedConsequenceLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t288" href="#t288">288</a></span><span class="t">    <span class="str">&quot;NewEvent&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t289" href="#t289">289</a></span><span class="t">    <span class="str">&quot;NoActiveAllocationLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t290" href="#t290">290</a></span><span class="t">    <span class="str">&quot;NoComputeReachabilityLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t291" href="#t291">291</a></span><span class="t">    <span class="str">&quot;NoDatasetDistributionsLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t292" href="#t292">292</a></span><span class="t">    <span class="str">&quot;NoInvolvementLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t293" href="#t293">293</a></span><span class="t">    <span class="str">&quot;NoSuppliesRegisteredLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t294" href="#t294">294</a></span><span class="t">    <span class="str">&quot;NullInferenceRecorder&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t295" href="#t295">295</a></span><span class="t">    <span class="str">&quot;PrincipalKind&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t296" href="#t296">296</a></span><span class="t">    <span class="str">&quot;PrincipalLiveness&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t297" href="#t297">297</a></span><span class="t">    <span class="str">&quot;PrincipalLivenessLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t298" href="#t298">298</a></span><span class="t">    <span class="str">&quot;Profile&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t299" href="#t299">299</a></span><span class="t">    <span class="str">&quot;ProfileStore&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t300" href="#t300">300</a></span><span class="t">    <span class="str">&quot;RoleLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t301" href="#t301">301</a></span><span class="t">    <span class="str">&quot;RoleLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t302" href="#t302">302</a></span><span class="t">    <span class="str">&quot;RunActorInvolvementLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t303" href="#t303">303</a></span><span class="t">    <span class="str">&quot;SeededComputeReachabilityLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t304" href="#t304">304</a></span><span class="t">    <span class="str">&quot;SeededDatasetDistributionLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t305" href="#t305">305</a></span><span class="t">    <span class="str">&quot;Signer&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t306" href="#t306">306</a></span><span class="t">    <span class="str">&quot;SignerKeyInactiveError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t307" href="#t307">307</a></span><span class="t">    <span class="str">&quot;SignerKeyNotFoundError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t308" href="#t308">308</a></span><span class="t">    <span class="str">&quot;SignerUnavailableError&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t309" href="#t309">309</a></span><span class="t">    <span class="str">&quot;SpendGuard&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t310" href="#t310">310</a></span><span class="t">    <span class="str">&quot;SpendLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t311" href="#t311">311</a></span><span class="t">    <span class="str">&quot;SpendLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t312" href="#t312">312</a></span><span class="t">    <span class="str">&quot;StoredEvent&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t313" href="#t313">313</a></span><span class="t">    <span class="str">&quot;StreamAppend&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t314" href="#t314">314</a></span><span class="t">    <span class="str">&quot;SupplyLookup&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t315" href="#t315">315</a></span><span class="t">    <span class="str">&quot;SupplyLookupResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t316" href="#t316">316</a></span><span class="t">    <span class="str">&quot;SystemClock&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t317" href="#t317">317</a></span><span class="t">    <span class="str">&quot;TokenVerifier&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t318" href="#t318">318</a></span><span class="t">    <span class="str">&quot;TotalSpendResult&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t319" href="#t319">319</a></span><span class="t">    <span class="str">&quot;UUIDv7Generator&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t320" href="#t320">320</a></span><span class="t">    <span class="str">&quot;VerifiedPrincipal&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t321" href="#t321">321</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
@@ -411,8 +411,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_bd2d50bd5f5bc3b9_allocation_lookup_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.15.2">coverage.py v7.15.2</a>,
-            created at 2026-08-09 11:56 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
+            created at 2026-08-09 16:00 +0000
         </p>
     </div>
 </footer>
