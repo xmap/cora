@@ -194,6 +194,7 @@ One physical Device (vendor-sealed Aerotech HEX300; inverse kinematics in firmwa
 
 - Z and Yaw exist physically but are not exposed as operator channels in 2-BM's current EPICS (no `m3`/`m6`); CORA still models all six (deployment-configuration limit, not a device one).
 - Constituent-port wiring: each DoF reads feedback from `Hexapod` via `Plan.wires` (not a partition-rule field). `Hexapod` exposes `x/y/z_feedback_out` (`position_feedback_linear_mm`) and `roll/pitch/yaw_feedback_out` (`position_feedback_rotation_deg`); each facet has one `constituent_in` INPUT plus one `<axis>_out` setpoint OUTPUT. Six wires, one per DoF (`Hexapod.<axis>_feedback_out -> Hexapod_<Axis>.constituent_in`). `validate_pseudoaxis_fanout` exempts `SolverReference` from the arity check; decomposition is owned by the firmware solver.
+- Dial-to-user coordinate convention, `user = dial home + OFFSET`, confirmed 2026-07-28 (HXP-8). Y is the axis where the two differ: it homes at dial 350 with `OFFSET = -350`, so a homed Y reads user 0. The other axes carry their own pair. The source states the Y numbers without a unit; they are recorded as given rather than assigned one. This is calibration state, not an advisory: it replaces an earlier Caution that described a manual post-reboot dial correction which is no longer performed. What re-homes the axes is [HXP-9](questions.md#the-hexapod).
 
 ### Detector table axes
 
