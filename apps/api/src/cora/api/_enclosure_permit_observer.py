@@ -11,7 +11,7 @@ the rule-of-three move is to hoist `ControlPort` to
 `cora.enclosure.adapters`.
 
 Maps each configured enclosure's SecureM PV to an `EnclosureObservation`:
-`SecureM == 1 -> Permitted`, `== 0 -> NotPermitted`, non-Good quality or
+`SecureM == 1 -> Permitted`, `== 0 -> NotPermitted`, `Bad` quality or
 any other value -> `Unknown`. A PV disconnect (or a clean stream end)
 emits one `Unknown` observation so a dead permit signal fails the run
 gate closed rather than leaving a stale `Permitted`.
@@ -51,9 +51,25 @@ def permit_status_from_reading(reading: Measurement) -> str:
     """Map a SecureM `Measurement` to an Enclosure permit-status string.
 
     SecureM polarity: `1` = searched / secured -> `Permitted`; `0` ->
-    `NotPermitted`. Non-Good quality, or any value this cannot resolve
-    to 0 / 1, flattens to `Unknown` (the conservative,
+    `NotPermitted`. A `Bad`-quality reading, or any value this cannot
+    resolve to 0 / 1, flattens to `Unknown` (the conservative,
     gate-fails-closed status).
+
+    The quality floor here is `Bad`, not `Good`, and that is a
+    deliberate choice for this consumer. A permit signal is one of the
+    values a facility most often annotates with a designed alarm:
+    2-BM's `S02BM-PSS:StaB:SecureM` sits at MAJOR whenever the hutch is
+    not secured, which is most of the time, so an `== "Good"` floor
+    made a hutch CORA could plainly read report `Unknown` forever. The
+    question this consumer asks is "can I believe this value", not "can
+    I act on it", and only `Bad` says the value is not believable. See
+    `epics_ca_control_port._SEVERITY_TO_QUALITY`.
+
+    The loosening is one-directional and worth naming: an alarmed
+    reading of `0` still closes the gate, while an alarmed reading of
+    `1` now opens it where it previously did not. That is acceptable
+    because CORA's permit status records what the interlock reports and
+    actuates nothing; the PSS, not CORA, is what holds the hutch.
 
     Both shapes a CA adapter can hand back are accepted, because a
     real SecureM is a `bi` record and arrives as `kind="Categorical"`.
@@ -69,7 +85,7 @@ def permit_status_from_reading(reading: Measurement) -> str:
     reads `'ON'`: the previous numeric-only form raised on `int('ON')`
     and reported a correctly secured hutch as `Unknown`.
     """
-    if reading.quality != "Good":
+    if reading.quality == "Bad":
         return _UNKNOWN
     code = _binary_code(reading.value)
     if code == 1:
