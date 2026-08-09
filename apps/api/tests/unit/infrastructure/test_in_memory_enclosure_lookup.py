@@ -39,7 +39,7 @@ async def test_register_then_lookup_returns_seeded_result() -> None:
         name="2-BM-A Hutch",
         permit_status="Permitted",
         lifecycle="Active",
-        observed_at="2026-06-09T12:00:00+00:00",
+        permit_status_changed_at="2026-06-09T12:00:00+00:00",
         source_kind="EpicsPv",
         source_id="2bma:hutch:permit",
     )
@@ -49,7 +49,7 @@ async def test_register_then_lookup_returns_seeded_result() -> None:
     assert result.name == "2-BM-A Hutch"
     assert result.permit_status == "Permitted"
     assert result.lifecycle == "Active"
-    assert result.observed_at == "2026-06-09T12:00:00+00:00"
+    assert result.permit_status_changed_at == "2026-06-09T12:00:00+00:00"
     assert result.source_kind == "EpicsPv"
     assert result.source_id == "2bma:hutch:permit"
 
@@ -76,12 +76,12 @@ async def test_register_overwrites_existing_record() -> None:
         enclosure_id=eid,
         name="2-BM-A Hutch",
         permit_status="Permitted",
-        observed_at="2026-06-09T12:30:00+00:00",
+        permit_status_changed_at="2026-06-09T12:30:00+00:00",
     )
     result = await lookup.lookup(eid)
     assert result is not None
     assert result.permit_status == "Permitted"
-    assert result.observed_at == "2026-06-09T12:30:00+00:00"
+    assert result.permit_status_changed_at == "2026-06-09T12:30:00+00:00"
 
 
 @pytest.mark.unit
@@ -93,7 +93,7 @@ async def test_ctor_seed_mapping_populates_records() -> None:
             name="A",
             permit_status="Permitted",
             lifecycle="Active",
-            observed_at=None,
+            permit_status_changed_at=None,
             source_kind=None,
             source_id=None,
         ),
@@ -102,7 +102,7 @@ async def test_ctor_seed_mapping_populates_records() -> None:
             name="B",
             permit_status="NotPermitted",
             lifecycle="Active",
-            observed_at=None,
+            permit_status_changed_at=None,
             source_kind=None,
             source_id=None,
         ),

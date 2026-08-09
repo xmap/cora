@@ -35,17 +35,24 @@ from the Clock port at call time (cross-BC non-determinism
 principle), so what the recorded event carries is CORA's ingest
 time.
 
-The substrate's own observation time reaches the seam on the
-`EnclosureObservation` envelope and is then DROPPED here: nothing
-carries it onto the command or the payload. That is a known gap, not
-a design choice, and the port docstring on
-`enclosure_observer.EnclosureObservation` used to claim the opposite.
-Closing it is the next slice of [[project-source-timestamp-design]];
-the field will arrive as `datetime | None`, since a substrate that
-stamps nothing is the ordinary case at 2-BM rather than a fault.
+  - `observed_at`: the SUBSTRATE's own time for the reading, or None
+    when it reported none. Adapter-supplied data riding the command,
+    which is not a non-determinism violation: the Clock still supplies
+    `now` in the handler, and the decider computes neither. Deliberately
+    has NO default, so every construction site must state what the
+    substrate said, including saying None. A default is precisely how
+    a field gets silently dropped at one hop of four.
+
+Two clocks, and the distinction is the whole point of carrying both.
+`observed_at` is when the substrate says it read the value;
+`occurred_at`, stamped from the Clock port in the handler, is when
+CORA learned of it. At APS 2-BM they are far apart: both PSS permit
+PVs report no time at all, so `observed_at` is None for every real
+reading there while `occurred_at` is always present.
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from cora.enclosure.aggregates._value_types import MonitorRef
 from cora.enclosure.aggregates.enclosure import EnclosureId, EnclosurePermitStatus
@@ -62,3 +69,4 @@ class ObserveEnclosureStatus:
     monitor_source_id: MonitorSourceId
     monitor_ref: MonitorRef
     trigger: str
+    observed_at: datetime | None

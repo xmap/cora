@@ -5,14 +5,29 @@ into the `proj_enclosure_summary` read model that backs future
 Subscribed events:
   - EnclosureRegistered     -> INSERT (lifecycle='Active',
                                        permit_status='Unknown',
-                                       last_observed_*=NULL,
+                                       last_*=NULL,
                                        registered_at=occurred_at)
   - EnclosurePermitObserved -> UPDATE permit_status=to_status,
-                                      last_observed_at=occurred_at,
-                                      last_observed_reason=reason,
+                                      last_permit_status_changed_at=occurred_at,
+                                      last_permit_status_reason=reason,
                                       last_trigger=trigger,
                                       last_source_kind, last_source_id
-                                      (split from monitor_ref)
+                                      (split from monitor_ref),
+                                      last_source_observed_at=observed_at
+
+Two clocks, two columns, and the distinction is the point.
+`last_permit_status_changed_at` is CORA's: the event's `occurred_at`,
+stamped by the Clock port when the handler appended. It says when CORA
+recorded a transition. `last_source_observed_at` is the substrate's own
+time for the reading behind that transition, and is NULL whenever the
+substrate reported none, which at APS 2-BM is every reading. Neither
+substitutes for the other, and nothing in this projection may fill one
+from the other.
+
+Both advance only on a CHANGE, because the decider emits no event for
+an identical-status observation. A stale value means "no transition
+since", never "not observed since"; distinguishing those is the job of
+monitoring-coverage recording, not of this table.
   - EnclosureDecommissioned -> UPDATE lifecycle='Decommissioned',
                                       decommissioned_at=occurred_at,
                                       decommissioned_by=decommissioned_by
@@ -94,14 +109,14 @@ INSERT INTO proj_enclosure_summary
     (enclosure_id, name, facility_code,
      lifecycle, permit_status,
      registered_at, registered_by,
-     last_observed_at, last_observed_reason, last_trigger,
-     last_source_kind, last_source_id,
+     last_permit_status_changed_at, last_permit_status_reason, last_trigger,
+     last_source_kind, last_source_id, last_source_observed_at,
      decommissioned_at, decommissioned_by)
 VALUES ($1, $2, $3,
         'Active', 'Unknown',
         $4, $5,
         NULL, NULL, NULL,
-        NULL, NULL,
+        NULL, NULL, NULL,
         NULL, NULL)
 ON CONFLICT (enclosure_id) DO NOTHING
 """
@@ -109,11 +124,12 @@ ON CONFLICT (enclosure_id) DO NOTHING
 _UPDATE_PERMIT_OBSERVED_SQL = """
 UPDATE proj_enclosure_summary
 SET permit_status = $2,
-    last_observed_at = $3,
-    last_observed_reason = $4,
+    last_permit_status_changed_at = $3,
+    last_permit_status_reason = $4,
     last_trigger = $5,
     last_source_kind = $6,
     last_source_id = $7,
+    last_source_observed_at = $8,
     updated_at = now()
 WHERE enclosure_id = $1
 """
@@ -126,6 +142,24 @@ SET lifecycle = 'Decommissioned',
     updated_at = now()
 WHERE enclosure_id = $1
 """
+
+
+def _optional_timestamp(raw: object) -> datetime | None:
+    """Parse an optional ISO-8601 payload time, tolerating its absence.
+
+    Two different absences arrive here and both answer None. A payload
+    written before `observed_at` existed has no key at all, and the
+    2-BM store holds such events today; the projection re-reads them on
+    every rebuild and the monitor re-folds them on every decision, so an
+    unguarded `payload["observed_at"]` would break the live permit
+    monitor immediately rather than at some later restore. A payload
+    written after it exists carries an explicit null whenever the
+    substrate reported no time, which at 2-BM is every reading.
+
+    Follows the `monitor_ref` precedent one field over, which uses the
+    same defensive `.get()` for the same reason.
+    """
+    return datetime.fromisoformat(raw) if isinstance(raw, str) else None
 
 
 def _split_monitor_ref(monitor_ref: str | None) -> tuple[str | None, str | None]:
@@ -197,6 +231,7 @@ class EnclosureSummaryProjection:
                 payload["trigger"],
                 source_kind,
                 source_id,
+                _optional_timestamp(payload.get("observed_at")),
             )
             return
 

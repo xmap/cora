@@ -106,7 +106,7 @@ class _MissThenHitLookup:
             name=name,
             permit_status="Unknown",
             lifecycle="Active",
-            observed_at=None,
+            permit_status_changed_at=None,
             source_kind=None,
             source_id=None,
         )

@@ -271,7 +271,7 @@ def test_post_start_procedure_returns_409_when_binding_enclosure_is_decommission
             name="A-Hutch",
             permit_status="Permitted",
             lifecycle="Decommissioned",
-            observed_at=None,
+            permit_status_changed_at=None,
             source_kind=None,
             source_id=None,
         )

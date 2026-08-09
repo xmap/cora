@@ -76,6 +76,7 @@ def test_fold_genesis_then_permit_observed_transitions_permit_status_preserves_o
                 trigger="Monitor",
                 triggered_by=_MONITOR_SOURCE_ID,
                 occurred_at=_OBSERVED_AT,
+                observed_at=None,
                 monitor_ref="psm:hutch-a",
             ),
         ]
@@ -109,6 +110,7 @@ def test_fold_decommission_transitions_lifecycle_and_preserves_permit_status() -
                 trigger="Monitor",
                 triggered_by=_MONITOR_SOURCE_ID,
                 occurred_at=_OBSERVED_AT,
+                observed_at=None,
                 monitor_ref="psm:hutch-a",
             ),
             EnclosureDecommissioned(
@@ -153,6 +155,7 @@ def test_evolve_permit_observed_to_unknown_preserves_other_fields() -> None:
                 trigger="Monitor",
                 triggered_by=_MONITOR_SOURCE_ID,
                 occurred_at=_OBSERVED_AT,
+                observed_at=None,
                 monitor_ref="psm:hutch-a",
             ),
         ]
@@ -183,6 +186,7 @@ def test_evolve_permit_observed_on_none_state_raises_value_error() -> None:
                 trigger="Monitor",
                 triggered_by=_MONITOR_SOURCE_ID,
                 occurred_at=_OBSERVED_AT,
+                observed_at=None,
                 monitor_ref="psm:hutch-a",
             ),
         )

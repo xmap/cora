@@ -41,7 +41,7 @@ def test_enclosure_reference_carries_all_seven_fields() -> None:
         name="Station A Hutch",
         permit_status="Permitted",
         lifecycle="Active",
-        observed_at="2026-06-09T12:00:00Z",
+        permit_status_changed_at="2026-06-09T12:00:00Z",
         source_kind="EpicsPv",
         source_id="2bma:hutch:permitted",
     )
@@ -49,7 +49,7 @@ def test_enclosure_reference_carries_all_seven_fields() -> None:
     assert ref.name == "Station A Hutch"
     assert ref.permit_status == "Permitted"
     assert ref.lifecycle == "Active"
-    assert ref.observed_at == "2026-06-09T12:00:00Z"
+    assert ref.permit_status_changed_at == "2026-06-09T12:00:00Z"
     assert ref.source_kind == "EpicsPv"
     assert ref.source_id == "2bma:hutch:permitted"
 
@@ -61,11 +61,11 @@ def test_enclosure_reference_allows_optional_observation_fields_to_be_none() -> 
         name="Station A Hutch",
         permit_status="Unknown",
         lifecycle="Active",
-        observed_at=None,
+        permit_status_changed_at=None,
         source_kind=None,
         source_id=None,
     )
-    assert ref.observed_at is None
+    assert ref.permit_status_changed_at is None
     assert ref.source_kind is None
     assert ref.source_id is None
 
@@ -77,7 +77,7 @@ def test_enclosure_reference_is_frozen() -> None:
         name="Station A Hutch",
         permit_status="Permitted",
         lifecycle="Active",
-        observed_at=None,
+        permit_status_changed_at=None,
         source_kind=None,
         source_id=None,
     )
@@ -95,7 +95,7 @@ def test_enclosure_reference_status_and_lifecycle_are_str() -> None:
         name="Station A Hutch",
         permit_status="Permitted",
         lifecycle="Active",
-        observed_at=None,
+        permit_status_changed_at=None,
         source_kind=None,
         source_id=None,
     )

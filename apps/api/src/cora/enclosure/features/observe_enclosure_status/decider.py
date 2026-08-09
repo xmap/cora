@@ -100,6 +100,7 @@ def decide(
             trigger=_TRIGGER_MONITOR,
             triggered_by=triggered_by,
             occurred_at=now,
+            observed_at=command.observed_at,
             monitor_ref=monitor_ref_str,
         )
     ]

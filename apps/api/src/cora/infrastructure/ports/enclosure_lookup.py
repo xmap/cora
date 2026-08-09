@@ -83,17 +83,32 @@ class EnclosureLookupResult:
     partitions on `permit_status == "Permitted"` and
     `lifecycle == "Active"`.
 
-    `observed_at` / `source_kind` / `source_id` are optional
-    epistemic provenance fields populated by
+    `permit_status_changed_at` / `source_kind` / `source_id` are
+    optional epistemic provenance fields populated by
     `observe_enclosure_status`; they are `None` for
     enclosures that have never been observed (genesis-only state).
+
+    `permit_status_changed_at` is CORA's ingest time for the last
+    permit-status CHANGE, not the substrate's time for the reading and
+    not a heartbeat. It was called `observed_at` and carried the same
+    value, which was wrong twice: the projection has always fed it from
+    the event's `occurred_at` (CORA's clock), and the decider emits
+    nothing for an identical-status observation, so it advances only on
+    a transition. A consumer computing staleness from it is measuring
+    "time since the permit last changed", which for a steady hutch
+    grows without bound while the monitor is perfectly healthy.
+
+    The substrate's own time lives in the projection as
+    `last_source_observed_at` and is deliberately NOT surfaced here;
+    see the adapter docstring for why, and add it as a separate field
+    rather than repointing this one if a consumer ever needs it.
     """
 
     enclosure_id: UUID
     name: str
     permit_status: str
     lifecycle: str
-    observed_at: str | None
+    permit_status_changed_at: str | None
     source_kind: str | None
     source_id: str | None
 
@@ -188,7 +203,7 @@ class AlwaysPermittedEnclosureLookup:
             name="",
             permit_status="Permitted",
             lifecycle="Active",
-            observed_at=None,
+            permit_status_changed_at=None,
             source_kind=None,
             source_id=None,
         )
