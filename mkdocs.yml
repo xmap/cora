@@ -1037,3 +1037,9 @@ exclude_docs: |
 # For local `mkdocs serve` it is absent and mkdocs will warn; build with
 # `make docs-build` to stage it first. index.md is hand-crafted and lives in docs/.
 strict: false
+
+validation:
+  nav:
+    omitted_files: warn
+  links:
+    anchors: warn

@@ -128,8 +128,8 @@ A fitness function in `tests/architecture/test_slice_test_coverage.py` enforces 
 | slice shape | decider | handler | endpoint | mcp_tool | handler_postgres |
 | --- | --- | --- | --- | --- | --- |
 | **command** | ✓ | ✓ | ✓ | ✓ | create-style only |
-| **entry-append** | — | ✓ | ✓ | ✓ | create-style only |
-| **query** | — | ✓ | ✓ | ✓ | — |
+| **entry-append** | n/a | ✓ | ✓ | ✓ | create-style only |
+| **query** | n/a | ✓ | ✓ | ✓ | n/a |
 
 **Create-style** = verb in `{define_*, register_*, add_*}`. These introduce a new aggregate or event stream, so the jsonb round-trip + ON CONFLICT + unique-constraint behavior gets pinned per-slice against real PG. **State-transition** slices (`abort_*`, `complete_*`, `resume_*`, `hold_*`, and so on) lean on cross-BC scenario coverage in `tests/integration/scenarios/` instead.
 
