@@ -24,6 +24,11 @@ dedicated connection from the pool for the LISTEN. The connection
 re-acquires on disconnect (asyncpg raises; the worker's outer retry
 loop handles it). One connection out of the pool budget is acceptable
 overhead for the latency win.
+
+That "one connection" is a real budget constraint, not a figure of
+speech: the instance is shared across every registered projection and
+`_ensure_listening` serialises on a lock to keep the count at one. See
+its docstring for what happened on the pilot when it did not.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportOptionalMemberAccess=false, reportAttributeAccessIssue=false
@@ -89,17 +94,45 @@ class ListenNotifyWakeup:
         self._conn: Any = None
         self._event = asyncio.Event()
         self._listening = False
+        self._listen_lock = asyncio.Lock()
 
     async def _ensure_listening(self) -> None:
+        """Acquire the single LISTEN connection, at most once.
+
+        One instance is shared by every projection, and each one's
+        advance loop calls `wait()` independently, so this runs
+        concurrently from dozens of coroutines. Without the lock they
+        all observe `self._conn is None`, all call `pool.acquire()`,
+        and each overwrites `self._conn` with its own connection: only
+        the last is ever released by `close()`, and the rest sit on
+        `LISTEN "events"` for the lifetime of the process. The losers
+        of the race also call `add_listener` on a connection another
+        coroutine is mid-operation on, which asyncpg rejects with
+        `InterfaceError: another operation is in progress`.
+
+        Measured on the 2-BM pilot on 2026-08-09: six connections
+        parked on LISTEN out of a pool of ten, so half the pool was
+        gone until the next restart, and 15 InterfaceErrors were
+        logged across ten projections at boot. The transient errors
+        were self-healing and looked like the whole story; the leak
+        was the part that persisted.
+
+        The double check is deliberate: the fast path stays lock-free
+        once listening, and the second check inside the lock catches
+        the coroutines that queued behind the winner.
+        """
         if self._listening and self._conn is not None and not self._conn.is_closed():
             return
-        # Acquire (or re-acquire) a dedicated connection and LISTEN.
-        if self._conn is not None and self._conn.is_closed():
-            self._conn = None
-        if self._conn is None:
-            self._conn = await self._pool.acquire()
-        await self._conn.add_listener(NOTIFY_CHANNEL, self._on_notify)
-        self._listening = True
+        async with self._listen_lock:
+            if self._listening and self._conn is not None and not self._conn.is_closed():
+                return
+            # Acquire (or re-acquire) a dedicated connection and LISTEN.
+            if self._conn is not None and self._conn.is_closed():
+                self._conn = None
+            if self._conn is None:
+                self._conn = await self._pool.acquire()
+            await self._conn.add_listener(NOTIFY_CHANNEL, self._on_notify)
+            self._listening = True
 
     def _on_notify(
         self,
