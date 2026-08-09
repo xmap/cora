@@ -241,7 +241,7 @@
 | src/cora/api/\_conduct\_run\_tool.py                                                     |       33 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/\_distribution\_materializer.py                                             |       40 |        2 |        6 |        1 |     93.5% |   188-191 |
 | src/cora/api/\_edge\_conductor.py                                                        |       85 |        7 |        6 |        1 |     91.2% |161-164, 315, 317, 323 |
-| src/cora/api/\_enclosure\_permit\_observer.py                                            |       61 |        0 |       16 |        0 |    100.0% |           |
+| src/cora/api/\_enclosure\_permit\_observer.py                                            |       73 |        0 |       22 |        0 |    100.0% |           |
 | src/cora/api/\_experiment\_steerer.py                                                    |      106 |        2 |       32 |        3 |     96.4% |394-\>398, 443-\>453, 465-466 |
 | src/cora/api/\_flag\_watcher.py                                                          |       69 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/api/\_inference\_recorder.py                                                    |       21 |        0 |        0 |        0 |    100.0% |           |
@@ -1551,15 +1551,15 @@
 | src/cora/operation/adapters/\_optional\_torch.py                                         |       10 |        2 |        4 |        2 |     71.4% |    28, 34 |
 | src/cora/operation/adapters/\_tree\_hash.py                                              |       45 |        0 |       14 |        0 |    100.0% |           |
 | src/cora/operation/adapters/botorch\_decide\_port.py                                     |       99 |        1 |       26 |        2 |     97.6% |300, 320-\>319 |
-| src/cora/operation/adapters/caproto\_control\_port.py                                    |      108 |        6 |       28 |        5 |     91.9% |139-140, 169, 190-\>193, 196-\>201, 199, 223-\>225, 249-250 |
+| src/cora/operation/adapters/caproto\_control\_port.py                                    |      109 |        4 |       28 |        5 |     93.4% |172, 193-\>196, 199-\>204, 202, 226-\>228, 252-253 |
 | src/cora/operation/adapters/compute\_port\_config.py                                     |       22 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/operation/adapters/control\_port\_beam\_availability\_lookup.py                 |       49 |        2 |       14 |        2 |     93.7% |    63, 75 |
 | src/cora/operation/adapters/control\_port\_config.py                                     |       45 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/operation/adapters/control\_port\_registry.py                                   |       55 |        1 |       16 |        2 |     95.8% |113-\>exit, 240 |
 | src/cora/operation/adapters/decide\_port\_config.py                                      |       43 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/operation/adapters/decider\_replayability.py                                    |       14 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/operation/adapters/epics\_ca\_control\_port.py                                  |       84 |        3 |       22 |        3 |     94.3% |257, 294, 390 |
-| src/cora/operation/adapters/epics\_pva\_control\_port.py                                 |      133 |       19 |       50 |       10 |     80.9% |191, 206, 210-\>215, 213-214, 218, 223-230, 234, 238, 287-288, 405, 407, 426-\>exit |
+| src/cora/operation/adapters/epics\_ca\_control\_port.py                                  |       85 |        3 |       22 |        3 |     94.4% |271, 308, 404 |
+| src/cora/operation/adapters/epics\_pva\_control\_port.py                                 |      134 |       19 |       50 |       10 |     81.0% |194, 209, 213-\>218, 216-217, 221, 226-233, 237, 241, 290-291, 408, 410, 429-\>exit |
 | src/cora/operation/adapters/fdt\_transfer\_port.py                                       |       67 |        6 |       16 |        0 |     90.4% |71-72, 86, 89-91 |
 | src/cora/operation/adapters/globus\_compute\_port.py                                     |       57 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/operation/adapters/globus\_transfer\_port.py                                    |       61 |        0 |       12 |        0 |    100.0% |           |
@@ -2606,7 +2606,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **55888** | **1256** | **8048** |  **367** | **97.2%** |           |
+| **TOTAL**                                                                                | **55903** | **1254** | **8054** |  **367** | **97.2%** |           |
 
 
 ## Setup coverage badge
