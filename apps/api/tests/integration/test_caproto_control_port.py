@@ -78,6 +78,7 @@ async def test_read_double_scalar_returns_reading_with_good_quality(
         assert reading.kind == "Scalar"
         assert reading.quality == "Good"
         assert reading.value == 0.0
+        assert reading.produced_at is not None
         assert reading.produced_at.tzinfo is not None
     finally:
         await port.aclose()
@@ -159,6 +160,7 @@ async def test_read_major_alarm_pv_returns_uncertain_quality(softioc: str) -> No
         assert reading.value == 99.9
         assert reading.quality == "Uncertain"
         assert reading.quality_detail.startswith("alarm_status=")
+        assert reading.produced_at is not None
         assert reading.produced_at.tzinfo is not None
     finally:
         await port.aclose()
@@ -172,6 +174,23 @@ async def test_read_invalid_alarm_pv_returns_bad_quality(softioc: str) -> None:
         reading = await port.read(EpicsPvAddress(f"{softioc}invalid_alarm_value"))
         assert reading.quality == "Bad"
         assert reading.quality_detail.startswith("alarm_status=")
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_read_unstamped_pv_reports_no_produced_at(softioc: str) -> None:
+    """An unprocessed record answers None, matching EpicsCa and EpicsPva.
+
+    See `test_epics_ca_control_port` for the reasoning; pinned on all
+    three wire protocols because each adapter owns its own predicate.
+    """
+    port = CaprotoControlPort()
+    try:
+        reading = await port.read(EpicsPvAddress(f"{softioc}unstamped_value"))
+        assert reading.value == 7.5
+        assert reading.quality == "Good"
+        assert reading.produced_at is None
     finally:
         await port.aclose()
 

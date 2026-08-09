@@ -21,10 +21,20 @@ transition.
   - `reason`: free-text audit string per the existing Supply
     transition convention (1-500 chars after trim).
 
-`observed_at` is NOT on the command: the handler injects it from
-the Clock port at call time (cross-BC non-determinism principle).
-The adapter's wall-clock at observation is captured on the
-SUBSCRIPTION side, not threaded through the command surface.
+`observed_at` is NOT on the command: the handler stamps the event
+from the Clock port at call time (cross-BC non-determinism
+principle), so the recorded event carries CORA's ingest time.
+
+An earlier version of this docstring said the substrate's own
+observation time was "captured on the SUBSCRIPTION side". There is
+no subscription side: `cora/supply/adapters` holds only
+`postgres_supply_lookup`, with no observer port and no monitor, so
+every `ObserveSupplyStatus` today comes from a caller that already
+has the fact in hand. When a Supply monitor does land it inherits the
+Enclosure shape, where the substrate time arrives as
+`datetime | None` because equipment that reports a value without
+stamping it is ordinary rather than broken. See
+[[project-source-timestamp-design]].
 """
 
 from dataclasses import dataclass

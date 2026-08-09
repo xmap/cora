@@ -117,12 +117,27 @@ class EnclosureObservation:
     not match a known status value; substrate values that cannot be
     classified should be flattened to `"Unknown"` by the adapter.
 
-    `observed_at` is the adapter's wall-clock at observation time.
-    The handler does NOT override this with the Clock port: the
-    substrate's timestamp is more accurate than the handler-side
-    clock for monitor-driven facts (the substrate's observation
-    moment is the fact-time; the handler's call moment is merely
-    when the fact crossed the seam).
+    `observed_at` is the substrate's own time for the observation,
+    and is `None` when the substrate supplied none. Real equipment
+    routinely reports a value without stamping it: at APS 2-BM both
+    PSS permit signals do exactly that on every update, so absence
+    here is the ordinary case rather than a fault.
+
+    Two different facts are in play and neither substitutes for the
+    other. The substrate's moment is the fact-time; the moment the
+    observation crossed this seam is merely when CORA learned of it.
+    An adapter with no substrate time MUST answer `None` rather than
+    supply its own clock, because a synthesized time is
+    indistinguishable from a reported one once it is written down.
+    The recording side always has its own clock for the second fact.
+
+    NOTE: this field does not currently reach the event payload.
+    `_monitor.record_observation` builds `ObserveEnclosureStatus`
+    without it, so the recorded `EnclosurePermitObserved` carries
+    CORA's ingest time only. Threading it through the command, event
+    and projection is the next slice of
+    [[project-source-timestamp-design]]; until then, treat this as a
+    port-level fact the seam still drops.
 
     `source_kind` and `source_id` ship as separate strings; the
     handler joins them into the colon-delimited `monitor_ref` wire
@@ -131,7 +146,7 @@ class EnclosureObservation:
 
     enclosure_code: str
     observed_status: str
-    observed_at: datetime
+    observed_at: datetime | None
     source_kind: str
     source_id: str
 

@@ -31,9 +31,17 @@ constructs a `Measurement` for the store: tuples become
 `produced_at` is read from the injectable `now` callable (defaults
 to `lambda: datetime.now(tz=UTC)`); `quality` stays `"Good"`,
 `quality_detail` stays `""`. Tests that need a specific kind
-(`Image` / `Categorical` / `Tabular`), non-`Good` quality, or a
-populated `quality_detail` use `set_reading` to push an explicit
-`Measurement`.
+(`Image` / `Categorical` / `Tabular`), non-`Good` quality, a
+populated `quality_detail`, or an ABSENT `produced_at` use
+`set_reading` to push an explicit `Measurement`.
+
+On that last case: `write` always stamps, which models a substrate
+that reports a time, and that is the right default. Real substrates
+also report values with no time at all (see
+`epics_ca_control_port._produced_at_for`), so a consumer branching
+on `produced_at is None` needs a way to reach that branch here.
+`set_reading(addr, Measurement(..., produced_at=None))` is that way;
+there is deliberately no separate knob for it.
 
 `wait` and `timeout_s` are accepted to satisfy the Protocol but
 ignored: in-memory has no substrate round-trip, so write-confirm /

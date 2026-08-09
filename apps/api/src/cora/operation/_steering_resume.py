@@ -26,7 +26,7 @@ cross-reference to the FSM iteration that produced the row.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from cora.operation.ports.control_port import ActuationKind
@@ -74,10 +74,15 @@ def _measurement_from_dict(raw: dict[str, Any]) -> Measurement:
     Symmetric with `conductor._outcome_measurement_to_dict`: reads back name,
     value, kind, quality, quality_detail, units, and the ISO-8601 produced_at.
     Defensive on the optional fields so a leaner recorded shape still rebuilds.
+
+    A recorded row with no `produced_at` rebuilds to `None`, which is the
+    same thing the adapters now say when a substrate stamps nothing. This
+    used to rebuild as the Unix epoch, which put a 1970 date on a
+    measurement whose time was simply never recorded.
     """
     produced_at_raw = raw.get("produced_at")
     produced_at = (
-        datetime.fromisoformat(produced_at_raw) if isinstance(produced_at_raw, str) else _EPOCH
+        datetime.fromisoformat(produced_at_raw) if isinstance(produced_at_raw, str) else None
     )
     kind: MeasurementKind = raw.get("kind", "Scalar")
     quality: Quality = raw.get("quality", "Good")
@@ -90,9 +95,6 @@ def _measurement_from_dict(raw: dict[str, Any]) -> Measurement:
         name=raw.get("name", ""),
         units=raw.get("units"),
     )
-
-
-_EPOCH = datetime.fromtimestamp(0, tz=UTC)
 
 
 __all__ = [

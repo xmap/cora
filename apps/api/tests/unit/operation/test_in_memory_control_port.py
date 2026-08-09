@@ -244,6 +244,7 @@ async def test_write_default_now_yields_utc_aware_produced_at() -> None:
     port.simulate_connect("2bm:rot:val")
     await port.write("2bm:rot:val", 1.0)
     got = await port.read("2bm:rot:val")
+    assert got.produced_at is not None
     assert got.produced_at.tzinfo is UTC
 
 
