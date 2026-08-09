@@ -1517,7 +1517,7 @@
 | src/cora/infrastructure/projection/handler.py                                            |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/projection/lifespan.py                                           |       30 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/projection/registry.py                                           |       30 |        0 |        4 |        0 |    100.0% |           |
-| src/cora/infrastructure/projection/wakeup.py                                             |       49 |        1 |       10 |        3 |     93.2% |98, 99-\>101, 127-\>131 |
+| src/cora/infrastructure/projection/wakeup.py                                             |       53 |        0 |       12 |        2 |     96.9% |132-\>134, 160-\>164 |
 | src/cora/infrastructure/projection/worker.py                                             |       59 |        6 |        8 |        0 |     91.0% |   208-228 |
 | src/cora/infrastructure/published\_artifact/\_\_init\_\_.py                              |        3 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/published\_artifact/\_stages.py                                  |       64 |        3 |       28 |        0 |     96.7% |87-88, 238 |
@@ -2606,7 +2606,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **55903** | **1254** | **8054** |  **367** | **97.2%** |           |
+| **TOTAL**                                                                                | **55907** | **1253** | **8056** |  **366** | **97.3%** |           |
 
 
 ## Setup coverage badge
