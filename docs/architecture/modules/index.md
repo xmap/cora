@@ -166,4 +166,12 @@ The **Cross-Module boundaries** table on each module page uses a fixed set of ve
 
     [Read →](enclosure/index.md)
 
+-   :material-cash-multiple:{ .lg .middle } __Budget__ <span class="md-maturity md-maturity--beta">beta</span>
+
+    ---
+
+    The instrument-wide spending envelope (`Allocation`): a USD ceiling, an optional Campaign binding, and a `Granted -> Active -> Sealed` window with `Voided` for a withdrawn award. Balance is never stored; it folds from the inference ledger. Bounds what the whole deployment spends, above the per-agent caps.
+
+    [Read →](budget/index.md)
+
 </div>

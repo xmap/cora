@@ -81,11 +81,12 @@ The recipe chain is the spine. Around it, CORA models the rest of what a single 
 
     ---
 
-    The instruments themselves, the continuously-available resources they draw on, the permit-gated spaces that contain them, and the empirical values that keep them honest.
+    The instruments themselves, the continuously-available resources they draw on, the permit-gated spaces that contain them, the spending envelope that bounds them, and the empirical values that keep them honest.
 
     [Equipment](architecture/modules/equipment/index.md) ·
     [Supply](architecture/modules/supply/index.md) ·
     [Enclosure](architecture/modules/enclosure/index.md) ·
+    [Budget](architecture/modules/budget/index.md) ·
     [Calibration](architecture/modules/calibration/index.md)
 
 -   :material-account-group-outline:{ .lg .middle } __People and agents__
