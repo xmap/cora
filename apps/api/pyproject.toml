@@ -8,15 +8,15 @@ authors = [{ name = "Doga Gursoy" }]
 license = { text = "Apache-2.0" }
 
 dependencies = [
-    "fastapi>=0.138.1,<0.139",
+    "fastapi>=0.141.1,<0.142",
     "asyncpg>=0.31.0,<0.32",
     "pydantic>=2.13.4,<3",
     "pydantic-settings>=2.14.2,<3",
     "mcp>=1.28.1,<2",
-    "uvicorn[standard]>=0.49.0",
+    "uvicorn[standard]>=0.52.1",
     "structlog>=26.1.0",
-    "uuid-utils>=0.16.2",
-    "prometheus-client>=0.21.0,<1",
+    "uuid-utils>=0.17.0",
+    "prometheus-client>=0.26.0,<1",
     # 8.x is the first release that handles FastAPI 0.138's lazy
     # include_router routing (the `_IncludedRouter` BaseRoute carries no
     # `.path`); 7.x raises AttributeError per-request under 0.138.
@@ -32,13 +32,13 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.62b1,<0.63",
     "opentelemetry-instrumentation-asyncpg>=0.62b1,<0.63",
     "opentelemetry-exporter-otlp-proto-http>=1.41,<2",
-    "jsonschema-rs>=0.46.6,<1",
+    "jsonschema-rs>=0.49.6,<1",
     # Anthropic SDK: used by `AnthropicLLM`, the production implementor of
     # `cora.infrastructure.ports.LLM`. No other code imports this;
     # subscribers + tests use the port + `FakeLLM`. Pin <1 to flag a future
     # major SDK shift in CI
     # before it lands silently.
-    "anthropic>=0.112.0,<1",
+    "anthropic>=0.120.2,<1",
     # cryptography: explicit top-level floor pin. Previously pulled
     # transitively at 48.x via pyjwt[crypto]. Pinned explicitly to
     # >=46,<47 ahead of the federation wire-tier adapters (python-cwt
@@ -48,7 +48,7 @@ dependencies = [
     # retains the cp313 manylinux + macosx_arm64 wheels and stable
     # RS256 / ES256 / Ed25519 paths that pyjwt and the existing
     # `cora.infrastructure.signing` Ed25519 verify codepath exercise.
-    "cryptography>=49.0.0,<50",
+    "cryptography>=50.0.0,<51",
     # PyJWT (Phase C Iter A): the one library dependency for the edge-auth
     # JWT path, used by `JwtTokenVerifier` for `Authorization: Bearer <JWT>`
     # signature verification + JWKS rotation. `[crypto]` extra pulls in
@@ -118,7 +118,7 @@ bo = [
 # startup rather than a request. LGPL-3.0 (PyTango binding) over the C++ Tango core.
 # Pin <11 to flag a future major SDK shift.
 tango = [
-    "pytango>=10,<11",
+    "pytango>=10.3.1,<11",
 ]
 
 [dependency-groups]
@@ -126,9 +126,9 @@ dev = [
     "pytest>=9.1.1,<10",
     "pytest-asyncio>=1.4.0,<2",
     "pytest-cov>=7.1.0,<8",
-    "coverage[toml]>=7.14.3,<8",
-    "diff-cover>=10.3.0,<11",
-    "ruff>=0.15.20,<0.16",
+    "coverage[toml]>=7.15.3,<8",
+    "diff-cover>=10.4.1,<11",
+    "ruff>=0.16.1,<0.17",
     "pyright>=1.1.411,<2",
     "httpx>=0.28.0",
     # httpx2: starlette 1.x routes its TestClient through httpx2 (it does
@@ -137,9 +137,9 @@ dev = [
     # strict-typing gate fails across the contract suite. Runtime also warns
     # and prefers httpx2 when present. src/ keeps the httpx pin above (two
     # adapters import httpx directly).
-    "httpx2>=2.5.0,<3",
+    "httpx2>=2.9.1,<3",
     "asgi-lifespan>=2.1.0,<3",
-    "pre-commit>=4.0.0,<5",
+    "pre-commit>=4.6.1,<5",
     "testcontainers[postgres]>=4.14.2,<5",
     "tach>=0.35.0",
     # pytest-xdist 3.7.0 (2025-05-26) made `--dist=worksteal` atomic and
@@ -182,7 +182,7 @@ dev = [
     # tests/conftest.py and auto-activates on CI=true to derandomize the seed
     # and disable the local example database, sidestepping xdist seed
     # collisions across worker processes.
-    "hypothesis>=6.155.7,<7",
+    "hypothesis>=6.165.2,<7",
     # hypothesis-jsonschema: Hypothesis strategy builder driven by JSON
     # Schema documents. Used by `tests/contract/test_mcp_tools_fuzz.py`
     # (Iter H of the testing-techniques rollout) to generate
@@ -227,7 +227,7 @@ dev = [
     # fixes; pinned >=3.5 to dodge earlier async-fixture rough edges.
     # Configuration in `[tool.mutmut]` below scopes mutation to pure
     # decider/evolver modules only.
-    "mutmut>=3.6.0,<4",
+    "mutmut>=3.7.0,<4",
     # PyYAML: parses the beamline descriptor (deployments/<id>/beamline.yaml).
     # Used by scripts/beamline_descriptor.py, which the docs build imports and
     # the deployment round-trip test dynamic-imports. types-PyYAML supplies the

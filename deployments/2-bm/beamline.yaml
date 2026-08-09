@@ -126,13 +126,13 @@ front-end:
           drawing: { system: ICMS, number: 4102020106-400000 }   # APS_2191941 row 9 (unlabelled, downstream-most)
     - name: FrontEndShutter
       family: Shutter
-      pv: "S02BM-PSS:FES"
+      pv: "S02BM-PSS:FES:BeamBlockingM"   # inverted: 1 = blocked = CLOSED, so open is == 0 (PSS-1)
       new: true
       confirm: true
       note: front-end safety shutter, gated by the personnel safety system; opened at session start and kept open throughout for optics thermal stability, not toggled per scan (BEAM-1)
     - name: vacuum_isolation
       family: Vacuum             # Supply(kind=Vacuum) observation, not a separate asset
-      pv: { BIV: "2bm:BIV", gate_valves: [GV1, GV2, GV3] }
+      pv: { BIV: "2bmBLEPS:BLEPS:BIV_CLOSED", gate_valves: [GV1, GV2, GV3] }
       new: true
       confirm: true
       # BLEPS-1 (#562) confirms each valve fault belongs to exactly one valve
@@ -303,7 +303,7 @@ beam-defining-and-safety:
       constituents:
         - name: StationShutter   # B-station safety shutter (SBS); distinct role from the front-end FES (FrontEndShutter)
           family: Shutter
-          pv: "S02BM-PSS:SBS"
+          pv: "S02BM-PSS:SBS:BeamBlockingM"   # inverted: 1 = blocked = CLOSED, so open is == 0 (PSS-1)
           material: "W 21 mm"
           aperture_mm: [60.0, 44.5]
           drawing: { system: ICMS, number: 41050401-410003, revision: "(-)" }   # BEAM-3 (#247): P6-50 safety-shutter element; assembly drawing 41050401-500000; RSS 02-BM-A-P-01; source APS_2191941 row 10
@@ -525,7 +525,7 @@ detector:
     - name: Objective_Selector
       family: PseudoAxis          # virtual lens picker; CORA writes LensSelect, MCTOptics owns the (lens x camera) turret/rotation/focus lookup (DET-2, DET-11)
       pv: "2bm:MCTOptics:LensSelect"
-      readback_pv: "2bm:MCTOptics:LensSelected"
+      readback_pv: "2bm:MCTOptics:LensSelect"   # mbbo reads back on itself; mctOptics.template defines no LensSelected record
       slot_labels_pv: ["2bm:MCTOptics:LensName0", "2bm:MCTOptics:LensName1", "2bm:MCTOptics:LensName2"]
       lens_slots: ["1.1x_Mitutoyo", "2x_Mitutoyo", "10x_Mitutoyo"]   # LensSelect index 0/1/2 (DET-11 slot order, operator-verified 2026-06-19)
       turret_lookup_mm:            # 2bmb:m1 position per (lens x camera); MCTOptics resolves it, CORA never drives 2bmb:m1 (DET-11)
