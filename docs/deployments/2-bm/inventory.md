@@ -74,7 +74,7 @@ Microscope-bound Models (turret motor, Mitutoyo MPLAPO kit, FLIR Oryx, Crytur Lu
 
 ## Settings
 
-Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIVE-2, TIME-1) kept inline.
+Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIVE-2) kept inline.
 
 | Asset | Settings |
 | --- | --- |
@@ -167,11 +167,12 @@ Trigger and step signals are modelled as typed ports plus wires resolved at Plan
 
 | Asset | Port | Direction | `signal_type` |
 | --- | --- | --- | --- |
-| `Timing` | `camera_trigger_out` | OUTPUT | `frame_trigger_ttl` |
+| `Timing` | `out1` | OUTPUT | `frame_trigger_ttl` |
 | `Camera` | `trigger_in` | INPUT | `frame_trigger_ttl` |
 
-- One wire: `Timing.camera_trigger_out -> Camera.trigger_in` (item_060). `frame_trigger_ttl` (start exposure) is distinct from the piezo `step_trigger_ttl` (advance a motion step).
-- Two labels open for staff: the exact FPGA output channel feeding the camera (path ends at camera `Line2`, no box-side output named), and the `GateDly1` block name (unconfirmed vs the source-grounded `GateDly-2`/`GateDly-3`).
+- One wire: `Timing.out1 -> Camera.trigger_in`. `frame_trigger_ttl` (start exposure) is distinct from the piezo `step_trigger_ttl` (advance a motion step).
+- Signal path (TIME-2): `PSO -> MUX2-1 -> GateDly1 -> outTrig -> FPGA out1 -> FLIR Oryx Line2`. The port is named for the pin, matching `out2`/`out3`; `outTrig` is the softGlue signal carried on it, and `Line2` is the camera-side input for both installed Oryx bodies.
+- Pulse shaping on this leg is the `GateDly1` block, whose PV fields are dot-separated record fields (`2bmbMZ1:SG:GateDly1.DLY`, `.Width`) where the two piezo legs use flat underscore names (`GateDly-2_DLY`, `_WIDTH`). The three blocks are peers in function but not in PV form, so each is recorded verbatim rather than derived from a template. They are not registered as Assets: nothing yet needs to address a gate-delay block by identity.
 - softGlue `Width`/`DLY` count 10 MHz clock cycles (100 ns/count, so `Width=100` = 10 us pulse); per-scan values are Method/Plan config.
 
 ## Computed axes

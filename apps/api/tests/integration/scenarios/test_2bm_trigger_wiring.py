@@ -29,7 +29,7 @@ signal types:
 
 Three wires validate end-to-end against the strict forward-reference
 contract (ports must exist before they are wired): one camera-trigger
-wire (`Timing.camera_trigger_out -> Camera.trigger_in`) and two piezo
+wire (`Timing.out1 -> Camera.trigger_in`) and two piezo
 step-trigger wires (`Timing.out2 -> ApertureFineDrive.step_x_in`,
 `Timing.out3 -> ApertureFineDrive.step_y_in`). A successful `add_plan_wire`
 is itself the proof of direction (source OUTPUT, target INPUT) and exact
@@ -37,11 +37,14 @@ signal_type match, which `validate_wire_endpoints` enforces at add time;
 the camera target is not a `PseudoAxis`, so no fan-out arity check
 applies.
 
+Port names are the box-side FPGA output pins: `out1` carries the camera
+frame trigger (softGlue signal `outTrig`, shaped by the `GateDly1` block)
+and `out2` / `out3` carry the two piezo step triggers.
+
 It does NOT actuate any trigger: which PSO subset reaches the camera
-(MUX2-1 select, trigILF via write_PSO_array), the GateDly width/delay
-values, and the exact FPGA output channel feeding the camera are per-scan
-Method / Plan configuration and operator-confirmed facts (TIME-2), not
-the durable wire topology this slice models.
+(MUX2-1 select, trigILF via write_PSO_array) and the GateDly width/delay
+values are per-scan Method / Plan configuration, not the durable wire
+topology this slice models.
 
 See [[project_plan_wiring_design]] for the Wire 4-tuple + direction +
 signal_type rules; the ports + wired Plan mirror
@@ -132,7 +135,7 @@ _DEVICES = (
 # piezo legs) and the matching INPUT on each driven device.
 # (asset_id, port_name, direction, signal_type)
 _PORT_SPECS: tuple[tuple[UUID, str, PortDirection, str], ...] = (
-    (_TIMING_ID, "camera_trigger_out", PortDirection.OUTPUT, _SIG_FRAME),
+    (_TIMING_ID, "out1", PortDirection.OUTPUT, _SIG_FRAME),
     (_TIMING_ID, "out2", PortDirection.OUTPUT, _SIG_STEP),
     (_TIMING_ID, "out3", PortDirection.OUTPUT, _SIG_STEP),
     (_CAMERA_ID, "trigger_in", PortDirection.INPUT, _SIG_FRAME),
@@ -142,7 +145,7 @@ _PORT_SPECS: tuple[tuple[UUID, str, PortDirection, str], ...] = (
 
 # Three wires: one camera-trigger leg + two piezo step-trigger legs.
 # (source_asset_id, source_port_name, target_asset_id, target_port_name)
-_WIRE_CAMERA = (_TIMING_ID, "camera_trigger_out", _CAMERA_ID, "trigger_in")
+_WIRE_CAMERA = (_TIMING_ID, "out1", _CAMERA_ID, "trigger_in")
 _WIRE_SPECS: tuple[tuple[UUID, str, UUID, str], ...] = (
     _WIRE_CAMERA,
     (_TIMING_ID, "out2", _APERTURE_FINE_DRIVE_ID, "step_x_in"),
@@ -308,5 +311,5 @@ async def test_trigger_wiring_validates_end_to_end(
         f"unexpected: {actual_wires - frozenset(_WIRE_SPECS)}"
     )
     assert _WIRE_CAMERA in actual_wires, (
-        "the camera-trigger wire (Timing.camera_trigger_out -> Camera.trigger_in) is missing"
+        "the camera-trigger wire (Timing.out1 -> Camera.trigger_in) is missing"
     )
