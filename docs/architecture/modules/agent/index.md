@@ -1,4 +1,4 @@
-# Agent module <span class="md-maturity md-maturity--stable" title="Eleven slices, nine seeded agents (LLM: RunDebriefer, CautionDrafter; deterministic: RunSupervisor, CautionPromoter, ClearanceExpirer, ClearanceWatcher, CalibrationWatcher, ProcedureWatcher, CampaignWatcher), four-state lifecycle, tool grants, and budget declarations">stable</span>
+# Agent module <span class="md-maturity md-maturity--stable" title="Two aggregates (Agent, LanguageModel), thirteen seeded agents (LLM: RunDebriefer, CautionDrafter; the rest deterministic), four-state lifecycle, tool grants, and enforced budget caps">stable</span>
 
 ## Purpose & Scope
 
@@ -11,12 +11,12 @@ An Agent carries five roles:
 - **Identity shared with an Actor.** `Agent.id` is the same UUID as Access's `Actor.id` for the same agent. `define_agent` writes `AgentDefined` and `ActorRegistered(kind="agent")` atomically across both BCs in a single transaction. Every cross-BC reference (Decision authorship, Authorize checks, logbook attribution) works uniformly for humans and agents.
 - **A four-state lifecycle.** An Agent moves through `Defined` (registered but not yet invocable), `Versioned` (promoted to ready-for-invocation; subscribers filter on this), `Suspended` (operator pause from `Versioned`; non-terminal, returns via `resume_agent`), and `Deprecated` (terminal). Versioning is per-Agent-id rainbow-style: multiple `Versioned` agents may share `kind` concurrently with different `id`s.
 - **A typed configuration record.** Required: `kind`, `name`, `version`, `model_ref` (provider plus model plus optional snapshot pin). Optional: `description`, `canonical_uri` (https-only, A2A-forward-compat), `prompt_template_id`, `capabilities` (free-form, cardinality-capped). All bounded-text fields trim and validate at the value-object boundary.
-- **Tool grants and budget declarations.** `tools` is a frozenset of MCP tool names the agent is authorised to invoke; grants and revocations are idempotent and stay editable in `Defined`, `Versioned`, and `Suspended` (only `Deprecated` blocks them). `budget` carries optional `monthly_usd_cap` and `daily_token_cap`; declaration only today, with enforcement deferred to the Budget BC.
+- **Tool grants and budget declarations.** `tools` is a frozenset of MCP tool names the agent is authorised to invoke; grants and revocations are idempotent and stay editable in `Defined`, `Versioned`, and `Suspended` (only `Deprecated` blocks them). `budget` carries optional `monthly_usd_cap` and `daily_token_cap`, and both are enforced. The gate is coarse and post-hoc: it debits the recorded `cost_usd` after each call and refuses the NEXT call once a cap is exhausted, so overspend is bounded to roughly one in-flight call. Windows are summed over the UTC calendar month and day containing the triggering event's `occurred_at`, not wall clock, so a replayed work item gates identically. Above the per-agent caps sits the instrument-wide [Allocation](../budget/index.md) envelope, which the same gate reads.
 - **Cross-BC action slices.** Two slices today drive cross-BC writes: `regenerate_run_debrief` invokes the RunDebriefer agent on demand and writes a Decision on the named Run; `promote_caution_proposal` reads a CautionDrafter agent's `CautionProposal` Decision and writes the proposed Caution into the Caution module after operator review.
 
 ### The agent fleet
 
-Nine agents are seeded today. They split two ways. By **how they decide**: the two LLM agents (RunDebriefer, CautionDrafter) call a model; the seven deterministic agents (RunSupervisor, CautionPromoter, ClearanceExpirer, ClearanceWatcher, CalibrationWatcher, ProcedureWatcher, CampaignWatcher) apply a fixed rule and carry a sentinel `model_ref` with no prompt template. By **what they do**: passive agents only advise (they write a Decision and stop); active agents decide and then act, but only by issuing an existing spine command through the same authorized path a human uses, so the resulting record is byte-identical whether a human or the agent acted.
+Thirteen agents are seeded today. They split two ways. By **how they decide**: the two LLM agents (RunDebriefer, CautionDrafter) call a model; the eleven deterministic agents apply a fixed rule and carry a sentinel `model_ref` with no prompt template. By **what they do**: passive agents only advise (they write a Decision and stop); active agents decide and then act, but only by issuing an existing spine command through the same authorized path a human uses, so the resulting record is byte-identical whether a human or the agent acted.
 
 The runtime that drives an agent takes one of three host shapes:
 
@@ -35,15 +35,19 @@ The runtime that drives an agent takes one of three host shapes:
 | CalibrationWatcher | deterministic | periodic loop | writes a `CalibrationVerification` (Stale) flag Decision (passive) |
 | ProcedureWatcher | deterministic | periodic loop | writes a `ProcedureProgress` (Stall) flag Decision (passive) |
 | CampaignWatcher | deterministic | periodic loop | writes a `CampaignProgress` (Stuck) flag Decision (passive) |
+| AuthorityRevocationHolder | deterministic | subscriber | on `PolicyGrantRevoked`, holds every in-flight Run the revoked principal drives + an `AuthorityRevocationHold` Decision per Run |
+| RatificationEnforcer | deterministic | subscriber | holds the target Run on `RatificationRequested`, resumes it on `RatificationGranted` |
+| RunInitiator | deterministic | periodic loop | issues `start_run` to begin a Run autonomously, the proactive counterpart to RunSupervisor's reactive protection |
+| ExperimentSteerer | deterministic | subscriber | across-Procedure disposition for a steered experiment (steer again, conclude, or hold the campaign) + an `ExperimentSteering` Decision |
 
-The active runtimes (RunSupervisor, CautionPromoter, ClearanceExpirer) ship off by default, gate every actuation through the Authorize port like any principal, and stand down the moment their Actor is deactivated. None of them reaches past the spine onto the real-time floor: an active agent only issues a command the spine already exposes. ClearanceWatcher, CalibrationWatcher, ProcedureWatcher, and CampaignWatcher are passive (each records a flag Decision and issues no command) and likewise ship off by default. The two LLM-backed reactions (RunDebriefer, CautionDrafter) also ship off by default, behind `LLM_ENABLED`: they are the seam that would send experiment metadata to an external model and spend on it, so the switch and a credential are both required before either registers. RunSupervisor additionally carries shadow observe-only rules (run-liveness, plus signal-quality and signal-stall against a live Run's observation channels) that log a would-flag and take no further action; each is a separate opt-in above the agent's own enable, and advise / act promotions are deferred.
+The active runtimes (RunSupervisor, CautionPromoter, ClearanceExpirer, RunInitiator) ship off by default, gate every actuation through the Authorize port like any principal, and stand down the moment their Actor is deactivated. Two act without an enable flag, deliberately: AuthorityRevocationHolder is the kill switch that holds a revoked principal's in-flight Runs, and RatificationEnforcer is the consequence gate that holds a Run until its co-signature lands. Both register unconditionally, because a safety hold that an operator can forget to switch on is not a safety hold. None of them reaches past the spine onto the real-time floor: an active agent only issues a command the spine already exposes. ClearanceWatcher, CalibrationWatcher, ProcedureWatcher, and CampaignWatcher are passive (each records a flag Decision and issues no command) and likewise ship off by default. The two LLM-backed reactions (RunDebriefer, CautionDrafter) also ship off by default, behind `LLM_ENABLED`: they are the seam that would send experiment metadata to an external model and spend on it, so the switch and a credential are both required before either registers. RunSupervisor additionally carries shadow observe-only rules (run-liveness, plus signal-quality and signal-stall against a live Run's observation channels) that log a would-flag and take no further action; each is a separate opt-in above the agent's own enable, and advise / act promotions are deferred.
 
 <div class="cora-aside cora-aside--deferred" markdown>
 
 Out of scope
 {: .cora-kicker }
 
-- **Budget enforcement.** `AgentBudget` is declarative today. The Budget BC adoption is the trigger for cap enforcement; cost telemetry already lands on `gen_ai.cost.usd` so the enforcer can ride on existing signals.
+- **Per-call pre-estimate refusal.** The shipped gate is the coarse tier: it debits after a call and refuses the next one. A caller that can exhaust a balance in a single expensive long-context call needs a pre-estimate tier above this, and that tier is deferred. The gate errs permissive on spend it cannot account for and hard-fails on a spend-lookup error, so the failure direction is deliberate rather than incidental.
 - **A2A endpoint serving.** `canonical_uri` and `card_signature` (deferred) are forward-compat fields for the Agent2Agent protocol. CORA does not serve an A2A endpoint today.
 - **`acts_on_behalf_of` delegation.** Per-operator agent delegation is deferred until the first concrete need.
 - **Strict URI validation.** `canonical_uri` validation is loose today (https scheme, no fragment, length cap). RFC-compliant parsing waits until A2A wiring lands.
@@ -58,8 +62,11 @@ Out of scope
 | Name | Identity | State summary | FSM |
 |---|---|---|---|
 | `Agent` | `id: UUID` (same UUID as Access's `Actor.id` for this agent) | `kind`, `name`, `version`, `model_ref`, `description?`, `canonical_uri?`, `prompt_template_id?`, `capabilities`, `status`, `deprecation_reason?`, `tools`, `budget?`, `suspended_at?`, `resumed_at?`, `suspension_reason?` | yes |
+| `LanguageModel` | `id: UUID` | `name`, `provider`, `model`, `snapshot_pin?`, `served_via`, `endpoint_note?`, `cost_basis`, `data_tier`, `archivability`, `status` | yes (single axis) |
 
 Lifecycle timestamps (`defined_at`, `versioned_at`, `deprecated_at`) live on the projection rather than on aggregate state, matching the Method / Plan / Practice / Family / Capability shape from the 2026-05-20 audit. `suspended_at`, `resumed_at`, and `suspension_reason` stay on state because `suspension_reason` is invariant-bearing (deciders read it).
+
+`LanguageModel` is the facility's catalog of models an agent is allowed to name. It binds a model's identity (provider, model, optional snapshot pin) and the governance facts that decide whether it may see a given class of data (`data_tier`, `archivability`, `cost_basis`) to the infrastructure serving it (`served_via`: `Direct` where CORA's own adapter holds the credentials, `Argo` where a facility gateway is the choke point, `InHouse` for a facility GPU pool). It lives in this BC beside the fleet whose `Agent.model_ref` it governs, and carries the longer name because Equipment already owns `Model` for vendor equipment. Credentials, quotas, and per-user grants are deliberately absent: the serving layer owns credentials and Trust owns grants.
 
 ## Value Objects
 
@@ -123,6 +130,26 @@ stateDiagram-v2
 `grant_tool_to_agent` / `revoke_tool_from_agent` / `update_agent_budget`
 : All blocked only in `Deprecated`. Open in `Defined`, `Versioned`, and `Suspended` so operators can fix permissions or caps while an agent is paused. Tool grants and revocations are idempotent (a no-op grant or revoke emits no event); budget update always emits an event.
 
+### LanguageModel
+
+The catalog entry has its own single-axis lifecycle. Approval is the facility's governance act: a `Defined` entry is registered but unusable by the `define_agent` gate until it is approved.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Defined: define_language_model
+    Defined --> Approved: approve_language_model
+    Approved --> RetirementAnnounced: announce_language_model_retirement
+    RetirementAnnounced --> Retired: retire_language_model
+    Approved --> Retired: retire_language_model
+    Defined --> Deprecated: deprecate_language_model
+    Approved --> Deprecated: deprecate_language_model
+    RetirementAnnounced --> Deprecated: deprecate_language_model
+    Retired --> [*]
+    Deprecated --> [*]
+```
+
+The two terminals answer different audit questions, so they stay distinct: `RetirementAnnounced` then `Retired` models the VENDOR ending the model's service life, which an at-risk-results projection reads as an appended governance fact, while `Deprecated` models the FACILITY withdrawing its own approval. A provider that removes a model without warning goes `Approved` straight to `Retired`.
+
 ## Events
 
 | Event | Payload sketch | When emitted |
@@ -135,6 +162,12 @@ stateDiagram-v2
 | `AgentToolGranted` | `agent_id`, `tool_name`, `occurred_at` | `grant_tool_to_agent` succeeds (no event on a no-op re-grant) |
 | `AgentToolRevoked` | `agent_id`, `tool_name`, `occurred_at` | `revoke_tool_from_agent` succeeds (no event on a no-op re-revoke) |
 | `AgentBudgetUpdated` | `agent_id`, `monthly_usd_cap?`, `daily_token_cap?`, `occurred_at` | `update_agent_budget` succeeds |
+| `AgentTargetPlanUpdated` | `agent_id`, `target_plan_id`, `occurred_at` | `update_agent_target_plan` succeeds |
+| `LanguageModelDefined` | `language_model_id`, `name`, `provider`, `model`, `snapshot_pin?`, `served_via`, `endpoint_note?`, `cost_basis`, `data_tier`, `archivability`, `occurred_at` | `define_language_model` succeeds (genesis, status `Defined`) |
+| `LanguageModelApproved` | `language_model_id`, `occurred_at` | `approve_language_model` succeeds; the entry becomes usable by the `define_agent` gate |
+| `LanguageModelRetirementAnnounced` | `language_model_id`, `reason`, `effective_at?`, `occurred_at` | `announce_language_model_retirement` succeeds; records the vendor's announcement |
+| `LanguageModelRetired` | `language_model_id`, `reason?`, `occurred_at` | `retire_language_model` succeeds; terminal |
+| `LanguageModelDeprecated` | `language_model_id`, `reason`, `occurred_at` | `deprecate_language_model` succeeds; terminal |
 
 `define_agent` is the only Agent-BC slice that writes across streams. The other lifecycle events are single-stream. The cross-BC action slices (`regenerate_run_debrief`, `promote_caution_proposal`) do not write to the Agent stream at all: they write a `DecisionRegistered` on the Decision stream and (for the promotion path) a `CautionRegistered` on the Caution stream.
 
@@ -212,7 +245,7 @@ The active-agent runtimes write through the same authorized command paths a huma
 
 ## Examples
 
-The four examples below follow the canonical path for one Agent: define it (atomically registering its Actor in Access), version it for invocation, invoke RunDebriefer on demand against a specific Run, and promote a CautionDrafter Decision into a real Caution. The caller's principal becomes the authoring actor on every write. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The four examples below follow the canonical path for one Agent: define it (atomically registering its Actor in Access), version it for invocation, invoke RunDebriefer on demand against a specific Run, and promote a CautionDrafter Decision into a real Caution. The caller's principal becomes the authoring actor on every write. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 <!-- extracted from tests/contract/agent/test_define_agent.py -->
 

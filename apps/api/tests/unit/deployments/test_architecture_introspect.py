@@ -30,6 +30,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 _CORA = _REPO_ROOT / "apps" / "api" / "src" / "cora"
 _DOCS_ARCH = _REPO_ROOT / "docs" / "architecture"
+_DOCS_HOME = _REPO_ROOT / "docs" / "index.md"
 
 
 def _load(name: str) -> ModuleType:
@@ -146,7 +147,9 @@ def test_count_renderer() -> None:
     assert ap.render_count(_MODEL, {"kind": "aggregate", "spell": "true"}) == "forty-three"
     assert ap.render_count(_MODEL, {"kind": "bc"}) == "18"
     assert ap.render_count(_MODEL, {"kind": "event", "bc": "decision"}) == "4"
-    assert ap.render_count(_MODEL, {"kind": "slice", "bc": "equipment"}) == "60"
+    assert ap.render_count(_MODEL, {"kind": "slice", "bc": "equipment"}) == "61"
+    assert ap.render_count(_MODEL, {"kind": "planned-bc"}) == "1"
+    assert ap.render_count(_MODEL, {"kind": "planned-bc", "spell": "true"}) == "one"
 
 
 def test_decision_slices_table_uses_real_surface() -> None:
@@ -158,6 +161,15 @@ def test_decision_slices_table_uses_real_surface() -> None:
     assert "`append_inferences`" in table
     assert "append_reasoning_entry" not in table
     assert "AppendReasoningEntry" not in table
+
+
+def test_slice_with_route_but_no_query_is_discovered() -> None:
+    # get_fixture_pidinst registers a REST route and an MCP tool but has no
+    # command.py or query.py, so the old rule dropped it from the equipment
+    # table with no build error: a shipped public surface, invisible on the site.
+    table = ap.render_slices_table(_MODEL, {"bc": "equipment"})
+    assert "`get_fixture_pidinst`" in table
+    assert "/fixtures/{fixture_id}/pidinst" in table
 
 
 def test_bc_aggregates_renderer() -> None:
@@ -177,22 +189,40 @@ def test_expand_markers_idempotent() -> None:
     assert ap.expand_markers(out, model=_MODEL, src_uri="architecture/model.md") == out
 
 
+def _marker_pages() -> list[tuple[Path, str]]:
+    # Every page the mkdocs hook expands arch:* markers on. The home page is on
+    # that path too, so a marker planted there is covered by the same walk.
+    pages = [
+        (p, f"architecture/{p.relative_to(_DOCS_ARCH).as_posix()}")
+        for p in sorted(_DOCS_ARCH.rglob("*.md"))
+    ]
+    return [*pages, (_DOCS_HOME, "index.md")]
+
+
 def test_every_architecture_marker_expands_cleanly() -> None:
-    # Walk the real docs: every arch:* marker on every architecture/ page must
+    # Walk the real docs: every arch:* marker on every page the hook expands must
     # expand against the live model without raising (no stale bc/agg, no bad arg).
-    md_files = sorted(_DOCS_ARCH.rglob("*.md"))
-    assert md_files, "expected architecture docs pages"
+    pages = _marker_pages()
+    assert pages, "expected architecture docs pages"
     seen_marker = False
-    for path in md_files:
+    for path, src_uri in pages:
         text = path.read_text(encoding="utf-8")
         if "<!-- arch:" not in text:
             continue
         seen_marker = True
-        src_uri = f"architecture/{path.relative_to(_DOCS_ARCH).as_posix()}"
         out = ap.expand_markers(text, model=_MODEL, src_uri=src_uri)
         assert "<!-- arch:" in out  # markers are preserved for the next build
         assert chr(0x2014) not in out, f"{src_uri} has an em dash"
     assert seen_marker, "no architecture page carries an arch:* marker"
+
+
+def test_home_page_bc_count_is_generated() -> None:
+    # The home page quoted a hand-typed BC count that drifted when budget shipped.
+    # Guard both halves: the marker is present, and the hook gate still reaches it.
+    text = _DOCS_HOME.read_text(encoding="utf-8")
+    assert "<!-- arch:count kind=bc" in text, "home page BC count must stay generated"
+    out = ap.expand_markers(text, model=_MODEL, src_uri="index.md")
+    assert "-->Eighteen<!-- /arch:count --> bounded contexts" in out
 
 
 def test_model_md_has_exactly_one_bc_table() -> None:

@@ -10,7 +10,7 @@ Stop at any step and you have a working mental model of the layer above.
 
 1. **One vertical slice end-to-end:** [features/register_actor/](https://github.com/xmap/cora/tree/main/apps/api/src/cora/access/features/register_actor). Five files, ~430 lines. `command.py` (input), `decider.py` (pure rule), `handler.py` (shell), `route.py` + `tool.py` (REST + MCP). Every slice follows this shape.
 2. **The aggregate:** [aggregates/actor/](https://github.com/xmap/cora/tree/main/apps/api/src/cora/access/aggregates/actor). State, events, evolver. Pure.
-3. **The ports:** [infrastructure/ports/](https://github.com/xmap/cora/tree/main/apps/api/src/cora/infrastructure/ports). Thirty `Protocol`s, spanning infrastructure seams (`Clock`, `IdGenerator`, `EventStore`, `IdempotencyStore`, `Authorize`, `EventPublisher`, `Canonicalizer`, `Signer`, `ByteSigner`, `TokenVerifier`, `SecretStore`, `ProfileStore`, `LogbookMirror`, `LLM`) and the cross-BC `*Lookup` family (`AssetLookup`, `CapabilityLookup`, `SupplyLookup`, and the rest).
+3. **The ports:** [infrastructure/ports/](https://github.com/xmap/cora/tree/main/apps/api/src/cora/infrastructure/ports). Forty-two `Protocol`s, spanning infrastructure seams (`Clock`, `IdGenerator`, `EventStore`, `IdempotencyStore`, `Authorize`, `EventPublisher`, `Canonicalizer`, `Signer`, `ByteSigner`, `TokenVerifier`, `SecretStore`, `ProfileStore`, `LogbookMirror`, `LLM`) and the cross-BC `*Lookup` family (`AssetLookup`, `CapabilityLookup`, `SupplyLookup`, and the rest).
 4. **One fitness test:** [test_slice_contract.py](https://github.com/xmap/cora/blob/main/apps/api/tests/architecture/test_slice_contract.py). What's enforced mechanically.
 5. **Vocabulary:** [Glossary](glossary.md).
 
@@ -128,8 +128,8 @@ A fitness function in `tests/architecture/test_slice_test_coverage.py` enforces 
 | slice shape | decider | handler | endpoint | mcp_tool | handler_postgres |
 | --- | --- | --- | --- | --- | --- |
 | **command** | ✓ | ✓ | ✓ | ✓ | create-style only |
-| **entry-append** | — | ✓ | ✓ | ✓ | create-style only |
-| **query** | — | ✓ | ✓ | ✓ | — |
+| **entry-append** | n/a | ✓ | ✓ | ✓ | create-style only |
+| **query** | n/a | ✓ | ✓ | ✓ | n/a |
 
 **Create-style** = verb in `{define_*, register_*, add_*}`. These introduce a new aggregate or event stream, so the jsonb round-trip + ON CONFLICT + unique-constraint behavior gets pinned per-slice against real PG. **State-transition** slices (`abort_*`, `complete_*`, `resume_*`, `hold_*`, and so on) lean on cross-BC scenario coverage in `tests/integration/scenarios/` instead.
 

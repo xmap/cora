@@ -88,22 +88,22 @@ Affordance ⇄ adjacent-vocabulary cross-walk for adapter authors:
 
 | Affordance | ros2_control | W3C WoT TD | NeXus | OPC UA LADS | PandABox | EPICS |
 |---|---|---|---|---|---|---|
-| `Rotatable` | `HW_IF_POSITION` (axis=rotary, dir=command) | `PropertyAffordance` (writable) | `NXpositioner` | `AnalogControlFunction` | — | `motorRecord` |
-| `Translatable` | `HW_IF_POSITION` (axis=linear, dir=command) | `PropertyAffordance` (writable) | `NXpositioner` | `AnalogControlFunction` | — | `motorRecord` |
-| `Homeable` | `HW_IF_HOME` (action) | `ActionAffordance` | — | `MoveControlFunction` | — | `motorRecord HOMR/HOMF` |
-| `Marking` | — | — | — | — | `PCOMP` | — |
-| `Capturable` | — | — | — | — | `PCAP` | — |
-| `Triggerable` | — | `ActionAffordance` | `NXdetector.acquisition_mode=triggered` | — | `PULSE` | — |
-| `Gateable` | — | — | `NXdetector.acquisition_mode=gated` | — | `GATE` | — |
-| `Imageable` | — | — | `NXdetector` | — | — | `areaDetector` |
-| `Capturing` | — | — | `NXdetector` / `NXdata` (W3C SOSA `Observation` cross-walk) | — | — | `areaDetector` |
-| `Streamable` | — | `EventAffordance` | — | — | — | `areaDetector NDPluginStream` |
-| `Recording` | — | — | — | — | — | `areaDetector NDFileHDF5/TIFF` |
-| `Bendable` | — | — | `NXmirror.bend_angle_x/y` | — | — | — |
-| `Following` | `HW_IF_POSITION` (state) | `PropertyAffordance` (read) | — | — | `INENC` | — |
-| `Leading` | — | — | — | — | `OUTENC` | — |
-| `Pulsing` | — | — | — | — | `PGEN` | — |
-| `Consumable` | — | — | material+thickness fields on NXmirror / NXattenuator / NXfilter / NXcrystal | — | — | — |
+| `Rotatable` | `HW_IF_POSITION` (axis=rotary, dir=command) | `PropertyAffordance` (writable) | `NXpositioner` | `AnalogControlFunction` | n/a | `motorRecord` |
+| `Translatable` | `HW_IF_POSITION` (axis=linear, dir=command) | `PropertyAffordance` (writable) | `NXpositioner` | `AnalogControlFunction` | n/a | `motorRecord` |
+| `Homeable` | `HW_IF_HOME` (action) | `ActionAffordance` | n/a | `MoveControlFunction` | n/a | `motorRecord HOMR/HOMF` |
+| `Marking` | n/a | n/a | n/a | n/a | `PCOMP` | n/a |
+| `Capturable` | n/a | n/a | n/a | n/a | `PCAP` | n/a |
+| `Triggerable` | n/a | `ActionAffordance` | `NXdetector.acquisition_mode=triggered` | n/a | `PULSE` | n/a |
+| `Gateable` | n/a | n/a | `NXdetector.acquisition_mode=gated` | n/a | `GATE` | n/a |
+| `Imageable` | n/a | n/a | `NXdetector` | n/a | n/a | `areaDetector` |
+| `Capturing` | n/a | n/a | `NXdetector` / `NXdata` (W3C SOSA `Observation` cross-walk) | n/a | n/a | `areaDetector` |
+| `Streamable` | n/a | `EventAffordance` | n/a | n/a | n/a | `areaDetector NDPluginStream` |
+| `Recording` | n/a | n/a | n/a | n/a | n/a | `areaDetector NDFileHDF5/TIFF` |
+| `Bendable` | n/a | n/a | `NXmirror.bend_angle_x/y` | n/a | n/a | n/a |
+| `Following` | `HW_IF_POSITION` (state) | `PropertyAffordance` (read) | n/a | n/a | `INENC` | n/a |
+| `Leading` | n/a | n/a | n/a | n/a | `OUTENC` | n/a |
+| `Pulsing` | n/a | n/a | n/a | n/a | `PGEN` | n/a |
+| `Consumable` | n/a | n/a | material+thickness fields on NXmirror / NXattenuator / NXfilter / NXcrystal | n/a | n/a | n/a |
 
 Note on **W3C SOSA inversion**: SOSA puts `-able` on the *property being acted on* (`ObservableProperty`, `ActuatableProperty`), CORA puts it on the *device that acts* (`Rotatable`). Both are coherent. When adapting to SOSA, translate `Rotatable` to `Rotation has type ActuatableProperty on this asset` rather than treating `Rotatable` and `Rotation` as the same noun.
 

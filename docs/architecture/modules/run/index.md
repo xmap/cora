@@ -103,11 +103,12 @@ stateDiagram-v2
 | `RunStarted` | `run_id`, `name`, `plan_id`, `subject_id?`, `raid?`, `override_parameters`, `effective_parameters`, `trigger_source?`, `external_refs`, `acknowledged_cautions`, `campaign_id?`, `decided_by_decision_id?`, `pinned_calibration_ids`, `occurred_at` | `start_run` succeeds |
 | `RunHeld` | `run_id`, `occurred_at` | `hold_run` succeeds |
 | `RunResumed` | `run_id`, `occurred_at` | `resume_run` succeeds |
+| `HoldClaimReleased` | `run_id`, `claim_id`, `occurred_at` | one hold claim was discharged while other claims remain active. Audit-only: the evolver returns prior state unchanged, so the Run stays `Held` and the event's existence on the stream is the fact. This is what makes the hold algebra compositional: a releaser folds `active_hold_claims` and emits `RunResumed` only when its own claim is the last one, otherwise this event. Without it a concern that is not the sole holder can only resume a Run others still want held, or hold forever |
 | `RunCompleted` | `run_id`, `occurred_at` | `complete_run` succeeds |
 | `RunAborted` | `run_id`, `reason`, `decided_by_decision_id?`, `occurred_at` | `abort_run` succeeds |
 | `RunStopped` | `run_id`, `reason`, `occurred_at` | `stop_run` succeeds |
 | `RunTruncated` | `run_id`, `reason`, `interrupted_at?`, `occurred_at` | `truncate_run` succeeds |
-| `RunAdjusted` | `run_id`, `parameter_patch`, `effective_parameters`, `reason`, `decided_by_decision_id?`, `occurred_at` | `adjust_run` succeeds; carries both the RFC 7396 patch and the post-merge snapshot |
+| `RunAdjusted` | `run_id`, `parameters_patch`, `effective_parameters`, `reason`, `decided_by_decision_id?`, `occurred_at` | `adjust_run` succeeds; carries both the RFC 7396 patch and the post-merge snapshot |
 | `RunObservationLogbookOpened` | `run_id`, `logbook_id`, `schema`, `occurred_at` | `append_observations` first write per Run (lazy open) |
 | `RunAddedToCampaign` | `run_id`, `campaign_id`, `occurred_at` | post-hoc Campaign membership write (see Campaign module) |
 | `RunRemovedFromCampaign` | `run_id`, `campaign_id`, `occurred_at` | post-hoc Campaign membership removal |
@@ -232,7 +233,7 @@ Clock skew between the sensor (`sampled_at`) and the handler (`occurred_at`) is 
 
 ## Examples
 
-The four examples below follow the happy path for one Run: start it, steer it mid-flight, append a sensor reading, end it. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The four examples below follow the happy path for one Run: start it, steer it mid-flight, append a sensor reading, end it. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 <!-- extracted from tests/contract/run/test_start_run.py -->
 
@@ -262,7 +263,7 @@ The four examples below follow the happy path for one Run: start it, steer it mi
     }
     ```
 
-    A successful call returns `201 Created` with the newly-assigned `run_id` and the resolved `effective_parameters` (Plan defaults merged with the overrides above).
+    A successful call returns `201 Created` with the newly-assigned `run_id`, and nothing else: the resolved `effective_parameters` (Plan defaults merged with the overrides above) are recorded on the `RunStarted` event, not returned in the response.
 
 === "MCP"
 
@@ -299,7 +300,7 @@ The four examples below follow the happy path for one Run: start it, steer it mi
     X-Principal-Id: 11111111-2222-3333-4444-555555555555
 
     {
-      "parameter_patch": {
+      "parameters_patch": {
         "exposure_time_ms": 75
       },
       "reason": "increased exposure to recover signal after detector temperature drift",
@@ -314,32 +315,39 @@ The four examples below follow the happy path for one Run: start it, steer it mi
         "adjust_run",
         {
             "run_id": "9f6a3b1c-8e2d-4f5a-9b8c-1d2e3f4a5b6c",
-            "parameter_patch": {"exposure_time_ms": 75},
+            "parameters_patch": {"exposure_time_ms": 75},
             "reason": "increased exposure to recover signal after detector temperature drift",
             "decided_by_decision_id": "decision-aaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
         },
     )
     ```
 
-The response carries the post-merge `effective_parameters` so the caller can confirm what the Run is now executing against.
+The call returns `204 No Content`. The post-merge `effective_parameters` are carried on the `RunAdjusted` event rather than in a response body, so a caller that needs to confirm what the Run is now executing against reads the Run back.
 
 ### Append a baseline reading
 
 === "REST"
 
     ```http
-    POST /runs/9f6a3b1c-8e2d-4f5a-9b8c-1d2e3f4a5b6c/readings
+    POST /runs/9f6a3b1c-8e2d-4f5a-9b8c-1d2e3f4a5b6c/observations
     Content-Type: application/json
     X-Principal-Id: 11111111-2222-3333-4444-555555555555
 
     {
-      "channel_name": "ring_current",
-      "value": 102.3,
-      "units": "mA",
-      "sampling_procedure": "baseline",
-      "sampled_at": "2026-05-20T14:30:15.123456Z"
+      "entries": [
+        {
+          "event_id": "0190f001-bbbb-7000-8000-000000000001",
+          "channel_name": "ring_current",
+          "value": 102.3,
+          "units": "mA",
+          "sampling_procedure": "baseline",
+          "sampled_at": "2026-05-20T14:30:15.123456Z"
+        }
+      ]
     }
     ```
+
+    Readings are appended in a batch. Each entry carries its own caller-supplied `event_id`, which makes the append idempotent under retry; `channel_name`, `value`, `sampled_at`, and `sampling_procedure` are required alongside it.
 
 === "MCP"
 
@@ -348,11 +356,16 @@ The response carries the post-merge `effective_parameters` so the caller can con
         "append_observations",
         {
             "run_id": "9f6a3b1c-8e2d-4f5a-9b8c-1d2e3f4a5b6c",
-            "channel_name": "ring_current",
-            "value": 102.3,
-            "units": "mA",
-            "sampling_procedure": "baseline",
-            "sampled_at": "2026-05-20T14:30:15.123456Z",
+            "entries": [
+                {
+                    "event_id": "0190f001-bbbb-7000-8000-000000000001",
+                    "channel_name": "ring_current",
+                    "value": 102.3,
+                    "units": "mA",
+                    "sampling_procedure": "baseline",
+                    "sampled_at": "2026-05-20T14:30:15.123456Z",
+                }
+            ],
         },
     )
     ```

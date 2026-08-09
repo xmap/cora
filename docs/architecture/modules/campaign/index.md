@@ -86,6 +86,7 @@ stateDiagram-v2
 | `CampaignAbandoned` | `campaign_id, reason, occurred_at` | `abandon_campaign` accepted (Planned, Active, or Held → Abandoned). |
 | `CampaignRunAdded` | `campaign_id, run_id, occurred_at` | `add_run_to_campaign` accepted, OR `start_run` accepted with `campaign_id` set. Written atomically with `RunAddedToCampaign` (or `RunStarted`) on the Run stream. |
 | `CampaignRunRemoved` | `campaign_id, run_id, reason, occurred_at` | `remove_run_from_campaign` accepted. Written atomically with `RunRemovedFromCampaign` on the Run stream. |
+| `CampaignSteeringDeclared` | `campaign_id, objective, space, occurred_at` | `declare_campaign_steering` accepted. PUT semantics: a re-declare overwrites both fields wholesale. Not a lifecycle transition (status is untouched), the same shape as the membership events, since declaring where a future across-Run steerer may look is orthogonal to the FSM. |
 
 Transitioning-actor identity lives only on `StoredEvent.principal_id`; the genesis payload's `lead_actor_id` is the operator-asserted campaign lead, which may differ from the registering actor (a beamline scientist registering on behalf of a visiting PI).
 
@@ -173,7 +174,7 @@ The Run module's summary projection carries the inverse pointer (a `campaign_id 
 
 ## Examples
 
-The four examples below follow the canonical Campaign path: register a Planned Campaign, start it, add a Run, then close it. Reasons on hold and abandon transitions are operator audit breadcrumbs and are persisted onto `last_status_reason`; the reason on `remove_run_from_campaign` is a per-membership audit breadcrumb and is NOT promoted onto `last_status_reason`. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The four examples below follow the canonical Campaign path: register a Planned Campaign, start it, add a Run, then close it. Reasons on hold and abandon transitions are operator audit breadcrumbs and are persisted onto `last_status_reason`; the reason on `remove_run_from_campaign` is a per-membership audit breadcrumb and is NOT promoted onto `last_status_reason`. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 <!-- extracted from tests/contract/campaign/test_*.py -->
 
@@ -195,8 +196,8 @@ The four examples below follow the canonical Campaign path: register a Planned C
       "description": "Repeat tomograms every 30 minutes during in-situ tensile loading.",
       "tags": ["in-situ", "tomography", "fatigue"],
       "external_refs": [
-        {"scheme": "proposal", "id": "GUP-89421"},
-        {"scheme": "btr", "id": "2026-1-APS-035"}
+        {"scheme": "proposal", "value": "GUP-89421"},
+        {"scheme": "btr", "value": "2026-1-APS-035"}
       ]
     }
     ```
@@ -216,8 +217,8 @@ The four examples below follow the canonical Campaign path: register a Planned C
             "description": "Repeat tomograms every 30 minutes during in-situ tensile loading.",
             "tags": ["in-situ", "tomography", "fatigue"],
             "external_refs": [
-                {"scheme": "proposal", "id": "GUP-89421"},
-                {"scheme": "btr", "id": "2026-1-APS-035"},
+                {"scheme": "proposal", "value": "GUP-89421"},
+                {"scheme": "btr", "value": "2026-1-APS-035"},
             ],
         },
     )

@@ -299,7 +299,7 @@ Binding-target references are validated for UUID shape at the API boundary but n
 
 ## Examples
 
-The four examples below follow the canonical path for one Clearance: register it, walk the review chain, approve it, activate it. The approving and rejecting actor on review-board steps comes from the `X-Principal-Id` header on the call, not from the request body. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md) on the Modules landing page.
+The four examples below follow the canonical path for one Clearance: register it, walk the review chain, approve it, activate it. The approving and rejecting actor on review-board steps comes from the `X-Principal-Id` header on the call, not from the request body. For the REST/MCP equivalence, auth, and idempotency conventions these examples share, see [Reading the examples](../index.md#reading-the-examples) on the Modules landing page.
 
 <!-- extracted from tests/contract/safety/test_register_clearance.py -->
 
@@ -320,7 +320,7 @@ The four examples below follow the canonical path for one Clearance: register it
       "bindings": [
         {"kind": "Subject", "id": "subject-1111-2222-3333-4444-555555555555"},
         {"kind": "Asset", "id": "aaaa1111-2222-3333-4444-666666666666"},
-        {"kind": "External", "scheme": "proposal", "id": "GUP-79431"}
+        {"kind": "External", "scheme": "proposal", "value": "GUP-79431"}
       ],
       "declarations": [
         {
@@ -353,7 +353,7 @@ The four examples below follow the canonical path for one Clearance: register it
             "bindings": [
                 {"kind": "Subject", "id": "subject-1111-2222-3333-4444-555555555555"},
                 {"kind": "Asset", "id": "aaaa1111-2222-3333-4444-666666666666"},
-                {"kind": "External", "scheme": "proposal", "id": "GUP-79431"},
+                {"kind": "External", "scheme": "proposal", "value": "GUP-79431"},
             ],
             "declarations": [
                 {

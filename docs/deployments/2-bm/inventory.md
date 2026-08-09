@@ -60,9 +60,9 @@ One row per registered Asset under the `2-BM` root (`tier = Unit`, bound to its 
 | `DetectorTable_Yaw` | `PseudoAxis` | (none) | `DetectorTable` | IOC virtual axis; raw `AY`; `2bmb:table3.AY` | live |
 | `Housing` | `Housing` | (none) | `PropagationDistance` | Microscope chassis; installed into a Mount | live |
 | `Turret` | `LinearStage` | (microscope catalog) | `Housing` | -60.3784..59.2300 mm (DET-11), `encoder_resolution=0.0016 mm` | live |
-| `Objective_10x` | `Objective` | (microscope catalog) | `Housing` | mag 10.0, NA 0.28, f=20 mm, WD 33.5 mm | live |
-| `Objective_2x` | `Objective` | (microscope catalog) | `Housing` | mag 2.0, NA 0.055, f=100 mm, WD 34 mm | live |
-| `Objective_1.1x` | `Objective` | (microscope catalog) | `Housing` | mag 1.1, NA 0.03, f=200 mm, WD 50 mm | live |
+| `Objective_10x` | `Objective` | (microscope catalog) | `Housing` | mag 10.0, NA 0.28, WD 33.5 mm | live |
+| `Objective_2x` | `Objective` | (microscope catalog) | `Housing` | mag 2.0, NA 0.055, WD 34 mm | live |
+| `Objective_1.1x` | `Objective` | (microscope catalog) | `Housing` | mag 1.1, NA 0.03, WD 50 mm | live |
 | `Objective_Selector` | `PseudoAxis` | (none) | `Housing` | writes MCTOptics `LensSelect`; (lens x camera) turret lookup, Camera 0 column as 1D provenance rule (DET-11) | live |
 | `PropagationDistance` | `LinearStage` | `aerotech_pro225sl` | `DetectorTable` | sample-to-detector rail; driven by `PropagationDistanceDrive` | live |
 | `Camera` | `Camera` | (microscope catalog) | `Housing` | 5 MP FLIR Oryx; 2448x2048, 3.45 um, 12 bit, 162 Hz, CMOS GlobalShutter | live |
@@ -80,7 +80,7 @@ Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIV
 | --- | --- |
 | `SampleTable` | `axis_layout=translation_xyz`; direct motors `2bmb:m24` Y, `2bmb:m20` Z, `2bmb:m21` X-up, `2bmb:m22` X-down |
 | `DetectorTable` | `axis_layout=virtual_pose`; `virtual_record=2bmb:table3`; `geometry=SRI: 3 Y-supports, 2 X-supports, 1 Z-support` |
-| `MirrorTable` | `axis_layout=virtual_pose`; `virtual_record=2bma:table1`; `geometry=SRI support table`; X axes `M0X`/`M2X` driven by energy-change IOC; bind table-X surface only until `M1Y=2bma:m3` IOC substitution error fixed |
+| `MirrorTable` | `axis_layout=virtual_pose`; `virtual_record=2bma:table1`; `geometry=SRI support table`; X axes `M0X`/`M2X` driven by energy-change IOC. **Stale:** upstream removed the `2bma:table1` record on 2026-06-15, so this virtual-pose layout no longer matches the beamline; re-modelling onto the raw motors is open as `MODE-3` |
 | `Monochromator` | `dmm_insertion=inserted` (closed enum `inserted` \| `retracted`, MODE-2); DMM Y motors `2bma:m26` / `m27` / `m29` to `0` in (Mono) / `-10` mm out (Pink); driven by `FrontEndDrive` |
 | `RotaryDrive` | `serial_number=730792/1`; `firmware_version=unknown-pending-confirmation` (DRIVE-2); `axis_count=1`; `protocol=Aerotech_Native`; installed in `RotaryDriveChassis` |
 | `RotaryDriveChassis` | altids: serial `160591-A-1-1` (SerialNumber), order `730578` (Other); drawing `630D2079 REV-H`; inventory-only, no command surface |
@@ -92,15 +92,15 @@ Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIV
 | `Rotary` | `min_position=-360 deg`; `max_position=360 deg`; `max_speed=720 deg/s` (operational soft limit); `max_speed_datasheet=3000 deg/s` (500 rpm); `encoder_resolution=0.000676 deg`; `homing_offset=0 deg`; `aperture=35 mm`; `accuracy_rotation=2 arcsec`; `repeatability_rotation=1 arcsec`; `load_capacity_axial=66 kg`; `load_capacity_radial=36 kg`; `load_capacity_tilt=28 Nm`; `stage_mass=15.6 kg`; altid serial `146853-A-1-1-X`; part `ABRS-250MP-M-AS`; [datasheet](#engineering-drawings) on file (#164) |
 | `SampleTop_X` | `min_position=-10 mm`; `max_position=10 mm`; `max_speed=1 mm/s`; `encoder_resolution=0.0005 mm`; channel `2bmb:m18` |
 | `SampleTop_Z` | same Model `kohzu_cyat070` + controller as `SampleTop_X`; channel `2bmb:m17` |
-| `Hexapod` | `travel_x=55 mm`, `travel_y=60 mm`, `travel_z=25 mm`, `travel_a=15 deg`, `travel_b=15 deg`, `travel_c=30 deg`; `max_speed_translation=25 mm/s`, `max_speed_rotation=15 deg/s`; `resolution_translation=20 nm`, `resolution_rotation=0.2 urad`; `accuracy_translation=1 um`, `accuracy_rotation=10 urad`; `load_capacity_vertical=45 kg`, `load_capacity_horizontal=21 kg`; `stage_mass=12 kg`; altid serial `486060-01` |
+| `Hexapod` | `travel_x=55 mm`, `travel_y=60 mm`, `travel_z=25 mm`, `travel_a=15 deg`, `travel_b=15 deg`, `travel_c=30 deg`; `max_speed_translation=25 mm/s`, `max_speed_rotation=15 deg/s`; `resolution_translation=20 nm`, `resolution_rotation=0.2 urad`; `accuracy_translation=1 um`, `accuracy_rotation=10 urad`; `load_capacity_vertical=45 kg`, `load_capacity_horizontal=21 kg`; `stage_mass=12 kg`; altid serial `486060-01`; part `HEX300-230HL-E1-PL4-TAS`; [datasheet](#engineering-drawings) on file (`Hex300-Data-Sheet-D20250203`). The speed and accuracy pairs are dominant-axis envelope figures, not per-DoF measurements |
 | `Scintillator` | `thickness=100 um`; `decay_time=0.07 us` |
 | `Camera` | `sensor_width=2448 pixel`; `sensor_height=2048 pixel`; `pixel_size=3.45 um`; `bit_depth=12 bit`; `max_framerate_hz=162 Hz`; `sensor_kind=CMOS`; `readout_mode=GlobalShutter`; altids model `Oryx ORX-10G-51S5M`, serial `19173710`, firmware `1710.0.0.0`, EPICS `2bmSP1:` |
 | `Camera_HighRes` | model `Oryx ORX-10G-310S9M`; serial `22150530`; firmware `1904.0.72.0`; EPICS `2bmSP2:`; `pixel_size=3.45 um`; remaining `Camera`-schema settings pending |
 | `Camera_Selector` | Schunk LPTM 30 (`2bmb:m5`); Pos.0=20, Pos.1=15; `min/max/max_speed/encoder_resolution` pending |
 | `Turret` | `min_position=-60.3784 mm`; `max_position=59.2300 mm`; `encoder_resolution=0.0016 mm`; Nanotec ST4118M1404-B, Heidenhain ERO 1420 encoder; MCTOptics resolves the (lens x camera) position (DET-11), Camera 0 column: 1.1x=-59.8184 mm, 2x=-0.5734 mm, 10x=58.8707 mm |
-| `Objective_10x` | `magnification=10.0`; `numerical_aperture=0.28`; `focal_length=20 mm`; `working_distance=33.5 mm` |
-| `Objective_2x` | `magnification=2.0`; `numerical_aperture=0.055`; `focal_length=100 mm`; `working_distance=34 mm` |
-| `Objective_1.1x` | `magnification=1.1`; `numerical_aperture=0.03`; `focal_length=200 mm`; `working_distance=50 mm` |
+| `Objective_10x` | `magnification=10.0`; `numerical_aperture=0.28`; `working_distance=33.5 mm` |
+| `Objective_2x` | `magnification=2.0`; `numerical_aperture=0.055`; `working_distance=34 mm` |
+| `Objective_1.1x` | `magnification=1.1`; `numerical_aperture=0.03`; `working_distance=50 mm` |
 
 ## Vendor catalog
 
@@ -230,14 +230,24 @@ Configured Mono energies (the curve x-points, real): 13.374, 13.574, 18.0, 20.0,
 
 Discrete "pick one of N" move. Two PseudoAxis facets under `Filter` (`Filter_FoilSelector_Upstream` for the operational `2bma:m17`, `Filter_FoilSelector_Downstream` for the `2bma:m18`), each carrying a `LookupTable` rule with `interpolation_kind=Nearest` backed by its own `index_position_table` Calibration. `extrapolation_kind=Error` (cannot select an absent foil); `invertible=False` with `readback_aggregator_kind=Identity`. The downstream m18 paddle failed 2026-06-19 (parked 107.19 mm), modelled condition `Faulted` with bindings retained and lifecycle still `Active`; m17 is the sole operational selector. Runtime proven end-to-end in `apps/api/tests/integration/test_pseudoaxis_roundtrip.py`; model: `test_2bm_filter_foil_setup.py`.
 
-Downstream-paddle slot positions (REAL, staff-published):
+Upstream paddle (`2bma:m17`), the operational selector, slot positions (REAL, from the `2filter_setup.adl` admin screen):
+
+| Slot index | Material | Position |
+| --- | --- | --- |
+| 0 | `1 mm C` | 2 |
+| 1 | `150 um Al` | 25 |
+| 2 | `600 um Al` | 52 |
+| 3 | `1 mm Al` | 79 |
+| 4 | `None` | 106 |
+
+Downstream paddle (`2bma:m18`), `Faulted` since 2026-06-19, bindings retained, slot positions (REAL, staff-published):
 
 | Slot index | Material | Position |
 | --- | --- | --- |
 | 0 | `600 um Al` | 0 |
-| 26 | `150 um Al` | 26 |
-| 53 | `300 um C` | 53 |
-| 80 | `50 um C` | 80 |
-| 106 | `None` | 106 |
+| 1 | `150 um Al` | 26 |
+| 2 | `300 um C` | 53 |
+| 3 | `50 um C` | 80 |
+| 4 | `None` | 106 |
 
-The position unit is mm, staff-confirmed (`caget 2bma:m18.EGU`, `FOIL-1`). Foil ATTENUATION (`Attenuable`) and the energy-dependent mirror coating stripe (`2bma:m3`) are deliberately out of scope here (the stripe is modelled with the [beam-mode work](procedures.md#beam-modes)).
+The slot index is the selector's own index, 0 to 4, and the position is where that slot sits on the paddle in mm. Command the index, never the position. The two columns are not interchangeable and the runtime cannot catch the confusion for you: `extrapolation_kind=Error` refuses only an index outside 0 to 4, so a mistyped 53 is rejected, but a position that happens to fall inside that range is not. Commanding 2 on the upstream paddle selects slot 2 (`600 um Al`), not the slot sitting at position 2 mm (`1 mm C`). The downstream unit is staff-confirmed (`caget 2bma:m18.EGU`, `FOIL-1`); the upstream positions come from the `2filter_setup.adl` admin screen in the same mm unit. Foil ATTENUATION (`Attenuable`) and the energy-dependent mirror coating stripe (`2bma:m3`) are deliberately out of scope here (the stripe is modelled with the [beam-mode work](procedures.md#beam-modes)).

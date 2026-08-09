@@ -129,7 +129,14 @@ front-end:
       pv: "S02BM-PSS:FES:BeamBlockingM"   # inverted: 1 = blocked = CLOSED, so open is == 0 (PSS-1)
       new: true
       confirm: true
-      note: front-end safety shutter, gated by the personnel safety system; opened at session start and kept open throughout for optics thermal stability, not toggled per scan (BEAM-1)
+      note: >
+        Front-end safety shutter, gated by the personnel safety system; opened
+        at session start and kept open throughout for optics thermal stability,
+        not toggled per scan (BEAM-1). The pv above is the full record: the
+        `:BeamBlockingM` leaf reads inverted, 1 = blocked = CLOSED, so open is
+        == 0. The leaf name is still CORA-proposed against the post-migration
+        staff screens and awaits APS PSS gateway sign-off, so treat the string
+        as unconfirmed. See enclosures.md for the full signal set.
     - name: vacuum_isolation
       family: Vacuum             # Supply(kind=Vacuum) observation, not a separate asset
       pv: { BIV: "2bmBLEPS:BLEPS:BIV_CLOSED", gate_valves: [GV1, GV2, GV3] }
@@ -215,7 +222,10 @@ conditioning-optics:
         Pink sibling energy_position_curve, test_2bm_energy_curves_setup.py); the
         named-stripe-to-position map is the stripes list above. The coordinated
         mirror-table X move (m1mox/m1m2x = 2bma:m1/m4) that stripe d at 60 keV
-        needs stays deferred (MirrorTable virtual_pose axes, 2bm-docs#171); the
+        needs stays deferred (MirrorTable virtual_pose axes; 2bm-docs#171 closed
+        as completed 2026-06-16 by REMOVING the 2bma:table1 record, not by
+        repairing the substitution, so the binding target itself is now in
+        question, MODE-3); the
         mirror angle itself is constant 2.615 mrad across all modes and energies.
     - name: MirrorTable
       family: Table
@@ -223,7 +233,19 @@ conditioning-optics:
       support_motors: [M0X, M0Y, M1Y, M2X, M2Y, "Z (along beam)"]
       geometry: "SRI support table (table_full IOC); virtual record 2bma:table1"
       confirm: true
-      note: in operational use (STAGE-7); carries the Y3-30 mirror. X axes (M0X=2bma:m1, M2X=2bma:m4) driven by the energy-change IOC for stripe selection. The M1Y support-motor slot is a known IOC substitution error (mapped to the in-vacuum stripe-selector 2bma:m3, not a table Y); bind only the table-X surface until 2bm-docs#171 is fixed. AX=pitch, AY=yaw, AZ=roll (STAGE-9).
+      note: >
+        In operational use (STAGE-7); carries the Y3-30 mirror. X axes
+        (M0X=2bma:m1, M2X=2bma:m4) are driven by the energy-change IOC for
+        stripe selection. STALE MODEL (MODE-3): the M1Y slot in this SRI
+        template was a substitution error (mapped to the in-vacuum stripe
+        selector 2bma:m3, not a table Y), and upstream resolved it on
+        2026-06-15 by commenting out the table.db dbLoadRecords line
+        entirely (2bm-docs#171, Path C). The 2bma:table1 record and its
+        composite axes therefore no longer exist in Channel Access, so the
+        virtual_pose layout and virtual_record below describe something the
+        beamline no longer has. Re-modelling onto the raw motors
+        (2postMirror.db for pitch / vertical, the energy-change IOC for
+        table X) is the open question, not a fix to wait for.
     - name: Monochromator
       family: Monochromator
       pv:
@@ -314,7 +336,11 @@ beam-defining-and-safety:
             fast actuator exists today). TomoScan cycles it closed for dark and
             white (flat) fields and open for projections, many times per scan;
             open before a run starts (operator-opened at session start). No
-            separate FastShutter Asset is modelled (BEAM-1).
+            separate FastShutter Asset is modelled (BEAM-1). The pv above is the
+            full record: the `:BeamBlockingM` leaf reads inverted, 1 = blocked
+            = CLOSED, so open is == 0. The leaf name is still CORA-proposed and
+            awaits APS PSS gateway sign-off, so treat the string as
+            unconfirmed. See enclosures.md for the full signal set.
         - name: BeamStop
           family: BeamStop
           passive: true
@@ -385,6 +411,25 @@ sample-environment:
       serial_number: "486060-01"   # operator-confirmed (#156)
       travel: "x 55 mm, y 60 mm, z 25 mm, a 15 deg, b 15 deg, c 30 deg"
       drawing: { system: EDMS, number: Hex300-Data-Sheet, revision: D20250203 }
+      # Aerotech HEX300-230HL product datasheet (Hex300-Data-Sheet-D20250203),
+      # the drawing named above. Per-DoF figures collapse to the dominant axis
+      # where the vendor's range across DoFs fits within a faithful envelope
+      # (e.g. translation accuracy reported as the laxest of X / Y / Z); the
+      # resolution pair is a common value the vendor reports across X / Y / Z
+      # rather than a collapse. These are envelope figures, NOT per-DoF
+      # measurements; a Method binding per-DoF setpoints would need the
+      # PseudoAxis facets instead. Attribution restored from 7caa431a27, which
+      # carried it before the zone-page consolidation (087a8d5f94) dropped the
+      # prose that held it.
+      max_speed_translation: 25 mm/s
+      max_speed_rotation: 15 deg/s
+      resolution_translation: 20 nm
+      resolution_rotation: 0.2 urad
+      accuracy_translation: 1 um
+      accuracy_rotation: 10 urad
+      load_capacity_vertical: 45 kg
+      load_capacity_horizontal: 21 kg
+      stage_mass: 12 kg
     # Kohzu goniometer/swivel. Staff item_020 confirms it is a SEPARATE stage (not the hexapod pitch),
     # and it is PERMANENTLY installed (tomo vs lamino is a tilt setpoint, not an insert/remove).
     # Working model SA16A-RM (operator); sources also list SA16A-RS / SA07A-R2L, confirm (questions STAGE-6).
