@@ -4,7 +4,12 @@ on:
   push:
     branches: [main]
     paths:
+      # Staged into docs/ at build time by scripts/stage_docs.py, so an edit
+      # here changes published pages without touching docs/.
       - "CONTRIBUTING.md"
+      - "SECURITY.md"
+      - "README.md"
+      - "CITATION.cff"
       - "docs/**"
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"

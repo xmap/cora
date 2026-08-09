@@ -46,7 +46,12 @@ REPO_BLOB = "https://github.com/xmap/cora/blob/main/"
 HOOK_DIR = Path(__file__).resolve().parent
 REPO_ROOT = HOOK_DIR.parent
 DOCS_DIR = REPO_ROOT / "docs"
-STAGED_CONTRIBUTING_SRC_URI = "reference/contributing.md"
+# Pages copied in from the repo root by scripts/stage_docs.py. Their links are
+# written relative to the repo root, so the rewrite below has to treat them
+# differently from a page authored inside docs/.
+STAGED_SRC_URIS = frozenset(
+    {"reference/contributing.md", "reference/security.md", "stack/run.md"}
+)
 DEPLOYMENTS_DIR = REPO_ROOT / "deployments"
 CATALOG_PATH = REPO_ROOT / "catalog" / "catalog.yaml"
 CORA_SRC = REPO_ROOT / "apps" / "api" / "src" / "cora"
@@ -107,7 +112,7 @@ if str(HOOK_DIR) not in sys.path:
 
 
 def _rewrite_in_page(page_src_uri: str, markdown: str) -> str:
-    is_staged = page_src_uri == STAGED_CONTRIBUTING_SRC_URI
+    is_staged = page_src_uri in STAGED_SRC_URIS
     page_path_in_docs = Path(page_src_uri)
     page_dir_in_docs = page_path_in_docs.parent
     # Number of "../" steps to climb from the page back to docs/ root.
@@ -146,8 +151,12 @@ def _rewrite_in_page(page_src_uri: str, markdown: str) -> str:
             while cleaned.startswith("./"):
                 cleaned = cleaned[2:]
 
+            # Depth-aware: a staged page can live anywhere under docs/, so the
+            # target is written from the docs root rather than as a sibling.
             if cleaned == "CONTRIBUTING.md":
-                return f"[{label}](contributing.md{anchor})"
+                return f"[{label}]({up_to_docs_root}reference/contributing.md{anchor})"
+            if cleaned == "SECURITY.md":
+                return f"[{label}]({up_to_docs_root}reference/security.md{anchor})"
             if cleaned.startswith("docs/"):
                 cleaned = cleaned[len("docs/") :]
                 if cleaned == "" or cleaned.endswith("/"):
@@ -179,6 +188,8 @@ def _rewrite_in_page(page_src_uri: str, markdown: str) -> str:
 
         if rel_in_repo == "CONTRIBUTING.md":
             return f"[{label}]({up_to_docs_root}reference/contributing.md{anchor})"
+        if rel_in_repo == "SECURITY.md":
+            return f"[{label}]({up_to_docs_root}reference/security.md{anchor})"
 
         return f"[{label}]({REPO_BLOB}{rel_in_repo}{anchor})"
 
@@ -219,7 +230,44 @@ def on_page_markdown(
             descriptor=_beamline_descriptor_for(src_uri),
             src_uri=src_uri,
         )
+    # Every Open questions page asks beamline staff to confirm facts, and until
+    # now only 2-BM told them how to answer or what the priority words mean. The
+    # footer is appended here rather than written into 83 hand-authored files,
+    # and before the link rewrite so its links resolve like any other.
+    if (
+        src_uri.startswith("deployments/")
+        and src_uri.endswith("/questions.md")
+        and "## How to reply" not in markdown
+    ):
+        markdown = markdown.rstrip() + _QUESTIONS_FOOTER
+
     return _rewrite_in_page(src_uri, markdown)
+
+
+# No anchors in here: it lands on 83 pages, so one bad fragment would become 83.
+_QUESTIONS_FOOTER = """
+
+## Answering one of these
+
+Every row above is a question about the real beamline, and any of them can be
+answered by someone who knows the hardware. You do not need to edit this page
+or know where it lives.
+
+Open a short issue at
+[github.com/xmap/cora/issues](https://github.com/xmap/cora/issues), quote the
+item ID, and write the answer in plain text. One answer is as welcome as
+several. If you do not use GitHub, send the same thing to whoever shared this
+page with you. If a row turns out to be a controls, network, or engineering
+question, pass it to the right person or tell us who that is.
+
+The priorities mean: `Blocks-build`, your answer changes the structure of the
+description, so CORA cannot finalise it until you reply; `Blocks-go-live`, a
+guess is fine for the description, but the real value is needed before CORA
+controls or observes the hardware; `Nice-to-have`, extra detail for the record.
+
+Once an item is confirmed we record the value and delete the row, so this page
+always shows only what is still open.
+"""
 
 
 def on_files(files: Any, *, config: Any) -> Any:
@@ -305,6 +353,70 @@ def on_files(files: Any, *, config: Any) -> Any:
             )
         )
 
+    generated["reference/cite.md"] = _render_cite_page()
+
     for src_uri, content in generated.items():
         files.append(File.generated(config, src_uri, content=content))
     return files
+
+
+def _render_cite_page() -> str:
+    """Render the citation page from CITATION.cff.
+
+    Generated rather than authored so the version, release date and ORCID on
+    the site cannot drift from the machine-readable file that other tools read.
+    """
+    import yaml
+
+    cff = yaml.safe_load((REPO_ROOT / "CITATION.cff").read_text(encoding="utf-8"))
+    author = cff["authors"][0]
+    given, family = author["given-names"], author["family-names"]
+    year = str(cff["date-released"])[:4]
+    title = cff["title"]
+    version = cff["version"]
+    url = cff["url"]
+    repo = cff["repository-code"]
+    orcid = author.get("orcid", "")
+    apa = f"{family}, {given[:1]}. ({year}). *{title}* (Version {version}) [Computer software]. {repo}"
+    bibtex = "\n".join(
+        [
+            "@software{cora,",
+            f"  author  = {{{family}, {given}}},",
+            f"  title   = {{{title}}},",
+            f"  year    = {{{year}}},",
+            f"  version = {{{version}}},",
+            f"  url     = {{{url}}},",
+            f"  note    = {{{repo}}}",
+            "}",
+        ]
+    )
+    return "\n\n".join(
+        [
+            "# Cite CORA",
+            "*How to reference CORA in a methods section or a bibliography.*",
+            _admonition_info(
+                "This page is generated from "
+                f"[`CITATION.cff`]({REPO_BLOB}CITATION.cff) at build time, so the "
+                "version and release date here are always the ones the "
+                "machine-readable file carries."
+            ),
+            f"CORA is {cff['license']} licensed. The current release is "
+            f"version {version}, dated {cff['date-released']}. "
+            f"{given} {family} is the author"
+            + (f" ([ORCID]({orcid}))" if orcid else "")
+            + ".",
+            "## APA",
+            f"> {apa}",
+            "## BibTeX",
+            f"```bibtex\n{bibtex}\n```",
+            "## Citing a specific version",
+            "There is no DOI yet: CORA is pre-1.0 and has no tagged release. "
+            "Cite the commit you used until one exists, and prefer the "
+            f"repository URL ({repo}) over this site's URL, because the site "
+            "is rebuilt from `main` on every push and carries no version history.",
+        ]
+    )
+
+
+def _admonition_info(body: str) -> str:
+    return "!!! info\n\n    " + body
