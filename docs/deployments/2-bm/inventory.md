@@ -74,7 +74,7 @@ Microscope-bound Models (turret motor, Mitutoyo MPLAPO kit, FLIR Oryx, Crytur Lu
 
 ## Settings
 
-Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIVE-2, TIME-1) kept inline.
+Per-asset settings the source spells out in prose. Open-item tags (DRIVE-1, DRIVE-2) kept inline.
 
 | Asset | Settings |
 | --- | --- |
@@ -143,7 +143,7 @@ Trigger and step signals are modelled as typed ports plus wires resolved at Plan
 
 - `ApertureFineDrive` = two Piezosystem Jena NV200D/NET single-channel controllers (staff item_028), one per axis (X `10.54.113.126`, Y `10.54.113.125`), EPICS IOC `JenaNV200D` on host `arcturus`. They fine-position the `Aperture` coded-mask via a nanoSXY 120 CAP XY flexure stage (part `T-223-06D`, 120 um nominal / 100 um closed-loop per axis, 12.5 mm clear aperture); the axes step under FPGA trigger for compressive-sensing dithered sampling (PIEZO-1/2/4).
 - The Jena NV100D (formerly the provisional `OpticsFineDrive`, IOC `JenaNV100D`) is physically present but not in operational use at 2-BM: it lacks the external trigger mode tomoscan fly-scan needs, so no Run drives it. Recorded as provenance, not modelled as an active controller.
-- The driven X/Y `LinearStage` axis Assets and the `Aperture` identity registration are deferred to a follow-up slice; the FPGA `out2`/`out3` -> X/Y cable map needs operator confirmation (PIEZO-5).
+- The driven X/Y `LinearStage` axis Assets and the `Aperture` identity registration are deferred to a follow-up slice. The FPGA `out2`/`out3` -> X/Y cable map is confirmed (PIEZO-5, see below).
 
 ### NV200D trigger wiring
 
@@ -152,19 +152,27 @@ Trigger and step signals are modelled as typed ports plus wires resolved at Plan
 | `Timing` | `out2`, `out3` | OUTPUT | `step_trigger_ttl` |
 | `ApertureFineDrive` | `step_x_in`, `step_y_in` | INPUT | `step_trigger_ttl` |
 
-- Wires: `Timing.out2 -> ApertureFineDrive.step_x_in`, `Timing.out3 -> ApertureFineDrive.step_y_in` (JenaX/JenaY land on FPGA `out2`/`out3`, item_028); up to 1024 positions/axis.
-- Gate-delay PVs: `2bmbMZ1:SG:GateDly-3_DLY` (labelled "X axis delay"), `2bmbMZ1:SG:GateDly-2_DLY` (labelled "Y axis delay"); the label-to-cable map appears crossed, recorded verbatim and flagged for confirmation.
+- Wires: `Timing.out2 -> ApertureFineDrive.step_x_in`, `Timing.out3 -> ApertureFineDrive.step_y_in`; up to 1024 positions/axis.
+- Per-axis chain, confirmed end to end by a physical patch-panel trace on 2026-07-28 (PIEZO-5, staff [item_020](https://docs2bm.readthedocs.io/en/latest/source/manual/item_020.html)):
+
+| Axis | FPGA out | softGlue signal | Gate-delay PV | NV200D `TRG IN` |
+| --- | --- | --- | --- | --- |
+| X | `out2` | `JenaX` | `2bmbMZ1:SG:GateDly-2_DLY` | `10.54.113.126` |
+| Y | `out3` | `JenaY` | `2bmbMZ1:SG:GateDly-3_DLY` | `10.54.113.125` |
+
+- CORA previously recorded the two gate-delay PVs with their axes reversed and flagged the result as a cable-map contradiction. There was no contradiction: the axis comments in staff `item_028` were themselves wrong, and the same trace corrected them ([2bm-docs `a3aa6be0`](https://github.com/xray-imaging/2bm-docs/commit/a3aa6be03efd)). The cable map was right throughout, so the wires above are unchanged; only the delay-PV association moved. An operator screen still carrying the old annotation would point at the wrong axis's delay, which is why the binding is recorded per axis rather than as a PV list.
 - Ports sit on the controller box today; they migrate onto per-axis Assets when registered.
 
 ### Camera trigger wiring
 
 | Asset | Port | Direction | `signal_type` |
 | --- | --- | --- | --- |
-| `Timing` | `camera_trigger_out` | OUTPUT | `frame_trigger_ttl` |
+| `Timing` | `out1` | OUTPUT | `frame_trigger_ttl` |
 | `Camera` | `trigger_in` | INPUT | `frame_trigger_ttl` |
 
-- One wire: `Timing.camera_trigger_out -> Camera.trigger_in` (item_060). `frame_trigger_ttl` (start exposure) is distinct from the piezo `step_trigger_ttl` (advance a motion step).
-- Two labels open for staff: the exact FPGA output channel feeding the camera (path ends at camera `Line2`, no box-side output named), and the `GateDly1` block name (unconfirmed vs the source-grounded `GateDly-2`/`GateDly-3`).
+- One wire: `Timing.out1 -> Camera.trigger_in`. `frame_trigger_ttl` (start exposure) is distinct from the piezo `step_trigger_ttl` (advance a motion step).
+- Signal path (TIME-2): `PSO -> MUX2-1 -> GateDly1 -> outTrig -> FPGA out1 -> FLIR Oryx Line2`. The port is named for the pin, matching `out2`/`out3`; `outTrig` is the softGlue signal carried on it, and `Line2` is the camera-side input for both installed Oryx bodies.
+- Pulse shaping on this leg is the `GateDly1` block, whose PV fields are dot-separated record fields (`2bmbMZ1:SG:GateDly1.DLY`, `.Width`) where the two piezo legs use flat underscore names (`GateDly-2_DLY`, `_WIDTH`). The three blocks are peers in function but not in PV form, so each is recorded verbatim rather than derived from a template. They are not registered as Assets: nothing yet needs to address a gate-delay block by identity.
 - softGlue `Width`/`DLY` count 10 MHz clock cycles (100 ns/count, so `Width=100` = 10 us pulse); per-scan values are Method/Plan config.
 
 ## Computed axes
@@ -186,6 +194,7 @@ One physical Device (vendor-sealed Aerotech HEX300; inverse kinematics in firmwa
 
 - Z and Yaw exist physically but are not exposed as operator channels in 2-BM's current EPICS (no `m3`/`m6`); CORA still models all six (deployment-configuration limit, not a device one).
 - Constituent-port wiring: each DoF reads feedback from `Hexapod` via `Plan.wires` (not a partition-rule field). `Hexapod` exposes `x/y/z_feedback_out` (`position_feedback_linear_mm`) and `roll/pitch/yaw_feedback_out` (`position_feedback_rotation_deg`); each facet has one `constituent_in` INPUT plus one `<axis>_out` setpoint OUTPUT. Six wires, one per DoF (`Hexapod.<axis>_feedback_out -> Hexapod_<Axis>.constituent_in`). `validate_pseudoaxis_fanout` exempts `SolverReference` from the arity check; decomposition is owned by the firmware solver.
+- Dial-to-user coordinate convention, `user = dial home + OFFSET`, confirmed 2026-07-28 (HXP-8). Y is the axis where the two differ: it homes at dial 350 with `OFFSET = -350`, so a homed Y reads user 0. The other axes carry their own pair. The source states the Y numbers without a unit; they are recorded as given rather than assigned one. This is calibration state, not an advisory: it replaces an earlier Caution that described a manual post-reboot dial correction which is no longer performed. What re-homes the axes is [HXP-9](questions.md#the-hexapod).
 
 ### Detector table axes
 

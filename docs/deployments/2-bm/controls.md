@@ -21,7 +21,7 @@ The timing box is not a `MotionController`: it is itself the actor that generate
 | --- | --- | --- | --- | --- |
 | `Timing` | the camera frame trigger, plus two sample-piezo step triggers on a readout boundary | softGlueZynq (Xilinx Zynq on a MicroZed carrier) | `EPICS` | `2bmbMZ1:SG:` |
 
-The trigger legs are modelled as Asset ports resolved into Plan wires: see [Signal wiring](inventory.md#signal-wiring) for the camera and NV200D port maps. The box's gateware version and output-channel count are pending (`TIME-1`).
+The trigger legs are modelled as Asset ports resolved into Plan wires: see [Signal wiring](inventory.md#signal-wiring) for the camera and NV200D port maps. Three output pins are in use, `out1` to the camera and `out2`/`out3` to the two piezo axes. The gateware version is recorded (`2.0`); how many outputs the box has in total is not, and is not derivable from the three in use: that number and the board serial sit on the MicroZed's own filesystem, which only the IOC admin can reach.
 
 ## Software IOCs
 

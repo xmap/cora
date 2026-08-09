@@ -268,6 +268,18 @@ Docstrings carry intent. Comments carry hidden constraints. Test names carry sce
 
 No emoji anywhere in source: comments, docstrings, log strings, error messages, `Field(description=...)`. Emoji in source is a documented LLM tell ([LLM Slop Taxonomy](https://github.com/nokusukun/sublime/blob/main/llm-slop-taxonomy.md) Cat 4.5 and 7.1) that accumulates as noise across reviews. Mirrors the no-em-dash rule applied to prose.
 
+### Citing an external source
+
+Two different things get called a citation, and they need different links.
+
+**Reading a source: link the moving ref.** "See the staff sample motor stack page" wants whatever that page says today, so link `main`, `HEAD`, or `/en/latest/`. Pinning a navigational link sends the reader to a stale copy, which is worse than no link.
+
+**Sourcing a value: identify the version.** When a number, a PV name, an address, a serial, or a step order is recorded because an external artifact said so, the citation has to say which state of that artifact. Otherwise the value silently stops matching its own source the next time the source changes, and nothing in CORA notices. Use a commit SHA for a repository (`decarlof/2bmb-bin@372285c6`), and for a page that has no addressable version, keep the readable link and name the commit or the date the value was folded from it beside the value.
+
+The distinction is not about how important the source is; it is about whether CORA is repeating a claim. A record whose provenance means "whatever that file says now" is not a record. When both uses appear on one page, link the live page in the prose and pin next to the value.
+
+Verify before pinning: read the source at the ref you are about to cite. A pin makes a claim about a specific state, and a wrong pin is more misleading than a moving one, because it looks checked.
+
 ### Docstrings
 
 Every public module, class, function, and method gets a docstring. Style is prose, not Sphinx.
