@@ -14,7 +14,9 @@ Maps each configured enclosure's SecureM PV to an `EnclosureObservation`:
 `SecureM == 1 -> Permitted`, `== 0 -> NotPermitted`, `Bad` quality or
 any other value -> `Unknown`. A PV disconnect (or a clean stream end)
 emits one `Unknown` observation so a dead permit signal fails the run
-gate closed rather than leaving a stale `Permitted`.
+gate closed rather than leaving a stale `Permitted`. That synthesized
+observation carries NO substrate time, because there was no substrate
+reading behind it; see `_unknown`.
 """
 
 from __future__ import annotations
@@ -32,7 +34,6 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
     from datetime import datetime
 
-    from cora.infrastructure.ports import Clock
     from cora.operation.ports.control_port import ControlPort
 
 _SOURCE_KIND = "EpicsPv"
@@ -128,11 +129,9 @@ class ControlPortEnclosureObserver:
         *,
         control_port: ControlPort,
         permit_pvs: Mapping[str, str],
-        clock: Clock,
     ) -> None:
         self._control_port = control_port
         self._permit_pvs = dict(permit_pvs)
-        self._clock = clock
 
     def observe(self, scope: EnclosureObserverScope) -> AsyncGenerator[EnclosureObservation]:
         return self._drain(scope)
@@ -192,7 +191,27 @@ class ControlPortEnclosureObserver:
         )
 
     def _unknown(self, code: str, pv: str) -> EnclosureObservation:
-        return self._observation(code, pv, _UNKNOWN, self._clock.now())
+        """A disconnect or stream end, which carries NO substrate time.
+
+        This used to stamp `clock.now()`, which is a CORA time wearing a
+        substrate label. The port forbids exactly that
+        (`enclosure_observer.EnclosureObservation`: an adapter with no
+        substrate time MUST answer None rather than supply its own
+        clock), and it is the same defect removed from the caproto
+        adapter, one layer up.
+
+        It was harmless only while the seam discarded the field. It stops
+        being harmless the moment that time reaches a payload, and the
+        inversion at 2-BM would be total: both PSS PVs report an
+        undefined stamp, so every REAL reading yields None while every
+        synthesized disconnect would carry a real-looking time. The
+        column would be populated precisely when the substrate said
+        nothing.
+
+        The recording side keeps its own clock: the event's `occurred_at`
+        still says when CORA learned of the disconnect.
+        """
+        return self._observation(code, pv, _UNKNOWN, None)
 
 
 __all__ = ["ControlPortEnclosureObserver", "permit_status_from_reading"]

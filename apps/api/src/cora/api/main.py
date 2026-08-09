@@ -1009,7 +1009,6 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             enclosure_permit_observer = ControlPortEnclosureObserver(
                 control_port=app.state.operation.control_port,
                 permit_pvs=settings.enclosure_permit_pvs,
-                clock=deps.clock,
             )
 
             try:

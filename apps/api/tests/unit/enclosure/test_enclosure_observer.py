@@ -94,16 +94,22 @@ async def test_always_permitted_observer_emits_stable_stub_source_attribution() 
 
 
 @pytest.mark.unit
-async def test_always_permitted_observer_stamps_deterministic_utc_epoch() -> None:
-    """The stub captures `observed_at` as `datetime(1970, 1, 1, tzinfo=UTC)`
-    so tests can assert exact payloads across machines without depending
-    on the runner's system timezone."""
+async def test_always_permitted_observer_reports_no_substrate_time() -> None:
+    """The stub has no substrate, so it reports no substrate time.
+
+    This asserted a fixed `datetime(1970, 1, 1, tzinfo=UTC)`, chosen for
+    determinism across machines. `None` is equally deterministic and
+    cannot be mistaken for a reading: a 1970 date parses, sorts and
+    filters exactly like a real one, which is how a Q:group mapping bug
+    stayed hidden behind an assertion that a timestamp merely had a
+    timezone.
+    """
     observer = AlwaysPermittedEnclosureObserver()
     scope = EnclosureObserverScope(enclosure_codes=frozenset({_HUTCH_A}))
     observations = [obs async for obs in observer.observe(scope)]
     assert len(observations) == 1
     obs = observations[0]
-    assert obs.observed_at == _EPOCH
+    assert obs.observed_at is None
 
 
 @pytest.mark.unit

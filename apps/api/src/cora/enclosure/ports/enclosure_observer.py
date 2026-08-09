@@ -74,8 +74,7 @@ seam; severity bookkeeping belongs to the substrate, not the spine.
 
 `AlwaysPermittedEnclosureObserver` ships inline at the bottom of this
 module. It yields one Permitted observation per enclosure in scope
-and is the canonical zero-substrate stub for tests and the first-boot
-"no observer wired" code path. Mirrors the
+and is the canonical zero-substrate stub for tests. Mirrors the
 `AlwaysQuietCautionLookup` / `AlwaysCoveredClearanceLookup` precedent
 shape (inline stub colocated with the port). Production adapters
 (EPICS / P4P / Tango) land outside this module under
@@ -93,12 +92,16 @@ can react; the stub never disconnects.
 
 from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Protocol, runtime_checkable
 
 from cora.enclosure.aggregates.enclosure import EnclosurePermitStatus
 
-_STUB_OBSERVED_AT = datetime(1970, 1, 1, tzinfo=UTC)
+# No `_STUB_OBSERVED_AT`. The stub has no substrate behind it, so it
+# reports no substrate time. A fixed 1970 sentinel here would be a date
+# that parses, sorts and filters exactly like a real reading, which is
+# the trap that let a Q:group mapping bug hide behind an assertion of
+# `tzinfo is not None` until 2026-08-09.
 
 
 @dataclass(frozen=True)
@@ -209,17 +212,19 @@ class AlwaysPermittedEnclosureObserver:
 
       - `observed_status="Permitted"` matching
         `EnclosurePermitStatus.PERMITTED`.
-      - `observed_at` fixed to `datetime(1970, 1, 1, tzinfo=UTC)` so
-        tests can assert exact payloads without injecting a clock
-        (deterministic across timezones).
+      - `observed_at=None`, because a stub has no substrate and so has
+        no substrate time to report. This was a fixed 1970 sentinel,
+        chosen for determinism, until the nullable field made honesty
+        available at the same price: `None` is equally deterministic
+        and cannot be mistaken for a reading.
       - `source_kind="Stub"`, `source_id="AlwaysPermittedEnclosureObserver"`
         so the audit trail records the stub-source distinction.
 
-    Production adapters (EPICS subscriber, P4P PVA subscription,
-    Tango attribute callback, file-watch tail) ship in
-    `cora/enclosure/adapters/` when the runtime is wired to a real
-    substrate; this stub is never used outside tests and
-    first-boot.
+    Production wiring never reaches this stub: `api/main.py` always
+    constructs `ControlPortEnclosureObserver`. The "first-boot no
+    observer wired" path this docstring used to claim does not exist
+    in `src`; the only non-test reference is the `ports/__init__`
+    export. Treat it as test-only until something wires it.
     """
 
     def observe(self, scope: EnclosureObserverScope) -> AsyncGenerator[EnclosureObservation]:
@@ -230,7 +235,7 @@ class AlwaysPermittedEnclosureObserver:
             yield EnclosureObservation(
                 enclosure_code=enclosure_code,
                 observed_status=EnclosurePermitStatus.PERMITTED.value,
-                observed_at=_STUB_OBSERVED_AT,
+                observed_at=None,
                 source_kind="Stub",
                 source_id="AlwaysPermittedEnclosureObserver",
             )

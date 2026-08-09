@@ -20,15 +20,15 @@ from cora.enclosure.ports.enclosure_observer import (
     EnclosureObservation,
     EnclosureObserverScope,
 )
-from cora.infrastructure.ports.clock import FakeClock
 from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
 
 _T = datetime(2026, 6, 17, 12, 0, 0, tzinfo=UTC)
-_T_UNKNOWN = datetime(2026, 6, 17, 13, 0, 0, tzinfo=UTC)
 
 
-def _reading(value: object, quality: str = "Good") -> Measurement:
-    return Measurement(value=value, kind="Scalar", quality=quality, produced_at=_T)  # type: ignore[arg-type]
+def _reading(
+    value: object, quality: str = "Good", produced_at: datetime | None = _T
+) -> Measurement:
+    return Measurement(value=value, kind="Scalar", quality=quality, produced_at=produced_at)  # type: ignore[arg-type]
 
 
 def _enum_reading(label: str, quality: str = "Good") -> Measurement:
@@ -157,7 +157,6 @@ def _observer(
     return ControlPortEnclosureObserver(
         control_port=port,  # type: ignore[arg-type]
         permit_pvs=permit_pvs,
-        clock=FakeClock(_T_UNKNOWN),
     )
 
 
@@ -195,8 +194,11 @@ async def test_observe_maps_readings_then_unknown_on_clean_end() -> None:
     assert observations[0].observed_at == _T
     assert observations[0].source_kind == "EpicsPv"
     assert observations[0].source_id == "pvA"
-    # The clean-stream-end Unknown is clock-stamped, not reading-stamped.
-    assert observations[-1].observed_at == _T_UNKNOWN
+    # The clean-stream-end Unknown has NO substrate time. It is synthesized
+    # by CORA because the stream ended, not reported by the substrate, and
+    # a clock reading here would be indistinguishable from a real one once
+    # written down. When CORA learned of it lives on the event's occurred_at.
+    assert observations[-1].observed_at is None
 
 
 @pytest.mark.unit
@@ -208,7 +210,46 @@ async def test_observe_disconnect_yields_single_unknown() -> None:
 
     assert len(observations) == 1
     assert observations[0].observed_status == "Unknown"
-    assert observations[0].observed_at == _T_UNKNOWN
+    # A disconnect is the case that matters most at 2-BM: both PSS PVs
+    # report an undefined stamp, so real readings already yield None. If
+    # disconnects stamped a clock, the substrate-time field would be
+    # populated exactly when the substrate said nothing.
+    assert observations[0].observed_at is None
+
+
+@pytest.mark.unit
+async def test_observe_passes_through_an_absent_substrate_time() -> None:
+    """A reading with no substrate time reaches the seam as None, not as a date.
+
+    This is the live 2-BM shape, not a hypothetical: both PSS permit PVs
+    report an undefined EPICS stamp on every update, so `produced_at` is
+    None for every real reading there. Pinned because the bridge is the
+    one place that could quietly substitute a clock.
+    """
+    port = _ScriptedControlPort(readings={"pvA": [_reading(1, produced_at=None)]})
+    observer = _observer(port, {"hutch-a": "pvA"})
+
+    observations = await _collect(observer, {"hutch-a"})
+
+    assert [o.observed_status for o in observations] == ["Permitted", "Unknown"]
+    # The status is still read; only the time is absent.
+    assert observations[0].observed_at is None
+
+
+@pytest.mark.unit
+async def test_observe_preserves_a_present_substrate_time() -> None:
+    """The other arm: a substrate that DOES stamp is carried verbatim.
+
+    Paired with the absent case so neither direction can regress into a
+    constant. A test that only pinned None would pass if the bridge
+    dropped the field entirely.
+    """
+    port = _ScriptedControlPort(readings={"pvA": [_reading(1, produced_at=_T)]})
+    observer = _observer(port, {"hutch-a": "pvA"})
+
+    observations = await _collect(observer, {"hutch-a"})
+
+    assert observations[0].observed_at == _T
 
 
 @pytest.mark.unit
