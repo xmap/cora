@@ -320,7 +320,7 @@ The four examples below follow the canonical path for one Clearance: register it
       "bindings": [
         {"kind": "Subject", "id": "subject-1111-2222-3333-4444-555555555555"},
         {"kind": "Asset", "id": "aaaa1111-2222-3333-4444-666666666666"},
-        {"kind": "External", "scheme": "proposal", "id": "GUP-79431"}
+        {"kind": "External", "scheme": "proposal", "value": "GUP-79431"}
       ],
       "declarations": [
         {
@@ -353,7 +353,7 @@ The four examples below follow the canonical path for one Clearance: register it
             "bindings": [
                 {"kind": "Subject", "id": "subject-1111-2222-3333-4444-555555555555"},
                 {"kind": "Asset", "id": "aaaa1111-2222-3333-4444-666666666666"},
-                {"kind": "External", "scheme": "proposal", "id": "GUP-79431"},
+                {"kind": "External", "scheme": "proposal", "value": "GUP-79431"},
             ],
             "declarations": [
                 {

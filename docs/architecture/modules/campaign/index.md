@@ -195,8 +195,8 @@ The four examples below follow the canonical Campaign path: register a Planned C
       "description": "Repeat tomograms every 30 minutes during in-situ tensile loading.",
       "tags": ["in-situ", "tomography", "fatigue"],
       "external_refs": [
-        {"scheme": "proposal", "id": "GUP-89421"},
-        {"scheme": "btr", "id": "2026-1-APS-035"}
+        {"scheme": "proposal", "value": "GUP-89421"},
+        {"scheme": "btr", "value": "2026-1-APS-035"}
       ]
     }
     ```
@@ -216,8 +216,8 @@ The four examples below follow the canonical Campaign path: register a Planned C
             "description": "Repeat tomograms every 30 minutes during in-situ tensile loading.",
             "tags": ["in-situ", "tomography", "fatigue"],
             "external_refs": [
-                {"scheme": "proposal", "id": "GUP-89421"},
-                {"scheme": "btr", "id": "2026-1-APS-035"},
+                {"scheme": "proposal", "value": "GUP-89421"},
+                {"scheme": "btr", "value": "2026-1-APS-035"},
             ],
         },
     )

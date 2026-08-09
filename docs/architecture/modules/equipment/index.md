@@ -892,7 +892,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
 
     {
       "name": "RotaryStage",
-      "affordances": ["Move.Continuous", "Move.Step", "Signal.PositionFeedback"]
+      "affordances": ["Rotatable", "Homeable", "Limitable"]
     }
     ```
 
@@ -905,7 +905,7 @@ The five examples below cover the canonical lifecycle of one beamline's installa
         "define_family",
         {
             "name": "RotaryStage",
-            "affordances": ["Move.Continuous", "Move.Step", "Signal.PositionFeedback"],
+            "affordances": ["Rotatable", "Homeable", "Limitable"],
         },
     )
     ```
@@ -1002,10 +1002,10 @@ The five examples below cover the canonical lifecycle of one beamline's installa
       ],
       "required_wires": [
         {
-          "source_slot": "rotary_stage",
-          "source_port": "trigger_out",
-          "target_slot": "camera",
-          "target_port": "trigger_in"
+          "source_slot_name": "rotary_stage",
+          "source_port_name": "trigger_out",
+          "target_slot_name": "camera",
+          "target_port_name": "trigger_in"
         }
       ]
     }
@@ -1027,8 +1027,8 @@ The five examples below cover the canonical lifecycle of one beamline's installa
                 {"slot_name": "scintillator", "required_family_ids": ["cccc3333-3333-3333-3333-333333333333"], "cardinality": "Exactly1"},
             ],
             "required_wires": [
-                {"source_slot": "rotary_stage", "source_port": "trigger_out",
-                 "target_slot": "camera",       "target_port": "trigger_in"},
+                {"source_slot_name": "rotary_stage", "source_port_name": "trigger_out",
+                 "target_slot_name": "camera",       "target_port_name": "trigger_in"},
             ],
         },
     )

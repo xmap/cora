@@ -190,7 +190,7 @@ The four examples below follow the canonical path for one Caution: register an A
     X-Principal-Id: 11111111-2222-3333-4444-555555555555
 
     {
-      "target": {"target_kind": "Asset", "asset_id": "aaaa1111-2222-3333-4444-555555555555"},
+      "target": {"kind": "Asset", "id": "aaaa1111-2222-3333-4444-555555555555"},
       "category": "OperationalWindow",
       "severity": "Caution",
       "text": "Hexapod stalls below 0.5 mm/s after thermal-soak completes; observed twice in cycle 2026-1.",
@@ -209,7 +209,7 @@ The four examples below follow the canonical path for one Caution: register an A
     mcp.call_tool(
         "register_caution",
         {
-            "target": {"target_kind": "Asset", "asset_id": "aaaa1111-2222-3333-4444-555555555555"},
+            "target": {"kind": "Asset", "id": "aaaa1111-2222-3333-4444-555555555555"},
             "category": "OperationalWindow",
             "severity": "Caution",
             "text": "Hexapod stalls below 0.5 mm/s after thermal-soak completes; observed twice in cycle 2026-1.",
@@ -232,6 +232,7 @@ The four examples below follow the canonical path for one Caution: register an A
     X-Principal-Id: 22222222-3333-4444-5555-666666666666
 
     {
+      "target": {"kind": "Asset", "id": "aaaa1111-2222-3333-4444-555555555555"},
       "category": "OperationalWindow",
       "severity": "Caution",
       "text": "Hexapod stalls below 0.5 mm/s after thermal-soak completes (cycle 2026-1 + 2026-2 observed).",
@@ -250,6 +251,7 @@ The four examples below follow the canonical path for one Caution: register an A
         "supersede_caution",
         {
             "parent_id": "9f6a3b1c-8e2d-4f5a-9b8c-1d2e3f4a5b6c",
+            "target": {"kind": "Asset", "id": "aaaa1111-2222-3333-4444-555555555555"},
             "category": "OperationalWindow",
             "severity": "Caution",
             "text": "Hexapod stalls below 0.5 mm/s after thermal-soak completes (cycle 2026-1 + 2026-2 observed).",

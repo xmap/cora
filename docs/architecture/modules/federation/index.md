@@ -465,12 +465,11 @@ The four examples below cover the canonical Federation flow: register two Creden
 
     {
       "new_head_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-      "new_sequence_number": 1,
-      "signed_at": "2026-06-01T14:30:00Z"
+      "new_sequence_number": 1
     }
     ```
 
-    Returns `204 No Content`. `new_sequence_number` must be strictly greater than the prior value (seeded to 0 at initialization); the decider rejects regressions and re-signs at the same sequence as `SealSequenceNumberRegressionError`. `signed_at` is the domain wall-clock of signature, distinct from the event envelope's `occurred_at`; the projection's `last_signed_at` column reflects this field so cross-facility consumers see signing time rather than append time.
+    Returns `204 No Content`. `new_sequence_number` must be strictly greater than the prior value (seeded to 0 at initialization); the decider rejects regressions and re-signs at the same sequence as `SealSequenceNumberRegressionError`. The caller does not supply the signing time: the handler stamps `SealPointerSigned.signed_at` from the clock port, and the projection's `last_signed_at` column reflects that payload field, so cross-facility consumers see domain signing time rather than append time.
 
 === "MCP"
 
@@ -481,7 +480,6 @@ The four examples below cover the canonical Federation flow: register two Creden
             "facility_code": "aps",
             "new_head_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
             "new_sequence_number": 1,
-            "signed_at": "2026-06-01T14:30:00Z",
         },
     )
     ```
@@ -506,7 +504,7 @@ The four examples below cover the canonical Federation flow: register two Creden
       "expires_at": "2027-05-31T00:00:00Z",
       "terms": {
         "kind": "Outbound",
-        "scope_set": [
+        "scopes": [
           {"kind": "beamline", "name": "aps-2bm", "qualifier": "public"}
         ],
         "read_scope": "ReadAllArtifacts",
@@ -532,7 +530,7 @@ The four examples below cover the canonical Federation flow: register two Creden
             "expires_at": "2027-05-31T00:00:00Z",
             "terms": {
                 "kind": "Outbound",
-                "scope_set": [
+                "scopes": [
                     {"kind": "beamline", "name": "aps-2bm", "qualifier": "public"}
                 ],
                 "read_scope": "ReadAllArtifacts",

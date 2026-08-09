@@ -472,7 +472,7 @@ The four examples below cover a typical declaration walk: a universal Capability
       "code": "cora.capability.continuous_rotation_sweep",
       "name": "Continuous Rotation Sweep",
       "description": "Sample rotates continuously while the camera streams projections at fixed angular spacing.",
-      "required_affordances": ["rotates", "captures_images"],
+      "required_affordances": ["Rotatable", "Imageable"],
       "executor_shapes": ["Method"],
       "parameters_schema": {
         "type": "object",
@@ -502,7 +502,7 @@ The four examples below cover a typical declaration walk: a universal Capability
             "code": "cora.capability.continuous_rotation_sweep",
             "name": "Continuous Rotation Sweep",
             "description": "Sample rotates continuously while the camera streams projections.",
-            "required_affordances": ["rotates", "captures_images"],
+            "required_affordances": ["Rotatable", "Imageable"],
             "executor_shapes": ["Method"],
             "parameters_schema": {...},
         },
@@ -522,6 +522,7 @@ The four examples below cover a typical declaration walk: a universal Capability
     {
       "name": "Fly-Scan Tomography",
       "capability_id": "<capability-id>",
+      "execution_pattern": "Batch",
       "needed_family_ids": ["<rotary-stage-family-id>", "<camera-family-id>"],
       "needed_supplies": ["liquid_nitrogen"],
       "parameters_schema": {
@@ -551,6 +552,7 @@ The four examples below cover a typical declaration walk: a universal Capability
         {
             "name": "Fly-Scan Tomography",
             "capability_id": "<capability-id>",
+            "execution_pattern": "Batch",
             "needed_family_ids": ["<rotary-stage-family-id>", "<camera-family-id>"],
             "needed_supplies": ["liquid_nitrogen"],
             "parameters_schema": {...},
@@ -598,7 +600,7 @@ The four examples below cover a typical declaration walk: a universal Capability
 === "REST"
 
     ```http
-    POST /plans/<plan-id>/wires
+    POST /plans/<plan-id>/add-wire
     Content-Type: application/json
     X-Principal-Id: 11111111-2222-3333-4444-555555555555
 
@@ -610,7 +612,7 @@ The four examples below cover a typical declaration walk: a universal Capability
     }
     ```
 
-    Returns `201 Created`. The decider checks that both endpoint Assets are in the Plan's `asset_ids`, both endpoint ports exist on those Assets, source has `direction=OUTPUT` and target has `direction=INPUT`, the two ports' `signal_type` values match exactly, and the target port is not already the destination of another wire (fan-in forbidden). `DELETE /plans/<plan-id>/wires` with the same 4-tuple body removes a wire; both add and remove are strict-not-idempotent and reject duplicate or missing wires with `409`.
+    Returns `204 No Content`. The decider checks that both endpoint Assets are in the Plan's `asset_ids`, both endpoint ports exist on those Assets, source has `direction=OUTPUT` and target has `direction=INPUT`, the two ports' `signal_type` values match exactly, and the target port is not already the destination of another wire (fan-in forbidden). `POST /plans/<plan-id>/remove-wire` with the same 4-tuple body removes a wire; both add and remove are strict-not-idempotent and reject duplicate or missing wires with `409`.
 
 === "MCP"
 

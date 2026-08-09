@@ -332,7 +332,7 @@ The four examples below follow the canonical Procedure path: register an alignme
 === "REST"
 
     ```http
-    POST /procedures/{procedure_id}/steps
+    POST /procedures/{procedure_id}/activities
     Content-Type: application/json
     X-Principal-Id: 7b1f2d4e-2a3c-4d5e-8f9a-1b2c3d4e5f60
 

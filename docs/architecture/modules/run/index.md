@@ -107,7 +107,7 @@ stateDiagram-v2
 | `RunAborted` | `run_id`, `reason`, `decided_by_decision_id?`, `occurred_at` | `abort_run` succeeds |
 | `RunStopped` | `run_id`, `reason`, `occurred_at` | `stop_run` succeeds |
 | `RunTruncated` | `run_id`, `reason`, `interrupted_at?`, `occurred_at` | `truncate_run` succeeds |
-| `RunAdjusted` | `run_id`, `parameter_patch`, `effective_parameters`, `reason`, `decided_by_decision_id?`, `occurred_at` | `adjust_run` succeeds; carries both the RFC 7396 patch and the post-merge snapshot |
+| `RunAdjusted` | `run_id`, `parameters_patch`, `effective_parameters`, `reason`, `decided_by_decision_id?`, `occurred_at` | `adjust_run` succeeds; carries both the RFC 7396 patch and the post-merge snapshot |
 | `RunObservationLogbookOpened` | `run_id`, `logbook_id`, `schema`, `occurred_at` | `append_observations` first write per Run (lazy open) |
 | `RunAddedToCampaign` | `run_id`, `campaign_id`, `occurred_at` | post-hoc Campaign membership write (see Campaign module) |
 | `RunRemovedFromCampaign` | `run_id`, `campaign_id`, `occurred_at` | post-hoc Campaign membership removal |
@@ -299,7 +299,7 @@ The four examples below follow the happy path for one Run: start it, steer it mi
     X-Principal-Id: 11111111-2222-3333-4444-555555555555
 
     {
-      "parameter_patch": {
+      "parameters_patch": {
         "exposure_time_ms": 75
       },
       "reason": "increased exposure to recover signal after detector temperature drift",
@@ -314,7 +314,7 @@ The four examples below follow the happy path for one Run: start it, steer it mi
         "adjust_run",
         {
             "run_id": "9f6a3b1c-8e2d-4f5a-9b8c-1d2e3f4a5b6c",
-            "parameter_patch": {"exposure_time_ms": 75},
+            "parameters_patch": {"exposure_time_ms": 75},
             "reason": "increased exposure to recover signal after detector temperature drift",
             "decided_by_decision_id": "decision-aaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
         },
@@ -328,18 +328,25 @@ The response carries the post-merge `effective_parameters` so the caller can con
 === "REST"
 
     ```http
-    POST /runs/9f6a3b1c-8e2d-4f5a-9b8c-1d2e3f4a5b6c/readings
+    POST /runs/9f6a3b1c-8e2d-4f5a-9b8c-1d2e3f4a5b6c/observations
     Content-Type: application/json
     X-Principal-Id: 11111111-2222-3333-4444-555555555555
 
     {
-      "channel_name": "ring_current",
-      "value": 102.3,
-      "units": "mA",
-      "sampling_procedure": "baseline",
-      "sampled_at": "2026-05-20T14:30:15.123456Z"
+      "entries": [
+        {
+          "event_id": "0190f001-bbbb-7000-8000-000000000001",
+          "channel_name": "ring_current",
+          "value": 102.3,
+          "units": "mA",
+          "sampling_procedure": "baseline",
+          "sampled_at": "2026-05-20T14:30:15.123456Z"
+        }
+      ]
     }
     ```
+
+    Readings are appended in a batch. Each entry carries its own caller-supplied `event_id`, which makes the append idempotent under retry; `channel_name`, `value`, `sampled_at`, and `sampling_procedure` are required alongside it.
 
 === "MCP"
 
@@ -348,11 +355,16 @@ The response carries the post-merge `effective_parameters` so the caller can con
         "append_observations",
         {
             "run_id": "9f6a3b1c-8e2d-4f5a-9b8c-1d2e3f4a5b6c",
-            "channel_name": "ring_current",
-            "value": 102.3,
-            "units": "mA",
-            "sampling_procedure": "baseline",
-            "sampled_at": "2026-05-20T14:30:15.123456Z",
+            "entries": [
+                {
+                    "event_id": "0190f001-bbbb-7000-8000-000000000001",
+                    "channel_name": "ring_current",
+                    "value": 102.3,
+                    "units": "mA",
+                    "sampling_procedure": "baseline",
+                    "sampled_at": "2026-05-20T14:30:15.123456Z",
+                }
+            ],
         },
     )
     ```
