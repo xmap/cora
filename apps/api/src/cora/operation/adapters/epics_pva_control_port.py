@@ -49,7 +49,7 @@ unpacks per NT type:
   - `NTTable` -> `Measurement(kind="Tabular")`, `value = ` dict of
     column-name -> tuple (rare in practice; reserved for future use)
 
-`quality` from `severity` via the same 0->Good, 1->Uncertain, 2/3->Bad
+`quality` from `severity` via the same 0->Good, 1/2->Uncertain, 3->Bad
 map the CA adapter uses. `quality_detail` from `status` integer as a
 forensic breadcrumb when severity is non-zero.
 
@@ -148,9 +148,12 @@ transferring `display`, `control`, `valueAlarm` presentation hints."""
 _SEVERITY_TO_QUALITY: dict[int, Quality] = {
     0: "Good",  # NO_ALARM
     1: "Uncertain",  # MINOR_ALARM
-    2: "Bad",  # MAJOR_ALARM
+    2: "Uncertain",  # MAJOR_ALARM
     3: "Bad",  # INVALID_ALARM
 }
+"""Same severity trichotomy the CA adapter uses; see
+`epics_ca_control_port._SEVERITY_TO_QUALITY` for why MAJOR is
+Uncertain rather than Bad."""
 
 
 def _quality_for(severity: int) -> Quality:

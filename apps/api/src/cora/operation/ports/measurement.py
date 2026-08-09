@@ -55,10 +55,18 @@ grouping and the NAMUR / ISA-95 vocabulary.
 Per the OPC UA sanity check in
 [[project_control_port_generalization_research]], `StatusCode`'s top
 2 bits are exactly this trichotomy:
-`Good = 0b00 | Uncertain = 0b01 | Bad = 0b10`. EPICS CA's 4-value
-severity collapses (`NONE -> Good`, `MINOR | MAJOR | INVALID -> Bad`).
+`Good = 0b00 | Uncertain = 0b01 | Bad = 0b10`. EPICS's 4-value
+severity collapses (`NO_ALARM -> Good`, `MINOR | MAJOR -> Uncertain`,
+`INVALID -> Bad`): EPICS distinguishes a value that is fine while the
+process it describes is in alarm (MINOR / MAJOR) from a value that
+cannot be trusted at all (INVALID), and only the latter is Bad.
 Tango's 5-value `AttrQuality` collapses (`VALID -> Good`,
 `WARNING | CHANGING -> Uncertain`, `ALARM | INVALID -> Bad`).
+
+Consumers choose their own floor against this enum. A gate that needs
+a value it can act on tests `== "Good"`; a gate that only needs a
+value it can believe tests `!= "Bad"`. Both are legitimate; neither is
+the default, so each use site states which it means.
 
 Substrate-specific forensic detail (EPICS `alarm_status`, Tango
 string detail, OPC UA's ~240 named sub-codes such as

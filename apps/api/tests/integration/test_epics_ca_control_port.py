@@ -139,21 +139,35 @@ async def test_read_enum_returns_categorical_with_label(softioc: str) -> None:
 
 
 @pytest.mark.integration
-async def test_read_major_alarm_pv_returns_bad_quality(softioc: str) -> None:
-    """MAJOR_ALARM severity (HIHI threshold tripped) translates to Quality='Bad'.
+async def test_read_major_alarm_pv_returns_uncertain_quality(softioc: str) -> None:
+    """MAJOR_ALARM severity (HIHI threshold tripped) translates to Quality='Uncertain'.
 
     Pins the full Measurement shape for a non-Good reading: value + kind +
     quality + `alarm_status=<int>` quality_detail format + tz-aware
     UTC produced_at. Mirrors the same assertions on Caproto + EpicsPva.
+    MAJOR is a correctly-read value reporting a serious process
+    condition, so it stays believable; only INVALID is Bad.
     """
     port = EpicsCaControlPort()
     try:
-        reading = await port.read(EpicsPvAddress(f"{softioc}bad_quality_value"))
+        reading = await port.read(EpicsPvAddress(f"{softioc}major_alarm_value"))
         assert reading.kind == "Scalar"
         assert reading.value == 99.9
-        assert reading.quality == "Bad"
+        assert reading.quality == "Uncertain"
         assert reading.quality_detail.startswith("alarm_status=")
         assert reading.produced_at.tzinfo is not None
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_read_invalid_alarm_pv_returns_bad_quality(softioc: str) -> None:
+    """INVALID_ALARM severity is the one severity that reaches Quality='Bad'."""
+    port = EpicsCaControlPort()
+    try:
+        reading = await port.read(EpicsPvAddress(f"{softioc}invalid_alarm_value"))
+        assert reading.quality == "Bad"
+        assert reading.quality_detail.startswith("alarm_status=")
     finally:
         await port.aclose()
 
