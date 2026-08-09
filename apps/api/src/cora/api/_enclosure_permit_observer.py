@@ -40,25 +40,59 @@ _PERMITTED = "Permitted"
 _NOT_PERMITTED = "NotPermitted"
 _UNKNOWN = "Unknown"
 
+# Conventional EPICS binary state labels. A DBR_ENUM reading reaches
+# this module as its resolved label, never as its index, so the label
+# is the only thing left to compare against.
+_PERMITTED_LABELS = frozenset({"1", "ON", "TRUE", "YES"})
+_NOT_PERMITTED_LABELS = frozenset({"0", "OFF", "FALSE", "NO"})
+
 
 def permit_status_from_reading(reading: Measurement) -> str:
     """Map a SecureM `Measurement` to an Enclosure permit-status string.
 
     SecureM polarity: `1` = searched / secured -> `Permitted`; `0` ->
-    `NotPermitted`. Non-Good quality, or any value that is not 0 / 1,
-    flattens to `Unknown` (the conservative, gate-fails-closed status).
+    `NotPermitted`. Non-Good quality, or any value this cannot resolve
+    to 0 / 1, flattens to `Unknown` (the conservative,
+    gate-fails-closed status).
+
+    Both shapes a CA adapter can hand back are accepted, because a
+    real SecureM is a `bi` record and arrives as `kind="Categorical"`.
+    For DBR_ENUM, `EpicsCaControlPort` resolves the index to its label
+    and the index is no longer on the reading, so the label is all
+    there is to read. `ON` / `OFF` are the stock EPICS ZNAM / ONAM
+    defaults; `TRUE` / `FALSE` and `YES` / `NO` are the other
+    conventional binary pairs. A facility that renames its states
+    resolves to `Unknown`, which fails the gate closed and surfaces as
+    a seam question rather than as a wrong permit.
+
+    Read against 2-BM on 2026-08-09, where `S02BM-PSS:StaA:SecureM`
+    reads `'ON'`: the previous numeric-only form raised on `int('ON')`
+    and reported a correctly secured hutch as `Unknown`.
     """
     if reading.quality != "Good":
         return _UNKNOWN
-    try:
-        value = int(reading.value)
-    except (TypeError, ValueError):
-        return _UNKNOWN
-    if value == 1:
+    code = _binary_code(reading.value)
+    if code == 1:
         return _PERMITTED
-    if value == 0:
+    if code == 0:
         return _NOT_PERMITTED
     return _UNKNOWN
+
+
+def _binary_code(value: object) -> int | None:
+    """Resolve a SecureM reading to 1 / 0, or None when it is neither."""
+    if isinstance(value, str):
+        token = value.strip().upper()
+        if token in _PERMITTED_LABELS:
+            return 1
+        if token in _NOT_PERMITTED_LABELS:
+            return 0
+        return None
+    try:
+        code = int(value)  # type: ignore[call-overload]
+    except (TypeError, ValueError):
+        return None
+    return code if code in (0, 1) else None
 
 
 class _PumpDone:
