@@ -1,4 +1,4 @@
-h1:LiFfsQkvQmASecd/QFx9VE1SOE0RHKlpWw++Tqv5XZo=
+h1:bdALzYDPVBnS+sQ6HlFKoV4ZwWy02BiLdJGYVeBbgGg=
 20260509120000_init_events.sql h1:GmgCZKfaqXu1m96/cKAks2vhaLWTdEaHTLkFtUo9FXg=
 20260509170000_init_idempotency.sql h1:Nbu8DIE4Sv1WiHw3G22+tYffPhKc5Jryw3PMK8wB2zY=
 20260510010000_add_event_id.sql h1:RbtYP6uMnOB20zhJ9dNXUi4YVqbmlEzf562pmygnRW8=
@@ -161,3 +161,4 @@ h1:LiFfsQkvQmASecd/QFx9VE1SOE0RHKlpWw++Tqv5XZo=
 20260713000000_init_proj_budget_allocation_summary.sql h1:72j+IH7DwQ9xmV1srtNszWNLhBmIu3nDljwIHYYnm8E=
 20260729120000_add_proj_data_dataset_summary_checksum.sql h1:Zk3BmIBMjck0Q4OkKzP1wU93NLWC2b5IRV0iM0ihlX0=
 20260809190000_split_enclosure_permit_transition_and_source_times.sql h1:xjTv+1Eq6Ujg40E4y0mOK5nIlT8pXKhdp3ve7No+uvQ=
+20260810000000_init_entries_enclosure_permit_probes.sql h1:jSvy8jXhHwZbq1A4AMqKEL3uviaJtlyGLCGvISfevd4=

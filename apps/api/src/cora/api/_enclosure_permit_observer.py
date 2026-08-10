@@ -17,6 +17,30 @@ emits one `Unknown` observation so a dead permit signal fails the run
 gate closed rather than leaving a stale `Permitted`. That synthesized
 observation carries NO substrate time, because there was no substrate
 reading behind it; see `_unknown`.
+
+## Permit probe trail: a sibling poller, not an in-pump interleave
+
+When `tick_seconds` is configured, each PV also gets a sibling polling
+task (`_poll`) alongside its push subscription (`_pump`), both feeding
+the same queue. The poll never carries a status claim
+(`observed_status=None`): it exists only to re-affirm reach on a fixed
+cadence, independent of push traffic, because EPICS CA monitors are
+change-only and a quiet permit PV would otherwise leave a probe-trail
+gap that is really coverage, not an outage. See
+[[project_enclosure_permit_probe_design]].
+
+The poller is a SIBLING of `_pump`, not nested inside it, deliberately:
+`_pump` returns as soon as its subscription ends (clean end or
+disconnect), and `_drain` only re-subscribes after every pump has
+returned. A poller living inside `_pump` would die with it and could
+never observe a PV's recovery. As a sibling it keeps polling through a
+dead push path and its `UNREACHED` probes are the only signal left that
+this specific PV, not the whole deployment, is unreachable.
+
+Because the poll never carries a status, it cannot drive a permit
+transition and cannot be confused for evidence stronger than it is: a
+successful poll proves only that the configured channel answered this
+tick, never that the underlying signal is current (see `ReachTier`).
 """
 
 from __future__ import annotations
@@ -27,6 +51,7 @@ from typing import TYPE_CHECKING
 from cora.enclosure.ports.enclosure_observer import (
     EnclosureObservation,
     EnclosureObserverScope,
+    ReachTier,
 )
 from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
 
@@ -129,9 +154,11 @@ class ControlPortEnclosureObserver:
         *,
         control_port: ControlPort,
         permit_pvs: Mapping[str, str],
+        tick_seconds: float | None = None,
     ) -> None:
         self._control_port = control_port
         self._permit_pvs = dict(permit_pvs)
+        self._tick_seconds = tick_seconds
 
     def observe(self, scope: EnclosureObserverScope) -> AsyncGenerator[EnclosureObservation]:
         return self._drain(scope)
@@ -145,8 +172,16 @@ class ControlPortEnclosureObserver:
         if not pvs:
             return
         queue: asyncio.Queue[EnclosureObservation | _PumpDone] = asyncio.Queue()
-        tasks = [asyncio.create_task(self._pump(code, pv, queue)) for code, pv in pvs]
-        remaining = len(tasks)
+        pump_tasks = [asyncio.create_task(self._pump(code, pv, queue)) for code, pv in pvs]
+        poll_tasks = (
+            [asyncio.create_task(self._poll(code, pv, queue)) for code, pv in pvs]
+            if self._tick_seconds is not None
+            else []
+        )
+        tasks = pump_tasks + poll_tasks
+        # Only pumps ever signal completion; a poller runs until the
+        # `finally` below cancels it, so it must not hold this open.
+        remaining = len(pump_tasks)
         try:
             while remaining > 0:
                 item = await queue.get()
@@ -154,6 +189,20 @@ class ControlPortEnclosureObserver:
                     remaining -= 1
                     continue
                 yield item
+            # Every pump has finished, but a still-running poller can have
+            # enqueued a probe in the same instant the final _PumpDone was
+            # read (asyncio.Queue.put_nowait needs no await, so it is not
+            # ordered against the `remaining` check above). Drain exactly
+            # what is ALREADY queued right now, synchronously, into a list
+            # before yielding any of it: yielding suspends this generator
+            # and hands control back to a poller, which could otherwise
+            # keep queue.empty() perpetually False and stop `_drain` from
+            # ever returning to let the outer loop reconnect.
+            pending = queue.qsize()
+            leftover = [queue.get_nowait() for _ in range(pending)]
+            for item in leftover:
+                if not isinstance(item, _PumpDone):
+                    yield item
         finally:
             for task in tasks:
                 task.cancel()
@@ -167,9 +216,19 @@ class ControlPortEnclosureObserver:
     ) -> None:
         try:
             async for reading in self._control_port.subscribe(pv):
+                # RELAYED unconditionally: a delivered reading is push
+                # contact regardless of its mapped status. A Bad-quality
+                # reading still maps to "Unknown" but is NOT the same
+                # fact as `_unknown`'s disconnect: the substrate spoke
+                # and said its value could not be believed, which is
+                # reach with an unbelievable value, not absence of reach.
                 queue.put_nowait(
                     self._observation(
-                        code, pv, permit_status_from_reading(reading), reading.produced_at
+                        code,
+                        pv,
+                        permit_status_from_reading(reading),
+                        reading.produced_at,
+                        reach_tier=ReachTier.RELAYED,
                     )
                 )
             # Clean stream end: permit becomes Unknown until re-subscribed.
@@ -179,13 +238,60 @@ class ControlPortEnclosureObserver:
         finally:
             queue.put_nowait(_PUMP_DONE)
 
+    async def _poll(
+        self,
+        code: str,
+        pv: str,
+        queue: asyncio.Queue[EnclosureObservation | _PumpDone],
+    ) -> None:
+        """Re-affirm reach to `pv` every `_tick_seconds`, independent of push.
+
+        Never pushes `_PumpDone`: this task is a sibling of `_pump`, not
+        a stage in its lifecycle, and runs until `_drain`'s `finally`
+        cancels it on teardown. It ticks unconditionally, regardless of
+        how much push traffic `pv` is producing, which is simpler than
+        gating on push quiescence and avoids the "a chatty PV is never
+        polled" surprise a quiescence-gated poll would carry.
+
+        A tick that fails (any exception but cancellation) writes an
+        `UNREACHED` probe-only observation and keeps polling; it never
+        raises out of this loop and never touches `_pump`'s subscription.
+        """
+        assert self._tick_seconds is not None
+        while True:
+            await asyncio.sleep(self._tick_seconds)
+            try:
+                await self._control_port.read(pv)
+            except Exception:  # any read failure is a failed probe, not a bug
+                queue.put_nowait(self._probe_only(code, pv, ReachTier.UNREACHED))
+            else:
+                queue.put_nowait(self._probe_only(code, pv, ReachTier.RELAYED))
+
     def _observation(
-        self, code: str, pv: str, status: str, observed_at: datetime | None
+        self,
+        code: str,
+        pv: str,
+        status: str,
+        observed_at: datetime | None,
+        *,
+        reach_tier: ReachTier,
     ) -> EnclosureObservation:
         return EnclosureObservation(
             enclosure_code=code,
             observed_status=status,
+            reach_tier=reach_tier,
             observed_at=observed_at,
+            source_kind=_SOURCE_KIND,
+            source_id=pv,
+        )
+
+    def _probe_only(self, code: str, pv: str, reach_tier: ReachTier) -> EnclosureObservation:
+        """A poll tick's result: reach evidence with no status claim."""
+        return EnclosureObservation(
+            enclosure_code=code,
+            observed_status=None,
+            reach_tier=reach_tier,
+            observed_at=None,
             source_kind=_SOURCE_KIND,
             source_id=pv,
         )
@@ -209,9 +315,11 @@ class ControlPortEnclosureObserver:
         nothing.
 
         The recording side keeps its own clock: the event's `occurred_at`
-        still says when CORA learned of the disconnect.
+        still says when CORA learned of the disconnect. `reach_tier` is
+        `UNREACHED`: a disconnect carries a status claim (`Unknown`, so
+        the run gate still fails closed) but is not reach evidence.
         """
-        return self._observation(code, pv, _UNKNOWN, None)
+        return self._observation(code, pv, _UNKNOWN, None, reach_tier=ReachTier.UNREACHED)
 
 
 __all__ = ["ControlPortEnclosureObserver", "permit_status_from_reading"]

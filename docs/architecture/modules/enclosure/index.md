@@ -153,6 +153,45 @@ CREATE INDEX proj_enclosure_summary_gate_idx
 
 The address tuple `(facility_code, name)` is enforced unique at the projection because aggregates cannot enforce cross-stream invariants. The UNIQUE INDEX is partial on `WHERE lifecycle = 'Active'` so a decommissioned Enclosure does not hold the address against re-registration. CHECK constraints lock all enum values day-one so a future widening of the operational axis lands without a constraint migration. No FK constraints to other projections: rebuild order is arbitrary, and cross-projection consistency is event-driven. The `last_*` columns live only on the projection (the slim-aggregate rule keeps the aggregate state cheap to fold); the `last_source_kind` / `last_source_id` split mirrors the colon-delimited wire form so the gate-side queries can filter on adapter kind without LIKE patterns. The table carries two clocks and they answer different questions: `last_permit_status_changed_at` is CORA's ingest time for the last permit-status change, from the event's `occurred_at`, while `last_source_observed_at` is the substrate's own time for the reading behind it and is NULL whenever the substrate reported none. Both advance only on a change, because the decider emits nothing for an identical-status observation, so a stale value means "no transition since" rather than "not observed since".
 
+A stale value means "no transition since", never "not observed since" -- and `proj_enclosure_summary` alone cannot distinguish the two, which is why the permit probe trail exists.
+
+`entries_enclosure_permit_probes`:
+
+```sql title="entries_enclosure_permit_probes"
+CREATE TABLE entries_enclosure_permit_probes (
+    event_id        UUID         PRIMARY KEY,
+    enclosure_id    UUID         NOT NULL,
+    source_kind     TEXT         NOT NULL CHECK (length(source_kind) BETWEEN 1 AND 50),
+    source_id       TEXT         NOT NULL CHECK (length(source_id) BETWEEN 1 AND 200),
+    reach_tier      TEXT         NOT NULL CHECK (length(reach_tier) BETWEEN 1 AND 32),
+    status_claimed  BOOLEAN      NOT NULL,
+    recorded_at     TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX entries_enclosure_permit_probes_enclosure_recorded_idx
+    ON entries_enclosure_permit_probes (enclosure_id, recorded_at DESC);
+```
+
+Append-only (INSERT-only role grant, `UPDATE` / `DELETE` / `TRUNCATE` REVOKEd): one row per observation the permit monitor's `EnclosureObserver` surfaces, whether or not it caused a `permit_status` transition. This is the record of whether CORA could reach the substrate, kept deliberately separate from `EnclosurePermitObserved`'s record of what the interlock said; the row never carries the observed permit value itself, so it cannot become a second source of truth for permit status. `reach_tier` is `RELAYED` (CORA received or fetched a value through the configured channel) or `UNREACHED` (it could not, this tick); a stronger tier for a confirmed direct round trip to the authoritative source, as opposed to an intermediary such as an EPICS CA gateway that may answer from its own cache, is deliberately not defined until a deployment can demonstrate one. `status_claimed` distinguishes a push delivery or a real substrate disconnect (both carry a permit-status claim) from a periodic re-affirmation poll (which intentionally makes none); it is a fact about the probe, not the hutch. `recorded_at` (DB `DEFAULT now()`) is the only clock on this row: no producer-asserted timestamp crosses the `EnclosureObserver` port, so consumer-side queueing lag can forward-date a row relative to when reach actually happened, with nothing on the row to detect it in v1.
+
+Reading the trail (no query slice exists yet; this is a direct read against the table, same posture as the `proj_enclosure_summary` psql query above):
+
+```sql title="latest confirmed reach per enclosure"
+SELECT e.enclosure_id, e.name, p.reach_tier, p.recorded_at,
+       now() - p.recorded_at AS since_last_probe
+FROM proj_enclosure_summary e
+LEFT JOIN LATERAL (
+    SELECT reach_tier, recorded_at
+    FROM entries_enclosure_permit_probes
+    WHERE enclosure_id = e.enclosure_id
+    ORDER BY recorded_at DESC
+    LIMIT 1
+) p ON true
+WHERE e.lifecycle = 'Active';
+```
+
+One caveat worth stating plainly rather than discovering at 3am: a `RELAYED` row proves CORA reached the configured channel, never that the underlying substrate value is current. At a deployment reading through a caching intermediary, a `RELAYED` trail can stay dense through an upstream outage the intermediary is masking. This is not visible from `reach_tier` alone; it requires knowing the deployment's topology, not just querying this table. A related failure mode is closed rather than merely documented: no probe row is written at all while a process runs degraded under the schema-version mismatch override (whose event store is read-only), so a gap in the trail, not a misleadingly dense one, is what a reader sees across that window.
+
 ## Cross-Module boundaries
 
 | Module | Relationship | What's exchanged |

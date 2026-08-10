@@ -20,7 +20,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from cora.enclosure.aggregates.enclosure import EnclosurePermitStatus
+from cora.enclosure.aggregates.enclosure import EnclosurePermitStatus, ReachTier
 from cora.enclosure.ports.enclosure_observer import (
     AlwaysPermittedEnclosureObserver,
     EnclosureObservation,
@@ -125,10 +125,24 @@ async def test_always_permitted_observer_yields_observations_for_each_distinct_c
 
 
 @pytest.mark.unit
+async def test_always_permitted_observer_emits_relayed_reach_tier() -> None:
+    """The stub always delivers a status claim, the same shape as a real
+    push delivery, so it is RELAYED, not UNREACHED: pairing a delivered
+    status with a no-reach-evidence tier is the illegal combination the
+    port docstring warns adapters against."""
+    observer = AlwaysPermittedEnclosureObserver()
+    scope = EnclosureObserverScope(enclosure_codes=frozenset({_HUTCH_A}))
+    observations = [obs async for obs in observer.observe(scope)]
+    assert len(observations) == 1
+    assert observations[0].reach_tier is ReachTier.RELAYED
+
+
+@pytest.mark.unit
 def test_enclosure_observation_is_frozen_dataclass() -> None:
     obs = EnclosureObservation(
         enclosure_code=_HUTCH_A,
         observed_status=EnclosurePermitStatus.PERMITTED.value,
+        reach_tier=ReachTier.RELAYED,
         observed_at=_EPOCH,
         source_kind="Stub",
         source_id="always-permitted",

@@ -1009,6 +1009,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             enclosure_permit_observer = ControlPortEnclosureObserver(
                 control_port=app.state.operation.control_port,
                 permit_pvs=settings.enclosure_permit_pvs,
+                tick_seconds=settings.enclosure_permit_probe_tick_seconds,
             )
 
             try:
@@ -1019,6 +1020,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         observer=enclosure_permit_observer,
                         kernel=deps,
                         name_to_id=enclosure_permit_ids,
+                        probe_store=app.state.enclosure.permit_probe_store,
                         enclosure_projection_registry=enclosure_only_registry,
                         startup_timeout_seconds=(
                             settings.enclosure_permit_monitor_startup_timeout_seconds

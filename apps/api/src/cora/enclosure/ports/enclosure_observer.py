@@ -69,6 +69,9 @@ no `vendor_status_code` on either the observation envelope or the
 scope. Substrate severity codes are flattened by the adapter into the
 three-value `EnclosurePermitStatus` codomain before crossing this
 seam; severity bookkeeping belongs to the substrate, not the spine.
+`reach_tier` (see `ReachTier`) is not a severity scalar in this sense:
+it grades CORA's own reach to the substrate, never the hazard the
+substrate reports.
 
 ## Stub roster
 
@@ -95,7 +98,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol, runtime_checkable
 
-from cora.enclosure.aggregates.enclosure import EnclosurePermitStatus
+# `ReachTier` is re-exported (see `__all__` below) rather than left for
+# consumers to import from `cora.enclosure.aggregates.enclosure`
+# directly: `cora.aggregates` submodules are tach-walled from the
+# composition root (`cora.api`), while this port module is the blessed
+# public surface, exactly like `EnclosureObservation` itself.
+from cora.enclosure.aggregates.enclosure import EnclosurePermitStatus, ReachTier
 
 # No `_STUB_OBSERVED_AT`. The stub has no substrate behind it, so it
 # reports no substrate time. A fixed 1970 sentinel here would be a date
@@ -106,7 +114,7 @@ from cora.enclosure.aggregates.enclosure import EnclosurePermitStatus
 
 @dataclass(frozen=True)
 class EnclosureObservation:
-    """One permit-status reading drained from the substrate.
+    """One reach observation from the permit substrate.
 
     `enclosure_code` is the BC-local Enclosure identity surface
     adapters know (the operator-readable code an EPICS PV's record
@@ -115,10 +123,22 @@ class EnclosureObservation:
     decider.
 
     `observed_status` is the raw status string the adapter parsed
-    from the substrate. The decider parses it against the
-    `EnclosurePermitStatus` codomain and raises if the string does
-    not match a known status value; substrate values that cannot be
-    classified should be flattened to `"Unknown"` by the adapter.
+    from the substrate, or `None` when this observation makes no
+    status claim at all: a probe-only re-affirmation read that
+    exists to record reach, not to report a permit value. When not
+    `None`, the decider parses it against the `EnclosurePermitStatus`
+    codomain and raises if the string does not match a known status
+    value; substrate values that cannot be classified should be
+    flattened to `"Unknown"` by the adapter. A `None` status never
+    causes a permit transition, by construction: there is nothing to
+    parse.
+
+    `reach_tier` says what kind of evidence backed this observation
+    (see `ReachTier`). It is required, not optional, so every adapter
+    states its own evidence rather than letting the recorder infer it
+    from `observed_status`, which cannot distinguish "the substrate
+    said Unknown" from "nothing was heard from the substrate at all"
+    (both would otherwise look identical).
 
     `observed_at` is the substrate's own time for the observation,
     and is `None` when the substrate supplied none. Real equipment
@@ -134,21 +154,21 @@ class EnclosureObservation:
     indistinguishable from a reported one once it is written down.
     The recording side always has its own clock for the second fact.
 
-    NOTE: this field does not currently reach the event payload.
-    `_monitor.record_observation` builds `ObserveEnclosureStatus`
-    without it, so the recorded `EnclosurePermitObserved` carries
-    CORA's ingest time only. Threading it through the command, event
-    and projection is the next slice of
-    [[project-source-timestamp-design]]; until then, treat this as a
-    port-level fact the seam still drops.
+    `observed_at` reaches the event payload: `_monitor.record_observation`
+    threads it onto `ObserveEnclosureStatus`, and `EnclosurePermitObserved`
+    carries it alongside `occurred_at` (CORA's ingest time). This field
+    is untouched by the permit-probe trail, which records reach
+    separately and never carries a permit value.
 
     `source_kind` and `source_id` ship as separate strings; the
     handler joins them into the colon-delimited `monitor_ref` wire
-    string on the `EnclosurePermitObserved` event payload.
+    string on the `EnclosurePermitObserved` event payload, and the
+    same pair is carried unmodified onto the probe trail row.
     """
 
     enclosure_code: str
-    observed_status: str
+    observed_status: str | None
+    reach_tier: ReachTier
     observed_at: datetime | None
     source_kind: str
     source_id: str
@@ -212,6 +232,11 @@ class AlwaysPermittedEnclosureObserver:
 
       - `observed_status="Permitted"` matching
         `EnclosurePermitStatus.PERMITTED`.
+      - `reach_tier=ReachTier.RELAYED`, because the stub always
+        delivers a status claim, the same shape as a real push
+        delivery. `UNREACHED` would pair a delivered status with a
+        tier that means "no reach evidence", which is the illegal
+        combination the port docstring warns adapters against.
       - `observed_at=None`, because a stub has no substrate and so has
         no substrate time to report. This was a fixed 1970 sentinel,
         chosen for determinism, until the nullable field made honesty
@@ -235,6 +260,7 @@ class AlwaysPermittedEnclosureObserver:
             yield EnclosureObservation(
                 enclosure_code=enclosure_code,
                 observed_status=EnclosurePermitStatus.PERMITTED.value,
+                reach_tier=ReachTier.RELAYED,
                 observed_at=None,
                 source_kind="Stub",
                 source_id="AlwaysPermittedEnclosureObserver",
@@ -246,4 +272,5 @@ __all__ = [
     "EnclosureObservation",
     "EnclosureObserver",
     "EnclosureObserverScope",
+    "ReachTier",
 ]

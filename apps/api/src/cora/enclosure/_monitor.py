@@ -57,6 +57,33 @@ Neither step closes the window to zero: CORA can only observe that a
 settlement happened, never that no more are pending, and a PV that never
 answers leaves that one enclosure's preflight reading exactly as stale as
 before this fix.
+
+## Permit probe trail
+
+Every observation the observer surfaces, whether or not it carries a
+status claim, is also recorded as a `PermitProbe` row: an append-only
+fact about whether CORA reached the permit substrate, kept separate from
+`EnclosurePermitObserved`'s record of what the interlock said. See
+[[project_enclosure_permit_probe_design]]. The probe write happens in
+its own try/except, before the transition attempt, so a bookkeeping
+failure there can never suppress a real permit transition (the reverse
+of "Startup race" above: this failure mode makes the record LESS
+truthful, not the boot LESS available, so it degrades by logging and
+continuing rather than by warning and proceeding).
+
+`observation.observed_status is None` means the observation is
+probe-only (a periodic re-affirmation read that intentionally makes no
+status claim): the probe row is still written, but no permit transition
+is attempted and no startup-readiness code is settled by it (see
+`run_enclosure_permit_monitor`), because it proves nothing about
+whether the enclosure's actual permit-status has been confirmed.
+
+No probe row is written at all while `kernel.schema_posture ==
+"degraded"` (a boot running under `ALLOW_SCHEMA_VERSION_MISMATCH`,
+whose event store is read-only): a probe row asserting reach during a
+window where CORA cannot actually record what it observed would be
+worse than silence. The resulting gap in the trail is the correct
+signal, not a bug.
 """
 
 from __future__ import annotations
@@ -71,6 +98,7 @@ from cora.enclosure.aggregates.enclosure import (
     EnclosureEvent,
     EnclosurePermitStatus,
     MonitorRef,
+    PermitProbe,
     event_type_name,
     fold,
     from_stored,
@@ -88,6 +116,7 @@ from cora.shared.identity import MonitorSourceId
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Mapping
 
+    from cora.enclosure.aggregates.enclosure import PermitProbeStore
     from cora.enclosure.ports.enclosure_observer import (
         EnclosureObservation,
         EnclosureObserver,
@@ -117,16 +146,68 @@ async def record_observation(
     kernel: Kernel,
     observation: EnclosureObservation,
     name_to_id: Mapping[str, UUID],
+    probe_store: PermitProbeStore,
 ) -> None:
-    """Record one observation as an EnclosurePermitObserved (raw, authz-bypassed).
+    """Record one observation: a permit-probe row, then, when status-bearing,
+    an EnclosurePermitObserved transition (raw, authz-bypassed).
 
-    No-op when the code is unmapped, the status is unparseable, or the
-    decider returns `[]` (identical-status, status-change-only).
+    No-op entirely when the code is unmapped: the row cannot be
+    attributed to an enclosure. Otherwise the probe row is written
+    unconditionally (except see the degraded-schema case below), in its
+    own try/except: a probe-store failure must never suppress the
+    transition below it (a bookkeeping table must never take down the
+    safety-relevant record it exists to annotate).
+
+    `kernel.schema_posture == "degraded"` skips the probe write entirely
+    rather than writing one: a degraded boot runs a read-only event
+    store (see `Kernel.schema_posture`), so a probe row asserting reach
+    during that window would claim coverage over a process that cannot
+    actually record what it observed. A GAP in the trail here is the
+    correct signal, not a bug: it is exactly the "CORA was not really
+    watching" fact the trail exists to preserve, and writing a row would
+    hide it behind a dense, misleading RELAYED/UNREACHED history.
+
+    `observation.observed_status is None` means this observation is
+    probe-only and makes no status claim, so no transition is attempted
+    past the probe write. Otherwise, an unparseable status, or the
+    decider returning `[]` (identical-status, status-change-only), are
+    no-ops on the transition path only; the probe row still stands.
     """
     enclosure_id = name_to_id.get(observation.enclosure_code)
     if enclosure_id is None:
         _log.warning("enclosure_monitor.unknown_code", enclosure_code=observation.enclosure_code)
         return
+
+    if kernel.schema_posture == "degraded":
+        _log.warning(
+            "enclosure_monitor.probe_skipped_degraded_schema",
+            enclosure_code=observation.enclosure_code,
+        )
+    else:
+        try:
+            await probe_store.append(
+                [
+                    PermitProbe(
+                        event_id=kernel.id_generator.new_id(),
+                        enclosure_id=enclosure_id,
+                        source_kind=observation.source_kind,
+                        source_id=observation.source_id,
+                        reach_tier=observation.reach_tier,
+                        status_claimed=observation.observed_status is not None,
+                    )
+                ]
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            _log.exception(
+                "enclosure_monitor.probe_write_failed",
+                enclosure_code=observation.enclosure_code,
+            )
+
+    if observation.observed_status is None:
+        return
+
     try:
         new_status = EnclosurePermitStatus(observation.observed_status)
     except ValueError:
@@ -188,18 +269,32 @@ async def run_enclosure_permit_monitor(
     observer: EnclosureObserver,
     kernel: Kernel,
     name_to_id: Mapping[str, UUID],
+    probe_store: PermitProbeStore,
     reconnect_delay_seconds: float = _RECONNECT_DELAY_SECONDS,
     startup_ready: asyncio.Event | None = None,
 ) -> None:
     """Drain the observer, recording each observation; re-subscribe on stream end.
 
-    `startup_ready`, when given, is set as soon as every configured enclosure
-    code has produced one observation (a real reading or the observer's own
-    `Unknown` on a dead PV), or, failing that, once the current pass ends (the
-    observer's stream terminated or raised with codes still unheard from). The
-    second case fires on every reconnect attempt, not only the first, but
-    `Event.set` on an already-set event is a no-op, so the caller only ever
-    sees the earliest settlement.
+    `startup_ready`, when given, is set once every configured enclosure code
+    has produced one STATUS-BEARING observation (a real reading, or the
+    observer's own `Unknown` on a dead PV; `observation.observed_status is
+    not None`). A probe-only observation (a periodic re-affirmation poll,
+    `observed_status is None`) never settles a code: it proves reach, not
+    that the enclosure's permit status has been confirmed, and settling on
+    it would let a poll-only pass mark boot ready while the actual permit
+    transition attempt (which only a status-bearing observation can make)
+    never happened, serving a stale `permit_status` boot never confirmed.
+
+    Failing that, `startup_ready` is set once a full pass ends (the
+    observer's stream terminated or raised) with every code still settled
+    from a PRIOR pass, i.e. `pending_codes` is already empty; a pass that
+    ends with codes still pending (a total connection failure, or the
+    observer producing nothing at all) does NOT settle `startup_ready`
+    here, so the caller's own bounded wait (see `enclosure_permit_monitor_lifespan`)
+    is what gives up on a deployment that cannot connect at all, rather
+    than this loop falsely reporting readiness for a code it never heard
+    a status-bearing observation for. `Event.set` on an already-set event
+    is a no-op, so the caller only ever sees the earliest settlement.
     """
     if not name_to_id:
         return
@@ -209,7 +304,7 @@ async def run_enclosure_permit_monitor(
         try:
             async for observation in observer.observe(scope):
                 try:
-                    await record_observation(kernel, observation, name_to_id)
+                    await record_observation(kernel, observation, name_to_id, probe_store)
                 except asyncio.CancelledError:
                     raise
                 except Exception:
@@ -217,14 +312,15 @@ async def run_enclosure_permit_monitor(
                         "enclosure_monitor.record_failed",
                         enclosure_code=observation.enclosure_code,
                     )
-                pending_codes.discard(observation.enclosure_code)
-                if startup_ready is not None and not pending_codes:
-                    startup_ready.set()
+                if observation.observed_status is not None:
+                    pending_codes.discard(observation.enclosure_code)
+                    if startup_ready is not None and not pending_codes:
+                        startup_ready.set()
         except asyncio.CancelledError:
             raise
         except Exception:
             _log.exception("enclosure_monitor.iteration_failed")
-        if startup_ready is not None:
+        if startup_ready is not None and not pending_codes:
             startup_ready.set()
         await asyncio.sleep(reconnect_delay_seconds)
 
@@ -235,6 +331,7 @@ async def enclosure_permit_monitor_lifespan(
     observer: EnclosureObserver,
     kernel: Kernel,
     name_to_id: Mapping[str, UUID],
+    probe_store: PermitProbeStore,
     enclosure_projection_registry: ProjectionRegistry | None = None,
     startup_timeout_seconds: float = _STARTUP_TIMEOUT_SECONDS,
 ) -> AsyncGenerator[None]:
@@ -266,6 +363,7 @@ async def enclosure_permit_monitor_lifespan(
             observer=observer,
             kernel=kernel,
             name_to_id=name_to_id,
+            probe_store=probe_store,
             startup_ready=startup_ready,
         ),
         name="enclosure-permit-monitor",
