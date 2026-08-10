@@ -159,6 +159,26 @@ class EnclosurePermitObserved:
     ('PSS interlock chain healthy', 'EPS shutter closed pending
     survey'). Validated 1-500 chars in the decider via
     `EnclosureReason` VO.
+
+    `observed_at` is the SUBSTRATE's own time for the reading behind
+    this transition, and is `None` whenever the substrate reported
+    none. It is not `occurred_at`: that one is CORA's clock at
+    handler-append, the moment CORA learned of the change. Keeping both
+    is the point, and at APS 2-BM they are far apart, because both PSS
+    permit PVs report no time at all and `observed_at` is therefore
+    `None` on every real reading there.
+
+    Unlike `monitor_ref` one field over, `observed_at` is
+    PRESENT-AS-NULL on the wire rather than omit-when-None. The
+    deviation is deliberate: omitting it would make an event written
+    before this field existed byte-identical to one saying "the
+    substrate gave no time", conflating "never captured" with "nothing
+    to capture" permanently. The key costs nothing and keeps the two
+    distinguishable forever.
+
+    `observed_at` has NO default. Every construction site must state
+    what the substrate said, including saying `None`, because a default
+    is exactly how a field gets silently dropped at one hop of four.
     """
 
     enclosure_id: UUID
@@ -168,6 +188,7 @@ class EnclosurePermitObserved:
     trigger: str
     triggered_by: MonitorSourceId
     occurred_at: datetime
+    observed_at: datetime | None
     monitor_ref: str | None = None
 
     def __post_init__(self) -> None:
@@ -242,6 +263,7 @@ def to_payload(event: EnclosureEvent) -> dict[str, Any]:
             trigger=trigger,
             triggered_by=triggered_by,
             occurred_at=occurred_at,
+            observed_at=observed_at,
             monitor_ref=monitor_ref,
         ):
             payload: dict[str, Any] = {
@@ -252,6 +274,10 @@ def to_payload(event: EnclosureEvent) -> dict[str, Any]:
                 "trigger": trigger,
                 "triggered_by": str(triggered_by),
                 "occurred_at": occurred_at.isoformat(),
+                # Present-as-null, unlike monitor_ref below. See the
+                # dataclass docstring: omitting it would make a pre-field
+                # event indistinguishable from "the substrate gave none".
+                "observed_at": observed_at.isoformat() if observed_at else None,
             }
             if monitor_ref is not None:
                 payload["monitor_ref"] = monitor_ref
@@ -270,6 +296,17 @@ def to_payload(event: EnclosureEvent) -> dict[str, Any]:
             }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
+
+
+def _optional_datetime(raw: object) -> datetime | None:
+    """Parse an optional ISO-8601 payload time; absence and null both give None.
+
+    Two absences reach this and both answer None: a payload written
+    before `observed_at` existed carries no key at all, and a payload
+    written after carries an explicit null whenever the substrate
+    reported no time.
+    """
+    return datetime.fromisoformat(raw) if isinstance(raw, str) else None
 
 
 def from_stored(stored: StoredEvent) -> EnclosureEvent:
@@ -304,6 +341,13 @@ def from_stored(stored: StoredEvent) -> EnclosureEvent:
                     trigger=payload["trigger"],
                     triggered_by=MonitorSourceId(UUID(payload["triggered_by"])),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    # `.get()`, not `[...]`. Events written before this
+                    # field existed have no key, and the 2-BM store holds
+                    # such events today. `_monitor.record_observation`
+                    # re-folds the whole stream on EVERY decision, so an
+                    # unguarded read would break the live permit monitor
+                    # on its next transition, not at some later replay.
+                    observed_at=_optional_datetime(payload.get("observed_at")),
                     monitor_ref=payload.get("monitor_ref"),
                 ),
                 extra=(ValueError,),

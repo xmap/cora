@@ -87,6 +87,7 @@ def _cmd(
         monitor_source_id=_MONITOR_SOURCE_ID,
         reason=reason,
         trigger=trigger,
+        observed_at=None,
     )
 
 

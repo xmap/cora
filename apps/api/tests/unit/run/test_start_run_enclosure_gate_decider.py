@@ -52,7 +52,7 @@ def _enclosure_ref(
         name="<test enclosure>",
         permit_status=permit_status,
         lifecycle=lifecycle,
-        observed_at=None,
+        permit_status_changed_at=None,
         source_kind=None,
         source_id=None,
     )

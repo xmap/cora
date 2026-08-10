@@ -166,7 +166,11 @@ async def test_enclosure_permit_observed_updates_status_and_observation_envelope
     fragility (per L-proj-2)."""
     proj = EnclosureSummaryProjection()
     conn = AsyncMock()
-    observed_at = datetime(2026, 6, 9, 14, 30, 0, tzinfo=UTC)
+    # Two clocks, two constants, deliberately hours apart. Sharing one
+    # would let a test pass whichever column the value came from, which
+    # is exactly how the old single-column shape hid its own meaning.
+    changed_at = datetime(2026, 6, 9, 14, 30, 0, tzinfo=UTC)
+    source_observed_at = datetime(2026, 6, 9, 9, 15, 0, tzinfo=UTC)
     event = _stored(
         "EnclosurePermitObserved",
         {
@@ -176,7 +180,8 @@ async def test_enclosure_permit_observed_updates_status_and_observation_envelope
             "reason": "PSS interlock chain healthy",
             "trigger": "Monitor",
             "triggered_by": str(_TEST_MONITOR_SOURCE_ID),
-            "occurred_at": observed_at.isoformat(),
+            "occurred_at": changed_at.isoformat(),
+            "observed_at": source_observed_at.isoformat(),
             "monitor_ref": "EpicsPv:2bma:PSS:permit",
         },
     )
@@ -188,13 +193,87 @@ async def test_enclosure_permit_observed_updates_status_and_observation_envelope
     assert args is not None
     sql = args.args[0]
     assert "UPDATE proj_enclosure_summary" in sql
+    # Arity is asserted so a future append cannot slip in unlooked-at:
+    # these are positional binds, and adding one without extending the
+    # assertions leaves every existing check passing.
+    assert len(args.args) == 9
     assert args.args[1] == _ENCLOSURE_ID
     assert args.args[2] == "Permitted"
-    assert args.args[3] == observed_at
+    assert args.args[3] == changed_at
     assert args.args[4] == "PSS interlock chain healthy"
     assert args.args[5] == "Monitor"
     assert args.args[6] == "EpicsPv"
     assert args.args[7] == "2bma:PSS:permit"
+    assert args.args[8] == source_observed_at
+
+
+@pytest.mark.unit
+async def test_enclosure_permit_observed_records_a_null_source_time() -> None:
+    """A substrate that stamps nothing lands as NULL, not as the ingest time.
+
+    The 2-BM shape: both PSS permit PVs report an undefined EPICS stamp,
+    so `observed_at` is null on every real reading there while
+    `occurred_at` is always present. The two columns must not collapse.
+    """
+    proj = EnclosureSummaryProjection()
+    conn = AsyncMock()
+    changed_at = datetime(2026, 6, 9, 14, 30, 0, tzinfo=UTC)
+    event = _stored(
+        "EnclosurePermitObserved",
+        {
+            "enclosure_id": str(_ENCLOSURE_ID),
+            "from_status": "Unknown",
+            "to_status": "NotPermitted",
+            "reason": "PSS reports hutch unsecured",
+            "trigger": "Monitor",
+            "triggered_by": str(_TEST_MONITOR_SOURCE_ID),
+            "occurred_at": changed_at.isoformat(),
+            "observed_at": None,
+            "monitor_ref": "EpicsPv:S02BM-PSS:StaB:SecureM",
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[3] == changed_at
+    assert args.args[8] is None
+
+
+@pytest.mark.unit
+async def test_enclosure_permit_observed_replays_a_payload_written_before_the_field() -> None:
+    """A pre-P1 payload has no `observed_at` key at all, and must still apply.
+
+    The 2-BM store holds two such events today. The projection re-reads
+    them on every rebuild, so an unguarded `payload["observed_at"]`
+    would stall this projection forever behind the first historic event
+    while the API kept serving the stale row.
+    """
+    proj = EnclosureSummaryProjection()
+    conn = AsyncMock()
+    changed_at = datetime(2026, 6, 9, 14, 30, 0, tzinfo=UTC)
+    event = _stored(
+        "EnclosurePermitObserved",
+        {
+            "enclosure_id": str(_ENCLOSURE_ID),
+            "from_status": "Unknown",
+            "to_status": "Permitted",
+            "reason": "PSS interlock chain healthy",
+            "trigger": "Monitor",
+            "triggered_by": str(_TEST_MONITOR_SOURCE_ID),
+            "occurred_at": changed_at.isoformat(),
+            "monitor_ref": "EpicsPv:2bma:PSS:permit",
+        },
+    )
+
+    await proj.apply(event, conn)
+
+    args = conn.execute.await_args
+    assert args is not None
+    assert args.args[3] == changed_at
+    # Absent key and explicit null both mean "no substrate time".
+    assert args.args[8] is None
 
 
 @pytest.mark.unit

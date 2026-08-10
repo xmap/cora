@@ -43,11 +43,21 @@ so assignment into the dataclass's `str`-typed fields is exact.
 
 ## Timestamp coercion
 
-`last_observed_at` is stored as `TIMESTAMPTZ` and is typed as
-`str | None` on the port surface (ISO 8601 string when present,
-`None` when no observation has landed). The adapter formats the
-asyncpg `datetime` via `.isoformat()` so consumers receive a
+`last_permit_status_changed_at` is stored as `TIMESTAMPTZ` and is
+typed as `str | None` on the port surface (ISO 8601 string when
+present, `None` when no transition has landed). The adapter formats
+the asyncpg `datetime` via `.isoformat()` so consumers receive a
 parse-stable string without importing `datetime` through the port.
+
+This surfaces CORA's ingest time, NOT the substrate's. The projection
+also carries `last_source_observed_at`, the substrate's own time, and
+this port deliberately does not expose it yet: no cross-BC consumer
+has asked for it, and inventing a second time field for a hypothetical
+reader is the speculative generality this design already rejected
+once. When a consumer does need substrate time, add it as its own
+field rather than repointing this one, because the two answer
+different questions and a silent repoint is exactly the confusion the
+rename exists to end.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -65,7 +75,7 @@ from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 
 _LOOKUP_SQL = """
 SELECT enclosure_id, name, permit_status, lifecycle,
-       last_observed_at, last_source_kind, last_source_id
+       last_permit_status_changed_at, last_source_kind, last_source_id
 FROM proj_enclosure_summary
 WHERE enclosure_id = $1
 LIMIT 1
@@ -73,7 +83,7 @@ LIMIT 1
 
 _FIND_BY_IDS_SQL = """
 SELECT enclosure_id, name, permit_status, lifecycle,
-       last_observed_at, last_source_kind, last_source_id
+       last_permit_status_changed_at, last_source_kind, last_source_id
 FROM proj_enclosure_summary
 WHERE enclosure_id = ANY($1)
   AND lifecycle = 'Active'
@@ -81,7 +91,7 @@ WHERE enclosure_id = ANY($1)
 
 _LOOKUP_BY_NAME_SQL = """
 SELECT enclosure_id, name, permit_status, lifecycle,
-       last_observed_at, last_source_kind, last_source_id
+       last_permit_status_changed_at, last_source_kind, last_source_id
 FROM proj_enclosure_summary
 WHERE facility_code = $1
   AND name = $2
@@ -120,7 +130,7 @@ class PostgresEnclosureLookup:
         return _row_to_reference(row)
 
 
-def _format_observed_at(raw: Any) -> str | None:
+def _format_changed_at(raw: Any) -> str | None:
     if raw is None:
         return None
     return raw.isoformat()
@@ -132,7 +142,7 @@ def _row_to_reference(row: Any) -> EnclosureLookupResult:
         name=str(row["name"]),
         permit_status=EnclosurePermitStatus(row["permit_status"]),
         lifecycle=EnclosureLifecycle(row["lifecycle"]),
-        observed_at=_format_observed_at(row["last_observed_at"]),
+        permit_status_changed_at=_format_changed_at(row["last_permit_status_changed_at"]),
         source_kind=row["last_source_kind"],
         source_id=row["last_source_id"],
     )

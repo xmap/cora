@@ -134,6 +134,20 @@ an image that migrated itself on boot would let a rolling deploy race
 two schema versions against one database. Apply migrations first, then
 roll the image.
 
+That order is right for ADDITIVE migrations, which is nearly all of
+them, and wrong for a migration that renames or removes anything the
+running image still names. A rename lands instantly and the old image
+keeps issuing SQL against the old name, so the window between apply
+and rollout is one where queries raise `UndefinedColumnError`, and a
+projection that hits one rolls its batch back without advancing its
+bookmark and retries forever. For those, STOP the API, apply, then
+START it, and accept the short outage instead. The migration should
+say so in its own header; CI cannot warn you, because the
+destructive-DDL scan matches `DROP` and `ALTER COLUMN ... TYPE` but
+not `RENAME COLUMN`. The schema-version boot gate is not a substitute:
+it refuses a stale image at boot, which does nothing for a process
+already running when the migration lands.
+
 The image carries no configuration. `create_app()` runs at import and
 its boot gates raise there, so a misconfigured container exits instead
 of serving: `APP_ENV=prod` with no `TRUST_POLICY_ID` dies at import

@@ -99,6 +99,7 @@ def _command(
     monitor_source_uuid: UUID,
     reason: str = "PSS interlock chain healthy",
     trigger: str = "Monitor",
+    observed_at: datetime | None = None,
 ) -> ObserveEnclosureStatus:
     return ObserveEnclosureStatus(
         enclosure_id=EnclosureId(enclosure_id),
@@ -107,6 +108,7 @@ def _command(
         monitor_source_id=MonitorSourceId(monitor_source_uuid),
         reason=reason,
         trigger=trigger,
+        observed_at=observed_at,
     )
 
 
@@ -362,3 +364,56 @@ def test_observe_is_pure_same_input_same_output(
         state=state, command=command, now=now, triggered_by=triggered_by
     )
     assert first == second
+
+
+@pytest.mark.unit
+@given(
+    enclosure_id=st.uuids(),
+    monitor_source_uuid=st.uuids(),
+    now=aware_datetimes(),
+    triggered_by_uuid=st.uuids(),
+    registered_by=st.uuids(),
+    observed_at=st.one_of(st.none(), aware_datetimes()),
+)
+def test_substrate_time_is_carried_onto_the_event_verbatim(
+    enclosure_id: UUID,
+    monitor_source_uuid: UUID,
+    now: datetime,
+    triggered_by_uuid: UUID,
+    registered_by: UUID,
+    observed_at: datetime | None,
+) -> None:
+    """Whatever the substrate said, the event says the same, unaltered.
+
+    The cheapest guard against half-wiring: the field is carried through
+    four hops (observation, command, event, payload) and a drop at any
+    one of them is invisible to a test that only checks the status
+    transitioned. `None` is in the strategy on purpose, because it is
+    the ordinary case at 2-BM rather than the edge, and because a
+    property that only ever saw real datetimes would pass on an
+    implementation that substituted `now` for absence.
+    """
+    state = _state(
+        enclosure_id=enclosure_id,
+        registered_by=registered_by,
+        permit_status=EnclosurePermitStatus.UNKNOWN,
+    )
+    command = _command(
+        enclosure_id=enclosure_id,
+        new_status=EnclosurePermitStatus.PERMITTED,
+        monitor_source_uuid=monitor_source_uuid,
+        observed_at=observed_at,
+    )
+
+    events = observe_enclosure_status.decide(
+        state=state,
+        command=command,
+        now=now,
+        triggered_by=MonitorSourceId(triggered_by_uuid),
+    )
+
+    assert len(events) == 1
+    emitted = events[0]
+    assert emitted.observed_at == observed_at
+    # And it is never confused with CORA's own clock.
+    assert emitted.occurred_at == now

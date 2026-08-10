@@ -116,6 +116,7 @@ async def _observe(
             monitor_source_id=_MONITOR_SOURCE_ID,
             monitor_ref=MonitorRef(source_kind="EpicsPv", source_id="2bm:hutch:permit"),
             trigger="Monitor",
+            observed_at=None,
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,

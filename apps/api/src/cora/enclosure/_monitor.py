@@ -105,6 +105,11 @@ async def record_observation(
             source_kind=observation.source_kind, source_id=observation.source_id
         ),
         trigger="Monitor",
+        # The seam used to stop here and drop this. `occurred_at` on the
+        # emitted event still records when CORA learned of the reading;
+        # this records when the substrate says it took it, or None when
+        # the substrate said nothing, which at 2-BM is every reading.
+        observed_at=observation.observed_at,
     )
 
     stored, version = await kernel.event_store.load(

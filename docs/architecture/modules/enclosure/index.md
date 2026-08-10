@@ -126,13 +126,14 @@ CREATE TABLE proj_enclosure_summary (
     ),
     registered_at           TIMESTAMPTZ  NOT NULL,
     registered_by           UUID         NOT NULL,
-    last_observed_at        TIMESTAMPTZ,
-    last_observed_reason    TEXT,
+    last_permit_status_changed_at  TIMESTAMPTZ,
+    last_permit_status_reason      TEXT,
     last_trigger            TEXT         CHECK (
         last_trigger IS NULL OR last_trigger IN ('Operator', 'Monitor', 'Auto')
     ),
     last_source_kind        TEXT,
     last_source_id          TEXT,
+    last_source_observed_at TIMESTAMPTZ,
     decommissioned_at       TIMESTAMPTZ,
     decommissioned_by       UUID,
     updated_at              TIMESTAMPTZ  NOT NULL DEFAULT now()
@@ -150,7 +151,7 @@ CREATE INDEX proj_enclosure_summary_gate_idx
     ON proj_enclosure_summary (lifecycle, permit_status);
 ```
 
-The address tuple `(facility_code, name)` is enforced unique at the projection because aggregates cannot enforce cross-stream invariants. The UNIQUE INDEX is partial on `WHERE lifecycle = 'Active'` so a decommissioned Enclosure does not hold the address against re-registration. CHECK constraints lock all enum values day-one so a future widening of the operational axis lands without a constraint migration. No FK constraints to other projections: rebuild order is arbitrary, and cross-projection consistency is event-driven. `last_observed_*` columns live only on the projection (the slim-aggregate rule keeps the aggregate state cheap to fold); the `last_source_kind` / `last_source_id` split mirrors the colon-delimited wire form so the gate-side queries can filter on adapter kind without LIKE patterns.
+The address tuple `(facility_code, name)` is enforced unique at the projection because aggregates cannot enforce cross-stream invariants. The UNIQUE INDEX is partial on `WHERE lifecycle = 'Active'` so a decommissioned Enclosure does not hold the address against re-registration. CHECK constraints lock all enum values day-one so a future widening of the operational axis lands without a constraint migration. No FK constraints to other projections: rebuild order is arbitrary, and cross-projection consistency is event-driven. The `last_*` columns live only on the projection (the slim-aggregate rule keeps the aggregate state cheap to fold); the `last_source_kind` / `last_source_id` split mirrors the colon-delimited wire form so the gate-side queries can filter on adapter kind without LIKE patterns. The table carries two clocks and they answer different questions: `last_permit_status_changed_at` is CORA's ingest time for the last permit-status change, from the event's `occurred_at`, while `last_source_observed_at` is the substrate's own time for the reading behind it and is NULL whenever the substrate reported none. Both advance only on a change, because the decider emits nothing for an identical-status observation, so a stale value means "no transition since" rather than "not observed since".
 
 ## Cross-Module boundaries
 

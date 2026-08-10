@@ -43,7 +43,7 @@ class InMemoryEnclosureLookup:
         name: str,
         permit_status: str = "Permitted",
         lifecycle: str = "Active",
-        observed_at: str | None = None,
+        permit_status_changed_at: str | None = None,
         source_kind: str | None = None,
         source_id: str | None = None,
         facility_code: str = "cora",
@@ -63,7 +63,7 @@ class InMemoryEnclosureLookup:
                 name=name,
                 permit_status=permit_status,
                 lifecycle=lifecycle,
-                observed_at=observed_at,
+                permit_status_changed_at=permit_status_changed_at,
                 source_kind=source_kind,
                 source_id=source_id,
             )

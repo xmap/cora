@@ -68,6 +68,7 @@ def test_event_type_name_is_class_name() -> None:
         trigger="Monitor",
         triggered_by=_MONITOR_SOURCE_ID,
         occurred_at=_OCCURRED_AT,
+        observed_at=None,
         monitor_ref="epics:HUTCH:A:PSS",
     )
     decommissioned = EnclosureDecommissioned(
@@ -113,11 +114,100 @@ def test_enclosure_permit_observed_round_trips() -> None:
         trigger="Monitor",
         triggered_by=_MONITOR_SOURCE_ID,
         occurred_at=_OCCURRED_AT,
+        observed_at=None,
         monitor_ref="epics:HUTCH:A:PSS",
     )
     payload = to_payload(event)
     rebuilt = from_stored(_stored("EnclosurePermitObserved", payload))
     assert rebuilt == event
+
+
+@pytest.mark.unit
+def test_enclosure_permit_observed_round_trips_a_substrate_time() -> None:
+    """The None round trip above passes on the default; this one cannot.
+
+    A round trip of `None -> null -> None` is satisfied by a field that
+    is dropped at both ends, so it pins nothing on its own. Paired with
+    a real value that must survive both directions.
+    """
+    observed_at = datetime(2026, 6, 9, 9, 15, 0, tzinfo=UTC)
+    event = EnclosurePermitObserved(
+        enclosure_id=_ENCLOSURE_ID,
+        from_status="Unknown",
+        to_status="Permitted",
+        reason="PSS interlock chain healthy",
+        trigger="Monitor",
+        triggered_by=_MONITOR_SOURCE_ID,
+        occurred_at=_OCCURRED_AT,
+        observed_at=observed_at,
+        monitor_ref="epics:HUTCH:A:PSS",
+    )
+    payload = to_payload(event)
+
+    assert payload["observed_at"] == observed_at.isoformat()
+    assert payload["occurred_at"] == _OCCURRED_AT.isoformat()
+    assert payload["observed_at"] != payload["occurred_at"]
+
+    rebuilt = from_stored(_stored("EnclosurePermitObserved", payload))
+    assert rebuilt == event
+    assert isinstance(rebuilt, EnclosurePermitObserved)
+    assert rebuilt.observed_at == observed_at
+
+
+@pytest.mark.unit
+def test_enclosure_permit_observed_payload_keeps_a_null_source_time_key() -> None:
+    """Present-as-null, deliberately unlike `monitor_ref` one field over.
+
+    Omitting the key would make an event written before the field
+    existed byte-identical to one saying the substrate gave no time,
+    conflating "never captured" with "nothing to capture" forever.
+    """
+    # `__post_init__` requires monitor_ref when trigger is Monitor, so the
+    # sibling test's bypass is reused to reach the serialization branch
+    # with both fields None at once.
+    event = object.__new__(EnclosurePermitObserved)
+    object.__setattr__(event, "enclosure_id", _ENCLOSURE_ID)
+    object.__setattr__(event, "from_status", "Unknown")
+    object.__setattr__(event, "to_status", "Permitted")
+    object.__setattr__(event, "reason", "PSS interlock chain healthy")
+    object.__setattr__(event, "trigger", "Monitor")
+    object.__setattr__(event, "triggered_by", _MONITOR_SOURCE_ID)
+    object.__setattr__(event, "occurred_at", _OCCURRED_AT)
+    object.__setattr__(event, "observed_at", None)
+    object.__setattr__(event, "monitor_ref", None)
+
+    payload = to_payload(event)
+
+    assert "observed_at" in payload
+    assert payload["observed_at"] is None
+    # The contrast that makes the deviation visible: monitor_ref omits.
+    assert "monitor_ref" not in payload
+
+
+@pytest.mark.unit
+def test_enclosure_permit_observed_rebuilds_from_a_payload_without_the_field() -> None:
+    """Pre-P1 stored payloads carry no `observed_at` key and must still fold.
+
+    `_monitor.record_observation` re-folds the entire stream before every
+    decision, so an unguarded read here would break the live 2-BM permit
+    monitor on its next transition, not at some later replay.
+    """
+    payload = {
+        "enclosure_id": str(_ENCLOSURE_ID),
+        "from_status": "Unknown",
+        "to_status": "Permitted",
+        "reason": "PSS interlock chain healthy",
+        "trigger": "Monitor",
+        "triggered_by": str(_MONITOR_SOURCE_ID),
+        "occurred_at": _OCCURRED_AT.isoformat(),
+        "monitor_ref": "epics:HUTCH:A:PSS",
+    }
+
+    rebuilt = from_stored(_stored("EnclosurePermitObserved", payload))
+
+    assert isinstance(rebuilt, EnclosurePermitObserved)
+    assert rebuilt.observed_at is None
+    assert rebuilt.occurred_at == _OCCURRED_AT
 
 
 # ---------- EnclosureDecommissioned round-trip ----------
@@ -151,6 +241,7 @@ def test_permit_observed_monitor_ref_present_on_wire_when_set() -> None:
         trigger="Monitor",
         triggered_by=_MONITOR_SOURCE_ID,
         occurred_at=_OCCURRED_AT,
+        observed_at=None,
         monitor_ref="epics:HUTCH:A:PSS",
     )
     payload = to_payload(event)
@@ -175,6 +266,7 @@ def test_permit_observed_monitor_ref_omitted_on_wire_when_none() -> None:
     object.__setattr__(event, "trigger", "Monitor")
     object.__setattr__(event, "triggered_by", _MONITOR_SOURCE_ID)
     object.__setattr__(event, "occurred_at", _OCCURRED_AT)
+    object.__setattr__(event, "observed_at", None)
     object.__setattr__(event, "monitor_ref", None)
     payload = to_payload(event)
     assert "monitor_ref" not in payload
