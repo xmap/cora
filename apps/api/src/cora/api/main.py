@@ -1019,6 +1019,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         observer=enclosure_permit_observer,
                         kernel=deps,
                         name_to_id=enclosure_permit_ids,
+                        enclosure_projection_registry=enclosure_only_registry,
+                        startup_timeout_seconds=(
+                            settings.enclosure_permit_monitor_startup_timeout_seconds
+                        ),
                     ),
                     run_supervisor_lifespan(
                         deps,
