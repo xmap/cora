@@ -719,7 +719,7 @@
 | src/cora/enclosure/aggregates/\_\_init\_\_.py                                            |        0 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/aggregates/\_value\_types.py                                          |       31 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/enclosure/aggregates/enclosure/\_\_init\_\_.py                                  |        5 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/enclosure/aggregates/enclosure/events.py                                        |       54 |        2 |       18 |        1 |     95.8% |     83-88 |
+| src/cora/enclosure/aggregates/enclosure/events.py                                        |       55 |        2 |       16 |        1 |     95.8% |     83-88 |
 | src/cora/enclosure/aggregates/enclosure/evolver.py                                       |       22 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/enclosure/aggregates/enclosure/state.py                                         |       50 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/errors.py                                                             |        4 |        0 |        0 |        0 |    100.0% |           |
@@ -731,7 +731,7 @@
 | src/cora/enclosure/features/decommission\_enclosure/route.py                             |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/features/decommission\_enclosure/tool.py                              |       18 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/features/observe\_enclosure\_status/\_\_init\_\_.py                   |        6 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/enclosure/features/observe\_enclosure\_status/command.py                        |        6 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/enclosure/features/observe\_enclosure\_status/command.py                        |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/features/observe\_enclosure\_status/decider.py                        |       18 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/enclosure/features/observe\_enclosure\_status/handler.py                        |       36 |        4 |        4 |        2 |     85.0% |105-114, 133-141 |
 | src/cora/enclosure/features/observe\_enclosure\_status/route.py                          |        4 |        0 |        0 |        0 |    100.0% |           |
@@ -745,7 +745,7 @@
 | src/cora/enclosure/ports/\_\_init\_\_.py                                                 |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/ports/enclosure\_observer.py                                          |       19 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/enclosure/projections/\_\_init\_\_.py                                           |        2 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/enclosure/projections/enclosure.py                                              |       40 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/enclosure/projections/enclosure.py                                              |       42 |        0 |       10 |        0 |    100.0% |           |
 | src/cora/enclosure/routes.py                                                             |       35 |        0 |        8 |        0 |    100.0% |           |
 | src/cora/enclosure/tools.py                                                              |       10 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/enclosure/wire.py                                                               |       11 |        0 |        0 |        0 |    100.0% |           |
@@ -2606,7 +2606,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **55929** | **1252** | **8066** |  **364** | **97.3%** |           |
+| **TOTAL**                                                                                | **55933** | **1252** | **8064** |  **364** | **97.3%** |           |
 
 
 ## Setup coverage badge
