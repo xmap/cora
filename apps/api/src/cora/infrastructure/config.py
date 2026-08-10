@@ -626,6 +626,23 @@ class Settings(BaseSettings):
     # `cora.enclosure.adapters.control_port_enclosure_observer`.
     enclosure_permit_pvs: dict[str, str] = {}
 
+    # Bounds how long boot waits for the permit monitor's first settled read
+    # per configured enclosure before serving requests (the startup-race
+    # window documented in `cora.enclosure._monitor`, "Startup race"). A PV
+    # that has not settled by the deadline does not delay boot further: the
+    # monitor keeps retrying in the background and that enclosure's existing
+    # `permit_status` stands. Irrelevant when `enclosure_permit_pvs` is empty.
+    #
+    # `main.py` always passes this value explicitly, so it is the LIVE
+    # default; `_monitor._STARTUP_TIMEOUT_SECONDS` only covers a caller that
+    # skips Settings entirely. Keep both above EpicsCaControlPort's own
+    # `_DEFAULT_TIMEOUT_S` (5.0s): a dead PV's per-code settlement needs
+    # room to finish before this outer bound gives up, or a dead-PV boot
+    # always falls through to the blunter warn-and-proceed path. These two
+    # defaults drifted out of sync once already; if you change one, change
+    # both.
+    enclosure_permit_monitor_startup_timeout_seconds: float = 8.0
+
     # Beam-availability pre-flight (BEAM-1, beam-availability slice).
     # Role -> read-only PV for the run / procedure start gate. `fes` and
     # `sbs` are the front-end and station-shutter BeamBlockingM PVs
