@@ -1,4 +1,5 @@
-"""Integration test: cora_app role cannot UPDATE / DELETE append-only tables.
+"""Integration test: cora_app role cannot UPDATE / DELETE append-only tables,
+and DOES have SELECT + INSERT on every entries_* table.
 
 Foundation hardening. The migration
 `20260512230000_init_role_cora_app.sql` creates a `cora_app` database
@@ -15,6 +16,11 @@ What this test guards against:
     review (Postgres now refuses them at the role boundary)
   - The classic event-sourcing failure mode where "events are
     immutable" is documented but not enforced
+  - A GRANT statement that exists in migration text but that Postgres
+    does not actually honor (`test_entries_table_grants.py` is a regex
+    match against SQL source, not a proof the database accepts it; five
+    tables carried a false ALTER DEFAULT PRIVILEGES claim for months
+    with a passing test suite before `20260810120000_...sql` fixed it)
 
 The fixtures in `conftest.py` connect as the testcontainers
 superuser so the rest of the suite can TRUNCATE between tests.
@@ -190,6 +196,86 @@ async def test_cora_app_cannot_update_or_delete_entries_tables(
             await conn.execute(f"UPDATE {table} SET event_id = $1", uuid4())
         with pytest.raises(asyncpg.InsufficientPrivilegeError):
             await conn.execute(f"DELETE FROM {table}")
+
+
+_ENTRIES_TABLE_INSERTS: dict[str, tuple[str, int]] = {
+    "entries_run_observations": (
+        """
+        INSERT INTO entries_run_observations (
+            event_id, run_id, logbook_id, actor_id, command_name,
+            channel_name, value, sampling_procedure, sampled_at,
+            occurred_at, correlation_id
+        ) VALUES ($1, $2, $3, $4, 'TestCmd', 'test-channel', 1.0,
+            'periodic', now(), now(), $5)
+        """,
+        5,
+    ),
+    "entries_operation_procedure_activities": (
+        """
+        INSERT INTO entries_operation_procedure_activities (
+            event_id, procedure_id, logbook_id, actor_id, command_name,
+            step_kind, payload, sampled_at, occurred_at, correlation_id
+        ) VALUES ($1, $2, $3, $4, 'TestCmd', 'SetpointStep', '{}'::jsonb,
+            now(), now(), $5)
+        """,
+        5,
+    ),
+    "entries_run_feed_heartbeats": (
+        """
+        INSERT INTO entries_run_feed_heartbeats (
+            event_id, run_id, source_id, heartbeat_at
+        ) VALUES ($1, $2, 'test-source', now())
+        """,
+        2,
+    ),
+    "entries_operation_procedure_diagnostics": (
+        """
+        INSERT INTO entries_operation_procedure_diagnostics (
+            event_id, procedure_id, logbook_id, iteration_index,
+            model_ref, payload, sampled_at, occurred_at, correlation_id
+        ) VALUES ($1, $2, $3, 1, 'test-model', '{}'::jsonb, now(), now(), $4)
+        """,
+        4,
+    ),
+    "entries_operation_procedure_outcomes": (
+        """
+        INSERT INTO entries_operation_procedure_outcomes (
+            event_id, procedure_id, logbook_id, iteration_index,
+            point, measurements, succeeded, sampled_at, occurred_at,
+            correlation_id
+        ) VALUES ($1, $2, $3, 1, '{}'::jsonb, '{}'::jsonb, true, now(), now(), $4)
+        """,
+        4,
+    ),
+}
+"""The five tables `20260810120000_grant_cora_app_entries_table_access.sql`
+fixed, by their CURRENT (post-rename) name, each mapped to a minimal
+valid INSERT and its UUID-parameter count. Column shapes copied from
+each table's own CREATE TABLE migration; `is_simulated` and other
+DEFAULT-bearing columns are omitted since a bare INSERT already proves
+the grant."""
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("table", sorted(_ENTRIES_TABLE_INSERTS))
+async def test_cora_app_can_select_and_insert_entries_tables(
+    cora_app_pool: asyncpg.Pool,
+    table: str,
+) -> None:
+    """The regression this test exists for: each of these five tables'
+    migration header claimed cora_app already had SELECT + INSERT via
+    ALTER DEFAULT PRIVILEGES, a claim that was false (that clause covers
+    sequences only). `test_entries_table_grants.py` proves a GRANT
+    statement is present in migration text; only a real INSERT against a
+    `cora_app`-credentialed pool proves Postgres actually honors it."""
+    sql, param_count = _ENTRIES_TABLE_INSERTS[table]
+    event_id = uuid4()
+    params = [event_id, *(uuid4() for _ in range(param_count - 1))]
+
+    async with cora_app_pool.acquire() as conn:
+        await conn.execute(sql, *params)
+        rows = await conn.fetch(f"SELECT event_id FROM {table} WHERE event_id = $1", event_id)
+    assert len(rows) == 1
 
 
 @pytest.mark.integration
