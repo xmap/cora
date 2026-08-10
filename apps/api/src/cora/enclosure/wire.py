@@ -34,6 +34,11 @@ Subject / Equipment (composition order matters, innermost first):
 from dataclasses import dataclass
 from uuid import UUID
 
+from cora.enclosure.aggregates.enclosure import (
+    InMemoryPermitProbeStore,
+    PermitProbeStore,
+    PostgresPermitProbeStore,
+)
 from cora.enclosure.features import (
     decommission_enclosure,
     observe_enclosure_status,
@@ -53,11 +58,22 @@ class EnclosureHandlers:
     register_enclosure: register_enclosure.IdempotentHandler
     observe_enclosure_status: observe_enclosure_status.Handler
     decommission_enclosure: decommission_enclosure.Handler
+    permit_probe_store: PermitProbeStore
+    """The permit-probe trail's write store. Surfaced on the bundle,
+    not a handler, so the FastAPI lifespan can hand it to the permit
+    monitor at `enclosure_permit_monitor_lifespan`'s call site (mirrors
+    `OperationHandlers.control_port`, surfaced the same way for the
+    same reason: a composition-root lifespan needs a dependency that
+    isn't itself a command handler)."""
 
 
 def wire_enclosure(deps: Kernel) -> EnclosureHandlers:
     """Build the Enclosure BC handlers from shared dependencies."""
+    permit_probe_store: PermitProbeStore = (
+        PostgresPermitProbeStore(deps.pool) if deps.pool is not None else InMemoryPermitProbeStore()
+    )
     return EnclosureHandlers(
+        permit_probe_store=permit_probe_store,
         register_enclosure=with_tracing(
             with_idempotency(
                 register_enclosure.bind(deps),

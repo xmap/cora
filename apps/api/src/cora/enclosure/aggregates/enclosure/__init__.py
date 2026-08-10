@@ -30,6 +30,13 @@ from cora.enclosure.aggregates.enclosure.events import (
     to_payload,
 )
 from cora.enclosure.aggregates.enclosure.evolver import evolve, fold
+from cora.enclosure.aggregates.enclosure.permit_probes import (
+    InMemoryPermitProbeStore,
+    PermitProbe,
+    PermitProbeStore,
+    PostgresPermitProbeStore,
+    ReachTier,
+)
 from cora.enclosure.aggregates.enclosure.state import (
     ENCLOSURE_NAME_MAX_LENGTH,
     Enclosure,
@@ -62,11 +69,16 @@ __all__ = [
     "EnclosurePermitStatus",
     "EnclosureReason",
     "EnclosureRegistered",
+    "InMemoryPermitProbeStore",
     "InvalidEnclosureNameError",
     "InvalidEnclosureReasonError",
     "InvalidMonitorRefError",
     "MonitorRef",
     "MonitorTriggerNotPermittedError",
+    "PermitProbe",
+    "PermitProbeStore",
+    "PostgresPermitProbeStore",
+    "ReachTier",
     "event_type_name",
     "evolve",
     "fold",

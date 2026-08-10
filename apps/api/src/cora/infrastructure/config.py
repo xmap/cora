@@ -623,8 +623,25 @@ class Settings(BaseSettings):
     #
     # The keys are the enclosures to seed (under self_facility_code) and
     # monitor; the values are their SecureM PVs. See
-    # `cora.enclosure.adapters.control_port_enclosure_observer`.
+    # `cora.api._enclosure_permit_observer`.
     enclosure_permit_pvs: dict[str, str] = {}
+
+    # Permit probe trail (coverage-window commissioning ladder item 3;
+    # [[project_enclosure_permit_probe_design]]). Bounds how often
+    # `ControlPortEnclosureObserver` re-reads each configured permit PV
+    # independent of push traffic, so a quiet PV (EPICS CA monitors are
+    # change-only) does not leave a probe-trail gap that reads as a
+    # coverage outage when CORA was in fact still watching. `None`
+    # (default) disables polling entirely: the trail is then push-only,
+    # written only when the substrate itself sends something. This is an
+    # OPERATIONAL KILL SWITCH, not just a test-determinism convenience:
+    # setting it back to `None` stops the periodic read against the PSS
+    # gateway (a shared facility resource) without any other code change,
+    # and is the correct rollback for this feature if the poll cadence
+    # ever needs revisiting. Confirm a cadence with beamline staff before
+    # setting this in a deployment: it polls a facility resource on a
+    # timer. Irrelevant when `enclosure_permit_pvs` is empty.
+    enclosure_permit_probe_tick_seconds: float | None = None
 
     # Bounds how long boot waits for the permit monitor's first settled read
     # per configured enclosure before serving requests (the startup-race
