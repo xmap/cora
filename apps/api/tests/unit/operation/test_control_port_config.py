@@ -16,6 +16,8 @@ Covers:
     substrate rejected, extra fields rejected
   - writes_enabled=False wraps every route so writes refuse, with no
     per-substrate exemption; per-route read_only wraps only its route
+  - text_addresses defaults empty, threads through to the constructed
+    EpicsCaControlPort, and is accepted-but-inert on a non-CA route
 
 Every routing test passes `writes_enabled=True` so it observes the
 naked adapter: the write posture is orthogonal to which adapter a
@@ -196,6 +198,61 @@ def test_build_control_port_mixed_simulated_and_physical_routes() -> None:
 @pytest.mark.unit
 def test_control_port_route_read_only_defaults_false() -> None:
     assert ControlPortRoute(prefix="2bma:", substrate="epics_ca").read_only is False
+
+
+@pytest.mark.unit
+def test_control_port_route_text_addresses_defaults_empty() -> None:
+    assert ControlPortRoute(prefix="2bma:", substrate="epics_ca").text_addresses == ()
+
+
+@pytest.mark.unit
+def test_build_control_port_threads_text_addresses_to_ca_adapter() -> None:
+    """A route's `text_addresses` reaches the constructed `EpicsCaControlPort`.
+
+    No registry-level observable exists for this (unlike `is_simulated`,
+    which the registry itself tracks): the declaration only changes how
+    the adapter decodes a DBR_CHAR reading, which needs a live PV to
+    exercise (covered at the integration tier against a soft IOC). Here
+    it is enough to confirm the constructor argument was not dropped.
+    """
+    port = build_control_port(
+        [
+            ControlPortRoute(
+                prefix="2bmb:TomoScan:",
+                substrate="epics_ca",
+                text_addresses=("2bmb:TomoScan:ScanStatus",),
+            )
+        ],
+        writes_enabled=True,
+    )
+    assert isinstance(port, ControlPortRegistry)
+    adapter = port.route("2bmb:TomoScan:ScanStatus")
+    assert isinstance(adapter, EpicsCaControlPort)
+    assert adapter._text_addresses == frozenset(  # pyright: ignore[reportPrivateUsage]
+        {"2bmb:TomoScan:ScanStatus"}
+    )
+
+
+@pytest.mark.unit
+def test_build_control_port_text_addresses_on_pva_route_is_accepted_and_unused() -> None:
+    """`text_addresses` is CA-specific; a PVA route may still declare it without error.
+
+    The field describes a true fact about the deployment regardless of
+    which adapter reads it; PVA's `NTScalar` already disambiguates text
+    from bytes on the wire, so nothing here consumes the declaration.
+    """
+    port = build_control_port(
+        [
+            ControlPortRoute(
+                prefix="2bma:cam1:",
+                substrate="epics_pva",
+                text_addresses=("2bma:cam1:SomeLabel",),
+            )
+        ],
+        writes_enabled=True,
+    )
+    assert isinstance(port, ControlPortRegistry)
+    assert isinstance(port.route("2bma:cam1:x"), EpicsPvaControlPort)
 
 
 @pytest.mark.unit

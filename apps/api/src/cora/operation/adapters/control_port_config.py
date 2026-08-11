@@ -62,7 +62,7 @@ does NOT track individual adapters.
 from collections.abc import Sequence
 from typing import Any, Literal
 
-from cora.infrastructure.control_port_route import ControlPortRoute, Substrate
+from cora.infrastructure.control_port_route import ControlPortRoute
 from cora.operation.adapters.control_port_registry import ControlPortRegistry
 from cora.operation.adapters.epics_ca_control_port import EpicsCaControlPort
 from cora.operation.adapters.epics_pva_control_port import EpicsPvaControlPort
@@ -130,7 +130,7 @@ def build_control_port(routes: Sequence[ControlPortRoute], *, writes_enabled: bo
             registry.register_substrate_port(
                 route.prefix,
                 _guarded_substrate(
-                    _build_substrate(route.substrate),
+                    _build_substrate(route),
                     read_only=read_only,
                     scope=scope,
                     prefix=prefix,
@@ -190,21 +190,26 @@ def _guarded_substrate(
     return ReadOnlySubstratePort(port, scope=scope, prefix=prefix)
 
 
-def _build_substrate(substrate: Substrate) -> SubstrateControlPort[Any]:
+def _build_substrate(route: ControlPortRoute) -> SubstrateControlPort[Any]:
     """Construct the per-substrate typed adapter with deployment defaults.
 
     Handles the typed-address substrate adapters only; `in_memory` is
     registered through `ControlPortRegistry.register_control_port` in
     `build_control_port` because it is `str`-surfaced.
 
-    Per-adapter constructor kwargs (timeouts, etc.) ride on the
-    adapter defaults today; a future iteration may widen
-    `ControlPortRoute` with optional per-route overrides
-    (`timeout_s`, etc.) when a real deployment surfaces the need.
+    `route.text_addresses` is CA-specific (see `ControlPortRoute`
+    docstring) and reaches only `EpicsCaControlPort`; PVA and Tango
+    routes carry the field but nothing here reads it for them, which
+    is the field's declared inert-elsewhere contract, not an omission.
+
+    Remaining per-adapter constructor kwargs (timeouts, etc.) ride on
+    the adapter defaults today; a future iteration may widen
+    `ControlPortRoute` with further per-route overrides when a real
+    deployment surfaces the need.
     """
-    if substrate == "epics_ca":
-        return EpicsCaControlPort()
-    if substrate == "epics_pva":
+    if route.substrate == "epics_ca":
+        return EpicsCaControlPort(text_addresses=route.text_addresses)
+    if route.substrate == "epics_pva":
         return EpicsPvaControlPort()
     return TangoControlPort()
 
