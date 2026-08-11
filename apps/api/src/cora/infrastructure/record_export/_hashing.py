@@ -29,6 +29,11 @@ manifest body in hand rather than guessed at here.
 
 from cora.infrastructure.record_export._dispositions import DISPOSITIONS
 from cora.infrastructure.record_export._export import ExportedRecord
+from cora.infrastructure.record_export._redact_tier2 import (
+    TIER2_DISPOSITIONS,
+    TIER2_JSONB_CLEARED_POINTERS,
+    TIER2_JSONB_DROPPED_COLUMNS,
+)
 from cora.shared.content_hash import compute_content_hash
 
 RECORD_PAYLOAD_TYPE = "application/vnd.cora.record+json"
@@ -69,17 +74,47 @@ def hash_record(record: ExportedRecord) -> str:
 
 
 def hash_redaction_profile() -> str:
-    """SHA-256 content hash over Step 0's generated disposition table.
+    """SHA-256 content hash over every table that decides what a
+    published record discloses: tier 1's generated `DISPOSITIONS` AND
+    tier 2's hand-authored `TIER2_DISPOSITIONS` /
+    `TIER2_JSONB_CLEARED_POINTERS` / `TIER2_JSONB_DROPPED_COLUMNS`.
 
-    This IS the redaction profile hash (H2): the disposition table
-    decides what a published record discloses, so its hash is what
-    step 6's fail-closed switch checks and what the manifest names
-    alongside `record_hash` (H1). Regenerating the table via
-    `make record-dispositions` after a real event-model change is
+    This IS the redaction profile hash (H2). Step 7's security re-review
+    found the tier-2 tables missing from this hash: the fail-closed
+    switch (`redact_record`'s `expected_redaction_profile_hash` check)
+    was fail-closed for tier 1 only, silently blind to a tier-2 table
+    edit that weakened a disposition (e.g. `conduit_verdicts.reason`
+    `DROP` -> `KEEP`) or dropped a jsonb clearance restriction. Both
+    tiers must be in H2, or "the hash matches" does not mean what
+    `RedactionProfileMismatchError`'s docstring claims it means.
+
+    Tuple-keyed dicts (`TIER2_JSONB_CLEARED_POINTERS` /
+    `TIER2_JSONB_DROPPED_COLUMNS`) are flattened to `"kind/column"`
+    string keys before hashing rather than relying on
+    `compute_content_hash`'s `str(key)` fallback for non-string Mapping
+    keys, which would hash a Python tuple's `repr()` instead of a
+    reviewable string.
+
+    Regenerating tier 1's table via `make record-dispositions` after a
+    real event-model change, or hand-editing tier 2's tables, is
     expected to change this value; `test_record_dispositions_drift.py`
-    is the guard against an UNREVIEWED change slipping through instead.
+    guards tier 1's generator output specifically, and
+    `test_redact_tier2.py`'s live-schema drift test guards tier 2's
+    column coverage, but only THIS hash is what a caller's
+    `expected_redaction_profile_hash` actually pins.
     """
-    return compute_content_hash(REDACTION_PROFILE_PAYLOAD_TYPE, DISPOSITIONS)
+    body = {
+        "tier1": DISPOSITIONS,
+        "tier2_dispositions": TIER2_DISPOSITIONS,
+        "tier2_jsonb_cleared_pointers": {
+            f"{kind}/{column}": sorted(pointers)
+            for (kind, column), pointers in TIER2_JSONB_CLEARED_POINTERS.items()
+        },
+        "tier2_jsonb_dropped_columns": sorted(
+            f"{kind}/{column}" for kind, column in TIER2_JSONB_DROPPED_COLUMNS
+        ),
+    }
+    return compute_content_hash(REDACTION_PROFILE_PAYLOAD_TYPE, body)
 
 
 __all__ = [
