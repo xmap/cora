@@ -23,3 +23,21 @@ than from first principles:
   timestamps plus a facility's own published beamtime schedule
   re-identify without the token map.
 """
+
+from cora.infrastructure.record_export._registry import (
+    EntriesReader,
+    EntriesTableSpec,
+    UnknownLogbookKindError,
+    all_specs,
+    registered_envelope_classes,
+    resolve,
+)
+
+__all__ = [
+    "EntriesReader",
+    "EntriesTableSpec",
+    "UnknownLogbookKindError",
+    "all_specs",
+    "registered_envelope_classes",
+    "resolve",
+]
