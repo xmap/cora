@@ -43,7 +43,8 @@ the power is the site's, neither is cut to 2-BM's shape.
 Beyond the physical utilities, a run also draws on a compute pool (for reconstruction) and on data-transfer and
 storage tiers. These are modelled through the `ComputePort` and `TransferPort` (a Method plus a port, not a new
 deployment aggregate). The confirmed pipeline (DATA-1 through DATA-7): the detector writes to fast local NVMe on
-`tomdet` (`/local1`), tomoscan auto-uploads each scan to the analysis tier (`/data2` or `/data3`), tomocupy
+`tomdet` (`/local2`, corrected 2026-08-11 by a direct read of `DetectorTopDir`; this page previously said
+`/local1`), tomoscan auto-uploads each scan to the analysis tier (`/data2` or `/data3`), tomocupy
 reconstructs there (`..._rec/` beside the raw), and an operator copies the experiment to its canonical home on
 Sojourner (`/gdata/dm/2BM/<yyyy-mm>/<exp>/{data,analysis,system}/`), shared to proposal and ESAF users through
 the Globus collection `APS:DM:2BM` and archived to tape on a per-experiment timer (default one year). The
@@ -57,6 +58,12 @@ Read from the upstream source rather than assumed: [tomoscan](https://github.com
 2-BM subclass and [dmagic](https://github.com/decarlof/dmagic). Every scan product is HDF5; no
 acquisition path writes TIFF.
 
+Confirmed 2026-08-11 against the live 2bmb deployment (DATA-9): the deployed `tomoscan_2bm.py`
+and its siblings (`tomoscan_2bm_step.py`, `tomoscan_stream_2bm.py`, `tomoscan_fpga_2bm.py`, both
+`.template` files) are byte-identical to `decarlof/tomoscan@ce86818`. The shared `tomoscan.py` base
+class carries one uncommitted local edit, a camera-readout-timing tweak for one pixel format, nowhere
+near `add_theta()` or the `ScanStatus` literals below.
+
 The layout is Data Exchange. `tomoscan_2bm.py` addresses the datasets by name when it post-processes a
 finished scan: `/exchange/data` (projections), `/exchange/data_white` (flats), `/exchange/data_dark`
 (darks), and `/exchange/theta` (rotation angles). Frame bookkeeping lives in `/defaults/NDArrayUniqueId`
@@ -66,13 +73,18 @@ scan basename carries a three-digit counter, and `..._rec/` reconstruction direc
 The file has a second author besides tomoscan: the areaDetector layout XML configured in the detector
 IOC writes everything under `/process`, `/measurement`, and `/defaults` (public copy:
 [`data-exchange/dxfile/doc/demo/areadetector/2-BM/`](https://github.com/data-exchange/dxfile/tree/master/doc/demo/areadetector/2-BM)).
-Two of its facts matter to a reader. The commanded scan geometry
-(`/process/acquisition/rotation/num_angles`, the flat and dark field mode-and-count groups) is written
-`OnFileClose`, so it exists only in cleanly closed files, and it is what a shortfall check compares
-captured frames against; the `/defaults` frame ids alone can never show tail truncation, because a
-missed trigger never receives an id. The acquisition timestamp (`/process/acquisition/start_date`, from
-the PV `S:IOC:timeOfDayISO8601`) is written `OnFileOpen`, so a crashed file keeps its timestamp while
-losing its geometry.
+The deployed file has no name match in that public tree (it lives on `tomdet` as `TomoScanLayout.xml`
+at a beamline-local path, not one of the `2bma*` / `adimec2bmb*` names dxfile ships), so DATA-9 was
+confirmed by reading its content on 2026-08-11 rather than by matching a filename: it writes the same
+dataset paths and lifecycle timing this section assumes. Two of its facts matter to a reader. The
+commanded scan geometry (`/process/acquisition/rotation/num_angles`, the flat and dark field
+mode-and-count groups) is written `OnFileClose`, so it exists only in cleanly closed files, and it is
+what a shortfall check compares captured frames against; the `/defaults` frame ids alone can never show
+tail truncation, because a missed trigger never receives an id. The acquisition timestamp
+(`/process/acquisition/start_date`, from the PV `S:IOC:timeOfDayISO8601`) is written `OnFileOpen`, so a
+crashed file keeps its timestamp while losing its geometry. That PV carries an explicit UTC offset
+(confirmed 2026-08-11, DATA-10: `2026-08-11T12:01:05-0500`), not naive local time, so a reader parses it
+as an unambiguous instant with no site timezone rule needed.
 
 **A finished capture is not a finished file, and this is the fact an ingest reader must respect.** The
 end-of-scan sequence stops the file plugin (`FPCapture` to `Done`, then waits for `Capture_RBV` to reach
@@ -88,6 +100,10 @@ rather than trust the status message.
 `add_theta()` also compares the frames actually written against the angles commanded, and logs a warning
 naming the missing ones when they disagree. Dropped frames are therefore a known, detected, and
 non-fatal condition: a reader that records only what landed will silently under-describe such a scan.
+A genuine instance was found 2026-08-11 reading a real file from the beamline (`test_000.h5`, an early
+smoke test rather than a production scan): 3601 angles commanded, one frame captured, `theta` absent.
+`DataExchangeScanReader` handled it exactly as designed; DATA-8's frequency question (rare-and-alarming
+versus routine for an actual production scan) is still open.
 
 The experiment folder is computed, not conventional, which is what makes it derivable rather than
 guessable. `dmagic`'s `dm.py` formats it as `{year_month}-{pi_last_name}-{gup_number}` from APS
