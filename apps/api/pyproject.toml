@@ -246,7 +246,10 @@ packages = ["src/cora"]
 [tool.ruff]
 line-length = 100
 target-version = "py313"
-src = ["src", "tests"]
+# `tools` holds build-time generators that MAY import every bounded
+# context; they live outside `src` so nothing shippable can import them,
+# but they are still first-party code and get linted and type-checked.
+src = ["src", "tests", "tools"]
 # Parked directories are work-in-progress slices the user explicitly
 # shelved (suffix `.parked`); mirrors the same exclusion in [tool.pyright].
 extend-exclude = ["**/*.parked"]
@@ -298,7 +301,7 @@ indent-style = "space"
 known-first-party = ["cora", "tests"]
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["src", "tests", "tools"]
 # Parked directories are work-in-progress slices the user explicitly
 # shelved (suffix `.parked`); they shouldn't block type-check on the
 # active codebase. Same convention applies to ruff (below).

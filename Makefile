@@ -2,7 +2,7 @@
         test-noio test-db test-coverage store-durations diff-coverage fmt clean help \
         migrate-status migrate-apply migrate-new migrate-hash precommit precommit-run \
         arch-check arch-show docs-stage docs-build docs-serve openapi-snapshot \
-        mutmut-audit mutmut-browse restore-drill
+        record-dispositions mutmut-audit mutmut-browse restore-drill
 
 API_DIR := apps/api
 COMPOSE := docker compose -f infra/docker-compose.yml
@@ -36,6 +36,7 @@ help:
 	@echo "  arch-check      Tach dependency contract + architecture fitness-function tests"
 	@echo "  arch-show       Open the dependency graph (tach show)"
 	@echo "  openapi-snapshot Regenerate apps/api/openapi.json from create_app()"
+	@echo "  record-dispositions Regenerate the record-export redaction table"
 	@echo "  mutmut-audit    Run mutmut against Access BC deciders/evolver (audit cadence, ~5-15 min)"
 	@echo "  mutmut-browse   Open mutmut's interactive TUI to triage surviving mutants"
 	@echo "  precommit       Install pre-commit hooks (one-time per clone)"
@@ -62,15 +63,15 @@ db-reset:
 	$(COMPOSE) up -d postgres
 
 lint:
-	cd $(API_DIR) && uv run ruff check src tests
-	cd $(API_DIR) && uv run ruff format --check src tests
+	cd $(API_DIR) && uv run ruff check src tests tools
+	cd $(API_DIR) && uv run ruff format --check src tests tools
 
 fmt:
-	cd $(API_DIR) && uv run ruff check --fix src tests
-	cd $(API_DIR) && uv run ruff format src tests
+	cd $(API_DIR) && uv run ruff check --fix src tests tools
+	cd $(API_DIR) && uv run ruff format src tests tools
 
 typecheck:
-	cd $(API_DIR) && uv run pyright src tests
+	cd $(API_DIR) && uv run pyright src tests tools
 
 # pytest-xdist with `--dist=worksteal -n 4`: worksteal is the
 # scheduler-of-choice for mixed-duration suites (50ms unit alongside
@@ -137,6 +138,19 @@ arch-show:
 openapi-snapshot:
 	cd $(API_DIR) && APP_ENV=test uv run python -c "import json; from cora.api.main import create_app; \
 		f = open('openapi.json', 'w'); json.dump(create_app().openapi(), f, indent=2, sort_keys=True); f.write('\n'); f.close()"
+
+# Regenerate the record-export redaction disposition table after adding
+# an event type, adding a field, or changing a field's declared type.
+# The drift test (tests/architecture/test_record_dispositions_drift.py)
+# fails until this is run and the diff is reviewed in the PR, and that
+# diff is the list of what a published record would disclose.
+#
+# The generator ABORTS on an annotation it cannot classify. That is the
+# design, not a bug: an unrecognised type is a question about the model.
+# Pass --survey to list every such annotation in one pass instead of
+# hitting them one exception at a time.
+record-dispositions:
+	cd $(API_DIR) && uv run python tools/gen_record_dispositions.py
 
 # Mutation testing audit. Pure-logic scope via the CLI wildcard pattern
 # (Access BC deciders + evolver only). [tool.mutmut] in apps/api/pyproject.toml
