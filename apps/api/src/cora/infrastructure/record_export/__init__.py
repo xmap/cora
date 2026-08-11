@@ -30,6 +30,14 @@ from cora.infrastructure.record_export._export import (
     capture_watermark,
     export_record,
 )
+from cora.infrastructure.record_export._hashing import (
+    LOGBOOKS_PAYLOAD_TYPE,
+    RECORD_PAYLOAD_TYPE,
+    STREAMS_PAYLOAD_TYPE,
+    hash_logbooks,
+    hash_record,
+    hash_streams,
+)
 from cora.infrastructure.record_export._registry import (
     EntriesReader,
     EntriesTableSpec,
@@ -47,6 +55,9 @@ from cora.infrastructure.record_export._stream_types import (
 
 __all__ = [
     "KNOWN_STREAM_TYPES",
+    "LOGBOOKS_PAYLOAD_TYPE",
+    "RECORD_PAYLOAD_TYPE",
+    "STREAMS_PAYLOAD_TYPE",
     "EmptyExportError",
     "EntriesReader",
     "EntriesTableSpec",
@@ -57,6 +68,9 @@ __all__ = [
     "capture_watermark",
     "ensure_stream_type_known",
     "export_record",
+    "hash_logbooks",
+    "hash_record",
+    "hash_streams",
     "registered_envelope_classes",
     "render_row",
     "render_value",
