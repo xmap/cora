@@ -41,6 +41,25 @@ from cora.infrastructure.record_export._hashing import (
     hash_streams,
 )
 from cora.infrastructure.record_export._manifest import Manifest, build_manifest, capture_git_commit
+from cora.infrastructure.record_export._redact_tier1 import (
+    Tier1Redactor,
+    UnknownEventTypeError,
+    redact_tier1_payload,
+)
+from cora.infrastructure.record_export._redact_tier2 import (
+    TIER2_DISPOSITIONS,
+    TIER2_JSONB_CLEARED_POINTERS,
+    TIER2_JSONB_DROPPED_COLUMNS,
+    UnfiredClearanceError,
+    ensure_all_clearances_fired,
+    redact_tier2_row,
+)
+from cora.infrastructure.record_export._redaction import (
+    RedactedRecord,
+    RedactionProfileMismatchError,
+    RedactionResult,
+    redact_record,
+)
 from cora.infrastructure.record_export._registry import (
     EntriesReader,
     EntriesTableSpec,
@@ -55,6 +74,7 @@ from cora.infrastructure.record_export._stream_types import (
     UnknownStreamTypeError,
     ensure_stream_type_known,
 )
+from cora.infrastructure.record_export._tokens import TokenMap
 
 __all__ = [
     "KNOWN_STREAM_TYPES",
@@ -62,23 +82,37 @@ __all__ = [
     "RECORD_PAYLOAD_TYPE",
     "REDACTION_PROFILE_PAYLOAD_TYPE",
     "STREAMS_PAYLOAD_TYPE",
+    "TIER2_DISPOSITIONS",
+    "TIER2_JSONB_CLEARED_POINTERS",
+    "TIER2_JSONB_DROPPED_COLUMNS",
     "EmptyExportError",
     "EntriesReader",
     "EntriesTableSpec",
     "ExportedRecord",
     "Manifest",
+    "RedactedRecord",
+    "RedactionProfileMismatchError",
+    "RedactionResult",
+    "Tier1Redactor",
+    "TokenMap",
+    "UnfiredClearanceError",
+    "UnknownEventTypeError",
     "UnknownLogbookKindError",
     "UnknownStreamTypeError",
     "all_specs",
     "build_manifest",
     "capture_git_commit",
     "capture_watermark",
+    "ensure_all_clearances_fired",
     "ensure_stream_type_known",
     "export_record",
     "hash_logbooks",
     "hash_record",
     "hash_redaction_profile",
     "hash_streams",
+    "redact_record",
+    "redact_tier1_payload",
+    "redact_tier2_row",
     "registered_envelope_classes",
     "render_row",
     "render_value",
