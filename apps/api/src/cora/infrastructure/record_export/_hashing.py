@@ -27,12 +27,14 @@ disk, that is a decision for whoever builds it, made with an actual
 manifest body in hand rather than guessed at here.
 """
 
+from cora.infrastructure.record_export._dispositions import DISPOSITIONS
 from cora.infrastructure.record_export._export import ExportedRecord
 from cora.shared.content_hash import compute_content_hash
 
 RECORD_PAYLOAD_TYPE = "application/vnd.cora.record+json"
 STREAMS_PAYLOAD_TYPE = "application/vnd.cora.record-streams+json"
 LOGBOOKS_PAYLOAD_TYPE = "application/vnd.cora.record-logbooks+json"
+REDACTION_PROFILE_PAYLOAD_TYPE = "application/vnd.cora.record-redaction-profile+json"
 
 
 def hash_streams(streams: tuple[dict[str, object], ...]) -> str:
@@ -66,11 +68,27 @@ def hash_record(record: ExportedRecord) -> str:
     return compute_content_hash(RECORD_PAYLOAD_TYPE, body)
 
 
+def hash_redaction_profile() -> str:
+    """SHA-256 content hash over Step 0's generated disposition table.
+
+    This IS the redaction profile hash (H2): the disposition table
+    decides what a published record discloses, so its hash is what
+    step 6's fail-closed switch checks and what the manifest names
+    alongside `record_hash` (H1). Regenerating the table via
+    `make record-dispositions` after a real event-model change is
+    expected to change this value; `test_record_dispositions_drift.py`
+    is the guard against an UNREVIEWED change slipping through instead.
+    """
+    return compute_content_hash(REDACTION_PROFILE_PAYLOAD_TYPE, DISPOSITIONS)
+
+
 __all__ = [
     "LOGBOOKS_PAYLOAD_TYPE",
     "RECORD_PAYLOAD_TYPE",
+    "REDACTION_PROFILE_PAYLOAD_TYPE",
     "STREAMS_PAYLOAD_TYPE",
     "hash_logbooks",
     "hash_record",
+    "hash_redaction_profile",
     "hash_streams",
 ]
