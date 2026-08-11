@@ -1559,7 +1559,7 @@
 | src/cora/operation/adapters/control\_port\_registry.py                                   |       55 |        1 |       16 |        2 |     95.8% |113-\>exit, 240 |
 | src/cora/operation/adapters/decide\_port\_config.py                                      |       43 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/operation/adapters/decider\_replayability.py                                    |       14 |        0 |        2 |        0 |    100.0% |           |
-| src/cora/operation/adapters/epics\_ca\_control\_port.py                                  |       91 |        3 |       24 |        3 |     94.8% |306, 343, 439 |
+| src/cora/operation/adapters/epics\_ca\_control\_port.py                                  |       96 |        3 |       24 |        3 |     95.0% |367, 410, 507 |
 | src/cora/operation/adapters/epics\_pva\_control\_port.py                                 |      140 |       19 |       52 |       10 |     81.8% |194, 209, 213-\>218, 216-217, 221, 226-233, 237, 241, 309-310, 427, 429, 448-\>exit |
 | src/cora/operation/adapters/fdt\_transfer\_port.py                                       |       67 |        6 |       16 |        0 |     90.4% |71-72, 86, 89-91 |
 | src/cora/operation/adapters/globus\_compute\_port.py                                     |       57 |        0 |        8 |        0 |    100.0% |           |
@@ -2607,7 +2607,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **56016** | **1256** | **8082** |  **366** | **97.3%** |           |
+| **TOTAL**                                                                                | **56021** | **1256** | **8082** |  **366** | **97.3%** |           |
 
 
 ## Setup coverage badge
