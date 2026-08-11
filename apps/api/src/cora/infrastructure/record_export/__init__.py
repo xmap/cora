@@ -1,0 +1,25 @@
+"""Record export: CORA's record as a hashed, offline-verifiable artifact.
+
+The design is `project_record_export_v3.md`, locked for the no-beam
+commissioning scope. This package holds the exporter and the generated
+redaction disposition table it reads.
+
+It lives at `cora.infrastructure`, whose `tach.toml` entry allows
+`cora.shared` and nothing else, and that constraint is the guarantee
+rather than the obstacle: the exporter composes nothing (column-driven
+over raw rows, a registry of `str -> str` pairs, and a table read as
+data), so the layering rule ENFORCES the zero-bounded-context-import
+property that makes the standalone-verifiability claim honest. If a
+change here wants to import an aggregate, the design has drifted.
+
+Two things this package must never do, both learned from review rather
+than from first principles:
+
+- Drive extraction, redaction or parity from `LogbookSchema`.
+  `LogbookFieldType` is closed over six scalars, so no schema can name a
+  jsonb column, and jsonb is where the doing lives. The schema travels
+  with the export as documentation.
+- Describe the published record as anonymous. It is pseudonymous:
+  timestamps plus a facility's own published beamtime schedule
+  re-identify without the token map.
+"""
