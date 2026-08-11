@@ -16,8 +16,10 @@
 -- key). An UPSERT would need UPDATE, which the append-only cora_app role
 -- is REVOKEd from (test_migration_revokes enforces this for every
 -- entries_* table). Reading MAX(recorded_at) gives the same "newest
--- heartbeat" answer with no mutable state. Retention sweeps prune old
--- ping rows (same posture as the other entries_* tables; BRIN-friendly).
+-- heartbeat" answer with no mutable state. Rows therefore accumulate
+-- without bound: nothing prunes this table today. The only index below
+-- is a (run_id, recorded_at DESC) btree, so a time-range sweep would
+-- need an index of its own before it could run cheaply here.
 --
 -- ## Freshness keys on recorded_at, not heartbeat_at
 --
