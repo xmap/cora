@@ -25,6 +25,16 @@ state without trying to call the unsafe `ca_context_destroy`.
   - `long_value`   (DBR_LONG,   `longout`)   -> `Measurement(kind="Scalar")`
   - `string_value` (DBR_STRING, `stringout`) -> `Measurement(kind="Scalar")`
   - `waveform`     (DBR_DOUBLE x 4, `waveform`) -> `Measurement(kind="Array")`
+  - `text_waveform` (DBR_CHAR x 256, `waveform`) -> `Measurement(kind="Array")`
+    by default; `Measurement(kind="Scalar", value=<str>)` when the caller
+    declares it via `EpicsCaControlPort(text_addresses={...})`, exercising
+    the tomoscan `ScanStatus`-shaped ambiguity (see that adapter's
+    "DBR_CHAR waveforms" module-docstring section)
+  - `text_waveform_nelm1` (DBR_CHAR x 1, `waveform`) -> aioca collapses a
+    length-1 char waveform to its scalar `ca_int` type; declaring it via
+    `text_addresses` must stay inert (no `.tolist()` / not iterable, so
+    the naive "any DBR_CHAR is a waveform" version of the decode crashed
+    here before the `element_count > 1` guard was added)
   - `enum_value`   (DBR_ENUM,   `mbbo` with 3 strings) -> `Measurement(kind="Categorical")`
   - `major_alarm_value` (`ao` with HIHI threshold tripped, HHSV=MAJOR)
     -> `Measurement(quality="Uncertain")`
@@ -133,6 +143,22 @@ record(waveform, "$(P)waveform") {
   field(DTYP, "Soft Channel")
   field(NELM, "4")
   field(FTVL, "DOUBLE")
+  field(PINI, "YES")
+}
+
+record(waveform, "$(P)text_waveform") {
+  field(DESC, "DBR_CHAR waveform, NUL-terminated string")
+  field(DTYP, "Soft Channel")
+  field(NELM, "256")
+  field(FTVL, "UCHAR")
+  field(PINI, "YES")
+}
+
+record(waveform, "$(P)text_waveform_nelm1") {
+  field(DESC, "DBR_CHAR waveform, NELM=1")
+  field(DTYP, "Soft Channel")
+  field(NELM, "1")
+  field(FTVL, "UCHAR")
   field(PINI, "YES")
 }
 

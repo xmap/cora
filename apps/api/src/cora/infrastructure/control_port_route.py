@@ -70,6 +70,18 @@ class ControlPortRoute(BaseModel):
     `Settings.control_writes_enabled`, which cannot be partially
     applied. Reach for the switch to make a deployment observe-only;
     reach for this field only to carve a hole in a writable one.
+
+    `text_addresses` declares which addresses on this route carry text
+    in an EPICS DBR_CHAR waveform. EPICS gives a char waveform holding
+    a NUL-terminated string (tomoscan's `ScanStatus`, `FileName`, ...)
+    and one holding raw bytes (an NTNDArray image) the same wire type,
+    so the adapter cannot tell them apart and must be told. Meaningful
+    only for `epics_ca` (`EpicsCaControlPort` is the sole reader of it;
+    PVA's NTScalar and Tango's DevString already carry this distinction
+    on the wire); a route on another substrate that sets it is inert
+    rather than rejected, since the address list still describes a
+    true fact about the deployment, just one this substrate's adapter
+    has no ambiguity to resolve.
     """
 
     prefix: str = Field(..., min_length=1)
@@ -88,6 +100,16 @@ class ControlPortRoute(BaseModel):
             "write to it. Refuses before contacting the substrate. Per-route "
             "expressiveness within a writable deployment; to make a whole "
             "deployment observe-only, set CONTROL_WRITES_ENABLED=false instead."
+        ),
+    )
+    text_addresses: tuple[str, ...] = Field(
+        default=(),
+        description=(
+            "Addresses on this route whose EPICS DBR_CHAR waveform carries a "
+            "NUL-terminated string rather than raw bytes. Declared per deployment, "
+            "never inferred: EPICS gives a string-bearing char waveform and a "
+            "byte-bearing one (e.g. NTNDArray image data) the same wire type. "
+            "Applies to epics_ca routes only; a no-op on other substrates."
         ),
     )
 

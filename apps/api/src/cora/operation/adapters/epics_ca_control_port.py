@@ -62,6 +62,28 @@ index; the adapter widens to FORMAT_CTRL on first encounter to grab
 `.enums` for label resolution, then caches the labels per-address so
 subsequent reads stay on the cheap FORMAT_TIME path.
 
+## DBR_CHAR waveforms: bytes, or a string wearing bytes' clothes
+
+A DBR_CHAR waveform (`aioca.DBR_CHAR`, `element_count > 1`) reaches
+`_kind_for` indistinguishably from any other array type and is
+unpacked as a tuple of small integers: correct for a byte-array
+payload (an NTNDArray image plugin's raw data), wrong for what many
+IOCs use the same record shape for, a NUL-terminated ASCII string
+too long for a `stringout`'s 40-character limit (tomoscan's
+`ScanStatus`, `FileName`, `FilePath`, `FullFileName`). EPICS assigns
+both the same wire type, so nothing in the reading itself says which
+this is; `EpicsCaControlPort` is told via `text_addresses`, a
+deployment-declared set of PVs to decode as text rather than an
+integer tuple. Declaring an address that never resolves to DBR_CHAR
+is inert, not an error: the declaration describes what the PV
+carries, and a route that also lists the wrong PVs merely finds
+nothing to apply it to.
+
+A decoded string is cut at the first NUL: a fixed-size waveform
+written with a shorter string than its NELM leaves trailing NULs
+(or whatever was in the buffer previously) past the terminator, and
+everything from the first NUL on is padding, not payload.
+
 ## Error mapping
 
 aioca raises ONE exception class, `CANothing(name, errorcode)`,
@@ -110,6 +132,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from aioca import (
+    DBR_CHAR,
     DBR_ENUM,
     FORMAT_CTRL,
     FORMAT_TIME,
@@ -134,7 +157,7 @@ from cora.operation.ports.control_port import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Iterable
 
     from cora.operation.ports.control_address import EpicsPvAddress
 
@@ -280,10 +303,48 @@ def _produced_at_for(timestamp: float) -> datetime | None:
     return datetime.fromtimestamp(timestamp, tz=UTC)
 
 
-def _to_reading(augmented: Any, enum_labels: tuple[str, ...] | None) -> Measurement:
-    """Translate an aioca `AugmentedValue` (FORMAT_TIME) to `Measurement`."""
-    kind = _kind_for(augmented.datatype, augmented.element_count)
-    value = _unpack_value(augmented, kind, enum_labels)
+def _decode_char_waveform(augmented: Any) -> str:
+    """Decode a DBR_CHAR waveform holding a NUL-terminated string.
+
+    Only called once the caller has confirmed both that the reading is
+    actually DBR_CHAR and that the deployment declared this address as
+    text (see module docstring, "DBR_CHAR waveforms"). `.tolist()`
+    covers the numpy-array case aioca returns for a populated waveform;
+    the plain `list()` fallback covers a zero-length reading, which
+    aioca can hand back as an empty non-numpy sequence.
+    """
+    raw = augmented.tolist() if hasattr(augmented, "tolist") else list(augmented)
+    return bytes(raw).split(b"\x00", 1)[0].decode("utf-8", errors="replace")
+
+
+def _to_reading(
+    augmented: Any,
+    enum_labels: tuple[str, ...] | None,
+    *,
+    as_text: bool = False,
+) -> Measurement:
+    """Translate an aioca `AugmentedValue` (FORMAT_TIME) to `Measurement`.
+
+    `as_text` is the caller's `text_addresses` declaration for this
+    specific address, not a property of the reading. It only takes
+    effect when the reading is actually a DBR_CHAR *waveform*
+    (`element_count > 1`, matching `_kind_for`'s own Array threshold
+    and the module docstring's "DBR_CHAR waveforms" scope): a
+    declaration cannot manufacture a wire type the substrate did not
+    send, so a stale or misdirected declaration is inert rather than
+    corrupting. The `element_count > 1` half of that guard matters on
+    its own: aioca collapses a length-1 DBR_CHAR waveform to its
+    scalar `ca_int` type, which has neither `.tolist()` nor
+    `__iter__`, so decoding it as a waveform would raise `TypeError`
+    instead of falling through inert.
+    """
+    is_text = as_text and int(augmented.datatype) == DBR_CHAR and augmented.element_count > 1
+    kind: MeasurementKind = (
+        "Scalar" if is_text else _kind_for(augmented.datatype, augmented.element_count)
+    )
+    value = (
+        _decode_char_waveform(augmented) if is_text else _unpack_value(augmented, kind, enum_labels)
+    )
     severity = int(getattr(augmented, "severity", 0))
     status = int(getattr(augmented, "status", 0))
     timestamp = float(getattr(augmented, "timestamp", 0.0))
@@ -315,8 +376,14 @@ class EpicsCaControlPort:
     See module docstring for the connection model + ACL table.
     """
 
-    def __init__(self, *, default_timeout_s: float = _DEFAULT_TIMEOUT_S) -> None:
+    def __init__(
+        self,
+        *,
+        default_timeout_s: float = _DEFAULT_TIMEOUT_S,
+        text_addresses: Iterable[str] = (),
+    ) -> None:
         self._default_timeout_s = default_timeout_s
+        self._text_addresses = frozenset(text_addresses)
         self._enum_labels: dict[str, tuple[str, ...]] = {}
         self._closed = False
 
@@ -356,7 +423,7 @@ class EpicsCaControlPort:
         labels: tuple[str, ...] | None = None
         if _kind_for(augmented.datatype, augmented.element_count) == "Categorical":
             labels = await self._resolve_enum_labels(pv)
-        return _to_reading(augmented, labels)
+        return _to_reading(augmented, labels, as_text=pv in self._text_addresses)
 
     async def write(
         self,
@@ -426,6 +493,7 @@ class EpicsCaControlPort:
             format=FORMAT_TIME,
             notify_disconnect=True,
         )
+        as_text = address in self._text_addresses
         try:
             labels: tuple[str, ...] | None = None
             while True:
@@ -437,7 +505,7 @@ class EpicsCaControlPort:
                     and _kind_for(update.datatype, update.element_count) == "Categorical"
                 ):
                     labels = await self._resolve_enum_labels(address)
-                yield _to_reading(update, labels)
+                yield _to_reading(update, labels, as_text=as_text)
         finally:
             with contextlib.suppress(Exception):
                 sub.close()

@@ -22,6 +22,9 @@ nonexistent-PV paths don't mutate state and stay order-independent.
 
   - Protocol conformance via `isinstance` (no IOC)
   - Every `MeasurementKind` branch (Scalar / Array / Categorical)
+  - DBR_CHAR waveform: undeclared (Array-of-bytes), declared via
+    `text_addresses` (decoded Scalar str, both read + subscribe),
+    NUL-padding trim, and the inert case (declaring a non-char PV)
   - `Quality=Bad` via `bad_quality_value` (HIHI threshold tripped)
   - caput-callback round-trip on scalar + long
   - subscribe initial-value + post-write fan-out
@@ -117,6 +120,127 @@ async def test_read_waveform_returns_array_as_tuple(softioc: str) -> None:
         assert reading.kind == "Array"
         assert isinstance(reading.value, tuple)
         assert reading.value == (1.0, 2.0, 3.0, 4.0)
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_read_char_waveform_without_declaration_returns_array_of_bytes(
+    softioc: str,
+) -> None:
+    """DBR_CHAR waveform is Array-of-int by default: the ambiguous case, undeclared.
+
+    Same shape a byte-array payload (an NTNDArray image) would take;
+    this is the reading a deployment gets before it tells the adapter
+    which addresses actually carry text via `text_addresses`.
+    """
+    port = EpicsCaControlPort()
+    try:
+        await port.write(
+            EpicsPvAddress(f"{softioc}text_waveform"),
+            tuple(b"hello"),
+            wait=True,
+        )
+        reading = await port.read(EpicsPvAddress(f"{softioc}text_waveform"))
+        assert reading.kind == "Array"
+        assert reading.value == (104, 101, 108, 108, 111)
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_read_char_waveform_declared_as_text_returns_decoded_string(
+    softioc: str,
+) -> None:
+    """A declared `text_addresses` entry decodes the same wire reading as text.
+
+    Models tomoscan's `ScanStatus` / `FileName` / `FullFileName`: a
+    DBR_CHAR waveform an operator knows carries a NUL-terminated
+    string, told to the adapter because EPICS gives it no way to tell
+    that apart from a byte-array payload on its own.
+    """
+    pv = f"{softioc}text_waveform"
+    port = EpicsCaControlPort(text_addresses={pv})
+    try:
+        await port.write(EpicsPvAddress(pv), tuple(b"fdt file transfer complete"), wait=True)
+        reading = await port.read(EpicsPvAddress(pv))
+        assert reading.kind == "Scalar"
+        assert reading.value == "fdt file transfer complete"
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_read_char_waveform_declared_as_text_trims_trailing_nul_padding(
+    softioc: str,
+) -> None:
+    """A shorter message than NELM leaves trailing padding; decode stops at the first NUL."""
+    pv = f"{softioc}text_waveform"
+    port = EpicsCaControlPort(text_addresses={pv})
+    try:
+        padded = tuple(b"hi") + (0,) * 254
+        await port.write(EpicsPvAddress(pv), padded, wait=True)
+        reading = await port.read(EpicsPvAddress(pv))
+        assert reading.value == "hi"
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_declaring_a_non_char_address_as_text_is_inert(softioc: str) -> None:
+    """`text_addresses` naming a non-DBR_CHAR PV changes nothing: it cannot manufacture a type."""
+    pv = f"{softioc}waveform"
+    port = EpicsCaControlPort(text_addresses={pv})
+    try:
+        await port.write(EpicsPvAddress(pv), (1.0, 2.0, 3.0, 4.0), wait=True)
+        reading = await port.read(EpicsPvAddress(pv))
+        assert reading.kind == "Array"
+        assert reading.value == (1.0, 2.0, 3.0, 4.0)
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_declaring_a_length_one_char_waveform_as_text_does_not_raise(
+    softioc: str,
+) -> None:
+    """A length-1 DBR_CHAR waveform must stay inert under `text_addresses`, not crash.
+
+    aioca collapses `element_count == 1` to its scalar `ca_int` type,
+    which is neither iterable nor has `.tolist()`. `_to_reading` gates
+    `as_text` on `element_count > 1` for exactly this reason: without
+    it, decoding this reading as a waveform raises `TypeError` instead
+    of falling through to the ordinary (already-Scalar) path.
+    """
+    pv = f"{softioc}text_waveform_nelm1"
+    port = EpicsCaControlPort(text_addresses={pv})
+    try:
+        await port.write(EpicsPvAddress(pv), (ord("Q"),), wait=True)
+        reading = await port.read(EpicsPvAddress(pv))
+        assert reading.kind == "Scalar"
+    finally:
+        await port.aclose()
+
+
+@pytest.mark.integration
+async def test_subscribe_char_waveform_declared_as_text_yields_decoded_strings(
+    softioc: str,
+) -> None:
+    """Subscribe honours the same declaration as read, per update."""
+    pv = f"{softioc}text_waveform"
+    port = EpicsCaControlPort(text_addresses={pv})
+    try:
+        await port.write(EpicsPvAddress(pv), tuple(b"scan started"), wait=True)
+        iterator = port.subscribe(EpicsPvAddress(pv))
+        first = await asyncio.wait_for(anext(iterator), timeout=2.0)
+        assert first.kind == "Scalar"
+        assert first.value == "scan started"
+
+        await port.write(EpicsPvAddress(pv), tuple(b"scan complete"), wait=True)
+        second = await asyncio.wait_for(anext(iterator), timeout=2.0)
+        assert second.value == "scan complete"
+
+        await iterator.aclose()
     finally:
         await port.aclose()
 
