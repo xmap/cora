@@ -24,6 +24,12 @@ than from first principles:
   re-identify without the token map.
 """
 
+from cora.infrastructure.record_export._export import (
+    EmptyExportError,
+    ExportedRecord,
+    capture_watermark,
+    export_record,
+)
 from cora.infrastructure.record_export._registry import (
     EntriesReader,
     EntriesTableSpec,
@@ -32,12 +38,27 @@ from cora.infrastructure.record_export._registry import (
     registered_envelope_classes,
     resolve,
 )
+from cora.infrastructure.record_export._render import render_row, render_value
+from cora.infrastructure.record_export._stream_types import (
+    KNOWN_STREAM_TYPES,
+    UnknownStreamTypeError,
+    ensure_stream_type_known,
+)
 
 __all__ = [
+    "KNOWN_STREAM_TYPES",
+    "EmptyExportError",
     "EntriesReader",
     "EntriesTableSpec",
+    "ExportedRecord",
     "UnknownLogbookKindError",
+    "UnknownStreamTypeError",
     "all_specs",
+    "capture_watermark",
+    "ensure_stream_type_known",
+    "export_record",
     "registered_envelope_classes",
+    "render_row",
+    "render_value",
     "resolve",
 ]
