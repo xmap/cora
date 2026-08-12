@@ -659,7 +659,7 @@
 | src/cora/data/projections/summary.py                                                     |       23 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/data/routes.py                                                                  |       71 |        2 |       16 |        0 |     97.7% |   254-255 |
 | src/cora/data/tools.py                                                                   |       38 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/data/wire.py                                                                    |       55 |        2 |        8 |        1 |     95.2% |151-152, 178-\>189 |
+| src/cora/data/wire.py                                                                    |       55 |        2 |        8 |        1 |     95.2% |154-155, 181-\>192 |
 | src/cora/decision/\_\_init\_\_.py                                                        |        7 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/decision/\_bootstrap.py                                                         |        2 |        2 |        0 |        0 |      0.0% |      8-10 |
 | src/cora/decision/\_projections.py                                                       |        8 |        0 |        0 |        0 |    100.0% |           |
@@ -1443,7 +1443,7 @@
 | src/cora/infrastructure/auth/config.py                                                   |       56 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/exception\_handlers.py                                      |       44 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/idp\_registry.py                                            |       48 |        0 |       18 |        0 |    100.0% |           |
-| src/cora/infrastructure/config.py                                                        |      261 |        6 |       50 |        3 |     97.1% |861-865, 873-877, 886-890 |
+| src/cora/infrastructure/config.py                                                        |      262 |        6 |       50 |        3 |     97.1% |875-879, 887-891, 900-904 |
 | src/cora/infrastructure/control\_port\_route.py                                          |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/deps.py                                                          |      129 |        1 |       18 |        2 |     98.0% |1235, 1426-\>1422 |
 | src/cora/infrastructure/edge\_runtime.py                                                 |       16 |        0 |        0 |        0 |    100.0% |           |
@@ -2621,7 +2621,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **56457** | **1263** | **8216** |  **379** | **97.2%** |           |
+| **TOTAL**                                                                                | **56458** | **1263** | **8216** |  **379** | **97.2%** |           |
 
 
 ## Setup coverage badge
