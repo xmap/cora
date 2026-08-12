@@ -226,6 +226,55 @@ async def test_wrong_redaction_profile_hash_refuses_before_redacting(db_pool: as
 
 
 @pytest.mark.integration
+async def test_unfired_tier1_fields_is_empty_for_a_realistic_export(db_pool: asyncpg.Pool) -> None:
+    """A real export naturally exercises every declared field of every
+    event type it carries: a stored payload includes a key, even as
+    `null`, on any `schema_version` that still declares it. The tier-1
+    completeness twin to tier-2's `unfired_tier2_clearances` should be
+    empty for a normal fixture, not merely small."""
+    procedure_id = uuid4()
+    await _seed_running_procedure_with_activity(db_pool, procedure_id)
+
+    async with db_pool.acquire() as conn:
+        pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
+        exported = await export_record(pg_conn)
+
+    result = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
+    assert result.unfired_tier1_fields == frozenset()
+
+
+@pytest.mark.integration
+async def test_unfired_tier1_fields_names_a_declared_field_missing_from_every_row_of_its_type(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Simulates an older `schema_version` row: a declared field
+    (`ProcedureRegistered.kind`, a real `DISPOSITIONS` key) removed from
+    the only `ProcedureRegistered` row this export carries must be
+    reported as unfired for that event type -- the narrowness caveat a
+    build-time guard cannot see, because the field is not missing from
+    the TABLE, only from every row THIS export happens to carry."""
+    procedure_id = uuid4()
+    await _seed_running_procedure_with_activity(db_pool, procedure_id)
+
+    async with db_pool.acquire() as conn:
+        pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
+        exported = await export_record(pg_conn)
+
+    streams = list(exported.streams)
+    for index, row in enumerate(streams):
+        if row["event_type"] == "ProcedureRegistered":
+            raw_payload = row["payload"]
+            assert isinstance(raw_payload, dict)
+            payload = dict(raw_payload)
+            del payload["kind"]
+            streams[index] = {**row, "payload": payload}
+    tampered = dataclasses.replace(exported, streams=tuple(streams))
+
+    result = redact_record(tampered, expected_redaction_profile_hash=hash_redaction_profile())
+    assert ("ProcedureRegistered", "kind") in result.unfired_tier1_fields
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize("spec", all_specs(), ids=lambda spec: spec.kind)
 async def test_tier2_disposition_table_columns_match_live_schema(
     db_pool: asyncpg.Pool, spec: object

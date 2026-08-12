@@ -161,3 +161,49 @@ def test_stream_id_correlation_id_and_event_id_are_tokened() -> None:
 def test_causation_id_none_stays_none() -> None:
     redacted = Tier1Redactor(TokenMap()).redact_row(_stream_row(causation_id=None))
     assert redacted["causation_id"] is None
+
+
+def test_fired_fields_records_declared_keys_actually_present_on_a_row() -> None:
+    """The tier-1 completeness twin to tier-2's `fired_pointers`: every
+    declared field key on the payload that had a real disposition entry,
+    not just a snapshot of the payload's own keys."""
+    fired: dict[str, set[str]] = {}
+    redact_tier1_payload(
+        "AgentDefined", _agent_defined_payload(), token_map=TokenMap(), fired_fields=fired
+    )
+    assert "agent_id" in fired["AgentDefined"]
+    assert "daily_token_cap" in fired["AgentDefined"]
+
+
+def test_fired_fields_excludes_an_unlisted_key_that_only_dropped_by_omission() -> None:
+    """A key with no table entry (schema-evolution drop) is not a fired
+    RULE: nothing in the disposition table was exercised by it."""
+    fired: dict[str, set[str]] = {}
+    payload = _agent_defined_payload()
+    payload["a_field_removed_in_a_later_schema_version"] = "still in an old row"
+    redact_tier1_payload("AgentDefined", payload, token_map=TokenMap(), fired_fields=fired)
+    assert "a_field_removed_in_a_later_schema_version" not in fired["AgentDefined"]
+
+
+def test_fired_fields_defaults_to_none_and_costs_nothing_when_omitted() -> None:
+    """Existing callers that never pass `fired_fields` keep working."""
+    redacted = redact_tier1_payload("AgentDefined", _agent_defined_payload(), token_map=TokenMap())
+    assert redacted["daily_token_cap"] == 1000
+
+
+def test_tier1_redactor_exposes_fired_fields_per_event_type_accumulated_across_rows() -> None:
+    redactor = Tier1Redactor(TokenMap())
+    redactor.redact_row(_stream_row(event_type="AgentDefined"))
+    fired = redactor.fired_fields
+    assert "AgentDefined" in fired
+    assert "agent_id" in fired["AgentDefined"]
+
+
+def test_tier1_redactor_fired_fields_is_a_copy_not_a_live_view() -> None:
+    redactor = Tier1Redactor(TokenMap())
+    redactor.redact_row(_stream_row())
+    snapshot = redactor.fired_fields
+    redactor.redact_row(
+        _stream_row(event_type="AgentSuspended", payload={"agent_id": str(uuid4())})
+    )
+    assert "AgentSuspended" not in snapshot

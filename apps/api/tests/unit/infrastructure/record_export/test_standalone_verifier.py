@@ -235,12 +235,12 @@ def _write_bundle_for_cli(tmp_path: Path, *, published: bool) -> Path:
 
     bundle = tmp_path / "bundle"
     if not published:
-        manifest = build_manifest(record, watermark=7, git_commit="0" * 40)
+        manifest = build_manifest(record, git_commit="0" * 40)
         write_bundle(record, manifest, bundle)
         return bundle
 
     redaction = redact_record(record, expected_redaction_profile_hash=hash_redaction_profile())
-    manifest = build_manifest(record, watermark=7, git_commit="0" * 40, redaction=redaction)
+    manifest = build_manifest(record, git_commit="0" * 40, redaction=redaction)
     write_bundle(redaction.redacted_record, manifest, bundle)
     return bundle
 

@@ -70,7 +70,7 @@ def _record() -> ExportedRecord:
 
 
 def _manifest(record: ExportedRecord) -> object:
-    return build_manifest(record, watermark=42, git_commit=_COMMIT)
+    return build_manifest(record, git_commit=_COMMIT)
 
 
 def test_write_bundle_lays_out_the_names_the_design_fixed(tmp_path: Path) -> None:
@@ -171,11 +171,14 @@ def test_manifest_carries_h3_only_when_a_redaction_is_supplied(tmp_path: Path) -
     record = _record()
     redacted = RedactedRecord(streams=record.streams, logbooks=record.logbooks)
     redaction = RedactionResult(
-        redacted_record=redacted, token_map=TokenMap(), unfired_tier2_clearances=frozenset()
+        redacted_record=redacted,
+        token_map=TokenMap(),
+        unfired_tier2_clearances=frozenset(),
+        unfired_tier1_fields=frozenset(),
     )
 
-    without = build_manifest(record, watermark=42, git_commit=_COMMIT)
-    with_h3 = build_manifest(record, watermark=42, git_commit=_COMMIT, redaction=redaction)
+    without = build_manifest(record, git_commit=_COMMIT)
+    with_h3 = build_manifest(record, git_commit=_COMMIT, redaction=redaction)
 
     assert without.published_record_hash is None
     assert with_h3.published_record_hash == hash_redacted_record(redacted)
@@ -213,7 +216,7 @@ def test_write_bundle_refuses_when_the_manifest_describes_a_different_record(
     """Unredacted case: `write_bundle` must not accept a manifest built
     from one record next to a different record. Before this guard
     existed, neither argument was checked against the other at all."""
-    manifest = build_manifest(_record(), watermark=42, git_commit=_COMMIT)
+    manifest = build_manifest(_record(), git_commit=_COMMIT)
 
     with pytest.raises(ManifestRecordMismatchError):
         write_bundle(_other_record(), manifest, tmp_path / "b")  # pyright: ignore[reportArgumentType]
@@ -265,7 +268,7 @@ def test_write_bundle_refuses_an_unredacted_record_beside_a_manifest_carrying_h3
     verifier printed `OK` for under a `--published` label."""
     record = _record_redactable_by_the_real_pipeline()
     redaction = _redact(record)
-    manifest = build_manifest(record, watermark=42, git_commit=_COMMIT, redaction=redaction)
+    manifest = build_manifest(record, git_commit=_COMMIT, redaction=redaction)
 
     with pytest.raises(ManifestRecordMismatchError):
         write_bundle(record, manifest, tmp_path / "b")  # pyright: ignore[reportArgumentType]
@@ -282,7 +285,7 @@ def test_write_bundle_refuses_a_redacted_record_beside_an_h1_only_manifest(
     dropped columns mean the redacted body cannot reproduce H1."""
     record = _record_redactable_by_the_real_pipeline()
     redaction = _redact(record)
-    manifest = build_manifest(record, watermark=42, git_commit=_COMMIT)
+    manifest = build_manifest(record, git_commit=_COMMIT)
 
     with pytest.raises(ManifestRecordMismatchError):
         write_bundle(redaction.redacted_record, manifest, tmp_path / "b")
@@ -297,7 +300,7 @@ def test_write_bundle_accepts_the_redacted_record_beside_its_own_h3_manifest(
     H3 is exactly what `write_bundle` was handed, so it must proceed."""
     record = _record_redactable_by_the_real_pipeline()
     redaction = _redact(record)
-    manifest = build_manifest(record, watermark=42, git_commit=_COMMIT, redaction=redaction)
+    manifest = build_manifest(record, git_commit=_COMMIT, redaction=redaction)
 
     bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "b")
     assert (bundle / MANIFEST_NAME).is_file()

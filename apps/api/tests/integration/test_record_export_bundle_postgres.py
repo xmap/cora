@@ -173,7 +173,7 @@ async def test_a_real_export_writes_a_bundle_a_stranger_can_verify(
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
 
-    manifest = build_manifest(exported, watermark=1, git_commit=capture_git_commit())
+    manifest = build_manifest(exported, git_commit=capture_git_commit())
     bundle = write_bundle(exported, manifest, tmp_path / "bundle")
 
     assert (bundle / STREAMS_NAME).is_file()
@@ -196,9 +196,7 @@ async def test_a_real_redacted_export_verifies_against_h3(
         exported = await export_record(pg_conn)
 
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
-    manifest = build_manifest(
-        exported, watermark=1, git_commit=capture_git_commit(), redaction=redaction
-    )
+    manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
     bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "published")
 
     result = _verify(bundle, published=True)
@@ -273,9 +271,7 @@ async def test_a_narrow_export_redacts_and_reports_what_it_could_not_exercise(
     # UnfiredClearanceError for exactly this fixture.
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
 
-    manifest = build_manifest(
-        exported, watermark=1, git_commit=capture_git_commit(), redaction=redaction
-    )
+    manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
     assert manifest.unfired_tier2_clearances == (
         "activity/payload/action_name",
         "activity/payload/units",
@@ -302,9 +298,7 @@ async def test_write_bundle_refuses_a_real_unredacted_record_beside_an_h3_manife
         exported = await export_record(pg_conn)
 
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
-    manifest = build_manifest(
-        exported, watermark=1, git_commit=capture_git_commit(), redaction=redaction
-    )
+    manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
 
     with pytest.raises(ManifestRecordMismatchError):
         write_bundle(exported, manifest, tmp_path / "should_not_exist")
@@ -322,7 +316,7 @@ async def test_a_real_bundle_fails_verification_after_one_edited_digit(
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
 
-    manifest = build_manifest(exported, watermark=1, git_commit=capture_git_commit())
+    manifest = build_manifest(exported, git_commit=capture_git_commit())
     bundle = write_bundle(exported, manifest, tmp_path / "bundle")
     assert _verify(bundle).returncode == 0
 
@@ -348,7 +342,7 @@ async def test_both_reassembly_implementations_agree_on_a_real_bundle(
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
 
-    manifest = build_manifest(exported, watermark=1, git_commit=capture_git_commit())
+    manifest = build_manifest(exported, git_commit=capture_git_commit())
     bundle = write_bundle(exported, manifest, tmp_path / "bundle")
 
     # CORA's reader reassembles the body; the script's reader then has to

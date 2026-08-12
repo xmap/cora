@@ -36,21 +36,21 @@ from cora.infrastructure.record_export._dispositions import DISPOSITIONS
 from cora.infrastructure.record_export._leaf_rule import OMITTED, apply_leaf_rule
 from cora.infrastructure.record_export._tokens import TokenMap
 
-_FIXED_KEEP_COLUMNS = (
+FIXED_KEEP_COLUMNS = (
     "schema_version",
     "stream_type",
     "event_type",
     "occurred_at",
     "recorded_at",
 )
-_FIXED_TOKEN_COLUMNS = (
+FIXED_TOKEN_COLUMNS = (
     "stream_id",
     "correlation_id",
     "causation_id",
     "event_id",
     "principal_id",
 )
-_FIXED_DROP_COLUMNS = ("metadata", "signature", "signature_kid", "signature_version")
+FIXED_DROP_COLUMNS = ("metadata", "signature", "signature_kid", "signature_version")
 
 
 class UnknownEventTypeError(LookupError):
@@ -109,10 +109,24 @@ def _apply_field_disposition(disposition: Any, value: Any, *, token_map: TokenMa
 
 
 def redact_tier1_payload(
-    event_type: str, payload: dict[str, Any], *, token_map: TokenMap
+    event_type: str,
+    payload: dict[str, Any],
+    *,
+    token_map: TokenMap,
+    fired_fields: dict[str, set[str]] | None = None,
 ) -> dict[str, Any]:
     """Redact one event's `payload`, iterating the STORED payload's own
-    keys (never the disposition table's), per F5's fail-closed property."""
+    keys (never the disposition table's), per F5's fail-closed property.
+
+    `fired_fields`, when given, records which of `DISPOSITIONS[event_type]`'s
+    DECLARED field keys were actually present on this row -- the tier-1
+    completeness twin to tier-2's `fired_pointers`. A field can be
+    declared but never fire within one export's event types if every row
+    of that type in this export happens to come from an older
+    `schema_version` that predates the field; `redact_record` uses this
+    to report the fact on the manifest, mirroring
+    `Manifest.unfired_tier2_clearances`.
+    """
     if event_type not in DISPOSITIONS:
         raise UnknownEventTypeError(event_type)
     field_dispositions = DISPOSITIONS[event_type]
@@ -122,6 +136,8 @@ def redact_tier1_payload(
         disposition = field_dispositions.get(key)
         if disposition is None:
             continue  # known event type, unlisted field: schema-evolution DROP
+        if fired_fields is not None:
+            fired_fields.setdefault(event_type, set()).add(key)
         redacted = _apply_field_disposition(disposition, value, token_map=token_map)
         if redacted is not OMITTED:
             result[key] = redacted
@@ -144,6 +160,14 @@ class Tier1Redactor:
         self._next_version_by_stream: dict[str, int] = {}
         self._transaction_id_index: dict[str, int] = {}
         self._next_transaction_id = 1
+        self._fired_fields: dict[str, set[str]] = {}
+
+    @property
+    def fired_fields(self) -> dict[str, frozenset[str]]:
+        """Per event type redacted so far, the declared field keys that
+        actually appeared on at least one row. A copy; callers cannot
+        mutate the accumulator this instance still writes to."""
+        return {event_type: frozenset(keys) for event_type, keys in self._fired_fields.items()}
 
     def _dense_version(self, raw_stream_id: str) -> int:
         version = self._next_version_by_stream.get(raw_stream_id, 1)
@@ -166,16 +190,26 @@ class Tier1Redactor:
         }
         self._next_position += 1
 
-        for column in _FIXED_KEEP_COLUMNS:
+        for column in FIXED_KEEP_COLUMNS:
             redacted[column] = row[column]
-        for column in _FIXED_TOKEN_COLUMNS:
+        for column in FIXED_TOKEN_COLUMNS:
             redacted[column] = self._token_map.token_uuid(row[column])
-        # _FIXED_DROP_COLUMNS (metadata, signature*) intentionally absent.
+        # FIXED_DROP_COLUMNS (metadata, signature*) intentionally absent.
 
         redacted["payload"] = redact_tier1_payload(
-            row["event_type"], row["payload"], token_map=self._token_map
+            row["event_type"],
+            row["payload"],
+            token_map=self._token_map,
+            fired_fields=self._fired_fields,
         )
         return redacted
 
 
-__all__ = ["Tier1Redactor", "UnknownEventTypeError", "redact_tier1_payload"]
+__all__ = [
+    "FIXED_DROP_COLUMNS",
+    "FIXED_KEEP_COLUMNS",
+    "FIXED_TOKEN_COLUMNS",
+    "Tier1Redactor",
+    "UnknownEventTypeError",
+    "redact_tier1_payload",
+]
