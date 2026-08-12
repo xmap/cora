@@ -30,6 +30,7 @@ from cora.infrastructure.record_export._bundle import (
     STREAMS_NAME,
     BundleDestinationNotEmptyError,
     MalformedBundleError,
+    ManifestRecordMismatchError,
     read_bundle_body,
     write_bundle,
 )
@@ -111,6 +112,7 @@ __all__ = [
     "ExportedRecord",
     "MalformedBundleError",
     "Manifest",
+    "ManifestRecordMismatchError",
     "RedactedRecord",
     "RedactionProfileMismatchError",
     "RedactionResult",

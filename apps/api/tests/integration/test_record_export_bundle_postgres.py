@@ -45,6 +45,7 @@ from cora.infrastructure.record_export import (
     MANIFEST_NAME,
     RECORD_PAYLOAD_TYPE,
     STREAMS_NAME,
+    ManifestRecordMismatchError,
     build_manifest,
     capture_git_commit,
     export_record,
@@ -196,11 +197,7 @@ async def test_a_real_redacted_export_verifies_against_h3(
 
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
     manifest = build_manifest(
-        exported,
-        watermark=1,
-        git_commit=capture_git_commit(),
-        redacted=redaction.redacted_record,
-        unfired_tier2_clearances=redaction.unfired_tier2_clearances,
+        exported, watermark=1, git_commit=capture_git_commit(), redaction=redaction
     )
     bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "published")
 
@@ -277,11 +274,7 @@ async def test_a_narrow_export_redacts_and_reports_what_it_could_not_exercise(
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
 
     manifest = build_manifest(
-        exported,
-        watermark=1,
-        git_commit=capture_git_commit(),
-        redacted=redaction.redacted_record,
-        unfired_tier2_clearances=redaction.unfired_tier2_clearances,
+        exported, watermark=1, git_commit=capture_git_commit(), redaction=redaction
     )
     assert manifest.unfired_tier2_clearances == (
         "activity/payload/action_name",
@@ -291,6 +284,31 @@ async def test_a_narrow_export_redacts_and_reports_what_it_could_not_exercise(
     bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "narrow")
     result = _verify(bundle, published=True)
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.integration
+async def test_write_bundle_refuses_a_real_unredacted_record_beside_an_h3_manifest(
+    db_pool: asyncpg.Pool, tmp_path: Path
+) -> None:
+    """Against real Postgres-shaped rows, not the synthetic unit fixture:
+    passing the UNREDACTED export beside a manifest whose H3 was computed
+    from the real redacted record must refuse. Before this guard existed
+    this wrote a fully unredacted bundle under a --published label that
+    the default verifier printed OK for."""
+    await _seed_a_procedure_with_one_activity(db_pool)
+
+    async with db_pool.acquire() as conn:
+        pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
+        exported = await export_record(pg_conn)
+
+    redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
+    manifest = build_manifest(
+        exported, watermark=1, git_commit=capture_git_commit(), redaction=redaction
+    )
+
+    with pytest.raises(ManifestRecordMismatchError):
+        write_bundle(exported, manifest, tmp_path / "should_not_exist")
+    assert not (tmp_path / "should_not_exist").exists()
 
 
 @pytest.mark.integration

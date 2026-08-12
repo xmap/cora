@@ -11,6 +11,9 @@ import re
 
 from cora.infrastructure.record_export import (
     ExportedRecord,
+    RedactedRecord,
+    RedactionResult,
+    TokenMap,
     build_manifest,
     capture_git_commit,
     hash_record,
@@ -139,6 +142,19 @@ def test_capture_git_commit_returns_a_full_sha() -> None:
     assert re.fullmatch(r"[0-9a-f]{40}", commit)
 
 
+def _redaction_result(
+    record: ExportedRecord, *, unfired: frozenset[tuple[str, str, str]] = frozenset()
+) -> RedactionResult:
+    """A `RedactionResult` wrapping `record`'s own content unchanged, for
+    tests that only exercise `build_manifest`'s H3 / unfired-clearances
+    plumbing and do not need genuinely redacted (tokenized) content."""
+    return RedactionResult(
+        redacted_record=RedactedRecord(streams=record.streams, logbooks=record.logbooks),
+        token_map=TokenMap(),
+        unfired_tier2_clearances=unfired,
+    )
+
+
 def test_unfired_tier2_clearances_absent_without_redaction() -> None:
     """`None` means no redaction happened, the same convention as
     `published_record_hash`; unrelated to whether any clearance would
@@ -147,13 +163,15 @@ def test_unfired_tier2_clearances_absent_without_redaction() -> None:
     assert manifest.unfired_tier2_clearances is None
 
 
-def test_unfired_tier2_clearances_empty_when_none_supplied_but_redacted() -> None:
-    """Passing `redacted` without `unfired_tier2_clearances` reports an
-    empty tuple, not `None`: redaction DID happen, so absence-as-signal
-    no longer applies, and "empty" correctly reads as "nothing to
-    report" rather than "not tracked"."""
+def test_unfired_tier2_clearances_empty_when_none_fired() -> None:
+    """A `RedactionResult` whose `unfired_tier2_clearances` is empty
+    reports an empty tuple, not `None`: redaction DID happen, so
+    absence-as-signal no longer applies, and "empty" correctly reads as
+    "nothing to report" rather than "not tracked"."""
     record = _record()
-    manifest = build_manifest(record, watermark=1, git_commit="deadbeef", redacted=record)
+    manifest = build_manifest(
+        record, watermark=1, git_commit="deadbeef", redaction=_redaction_result(record)
+    )
     assert manifest.unfired_tier2_clearances == ()
 
 
@@ -163,15 +181,36 @@ def test_unfired_tier2_clearances_renders_sorted_kind_column_pointer() -> None:
         record,
         watermark=1,
         git_commit="deadbeef",
-        redacted=record,
-        unfired_tier2_clearances=frozenset(
-            {
-                ("activity", "payload", "units"),
-                ("activity", "payload", "channel"),
-            }
+        redaction=_redaction_result(
+            record,
+            unfired=frozenset(
+                {
+                    ("activity", "payload", "units"),
+                    ("activity", "payload", "channel"),
+                }
+            ),
         ),
     )
     assert manifest.unfired_tier2_clearances == (
         "activity/payload/channel",
         "activity/payload/units",
     )
+
+
+def test_expansion_digest_presence_by_run_is_keyed_by_the_redactions_own_surrogate() -> None:
+    """The published manifest must not carry the raw Run `stream_id` as a
+    dict key: it must be the SAME surrogate `TokenMap.token_uuid` would
+    hand back for that source, i.e. what tier-1 redaction already put on
+    the run's own rows. Threading `token_map` through `redaction` rather
+    than as an independent parameter makes it impossible to key by a
+    DIFFERENT redaction's surrogates than the one that produced the
+    streams body beside this manifest."""
+    record = _record()
+    redaction = _redaction_result(record)
+    manifest = build_manifest(record, watermark=1, git_commit="deadbeef", redaction=redaction)
+
+    assert _RUN_A not in manifest.expansion_digest_presence_by_run
+    assert _RUN_B not in manifest.expansion_digest_presence_by_run
+    surrogate_a = redaction.token_map.token_uuid(_RUN_A)
+    surrogate_b = redaction.token_map.token_uuid(_RUN_B)
+    assert manifest.expansion_digest_presence_by_run == {surrogate_a: True, surrogate_b: False}

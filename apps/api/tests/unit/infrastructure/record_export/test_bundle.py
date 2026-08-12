@@ -24,10 +24,15 @@ from cora.infrastructure.record_export import (
     BundleDestinationNotEmptyError,
     ExportedRecord,
     MalformedBundleError,
+    ManifestRecordMismatchError,
+    RedactionResult,
+    TokenMap,
     build_manifest,
     hash_record,
     hash_redacted_record,
+    hash_redaction_profile,
     read_bundle_body,
+    redact_record,
     write_bundle,
 )
 from cora.infrastructure.record_export._redaction import RedactedRecord
@@ -162,12 +167,15 @@ def test_non_object_line_refuses_rather_than_reading_partially(tmp_path: Path) -
         read_bundle_body(tmp_path / "b")
 
 
-def test_manifest_carries_h3_only_when_a_redacted_record_is_supplied(tmp_path: Path) -> None:
+def test_manifest_carries_h3_only_when_a_redaction_is_supplied(tmp_path: Path) -> None:
     record = _record()
     redacted = RedactedRecord(streams=record.streams, logbooks=record.logbooks)
+    redaction = RedactionResult(
+        redacted_record=redacted, token_map=TokenMap(), unfired_tier2_clearances=frozenset()
+    )
 
     without = build_manifest(record, watermark=42, git_commit=_COMMIT)
-    with_h3 = build_manifest(record, watermark=42, git_commit=_COMMIT, redacted=redacted)
+    with_h3 = build_manifest(record, watermark=42, git_commit=_COMMIT, redaction=redaction)
 
     assert without.published_record_hash is None
     assert with_h3.published_record_hash == hash_redacted_record(redacted)
@@ -180,3 +188,116 @@ def test_h1_and_h3_differ_even_when_redaction_changed_nothing() -> None:
     redacted = RedactedRecord(streams=record.streams, logbooks=record.logbooks)
 
     assert hash_record(record) != hash_redacted_record(redacted)
+
+
+def _other_record() -> ExportedRecord:
+    """A record with different content from `_record()`, so its H1/H3
+    cannot coincidentally match a manifest built for the other one."""
+    return ExportedRecord(
+        streams=(
+            {
+                "stream_type": "Run",
+                "stream_id": "01900000-0000-7000-8000-0000000000ff",
+                "event_type": "RunStarted",
+                "schema_version": 1,
+                "payload": {"note": "a different run entirely"},
+            },
+        ),
+        logbooks={},
+    )
+
+
+def test_write_bundle_refuses_when_the_manifest_describes_a_different_record(
+    tmp_path: Path,
+) -> None:
+    """Unredacted case: `write_bundle` must not accept a manifest built
+    from one record next to a different record. Before this guard
+    existed, neither argument was checked against the other at all."""
+    manifest = build_manifest(_record(), watermark=42, git_commit=_COMMIT)
+
+    with pytest.raises(ManifestRecordMismatchError):
+        write_bundle(_other_record(), manifest, tmp_path / "b")  # pyright: ignore[reportArgumentType]
+
+    assert not (tmp_path / "b").exists()
+
+
+def _record_redactable_by_the_real_pipeline() -> ExportedRecord:
+    """A record whose stream rows carry every fixed column
+    `Tier1Redactor.redact_row` reads directly (`_record()`'s rows are
+    minimal and lack `transaction_id` / `event_id` / etc.), so it can go
+    through the REAL `redact_record` rather than an aliased
+    `RedactedRecord` copy. Tokenizing `stream_id` to a random surrogate
+    changes the body content, which is what makes H3 actually differ
+    from hashing the unredacted record -- an aliased copy is
+    byte-identical and cannot reproduce a real mismatch at all."""
+    return ExportedRecord(
+        streams=(
+            {
+                "stream_type": "Run",
+                "stream_id": "01900000-0000-7000-8000-0000000000a1",
+                "event_type": "RunStarted",
+                "schema_version": 1,
+                "occurred_at": "2026-05-15T12:00:00+00:00",
+                "recorded_at": "2026-05-15T12:00:00+00:00",
+                "transaction_id": 1,
+                "event_id": "01900000-0000-7000-8000-0000000000e1",
+                "correlation_id": None,
+                "causation_id": None,
+                "principal_id": None,
+                "payload": {"note": "first"},
+            },
+        ),
+        logbooks={},
+    )
+
+
+def _redact(record: ExportedRecord) -> RedactionResult:
+    return redact_record(record, expected_redaction_profile_hash=hash_redaction_profile())
+
+
+def test_write_bundle_refuses_an_unredacted_record_beside_a_manifest_carrying_h3(
+    tmp_path: Path,
+) -> None:
+    """The exact reproduction: a manifest whose `published_record_hash`
+    (H3) was computed from the REAL redacted record, handed to
+    `write_bundle` alongside the UNREDACTED record instead. Before this
+    guard existed, this wrote a fully unredacted bundle that the default
+    verifier printed `OK` for under a `--published` label."""
+    record = _record_redactable_by_the_real_pipeline()
+    redaction = _redact(record)
+    manifest = build_manifest(record, watermark=42, git_commit=_COMMIT, redaction=redaction)
+
+    with pytest.raises(ManifestRecordMismatchError):
+        write_bundle(record, manifest, tmp_path / "b")  # pyright: ignore[reportArgumentType]
+
+    assert not (tmp_path / "b").exists()
+
+
+def test_write_bundle_refuses_a_redacted_record_beside_an_h1_only_manifest(
+    tmp_path: Path,
+) -> None:
+    """The mirror direction: a manifest with NO `published_record_hash`
+    (an unredacted-bundle manifest) handed the REDACTED record instead of
+    the one it was actually built from. Tokenized `stream_id`s and
+    dropped columns mean the redacted body cannot reproduce H1."""
+    record = _record_redactable_by_the_real_pipeline()
+    redaction = _redact(record)
+    manifest = build_manifest(record, watermark=42, git_commit=_COMMIT)
+
+    with pytest.raises(ManifestRecordMismatchError):
+        write_bundle(redaction.redacted_record, manifest, tmp_path / "b")
+
+    assert not (tmp_path / "b").exists()
+
+
+def test_write_bundle_accepts_the_redacted_record_beside_its_own_h3_manifest(
+    tmp_path: Path,
+) -> None:
+    """The positive case: the record `build_manifest` actually hashed for
+    H3 is exactly what `write_bundle` was handed, so it must proceed."""
+    record = _record_redactable_by_the_real_pipeline()
+    redaction = _redact(record)
+    manifest = build_manifest(record, watermark=42, git_commit=_COMMIT, redaction=redaction)
+
+    bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "b")
+    assert (bundle / MANIFEST_NAME).is_file()

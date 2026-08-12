@@ -30,7 +30,6 @@ manifest body in hand rather than guessed at here.
 from typing import Protocol
 
 from cora.infrastructure.record_export._dispositions import DISPOSITIONS
-from cora.infrastructure.record_export._export import ExportedRecord
 from cora.infrastructure.record_export._redact_tier2 import (
     TIER2_DISPOSITIONS,
     TIER2_JSONB_CLEARED_POINTERS,
@@ -85,13 +84,18 @@ def hash_logbooks(logbooks: dict[str, tuple[dict[str, object], ...]]) -> str:
     return compute_content_hash(LOGBOOKS_PAYLOAD_TYPE, body)
 
 
-def hash_record(record: ExportedRecord) -> str:
+def hash_record(record: TwoTierRecord) -> str:
     """SHA-256 content hash over the whole bundle, both tiers, no exclusions.
 
     This is THE record hash (H1): per F2, it covers everything
     `export_record` produced. Re-running the export against an unchanged
     database reproduces this value exactly; any single differing byte
     anywhere in either tier changes it.
+
+    Takes the structural `TwoTierRecord`, not `ExportedRecord` by name,
+    so `_bundle.write_bundle`'s binding check can call this on whatever
+    it was actually handed and compare against what a manifest claims,
+    without needing to know which concrete type that is.
     """
     return compute_content_hash(RECORD_PAYLOAD_TYPE, _two_tier_body(record))
 
@@ -116,9 +120,13 @@ def hash_redacted_record(record: TwoTierRecord) -> str:
     Takes the structural `TwoTierRecord` rather than `RedactedRecord`
     only because importing `_redaction` here would invert this module's
     dependency; callers pass `RedactionResult.redacted_record`. Passing
-    an unredacted `ExportedRecord` is a caller error this signature
-    cannot catch, and the reason `write_bundle` derives H3 itself from
-    the record it is handed rather than accepting one as a parameter.
+    an unredacted `ExportedRecord` alongside a manifest whose
+    `published_record_hash` was computed from the real redacted record
+    is a caller error this function's signature cannot catch by itself
+    -- `write_bundle` is what catches it, by recomputing this same hash
+    over whatever record it was actually handed and refusing on
+    disagreement (`ManifestRecordMismatchError`) before writing a single
+    byte.
     """
     return compute_content_hash(PUBLISHED_RECORD_PAYLOAD_TYPE, _two_tier_body(record))
 

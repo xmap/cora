@@ -35,7 +35,11 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import cast
 
-from cora.infrastructure.record_export._hashing import TwoTierRecord
+from cora.infrastructure.record_export._hashing import (
+    TwoTierRecord,
+    hash_record,
+    hash_redacted_record,
+)
 from cora.infrastructure.record_export._manifest import Manifest
 
 MANIFEST_NAME = "manifest.json"
@@ -48,6 +52,7 @@ __all__ = [
     "STREAMS_NAME",
     "BundleDestinationNotEmptyError",
     "MalformedBundleError",
+    "ManifestRecordMismatchError",
     "read_bundle_body",
     "write_bundle",
 ]
@@ -78,6 +83,55 @@ class MalformedBundleError(RuntimeError):
     matches nothing, which reads as tampering rather than as the file
     error it is.
     """
+
+
+class ManifestRecordMismatchError(RuntimeError):
+    """The manifest handed to `write_bundle` does not describe the record
+    handed alongside it.
+
+    `record` and `manifest` are two independent arguments with nothing
+    structurally binding them together: nothing before this check
+    verified that `manifest` was built FROM `record`. Reproduced
+    concretely: passing the unredacted record next to a manifest whose
+    `published_record_hash` was computed from the real redacted record
+    wrote a self-consistently-formatted, fully unredacted bundle under a
+    `--published` label, and the default verifier printed `OK`.
+    `write_bundle` recomputes whichever of H1 or H3 the manifest claims
+    over the record it was actually handed, before writing a single
+    byte, and refuses on disagreement.
+    """
+
+    def __init__(self, *, expected: str, actual: str, published: bool) -> None:
+        field = "published_record_hash (H3)" if published else "record_hash (H1)"
+        super().__init__(
+            f"refusing to write a bundle: the manifest's {field} is {expected!r}, but "
+            f"the record handed to write_bundle hashes to {actual!r}. A bundle's "
+            "manifest must describe the exact record written beside it."
+        )
+        self.expected = expected
+        self.actual = actual
+
+
+def _ensure_manifest_describes_record(record: TwoTierRecord, manifest: Manifest) -> None:
+    """Which hash applies follows `manifest.published_record_hash`:
+    present means this claims to be a published projection, so `record`
+    must hash to H3; absent means an unredacted bundle, so `record` must
+    hash to H1. Either branch also catches the mixed case (an unredacted
+    `record` beside a manifest that carries H3, or vice versa), because
+    the wrong-shaped record cannot reproduce the hash the manifest names.
+    """
+    if manifest.published_record_hash is not None:
+        actual = hash_redacted_record(record)
+        if actual != manifest.published_record_hash:
+            raise ManifestRecordMismatchError(
+                expected=manifest.published_record_hash, actual=actual, published=True
+            )
+        return
+    actual = hash_record(record)
+    if actual != manifest.record_hash:
+        raise ManifestRecordMismatchError(
+            expected=manifest.record_hash, actual=actual, published=False
+        )
 
 
 def _kind_filename(kind: str) -> str:
@@ -136,7 +190,11 @@ def write_bundle(record: TwoTierRecord, manifest: Manifest, destination: Path) -
     a directory with no `manifest.json`, which `read_bundle_body`
     refuses, rather than a complete-looking bundle whose row files are
     truncated.
+
+    Raises `ManifestRecordMismatchError` before writing anything if
+    `manifest` does not describe `record`: see that error's docstring.
     """
+    _ensure_manifest_describes_record(record, manifest)
     destination.mkdir(parents=True, exist_ok=True)
     existing = sorted(p.name for p in destination.iterdir())
     if existing:
