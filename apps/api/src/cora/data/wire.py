@@ -316,7 +316,8 @@ def wire_data(deps: Kernel) -> DataHandlers:
                 ingest_scan.bind(
                     deps,
                     scan_reader=DataExchangeScanReader(
-                        allowed_roots=deps.settings.posix_checksum_roots
+                        allowed_roots=deps.settings.posix_checksum_roots,
+                        captured_at_source=deps.settings.scan_captured_at_source,
                     ),
                     checksum_computer=PosixChecksumAdapter(
                         allowed_roots=deps.settings.posix_checksum_roots

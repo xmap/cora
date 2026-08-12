@@ -27,7 +27,7 @@ also leave zero events, because nothing has been appended yet.
 
 ## The timestamp policy
 
-A parseable (timezone-aware) file `start_date` always wins; supplying
+A parseable (timezone-aware) file timestamp always wins; supplying
 `captured_at` alongside one is refused as ambiguous rather than
 silently overridden. With no parseable file value, the operator's
 `captured_at` is accepted as caller-asserted provenance, the same trust
@@ -36,6 +36,14 @@ refuses and names the remedy. Ingest observation time is NEVER written:
 the only files lacking a timestamp here are complete-but-timestampless
 ones (layout divergence, time-IOC disconnect, format drift), each a
 staff-visible anomaly a fabricated value would bury.
+
+WHICH of the file's timestamps that is comes from the reader, not from
+here, and the record stamps `captured_at_source` with the answer. The
+policy is deliberately unchanged by that: a file value still beats an
+operator's, because the fix for a deployment whose writer emits a bad
+timestamp is to declare the good one, not to let every caller assert
+over the file. See `DataExchangeScanReader` for the 2-BM measurement
+that forced the distinction.
 """
 
 from pathlib import Path
@@ -89,8 +97,11 @@ EVIDENCE_SCHEMA: dict[str, Any] = {
     "properties": {
         "reader_kind": {"type": "string"},
         "checksum_computer_kind": {"type": "string"},
-        "captured_at_source": {"type": "string", "enum": ["start_date", "operator"]},
-        "start_date_raw": {"type": "string"},
+        "captured_at_source": {
+            "type": "string",
+            "enum": ["start_date", "end_date", "operator"],
+        },
+        "captured_at_raw": {"type": "string"},
         "projection_count": {"type": "integer"},
         "flat_count": {"type": "integer"},
         "dark_count": {"type": "integer"},
@@ -363,19 +374,20 @@ def bind(
 
 def _resolve_captured_at(command: IngestScan, described: Description) -> tuple[Any, str]:
     """Apply the locked timestamp policy; see the module docstring."""
-    if described.start_date is not None:
+    if described.captured_at is not None:
         if command.captured_at is not None:
             raise InvalidScanFileError(
                 f"captured_at was supplied but the file carries its own "
-                f"parseable timestamp ({described.start_date_raw}). Drop the "
-                f"supplied value; the file's own timestamp always wins."
+                f"parseable timestamp ({described.captured_at_raw}, from "
+                f"{described.captured_at_source}). Drop the supplied value; "
+                f"the file's own timestamp always wins."
             )
-        return described.start_date, "start_date"
+        return described.captured_at, described.captured_at_source
     if command.captured_at is not None:
         return command.captured_at, "operator"
     detail = (
-        f"present but not parseable as an unambiguous instant: {described.start_date_raw!r}"
-        if described.start_date_raw is not None
+        f"present but not parseable as an unambiguous instant: {described.captured_at_raw!r}"
+        if described.captured_at_raw is not None
         else "absent"
     )
     raise InvalidScanFileError(
@@ -402,8 +414,8 @@ def _build_evidence(
         "dark_count": described.dark_count,
         "invalid_count": described.invalid_count,
     }
-    if described.start_date_raw is not None:
-        evidence["start_date_raw"] = described.start_date_raw
+    if described.captured_at_raw is not None:
+        evidence["captured_at_raw"] = described.captured_at_raw
     if described.commanded_projection_count is not None:
         evidence["commanded_projection_count"] = described.commanded_projection_count
     if described.commanded_flat_count is not None:

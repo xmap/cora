@@ -70,12 +70,21 @@ class Description:
     digest pass's snapshot to refuse files that changed while being
     read (the live-file guard).
 
-    ``start_date`` is parsed ONLY when the file's timestamp string
+    ``captured_at`` is parsed ONLY when the file's timestamp string
     carries an unambiguous offset; a naive string stays raw in
-    ``start_date_raw`` with ``start_date=None``, because guessing a
+    ``captured_at_raw`` with ``captured_at=None``, because guessing a
     timezone would manufacture provenance. The site timezone rule, once
     staff confirm it, lands in the adapter and turns those raws into
     parsed values.
+
+    ``captured_at_source`` names WHICH of the file's timestamps that
+    came from, and it is not always the obvious one. A layout can offer
+    several, and a deployment's writer can be wrong about one of them:
+    2-BM's ``start_date`` is measurably the PREVIOUS scan's end, while
+    its ``end_date`` is correct to within seconds. So the reader is told
+    which to believe, and the record carries the answer rather than
+    leaving a reader to assume. The field is a plain ``str`` so a new
+    layout can name a timestamp this one has never heard of.
     """
 
     media_type: str
@@ -91,8 +100,9 @@ class Description:
     projection_angles_deg: tuple[float, ...] | None
     flat_angles_deg: tuple[float, ...] | None
     dark_angles_deg: tuple[float, ...] | None
-    start_date: datetime | None
-    start_date_raw: str | None
+    captured_at: datetime | None
+    captured_at_raw: str | None
+    captured_at_source: str
     byte_size: int
     mtime_ns: int
 

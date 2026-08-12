@@ -21,6 +21,23 @@ counts use tomoscan's own arithmetic: the configured count times the
 number of phases the mode names (Start or End contribute one each,
 Both contributes two, None contributes zero).
 
+## Which timestamp is the acquisition time
+
+Not a layout question, a deployment one, so the caller declares it and
+this adapter reads what it is told. The layout offers two, and at 2-BM
+one of them is wrong: measured across six consecutive scan files,
+``start_date`` is the PREVIOUS scan's ``end_date`` every time, while
+``end_date`` matches the file's own close to within five seconds. The
+areaDetector timestamp attribute refreshes only while frames flow, so
+a file opened for scan N carries the value left over from scan N-1's
+last frame, and the value written on close is the current one.
+
+The correctness of the timestamp PV is not the issue and reading it
+live returns the right instant; the staleness is in the attribute
+cache between scans. A deployment whose writer does not have that
+defect keeps naming ``start_date``, which is why this is a per-
+deployment declaration rather than a change of default.
+
 ## Locking, and why it is not optional
 
 The file is opened read-only with HDF5 file locking disabled. Two
@@ -77,6 +94,15 @@ _THETA = "exchange/theta"
 _THETA_WHITE = "exchange/theta_white"
 _THETA_DARK = "exchange/theta_dark"
 _START_DATE = "process/acquisition/start_date"
+_END_DATE = "process/acquisition/end_date"
+# The timestamps this layout offers, by the name a deployment declares.
+# Closed here rather than taking a raw dataset path from configuration:
+# a caller may choose among the timestamps the layout defines, not point
+# the reader at an arbitrary dataset.
+_CAPTURED_AT_SOURCES: dict[str, str] = {
+    "start_date": _START_DATE,
+    "end_date": _END_DATE,
+}
 _NUM_ANGLES = "process/acquisition/rotation/num_angles"
 _NUM_FLAT_FIELDS = "process/acquisition/flat_fields/num_flat_fields"
 _FLAT_FIELD_MODE = "process/acquisition/flat_fields/flat_field_mode"
@@ -89,10 +115,22 @@ class DataExchangeScanReader:
 
     kind = "DataExchange"
 
-    def __init__(self, *, allowed_roots: tuple[str, ...]) -> None:
+    def __init__(
+        self,
+        *,
+        allowed_roots: tuple[str, ...],
+        captured_at_source: str = "start_date",
+    ) -> None:
         # Same canonicalisation as PosixChecksumAdapter: roots resolve
         # once so containment compares realpath-to-realpath.
         self._allowed_roots = tuple(os.path.realpath(root) for root in allowed_roots)
+        if captured_at_source not in _CAPTURED_AT_SOURCES:
+            raise ValueError(
+                f"captured_at_source {captured_at_source!r} is not a timestamp this "
+                f"layout offers; choose one of {sorted(_CAPTURED_AT_SOURCES)}."
+            )
+        self._captured_at_source = captured_at_source
+        self._captured_at_path = _CAPTURED_AT_SOURCES[captured_at_source]
 
     async def describe(self, *, locator_uri: str) -> ScanReadResult:
         try:
@@ -156,7 +194,7 @@ class DataExchangeScanReader:
                 _scalar_str(handle, _DARK_FIELD_MODE),
             )
 
-            start_date_raw = _scalar_str(handle, _START_DATE)
+            captured_at_raw = _scalar_str(handle, self._captured_at_path)
 
         dropped: int | None = None
         if commanded_projections is not None:
@@ -183,8 +221,9 @@ class DataExchangeScanReader:
             projection_angles_deg=projection_angles,
             flat_angles_deg=flat_angles,
             dark_angles_deg=dark_angles,
-            start_date=_parse_aware(start_date_raw),
-            start_date_raw=start_date_raw,
+            captured_at=_parse_aware(captured_at_raw),
+            captured_at_raw=captured_at_raw,
+            captured_at_source=self._captured_at_source,
             byte_size=stat.st_size,
             mtime_ns=stat.st_mtime_ns,
         )

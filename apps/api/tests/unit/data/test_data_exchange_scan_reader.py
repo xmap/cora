@@ -48,6 +48,7 @@ def _write_scan(
     dark_mode: str | None = "Start",
     num_dark_fields: int | None = 2,
     start_date: str | None = "2026-07-29T10:15:30-05:00",
+    end_date: str | None = None,
     boxed_scalars: bool = False,
 ) -> None:
     def scalar(value: int | str) -> object:
@@ -81,10 +82,14 @@ def _write_scan(
             )
         if start_date is not None:
             f.create_dataset("process/acquisition/start_date", data=scalar(start_date))
+        if end_date is not None:
+            f.create_dataset("process/acquisition/end_date", data=scalar(end_date))
 
 
-def _reader(tmp_path: Path) -> DataExchangeScanReader:
-    return DataExchangeScanReader(allowed_roots=(str(tmp_path),))
+def _reader(tmp_path: Path, captured_at_source: str = "start_date") -> DataExchangeScanReader:
+    return DataExchangeScanReader(
+        allowed_roots=(str(tmp_path),), captured_at_source=captured_at_source
+    )
 
 
 async def test_describe_clean_scan_reports_complete_counts(tmp_path: Path) -> None:
@@ -126,7 +131,7 @@ async def test_describe_one_element_array_scalars_read_the_same_as_zero_d(tmp_pa
     assert result.commanded_flat_count == 2
     assert result.commanded_dark_count == 2
     assert result.dropped_frame_count == 0
-    assert result.start_date_raw == "2026-07-29T10:15:30-05:00"
+    assert result.captured_at_raw == "2026-07-29T10:15:30-05:00"
 
 
 async def test_describe_boxed_shortfall_reports_the_dropped_frames(tmp_path: Path) -> None:
@@ -159,6 +164,58 @@ async def test_describe_multi_element_array_where_a_scalar_belongs_reads_none(
     assert isinstance(result, Description)
     assert result.commanded_projection_count is None
     assert result.dropped_frame_count is None
+
+
+async def test_describe_reads_the_declared_timestamp_not_the_first_one(tmp_path: Path) -> None:
+    """The 2-BM case, reproduced in miniature.
+
+    A file whose start_date belongs to the previous scan and whose
+    end_date is its own. A deployment declaring end_date gets the right
+    instant, and the Description says which fact it used so a reader of
+    the record never has to assume.
+    """
+    scan = tmp_path / "scan_two_stamps.h5"
+    _write_scan(
+        scan,
+        start_date="2026-08-11T18:51:06-05:00",
+        end_date="2026-08-12T06:21:17-05:00",
+    )
+
+    from_start = await _reader(tmp_path).describe(locator_uri=scan.as_uri())
+    from_end = await _reader(tmp_path, "end_date").describe(locator_uri=scan.as_uri())
+
+    assert isinstance(from_start, Description)
+    assert isinstance(from_end, Description)
+    assert from_start.captured_at_raw == "2026-08-11T18:51:06-05:00"
+    assert from_start.captured_at_source == "start_date"
+    assert from_end.captured_at_raw == "2026-08-12T06:21:17-05:00"
+    assert from_end.captured_at_source == "end_date"
+
+
+async def test_describe_declared_timestamp_absent_reads_none_not_the_other_one(
+    tmp_path: Path,
+) -> None:
+    """No silent fallback.
+
+    A deployment that declared end_date and got a file without one has
+    a broken assumption, and the ingest refusing is how it finds out.
+    Falling back to start_date would hand back the exact wrong value
+    the declaration exists to avoid.
+    """
+    scan = tmp_path / "scan_no_end.h5"
+    _write_scan(scan, start_date="2026-08-11T18:51:06-05:00", end_date=None)
+
+    result = await _reader(tmp_path, "end_date").describe(locator_uri=scan.as_uri())
+
+    assert isinstance(result, Description)
+    assert result.captured_at is None
+    assert result.captured_at_raw is None
+    assert result.captured_at_source == "end_date"
+
+
+def test_reader_refuses_a_timestamp_the_layout_does_not_offer() -> None:
+    with pytest.raises(ValueError, match="not a timestamp this layout offers"):
+        DataExchangeScanReader(allowed_roots=("/tmp",), captured_at_source="acquired_on")
 
 
 async def test_describe_theta_absent_reads_structurally_incomplete(tmp_path: Path) -> None:
@@ -272,9 +329,9 @@ async def test_describe_aware_start_date_parses(tmp_path: Path) -> None:
     result = await _reader(tmp_path).describe(locator_uri=scan.as_uri())
 
     assert isinstance(result, Description)
-    assert result.start_date is not None
-    assert result.start_date.utcoffset() is not None
-    assert result.start_date_raw == "2026-07-29T10:15:30-05:00"
+    assert result.captured_at is not None
+    assert result.captured_at.utcoffset() is not None
+    assert result.captured_at_raw == "2026-07-29T10:15:30-05:00"
 
 
 async def test_describe_naive_start_date_stays_raw(tmp_path: Path) -> None:
@@ -286,8 +343,8 @@ async def test_describe_naive_start_date_stays_raw(tmp_path: Path) -> None:
     result = await _reader(tmp_path).describe(locator_uri=scan.as_uri())
 
     assert isinstance(result, Description)
-    assert result.start_date is None
-    assert result.start_date_raw == "2026-07-29T10:15:30"
+    assert result.captured_at is None
+    assert result.captured_at_raw == "2026-07-29T10:15:30"
 
 
 async def test_describe_non_hdf5_bytes_reads_unreadable(tmp_path: Path) -> None:
