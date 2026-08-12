@@ -47,7 +47,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     "ActorDeactivated": {"actor_id": "token:uuid", "occurred_at": "keep:time"},
     "ActorProfileForgotten": {"actor_id": "token:uuid", "occurred_at": "keep:time"},
     "ActorReactivated": {"actor_id": "token:uuid", "occurred_at": "keep:time"},
-    "ActorRegistered": {
+    "ActorRegisteredV2": {
         "actor_id": "token:uuid",
         "kind": "keep:enum:ActorKind",
         "occurred_at": "keep:time",
