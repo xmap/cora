@@ -123,7 +123,8 @@ answer is left here.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| DATA-8 | `Nice-to-have` | How often do scans finish with dropped frames? `add_theta()` compares written frames against commanded angles and logs a warning when they disagree, so the condition is detected but not fatal. Knowing whether this is rare-and-alarming or routine decides whether a record of the scan should refuse to be written, or carry the shortfall as an ordinary recorded fact. | rare enough to treat as an exception worth surfacing, not a routine outcome to normalise | not yet (a genuine instance was found 2026-08-11 reading a live 2bmb test file, `test_000.h5`: 3601 angles commanded, 1 frame captured, `theta` absent; `DataExchangeScanReader` handled it exactly as designed, but the file was an early smoke test, not evidence about routine production frequency) | [Operations](operations.md) |
+| DATA-8 | `Nice-to-have` | How often do scans finish with dropped frames? `add_theta()` compares written frames against commanded angles and logs a warning when they disagree, so the condition is detected but not fatal. Knowing whether this is rare-and-alarming or routine decides whether a record of the scan should refuse to be written, or carry the shortfall as an ordinary recorded fact. | rare enough to treat as an exception worth surfacing, not a routine outcome to normalise | not yet, but the question is now askable: CORA could not read the commanded counts at all until 2026-08-12 (2-BM writes them as one-element arrays and the reader understood only plain scalars), so every shortfall check silently compared against nothing. Two data points since: `test_000.h5`, an early smoke test, 3601 commanded and 1 captured with `theta` absent; and `test_005.h5`, the first production scan CORA read end to end, 1501 commanded and 1501 captured, nothing dropped | [Operations](operations.md) |
+| DATA-11 | `Blocks-go-live` | Can the detector IOC's timestamp attribute be made to refresh when a file opens? `start_date` is measurably the PREVIOUS scan's `end_date` (see [Operations](operations.md#inside-the-scan-file) for the six-file evidence), so every scan file 2-BM writes carries a wrong acquisition start, silently, for every consumer and not only CORA. CORA reads `end_date` here and is unblocked; the question is whether the file contract itself can be repaired at the source, and whether the inferred mechanism matches what the IOC configuration actually does. | the attribute can be refreshed at file open, making `start_date` true rather than inherited | not yet | [Operations](operations.md#inside-the-scan-file) |
 
 ## Where CORA runs
 
@@ -140,9 +141,12 @@ interim choice for testing and development while nothing structured is decided y
 move later. Two consequences follow. `arcturus`'s own `EPICS_CA_ADDR_LIST` (an explicit address list,
 not broadcast) is simply what CORA now uses, which is what the former HOST-1 asked. And read access to a
 finished scan file has a working interim answer that needs no mount and never touches the beamline's
-write paths: read the file in place over SSH to `tomdet`, the same way `test_003.h5` was inspected on
-2026-08-11 (see [Operations](operations.md#inside-the-scan-file)). The durable version of that question,
-a mount or a supported fetch path, stays open below.
+write paths: copy the finished file from `tomdet` to a staging directory on the host and read it there.
+That was exercised end to end on 2026-08-12, staging `test_005.h5` (24.5 GB) to `/local/cora-scans` on
+`arcturus` and ingesting it. Two costs the durable answer should weigh: the copy duplicates the file, and
+digesting it takes real time (`sha256sum` alone is 82 seconds on this hardware, about 300 MB/s), which is
+why the deployment raises the digest walk budget rather than accepting the 60-second default. The durable
+version of the question, a mount or a supported fetch path, stays open below.
 
 These are likely controls, networking, or IT questions rather than floor questions. Routing them to the
 right person, or naming who that person is, is a complete answer to any row here.
