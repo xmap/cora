@@ -79,7 +79,11 @@ from cora.infrastructure.record_export._registry import (
     registered_envelope_classes,
     resolve,
 )
-from cora.infrastructure.record_export._render import render_row, render_value
+from cora.infrastructure.record_export._render import (
+    UndecodedJsonColumnError,
+    render_row,
+    render_value,
+)
 from cora.infrastructure.record_export._stream_types import (
     KNOWN_STREAM_TYPES,
     UnknownStreamTypeError,
@@ -113,6 +117,7 @@ __all__ = [
     "Tier1Redactor",
     "TokenMap",
     "TwoTierRecord",
+    "UndecodedJsonColumnError",
     "UnknownEventTypeError",
     "UnknownLogbookKindError",
     "UnknownStreamTypeError",
