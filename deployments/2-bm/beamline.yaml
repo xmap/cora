@@ -795,5 +795,18 @@ data:
     independently. The transport axis (mount vs fetch) is deliberately
     NOT declared: it is the open HOST-2 staff question, and the
     descriptor records answers, not assumptions.
+
+    The acquisition time is read from end_date, not start_date, and
+    that is a measurement rather than a preference. Across six
+    consecutive files written 2026-08-05 to 2026-08-12, every file's
+    start_date equalled the PREVIOUS file's end_date, while every
+    file's end_date fell within five seconds of its own close. The
+    areaDetector timestamp attribute refreshes only while frames flow,
+    so a file opened for scan N carries the value left from scan N-1's
+    last frame. The timestamp PV itself is healthy: read live it
+    returns the correct instant. Until the IOC's attribute
+    configuration is corrected upstream, end_date is the only
+    trustworthy instant the file carries.
   layout: data_exchange
   finality: transfer_status
+  captured_at_source: end_date

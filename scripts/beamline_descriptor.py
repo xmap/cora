@@ -321,13 +321,21 @@ class Resources(BaseModel):
 class Data(BaseModel):
     """The beamline's scan-data choices on the ingest seam's axes.
 
-    Declares VERIFIED facts only (`layout`, `finality`); an open
-    assumption stays out of the descriptor rather than in it. Nothing
-    at runtime reads this section yet: the adapters are wired
-    unconditionally while one layout exists, and the first consumer is
-    the discovery slice (or a second layout adapter). Declaring it now
-    records the per-beamline choice where the docs and a future seeder
-    read from, without building selection machinery ahead of need.
+    Declares VERIFIED facts only (`layout`, `finality`,
+    `captured_at_source`); an open assumption stays out of the
+    descriptor rather than in it. Nothing at runtime reads this section
+    yet: the adapters are wired unconditionally while one layout
+    exists, and the first consumer is the discovery slice (or a second
+    layout adapter). Declaring it here records the per-beamline choice
+    where the docs and a future seeder read from, without building
+    selection machinery ahead of need.
+
+    `captured_at_source` is the one whose runtime twin already exists,
+    as the `SCAN_CAPTURED_AT_SOURCE` setting, because a wrong
+    acquisition time is a wrong fact in the record rather than a
+    missing feature. Until the descriptor is read at runtime the two
+    have to agree by hand, so a deployment declaring it here must set
+    the environment variable to match.
     """
 
     model_config = _MODEL_CONFIG
@@ -335,6 +343,7 @@ class Data(BaseModel):
     intro: str | None = None
     layout: str
     finality: str
+    captured_at_source: str | None = None
 
 
 @dataclass(frozen=True)

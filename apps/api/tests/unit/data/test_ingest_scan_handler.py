@@ -68,8 +68,9 @@ def _description(**overrides: object) -> Description:
         projection_angles_deg=(0.0, 45.0, 90.0, 135.0, 180.0),
         flat_angles_deg=None,
         dark_angles_deg=None,
-        start_date=datetime.fromisoformat(_AWARE_RAW),
-        start_date_raw=_AWARE_RAW,
+        captured_at=datetime.fromisoformat(_AWARE_RAW),
+        captured_at_raw=_AWARE_RAW,
+        captured_at_source="start_date",
         byte_size=4096,
         mtime_ns=111,
     )
@@ -229,7 +230,8 @@ async def test_ingest_incomplete_file_refusal_leaves_zero_events() -> None:
 async def test_ingest_timestampless_file_without_operator_value_refuses() -> None:
     store = InMemoryEventStore()
     handler = _bind(
-        _deps(store), described=_description(start_date=None, start_date_raw="2026-07-29T10:15:30")
+        _deps(store),
+        described=_description(captured_at=None, captured_at_raw="2026-07-29T10:15:30"),
     )
 
     with pytest.raises(InvalidScanFileError, match="captured_at"):
@@ -241,7 +243,8 @@ async def test_ingest_timestampless_file_without_operator_value_refuses() -> Non
 async def test_ingest_timestampless_file_accepts_operator_captured_at() -> None:
     store = InMemoryEventStore()
     handler = _bind(
-        _deps(store), described=_description(start_date=None, start_date_raw="2026-07-29T10:15:30")
+        _deps(store),
+        described=_description(captured_at=None, captured_at_raw="2026-07-29T10:15:30"),
     )
     operator_time = datetime(2026, 7, 29, 10, 20, 0, tzinfo=UTC)
 
@@ -255,7 +258,25 @@ async def test_ingest_timestampless_file_accepts_operator_captured_at() -> None:
     payload = events[0].payload
     assert payload["captured_at"] == operator_time.isoformat()
     assert payload["evidence"]["captured_at_source"] == "operator"
-    assert payload["evidence"]["start_date_raw"] == "2026-07-29T10:15:30"
+    assert payload["evidence"]["captured_at_raw"] == "2026-07-29T10:15:30"
+
+
+async def test_ingest_records_the_source_the_reader_used_not_a_fixed_name() -> None:
+    """The record says WHICH timestamp it believed.
+
+    A deployment whose writer emits a bad `start_date` declares another
+    source, and the record has to carry that rather than a hardcoded
+    label, or a reader cannot tell which fact the capture time came
+    from. This is the 2-BM posture: `end_date`, because `start_date`
+    there is measurably the previous scan's.
+    """
+    store = InMemoryEventStore()
+    handler = _bind(_deps(store), described=_description(captured_at_source="end_date"))
+
+    await handler(_command(), principal_id=_PRINCIPAL_ID, correlation_id=_CORRELATION_ID)
+
+    events, _ = await store.load("Acquisition", _ACQUISITION_ID)
+    assert events[0].payload["evidence"]["captured_at_source"] == "end_date"
 
 
 async def test_ingest_operator_value_alongside_file_timestamp_refuses_as_ambiguous() -> None:

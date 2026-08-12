@@ -7,7 +7,13 @@ touches typed outer-row columns and must not recurse into jsonb.
 from datetime import UTC, datetime, timedelta, timezone
 from uuid import UUID
 
-from cora.infrastructure.record_export import render_row, render_value
+import pytest
+
+from cora.infrastructure.record_export import (
+    UndecodedJsonColumnError,
+    render_row,
+    render_value,
+)
 
 _SOME_UUID = UUID("12345678-1234-5678-1234-567812345678")
 
@@ -53,6 +59,46 @@ def test_jsonb_decoded_dict_and_list_pass_through_unrendered() -> None:
     payload = {"logbook_id": "12345678-1234-5678-1234-567812345678", "kind": "activity"}
     assert render_value(payload) is payload
     assert render_value([1, "a", None]) == [1, "a", None]
+
+
+def test_render_row_refuses_a_payload_that_arrived_as_a_string() -> None:
+    """The shape a connection without jsonb codecs produces.
+
+    Measured against the live 2-BM database: a raw `asyncpg.connect`
+    hands `payload` back as text, and every later stage accepted it. The
+    bundle was written, hashed, and the standalone verifier reported OK
+    on a record whose payloads were strings, because the artifact was
+    self-consistent about the wrong structure.
+    """
+    row: dict[str, object] = {
+        "event_id": _SOME_UUID,
+        "event_type": "EnclosurePermitObserved",
+        "payload": '{"reason": "PSS permit observation", "trigger": "Monitor"}',
+    }
+
+    with pytest.raises(UndecodedJsonColumnError) as caught:
+        render_row(row)
+
+    assert caught.value.column == "payload"
+
+
+def test_render_row_refuses_metadata_that_arrived_as_a_string() -> None:
+    row: dict[str, object] = {
+        "event_id": _SOME_UUID,
+        "payload": {"a": 1},
+        "metadata": '{"command": "ObserveEnclosureStatus"}',
+    }
+
+    with pytest.raises(UndecodedJsonColumnError) as caught:
+        render_row(row)
+
+    assert caught.value.column == "metadata"
+
+
+def test_render_row_accepts_a_null_jsonb_column() -> None:
+    row: dict[str, object] = {"payload": {"a": 1}, "metadata": None}
+
+    assert render_row(row) == {"payload": {"a": 1}, "metadata": None}
 
 
 def test_render_row_applies_render_value_to_every_column() -> None:

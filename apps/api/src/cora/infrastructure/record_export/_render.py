@@ -51,8 +51,57 @@ def render_value(value: object) -> object:
     return value
 
 
+class UndecodedJsonColumnError(RuntimeError):
+    """A jsonb column arrived as a `str`, so the connection lacks codecs.
+
+    asyncpg returns jsonb as text unless the connection registers the
+    codecs `cora.infrastructure.postgres.pool` installs. An export over
+    such a connection is not merely degraded, it is wrong in a way that
+    hides: every payload becomes one opaque string, the bundle is
+    written, the manifest hashes it, and `verify_record_hash.py` reports
+    OK, because the artifact is perfectly self-consistent about the
+    wrong structure. Redaction is the only stage that would notice, and
+    only by crashing on a `str` where it wanted a mapping.
+
+    An exporter whose product is meant to be verifiable by a stranger
+    cannot leave that to luck, so the shape is checked where rows enter
+    rather than where they happen to break.
+    """
+
+    def __init__(self, column: str) -> None:
+        super().__init__(
+            f"column {column!r} arrived as a str, so this connection has no "
+            "jsonb codec registered; build it through "
+            "cora.infrastructure.postgres.pool.create_pool, or register the "
+            "same codecs before exporting. Exporting now would hash a record "
+            "whose payloads are strings."
+        )
+        self.column = column
+
+
+# The jsonb columns an exported row can carry: `payload` and `metadata`
+# on `events`, `payload` again on the activities entries table. Named
+# rather than sniffed, because only these are known to be jsonb.
+#
+# The check reads a decoded `str` as proof of a missing codec, which
+# holds because every one of these columns is written from a
+# `to_payload()` returning a dict, so a correctly decoded value is
+# always a mapping (or NULL). A jsonb column that legitimately held a
+# bare JSON string would decode to `str` too and trip this; none does,
+# and one arriving is a modelling change that should come here first.
+_JSON_COLUMNS = ("payload", "metadata")
+
+
 def render_row(row: "dict[str, object] | asyncpg.Record") -> dict[str, object]:
     """Render every column of one asyncpg `Record` (production) or plain
     `dict` (unit tests -- `Record` isn't constructible outside asyncpg's
-    own protocol machinery)."""
-    return {key: render_value(value) for key, value in row.items()}
+    own protocol machinery).
+
+    Refuses a jsonb column that arrived as a `str`. See
+    `UndecodedJsonColumnError`.
+    """
+    rendered = {key: render_value(value) for key, value in row.items()}
+    for column in _JSON_COLUMNS:
+        if isinstance(rendered.get(column), str):
+            raise UndecodedJsonColumnError(column)
+    return rendered

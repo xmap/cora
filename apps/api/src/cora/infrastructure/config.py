@@ -510,6 +510,26 @@ class Settings(BaseSettings):
     # See `cora.data.adapters.posix_checksum`.
     posix_checksum_roots: tuple[str, ...] = ()
 
+    # Data BC -- which of a scan file's timestamps is the acquisition
+    # time. `start_date` (the default) preserves the behaviour every
+    # deployment had before this setting existed.
+    #
+    # A deployment overrides it when its writer emits a timestamp that
+    # is wrong rather than merely different. At 2-BM, measured across
+    # six consecutive files, `start_date` is the PREVIOUS scan's
+    # `end_date` because the areaDetector timestamp attribute refreshes
+    # only while frames flow; `end_date` is correct to within seconds of
+    # the file's own close. Ingesting there without `end_date` records a
+    # capture time that is wrong by however long the gap between scans
+    # was, and the policy that a file value beats an operator's means
+    # nobody can correct it afterwards.
+    #
+    # The value is validated against the layout's own timestamp set by
+    # the reader, which refuses a name the layout does not offer rather
+    # than silently reading nothing. Read from
+    # SCAN_CAPTURED_AT_SOURCE.
+    scan_captured_at_source: str = "start_date"
+
     # Equipment BC — PIDINST integration (slice E.1)
     # `facility_publisher` is the institutional `publisher` field emitted
     # on every PIDINST record produced by `GET /assets/{asset_id}/pidinst`
