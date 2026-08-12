@@ -80,11 +80,31 @@ dataset paths and lifecycle timing this section assumes. Two of its facts matter
 commanded scan geometry (`/process/acquisition/rotation/num_angles`, the flat and dark field
 mode-and-count groups) is written `OnFileClose`, so it exists only in cleanly closed files, and it is
 what a shortfall check compares captured frames against; the `/defaults` frame ids alone can never show
-tail truncation, because a missed trigger never receives an id. The acquisition timestamp
-(`/process/acquisition/start_date`, from the PV `S:IOC:timeOfDayISO8601`) is written `OnFileOpen`, so a
-crashed file keeps its timestamp while losing its geometry. That PV carries an explicit UTC offset
-(confirmed 2026-08-11, DATA-10: `2026-08-11T12:01:05-0500`), not naive local time, so a reader parses it
-as an unambiguous instant with no site timezone rule needed.
+tail truncation, because a missed trigger never receives an id. The two acquisition timestamps
+(`/process/acquisition/start_date` and `end_date`, both from the PV `S:IOC:timeOfDayISO8601`) are written
+`OnFileOpen` and `OnFileClose`, so a crashed file keeps a start time while losing its geometry. The PV
+carries an explicit UTC offset (confirmed 2026-08-11, DATA-10: `2026-08-11T12:01:05-0500`), not naive
+local time, so a reader parses either as an unambiguous instant with no site timezone rule needed.
+
+**`start_date` does not say when the scan started, and `end_date` does say when it ended.** Measured
+2026-08-12 across the six files in `2026-08-DeCarlo-1015116`: every file's `end_date` falls within five
+seconds of its own close, and in three consecutive cases the `start_date` is the PREVIOUS file's
+`end_date` to the second (`test_003` carries `test_002`'s, `test_004` carries `test_003`'s, `test_005`
+carries `test_004`'s). `test_005` ran on the morning of 2026-08-12 and claims a start on the evening of
+2026-08-11, wrong by about twelve hours and across a day boundary. Two early smoke tests carry a value
+five days older than the file. One file, `test_002`, does look correct, which is part of why the defect
+is easy to miss.
+
+The clock PV is healthy: read live on 2026-08-12 it returned the correct instant. The reading consistent
+with the evidence is that the areaDetector timestamp attribute refreshes only while frames are flowing,
+so a file opened before any frame of the new scan inherits the value the previous scan left, while the
+value written on close has been refreshed by that scan's own frames. That mechanism is inferred from the
+measurements rather than read out of the IOC configuration, and staff are the authority on it.
+
+Two consequences. A reader wanting when a scan happened uses `end_date` here, which is why the descriptor
+declares `captured_at_source: end_date` and CORA records which timestamp it used rather than leaving a
+reader to assume. And the defect is upstream of CORA: it is in every scan file 2-BM writes, so anything
+else reading `start_date` inherits it silently.
 
 **A finished capture is not a finished file, and this is the fact an ingest reader must respect.** The
 end-of-scan sequence stops the file plugin (`FPCapture` to `Done`, then waits for `Capture_RBV` to reach
@@ -102,8 +122,14 @@ naming the missing ones when they disagree. Dropped frames are therefore a known
 non-fatal condition: a reader that records only what landed will silently under-describe such a scan.
 A genuine instance was found 2026-08-11 reading a real file from the beamline (`test_000.h5`, an early
 smoke test rather than a production scan): 3601 angles commanded, one frame captured, `theta` absent.
-`DataExchangeScanReader` handled it exactly as designed; DATA-8's frequency question (rare-and-alarming
-versus routine for an actual production scan) is still open.
+`DataExchangeScanReader` handled it exactly as designed.
+
+The first production scan CORA read end to end (`test_005.h5`, 2026-08-12) dropped nothing: 1501
+commanded, 1501 captured, 40 flats, 20 darks, angles 0 to 180.013. That is one scan, so it does not
+settle DATA-8's frequency question, but it is the first data point and it comes from the record rather
+than from a log line. Until 2026-08-12 the question could not be asked at all: the reader could not read
+the commanded counts, because 2-BM writes them as one-element arrays and the reader only understood
+plain scalars, so every shortfall check compared against nothing.
 
 The experiment folder is computed, not conventional, which is what makes it derivable rather than
 guessable. `dmagic`'s `dm.py` formats it as `{year_month}-{pi_last_name}-{gup_number}` from APS
