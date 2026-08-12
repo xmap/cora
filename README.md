@@ -497,7 +497,7 @@
 | src/cora/data/\_projections.py                                                           |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/adapters/\_\_init\_\_.py                                                   |        8 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/adapters/\_file\_uri.py                                                    |        8 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/data/adapters/data\_exchange\_scan\_reader.py                                   |      118 |       22 |       24 |        3 |     79.6% |100-109, 126-127, 230, 232-233, 242-243, 246-255, 279, 282-283 |
+| src/cora/data/adapters/data\_exchange\_scan\_reader.py                                   |      136 |       15 |       30 |        2 |     89.8% |138-147, 164-165, 268-269, 307-308, 312, 316-317, 320, 347-348 |
 | src/cora/data/adapters/http\_range\_checksum.py                                          |       62 |       11 |       16 |        5 |     79.5% |97, 100-101, 105, 110, 121-129, 131, 136, 145 |
 | src/cora/data/adapters/in\_memory\_distribution\_lookup.py                               |       18 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/data/adapters/posix\_checksum.py                                                |       60 |        8 |       14 |        4 |     83.8% |119-126, 147, 160-166, 170, 187 |
@@ -568,7 +568,7 @@
 | src/cora/data/features/get\_dataset/tool.py                                              |       22 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/data/features/ingest\_scan/\_\_init\_\_.py                                      |        5 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/data/features/ingest\_scan/command.py                                           |        7 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/data/features/ingest\_scan/handler.py                                           |      112 |        7 |       42 |        9 |     88.3% |217, 254, 257, 260-264, 405-\>407, 407-\>409, 413-\>415, 415-\>419, 425 |
+| src/cora/data/features/ingest\_scan/handler.py                                           |      112 |        7 |       42 |        9 |     88.3% |228, 265, 268, 271-275, 417-\>419, 419-\>421, 425-\>427, 427-\>431, 437 |
 | src/cora/data/features/ingest\_scan/route.py                                             |       24 |        1 |        0 |        0 |     95.8% |       163 |
 | src/cora/data/features/ingest\_scan/tool.py                                              |       20 |        1 |        0 |        0 |     95.0% |       102 |
 | src/cora/data/features/list\_datasets/\_\_init\_\_.py                                    |        4 |        0 |        0 |        0 |    100.0% |           |
@@ -1443,7 +1443,7 @@
 | src/cora/infrastructure/auth/config.py                                                   |       56 |        0 |       12 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/exception\_handlers.py                                      |       44 |        0 |        6 |        0 |    100.0% |           |
 | src/cora/infrastructure/auth/idp\_registry.py                                            |       48 |        0 |       18 |        0 |    100.0% |           |
-| src/cora/infrastructure/config.py                                                        |      260 |        6 |       50 |        3 |     97.1% |841-845, 853-857, 866-870 |
+| src/cora/infrastructure/config.py                                                        |      261 |        6 |       50 |        3 |     97.1% |861-865, 873-877, 886-890 |
 | src/cora/infrastructure/control\_port\_route.py                                          |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/deps.py                                                          |      129 |        1 |       18 |        2 |     98.0% |1235, 1426-\>1422 |
 | src/cora/infrastructure/edge\_runtime.py                                                 |       16 |        0 |        0 |        0 |    100.0% |           |
@@ -1535,7 +1535,7 @@
 | src/cora/infrastructure/record\_export/\_redact\_tier2.py                                |       40 |        0 |       20 |        2 |     96.7% |196-\>183, 204-\>183 |
 | src/cora/infrastructure/record\_export/\_redaction.py                                    |       27 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_registry.py                                     |       19 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/record\_export/\_render.py                                       |       13 |        0 |        6 |        0 |    100.0% |           |
+| src/cora/infrastructure/record\_export/\_render.py                                       |       22 |        0 |       10 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_stream\_types.py                                |        8 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_tokens.py                                       |       14 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/infrastructure/routing.py                                                       |       46 |        1 |       12 |        1 |     96.6% |       169 |
@@ -2621,7 +2621,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **56429** | **1270** | **8206** |  **380** | **97.2%** |           |
+| **TOTAL**                                                                                | **56457** | **1263** | **8216** |  **379** | **97.2%** |           |
 
 
 ## Setup coverage badge
