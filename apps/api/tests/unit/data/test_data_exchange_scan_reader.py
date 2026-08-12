@@ -145,6 +145,56 @@ async def test_describe_boxed_shortfall_reports_the_dropped_frames(tmp_path: Pat
     assert result.dropped_frame_count == 2
 
 
+@pytest.mark.parametrize(
+    ("written", "expected"),
+    [
+        pytest.param("1501", 1501, id="text_scalar"),
+        pytest.param(["1501"], 1501, id="text_in_a_one_element_array"),
+    ],
+)
+async def test_describe_reads_a_commanded_count_written_as_text(
+    tmp_path: Path, written: object, expected: int
+) -> None:
+    """h5py hands string datasets back as bytes.
+
+    A writer that stores a count as text is not a shape this beamline
+    uses today, but the reader already decodes bytes for the timestamp
+    and the same value can arrive on either path; a count it could
+    decode but silently dropped would be the `_scalar_int` bug again in
+    a different costume.
+    """
+    scan = tmp_path / "scan_text_count.h5"
+    _write_scan(scan, projections=1501)
+    with h5py.File(scan, "a") as f:
+        del f["process/acquisition/rotation/num_angles"]
+        f.create_dataset("process/acquisition/rotation/num_angles", data=written)
+
+    result = await _reader(tmp_path).describe(locator_uri=scan.as_uri())
+
+    assert isinstance(result, Description)
+    assert result.commanded_projection_count == expected
+
+
+async def test_describe_uncountable_commanded_value_reads_none(tmp_path: Path) -> None:
+    """A value that is neither a number nor a sized thing.
+
+    The reader's contract is never to raise, so an unreadable count
+    reports unknowable rather than propagating out of the worker
+    thread as a failed describe.
+    """
+    scan = tmp_path / "scan_nan_count.h5"
+    _write_scan(scan)
+    with h5py.File(scan, "a") as f:
+        del f["process/acquisition/rotation/num_angles"]
+        f.create_dataset("process/acquisition/rotation/num_angles", data=float("nan"))
+
+    result = await _reader(tmp_path).describe(locator_uri=scan.as_uri())
+
+    assert isinstance(result, Description)
+    assert result.commanded_projection_count is None
+    assert result.dropped_frame_count is None
+
+
 async def test_describe_multi_element_array_where_a_scalar_belongs_reads_none(
     tmp_path: Path,
 ) -> None:
