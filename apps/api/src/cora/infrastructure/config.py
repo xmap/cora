@@ -510,6 +510,20 @@ class Settings(BaseSettings):
     # See `cora.data.adapters.posix_checksum`.
     posix_checksum_roots: tuple[str, ...] = ()
 
+    # End-to-end budget for one POSIX digest walk, seconds. The bound
+    # exists so a file on a hung mount, or one still growing, cannot
+    # occupy a worker indefinitely; it is not a performance knob.
+    #
+    # The 60 s default suits the small files the adapter was written
+    # against and is far too short for a tomography scan. Measured on
+    # the 2-BM pilot: `sha256sum` alone takes 82 s on a 24.5 GB scan
+    # (77 s of it CPU), and CORA's chunked read is slower still, so the
+    # first real ingest refused with `walk exceeded max_walk_seconds`.
+    # A deployment holding files of that size raises this to something
+    # that bounds a hang without forbidding its own data. Read from
+    # POSIX_CHECKSUM_MAX_WALK_SECONDS.
+    posix_checksum_max_walk_seconds: float = 60.0
+
     # Data BC -- which of a scan file's timestamps is the acquisition
     # time. `start_date` (the default) preserves the behaviour every
     # deployment had before this setting existed.

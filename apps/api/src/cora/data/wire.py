@@ -130,7 +130,10 @@ def _build_checksum_verifiers(deps: Kernel) -> Mapping[str, ChecksumVerifier]:
     verifiers: dict[str, ChecksumVerifier] = {"http": http, "https": http}
     roots = deps.settings.posix_checksum_roots
     if roots:
-        verifiers["file"] = PosixChecksumAdapter(allowed_roots=roots)
+        verifiers["file"] = PosixChecksumAdapter(
+            allowed_roots=roots,
+            max_walk_seconds=deps.settings.posix_checksum_max_walk_seconds,
+        )
     return verifiers
 
 
@@ -320,7 +323,8 @@ def wire_data(deps: Kernel) -> DataHandlers:
                         captured_at_source=deps.settings.scan_captured_at_source,
                     ),
                     checksum_computer=PosixChecksumAdapter(
-                        allowed_roots=deps.settings.posix_checksum_roots
+                        allowed_roots=deps.settings.posix_checksum_roots,
+                        max_walk_seconds=deps.settings.posix_checksum_max_walk_seconds,
                     ),
                     dataset_by_checksum_lookup=_build_dataset_by_checksum_lookup(deps),
                 ),
