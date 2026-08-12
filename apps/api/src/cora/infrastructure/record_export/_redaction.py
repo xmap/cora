@@ -15,8 +15,8 @@ from cora.infrastructure.record_export._export import ExportedRecord
 from cora.infrastructure.record_export._hashing import hash_redaction_profile
 from cora.infrastructure.record_export._redact_tier1 import Tier1Redactor, UnknownEventTypeError
 from cora.infrastructure.record_export._redact_tier2 import (
-    ensure_all_clearances_fired,
     redact_tier2_row,
+    unfired_clearances,
 )
 from cora.infrastructure.record_export._tokens import TokenMap
 
@@ -60,10 +60,22 @@ class RedactionResult:
     """`redacted_record` is safe to hash as the published record.
     `token_map` is an artifact of THIS export, retained separately under
     H1's obligation; it must never be shipped or fed into anything
-    hashed as the published record."""
+    hashed as the published record.
+
+    `unfired_tier2_clearances` names every declared jsonb clearance
+    (`kind`, `column`, `pointer`) that never matched a row in a kind
+    THIS export actually carried. It is a completeness fact about the
+    export, not a safety finding: tier 2 is an allowlist, so a
+    clearance not firing means a field was published less often than
+    permitted, never more. Callers pass it to `build_manifest` so a
+    reader can see, from the artifact itself, which parts of the
+    redaction profile this particular export was too narrow to
+    exercise.
+    """
 
     redacted_record: RedactedRecord
     token_map: TokenMap
+    unfired_tier2_clearances: frozenset[tuple[str, str, str]]
 
 
 def redact_record(
@@ -73,9 +85,11 @@ def redact_record(
 
     Raises `RedactionProfileMismatchError` before touching any row if
     the hash does not match; `UnknownEventTypeError` if a stream row's
-    `event_type` has no entry in the disposition table at all;
-    `UnfiredClearanceError` if a declared tier-2 jsonb clearance never
-    matched a row in a kind present in this export.
+    `event_type` has no entry in the disposition table at all. Does NOT
+    raise over an unfired tier-2 clearance; see
+    `RedactionResult.unfired_tier2_clearances` and
+    `unfired_clearances`'s own docstring for why an earlier version of
+    this function did and was wrong to.
     """
     actual_hash = hash_redaction_profile()
     if expected_redaction_profile_hash != actual_hash:
@@ -94,9 +108,10 @@ def redact_record(
         )
         for kind, rows in record.logbooks.items()
     }
-    ensure_all_clearances_fired(fired_pointers, kinds_present=frozenset(record.logbooks))
+    unfired = unfired_clearances(fired_pointers, kinds_present=frozenset(record.logbooks))
 
     return RedactionResult(
         redacted_record=RedactedRecord(streams=redacted_streams, logbooks=redacted_logbooks),
         token_map=token_map,
+        unfired_tier2_clearances=unfired,
     )

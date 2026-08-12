@@ -1,6 +1,6 @@
 """Unit tests for tier-2 (`entries_*`) redaction: the hand-authored
 per-kind disposition table, jsonb recursion, and the unfired-clearance
-check."""
+report."""
 
 from uuid import uuid4
 
@@ -9,9 +9,8 @@ import pytest
 from cora.infrastructure.record_export import TokenMap
 from cora.infrastructure.record_export._redact_tier2 import (
     TIER2_DISPOSITIONS,
-    UnfiredClearanceError,
-    ensure_all_clearances_fired,
     redact_tier2_row,
+    unfired_clearances,
 )
 
 
@@ -128,26 +127,37 @@ def test_every_declared_kind_has_at_least_one_uuid_scope_column(kind: str) -> No
     assert "token" in TIER2_DISPOSITIONS[kind].values()
 
 
-def test_unfired_clearance_raises_when_a_declared_pointer_never_matched() -> None:
+def test_unfired_clearance_names_the_pointer_that_never_matched() -> None:
+    """A narrow export (one setpoint, no units) is a normal export, not
+    an error: CORRECTED 2026-08-12, this used to raise. See
+    `unfired_clearances`'s own docstring for why raising here was a
+    denylist-shaped mistake applied to an allowlist mechanism."""
     # No channel/action_name/units in this payload.
     row = {"event_id": str(uuid4()), "payload": {"target_value": 423.0}}
     fired: dict[tuple[str, str], set[str]] = {}
     redact_tier2_row("activity", row, token_map=TokenMap(), fired_pointers=fired)
-    with pytest.raises(UnfiredClearanceError):
-        ensure_all_clearances_fired(fired, kinds_present=frozenset({"activity"}))
+
+    unfired = unfired_clearances(fired, kinds_present=frozenset({"activity"}))
+
+    assert unfired == {
+        ("activity", "payload", "channel"),
+        ("activity", "payload", "action_name"),
+        ("activity", "payload", "units"),
+    }
 
 
-def test_unfired_clearance_does_not_raise_for_a_kind_not_present() -> None:
+def test_unfired_clearance_for_a_kind_not_present_reports_empty() -> None:
     """An unused clearance for a kind with zero rows in this export is
-    not a leak -- nothing exported to leak."""
-    ensure_all_clearances_fired({}, kinds_present=frozenset({"verdict"}))
+    not a completeness gap -- nothing exported to have exercised it."""
+    assert unfired_clearances({}, kinds_present=frozenset({"verdict"})) == frozenset()
 
 
-def test_all_declared_clearances_fire_when_every_pointer_is_exercised() -> None:
+def test_all_declared_clearances_fired_reports_empty() -> None:
     row = {
         "event_id": str(uuid4()),
         "payload": {"channel": "T_oven", "action_name": "open_valve", "units": "K"},
     }
     fired: dict[tuple[str, str], set[str]] = {}
     redact_tier2_row("activity", row, token_map=TokenMap(), fired_pointers=fired)
-    ensure_all_clearances_fired(fired, kinds_present=frozenset({"activity"}))  # must not raise
+
+    assert unfired_clearances(fired, kinds_present=frozenset({"activity"})) == frozenset()

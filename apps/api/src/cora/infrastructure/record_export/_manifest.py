@@ -62,6 +62,23 @@ class Manifest:
     because H3 hashes the two tiers only. The manifest is not in its own
     hashed body, so there is no circularity to resolve.
     """
+    unfired_tier2_clearances: tuple[str, ...] | None = None
+    """Declared tier-2 jsonb clearances (`"kind/column/pointer"`) that
+    never matched a row in a kind this export carried. `None` means "no
+    redaction happened", the same absence-is-the-signal convention as
+    `published_record_hash`; an empty tuple means redaction happened and
+    every clearance fired.
+
+    This is a COMPLETENESS fact, not a safety finding. Tier 2's
+    dispositions are an allowlist, so an unfired clearance means a field
+    was published less often than the profile permits, never more --
+    see `unfired_clearances`'s own docstring for the full argument and
+    the denylist-shaped mistake this field replaces (an earlier version
+    aborted the export instead of reporting this). A reviewer reading a
+    non-empty list here learns "this export was too narrow to exercise
+    every rule the profile declares", which is a caveat about coverage,
+    not a leak.
+    """
 
 
 def capture_git_commit(*, cwd: Path | str | None = None) -> str:
@@ -151,12 +168,17 @@ def _expansion_digest_presence_by_run(record: ExportedRecord) -> dict[str, bool]
     }
 
 
+def _render_unfired_clearances(unfired: frozenset[tuple[str, str, str]]) -> tuple[str, ...]:
+    return tuple(sorted(f"{kind}/{column}/{pointer}" for kind, column, pointer in unfired))
+
+
 def build_manifest(
     record: ExportedRecord,
     *,
     watermark: int,
     git_commit: str,
     redacted: TwoTierRecord | None = None,
+    unfired_tier2_clearances: frozenset[tuple[str, str, str]] | None = None,
 ) -> Manifest:
     """Assemble the manifest for one already-exported, already-rendered record.
 
@@ -167,6 +189,12 @@ def build_manifest(
     one, so the counts describe both, and deriving them from the
     unredacted side keeps a reader's recomputation honest if redaction
     ever does start dropping rows.
+
+    Pass `unfired_tier2_clearances` (a `RedactionResult.unfired_tier2_clearances`)
+    alongside `redacted` so the manifest carries the completeness caveat
+    described on `Manifest.unfired_tier2_clearances`. Meaningless without
+    `redacted` and ignored if `redacted` is `None`, matching that field's
+    same "no redaction happened" absence.
     """
     return Manifest(
         git_commit=git_commit,
@@ -178,6 +206,11 @@ def build_manifest(
         is_simulated=_is_simulated(record),
         expansion_digest_presence_by_run=_expansion_digest_presence_by_run(record),
         published_record_hash=None if redacted is None else hash_redacted_record(redacted),
+        unfired_tier2_clearances=(
+            None
+            if redacted is None
+            else _render_unfired_clearances(unfired_tier2_clearances or frozenset())
+        ),
     )
 
 

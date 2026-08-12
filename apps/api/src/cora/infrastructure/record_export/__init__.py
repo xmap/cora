@@ -62,9 +62,8 @@ from cora.infrastructure.record_export._redact_tier2 import (
     TIER2_DISPOSITIONS,
     TIER2_JSONB_CLEARED_POINTERS,
     TIER2_JSONB_DROPPED_COLUMNS,
-    UnfiredClearanceError,
-    ensure_all_clearances_fired,
     redact_tier2_row,
+    unfired_clearances,
 )
 from cora.infrastructure.record_export._redaction import (
     RedactedRecord,
@@ -114,7 +113,6 @@ __all__ = [
     "Tier1Redactor",
     "TokenMap",
     "TwoTierRecord",
-    "UnfiredClearanceError",
     "UnknownEventTypeError",
     "UnknownLogbookKindError",
     "UnknownStreamTypeError",
@@ -122,7 +120,6 @@ __all__ = [
     "build_manifest",
     "capture_git_commit",
     "capture_watermark",
-    "ensure_all_clearances_fired",
     "ensure_stream_type_known",
     "export_record",
     "hash_logbooks",
@@ -138,5 +135,6 @@ __all__ = [
     "render_row",
     "render_value",
     "resolve",
+    "unfired_clearances",
     "write_bundle",
 ]

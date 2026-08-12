@@ -12,19 +12,20 @@ that shares no code with the writer, and hashed to the same value. Any
 drift between the two reassembly implementations shows up here and
 nowhere else.
 
-FOUND WHILE WRITING THIS, and not fixed here because loosening a
-fail-closed check is a security decision rather than a test fixture's
-business: `ensure_all_clearances_fired` raises unless EVERY declared
-`activity/payload` clearance fires, and those three keys (`channel`,
+FOUND WHILE WRITING THIS, and FIXED separately (same session, next
+commit): `redact_record` used to raise unless EVERY declared
+`activity/payload` clearance fired, and those three keys (`channel`,
 `action_name`, `units`) live on different step kinds, two of them
-optional per `append_activities/route.py:86-94`. So `redact_record`
-refuses on any export whose activities happen not to include a
-setpoint-carrying-units AND an action AND a check. Step 6's own
-integration fixture already works around it with a comment reasoning
-that a whole-database export "would plausibly exercise every step
-kind". That is an assumption about data, holding up a hard refusal. It
-fails CLOSED, so nothing leaks, but the first small rehearsal bundle,
-or any future per-run slice, would hit it and read as a config error.
+optional per `append_activities/route.py:86-94`, so a narrow export
+(a single setpoint, say) aborted instead of exporting. The check
+reasoned from a denylist's threat model (an unfired rule that should
+have hidden something is a leak) applied backwards to tier 2's
+allowlist (an unfired rule here means something was published LESS
+than the profile permits, never more). `unfired_clearances` now reports
+the fact on the manifest instead of aborting; see its docstring in
+`_redact_tier2.py` for the full argument. This test's fixture still
+seeds three step kinds, not to dodge an abort that no longer exists,
+but because it is better coverage of the redaction path than one kind.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -102,14 +103,11 @@ async def _seed_a_procedure_with_one_activity(db_pool: asyncpg.Pool) -> None:
             events=[new_event],
         )
 
-    # Three step kinds, not one, and NOT because this test needs three.
-    # `ensure_all_clearances_fired` raises unless every declared
-    # `activity/payload` clearance (`channel`, `action_name`, `units`)
-    # matches at least one row, and those keys live on DIFFERENT step
-    # kinds, two of them optional. A setpoint-only export therefore
-    # fails to redact. See this module's docstring: that is a real
-    # fragility in step 6, worked around here so these tests exercise
-    # the BUNDLE rather than accidentally re-testing the clearance rule.
+    # Three step kinds, exercising a wider slice of tier-2 redaction
+    # (setpoint/action/check each carry different payload keys) than a
+    # single kind would. A one-kind fixture would previously have
+    # aborted `redact_record` outright; see the module docstring for
+    # why that is no longer possible.
     handler = bind_append(deps, step_store=PostgresActivityStore(db_pool))
     await handler(
         AppendProcedureActivities(
@@ -202,9 +200,95 @@ async def test_a_real_redacted_export_verifies_against_h3(
         watermark=1,
         git_commit=capture_git_commit(),
         redacted=redaction.redacted_record,
+        unfired_tier2_clearances=redaction.unfired_tier2_clearances,
     )
     bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "published")
 
+    result = _verify(bundle, published=True)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.integration
+async def test_a_narrow_export_redacts_and_reports_what_it_could_not_exercise(
+    db_pool: asyncpg.Pool, tmp_path: Path
+) -> None:
+    """The regression test for the defect this module's docstring
+    describes. A single setpoint, no `units`, no `action`, no `check`:
+    exactly the shape that used to abort `redact_record` outright.
+
+    It must now redact successfully, verify against H3, AND the
+    manifest must name the two clearances this narrow export could not
+    exercise -- proving the fact is surfaced, not just silently dropped.
+    """
+    procedure_id = uuid4()
+    logbook_id = uuid4()
+    open_event_id = uuid4()
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[logbook_id, open_event_id])
+
+    registered = ProcedureRegistered(
+        procedure_id=procedure_id,
+        name="Narrow rehearsal",
+        kind="bakeout",
+        target_asset_ids=(),
+        parent_run_id=None,
+        occurred_at=_NOW,
+    )
+    started = ProcedureStarted(procedure_id=procedure_id, occurred_at=_NOW)
+    for index, event in enumerate((registered, started)):
+        new_event = to_new_event(
+            event_type=event_type_name(event),
+            payload=to_payload(event),
+            occurred_at=event.occurred_at,
+            event_id=uuid4(),
+            command_name="RegisterProcedure" if index == 0 else "StartProcedure",
+            correlation_id=_CORRELATION_ID,
+            principal_id=_PRINCIPAL_ID,
+        )
+        await deps.event_store.append(
+            stream_type="Procedure",
+            stream_id=procedure_id,
+            expected_version=index,
+            events=[new_event],
+        )
+
+    handler = bind_append(deps, step_store=PostgresActivityStore(db_pool))
+    await handler(
+        AppendProcedureActivities(
+            procedure_id=procedure_id,
+            entries=(
+                ActivityInput(
+                    event_id=uuid4(),
+                    step_kind="setpoint",
+                    payload={"channel": "T_oven", "target_value": 423.0},  # no units
+                    sampled_at=_NOW,
+                ),
+            ),
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    async with db_pool.acquire() as conn:
+        pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
+        exported = await export_record(pg_conn)
+
+    # This call itself is the regression assertion: it used to raise
+    # UnfiredClearanceError for exactly this fixture.
+    redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
+
+    manifest = build_manifest(
+        exported,
+        watermark=1,
+        git_commit=capture_git_commit(),
+        redacted=redaction.redacted_record,
+        unfired_tier2_clearances=redaction.unfired_tier2_clearances,
+    )
+    assert manifest.unfired_tier2_clearances == (
+        "activity/payload/action_name",
+        "activity/payload/units",
+    )
+
+    bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "narrow")
     result = _verify(bundle, published=True)
     assert result.returncode == 0, result.stderr
 
