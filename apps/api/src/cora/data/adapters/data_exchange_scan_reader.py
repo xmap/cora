@@ -226,10 +226,36 @@ def _scalar_int(handle: h5py.File, path: str) -> int | None:
         return None
     try:
         value = dataset[()]
-        if isinstance(value, bytes):
-            value = value.decode("utf-8", errors="replace")
-        return int(value)
-    except (TypeError, ValueError, OSError):
+    except OSError:
+        return None
+    if isinstance(value, bytes):
+        value = value.decode("utf-8", errors="replace")
+    parsed = _as_int(value)
+    if parsed is not None:
+        return parsed
+    # Same shape `_scalar_str` already handles: 2-BM writes every
+    # /process/acquisition integer as a 1-element array, and NumPy 2
+    # refuses int() on anything that is not 0-dimensional. Measured on
+    # a real scan file: num_angles is (1,) int32, so reading only the
+    # 0-d form left every commanded count None and made the shortfall
+    # check unable to fire at all. A longer array is NOT a scalar
+    # written oddly, so it stays unreadable rather than being reported
+    # as its own first element.
+    try:
+        if len(value) != 1:  # pyright: ignore[reportArgumentType]
+            return None
+        first = value[0]  # pyright: ignore[reportIndexIssue]
+    except (TypeError, IndexError, KeyError):
+        return None
+    if isinstance(first, bytes):
+        first = first.decode("utf-8", errors="replace")
+    return _as_int(first)
+
+
+def _as_int(value: object) -> int | None:
+    try:
+        return int(value)  # pyright: ignore[reportArgumentType]
+    except (TypeError, ValueError):
         return None
 
 

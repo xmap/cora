@@ -23,6 +23,18 @@ from cora.data.ports.scan_reader import Description, Unreadable, Unrecognized
 pytestmark = pytest.mark.unit
 
 
+def _scalar(value: int | str, *, boxed: bool) -> object:
+    """A scalar as the two shapes real writers use.
+
+    2-BM writes every `/process/acquisition` scalar as a 1-element
+    array, not as a 0-dimensional dataset, measured against a real scan
+    file. Tests that only ever wrote the 0-d shape were green while the
+    reader could not read a single commanded count at the beamline, so
+    the shape is a fixture parameter rather than an assumption.
+    """
+    return [value] if boxed else value
+
+
 def _write_scan(
     path: Path,
     *,
@@ -36,7 +48,11 @@ def _write_scan(
     dark_mode: str | None = "Start",
     num_dark_fields: int | None = 2,
     start_date: str | None = "2026-07-29T10:15:30-05:00",
+    boxed_scalars: bool = False,
 ) -> None:
+    def scalar(value: int | str) -> object:
+        return _scalar(value, boxed=boxed_scalars)
+
     with h5py.File(path, "w") as f:
         f.create_dataset("exchange/data", data=np.zeros((projections, 4, 4), dtype=np.uint16))
         if flats is not None:
@@ -46,21 +62,25 @@ def _write_scan(
         if theta:
             f.create_dataset("exchange/theta", data=np.linspace(0.0, 180.0, projections))
         if num_angles is not None:
-            f.create_dataset("process/acquisition/rotation/num_angles", data=num_angles)
+            f.create_dataset("process/acquisition/rotation/num_angles", data=scalar(num_angles))
         if num_flat_fields is not None:
             f.create_dataset(
-                "process/acquisition/flat_fields/num_flat_fields", data=num_flat_fields
+                "process/acquisition/flat_fields/num_flat_fields", data=scalar(num_flat_fields)
             )
         if flat_mode is not None:
-            f.create_dataset("process/acquisition/flat_fields/flat_field_mode", data=flat_mode)
+            f.create_dataset(
+                "process/acquisition/flat_fields/flat_field_mode", data=scalar(flat_mode)
+            )
         if num_dark_fields is not None:
             f.create_dataset(
-                "process/acquisition/dark_fields/num_dark_fields", data=num_dark_fields
+                "process/acquisition/dark_fields/num_dark_fields", data=scalar(num_dark_fields)
             )
         if dark_mode is not None:
-            f.create_dataset("process/acquisition/dark_fields/dark_field_mode", data=dark_mode)
+            f.create_dataset(
+                "process/acquisition/dark_fields/dark_field_mode", data=scalar(dark_mode)
+            )
         if start_date is not None:
-            f.create_dataset("process/acquisition/start_date", data=start_date)
+            f.create_dataset("process/acquisition/start_date", data=scalar(start_date))
 
 
 def _reader(tmp_path: Path) -> DataExchangeScanReader:
@@ -85,6 +105,60 @@ async def test_describe_clean_scan_reports_complete_counts(tmp_path: Path) -> No
     assert len(result.projection_angles_deg) == 5
     assert result.byte_size > 0
     assert result.media_type == "application/x-hdf5"
+
+
+async def test_describe_one_element_array_scalars_read_the_same_as_zero_d(tmp_path: Path) -> None:
+    """The shape 2-BM actually writes.
+
+    Measured on a real scan file: `/process/acquisition` scalars are
+    1-element arrays, and NumPy 2 refuses `int()` on those. Before the
+    reader handled them, every commanded count came back None at the
+    beamline while this whole module stayed green, because the fixture
+    only ever wrote the 0-dimensional shape.
+    """
+    scan = tmp_path / "scan_boxed.h5"
+    _write_scan(scan, boxed_scalars=True)
+
+    result = await _reader(tmp_path).describe(locator_uri=scan.as_uri())
+
+    assert isinstance(result, Description)
+    assert result.commanded_projection_count == 5
+    assert result.commanded_flat_count == 2
+    assert result.commanded_dark_count == 2
+    assert result.dropped_frame_count == 0
+    assert result.start_date_raw == "2026-07-29T10:15:30-05:00"
+
+
+async def test_describe_boxed_shortfall_reports_the_dropped_frames(tmp_path: Path) -> None:
+    scan = tmp_path / "scan_boxed_short.h5"
+    _write_scan(scan, projections=3, num_angles=5, boxed_scalars=True)
+
+    result = await _reader(tmp_path).describe(locator_uri=scan.as_uri())
+
+    assert isinstance(result, Description)
+    assert result.commanded_projection_count == 5
+    assert result.dropped_frame_count == 2
+
+
+async def test_describe_multi_element_array_where_a_scalar_belongs_reads_none(
+    tmp_path: Path,
+) -> None:
+    """A longer array is not a scalar written oddly.
+
+    Reporting its first element would fabricate a commanded count from
+    a dataset whose meaning the reader does not know.
+    """
+    scan = tmp_path / "scan_multi.h5"
+    _write_scan(scan)
+    with h5py.File(scan, "a") as f:
+        del f["process/acquisition/rotation/num_angles"]
+        f.create_dataset("process/acquisition/rotation/num_angles", data=[5, 6, 7])
+
+    result = await _reader(tmp_path).describe(locator_uri=scan.as_uri())
+
+    assert isinstance(result, Description)
+    assert result.commanded_projection_count is None
+    assert result.dropped_frame_count is None
 
 
 async def test_describe_theta_absent_reads_structurally_incomplete(tmp_path: Path) -> None:
