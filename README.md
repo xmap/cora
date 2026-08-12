@@ -1524,14 +1524,15 @@
 | src/cora/infrastructure/published\_artifact/\_stages.py                                  |       64 |        3 |       28 |        0 |     96.7% |87-88, 238 |
 | src/cora/infrastructure/published\_artifact/orchestrator.py                              |       48 |        1 |       16 |        1 |     96.9% |       135 |
 | src/cora/infrastructure/read\_only\_event\_store.py                                      |       19 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/record\_export/\_\_init\_\_.py                                   |       11 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/record\_export/\_\_init\_\_.py                                   |       12 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/record\_export/\_bundle.py                                       |       47 |        4 |       14 |        3 |     88.5% |92-93, 170-171, 181-\>185 |
 | src/cora/infrastructure/record\_export/\_dispositions.py                                 |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_export.py                                       |       35 |        0 |        6 |        0 |    100.0% |           |
-| src/cora/infrastructure/record\_export/\_hashing.py                                      |       15 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/record\_export/\_hashing.py                                      |       21 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_leaf\_rule.py                                   |       39 |        1 |       22 |        3 |     93.4% |94-\>86, 105-\>107, 112 |
-| src/cora/infrastructure/record\_export/\_manifest.py                                     |       48 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/infrastructure/record\_export/\_manifest.py                                     |       51 |        0 |       10 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_redact\_tier1.py                                |       80 |        9 |       38 |        6 |     85.6% |76-79, 85, 89, 92, 96, 108 |
-| src/cora/infrastructure/record\_export/\_redact\_tier2.py                                |       45 |        0 |       22 |        2 |     97.0% |215-\>202, 223-\>202 |
+| src/cora/infrastructure/record\_export/\_redact\_tier2.py                                |       40 |        0 |       20 |        2 |     96.7% |196-\>183, 204-\>183 |
 | src/cora/infrastructure/record\_export/\_redaction.py                                    |       27 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_registry.py                                     |       19 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_render.py                                       |       13 |        0 |        6 |        0 |    100.0% |           |
@@ -2620,7 +2621,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **56377** | **1266** | **8194** |  **377** | **97.2%** |           |
+| **TOTAL**                                                                                | **56429** | **1270** | **8206** |  **380** | **97.2%** |           |
 
 
 ## Setup coverage badge
