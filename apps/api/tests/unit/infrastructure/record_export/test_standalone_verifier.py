@@ -188,3 +188,91 @@ def test_cli_reports_a_clean_error_on_unreadable_input(tmp_path: Path) -> None:
         text=True,
     )
     assert result.returncode == 2
+
+
+def _write_bundle_for_cli(tmp_path: Path, *, published: bool) -> Path:
+    """A real bundle, written by the real writer, for the CLI to check.
+
+    Imports `cora` only to BUILD the fixture. The verification itself
+    runs as a subprocess that never imports `cora`, which is the
+    property under test.
+    """
+    from cora.infrastructure.record_export import ExportedRecord, build_manifest, write_bundle
+    from cora.infrastructure.record_export._redaction import RedactedRecord
+
+    record = ExportedRecord(
+        streams=(
+            {
+                "stream_type": "Run",
+                "stream_id": "01900000-0000-7000-8000-0000000000a1",
+                "event_type": "RunStarted",
+                "schema_version": 1,
+                "payload": {"note": _PRECOMPOSED_E_ACUTE, "target_value": 423.0},
+            },
+        ),
+        logbooks={"activity": ({"event_id": "a1", "payload": {"channel": "2bma:x"}},)},
+    )
+    redacted = (
+        RedactedRecord(streams=record.streams, logbooks=record.logbooks) if published else None
+    )
+    manifest = build_manifest(record, watermark=7, git_commit="0" * 40, redacted=redacted)
+
+    bundle = tmp_path / "bundle"
+    write_bundle(redacted if redacted is not None else record, manifest, bundle)
+    return bundle
+
+
+def _run_bundle_cli(bundle: Path, *, published: bool = False) -> subprocess.CompletedProcess[str]:
+    argv = [sys.executable, str(_SCRIPT), "verify-bundle", str(bundle)]
+    if published:
+        argv.append("--published")
+    return subprocess.run(argv, capture_output=True, text=True)
+
+
+def test_cli_verify_bundle_accepts_a_freshly_written_bundle(tmp_path: Path) -> None:
+    """End to end, and the point of the whole exercise: a bundle CORA
+    produced verifies in a process that never imports CORA."""
+    result = _run_bundle_cli(_write_bundle_for_cli(tmp_path, published=False))
+    assert result.returncode == 0, result.stderr
+    assert "OK" in result.stdout
+
+
+def test_cli_verify_bundle_fails_on_a_tampered_row(tmp_path: Path) -> None:
+    bundle = _write_bundle_for_cli(tmp_path, published=False)
+    path = bundle / "logbooks" / "activity.jsonl"
+    path.write_text(path.read_text(encoding="utf-8").replace("2bma:x", "2bma:y"), encoding="utf-8")
+
+    result = _run_bundle_cli(bundle)
+    assert result.returncode == 1
+    assert "MISMATCH" in result.stderr
+
+
+def test_cli_verify_bundle_fails_when_a_whole_logbook_kind_is_removed(tmp_path: Path) -> None:
+    """A file-by-file check passes here; only the reassembled body catches it."""
+    bundle = _write_bundle_for_cli(tmp_path, published=False)
+    (bundle / "logbooks" / "activity.jsonl").unlink()
+
+    result = _run_bundle_cli(bundle)
+    assert result.returncode == 1
+    assert "MISMATCH" in result.stderr
+
+
+def test_cli_verify_bundle_checks_h3_for_a_published_bundle(tmp_path: Path) -> None:
+    result = _run_bundle_cli(_write_bundle_for_cli(tmp_path, published=True), published=True)
+    assert result.returncode == 0, result.stderr
+
+
+def test_cli_published_flag_refuses_a_bundle_carrying_no_h3(tmp_path: Path) -> None:
+    """Absence of H3 is a signal, not a default: asking for a published
+    check on an unredacted bundle must refuse, never fall back to H1."""
+    result = _run_bundle_cli(_write_bundle_for_cli(tmp_path, published=False), published=True)
+    assert result.returncode == 2
+    assert "not a published projection" in result.stderr
+
+
+def test_cli_verify_bundle_refuses_a_directory_missing_its_manifest(tmp_path: Path) -> None:
+    bundle = _write_bundle_for_cli(tmp_path, published=False)
+    (bundle / "manifest.json").unlink()
+
+    result = _run_bundle_cli(bundle)
+    assert result.returncode == 2

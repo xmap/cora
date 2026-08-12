@@ -3,13 +3,14 @@ the per-kind / per-event-type / per-run facts a reader needs before
 trusting the bundle.
 
 Per `project_record_export_build_brief.md` step 4 and
-`project_record_export_v3.md` F8. "Both profile hashes" are the two
-namable today: `record_hash` (H1, the whole unredacted bundle, built in
-step 3) and `redaction_profile_hash` (H2, step 0's generated disposition
-table -- "the table's canonical hash IS the redaction profile hash",
-computed here because nothing computed it before this step existed). H3
-(the published/redacted record's hash) does not exist until step 6
-builds redaction.
+`project_record_export_v3.md` F8. All THREE of F5's hashes are namable
+here now: `record_hash` (H1, the whole unredacted bundle, step 3),
+`redaction_profile_hash` (H2, every table that decides what a published
+record discloses, widened to both tiers by step 7's security review),
+and `published_record_hash` (H3, the redacted projection's own hash,
+added with the bundle writer). H3 is optional because an unredacted
+bundle genuinely has none; see the field's own docstring for why its
+absence is a signal rather than a default.
 
 `build_manifest` is pure: every input it needs (`git_commit`,
 `watermark`) is captured by the caller first and passed in, so the
@@ -23,7 +24,12 @@ from pathlib import Path
 from typing import cast
 
 from cora.infrastructure.record_export._export import ExportedRecord
-from cora.infrastructure.record_export._hashing import hash_record, hash_redaction_profile
+from cora.infrastructure.record_export._hashing import (
+    TwoTierRecord,
+    hash_record,
+    hash_redacted_record,
+    hash_redaction_profile,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +50,18 @@ class Manifest:
     max_schema_version_by_event_type: dict[str, int]
     is_simulated: bool
     expansion_digest_presence_by_run: dict[str, bool]
+    published_record_hash: str | None = None
+    """H3, present only on a manifest built alongside a redacted record.
+
+    `None` means "this manifest describes an unredacted bundle", NOT
+    "redaction produced nothing". A reader seeing `None` beside a bundle
+    someone called published should treat the bundle as unverified: the
+    absence is the signal.
+
+    Safe to carry inside the bundle despite H3 covering that bundle,
+    because H3 hashes the two tiers only. The manifest is not in its own
+    hashed body, so there is no circularity to resolve.
+    """
 
 
 def capture_git_commit(*, cwd: Path | str | None = None) -> str:
@@ -133,8 +151,23 @@ def _expansion_digest_presence_by_run(record: ExportedRecord) -> dict[str, bool]
     }
 
 
-def build_manifest(record: ExportedRecord, *, watermark: int, git_commit: str) -> Manifest:
-    """Assemble the manifest for one already-exported, already-rendered record."""
+def build_manifest(
+    record: ExportedRecord,
+    *,
+    watermark: int,
+    git_commit: str,
+    redacted: TwoTierRecord | None = None,
+) -> Manifest:
+    """Assemble the manifest for one already-exported, already-rendered record.
+
+    Pass `redacted` (a `RedactionResult.redacted_record`) when the bundle
+    being written is the published projection, so the manifest carries
+    H3. The shape counts stay derived from the UNREDACTED `record`:
+    redaction never adds or removes a row, only rewrites values within
+    one, so the counts describe both, and deriving them from the
+    unredacted side keeps a reader's recomputation honest if redaction
+    ever does start dropping rows.
+    """
     return Manifest(
         git_commit=git_commit,
         watermark=watermark,
@@ -144,6 +177,7 @@ def build_manifest(record: ExportedRecord, *, watermark: int, git_commit: str) -
         max_schema_version_by_event_type=_max_schema_version_by_event_type(record),
         is_simulated=_is_simulated(record),
         expansion_digest_presence_by_run=_expansion_digest_presence_by_run(record),
+        published_record_hash=None if redacted is None else hash_redacted_record(redacted),
     )
 
 

@@ -24,6 +24,15 @@ than from first principles:
   re-identify without the token map.
 """
 
+from cora.infrastructure.record_export._bundle import (
+    LOGBOOKS_DIR,
+    MANIFEST_NAME,
+    STREAMS_NAME,
+    BundleDestinationNotEmptyError,
+    MalformedBundleError,
+    read_bundle_body,
+    write_bundle,
+)
 from cora.infrastructure.record_export._export import (
     EmptyExportError,
     ExportedRecord,
@@ -32,11 +41,14 @@ from cora.infrastructure.record_export._export import (
 )
 from cora.infrastructure.record_export._hashing import (
     LOGBOOKS_PAYLOAD_TYPE,
+    PUBLISHED_RECORD_PAYLOAD_TYPE,
     RECORD_PAYLOAD_TYPE,
     REDACTION_PROFILE_PAYLOAD_TYPE,
     STREAMS_PAYLOAD_TYPE,
+    TwoTierRecord,
     hash_logbooks,
     hash_record,
+    hash_redacted_record,
     hash_redaction_profile,
     hash_streams,
 )
@@ -78,23 +90,30 @@ from cora.infrastructure.record_export._tokens import TokenMap
 
 __all__ = [
     "KNOWN_STREAM_TYPES",
+    "LOGBOOKS_DIR",
     "LOGBOOKS_PAYLOAD_TYPE",
+    "MANIFEST_NAME",
+    "PUBLISHED_RECORD_PAYLOAD_TYPE",
     "RECORD_PAYLOAD_TYPE",
     "REDACTION_PROFILE_PAYLOAD_TYPE",
+    "STREAMS_NAME",
     "STREAMS_PAYLOAD_TYPE",
     "TIER2_DISPOSITIONS",
     "TIER2_JSONB_CLEARED_POINTERS",
     "TIER2_JSONB_DROPPED_COLUMNS",
+    "BundleDestinationNotEmptyError",
     "EmptyExportError",
     "EntriesReader",
     "EntriesTableSpec",
     "ExportedRecord",
+    "MalformedBundleError",
     "Manifest",
     "RedactedRecord",
     "RedactionProfileMismatchError",
     "RedactionResult",
     "Tier1Redactor",
     "TokenMap",
+    "TwoTierRecord",
     "UnfiredClearanceError",
     "UnknownEventTypeError",
     "UnknownLogbookKindError",
@@ -108,8 +127,10 @@ __all__ = [
     "export_record",
     "hash_logbooks",
     "hash_record",
+    "hash_redacted_record",
     "hash_redaction_profile",
     "hash_streams",
+    "read_bundle_body",
     "redact_record",
     "redact_tier1_payload",
     "redact_tier2_row",
@@ -117,4 +138,5 @@ __all__ = [
     "render_row",
     "render_value",
     "resolve",
+    "write_bundle",
 ]
