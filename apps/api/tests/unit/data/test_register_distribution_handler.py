@@ -21,6 +21,7 @@ from cora.data.aggregates.dataset.events import (
     event_type_name,
     to_payload,
 )
+from cora.data.aggregates.dataset.state import DatasetChecksum, DatasetEncoding
 from cora.data.aggregates.distribution import (
     DistributionCannotRegisterOnNonStorageSupplyError,
     DistributionChecksumMismatchError,
@@ -91,11 +92,9 @@ async def _seed_dataset(
         dataset_id=dataset_id,
         name="seed",
         uri="s3://b/k",
-        checksum_algorithm="sha256",
-        checksum_value=checksum_value,
+        checksum=DatasetChecksum(algorithm="sha256", value=checksum_value),
         byte_size=byte_size,
-        media_type="application/x-hdf5",
-        conforms_to=frozenset(),
+        encoding=DatasetEncoding(media_type="application/x-hdf5", conforms_to=frozenset()),
         producing_run_id=None,
         subject_id=None,
         derived_from=frozenset(),

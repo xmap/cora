@@ -32,17 +32,12 @@ from collections.abc import Sequence
 from dataclasses import replace
 from typing import assert_never
 
-from cora.data.aggregates.dataset.state import (
-    DatasetChecksum,
-    DatasetEncoding,
-)
 from cora.data.aggregates.distribution.events import (
     DistributionDiscarded,
     DistributionEvent,
     DistributionRegistered,
 )
 from cora.data.aggregates.distribution.state import (
-    AccessProtocol,
     Distribution,
     DistributionStatus,
     DistributionUri,
@@ -58,11 +53,9 @@ def evolve(state: Distribution | None, event: DistributionEvent) -> Distribution
             dataset_id=dataset_id,
             supply_id=supply_id,
             uri=uri,
-            checksum_algorithm=checksum_algorithm,
-            checksum_value=checksum_value,
+            checksum=checksum,
             byte_size=byte_size,
-            media_type=media_type,
-            conforms_to=conforms_to,
+            encoding=encoding,
             access_protocol=access_protocol,
             occurred_at=occurred_at,
             registered_by=registered_by,
@@ -73,10 +66,10 @@ def evolve(state: Distribution | None, event: DistributionEvent) -> Distribution
                 dataset_id=dataset_id,
                 supply_id=supply_id,
                 uri=DistributionUri(uri),
-                checksum=DatasetChecksum(algorithm=checksum_algorithm, value=checksum_value),
+                checksum=checksum,
                 byte_size=byte_size,
-                encoding=DatasetEncoding(media_type=media_type, conforms_to=conforms_to),
-                access_protocol=AccessProtocol(access_protocol),
+                encoding=encoding,
+                access_protocol=access_protocol,
                 registered_at=occurred_at,
                 registered_by=registered_by,
                 status=DistributionStatus.REGISTERED,

@@ -17,6 +17,8 @@ from cora.data.aggregates.acquisition import (
 )
 from cora.data.aggregates.dataset import (
     DATASET_CHECKSUM_SHA256_HEX_LENGTH,
+    DatasetChecksum,
+    DatasetEncoding,
     DatasetNotFoundError,
     DatasetRegistered,
 )
@@ -78,11 +80,9 @@ async def _seed_dataset(store: InMemoryEventStore, dataset_id: UUID) -> None:
         dataset_id=dataset_id,
         name="recon.h5",
         uri="s3://b/recon.h5",
-        checksum_algorithm="sha256",
-        checksum_value=_GOOD_SHA256,
+        checksum=DatasetChecksum(algorithm="sha256", value=_GOOD_SHA256),
         byte_size=1024,
-        media_type="application/x-hdf5",
-        conforms_to=frozenset(),
+        encoding=DatasetEncoding(media_type="application/x-hdf5", conforms_to=frozenset()),
         producing_run_id=None,
         subject_id=None,
         derived_from=frozenset(),

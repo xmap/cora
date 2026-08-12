@@ -55,7 +55,14 @@ class ActorName:
 
 Each VO keeps its own frozen dataclass type, per-aggregate error class, and `MAX_LENGTH`. A shared base class would couple aggregates; a class factory would weaken `isinstance`. A free function avoids both.
 
-**Primitives in events, VOs at state and decider boundaries.** Events carry primitives (str, int, UUID, datetime, dict), never VOs. Decider unwraps: `ActorRegistered(name=actor_name.value)`. Evolver re-validates: `Actor(name=ActorName(event.name))`. The round-trip test at `tests/unit/<bc>/test_evolver.py` verifies this per aggregate.
+**Primitives in events, VOs at state and decider boundaries, EXCEPT a closed vocabulary.** Events carry primitives (str, int, UUID, datetime, dict), never VOs. Decider unwraps: `ActorRegistered(name=actor_name.value)`. Evolver re-validates: `Actor(name=ActorName(event.name))`. The round-trip test at `tests/unit/<bc>/test_evolver.py` verifies this per aggregate.
+
+The carve-out: a field whose VALUE SET is closed, a `StrEnum`, or a frozen VO every one of whose fields is closed by construction (a fixed charset and length, a closed literal set), may be declared on the event as that type directly, unwrapped-and-rewrapped ceremony skipped. Two independent forces created this exception and both must hold before using it:
+
+1. `tools/gen_record_dispositions.py`, the record exporter's redaction-profile generator, resolves a field's publishability from its DECLARED TYPE. A field wrapped down to bare `str` on the event is unpublishable by construction even when its own constructor already closes its range: this is why `DatasetRegistered.checksum: DatasetChecksum` (not `checksum_algorithm: str` + `checksum_value: str`) and `.intent: Intent` (not `str`) are declared as their real types. A hex digest and a closed trust-level tag disclose nothing a redaction reviewer needs to withhold, and wrapping them to `str` first only cost the record its own checksum for a release cycle (see `project_2bm_first_scan_record.md` F6, the published record of the first real 2-BM scan).
+2. The type must be reachable from wherever the event class lives. `cora.data.aggregates` may depend on `cora.infrastructure` and `cora.shared` only (`tach.toml`), narrower than the feature layer above it (`cora.data`) that a decider runs in. `DatasetRegistered.producing_run_end_state` stays a bare `str`, deliberately, because the Run BC's `RunStatus` enum is reachable from `cora.data`'s deciders but not from `cora.data.aggregates`'s events, and a Data-BC-local mirror enum would raise at the decider on any future `RunStatus` member the mirror has not caught up to. A closed type that is not SAFELY reachable stays a primitive; that is the ordinary rule, not an exception to it.
+
+A frozen VO that opts into this carve-out for the record exporter's benefit marks itself with `cora.shared.closed_value.ClosedValueObject`, so the generator can ask a type object "does this VO close its own range?" without a hand-maintained list of class names. See that module's docstring for the exact criterion (every field closed, none free text) before subclassing it.
 
 ## Field grouping
 

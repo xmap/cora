@@ -13,6 +13,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.data.aggregates.dataset import DATASET_CHECKSUM_SHA256_HEX_LENGTH
+from cora.data.aggregates.dataset.state import DatasetChecksum, DatasetEncoding
 from cora.data.aggregates.distribution import (
     DistributionDiscarded,
     DistributionRegistered,
@@ -22,6 +23,7 @@ from cora.data.aggregates.distribution import (
     from_stored,
     to_payload,
 )
+from cora.data.aggregates.distribution.state import AccessProtocol
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.shared.identity import ActorId
 
@@ -57,12 +59,13 @@ def _registered() -> DistributionRegistered:
         dataset_id=_DATASET_ID,
         supply_id=_SUPPLY_ID,
         uri="s3://bucket/key.h5",
-        checksum_algorithm="sha256",
-        checksum_value=_GOOD_SHA256,
+        checksum=DatasetChecksum(algorithm="sha256", value=_GOOD_SHA256),
         byte_size=1024,
-        media_type="application/x-hdf5",
-        conforms_to=frozenset({"https://manual.nexusformat.org/"}),
-        access_protocol="S3",
+        encoding=DatasetEncoding(
+            media_type="application/x-hdf5",
+            conforms_to=frozenset({"https://manual.nexusformat.org/"}),
+        ),
+        access_protocol=AccessProtocol.S3,
         occurred_at=_NOW,
         registered_by=_REGISTERED_BY,
     )
