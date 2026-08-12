@@ -27,6 +27,8 @@ disk, that is a decision for whoever builds it, made with an actual
 manifest body in hand rather than guessed at here.
 """
 
+from typing import Protocol
+
 from cora.infrastructure.record_export._dispositions import DISPOSITIONS
 from cora.infrastructure.record_export._export import ExportedRecord
 from cora.infrastructure.record_export._redact_tier2 import (
@@ -40,6 +42,31 @@ RECORD_PAYLOAD_TYPE = "application/vnd.cora.record+json"
 STREAMS_PAYLOAD_TYPE = "application/vnd.cora.record-streams+json"
 LOGBOOKS_PAYLOAD_TYPE = "application/vnd.cora.record-logbooks+json"
 REDACTION_PROFILE_PAYLOAD_TYPE = "application/vnd.cora.record-redaction-profile+json"
+PUBLISHED_RECORD_PAYLOAD_TYPE = "application/vnd.cora.record-published+json"
+
+
+class TwoTierRecord(Protocol):
+    """The shape both `ExportedRecord` and `RedactedRecord` share.
+
+    Structural, not a base class, so `_hashing` can hash a redacted
+    record without importing `_redaction` (which imports this module:
+    the dependency runs one way only).
+    """
+
+    @property
+    def streams(self) -> tuple[dict[str, object], ...]: ...
+
+    @property
+    def logbooks(self) -> dict[str, tuple[dict[str, object], ...]]: ...
+
+
+def _two_tier_body(record: TwoTierRecord) -> dict[str, object]:
+    """The hashed body shape shared by H1 and H3, so the two can never
+    disagree about what "the whole bundle" means."""
+    return {
+        "streams": list(record.streams),
+        "logbooks": {kind: list(rows) for kind, rows in record.logbooks.items()},
+    }
 
 
 def hash_streams(streams: tuple[dict[str, object], ...]) -> str:
@@ -61,16 +88,39 @@ def hash_logbooks(logbooks: dict[str, tuple[dict[str, object], ...]]) -> str:
 def hash_record(record: ExportedRecord) -> str:
     """SHA-256 content hash over the whole bundle, both tiers, no exclusions.
 
-    This is THE record hash: per F2, it covers everything `export_record`
-    produced. Re-running the export against an unchanged database
-    reproduces this value exactly; any single differing byte anywhere in
-    either tier changes it.
+    This is THE record hash (H1): per F2, it covers everything
+    `export_record` produced. Re-running the export against an unchanged
+    database reproduces this value exactly; any single differing byte
+    anywhere in either tier changes it.
     """
-    body = {
-        "streams": list(record.streams),
-        "logbooks": {kind: list(rows) for kind, rows in record.logbooks.items()},
-    }
-    return compute_content_hash(RECORD_PAYLOAD_TYPE, body)
+    return compute_content_hash(RECORD_PAYLOAD_TYPE, _two_tier_body(record))
+
+
+def hash_redacted_record(record: TwoTierRecord) -> str:
+    """SHA-256 content hash over the PUBLISHED record: H3.
+
+    The third of `project_record_export_v3.md` F5's three hashes (full
+    record H1, redaction profile H2, published record H3), and the one
+    the paper actually prints beside its locator, because it is the only
+    one covering the bytes a reader can hold.
+
+    The payload type is deliberately distinct from
+    `RECORD_PAYLOAD_TYPE`. `compute_content_hash` binds the payload type
+    into the DSSE-PAE preamble, so an unredacted and a redacted record
+    that happened to reduce to identical bodies still hash differently.
+    That matters: without it, an export whose redaction dropped nothing
+    (every field already publishable) would produce H1 == H3, and a
+    reader could not tell a published record from a full one by its hash
+    alone. They must never collide.
+
+    Takes the structural `TwoTierRecord` rather than `RedactedRecord`
+    only because importing `_redaction` here would invert this module's
+    dependency; callers pass `RedactionResult.redacted_record`. Passing
+    an unredacted `ExportedRecord` is a caller error this signature
+    cannot catch, and the reason `write_bundle` derives H3 itself from
+    the record it is handed rather than accepting one as a parameter.
+    """
+    return compute_content_hash(PUBLISHED_RECORD_PAYLOAD_TYPE, _two_tier_body(record))
 
 
 def hash_redaction_profile() -> str:
@@ -119,11 +169,14 @@ def hash_redaction_profile() -> str:
 
 __all__ = [
     "LOGBOOKS_PAYLOAD_TYPE",
+    "PUBLISHED_RECORD_PAYLOAD_TYPE",
     "RECORD_PAYLOAD_TYPE",
     "REDACTION_PROFILE_PAYLOAD_TYPE",
     "STREAMS_PAYLOAD_TYPE",
+    "TwoTierRecord",
     "hash_logbooks",
     "hash_record",
+    "hash_redacted_record",
     "hash_redaction_profile",
     "hash_streams",
 ]

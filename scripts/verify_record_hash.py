@@ -28,9 +28,18 @@ recipes from drifting apart.
 Usage:
     python3 verify_record_hash.py hash --payload-type TYPE body.json
     python3 verify_record_hash.py verify --payload-type TYPE --expected-hash HASH body.json
+    python3 verify_record_hash.py verify-bundle path/to/bundle/
+    python3 verify_record_hash.py verify-bundle path/to/bundle/ --published
+
+`verify-bundle` is the one a reviewer actually runs: point it at an
+exported bundle directory and it reassembles the hashed body from
+`streams.jsonl` plus `logbooks/*.jsonl`, recomputes the hash, and
+compares against the manifest's own. `verify` is the stronger check,
+because the expected hash comes from outside the bundle (a paper, a
+DOI landing page) rather than from a file the same tamperer could edit.
 
 Exit codes: 0 success (hash printed, or verify matched); 1 verify
-mismatch; 2 the input file could not be read or parsed as JSON.
+mismatch; 2 the input could not be read or parsed.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -104,6 +113,102 @@ def _load_body(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+MANIFEST_NAME = "manifest.json"
+STREAMS_NAME = "streams.jsonl"
+LOGBOOKS_DIR = "logbooks"
+
+RECORD_PAYLOAD_TYPE = "application/vnd.cora.record+json"
+PUBLISHED_RECORD_PAYLOAD_TYPE = "application/vnd.cora.record-published+json"
+
+
+def _read_jsonl(path: Path) -> list[Any]:
+    rows: list[Any] = []
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            message = f"{path.name} line {number} is not valid JSON: {exc}"
+            raise ValueError(message) from exc
+        if not isinstance(row, dict):
+            message = f"{path.name} line {number} is not a JSON object"
+            raise ValueError(message)
+        rows.append(row)
+    return rows
+
+
+def read_bundle_body(bundle: Path) -> Any:
+    """Reassemble the hashed body from a bundle directory on disk.
+
+    Deliberately duplicates
+    `cora.infrastructure.record_export._bundle.read_bundle_body`. That
+    duplication is the same argument as the rest of this file: a checker
+    that imported CORA's reassembly would confirm CORA's own idea of
+    what the bundle says, which is not a check. Reassembly is part of
+    what a verifier must independently believe, because a bundle whose
+    files are correct individually can still be missing a whole logbook
+    kind, and only the reassembled body's hash catches that.
+    """
+    streams_path = bundle / STREAMS_NAME
+    if not streams_path.is_file():
+        message = f"{bundle} has no {STREAMS_NAME}; not a bundle"
+        raise ValueError(message)
+    if not (bundle / MANIFEST_NAME).is_file():
+        message = f"{bundle} has no {MANIFEST_NAME}; export may be incomplete"
+        raise ValueError(message)
+
+    logbooks: dict[str, Any] = {}
+    logbooks_dir = bundle / LOGBOOKS_DIR
+    if logbooks_dir.is_dir():
+        for path in sorted(logbooks_dir.glob("*.jsonl")):
+            logbooks[path.stem] = _read_jsonl(path)
+
+    return {"streams": _read_jsonl(streams_path), "logbooks": logbooks}
+
+
+def _verify_bundle(bundle: Path, *, published: bool) -> int:
+    """Recompute a bundle's own hash and compare it to its manifest.
+
+    The manifest is read for the EXPECTED value only. That is not
+    circular: the hash covers the two tiers, the manifest is not in
+    them, so a tamperer who edits a row must also edit the manifest, and
+    a tamperer who edits the manifest has changed the number a paper
+    printed. Comparing against a hash quoted in a paper rather than in
+    the bundle is strictly stronger, and is what `verify` (not
+    `verify-bundle`) is for.
+    """
+    try:
+        body = read_bundle_body(bundle)
+        manifest = _load_body(bundle / MANIFEST_NAME)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"cannot read bundle {bundle}: {exc}", file=sys.stderr)
+        return 2
+
+    if not isinstance(manifest, dict):
+        print(f"{MANIFEST_NAME} is not a JSON object", file=sys.stderr)
+        return 2
+
+    field = "published_record_hash" if published else "record_hash"
+    payload_type = PUBLISHED_RECORD_PAYLOAD_TYPE if published else RECORD_PAYLOAD_TYPE
+    expected = manifest.get(field)
+    if not isinstance(expected, str):
+        detail = (
+            "this bundle is not a published projection (its manifest carries no H3)"
+            if published
+            else "manifest has no record_hash"
+        )
+        print(f"cannot verify: {detail}", file=sys.stderr)
+        return 2
+
+    digest = compute_content_hash(payload_type, body)
+    if digest == expected:
+        print(f"OK {digest}")
+        return 0
+    print(f"MISMATCH: manifest says {expected}, computed {digest}", file=sys.stderr)
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Standalone content-hash verifier for a CORA record export."
@@ -121,7 +226,27 @@ def main(argv: list[str] | None = None) -> int:
     verify_parser.add_argument("--expected-hash", required=True)
     verify_parser.add_argument("body_file", type=Path)
 
+    bundle_parser = subparsers.add_parser(
+        "verify-bundle",
+        help=(
+            "Verify a bundle directory against the hash in its own manifest. "
+            "Reads manifest.json, streams.jsonl and logbooks/*.jsonl."
+        ),
+    )
+    bundle_parser.add_argument("bundle_dir", type=Path)
+    bundle_parser.add_argument(
+        "--published",
+        action="store_true",
+        help=(
+            "Check the bundle against the manifest's published_record_hash (H3) "
+            "instead of record_hash (H1). Use for a redacted bundle."
+        ),
+    )
+
     args = parser.parse_args(argv)
+
+    if args.command == "verify-bundle":
+        return _verify_bundle(args.bundle_dir, published=args.published)
 
     try:
         body = _load_body(args.body_file)

@@ -137,3 +137,41 @@ def test_manifest_carries_the_watermark_and_commit_verbatim() -> None:
 def test_capture_git_commit_returns_a_full_sha() -> None:
     commit = capture_git_commit()
     assert re.fullmatch(r"[0-9a-f]{40}", commit)
+
+
+def test_unfired_tier2_clearances_absent_without_redaction() -> None:
+    """`None` means no redaction happened, the same convention as
+    `published_record_hash`; unrelated to whether any clearance would
+    have fired."""
+    manifest = build_manifest(_record(), watermark=1, git_commit="deadbeef")
+    assert manifest.unfired_tier2_clearances is None
+
+
+def test_unfired_tier2_clearances_empty_when_none_supplied_but_redacted() -> None:
+    """Passing `redacted` without `unfired_tier2_clearances` reports an
+    empty tuple, not `None`: redaction DID happen, so absence-as-signal
+    no longer applies, and "empty" correctly reads as "nothing to
+    report" rather than "not tracked"."""
+    record = _record()
+    manifest = build_manifest(record, watermark=1, git_commit="deadbeef", redacted=record)
+    assert manifest.unfired_tier2_clearances == ()
+
+
+def test_unfired_tier2_clearances_renders_sorted_kind_column_pointer() -> None:
+    record = _record()
+    manifest = build_manifest(
+        record,
+        watermark=1,
+        git_commit="deadbeef",
+        redacted=record,
+        unfired_tier2_clearances=frozenset(
+            {
+                ("activity", "payload", "units"),
+                ("activity", "payload", "channel"),
+            }
+        ),
+    )
+    assert manifest.unfired_tier2_clearances == (
+        "activity/payload/channel",
+        "activity/payload/units",
+    )

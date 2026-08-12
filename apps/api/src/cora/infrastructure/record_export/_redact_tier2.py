@@ -170,25 +170,6 @@ TIER2_JSONB_CLEARED_POINTERS: dict[tuple[str, str], frozenset[str]] = {
 TIER2_JSONB_DROPPED_COLUMNS: frozenset[tuple[str, str]] = frozenset({("inference", "messages")})
 
 
-class UnfiredClearanceError(RuntimeError):
-    """A declared tier-2 jsonb clearance never matched a row in a kind
-    that WAS present in this export.
-
-    Per F5's Rejections list: an unfired rule inside a type that was
-    exported is a leak-shaped gap (most likely a typo in this file's
-    own `TIER2_JSONB_CLEARED_POINTERS`), not a benign no-op.
-    """
-
-    def __init__(self, kind: str, column: str, pointer: str) -> None:
-        super().__init__(
-            f"declared clearance ({kind!r}, {column!r})/{pointer!r} never matched "
-            f"any row while redacting {kind!r} rows present in this export."
-        )
-        self.kind = kind
-        self.column = column
-        self.pointer = pointer
-
-
 def redact_tier2_row(
     kind: str,
     row: dict[str, Any],
@@ -225,25 +206,54 @@ def redact_tier2_row(
     return result
 
 
-def ensure_all_clearances_fired(
+def unfired_clearances(
     fired_pointers: dict[tuple[str, str], set[str]], *, kinds_present: frozenset[str]
-) -> None:
-    """Raise `UnfiredClearanceError` for a declared clearance that never
-    matched, scoped to kinds actually present in this export (an unused
-    clearance for a kind with zero rows is not a leak -- nothing to leak)."""
+) -> frozenset[tuple[str, str, str]]:
+    """Every declared tier-2 jsonb clearance that never matched a row,
+    scoped to kinds actually present in this export.
+
+    CORRECTED 2026-08-12. An earlier version of this function
+    (`ensure_all_clearances_fired`) raised here, reasoning from F5's
+    Rejections list: "an unfired rule inside a type that was exported is
+    a leak-shaped gap." That reasoning is right for a DENYLIST, where a
+    rule that fails to fire means the thing it should have hidden got
+    published. It is backwards for tier 2's ALLOWLIST: a clearance that
+    never fires means a field was published LESS often than the profile
+    permits, never more. There is no mechanism by which that leaks
+    anything, so treating it as fatal was importing a denylist-shaped
+    fear into an allowlist-shaped mechanism.
+
+    The practical failure this produced: `activity/payload`'s three
+    cleared pointers (`channel`, `action_name`, `units`) live on
+    different step kinds, two of them optional, so no small export --
+    including a first rehearsal bundle -- reliably fires all three. The
+    export would abort with an error reading like a broken disposition
+    table rather than "this export was too narrow to exercise every
+    clearance."
+
+    Callers now record the result on the manifest
+    (`Manifest.unfired_tier2_clearances`) instead of treating it as a
+    reason to refuse. The genuine worry this WAS reaching for --a
+    misspelled pointer in `TIER2_JSONB_CLEARED_POINTERS` that can never
+    fire against any real payload-- is a fact about this file's code,
+    not about any one export, and belongs in a build-time check against
+    the real key space (the same shape as step 0's generated disposition
+    table), not in a per-export runtime gate. That check does not exist
+    yet; this function no longer stands in for it.
+    """
+    result: set[tuple[str, str, str]] = set()
     for (kind, column), cleared in TIER2_JSONB_CLEARED_POINTERS.items():
         if kind not in kinds_present:
             continue
         fired = fired_pointers.get((kind, column), set())
-        for pointer in cleared - fired:
-            raise UnfiredClearanceError(kind, column, pointer)
+        result.update((kind, column, pointer) for pointer in cleared - fired)
+    return frozenset(result)
 
 
 __all__ = [
     "TIER2_DISPOSITIONS",
     "TIER2_JSONB_CLEARED_POINTERS",
     "TIER2_JSONB_DROPPED_COLUMNS",
-    "UnfiredClearanceError",
-    "ensure_all_clearances_fired",
     "redact_tier2_row",
+    "unfired_clearances",
 ]
