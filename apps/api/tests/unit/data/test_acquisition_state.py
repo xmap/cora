@@ -161,6 +161,29 @@ def test_validate_evidence_rejects_bool_for_int_field() -> None:
 
 
 @pytest.mark.unit
+def test_validate_evidence_rejects_wrong_typed_float_field() -> None:
+    with pytest.raises(InvalidAcquisitionEvidenceError, match="projection_angle_first"):
+        validate_evidence({"projection_angle_first": "zero"})
+
+
+@pytest.mark.unit
+def test_validate_evidence_rejects_bool_for_float_field() -> None:
+    """Same shape-violation rule as the int fields: a bool is not a number
+    here even though Python's bool is an int subclass."""
+    with pytest.raises(InvalidAcquisitionEvidenceError, match="projection_angle_last"):
+        validate_evidence({"projection_angle_last": False})
+
+
+@pytest.mark.unit
+def test_validate_evidence_accepts_int_for_float_field() -> None:
+    """A whole-number angle (e.g. `180`) is valid JSON for a float field;
+    the stored value coerces to float rather than being rejected."""
+    evidence = validate_evidence({"projection_angle_first": 0})
+    assert evidence.projection_angle_first == 0.0
+    assert isinstance(evidence.projection_angle_first, float)
+
+
+@pytest.mark.unit
 def test_validate_evidence_rejects_unknown_captured_at_source() -> None:
     with pytest.raises(InvalidAcquisitionEvidenceError, match="captured_at_source"):
         validate_evidence({"captured_at_source": "acquisition_time"})
