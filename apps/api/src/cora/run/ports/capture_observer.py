@@ -19,15 +19,18 @@ precedent.
 
 ## Domain vocabulary (substrate-neutral)
 
-- `CapturePhase`: the closed, facility-neutral lifecycle a capture
-  passes through, as CORA understands it. NOT the literal vocabulary
-  any one facility's tool emits: 2-BM's TomoScan reports free-text
-  values ("Beginning scan", "Programming PSO", "Collecting dark
-  fields", "Scan complete") on `ScanStatus`, and those strings belong
-  to one tomoscan commit, never to this port or the spine. A
-  deployment DECLARES the mapping from its own literals to
-  `CapturePhase`; unmapped or unrecognized substrate values classify
-  as `UNRECOGNIZED`, never silently as `PROGRESSING` or dropped.
+- `CapturePhase` (re-exported from `cora.shared.capture_phase`, hoisted
+  there because `cora.infrastructure` validates a deployment's declared
+  literal table against it and cannot depend on `cora.run.ports`): the
+  closed, facility-neutral lifecycle a capture passes through, as CORA
+  understands it. NOT the literal vocabulary any one facility's tool
+  emits: 2-BM's TomoScan reports free-text values ("Beginning scan",
+  "Programming PSO", "Collecting dark fields", "Scan complete") on
+  `ScanStatus`, and those strings belong to one tomoscan commit, never
+  to this port or the spine. A deployment DECLARES the mapping from its
+  own literals to `CapturePhase`; unmapped or unrecognized substrate
+  values classify as `UNRECOGNIZED`, never silently as `PROGRESSING` or
+  dropped.
 - `CaptureObservation`: one capture-lifecycle reading drained from the
   substrate, scoped by `capture_code` (the identity surface the
   runtime's configuration knows, e.g. a named acquisition path). Same
@@ -67,30 +70,10 @@ adapter's concern.
 from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass
 from datetime import datetime
-from enum import StrEnum
 from typing import Protocol, runtime_checkable
 
+from cora.shared.capture_phase import CapturePhase
 from cora.shared.reach import ReachTier
-
-
-class CapturePhase(StrEnum):
-    """The facility-neutral lifecycle phase of an observed capture.
-
-    Closed and small on purpose: this is the vocabulary CORA's spine
-    reasons over, not the vocabulary any one facility's tool emits.
-    `UNRECOGNIZED` is a first-class member, not an absence: a substrate
-    literal that does not match the deployment's declared mapping
-    reports `UNRECOGNIZED` rather than being coerced into a nearby
-    phase or dropped silently, so a vocabulary drift (a tool upgrade
-    that renames a status) is visible in the record rather than
-    misread as routine progress.
-    """
-
-    BEGUN = "Begun"
-    PROGRESSING = "Progressing"
-    ENDED = "Ended"
-    ABORTED = "Aborted"
-    UNRECOGNIZED = "Unrecognized"
 
 
 @dataclass(frozen=True)

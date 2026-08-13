@@ -287,3 +287,84 @@ def test_settings_idempotency_lock_stale_seconds_rejects_below_one(
         pydantic.ValidationError, match="idempotency_lock_stale_seconds must be >= 1"
     ):
         Settings()
+
+
+# ---------------------------------------------------------------------------
+# capture_status_phases: the deployment-declared literal-to-CapturePhase map
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_settings_capture_watch_defaults_are_empty_and_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A generic boot declares no capture PVs and runs no watcher."""
+    monkeypatch.delenv("CAPTURE_WATCH_PVS", raising=False)
+    monkeypatch.delenv("CAPTURE_STATUS_PHASES", raising=False)
+    monkeypatch.delenv("RUN_WATCHER_ENABLED", raising=False)
+
+    settings = Settings()
+
+    assert settings.capture_watch_pvs == {}
+    assert settings.capture_status_phases == {}
+    assert settings.capture_watch_probe_tick_seconds is None
+    assert settings.run_watcher_enabled is False
+
+
+@pytest.mark.unit
+def test_settings_capture_watch_pvs_reads_role_keyed_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Outer key is the capture code, inner dict is role -> PV."""
+    monkeypatch.setenv(
+        "CAPTURE_WATCH_PVS",
+        '{"2bmb-tomoscan": {"status": "2bmb:TomoScan:ScanStatus"}}',
+    )
+    settings = Settings()
+    assert settings.capture_watch_pvs == {"2bmb-tomoscan": {"status": "2bmb:TomoScan:ScanStatus"}}
+
+
+@pytest.mark.unit
+def test_settings_capture_status_phases_accepts_every_real_capture_phase_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every non-UNRECOGNIZED CapturePhase value is a legal mapping target."""
+    monkeypatch.setenv(
+        "CAPTURE_STATUS_PHASES",
+        '{"Beginning scan": "Begun", "Collecting projections": "Progressing", '
+        '"Scan complete": "Ended", "Scan aborted": "Aborted"}',
+    )
+    settings = Settings()
+    assert settings.capture_status_phases == {
+        "Beginning scan": "Begun",
+        "Collecting projections": "Progressing",
+        "Scan complete": "Ended",
+        "Scan aborted": "Aborted",
+    }
+
+
+@pytest.mark.unit
+def test_settings_capture_status_phases_rejects_a_value_outside_capture_phase(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A typo in the mapped-to phase must fail at boot, not classify
+    silently as UNRECOGNIZED until someone reads the log."""
+    import pydantic
+
+    monkeypatch.setenv("CAPTURE_STATUS_PHASES", '{"Scan complete": "Endedd"}')
+    with pytest.raises(pydantic.ValidationError, match="capture_status_phases has values"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_status_phases_rejects_explicit_unrecognized(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """UNRECOGNIZED is what an absent literal already means; mapping a
+    literal to it explicitly would be a second way to say the same
+    thing, so it is rejected rather than silently accepted."""
+    import pydantic
+
+    monkeypatch.setenv("CAPTURE_STATUS_PHASES", '{"Weird status": "Unrecognized"}')
+    with pytest.raises(pydantic.ValidationError, match="capture_status_phases has values"):
+        Settings()
