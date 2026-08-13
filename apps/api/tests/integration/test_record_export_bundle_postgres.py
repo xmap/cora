@@ -14,18 +14,24 @@ nowhere else.
 
 FOUND WHILE WRITING THIS, and FIXED separately (same session, next
 commit): `redact_record` used to raise unless EVERY declared
-`activity/payload` clearance fired, and those three keys (`channel`,
-`action_name`, `units`) live on different step kinds, two of them
-optional per `append_activities/route.py:86-94`, so a narrow export
-(a single setpoint, say) aborted instead of exporting. The check
-reasoned from a denylist's threat model (an unfired rule that should
-have hidden something is a leak) applied backwards to tier 2's
+`activity/payload` clearance fired, and those clearances live on
+different step kinds, several of them optional or failure-arm-only, so
+a narrow export (a single setpoint, say) aborted instead of exporting.
+The check reasoned from a denylist's threat model (an unfired rule that
+should have hidden something is a leak) applied backwards to tier 2's
 allowlist (an unfired rule here means something was published LESS
 than the profile permits, never more). `unfired_clearances` now reports
 the fact on the manifest instead of aborting; see its docstring in
 `_redact_tier2.py` for the full argument. This test's fixture still
 seeds three step kinds, not to dodge an abort that no longer exists,
 but because it is better coverage of the redaction path than one kind.
+
+Payload shapes below are the real ones `conductor.py` writes
+(`address`/`value`, `name`/`params`, `address`/`criterion`), not the
+route-docstring shape slice 6 of project_record_publishing_campaign.md
+found was fictional -- see `_redact_tier2.py`'s
+`TIER2_JSONB_CLEARED_POINTERS` comment and
+`test_tier2_jsonb_clearances_are_real_keys.py` for that fix.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -45,6 +51,7 @@ from cora.infrastructure.record_export import (
     MANIFEST_NAME,
     RECORD_PAYLOAD_TYPE,
     STREAMS_NAME,
+    TIER2_JSONB_CLEARED_POINTERS,
     ManifestRecordMismatchError,
     build_manifest,
     capture_git_commit,
@@ -117,19 +124,22 @@ async def _seed_a_procedure_with_one_activity(db_pool: asyncpg.Pool) -> None:
                 ActivityInput(
                     event_id=uuid4(),
                     step_kind="setpoint",
-                    payload={"channel": "T_oven", "target_value": 423.0, "units": "K"},
+                    payload={"address": "T_oven", "value": 423.0},
                     sampled_at=_NOW,
                 ),
                 ActivityInput(
                     event_id=uuid4(),
                     step_kind="action",
-                    payload={"action_name": "open_valve", "params": {"valve": "V12"}},
+                    payload={"name": "open_valve", "params": {"valve": "V12"}},
                     sampled_at=_NOW,
                 ),
                 ActivityInput(
                     event_id=uuid4(),
                     step_kind="check",
-                    payload={"channel": "T_oven", "passed": True},
+                    payload={
+                        "address": "T_oven",
+                        "criterion": {"kind": "equals", "expected": 423.0},
+                    },
                     sampled_at=_NOW,
                 ),
             ),
@@ -208,12 +218,18 @@ async def test_a_narrow_export_redacts_and_reports_what_it_could_not_exercise(
     db_pool: asyncpg.Pool, tmp_path: Path
 ) -> None:
     """The regression test for the defect this module's docstring
-    describes. A single setpoint, no `units`, no `action`, no `check`:
-    exactly the shape that used to abort `redact_record` outright.
+    describes. A single setpoint, no action, no check: exactly the
+    shape that used to abort `redact_record` outright.
 
     It must now redact successfully, verify against H3, AND the
-    manifest must name the two clearances this narrow export could not
-    exercise -- proving the fact is surfaced, not just silently dropped.
+    manifest must name every clearance this narrow export could not
+    exercise -- proving the fact is surfaced, not just silently
+    dropped. The expected set is DERIVED from
+    `TIER2_JSONB_CLEARED_POINTERS` itself (every declared pointer this
+    fixture's one `address`-only payload doesn't fire), not
+    re-transcribed by hand: hand-transcribing it is exactly the mistake
+    slice 6 of project_record_publishing_campaign.md fixed for the
+    clearance list itself.
     """
     procedure_id = uuid4()
     logbook_id = uuid4()
@@ -254,7 +270,7 @@ async def test_a_narrow_export_redacts_and_reports_what_it_could_not_exercise(
                 ActivityInput(
                     event_id=uuid4(),
                     step_kind="setpoint",
-                    payload={"channel": "T_oven", "target_value": 423.0},  # no units
+                    payload={"address": "T_oven", "value": 423.0},  # no criterion, no name
                     sampled_at=_NOW,
                 ),
             ),
@@ -272,10 +288,14 @@ async def test_a_narrow_export_redacts_and_reports_what_it_could_not_exercise(
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
 
     manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
-    assert manifest.unfired_tier2_clearances == (
-        "activity/payload/action_name",
-        "activity/payload/units",
+    expected_unfired_clearances = tuple(
+        sorted(
+            f"activity/payload/{pointer}"
+            for pointer in TIER2_JSONB_CLEARED_POINTERS[("activity", "payload")]
+            if pointer != "address"
+        )
     )
+    assert manifest.unfired_tier2_clearances == expected_unfired_clearances
 
     bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "narrow")
     result = _verify(bundle, published=True)

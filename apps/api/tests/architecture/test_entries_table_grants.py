@@ -22,16 +22,7 @@ import re
 
 import pytest
 
-from tests.architecture.conftest import tracked_migration_files
-
-_CREATE_TABLE_RE = re.compile(
-    r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-zA-Z_][a-zA-Z0-9_]*)",
-    re.IGNORECASE,
-)
-_RENAME_TABLE_RE = re.compile(
-    r"ALTER\s+TABLE\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+RENAME\s+TO\s+([a-zA-Z_][a-zA-Z0-9_]*)",
-    re.IGNORECASE,
-)
+from tests.architecture.conftest import append_only_table_lineage, tracked_migration_files
 
 # Closed: the five tables that relied on the false ALTER DEFAULT
 # PRIVILEGES claim all got an explicit GRANT in
@@ -45,64 +36,16 @@ def _all_migration_text() -> str:
     return "\n".join(f.read_text() for f in tracked_migration_files())
 
 
-def _append_only_tables_created() -> dict[str, frozenset[str]]:
-    """Every CURRENTLY append-only table, keyed by its CURRENT identifier
-    and mapped to every name it has ever held.
-
-    Follows `ALTER TABLE ... RENAME TO ...` across ALL tables' migration
-    history, not just tables already matching `entries_`/`events`, then
-    filters to that prefix only on the final (current) name. A table can
-    enter the append-only family through a rename whose OLD name never
-    matched the prefix: `entries_conduit_verdicts` was created as
-    `observations_conduit_traversals`, renamed to
-    `entries_conduit_traversals`, then renamed again to its current name.
-    Gating the rename-follow on "old name already tracked as entries_/
-    events" would silently drop that chain the moment the origin name
-    fell outside the prefix, exactly the same blind spot this function
-    exists to close for the `entries_run_readings` case (see below), just
-    one hop earlier.
-
-    The same walk gives the full lineage, not just the current name,
-    which matters for the GRANT search: a privilege attaches to the
-    table's OID, not its name, so a GRANT issued under an OLD name (e.g.
-    `entries_decision_reasonings`, before it became
-    `entries_decision_inferences`) remains valid forever and a rename
-    never needs it re-issued under the new name. And the current-name
-    requirement matters for correctness in the other direction: a GRANT
-    written TODAY must target the table's current name (e.g.
-    `entries_run_observations`, not the dead `entries_run_readings`), the
-    only name that actually exists in the database by the time a later
-    migration runs.
-    """
-    lineage: dict[str, set[str]] = {}
-    for path in tracked_migration_files():
-        text = path.read_text()
-        for match in _CREATE_TABLE_RE.finditer(text):
-            name = match.group(1)
-            lineage.setdefault(name, {name})
-        for match in _RENAME_TABLE_RE.finditer(text):
-            old_name, new_name = match.group(1), match.group(2)
-            if old_name in lineage:
-                names = lineage.pop(old_name)
-                names.add(new_name)
-                lineage[new_name] = names
-    return {
-        name: frozenset(names)
-        for name, names in lineage.items()
-        if name == "events" or name.startswith("entries_")
-    }
-
-
 @pytest.mark.architecture
 def test_every_new_entries_table_has_cora_app_grant() -> None:
     """Pattern accepted: `GRANT ... ON [TABLE] <name> ... TO cora_app`,
     where `<name>` is any name in the table's rename lineage (see
-    `_append_only_tables_created`), not just its current one. Tables on
+    `append_only_table_lineage`), not just its current one. Tables on
     `_GRANDFATHERED` are skipped: they predate this test and fixing them
     is a separate production migration, not a test change.
     """
     haystack = _all_migration_text()
-    lineages = _append_only_tables_created()
+    lineages = append_only_table_lineage()
     tables = set(lineages) - _GRANDFATHERED
     assert tables, (
         "No non-grandfathered append-only tables found; either the schema "

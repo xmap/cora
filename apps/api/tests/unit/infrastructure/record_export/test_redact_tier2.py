@@ -9,6 +9,7 @@ import pytest
 from cora.infrastructure.record_export import TokenMap
 from cora.infrastructure.record_export._redact_tier2 import (
     TIER2_DISPOSITIONS,
+    TIER2_JSONB_CLEARED_POINTERS,
     redact_tier2_row,
     unfired_clearances,
 )
@@ -58,24 +59,35 @@ def test_a_column_absent_from_the_disposition_table_is_omitted() -> None:
 
 
 def test_activities_payload_keeps_cleared_string_leaves_and_drops_others() -> None:
+    """`address`/`result`/`error_class` are real, closed-in-practice keys
+    `conductor.py` writes for a conducted step (slice 6 of
+    project_record_publishing_campaign.md); `message` and `name` are
+    deliberately NOT cleared -- `message` is free text (same posture as
+    `verdict.reason`), and `name` was cleared in this slice's first draft
+    then reverted during its own gate review: `ActionStep.name` reaches
+    the payload on the pre-lookup in-flight marker and the
+    `UnknownActionError` failure arm, both before or instead of the
+    registry check that would have closed it."""
     row = {
         "event_id": str(uuid4()),
         "payload": {
-            "channel": "T_oven",
-            "target_value": 423.0,
-            "units": "K",
-            "action_name": "open_valve",
-            "an_uncleared_free_text_field": "should drop",
+            "address": "T_oven",
+            "value": 423.0,
+            "name": "open_valve",
+            "result": "ok",
+            "error_class": "ControlNotConnectedError",
+            "message": "should drop",
         },
     }
     fired: dict[tuple[str, str], set[str]] = {}
     redacted = redact_tier2_row("activity", row, token_map=TokenMap(), fired_pointers=fired)
     payload = redacted["payload"]
-    assert payload["channel"] == "T_oven"
-    assert payload["units"] == "K"
-    assert payload["action_name"] == "open_valve"
-    assert payload["target_value"] == 423.0
-    assert "an_uncleared_free_text_field" not in payload
+    assert payload["address"] == "T_oven"
+    assert payload["result"] == "ok"
+    assert payload["error_class"] == "ControlNotConnectedError"
+    assert payload["value"] == 423.0
+    assert "name" not in payload
+    assert "message" not in payload
 
 
 def test_activities_payload_tokens_a_uuid_shaped_string_leaf() -> None:
@@ -128,22 +140,29 @@ def test_every_declared_kind_has_at_least_one_uuid_scope_column(kind: str) -> No
 
 
 def test_unfired_clearance_names_the_pointer_that_never_matched() -> None:
-    """A narrow export (one setpoint, no units) is a normal export, not
-    an error: CORRECTED 2026-08-12, this used to raise. See
+    """A narrow export (one setpoint, address only) is a normal export,
+    not an error: CORRECTED 2026-08-12, this used to raise. See
     `unfired_clearances`'s own docstring for why raising here was a
-    denylist-shaped mistake applied to an allowlist mechanism."""
-    # No channel/action_name/units in this payload.
-    row = {"event_id": str(uuid4()), "payload": {"target_value": 423.0}}
+    denylist-shaped mistake applied to an allowlist mechanism.
+
+    Expected unfired set is DERIVED from `TIER2_JSONB_CLEARED_POINTERS`
+    (every declared pointer besides `address`, which this payload does
+    fire), not re-transcribed by hand -- hand-transcribing it is exactly
+    the mistake slice 6 of project_record_publishing_campaign.md fixed
+    for the clearance list itself.
+    """
+    row = {"event_id": str(uuid4()), "payload": {"address": "T_oven", "value": 423.0}}
     fired: dict[tuple[str, str], set[str]] = {}
     redact_tier2_row("activity", row, token_map=TokenMap(), fired_pointers=fired)
 
     unfired = unfired_clearances(fired, kinds_present=frozenset({"activity"}))
 
-    assert unfired == {
-        ("activity", "payload", "channel"),
-        ("activity", "payload", "action_name"),
-        ("activity", "payload", "units"),
+    expected = {
+        ("activity", "payload", pointer)
+        for pointer in TIER2_JSONB_CLEARED_POINTERS[("activity", "payload")]
+        if pointer != "address"
     }
+    assert unfired == expected
 
 
 def test_unfired_clearance_for_a_kind_not_present_reports_empty() -> None:
@@ -153,9 +172,23 @@ def test_unfired_clearance_for_a_kind_not_present_reports_empty() -> None:
 
 
 def test_all_declared_clearances_fired_reports_empty() -> None:
+    """Not a realistic single conducted step -- no real payload carries
+    every step kind's fields at once -- but every declared pointer needs
+    SOME payload shape that fires it, and this is the compact way to
+    prove each one still matches a real leaf position after any future
+    edit to `TIER2_JSONB_CLEARED_POINTERS`."""
     row = {
         "event_id": str(uuid4()),
-        "payload": {"channel": "T_oven", "action_name": "open_valve", "units": "K"},
+        "payload": {
+            "address": "T_oven",
+            "result": "ok",
+            "error_class": "ControlNotConnectedError",
+            "criterion": {"kind": "equals"},
+            "reading": {"kind": "Scalar", "quality": "Good"},
+            "post_reading": {"kind": "Scalar", "quality": "Good"},
+            "post_read_error": {"error_class": "ControlNotConnectedError"},
+            "measurements": [{"name": "flux", "units": "cps", "kind": "Scalar", "quality": "Good"}],
+        },
     }
     fired: dict[tuple[str, str], set[str]] = {}
     redact_tier2_row("activity", row, token_map=TokenMap(), fired_pointers=fired)
