@@ -27,7 +27,9 @@ from hypothesis import strategies as st
 from cora.data.aggregates.acquisition import (
     AcquisitionAlreadyExistsError,
     AcquisitionCannotRecordWithoutCapturingError,
+    AcquisitionEvidence,
     AcquisitionStatus,
+    validate_evidence,
 )
 from cora.data.aggregates.acquisition.state import Acquisition
 from cora.data.aggregates.dataset import (
@@ -56,11 +58,39 @@ _GOOD_SHA256 = "a" * DATASET_CHECKSUM_SHA256_HEX_LENGTH
 # rejected, covered by the example-based decider test).
 _BACKFILL_DELTA = st.timedeltas(min_value=timedelta(0), max_value=timedelta(days=365))
 
-# Primitive-leaf carrier dicts (settings / evidence shape today).
+# settings has no declared shape today: primitive-leaf carrier dict.
 _CARRIER = st.dictionaries(
     keys=st.text(min_size=1, max_size=12),
     values=st.one_of(st.integers(), st.text(max_size=12), st.booleans(), st.none()),
     max_size=4,
+)
+
+# evidence DOES have a declared shape (AcquisitionEvidence): a random
+# subset of its known keys, each independently present or absent, per
+# the "0 vs None vs source-cannot-know" convention.
+_EVIDENCE_CARRIER = st.fixed_dictionaries(
+    {},
+    optional={
+        "reader_kind": st.text(max_size=20),
+        "checksum_computer_kind": st.text(max_size=20),
+        "captured_at_source": st.sampled_from(["start_date", "end_date", "operator"]),
+        "captured_at_raw": st.text(max_size=40),
+        "projection_count": st.integers(min_value=0, max_value=100_000),
+        "flat_count": st.integers(min_value=0, max_value=100_000),
+        "dark_count": st.integers(min_value=0, max_value=100_000),
+        "invalid_count": st.integers(min_value=0, max_value=100_000),
+        "commanded_projection_count": st.integers(min_value=0, max_value=100_000),
+        "commanded_flat_count": st.integers(min_value=0, max_value=100_000),
+        "commanded_dark_count": st.integers(min_value=0, max_value=100_000),
+        "dropped_frame_count": st.integers(min_value=0, max_value=100_000),
+        "projection_angle_count": st.integers(min_value=0, max_value=100_000),
+        "projection_angle_first": st.floats(
+            min_value=-360.0, max_value=360.0, allow_nan=False, allow_infinity=False
+        ),
+        "projection_angle_last": st.floats(
+            min_value=-360.0, max_value=360.0, allow_nan=False, allow_infinity=False
+        ),
+    },
 )
 
 
@@ -107,7 +137,7 @@ def _context(
     asset_id=st.uuids(),
     actor_id=st.uuids(),
     settings=_CARRIER,
-    evidence=_CARRIER,
+    evidence=_EVIDENCE_CARRIER,
 )
 def test_genesis_emits_single_event_with_injected_fields_and_dual_time(
     now: datetime,
@@ -146,7 +176,7 @@ def test_genesis_emits_single_event_with_injected_fields_and_dual_time(
     assert event.captured_at == captured_at
     assert event.occurred_at == now
     assert event.settings == settings
-    assert event.evidence == evidence
+    assert event.evidence == validate_evidence(evidence)
 
 
 @pytest.mark.unit
@@ -175,7 +205,7 @@ def test_non_none_state_always_raises_already_exists(
         producing_run_id=None,
         captured_at=now - backfill,
         settings={},
-        evidence={},
+        evidence=AcquisitionEvidence(),
         recorded_at=now,
         recorded_by=ActorId(actor_id),
         status=AcquisitionStatus.RECORDED,
