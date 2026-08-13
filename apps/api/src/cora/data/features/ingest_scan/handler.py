@@ -22,8 +22,16 @@ Everything that can refuse does so BEFORE the deciders run: the reader
 policy, the digest pass, the changed-under-read guard, the natural-key
 duplicate check, and the cross-aggregate pre-loads. A refusal at any
 point leaves zero events. Decider rejections (Capturing gate, future
-captured_at, non-Storage supply) then fire inside the composition and
-also leave zero events, because nothing has been appended yet.
+captured_at, non-Storage supply, and now evidence shape --
+`AcquisitionEvidence` validation moved from a pre-decider check here to
+`record_acquisition.decide`'s `validate_evidence` call, reached last
+inside the composed decider) then fire inside the composition and
+also leave zero events, because nothing has been appended yet. The
+only observable effect of that move: a request whose evidence AND a
+dataset/distribution invariant are both violated now surfaces the
+dataset/distribution error first, not the evidence one; the
+all-or-nothing guarantee and the resulting HTTP 400 either way are
+unaffected.
 
 ## The timestamp policy
 
@@ -71,7 +79,6 @@ from cora.infrastructure.ports.event_store import StreamAppend
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.aggregates.run import load_run
 from cora.shared.identity import ActorId
-from cora.shared.json_schema_validation import validate_values_against_schema
 
 _COMMAND_NAME = "IngestScan"
 _DATASET_STREAM = "Dataset"
@@ -85,42 +92,6 @@ _log = get_logger(__name__)
 #: self-identification (nothing writes /implements), so conformance is
 #: CORA's assertion, pinned to the DXfile paper's DOI.
 DATA_EXCHANGE_PROFILE = "https://doi.org/10.1107/S160057751401604X"
-
-#: Declared shape of the frame-accounting evidence this slice records
-#: (declarer-owns-schema: the ingest slice declares, the Acquisition
-#: carries). Optional keys are OMITTED when the source cannot know
-#: them, never nulled: absence means source-cannot-know, 0 means
-#: verified-none, and a consumer must not collapse the two.
-EVIDENCE_SCHEMA: dict[str, Any] = {
-    "type": "object",
-    "additionalProperties": False,
-    "properties": {
-        "reader_kind": {"type": "string"},
-        "checksum_computer_kind": {"type": "string"},
-        "captured_at_source": {
-            "type": "string",
-            "enum": ["start_date", "end_date", "operator"],
-        },
-        "captured_at_raw": {"type": "string"},
-        "projection_count": {"type": "integer"},
-        "flat_count": {"type": "integer"},
-        "dark_count": {"type": "integer"},
-        "invalid_count": {"type": "integer"},
-        "commanded_projection_count": {"type": "integer"},
-        "commanded_flat_count": {"type": "integer"},
-        "commanded_dark_count": {"type": "integer"},
-        "dropped_frame_count": {"type": "integer"},
-        "projection_angle_count": {"type": "integer"},
-        "projection_angle_first": {
-            "type": "number",
-            "unit": {"system": "udunits", "code": "degree"},
-        },
-        "projection_angle_last": {
-            "type": "number",
-            "unit": {"system": "udunits", "code": "degree"},
-        },
-    },
-}
 
 
 class DatasetByChecksumLookup(Protocol):
@@ -274,12 +245,12 @@ def bind(
                 # context; surface the same error its handler would.
                 raise ProducingRunNotFoundError(command.producing_run_id)
 
+        # Built as a plain dict and validated where every RecordAcquisition
+        # writer's evidence is validated, `record_acquisition.decide`'s
+        # `validate_evidence` call inside the composed decider below (see
+        # `AcquisitionEvidence`); this slice no longer keeps a second,
+        # ingest-local copy of the same schema.
         evidence = _build_evidence(described, captured_at_source, scan_reader, checksum_computer)
-        validate_values_against_schema(
-            evidence,
-            EVIDENCE_SCHEMA,
-            error_class=InvalidScanFileError,
-        )
 
         now = deps.clock.now()
         dataset_id = deps.id_generator.new_id()
@@ -403,8 +374,8 @@ def _build_evidence(
     scan_reader: ScanReader,
     checksum_computer: ChecksumComputer,
 ) -> dict[str, Any]:
-    """Frame accounting per EVIDENCE_SCHEMA: omit what the source cannot
-    know, record who produced each fact."""
+    """Frame accounting per `AcquisitionEvidence`: omit what the source
+    cannot know, record who produced each fact."""
     evidence: dict[str, Any] = {
         "reader_kind": scan_reader.kind,
         "checksum_computer_kind": checksum_computer.kind,
@@ -443,7 +414,6 @@ def _filename_of(locator: str) -> str:
 
 __all__ = [
     "DATA_EXCHANGE_PROFILE",
-    "EVIDENCE_SCHEMA",
     "DatasetByChecksumLookup",
     "Handler",
     "IdempotentHandler",

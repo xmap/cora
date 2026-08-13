@@ -48,8 +48,6 @@ from cora.data.aggregates.dataset.events import (
 )
 from cora.data.aggregates.dataset.state import (
     Dataset,
-    DatasetChecksum,
-    DatasetEncoding,
     DatasetName,
     DatasetStatus,
     DatasetUri,
@@ -65,11 +63,9 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
             dataset_id=dataset_id,
             name=name,
             uri=uri,
-            checksum_algorithm=checksum_algorithm,
-            checksum_value=checksum_value,
+            checksum=checksum,
             byte_size=byte_size,
-            media_type=media_type,
-            conforms_to=conforms_to,
+            encoding=encoding,
             producing_run_id=producing_run_id,
             producing_procedure_id=producing_procedure_id,
             subject_id=subject_id,
@@ -84,15 +80,9 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
                 id=dataset_id,
                 name=DatasetName(name),
                 uri=DatasetUri(uri),
-                checksum=DatasetChecksum(
-                    algorithm=checksum_algorithm,
-                    value=checksum_value,
-                ),
+                checksum=checksum,
                 byte_size=byte_size,
-                encoding=DatasetEncoding(
-                    media_type=media_type,
-                    conforms_to=conforms_to,
-                ),
+                encoding=encoding,
                 producing_run_id=producing_run_id,
                 producing_procedure_id=producing_procedure_id,
                 subject_id=subject_id,
@@ -102,7 +92,7 @@ def evolve(state: Dataset | None, event: DatasetEvent) -> Dataset:
                 # via payload.get for legacy events in from_stored).
                 producing_run_end_state=producing_run_end_state,
                 producing_actuation_kind=producing_actuation_kind,
-                intent=Intent(intent),
+                intent=intent,
                 # AsShot citation set at genesis (frozenset for
                 # in-memory equality semantics; the event carries a tuple
                 # for deterministic wire byte ordering).

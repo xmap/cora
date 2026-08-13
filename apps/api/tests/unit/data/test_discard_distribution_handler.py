@@ -23,6 +23,7 @@ from cora.data.aggregates.dataset.events import (
 from cora.data.aggregates.dataset.events import (
     to_payload as dataset_to_payload,
 )
+from cora.data.aggregates.dataset.state import DatasetChecksum, DatasetEncoding
 from cora.data.aggregates.distribution import (
     DistributionCannotDiscardError,
     DistributionCannotDiscardLastVerifiedError,
@@ -31,6 +32,7 @@ from cora.data.aggregates.distribution import (
     event_type_name,
     to_payload,
 )
+from cora.data.aggregates.distribution.state import AccessProtocol
 from cora.data.features import discard_distribution
 from cora.data.features.discard_distribution import DiscardDistribution
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
@@ -61,11 +63,9 @@ async def _seed_dataset(store: InMemoryEventStore, dataset_id: UUID) -> None:
         dataset_id=dataset_id,
         name="seed",
         uri="s3://b/k",
-        checksum_algorithm="sha256",
-        checksum_value=_GOOD_SHA256,
+        checksum=DatasetChecksum(algorithm="sha256", value=_GOOD_SHA256),
         byte_size=0,
-        media_type="application/x-hdf5",
-        conforms_to=frozenset(),
+        encoding=DatasetEncoding(media_type="application/x-hdf5", conforms_to=frozenset()),
         producing_run_id=None,
         subject_id=None,
         derived_from=frozenset(),
@@ -98,12 +98,10 @@ async def _seed_distribution(
         dataset_id=_DATASET_ID,
         supply_id=supply_id,
         uri="s3://b/k",
-        checksum_algorithm="sha256",
-        checksum_value=_GOOD_SHA256,
+        checksum=DatasetChecksum(algorithm="sha256", value=_GOOD_SHA256),
         byte_size=0,
-        media_type="application/x-hdf5",
-        conforms_to=frozenset(),
-        access_protocol="S3",
+        encoding=DatasetEncoding(media_type="application/x-hdf5", conforms_to=frozenset()),
+        access_protocol=AccessProtocol.S3,
         occurred_at=_NOW,
         registered_by=_SEED_ACTOR_ID,
     )

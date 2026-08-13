@@ -13,7 +13,10 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from cora.data.aggregates.acquisition import AcquisitionCannotRecordWithoutCapturingError
+from cora.data.aggregates.acquisition import (
+    AcquisitionCannotRecordWithoutCapturingError,
+    InvalidAcquisitionEvidenceError,
+)
 from cora.data.aggregates.dataset import DatasetAlreadyIngestedError
 from cora.data.aggregates.distribution import DistributionCannotRegisterOnNonStorageSupplyError
 from cora.data.errors import InvalidScanFileError, UnauthorizedError
@@ -199,9 +202,26 @@ async def test_ingest_records_file_timestamp_with_source_marker() -> None:
     events, _ = await store.load("Acquisition", _ACQUISITION_ID)
     payload = events[0].payload
     assert payload["captured_at"] == datetime.fromisoformat(_AWARE_RAW).isoformat()
-    assert payload["evidence"]["captured_at_source"] == "start_date"
-    assert payload["evidence"]["projection_count"] == 5
-    assert payload["evidence"]["reader_kind"] == "Configured"
+    # Every field _description() populates survives the real
+    # _build_evidence -> decide_ingest -> record_acquisition.decide ->
+    # validate_evidence -> to_payload path, not just a hand-picked few.
+    assert payload["evidence"] == {
+        "reader_kind": "Configured",
+        "checksum_computer_kind": "Configured",
+        "captured_at_source": "start_date",
+        "captured_at_raw": _AWARE_RAW,
+        "projection_count": 5,
+        "flat_count": 2,
+        "dark_count": 2,
+        "invalid_count": 0,
+        "commanded_projection_count": 5,
+        "commanded_flat_count": 2,
+        "commanded_dark_count": 2,
+        "dropped_frame_count": 0,
+        "projection_angle_count": 5,
+        "projection_angle_first": 0.0,
+        "projection_angle_last": 180.0,
+    }
 
 
 async def test_ingest_unreadable_file_refusal_leaves_zero_events() -> None:
@@ -222,6 +242,27 @@ async def test_ingest_incomplete_file_refusal_leaves_zero_events() -> None:
     )
 
     with pytest.raises(InvalidScanFileError):
+        await handler(_command(), principal_id=_PRINCIPAL_ID, correlation_id=_CORRELATION_ID)
+
+    assert await _stream_counts(store) == (0, 0, 0)
+
+
+async def test_ingest_reader_names_an_unrecognized_captured_at_source_refuses() -> None:
+    """`Description.captured_at_source` is a plain str so a future layout
+    can name a timestamp no reader has produced yet (its own docstring);
+    `CapturedAtSource` has not caught up to that hypothetical layout yet.
+    This is now an InvalidAcquisitionEvidenceError from the composed
+    decider's validate_evidence call, not the InvalidScanFileError every
+    other refusal in this file raises (EVIDENCE_SCHEMA's pre-decider
+    check, which raised InvalidScanFileError for the same case, is gone;
+    see the handler module docstring's "Refusal order" section)."""
+    store = InMemoryEventStore()
+    handler = _bind(
+        _deps(store),
+        described=_description(captured_at_source="acquisition_time"),
+    )
+
+    with pytest.raises(InvalidAcquisitionEvidenceError, match="captured_at_source"):
         await handler(_command(), principal_id=_PRINCIPAL_ID, correlation_id=_CORRELATION_ID)
 
     assert await _stream_counts(store) == (0, 0, 0)

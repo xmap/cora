@@ -67,10 +67,21 @@ class ExportedRecord:
     entries-tier row pulled via an envelope by `kind`, in each kind's own
     registry order-by order; rows are UNFOLDED (one dict per row), never
     aggregated.
+
+    `watermark` is the SAME xmin value `capture_watermark` produced and
+    the stream query above was bounded by, carried on the record itself
+    so `build_manifest` can read it here rather than take it as an
+    independent parameter: a caller wanting "the watermark this export
+    used" for the manifest had no way to obtain it other than by calling
+    `capture_watermark` a SECOND time, which returns a different snapshot
+    than the one the rows were actually bounded by. Defaults to 0 for
+    hand-built test fixtures that do not exercise watermark plumbing;
+    every real export sets it from the same call `export_record` used.
     """
 
     streams: tuple[dict[str, object], ...]
     logbooks: dict[str, tuple[dict[str, object], ...]]
+    watermark: int = 0
 
 
 async def capture_watermark(conn: asyncpg.Connection) -> int:
@@ -82,10 +93,10 @@ async def capture_watermark(conn: asyncpg.Connection) -> int:
     cast to `text` on the way out here and to `int` on the way back in,
     then bound as `$1::xid8` by the caller -- never compared as a string.
 
-    Callers must pass the SAME returned value to `export_record`'s
-    underlying query exactly once; capturing it here rather than letting
-    the stream query re-evaluate `pg_snapshot_xmin` per row is what makes
-    one export see one snapshot instead of a moving target.
+    `export_record` is the sole caller: it binds this value into the
+    stream query AND carries it on the returned `ExportedRecord`, so
+    there is exactly one snapshot per export and one place that reads it
+    back.
     """
     value = await conn.fetchval(_WATERMARK_SQL)
     assert value is not None, "pg_snapshot_xmin(pg_current_snapshot()) returned NULL"
@@ -130,4 +141,5 @@ async def export_record(conn: asyncpg.Connection) -> ExportedRecord:
     return ExportedRecord(
         streams=tuple(streams),
         logbooks={kind: tuple(entries) for kind, entries in logbooks.items()},
+        watermark=watermark,
     )

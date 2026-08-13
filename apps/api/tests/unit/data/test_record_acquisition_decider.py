@@ -14,6 +14,7 @@ import pytest
 from cora.data.aggregates.acquisition import (
     AcquisitionAlreadyExistsError,
     AcquisitionCannotRecordWithoutCapturingError,
+    AcquisitionEvidence,
     AcquisitionStatus,
     InvalidAcquisitionCapturedAtError,
     InvalidAcquisitionEvidenceError,
@@ -53,7 +54,7 @@ def _command(**overrides: object) -> RecordAcquisition:
         "captured_at": _CAPTURED_AT,
         "producing_run_id": None,
         "settings": {"exposure_ms": 200},
-        "evidence": {"frames": 1801},
+        "evidence": {"projection_count": 1801},
     }
     base.update(overrides)
     return RecordAcquisition(**base)  # type: ignore[arg-type]
@@ -125,7 +126,7 @@ def test_decide_emits_acquisition_recorded_on_valid_command() -> None:
     assert event.occurred_at == _NOW
     assert event.recorded_by == _RECORDED_BY
     assert event.settings == {"exposure_ms": 200}
-    assert event.evidence == {"frames": 1801}
+    assert event.evidence == AcquisitionEvidence(projection_count=1801)
 
 
 @pytest.mark.unit
@@ -169,7 +170,7 @@ def test_decide_raises_already_exists_on_non_none_state() -> None:
         producing_run_id=None,
         captured_at=_CAPTURED_AT,
         settings={},
-        evidence={},
+        evidence=AcquisitionEvidence(),
         recorded_at=_NOW,
         recorded_by=_RECORDED_BY,
         status=AcquisitionStatus.RECORDED,
@@ -274,7 +275,7 @@ def test_decide_raises_on_malformed_evidence() -> None:
     with pytest.raises(InvalidAcquisitionEvidenceError):
         record_acquisition.decide(
             state=None,
-            command=_command(evidence={"bad": object()}),
+            command=_command(evidence={"frames": 1801}),
             context=_context(),
             now=_NOW,
             new_id=_NEW_ID,

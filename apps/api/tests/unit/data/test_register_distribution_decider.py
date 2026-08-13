@@ -146,11 +146,11 @@ def test_decide_emits_distribution_registered_with_all_fields() -> None:
     assert event.dataset_id == cmd.dataset_id
     assert event.supply_id == cmd.supply_id
     assert event.uri == cmd.uri
-    assert event.checksum_algorithm == "sha256"
-    assert event.checksum_value == _GOOD_SHA256
+    assert event.checksum.algorithm == "sha256"
+    assert event.checksum.value == _GOOD_SHA256
     assert event.byte_size == 1024
-    assert event.media_type == "application/x-hdf5"
-    assert event.conforms_to == frozenset()
+    assert event.encoding.media_type == "application/x-hdf5"
+    assert event.encoding.conforms_to == frozenset()
     assert event.access_protocol == "S3"
     assert event.occurred_at == _NOW
     assert event.registered_by == _REGISTERED_BY
@@ -199,7 +199,7 @@ def test_decide_passes_conforms_to_through() -> None:
         new_id=uuid4(),
         registered_by=_REGISTERED_BY,
     )
-    assert events[0].conforms_to == frozenset({"https://manual.nexusformat.org/"})
+    assert events[0].encoding.conforms_to == frozenset({"https://manual.nexusformat.org/"})
 
 
 @pytest.mark.unit
@@ -417,7 +417,7 @@ def test_decide_accepts_matching_sha256_tree_distribution() -> None:
         new_id=uuid4(),
         registered_by=_REGISTERED_BY,
     )
-    assert events[0].checksum_algorithm == "sha256-tree"
+    assert events[0].checksum.algorithm == "sha256-tree"
 
 
 # ---------- Strict-not-idempotent ----------

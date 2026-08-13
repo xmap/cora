@@ -124,11 +124,11 @@ def test_decide_emits_dataset_registered_with_minimum_fields() -> None:
     assert event.dataset_id == new_id
     assert event.name == "32-ID FlyScan recon"
     assert event.uri == "s3://aps-32id/runs/abc/recon.h5"
-    assert event.checksum_algorithm == "sha256"
-    assert event.checksum_value == _GOOD_SHA256
+    assert event.checksum.algorithm == "sha256"
+    assert event.checksum.value == _GOOD_SHA256
     assert event.byte_size == 1024
-    assert event.media_type == "application/x-hdf5"
-    assert event.conforms_to == frozenset()
+    assert event.encoding.media_type == "application/x-hdf5"
+    assert event.encoding.conforms_to == frozenset()
     assert event.producing_run_id is None
     assert event.subject_id is None
     assert event.derived_from == frozenset()
@@ -188,7 +188,7 @@ def test_decide_accepts_encoding_conforms_to_set() -> None:
         new_id=uuid4(),
         registered_by=_REGISTERED_BY,
     )
-    assert events[0].conforms_to == frozenset({"https://manual.nexusformat.org/"})
+    assert events[0].encoding.conforms_to == frozenset({"https://manual.nexusformat.org/"})
 
 
 # ---------- Field validation ----------

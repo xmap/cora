@@ -196,9 +196,22 @@ def _write_bundle_for_cli(tmp_path: Path, *, published: bool) -> Path:
     Imports `cora` only to BUILD the fixture. The verification itself
     runs as a subprocess that never imports `cora`, which is the
     property under test.
+
+    The `published=True` path goes through the REAL `redact_record`, not
+    an aliased `RedactedRecord` copy of the unredacted streams: an
+    aliased copy is byte-identical content, so H1 and H3 differ only by
+    payload type and the default (non-`--published`) check would happen
+    to still pass against it, unable to reproduce the mode-confusion bug
+    at all. Real redaction tokenizes `stream_id`, which actually changes
+    the body.
     """
-    from cora.infrastructure.record_export import ExportedRecord, build_manifest, write_bundle
-    from cora.infrastructure.record_export._redaction import RedactedRecord
+    from cora.infrastructure.record_export import (
+        ExportedRecord,
+        build_manifest,
+        hash_redaction_profile,
+        redact_record,
+        write_bundle,
+    )
 
     record = ExportedRecord(
         streams=(
@@ -207,18 +220,28 @@ def _write_bundle_for_cli(tmp_path: Path, *, published: bool) -> Path:
                 "stream_id": "01900000-0000-7000-8000-0000000000a1",
                 "event_type": "RunStarted",
                 "schema_version": 1,
+                "occurred_at": "2026-05-15T12:00:00+00:00",
+                "recorded_at": "2026-05-15T12:00:00+00:00",
+                "transaction_id": 1,
+                "event_id": "01900000-0000-7000-8000-0000000000e1",
+                "correlation_id": None,
+                "causation_id": None,
+                "principal_id": None,
                 "payload": {"note": _PRECOMPOSED_E_ACUTE, "target_value": 423.0},
             },
         ),
         logbooks={"activity": ({"event_id": "a1", "payload": {"channel": "2bma:x"}},)},
     )
-    redacted = (
-        RedactedRecord(streams=record.streams, logbooks=record.logbooks) if published else None
-    )
-    manifest = build_manifest(record, watermark=7, git_commit="0" * 40, redacted=redacted)
 
     bundle = tmp_path / "bundle"
-    write_bundle(redacted if redacted is not None else record, manifest, bundle)
+    if not published:
+        manifest = build_manifest(record, git_commit="0" * 40)
+        write_bundle(record, manifest, bundle)
+        return bundle
+
+    redaction = redact_record(record, expected_redaction_profile_hash=hash_redaction_profile())
+    manifest = build_manifest(record, git_commit="0" * 40, redaction=redaction)
+    write_bundle(redaction.redacted_record, manifest, bundle)
     return bundle
 
 
@@ -268,6 +291,18 @@ def test_cli_published_flag_refuses_a_bundle_carrying_no_h3(tmp_path: Path) -> N
     result = _run_bundle_cli(_write_bundle_for_cli(tmp_path, published=False), published=True)
     assert result.returncode == 2
     assert "not a published projection" in result.stderr
+
+
+def test_cli_default_verify_bundle_on_a_published_bundle_asks_for_the_flag(
+    tmp_path: Path,
+) -> None:
+    """Forgetting `--published` on a genuinely published bundle must
+    not read as tampering. Before the fix this printed MISMATCH and
+    exited 1, byte-identical to the tampered-row case above."""
+    result = _run_bundle_cli(_write_bundle_for_cli(tmp_path, published=True))
+    assert result.returncode == 2
+    assert "--published" in result.stderr
+    assert "MISMATCH:" not in result.stderr  # the tamper-signal prefix, exit 1's format
 
 
 def test_cli_verify_bundle_refuses_a_directory_missing_its_manifest(tmp_path: Path) -> None:

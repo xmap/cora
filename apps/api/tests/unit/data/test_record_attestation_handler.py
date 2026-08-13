@@ -30,6 +30,7 @@ from cora.data.aggregates.dataset.events import (
 from cora.data.aggregates.dataset.events import (
     to_payload as dataset_to_payload,
 )
+from cora.data.aggregates.dataset.state import DatasetChecksum, DatasetEncoding
 from cora.data.aggregates.distribution.events import (
     DistributionRegistered,
 )
@@ -39,6 +40,7 @@ from cora.data.aggregates.distribution.events import (
 from cora.data.aggregates.distribution.events import (
     to_payload as distribution_to_payload,
 )
+from cora.data.aggregates.distribution.state import AccessProtocol
 from cora.data.features import record_attestation
 from cora.data.features.record_attestation import RecordAttestation
 from cora.data.ports.checksum_verifier import (
@@ -105,11 +107,9 @@ async def _seed_dataset(
         dataset_id=dataset_id,
         name="seed",
         uri="s3://b/k",
-        checksum_algorithm="sha256",
-        checksum_value=checksum_value,
+        checksum=DatasetChecksum(algorithm="sha256", value=checksum_value),
         byte_size=byte_size,
-        media_type="application/x-hdf5",
-        conforms_to=frozenset(),
+        encoding=DatasetEncoding(media_type="application/x-hdf5", conforms_to=frozenset()),
         producing_run_id=None,
         subject_id=None,
         derived_from=frozenset(),
@@ -145,12 +145,10 @@ async def _seed_distribution(
         dataset_id=dataset_id,
         supply_id=_SUPPLY_ID,
         uri=uri,
-        checksum_algorithm=checksum_algorithm,
-        checksum_value=checksum_value,
+        checksum=DatasetChecksum(algorithm=checksum_algorithm, value=checksum_value),
         byte_size=1024,
-        media_type="application/x-hdf5",
-        conforms_to=frozenset(),
-        access_protocol=access_protocol,
+        encoding=DatasetEncoding(media_type="application/x-hdf5", conforms_to=frozenset()),
+        access_protocol=AccessProtocol(access_protocol),
         occurred_at=_NOW,
         registered_by=ActorId(_PRINCIPAL_ID),
     )

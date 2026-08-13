@@ -39,7 +39,10 @@ because the expected hash comes from outside the bundle (a paper, a
 DOI landing page) rather than from a file the same tamperer could edit.
 
 Exit codes: 0 success (hash printed, or verify matched); 1 verify
-mismatch; 2 the input could not be read or parsed.
+mismatch; 2 the input could not be read or parsed, OR the wrong mode was
+used for this bundle (`verify-bundle` with no `--published` against a
+manifest that carries `published_record_hash`, or `--published` against
+one that does not).
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -187,6 +190,24 @@ def _verify_bundle(bundle: Path, *, published: bool) -> int:
 
     if not isinstance(manifest, dict):
         print(f"{MANIFEST_NAME} is not a JSON object", file=sys.stderr)
+        return 2
+
+    # The symmetric guard to the one four lines below. A bundle
+    # whose manifest carries `published_record_hash` (H3) is structurally
+    # a published projection -- checking it against `record_hash` (H1)
+    # instead recomputes over the redacted body with the wrong payload
+    # type, which mismatches for two independent reasons and prints
+    # MISMATCH: byte-identical, on this CLI, to genuine tampering. Refuse
+    # by the manifest's own shape, before ever comparing a digest.
+    if not published and isinstance(manifest.get("published_record_hash"), str):
+        print(
+            "cannot verify: this bundle's manifest carries published_record_hash "
+            "(H3), so it is a published projection. Checking it against "
+            "record_hash (H1) would compare the redacted body to the unredacted "
+            "record's hash and print MISMATCH, indistinguishable from tampering. "
+            "Re-run with --published.",
+            file=sys.stderr,
+        )
         return 2
 
     field = "published_record_hash" if published else "record_hash"

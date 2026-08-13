@@ -199,21 +199,20 @@ def decide(
             actual_byte_size=byte_size,
         )
 
-    # Step 11: emit DistributionRegistered. The event payload carries
-    # primitive types only per CONTRIBUTING.md "Primitives in event
-    # payloads"; VOs reconstructed by the evolver on fold.
+    # Step 11: emit DistributionRegistered. checksum / encoding /
+    # access_protocol are the real VOs / enum already validated above
+    # (see DatasetRegistered's docstring for why the event declares
+    # them directly rather than unwrapping to primitives).
     return [
         DistributionRegistered(
             distribution_id=new_id,
             dataset_id=command.dataset_id,
             supply_id=command.supply_id,
             uri=uri.value,
-            checksum_algorithm=checksum.algorithm,
-            checksum_value=checksum.value,
+            checksum=checksum,
             byte_size=byte_size,
-            media_type=encoding.media_type,
-            conforms_to=encoding.conforms_to,
-            access_protocol=access_protocol.value,
+            encoding=encoding,
+            access_protocol=access_protocol,
             occurred_at=now,
             registered_by=registered_by,
         )

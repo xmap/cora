@@ -161,10 +161,112 @@ TIER2_DISPOSITIONS: dict[str, dict[str, str]] = {
 # that jsonb column. Absent entries default to an empty set (every
 # string leaf drops). Pointers use "*" for "any list element", matching
 # F5's own notation (`outcomes.measurements/*/name`).
+#
+# `activity/payload`'s set below replaces one transcribed from a route
+# docstring that named no key the real Conductor ever writes (slice 6 of
+# project_record_publishing_campaign.md). Every pointer matches a real,
+# closed-in-practice string leaf `conductor.py` writes on some step kind;
+# see the detailed rationale AND the scope note (a second, un-addressed
+# `activity/payload` writer exists) in the comment following this dict.
 TIER2_JSONB_CLEARED_POINTERS: dict[tuple[str, str], frozenset[str]] = {
-    ("activity", "payload"): frozenset({"channel", "action_name", "units"}),
+    ("activity", "payload"): frozenset(
+        {
+            "address",
+            "result",
+            "error_class",
+            "criterion/kind",
+            "reading/kind",
+            "reading/quality",
+            "post_reading/kind",
+            "post_reading/quality",
+            "post_read_error/error_class",
+            "measurements/*/name",
+            "measurements/*/units",
+            "measurements/*/kind",
+            "measurements/*/quality",
+        }
+    ),
     ("outcome", "measurements"): frozenset({"*/name", "*/units", "*/kind", "*/quality"}),
 }
+
+# `activity/payload`'s clearance rationale, per pointer. `address` is a
+# facility-fixed PV, same posture as `observation.channel_name`. `result`
+# is closed to 3 module constants (verified against every `result=` call
+# site). `error_class`/`post_read_error/error_class` are `type(exc).__name__`
+# for exceptions this module catches by tuple membership or explicit
+# subclass (e.g. `ComputeExecutableNotPermittedError`); CORA-defined
+# literals either way, never third-party or input-varying. `criterion/kind`
+# is closed to "equals"/"within_tolerance". The `kind`/`quality` fields of
+# every `Measurement` projection (`reading`, `post_reading`,
+# `measurements/*`) match the outcome/measurements precedent above; unlike
+# the control-path readings (closed by a real ACL,
+# `epics_ca_control_port.py`'s quality translation), `measurements/*` from
+# a COMPUTE step is closed only by there being no real value-arm
+# ComputePort adapter yet (`Measurement` itself has no runtime validation
+# on these fields) -- re-verify this clearance the day one lands.
+#
+# `criterion/expected`, `criterion/tolerance`, and the uncleared setpoint
+# `value` need no pointer entry ONLY when their leaf is numeric, which is
+# the common case but not the type: all three are typed as
+# `int | float | bool | str | tuple[Any, ...]` unions, so a categorical
+# check/setpoint (a string or tuple expected/value) silently drops today.
+# Fails closed, not a leak, but means "what was checked/written" is
+# incomplete for exactly the non-numeric case this slice is partly about;
+# a real per-kind typed payload (Step 3, project_record_export_build_brief.md)
+# is what would let this clear correctly instead of silently.
+#
+# Deliberately NOT cleared: `message`/`post_read_error/message` (free
+# text, same shape as `verdict.reason`'s DROP); `quality_detail` and any
+# `sampled_at`/`produced_at` timestamp (same non-clearance as
+# outcome/measurements, and the timestamp-linkage lesson in
+# feedback-claims-need-a-threat-model); `command`/`input_uris`/
+# `output_uri`/`input_refs`/`artifacts` (locator-shaped; a 2-BM path
+# carries a PI surname and a proposal number); `parameters`/`params`/
+# `result_data`/compute `job_id`/`status` (arbitrary or unverified-closed
+# shapes, watch items rather than asserted safe); and, DECIDED AND
+# REVERSED during this slice's own gate review, `name` (ActionStep) plus
+# `capture_name`/`capture_ref`/`steering_ref`/`output_ref_name` (Setpoint/
+# Capture/Compute ref-and-slot names). The first draft cleared these five
+# by analogy to `command_name`/`tool_name` ("code-literal, not a
+# person"). Both the analogy and the closure claim were wrong: none of
+# the five is type- or registry-closed (`capture_name`/`output_ref_name`/
+# the ref names are plain `str` fields on Setpoint/Capture/Compute steps
+# with no character-class validation anywhere in the recipe/body
+# machinery), and `ActionStep.name` specifically is recorded on the
+# PRE-LOOKUP in-flight marker and on the `UnknownActionError` failure arm
+# -- both before or instead of the registry check that would have closed
+# it, so an unregistered, arbitrary operator-authored string reaches the
+# payload. The correct precedent in this same file is `agent_name`/
+# `agent_description`: DROP, "operator-authored free text". Per
+# feedback-claims-need-a-threat-model, withdrawing this overclaim costs
+# nothing: `address`+`result`+`criterion`+`reading` already carry the
+# core "what did the Conductor do" evidence this slice exists for.
+#
+# SCOPE: `redact_tier2_row` dispatches on `kind` alone (`redact_tier2_row`,
+# below) -- it does not know or care which code path wrote a row, so
+# EVERY pointer above governs EVERY `("activity", "payload")` row
+# regardless of writer. `entries_operation_procedure_activities.payload`
+# has a SECOND real writer besides the Conductor: `append_activities`'s
+# route and MCP tool accept an arbitrary caller-submitted payload
+# (`payload: dict[str, Any]`, Pydantic does not constrain its shape), and
+# 16 `tests/integration/scenarios/test_2bm_*.py` files modeling genuine
+# 2-BM procedures submit activities this way directly, using the OLDER
+# `channel`/`target_value`/`units`/`ramp_rate` (setpoint), `action_name`/
+# `params` (action), `channel`/`passed`/`expected`/`actual`/`tolerance`
+# (check) shape this file used to (uselessly) clear. This slice's real,
+# observable effect on that writer: the three old dead pointers
+# (`channel`, `action_name`, `units`) tighten to DROP for it too, and any
+# of its rows that happen to use `address`/`result`/`criterion`/`reading`-
+# shaped keys would newly clear under the pointers above -- neither
+# effect was decided FOR that writer, both are a side effect of one
+# shared dispatch-on-`kind` mechanism with no writer discrimination.
+# Verified no scenario test's fixture currently collides with the new
+# pointer names, so nothing changes in practice today; that is
+# incidental, not structural. That writer's own threat-modeled pass is a
+# separate, un-briefed follow-up slice; do not assume it is covered by
+# the pointers above just because they live in the same dict. This is
+# the ONE authoritative copy of this note -- do not restate it in a
+# docstring elsewhere, only cross-reference it.
 
 # (kind, column) pairs whose jsonb value drops WHOLE rather than recursing.
 TIER2_JSONB_DROPPED_COLUMNS: frozenset[tuple[str, str]] = frozenset({("inference", "messages")})
@@ -223,13 +325,13 @@ def unfired_clearances(
     anything, so treating it as fatal was importing a denylist-shaped
     fear into an allowlist-shaped mechanism.
 
-    The practical failure this produced: `activity/payload`'s three
-    cleared pointers (`channel`, `action_name`, `units`) live on
-    different step kinds, two of them optional, so no small export --
-    including a first rehearsal bundle -- reliably fires all three. The
-    export would abort with an error reading like a broken disposition
-    table rather than "this export was too narrow to exercise every
-    clearance."
+    The practical failure this produced: `activity/payload`'s cleared
+    pointers live on different step kinds (setpoint, action, check,
+    compute), several of them optional or failure-arm-only, so no small
+    export -- including a first rehearsal bundle -- reliably fires every
+    one. The export would abort with an error reading like a broken
+    disposition table rather than "this export was too narrow to
+    exercise every clearance."
 
     Callers now record the result on the manifest
     (`Manifest.unfired_tier2_clearances`) instead of treating it as a

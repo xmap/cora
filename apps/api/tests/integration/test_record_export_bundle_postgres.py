@@ -14,18 +14,24 @@ nowhere else.
 
 FOUND WHILE WRITING THIS, and FIXED separately (same session, next
 commit): `redact_record` used to raise unless EVERY declared
-`activity/payload` clearance fired, and those three keys (`channel`,
-`action_name`, `units`) live on different step kinds, two of them
-optional per `append_activities/route.py:86-94`, so a narrow export
-(a single setpoint, say) aborted instead of exporting. The check
-reasoned from a denylist's threat model (an unfired rule that should
-have hidden something is a leak) applied backwards to tier 2's
+`activity/payload` clearance fired, and those clearances live on
+different step kinds, several of them optional or failure-arm-only, so
+a narrow export (a single setpoint, say) aborted instead of exporting.
+The check reasoned from a denylist's threat model (an unfired rule that
+should have hidden something is a leak) applied backwards to tier 2's
 allowlist (an unfired rule here means something was published LESS
 than the profile permits, never more). `unfired_clearances` now reports
 the fact on the manifest instead of aborting; see its docstring in
 `_redact_tier2.py` for the full argument. This test's fixture still
 seeds three step kinds, not to dodge an abort that no longer exists,
 but because it is better coverage of the redaction path than one kind.
+
+Payload shapes below are the real ones `conductor.py` writes
+(`address`/`value`, `name`/`params`, `address`/`criterion`), not the
+route-docstring shape slice 6 of project_record_publishing_campaign.md
+found was fictional -- see `_redact_tier2.py`'s
+`TIER2_JSONB_CLEARED_POINTERS` comment and
+`test_tier2_jsonb_clearances_are_real_keys.py` for that fix.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -45,6 +51,8 @@ from cora.infrastructure.record_export import (
     MANIFEST_NAME,
     RECORD_PAYLOAD_TYPE,
     STREAMS_NAME,
+    TIER2_JSONB_CLEARED_POINTERS,
+    ManifestRecordMismatchError,
     build_manifest,
     capture_git_commit,
     export_record,
@@ -116,19 +124,22 @@ async def _seed_a_procedure_with_one_activity(db_pool: asyncpg.Pool) -> None:
                 ActivityInput(
                     event_id=uuid4(),
                     step_kind="setpoint",
-                    payload={"channel": "T_oven", "target_value": 423.0, "units": "K"},
+                    payload={"address": "T_oven", "value": 423.0},
                     sampled_at=_NOW,
                 ),
                 ActivityInput(
                     event_id=uuid4(),
                     step_kind="action",
-                    payload={"action_name": "open_valve", "params": {"valve": "V12"}},
+                    payload={"name": "open_valve", "params": {"valve": "V12"}},
                     sampled_at=_NOW,
                 ),
                 ActivityInput(
                     event_id=uuid4(),
                     step_kind="check",
-                    payload={"channel": "T_oven", "passed": True},
+                    payload={
+                        "address": "T_oven",
+                        "criterion": {"kind": "equals", "expected": 423.0},
+                    },
                     sampled_at=_NOW,
                 ),
             ),
@@ -172,7 +183,7 @@ async def test_a_real_export_writes_a_bundle_a_stranger_can_verify(
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
 
-    manifest = build_manifest(exported, watermark=1, git_commit=capture_git_commit())
+    manifest = build_manifest(exported, git_commit=capture_git_commit())
     bundle = write_bundle(exported, manifest, tmp_path / "bundle")
 
     assert (bundle / STREAMS_NAME).is_file()
@@ -195,13 +206,7 @@ async def test_a_real_redacted_export_verifies_against_h3(
         exported = await export_record(pg_conn)
 
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
-    manifest = build_manifest(
-        exported,
-        watermark=1,
-        git_commit=capture_git_commit(),
-        redacted=redaction.redacted_record,
-        unfired_tier2_clearances=redaction.unfired_tier2_clearances,
-    )
+    manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
     bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "published")
 
     result = _verify(bundle, published=True)
@@ -213,12 +218,18 @@ async def test_a_narrow_export_redacts_and_reports_what_it_could_not_exercise(
     db_pool: asyncpg.Pool, tmp_path: Path
 ) -> None:
     """The regression test for the defect this module's docstring
-    describes. A single setpoint, no `units`, no `action`, no `check`:
-    exactly the shape that used to abort `redact_record` outright.
+    describes. A single setpoint, no action, no check: exactly the
+    shape that used to abort `redact_record` outright.
 
     It must now redact successfully, verify against H3, AND the
-    manifest must name the two clearances this narrow export could not
-    exercise -- proving the fact is surfaced, not just silently dropped.
+    manifest must name every clearance this narrow export could not
+    exercise -- proving the fact is surfaced, not just silently
+    dropped. The expected set is DERIVED from
+    `TIER2_JSONB_CLEARED_POINTERS` itself (every declared pointer this
+    fixture's one `address`-only payload doesn't fire), not
+    re-transcribed by hand: hand-transcribing it is exactly the mistake
+    slice 6 of project_record_publishing_campaign.md fixed for the
+    clearance list itself.
     """
     procedure_id = uuid4()
     logbook_id = uuid4()
@@ -259,7 +270,7 @@ async def test_a_narrow_export_redacts_and_reports_what_it_could_not_exercise(
                 ActivityInput(
                     event_id=uuid4(),
                     step_kind="setpoint",
-                    payload={"channel": "T_oven", "target_value": 423.0},  # no units
+                    payload={"address": "T_oven", "value": 423.0},  # no criterion, no name
                     sampled_at=_NOW,
                 ),
             ),
@@ -276,21 +287,42 @@ async def test_a_narrow_export_redacts_and_reports_what_it_could_not_exercise(
     # UnfiredClearanceError for exactly this fixture.
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
 
-    manifest = build_manifest(
-        exported,
-        watermark=1,
-        git_commit=capture_git_commit(),
-        redacted=redaction.redacted_record,
-        unfired_tier2_clearances=redaction.unfired_tier2_clearances,
+    manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
+    expected_unfired_clearances = tuple(
+        sorted(
+            f"activity/payload/{pointer}"
+            for pointer in TIER2_JSONB_CLEARED_POINTERS[("activity", "payload")]
+            if pointer != "address"
+        )
     )
-    assert manifest.unfired_tier2_clearances == (
-        "activity/payload/action_name",
-        "activity/payload/units",
-    )
+    assert manifest.unfired_tier2_clearances == expected_unfired_clearances
 
     bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "narrow")
     result = _verify(bundle, published=True)
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.integration
+async def test_write_bundle_refuses_a_real_unredacted_record_beside_an_h3_manifest(
+    db_pool: asyncpg.Pool, tmp_path: Path
+) -> None:
+    """Against real Postgres-shaped rows, not the synthetic unit fixture:
+    passing the UNREDACTED export beside a manifest whose H3 was computed
+    from the real redacted record must refuse. Before this guard existed
+    this wrote a fully unredacted bundle under a --published label that
+    the default verifier printed OK for."""
+    await _seed_a_procedure_with_one_activity(db_pool)
+
+    async with db_pool.acquire() as conn:
+        pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
+        exported = await export_record(pg_conn)
+
+    redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
+    manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
+
+    with pytest.raises(ManifestRecordMismatchError):
+        write_bundle(exported, manifest, tmp_path / "should_not_exist")
+    assert not (tmp_path / "should_not_exist").exists()
 
 
 @pytest.mark.integration
@@ -304,7 +336,7 @@ async def test_a_real_bundle_fails_verification_after_one_edited_digit(
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
 
-    manifest = build_manifest(exported, watermark=1, git_commit=capture_git_commit())
+    manifest = build_manifest(exported, git_commit=capture_git_commit())
     bundle = write_bundle(exported, manifest, tmp_path / "bundle")
     assert _verify(bundle).returncode == 0
 
@@ -330,7 +362,7 @@ async def test_both_reassembly_implementations_agree_on_a_real_bundle(
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
 
-    manifest = build_manifest(exported, watermark=1, git_commit=capture_git_commit())
+    manifest = build_manifest(exported, git_commit=capture_git_commit())
     bundle = write_bundle(exported, manifest, tmp_path / "bundle")
 
     # CORA's reader reassembles the body; the script's reader then has to

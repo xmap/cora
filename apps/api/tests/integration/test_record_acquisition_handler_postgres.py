@@ -27,6 +27,7 @@ import pytest
 from cora.data.aggregates.acquisition import (
     AcquisitionAssetNotFoundError,
     AcquisitionCannotRecordWithoutCapturingError,
+    AcquisitionEvidence,
     AcquisitionStatus,
     load_acquisition,
 )
@@ -126,7 +127,7 @@ async def test_record_acquisition_happy_path_round_trip(db_pool: asyncpg.Pool) -
             producing_asset_id=asset_id,
             captured_at=_CAPTURED_AT,
             settings={"exposure_ms": 200},
-            evidence={"frames": 1801},
+            evidence={"projection_count": 1801},
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -142,7 +143,7 @@ async def test_record_acquisition_happy_path_round_trip(db_pool: asyncpg.Pool) -
     assert acq.captured_at == _CAPTURED_AT
     assert acq.recorded_at == _NOW
     assert acq.settings == {"exposure_ms": 200}
-    assert acq.evidence == {"frames": 1801}
+    assert acq.evidence == AcquisitionEvidence(projection_count=1801)
     assert acq.status is AcquisitionStatus.RECORDED
 
     # Persisted event payload preserves dual-time + bindings.

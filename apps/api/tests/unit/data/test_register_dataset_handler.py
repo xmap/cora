@@ -24,6 +24,7 @@ from cora.data.aggregates.dataset.events import (
     event_type_name,
     to_payload,
 )
+from cora.data.aggregates.dataset.state import DatasetChecksum, DatasetEncoding
 from cora.data.features import register_dataset
 from cora.data.features.register_dataset import RegisterDataset
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
@@ -200,11 +201,9 @@ async def _seed_dataset(store: InMemoryEventStore, dataset_id: UUID) -> None:
         dataset_id=dataset_id,
         name="seed",
         uri="s3://b/k",
-        checksum_algorithm="sha256",
-        checksum_value=_GOOD_SHA256,
+        checksum=DatasetChecksum(algorithm="sha256", value=_GOOD_SHA256),
         byte_size=0,
-        media_type="application/x-hdf5",
-        conforms_to=frozenset(),
+        encoding=DatasetEncoding(media_type="application/x-hdf5", conforms_to=frozenset()),
         producing_run_id=None,
         subject_id=None,
         derived_from=frozenset(),

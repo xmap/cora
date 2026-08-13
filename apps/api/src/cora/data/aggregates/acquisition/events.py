@@ -25,7 +25,10 @@ tiers (PROV-O `generatedAtTime` vs `qualifiedGeneration`).
   - UUIDs serialize as strings; the optional `producing_run_id`
     serializes as null when None.
   - `settings` and `evidence` are JSON objects on disk (may be `{}`
-    empty but never None).
+    empty but never None). `evidence` is `AcquisitionEvidence`
+    in-memory, not a bare dict: an evidence field left None is
+    OMITTED from the object, never nulled, same as
+    `ingest_scan.EVIDENCE_SCHEMA` before this VO replaced it.
   - Datetimes serialize via `.isoformat()`.
   - Status is NOT carried in the payload; the event type encodes it
     (AcquisitionRecorded -> RECORDED), same precedent as the rest of
@@ -38,11 +41,16 @@ tiers (PROV-O `generatedAtTime` vs `qualifiedGeneration`).
 `occurred_at`, `recorded_by`.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import datetime
 from typing import Any, assert_never
 from uuid import UUID
 
+from cora.data.aggregates.acquisition.state import (
+    AcquisitionEvidence,
+    CapturedAtSource,
+    validate_evidence,
+)
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.shared.identity import ActorId
@@ -56,11 +64,17 @@ class AcquisitionRecorded:
     Status is implicit (`Recorded`); the evolver sets it. This is the
     only event the Acquisition aggregate ever emits.
 
-    Per CONTRIBUTING.md "Primitives in event payloads": every field
-    here is a primitive (str, int, UUID, datetime) or a JSON-object
-    carrier dict (`settings`, `evidence`). The dual-time pair carries
-    `captured_at` (instrument wall-clock) alongside `occurred_at`
-    (CORA-side wall-clock; the in-memory state field is `recorded_at`).
+    Per `docs/reference/modeling.md`'s event-VO carve-out: `evidence`
+    is `AcquisitionEvidence`, not degraded to a bare `dict`, because
+    the record exporter's generator recurses into a declared VO field
+    by field but must drop an untyped `dict` opaque whole; see that VO
+    for why it still recurses (not `ClosedValueObject`) rather than
+    being kept whole. Every other field is a primitive (str, int, UUID,
+    datetime) or `settings`, a JSON-object carrier dict with no known
+    shape yet (see `Acquisition`'s "Settings and evidence" docstring).
+    The dual-time pair carries `captured_at` (instrument wall-clock)
+    alongside `occurred_at` (CORA-side wall-clock; the in-memory state
+    field is `recorded_at`).
 
     Fold-symmetry attribution (every-fact-has-an-actor):
       - `recorded_by: ActorId`: the envelope `principal_id` of the
@@ -75,7 +89,7 @@ class AcquisitionRecorded:
     producing_run_id: UUID | None
     captured_at: datetime
     settings: dict[str, Any]
-    evidence: dict[str, Any]
+    evidence: AcquisitionEvidence
     occurred_at: datetime
     recorded_by: ActorId
 
@@ -114,12 +128,33 @@ def to_payload(event: AcquisitionEvent) -> dict[str, Any]:
                 ),
                 "captured_at": captured_at.isoformat(),
                 "settings": settings,
-                "evidence": evidence,
+                "evidence": _evidence_to_payload(evidence),
                 "occurred_at": occurred_at.isoformat(),
                 "recorded_by": str(recorded_by),
             }
         case _:  # pragma: no cover  # exhaustiveness guard
             assert_never(event)
+
+
+def _evidence_to_payload(evidence: AcquisitionEvidence) -> dict[str, Any]:
+    """Wire shape for `AcquisitionEvidence`: a JSON object with a key
+    per non-None field, omitted (never nulled) when absent, matching
+    the `ingest_scan.EVIDENCE_SCHEMA` convention this VO replaced.
+
+    Iterates `dataclasses.fields` rather than a hand-maintained field
+    list: a second, separately-maintained list here previously could
+    silently drop a field from every published record if it fell out
+    of sync with the dataclass (an addition to `AcquisitionEvidence`
+    forgotten here), with no test able to catch it short of asserting
+    every field by name.
+    """
+    payload: dict[str, Any] = {}
+    for f in fields(evidence):
+        raw = getattr(evidence, f.name)
+        if raw is None:
+            continue
+        payload[f.name] = raw.value if isinstance(raw, CapturedAtSource) else raw
+    return payload
 
 
 def from_stored(stored: StoredEvent) -> AcquisitionEvent:
@@ -144,12 +179,12 @@ def from_stored(stored: StoredEvent) -> AcquisitionEvent:
                     ),
                     captured_at=datetime.fromisoformat(payload["captured_at"]),
                     settings=dict(payload["settings"]),
-                    evidence=dict(payload["evidence"]),
+                    evidence=validate_evidence(payload["evidence"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                     recorded_by=ActorId(UUID(payload["recorded_by"])),
                 )
 
-            return deserialize_or_raise("AcquisitionRecorded", _build_recorded)
+            return deserialize_or_raise("AcquisitionRecorded", _build_recorded, extra=(ValueError,))
         case _:
             msg = f"Unknown AcquisitionEvent event_type: {stored.event_type!r}"
             raise ValueError(msg)

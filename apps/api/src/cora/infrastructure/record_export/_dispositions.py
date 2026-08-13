@@ -7,18 +7,26 @@ One entry per event type, one disposition per declared field, resolved
 from the field's real type by `tools/gen_record_dispositions.py`. The
 vocabulary:
 
-    keep:enum:<Name>  closed value set, provably reviewable. The enum is
-                      NAMED because a human signs off the value set, and
-                      swapping one enum for another must read as drift.
-    keep:number       int / float / bool
-    keep:time         datetime
-    token:uuid        replaced with a per-export random surrogate
-    drop:text         free text, no finite range, dropped by default
-    drop:opaque       a dict with no declared keys, nothing to allowlist
-    by-value          the slot is polymorphic across scalars and objects,
-                      so no static answer exists. Apply the tier-2 leaf
-                      rule at export time: numbers and booleans keep,
-                      UUID-shaped strings token, other strings drop.
+    keep:enum:<Name>       closed value set, provably reviewable. The
+                           enum is NAMED because a human signs off the
+                           value set, and swapping one enum for another
+                           must read as drift.
+    keep:closed:<Name>       a value object every one of whose fields is
+                           closed by construction (a fixed charset and
+                           length, a closed literal set), kept WHOLE
+                           rather than resolved field by field. See
+                           `cora.shared.closed_value.ClosedValueObject`.
+    keep:number            int / float / bool
+    keep:time              datetime
+    token:uuid             replaced with a per-export random surrogate
+    drop:text              free text, no finite range, dropped by default
+    drop:opaque            a dict with no declared keys, nothing to
+                           allowlist
+    by-value               the slot is polymorphic across scalars and
+                           objects, so no static answer exists. Apply the
+                           tier-2 leaf rule at export time: numbers and
+                           booleans keep, UUID-shaped strings token,
+                           other strings drop.
 
 A nested mapping is a value object recursed into. A mapping whose sole
 key is `[]` is a fixed-length heterogeneous tuple, and its value lists
@@ -28,6 +36,12 @@ Redaction iterates the STORED payload's keys and looks each up here. A
 key absent from its event's entry is dropped; an event type absent from
 this table aborts the export. The canonical hash of this mapping is the
 redaction profile hash recorded in the export manifest.
+
+A handful of entries are keyed on the WIRE key a field is actually
+stored under rather than its dataclass field name, per
+`gen_record_dispositions.py`'s `_OVERRIDE_WIRE_KEYS`: the two never
+disagree about what ships, only about which name this table's lookup
+uses to find it.
 """
 
 from typing import Any
@@ -37,7 +51,23 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "acquisition_id": "token:uuid",
         "captured_at": "keep:time",
         "dataset_id": "token:uuid",
-        "evidence": "drop:opaque",
+        "evidence": {
+            "captured_at_raw": "drop:text",
+            "captured_at_source": "keep:enum:CapturedAtSource",
+            "checksum_computer_kind": "drop:text",
+            "commanded_dark_count": "keep:number",
+            "commanded_flat_count": "keep:number",
+            "commanded_projection_count": "keep:number",
+            "dark_count": "keep:number",
+            "dropped_frame_count": "keep:number",
+            "flat_count": "keep:number",
+            "invalid_count": "keep:number",
+            "projection_angle_count": "keep:number",
+            "projection_angle_first": "keep:number",
+            "projection_angle_last": "keep:number",
+            "projection_count": "keep:number",
+            "reader_kind": "drop:text",
+        },
         "occurred_at": "keep:time",
         "producing_asset_id": "token:uuid",
         "producing_run_id": "token:uuid",
@@ -673,7 +703,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "audience": "drop:text",
         "credential_id": "token:uuid",
         "expires_at": "keep:time",
-        "facility_code": {"value": "drop:text"},
+        "facility_id": {"value": "drop:text"},
         "occurred_at": "keep:time",
         "public_material_ref": "drop:text",
         "purpose": "keep:enum:CredentialPurpose",
@@ -724,13 +754,11 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     },
     "DatasetRegistered": {
         "byte_size": "keep:number",
-        "checksum_algorithm": "drop:text",
-        "checksum_value": "drop:text",
-        "conforms_to": "drop:text",
+        "checksum": "keep:closed:DatasetChecksum",
         "dataset_id": "token:uuid",
         "derived_from": "token:uuid",
-        "intent": "drop:text",
-        "media_type": "drop:text",
+        "encoding": {"conforms_to": "drop:text", "media_type": "drop:text"},
+        "intent": "keep:enum:Intent",
         "name": "drop:text",
         "occurred_at": "keep:time",
         "producing_actuation_kind": "drop:text",
@@ -793,14 +821,12 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "reason": "drop:text",
     },
     "DistributionRegistered": {
-        "access_protocol": "drop:text",
+        "access_protocol": "keep:enum:AccessProtocol",
         "byte_size": "keep:number",
-        "checksum_algorithm": "drop:text",
-        "checksum_value": "drop:text",
-        "conforms_to": "drop:text",
+        "checksum": "keep:closed:DatasetChecksum",
         "dataset_id": "token:uuid",
         "distribution_id": "token:uuid",
-        "media_type": "drop:text",
+        "encoding": {"conforms_to": "drop:text", "media_type": "drop:text"},
         "occurred_at": "keep:time",
         "registered_by": "token:uuid",
         "supply_id": "token:uuid",
@@ -1235,7 +1261,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "direction": "keep:enum:Direction",
         "expires_at": "keep:time",
         "occurred_at": "keep:time",
-        "peer_facility_code": {"value": "drop:text"},
+        "peer_facility_id": {"value": "drop:text"},
         "permit_id": "token:uuid",
         "terms": {
             "accepted_canonicalization_versions": "drop:text",
@@ -1620,21 +1646,21 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "run_id": "token:uuid",
     },
     "SealInitialized": {
-        "facility_code": {"value": "drop:text"},
+        "facility_id": {"value": "drop:text"},
         "initialized_by": "token:uuid",
         "occurred_at": "keep:time",
         "offline_credential_id": "token:uuid",
         "online_credential_id": "token:uuid",
     },
     "SealOnlineKeyRotated": {
-        "facility_code": {"value": "drop:text"},
+        "facility_id": {"value": "drop:text"},
         "new_online_credential_id": "token:uuid",
         "occurred_at": "keep:time",
         "rotated_by": "token:uuid",
         "signed_by_offline_root": "keep:number",
     },
     "SealPointerSigned": {
-        "facility_code": {"value": "drop:text"},
+        "facility_id": {"value": "drop:text"},
         "head_hash": "drop:text",
         "occurred_at": "keep:time",
         "sequence_number": "keep:number",
@@ -1643,13 +1669,13 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     },
     "SealRepublishingCompleted": {
         "completed_by": "token:uuid",
-        "facility_code": {"value": "drop:text"},
+        "facility_id": {"value": "drop:text"},
         "new_head_hash": "drop:text",
         "new_sequence_number": "keep:number",
         "occurred_at": "keep:time",
     },
     "SealRepublishingStarted": {
-        "facility_code": {"value": "drop:text"},
+        "facility_id": {"value": "drop:text"},
         "occurred_at": "keep:time",
         "reason": "drop:text",
         "started_by": "token:uuid",

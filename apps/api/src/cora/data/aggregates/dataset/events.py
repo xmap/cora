@@ -38,6 +38,7 @@ from datetime import datetime
 from typing import Any, assert_never
 from uuid import UUID
 
+from cora.data.aggregates.dataset.state import DatasetChecksum, DatasetEncoding, Intent
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.shared.identity import ActorId
@@ -51,19 +52,45 @@ class DatasetRegistered:
     cross-aggregate refs (`producing_run_id`, `subject_id`,
     `derived_from`) are eventual-consistency primitives.
 
-    Per CONTRIBUTING.md "Primitives in event payloads": every field
-    here is a primitive (str, int, UUID, datetime, frozenset of
-    primitives). VOs (`DatasetChecksum`, `DatasetEncoding`) are
-    reconstructed by the evolver on fold; the decider unwraps VOs
-    before constructing the event.
+    `checksum: DatasetChecksum` and `intent: Intent` are declared as
+    their real value object / enum, not unwrapped to primitives, per
+    the closed-vocabulary carve-out in `docs/reference/modeling.md`'s
+    "Primitives in events" rule: the record exporter's generated
+    redaction table resolves a field's disposition from its DECLARED
+    TYPE, so a field wrapped down to `str` on the event is unpublishable
+    by construction even when its own constructor already closes its
+    range. `DatasetChecksum` also marks itself `ClosedValueObject` (see
+    that module), so the exporter keeps it whole; `checksum.value` is
+    the record's own hex digest, the field that makes a published
+    record checkable against the data it describes.
+
+    `encoding: DatasetEncoding` moved onto the event alongside
+    `checksum` for shape symmetry, not because it independently
+    qualifies for the carve-out: `DatasetEncoding` is NOT a
+    `ClosedValueObject` (its `media_type` is a loose, unvalidated
+    string), so the exporter still recurses into it field by field and
+    still drops `media_type`/`conforms_to` exactly as it did when they
+    were flat primitives. Do not cite this field as carve-out precedent.
+
+    `to_payload`/`from_stored` still serialize the SAME on-disk shape
+    (`{"algorithm": str, "value": str}` /
+    `{"media_type": str, "conforms_to": list[str]}`) as before this
+    change; only the dataclass's declared shape moved to match it.
 
     Trust-level additions (additive, forward-compat):
       - `producing_run_end_state: str | None`: Run's terminal status
         captured at registration when producing_run_id is set; None
         otherwise. Legacy events fold cleanly with this defaulting
-        to None (payload.get).
-      - `intent: str`: trust level (Intent.value); defaults to "Trial"
-        on register. Legacy events fold cleanly with default "Trial".
+        to None (payload.get). Stays a bare `str` deliberately: the
+        Run BC's own `RunStatus` enum cannot be imported into
+        `cora.data.aggregates` (only the wider `cora.data` feature
+        layer may reach `cora.run.aggregates`), and mirroring it with a
+        Data-BC-local enum risks a decider-time `ValueError` on any
+        future `RunStatus` member this file has not caught up to. Left
+        dropping as a named, deferred decision, not an oversight.
+      - `intent: Intent`: trust level; defaults to `Intent.TRIAL` on
+        register. Legacy events fold cleanly via `payload.get("intent",
+        "Trial")` in `from_stored`, wrapped into the enum there.
 
     Calibration-citation addition (additive, forward-compat):
       - `used_calibration_ids: tuple[UUID, ...]`: revision-cited atomic
@@ -87,11 +114,9 @@ class DatasetRegistered:
     dataset_id: UUID
     name: str
     uri: str
-    checksum_algorithm: str
-    checksum_value: str
+    checksum: DatasetChecksum
     byte_size: int
-    media_type: str
-    conforms_to: frozenset[str]
+    encoding: DatasetEncoding
     producing_run_id: UUID | None
     subject_id: UUID | None
     derived_from: frozenset[UUID]
@@ -112,8 +137,18 @@ class DatasetRegistered:
     # upload, or a conduct with no routing table to consult). Powers the
     # `promote_dataset` simulator-origin guard. Forward-compat via
     # `payload.get("producing_actuation_kind")` for legacy streams.
+    #
+    # Stays a bare `str | None` for the same layering reason as
+    # `producing_run_end_state`: `cora.operation.ports.control_port`
+    # (where `ActuationKind` lives) is not reachable from
+    # `cora.data.aggregates`, and a Data-BC-local mirror enum would raise
+    # at the decider on any future `ActuationKind` member it has not
+    # caught up to. This is the record's real rehearsal-versus-live
+    # carrier, so it dropping is a named, deferred decision, not an
+    # oversight -- see `is_simulated`'s own history for what an
+    # unexamined default costs.
     producing_actuation_kind: str | None = None
-    intent: str = "Trial"
+    intent: Intent = Intent.TRIAL
     # Calibration BC AsShot citation; revision-cited
     # atomic-ID model per [[project_calibration_design]]. See state.py
     # for the full rationale. NO cross-BC existence check at the
@@ -231,11 +266,9 @@ def to_payload(event: DatasetEvent) -> dict[str, Any]:
             dataset_id=dataset_id,
             name=name,
             uri=uri,
-            checksum_algorithm=checksum_algorithm,
-            checksum_value=checksum_value,
+            checksum=checksum,
             byte_size=byte_size,
-            media_type=media_type,
-            conforms_to=conforms_to,
+            encoding=encoding,
             producing_run_id=producing_run_id,
             subject_id=subject_id,
             derived_from=derived_from,
@@ -252,13 +285,13 @@ def to_payload(event: DatasetEvent) -> dict[str, Any]:
                 "name": name,
                 "uri": uri,
                 "checksum": {
-                    "algorithm": checksum_algorithm,
-                    "value": checksum_value,
+                    "algorithm": checksum.algorithm,
+                    "value": checksum.value,
                 },
                 "byte_size": byte_size,
                 "encoding": {
-                    "media_type": media_type,
-                    "conforms_to": sorted(conforms_to),
+                    "media_type": encoding.media_type,
+                    "conforms_to": sorted(encoding.conforms_to),
                 },
                 "producing_run_id": (
                     str(producing_run_id) if producing_run_id is not None else None
@@ -273,7 +306,7 @@ def to_payload(event: DatasetEvent) -> dict[str, Any]:
                     str(producing_procedure_id) if producing_procedure_id is not None else None
                 ),
                 "producing_actuation_kind": producing_actuation_kind,
-                "intent": intent,
+                "intent": intent.value,
                 # addition (sorted for deterministic jsonb bytes,
                 # mirrors derived_from + Run.pinned_calibration_ids precedent).
                 "used_calibration_ids": sorted(str(c) for c in used_calibration_ids),
@@ -339,11 +372,14 @@ def from_stored(stored: StoredEvent) -> DatasetEvent:
                     dataset_id=UUID(payload["dataset_id"]),
                     name=payload["name"],
                     uri=payload["uri"],
-                    checksum_algorithm=raw_checksum["algorithm"],
-                    checksum_value=raw_checksum["value"],
+                    checksum=DatasetChecksum(
+                        algorithm=raw_checksum["algorithm"], value=raw_checksum["value"]
+                    ),
                     byte_size=int(payload["byte_size"]),
-                    media_type=raw_encoding["media_type"],
-                    conforms_to=frozenset(raw_encoding["conforms_to"]),
+                    encoding=DatasetEncoding(
+                        media_type=raw_encoding["media_type"],
+                        conforms_to=frozenset(raw_encoding["conforms_to"]),
+                    ),
                     producing_run_id=(
                         UUID(raw_producing_run_id) if raw_producing_run_id is not None else None
                     ),
@@ -358,13 +394,13 @@ def from_stored(stored: StoredEvent) -> DatasetEvent:
                         else None
                     ),
                     producing_actuation_kind=payload.get("producing_actuation_kind"),
-                    intent=payload.get("intent", "Trial"),
+                    intent=Intent(payload.get("intent", "Trial")),
                     used_calibration_ids=tuple(
                         UUID(c) for c in payload.get("used_calibration_ids", [])
                     ),
                 )
 
-            return deserialize_or_raise("DatasetRegistered", _build_registered)
+            return deserialize_or_raise("DatasetRegistered", _build_registered, extra=(ValueError,))
         case "DatasetDiscarded":
             return deserialize_or_raise(
                 "DatasetDiscarded",
