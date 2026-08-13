@@ -53,10 +53,17 @@ _NOW = datetime(2026, 8, 12, 6, 21, 17, tzinfo=UTC)
 _PRINCIPAL_ID = UUID("01900000-0000-7000-8000-000000000099")
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000000000aa")
 
-# A realistic-shaped digest, not the live 2-BM scan's own value: this test
-# proves the MECHANISM survives redaction, and pinning a real production
-# digest into test source would be a second, unrelated way to leak it.
-_CHECKSUM_VALUE = "96360334138a1d63aa080f799e040fc6c93493b407908c83c90a4474fac19842"
+# A fabricated digest (sha256 of an arbitrary literal, not any real
+# file's bytes), not the live 2-BM scan's own value: this test proves
+# the MECHANISM survives redaction, and pinning a real production digest
+# into test source would be a second, unrelated way to leak it. CAUGHT
+# DRIFTING during the campaign's live-verification pass on 2026-08-13:
+# this constant had silently become the real test_005.h5 digest at some
+# point (confirmed against a direct, authorized read of the live
+# database), exactly the promise this comment makes and had stopped
+# keeping. Regenerate with a fresh literal if this ever needs to change
+# again; never copy a value observed from a live export.
+_CHECKSUM_VALUE = "3244f0175ea7d0107cb39a37cd000c313dedf1610b45fced8b5edbad99616c39"
 assert len(_CHECKSUM_VALUE) == DATASET_CHECKSUM_SHA256_HEX_LENGTH
 
 
