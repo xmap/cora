@@ -46,9 +46,10 @@ def evolve(state: Acquisition | None, event: AcquisitionEvent) -> Acquisition:
                 producing_asset_id=producing_asset_id,
                 producing_run_id=producing_run_id,
                 captured_at=captured_at,
-                # Defensive copies so mutating either side cannot alias.
+                # Defensive copy so mutating one side cannot alias the
+                # other; evidence is a frozen VO, already immune to this.
                 settings=dict(settings),
-                evidence=dict(evidence),
+                evidence=evidence,
                 recorded_at=occurred_at,
                 recorded_by=recorded_by,
                 status=AcquisitionStatus.RECORDED,
