@@ -1,0 +1,353 @@
+"""Unit tests for the composition-root capture observer bridge.
+
+Mirrors `test_enclosure_permit_observer.py`'s two-layer shape: the pure
+`classify_capture_status` mapping, and the async multi-PV merge /
+clean-stream-end / disconnect behaviour of `ControlPortCaptureObserver`
+driven against a scripted fake `ControlPort`. The one behavioral
+difference pinned throughout: where the Enclosure bridge synthesizes an
+`Unknown` status on disconnect (to fail a real gate closed),
+`ControlPortCaptureObserver` synthesizes NO status claim at all, because
+there is no gate here and a synthesized phase would fabricate a
+terminal.
+"""
+
+import asyncio
+from collections.abc import AsyncGenerator, AsyncIterator, Callable
+from datetime import UTC, datetime
+
+import pytest
+
+from cora.api._capture_observer import ControlPortCaptureObserver, classify_capture_status
+from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
+from cora.run.ports.capture_observer import CaptureObservation, CaptureObserverScope, CapturePhase
+from cora.shared.reach import ReachTier
+
+_T = datetime(2026, 8, 13, 12, 0, 0, tzinfo=UTC)
+
+_PHASES = {
+    "Beginning scan": "Begun",
+    "Collecting projections": "Progressing",
+    "Scan complete": "Ended",
+    "Scan aborted": "Aborted",
+}
+
+
+def _reading(value: object, produced_at: datetime | None = _T) -> Measurement:
+    return Measurement(value=value, kind="Categorical", quality="Good", produced_at=produced_at)  # type: ignore[arg-type]
+
+
+@pytest.mark.unit
+def test_classify_maps_a_declared_literal_to_its_phase() -> None:
+    assert classify_capture_status("Beginning scan", _PHASES) is CapturePhase.BEGUN
+    assert classify_capture_status("Scan complete", _PHASES) is CapturePhase.ENDED
+    assert classify_capture_status("Scan aborted", _PHASES) is CapturePhase.ABORTED
+
+
+@pytest.mark.unit
+def test_classify_an_undeclared_literal_is_unrecognized() -> None:
+    """A vocabulary drift (a tool upgrade renaming a status) must be
+    visible, never silently dropped or coerced into a nearby phase."""
+    assert classify_capture_status("Some new status", _PHASES) is CapturePhase.UNRECOGNIZED
+
+
+@pytest.mark.unit
+def test_classify_against_an_empty_table_is_always_unrecognized() -> None:
+    assert classify_capture_status("Scan complete", {}) is CapturePhase.UNRECOGNIZED
+
+
+class _ScriptedControlPort:
+    """Fake `ControlPort`: replays a per-address reading script.
+
+    Same shape as `test_enclosure_permit_observer.py`'s
+    `_ScriptedControlPort`: each address yields its scripted readings in
+    order, then ends cleanly, hangs (models a live subscription with no
+    more traffic), or disconnects. `read_results` scripts the poll path.
+    """
+
+    def __init__(
+        self,
+        *,
+        readings: dict[str, list[Measurement]],
+        disconnect: frozenset[str] = frozenset(),
+        hang: frozenset[str] = frozenset(),
+        read_results: dict[str, list[Measurement | Exception]] | None = None,
+    ) -> None:
+        self._readings = readings
+        self._disconnect = disconnect
+        self._hang = hang
+        self._read_results = {k: list(v) for k, v in (read_results or {}).items()}
+
+    def subscribe(self, address: str) -> AsyncIterator[Measurement]:
+        return self._stream(address)
+
+    async def _stream(self, address: str) -> AsyncGenerator[Measurement]:
+        for reading in self._readings.get(address, []):
+            yield reading
+        if address in self._hang:
+            await asyncio.Event().wait()  # never released; models a live subscription
+            return  # pragma: no cover - unreachable
+        if address in self._disconnect:
+            raise ControlNotConnectedError(address)
+
+    async def read(self, address: str) -> Measurement:
+        results = self._read_results.get(address)
+        if not results:
+            raise ControlNotConnectedError(address)
+        result = results.pop(0)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+
+def _observer(
+    port: _ScriptedControlPort,
+    capture_pvs: dict[str, dict[str, str]],
+    *,
+    status_phases: dict[str, str] | None = None,
+    tick_seconds: float | None = None,
+) -> ControlPortCaptureObserver:
+    return ControlPortCaptureObserver(
+        control_port=port,  # type: ignore[arg-type]
+        capture_pvs=capture_pvs,
+        status_phases=status_phases if status_phases is not None else _PHASES,
+        tick_seconds=tick_seconds,
+    )
+
+
+async def _collect(
+    observer: ControlPortCaptureObserver, codes: set[str]
+) -> list[CaptureObservation]:
+    scope = CaptureObserverScope(capture_codes=frozenset(codes))
+    return [observation async for observation in observer.observe(scope)]
+
+
+@pytest.mark.unit
+async def test_observe_empty_scope_yields_nothing() -> None:
+    observer = _observer(_ScriptedControlPort(readings={}), {"tomoscan": {"status": "pvA"}})
+    assert await _collect(observer, set()) == []
+
+
+@pytest.mark.unit
+async def test_observe_unconfigured_code_yields_nothing() -> None:
+    observer = _observer(_ScriptedControlPort(readings={}), {"tomoscan": {"status": "pvA"}})
+    assert await _collect(observer, {"other-tomoscan"}) == []
+
+
+@pytest.mark.unit
+async def test_observe_a_code_with_no_status_role_is_excluded_from_scope() -> None:
+    """A configured code missing the `status` role cannot be watched: it
+    is silently excluded rather than raising, mirroring the Enclosure
+    adapter's unconfigured-code behaviour."""
+    observer = _observer(_ScriptedControlPort(readings={}), {"tomoscan": {"server_running": "pvA"}})
+    assert await _collect(observer, {"tomoscan"}) == []
+
+
+@pytest.mark.unit
+async def test_observe_maps_readings_then_no_status_claim_on_clean_end() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan"), _reading("Scan complete")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    assert [(o.capture_code, o.reported_status, o.phase) for o in observations] == [
+        ("tomoscan", "Beginning scan", CapturePhase.BEGUN),
+        ("tomoscan", "Scan complete", CapturePhase.ENDED),
+        ("tomoscan", None, None),
+    ]
+    assert observations[0].observed_at == _T
+    assert observations[0].source_kind == "EpicsPv"
+    assert observations[0].source_id == "pvA"
+    # The clean-stream-end observation has NO substrate time, matching
+    # the disconnect case: nothing was reported, so nothing is stamped.
+    assert observations[-1].observed_at is None
+    assert observations[-1].reach_tier is ReachTier.UNREACHED
+
+
+@pytest.mark.unit
+async def test_observe_disconnect_yields_a_single_no_status_observation() -> None:
+    """The deliberate inversion from Enclosure: a disconnect must NOT
+    carry `phase=CapturePhase.ENDED` or any other phase. Reading a
+    disconnect as a real terminal would fabricate one the substrate
+    never reported."""
+    port = _ScriptedControlPort(readings={"pvA": []}, disconnect=frozenset({"pvA"}))
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    assert len(observations) == 1
+    assert observations[0].reported_status is None
+    assert observations[0].phase is None
+    assert observations[0].reach_tier is ReachTier.UNREACHED
+    assert observations[0].observed_at is None
+
+
+@pytest.mark.unit
+async def test_observe_an_undeclared_literal_classifies_unrecognized_not_dropped() -> None:
+    port = _ScriptedControlPort(readings={"pvA": [_reading("Some future firmware status")]})
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    assert observations[0].reported_status == "Some future firmware status"
+    assert observations[0].phase is CapturePhase.UNRECOGNIZED
+    # A reading was still delivered: RELAYED, not UNREACHED. Classification
+    # failure is not the same fact as a communication failure.
+    assert observations[0].reach_tier is ReachTier.RELAYED
+
+
+@pytest.mark.unit
+async def test_observe_passes_through_an_absent_substrate_time() -> None:
+    port = _ScriptedControlPort(readings={"pvA": [_reading("Scan complete", produced_at=None)]})
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    assert observations[0].phase is CapturePhase.ENDED
+    assert observations[0].observed_at is None
+
+
+@pytest.mark.unit
+async def test_observe_preserves_a_present_substrate_time() -> None:
+    port = _ScriptedControlPort(readings={"pvA": [_reading("Scan complete", produced_at=_T)]})
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    assert observations[0].observed_at == _T
+
+
+@pytest.mark.unit
+async def test_observe_merges_multiple_codes() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvB": [_reading("Scan complete")]}
+    )
+    observer = _observer(port, {"tomoscan-a": {"status": "pvA"}, "tomoscan-b": {"status": "pvB"}})
+
+    observations = await _collect(observer, {"tomoscan-a", "tomoscan-b"})
+
+    emitted = {(o.capture_code, o.phase) for o in observations if o.phase is not None}
+    assert emitted == {
+        ("tomoscan-a", CapturePhase.BEGUN),
+        ("tomoscan-b", CapturePhase.ENDED),
+    }
+
+
+async def _collect_until(
+    gen: AsyncGenerator[CaptureObservation],
+    predicate: Callable[[list[CaptureObservation]], bool],
+    *,
+    timeout_seconds: float = 2.0,
+) -> list[CaptureObservation]:
+    collected: list[CaptureObservation] = []
+
+    async def _drain() -> None:
+        async for observation in gen:
+            collected.append(observation)
+            if predicate(collected):
+                break
+
+    try:
+        await asyncio.wait_for(_drain(), timeout=timeout_seconds)
+    finally:
+        await gen.aclose()
+    return collected
+
+
+@pytest.mark.unit
+async def test_poll_disabled_by_default_emits_nothing_extra() -> None:
+    port = _ScriptedControlPort(readings={"pvA": []}, hang=frozenset({"pvA"}))
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}})
+    gen = observer.observe(CaptureObserverScope(capture_codes=frozenset({"tomoscan"})))
+    try:
+        with pytest.raises(TimeoutError):
+            await asyncio.wait_for(anext(gen), timeout=0.05)
+    finally:
+        await gen.aclose()
+
+
+@pytest.mark.unit
+async def test_poll_emits_relayed_probe_on_successful_read() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": []},
+        hang=frozenset({"pvA"}),
+        read_results={"pvA": [_reading("Scan complete")]},
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}}, tick_seconds=0.01)
+    gen = observer.observe(CaptureObserverScope(capture_codes=frozenset({"tomoscan"})))
+
+    collected = await _collect_until(gen, lambda obs: len(obs) >= 1)
+
+    assert len(collected) == 1
+    probe = collected[0]
+    assert probe.capture_code == "tomoscan"
+    assert probe.reported_status is None  # probe-only: makes no status claim
+    assert probe.phase is None
+    assert probe.reach_tier is ReachTier.RELAYED
+    assert probe.source_kind == "EpicsPv"
+    assert probe.source_id == "pvA"
+
+
+@pytest.mark.unit
+async def test_poll_emits_unreached_probe_on_failed_read() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": []},
+        hang=frozenset({"pvA"}),
+        read_results={"pvA": [ControlNotConnectedError("pvA")]},
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}}, tick_seconds=0.01)
+    gen = observer.observe(CaptureObserverScope(capture_codes=frozenset({"tomoscan"})))
+
+    collected = await _collect_until(gen, lambda obs: len(obs) >= 1)
+
+    assert len(collected) == 1
+    assert collected[0].reported_status is None
+    assert collected[0].reach_tier is ReachTier.UNREACHED
+
+
+@pytest.mark.unit
+async def test_poll_survives_a_disconnected_sibling_pump() -> None:
+    """A poller keeps ticking for its own PV even after ANOTHER PV's pump
+    disconnects, matching the Enclosure adapter's sibling-poller
+    guarantee exactly. See that test for the full reasoning."""
+    port = _ScriptedControlPort(
+        readings={"pvB": []},
+        hang=frozenset({"pvB"}),
+        disconnect=frozenset({"pvA"}),
+        read_results={"pvA": [_reading("Scan complete"), _reading("Scan complete")]},
+    )
+    observer = _observer(
+        port, {"tomoscan-a": {"status": "pvA"}, "tomoscan-b": {"status": "pvB"}}, tick_seconds=0.01
+    )
+    gen = observer.observe(
+        CaptureObserverScope(capture_codes=frozenset({"tomoscan-a", "tomoscan-b"}))
+    )
+
+    def _seen_disconnect_and_a_probe(obs: list[CaptureObservation]) -> bool:
+        disconnected = any(
+            o.capture_code == "tomoscan-a"
+            and o.reach_tier is ReachTier.UNREACHED
+            and o.reported_status is None
+            for o in obs
+        )
+        probed = any(
+            o.capture_code == "tomoscan-a"
+            and o.reach_tier is ReachTier.RELAYED
+            and o.reported_status is None
+            for o in obs
+        )
+        return disconnected and probed
+
+    collected = await _collect_until(gen, _seen_disconnect_and_a_probe, timeout_seconds=2.0)
+
+    disconnect_obs = [
+        o
+        for o in collected
+        if o.capture_code == "tomoscan-a" and o.reach_tier is ReachTier.UNREACHED
+    ]
+    probe_obs = [
+        o for o in collected if o.capture_code == "tomoscan-a" and o.reach_tier is ReachTier.RELAYED
+    ]
+    assert disconnect_obs, "pump A's disconnect must still be observed"
+    assert probe_obs, "the poller for A must keep ticking after A's pump has died"

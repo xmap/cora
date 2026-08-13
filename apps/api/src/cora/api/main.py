@@ -75,6 +75,7 @@ from cora.agent import (
 from cora.agent.adapters import BudgetSpendGuard, PostgresLanguageModelLookup
 from cora.api._calibration_watcher import calibration_watcher_lifespan
 from cora.api._campaign_watcher import campaign_watcher_lifespan
+from cora.api._capture_observer import ControlPortCaptureObserver
 from cora.api._clearance_expirer import clearance_expirer_lifespan
 from cora.api._clearance_watcher import clearance_watcher_lifespan
 from cora.api._conduct_run_route import register_conduct_run_routes
@@ -91,6 +92,7 @@ from cora.api._readiness import (
 )
 from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
+from cora.api._run_watcher import run_watcher_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
 from cora.budget import (
@@ -1012,6 +1014,24 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 tick_seconds=settings.enclosure_permit_probe_tick_seconds,
             )
 
+            # RunWatcher: shadow-observe an external tool's captures (2-BM
+            # commissioning ladder rung 1). SHADOW ONLY: writes nothing,
+            # regardless of settings. run_watcher_enabled is a SEPARATE
+            # gate from having capture_watch_pvs configured, so a
+            # deployment can declare the PVs ahead of turning the watcher
+            # on. No-op (empty capture_codes) when either is unset.
+            capture_watch_observer = ControlPortCaptureObserver(
+                control_port=app.state.operation.control_port,
+                capture_pvs=settings.capture_watch_pvs,
+                status_phases=settings.capture_status_phases,
+                tick_seconds=settings.capture_watch_probe_tick_seconds,
+            )
+            capture_watch_codes: frozenset[str] = (
+                frozenset(settings.capture_watch_pvs)
+                if settings.run_watcher_enabled
+                else frozenset()
+            )
+
             try:
                 async with (
                     projection_worker_lifespan(deps, registry, settings),
@@ -1061,6 +1081,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                     campaign_watcher_lifespan(
                         deps,
                         list_campaigns=app.state.campaign.list_campaigns,
+                    ),
+                    run_watcher_lifespan(
+                        observer=capture_watch_observer,
+                        capture_codes=capture_watch_codes,
                     ),
                 ):
                     yield
