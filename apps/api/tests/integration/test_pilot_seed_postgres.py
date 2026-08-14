@@ -151,10 +151,13 @@ async def test_dry_run_writes_nothing_beyond_bootstrap(seed_database: SeedDataba
         recipe_seed_id(_FACILITY, _BEAMLINE, "capability", "acquisition"),
         recipe_seed_id(_FACILITY, _BEAMLINE, "method", "dark_field"),
         recipe_seed_id(_FACILITY, _BEAMLINE, "method", "flat_field"),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "method", "fly_scan"),
         recipe_seed_id(_FACILITY, _BEAMLINE, "practice", "2BM_dark_field_practice"),
         recipe_seed_id(_FACILITY, _BEAMLINE, "practice", "2BM_flat_field_practice"),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "practice", "2BM_fly_scan_practice"),
         recipe_seed_id(_FACILITY, _BEAMLINE, "plan", "2BM_dark_field_plan"),
         recipe_seed_id(_FACILITY, _BEAMLINE, "plan", "2BM_flat_field_plan"),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "plan", "2BM_fly_scan_plan_v1"),
     ]
     ladder_events = await pool.fetchval(
         "SELECT COUNT(*) FROM events WHERE stream_id = ANY($1::uuid[])",
@@ -174,15 +177,17 @@ async def test_seeded_camera_carries_capturing_through_the_real_lookup(
     assert "Capturing" in asset.family_affordances
 
 
-async def test_seeded_ladder_resolves_for_both_acquisition_recipes(
+async def test_seeded_ladder_resolves_for_all_acquisition_recipes(
     seed_database: SeedDatabase,
 ) -> None:
     """The Recipe BC ladder the ceremony registers is not just present,
     it RESOLVES: `define_plan`'s cross-aggregate decider (family-
-    superset + affordance-cover checks) accepted both Plans without
+    superset + affordance-cover checks) accepted every Plan without
     raising, and each Plan binds exactly the StationShutter + the
     acquisition camera -- the two Assets `docs/deployments/2-bm/
-    recipes.md`'s dark_field / flat_field recipes actually target."""
+    recipes.md`'s dark_field / flat_field recipes actually target, and
+    the same pair the fly_scan recipe (the real TomoScan workflow the
+    RunWatcher's promotion path watches) reuses."""
     pool, url = seed_database
     assert await _run_ceremony(url) == 2
 
@@ -204,6 +209,7 @@ async def test_seeded_ladder_resolves_for_both_acquisition_recipes(
     for method_name, practice_name, plan_name in (
         ("dark_field", "2BM_dark_field_practice", "2BM_dark_field_plan_v2"),
         ("flat_field", "2BM_flat_field_practice", "2BM_flat_field_plan_v2"),
+        ("fly_scan", "2BM_fly_scan_practice", "2BM_fly_scan_plan_v1"),
     ):
         method_id = recipe_seed_id(_FACILITY, _BEAMLINE, "method", method_name)
         practice_id = recipe_seed_id(_FACILITY, _BEAMLINE, "practice", practice_name)

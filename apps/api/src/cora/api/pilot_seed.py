@@ -915,6 +915,14 @@ async def seed_pilot_beamline(
         await seed_acquisition_recipe(
             "flat_field", "2BM_flat_field_practice", "2BM_flat_field_plan_v2"
         )
+        # The actual 2-BM TomoScan workflow the RunWatcher's promotion path
+        # (cora.api._run_watcher) watches: a fly-scan capture, distinct from
+        # the two conductible baseline captures above. Watch-only, not
+        # conducted: no operator REST/UI surface ever selects this Plan for
+        # start_run, matching record_watched_run's own stub route/tool.
+        # `_v1`, not `_v2`: there is no prior un-located fly_scan Plan to
+        # supersede via deprecate_plan_if_present.
+        await seed_acquisition_recipe("fly_scan", "2BM_fly_scan_practice", "2BM_fly_scan_plan_v1")
 
         _ = root
         if not dry_run:
