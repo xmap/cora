@@ -1,8 +1,9 @@
 """The `ListRuns` query: intent dataclass for keyset-paginated
 list of runs from the projection.
 
-Two optional filters: status (Running / Held / Completed / Aborted /
-Stopped / Truncated) and plan_id (which Plan was bound). Cursor
+Optional filters: status (Running / Held / Completed / Aborted /
+Stopped / Truncated), plan_id (which Plan was bound), campaign_id
+(Campaign membership), and conduct_mode (Conducted / Recorded). Cursor
 encodes (created_at, run_id).
 """
 
@@ -41,3 +42,8 @@ class ListRuns:
     """Optional `campaign_id` filter (Campaign Watch #10):
     returns Runs that are members of the given Campaign. Pass `None`
     (omit) for "any Campaign or none"."""
+
+    conduct_mode: str | None = None
+    """Optional `ConductMode` value filter ("Conducted" or "Recorded").
+    Pass `None` (omit) for "any conduct mode". Lets a caller restrict to
+    watched (Recorded) Runs, e.g. the RunWatcher restart-rebuild query."""
