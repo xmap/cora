@@ -60,7 +60,14 @@ from cora.run.aggregates.run.parameters_validation import (
     validate_effective_parameters_against_method_schema,
 )
 from cora.run.aggregates.run.read import load_run
-from cora.run.aggregates.run.safety_envelope import check_safety_envelope
+from cora.run.aggregates.run.safety_envelope import (
+    beam_gate_refusal,
+    check_clearance_gate,
+    check_safety_envelope,
+    check_supply_gate,
+    enclosure_gate_refusal,
+    witness_safety_envelope,
+)
 from cora.run.aggregates.run.state import (
     LOGBOOK_KIND_OBSERVATION,
     OBSERVATION_LOGBOOK_SCHEMA,
@@ -124,6 +131,7 @@ from cora.run.aggregates.run.state import (
     RunSubjectNotMountableError,
     RunSupplyCoverageMismatchError,
     RunTruncateReason,
+    SafetyEnvelopeVerdict,
     SamplingProcedure,
     validate_input_dataset_ids,
     validate_pinned_calibration_ids,
@@ -222,11 +230,16 @@ __all__ = [
     "RunSupplyCoverageMismatchError",
     "RunTruncateReason",
     "RunTruncated",
+    "SafetyEnvelopeVerdict",
     "SamplingProcedure",
     "active_hold_claims",
+    "beam_gate_refusal",
     "blocking_causes",
+    "check_clearance_gate",
     "check_safety_envelope",
+    "check_supply_gate",
     "derive_claim_id",
+    "enclosure_gate_refusal",
     "event_type_name",
     "evolve",
     "fold",
@@ -240,4 +253,5 @@ __all__ = [
     "validate_effective_parameters_against_method_schema",
     "validate_input_dataset_ids",
     "validate_pinned_calibration_ids",
+    "witness_safety_envelope",
 ]

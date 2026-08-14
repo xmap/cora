@@ -306,6 +306,43 @@ class ConductMode(StrEnum):
     RECORDED = "Recorded"
 
 
+@dataclass(frozen=True)
+class SafetyEnvelopeVerdict:
+    """A recorded reading of the two live facility signals at a watched
+    genesis: did the enclosure permit hold, was beam available.
+
+    Plain bools only, deliberately. The record exporter's disposition
+    generator drops bare `str` and `Any`; `keep:number` covers `bool`, so
+    this VO survives export and redaction whole. Naming WHICH enclosure or
+    WHICH shutter failed is not this VO's job: that detail goes to the log
+    line at the moment of the reading and stays reconstructible from the
+    Enclosure stream in the same exported bundle.
+
+    Clearance and Supply are deliberately absent. Per the roadmap's rule
+    ("refuse on what CORA can fix, witness what CORA cannot"), those two
+    gates are CORA's own aggregates, not live facility readings, so they
+    stay refusals on every path (`check_safety_envelope` AND
+    `witness_safety_envelope` both raise on them); their passage is implied
+    by a `RunStarted` existing at all, the same reason `check_safety_envelope`
+    itself never persists a snapshot of the gates it enforces.
+
+    Lives beside `ConductMode` in this module (not in `events.py`, the
+    `CautionAcknowledgement` precedent's home) so that `safety_envelope.py`
+    and `events.py`, which both already import from `state.py`, gain no new
+    import edge to carry it.
+    """
+
+    enclosure_permitted: bool
+    beam_available: bool
+
+    @property
+    def held(self) -> bool:
+        """True only when every witnessed gate passed. Not a dataclass
+        field: a derived property never reaches the record-export
+        generator, which walks `dataclasses.fields()`."""
+        return self.enclosure_permitted and self.beam_available
+
+
 class InvalidRunNameError(ValueError):
     """The supplied name is empty, whitespace-only, or too long."""
 
