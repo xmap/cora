@@ -50,6 +50,7 @@ from cora.access import (
 )
 from cora.access.adapters import EventStorePrincipalLivenessLookup
 from cora.agent import (
+    RUN_WATCHER_AGENT_ID,
     AgentHandlers,
     build_llm,
     refresh_language_model_pricing,
@@ -84,6 +85,7 @@ from cora.api._conduct_run_route import register_conduct_run_routes
 from cora.api._conduct_run_tool import register_conduct_run_tools
 from cora.api._edge_conductor import ComputeRunDriver
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
+from cora.api._flag_watcher import probe_read_grant
 from cora.api._inference_recorder import DelegatingInferenceRecorder
 from cora.api._procedure_watcher import procedure_watcher_lifespan
 from cora.api._readiness import (
@@ -225,6 +227,9 @@ from cora.run import (
     register_run_routes,
     register_run_tools,
     wire_run,
+)
+from cora.run import (
+    UnauthorizedError as RunUnauthorizedError,
 )
 from cora.run.adapters import PostgresRunActorInvolvementLookup
 from cora.safety import (
@@ -1075,11 +1080,39 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # currently-Running Recorded Run's external_refs, so a
             # capture still open across a restart is never re-promoted.
             # Skipped entirely when the watcher is not configured at all.
-            open_captures: dict[str, UUID] = (
-                await rebuild_open_captures(deps, list_runs=app.state.run.list_runs)
-                if capture_watch_codes
-                else {}
-            )
+            # Probe the ListRuns read grant first (mirrors run_initiator_lifespan's
+            # probe_read_grant calls): raises a clear, named error in strict
+            # mode rather than the rebuild below failing with a bare
+            # UnauthorizedError. In non-strict mode the probe only warns, so
+            # the rebuild itself is also wrapped: every other watcher's read
+            # lives inside its own per-tick try/except and a missing grant
+            # never brings down more than that watcher; this one-time boot
+            # read had no such guard and would otherwise crash the entire
+            # app's boot over a single misconfigured grant. Falling back to
+            # an empty map on that failure degrades to "cold start" (a still-
+            # open capture could be re-promoted once) rather than refusing
+            # every other BC's routes.
+            open_captures: dict[str, UUID] = {}
+            if capture_watch_codes:
+                await probe_read_grant(
+                    deps,
+                    agent_id=RUN_WATCHER_AGENT_ID,
+                    read_command="ListRuns",
+                    log_prefix="run_watcher",
+                    strict=settings.watcher_authz_strict,
+                )
+                try:
+                    open_captures = await rebuild_open_captures(
+                        deps, list_runs=app.state.run.list_runs
+                    )
+                except RunUnauthorizedError:
+                    _log.warning(
+                        "run_watcher.rebuild_unauthorized",
+                        reason=(
+                            "ListRuns grant missing for RUN_WATCHER_AGENT_ID; "
+                            "starting with an empty dedup map"
+                        ),
+                    )
 
             try:
                 async with (
