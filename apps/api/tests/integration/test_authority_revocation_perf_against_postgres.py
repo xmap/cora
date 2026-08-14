@@ -151,7 +151,7 @@ def _replay_throughput() -> dict[str, float | int]:
     while len(events) < _REPLAY_STREAM - 1:
         events.append(RunHeld(run_id=rid, occurred_at=_NOW))
         events.append(RunResumed(run_id=rid, occurred_at=_NOW))
-    events.append(RunCompleted(run_id=rid, occurred_at=_NOW))
+    events.append(RunCompleted(run_id=rid, occurred_at=_NOW, observed_at=None))
 
     for _ in range(1000):  # warm
         fold(events)  # type: ignore[arg-type]

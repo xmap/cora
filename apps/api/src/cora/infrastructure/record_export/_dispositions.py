@@ -1555,6 +1555,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     "RunAborted": {
         "actuation_kind": "drop:text",
         "decided_by_decision_id": "token:uuid",
+        "observed_at": "keep:time",
         "occurred_at": "keep:time",
         "producing_job_id": "drop:text",
         "reason": "drop:text",
@@ -1577,6 +1578,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     "RunCompleted": {
         "actuation_kind": "drop:text",
         "artifact_uri": "drop:text",
+        "observed_at": "keep:time",
         "occurred_at": "keep:time",
         "producing_job_id": "drop:text",
         "run_id": "token:uuid",

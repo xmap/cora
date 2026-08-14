@@ -220,10 +220,10 @@ def _terminal_event(
     """Build a StoredEvent for a terminal Run event."""
     domain: Any
     if event_type == "RunCompleted":
-        domain = RunCompleted(run_id=run_id, occurred_at=_LATER)
+        domain = RunCompleted(run_id=run_id, occurred_at=_LATER, observed_at=None)
     elif event_type == "RunAborted":
         assert reason is not None
-        domain = RunAborted(run_id=run_id, reason=reason, occurred_at=_LATER)
+        domain = RunAborted(run_id=run_id, reason=reason, occurred_at=_LATER, observed_at=None)
     else:
         msg = f"unsupported event type for fixture: {event_type}"
         raise ValueError(msg)

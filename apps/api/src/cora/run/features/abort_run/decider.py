@@ -71,5 +71,7 @@ def decide(
             actuation_kind=command.actuation_kind,
             producing_job_id=command.producing_job_id,
             occurred_at=now,
+            # An operator/agent abort has no substrate reading to report.
+            observed_at=None,
         )
     ]

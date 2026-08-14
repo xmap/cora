@@ -53,6 +53,7 @@ def test_decide_emits_run_aborted_for_running_state() -> None:
             run_id=state.id,
             reason="detector overheating",
             occurred_at=_NOW,
+            observed_at=None,
         )
     ]
 

@@ -56,7 +56,7 @@ async def _seed_run_started(store: InMemoryEventStore, run_id: UUID) -> None:
 
 async def _seed_run_completed(store: InMemoryEventStore, run_id: UUID) -> None:
     await _seed_run_started(store, run_id)
-    completed = RunCompleted(run_id=run_id, occurred_at=_NOW)
+    completed = RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None)
     new_event = to_new_event(
         event_type=event_type_name(completed),
         payload=to_payload(completed),

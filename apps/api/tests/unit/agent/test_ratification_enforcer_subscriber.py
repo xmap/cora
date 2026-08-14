@@ -274,7 +274,7 @@ async def test_hold_subscriber_noop_when_run_is_terminal() -> None:
     kernel = _kernel()
     await seed_ratification_enforcer_agent(kernel)
     run_id = await _seed_running_run(kernel.event_store)
-    completed = RunCompleted(run_id=run_id, occurred_at=_NOW)
+    completed = RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None)
     await kernel.event_store.append(
         "Run",
         run_id,
