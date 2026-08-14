@@ -1631,8 +1631,8 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "raid": "drop:text",
         "run_id": "token:uuid",
         "safety_envelope_verdict": {
-            "beam_available": "keep:number",
-            "enclosure_permitted": "keep:number",
+            "beam_available": "drop:text",
+            "enclosure_permitted": "drop:text",
         },
         "subject_id": "token:uuid",
         "trigger_source": "drop:text",
