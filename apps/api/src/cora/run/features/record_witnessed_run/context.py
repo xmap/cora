@@ -1,12 +1,12 @@
-"""Cross-aggregate context the `record_watched_run` decider validates against.
+"""Cross-aggregate context the `record_witnessed_run` decider validates against.
 
-`RunWatchedStartContext` is the watched-genesis counterpart to `RunStartContext`
+`RunWitnessedStartContext` is the witnessed-genesis counterpart to `RunStartContext`
 (`cora.run.features.start_run.context`). Deliberately a separate,
 slice-local dataclass rather than a shared import: cross-slice sharing
 through a feature module is banned (cross-slice independence), and the
 two contexts are not identical shapes anyway (this one carries no
 `campaign`, `input_distributions`, or `reachable_storage_supply_ids`,
-since a watcher has no operator inputs in those axes).
+since RunWitness has no operator inputs in those axes).
 
 ## Field semantics
 
@@ -28,13 +28,13 @@ rule: CORA-side data faults stay refusals on both paths.
     superset against current Asset state.
   - `referencing_clearances`: every Safety clearance whose bindings
     reference this Run's scope, loaded exactly as at a driven start.
-    Still gates: a watched genesis without an Active Clearance still
+    Still gates: a witnessed genesis without an Active Clearance still
     refuses.
   - `active_cautions`: every Active Caution in scope. Non-blocking,
     embedded on `RunStarted.acknowledged_cautions` exactly as at a
     driven start.
   - `needed_supplies_satisfaction`: mapping keyed by Supply kind. Still
-    gates: a watched genesis without an Available Supply of a required
+    gates: a witnessed genesis without an Available Supply of a required
     kind still refuses.
   - `referencing_enclosures`: every Enclosure the Run's scoped Assets (or
     ancestors) declare via `located_in_enclosure_id`. WITNESSED, not
@@ -61,8 +61,8 @@ from cora.subject.aggregates.subject import Subject
 
 
 @dataclass(frozen=True)
-class RunWatchedStartContext:
-    """Snapshot of upstream aggregate state at a watched Run's genesis."""
+class RunWitnessedStartContext:
+    """Snapshot of upstream aggregate state at a witnessed Run's genesis."""
 
     plan: Plan
     subject: Subject | None

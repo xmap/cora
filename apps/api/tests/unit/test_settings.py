@@ -301,14 +301,14 @@ def test_settings_capture_watch_defaults_are_empty_and_off(
     """A generic boot declares no capture PVs and runs no watcher."""
     monkeypatch.delenv("CAPTURE_WATCH_PVS", raising=False)
     monkeypatch.delenv("CAPTURE_STATUS_PHASES", raising=False)
-    monkeypatch.delenv("RUN_WATCHER_ENABLED", raising=False)
+    monkeypatch.delenv("RUN_WITNESS_ENABLED", raising=False)
 
     settings = Settings()
 
     assert settings.capture_watch_pvs == {}
     assert settings.capture_status_phases == {}
     assert settings.capture_watch_probe_tick_seconds is None
-    assert settings.run_watcher_enabled is False
+    assert settings.run_witness_enabled is False
 
 
 @pytest.mark.unit

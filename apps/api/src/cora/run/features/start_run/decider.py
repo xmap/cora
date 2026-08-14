@@ -403,8 +403,8 @@ def decide(
             # Hardcoded, not read from the command: this decider drives
             # every Run it starts through CORA's own Conductor, so the
             # mode is a property of which decider ran, never a caller's
-            # choice. A Recorded Run is genesis-only through the separate
-            # watched-genesis decider.
+            # choice. A Witnessed Run is genesis-only through the separate
+            # witnessed-genesis decider.
             conduct_mode=ConductMode.CONDUCTED,
             raid=command.raid,
             override_parameters=command.override_parameters,

@@ -49,8 +49,8 @@ from cora.run.features.hold_run import HoldRun
 from cora.run.features.hold_run import bind as bind_hold
 from cora.run.features.list_runs import ListRuns
 from cora.run.features.list_runs import bind as bind_list
-from cora.run.features.record_watched_run import RecordWatchedRun
-from cora.run.features.record_watched_run import bind as bind_record_watched_run
+from cora.run.features.record_witnessed_run import RecordWitnessedRun
+from cora.run.features.record_witnessed_run import bind as bind_record_witnessed_run
 from cora.run.features.resume_run import ResumeRun
 from cora.run.features.resume_run import bind as bind_resume
 from cora.run.features.start_run import StartRun
@@ -452,8 +452,8 @@ async def test_campaign_id_filter_narrows_results(db_pool: asyncpg.Pool) -> None
 @pytest.mark.integration
 async def test_conduct_mode_filter_narrows_to_recorded_runs_only(db_pool: asyncpg.Pool) -> None:
     """One Conducted Run (via start_run) and one Recorded Run (via
-    record_watched_run) against distinct Plans; `conduct_mode="Recorded"`
-    returns only the watched one. Proves the query-side filter (this
+    record_witnessed_run) against distinct Plans; `conduct_mode="Witnessed"`
+    returns only the witnessed one. Proves the query-side filter (this
     commit) composes with the projection column already carrying
     `conduct_mode` (added in slice 5)."""
     # Conducted Run.
@@ -466,13 +466,13 @@ async def test_conduct_mode_filter_narrows_to_recorded_runs_only(db_pool: asyncp
         correlation_id=_CORRELATION_ID,
     )
 
-    # Recorded (watched) Run.
+    # Witnessed Run.
     run_id_placeholder = uuid4()
     deps_recorded = _build_deps(db_pool, [*_chain_ids(), run_id_placeholder, uuid4()])
     plan_recorded = await _seed_plan(deps_recorded, family_name="TomographyRecorded")
-    run_recorded = await bind_record_watched_run(deps_recorded)(
-        RecordWatchedRun(
-            name="watched-run",
+    run_recorded = await bind_record_witnessed_run(deps_recorded)(
+        RecordWitnessedRun(
+            name="witnessed-run",
             plan_id=plan_recorded,
             capture_code="test-capture",
             monitor_source_id=MonitorSourceId(uuid4()),
@@ -486,10 +486,10 @@ async def test_conduct_mode_filter_narrows_to_recorded_runs_only(db_pool: asyncp
 
     handler = bind_list(deps_conducted)
     page = await handler(
-        ListRuns(conduct_mode="Recorded", limit=10),
+        ListRuns(conduct_mode="Witnessed", limit=10),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
     assert len(page.items) == 1
     assert page.items[0].run_id == run_recorded
-    assert page.items[0].conduct_mode == "Recorded"
+    assert page.items[0].conduct_mode == "Witnessed"

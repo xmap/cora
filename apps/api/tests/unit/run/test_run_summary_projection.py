@@ -504,20 +504,20 @@ async def test_run_started_with_pinned_calibration_ids_inserts_uuid_array() -> N
 
 
 @pytest.mark.unit
-async def test_run_started_with_recorded_conduct_mode_inserts_recorded() -> None:
-    """A RECORDED-mode RunStarted payload (the not-yet-built shadow-
-    promotion path's future emit shape) lands its declared value on the
-    row verbatim, not the historical Conducted default."""
+async def test_run_started_with_witnessed_conduct_mode_inserts_witnessed() -> None:
+    """A WITNESSED-mode RunStarted payload (record_witnessed_run's real
+    emit shape) lands its declared value on the row verbatim, not the
+    historical Conducted default."""
     proj = RunSummaryProjection()
     conn = AsyncMock()
     event = _stored(
         "RunStarted",
         {
             "run_id": str(_RUN_ID),
-            "name": "watched-scan",
+            "name": "witnessed-scan",
             "plan_id": str(_PLAN_ID),
             "subject_id": None,
-            "conduct_mode": "Recorded",
+            "conduct_mode": "Witnessed",
             "occurred_at": _NOW.isoformat(),
         },
     )
@@ -526,4 +526,4 @@ async def test_run_started_with_recorded_conduct_mode_inserts_recorded() -> None
 
     args = conn.execute.await_args
     assert args is not None
-    assert args.args[12] == "Recorded"
+    assert args.args[12] == "Witnessed"

@@ -24,7 +24,7 @@ FSM closes via four terminal transitions (`complete` / `abort` /
 strict-not-idempotent (the guard rejects double-application and
 ConcurrencyError catches the persistence-layer double-submit case).
 
-`record_watched_run` is a second, independent genesis (the watched
+`record_witnessed_run` is a second, independent genesis (the witnessed
 path). NOT idempotency-wrapped despite being create-style: the Run id
 is fresh and random per call, so there is no Idempotency-Key to
 collapse a retry against. In-process-only; no route, no MCP tool ever
@@ -75,7 +75,7 @@ from cora.run.features import (
     get_run,
     hold_run,
     list_runs,
-    record_watched_run,
+    record_witnessed_run,
     resume_run,
     start_run,
     stop_run,
@@ -90,7 +90,7 @@ class RunHandlers:
     """The Run BC's handler bundle, each closed over Kernel."""
 
     start_run: start_run.IdempotentHandler
-    record_watched_run: record_watched_run.Handler
+    record_witnessed_run: record_witnessed_run.Handler
     complete_run: complete_run.Handler
     abort_run: abort_run.Handler
     hold_run: hold_run.Handler
@@ -123,9 +123,9 @@ def wire_run(deps: Kernel) -> RunHandlers:
             command_name="StartRun",
             bc=_BC,
         ),
-        record_watched_run=with_tracing(
-            record_watched_run.bind(deps),
-            command_name="RecordWatchedRun",
+        record_witnessed_run=with_tracing(
+            record_witnessed_run.bind(deps),
+            command_name="RecordWitnessedRun",
             bc=_BC,
         ),
         complete_run=with_tracing(

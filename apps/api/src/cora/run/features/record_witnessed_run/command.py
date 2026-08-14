@@ -1,12 +1,12 @@
-"""The `RecordWatchedRun` command -- intent dataclass for this slice.
+"""The `RecordWitnessedRun` command -- intent dataclass for this slice.
 
-A watched genesis: CORA records that an external tool began a capture,
+A witnessed genesis: CORA records that an external tool began a capture,
 rather than driving the act itself. Carries the caller-controlled inputs:
 
   - `name` -- display name for the new Run, same free-text shape as
     `StartRun.name`.
   - `plan_id` -- the Plan being executed. Deployment-declared (the
-    watcher runtime resolves it from settings, not from the substrate);
+    RunWitness runtime resolves it from settings, not from the substrate);
     existence verified at handler-load time exactly as at a driven start.
   - `subject_id` -- always None in practice today (2-BM's dark-field /
     flat-field / fly-scan captures carry no Subject binding), but kept
@@ -18,22 +18,22 @@ rather than driving the act itself. Carries the caller-controlled inputs:
     an `Identifier(scheme="capture-code", value=capture_code)` so a
     restart can rediscover which Run belongs to which open capture.
   - `monitor_source_id` -- the stable `MonitorSourceId` of the in-process
-    watcher runtime that produced this genesis, mirroring
+    RunWitness runtime that produced this genesis, mirroring
     `ObserveEnclosureStatus.monitor_source_id`.
   - `trigger` -- command-tier guard string. The decider rejects any value
     other than the literal `"Monitor"` with
     `RunMonitorTriggerNotPermittedError`, closing the operator-assert-
-    Recorded backdoor (mirrors `ObserveEnclosureStatus.trigger`'s D6.L2
-    anti-lock): there is no operator path to a watched genesis.
+    Witnessed backdoor (mirrors `ObserveEnclosureStatus.trigger`'s D6.L2
+    anti-lock): there is no operator path to a witnessed genesis.
 
-No `conduct_mode` field: this decider hardcodes `ConductMode.RECORDED`,
+No `conduct_mode` field: this decider hardcodes `ConductMode.WITNESSED`,
 symmetric to `StartRun` carrying no `conduct_mode` field for the driven
 decider's hardcoded `CONDUCTED`. The mode is a property of which decider
 ran, never a caller's choice, on either path.
 
 No `override_parameters`, `campaign_id`, `raid`, `decided_by_decision_id`,
 `pinned_calibration_ids`, `input_dataset_ids`, or `compute_resource_code`:
-a watcher has no operator inputs to pass, and every field this command
+RunWitness has no operator inputs to pass, and every field this command
 does not carry is a field an operator cannot reach through it. Effective
 parameters are the Plan's own defaults, unmodified.
 
@@ -53,8 +53,8 @@ from cora.shared.identity import MonitorSourceId
 
 
 @dataclass(frozen=True)
-class RecordWatchedRun:
-    """Record that an external tool began a capture: a watched Run genesis."""
+class RecordWitnessedRun:
+    """Record that an external tool began a capture: a witnessed Run genesis."""
 
     name: str
     plan_id: UUID

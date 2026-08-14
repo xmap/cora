@@ -1,15 +1,15 @@
-"""The watched genesis has no operator path in, by construction.
+"""The witnessed genesis has no operator path in, by construction.
 
 Two structural facts the roadmap's anti-scope depends on, each pinned
 here rather than left to convention:
 
-  1. `ConductMode.RECORDED` is constructed in exactly one place: the
-     watched-genesis decider. If a second construction site appears
+  1. `ConductMode.WITNESSED` is constructed in exactly one place: the
+     witnessed-genesis decider. If a second construction site appears
      anywhere under `src/cora`, an operator-reachable path has found a
-     way to claim RECORDED, which is precisely the laundering hole the
+     way to claim WITNESSED, which is precisely the laundering hole the
      axis exists to close.
   2. The in-process-only slices (`observe_enclosure_status`,
-     `record_watched_run`) expose zero REST routes and zero MCP tools.
+     `record_witnessed_run`) expose zero REST routes and zero MCP tools.
      Their `route.py` / `tool.py` modules are stubs by design; this
      confirms the stub actually stays empty rather than trusting the
      docstring that says so.
@@ -24,15 +24,18 @@ from tests.architecture.conftest import CORA_ROOT, tracked_python_files
 
 _IN_PROCESS_ONLY_SLICES: tuple[str, ...] = (
     "enclosure/features/observe_enclosure_status",
-    "run/features/record_watched_run",
+    "run/features/record_witnessed_run",
 )
 
 
-def _find_conduct_mode_recorded_sites() -> list[Path]:
-    """Every tracked file under src/cora that references `ConductMode.RECORDED`
-    specifically (other aggregates declare their own unrelated `RECORDED`
-    members, e.g. `AcquisitionStatus.RECORDED` in the Data BC, so the scan
-    must check the attribute's base name, not just the attribute name)."""
+def _find_conduct_mode_witnessed_sites() -> list[Path]:
+    """Every tracked file under src/cora that references `ConductMode.WITNESSED`.
+
+    Scoped to the attribute's base name (`ConductMode`), not just the
+    attribute name, though `WITNESSED` is unique to this enum today (no
+    collision risk like the old `RECORDED` name had with
+    `AcquisitionStatus.RECORDED` / `AttestationStatus.RECORDED` in the
+    Data BC) -- kept as belt-and-suspenders rather than load-bearing."""
     sites: list[Path] = []
     for path in sorted(tracked_python_files()):
         try:
@@ -42,7 +45,7 @@ def _find_conduct_mode_recorded_sites() -> list[Path]:
         for node in ast.walk(tree):
             if (
                 isinstance(node, ast.Attribute)
-                and node.attr == "RECORDED"
+                and node.attr == "WITNESSED"
                 and isinstance(node.value, ast.Name)
                 and node.value.id == "ConductMode"
             ):
@@ -52,13 +55,13 @@ def _find_conduct_mode_recorded_sites() -> list[Path]:
 
 
 @pytest.mark.architecture
-def test_conduct_mode_recorded_has_exactly_one_construction_site() -> None:
-    sites = _find_conduct_mode_recorded_sites()
+def test_conduct_mode_witnessed_has_exactly_one_construction_site() -> None:
+    sites = _find_conduct_mode_witnessed_sites()
     relative = sorted(str(p.relative_to(CORA_ROOT)) for p in sites)
-    assert relative == ["run/features/record_watched_run/decider.py"], (
-        "ConductMode.RECORDED must be constructed in exactly one place "
-        f"(the watched-genesis decider); found it referenced in: {relative}. "
-        "A second site is an operator-reachable path claiming a watched "
+    assert relative == ["run/features/record_witnessed_run/decider.py"], (
+        "ConductMode.WITNESSED must be constructed in exactly one place "
+        f"(the witnessed-genesis decider); found it referenced in: {relative}. "
+        "A second site is an operator-reachable path claiming a witnessed "
         "genesis, the exact laundering hole this axis exists to close."
     )
 

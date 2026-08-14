@@ -1,6 +1,6 @@
-"""Unit tests for the RunWatcher Agent bootstrap seed.
+"""Unit tests for the RunWitness Agent bootstrap seed.
 
-RunWatcher is another DETERMINISTIC agent: no prompt template and a
+RunWitness is another DETERMINISTIC agent: no prompt template and a
 sentinel ModelRef (it is rule-based, never builds an LLM). These tests
 pin that shape alongside the shared seed scaffolding, mirroring
 `test_run_supervisor_seed.py`.
@@ -11,12 +11,12 @@ from datetime import UTC, datetime
 import pytest
 
 from cora.agent.aggregates.agent import load_agent
-from cora.agent.seed_run_watcher import (
-    RUN_WATCHER_AGENT_ID,
-    RUN_WATCHER_AGENT_KIND,
-    RUN_WATCHER_AGENT_NAME,
-    RUN_WATCHER_AGENT_VERSION,
-    seed_run_watcher_agent,
+from cora.agent.seed_run_witness import (
+    RUN_WITNESS_AGENT_ID,
+    RUN_WITNESS_AGENT_KIND,
+    RUN_WITNESS_AGENT_NAME,
+    RUN_WITNESS_AGENT_VERSION,
+    seed_run_witness_agent,
 )
 from cora.infrastructure.config import Settings
 from cora.infrastructure.deps import make_inmemory_kernel
@@ -35,29 +35,29 @@ def _kernel() -> Kernel:
 
 
 @pytest.mark.unit
-async def test_seed_creates_run_watcher_at_pinned_id() -> None:
+async def test_seed_creates_run_witness_at_pinned_id() -> None:
     kernel = _kernel()
-    await seed_run_watcher_agent(kernel)
+    await seed_run_witness_agent(kernel)
 
-    agent = await load_agent(kernel.event_store, RUN_WATCHER_AGENT_ID)
+    agent = await load_agent(kernel.event_store, RUN_WITNESS_AGENT_ID)
     assert agent is not None
-    assert agent.id == RUN_WATCHER_AGENT_ID
-    assert agent.name.value == RUN_WATCHER_AGENT_NAME
-    assert agent.kind.value == RUN_WATCHER_AGENT_KIND
-    assert agent.version.value == RUN_WATCHER_AGENT_VERSION
+    assert agent.id == RUN_WITNESS_AGENT_ID
+    assert agent.name.value == RUN_WITNESS_AGENT_NAME
+    assert agent.kind.value == RUN_WITNESS_AGENT_KIND
+    assert agent.version.value == RUN_WITNESS_AGENT_VERSION
 
 
 @pytest.mark.unit
 async def test_seed_is_deterministic_no_prompt_sentinel_model() -> None:
     """Deterministic agent: no prompt template, sentinel (non-LLM) model_ref."""
     kernel = _kernel()
-    await seed_run_watcher_agent(kernel)
+    await seed_run_witness_agent(kernel)
 
-    agent = await load_agent(kernel.event_store, RUN_WATCHER_AGENT_ID)
+    agent = await load_agent(kernel.event_store, RUN_WITNESS_AGENT_ID)
     assert agent is not None
     assert agent.prompt_template_id is None
     assert agent.model_ref.provider == "deterministic"
-    assert agent.model_ref.model == "agent:RunWatcher:v1"
+    assert agent.model_ref.model == "agent:RunWitness:v1"
 
 
 @pytest.mark.unit
@@ -66,11 +66,11 @@ async def test_seed_creates_co_registered_actor() -> None:
     from cora.access.aggregates.actor import load_actor
 
     kernel = _kernel()
-    await seed_run_watcher_agent(kernel)
+    await seed_run_witness_agent(kernel)
 
-    actor = await load_actor(kernel.event_store, RUN_WATCHER_AGENT_ID)
+    actor = await load_actor(kernel.event_store, RUN_WITNESS_AGENT_ID)
     assert actor is not None
-    assert actor.id == RUN_WATCHER_AGENT_ID
+    assert actor.id == RUN_WITNESS_AGENT_ID
     assert actor.kind.value == "agent"
 
 
@@ -78,16 +78,16 @@ async def test_seed_creates_co_registered_actor() -> None:
 async def test_seed_is_idempotent() -> None:
     """Re-running the seed is a no-op (ConcurrencyError-as-success pattern)."""
     kernel = _kernel()
-    await seed_run_watcher_agent(kernel)
-    await seed_run_watcher_agent(kernel)
+    await seed_run_witness_agent(kernel)
+    await seed_run_witness_agent(kernel)
 
 
 @pytest.mark.unit
-async def test_run_watcher_id_distinct_from_other_agents() -> None:
-    """RunWatcher shares the UUID-range scheme with its sibling runtimes
+async def test_run_witness_id_distinct_from_other_agents() -> None:
+    """RunWitness shares the UUID-range scheme with its sibling runtimes
     but must NOT collide with either."""
     from cora.agent.seed_run_initiator import RUN_INITIATOR_AGENT_ID
     from cora.agent.seed_run_supervisor import RUN_SUPERVISOR_AGENT_ID
 
-    assert RUN_WATCHER_AGENT_ID != RUN_SUPERVISOR_AGENT_ID
-    assert RUN_WATCHER_AGENT_ID != RUN_INITIATOR_AGENT_ID
+    assert RUN_WITNESS_AGENT_ID != RUN_SUPERVISOR_AGENT_ID
+    assert RUN_WITNESS_AGENT_ID != RUN_INITIATOR_AGENT_ID

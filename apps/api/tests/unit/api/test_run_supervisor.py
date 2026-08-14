@@ -484,15 +484,15 @@ async def test_tick_holds_running_run_when_beam_down_and_records_decision() -> N
 
 
 @pytest.mark.unit
-async def test_tick_never_holds_a_watched_recorded_run_when_beam_down() -> None:
-    """A watched (Recorded) Run is driven by an external tool CORA only
+async def test_tick_never_holds_a_witnessed_run_when_beam_down() -> None:
+    """A Witnessed Run is driven by an external tool CORA only
     witnessed at genesis; the hold FSM cannot actually hold anything on that
     Run's behalf. Filtered out before the hold pass ever sees it, regardless
     of the beam reading."""
     kernel = _kernel()
     await seed_run_supervisor_agent(kernel)
     run_id = uuid4()
-    list_runs = _make_list_runs([_running_item(run_id, conduct_mode="Recorded")])
+    list_runs = _make_list_runs([_running_item(run_id, conduct_mode="Witnessed")])
     hold_run, hold_calls = _make_recording_hold()
     memory: dict[UUID, str] = {}
 
@@ -1192,15 +1192,15 @@ async def test_shadow_liveness_flags_stale_run_observe_only() -> None:
 
 
 @pytest.mark.unit
-async def test_shadow_liveness_never_flags_a_watched_recorded_run() -> None:
-    """A watched Run's duration is set by the external tool driving it, not
+async def test_shadow_liveness_never_flags_a_witnessed_run() -> None:
+    """A Witnessed Run's duration is set by the external tool driving it, not
     by anything CORA can truncate; the liveness/truncate population excludes
     it before the ceiling check ever runs, however long it has been open."""
     kernel = _kernel()
     await seed_run_supervisor_agent(kernel)
     run_id = uuid4()
     list_runs = _make_list_runs(
-        [_running_item(run_id, running_since=_NOW - timedelta(hours=2), conduct_mode="Recorded")]
+        [_running_item(run_id, running_since=_NOW - timedelta(hours=2), conduct_mode="Witnessed")]
     )
     hold_run, hold_calls = _make_recording_hold()
     resume_run, resume_calls = _make_recording_resume()

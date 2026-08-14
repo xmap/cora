@@ -1,6 +1,6 @@
-"""Unit tests for the `record_watched_run` slice's pure decider.
+"""Unit tests for the `record_witnessed_run` slice's pure decider.
 
-The watched-genesis counterpart to `test_start_run_decider.py`. Pins the
+The witnessed-genesis counterpart to `test_start_run_decider.py`. Pins the
 governing rule: CORA-side data faults (deprecated Plan, decommissioned
 Asset, capability shortfall, absent Clearance or Supply) stay refusals
 here exactly as at a driven start; only the enclosure and beam gates are
@@ -38,8 +38,8 @@ from cora.run.aggregates.run import (
     RunSubjectNotMountableError,
     SafetyEnvelopeVerdict,
 )
-from cora.run.features import record_watched_run
-from cora.run.features.record_watched_run import RecordWatchedRun, RunWatchedStartContext
+from cora.run.features import record_witnessed_run
+from cora.run.features.record_witnessed_run import RecordWitnessedRun, RunWitnessedStartContext
 from cora.subject.aggregates.subject import Subject, SubjectName, SubjectStatus
 
 _NOW = datetime(2026, 8, 14, 12, 0, 0, tzinfo=UTC)
@@ -102,7 +102,7 @@ def _subject(
     )
 
 
-def _command(**overrides: object) -> RecordWatchedRun:
+def _command(**overrides: object) -> RecordWitnessedRun:
     defaults: dict[str, object] = {
         "name": "watched capture",
         "plan_id": uuid4(),
@@ -111,7 +111,7 @@ def _command(**overrides: object) -> RecordWatchedRun:
         "trigger": _TRIGGER,
     }
     defaults.update(overrides)
-    return RecordWatchedRun(**defaults)  # type: ignore[arg-type]
+    return RecordWitnessedRun(**defaults)  # type: ignore[arg-type]
 
 
 def _beam(
@@ -142,19 +142,19 @@ def _enclosure(permit_status: str, lifecycle: str) -> EnclosureLookupResult:
 
 
 @pytest.mark.unit
-def test_decide_emits_run_started_recorded_for_valid_watched_capture() -> None:
+def test_decide_emits_run_started_witnessed_for_a_valid_capture() -> None:
     cap = uuid4()
     asset_id = uuid4()
     plan = _plan(asset_ids=frozenset({asset_id}))
     asset = _asset(asset_id=asset_id, family_ids=frozenset({cap}))
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=plan,
         subject=None,
         assets={asset_id: asset},
         referencing_clearances=_active_clearance_stub(),
     )
     new_id = uuid4()
-    decision = record_watched_run.decide(
+    decision = record_witnessed_run.decide(
         state=None,
         command=_command(name="watched capture", plan_id=plan.id),
         context=context,
@@ -166,29 +166,29 @@ def test_decide_emits_run_started_recorded_for_valid_watched_capture() -> None:
     )
     assert len(decision.run_events) == 1
     event = decision.run_events[0]
-    assert event.conduct_mode is ConductMode.RECORDED
+    assert event.conduct_mode is ConductMode.WITNESSED
     assert event.safety_envelope_verdict == SafetyEnvelopeVerdict(
         enclosure_permitted=True, beam_available=True
     )
-    assert event.trigger_source == "CaptureWatcher:2bmb-tomoscan"
+    assert event.trigger_source == "RunWitness:2bmb-tomoscan"
     assert dict(event.external_refs[0]) == {"scheme": "capture-code", "value": "2bmb-tomoscan"}
 
 
 @pytest.mark.unit
 def test_decide_hardcodes_recorded_regardless_of_input() -> None:
-    """RecordWatchedRun carries no conduct_mode field for a caller to set;
-    the decider always stamps RECORDED."""
+    """RecordWitnessedRun carries no conduct_mode field for a caller to set;
+    the decider always stamps WITNESSED."""
     cap = uuid4()
     asset_id = uuid4()
     plan = _plan(asset_ids=frozenset({asset_id}))
     asset = _asset(asset_id=asset_id, family_ids=frozenset({cap}))
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=plan,
         subject=None,
         assets={asset_id: asset},
         referencing_clearances=_active_clearance_stub(),
     )
-    decision = record_watched_run.decide(
+    decision = record_witnessed_run.decide(
         state=None,
         command=_command(plan_id=plan.id),
         context=context,
@@ -198,7 +198,7 @@ def test_decide_hardcodes_recorded_regardless_of_input() -> None:
         now=_NOW,
         new_id=uuid4(),
     )
-    assert decision.run_events[0].conduct_mode is ConductMode.RECORDED
+    assert decision.run_events[0].conduct_mode is ConductMode.WITNESSED
 
 
 # ---------- The trigger guard ----------
@@ -211,14 +211,14 @@ def test_decide_rejects_any_non_monitor_trigger(bad_trigger: str) -> None:
     asset_id = uuid4()
     plan = _plan(asset_ids=frozenset({asset_id}))
     asset = _asset(asset_id=asset_id, family_ids=frozenset({cap}))
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=plan,
         subject=None,
         assets={asset_id: asset},
         referencing_clearances=_active_clearance_stub(),
     )
     with pytest.raises(RunMonitorTriggerNotPermittedError):
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=None,
             command=_command(plan_id=plan.id, trigger=bad_trigger),
             context=context,
@@ -241,7 +241,7 @@ def test_decide_records_failing_enclosure_and_beam_instead_of_raising() -> None:
     asset_id = uuid4()
     plan = _plan(asset_ids=frozenset({asset_id}))
     asset = _asset(asset_id=asset_id, family_ids=frozenset({cap}))
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=plan,
         subject=None,
         assets={asset_id: asset},
@@ -249,7 +249,7 @@ def test_decide_records_failing_enclosure_and_beam_instead_of_raising() -> None:
         referencing_enclosures=(_enclosure("NotPermitted", "Active"),),
         beam_availability=_beam(quality_ok=False),
     )
-    decision = record_watched_run.decide(
+    decision = record_witnessed_run.decide(
         state=None,
         command=_command(plan_id=plan.id),
         context=context,
@@ -274,14 +274,14 @@ def test_decide_no_clearance_still_raises() -> None:
     asset_id = uuid4()
     plan = _plan(asset_ids=frozenset({asset_id}))
     asset = _asset(asset_id=asset_id, family_ids=frozenset({cap}))
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=plan,
         subject=None,
         assets={asset_id: asset},
         referencing_clearances=(),
     )
     with pytest.raises(RunRequiresActiveClearanceError):
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=None,
             command=_command(plan_id=plan.id),
             context=context,
@@ -299,7 +299,7 @@ def test_decide_clearance_present_but_inactive_still_raises() -> None:
     asset_id = uuid4()
     plan = _plan(asset_ids=frozenset({asset_id}))
     asset = _asset(asset_id=asset_id, family_ids=frozenset({cap}))
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=plan,
         subject=None,
         assets={asset_id: asset},
@@ -314,7 +314,7 @@ def test_decide_clearance_present_but_inactive_still_raises() -> None:
         ),
     )
     with pytest.raises(RunClearanceCoverageMismatchError):
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=None,
             command=_command(plan_id=plan.id),
             context=context,
@@ -338,14 +338,14 @@ def test_decide_on_existing_state_raises_already_exists() -> None:
         subject_id=None,
         status=RunStatus.RUNNING,
     )
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=_plan(),
         subject=None,
         assets={},
         referencing_clearances=_active_clearance_stub(),
     )
     with pytest.raises(RunAlreadyExistsError) as exc:
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=existing,
             command=_command(),
             context=context,
@@ -361,14 +361,14 @@ def test_decide_on_existing_state_raises_already_exists() -> None:
 @pytest.mark.unit
 def test_decide_deprecated_plan_raises() -> None:
     plan = _plan(status=PlanStatus.DEPRECATED)
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=plan,
         subject=None,
         assets={},
         referencing_clearances=_active_clearance_stub(),
     )
     with pytest.raises(RunBoundPlanDeprecatedError):
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=None,
             command=_command(plan_id=plan.id),
             context=context,
@@ -384,14 +384,14 @@ def test_decide_deprecated_plan_raises() -> None:
 def test_decide_subject_not_mountable_raises() -> None:
     plan = _plan()
     subject = _subject(status=SubjectStatus.RECEIVED)
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=plan,
         subject=subject,
         assets={},
         referencing_clearances=_active_clearance_stub(),
     )
     with pytest.raises(RunSubjectNotMountableError):
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=None,
             command=_command(plan_id=plan.id, subject_id=subject.id),
             context=context,
@@ -408,14 +408,14 @@ def test_decide_decommissioned_asset_raises() -> None:
     asset_id = uuid4()
     plan = _plan(asset_ids=frozenset({asset_id}))
     asset = _asset(asset_id=asset_id, lifecycle=AssetLifecycle.DECOMMISSIONED)
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=plan,
         subject=None,
         assets={asset_id: asset},
         referencing_clearances=_active_clearance_stub(),
     )
     with pytest.raises(RunPlanAssetDecommissionedError):
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=None,
             command=_command(plan_id=plan.id),
             context=context,
@@ -432,14 +432,14 @@ def test_decide_capability_shortfall_raises() -> None:
     asset_id = uuid4()
     plan = _plan(asset_ids=frozenset({asset_id}))
     asset = _asset(asset_id=asset_id, family_ids=frozenset())
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=plan,
         subject=None,
         assets={asset_id: asset},
         referencing_clearances=_active_clearance_stub(),
     )
     with pytest.raises(RunCapabilitiesNotSatisfiedError):
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=None,
             command=_command(plan_id=plan.id),
             context=context,
@@ -454,14 +454,14 @@ def test_decide_capability_shortfall_raises() -> None:
 @pytest.mark.unit
 def test_decide_invalid_name_raises() -> None:
     plan = _plan()
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=plan,
         subject=None,
         assets={},
         referencing_clearances=_active_clearance_stub(),
     )
     with pytest.raises(InvalidRunNameError):
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=None,
             command=_command(plan_id=plan.id, name="   "),
             context=context,
@@ -490,14 +490,14 @@ def test_decide_embeds_active_cautions_snapshot() -> None:
         text_excerpt="Fragile mount",
         workaround_excerpt="Handle gently",
     )
-    context = RunWatchedStartContext(
+    context = RunWitnessedStartContext(
         plan=plan,
         subject=None,
         assets={},
         referencing_clearances=_active_clearance_stub(),
         active_cautions=(caution,),
     )
-    decision = record_watched_run.decide(
+    decision = record_witnessed_run.decide(
         state=None,
         command=_command(plan_id=plan.id),
         context=context,

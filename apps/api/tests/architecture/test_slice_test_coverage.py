@@ -109,10 +109,10 @@ EXEMPT_FROM_ENDPOINT_CONTRACT: frozenset[str] = frozenset(
         # In-process adapters call via EnclosureHandlers.observe_enclosure_status.
         "cora.enclosure.features.observe_enclosure_status",
         # Watched-genesis slice: no REST surface by design (the roadmap's
-        # anti-scope: no operator path to a watched Run). Mirrors the
+        # anti-scope: no operator path to a witnessed Run). Mirrors the
         # Enclosure / Supply monitor-trigger precedent. In-process adapters
-        # call via RunHandlers.record_watched_run.
-        "cora.run.features.record_watched_run",
+        # call via RunHandlers.record_witnessed_run.
+        "cora.run.features.record_witnessed_run",
         # Frame slices: contract tests deferred to a follow-up commit
         # so the Frame + Mount REST + MCP suite can be authored together
         # against the shared PlacementBody surface. Decider tests +
@@ -198,7 +198,7 @@ EXEMPT_FROM_MCP_CONTRACT: frozenset[str] = frozenset(
         "cora.enclosure.features.observe_enclosure_status",
         # Watched-genesis slice: in-process-only by design, no MCP tool.
         # Mirrors the Enclosure / Supply monitor-trigger precedent.
-        "cora.run.features.record_watched_run",
+        "cora.run.features.record_witnessed_run",
         # --- TODO: real gaps to fill -----------------------------------
         # The slice is MCP-registered in `cora.<bc>.tools.py` but no
         # contract test exercises the tool schema or call surface. Each
@@ -536,7 +536,7 @@ _DESIGN_LOCKED_EXEMPTIONS: frozenset[str] = frozenset(
     {
         "cora.supply.features.observe_supply_status",
         "cora.enclosure.features.observe_enclosure_status",
-        "cora.run.features.record_watched_run",
+        "cora.run.features.record_witnessed_run",
     }
 )
 

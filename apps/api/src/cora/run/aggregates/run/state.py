@@ -288,12 +288,23 @@ class ConductMode(StrEnum):
 
     `CONDUCTED` is CORA's own Conductor driving the act (every Run
     started today, via `_run_initiator.py` or a phase-conduct bridge,
-    is Conducted). `RECORDED` is an externally-driven act CORA only
-    observes after the fact, for example a 2-BM tomoscan scan watched
-    by `RunWatcher` (see `cora.api._run_watcher`). Nothing
-    yet constructs a `RECORDED` Run: promoting a shadow observation
-    into one is deliberately a separate, not-yet-built module (see
-    `_run_watcher.py`'s own docstring).
+    is Conducted). `WITNESSED` is an externally-driven act CORA only
+    observes after the fact, for example a 2-BM tomoscan scan witnessed
+    by `RunWitness` (see `cora.api._run_witness`) and promoted via
+    `record_witnessed_run`.
+
+    Named `WITNESSED`, not `RECORDED`: every Conducted Run is ALSO
+    recorded (in the event store, in `proj_run_summary`, in the export
+    bundle), so `RECORDED` was not actually a contrast pair with
+    `CONDUCTED` -- it answered a different question ("how did this
+    fact enter CORA") that happens to be true of both modes at once.
+    `WITNESSED` is the only candidate mutually exclusive with
+    `CONDUCTED`: CORA does not merely witness a Run it drove. This is
+    also the governing rule `record_witnessed_run/decider.py` states
+    verbatim: "refuse on what CORA can fix, witness what CORA cannot."
+    This is a provenance label, not an attestation guarantee: it says
+    CORA observed the act, not that the observation was independently
+    verified.
 
     Named `conduct_mode`, not bare `mode`, on the `Run` field: Run
     already carries a neighboring "how was this driven" fact,
@@ -303,12 +314,12 @@ class ConductMode(StrEnum):
     """
 
     CONDUCTED = "Conducted"
-    RECORDED = "Recorded"
+    WITNESSED = "Witnessed"
 
 
 @dataclass(frozen=True)
 class SafetyEnvelopeVerdict:
-    """A recorded reading of the two live facility signals at a watched
+    """A recorded reading of the two live facility signals at a witnessed
     genesis: did the enclosure permit hold, was beam available.
 
     Plain bools only, deliberately. The record exporter's disposition
@@ -365,18 +376,18 @@ class RunAlreadyExistsError(Exception):
 
 
 class RunMonitorTriggerNotPermittedError(Exception):
-    """`record_watched_run` carried a non-Monitor trigger.
+    """`record_witnessed_run` carried a non-Monitor trigger.
 
     Mirrors the Enclosure BC's `MonitorTriggerNotPermittedError`
     (`observe_enclosure_status`, D6.L2 observation-axis-only anti-lock):
-    a watched genesis is reachable only via Monitor-driven inbound
+    a witnessed genesis is reachable only via Monitor-driven inbound
     observation from the substrate; there is no operator path to it. The
     command surface types `monitor_source_id` as `MonitorSourceId` so an
     operator cannot supply non-Monitor attribution at the type level;
     this error fences the same invariant defensively at the decider so a
     programmer mistake in a custom handler, test fixture, or future
     adapter cannot smuggle an operator-asserted Run genesis onto the
-    spine through the watched path.
+    spine through the witnessed path.
 
     HTTP 400 (semantically a request the caller cannot issue, not a
     state-transition conflict).
@@ -385,7 +396,7 @@ class RunMonitorTriggerNotPermittedError(Exception):
     def __init__(self, run_id: UUID, trigger: str) -> None:
         super().__init__(
             f"Run {run_id}: trigger {trigger!r} is not permitted on "
-            f"record_watched_run; only 'Monitor' is accepted per the "
+            f"record_witnessed_run; only 'Monitor' is accepted per the "
             f"observation-axis-only anti-lock."
         )
         self.run_id = run_id

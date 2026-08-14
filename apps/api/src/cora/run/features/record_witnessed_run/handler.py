@@ -1,4 +1,4 @@
-"""Application handler for the `record_watched_run` slice: the watched genesis.
+"""Application handler for the `record_witnessed_run` slice: the witnessed genesis.
 
 Trimmed sibling of `start_run/handler.py`'s pre-load + scope-widening +
 cross-BC lookup sequence (Plan -> Practice -> Method -> Assets -> Subject,
@@ -11,13 +11,13 @@ yet justify on its own (see the commit history for the reasoning).
 Not wrapped in `with_idempotency`: the Run id is fresh and random per
 call, so there is no retry key to collapse against. Dedup against a
 repeated substrate observation (the PV re-reporting the same capture's
-begin) is the watcher runtime's own edge-triggered state, not this
+begin) is the RunWitness runtime's own edge-triggered state, not this
 handler's concern.
 
 Per the roadmap's anti-scope: no REST route, no MCP tool reach this
 handler (see `route.py` / `tool.py`, both stubs). The authorized path in
-is the bound handler on `RunHandlers.record_watched_run`, called only by
-the in-process watcher runtime as a seeded Agent principal.
+is the bound handler on `RunHandlers.record_witnessed_run`, called only by
+the in-process RunWitness runtime as a seeded Agent principal.
 """
 
 from typing import Protocol
@@ -34,24 +34,24 @@ from cora.recipe.aggregates.plan import PlanNotFoundError, load_plan
 from cora.recipe.aggregates.practice import PracticeNotFoundError, load_practice
 from cora.run.aggregates.run import event_type_name, to_payload
 from cora.run.errors import UnauthorizedError
-from cora.run.features.record_watched_run.command import RecordWatchedRun
-from cora.run.features.record_watched_run.context import RunWatchedStartContext
-from cora.run.features.record_watched_run.decider import decide
+from cora.run.features.record_witnessed_run.command import RecordWitnessedRun
+from cora.run.features.record_witnessed_run.context import RunWitnessedStartContext
+from cora.run.features.record_witnessed_run.decider import decide
 from cora.shared.json_merge_patch import merge_patch
 from cora.subject.aggregates.subject import SubjectNotFoundError, load_subject
 
 _STREAM_TYPE = "Run"
-_COMMAND_NAME = "RecordWatchedRun"
+_COMMAND_NAME = "RecordWitnessedRun"
 
 _log = get_logger(__name__)
 
 
 class Handler(Protocol):
-    """Callable interface every record_watched_run handler implements."""
+    """Callable interface every record_witnessed_run handler implements."""
 
     async def __call__(
         self,
-        command: RecordWatchedRun,
+        command: RecordWitnessedRun,
         *,
         principal_id: UUID,
         correlation_id: UUID,
@@ -61,10 +61,10 @@ class Handler(Protocol):
 
 
 def bind(deps: Kernel) -> Handler:
-    """Build a record_watched_run handler closed over the shared deps."""
+    """Build a record_witnessed_run handler closed over the shared deps."""
 
     async def handler(
-        command: RecordWatchedRun,
+        command: RecordWitnessedRun,
         *,
         principal_id: UUID,
         correlation_id: UUID,
@@ -72,7 +72,7 @@ def bind(deps: Kernel) -> Handler:
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> UUID:
         _log.info(
-            "record_watched_run.start",
+            "record_witnessed_run.start",
             command_name=_COMMAND_NAME,
             plan_id=str(command.plan_id),
             capture_code=command.capture_code,
@@ -89,7 +89,7 @@ def bind(deps: Kernel) -> Handler:
         )
         if isinstance(decision, Deny):
             _log.info(
-                "record_watched_run.denied",
+                "record_witnessed_run.denied",
                 command_name=_COMMAND_NAME,
                 plan_id=str(command.plan_id),
                 principal_id=str(principal_id),
@@ -172,7 +172,7 @@ def bind(deps: Kernel) -> Handler:
         # reading on the emitted RunStarted rather than gating on it.
         beam_availability = await deps.beam_availability_lookup.read()
 
-        context = RunWatchedStartContext(
+        context = RunWitnessedStartContext(
             plan=plan,
             subject=subject,
             assets=assets,
@@ -224,7 +224,7 @@ def bind(deps: Kernel) -> Handler:
         )
 
         _log.info(
-            "record_watched_run.success",
+            "record_witnessed_run.success",
             command_name=_COMMAND_NAME,
             run_id=str(new_id),
             plan_id=str(command.plan_id),

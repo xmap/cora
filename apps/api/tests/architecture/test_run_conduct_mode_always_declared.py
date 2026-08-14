@@ -6,9 +6,9 @@ properties make "declared by the decider that ran, never a caller's
 choice" a build-time guarantee rather than a convention someone can
 forget:
 
-  - The enum stays closed to exactly {CONDUCTED, RECORDED}. A third member
+  - The enum stays closed to exactly {CONDUCTED, WITNESSED}. A third member
     added without a design decision (see docs/reference/modeling.md's
-    "Conducted vs recorded" framing) would silently widen what the axis
+    "Conducted vs witnessed" framing) would silently widen what the axis
     claims to mean.
   - `conduct_mode` is never `Optional`/nullable on `RunStarted` or `Run`.
     A Run's cause is always one of the two named values; there is no
@@ -19,9 +19,9 @@ forget:
   - `StartRun` (the driven-genesis command) carries NO `conduct_mode`
     field at all. The mode is a property of which decider ran: the
     driven `start_run` decider hardcodes `ConductMode.CONDUCTED`; a
-    `Recorded` Run is genesis-only through the separate watched-genesis
+    `Witnessed` Run is genesis-only through the separate witnessed-genesis
     slice. A field on `StartRun` would let any caller of the driven path
-    claim `Recorded` while taking the enforcing path, which is exactly
+    claim `Witnessed` while taking the enforcing path, which is exactly
     the laundering hole this axis exists to close.
 """
 
@@ -39,11 +39,11 @@ from cora.run.features.start_run.command import StartRun
 @pytest.mark.architecture
 def test_conduct_mode_has_exactly_two_members() -> None:
     names = {member.name for member in ConductMode}
-    assert names == {"CONDUCTED", "RECORDED"}, (
-        f"ConductMode grew a member beyond {{CONDUCTED, RECORDED}}: {names}. "
+    assert names == {"CONDUCTED", "WITNESSED"}, (
+        f"ConductMode grew a member beyond {{CONDUCTED, WITNESSED}}: {names}. "
         "A third mode is a design decision (who else can drive a Run's act?), "
         "not a mechanical addition; see docs/reference/modeling.md's "
-        "'Conducted vs recorded' framing before widening this enum."
+        "'Conducted vs witnessed' framing before widening this enum."
     )
 
 
@@ -66,5 +66,5 @@ def test_start_run_has_no_conduct_mode_field() -> None:
         "StartRun must never carry a conduct_mode field: the driven decider "
         "hardcodes ConductMode.CONDUCTED, so the mode is a property of which "
         "decider ran, never a caller's choice. A field here would let a driven "
-        "caller claim Recorded while taking the enforcing path."
+        "caller claim Witnessed while taking the enforcing path."
     )

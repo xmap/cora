@@ -188,7 +188,7 @@ async def test_seeded_ladder_resolves_for_all_acquisition_recipes(
     raising. dark_field / flat_field each bind exactly the StationShutter
     + the acquisition camera -- the two Assets `docs/deployments/2-bm/
     recipes.md`'s recipes actually target. fly_scan (the real TomoScan
-    workflow the RunWatcher's promotion path watches) additionally binds
+    workflow the RunWitness's promotion path watches) additionally binds
     the Rotary stage: continuous sample rotation is the defining feature
     of a real fly-scan, unlike the two static baseline captures."""
     pool, url = seed_database

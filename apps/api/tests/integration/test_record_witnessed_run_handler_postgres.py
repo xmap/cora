@@ -1,9 +1,9 @@
-"""Postgres integration test for the `record_watched_run` handler.
+"""Postgres integration test for the `record_witnessed_run` handler.
 
-Round-trips the watched genesis through a real event store: authorize,
+Round-trips the witnessed genesis through a real event store: authorize,
 load the Plan -> Practice -> Method -> Asset chain, decide, append, and
 reload. Confirms the new nested `safety_envelope_verdict` VO survives the jsonb
-round-trip and that `conduct_mode` lands as `Recorded`.
+round-trip and that `conduct_mode` lands as `Witnessed`.
 
 Reuses the shared 2-BM tomography fixture (`_tomography_fixture.py`)
 already exercised by the RunInitiator tick scenario, minus the
@@ -24,7 +24,7 @@ from cora.run.aggregates.run import (
     fold,
     from_stored,
 )
-from cora.run.features.record_watched_run import RecordWatchedRun, bind
+from cora.run.features.record_witnessed_run import RecordWitnessedRun, bind
 from cora.shared.identity import MonitorSourceId
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
 from tests.integration.scenarios._facility_fixture import operator_for
@@ -41,7 +41,7 @@ _NOW = datetime(2026, 8, 14, 3, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000004c9601")
 
-# Scenario tag: 4c96 (record_watched_run handler round-trip).
+# Scenario tag: 4c96 (record_witnessed_run handler round-trip).
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-00000004c9a1")
 
 _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
@@ -84,7 +84,7 @@ _RECIPE = RecipeSpec(
     practice_name="2BM_tomography_practice",
     site_id=_2BM_UNIT_ID,
     plan_id=_PLAN_ID,
-    plan_name="2BM_watched_tomography_plan",
+    plan_name="2BM_witnessed_tomography_plan",
     plan_asset_ids=frozenset(
         {_ASSET_ROTARY_ID, _ASSET_LINEAR_X_ID, _ASSET_CAMERA_ID, _ASSET_SCINTILLATOR_ID}
     ),
@@ -96,12 +96,12 @@ def _id_queue() -> list[UUID]:
     return [
         *tomography_install_id_prefix(asset_ids=_TOMO_ASSETS),
         *recipe_ladder_id_prefix(spec=_RECIPE),
-        *[e() for _ in range(20)],  # headroom: record_watched_run's own event ids
+        *[e() for _ in range(20)],  # headroom: record_witnessed_run's own event ids
     ]
 
 
 @pytest.mark.integration
-async def test_record_watched_run_persists_recorded_run_with_safety_envelope_verdict(
+async def test_record_witnessed_run_persists_witnessed_run_with_safety_envelope_verdict(
     db_pool: asyncpg.Pool,
 ) -> None:
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue())
@@ -121,8 +121,8 @@ async def test_record_watched_run_persists_recorded_run_with_safety_envelope_ver
 
     handler = bind(deps)
     run_id = await handler(
-        RecordWatchedRun(
-            name="2BM watched capture",
+        RecordWitnessedRun(
+            name="2BM witnessed capture",
             plan_id=_PLAN_ID,
             capture_code="2bmb-tomoscan",
             monitor_source_id=MonitorSourceId(UUID("01900000-0000-7000-8000-000063617001")),
@@ -137,7 +137,7 @@ async def test_record_watched_run_persists_recorded_run_with_safety_envelope_ver
     assert len(events) == 1
     stored = events[0]
     assert stored.event_type == "RunStarted"
-    assert stored.payload["conduct_mode"] == "Recorded"
+    assert stored.payload["conduct_mode"] == "Witnessed"
     assert stored.payload["subject_id"] is None
     assert stored.payload["safety_envelope_verdict"] == {
         "enclosure_permitted": True,
@@ -149,11 +149,11 @@ async def test_record_watched_run_persists_recorded_run_with_safety_envelope_ver
     # reconstructs correctly, not just that raw jsonb round-trips.
     state = fold([from_stored(e) for e in events])
     assert state is not None
-    assert state.conduct_mode is ConductMode.RECORDED
+    assert state.conduct_mode is ConductMode.WITNESSED
 
 
 @pytest.mark.integration
-async def test_record_watched_run_rejects_non_monitor_trigger(db_pool: asyncpg.Pool) -> None:
+async def test_record_witnessed_run_rejects_non_monitor_trigger(db_pool: asyncpg.Pool) -> None:
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue())
     await install_and_activate_tomography_assets(
         deps,
@@ -172,8 +172,8 @@ async def test_record_watched_run_rejects_non_monitor_trigger(db_pool: asyncpg.P
     handler = bind(deps)
     with pytest.raises(RunMonitorTriggerNotPermittedError):
         await handler(
-            RecordWatchedRun(
-                name="2BM watched capture",
+            RecordWitnessedRun(
+                name="2BM witnessed capture",
                 plan_id=_PLAN_ID,
                 capture_code="2bmb-tomoscan",
                 monitor_source_id=MonitorSourceId(UUID("01900000-0000-7000-8000-000063617001")),

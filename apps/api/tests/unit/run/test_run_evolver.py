@@ -91,25 +91,25 @@ def test_evolve_run_started_defaults_conduct_mode_to_conducted() -> None:
 
 
 @pytest.mark.unit
-def test_evolve_run_started_honors_explicit_recorded_conduct_mode() -> None:
-    """A RECORDED genesis (the not-yet-built shadow-promotion path) must
-    declare its mode explicitly; the evolver copies it verbatim, never
-    computing or guessing it."""
-    state = evolve(None, _run_started(conduct_mode=ConductMode.RECORDED))
-    assert state.conduct_mode is ConductMode.RECORDED
+def test_evolve_run_started_honors_explicit_witnessed_conduct_mode() -> None:
+    """A Witnessed genesis (record_witnessed_run's decider) must declare
+    its mode explicitly; the evolver copies it verbatim, never computing
+    or guessing it."""
+    state = evolve(None, _run_started(conduct_mode=ConductMode.WITNESSED))
+    assert state.conduct_mode is ConductMode.WITNESSED
 
 
 @pytest.mark.unit
 def test_conduct_mode_survives_hold_resume_complete_round_trip() -> None:
     """conduct_mode is immutable after genesis: it must ride through every
     transition arm unchanged, same as pinned_calibration_ids."""
-    started = _run_started(conduct_mode=ConductMode.RECORDED)
+    started = _run_started(conduct_mode=ConductMode.WITNESSED)
     running = evolve(None, started)
     held = evolve(running, RunHeld(run_id=started.run_id, occurred_at=_NOW))
     resumed = evolve(held, RunResumed(run_id=started.run_id, occurred_at=_NOW))
     completed = evolve(resumed, RunCompleted(run_id=started.run_id, occurred_at=_NOW))
     for state in (running, held, resumed, completed):
-        assert state.conduct_mode is ConductMode.RECORDED
+        assert state.conduct_mode is ConductMode.WITNESSED
 
 
 @pytest.mark.unit

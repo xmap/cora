@@ -1,6 +1,6 @@
-"""Property-based tests for `record_watched_run.decide` (Run BC).
+"""Property-based tests for `record_witnessed_run.decide` (Run BC).
 
-Complements the example-based `test_record_watched_run_decider.py`.
+Complements the example-based `test_record_witnessed_run_decider.py`.
 Universal claims across generated inputs:
 
   - Any non-None state always raises `RunAlreadyExistsError`.
@@ -11,7 +11,7 @@ Universal claims across generated inputs:
     `RunRequiresActiveClearanceError` (still a refusal, per the
     roadmap's rule).
   - On the happy path, the single `RunStarted` always carries
-    `conduct_mode=RECORDED` and a non-None `safety_envelope_verdict`.
+    `conduct_mode=WITNESSED` and a non-None `safety_envelope_verdict`.
   - Pure: same inputs return equal results.
 """
 
@@ -37,8 +37,8 @@ from cora.run.aggregates.run import (
     RunStarted,
     RunStatus,
 )
-from cora.run.features import record_watched_run
-from cora.run.features.record_watched_run import RecordWatchedRun, RunWatchedStartContext
+from cora.run.features import record_witnessed_run
+from cora.run.features.record_witnessed_run import RecordWitnessedRun, RunWitnessedStartContext
 from cora.shared.identity import MonitorSourceId
 from tests._strategies import aware_datetimes, printable_ascii_text
 
@@ -76,8 +76,8 @@ def _context(
     *,
     plan_status: PlanStatus = PlanStatus.DEFINED,
     clearances: tuple[ClearanceLookupResult, ...] | None = None,
-) -> RunWatchedStartContext:
-    return RunWatchedStartContext(
+) -> RunWitnessedStartContext:
+    return RunWitnessedStartContext(
         plan=_plan(status=plan_status),
         subject=None,
         assets={},
@@ -87,8 +87,8 @@ def _context(
 
 def _command(
     *, name: str, plan_id: UUID, capture_code: str, trigger: str = "Monitor"
-) -> RecordWatchedRun:
-    return RecordWatchedRun(
+) -> RecordWitnessedRun:
+    return RecordWitnessedRun(
         name=name,
         plan_id=plan_id,
         capture_code=capture_code,
@@ -107,7 +107,7 @@ def _command(
     now=aware_datetimes(),
     new_id=st.uuids(),
 )
-def test_watched_on_existing_state_always_raises_already_exists(
+def test_witnessed_on_existing_state_always_raises_already_exists(
     existing_id: UUID,
     existing_status: RunStatus,
     name: str,
@@ -124,7 +124,7 @@ def test_watched_on_existing_state_always_raises_already_exists(
         status=existing_status,
     )
     with pytest.raises(RunAlreadyExistsError) as exc:
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=existing,
             command=_command(name=name, plan_id=plan_id, capture_code=capture_code),
             context=_context(),
@@ -146,7 +146,7 @@ def test_watched_on_existing_state_always_raises_already_exists(
     now=aware_datetimes(),
     new_id=st.uuids(),
 )
-def test_watched_any_non_monitor_trigger_always_raises(
+def test_witnessed_any_non_monitor_trigger_always_raises(
     name: str,
     plan_id: UUID,
     capture_code: str,
@@ -157,7 +157,7 @@ def test_watched_any_non_monitor_trigger_always_raises(
     """No input shape can make a non-Monitor trigger pass: the laundering
     wall holds regardless of every other field."""
     with pytest.raises(RunMonitorTriggerNotPermittedError):
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=None,
             command=_command(
                 name=name, plan_id=plan_id, capture_code=capture_code, trigger=trigger
@@ -179,7 +179,7 @@ def test_watched_any_non_monitor_trigger_always_raises(
     now=aware_datetimes(),
     new_id=st.uuids(),
 )
-def test_watched_without_referencing_clearance_always_raises_requires_clearance(
+def test_witnessed_without_referencing_clearance_always_raises_requires_clearance(
     name: str,
     plan_id: UUID,
     capture_code: str,
@@ -187,7 +187,7 @@ def test_watched_without_referencing_clearance_always_raises_requires_clearance(
     new_id: UUID,
 ) -> None:
     with pytest.raises(RunRequiresActiveClearanceError):
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=None,
             command=_command(name=name, plan_id=plan_id, capture_code=capture_code),
             context=_context(clearances=()),
@@ -208,7 +208,7 @@ def test_watched_without_referencing_clearance_always_raises_requires_clearance(
     now=aware_datetimes(),
     new_id=st.uuids(),
 )
-def test_watched_clearance_present_but_never_active_always_raises_coverage_mismatch(
+def test_witnessed_clearance_present_but_never_active_always_raises_coverage_mismatch(
     name: str,
     plan_id: UUID,
     capture_code: str,
@@ -217,7 +217,7 @@ def test_watched_clearance_present_but_never_active_always_raises_coverage_misma
     new_id: UUID,
 ) -> None:
     """Whatever non-Active status a referencing clearance carries, the
-    watched path still refuses -- it never treats a present-but-inactive
+    witnessed path still refuses -- it never treats a present-but-inactive
     clearance as witnessed."""
     clearances = (
         ClearanceLookupResult(
@@ -229,7 +229,7 @@ def test_watched_clearance_present_but_never_active_always_raises_coverage_misma
         ),
     )
     with pytest.raises(RunClearanceCoverageMismatchError):
-        record_watched_run.decide(
+        record_witnessed_run.decide(
             state=None,
             command=_command(name=name, plan_id=plan_id, capture_code=capture_code),
             context=_context(clearances=clearances),
@@ -249,17 +249,17 @@ def test_watched_clearance_present_but_never_active_always_raises_coverage_misma
     now=aware_datetimes(),
     new_id=st.uuids(),
 )
-def test_watched_happy_path_always_emits_recorded_with_a_verdict(
+def test_witnessed_happy_path_always_emits_witnessed_with_a_verdict(
     name: str,
     plan_id: UUID,
     capture_code: str,
     now: datetime,
     new_id: UUID,
 ) -> None:
-    """The happy path always stamps RECORDED and a non-None verdict,
+    """The happy path always stamps WITNESSED and a non-None verdict,
     across the whole generated input space -- never CONDUCTED, never a
     bare safety_envelope_verdict=None."""
-    result = record_watched_run.decide(
+    result = record_witnessed_run.decide(
         state=None,
         command=_command(name=name, plan_id=plan_id, capture_code=capture_code),
         context=_context(),
@@ -272,7 +272,7 @@ def test_watched_happy_path_always_emits_recorded_with_a_verdict(
     assert len(result.run_events) == 1
     event = result.run_events[0]
     assert isinstance(event, RunStarted)
-    assert event.conduct_mode is ConductMode.RECORDED
+    assert event.conduct_mode is ConductMode.WITNESSED
     assert event.safety_envelope_verdict is not None
     assert event.run_id == new_id
     assert event.name == name
@@ -288,7 +288,7 @@ def test_watched_happy_path_always_emits_recorded_with_a_verdict(
     now=aware_datetimes(),
     new_id=st.uuids(),
 )
-def test_watched_is_pure_same_input_same_output(
+def test_witnessed_is_pure_same_input_same_output(
     name: str,
     plan_id: UUID,
     capture_code: str,
@@ -297,7 +297,7 @@ def test_watched_is_pure_same_input_same_output(
 ) -> None:
     command = _command(name=name, plan_id=plan_id, capture_code=capture_code)
     context = _context()
-    first = record_watched_run.decide(
+    first = record_witnessed_run.decide(
         state=None,
         command=command,
         context=context,
@@ -307,7 +307,7 @@ def test_watched_is_pure_same_input_same_output(
         now=now,
         new_id=new_id,
     )
-    second = record_watched_run.decide(
+    second = record_witnessed_run.decide(
         state=None,
         command=command,
         context=context,

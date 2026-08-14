@@ -181,7 +181,7 @@ async def test_start_run_persists_event_with_full_upstream_chain_against_postgre
         # by the decider (not caller-settable). Forward-compat via
         # `payload.get("conduct_mode", ConductMode.CONDUCTED.value)`.
         "conduct_mode": "Conducted",
-        # Additive payload field: the watched-genesis envelope reading.
+        # Additive payload field: the witnessed-genesis envelope reading.
         # Always None on a driven Run; forward-compat via
         # `payload.get("safety_envelope_verdict")`.
         "safety_envelope_verdict": None,

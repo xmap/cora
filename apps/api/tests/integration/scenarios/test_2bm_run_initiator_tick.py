@@ -315,38 +315,38 @@ async def test_initiator_tick_respects_max_in_flight(db_pool: asyncpg.Pool) -> N
 
 
 @pytest.mark.integration
-async def test_initiator_tick_counts_a_watched_recorded_run_toward_max_in_flight(
+async def test_initiator_tick_counts_a_witnessed_run_toward_max_in_flight(
     db_pool: asyncpg.Pool,
 ) -> None:
-    """A watched (Recorded) Run occupies the same one-stage hardware a driven
+    """A Witnessed Run occupies the same one-stage hardware a driven
     Run would: the cap counts it exactly like a Conducted Run, so the tick
     starts nothing even though a ready Subject exists. Excluding it here
     (unlike the RunSupervisor's hold/resume/liveness, which do skip a
-    watched Run because CORA does not control it) would let the initiator
+    Witnessed Run because CORA does not control it) would let the initiator
     start a second, driven Run on the same stage an external tool is
     already driving."""
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue(with_subjects=True))
     await _setup(deps, db_pool, with_subjects=True)
     await _drain_subjects(db_pool)
 
-    watched_run_id = uuid4()
-    watched = RunStarted(
-        run_id=watched_run_id,
-        name="watched capture",
+    witnessed_run_id = uuid4()
+    witnessed = RunStarted(
+        run_id=witnessed_run_id,
+        name="witnessed capture",
         plan_id=_PLAN_ID,
         subject_id=None,
         occurred_at=_NOW,
-        conduct_mode=ConductMode.RECORDED,
+        conduct_mode=ConductMode.WITNESSED,
     )
     await deps.event_store.append(
         stream_type="Run",
-        stream_id=watched_run_id,
+        stream_id=witnessed_run_id,
         expected_version=0,
         events=[
             to_new_event(
-                event_type=run_event_type_name(watched),
-                payload=run_to_payload(watched),
-                occurred_at=watched.occurred_at,
+                event_type=run_event_type_name(witnessed),
+                payload=run_to_payload(witnessed),
+                occurred_at=witnessed.occurred_at,
                 event_id=uuid4(),
                 command_name="seed",
                 correlation_id=_CORRELATION_ID,

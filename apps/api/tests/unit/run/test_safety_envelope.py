@@ -3,7 +3,7 @@
 `check_safety_envelope` and `witness_safety_envelope` are the two entry
 points built from the four cross-BC live-signal gates (clearance / supply
 / enclosure / beam) shared by `start_run`, the RunSupervisor's pre-resume
-re-check, and the watched-genesis decider. These pin the pass path and
+re-check, and the witnessed-genesis decider. These pin the pass path and
 each failing gate so every caller can rely on one definition of "safe to
 (re)start", and prove the two entry points cannot drift: they are built
 from the exact same gate functions, not two hand-synchronized copies.
@@ -282,7 +282,7 @@ def test_witness_every_gate_failing_records_both_false() -> None:
 @pytest.mark.unit
 def test_witness_no_clearance_still_raises() -> None:
     """Per the roadmap's rule, clearance is CORA's own aggregate, not a live
-    facility reading: the watched path refuses on it exactly as the driven
+    facility reading: the witnessed path refuses on it exactly as the driven
     path does."""
     with pytest.raises(RunRequiresActiveClearanceError):
         _witness(referencing_clearances=())

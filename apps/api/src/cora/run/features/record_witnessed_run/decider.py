@@ -1,10 +1,10 @@
-"""Pure decider for the `RecordWatchedRun` command: the watched genesis.
+"""Pure decider for the `RecordWitnessedRun` command: the witnessed genesis.
 
 Second genesis decider on the Run aggregate, after `start_run`. Where
 `start_run` drives the act through CORA's own Conductor and hardcodes
 `ConductMode.CONDUCTED`, this decider records that an external tool
-already began a capture and hardcodes `ConductMode.RECORDED`. Never the
-other way around: `RecordWatchedRun` carries no `conduct_mode` field for
+already began a capture and hardcodes `ConductMode.WITNESSED`. Never the
+other way around: `RecordWitnessedRun` carries no `conduct_mode` field for
 either decider to read, so the mode is a property of which decider ran.
 
 ## The governing rule: refuse on what CORA can fix, witness what CORA cannot
@@ -83,8 +83,8 @@ from cora.run.aggregates.run import (
     validate_effective_parameters_against_method_schema,
     witness_safety_envelope,
 )
-from cora.run.features.record_watched_run.command import RecordWatchedRun
-from cora.run.features.record_watched_run.context import RunWatchedStartContext
+from cora.run.features.record_witnessed_run.command import RecordWitnessedRun
+from cora.run.features.record_witnessed_run.context import RunWitnessedStartContext
 from cora.shared.identifier import Identifier
 from cora.subject.aggregates.subject import SubjectStatus
 
@@ -99,25 +99,25 @@ _CAPTURE_CODE_SCHEME = "capture-code"
 
 
 @dataclass(frozen=True)
-class RunWatchedStartEvents:
-    """Events produced by a watched Run genesis: always exactly one."""
+class RunWitnessedStartEvents:
+    """Events produced by a witnessed Run genesis: always exactly one."""
 
     run_events: list[RunStarted]
 
 
 def decide(
     state: Run | None,
-    command: RecordWatchedRun,
+    command: RecordWitnessedRun,
     *,
-    context: RunWatchedStartContext,
+    context: RunWitnessedStartContext,
     needed_family_ids_snapshot: frozenset[UUID],
     needed_supplies_snapshot: frozenset[str] = frozenset(),
     effective_parameters: dict[str, Any],
     method_parameters_schema: dict[str, Any] | None,
     now: datetime,
     new_id: UUID,
-) -> RunWatchedStartEvents:
-    """Decide the events produced by recording a watched Run genesis."""
+) -> RunWitnessedStartEvents:
+    """Decide the events produced by recording a witnessed Run genesis."""
     if state is not None:
         raise RunAlreadyExistsError(state.id)
 
@@ -203,8 +203,8 @@ def decide(
             name=name.value,
             plan_id=command.plan_id,
             subject_id=command.subject_id,
-            conduct_mode=ConductMode.RECORDED,
-            trigger_source=f"CaptureWatcher:{command.capture_code}",
+            conduct_mode=ConductMode.WITNESSED,
+            trigger_source=f"RunWitness:{command.capture_code}",
             effective_parameters=effective_parameters,
             external_refs=external_refs,
             acknowledged_cautions=acknowledged_cautions,
@@ -212,4 +212,4 @@ def decide(
             occurred_at=now,
         )
     ]
-    return RunWatchedStartEvents(run_events=run_events)
+    return RunWitnessedStartEvents(run_events=run_events)

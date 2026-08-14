@@ -779,29 +779,29 @@ class Settings(BaseSettings):
     # Runs the capture-watch loop in shadow mode: drains observations,
     # maps them through `capture_status_phases`, and logs. Writes
     # nothing (no event, no entries row, no Run) unless
-    # `run_watcher_recording_enabled` is ALSO True (see below). Default
+    # `run_witness_recording_enabled` is ALSO True (see below). Default
     # off; irrelevant when `capture_watch_pvs` is empty. See
-    # `cora.api._run_watcher`.
-    run_watcher_enabled: bool = False
+    # `cora.api._run_witness`.
+    run_witness_enabled: bool = False
 
-    # Which Plan a promoted watched Run references (record_watched_run's
+    # Which Plan a promoted witnessed Run references (record_witnessed_run's
     # plan_id). Deployment-declared, not read from the substrate:
     # TomoScan reports a scan began, never which Plan it corresponds to.
     # `None` (default) disables promotion regardless of
-    # `run_watcher_recording_enabled` (see
-    # `_enforce_run_watcher_recording_gate` in `main.py`).
+    # `run_witness_recording_enabled` (see
+    # `_enforce_run_witness_recording_gate` in `main.py`).
     capture_watch_plan_id: UUID | None = None
 
-    # SECOND, independent kill switch above `run_watcher_enabled`:
-    # shadow mode (drain + log) stays default-on once `run_watcher_enabled`
+    # SECOND, independent kill switch above `run_witness_enabled`:
+    # shadow mode (drain + log) stays default-on once `run_witness_enabled`
     # is True; this flag additionally gates whether a BEGUN observation is
-    # actually promoted to a real watched Run via `record_watched_run`.
-    # Default off, so enabling `run_watcher_enabled` alone stays
+    # actually promoted to a real witnessed Run via `record_witnessed_run`.
+    # Default off, so enabling `run_witness_enabled` alone stays
     # shadow-only, unchanged from today. OPERATIONAL KILL SWITCH: boot
     # refuses to start if this is True without both
-    # `run_watcher_enabled=True` and `capture_watch_plan_id` set (see
-    # `_enforce_run_watcher_recording_gate` in `main.py`).
-    run_watcher_recording_enabled: bool = False
+    # `run_witness_enabled=True` and `capture_watch_plan_id` set (see
+    # `_enforce_run_witness_recording_gate` in `main.py`).
+    run_witness_recording_enabled: bool = False
 
     @field_validator("capture_status_phases")
     @classmethod

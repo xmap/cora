@@ -67,9 +67,9 @@ class RunSummaryItem:
     """Expected inter-arrival for Rule R (stall), precomputed from
     effective_parameters. NULL disables Rule R for this Run."""
     conduct_mode: str
-    """`ConductMode` value ("Conducted" or "Recorded"), immutable from
+    """`ConductMode` value ("Conducted" or "Witnessed"), immutable from
     genesis. The RunSupervisor and RunInitiator runtimes filter on this
-    to skip watched (Recorded) Runs: those are not theirs to hold, resume,
+    to skip Witnessed Runs: those are not theirs to hold, resume,
     truncate, or count toward in-flight limits."""
 
 

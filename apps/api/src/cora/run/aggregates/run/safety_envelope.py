@@ -5,22 +5,22 @@ clearance, supply, enclosure, and beam, are the same gates that must
 still hold for a held Run to be safely resumed. Living in the aggregate
 kernel (mirroring `plan.wires_validation.validate_wire_endpoints`) lets
 the `start_run` decider, the RunSupervisor's pre-resume re-check, AND the
-watched-genesis decider import one definition, so a change to any gate
+witnessed-genesis decider import one definition, so a change to any gate
 applies to every consumer. Slice-to-slice sharing through a feature
 module is banned (cross-slice independence), so this is the correct home.
 
 Pure: no I/O. The caller (the `start_run` handler, the supervisor runtime
-for resume, or the watched-genesis handler) loads the cross-aggregate
+for resume, or the witnessed-genesis handler) loads the cross-aggregate
 state and passes it in.
 
 ## Two entry points, four shared gates
 
 `check_safety_envelope` raises the first failing gate, in the fixed order
 clearance, supply, enclosure, beam; unchanged from before this module had
-a second entry point. `witness_safety_envelope` is the watched-genesis
+a second entry point. `witness_safety_envelope` is the witnessed-genesis
 counterpart: per the roadmap's rule ("refuse on what CORA can fix, witness
 what CORA cannot"), clearance and supply are CORA's own aggregates, so
-they still RAISE on the watched path exactly as they do on the driven
+they still RAISE on the witnessed path exactly as they do on the driven
 path. Only enclosure and beam, the two genuinely external live facility
 signals, become a recorded `SafetyEnvelopeVerdict` instead of a refusal.
 
@@ -34,7 +34,7 @@ The structural start-genesis validations (Plan-deprecated, Subject
 status, Asset-decommissioned, capability re-validation, wire endpoints,
 Campaign membership, name) deliberately stay in each decider: they are
 genesis invariants, not live-signal gates, and a resume must NOT re-run
-them (resume continues a Run that already passed them), and the watched
+them (resume continues a Run that already passed them), and the witnessed
 path's decider re-runs them exactly as the driven decider does (per the
 roadmap: CORA-side data faults stay refusals on both paths).
 """
@@ -77,7 +77,7 @@ def clearance_gate_check(
     not a live facility reading, per the roadmap's rule. This keeps the
     cross-port invariant fail-closed for EVERY Run, including a compute
     Run whose empty Asset scope makes the enclosure / beam gates below
-    vacuous, and including a watched Run (see `test_compute_shaped_scope_
+    vacuous, and including a witnessed Run (see `test_compute_shaped_scope_
     still_requires_active_clearance`; any future split must not exempt
     either).
     """
@@ -213,7 +213,7 @@ def check_safety_envelope(
     """Raise the first failing start-safety gate; return None if all pass.
 
     `run_id` is carried on each raised error (the new id at start_run,
-    the existing run id at resume or at a watched genesis). Composed from
+    the existing run id at resume or at a witnessed genesis). Composed from
     the four gate functions above; behaviour, order, and every raised
     error's payload are unchanged from before this module gained a second
     entry point.
@@ -244,11 +244,11 @@ def witness_safety_envelope(
     beam_availability: BeamAvailabilityLookupResult | None,
 ) -> SafetyEnvelopeVerdict:
     """Record a verdict on the two live facility signals instead of
-    enforcing them; used only by the watched-genesis decider.
+    enforcing them; used only by the witnessed-genesis decider.
 
     Same six inputs and same clearance/supply behaviour as
     `check_safety_envelope`: both still raise on those two gates, because
-    they are CORA-side data, not something the watcher can observe from
+    they are CORA-side data, not something RunWitness can observe from
     the floor. Only enclosure and beam, evaluated by the exact same
     `enclosure_gate_refusal` / `beam_gate_refusal` functions
     `check_safety_envelope` uses, are converted to a bool instead of

@@ -3,7 +3,7 @@ list of runs from the projection.
 
 Optional filters: status (Running / Held / Completed / Aborted /
 Stopped / Truncated), plan_id (which Plan was bound), campaign_id
-(Campaign membership), and conduct_mode (Conducted / Recorded). Cursor
+(Campaign membership), and conduct_mode (Conducted / Witnessed). Cursor
 encodes (created_at, run_id).
 """
 
@@ -44,6 +44,6 @@ class ListRuns:
     (omit) for "any Campaign or none"."""
 
     conduct_mode: str | None = None
-    """Optional `ConductMode` value filter ("Conducted" or "Recorded").
+    """Optional `ConductMode` value filter ("Conducted" or "Witnessed").
     Pass `None` (omit) for "any conduct mode". Lets a caller restrict to
-    watched (Recorded) Runs, e.g. the RunWatcher restart-rebuild query."""
+    Witnessed Runs, e.g. the RunWitness restart-rebuild query."""

@@ -35,8 +35,8 @@ enum-in-state, derived-from-event-type-in-evolver convention.
 this slice is driven by CORA's own Conductor, so the decider hardcodes
 `ConductMode.CONDUCTED` on the emitted `RunStarted` rather than accepting
 it from the caller: the mode is a property of which decider ran, not a
-value a caller could set. A `Recorded` Run is genesis-only through the
-separate watched-genesis slice, never through this one. See
+value a caller could set. A `Witnessed` Run is genesis-only through the
+separate witnessed-genesis slice, never through this one. See
 `ConductMode`'s own docstring on `Run`.
 
 The handler additionally pre-loads Plan + Subject (if given) +

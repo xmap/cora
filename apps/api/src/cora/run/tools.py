@@ -17,7 +17,7 @@ from cora.run.features.complete_run import tool as complete_run_tool
 from cora.run.features.get_run import tool as get_run_tool
 from cora.run.features.hold_run import tool as hold_run_tool
 from cora.run.features.list_runs import tool as list_runs_tool
-from cora.run.features.record_watched_run import tool as record_watched_run_tool
+from cora.run.features.record_witnessed_run import tool as record_witnessed_run_tool
 from cora.run.features.resume_run import tool as resume_run_tool
 from cora.run.features.start_run import tool as start_run_tool
 from cora.run.features.stop_run import tool as stop_run_tool
@@ -35,13 +35,13 @@ def register_run_tools(
         mcp,
         get_handler=lambda: get_handlers().start_run,
     )
-    # Stub registration for the in-process-only watched-genesis slice.
+    # Stub registration for the in-process-only witnessed-genesis slice.
     # The tool module's register() is a no-op by design; this invocation
     # satisfies the tools-completeness architecture fitness without
     # exposing a public MCP tool surface.
-    record_watched_run_tool.register(
+    record_witnessed_run_tool.register(
         mcp,
-        get_handler=lambda: get_handlers().record_watched_run,
+        get_handler=lambda: get_handlers().record_witnessed_run,
     )
     complete_run_tool.register(
         mcp,

@@ -1,9 +1,9 @@
-"""Bootstrap-time seed for the RunWatcher Agent.
+"""Bootstrap-time seed for the RunWitness Agent.
 
-The RunWatcher runtime (`cora.api._run_watcher`) needs an Agent record
-(and its co-registered Actor) to exist at the pinned `RUN_WATCHER_AGENT_ID`
-so it can issue `RecordWatchedRun` as an agent-kind principal when it
-promotes a BEGUN capture observation to a real watched Run. Mirrors
+The RunWitness runtime (`cora.api._run_witness`) needs an Agent record
+(and its co-registered Actor) to exist at the pinned `RUN_WITNESS_AGENT_ID`
+so it can issue `RecordWitnessedRun` as an agent-kind principal when it
+promotes a BEGUN capture observation to a real witnessed Run. Mirrors
 `cora.agent.seed_run_supervisor.seed_run_supervisor_agent` verbatim except
 for the per-agent constants below; the shared scaffolding lives in
 `cora.agent._agent_seed`.
@@ -15,14 +15,14 @@ for the per-agent constants below; the shared scaffolding lives in
     (`prompt_template_id=None`) and a sentinel `ModelRef`
     (`provider="deterministic"`). Never used to build an LLM: the
     runtime is a substrate-observation loop, not an LLM subscriber.
-  - Authorization: the runtime issues `RecordWatchedRun` through the
+  - Authorization: the runtime issues `RecordWitnessedRun` through the
     Authorize port like any principal. Under the default AllowAllAuthorize
     it is permitted; under TrustAuthorize the operator's single configured
-    Policy must include this principal + {RecordWatchedRun, ListRuns}.
+    Policy must include this principal + {RecordWitnessedRun, ListRuns}.
     ListRuns is the restart-rebuild read: without it a restart cannot
     rediscover which captures are already open, and would re-promote
-    them. Without the RecordWatchedRun grant, a real BEGUN observation
-    logs `run_watcher.promotion_unauthorized` and stays IDLE (retried on
+    them. Without the RecordWitnessedRun grant, a real BEGUN observation
+    logs `run_witness.promotion_unauthorized` and stays IDLE (retried on
     the next BEGUN, same posture as RunInitiator's StartRun grant).
 """
 
@@ -39,21 +39,21 @@ if TYPE_CHECKING:
 
 
 # ---------------------------------------------------------------------------
-# RunWatcher agent identity (deployment-stable constants)
+# RunWitness agent identity (deployment-stable constants)
 # ---------------------------------------------------------------------------
 
 # Treat as FOREVER-STABLE. Same change-cost rationale as
 # `RUN_SUPERVISOR_AGENT_ID` / `RUN_INITIATOR_AGENT_ID`: changing this
-# orphans every prior RunWatcher-authored Run's principal_id pointer.
+# orphans every prior RunWitness-authored Run's principal_id pointer.
 # UUID continues the `1111`-opened numeric range at `2222` (next unclaimed
 # block).
-RUN_WATCHER_AGENT_ID = UUID("01900000-0000-7000-8000-000022220010")
-RUN_WATCHER_AGENT_NAME = "RunWatcher"
-RUN_WATCHER_AGENT_KIND = "RunWatcher"
-RUN_WATCHER_AGENT_VERSION = "1.0.0"
-RUN_WATCHER_AGENT_DESCRIPTION = (
-    "Deterministic in-process runtime: promotes a real watched (Recorded) "
-    "Run via record_watched_run when it observes an external tool "
+RUN_WITNESS_AGENT_ID = UUID("01900000-0000-7000-8000-000022220010")
+RUN_WITNESS_AGENT_NAME = "RunWitness"
+RUN_WITNESS_AGENT_KIND = "RunWitness"
+RUN_WITNESS_AGENT_VERSION = "1.0.0"
+RUN_WITNESS_AGENT_DESCRIPTION = (
+    "Deterministic in-process runtime: promotes a real Witnessed "
+    "Run via record_witnessed_run when it observes an external tool "
     "(TomoScan) begin a capture, with per-capture-code dedup so a single "
     "in-progress capture is never promoted twice. Not a control path: it "
     "never drives the substrate, only records that a capture already "
@@ -61,12 +61,12 @@ RUN_WATCHER_AGENT_DESCRIPTION = (
 )
 
 
-# Sentinel model ref: RunWatcher is rule-based, not an LLM agent. The
+# Sentinel model ref: RunWitness is rule-based, not an LLM agent. The
 # Agent aggregate requires a ModelRef; this value is never used to build
 # an LLM (no subscriber / no build_llm call for this agent).
 _DETERMINISTIC_MODEL_REF = ModelRef(
     provider="deterministic",
-    model="agent:RunWatcher:v1",
+    model="agent:RunWitness:v1",
     snapshot_pin=None,
 )
 
@@ -80,29 +80,29 @@ _ACTOR_EVENT_ID = UUID("01900000-0000-7000-8000-000022220013")
 _BOOTSTRAP_CORRELATION_ID = UUID("01900000-0000-7000-8000-000022220014")
 
 
-async def seed_run_watcher_agent(kernel: Kernel) -> None:
-    """Seed the RunWatcher Agent + co-registered Actor (idempotent)."""
+async def seed_run_witness_agent(kernel: Kernel) -> None:
+    """Seed the RunWitness Agent + co-registered Actor (idempotent)."""
     identity = AgentSeedIdentity(
-        agent_id=RUN_WATCHER_AGENT_ID,
-        name=RUN_WATCHER_AGENT_NAME,
-        kind=RUN_WATCHER_AGENT_KIND,
-        version=RUN_WATCHER_AGENT_VERSION,
-        description=RUN_WATCHER_AGENT_DESCRIPTION,
+        agent_id=RUN_WITNESS_AGENT_ID,
+        name=RUN_WITNESS_AGENT_NAME,
+        kind=RUN_WITNESS_AGENT_KIND,
+        version=RUN_WITNESS_AGENT_VERSION,
+        description=RUN_WITNESS_AGENT_DESCRIPTION,
         model_ref=_DETERMINISTIC_MODEL_REF,
         prompt_template_id=None,
         agent_event_id=_AGENT_EVENT_ID,
         actor_event_id=_ACTOR_EVENT_ID,
         correlation_id=_BOOTSTRAP_CORRELATION_ID,
-        command_name="SeedRunWatcherAgent",
+        command_name="SeedRunWitnessAgent",
     )
     await seed_agent(kernel, identity)
 
 
 __all__ = [
-    "RUN_WATCHER_AGENT_DESCRIPTION",
-    "RUN_WATCHER_AGENT_ID",
-    "RUN_WATCHER_AGENT_KIND",
-    "RUN_WATCHER_AGENT_NAME",
-    "RUN_WATCHER_AGENT_VERSION",
-    "seed_run_watcher_agent",
+    "RUN_WITNESS_AGENT_DESCRIPTION",
+    "RUN_WITNESS_AGENT_ID",
+    "RUN_WITNESS_AGENT_KIND",
+    "RUN_WITNESS_AGENT_NAME",
+    "RUN_WITNESS_AGENT_VERSION",
+    "seed_run_witness_agent",
 ]

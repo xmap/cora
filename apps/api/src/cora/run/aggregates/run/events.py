@@ -202,19 +202,19 @@ class RunStarted:
     # only observes. See `ConductMode`'s own docstring (cora.run.aggregates
     # .run.state) for the full rationale. A property of which decider ran,
     # never a caller's choice: `StartRun` carries no `conduct_mode` field,
-    # and the driven decider hardcodes CONDUCTED here; a watched genesis
-    # (the separate decider) hardcodes RECORDED. Defaults to CONDUCTED for
+    # and the driven decider hardcodes CONDUCTED here; a witnessed genesis
+    # (the separate decider) hardcodes WITNESSED. Defaults to CONDUCTED for
     # forward-compat replay via `payload.get("conduct_mode",
     # ConductMode.CONDUCTED.value)` in `from_stored` for legacy streams
     # without the key, not because any caller supplies it.
     conduct_mode: ConductMode = ConductMode.CONDUCTED
-    # The watched genesis's recorded reading of the two live facility
+    # The witnessed genesis's recorded reading of the two live facility
     # signals (enclosure permit, beam availability) instead of an
     # enforced gate. Always None on a driven Run: a driven Run
     # necessarily passed both gates to exist at all, so a stored
     # all-True verdict would carry no information beyond the event's
     # own existence, the same reason `start_run`'s decider never
-    # persists its beam reading. Only `record_watched_run`'s decider
+    # persists its beam reading. Only `record_witnessed_run`'s decider
     # ever constructs a non-None value. Forward-compat via
     # `payload.get("safety_envelope_verdict")` returning None for legacy
     # streams without the key.

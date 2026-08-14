@@ -1,5 +1,5 @@
 """Postgres integration test for `rebuild_open_captures`
-(cora.api._run_watcher).
+(cora.api._run_witness).
 
 Proves the restart-rebuild query composes correctly end-to-end against
 real Postgres: the `conduct_mode` list_runs filter, the
@@ -8,7 +8,7 @@ real Postgres: the `conduct_mode` list_runs filter, the
 fake handlers) can prove this chain.
 
 Reuses the shared 2-BM tomography fixture, the same one
-`test_record_watched_run_handler_postgres.py` exercises.
+`test_record_witnessed_run_handler_postgres.py` exercises.
 """
 
 from datetime import UTC, datetime
@@ -17,14 +17,14 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from cora.api._run_watcher import rebuild_open_captures
+from cora.api._run_witness import rebuild_open_captures
 from cora.equipment._projections import register_equipment_projections
 from cora.equipment.aggregates.family import FamilyName, family_stream_id
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.recipe._projections import register_recipe_projections
 from cora.run._projections import register_run_projections
 from cora.run.features.list_runs import bind as bind_list_runs
-from cora.run.features.record_watched_run import RecordWatchedRun, bind
+from cora.run.features.record_witnessed_run import RecordWitnessedRun, bind
 from cora.shared.identity import MonitorSourceId
 from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, make_pg_profile_store
@@ -42,7 +42,7 @@ _NOW = datetime(2026, 8, 14, 4, 0, 0, tzinfo=UTC)
 _PRINCIPAL_ID = operator_for(__file__)
 _CORRELATION_ID = UUID("01900000-0000-7000-8000-0000004caa01")
 
-# Scenario tag: 4caa (RunWatcher restart-rebuild round-trip).
+# Scenario tag: 4caa (RunWitness restart-rebuild round-trip).
 _2BM_UNIT_ID = UUID("01900000-0000-7000-8000-00000004caa2")
 
 _CAP_ROTARY_STAGE_ID = family_stream_id(FamilyName("RotaryStage"))
@@ -82,10 +82,10 @@ _RECIPE = RecipeSpec(
         {_CAP_ROTARY_STAGE_ID, _CAP_LINEAR_STAGE_ID, _CAP_CAMERA_ID, _CAP_SCINTILLATOR_ID}
     ),
     practice_id=_PRACTICE_ID,
-    practice_name="2BM_tomography_practice_watcher_rebuild",
+    practice_name="2BM_tomography_practice_witness_rebuild",
     site_id=_2BM_UNIT_ID,
     plan_id=_PLAN_ID,
-    plan_name="2BM_watched_tomography_plan_watcher_rebuild",
+    plan_name="2BM_witnessed_tomography_plan_witness_rebuild",
     plan_asset_ids=frozenset(
         {_ASSET_ROTARY_ID, _ASSET_LINEAR_X_ID, _ASSET_CAMERA_ID, _ASSET_SCINTILLATOR_ID}
     ),
@@ -110,7 +110,7 @@ async def _drain(db_pool: asyncpg.Pool) -> None:
 
 
 @pytest.mark.integration
-async def test_rebuild_open_captures_seeds_dedup_map_from_a_real_open_watched_run(
+async def test_rebuild_open_captures_seeds_dedup_map_from_a_real_open_witnessed_run(
     db_pool: asyncpg.Pool,
 ) -> None:
     deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue())
@@ -130,8 +130,8 @@ async def test_rebuild_open_captures_seeds_dedup_map_from_a_real_open_watched_ru
 
     handler = bind(deps)
     run_id = await handler(
-        RecordWatchedRun(
-            name="2BM watched capture",
+        RecordWitnessedRun(
+            name="2BM witnessed capture",
             plan_id=_PLAN_ID,
             capture_code="2bmb-tomoscan",
             monitor_source_id=MonitorSourceId(UUID("01900000-0000-7000-8000-000063617001")),

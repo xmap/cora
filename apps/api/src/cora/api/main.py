@@ -50,7 +50,7 @@ from cora.access import (
 )
 from cora.access.adapters import EventStorePrincipalLivenessLookup
 from cora.agent import (
-    RUN_WATCHER_AGENT_ID,
+    RUN_WITNESS_AGENT_ID,
     AgentHandlers,
     build_llm,
     refresh_language_model_pricing,
@@ -72,7 +72,7 @@ from cora.agent import (
     seed_run_debriefer_agent,
     seed_run_initiator_agent,
     seed_run_supervisor_agent,
-    seed_run_watcher_agent,
+    seed_run_witness_agent,
     wire_agent,
 )
 from cora.agent.adapters import BudgetSpendGuard, PostgresLanguageModelLookup
@@ -96,7 +96,7 @@ from cora.api._readiness import (
 )
 from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
-from cora.api._run_watcher import rebuild_open_captures, run_watcher_lifespan
+from cora.api._run_witness import rebuild_open_captures, run_witness_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
 from cora.budget import (
@@ -413,28 +413,28 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
         raise RuntimeError(msg)
 
 
-def _enforce_run_watcher_recording_gate(settings: Settings) -> None:
-    """Refuse to boot with run_watcher_recording_enabled=True unless both
+def _enforce_run_witness_recording_gate(settings: Settings) -> None:
+    """Refuse to boot with run_witness_recording_enabled=True unless both
     prerequisites it depends on are also set.
 
-    run_watcher_recording_enabled promotes a BEGUN capture observation to
-    a real watched Run; that promotion needs (a) the shadow watcher
-    itself running (run_watcher_enabled) to ever see an observation, and
+    run_witness_recording_enabled promotes a BEGUN capture observation to
+    a real witnessed Run; that promotion needs (a) the shadow witness
+    itself running (run_witness_enabled) to ever see an observation, and
     (b) a target Plan (capture_watch_plan_id) to bind the promoted Run
     to. Catching the misconfiguration at boot is cheaper than discovering
-    it the first time a real capture begins and record_watched_run has
+    it the first time a real capture begins and record_witnessed_run has
     nowhere to point.
     """
-    if not settings.run_watcher_recording_enabled:
+    if not settings.run_witness_recording_enabled:
         return
     missing: list[str] = []
-    if not settings.run_watcher_enabled:
-        missing.append("RUN_WATCHER_ENABLED=true")
+    if not settings.run_witness_enabled:
+        missing.append("RUN_WITNESS_ENABLED=true")
     if settings.capture_watch_plan_id is None:
         missing.append("CAPTURE_WATCH_PLAN_ID=<uuid>")
     if missing:
         msg = (
-            "RUN_WATCHER_RECORDING_ENABLED=true requires "
+            "RUN_WITNESS_RECORDING_ENABLED=true requires "
             f"{' and '.join(missing)}. Promotion has no shadow observer "
             "to promote from, or no Plan to bind the promoted Run to, "
             "without both."
@@ -536,7 +536,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     """
     settings = settings if settings is not None else _settings_for_app()
     _enforce_production_principal_policy(settings)
-    _enforce_run_watcher_recording_gate(settings)
+    _enforce_run_witness_recording_gate(settings)
 
     # Signing factories: in-memory stubs by default until the rule-of-two
     # wire-tier trigger fires (see Settings.allow_insecure_inmemory_signing
@@ -1007,8 +1007,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # same shape for ExperimentSteerer (deterministic L3 steering agent;
             # identity + Decision seam now, proactive driver loop in a later slice).
             await seed_experiment_steerer_agent(deps)
-            # same shape for RunWatcher (deterministic capture-promotion agent).
-            await seed_run_watcher_agent(deps)
+            # same shape for RunWitness (deterministic capture-promotion agent).
+            await seed_run_witness_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
@@ -1056,15 +1056,15 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 tick_seconds=settings.enclosure_permit_probe_tick_seconds,
             )
 
-            # RunWatcher: shadow-observe an external tool's captures (2-BM
+            # RunWitness: shadow-observe an external tool's captures (2-BM
             # commissioning ladder rung 1), and (behind the SECOND,
-            # independent run_watcher_recording_enabled gate) promote a
-            # BEGUN capture to a real watched Run. run_watcher_enabled is
+            # independent run_witness_recording_enabled gate) promote a
+            # BEGUN capture to a real witnessed Run. run_witness_enabled is
             # a SEPARATE gate from having capture_watch_pvs configured,
             # so a deployment can declare the PVs ahead of turning the
             # watcher on. No-op (empty capture_codes) when either is
             # unset; recording stays off (shadow-only, writes nothing)
-            # unless run_watcher_recording_enabled is also True.
+            # unless run_witness_recording_enabled is also True.
             capture_watch_observer = ControlPortCaptureObserver(
                 control_port=app.state.operation.control_port,
                 capture_pvs=settings.capture_watch_pvs,
@@ -1073,11 +1073,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             )
             capture_watch_codes: frozenset[str] = (
                 frozenset(settings.capture_watch_pvs)
-                if settings.run_watcher_enabled
+                if settings.run_witness_enabled
                 else frozenset()
             )
             # Boot-time restart-rebuild: seed the dedup map from every
-            # currently-Running Recorded Run's external_refs, so a
+            # currently-Running Witnessed Run's external_refs, so a
             # capture still open across a restart is never re-promoted.
             # Skipped entirely when the watcher is not configured at all.
             # Probe the ListRuns read grant first (mirrors run_initiator_lifespan's
@@ -1096,9 +1096,9 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             if capture_watch_codes:
                 await probe_read_grant(
                     deps,
-                    agent_id=RUN_WATCHER_AGENT_ID,
+                    agent_id=RUN_WITNESS_AGENT_ID,
                     read_command="ListRuns",
-                    log_prefix="run_watcher",
+                    log_prefix="run_witness",
                     strict=settings.watcher_authz_strict,
                 )
                 try:
@@ -1107,9 +1107,9 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                     )
                 except RunUnauthorizedError:
                     _log.warning(
-                        "run_watcher.rebuild_unauthorized",
+                        "run_witness.rebuild_unauthorized",
                         reason=(
-                            "ListRuns grant missing for RUN_WATCHER_AGENT_ID; "
+                            "ListRuns grant missing for RUN_WITNESS_AGENT_ID; "
                             "starting with an empty dedup map"
                         ),
                     )
@@ -1164,11 +1164,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         deps,
                         list_campaigns=app.state.campaign.list_campaigns,
                     ),
-                    run_watcher_lifespan(
+                    run_witness_lifespan(
                         observer=capture_watch_observer,
                         capture_codes=capture_watch_codes,
                         deps=deps,
-                        record_watched_run=app.state.run.record_watched_run,
+                        record_witnessed_run=app.state.run.record_witnessed_run,
                         open_captures=open_captures,
                     ),
                 ):

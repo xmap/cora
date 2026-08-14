@@ -79,7 +79,7 @@ def test_to_payload_serializes_run_started_with_subject_to_primitives() -> None:
         # "Conducted" when not supplied; forward-compat via
         # `payload.get("conduct_mode", ConductMode.CONDUCTED.value)`.
         "conduct_mode": "Conducted",
-        # Additive payload field: the watched-genesis envelope reading.
+        # Additive payload field: the witnessed-genesis envelope reading.
         # Always None on a driven Run; forward-compat via
         # `payload.get("safety_envelope_verdict")`.
         "safety_envelope_verdict": None,

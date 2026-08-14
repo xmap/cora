@@ -276,12 +276,12 @@ async def initiate_tick(
 
     `running` deliberately counts EVERY Running Run toward `max_in_flight`
     regardless of `conduct_mode`: unlike the RunSupervisor's hold / resume /
-    liveness mechanisms, which skip a watched (Recorded) Run because CORA
-    does not control it, this cap exists to serialize access to shared
-    single-stage hardware. A watched capture IS occupying that hardware, so
-    excluding it here would let the initiator start a second, driven Run on
-    the same stage an external tool is actively driving, the opposite of
-    what the cap is for.
+    liveness mechanisms, which skip a Witnessed Run because CORA does not
+    control it, this cap exists to serialize access to shared single-stage
+    hardware. A witnessed capture IS occupying that hardware, so excluding
+    it here would let the initiator start a second, driven Run on the same
+    stage an external tool is actively driving, the opposite of what the
+    cap is for.
 
     A per-Subject StartRun denial makes `initiate_run` return None (a logged
     no-op); that Subject is not added to `started`, so a transient fault is

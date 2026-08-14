@@ -125,7 +125,7 @@ Two structural facts already enforce most of this, so it is mostly derivation, n
 
 Orthogonal axes, do not conflate with selection:
 
-- **Conducted vs recorded** (who drives the act): CORA's conducting engine drives either spine aggregate across the relevant port (control over `ControlPort`, compute over `ComputePort`, transfer over `TransferPort`); an externally-driven act (a scan loop a facility tool runs) is recorded. Both Runs and Procedures span both modes.
+- **Conducted vs witnessed** (who drives the act): CORA's conducting engine drives either spine aggregate across the relevant port (control over `ControlPort`, compute over `ComputePort`, transfer over `TransferPort`); an externally-driven act (a scan loop a facility tool runs) is witnessed. Both Runs and Procedures span both modes. ("Recorded" is not this axis's name: every Conducted act is also recorded, in the event store and elsewhere, so it does not distinguish the two.)
 - **Compute** homes by the same test: a reconstruction leaves a Dataset, so it is a Run (conducted over `ComputePort`); its provenance is the Dataset's `derived_from` plus `used_calibration_ids`.
 - **Transfer** moves bytes onto a `Distribution` and leaves no new Dataset of record, so it is an edge job, not a spine aggregate, until a publish / custody invariant earns it one.
 

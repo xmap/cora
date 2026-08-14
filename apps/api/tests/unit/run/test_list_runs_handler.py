@@ -72,7 +72,7 @@ async def test_handler_accepts_combined_filters() -> None:
             status="Running",
             plan_id=uuid4(),
             campaign_id=uuid4(),
-            conduct_mode="Recorded",
+            conduct_mode="Witnessed",
         ),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
@@ -84,7 +84,7 @@ async def test_handler_accepts_combined_filters() -> None:
 async def test_handler_accepts_conduct_mode_filter() -> None:
     handler = bind(build_deps())
     page = await handler(
-        ListRuns(conduct_mode="Recorded"),
+        ListRuns(conduct_mode="Witnessed"),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )

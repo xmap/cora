@@ -83,7 +83,7 @@ def test_safety_envelope_verdict_bools_are_redacted_not_kept_whole() -> None:
         "plan_id": "01900000-0000-7000-8000-0000000000d2",
         "subject_id": None,
         "raid": None,
-        "conduct_mode": "Recorded",
+        "conduct_mode": "Witnessed",
         "safety_envelope_verdict": {
             "enclosure_permitted": True,
             "beam_available": False,
@@ -103,7 +103,7 @@ def test_safety_envelope_verdict_bools_are_redacted_not_kept_whole() -> None:
     assert "safety_envelope_verdict" not in redacted or redacted["safety_envelope_verdict"] == {}
     # conduct_mode (keep:enum) survives, proving the drop is specific to
     # the verdict's two bools, not a blanket omission of the whole event.
-    assert redacted["conduct_mode"] == "Recorded"
+    assert redacted["conduct_mode"] == "Witnessed"
 
 
 def test_a_payload_key_absent_from_a_known_events_field_list_drops() -> None:
