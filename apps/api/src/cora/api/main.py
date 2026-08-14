@@ -70,6 +70,7 @@ from cora.agent import (
     seed_run_debriefer_agent,
     seed_run_initiator_agent,
     seed_run_supervisor_agent,
+    seed_run_watcher_agent,
     wire_agent,
 )
 from cora.agent.adapters import BudgetSpendGuard, PostgresLanguageModelLookup
@@ -967,6 +968,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # same shape for ExperimentSteerer (deterministic L3 steering agent;
             # identity + Decision seam now, proactive driver loop in a later slice).
             await seed_experiment_steerer_agent(deps)
+            # same shape for RunWatcher (deterministic capture-promotion agent).
+            await seed_run_watcher_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
