@@ -50,6 +50,7 @@ InvalidRunInterruptedAtError).
   - 409 (Run adjust transition guard, 6j): RunCannotAdjustError
   - 400 (validation, 12b-5 adds): InvalidPinnedCalibrationsError
   - 400 (validation): InvalidInputDatasetsError
+  - 400 (watched-genesis trigger guard): RunMonitorTriggerNotPermittedError
 """
 
 from fastapi import FastAPI, Request, status
@@ -90,6 +91,7 @@ from cora.run.aggregates.run import (
     RunHoldClaimsRemainError,
     RunInputNotReachableError,
     RunInputNotVerifiedError,
+    RunMonitorTriggerNotPermittedError,
     RunNotFoundError,
     RunObservationLogbookClosedError,
     RunPlanAssetDecommissionedError,
@@ -110,6 +112,7 @@ from cora.run.features import (
     get_run,
     hold_run,
     list_runs,
+    record_watched_run,
     resume_run,
     start_run,
     stop_run,
@@ -198,6 +201,11 @@ async def _handle_cannot_transition(request: Request, exc: Exception) -> JSONRes
 def register_run_routes(app: FastAPI) -> None:
     """Attach Run slice routers and exception handlers to the FastAPI app."""
     app.include_router(start_run.router)
+    # Stub router inclusion for the in-process-only watched-genesis slice.
+    # The router carries no routes by design; this include satisfies the
+    # routes-completeness architecture fitness without exposing a public
+    # HTTP surface.
+    app.include_router(record_watched_run.router)
     app.include_router(complete_run.router)
     app.include_router(abort_run.router)
     app.include_router(hold_run.router)
@@ -231,6 +239,10 @@ def register_run_routes(app: FastAPI) -> None:
         # Input-Dataset reference set cardinality cap (PROV `used`;
         # symmetric to the pinned_calibration_ids cap).
         InvalidInputDatasetsError,
+        # Watched-genesis trigger guard: mirrors the Enclosure BC's
+        # MonitorTriggerNotPermittedError registration for an
+        # in-process-only slice even with no route mounted.
+        RunMonitorTriggerNotPermittedError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
     # Obligation gate (Gate III): missing/invalid justification -> 422.

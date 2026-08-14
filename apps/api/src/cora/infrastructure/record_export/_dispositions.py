@@ -1630,6 +1630,10 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "plan_id": "token:uuid",
         "raid": "drop:text",
         "run_id": "token:uuid",
+        "safety_envelope_verdict": {
+            "beam_available": "keep:number",
+            "enclosure_permitted": "keep:number",
+        },
         "subject_id": "token:uuid",
         "trigger_source": "drop:text",
     },

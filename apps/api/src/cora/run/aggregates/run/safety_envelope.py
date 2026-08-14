@@ -59,7 +59,7 @@ from cora.run.aggregates.run.state import (
 )
 
 
-def check_clearance_gate(
+def clearance_gate_check(
     *,
     run_id: UUID,
     referencing_clearances: tuple[ClearanceLookupResult, ...],
@@ -91,7 +91,7 @@ def check_clearance_gate(
         )
 
 
-def check_supply_gate(
+def supply_gate_check(
     *,
     run_id: UUID,
     needed_supplies_snapshot: frozenset[str],
@@ -102,10 +102,10 @@ def check_supply_gate(
     [[project_supply_preflight_gate_design]]. Default-strict: Degraded
     does NOT pass; operators with override authority use
     mark_supply_available to declare a Supply Available before starting.
-    Mirrors `check_clearance_gate`'s two-error pair pattern.
+    Mirrors `clearance_gate_check`'s two-error pair pattern.
 
     Always raises, never witnesses, for the same reason as
-    `check_clearance_gate`: Supply is CORA's own aggregate, not a live
+    `clearance_gate_check`: Supply is CORA's own aggregate, not a live
     facility reading.
     """
     for kind in sorted(needed_supplies_snapshot):
@@ -218,8 +218,8 @@ def check_safety_envelope(
     error's payload are unchanged from before this module gained a second
     entry point.
     """
-    check_clearance_gate(run_id=run_id, referencing_clearances=referencing_clearances)
-    check_supply_gate(
+    clearance_gate_check(run_id=run_id, referencing_clearances=referencing_clearances)
+    supply_gate_check(
         run_id=run_id,
         needed_supplies_snapshot=needed_supplies_snapshot,
         needed_supplies_satisfaction=needed_supplies_satisfaction,
@@ -255,8 +255,8 @@ def witness_safety_envelope(
     raised. This is what makes "both paths provably call the same
     predicates" a structural fact rather than a claim to trust.
     """
-    check_clearance_gate(run_id=run_id, referencing_clearances=referencing_clearances)
-    check_supply_gate(
+    clearance_gate_check(run_id=run_id, referencing_clearances=referencing_clearances)
+    supply_gate_check(
         run_id=run_id,
         needed_supplies_snapshot=needed_supplies_snapshot,
         needed_supplies_satisfaction=needed_supplies_satisfaction,

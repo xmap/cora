@@ -91,7 +91,7 @@ from uuid import UUID
 
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
-from cora.run.aggregates.run.state import ConductMode
+from cora.run.aggregates.run.state import ConductMode, SafetyEnvelopeVerdict
 from cora.shared.identity import ActorId
 from cora.shared.logbook import LogbookSchema
 
@@ -208,6 +208,17 @@ class RunStarted:
     # ConductMode.CONDUCTED.value)` in `from_stored` for legacy streams
     # without the key, not because any caller supplies it.
     conduct_mode: ConductMode = ConductMode.CONDUCTED
+    # The watched genesis's recorded reading of the two live facility
+    # signals (enclosure permit, beam availability) instead of an
+    # enforced gate. Always None on a driven Run: a driven Run
+    # necessarily passed both gates to exist at all, so a stored
+    # all-True verdict would carry no information beyond the event's
+    # own existence, the same reason `start_run`'s decider never
+    # persists its beam reading. Only `record_watched_run`'s decider
+    # ever constructs a non-None value. Forward-compat via
+    # `payload.get("safety_envelope_verdict")` returning None for legacy
+    # streams without the key.
+    safety_envelope_verdict: SafetyEnvelopeVerdict | None = None
     raid: str | None = None
     override_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     effective_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
@@ -754,6 +765,7 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             plan_id=plan_id,
             subject_id=subject_id,
             conduct_mode=conduct_mode,
+            safety_envelope_verdict=safety_envelope_verdict,
             raid=raid,
             override_parameters=override_parameters,
             effective_parameters=effective_parameters,
@@ -772,6 +784,14 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "plan_id": str(plan_id),
                 "subject_id": str(subject_id) if subject_id is not None else None,
                 "conduct_mode": conduct_mode.value,
+                "safety_envelope_verdict": (
+                    {
+                        "enclosure_permitted": safety_envelope_verdict.enclosure_permitted,
+                        "beam_available": safety_envelope_verdict.beam_available,
+                    }
+                    if safety_envelope_verdict is not None
+                    else None
+                ),
                 "raid": raid,
                 "override_parameters": override_parameters,
                 "effective_parameters": effective_parameters,
@@ -1018,6 +1038,7 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                 # payload, so legacy streams replay without an upcaster.
                 raw_campaign_id = payload.get("campaign_id")
                 raw_decided_by = payload.get("decided_by_decision_id")
+                raw_verdict = payload.get("safety_envelope_verdict")
                 return RunStarted(
                     run_id=UUID(payload["run_id"]),
                     name=payload["name"],
@@ -1025,6 +1046,14 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                     subject_id=UUID(raw_subject) if raw_subject is not None else None,
                     conduct_mode=ConductMode(
                         payload.get("conduct_mode", ConductMode.CONDUCTED.value)
+                    ),
+                    safety_envelope_verdict=(
+                        SafetyEnvelopeVerdict(
+                            enclosure_permitted=raw_verdict["enclosure_permitted"],
+                            beam_available=raw_verdict["beam_available"],
+                        )
+                        if raw_verdict is not None
+                        else None
                     ),
                     raid=payload.get("raid"),
                     override_parameters=payload.get("override_parameters", {}),

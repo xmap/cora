@@ -250,24 +250,24 @@ def _witness(
 
 
 @pytest.mark.unit
-def test_witness_full_envelope_returns_verdict_held() -> None:
+def test_witness_full_envelope_returns_verdict_all_gates_passed() -> None:
     verdict = _witness()
     assert verdict == SafetyEnvelopeVerdict(enclosure_permitted=True, beam_available=True)
-    assert verdict.held is True
+    assert verdict.all_gates_passed is True
 
 
 @pytest.mark.unit
 def test_witness_records_enclosure_not_permitted_instead_of_raising() -> None:
     verdict = _witness(referencing_enclosures=(_enclosure("NotPermitted", "Active"),))
     assert verdict == SafetyEnvelopeVerdict(enclosure_permitted=False, beam_available=True)
-    assert verdict.held is False
+    assert verdict.all_gates_passed is False
 
 
 @pytest.mark.unit
 def test_witness_records_beam_not_available_instead_of_raising() -> None:
     verdict = _witness(beam_availability=_beam(sbs_open=False))
     assert verdict == SafetyEnvelopeVerdict(enclosure_permitted=True, beam_available=False)
-    assert verdict.held is False
+    assert verdict.all_gates_passed is False
 
 
 @pytest.mark.unit

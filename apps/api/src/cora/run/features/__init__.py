@@ -10,4 +10,7 @@ Slices ship per state transition / aggregate operation:
     open-on-first-write)
   - 6j: adjust_run (mid-flight parameter steering; idempotency-wrapped;
     closes the autonomous-CT closed-loop steering gap)
+  - record_watched_run: the watched genesis (a second, independent
+    genesis alongside start_run). Hardcodes ConductMode.RECORDED;
+    in-process-only, no REST route, no MCP tool.
 """

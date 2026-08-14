@@ -24,6 +24,12 @@ FSM closes via four terminal transitions (`complete` / `abort` /
 strict-not-idempotent (the guard rejects double-application and
 ConcurrencyError catches the persistence-layer double-submit case).
 
+`record_watched_run` is a second, independent genesis (the watched
+path). NOT idempotency-wrapped despite being create-style: the Run id
+is fresh and random per call, so there is no Idempotency-Key to
+collapse a retry against. In-process-only; no route, no MCP tool ever
+call it.
+
 `append_observations` writes the polymorphic sensor / motor observation
 logbook (SOSA `sampling_procedure` discriminator; lazy open-on-first-
 write). Not idempotency-wrapped: natural idempotence via the
@@ -69,6 +75,7 @@ from cora.run.features import (
     get_run,
     hold_run,
     list_runs,
+    record_watched_run,
     resume_run,
     start_run,
     stop_run,
@@ -83,6 +90,7 @@ class RunHandlers:
     """The Run BC's handler bundle, each closed over Kernel."""
 
     start_run: start_run.IdempotentHandler
+    record_watched_run: record_watched_run.Handler
     complete_run: complete_run.Handler
     abort_run: abort_run.Handler
     hold_run: hold_run.Handler
@@ -113,6 +121,11 @@ def wire_run(deps: Kernel) -> RunHandlers:
                 lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
             ),
             command_name="StartRun",
+            bc=_BC,
+        ),
+        record_watched_run=with_tracing(
+            record_watched_run.bind(deps),
+            command_name="RecordWatchedRun",
             bc=_BC,
         ),
         complete_run=with_tracing(

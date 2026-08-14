@@ -336,10 +336,13 @@ class SafetyEnvelopeVerdict:
     beam_available: bool
 
     @property
-    def held(self) -> bool:
+    def all_gates_passed(self) -> bool:
         """True only when every witnessed gate passed. Not a dataclass
         field: a derived property never reaches the record-export
-        generator, which walks `dataclasses.fields()`."""
+        generator, which walks `dataclasses.fields()`. Named
+        `all_gates_passed`, not `held`: `Held` is already this module's
+        RunStatus vocabulary (a paused Run), and `verdict.held` would
+        read as the opposite of what it means here."""
         return self.enclosure_permitted and self.beam_available
 
 
@@ -359,6 +362,34 @@ class RunAlreadyExistsError(Exception):
     def __init__(self, run_id: UUID) -> None:
         super().__init__(f"Run {run_id} already exists")
         self.run_id = run_id
+
+
+class RunMonitorTriggerNotPermittedError(Exception):
+    """`record_watched_run` carried a non-Monitor trigger.
+
+    Mirrors the Enclosure BC's `MonitorTriggerNotPermittedError`
+    (`observe_enclosure_status`, D6.L2 observation-axis-only anti-lock):
+    a watched genesis is reachable only via Monitor-driven inbound
+    observation from the substrate; there is no operator path to it. The
+    command surface types `monitor_source_id` as `MonitorSourceId` so an
+    operator cannot supply non-Monitor attribution at the type level;
+    this error fences the same invariant defensively at the decider so a
+    programmer mistake in a custom handler, test fixture, or future
+    adapter cannot smuggle an operator-asserted Run genesis onto the
+    spine through the watched path.
+
+    HTTP 400 (semantically a request the caller cannot issue, not a
+    state-transition conflict).
+    """
+
+    def __init__(self, run_id: UUID, trigger: str) -> None:
+        super().__init__(
+            f"Run {run_id}: trigger {trigger!r} is not permitted on "
+            f"record_watched_run; only 'Monitor' is accepted per the "
+            f"observation-axis-only anti-lock."
+        )
+        self.run_id = run_id
+        self.trigger = trigger
 
 
 class RunNotFoundError(Exception):

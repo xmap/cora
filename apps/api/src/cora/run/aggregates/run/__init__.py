@@ -62,10 +62,10 @@ from cora.run.aggregates.run.parameters_validation import (
 from cora.run.aggregates.run.read import load_run
 from cora.run.aggregates.run.safety_envelope import (
     beam_gate_refusal,
-    check_clearance_gate,
     check_safety_envelope,
-    check_supply_gate,
+    clearance_gate_check,
     enclosure_gate_refusal,
+    supply_gate_check,
     witness_safety_envelope,
 )
 from cora.run.aggregates.run.state import (
@@ -117,6 +117,7 @@ from cora.run.aggregates.run.state import (
     RunHoldClaimsRemainError,
     RunInputNotReachableError,
     RunInputNotVerifiedError,
+    RunMonitorTriggerNotPermittedError,
     RunName,
     RunNotFoundError,
     RunObservationLogbookClosedError,
@@ -210,6 +211,7 @@ __all__ = [
     "RunHoldClaimsRemainError",
     "RunInputNotReachableError",
     "RunInputNotVerifiedError",
+    "RunMonitorTriggerNotPermittedError",
     "RunName",
     "RunNotFoundError",
     "RunObservationLogbookClosedError",
@@ -235,9 +237,8 @@ __all__ = [
     "active_hold_claims",
     "beam_gate_refusal",
     "blocking_causes",
-    "check_clearance_gate",
     "check_safety_envelope",
-    "check_supply_gate",
+    "clearance_gate_check",
     "derive_claim_id",
     "enclosure_gate_refusal",
     "event_type_name",
@@ -248,6 +249,7 @@ __all__ = [
     "from_stored",
     "is_last_active_claim",
     "load_run",
+    "supply_gate_check",
     "to_payload",
     "validate_adjusted_parameters_against_method_schema",
     "validate_effective_parameters_against_method_schema",
