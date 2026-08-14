@@ -14,7 +14,7 @@ exactly the ones a hand-rolled seed script gets wrong first, so this
 is proof the ceremony's Plan is real, not just present.
 """
 
-# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnusedFunction=false
 
 from dataclasses import replace as dc_replace
 from datetime import UTC, datetime
@@ -35,6 +35,7 @@ from cora.data.features import ingest_scan
 from cora.data.wire import (
     _build_dataset_by_checksum_lookup,  # pyright: ignore[reportPrivateUsage]
 )
+from cora.enclosure.adapters.postgres_enclosure_lookup import PostgresEnclosureLookup
 from cora.equipment.adapters.postgres_asset_lookup import PostgresAssetLookup
 from cora.infrastructure.postgres.pool import create_pool
 from cora.recipe.aggregates.capability import load_capability
@@ -55,6 +56,17 @@ _BEAMLINE = "2-bm"
 _CAMERA = "Camera"
 _SHUTTER = "StationShutter"
 _ACQUISITION_CAMERA = "AcquisitionCamera"
+
+
+@pytest.fixture(autouse=True)
+def _enclosure_permit_pvs(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The ceremony resolves 2-BM-B via `seed_enclosures`, which only
+    seeds names present in `Settings.enclosure_permit_pvs` (empty by
+    default). The PV values themselves are never read by the ceremony
+    (it never subscribes); any placeholder string is fine."""
+    monkeypatch.setenv(
+        "ENCLOSURE_PERMIT_PVS", '{"2-BM-A": "test:2bma:permit", "2-BM-B": "test:2bmb:permit"}'
+    )
 
 
 @pytest_asyncio.fixture
@@ -177,12 +189,21 @@ async def test_seeded_ladder_resolves_for_both_acquisition_recipes(
     event_store = build_postgres_deps(pool, now=_NOW).event_store
 
     capability_id = recipe_seed_id(_FACILITY, _BEAMLINE, "capability", "acquisition")
-    shutter_id = asset_seed_id(_FACILITY, _BEAMLINE, _SHUTTER)
-    acquisition_camera_id = asset_seed_id(_FACILITY, _BEAMLINE, _ACQUISITION_CAMERA)
+    shutter_id = asset_seed_id(_FACILITY, _BEAMLINE, f"{_SHUTTER}_v2")
+    acquisition_camera_id = asset_seed_id(_FACILITY, _BEAMLINE, f"{_ACQUISITION_CAMERA}_v2")
+
+    enclosure_b = await PostgresEnclosureLookup(pool).lookup_by_name(
+        facility_code=_FACILITY, name="2-BM-B"
+    )
+    assert enclosure_b is not None
+    for asset_id in (shutter_id, acquisition_camera_id):
+        asset = await PostgresAssetLookup(pool).lookup(asset_id)
+        assert asset is not None
+        assert asset.located_in_enclosure_id == enclosure_b.enclosure_id
 
     for method_name, practice_name, plan_name in (
-        ("dark_field", "2BM_dark_field_practice", "2BM_dark_field_plan"),
-        ("flat_field", "2BM_flat_field_practice", "2BM_flat_field_plan"),
+        ("dark_field", "2BM_dark_field_practice", "2BM_dark_field_plan_v2"),
+        ("flat_field", "2BM_flat_field_practice", "2BM_flat_field_plan_v2"),
     ):
         method_id = recipe_seed_id(_FACILITY, _BEAMLINE, "method", method_name)
         practice_id = recipe_seed_id(_FACILITY, _BEAMLINE, "practice", practice_name)

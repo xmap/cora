@@ -19,11 +19,28 @@ Registers:
   - a StationShutter Device Asset and a second camera Device Asset (the
     5 MP unit `docs/deployments/2-bm/recipes.md`'s `dark_field` /
     `flat_field` recipes actually target, distinct from the first
-    camera), plus the Capability -> Method -> Practice -> Plan chain
-    for those same two recipes, bound to the two new Assets -- what
-    `start_run` needs. `energy_setting` and `hexapod_reboot` stay
-    unregistered: `recipes.md` marks both "design, pending executor",
-    so a Plan for either would fail on its first conduct step.
+    camera), each declaring `located_in_enclosure_id` for `2-BM-B`
+    (resolved by name, never hardcoded -- see
+    `docs/deployments/2-bm/enclosures.md`), plus the Capability ->
+    Method -> Practice -> Plan chain for those same two recipes, bound
+    to the two new Assets -- what `start_run` needs, including the
+    Enclosure-permit gate: `located_in_enclosure_id` is genesis-only
+    (no update command exists), and a Run whose scoped Assets declare
+    NONE is Permit-by-default, so leaving it unset is a silent gate
+    skip, not a cosmetic gap. `energy_setting` and `hexapod_reboot`
+    stay unregistered: `recipes.md` marks both "design, pending
+    executor", so a Plan for either would fail on its first conduct
+    step.
+
+  A ONE-TIME migration lives permanently in this file: the first
+  StationShutter/Camera registration (pre-2026-08-14) had no
+  `located_in_enclosure_id`. Fixing that on an already-registered
+  Asset means decommission + re-register (Lock A precedent, same as
+  `controller_id`); the two Plans binding the old ids are deprecated
+  and replaced by `_v2` Plans binding the new ones. Capability /
+  Method / Practice are untouched -- none reference a specific Asset
+  id. A deployment seeded fresh after this change never sees the old
+  names at all; it goes straight to the located `_v2` registration.
 
 ## Identity is per-aggregate, matching each aggregate's locked design
 
@@ -36,9 +53,11 @@ Registers:
     and at MAX IV must share one id or Assembly content hashes fork),
     and definitions belong to the seed registry's graduation
     governance.
-  - Enclosures: not touched. They are boot-seeded with minted ids and
-    an address pre-check precisely because deterministic ids would
-    collide with tombstones on re-register.
+  - Enclosures: RESOLVED via `seed_enclosures(kernel)`, the same
+    idempotent seed the real app's boot lifespan runs -- never
+    created with a ceremony-local id. Minted at boot, with an address
+    pre-check, precisely because deterministic ids would collide with
+    tombstones on re-register.
   - Supplies: minted id; idempotency comes from an address pre-check
     against the supply projection, mirroring the partial-unique
     address that makes deregister-then-re-register legal.
@@ -49,16 +68,20 @@ The registration deciders demand facility lookup results that
 production fills from projections, and a standalone kernel has no
 projection worker. The ceremony therefore runs the same idempotent
 bootstrap hooks the app lifespan runs (federation for the
-self-Facility, equipment for roles and families) and drains the
-relevant projections between stages; without that, a fresh database
-refuses every registration with FacilityNotFound.
+self-Facility, equipment for roles and families, enclosure for
+2-BM-A / 2-BM-B) and drains the relevant projections between stages;
+without that, a fresh database refuses every registration with
+FacilityNotFound.
 
 ## What a re-run does
 
-Nothing, loudly. Every instance reports one of: seeded, exists,
-retired (the stream folds to Decommissioned; the ceremony never
-resurrects a tombstone, since decommission-then-re-register is the
-operator's rebind path, not the seeder's), or error. Exit codes: 0
+Nothing, loudly, for everything except the one deliberate migration
+this file performs on itself (see the `_v2` Asset/Plan registrations
+above): every OTHER instance reports one of: seeded, exists, retired
+(the stream folds to Decommissioned; the ceremony never resurrects a
+tombstone read on a name it did not itself just decommission, since
+decommission-then-re-register under a NEW id is the only rebind path,
+never a re-append to the old one), or error. Exit codes: 0
 when everything already existed, 2 when anything was seeded, 1 on any
 error. A `--dry-run` prints the same report and writes nothing.
 """
@@ -71,6 +94,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TypeVar
 from uuid import UUID, uuid5
 
+from cora.enclosure._enclosure_seed import seed_enclosures
+from cora.enclosure._projections import register_enclosure_projections
+from cora.enclosure.adapters.postgres_enclosure_lookup import PostgresEnclosureLookup
 from cora.equipment._bootstrap import bootstrap_equipment, bootstrap_families
 from cora.equipment._projections import register_equipment_projections
 from cora.equipment.aggregates.asset import Asset, AssetLifecycle, AssetTier
@@ -82,6 +108,9 @@ from cora.equipment.aggregates.family._family_registry import family_stream_id
 from cora.equipment.aggregates.family.read import load_family
 from cora.equipment.features.add_asset_family.command import AddAssetFamily
 from cora.equipment.features.add_asset_family.decider import decide as decide_add_family
+from cora.equipment.features.decommission_asset.command import DecommissionAsset
+from cora.equipment.features.decommission_asset.context import DecommissionAssetContext
+from cora.equipment.features.decommission_asset.decider import decide as decide_decommission_asset
 from cora.equipment.features.register_asset.command import RegisterAsset
 from cora.equipment.features.register_asset.decider import decide as decide_asset
 from cora.federation._bootstrap import bootstrap_federation
@@ -113,6 +142,7 @@ from cora.recipe.aggregates.method.read import load_method
 from cora.recipe.aggregates.plan.events import event_type_name as plan_event_type_name
 from cora.recipe.aggregates.plan.events import to_payload as plan_to_payload
 from cora.recipe.aggregates.plan.read import load_plan
+from cora.recipe.aggregates.plan.state import PlanStatus
 from cora.recipe.aggregates.practice.events import event_type_name as practice_event_type_name
 from cora.recipe.aggregates.practice.events import to_payload as practice_to_payload
 from cora.recipe.aggregates.practice.read import load_practice
@@ -125,6 +155,9 @@ from cora.recipe.features.define_plan.context import PlanBindingContext
 from cora.recipe.features.define_plan.decider import decide as decide_plan
 from cora.recipe.features.define_practice.command import DefinePractice
 from cora.recipe.features.define_practice.decider import decide as decide_practice
+from cora.recipe.features.deprecate_plan.command import DeprecatePlan
+from cora.recipe.features.deprecate_plan.decider import decide as decide_deprecate_plan
+from cora.shared.deprecation import DeprecationReason
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 from cora.supply._projections import register_supply_projections
@@ -224,12 +257,14 @@ async def seed_pilot_beamline(
             authz=AllowAllAuthorize(),
             facility_lookup=PostgresFacilityLookup(pool),
             supply_lookup=PostgresSupplyLookup(pool),
+            enclosure_lookup=PostgresEnclosureLookup(pool),
         )
 
         registry = ProjectionRegistry()
         register_federation_projections(registry, kernel)
         register_equipment_projections(registry, kernel)
         register_supply_projections(registry, kernel)
+        register_enclosure_projections(registry, kernel)
 
         # Prerequisites the app lifespan normally seeds. All
         # idempotent; a dry run still runs them so its report reads
@@ -237,6 +272,13 @@ async def seed_pilot_beamline(
         await bootstrap_federation(kernel)
         await bootstrap_equipment(kernel)
         await bootstrap_families(kernel)
+        # Same function the real app's own boot lifespan calls; on
+        # arcturus (already seeded) this just resolves the existing
+        # 2-BM-A / 2-BM-B ids, on a fresh database it seeds them for
+        # real. Never hardcode these ids: they are minted at boot, not
+        # deterministic (unlike Assets), so a stale literal would
+        # silently resolve nothing on a re-seeded database.
+        enclosure_ids_by_name = await seed_enclosures(kernel)
         await drain_projections(pool, registry)
 
         code = FacilityCode(facility_code)
@@ -246,6 +288,15 @@ async def seed_pilot_beamline(
                 "error",
                 f"facility {facility_code}",
                 "not found after bootstrap; is SELF_FACILITY_CODE set to this code?",
+            )
+            return _finish(report, dry_run)
+
+        enclosure_b_id = enclosure_ids_by_name.get("2-BM-B")
+        if enclosure_b_id is None:
+            report.note(
+                "error",
+                "enclosure 2-BM-B",
+                "not configured; is ENCLOSURE_PERMIT_PVS set for this deployment?",
             )
             return _finish(report, dry_run)
 
@@ -392,8 +443,76 @@ async def seed_pilot_beamline(
 
         # ----- Recipe BC prerequisite Assets: what dark_field / flat_field
         # actually target, per docs/deployments/2-bm/recipes.md -----
-        shutter_id = asset_seed_id(facility_code, beamline, shutter_name)
-        acquisition_camera_id = asset_seed_id(facility_code, beamline, acquisition_camera_name)
+
+        async def decommission_if_present(old_id: UUID, label: str) -> None:
+            """One-time migration step, permanent in this file: the first
+            registration of this Asset (pre-2026-08-14) had no
+            `located_in_enclosure_id`. No-op when the old stream never
+            existed (a fresh deployment goes straight to the located `_v2`
+            registration below and never sees this Asset name at all) or
+            is already Decommissioned (a prior run already migrated it).
+            """
+            old_state, old_version = await _load_asset_with_version(kernel, old_id)
+            if old_state is None:
+                return
+            if old_state.lifecycle is AssetLifecycle.DECOMMISSIONED:
+                report.note("exists", f"asset {label} (v1) decommissioned")
+                return
+            if dry_run:
+                report.note("seeded", f"asset {label} (v1) decommissioned", "dry-run, not written")
+                return
+            decommission_events = decide_decommission_asset(
+                state=old_state,
+                command=DecommissionAsset(
+                    asset_id=old_id,
+                    reason=(
+                        "relocated: located_in_enclosure_id was never set at genesis; "
+                        "superseded by a 2-BM-B-located registration"
+                    ),
+                ),
+                context=DecommissionAssetContext(currently_installed_at_mount_id=None),
+                now=clock.now(),
+                decommissioned_by=actor,
+            )
+            decommission_envelopes = [
+                to_new_event(
+                    event_type=asset_event_type_name(event),
+                    payload=asset_to_payload(event),
+                    occurred_at=event.occurred_at,
+                    event_id=ids.new_id(),
+                    command_name=_COMMAND_NAME,
+                    correlation_id=run_correlation_id,
+                    principal_id=SYSTEM_PRINCIPAL_ID,
+                )
+                for event in decommission_events
+            ]
+            await kernel.event_store.append(
+                stream_type="Asset",
+                stream_id=old_id,
+                expected_version=old_version,
+                events=decommission_envelopes,
+            )
+            report.note("seeded", f"asset {label} (v1) decommissioned")
+
+        await decommission_if_present(
+            asset_seed_id(facility_code, beamline, shutter_name), shutter_name
+        )
+        await decommission_if_present(
+            asset_seed_id(facility_code, beamline, acquisition_camera_name),
+            acquisition_camera_name,
+        )
+
+        # Located registration. New deterministic ids under a versioned
+        # SEED KEY only (asset_seed_id hashes on this key, not on
+        # RegisterAsset.name): the v1 id above is no longer at
+        # expected_version=0 once decommissioned, so this ceremony cannot
+        # reuse it. `RegisterAsset(name=...)` keeps the clean, unsuffixed
+        # display name; "_v2" exists only in the id-derivation key, never
+        # operator-visible.
+        shutter_id = asset_seed_id(facility_code, beamline, f"{shutter_name}_v2")
+        acquisition_camera_id = asset_seed_id(
+            facility_code, beamline, f"{acquisition_camera_name}_v2"
+        )
 
         shutter = await seed_asset(
             shutter_id,
@@ -402,8 +521,9 @@ async def seed_pilot_beamline(
                 tier=AssetTier.DEVICE,
                 parent_id=root_id,
                 facility_code=None,
+                located_in_enclosure_id=enclosure_b_id,
             ),
-            f"asset {shutter_name} (Device)",
+            f"asset {shutter_name} (Device, 2-BM-B)",
         )
         acquisition_camera = await seed_asset(
             acquisition_camera_id,
@@ -412,8 +532,9 @@ async def seed_pilot_beamline(
                 tier=AssetTier.DEVICE,
                 parent_id=root_id,
                 facility_code=None,
+                located_in_enclosure_id=enclosure_b_id,
             ),
-            f"asset {acquisition_camera_name} (Device)",
+            f"asset {acquisition_camera_name} (Device, 2-BM-B)",
         )
 
         shutter_family_id = family_stream_id(FamilyName("Shutter"))
@@ -740,11 +861,59 @@ async def seed_pilot_beamline(
             )
             _ = plan
 
+        async def deprecate_plan_if_present(old_plan_name: str) -> None:
+            """One-time migration step, permanent in this file: the Plans
+            bound to the pre-2026-08-14 (un-located) Assets are superseded
+            by the `_v2` Plans below. No-op when the old Plan never existed
+            (fresh deployment) or is already Deprecated (prior run already
+            migrated it). Hygiene, not a safety requirement: `start_run`
+            already refuses any Plan bound to a Decommissioned Asset
+            regardless of this step.
+            """
+            old_plan_id = recipe_seed_id(facility_code, beamline, "plan", old_plan_name)
+            old_plan = await load_plan(kernel.event_store, old_plan_id)
+            if old_plan is None:
+                return
+            if old_plan.status is PlanStatus.DEPRECATED:
+                report.note("exists", f"plan {old_plan_name} deprecated")
+                return
+            if dry_run:
+                report.note("seeded", f"plan {old_plan_name} deprecated", "dry-run, not written")
+                return
+            _, old_plan_version = await kernel.event_store.load("Plan", old_plan_id)
+            deprecate_events = decide_deprecate_plan(
+                state=old_plan,
+                command=DeprecatePlan(plan_id=old_plan_id, reason=DeprecationReason.SUPERSEDED),
+                now=clock.now(),
+            )
+            deprecate_envelopes = [
+                to_new_event(
+                    event_type=plan_event_type_name(event),
+                    payload=plan_to_payload(event),
+                    occurred_at=event.occurred_at,
+                    event_id=ids.new_id(),
+                    command_name=_COMMAND_NAME,
+                    correlation_id=run_correlation_id,
+                    principal_id=SYSTEM_PRINCIPAL_ID,
+                )
+                for event in deprecate_events
+            ]
+            await kernel.event_store.append(
+                stream_type="Plan",
+                stream_id=old_plan_id,
+                expected_version=old_plan_version,
+                events=deprecate_envelopes,
+            )
+            report.note("seeded", f"plan {old_plan_name} deprecated")
+
+        await deprecate_plan_if_present("2BM_dark_field_plan")
+        await deprecate_plan_if_present("2BM_flat_field_plan")
+
         await seed_acquisition_recipe(
-            "dark_field", "2BM_dark_field_practice", "2BM_dark_field_plan"
+            "dark_field", "2BM_dark_field_practice", "2BM_dark_field_plan_v2"
         )
         await seed_acquisition_recipe(
-            "flat_field", "2BM_flat_field_practice", "2BM_flat_field_plan"
+            "flat_field", "2BM_flat_field_practice", "2BM_flat_field_plan_v2"
         )
 
         _ = root
@@ -805,10 +974,10 @@ def build_parser() -> argparse.ArgumentParser:
             "record (the beamline root Unit, a camera Device with its "
             "Capturing-bearing family, a Storage supply) and before "
             "start_run has a real plan_id to bind to (a StationShutter "
-            "and a second camera Device, plus the Capability -> Method "
-            "-> Practice -> Plan chain for the dark_field / flat_field "
-            "recipes, bound to those two). Idempotent; re-runs report "
-            "and change nothing."
+            "and a second camera Device located in 2-BM-B, plus the "
+            "Capability -> Method -> Practice -> Plan chain for the "
+            "dark_field / flat_field recipes, bound to those two). "
+            "Idempotent; re-runs report and change nothing."
         ),
     )
     parser.add_argument("--facility-code", default="cora")
