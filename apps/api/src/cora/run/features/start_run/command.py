@@ -7,10 +7,6 @@ Carries the caller-controlled inputs:
     existence verified at handler-load time)
   - `subject_id` — the Subject being measured, or None for
     calibration / dark-field runs
-  - `conduct_mode`: who drove this act, CORA's own Conductor
-    (`Conducted`) or an external tool CORA only observes
-    (`Recorded`). Defaults to `Conducted`, true of every caller
-    today; see the field's own comment for the RECORDED-mode plan.
   - `raid` — Research Activity Identifier (ISO 23527) of the
     research activity this Run belongs to. Optional; opaque string
     carried verbatim. RAiD is project/activity scoped: one RAiD is
@@ -35,6 +31,14 @@ Status is implicit at start (`Running`) and not part of the
 command — see Run aggregate's `state.py` docstring for the
 enum-in-state, derived-from-event-type-in-evolver convention.
 
+`ConductMode` is likewise not a command field. Every Run started through
+this slice is driven by CORA's own Conductor, so the decider hardcodes
+`ConductMode.CONDUCTED` on the emitted `RunStarted` rather than accepting
+it from the caller: the mode is a property of which decider ran, not a
+value a caller could set. A `Recorded` Run is genesis-only through the
+separate watched-genesis slice, never through this one. See
+`ConductMode`'s own docstring on `Run`.
+
 The handler additionally pre-loads Plan + Subject (if given) +
 each bound Asset (from `plan.asset_ids`) to build a
 `RunStartContext` for the decider (gate-review Q2 / Q5 pattern),
@@ -45,7 +49,6 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
-from cora.run.aggregates.run.state import ConductMode
 from cora.shared.identifier import Identifier
 
 
@@ -70,15 +73,6 @@ class StartRun:
     name: str
     plan_id: UUID
     subject_id: UUID | None
-    # who drove this act: CORA's own Conductor, or an external tool CORA
-    # only observes. Defaults to CONDUCTED: the only production caller
-    # today (`cora.api._run_initiator`) is always Conducted, so the
-    # default declares the closed, currently-total set of reality rather
-    # than guessing a live signal. A future RECORDED-mode genesis (the
-    # not-yet-built shadow-to-real promotion, see `cora.api._run_watcher`)
-    # is new code passing this explicitly, never an old caller inheriting
-    # the default silently. See `ConductMode`'s own docstring.
-    conduct_mode: ConductMode = ConductMode.CONDUCTED
     raid: str | None = None
     override_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     trigger_source: str | None = None

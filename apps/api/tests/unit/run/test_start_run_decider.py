@@ -164,11 +164,11 @@ def test_decide_emits_run_started_for_valid_sample_run() -> None:
 
 
 @pytest.mark.unit
-def test_decide_copies_conduct_mode_from_command_unmodified() -> None:
-    """The decider copies `StartRun.conduct_mode` verbatim onto the emitted
-    `RunStarted` — it must never compute or guess the value itself. Explicit
-    RECORDED (the not-yet-built shadow-promotion path's future call shape)
-    reaches the event exactly as declared."""
+def test_decide_hardcodes_conducted_regardless_of_input() -> None:
+    """The decider always stamps `ConductMode.CONDUCTED` on the emitted
+    `RunStarted`: `StartRun` carries no `conduct_mode` field for a caller to
+    set, so there is nothing to copy. A `Recorded` Run is genesis-only
+    through the separate watched-genesis decider."""
     cap = uuid4()
     asset_id = uuid4()
     plan = _plan(asset_ids=frozenset({asset_id}))
@@ -187,7 +187,6 @@ def test_decide_copies_conduct_mode_from_command_unmodified() -> None:
             name="Run",
             plan_id=plan.id,
             subject_id=subject.id,
-            conduct_mode=ConductMode.RECORDED,
         ),
         context=context,
         needed_family_ids_snapshot=frozenset({cap}),
@@ -202,7 +201,7 @@ def test_decide_copies_conduct_mode_from_command_unmodified() -> None:
             name="Run",
             plan_id=plan.id,
             subject_id=subject.id,
-            conduct_mode=ConductMode.RECORDED,
+            conduct_mode=ConductMode.CONDUCTED,
             occurred_at=_NOW,
         )
     ]

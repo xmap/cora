@@ -250,6 +250,7 @@ def _running_item(
     running_since: datetime | None = _NOW,
     snr_limit: float | None = None,
     expected_observation_interval_seconds: float | None = None,
+    conduct_mode: str = "Conducted",
 ) -> RunSummaryItem:
     return RunSummaryItem(
         run_id=run_id,
@@ -264,6 +265,7 @@ def _running_item(
         campaign_id=None,
         snr_limit=snr_limit,
         expected_observation_interval_seconds=expected_observation_interval_seconds,
+        conduct_mode=conduct_mode,
     )
 
 
@@ -479,6 +481,31 @@ async def test_tick_holds_running_run_when_beam_down_and_records_decision() -> N
     assert decision.context.value == "RunSupervision"
     assert decision.choice.value == "Hold"
     assert decision.decided_by == ActorId(RUN_SUPERVISOR_AGENT_ID)
+
+
+@pytest.mark.unit
+async def test_tick_never_holds_a_watched_recorded_run_when_beam_down() -> None:
+    """A watched (Recorded) Run is driven by an external tool CORA only
+    witnessed at genesis; the hold FSM cannot actually hold anything on that
+    Run's behalf. Filtered out before the hold pass ever sees it, regardless
+    of the beam reading."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs([_running_item(run_id, conduct_mode="Recorded")])
+    hold_run, hold_calls = _make_recording_hold()
+    memory: dict[UUID, str] = {}
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        beam_lookup=_BeamDown(),
+        memory=memory,
+    )
+
+    assert hold_calls == []
+    assert run_id not in memory
 
 
 @pytest.mark.unit
@@ -812,6 +839,7 @@ def _held_item(run_id: UUID) -> RunSummaryItem:
         campaign_id=None,
         snr_limit=None,
         expected_observation_interval_seconds=None,
+        conduct_mode="Conducted",
     )
 
 
@@ -1160,6 +1188,37 @@ async def test_shadow_liveness_flags_stale_run_observe_only() -> None:
 
     assert liveness == {run_id}
     assert hold_calls == []  # observe-only: no command issued
+    assert resume_calls == []
+
+
+@pytest.mark.unit
+async def test_shadow_liveness_never_flags_a_watched_recorded_run() -> None:
+    """A watched Run's duration is set by the external tool driving it, not
+    by anything CORA can truncate; the liveness/truncate population excludes
+    it before the ceiling check ever runs, however long it has been open."""
+    kernel = _kernel()
+    await seed_run_supervisor_agent(kernel)
+    run_id = uuid4()
+    list_runs = _make_list_runs(
+        [_running_item(run_id, running_since=_NOW - timedelta(hours=2), conduct_mode="Recorded")]
+    )
+    hold_run, hold_calls = _make_recording_hold()
+    resume_run, resume_calls = _make_recording_resume()
+    liveness: set[UUID] = set()
+
+    await _tick(
+        kernel,
+        list_runs=list_runs,
+        hold_run=hold_run,
+        resume_run=resume_run,
+        beam_lookup=_BeamOpen(),
+        memory={},
+        liveness=liveness,
+        liveness_ceiling_seconds=3600.0,
+    )
+
+    assert liveness == set()
+    assert hold_calls == []
     assert resume_calls == []
 
 

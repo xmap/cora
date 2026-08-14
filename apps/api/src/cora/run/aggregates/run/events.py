@@ -200,13 +200,13 @@ class RunStarted:
     occurred_at: datetime
     # who drove this act: CORA's own Conductor, or an external tool CORA
     # only observes. See `ConductMode`'s own docstring (cora.run.aggregates
-    # .run.state) for the full rationale. Declared explicitly by
-    # `StartRun.conduct_mode`, never inferred; the decider copies it
-    # verbatim. Defaults to CONDUCTED: every StartRun caller today is
-    # Conducted, so the default declares the closed, currently-total set
-    # of reality rather than guessing a live signal. Forward-compat via
-    # `payload.get("conduct_mode", ConductMode.CONDUCTED.value)` in
-    # `from_stored` for legacy streams without the key.
+    # .run.state) for the full rationale. A property of which decider ran,
+    # never a caller's choice: `StartRun` carries no `conduct_mode` field,
+    # and the driven decider hardcodes CONDUCTED here; a watched genesis
+    # (the separate decider) hardcodes RECORDED. Defaults to CONDUCTED for
+    # forward-compat replay via `payload.get("conduct_mode",
+    # ConductMode.CONDUCTED.value)` in `from_stored` for legacy streams
+    # without the key, not because any caller supplies it.
     conduct_mode: ConductMode = ConductMode.CONDUCTED
     raid: str | None = None
     override_parameters: dict[str, Any] = field(default_factory=dict[str, Any])

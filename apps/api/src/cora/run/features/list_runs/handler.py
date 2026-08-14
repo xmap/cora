@@ -66,6 +66,11 @@ class RunSummaryItem:
     expected_observation_interval_seconds: float | None
     """Expected inter-arrival for Rule R (stall), precomputed from
     effective_parameters. NULL disables Rule R for this Run."""
+    conduct_mode: str
+    """`ConductMode` value ("Conducted" or "Recorded"), immutable from
+    genesis. The RunSupervisor and RunInitiator runtimes filter on this
+    to skip watched (Recorded) Runs: those are not theirs to hold, resume,
+    truncate, or count toward in-flight limits."""
 
 
 @dataclass(frozen=True)
@@ -92,7 +97,7 @@ class Handler(Protocol):
 _SELECT_COLUMNS = (
     "run_id, name, plan_id, subject_id, raid, status, created_at, running_since, "
     "override_parameters_present, campaign_id, snr_limit, "
-    "expected_observation_interval_seconds"
+    "expected_observation_interval_seconds, conduct_mode"
 )
 
 
@@ -110,6 +115,7 @@ def _row_to_item(row: Any) -> RunSummaryItem:
         campaign_id=row["campaign_id"],
         snr_limit=row["snr_limit"],
         expected_observation_interval_seconds=row["expected_observation_interval_seconds"],
+        conduct_mode=str(row["conduct_mode"]),
     )
 
 

@@ -88,6 +88,7 @@ from cora.equipment.aggregates.asset import AssetLifecycle
 from cora.recipe.aggregates.plan import PlanStatus, validate_wire_endpoints
 from cora.run.aggregates.run import (
     CautionAcknowledgement,
+    ConductMode,
     Run,
     RunAlreadyExistsError,
     RunBoundPlanDeprecatedError,
@@ -399,7 +400,12 @@ def decide(
             name=name.value,
             plan_id=command.plan_id,
             subject_id=command.subject_id,
-            conduct_mode=command.conduct_mode,
+            # Hardcoded, not read from the command: this decider drives
+            # every Run it starts through CORA's own Conductor, so the
+            # mode is a property of which decider ran, never a caller's
+            # choice. A Recorded Run is genesis-only through the separate
+            # watched-genesis decider.
+            conduct_mode=ConductMode.CONDUCTED,
             raid=command.raid,
             override_parameters=command.override_parameters,
             effective_parameters=effective_parameters,

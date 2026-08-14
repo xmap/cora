@@ -1177,6 +1177,15 @@ async def _supervise_tick(
             principal_id=RUN_SUPERVISOR_AGENT_ID,
             reason=str(err),
         ) from err
+    # Watched (Recorded) Runs are not the supervisor's to hold, resume,
+    # flag-liveness, truncate, or observe: they are driven by an external
+    # tool CORA only witnessed at genesis, so every downstream mechanism
+    # below (hold FSM, gated resume, liveness/truncate, Rule Q/R) would be
+    # trying to intervene on an act it cannot actually control. Filtering
+    # here, once, before any mechanism sees the lists, is what keeps a
+    # future new mechanism from having to remember this on its own.
+    running = [item for item in running if item.conduct_mode == "Conducted"]
+    held = [item for item in held if item.conduct_mode == "Conducted"]
     inflight_ids = {item.run_id for item in running} | {item.run_id for item in held}
     for run_id in list(memory):
         if run_id not in inflight_ids:
