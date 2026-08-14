@@ -32,6 +32,7 @@ import contextlib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import replace
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, Request, Response, status
 from mcp.server.fastmcp import FastMCP
@@ -93,7 +94,7 @@ from cora.api._readiness import (
 )
 from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
-from cora.api._run_watcher import run_watcher_lifespan
+from cora.api._run_watcher import rebuild_open_captures, run_watcher_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
 from cora.budget import (
@@ -261,6 +262,9 @@ from cora.trust import (
     wire_trust,
 )
 from cora.trust.adapters import PostgresConsequenceLookup
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 
 def _settings_for_app() -> Settings:
@@ -1048,11 +1052,14 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             )
 
             # RunWatcher: shadow-observe an external tool's captures (2-BM
-            # commissioning ladder rung 1). SHADOW ONLY: writes nothing,
-            # regardless of settings. run_watcher_enabled is a SEPARATE
-            # gate from having capture_watch_pvs configured, so a
-            # deployment can declare the PVs ahead of turning the watcher
-            # on. No-op (empty capture_codes) when either is unset.
+            # commissioning ladder rung 1), and (behind the SECOND,
+            # independent run_watcher_recording_enabled gate) promote a
+            # BEGUN capture to a real watched Run. run_watcher_enabled is
+            # a SEPARATE gate from having capture_watch_pvs configured,
+            # so a deployment can declare the PVs ahead of turning the
+            # watcher on. No-op (empty capture_codes) when either is
+            # unset; recording stays off (shadow-only, writes nothing)
+            # unless run_watcher_recording_enabled is also True.
             capture_watch_observer = ControlPortCaptureObserver(
                 control_port=app.state.operation.control_port,
                 capture_pvs=settings.capture_watch_pvs,
@@ -1063,6 +1070,15 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 frozenset(settings.capture_watch_pvs)
                 if settings.run_watcher_enabled
                 else frozenset()
+            )
+            # Boot-time restart-rebuild: seed the dedup map from every
+            # currently-Running Recorded Run's external_refs, so a
+            # capture still open across a restart is never re-promoted.
+            # Skipped entirely when the watcher is not configured at all.
+            open_captures: dict[str, UUID] = (
+                await rebuild_open_captures(deps, list_runs=app.state.run.list_runs)
+                if capture_watch_codes
+                else {}
             )
 
             try:
@@ -1118,6 +1134,9 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                     run_watcher_lifespan(
                         observer=capture_watch_observer,
                         capture_codes=capture_watch_codes,
+                        deps=deps,
+                        record_watched_run=app.state.run.record_watched_run,
+                        open_captures=open_captures,
                     ),
                 ):
                     yield
