@@ -32,6 +32,7 @@ import contextlib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import replace
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, Request, Response, status
 from mcp.server.fastmcp import FastMCP
@@ -49,6 +50,7 @@ from cora.access import (
 )
 from cora.access.adapters import EventStorePrincipalLivenessLookup
 from cora.agent import (
+    RUN_WITNESS_AGENT_ID,
     AgentHandlers,
     build_llm,
     refresh_language_model_pricing,
@@ -70,17 +72,20 @@ from cora.agent import (
     seed_run_debriefer_agent,
     seed_run_initiator_agent,
     seed_run_supervisor_agent,
+    seed_run_witness_agent,
     wire_agent,
 )
 from cora.agent.adapters import BudgetSpendGuard, PostgresLanguageModelLookup
 from cora.api._calibration_watcher import calibration_watcher_lifespan
 from cora.api._campaign_watcher import campaign_watcher_lifespan
+from cora.api._capture_observer import ControlPortCaptureObserver
 from cora.api._clearance_expirer import clearance_expirer_lifespan
 from cora.api._clearance_watcher import clearance_watcher_lifespan
 from cora.api._conduct_run_route import register_conduct_run_routes
 from cora.api._conduct_run_tool import register_conduct_run_tools
 from cora.api._edge_conductor import ComputeRunDriver
 from cora.api._enclosure_permit_observer import ControlPortEnclosureObserver
+from cora.api._flag_watcher import probe_read_grant
 from cora.api._inference_recorder import DelegatingInferenceRecorder
 from cora.api._procedure_watcher import procedure_watcher_lifespan
 from cora.api._readiness import (
@@ -91,6 +96,7 @@ from cora.api._readiness import (
 )
 from cora.api._run_initiator import run_initiator_lifespan
 from cora.api._run_supervisor import run_supervisor_lifespan
+from cora.api._run_witness import rebuild_open_captures, run_witness_lifespan
 from cora.api.middleware import BodySizeLimitMiddleware
 from cora.api.protected_resource_metadata import register_protected_resource_metadata_route
 from cora.budget import (
@@ -222,6 +228,9 @@ from cora.run import (
     register_run_tools,
     wire_run,
 )
+from cora.run import (
+    UnauthorizedError as RunUnauthorizedError,
+)
 from cora.run.adapters import PostgresRunActorInvolvementLookup
 from cora.safety import (
     SafetyHandlers,
@@ -258,6 +267,9 @@ from cora.trust import (
     wire_trust,
 )
 from cora.trust.adapters import PostgresConsequenceLookup
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 
 def _settings_for_app() -> Settings:
@@ -401,6 +413,35 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
         raise RuntimeError(msg)
 
 
+def _enforce_run_witness_recording_gate(settings: Settings) -> None:
+    """Refuse to boot with run_witness_recording_enabled=True unless both
+    prerequisites it depends on are also set.
+
+    run_witness_recording_enabled promotes a BEGUN capture observation to
+    a real witnessed Run; that promotion needs (a) the shadow witness
+    itself running (run_witness_enabled) to ever see an observation, and
+    (b) a target Plan (capture_watch_plan_id) to bind the promoted Run
+    to. Catching the misconfiguration at boot is cheaper than discovering
+    it the first time a real capture begins and record_witnessed_run has
+    nowhere to point.
+    """
+    if not settings.run_witness_recording_enabled:
+        return
+    missing: list[str] = []
+    if not settings.run_witness_enabled:
+        missing.append("RUN_WITNESS_ENABLED=true")
+    if settings.capture_watch_plan_id is None:
+        missing.append("CAPTURE_WATCH_PLAN_ID=<uuid>")
+    if missing:
+        msg = (
+            "RUN_WITNESS_RECORDING_ENABLED=true requires "
+            f"{' and '.join(missing)}. Promotion has no shadow observer "
+            "to promote from, or no Plan to bind the promoted Run to, "
+            "without both."
+        )
+        raise RuntimeError(msg)
+
+
 def _signing_factory_display_name(factory: object) -> str:
     """Name a signing factory for the boot-guard message.
 
@@ -495,6 +536,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     """
     settings = settings if settings is not None else _settings_for_app()
     _enforce_production_principal_policy(settings)
+    _enforce_run_witness_recording_gate(settings)
 
     # Signing factories: in-memory stubs by default until the rule-of-two
     # wire-tier trigger fires (see Settings.allow_insecure_inmemory_signing
@@ -965,6 +1007,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # same shape for ExperimentSteerer (deterministic L3 steering agent;
             # identity + Decision seam now, proactive driver loop in a later slice).
             await seed_experiment_steerer_agent(deps)
+            # same shape for RunWitness (deterministic capture-promotion agent).
+            await seed_run_witness_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
@@ -1011,6 +1055,64 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                 permit_pvs=settings.enclosure_permit_pvs,
                 tick_seconds=settings.enclosure_permit_probe_tick_seconds,
             )
+
+            # RunWitness: shadow-observe an external tool's captures (2-BM
+            # commissioning ladder rung 1), and (behind the SECOND,
+            # independent run_witness_recording_enabled gate) promote a
+            # BEGUN capture to a real witnessed Run. run_witness_enabled is
+            # a SEPARATE gate from having capture_watch_pvs configured,
+            # so a deployment can declare the PVs ahead of turning the
+            # watcher on. No-op (empty capture_codes) when either is
+            # unset; recording stays off (shadow-only, writes nothing)
+            # unless run_witness_recording_enabled is also True.
+            capture_watch_observer = ControlPortCaptureObserver(
+                control_port=app.state.operation.control_port,
+                capture_pvs=settings.capture_watch_pvs,
+                status_phases=settings.capture_status_phases,
+                tick_seconds=settings.capture_watch_probe_tick_seconds,
+            )
+            capture_watch_codes: frozenset[str] = (
+                frozenset(settings.capture_watch_pvs)
+                if settings.run_witness_enabled
+                else frozenset()
+            )
+            # Boot-time restart-rebuild: seed the dedup map from every
+            # currently-Running Witnessed Run's external_refs, so a
+            # capture still open across a restart is never re-promoted.
+            # Skipped entirely when the watcher is not configured at all.
+            # Probe the ListRuns read grant first (mirrors run_initiator_lifespan's
+            # probe_read_grant calls): raises a clear, named error in strict
+            # mode rather than the rebuild below failing with a bare
+            # UnauthorizedError. In non-strict mode the probe only warns, so
+            # the rebuild itself is also wrapped: every other watcher's read
+            # lives inside its own per-tick try/except and a missing grant
+            # never brings down more than that watcher; this one-time boot
+            # read had no such guard and would otherwise crash the entire
+            # app's boot over a single misconfigured grant. Falling back to
+            # an empty map on that failure degrades to "cold start" (a still-
+            # open capture could be re-promoted once) rather than refusing
+            # every other BC's routes.
+            open_captures: dict[str, UUID] = {}
+            if capture_watch_codes:
+                await probe_read_grant(
+                    deps,
+                    agent_id=RUN_WITNESS_AGENT_ID,
+                    read_command="ListRuns",
+                    log_prefix="run_witness",
+                    strict=settings.watcher_authz_strict,
+                )
+                try:
+                    open_captures = await rebuild_open_captures(
+                        deps, list_runs=app.state.run.list_runs
+                    )
+                except RunUnauthorizedError:
+                    _log.warning(
+                        "run_witness.rebuild_unauthorized",
+                        reason=(
+                            "ListRuns grant missing for RUN_WITNESS_AGENT_ID; "
+                            "starting with an empty dedup map"
+                        ),
+                    )
 
             try:
                 async with (
@@ -1061,6 +1163,13 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                     campaign_watcher_lifespan(
                         deps,
                         list_campaigns=app.state.campaign.list_campaigns,
+                    ),
+                    run_witness_lifespan(
+                        observer=capture_watch_observer,
+                        capture_codes=capture_watch_codes,
+                        deps=deps,
+                        record_witnessed_run=app.state.run.record_witnessed_run,
+                        open_captures=open_captures,
                     ),
                 ):
                     yield

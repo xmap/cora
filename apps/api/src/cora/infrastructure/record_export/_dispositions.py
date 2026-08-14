@@ -1618,6 +1618,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
             "workaround_excerpt": "drop:text",
         },
         "campaign_id": "token:uuid",
+        "conduct_mode": "keep:enum:ConductMode",
         "decided_by_decision_id": "token:uuid",
         "effective_parameters": "drop:opaque",
         "external_refs": "drop:opaque",
@@ -1629,6 +1630,10 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
         "plan_id": "token:uuid",
         "raid": "drop:text",
         "run_id": "token:uuid",
+        "safety_envelope_verdict": {
+            "beam_available": "drop:text",
+            "enclosure_permitted": "drop:text",
+        },
         "subject_id": "token:uuid",
         "trigger_source": "drop:text",
     },

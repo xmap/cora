@@ -276,6 +276,87 @@ class RunStatus(StrEnum):
     TRUNCATED = "Truncated"
 
 
+class ConductMode(StrEnum):
+    """Who drove this Run's act: CORA's own Conductor, or an external tool.
+
+    Reifies the axis `docs/reference/modeling.md`'s "Run vs Procedure
+    boundary" section names in prose but never encoded: "Conducted vs
+    recorded (who drives the act) ... Both Runs and Procedures span
+    both modes." Orthogonal to `RunStatus`: every status transition is
+    reachable under either mode, and the mode never changes once set
+    at genesis.
+
+    `CONDUCTED` is CORA's own Conductor driving the act (every Run
+    started today, via `_run_initiator.py` or a phase-conduct bridge,
+    is Conducted). `WITNESSED` is an externally-driven act CORA only
+    observes after the fact, for example a 2-BM tomoscan scan witnessed
+    by `RunWitness` (see `cora.api._run_witness`) and promoted via
+    `record_witnessed_run`.
+
+    Named `WITNESSED`, not `RECORDED`: every Conducted Run is ALSO
+    recorded (in the event store, in `proj_run_summary`, in the export
+    bundle), so `RECORDED` was not actually a contrast pair with
+    `CONDUCTED` -- it answered a different question ("how did this
+    fact enter CORA") that happens to be true of both modes at once.
+    `WITNESSED` is the only candidate mutually exclusive with
+    `CONDUCTED`: CORA does not merely witness a Run it drove. This is
+    also the governing rule `record_witnessed_run/decider.py` states
+    verbatim: "refuse on what CORA can fix, witness what CORA cannot."
+    This is a provenance label, not an attestation guarantee: it says
+    CORA observed the act, not that the observation was independently
+    verified.
+
+    Named `conduct_mode`, not bare `mode`, on the `Run` field: Run
+    already carries a neighboring "how was this driven" fact,
+    `actuation_kind` (raw `ActuationKind`, stamped by the compute
+    CONDUCT runtime onto terminal events), and bare `mode` would read
+    ambiguously beside it.
+    """
+
+    CONDUCTED = "Conducted"
+    WITNESSED = "Witnessed"
+
+
+@dataclass(frozen=True)
+class SafetyEnvelopeVerdict:
+    """A recorded reading of the two live facility signals at a witnessed
+    genesis: did the enclosure permit hold, was beam available.
+
+    Plain bools only, deliberately. The record exporter's disposition
+    generator drops bare `str` and `Any`; `keep:number` covers `bool`, so
+    this VO survives export and redaction whole. Naming WHICH enclosure or
+    WHICH shutter failed is not this VO's job: that detail goes to the log
+    line at the moment of the reading and stays reconstructible from the
+    Enclosure stream in the same exported bundle.
+
+    Clearance and Supply are deliberately absent. Per the roadmap's rule
+    ("refuse on what CORA can fix, witness what CORA cannot"), those two
+    gates are CORA's own aggregates, not live facility readings, so they
+    stay refusals on every path (`check_safety_envelope` AND
+    `witness_safety_envelope` both raise on them); their passage is implied
+    by a `RunStarted` existing at all, the same reason `check_safety_envelope`
+    itself never persists a snapshot of the gates it enforces.
+
+    Lives beside `ConductMode` in this module (not in `events.py`, the
+    `CautionAcknowledgement` precedent's home) so that `safety_envelope.py`
+    and `events.py`, which both already import from `state.py`, gain no new
+    import edge to carry it.
+    """
+
+    enclosure_permitted: bool
+    beam_available: bool
+
+    @property
+    def all_gates_passed(self) -> bool:
+        """True only when every witnessed gate passed. Not a dataclass
+        field: a derived property never reaches the record-export
+        generator, which walks `dataclasses.fields()`. Named
+        `all_gates_passed`, not `held`: `Held` is already this module's
+        RunStatus vocabulary (a paused Run), and `verdict.held` would
+        read as the opposite of what it means here."""
+        return self.enclosure_permitted and self.beam_available
+
+
 class InvalidRunNameError(ValueError):
     """The supplied name is empty, whitespace-only, or too long."""
 
@@ -292,6 +373,34 @@ class RunAlreadyExistsError(Exception):
     def __init__(self, run_id: UUID) -> None:
         super().__init__(f"Run {run_id} already exists")
         self.run_id = run_id
+
+
+class RunMonitorTriggerNotPermittedError(Exception):
+    """`record_witnessed_run` carried a non-Monitor trigger.
+
+    Mirrors the Enclosure BC's `MonitorTriggerNotPermittedError`
+    (`observe_enclosure_status`, D6.L2 observation-axis-only anti-lock):
+    a witnessed genesis is reachable only via Monitor-driven inbound
+    observation from the substrate; there is no operator path to it. The
+    command surface types `monitor_source_id` as `MonitorSourceId` so an
+    operator cannot supply non-Monitor attribution at the type level;
+    this error fences the same invariant defensively at the decider so a
+    programmer mistake in a custom handler, test fixture, or future
+    adapter cannot smuggle an operator-asserted Run genesis onto the
+    spine through the witnessed path.
+
+    HTTP 400 (semantically a request the caller cannot issue, not a
+    state-transition conflict).
+    """
+
+    def __init__(self, run_id: UUID, trigger: str) -> None:
+        super().__init__(
+            f"Run {run_id}: trigger {trigger!r} is not permitted on "
+            f"record_witnessed_run; only 'Monitor' is accepted per the "
+            f"observation-axis-only anti-lock."
+        )
+        self.run_id = run_id
+        self.trigger = trigger
 
 
 class RunNotFoundError(Exception):
@@ -1292,6 +1401,14 @@ class Run:
     subject_id: UUID | None
     raid: str | None = None
     status: RunStatus = RunStatus.RUNNING
+    # who drove this act: CORA's own Conductor, or an external tool CORA
+    # only observes. Set once at genesis (RunStarted.conduct_mode) and
+    # IMMUTABLE thereafter: every transition arm in the evolver threads
+    # `prior.conduct_mode` verbatim, same as `pinned_calibration_ids`.
+    # Never Optional: a Run's cause is always one of the two named
+    # values, declared explicitly by the genesis command, never
+    # inferred. See `ConductMode`'s own docstring.
+    conduct_mode: ConductMode = ConductMode.CONDUCTED
     override_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     effective_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     trigger_source: str | None = None

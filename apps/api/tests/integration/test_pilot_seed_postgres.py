@@ -1,15 +1,20 @@
 """The pilot seed ceremony, end to end against real Postgres.
 
-Three claims, one flow: a fresh database seeds (exit 2), a re-run
-changes nothing (exit 0), and `ingest_scan` then records a real file
-through the REAL `PostgresAssetLookup` and `PostgresSupplyLookup`,
-which retires the in-memory fake as the only Capturing-bearing asset
-in the test suite. This is the proof the seeder design's gate review
+Four claims, one flow: a fresh database seeds (exit 2), a re-run
+changes nothing (exit 0), `ingest_scan` then records a real file
+through the REAL `PostgresAssetLookup` and `PostgresSupplyLookup`
+(which retires the in-memory fake as the only Capturing-bearing asset
+in the test suite -- the proof the seeder design's gate review
 demanded: the seeded camera must surface the Capturing affordance
-through the projection join, or the ceremony is decoration.
+through the projection join, or the ceremony is decoration), and the
+Recipe BC ladder (Capability -> Method -> Practice -> Plan) the
+ceremony also registers actually resolves -- the family-superset and
+affordance-cover cross-aggregate checks in `define_plan`'s decider are
+exactly the ones a hand-rolled seed script gets wrong first, so this
+is proof the ceremony's Plan is real, not just present.
 """
 
-# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnusedFunction=false
 
 from dataclasses import replace as dc_replace
 from datetime import UTC, datetime
@@ -23,15 +28,20 @@ import pytest
 import pytest_asyncio
 from testcontainers.postgres import PostgresContainer
 
-from cora.api.pilot_seed import asset_seed_id, seed_pilot_beamline
+from cora.api.pilot_seed import asset_seed_id, recipe_seed_id, seed_pilot_beamline
 from cora.data.adapters.data_exchange_scan_reader import DataExchangeScanReader
 from cora.data.adapters.posix_checksum import PosixChecksumAdapter
 from cora.data.features import ingest_scan
 from cora.data.wire import (
     _build_dataset_by_checksum_lookup,  # pyright: ignore[reportPrivateUsage]
 )
+from cora.enclosure.adapters.postgres_enclosure_lookup import PostgresEnclosureLookup
 from cora.equipment.adapters.postgres_asset_lookup import PostgresAssetLookup
 from cora.infrastructure.postgres.pool import create_pool
+from cora.recipe.aggregates.capability import load_capability
+from cora.recipe.aggregates.method import load_method
+from cora.recipe.aggregates.plan import load_plan
+from cora.recipe.aggregates.practice import load_practice
 from cora.supply.adapters.postgres_supply_lookup import PostgresSupplyLookup
 from tests._postgres import normalize_async_url
 from tests.integration._helpers import build_postgres_deps
@@ -44,6 +54,20 @@ _NOW = datetime(2026, 7, 29, 16, 0, 0, tzinfo=UTC)
 _FACILITY = "cora"
 _BEAMLINE = "2-bm"
 _CAMERA = "Camera"
+_SHUTTER = "StationShutter"
+_ACQUISITION_CAMERA = "AcquisitionCamera"
+_ROTARY_STAGE = "RotaryStage"
+
+
+@pytest.fixture(autouse=True)
+def _enclosure_permit_pvs(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The ceremony resolves 2-BM-B via `seed_enclosures`, which only
+    seeds names present in `Settings.enclosure_permit_pvs` (empty by
+    default). The PV values themselves are never read by the ceremony
+    (it never subscribes); any placeholder string is fine."""
+    monkeypatch.setenv(
+        "ENCLOSURE_PERMIT_PVS", '{"2-BM-A": "test:2bma:permit", "2-BM-B": "test:2bmb:permit"}'
+    )
 
 
 @pytest_asyncio.fixture
@@ -122,6 +146,27 @@ async def test_dry_run_writes_nothing_beyond_bootstrap(seed_database: SeedDataba
     )
     assert camera_streams == 0, "dry run must not write the camera asset"
 
+    ladder_stream_ids = [
+        asset_seed_id(_FACILITY, _BEAMLINE, _SHUTTER),
+        asset_seed_id(_FACILITY, _BEAMLINE, _ACQUISITION_CAMERA),
+        asset_seed_id(_FACILITY, _BEAMLINE, _ROTARY_STAGE),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "capability", "acquisition"),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "method", "dark_field"),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "method", "flat_field"),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "method", "fly_scan"),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "practice", "2BM_dark_field_practice"),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "practice", "2BM_flat_field_practice"),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "practice", "2BM_fly_scan_practice"),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "plan", "2BM_dark_field_plan"),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "plan", "2BM_flat_field_plan"),
+        recipe_seed_id(_FACILITY, _BEAMLINE, "plan", "2BM_fly_scan_plan_v1"),
+    ]
+    ladder_events = await pool.fetchval(
+        "SELECT COUNT(*) FROM events WHERE stream_id = ANY($1::uuid[])",
+        ladder_stream_ids,
+    )
+    assert ladder_events == 0, "dry run must not write the StationShutter/camera/ladder chain"
+
 
 async def test_seeded_camera_carries_capturing_through_the_real_lookup(
     seed_database: SeedDatabase,
@@ -132,6 +177,71 @@ async def test_seeded_camera_carries_capturing_through_the_real_lookup(
     asset = await PostgresAssetLookup(pool).lookup(asset_seed_id(_FACILITY, _BEAMLINE, _CAMERA))
     assert asset is not None
     assert "Capturing" in asset.family_affordances
+
+
+async def test_seeded_ladder_resolves_for_all_acquisition_recipes(
+    seed_database: SeedDatabase,
+) -> None:
+    """The Recipe BC ladder the ceremony registers is not just present,
+    it RESOLVES: `define_plan`'s cross-aggregate decider (family-
+    superset + affordance-cover checks) accepted every Plan without
+    raising. dark_field / flat_field each bind exactly the StationShutter
+    + the acquisition camera -- the two Assets `docs/deployments/2-bm/
+    recipes.md`'s recipes actually target. fly_scan (the real TomoScan
+    workflow the RunWitness's promotion path watches) additionally binds
+    the Rotary stage: continuous sample rotation is the defining feature
+    of a real fly-scan, unlike the two static baseline captures."""
+    pool, url = seed_database
+    assert await _run_ceremony(url) == 2
+
+    event_store = build_postgres_deps(pool, now=_NOW).event_store
+
+    capability_id = recipe_seed_id(_FACILITY, _BEAMLINE, "capability", "acquisition")
+    shutter_id = asset_seed_id(_FACILITY, _BEAMLINE, f"{_SHUTTER}_v2")
+    acquisition_camera_id = asset_seed_id(_FACILITY, _BEAMLINE, f"{_ACQUISITION_CAMERA}_v2")
+    rotary_stage_id = asset_seed_id(_FACILITY, _BEAMLINE, _ROTARY_STAGE)
+
+    enclosure_b = await PostgresEnclosureLookup(pool).lookup_by_name(
+        facility_code=_FACILITY, name="2-BM-B"
+    )
+    assert enclosure_b is not None
+    for asset_id in (shutter_id, acquisition_camera_id, rotary_stage_id):
+        asset = await PostgresAssetLookup(pool).lookup(asset_id)
+        assert asset is not None
+        assert asset.located_in_enclosure_id == enclosure_b.enclosure_id
+
+    baseline_asset_ids = frozenset({shutter_id, acquisition_camera_id})
+    expected_asset_ids = {
+        "dark_field": baseline_asset_ids,
+        "flat_field": baseline_asset_ids,
+        "fly_scan": baseline_asset_ids | {rotary_stage_id},
+    }
+
+    for method_name, practice_name, plan_name in (
+        ("dark_field", "2BM_dark_field_practice", "2BM_dark_field_plan_v2"),
+        ("flat_field", "2BM_flat_field_practice", "2BM_flat_field_plan_v2"),
+        ("fly_scan", "2BM_fly_scan_practice", "2BM_fly_scan_plan_v1"),
+    ):
+        method_id = recipe_seed_id(_FACILITY, _BEAMLINE, "method", method_name)
+        practice_id = recipe_seed_id(_FACILITY, _BEAMLINE, "practice", practice_name)
+        plan_id = recipe_seed_id(_FACILITY, _BEAMLINE, "plan", plan_name)
+
+        method = await load_method(event_store, method_id)
+        assert method is not None
+        assert method.capability_id == capability_id
+
+        practice = await load_practice(event_store, practice_id)
+        assert practice is not None
+        assert practice.method_id == method_id
+
+        plan = await load_plan(event_store, plan_id)
+        assert plan is not None
+        assert plan.practice_id == practice_id
+        assert plan.asset_ids == expected_asset_ids[method_name]
+
+    capability = await load_capability(event_store, capability_id)
+    assert capability is not None
+    assert capability.code.value == "cora.capability.acquisition"
 
 
 async def test_ingest_against_the_seeded_beamline_records_the_dataset(

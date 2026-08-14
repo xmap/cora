@@ -177,6 +177,14 @@ async def test_start_run_persists_event_with_full_upstream_chain_against_postgre
         "plan_id": str(plan_id),
         "subject_id": str(subject_id),
         "raid": None,
+        # who drove this act: every driven start_run is Conducted, hardcoded
+        # by the decider (not caller-settable). Forward-compat via
+        # `payload.get("conduct_mode", ConductMode.CONDUCTED.value)`.
+        "conduct_mode": "Conducted",
+        # Additive payload field: the witnessed-genesis envelope reading.
+        # Always None on a driven Run; forward-compat via
+        # `payload.get("safety_envelope_verdict")`.
+        "safety_envelope_verdict": None,
         # 6g-c additive payload fields default to {} / None when no
         # overrides / no Plan defaults / no trigger_source are supplied.
         "override_parameters": {},

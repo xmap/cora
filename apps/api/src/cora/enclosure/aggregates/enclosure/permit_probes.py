@@ -15,34 +15,22 @@ BC-internal (NOT a shared cross-BC port). Append-only INSERT: the
 entries_* table is REVOKEd from UPDATE, and there is no natural key to
 deduplicate against (`event_id` is a fresh id per observation), so
 unlike `FeedHeartbeatStore` this store does not need `ON CONFLICT`.
+
+`ReachTier` itself is hoisted to `cora.shared.reach`: the Run BC's
+capture-observe seam needed the identical vocabulary and `cora.run`
+cannot depend on `cora.enclosure.aggregates` (tach). Re-exported here
+so every existing import of `ReachTier` from this module keeps working.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
 import asyncpg
 
-
-class ReachTier(StrEnum):
-    """How CORA reached the permit substrate for one observation.
-
-    Two values ship in v1. `RELAYED` means CORA received or fetched a
-    value through the configured channel; `UNREACHED` means it could
-    not, this tick. A stronger tier for a confirmed direct round trip to
-    the authoritative source (as opposed to an intermediary, such as an
-    EPICS CA gateway that may answer from its own cache) is deliberately
-    NOT defined here: no producer in this codebase can currently prove
-    one, and an unearned strong claim is worse than none. Adding a value
-    later needs no migration, since the column is a length-CHECK, not a
-    value-enumerating CHECK.
-    """
-
-    RELAYED = "Relayed"
-    UNREACHED = "Unreached"
+from cora.shared.reach import ReachTier
 
 
 @dataclass(frozen=True)

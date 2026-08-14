@@ -18,6 +18,7 @@ from cora.run.aggregates.run.events import (
     from_stored,
     to_payload,
 )
+from cora.run.aggregates.run.state import ConductMode
 from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 11, 12, 0, 0, tzinfo=UTC)
@@ -74,6 +75,14 @@ def test_to_payload_serializes_run_started_with_subject_to_primitives() -> None:
         "name": "32-ID FlyScan",
         "plan_id": str(plan_id),
         "subject_id": str(subject_id),
+        # Additive payload field: who drove this act. Defaults to
+        # "Conducted" when not supplied; forward-compat via
+        # `payload.get("conduct_mode", ConductMode.CONDUCTED.value)`.
+        "conduct_mode": "Conducted",
+        # Additive payload field: the witnessed-genesis envelope reading.
+        # Always None on a driven Run; forward-compat via
+        # `payload.get("safety_envelope_verdict")`.
+        "safety_envelope_verdict": None,
         "raid": None,
         # Additive payload fields default to {} / None when not
         # supplied; legacy stored events stay forward-compat via
@@ -208,6 +217,7 @@ def test_from_stored_rebuilds_run_started_without_legacy_keys_as_defaults() -> N
     assert event.override_parameters == {}
     assert event.effective_parameters == {}
     assert event.trigger_source is None
+    assert event.conduct_mode is ConductMode.CONDUCTED
 
 
 @pytest.mark.unit

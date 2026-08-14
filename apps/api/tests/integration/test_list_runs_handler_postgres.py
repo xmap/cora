@@ -49,6 +49,8 @@ from cora.run.features.hold_run import HoldRun
 from cora.run.features.hold_run import bind as bind_hold
 from cora.run.features.list_runs import ListRuns
 from cora.run.features.list_runs import bind as bind_list
+from cora.run.features.record_witnessed_run import RecordWitnessedRun
+from cora.run.features.record_witnessed_run import bind as bind_record_witnessed_run
 from cora.run.features.resume_run import ResumeRun
 from cora.run.features.resume_run import bind as bind_resume
 from cora.run.features.start_run import StartRun
@@ -57,6 +59,7 @@ from cora.run.features.stop_run import StopRun
 from cora.run.features.stop_run import bind as bind_stop
 from cora.run.features.truncate_run import TruncateRun
 from cora.run.features.truncate_run import bind as bind_truncate
+from cora.shared.identity import MonitorSourceId
 from tests._drain import drain_deadline_s
 from tests.integration._helpers import build_postgres_deps, seed_capability_postgres
 
@@ -444,3 +447,49 @@ async def test_campaign_id_filter_narrows_results(db_pool: asyncpg.Pool) -> None
     assert page.items[0].run_id == run_member
     assert page.items[0].campaign_id == campaign_id
     assert page.next_cursor is None
+
+
+@pytest.mark.integration
+async def test_conduct_mode_filter_narrows_to_recorded_runs_only(db_pool: asyncpg.Pool) -> None:
+    """One Conducted Run (via start_run) and one Recorded Run (via
+    record_witnessed_run) against distinct Plans; `conduct_mode="Witnessed"`
+    returns only the witnessed one. Proves the query-side filter (this
+    commit) composes with the projection column already carrying
+    `conduct_mode` (added in slice 5)."""
+    # Conducted Run.
+    run_conducted = uuid4()
+    deps_conducted = _build_deps(db_pool, [*_chain_ids(), run_conducted, uuid4()])
+    plan_conducted = await _seed_plan(deps_conducted, family_name="TomographyConducted")
+    await bind_start(deps_conducted)(
+        StartRun(name="conducted-run", plan_id=plan_conducted, subject_id=None),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    # Witnessed Run.
+    run_id_placeholder = uuid4()
+    deps_recorded = _build_deps(db_pool, [*_chain_ids(), run_id_placeholder, uuid4()])
+    plan_recorded = await _seed_plan(deps_recorded, family_name="TomographyRecorded")
+    run_recorded = await bind_record_witnessed_run(deps_recorded)(
+        RecordWitnessedRun(
+            name="witnessed-run",
+            plan_id=plan_recorded,
+            capture_code="test-capture",
+            monitor_source_id=MonitorSourceId(uuid4()),
+            trigger="Monitor",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    await _drain(db_pool)
+
+    handler = bind_list(deps_conducted)
+    page = await handler(
+        ListRuns(conduct_mode="Witnessed", limit=10),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert len(page.items) == 1
+    assert page.items[0].run_id == run_recorded
+    assert page.items[0].conduct_mode == "Witnessed"

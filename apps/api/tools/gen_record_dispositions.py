@@ -79,6 +79,27 @@ _OVERRIDE_WIRE_KEYS: dict[tuple[str, str], str] = {
     ("SealRepublishingCompleted", "facility_code"): "facility_id",
 }
 
+# A field's TYPE-DRIVEN disposition is occasionally the wrong call for
+# what the field actually names, not what it happens to be declared as.
+# Every entry here is a documented design decision, not a generic
+# catch-all: `bool` defaults to `keep:number` (see `_SCALAR_KEEP`) because
+# most booleans are operator-facing flags safe to publish whole, but
+# `SafetyEnvelopeVerdict.enclosure_permitted` / `.beam_available` are a
+# point-in-time reading of live PSS/interlock and beam-shutter facility
+# state -- the same class of fact `EnclosurePermitObserved.from_status` /
+# `.to_status` already treat as `drop:text` (dropped entirely), not
+# `keep:*`. Gate-review finding (record/publishing lens, watched-genesis
+# review): the two events described the same category of fact but got
+# opposite export treatment purely because one used `str` and the other
+# `bool`. Keeping the fields genuinely typed `bool` (correct domain
+# modeling; no `str` coercion) while overriding their export disposition
+# to match the precedent this table already sets for the same class of
+# reading.
+_OVERRIDE_DISPOSITIONS: dict[tuple[str, str], str] = {
+    ("SafetyEnvelopeVerdict", "enclosure_permitted"): DROP_TEXT,
+    ("SafetyEnvelopeVerdict", "beam_available"): DROP_TEXT,
+}
+
 _SCALAR_KEEP: Mapping[type, str] = {
     bool: KEEP_NUMBER,
     int: KEEP_NUMBER,
@@ -224,13 +245,21 @@ def _resolve_fields(cls: type) -> dict[str, Any]:
     resolved, so an override keyed on an EVENT class name (e.g.
     `("CredentialRegistered", "facility_code")`) cannot accidentally
     apply while recursing into an unrelated nested value object that
-    happens to share a field name.
+    happens to share a field name. `_OVERRIDE_DISPOSITIONS` replaces the
+    type-driven classification outright, under the same recursion-safety
+    guarantee, for the rarer case where the type's default answer is
+    wrong for what the field actually names (see that dict's docstring).
     """
     hints = typing.get_type_hints(cls)
     out: dict[str, Any] = {}
     for spec in dataclasses.fields(cls):
         wire_key = _OVERRIDE_WIRE_KEYS.get((cls.__name__, spec.name), spec.name)
-        out[wire_key] = _classify(hints[spec.name], cls.__name__, spec.name)
+        override = _OVERRIDE_DISPOSITIONS.get((cls.__name__, spec.name))
+        out[wire_key] = (
+            override
+            if override is not None
+            else _classify(hints[spec.name], cls.__name__, spec.name)
+        )
     return out
 
 

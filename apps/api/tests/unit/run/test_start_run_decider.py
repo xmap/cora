@@ -41,6 +41,7 @@ from cora.recipe.aggregates.plan import (
     Wire,
 )
 from cora.run.aggregates.run import (
+    ConductMode,
     InvalidRunNameError,
     InvalidRunParametersError,
     Run,
@@ -157,6 +158,50 @@ def test_decide_emits_run_started_for_valid_sample_run() -> None:
             name="Run",
             plan_id=plan.id,
             subject_id=subject.id,
+            occurred_at=_NOW,
+        )
+    ]
+
+
+@pytest.mark.unit
+def test_decide_hardcodes_conducted_regardless_of_input() -> None:
+    """The decider always stamps `ConductMode.CONDUCTED` on the emitted
+    `RunStarted`: `StartRun` carries no `conduct_mode` field for a caller to
+    set, so there is nothing to copy. A `Witnessed` Run is genesis-only
+    through the separate witnessed-genesis decider."""
+    cap = uuid4()
+    asset_id = uuid4()
+    plan = _plan(asset_ids=frozenset({asset_id}))
+    asset = _asset(asset_id=asset_id, family_ids=frozenset({cap}))
+    subject = _subject()
+    context = RunStartContext(
+        plan=plan,
+        subject=subject,
+        assets={asset_id: asset},
+        referencing_clearances=_active_clearance_stub(),
+    )
+    new_id = uuid4()
+    decision = start_run.decide(
+        state=None,
+        command=StartRun(
+            name="Run",
+            plan_id=plan.id,
+            subject_id=subject.id,
+        ),
+        context=context,
+        needed_family_ids_snapshot=frozenset({cap}),
+        effective_parameters={},
+        method_parameters_schema=None,
+        now=_NOW,
+        new_id=new_id,
+    )
+    assert decision.run_events == [
+        RunStarted(
+            run_id=new_id,
+            name="Run",
+            plan_id=plan.id,
+            subject_id=subject.id,
+            conduct_mode=ConductMode.CONDUCTED,
             occurred_at=_NOW,
         )
     ]

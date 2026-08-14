@@ -87,6 +87,10 @@ from cora.agent.seed_run_supervisor import (
     RUN_SUPERVISOR_AGENT_ID,
     seed_run_supervisor_agent,
 )
+from cora.agent.seed_run_witness import (
+    RUN_WITNESS_AGENT_ID,
+    seed_run_witness_agent,
+)
 from cora.agent.tools import register_agent_tools
 from cora.agent.wire import AgentHandlers, wire_agent
 
@@ -102,6 +106,7 @@ __all__ = [
     "RATIFICATION_ENFORCER_AGENT_ID",
     "RUN_INITIATOR_AGENT_ID",
     "RUN_SUPERVISOR_AGENT_ID",
+    "RUN_WITNESS_AGENT_ID",
     "AgentHandlers",
     "CautionProposalMalformedError",
     "CautionProposalNotActionableError",
@@ -129,5 +134,6 @@ __all__ = [
     "seed_run_debriefer_agent",
     "seed_run_initiator_agent",
     "seed_run_supervisor_agent",
+    "seed_run_witness_agent",
     "wire_agent",
 ]

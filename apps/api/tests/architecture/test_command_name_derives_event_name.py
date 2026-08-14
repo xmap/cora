@@ -149,6 +149,12 @@ _SANCTIONED_DEVIATIONS: dict[str, str] = {
     # the command states the act of recording it. Same shape as
     # `StartRun` emitting `RunStarted`. Do not "fix" this pair.
     "trust/record_visit_arrival": "PR #318 kept the arrival-fact event over the recording verb",
+    # Same shape as trust/record_visit_arrival, cited there by name:
+    # RecordWitnessedRun emits RunStarted, not WitnessedRunRecorded, because
+    # the event states the genesis fact (a Run started) and the command
+    # states the act of recording it. Symmetric with StartRun -> RunStarted,
+    # the driven genesis's own sanctioned pair.
+    "run/record_witnessed_run": "witnessed genesis; states the fact, not the recording verb",
 }
 
 _KNOWN_DRIFT: dict[str, str] = {

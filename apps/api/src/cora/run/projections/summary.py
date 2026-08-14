@@ -8,7 +8,8 @@ transition):
                                       subject_id? + raid? + running_since +
                                       override_parameters_present +
                                       campaign_id? +
-                                      pinned_calibration_ids from payload)
+                                      pinned_calibration_ids +
+                                      conduct_mode from payload)
   - RunHeld                -> UPDATE status=Held
   - RunResumed             -> UPDATE status=Running + running_since reset
   - RunCompleted           -> UPDATE status=Completed   (terminal)
@@ -27,10 +28,11 @@ transition):
                               [[project_fold_symmetry_design]])
 
 All branches idempotent. Genesis-event payload values (plan_id,
-subject_id, raid, override_parameters_present, pinned_calibration_ids)
-land on INSERT and never change (AsShot invariant for
-pinned_calibration_ids); lifecycle UPDATEs only touch `status`;
-membership UPDATEs only touch `campaign_id`.
+subject_id, raid, override_parameters_present, pinned_calibration_ids,
+conduct_mode) land on INSERT and never change (AsShot invariant for
+pinned_calibration_ids; conduct_mode is immutable for the same reason:
+who drove the act cannot change after genesis); lifecycle UPDATEs
+only touch `status`; membership UPDATEs only touch `campaign_id`.
 
 `override_parameters_present` is TRUE iff RunStarted's
 `override_parameters` payload was non-empty (operator customized
@@ -72,8 +74,8 @@ _INSERT_RUN_SQL = """
 INSERT INTO proj_run_summary
     (run_id, name, plan_id, subject_id, raid, status, created_at, running_since,
      override_parameters_present, campaign_id, pinned_calibration_ids,
-     snr_limit, expected_observation_interval_seconds)
-VALUES ($1, $2, $3, $4, $5, 'Running', $6, $6, $7, $8, $9::uuid[], $10, $11)
+     snr_limit, expected_observation_interval_seconds, conduct_mode)
+VALUES ($1, $2, $3, $4, $5, 'Running', $6, $6, $7, $8, $9::uuid[], $10, $11, $12)
 ON CONFLICT (run_id) DO NOTHING
 """
 
@@ -190,6 +192,11 @@ class RunSummaryProjection:
             # rows land with an empty UUID array.
             pinned_calibration_ids = [UUID(p) for p in payload.get("pinned_calibration_ids", [])]
             snr_limit, expected_interval = _rule_inputs(payload)
+            # Forward-compat: legacy RunStarted payloads have no
+            # conduct_mode key; .get(..., "Conducted") returns the
+            # historical default so legacy rows land as Conducted, which
+            # is true of every Run started before this field existed.
+            conduct_mode = payload.get("conduct_mode", "Conducted")
             await conn.execute(
                 _INSERT_RUN_SQL,
                 UUID(payload["run_id"]),
@@ -203,6 +210,7 @@ class RunSummaryProjection:
                 pinned_calibration_ids,
                 snr_limit,
                 expected_interval,
+                conduct_mode,
             )
             return
         if event.event_type == "RunResumed":

@@ -1,12 +1,12 @@
 """Application handler for the `list_runs` query slice.
 
 Reads `proj_run_summary` via the cross-BC
-`infrastructure.list_query.make_list_query_handler` factory. Two
-optional filters (status + plan_id) plus cursor pagination,
-declared as `ScalarFilter` specs; the factory composes only the
-WHERE fragments for filters the caller actually passed (sargable,
-indexable; replaces the legacy `$N IS NULL OR column = $N` smart-
-logic pattern documented in the factory module).
+`infrastructure.list_query.make_list_query_handler` factory. Four
+optional filters (status, plan_id, campaign_id, conduct_mode) plus
+cursor pagination, declared as `ScalarFilter` specs; the factory
+composes only the WHERE fragments for filters the caller actually
+passed (sargable, indexable; replaces the legacy `$N IS NULL OR
+column = $N` smart-logic pattern documented in the factory module).
 
 `subject_id` and `raid` flow through to the result row from the
 genesis event; both are nullable (Plan-only Runs without a Subject;
@@ -66,6 +66,11 @@ class RunSummaryItem:
     expected_observation_interval_seconds: float | None
     """Expected inter-arrival for Rule R (stall), precomputed from
     effective_parameters. NULL disables Rule R for this Run."""
+    conduct_mode: str
+    """`ConductMode` value ("Conducted" or "Witnessed"), immutable from
+    genesis. The RunSupervisor and RunInitiator runtimes filter on this
+    to skip Witnessed Runs: those are not theirs to hold, resume,
+    truncate, or count toward in-flight limits."""
 
 
 @dataclass(frozen=True)
@@ -92,7 +97,7 @@ class Handler(Protocol):
 _SELECT_COLUMNS = (
     "run_id, name, plan_id, subject_id, raid, status, created_at, running_since, "
     "override_parameters_present, campaign_id, snr_limit, "
-    "expected_observation_interval_seconds"
+    "expected_observation_interval_seconds, conduct_mode"
 )
 
 
@@ -110,6 +115,7 @@ def _row_to_item(row: Any) -> RunSummaryItem:
         campaign_id=row["campaign_id"],
         snr_limit=row["snr_limit"],
         expected_observation_interval_seconds=row["expected_observation_interval_seconds"],
+        conduct_mode=str(row["conduct_mode"]),
     )
 
 
@@ -118,6 +124,7 @@ def _log_fields(query: ListRuns) -> dict[str, Any]:
         "status": query.status,
         "plan_id": str(query.plan_id) if query.plan_id else None,
         "campaign_id": str(query.campaign_id) if query.campaign_id else None,
+        "conduct_mode": query.conduct_mode,
     }
 
 
@@ -136,6 +143,7 @@ def bind(deps: Kernel) -> Handler:
             ScalarFilter(attr="status"),
             ScalarFilter(attr="plan_id"),
             ScalarFilter(attr="campaign_id"),
+            ScalarFilter(attr="conduct_mode"),
         ],
         row_to_item=_row_to_item,
         item_cursor_at=lambda item: item.created_at,

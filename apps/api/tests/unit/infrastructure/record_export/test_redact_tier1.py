@@ -67,6 +67,45 @@ def test_recursed_value_object_drops_its_own_drop_text_subfields() -> None:
     assert "model_ref" not in redacted or redacted["model_ref"] == {}
 
 
+def test_safety_envelope_verdict_bools_are_redacted_not_kept_whole() -> None:
+    """`RunStarted.safety_envelope_verdict.enclosure_permitted` /
+    `.beam_available` are a point-in-time live PSS/interlock and
+    beam-shutter reading, the same class of fact `EnclosurePermitObserved`
+    already drops entirely. `_OVERRIDE_DISPOSITIONS`
+    (`tools/gen_record_dispositions.py`) overrides the generic
+    `bool -> keep:number` default for exactly these two fields; this pins
+    the outcome against the real, generated table rather than a
+    hand-tuned one, so a future regeneration that lost the override
+    would fail this test."""
+    payload = {
+        "run_id": "01900000-0000-7000-8000-0000000000d1",
+        "name": "2BM watched capture",
+        "plan_id": "01900000-0000-7000-8000-0000000000d2",
+        "subject_id": None,
+        "raid": None,
+        "conduct_mode": "Witnessed",
+        "safety_envelope_verdict": {
+            "enclosure_permitted": True,
+            "beam_available": False,
+        },
+        "override_parameters": {},
+        "effective_parameters": {},
+        "trigger_source": "Monitor:2bmb-tomoscan",
+        "external_refs": [{"scheme": "capture-code", "value": "2bmb-tomoscan"}],
+        "acknowledged_cautions": [],
+        "campaign_id": None,
+        "decided_by_decision_id": None,
+        "pinned_calibration_ids": [],
+        "input_dataset_ids": [],
+        "occurred_at": "2026-08-14T12:00:00+00:00",
+    }
+    redacted = redact_tier1_payload("RunStarted", payload, token_map=TokenMap())
+    assert "safety_envelope_verdict" not in redacted or redacted["safety_envelope_verdict"] == {}
+    # conduct_mode (keep:enum) survives, proving the drop is specific to
+    # the verdict's two bools, not a blanket omission of the whole event.
+    assert redacted["conduct_mode"] == "Witnessed"
+
+
 def test_a_payload_key_absent_from_a_known_events_field_list_drops() -> None:
     """Schema evolution: an older schema_version's row can carry a field
     the current dataclass no longer declares. Must drop, not abort --
