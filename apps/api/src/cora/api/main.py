@@ -404,6 +404,35 @@ def _enforce_production_principal_policy(settings: Settings) -> None:
         raise RuntimeError(msg)
 
 
+def _enforce_run_watcher_recording_gate(settings: Settings) -> None:
+    """Refuse to boot with run_watcher_recording_enabled=True unless both
+    prerequisites it depends on are also set.
+
+    run_watcher_recording_enabled promotes a BEGUN capture observation to
+    a real watched Run; that promotion needs (a) the shadow watcher
+    itself running (run_watcher_enabled) to ever see an observation, and
+    (b) a target Plan (capture_watch_plan_id) to bind the promoted Run
+    to. Catching the misconfiguration at boot is cheaper than discovering
+    it the first time a real capture begins and record_watched_run has
+    nowhere to point.
+    """
+    if not settings.run_watcher_recording_enabled:
+        return
+    missing: list[str] = []
+    if not settings.run_watcher_enabled:
+        missing.append("RUN_WATCHER_ENABLED=true")
+    if settings.capture_watch_plan_id is None:
+        missing.append("CAPTURE_WATCH_PLAN_ID=<uuid>")
+    if missing:
+        msg = (
+            "RUN_WATCHER_RECORDING_ENABLED=true requires "
+            f"{' and '.join(missing)}. Promotion has no shadow observer "
+            "to promote from, or no Plan to bind the promoted Run to, "
+            "without both."
+        )
+        raise RuntimeError(msg)
+
+
 def _signing_factory_display_name(factory: object) -> str:
     """Name a signing factory for the boot-guard message.
 
@@ -498,6 +527,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
     """
     settings = settings if settings is not None else _settings_for_app()
     _enforce_production_principal_policy(settings)
+    _enforce_run_watcher_recording_gate(settings)
 
     # Signing factories: in-memory stubs by default until the rule-of-two
     # wire-tier trigger fires (see Settings.allow_insecure_inmemory_signing

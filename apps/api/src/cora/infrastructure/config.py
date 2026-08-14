@@ -778,10 +778,30 @@ class Settings(BaseSettings):
 
     # Runs the capture-watch loop in shadow mode: drains observations,
     # maps them through `capture_status_phases`, and logs. Writes
-    # nothing (no event, no entries row, no Run) regardless of any
-    # other setting. Default off; irrelevant when `capture_watch_pvs`
-    # is empty. See `cora.api._run_watcher`.
+    # nothing (no event, no entries row, no Run) unless
+    # `run_watcher_recording_enabled` is ALSO True (see below). Default
+    # off; irrelevant when `capture_watch_pvs` is empty. See
+    # `cora.api._run_watcher`.
     run_watcher_enabled: bool = False
+
+    # Which Plan a promoted watched Run references (record_watched_run's
+    # plan_id). Deployment-declared, not read from the substrate:
+    # TomoScan reports a scan began, never which Plan it corresponds to.
+    # `None` (default) disables promotion regardless of
+    # `run_watcher_recording_enabled` (see
+    # `_enforce_run_watcher_recording_gate` in `main.py`).
+    capture_watch_plan_id: UUID | None = None
+
+    # SECOND, independent kill switch above `run_watcher_enabled`:
+    # shadow mode (drain + log) stays default-on once `run_watcher_enabled`
+    # is True; this flag additionally gates whether a BEGUN observation is
+    # actually promoted to a real watched Run via `record_watched_run`.
+    # Default off, so enabling `run_watcher_enabled` alone stays
+    # shadow-only, unchanged from today. OPERATIONAL KILL SWITCH: boot
+    # refuses to start if this is True without both
+    # `run_watcher_enabled=True` and `capture_watch_plan_id` set (see
+    # `_enforce_run_watcher_recording_gate` in `main.py`).
+    run_watcher_recording_enabled: bool = False
 
     @field_validator("capture_status_phases")
     @classmethod
