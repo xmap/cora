@@ -231,6 +231,7 @@ async def seed_pilot_beamline(
     dry_run: bool,
     shutter_name: str = "StationShutter",
     acquisition_camera_name: str = "AcquisitionCamera",
+    rotary_stage_name: str = "RotaryStage",
     database_url: str | None = None,
 ) -> int:
     """Run the ceremony. `database_url` overrides the Settings value so
@@ -537,6 +538,23 @@ async def seed_pilot_beamline(
             f"asset {acquisition_camera_name} (Device, 2-BM-B)",
         )
 
+        # No legacy un-located registration to migrate away from (unlike
+        # shutter/camera): this is a brand-new Asset, so a plain
+        # (unsuffixed) seed key is correct, matching fly_scan's own Plan
+        # using `_v1` rather than `_v2`.
+        rotary_stage_id = asset_seed_id(facility_code, beamline, rotary_stage_name)
+        rotary_stage = await seed_asset(
+            rotary_stage_id,
+            RegisterAsset(
+                name=rotary_stage_name,
+                tier=AssetTier.DEVICE,
+                parent_id=root_id,
+                facility_code=None,
+                located_in_enclosure_id=enclosure_b_id,
+            ),
+            f"asset {rotary_stage_name} (Device, 2-BM-B)",
+        )
+
         shutter_family_id = family_stream_id(FamilyName("Shutter"))
         shutter_family = await load_family(kernel.event_store, shutter_family_id)
         if shutter_family is None:
@@ -544,16 +562,30 @@ async def seed_pilot_beamline(
             return _finish(report, dry_run)
         report.note("exists", "family Shutter")
 
+        # RotaryStage is a globally-bootstrapped family (see
+        # `_family_seed_registry.py`), same precondition as Shutter above.
+        # Continuous sample rotation is the defining feature of a real
+        # fly-scan (docs/deployments/2-bm/techniques.md); the fly_scan
+        # recipe below is the only caller that needs this family/Asset.
+        rotary_family_id = family_stream_id(FamilyName("RotaryStage"))
+        rotary_family = await load_family(kernel.event_store, rotary_family_id)
+        if rotary_family is None:
+            report.note("error", "family RotaryStage", "not seeded; unknown family name")
+            return _finish(report, dry_run)
+        report.note("exists", "family RotaryStage")
+
         await attach_family(shutter, shutter_id, shutter_family_id, shutter_name)
         await attach_family(
             acquisition_camera, acquisition_camera_id, family_id, acquisition_camera_name
         )
+        await attach_family(rotary_stage, rotary_stage_id, rotary_family_id, rotary_stage_name)
         # Reload: `attach_family` writes the attachment but returns nothing,
         # and the Plan step below needs each Asset's CURRENT family_ids
         # (the Recipe-BC family-superset check reads them), not the
         # pre-attachment snapshot `seed_asset` returned above.
         shutter = await load_asset(kernel.event_store, shutter_id)
         acquisition_camera = await load_asset(kernel.event_store, acquisition_camera_id)
+        rotary_stage = await load_asset(kernel.event_store, rotary_stage_id)
 
         # Storage supply: minted id, address-pre-checked idempotency.
         supplies_by_kind = await kernel.supply_lookup.find_supplies_by_kind(
@@ -754,16 +786,26 @@ async def seed_pilot_beamline(
             reload=lambda: load_capability(kernel.event_store, capability_id),
         )
 
-        # Both recipes need exactly the two Assets seeded above; no
-        # Scintillator or other microscope-family requirement, unlike
+        # dark_field/flat_field need exactly the two Assets seeded above;
+        # no Scintillator or other microscope-family requirement, unlike
         # the broader scenario-test fixtures for these same recipes
         # (this ceremony registers a minimal, real, conductible pair,
-        # not the fuller test rig).
+        # not the fuller test rig). fly_scan additionally needs the
+        # Rotary stage: continuous sample rotation is the defining
+        # feature of a real fly-scan, unlike a static baseline capture.
         recipe_family_ids = frozenset({shutter_family_id, family_id})
+        recipe_family_ids_with_rotary = recipe_family_ids | {rotary_family_id}
 
         async def seed_acquisition_recipe(
-            method_name: str, practice_name: str, plan_name: str
+            method_name: str,
+            practice_name: str,
+            plan_name: str,
+            *,
+            include_rotary: bool = False,
         ) -> None:
+            needed_family_ids = (
+                recipe_family_ids_with_rotary if include_rotary else recipe_family_ids
+            )
             method_id = recipe_seed_id(facility_code, beamline, "method", method_name)
             method: Method | None = await seed_genesis(
                 stream_type="Method",
@@ -774,7 +816,7 @@ async def seed_pilot_beamline(
                         name=method_name,
                         capability_id=capability_id,
                         execution_pattern=ExecutionPattern.BATCH,
-                        needed_family_ids=recipe_family_ids,
+                        needed_family_ids=needed_family_ids,
                     ),
                     capability=capability,
                     now=clock.now(),
@@ -824,25 +866,31 @@ async def seed_pilot_beamline(
                 assert method is not None
                 assert shutter is not None
                 assert acquisition_camera is not None
+                assets = {
+                    shutter_id: shutter,
+                    acquisition_camera_id: acquisition_camera,
+                }
+                family_affordances = {
+                    shutter_family_id: shutter_family.affordances,
+                    family_id: family.affordances,
+                }
+                if include_rotary:
+                    assert rotary_stage is not None
+                    assets[rotary_stage_id] = rotary_stage
+                    family_affordances[rotary_family_id] = rotary_family.affordances
                 context = PlanBindingContext(
                     practice=practice,
                     method=method,
-                    assets={
-                        shutter_id: shutter,
-                        acquisition_camera_id: acquisition_camera,
-                    },
+                    assets=assets,
                     capability=capability,
-                    family_affordances={
-                        shutter_family_id: shutter_family.affordances,
-                        family_id: family.affordances,
-                    },
+                    family_affordances=family_affordances,
                 )
                 return decide_plan(
                     state=None,
                     command=DefinePlan(
                         name=plan_name,
                         practice_id=practice_id,
-                        asset_ids=frozenset({shutter_id, acquisition_camera_id}),
+                        asset_ids=frozenset(assets),
                     ),
                     context=context,
                     now=clock.now(),
@@ -921,8 +969,15 @@ async def seed_pilot_beamline(
         # conducted: no operator REST/UI surface ever selects this Plan for
         # start_run, matching record_watched_run's own stub route/tool.
         # `_v1`, not `_v2`: there is no prior un-located fly_scan Plan to
-        # supersede via deprecate_plan_if_present.
-        await seed_acquisition_recipe("fly_scan", "2BM_fly_scan_practice", "2BM_fly_scan_plan_v1")
+        # supersede via deprecate_plan_if_present. include_rotary=True: a
+        # real fly-scan's defining feature is continuous sample rotation,
+        # unlike the two static baseline captures above.
+        await seed_acquisition_recipe(
+            "fly_scan",
+            "2BM_fly_scan_practice",
+            "2BM_fly_scan_plan_v1",
+            include_rotary=True,
+        )
 
         _ = root
         if not dry_run:
@@ -1001,6 +1056,7 @@ def build_parser() -> argparse.ArgumentParser:
     # explicitly for a deployment (like 2-BM) where --camera-name
     # already names a different physical camera under an override.
     parser.add_argument("--acquisition-camera-name", default="AcquisitionCamera")
+    parser.add_argument("--rotary-stage-name", default="RotaryStage")
     parser.add_argument("--dry-run", action="store_true")
     return parser
 
@@ -1017,6 +1073,7 @@ def main(argv: list[str] | None = None) -> int:
             supply_name=args.supply_name,
             shutter_name=args.shutter_name,
             acquisition_camera_name=args.acquisition_camera_name,
+            rotary_stage_name=args.rotary_stage_name,
             dry_run=args.dry_run,
         )
     )

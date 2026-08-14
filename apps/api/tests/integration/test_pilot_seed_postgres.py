@@ -56,6 +56,7 @@ _BEAMLINE = "2-bm"
 _CAMERA = "Camera"
 _SHUTTER = "StationShutter"
 _ACQUISITION_CAMERA = "AcquisitionCamera"
+_ROTARY_STAGE = "RotaryStage"
 
 
 @pytest.fixture(autouse=True)
@@ -148,6 +149,7 @@ async def test_dry_run_writes_nothing_beyond_bootstrap(seed_database: SeedDataba
     ladder_stream_ids = [
         asset_seed_id(_FACILITY, _BEAMLINE, _SHUTTER),
         asset_seed_id(_FACILITY, _BEAMLINE, _ACQUISITION_CAMERA),
+        asset_seed_id(_FACILITY, _BEAMLINE, _ROTARY_STAGE),
         recipe_seed_id(_FACILITY, _BEAMLINE, "capability", "acquisition"),
         recipe_seed_id(_FACILITY, _BEAMLINE, "method", "dark_field"),
         recipe_seed_id(_FACILITY, _BEAMLINE, "method", "flat_field"),
@@ -183,11 +185,12 @@ async def test_seeded_ladder_resolves_for_all_acquisition_recipes(
     """The Recipe BC ladder the ceremony registers is not just present,
     it RESOLVES: `define_plan`'s cross-aggregate decider (family-
     superset + affordance-cover checks) accepted every Plan without
-    raising, and each Plan binds exactly the StationShutter + the
-    acquisition camera -- the two Assets `docs/deployments/2-bm/
-    recipes.md`'s dark_field / flat_field recipes actually target, and
-    the same pair the fly_scan recipe (the real TomoScan workflow the
-    RunWatcher's promotion path watches) reuses."""
+    raising. dark_field / flat_field each bind exactly the StationShutter
+    + the acquisition camera -- the two Assets `docs/deployments/2-bm/
+    recipes.md`'s recipes actually target. fly_scan (the real TomoScan
+    workflow the RunWatcher's promotion path watches) additionally binds
+    the Rotary stage: continuous sample rotation is the defining feature
+    of a real fly-scan, unlike the two static baseline captures."""
     pool, url = seed_database
     assert await _run_ceremony(url) == 2
 
@@ -196,15 +199,23 @@ async def test_seeded_ladder_resolves_for_all_acquisition_recipes(
     capability_id = recipe_seed_id(_FACILITY, _BEAMLINE, "capability", "acquisition")
     shutter_id = asset_seed_id(_FACILITY, _BEAMLINE, f"{_SHUTTER}_v2")
     acquisition_camera_id = asset_seed_id(_FACILITY, _BEAMLINE, f"{_ACQUISITION_CAMERA}_v2")
+    rotary_stage_id = asset_seed_id(_FACILITY, _BEAMLINE, _ROTARY_STAGE)
 
     enclosure_b = await PostgresEnclosureLookup(pool).lookup_by_name(
         facility_code=_FACILITY, name="2-BM-B"
     )
     assert enclosure_b is not None
-    for asset_id in (shutter_id, acquisition_camera_id):
+    for asset_id in (shutter_id, acquisition_camera_id, rotary_stage_id):
         asset = await PostgresAssetLookup(pool).lookup(asset_id)
         assert asset is not None
         assert asset.located_in_enclosure_id == enclosure_b.enclosure_id
+
+    baseline_asset_ids = frozenset({shutter_id, acquisition_camera_id})
+    expected_asset_ids = {
+        "dark_field": baseline_asset_ids,
+        "flat_field": baseline_asset_ids,
+        "fly_scan": baseline_asset_ids | {rotary_stage_id},
+    }
 
     for method_name, practice_name, plan_name in (
         ("dark_field", "2BM_dark_field_practice", "2BM_dark_field_plan_v2"),
@@ -226,7 +237,7 @@ async def test_seeded_ladder_resolves_for_all_acquisition_recipes(
         plan = await load_plan(event_store, plan_id)
         assert plan is not None
         assert plan.practice_id == practice_id
-        assert plan.asset_ids == frozenset({shutter_id, acquisition_camera_id})
+        assert plan.asset_ids == expected_asset_ids[method_name]
 
     capability = await load_capability(event_store, capability_id)
     assert capability is not None
