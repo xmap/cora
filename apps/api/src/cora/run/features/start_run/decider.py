@@ -399,6 +399,7 @@ def decide(
             name=name.value,
             plan_id=command.plan_id,
             subject_id=command.subject_id,
+            conduct_mode=command.conduct_mode,
             raid=command.raid,
             override_parameters=command.override_parameters,
             effective_parameters=effective_parameters,

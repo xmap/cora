@@ -1618,6 +1618,7 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
             "workaround_excerpt": "drop:text",
         },
         "campaign_id": "token:uuid",
+        "conduct_mode": "keep:enum:ConductMode",
         "decided_by_decision_id": "token:uuid",
         "effective_parameters": "drop:opaque",
         "external_refs": "drop:opaque",

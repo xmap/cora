@@ -276,6 +276,36 @@ class RunStatus(StrEnum):
     TRUNCATED = "Truncated"
 
 
+class ConductMode(StrEnum):
+    """Who drove this Run's act: CORA's own Conductor, or an external tool.
+
+    Reifies the axis `docs/reference/modeling.md`'s "Run vs Procedure
+    boundary" section names in prose but never encoded: "Conducted vs
+    recorded (who drives the act) ... Both Runs and Procedures span
+    both modes." Orthogonal to `RunStatus`: every status transition is
+    reachable under either mode, and the mode never changes once set
+    at genesis.
+
+    `CONDUCTED` is CORA's own Conductor driving the act (every Run
+    started today, via `_run_initiator.py` or a phase-conduct bridge,
+    is Conducted). `RECORDED` is an externally-driven act CORA only
+    observes after the fact, for example a 2-BM tomoscan scan watched
+    by `RunWatcher` (see `cora.api._run_watcher`). Nothing
+    yet constructs a `RECORDED` Run: promoting a shadow observation
+    into one is deliberately a separate, not-yet-built module (see
+    `_run_watcher.py`'s own docstring).
+
+    Named `conduct_mode`, not bare `mode`, on the `Run` field: Run
+    already carries a neighboring "how was this driven" fact,
+    `actuation_kind` (raw `ActuationKind`, stamped by the compute
+    CONDUCT runtime onto terminal events), and bare `mode` would read
+    ambiguously beside it.
+    """
+
+    CONDUCTED = "Conducted"
+    RECORDED = "Recorded"
+
+
 class InvalidRunNameError(ValueError):
     """The supplied name is empty, whitespace-only, or too long."""
 
@@ -1292,6 +1322,14 @@ class Run:
     subject_id: UUID | None
     raid: str | None = None
     status: RunStatus = RunStatus.RUNNING
+    # who drove this act: CORA's own Conductor, or an external tool CORA
+    # only observes. Set once at genesis (RunStarted.conduct_mode) and
+    # IMMUTABLE thereafter: every transition arm in the evolver threads
+    # `prior.conduct_mode` verbatim, same as `pinned_calibration_ids`.
+    # Never Optional: a Run's cause is always one of the two named
+    # values, declared explicitly by the genesis command, never
+    # inferred. See `ConductMode`'s own docstring.
+    conduct_mode: ConductMode = ConductMode.CONDUCTED
     override_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     effective_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     trigger_source: str | None = None

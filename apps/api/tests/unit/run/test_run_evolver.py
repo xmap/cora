@@ -10,6 +10,7 @@ import pytest
 from cora.run.aggregates.run import (
     LEGACY_CAUSE,
     LEGACY_CLAIM_ID,
+    ConductMode,
     Run,
     RunName,
     RunStatus,
@@ -35,6 +36,7 @@ def _run_started(
     run_id: UUID | None = None,
     plan_id: UUID | None = None,
     subject_id: UUID | None = None,
+    conduct_mode: ConductMode = ConductMode.CONDUCTED,
 ) -> RunStarted:
     """Test helper: RunStarted with sensible defaults."""
     return RunStarted(
@@ -42,6 +44,7 @@ def _run_started(
         name="32-ID FlyScan",
         plan_id=plan_id or uuid4(),
         subject_id=subject_id,
+        conduct_mode=conduct_mode,
         occurred_at=_NOW,
     )
 
@@ -77,6 +80,36 @@ def test_evolve_run_started_without_subject_sets_subject_id_to_none() -> None:
     state = evolve(None, _run_started(subject_id=None))
     assert state.subject_id is None
     assert state.status is RunStatus.RUNNING
+
+
+@pytest.mark.unit
+def test_evolve_run_started_defaults_conduct_mode_to_conducted() -> None:
+    """Every StartRun caller today is Conducted; the default declares that
+    closed, currently-total fact rather than inferring it."""
+    state = evolve(None, _run_started())
+    assert state.conduct_mode is ConductMode.CONDUCTED
+
+
+@pytest.mark.unit
+def test_evolve_run_started_honors_explicit_recorded_conduct_mode() -> None:
+    """A RECORDED genesis (the not-yet-built shadow-promotion path) must
+    declare its mode explicitly; the evolver copies it verbatim, never
+    computing or guessing it."""
+    state = evolve(None, _run_started(conduct_mode=ConductMode.RECORDED))
+    assert state.conduct_mode is ConductMode.RECORDED
+
+
+@pytest.mark.unit
+def test_conduct_mode_survives_hold_resume_complete_round_trip() -> None:
+    """conduct_mode is immutable after genesis: it must ride through every
+    transition arm unchanged, same as pinned_calibration_ids."""
+    started = _run_started(conduct_mode=ConductMode.RECORDED)
+    running = evolve(None, started)
+    held = evolve(running, RunHeld(run_id=started.run_id, occurred_at=_NOW))
+    resumed = evolve(held, RunResumed(run_id=started.run_id, occurred_at=_NOW))
+    completed = evolve(resumed, RunCompleted(run_id=started.run_id, occurred_at=_NOW))
+    for state in (running, held, resumed, completed):
+        assert state.conduct_mode is ConductMode.RECORDED
 
 
 @pytest.mark.unit

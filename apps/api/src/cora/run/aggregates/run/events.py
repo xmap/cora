@@ -91,6 +91,7 @@ from uuid import UUID
 
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.run.aggregates.run.state import ConductMode
 from cora.shared.identity import ActorId
 from cora.shared.logbook import LogbookSchema
 
@@ -197,6 +198,16 @@ class RunStarted:
     plan_id: UUID
     subject_id: UUID | None
     occurred_at: datetime
+    # who drove this act: CORA's own Conductor, or an external tool CORA
+    # only observes. See `ConductMode`'s own docstring (cora.run.aggregates
+    # .run.state) for the full rationale. Declared explicitly by
+    # `StartRun.conduct_mode`, never inferred; the decider copies it
+    # verbatim. Defaults to CONDUCTED: every StartRun caller today is
+    # Conducted, so the default declares the closed, currently-total set
+    # of reality rather than guessing a live signal. Forward-compat via
+    # `payload.get("conduct_mode", ConductMode.CONDUCTED.value)` in
+    # `from_stored` for legacy streams without the key.
+    conduct_mode: ConductMode = ConductMode.CONDUCTED
     raid: str | None = None
     override_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     effective_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
@@ -742,6 +753,7 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             name=name,
             plan_id=plan_id,
             subject_id=subject_id,
+            conduct_mode=conduct_mode,
             raid=raid,
             override_parameters=override_parameters,
             effective_parameters=effective_parameters,
@@ -759,6 +771,7 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "name": name,
                 "plan_id": str(plan_id),
                 "subject_id": str(subject_id) if subject_id is not None else None,
+                "conduct_mode": conduct_mode.value,
                 "raid": raid,
                 "override_parameters": override_parameters,
                 "effective_parameters": effective_parameters,
@@ -993,7 +1006,7 @@ def from_stored(stored: StoredEvent) -> RunEvent:
 
             def _build_run_started() -> RunStarted:
                 raw_subject = payload["subject_id"]
-                # Forward-compat additive evolution: `raid`,
+                # Forward-compat additive evolution: `conduct_mode`, `raid`,
                 # `override_parameters` / `effective_parameters` /
                 # `trigger_source`, `external_refs`,
                 # `acknowledged_cautions`, `campaign_id`,
@@ -1010,6 +1023,9 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                     name=payload["name"],
                     plan_id=UUID(payload["plan_id"]),
                     subject_id=UUID(raw_subject) if raw_subject is not None else None,
+                    conduct_mode=ConductMode(
+                        payload.get("conduct_mode", ConductMode.CONDUCTED.value)
+                    ),
                     raid=payload.get("raid"),
                     override_parameters=payload.get("override_parameters", {}),
                     effective_parameters=payload.get("effective_parameters", {}),

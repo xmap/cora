@@ -1,4 +1,4 @@
-h1:dnh/fWUfqZPraHDnlG7pcOs20kUk3ampmAsKq9IXLmc=
+h1:VAd2LX0bZJy/3clCYhf/ux2PAKI9cn4BriMCeDij7Uc=
 20260509120000_init_events.sql h1:GmgCZKfaqXu1m96/cKAks2vhaLWTdEaHTLkFtUo9FXg=
 20260509170000_init_idempotency.sql h1:Nbu8DIE4Sv1WiHw3G22+tYffPhKc5Jryw3PMK8wB2zY=
 20260510010000_add_event_id.sql h1:RbtYP6uMnOB20zhJ9dNXUi4YVqbmlEzf562pmygnRW8=
@@ -163,3 +163,4 @@ h1:dnh/fWUfqZPraHDnlG7pcOs20kUk3ampmAsKq9IXLmc=
 20260809190000_split_enclosure_permit_transition_and_source_times.sql h1:b+0GB3dqh0olt1eRCU0fa/j4wwvCsgrnhTjTZz262ps=
 20260810000000_init_entries_enclosure_permit_probes.sql h1:AgExM2HGWE6XsXJbKyNI3/DCoy8224PH+GQjCL3itkI=
 20260810120000_grant_cora_app_entries_table_access.sql h1:f8IxkQu8R7AUVyaItHjCQxDnt/nda2Y7mtRC8blqvB4=
+20260814041035_add_proj_run_summary_conduct_mode.sql h1:i34cwORg/LmkqEcT0O5xhE0z6geK91cJr0GtCiNcrLg=
