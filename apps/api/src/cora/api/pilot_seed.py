@@ -1,16 +1,29 @@
-"""The pilot seed ceremony: give a CORA instance the beamline ingest needs.
+"""The pilot seed ceremony: give a CORA instance what the 2-BM pilot needs.
 
-`python -m cora.api.pilot_seed` registers, idempotently, the minimum a
-deployment must know before `ingest_scan` can record anything: the
-beamline root Unit Asset (facility-bound per the anchoring XOR), the
-camera Device Asset, its Camera family attachment (whose seed roster
-carries Capturing), and one Storage-kind Supply. Inputs are explicit
-CLI arguments; the ceremony reads no descriptor. The full
-descriptor-reconciling onboarding is a deliberate later slice with its
-own trigger (see project_beamline_seeder_design), because 52 of the
-descriptor's 53 instances have no production reader in the read-only
-pilot and the two things ingest needs are exactly the two the
-descriptor cannot provide.
+`python -m cora.api.pilot_seed` registers, idempotently, two things a
+deployment must know before it can do anything real: what `ingest_scan`
+needs to record a capture, and what `start_run` needs to have a real
+`plan_id` to bind to. Inputs are explicit CLI arguments; the ceremony
+reads no descriptor. The full descriptor-reconciling onboarding is a
+deliberate later slice with its own trigger (see
+project_beamline_seeder_design), because 52 of the descriptor's 53
+instances have no production reader in the read-only pilot and the
+things this ceremony needs are exactly the ones the descriptor cannot
+provide.
+
+Registers:
+  - the beamline root Unit Asset (facility-bound per the anchoring
+    XOR), a camera Device Asset with its Camera family attachment
+    (whose seed roster carries Capturing), and one Storage-kind Supply
+    -- what `ingest_scan` needs.
+  - a StationShutter Device Asset and a second camera Device Asset (the
+    5 MP unit `docs/deployments/2-bm/recipes.md`'s `dark_field` /
+    `flat_field` recipes actually target, distinct from the first
+    camera), plus the Capability -> Method -> Practice -> Plan chain
+    for those same two recipes, bound to the two new Assets -- what
+    `start_run` needs. `energy_setting` and `hexapod_reboot` stay
+    unregistered: `recipes.md` marks both "design, pending executor",
+    so a Plan for either would fail on its first conduct step.
 
 ## Identity is per-aggregate, matching each aggregate's locked design
 
@@ -53,7 +66,9 @@ error. A `--dry-run` prints the same report and writes nothing.
 import argparse
 import asyncio
 import sys
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, TypeVar
 from uuid import UUID, uuid5
 
 from cora.equipment._bootstrap import bootstrap_equipment, bootstrap_families
@@ -87,6 +102,29 @@ from cora.infrastructure.projection.drain import drain_projections
 from cora.infrastructure.projection.worker import ProjectionRegistry
 from cora.infrastructure.routing import SYSTEM_PRINCIPAL_ID
 from cora.infrastructure.schema_version import verify_schema_version
+from cora.recipe.aggregates.capability import Capability, ExecutorShape
+from cora.recipe.aggregates.capability.events import event_type_name as capability_event_type_name
+from cora.recipe.aggregates.capability.events import to_payload as capability_to_payload
+from cora.recipe.aggregates.capability.read import load_capability
+from cora.recipe.aggregates.method import ExecutionPattern, Method
+from cora.recipe.aggregates.method.events import event_type_name as method_event_type_name
+from cora.recipe.aggregates.method.events import to_payload as method_to_payload
+from cora.recipe.aggregates.method.read import load_method
+from cora.recipe.aggregates.plan.events import event_type_name as plan_event_type_name
+from cora.recipe.aggregates.plan.events import to_payload as plan_to_payload
+from cora.recipe.aggregates.plan.read import load_plan
+from cora.recipe.aggregates.practice.events import event_type_name as practice_event_type_name
+from cora.recipe.aggregates.practice.events import to_payload as practice_to_payload
+from cora.recipe.aggregates.practice.read import load_practice
+from cora.recipe.features.define_capability.command import DefineCapability
+from cora.recipe.features.define_capability.decider import decide as decide_capability
+from cora.recipe.features.define_method.command import DefineMethod
+from cora.recipe.features.define_method.decider import decide as decide_method
+from cora.recipe.features.define_plan.command import DefinePlan
+from cora.recipe.features.define_plan.context import PlanBindingContext
+from cora.recipe.features.define_plan.decider import decide as decide_plan
+from cora.recipe.features.define_practice.command import DefinePractice
+from cora.recipe.features.define_practice.decider import decide as decide_practice
 from cora.shared.facility_code import FacilityCode
 from cora.shared.identity import ActorId
 from cora.supply._projections import register_supply_projections
@@ -99,11 +137,23 @@ from cora.supply.features.mark_supply_available.decider import decide as decide_
 from cora.supply.features.register_supply.command import RegisterSupply
 from cora.supply.features.register_supply.decider import decide as decide_supply
 
+if TYPE_CHECKING:
+    from cora.recipe.aggregates.plan import Plan
+    from cora.recipe.aggregates.practice import Practice
+
 #: Namespace for the ceremony's deterministic Asset identities. Path-
 #: qualified keys under it ("aps:2-bm:asset:<name>") make re-runs
 #: idempotent without reserving bare names repo-wide (the Role/Imager
 #: lesson) and keep two beamlines' identically named devices distinct.
 ASSET_SEED_NAMESPACE = UUID("6c1f4a52-8f2e-4bb0-9d59-1a4c9be1a23d")
+
+#: Namespace for the ceremony's deterministic Recipe-BC identities
+#: (Capability / Method / Practice / Plan). Recipe aggregates have no
+#: `uuid5` registry of their own (unlike Family's bare-name-derived
+#: ids), and this deployment-specific ladder is not cross-facility
+#: vocabulary, so it is facility+beamline-qualified like Assets, under
+#: its own namespace rather than reusing `ASSET_SEED_NAMESPACE`.
+RECIPE_SEED_NAMESPACE = UUID("48eb0d48-8fc2-482c-9e9e-d3547b1ff37b")
 
 _COMMAND_NAME = "SeedPilotBeamline"
 
@@ -111,9 +161,15 @@ _EXIT_CLEAN = 0
 _EXIT_ERROR = 1
 _EXIT_SEEDED = 2
 
+_T = TypeVar("_T")
+
 
 def asset_seed_id(facility_code: str, beamline: str, name: str) -> UUID:
     return uuid5(ASSET_SEED_NAMESPACE, f"{facility_code}:{beamline}:asset:{name}")
+
+
+def recipe_seed_id(facility_code: str, beamline: str, kind: str, name: str) -> UUID:
+    return uuid5(RECIPE_SEED_NAMESPACE, f"{facility_code}:{beamline}:{kind}:{name}")
 
 
 @dataclass
@@ -140,6 +196,8 @@ async def seed_pilot_beamline(
     camera_family_name: str,
     supply_name: str,
     dry_run: bool,
+    shutter_name: str = "StationShutter",
+    acquisition_camera_name: str = "AcquisitionCamera",
     database_url: str | None = None,
 ) -> int:
     """Run the ceremony. `database_url` overrides the Settings value so
@@ -293,37 +351,88 @@ async def seed_pilot_beamline(
         # history), so an operator who deliberately detached the family
         # will see it re-attach on the next run; acceptable for the
         # pilot camera, revisited if a real detach case appears.
-        if camera is not None:
-            if family_id in camera.family_ids:
-                report.note("exists", f"{camera_name} family attachment")
-            elif dry_run:
-                report.note("seeded", f"{camera_name} family attachment", "dry-run, not written")
-            else:
-                current_state, current_version = await _load_asset_with_version(kernel, camera_id)
-                attach_events = decide_add_family(
-                    state=current_state,
-                    command=AddAssetFamily(asset_id=camera_id, family_id=family_id),
-                    now=clock.now(),
+        async def attach_family(
+            asset: Asset | None, asset_id: UUID, family_id: UUID, label: str
+        ) -> None:
+            if asset is None:
+                return
+            if family_id in asset.family_ids:
+                report.note("exists", f"{label} family attachment")
+                return
+            if dry_run:
+                report.note("seeded", f"{label} family attachment", "dry-run, not written")
+                return
+            current_state, current_version = await _load_asset_with_version(kernel, asset_id)
+            attach_events = decide_add_family(
+                state=current_state,
+                command=AddAssetFamily(asset_id=asset_id, family_id=family_id),
+                now=clock.now(),
+            )
+            attach_envelopes = [
+                to_new_event(
+                    event_type=asset_event_type_name(event),
+                    payload=asset_to_payload(event),
+                    occurred_at=event.occurred_at,
+                    event_id=ids.new_id(),
+                    command_name=_COMMAND_NAME,
+                    correlation_id=run_correlation_id,
+                    principal_id=SYSTEM_PRINCIPAL_ID,
                 )
-                attach_envelopes = [
-                    to_new_event(
-                        event_type=asset_event_type_name(event),
-                        payload=asset_to_payload(event),
-                        occurred_at=event.occurred_at,
-                        event_id=ids.new_id(),
-                        command_name=_COMMAND_NAME,
-                        correlation_id=run_correlation_id,
-                        principal_id=SYSTEM_PRINCIPAL_ID,
-                    )
-                    for event in attach_events
-                ]
-                await kernel.event_store.append(
-                    stream_type="Asset",
-                    stream_id=camera_id,
-                    expected_version=current_version,
-                    events=attach_envelopes,
-                )
-                report.note("seeded", f"{camera_name} family attachment")
+                for event in attach_events
+            ]
+            await kernel.event_store.append(
+                stream_type="Asset",
+                stream_id=asset_id,
+                expected_version=current_version,
+                events=attach_envelopes,
+            )
+            report.note("seeded", f"{label} family attachment")
+
+        await attach_family(camera, camera_id, family_id, camera_name)
+
+        # ----- Recipe BC prerequisite Assets: what dark_field / flat_field
+        # actually target, per docs/deployments/2-bm/recipes.md -----
+        shutter_id = asset_seed_id(facility_code, beamline, shutter_name)
+        acquisition_camera_id = asset_seed_id(facility_code, beamline, acquisition_camera_name)
+
+        shutter = await seed_asset(
+            shutter_id,
+            RegisterAsset(
+                name=shutter_name,
+                tier=AssetTier.DEVICE,
+                parent_id=root_id,
+                facility_code=None,
+            ),
+            f"asset {shutter_name} (Device)",
+        )
+        acquisition_camera = await seed_asset(
+            acquisition_camera_id,
+            RegisterAsset(
+                name=acquisition_camera_name,
+                tier=AssetTier.DEVICE,
+                parent_id=root_id,
+                facility_code=None,
+            ),
+            f"asset {acquisition_camera_name} (Device)",
+        )
+
+        shutter_family_id = family_stream_id(FamilyName("Shutter"))
+        shutter_family = await load_family(kernel.event_store, shutter_family_id)
+        if shutter_family is None:
+            report.note("error", "family Shutter", "not seeded; unknown family name")
+            return _finish(report, dry_run)
+        report.note("exists", "family Shutter")
+
+        await attach_family(shutter, shutter_id, shutter_family_id, shutter_name)
+        await attach_family(
+            acquisition_camera, acquisition_camera_id, family_id, acquisition_camera_name
+        )
+        # Reload: `attach_family` writes the attachment but returns nothing,
+        # and the Plan step below needs each Asset's CURRENT family_ids
+        # (the Recipe-BC family-superset check reads them), not the
+        # pre-attachment snapshot `seed_asset` returned above.
+        shutter = await load_asset(kernel.event_store, shutter_id)
+        acquisition_camera = await load_asset(kernel.event_store, acquisition_camera_id)
 
         # Storage supply: minted id, address-pre-checked idempotency.
         supplies_by_kind = await kernel.supply_lookup.find_supplies_by_kind(
@@ -425,6 +534,219 @@ async def seed_pilot_beamline(
                     )
                     report.note("seeded", f"supply {supply_name} availability")
 
+        # ----- Recipe BC: Capability -> Method -> Practice -> Plan ceremony -----
+        #
+        # A real Run at 2-BM needs a valid plan_id (`start_run` walks
+        # Plan -> Practice -> Method -> Capability); nothing here has ever
+        # been registered. This registers exactly the two "conductible
+        # today" recipes from docs/deployments/2-bm/recipes.md
+        # (dark_field, flat_field, both reusing the registered `collect`
+        # action body) against the StationShutter + acquisition-camera
+        # Assets seeded above.
+
+        async def seed_genesis(
+            *,
+            stream_type: str,
+            state: _T | None,
+            decide_thunk: Callable[[], Sequence[Any]],
+            event_type_name_fn: Callable[[Any], str],
+            to_payload_fn: Callable[[Any], dict[str, Any]],
+            stream_id: UUID,
+            label: str,
+            reload: Callable[[], Awaitable[_T | None]],
+        ) -> _T | None:
+            """Genesis-only append for a Recipe BC aggregate, mirroring
+            `seed_asset`'s shape (state=None check, decide, serialize,
+            append at expected_version=0, ConcurrencyError means already
+            present).
+
+            Unlike `seed_asset`, `dry_run` is checked BEFORE calling
+            `decide_thunk`: a cross-aggregate decider here (Method needs
+            Capability, Plan needs Practice + Method + Assets) can
+            legitimately raise when an upstream dependency is merely
+            not-yet-WRITTEN under dry-run on a fresh database, and that
+            must read as "would seed", not a crash. This is the same
+            "skip a downstream step whose upstream id is unknown under
+            dry-run" posture the Supply availability step above already
+            takes, made explicit here because the dependency is an
+            object, not just an id.
+            """
+            if state is not None:
+                report.note("exists", label)
+                return state
+            if dry_run:
+                report.note("seeded", label, "dry-run, not written")
+                return None
+            events = decide_thunk()
+            envelopes = [
+                to_new_event(
+                    event_type=event_type_name_fn(event),
+                    payload=to_payload_fn(event),
+                    occurred_at=event.occurred_at,
+                    event_id=ids.new_id(),
+                    command_name=_COMMAND_NAME,
+                    correlation_id=run_correlation_id,
+                    principal_id=SYSTEM_PRINCIPAL_ID,
+                )
+                for event in events
+            ]
+            try:
+                await kernel.event_store.append(
+                    stream_type=stream_type,
+                    stream_id=stream_id,
+                    expected_version=0,
+                    events=envelopes,
+                )
+            except ConcurrencyError:
+                report.note("exists", label, "raced another writer; already present")
+                return await reload()
+            report.note("seeded", label)
+            return await reload()
+
+        capability_id = recipe_seed_id(facility_code, beamline, "capability", "acquisition")
+        capability: Capability | None = await seed_genesis(
+            stream_type="Capability",
+            state=await load_capability(kernel.event_store, capability_id),
+            decide_thunk=lambda: decide_capability(
+                state=None,
+                command=DefineCapability(
+                    code="cora.capability.acquisition",
+                    name="Acquisition",
+                    # A dark/flat baseline capture opens or closes the
+                    # station shutter and captures a frame stack; both
+                    # are real preconditions of "Acquisition" at 2-BM,
+                    # not an arbitrary choice. Covered by the union of
+                    # the Shutter + Camera family affordances below.
+                    required_affordances=frozenset({Affordance.SHUTTERABLE, Affordance.CAPTURING}),
+                    # Only ever bound via Method in this ceremony; no
+                    # Procedure realizes this Capability, so PROCEDURE
+                    # is left out rather than added speculatively.
+                    executor_shapes=frozenset({ExecutorShape.METHOD}),
+                ),
+                now=clock.now(),
+                new_id=capability_id,
+            ),
+            event_type_name_fn=capability_event_type_name,
+            to_payload_fn=capability_to_payload,
+            stream_id=capability_id,
+            label="capability cora.capability.acquisition",
+            reload=lambda: load_capability(kernel.event_store, capability_id),
+        )
+
+        # Both recipes need exactly the two Assets seeded above; no
+        # Scintillator or other microscope-family requirement, unlike
+        # the broader scenario-test fixtures for these same recipes
+        # (this ceremony registers a minimal, real, conductible pair,
+        # not the fuller test rig).
+        recipe_family_ids = frozenset({shutter_family_id, family_id})
+
+        async def seed_acquisition_recipe(
+            method_name: str, practice_name: str, plan_name: str
+        ) -> None:
+            method_id = recipe_seed_id(facility_code, beamline, "method", method_name)
+            method: Method | None = await seed_genesis(
+                stream_type="Method",
+                state=await load_method(kernel.event_store, method_id),
+                decide_thunk=lambda: decide_method(
+                    state=None,
+                    command=DefineMethod(
+                        name=method_name,
+                        capability_id=capability_id,
+                        execution_pattern=ExecutionPattern.BATCH,
+                        needed_family_ids=recipe_family_ids,
+                    ),
+                    capability=capability,
+                    now=clock.now(),
+                    new_id=method_id,
+                ),
+                event_type_name_fn=method_event_type_name,
+                to_payload_fn=method_to_payload,
+                stream_id=method_id,
+                label=f"method {method_name}",
+                reload=lambda: load_method(kernel.event_store, method_id),
+            )
+
+            practice_id = recipe_seed_id(facility_code, beamline, "practice", practice_name)
+            practice: Practice | None = await seed_genesis(
+                stream_type="Practice",
+                state=await load_practice(kernel.event_store, practice_id),
+                decide_thunk=lambda: decide_practice(
+                    state=None,
+                    command=DefinePractice(
+                        name=practice_name,
+                        method_id=method_id,
+                        # "Site-level Asset this Practice belongs to"
+                        # (DefinePractice's own docstring); the root Unit
+                        # Asset IS that binding point. No distinct Site
+                        # aggregate exists in the codebase.
+                        site_id=root_id,
+                    ),
+                    now=clock.now(),
+                    new_id=practice_id,
+                ),
+                event_type_name_fn=practice_event_type_name,
+                to_payload_fn=practice_to_payload,
+                stream_id=practice_id,
+                label=f"practice {practice_name}",
+                reload=lambda: load_practice(kernel.event_store, practice_id),
+            )
+
+            plan_id = recipe_seed_id(facility_code, beamline, "plan", plan_name)
+
+            def build_plan_events() -> list[Any]:
+                # Only ever called for real (never under dry-run, and
+                # never when this Plan already exists), by which point
+                # this same ceremony run has already written the
+                # Practice/Method/Assets it binds. The asserts are that
+                # invariant, not a runtime possibility.
+                assert practice is not None
+                assert method is not None
+                assert shutter is not None
+                assert acquisition_camera is not None
+                context = PlanBindingContext(
+                    practice=practice,
+                    method=method,
+                    assets={
+                        shutter_id: shutter,
+                        acquisition_camera_id: acquisition_camera,
+                    },
+                    capability=capability,
+                    family_affordances={
+                        shutter_family_id: shutter_family.affordances,
+                        family_id: family.affordances,
+                    },
+                )
+                return decide_plan(
+                    state=None,
+                    command=DefinePlan(
+                        name=plan_name,
+                        practice_id=practice_id,
+                        asset_ids=frozenset({shutter_id, acquisition_camera_id}),
+                    ),
+                    context=context,
+                    now=clock.now(),
+                    new_id=plan_id,
+                )
+
+            plan: Plan | None = await seed_genesis(
+                stream_type="Plan",
+                state=await load_plan(kernel.event_store, plan_id),
+                decide_thunk=build_plan_events,
+                event_type_name_fn=plan_event_type_name,
+                to_payload_fn=plan_to_payload,
+                stream_id=plan_id,
+                label=f"plan {plan_name}",
+                reload=lambda: load_plan(kernel.event_store, plan_id),
+            )
+            _ = plan
+
+        await seed_acquisition_recipe(
+            "dark_field", "2BM_dark_field_practice", "2BM_dark_field_plan"
+        )
+        await seed_acquisition_recipe(
+            "flat_field", "2BM_flat_field_practice", "2BM_flat_field_plan"
+        )
+
         _ = root
         if not dry_run:
             # Leave the projections current so a re-run's supply
@@ -479,10 +801,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m cora.api.pilot_seed",
         description=(
-            "Register the minimum a deployment needs before ingest_scan "
-            "can record: the beamline root Unit, the camera Device with "
-            "its Capturing-bearing family, and a Storage supply. "
-            "Idempotent; re-runs report and change nothing."
+            "Register what a deployment needs before ingest_scan can "
+            "record (the beamline root Unit, a camera Device with its "
+            "Capturing-bearing family, a Storage supply) and before "
+            "start_run has a real plan_id to bind to (a StationShutter "
+            "and a second camera Device, plus the Capability -> Method "
+            "-> Practice -> Plan chain for the dark_field / flat_field "
+            "recipes, bound to those two). Idempotent; re-runs report "
+            "and change nothing."
         ),
     )
     parser.add_argument("--facility-code", default="cora")
@@ -491,6 +817,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--camera-name", default="Camera")
     parser.add_argument("--camera-family-name", default="Camera")
     parser.add_argument("--supply-name", default="analysis-tier")
+    parser.add_argument("--shutter-name", default="StationShutter")
+    # Default deliberately distinct from --camera-name's own default
+    # ("Camera"): both default to that name would derive the SAME
+    # asset_seed_id and collide. Pass --acquisition-camera-name Camera
+    # explicitly for a deployment (like 2-BM) where --camera-name
+    # already names a different physical camera under an override.
+    parser.add_argument("--acquisition-camera-name", default="AcquisitionCamera")
     parser.add_argument("--dry-run", action="store_true")
     return parser
 
@@ -505,6 +838,8 @@ def main(argv: list[str] | None = None) -> int:
             camera_name=args.camera_name,
             camera_family_name=args.camera_family_name,
             supply_name=args.supply_name,
+            shutter_name=args.shutter_name,
+            acquisition_camera_name=args.acquisition_camera_name,
             dry_run=args.dry_run,
         )
     )
