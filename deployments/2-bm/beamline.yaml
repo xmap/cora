@@ -289,7 +289,15 @@ conditioning-optics:
         energy-change move, with no special sequencing and no software interlock.
         CORA records this two-state position as the dmm_insertion setting above;
         the coordinated mode-switch move that drives it stays deferred with the
-        Pink positions and stripe map (MODE-3, MIRROR-1). Source: docs2bm item_020.
+        Pink positions and stripe map (MODE-3, MIRROR-1).
+        Source: docs2bm item_020 at xray-imaging/2bm-docs@037772e9. That
+        commit corrected the page's own DMM role text (ENERGY-9, #656),
+        which had described m29 (DSY) as the second-crystal Y: it is the
+        downstream tank Y this note already carries as two-state, and the
+        second-crystal fine vertical is m32, the m2_offset_y above. The
+        correction cites ENERGY-1 (#249) and ENERGY-5 (#254), so it moved
+        the page onto what those answers had already established here;
+        the split above is unchanged by it.
     - name: AlignmentCamera
       family: Camera
       pv: "2bma:m21"
