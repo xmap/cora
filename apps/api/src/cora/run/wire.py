@@ -30,6 +30,11 @@ is fresh and random per call, so there is no Idempotency-Key to
 collapse a retry against. In-process-only; no route, no MCP tool ever
 call it.
 
+`record_witnessed_run_outcome` closes the witnessed path: update-style,
+bare Handler protocol, same posture as the four driven terminals (strict-
+not-idempotent, ConcurrencyError handles the double-submit case). Also
+in-process-only; no route, no MCP tool ever call it.
+
 `append_observations` writes the polymorphic sensor / motor observation
 logbook (SOSA `sampling_procedure` discriminator; lazy open-on-first-
 write). Not idempotency-wrapped: natural idempotence via the
@@ -76,6 +81,7 @@ from cora.run.features import (
     hold_run,
     list_runs,
     record_witnessed_run,
+    record_witnessed_run_outcome,
     resume_run,
     start_run,
     stop_run,
@@ -91,6 +97,7 @@ class RunHandlers:
 
     start_run: start_run.IdempotentHandler
     record_witnessed_run: record_witnessed_run.Handler
+    record_witnessed_run_outcome: record_witnessed_run_outcome.Handler
     complete_run: complete_run.Handler
     abort_run: abort_run.Handler
     hold_run: hold_run.Handler
@@ -126,6 +133,11 @@ def wire_run(deps: Kernel) -> RunHandlers:
         record_witnessed_run=with_tracing(
             record_witnessed_run.bind(deps),
             command_name="RecordWitnessedRun",
+            bc=_BC,
+        ),
+        record_witnessed_run_outcome=with_tracing(
+            record_witnessed_run_outcome.bind(deps),
+            command_name="RecordWitnessedRunOutcome",
             bc=_BC,
         ),
         complete_run=with_tracing(

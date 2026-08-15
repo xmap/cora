@@ -9,10 +9,10 @@ here rather than left to convention:
      way to claim WITNESSED, which is precisely the laundering hole the
      axis exists to close.
   2. The in-process-only slices (`observe_enclosure_status`,
-     `record_witnessed_run`) expose zero REST routes and zero MCP tools.
-     Their `route.py` / `tool.py` modules are stubs by design; this
-     confirms the stub actually stays empty rather than trusting the
-     docstring that says so.
+     `record_witnessed_run`, `record_witnessed_run_outcome`) expose zero
+     REST routes and zero MCP tools. Their `route.py` / `tool.py`
+     modules are stubs by design; this confirms the stub actually stays
+     empty rather than trusting the docstring that says so.
 """
 
 import ast
@@ -25,6 +25,7 @@ from tests.architecture.conftest import CORA_ROOT, tracked_python_files
 _IN_PROCESS_ONLY_SLICES: tuple[str, ...] = (
     "enclosure/features/observe_enclosure_status",
     "run/features/record_witnessed_run",
+    "run/features/record_witnessed_run_outcome",
 )
 
 

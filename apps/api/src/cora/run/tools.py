@@ -18,6 +18,9 @@ from cora.run.features.get_run import tool as get_run_tool
 from cora.run.features.hold_run import tool as hold_run_tool
 from cora.run.features.list_runs import tool as list_runs_tool
 from cora.run.features.record_witnessed_run import tool as record_witnessed_run_tool
+from cora.run.features.record_witnessed_run_outcome import (
+    tool as record_witnessed_run_outcome_tool,
+)
 from cora.run.features.resume_run import tool as resume_run_tool
 from cora.run.features.start_run import tool as start_run_tool
 from cora.run.features.stop_run import tool as stop_run_tool
@@ -42,6 +45,12 @@ def register_run_tools(
     record_witnessed_run_tool.register(
         mcp,
         get_handler=lambda: get_handlers().record_witnessed_run,
+    )
+    # Stub registration for the in-process-only witnessed-terminal slice;
+    # same rationale as record_witnessed_run above.
+    record_witnessed_run_outcome_tool.register(
+        mcp,
+        get_handler=lambda: get_handlers().record_witnessed_run_outcome,
     )
     complete_run_tool.register(
         mcp,
