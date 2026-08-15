@@ -1147,3 +1147,17 @@ class Settings(BaseSettings):
             )
             raise ValueError(msg)
         return value
+
+    @field_validator("capture_progress_flush_tick_seconds")
+    @classmethod
+    def _validate_capture_progress_flush_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight flush loop that also defeats
+        the decimation the feeder's buffering design rests on."""
+        if value < 0.1:
+            msg = (
+                f"capture_progress_flush_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the flush and turn the "
+                "buffer's decimation back into a PV-rate write firehose"
+            )
+            raise ValueError(msg)
+        return value

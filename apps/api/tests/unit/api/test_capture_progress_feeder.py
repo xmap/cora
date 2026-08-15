@@ -1,11 +1,13 @@
 """Unit tests for `CaptureProgressFeeder` (cora.api._capture_progress_feeder).
 
 Covers the decimating buffer (latest-wins per capture_code/role), the
-per-code flush contract (one AppendObservations batch + one heartbeat,
-independently), the no-open-Run drop, the no-substrate-time skip, and
-that a failure on one write path (UnauthorizedError,
-RunObservationLogbookClosedError, a bare exception) never suppresses
-the other.
+per-code flush contract (one AppendObservations batch + one heartbeat
+for EVERY open capture each tick, buffer or no buffer -- the
+FeedHeartbeat "regardless of whether any observation flowed" contract),
+the no-open-Run drop, the no-substrate-time skip, and that a failure on
+the observation write suppresses the heartbeat only when it was
+`UnauthorizedError` (a coverage claim must not survive a denied grant),
+never for a closed logbook or an unexpected exception.
 """
 
 from datetime import UTC, datetime
@@ -77,28 +79,59 @@ def _feeder(
     *,
     append_observations: _FakeAppendObservations | None = None,
     heartbeat_store: InMemoryFeedHeartbeatStore | None = None,
-    open_run_id: UUID | None = _RUN_ID,
+    open_captures: dict[str, UUID] | None = None,
 ) -> tuple[CaptureProgressFeeder, _FakeAppendObservations, InMemoryFeedHeartbeatStore]:
     append = append_observations if append_observations is not None else _FakeAppendObservations()
     heartbeats = heartbeat_store if heartbeat_store is not None else InMemoryFeedHeartbeatStore()
+    captures = open_captures if open_captures is not None else {_CODE: _RUN_ID}
     feeder = CaptureProgressFeeder(
         deps=build_deps(ids=[uuid4() for _ in range(50)], now=_NOW),
         append_observations=append,  # type: ignore[arg-type]
         feed_heartbeat_store=heartbeats,
-        open_run_id_for=lambda _code: open_run_id,
+        open_captures=lambda: captures,
         principal_id=_PRINCIPAL_ID,
     )
     return feeder, append, heartbeats
 
 
 @pytest.mark.unit
-async def test_flush_capture_with_nothing_buffered_writes_nothing() -> None:
-    feeder, append, heartbeats = _feeder()
+async def test_flush_capture_with_no_open_run_and_nothing_buffered_writes_nothing() -> None:
+    feeder, append, heartbeats = _feeder(open_captures={})
 
     await feeder.flush_capture(_CODE)
 
     assert append.calls == []
     assert heartbeats.all() == []
+
+
+@pytest.mark.unit
+async def test_flush_heartbeats_a_quiet_but_open_capture_with_nothing_ever_buffered() -> None:
+    """The core fix this slice needed: a capture that never had ANYTHING
+    buffered (a PV gone quiet mid-capture) must still get a heartbeat
+    every tick its Run is open, per `FeedHeartbeat`'s own contract
+    ("regardless of whether any observation flowed"). Before the fix,
+    `flush_capture` returned before ever checking whether a Run was
+    open, so a quiet channel was indistinguishable from a dead feeder."""
+    feeder, append, heartbeats = _feeder()
+
+    await feeder.flush_capture(_CODE)
+
+    assert append.calls == []
+    assert len(heartbeats.all()) == 1
+    assert heartbeats.all()[0].run_id == _RUN_ID
+
+
+@pytest.mark.unit
+async def test_flush_heartbeats_every_open_capture_even_with_empty_buffers() -> None:
+    run_id_b = uuid4()
+    feeder, append, heartbeats = _feeder(
+        open_captures={"tomoscan-a": _RUN_ID, "tomoscan-b": run_id_b}
+    )
+
+    await feeder.flush()
+
+    assert append.calls == []
+    assert {h.run_id for h in heartbeats.all()} == {_RUN_ID, run_id_b}
 
 
 @pytest.mark.unit
@@ -136,11 +169,7 @@ async def test_offer_twice_for_the_same_role_keeps_only_the_latest_value() -> No
 
 
 @pytest.mark.unit
-async def test_flush_capture_writes_a_heartbeat_even_with_nothing_buffered_for_it() -> None:
-    """A code with an open Run but no buffered reading still gets a
-    heartbeat once offer() has put SOMETHING in the buffer for it (the
-    coverage-evidence contract): the heartbeat and the observation
-    write are independent, not gated on each other."""
+async def test_flush_capture_writes_a_heartbeat_alongside_a_buffered_reading() -> None:
     feeder, append, heartbeats = _feeder()
     feeder.offer(_reading(role="images_saved", value=1.0))
 
@@ -154,7 +183,7 @@ async def test_flush_capture_writes_a_heartbeat_even_with_nothing_buffered_for_i
 
 @pytest.mark.unit
 async def test_flush_with_no_open_run_drops_the_buffer_and_writes_nothing() -> None:
-    feeder, append, heartbeats = _feeder(open_run_id=None)
+    feeder, append, heartbeats = _feeder(open_captures={})
     feeder.offer(_reading())
 
     await feeder.flush_capture(_CODE)
@@ -167,7 +196,7 @@ async def test_flush_with_no_open_run_drops_the_buffer_and_writes_nothing() -> N
 async def test_flush_after_dropping_for_no_open_run_the_buffer_stays_empty() -> None:
     """The buffer is popped unconditionally before resolving run_id, so a
     dropped capture does not accumulate readings forever."""
-    feeder, append, _ = _feeder(open_run_id=None)
+    feeder, append, _ = _feeder(open_captures={})
     feeder.offer(_reading())
     await feeder.flush_capture(_CODE)
 
@@ -205,7 +234,11 @@ async def test_offer_readings_all_with_no_substrate_time_writes_no_observations(
 
 
 @pytest.mark.unit
-async def test_flush_survives_an_unauthorized_append_and_still_heartbeats() -> None:
+async def test_flush_survives_an_unauthorized_append_and_suppresses_the_heartbeat() -> None:
+    """A revoked grant must not let the heartbeat assert coverage over a
+    window nothing was actually recorded in: the heartbeat has no authz
+    check of its own, so it is the observation write's own outcome that
+    gates it here."""
     feeder, _append, heartbeats = _feeder(
         append_observations=_FakeAppendObservations(raises=UnauthorizedError("denied"))
     )
@@ -213,7 +246,7 @@ async def test_flush_survives_an_unauthorized_append_and_still_heartbeats() -> N
 
     await feeder.flush_capture(_CODE)
 
-    assert len(heartbeats.all()) == 1
+    assert heartbeats.all() == []
 
 
 @pytest.mark.unit
@@ -244,7 +277,8 @@ async def test_flush_survives_an_unexpected_append_exception_and_still_heartbeat
 
 @pytest.mark.unit
 async def test_flush_only_touches_its_own_capture_codes_buffer() -> None:
-    feeder, append, _ = _feeder()
+    run_id_b = uuid4()
+    feeder, append, _ = _feeder(open_captures={"tomoscan-a": _RUN_ID, "tomoscan-b": run_id_b})
     feeder.offer(_reading(capture_code="tomoscan-a", role="images_saved", value=1.0))
     feeder.offer(_reading(capture_code="tomoscan-b", role="images_saved", value=2.0))
 
@@ -256,8 +290,11 @@ async def test_flush_only_touches_its_own_capture_codes_buffer() -> None:
 
 
 @pytest.mark.unit
-async def test_flush_flushes_every_buffered_capture_code() -> None:
-    feeder, append, heartbeats = _feeder()
+async def test_flush_flushes_every_open_capture_code() -> None:
+    run_id_b = uuid4()
+    feeder, append, heartbeats = _feeder(
+        open_captures={"tomoscan-a": _RUN_ID, "tomoscan-b": run_id_b}
+    )
     feeder.offer(_reading(capture_code="tomoscan-a", role="images_saved", value=1.0))
     feeder.offer(_reading(capture_code="tomoscan-b", role="images_saved", value=2.0))
 

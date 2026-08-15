@@ -560,6 +560,51 @@ async def test_observe_a_numeric_progress_reading_is_a_progress_observation() ->
 
 
 @pytest.mark.unit
+async def test_observe_a_real_2bm_progress_string_keeps_only_the_numerator() -> None:
+    """2-BM's real PVs are `stringout` records: TomoScan's
+    `update_status()` writes `"<done>/<total>"`, never a bare number.
+    The regression this guards: the first cut assumed a plain float,
+    which would have silently recorded nothing against the real
+    beamline (caught by checking the upstream source, not by the unit
+    tests, which originally only exercised bare integers)."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvSaved": [_reading("1561/1561")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    progress = [o for o in observations if isinstance(o, CaptureProgressObservation)]
+    assert len(progress) == 1
+    assert progress[0].value == 1561.0
+
+
+@pytest.mark.unit
+async def test_observe_a_real_2bm_progress_string_mid_scan() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Collecting projections")], "pvSaved": [_reading("42/1561")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    progress = [o for o in observations if isinstance(o, CaptureProgressObservation)]
+    assert progress[0].value == 42.0
+
+
+@pytest.mark.unit
+async def test_observe_a_malformed_progress_fraction_emits_nothing() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvSaved": [_reading("/1561")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CaptureProgressObservation) for o in observations)
+
+
+@pytest.mark.unit
 async def test_observe_two_progress_roles_for_one_code_both_emit() -> None:
     port = _ScriptedControlPort(
         readings={

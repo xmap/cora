@@ -36,6 +36,23 @@ all: `CaptureProgressObservation.value` is a required float with no
 "no claim" shape, so its disconnect / clean-end simply stops the pump
 rather than fabricating a reading (see `_pump_progress`).
 
+## The bug that would have shipped without checking the real PV, again
+
+Slice 9 caught 2-BM's `AbortScan` resolving to the ENUM label `'No'`,
+not `0`. Slice 10 caught the same class of trap on `ImagesSaved` /
+`ImagesCollected`: they are `stringout` records at 2-BM, and TomoScan
+writes `"<done>/<total>"` onto them (`update_status()` in the upstream
+`decarlof/tomoscan` source), never a bare number. `_finite_float`'s
+first cut assumed a plain float; every real reading would have failed
+to parse and the feature would have shipped recording nothing on the
+real beamline, with no error anywhere; a deployment can watch a whole
+scan complete and never notice the record stayed empty. Caught by
+checking the upstream source's own write path rather than trusting the
+`Settings.capture_watch_pvs` docstring's example. `_finite_float` now
+accepts both shapes and keeps only the numerator; see that function's
+own docstring for why the denominator is deliberately discarded, not
+lost.
+
 ## Permit probe trail's sibling-poller shape, reused unchanged
 
 Same reasoning as the Enclosure adapter: `_poll` is a SIBLING of
@@ -111,13 +128,35 @@ def _binary_code(value: object) -> int | None:
 def _finite_float(value: object) -> float | None:
     """Coerce a progress-role reading to a finite float, or `None`.
 
-    Fail-toward-silence, mirroring `_binary_code`: a non-numeric, NaN,
-    or Infinity reading enqueues nothing rather than reaching
-    `append_observations`, which raises `InvalidObservationValueError`
-    on NaN/Inf and would fail an entire batch over one bad reading.
+    Two accepted shapes: a bare number, and 2-BM's REAL format, a
+    `"<done>/<total>"` string. `ImagesSaved` / `ImagesCollected` are
+    `stringout` records at 2-BM (not numeric ones): TomoScan's
+    `update_status()` writes `f"{num_saved}/{num_to_save}"` /
+    `f"{num_collected}/{num_images}"` onto them, confirmed against the
+    upstream `decarlof/tomoscan` source, `tomoScan.template` (both
+    declared `record(stringout, ...)`) and `tomoscan.py`'s
+    `update_status`. A bare-number reading enqueues the number
+    unchanged, for a future substrate or role that IS numeric.
+
+    Only the numerator is kept: `images_saved`'s value is "how many
+    images have actually been saved", the count left of the slash. The
+    denominator (the commanded total) is a distinct fact -- the
+    intended scan length, not a progress count -- and is deliberately
+    NOT carried onto this channel; a consumer that needs it reads the
+    Plan's own parameters instead. This is a decision, not an
+    oversight: see this module's docstring.
+
+    Fail-toward-silence, mirroring `_binary_code`: a reading that is
+    neither shape, or resolves to NaN/Infinity, enqueues nothing
+    rather than reaching `append_observations`, which raises
+    `InvalidObservationValueError` on NaN/Inf and would fail an entire
+    batch over one bad reading.
     """
+    numerator: object = value
+    if isinstance(value, str) and "/" in value:
+        numerator, _, _total = value.partition("/")
     try:
-        result = float(value)  # type: ignore[arg-type]
+        result = float(numerator)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return None
     if math.isnan(result) or math.isinf(result):
