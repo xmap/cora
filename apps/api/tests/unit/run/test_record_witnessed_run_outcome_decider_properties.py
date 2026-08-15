@@ -36,6 +36,7 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from cora.run.aggregates.run import (
+    CaptureProgressSnapshot,
     ConductMode,
     InvalidRunObservedAtError,
     Run,
@@ -75,6 +76,18 @@ _SOME_NOW = st.datetimes(
     max_value=datetime(2200, 1, 1),
     timezones=st.just(UTC),
 )
+_SOME_COUNT = st.none() | st.floats(
+    allow_nan=False, allow_infinity=False, min_value=0, max_value=1e7
+)
+_SOME_SNAPSHOT = st.none() | st.builds(
+    CaptureProgressSnapshot,
+    collected_count=_SOME_COUNT,
+    collected_total=_SOME_COUNT,
+    collected_at=st.none() | _SOME_NOW,
+    saved_count=_SOME_COUNT,
+    saved_total=_SOME_COUNT,
+    saved_at=st.none() | _SOME_NOW,
+)
 
 
 def _run(*, run_id: UUID, status: RunStatus, conduct_mode: ConductMode) -> Run:
@@ -95,6 +108,7 @@ def _command(
     observed_phase: CapturePhase,
     observed_at: _datetime | None,
     trigger: str,
+    capture_progress_snapshot: CaptureProgressSnapshot | None = None,
 ) -> RecordWitnessedRunOutcome:
     return RecordWitnessedRunOutcome(
         run_id=run_id,
@@ -103,6 +117,7 @@ def _command(
         observed_at=observed_at,
         monitor_source_id=_MONITOR_SOURCE_ID,  # type: ignore[arg-type]
         trigger=trigger,
+        capture_progress_snapshot=capture_progress_snapshot,
     )
 
 
@@ -360,6 +375,41 @@ def test_running_witnessed_aborted_emits_single_aborted_with_observed_at_threade
     assert event.occurred_at == now
     assert event.observed_at == observed_at
     assert capture_code in event.reason
+
+
+@pytest.mark.unit
+@given(
+    run_id=st.uuids(),
+    capture_code=_CAPTURE_CODE,
+    observed_phase=st.sampled_from(_TERMINAL_PHASES),
+    now=_SOME_NOW,
+    snapshot=_SOME_SNAPSHOT,
+)
+def test_capture_progress_snapshot_threads_verbatim_onto_either_terminal(
+    run_id: UUID,
+    capture_code: str,
+    observed_phase: CapturePhase,
+    now: _datetime,
+    snapshot: CaptureProgressSnapshot | None,
+) -> None:
+    """For any snapshot value (including None), the emitted event's
+    `capture_progress_snapshot` is identically the command's, on
+    whichever terminal fires. No validation, no substitution."""
+    state = _run(run_id=run_id, status=RunStatus.RUNNING, conduct_mode=ConductMode.WITNESSED)
+    events = record_witnessed_run_outcome.decide(
+        state=state,
+        command=_command(
+            run_id=run_id,
+            capture_code=capture_code,
+            observed_phase=observed_phase,
+            observed_at=None,
+            trigger="Monitor",
+            capture_progress_snapshot=snapshot,
+        ),
+        now=now,
+    )
+    assert len(events) == 1
+    assert events[0].capture_progress_snapshot == snapshot
 
 
 @pytest.mark.unit

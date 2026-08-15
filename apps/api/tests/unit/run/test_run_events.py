@@ -18,7 +18,7 @@ from cora.run.aggregates.run.events import (
     from_stored,
     to_payload,
 )
-from cora.run.aggregates.run.state import ConductMode
+from cora.run.aggregates.run.state import CaptureProgressSnapshot, ConductMode
 from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 11, 12, 0, 0, tzinfo=UTC)
@@ -475,6 +475,8 @@ def test_to_payload_serializes_run_completed_to_primitives() -> None:
         # Present-as-null, not omitted: a driven completion has no
         # substrate reading to report.
         "observed_at": None,
+        # None for a driven completion: no progress PVs to have observed.
+        "capture_progress_snapshot": None,
     }
 
 
@@ -496,6 +498,7 @@ def test_to_payload_serializes_run_completed_with_conduct_provenance() -> None:
         "artifact_uri": "file:///data/recon.h5",
         "occurred_at": _NOW.isoformat(),
         "observed_at": None,
+        "capture_progress_snapshot": None,
     }
 
 
@@ -549,11 +552,38 @@ def test_run_completed_round_trips_with_observed_at() -> None:
 
 
 @pytest.mark.unit
+def test_run_completed_round_trips_with_a_capture_progress_snapshot() -> None:
+    """The load-bearing shape: a healthy scan short of its own commanded
+    total (2987 of 3000) round-trips whole, and the event stays
+    RunCompleted -- CORA never reclassifies a terminal off the counts."""
+    snapshot = CaptureProgressSnapshot(
+        collected_count=2987.0,
+        collected_total=3000.0,
+        collected_at=_NOW,
+        saved_count=2987.0,
+        saved_total=3000.0,
+        saved_at=_NOW,
+    )
+    original = RunCompleted(
+        run_id=uuid4(),
+        occurred_at=_NOW,
+        observed_at=_NOW,
+        capture_progress_snapshot=snapshot,
+    )
+    stored = _stored("RunCompleted", to_payload(original))
+    rebuilt = from_stored(stored)
+    assert rebuilt == original
+    assert isinstance(rebuilt, RunCompleted)
+    assert rebuilt.capture_progress_snapshot == snapshot
+
+
+@pytest.mark.unit
 def test_from_stored_rebuilds_run_completed_without_conduct_keys() -> None:
     """Pre-compute-conduct RunCompleted streams replay with the new keys
     absent, folding to None via the `.get(...)` forward-compat path.
     `observed_at` is the same additive shape: absent entirely on any
-    stream written before slice 9."""
+    stream written before slice 9. `capture_progress_snapshot` is the
+    same shape again: absent on any stream written before it existed."""
     run_id = uuid4()
     stored = _stored(
         "RunCompleted",
@@ -566,6 +596,7 @@ def test_from_stored_rebuilds_run_completed_without_conduct_keys() -> None:
     assert rebuilt.producing_job_id is None
     assert rebuilt.artifact_uri is None
     assert rebuilt.observed_at is None
+    assert rebuilt.capture_progress_snapshot is None
 
 
 # ---------- RunAborted ----------
@@ -596,6 +627,8 @@ def test_to_payload_serializes_run_aborted_to_primitives() -> None:
         # Present-as-null, not omitted: an operator abort has no
         # substrate reading to report.
         "observed_at": None,
+        # None for an operator abort: no progress PVs to have observed.
+        "capture_progress_snapshot": None,
     }
 
 
@@ -696,6 +729,30 @@ def test_run_aborted_round_trips() -> None:
     )
     stored = _stored("RunAborted", to_payload(original))
     assert from_stored(stored) == original
+
+
+@pytest.mark.unit
+def test_run_aborted_round_trips_with_a_capture_progress_snapshot() -> None:
+    snapshot = CaptureProgressSnapshot(
+        collected_count=812.0,
+        collected_total=3000.0,
+        collected_at=_NOW,
+        saved_count=None,
+        saved_total=None,
+        saved_at=None,
+    )
+    original = RunAborted(
+        run_id=uuid4(),
+        reason="RunWitness observed capture 2bmb-tomoscan as Aborted",
+        occurred_at=_NOW,
+        observed_at=_NOW,
+        capture_progress_snapshot=snapshot,
+    )
+    stored = _stored("RunAborted", to_payload(original))
+    rebuilt = from_stored(stored)
+    assert rebuilt == original
+    assert isinstance(rebuilt, RunAborted)
+    assert rebuilt.capture_progress_snapshot == snapshot
 
 
 # Decision-to-Run linkage on RunAborted

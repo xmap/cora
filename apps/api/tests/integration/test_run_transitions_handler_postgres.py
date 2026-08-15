@@ -217,6 +217,8 @@ async def test_complete_run_persists_and_round_trips_to_completed_state(
         "occurred_at": _NOW.isoformat(),
         # A driven completion has no substrate reading to report.
         "observed_at": None,
+        # None for a driven completion: no progress PVs to have observed.
+        "capture_progress_snapshot": None,
     }
 
     state = await load_run(deps.event_store, run_id)
@@ -312,6 +314,8 @@ async def test_abort_run_persists_with_trimmed_reason_and_round_trips_to_aborted
         "occurred_at": _NOW.isoformat(),
         # An operator abort has no substrate reading to report.
         "observed_at": None,
+        # None for an operator abort: no progress PVs to have observed.
+        "capture_progress_snapshot": None,
     }
 
     state = await load_run(deps.event_store, run_id)

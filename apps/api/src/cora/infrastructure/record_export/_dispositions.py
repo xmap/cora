@@ -1554,6 +1554,14 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     },
     "RunAborted": {
         "actuation_kind": "drop:text",
+        "capture_progress_snapshot": {
+            "collected_at": "keep:time",
+            "collected_count": "keep:number",
+            "collected_total": "keep:number",
+            "saved_at": "keep:time",
+            "saved_count": "keep:number",
+            "saved_total": "keep:number",
+        },
         "decided_by_decision_id": "token:uuid",
         "observed_at": "keep:time",
         "occurred_at": "keep:time",
@@ -1578,6 +1586,14 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
     "RunCompleted": {
         "actuation_kind": "drop:text",
         "artifact_uri": "drop:text",
+        "capture_progress_snapshot": {
+            "collected_at": "keep:time",
+            "collected_count": "keep:number",
+            "collected_total": "keep:number",
+            "saved_at": "keep:time",
+            "saved_count": "keep:number",
+            "saved_total": "keep:number",
+        },
         "observed_at": "keep:time",
         "occurred_at": "keep:time",
         "producing_job_id": "drop:text",

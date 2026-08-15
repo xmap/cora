@@ -71,6 +71,20 @@ class UnknownEventTypeError(LookupError):
 
 def _apply_field_disposition(disposition: Any, value: Any, *, token_map: TokenMap) -> Any:
     if isinstance(disposition, dict):
+        # `None` on a dict-shaped (nested-VO or fixed-tuple) disposition is
+        # the field's own declared absence (e.g. `SafetyEnvelopeVerdict |
+        # None = None`, `CaptureProgressSnapshot | None = None`), not a
+        # malformed value: preserve it as an explicit null, matching the
+        # "present-as-null, not omit-when-None" convention every optional
+        # scalar field on these same events already gets (see
+        # `RunCompleted.observed_at`'s `to_payload` comment). Falling
+        # through to the OMITTED branch below would silently drop the key
+        # for the COMMON case (a Conducted Run's `safety_envelope_verdict`,
+        # a driven or operator-terminal's `capture_progress_snapshot`),
+        # making "this stream predates the field" and "this stream has the
+        # field, unset" indistinguishable in the exported record.
+        if value is None:
+            return None
         if "[]" in disposition:
             # Fixed-length heterogeneous tuple: one disposition per position.
             per_position = disposition["[]"]

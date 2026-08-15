@@ -54,11 +54,14 @@ async def _seed_run_started(event_store: object, run_id: UUID) -> None:
     )
 
 
-def _progress(role: str, value: float) -> CaptureProgressObservation:
+def _progress(
+    role: str, value: float, *, commanded_total: float | None = None
+) -> CaptureProgressObservation:
     return CaptureProgressObservation(
         capture_code=_CODE,
         role=role,
         value=value,
+        commanded_total=commanded_total,
         reach_tier=ReachTier.RELAYED,
         observed_at=_NOW,
         source_kind="EpicsPv",

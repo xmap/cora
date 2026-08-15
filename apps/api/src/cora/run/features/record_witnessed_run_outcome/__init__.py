@@ -8,6 +8,7 @@ In-process-only by design: no REST route, no MCP tool, mirroring
     cmd = record_witnessed_run_outcome.RecordWitnessedRunOutcome(
         run_id=..., capture_code=..., observed_phase=CapturePhase.ENDED,
         observed_at=..., monitor_source_id=..., trigger="Monitor",
+        capture_progress_snapshot=...,
     )
     handler = record_witnessed_run_outcome.bind(deps)
     await handler(cmd, principal_id=..., correlation_id=...)

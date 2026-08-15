@@ -560,13 +560,15 @@ async def test_observe_a_numeric_progress_reading_is_a_progress_observation() ->
 
 
 @pytest.mark.unit
-async def test_observe_a_real_2bm_progress_string_keeps_only_the_numerator() -> None:
+async def test_observe_a_real_2bm_progress_string_keeps_numerator_and_total() -> None:
     """2-BM's real PVs are `stringout` records: TomoScan's
     `update_status()` writes `"<done>/<total>"`, never a bare number.
     The regression this guards: the first cut assumed a plain float,
     which would have silently recorded nothing against the real
     beamline (caught by checking the upstream source, not by the unit
-    tests, which originally only exercised bare integers)."""
+    tests, which originally only exercised bare integers). Both halves
+    are now carried: the total is evidence for a witnessed terminal,
+    never a completeness test (see `CaptureProgressSnapshot`)."""
     port = _ScriptedControlPort(
         readings={"pvA": [_reading("Beginning scan")], "pvSaved": [_reading("1561/1561")]}
     )
@@ -577,6 +579,7 @@ async def test_observe_a_real_2bm_progress_string_keeps_only_the_numerator() -> 
     progress = [o for o in observations if isinstance(o, CaptureProgressObservation)]
     assert len(progress) == 1
     assert progress[0].value == 1561.0
+    assert progress[0].commanded_total == 1561.0
 
 
 @pytest.mark.unit
@@ -590,10 +593,63 @@ async def test_observe_a_real_2bm_progress_string_mid_scan() -> None:
 
     progress = [o for o in observations if isinstance(o, CaptureProgressObservation)]
     assert progress[0].value == 42.0
+    assert progress[0].commanded_total == 1561.0
+
+
+@pytest.mark.unit
+async def test_observe_a_bare_numeric_progress_reading_has_no_commanded_total() -> None:
+    """A bare-number reading (no `/`) has nothing to carry as a total:
+    `commanded_total` is `None`, not a guess."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvSaved": [_reading(42)]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    progress = [o for o in observations if isinstance(o, CaptureProgressObservation)]
+    assert progress[0].value == 42.0
+    assert progress[0].commanded_total is None
+
+
+@pytest.mark.unit
+async def test_observe_a_progress_reading_with_a_garbled_total_still_keeps_the_count() -> None:
+    """A garbled or absent denominator does not drop the reading: the
+    reached count is a true progress fact on its own, per
+    `_progress_counts`'s fail-toward-silence posture on the numerator
+    only, never the denominator."""
+    port = _ScriptedControlPort(
+        readings={
+            "pvA": [_reading("Beginning scan")],
+            "pvSaved": [_reading("2987/")],
+            "pvCollected": [_reading("2987/abc")],
+        }
+    )
+    observer = _observer(
+        port,
+        {
+            "tomoscan": {
+                "status": "pvA",
+                "images_saved": "pvSaved",
+                "images_collected": "pvCollected",
+            }
+        },
+    )
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    progress = {o.role: o for o in observations if isinstance(o, CaptureProgressObservation)}
+    assert progress["images_saved"].value == 2987.0
+    assert progress["images_saved"].commanded_total is None
+    assert progress["images_collected"].value == 2987.0
+    assert progress["images_collected"].commanded_total is None
 
 
 @pytest.mark.unit
 async def test_observe_a_malformed_progress_fraction_emits_nothing() -> None:
+    """A garbled or absent NUMERATOR still drops the whole reading,
+    unlike a garbled denominator (see the sibling test above): there is
+    no reached count to report at all."""
     port = _ScriptedControlPort(
         readings={"pvA": [_reading("Beginning scan")], "pvSaved": [_reading("/1561")]}
     )

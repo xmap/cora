@@ -357,6 +357,64 @@ class SafetyEnvelopeVerdict:
         return self.enclosure_permitted and self.beam_available
 
 
+@dataclass(frozen=True)
+class CaptureProgressSnapshot:
+    """The last progress counts CaptureObserver saw before a witnessed
+    capture's terminal, retained across the flush that clears them from
+    `CaptureProgressFeeder`'s own buffer.
+
+    Named `Snapshot`, not `Verdict`, deliberately: unlike
+    `SafetyEnvelopeVerdict`'s bools, these counts carry no judgment.
+    `wait_camera_done()`'s poll loop (upstream `tomoscan.py`) returns on
+    `CamAcquireBusy == 0` BEFORE its final `update_status()` call, so
+    `collected_count < collected_total` is the NORMAL terminal state of
+    a successful scan, not evidence of a shortfall, typically short by
+    about one poll interval's worth of frames. There is deliberately no
+    `all_counts_matched` property or similar: that would be exactly the
+    fabricated completeness verdict this type exists to avoid. A reader
+    who wants to judge tail lag against a frozen counter should compare
+    `collected_at` / `saved_at` against the owning `RunCompleted` /
+    `RunAborted` event's own `observed_at`; CORA deliberately does not
+    compute that comparison itself.
+
+    Field names are facility-neutral (`collected`, `saved`), not
+    `images_collected`, `images_saved`: this VO lives on the Run
+    aggregate's own event schema, which stays free of tomography
+    vocabulary the same way `CapturePhase` is documented
+    facility-neutral. A non-imaging deployment carries all-`None`
+    fields rather than a mismatched name.
+
+    The two totals (`collected_total`, `saved_total`) are kept separate
+    rather than assumed equal: they are independently sourced upstream
+    (2-BM's `CamNumImages` vs `FPNumCapture`), and a divergence between
+    them is itself evidence worth preserving, not noise to collapse.
+
+    Whole object is `None` when nothing was retained for either role
+    (never constructed with all fields `None`): absence means "no
+    reading reached CORA before this terminal", never "zero images".
+
+    `float`, not `int`, throughout: matches `CaptureProgressObservation
+    .value`'s type all the way from the substrate, and avoids inventing
+    a rounding rule for a non-integral reading CORA cannot explain.
+
+    Lives beside `SafetyEnvelopeVerdict` in this module for the same
+    reason: `events.py` already imports from `state.py`, so this adds
+    no new import edge.
+
+    `collected_at` / `saved_at` have no `_by` fact-act partner, and are
+    allowlisted in `test_fold_symmetry.py` on that basis: the physical
+    reading entity is TomoScan's camera or file-writer, not a CORA
+    Actor, the same shape as `data.Acquisition.captured_at`.
+    """
+
+    collected_count: float | None
+    collected_total: float | None
+    collected_at: datetime | None
+    saved_count: float | None
+    saved_total: float | None
+    saved_at: datetime | None
+
+
 class InvalidRunNameError(ValueError):
     """The supplied name is empty, whitespace-only, or too long."""
 

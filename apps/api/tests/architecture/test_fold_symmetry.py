@@ -115,6 +115,18 @@ _INTRINSIC_ALLOWLIST: dict[str, str] = {
         "publication-author identity-ref (credited creator on the citable Edition); "
         "ordered tuple semantics, NOT a fact-act fold"
     ),
+    "run.Run.CaptureProgressSnapshot.collected_at": (
+        "substrate-observed PV timestamp (EPICS ImagesCollected), same shape as "
+        "data.Acquisition.captured_at: the physical reading entity is the external "
+        "tool's camera/detector, not a CORA Actor, so there is no `collected_by` "
+        "fact-act partner"
+    ),
+    "run.Run.CaptureProgressSnapshot.saved_at": (
+        "substrate-observed PV timestamp (EPICS ImagesSaved), same shape as "
+        "data.Acquisition.captured_at: the physical reading entity is the external "
+        "tool's file-writer, not a CORA Actor, so there is no `saved_by` fact-act "
+        "partner"
+    ),
 }
 
 # Aggregates whose events MUST carry the attribution half even though

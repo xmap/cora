@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.run.aggregates.run import (
+    CaptureProgressSnapshot,
     ConductMode,
     InvalidRunObservedAtError,
     Run,
@@ -58,6 +59,7 @@ def _command(**overrides: object) -> RecordWitnessedRunOutcome:
         "observed_at": _NOW,
         "monitor_source_id": _MONITOR_SOURCE_ID,
         "trigger": _TRIGGER,
+        "capture_progress_snapshot": None,
     }
     defaults.update(overrides)
     return RecordWitnessedRunOutcome(**defaults)  # type: ignore[arg-type]
@@ -284,6 +286,115 @@ def test_decide_allows_observed_at_none_regardless_of_now() -> None:
         now=_NOW,
     )
     assert events[0].observed_at is None
+
+
+# ---------- capture_progress_snapshot ----------
+
+
+@pytest.mark.unit
+def test_decide_threads_capture_progress_snapshot_onto_completed_event() -> None:
+    state = _run()
+    snapshot = CaptureProgressSnapshot(
+        collected_count=2987.0,
+        collected_total=3000.0,
+        collected_at=_NOW,
+        saved_count=2987.0,
+        saved_total=3000.0,
+        saved_at=_NOW,
+    )
+    events = record_witnessed_run_outcome.decide(
+        state=state,
+        command=_command(run_id=state.id, capture_progress_snapshot=snapshot),
+        now=_NOW,
+    )
+    assert events == [
+        RunCompleted(
+            run_id=state.id,
+            occurred_at=_NOW,
+            observed_at=_NOW,
+            capture_progress_snapshot=snapshot,
+        )
+    ]
+
+
+@pytest.mark.unit
+def test_decide_threads_capture_progress_snapshot_onto_aborted_event() -> None:
+    state = _run()
+    snapshot = CaptureProgressSnapshot(
+        collected_count=812.0,
+        collected_total=3000.0,
+        collected_at=_NOW,
+        saved_count=None,
+        saved_total=None,
+        saved_at=None,
+    )
+    events = record_witnessed_run_outcome.decide(
+        state=state,
+        command=_command(
+            run_id=state.id,
+            observed_phase=CapturePhase.ABORTED,
+            capture_progress_snapshot=snapshot,
+        ),
+        now=_NOW,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], RunAborted)
+    assert events[0].capture_progress_snapshot == snapshot
+
+
+@pytest.mark.unit
+def test_decide_does_not_reclassify_a_short_scan_as_aborted() -> None:
+    """The whole point of this slice: counts short of their commanded
+    total are evidence recorded alongside the terminal, never a
+    reclassification of it. A healthy scan's tail lag must not turn an
+    observed `Ended` into a fabricated `Aborted`."""
+    state = _run()
+    short_scan = CaptureProgressSnapshot(
+        collected_count=2987.0,
+        collected_total=3000.0,
+        collected_at=_NOW,
+        saved_count=2987.0,
+        saved_total=3000.0,
+        saved_at=_NOW,
+    )
+    events = record_witnessed_run_outcome.decide(
+        state=state,
+        command=_command(
+            run_id=state.id,
+            observed_phase=CapturePhase.ENDED,
+            capture_progress_snapshot=short_scan,
+        ),
+        now=_NOW,
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], RunCompleted)
+    snapshot = events[0].capture_progress_snapshot
+    assert snapshot is not None
+    assert snapshot.collected_count == 2987.0
+    assert snapshot.collected_total == 3000.0
+
+
+@pytest.mark.unit
+def test_decide_does_not_raise_on_a_future_capture_progress_timestamp() -> None:
+    """`capture_progress_snapshot`'s own timestamps are NOT validated
+    against `now`, unlike `command.observed_at`: a progress PV's clock
+    skew must never wedge a witnessed Run open forever."""
+    state = _run()
+    future = _NOW + timedelta(seconds=5)
+    skewed = CaptureProgressSnapshot(
+        collected_count=100.0,
+        collected_total=100.0,
+        collected_at=future,
+        saved_count=None,
+        saved_total=None,
+        saved_at=None,
+    )
+    events = record_witnessed_run_outcome.decide(
+        state=state,
+        command=_command(run_id=state.id, capture_progress_snapshot=skewed),
+        now=_NOW,
+    )
+    assert events[0].capture_progress_snapshot == skewed
 
 
 # ---------- Purity ----------

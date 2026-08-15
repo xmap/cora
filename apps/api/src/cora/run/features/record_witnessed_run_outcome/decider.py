@@ -3,8 +3,21 @@
 Closes the witnessed genesis: `Running -> Completed` for an observed
 `Ended`, `Running -> Aborted` for an observed `Aborted`. Emits the
 EXISTING `RunCompleted` / `RunAborted` events (no new event type, no new
-evolver arm, no new projection or export surface); only the command,
-this decider, and the handler are new.
+evolver arm, no new projection, no new route or tool); only the
+command, this decider, and the handler are new. `capture_progress_snapshot`
+adds a field to both existing events, not a new surface: no new
+projection reads it and no new export category is introduced, only new
+entries in the two events' existing disposition tables.
+
+For the false-completion gap this field closes, see
+tomography/tomoscan#181: `ScanStatus` reports `"Scan complete"` on
+every exit path from `fly_scan()`, including abort, camera timeout, and
+file-overwrite refusal, so CORA cannot trust `observed_phase` alone to
+distinguish a genuine completion from a failure the substrate never
+announced on that PV. The retained progress counts are evidence
+alongside the terminal, not a correction to it: this decider does not
+reclassify an `Ended` phase as `Aborted` no matter what the counts say,
+since that would fabricate a terminal the substrate never reported.
 
 The two request-shape guards (`trigger`, `observed_phase`) run first,
 mirroring `record_witnessed_run.decider`'s own ordering rationale: they
@@ -31,6 +44,15 @@ Invariants:
     -> RunCannotCompleteError(current_status=...)
   - State.status must be in {Running} for an Aborted outcome
     -> RunCannotAbortError(current_status=...)
+
+`command.capture_progress_snapshot` is NOT validated, deliberately:
+its per-role timestamps are not checked against `now` the way
+`observed_at` is. A progress PV's clock skew is a fact RunWitness
+retained before this terminal ever fired; refusing the terminal over
+it would wedge the Run in `Running` forever with no path to close it,
+the exact failure this slice exists to prevent. The snapshot is
+carried as observed, unexamined, same as `observed_phase` for the
+counts inside it.
 """
 
 from datetime import datetime
@@ -83,6 +105,7 @@ def decide(
                 run_id=state.id,
                 occurred_at=now,
                 observed_at=command.observed_at,
+                capture_progress_snapshot=command.capture_progress_snapshot,
             )
         ]
 
@@ -95,5 +118,6 @@ def decide(
             reason=reason.value,
             occurred_at=now,
             observed_at=command.observed_at,
+            capture_progress_snapshot=command.capture_progress_snapshot,
         )
     ]
