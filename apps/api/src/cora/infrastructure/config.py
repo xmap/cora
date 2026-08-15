@@ -803,6 +803,30 @@ class Settings(BaseSettings):
     # `_enforce_run_witness_recording_gate` in `main.py`).
     run_witness_recording_enabled: bool = False
 
+    # THIRD, independent kill switch (slice 10): gates whether the
+    # `images_saved` / `images_collected` progress roles are buffered and
+    # written as Observation entries against the promoted Run. Default
+    # off. Refuses to boot if True without `run_witness_recording_enabled`
+    # also True (see `_enforce_run_witness_recording_gate`): with no
+    # promoted Run there is nothing to attach a progress reading to.
+    # Writing to Postgres on a timer driven by a facility resource is
+    # exactly the same operational-rollback shape as
+    # `enclosure_permit_probe_tick_seconds`; this flag is the switch that
+    # touches no code. See `cora.api._capture_progress_feeder`.
+    capture_progress_recording_enabled: bool = False
+
+    # Flush cadence for buffered progress readings, matching the
+    # `*_tick_seconds` naming every other loop-cadence setting uses
+    # (run_supervisor / run_initiator / clearance_expirer /
+    # clearance_watcher / calibration_watcher / procedure_watcher /
+    # campaign_watcher / enclosure_permit_probe / capture_watch_probe).
+    # Bounds Postgres write rate to (codes x progress roles) per tick
+    # regardless of substrate update rate: the buffer always holds only
+    # the LATEST reading per (capture_code, role), so a shorter interval
+    # raises time-resolution, never row count per tick. Irrelevant when
+    # `capture_progress_recording_enabled` is False.
+    capture_progress_flush_tick_seconds: float = 10.0
+
     @field_validator("capture_status_phases")
     @classmethod
     def _validate_capture_status_phases(cls, value: dict[str, str]) -> dict[str, str]:
@@ -1120,6 +1144,20 @@ class Settings(BaseSettings):
             msg = (
                 f"campaign_watcher_stale_after_seconds must be > 0, got {value}; "
                 "a non-positive window would flag every Held campaign"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("capture_progress_flush_tick_seconds")
+    @classmethod
+    def _validate_capture_progress_flush_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight flush loop that also defeats
+        the decimation the feeder's buffering design rests on."""
+        if value < 0.1:
+            msg = (
+                f"capture_progress_flush_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the flush and turn the "
+                "buffer's decimation back into a PV-rate write firehose"
             )
             raise ValueError(msg)
         return value

@@ -37,13 +37,26 @@ from cora.api._run_witness import (
 from cora.infrastructure.config import Settings
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.routing import NIL_SENTINEL_ID
-from cora.run.aggregates.run import ConductMode, RunStarted, event_type_name, to_payload
+from cora.run.aggregates.run import (
+    ConductMode,
+    InMemoryFeedHeartbeatStore,
+    RunStarted,
+    event_type_name,
+    to_payload,
+)
 from cora.run.errors import UnauthorizedError
+from cora.run.features.append_observations.command import AppendObservations
 from cora.run.features.list_runs import RunListPage, RunSummaryItem
 from cora.run.features.record_witnessed_run.command import RecordWitnessedRun
 from cora.run.features.record_witnessed_run_outcome.command import RecordWitnessedRunOutcome
 from cora.run.features.truncate_run.command import TruncateRun
-from cora.run.ports.capture_observer import CaptureObservation, CaptureObserverScope, CapturePhase
+from cora.run.ports.capture_observer import (
+    AnyCaptureObservation,
+    CaptureLifecycleObservation,
+    CaptureObserverScope,
+    CapturePhase,
+    CaptureProgressObservation,
+)
 from cora.shared.reach import ReachTier
 from tests.unit._helpers import build_deps
 
@@ -59,8 +72,8 @@ def _obs(
     reach_tier: ReachTier = ReachTier.RELAYED,
     observed_at: datetime | None = _NOW,
     capture_code: str = _CODE,
-) -> CaptureObservation:
-    return CaptureObservation(
+) -> CaptureLifecycleObservation:
+    return CaptureLifecycleObservation(
         capture_code=capture_code,
         reported_status=reported_status,
         phase=phase,
@@ -71,27 +84,63 @@ def _obs(
     )
 
 
+def _progress_obs(
+    *,
+    role: str = "images_saved",
+    value: float = 1.0,
+    capture_code: str = _CODE,
+    observed_at: datetime | None = _NOW,
+) -> CaptureProgressObservation:
+    return CaptureProgressObservation(
+        capture_code=capture_code,
+        role=role,
+        value=value,
+        reach_tier=ReachTier.RELAYED,
+        observed_at=observed_at,
+        source_kind="EpicsPv",
+        source_id=f"2bmb:TomoScan:{role}",
+    )
+
+
 class _FakeObserver:
     """Yields a fixed observation sequence once, then ends the stream."""
 
-    def __init__(self, observations: list[CaptureObservation]) -> None:
+    def __init__(self, observations: list[AnyCaptureObservation]) -> None:
         self._observations = observations
 
-    def observe(self, scope: CaptureObserverScope) -> AsyncGenerator[CaptureObservation]:
+    def observe(self, scope: CaptureObserverScope) -> AsyncGenerator[AnyCaptureObservation]:
         return self._drain()
 
-    async def _drain(self) -> AsyncGenerator[CaptureObservation]:
+    async def _drain(self) -> AsyncGenerator[AnyCaptureObservation]:
         for observation in self._observations:
             yield observation
+
+
+class _FakeCaptureProgressFeeder:
+    """Records every `offer()` / `flush_capture()` call, in order, so a
+    test can assert both that they happened and their relative sequence
+    against the recorder's own dispatch."""
+
+    def __init__(self, *, raises_on_flush: Exception | None = None) -> None:
+        self.calls: list[tuple[str, str]] = []
+        self._raises_on_flush = raises_on_flush
+
+    def offer(self, observation: CaptureProgressObservation) -> None:
+        self.calls.append(("offer", observation.capture_code))
+
+    async def flush_capture(self, capture_code: str) -> None:
+        self.calls.append(("flush", capture_code))
+        if self._raises_on_flush is not None:
+            raise self._raises_on_flush
 
 
 class _BoomObserver:
     """Raises mid-iteration so the loop's outer resilience branch fires."""
 
-    def observe(self, scope: CaptureObserverScope) -> AsyncGenerator[CaptureObservation]:
+    def observe(self, scope: CaptureObserverScope) -> AsyncGenerator[CaptureLifecycleObservation]:
         return self._drain()
 
-    async def _drain(self) -> AsyncGenerator[CaptureObservation]:
+    async def _drain(self) -> AsyncGenerator[CaptureLifecycleObservation]:
         raise RuntimeError("observer boom")
         yield  # pragma: no cover - unreachable, marks this body an async generator
 
@@ -201,6 +250,124 @@ async def test_run_witness_loop_survives_an_observer_that_raises() -> None:
 
 
 @pytest.mark.unit
+async def test_run_witness_loop_offers_a_progress_observation_to_the_feeder() -> None:
+    """A `CaptureProgressObservation` never reaches the recorder: it is
+    handed to `feeder.offer()` and the loop moves on."""
+    feeder = _FakeCaptureProgressFeeder()
+    observer = _FakeObserver([_progress_obs(role="images_saved", value=3.0)])
+    task = asyncio.create_task(
+        run_witness_loop(
+            observer=observer,
+            capture_codes=frozenset({_CODE}),
+            feeder=feeder,  # type: ignore[arg-type]
+        )
+    )
+    await asyncio.sleep(0.02)
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+    assert feeder.calls == [("offer", _CODE)]
+
+
+@pytest.mark.unit
+async def test_run_witness_loop_a_progress_observation_with_no_feeder_is_a_noop() -> None:
+    """`feeder=None` (recording off) makes a progress observation a
+    silent no-op, same posture as `recorder=None` for a lifecycle one."""
+    observer = _FakeObserver([_progress_obs()])
+    task = asyncio.create_task(
+        run_witness_loop(observer=observer, capture_codes=frozenset({_CODE}))
+    )
+    await asyncio.sleep(0.02)  # would hang or crash if this branch mishandled feeder=None
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+
+@pytest.mark.unit
+async def test_run_witness_loop_flushes_progress_before_the_recorder_acts_on_a_terminal() -> None:
+    """A BEGUN/ENDED/ABORTED observation must flush the capture's
+    buffered progress trail BEFORE the recorder's own dispatch, so the
+    trail is attributed to the Run before it can close or be replaced."""
+    order: list[str] = []
+
+    class _OrderingFeeder(_FakeCaptureProgressFeeder):
+        async def flush_capture(self, capture_code: str) -> None:
+            order.append("flush")
+
+    class _OrderingRecorder:
+        async def observe_capture(self, observation: CaptureLifecycleObservation) -> None:
+            order.append("observe")
+
+    observer = _FakeObserver([_obs(reported_status="Scan complete", phase=CapturePhase.ENDED)])
+    task = asyncio.create_task(
+        run_witness_loop(
+            observer=observer,
+            capture_codes=frozenset({_CODE}),
+            recorder=_OrderingRecorder(),  # type: ignore[arg-type]
+            feeder=_OrderingFeeder(),  # type: ignore[arg-type]
+        )
+    )
+    await asyncio.sleep(0.02)
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+    assert order == ["flush", "observe"]
+
+
+@pytest.mark.unit
+async def test_run_witness_loop_does_not_flush_on_a_non_flush_trigger_phase() -> None:
+    """PROGRESSING is not in `_FLUSH_TRIGGER_PHASES`: the recorder's own
+    dedup state is untouched by it, so there is nothing to flush ahead
+    of."""
+    feeder = _FakeCaptureProgressFeeder()
+    observer = _FakeObserver(
+        [_obs(reported_status="Collecting projections", phase=CapturePhase.PROGRESSING)]
+    )
+    task = asyncio.create_task(
+        run_witness_loop(
+            observer=observer,
+            capture_codes=frozenset({_CODE}),
+            feeder=feeder,  # type: ignore[arg-type]
+        )
+    )
+    await asyncio.sleep(0.02)
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+    assert feeder.calls == []
+
+
+@pytest.mark.unit
+async def test_run_witness_loop_survives_a_flush_failure_and_still_dispatches_to_recorder() -> None:
+    """A flush failure is logged and swallowed; the recorder still gets
+    the observation, matching the loop's own record_failed posture."""
+    feeder = _FakeCaptureProgressFeeder(raises_on_flush=RuntimeError("flush boom"))
+    recorded: list[str] = []
+
+    class _RecordingRecorder:
+        async def observe_capture(self, observation: CaptureLifecycleObservation) -> None:
+            recorded.append(observation.capture_code)
+
+    observer = _FakeObserver([_obs(reported_status="Scan complete", phase=CapturePhase.ENDED)])
+    task = asyncio.create_task(
+        run_witness_loop(
+            observer=observer,
+            capture_codes=frozenset({_CODE}),
+            recorder=_RecordingRecorder(),  # type: ignore[arg-type]
+            feeder=feeder,  # type: ignore[arg-type]
+        )
+    )
+    with structlog.testing.capture_logs() as logs:
+        await asyncio.sleep(0.02)
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+    events = [entry["event"] for entry in logs]
+    assert "run_witness.progress_flush_failed" in events
+    assert recorded == [_CODE]
+
+
+@pytest.mark.unit
 async def test_lifespan_is_a_no_op_when_no_capture_codes_configured() -> None:
     entered = False
     async with run_witness_lifespan(observer=_FakeObserver([]), capture_codes=frozenset()):
@@ -284,6 +451,25 @@ class _FakeTruncateRun:
         self.calls.append(command)
         if self.raises is not None:
             raise self.raises
+
+
+class _FakeAppendObservations:
+    """Fake `append_observations` handler: records every call."""
+
+    def __init__(self) -> None:
+        self.calls: list[AppendObservations] = []
+
+    async def __call__(
+        self,
+        command: AppendObservations,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> int:
+        self.calls.append(command)
+        return len(command.entries)
 
 
 def _recorder(
@@ -553,6 +739,48 @@ async def test_run_witness_recorder_noop_on_none_phase_regardless_of_state(
 
 
 @pytest.mark.unit
+async def test_open_captures_reflects_the_seeded_map() -> None:
+    run_id = uuid4()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(), open_captures={_CODE: run_id}
+    )
+
+    assert recorder.open_captures() == {_CODE: run_id}
+
+
+@pytest.mark.unit
+async def test_open_captures_is_empty_when_nothing_is_open() -> None:
+    recorder = _recorder(record_witnessed_run=_FakeRecordWitnessedRun())
+
+    assert recorder.open_captures() == {}
+
+
+@pytest.mark.unit
+async def test_open_captures_reflects_a_promotion() -> None:
+    run_id = uuid4()
+    fake = _FakeRecordWitnessedRun(run_id=run_id)
+    recorder = _recorder(record_witnessed_run=fake)
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    assert recorder.open_captures() == {_CODE: run_id}
+
+
+@pytest.mark.unit
+async def test_open_captures_returns_a_copy_not_a_live_reference() -> None:
+    """The caller must not be able to mutate this recorder's own dedup
+    state through the returned mapping."""
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(), open_captures={_CODE: uuid4()}
+    )
+
+    snapshot = recorder.open_captures()
+    snapshot["injected"] = uuid4()
+
+    assert "injected" not in recorder.open_captures()
+
+
+@pytest.mark.unit
 async def test_run_witness_recorder_is_a_pass_through_when_recording_disabled() -> None:
     """The hard no-regression requirement: with recording off, the fake
     handler is never called and the log output matches bare
@@ -612,6 +840,159 @@ async def test_run_witness_lifespan_rejects_a_handler_without_deps() -> None:
             record_witnessed_run=_FakeRecordWitnessedRun(),
         ):
             pass
+
+
+@pytest.mark.unit
+async def test_run_witness_lifespan_rejects_progress_recording_without_witness_handler() -> None:
+    with pytest.raises(ValueError, match="capture_progress_recording_enabled requires"):
+        async with run_witness_lifespan(
+            observer=_FakeObserver([]),
+            capture_codes=frozenset({_CODE}),
+            capture_progress_recording_enabled=True,
+        ):
+            pass
+
+
+@pytest.mark.unit
+async def test_run_witness_lifespan_rejects_progress_recording_without_append_obs() -> None:
+    deps = dataclasses.replace(
+        build_deps(ids=[uuid4() for _ in range(5)]),
+        settings=Settings(  # type: ignore[call-arg]
+            run_witness_recording_enabled=True,
+            capture_watch_plan_id=_PLAN_ID,
+        ),
+    )
+    with pytest.raises(ValueError, match="append_observations"):
+        async with run_witness_lifespan(
+            observer=_FakeObserver([]),
+            capture_codes=frozenset({_CODE}),
+            deps=deps,
+            record_witnessed_run=_FakeRecordWitnessedRun(),
+            record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+            truncate_run=_FakeTruncateRun(),
+            capture_progress_recording_enabled=True,
+        ):
+            pass
+
+
+@pytest.mark.unit
+async def test_run_witness_lifespan_with_progress_recording_writes_observations() -> None:
+    """End-to-end wiring check: a BEGUN promotes, a buffered progress
+    reading survives to the periodic flush tick, and the flush writes
+    through the real `AppendObservations` fake against the promoted
+    run_id -- proving the feeder is actually constructed and started,
+    not just accepted as a parameter."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    append_observations = _FakeAppendObservations()
+    heartbeats = InMemoryFeedHeartbeatStore()
+    observer = _FakeObserver(
+        [
+            _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN),
+            _progress_obs(role="images_saved", value=5.0),
+        ]
+    )
+    deps = dataclasses.replace(
+        build_deps(ids=[uuid4() for _ in range(20)]),
+        settings=Settings(  # type: ignore[call-arg]
+            run_witness_recording_enabled=True,
+            capture_watch_plan_id=_PLAN_ID,
+        ),
+    )
+
+    async with run_witness_lifespan(
+        observer=observer,
+        capture_codes=frozenset({_CODE}),
+        deps=deps,
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+        truncate_run=_FakeTruncateRun(),
+        append_observations=append_observations,
+        feed_heartbeat_store=heartbeats,
+        capture_progress_recording_enabled=True,
+        capture_progress_flush_tick_seconds=0.01,
+    ):
+        await asyncio.sleep(0.05)  # promote, buffer, then at least one flush tick
+
+    assert len(genesis.calls) == 1
+    assert len(append_observations.calls) == 1
+    assert append_observations.calls[0].run_id == run_id
+    assert append_observations.calls[0].entries[0].channel_name == "images_saved"
+    assert len(heartbeats.all()) >= 1
+
+
+@pytest.mark.unit
+async def test_run_witness_lifespan_refuses_progress_recording_in_shadow_mode() -> None:
+    """Defensive, mirrors `_promote`'s own capture_watch_plan_id check:
+    the boot-time gate already refuses to start the app in this state,
+    but a direct in-process caller that sets `run_witness_recording_enabled
+    =False` on `deps.settings` while still passing
+    `capture_progress_recording_enabled=True` must not get a feeder
+    that writes real rows while the recorder stays shadow-only."""
+    deps = dataclasses.replace(
+        build_deps(ids=[uuid4() for _ in range(10)]),
+        settings=Settings(  # type: ignore[call-arg]
+            run_witness_recording_enabled=False,
+            capture_watch_plan_id=_PLAN_ID,
+        ),
+    )
+    with pytest.raises(ValueError, match="run_witness_recording_enabled=True"):
+        async with run_witness_lifespan(
+            observer=_FakeObserver([]),
+            capture_codes=frozenset({_CODE}),
+            deps=deps,
+            record_witnessed_run=_FakeRecordWitnessedRun(),
+            record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+            truncate_run=_FakeTruncateRun(),
+            append_observations=_FakeAppendObservations(),
+            feed_heartbeat_store=InMemoryFeedHeartbeatStore(),
+            capture_progress_recording_enabled=True,
+        ):
+            pass
+
+
+@pytest.mark.unit
+async def test_run_witness_lifespan_flushes_buffered_progress_on_shutdown() -> None:
+    """A reading buffered right before teardown must not be silently
+    lost: the lifespan's `finally` does one best-effort final flush
+    after cancelling both background tasks."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    append_observations = _FakeAppendObservations()
+    observer = _FakeObserver(
+        [
+            _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN),
+            _progress_obs(role="images_saved", value=9.0),
+        ]
+    )
+    deps = dataclasses.replace(
+        build_deps(ids=[uuid4() for _ in range(20)]),
+        settings=Settings(  # type: ignore[call-arg]
+            run_witness_recording_enabled=True,
+            capture_watch_plan_id=_PLAN_ID,
+        ),
+    )
+
+    async with run_witness_lifespan(
+        observer=observer,
+        capture_codes=frozenset({_CODE}),
+        deps=deps,
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+        truncate_run=_FakeTruncateRun(),
+        append_observations=append_observations,
+        feed_heartbeat_store=InMemoryFeedHeartbeatStore(),
+        capture_progress_recording_enabled=True,
+        # Long enough that the periodic loop never ticks on its own;
+        # only the shutdown-time final flush can be responsible for
+        # any write this test observes.
+        capture_progress_flush_tick_seconds=60.0,
+    ):
+        await asyncio.sleep(0.02)  # promote + buffer, no time for a periodic tick
+
+    assert len(append_observations.calls) == 1
+    assert append_observations.calls[0].run_id == run_id
+    assert append_observations.calls[0].entries[0].channel_name == "images_saved"
 
 
 class _FakeListRuns:

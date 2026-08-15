@@ -48,13 +48,19 @@ handler is longhand (not the update-handler factory) because it
 cross-loads Plan → Practice → Method to surface the Method's
 `parameters_schema` for merged-result validation.
 
-## BC-internal ObservationStore wiring
+## BC-internal ObservationStore + FeedHeartbeatStore wiring
 
 `append_observations` needs a `ObservationStore` adapter. Per the
 per-category-writer pattern (mirrors Decision BC's InferenceStore
 and Conduit's VerdictStore), the store is built LOCALLY here from
 `deps.pool` (Postgres in production) or as `InMemoryObservationStore`
 in `app_env=test`. NOT promoted to Kernel fields.
+
+`feed_heartbeat_store` is surfaced on the bundle the same way
+`EnclosureHandlers.permit_probe_store` is: not a command handler, so
+routes/tools never touch it, but the composition-root lifespan
+(`_capture_progress_feeder.py`'s feeder, slice 10) needs the write
+store directly, not wrapped behind a command.
 """
 
 from dataclasses import dataclass
@@ -68,8 +74,11 @@ from cora.infrastructure.idempotency import (
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
 from cora.run.aggregates.run import (
+    FeedHeartbeatStore,
+    InMemoryFeedHeartbeatStore,
     InMemoryObservationStore,
     ObservationStore,
+    PostgresFeedHeartbeatStore,
     PostgresObservationStore,
 )
 from cora.run.features import (
@@ -108,6 +117,11 @@ class RunHandlers:
     append_observations: append_observations.Handler
     get_run: get_run.Handler
     list_runs: list_runs.Handler
+    feed_heartbeat_store: FeedHeartbeatStore
+    """The feed-heartbeat trail's write store. Surfaced on the bundle,
+    not a handler, mirroring `EnclosureHandlers.permit_probe_store`
+    exactly: a composition-root lifespan needs this dependency
+    directly, and it isn't itself a command handler."""
 
 
 def wire_run(deps: Kernel) -> RunHandlers:
@@ -115,7 +129,13 @@ def wire_run(deps: Kernel) -> RunHandlers:
     observation_store: ObservationStore = (
         PostgresObservationStore(deps.pool) if deps.pool is not None else InMemoryObservationStore()
     )
+    feed_heartbeat_store: FeedHeartbeatStore = (
+        PostgresFeedHeartbeatStore(deps.pool)
+        if deps.pool is not None
+        else InMemoryFeedHeartbeatStore()
+    )
     return RunHandlers(
+        feed_heartbeat_store=feed_heartbeat_store,
         start_run=with_tracing(
             with_idempotency(
                 start_run.bind(deps),

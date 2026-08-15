@@ -30,7 +30,7 @@ an Agent principal, and only `cora.api` may depend on both.
   read, or a disconnect the adapter reported with nothing to classify).
 
 Every line carries `capture_code`, `reported_status`, `source_kind`,
-`source_id`, and `observed_at` (nullable; see `CaptureObservation`'s
+`source_id`, and `observed_at` (nullable; see `CaptureLifecycleObservation`'s
 own docstring on why an adapter must never substitute a synthesized
 time for an absent one). These log lines are unconditional: they fire
 identically whether or not recording is enabled.
@@ -67,7 +67,7 @@ re-promoted.
 
 ## Closing the abort/success gap needs a deployment change too
 
-`CaptureObservation.phase` classifies the `status` role's literal off
+`CaptureLifecycleObservation.phase` classifies the `status` role's literal off
 the deployment's declared table, and separately, `ControlPortCaptureObserver`
 now also reads an optional `abort` role: a decoded-asserted reading on
 it is a direct `ABORTED` claim (see that module's docstring), landing
@@ -128,6 +128,45 @@ residual in `_capture_observer.py`'s own docstring: a real 2-BM abort
 degrading to a `Completed` record, never a corrupted attribution to a
 different Run.
 
+## Accepted residual (slice 10): a post-restart missed terminal writes a trail into the wrong Run
+
+The reconnect-during-BEGUN residual above already accepts that a
+process restart mid-capture can leave a stale Run open with nothing to
+truncate it until the NEXT capture's `BEGUN`. Before slice 10 that
+window produced at most one wrong terminal event. With the progress
+feeder wired, every flush tick during that window writes the NEW
+capture's `images_saved` / `images_collected` readings into the STALE
+Run's observation trail, because `rebuild_open_captures` seeds
+`code -> stale_run_id` at boot and camonitor's first delivery on a
+fresh subscribe is whatever literal the PV currently holds -- typically
+a `PROGRESSING` one mid-capture, which triggers no `BEGUN` and so never
+corrects the map. Detectable signature: the channel's value regresses
+against the prior rows for the same Run instead of monotonically
+increasing. Accepted rather than fixed here: closing it needs either a
+staleness timer (explicitly out of scope per the locked slice-9
+decision) or a monotonicity guard per (run_id, channel), which is a
+real fix but a separate, deliberate design decision, not a wiring
+change.
+
+## Accepted residual (slice 10): CA's redeliver-on-resubscribe can misattribute a stale reading
+
+If a reconnect lands between a new capture's `BEGUN` and its first
+progress update, EPICS CA can redeliver the PREVIOUS capture's final
+progress string with the PREVIOUS capture's own substrate timestamp on
+the fresh subscribe. That reading is buffered under the current
+capture_code and, having a real (if stale) `observed_at`, is not
+skipped by the no-substrate-time guard; the next flush writes it
+against the NEW Run, one row bearing an out-of-order timestamp lower
+than the Run's own start. Same class as the reconnect-during-BEGUN
+residual above (an artifact of CA's own resubscribe semantics, not a
+bug in this code), and the same posture: a data-quality degradation
+(one out-of-order row), never a claim this code cannot tell is
+suspect. No freshness guard (rejecting a reading whose `observed_at`
+predates the Run's own promotion) is implemented; it would need
+threading a promotion timestamp through `RunWitnessRecorder`, a real
+fix but, again, a deliberate design decision to make later if this is
+ever observed in practice, not a wiring change.
+
 ## Retry + resilience
 
 Mirrors `run_enclosure_permit_monitor`: `observe()` ending (stream
@@ -151,14 +190,21 @@ import contextlib
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from cora.agent.seed_capture_progress_feeder import CAPTURE_PROGRESS_FEEDER_AGENT_ID
 from cora.agent.seed_run_witness import RUN_WITNESS_AGENT_ID
+from cora.api._capture_progress_feeder import CaptureProgressFeeder, capture_progress_flush_loop
 from cora.infrastructure.logging import get_logger
 from cora.run.errors import UnauthorizedError
 from cora.run.features.list_runs.query import ListRuns
 from cora.run.features.record_witnessed_run.command import RecordWitnessedRun
 from cora.run.features.record_witnessed_run_outcome.command import RecordWitnessedRunOutcome
 from cora.run.features.truncate_run.command import TruncateRun
-from cora.run.ports.capture_observer import CaptureObserverScope, CapturePhase
+from cora.run.ports.capture_observer import (
+    CaptureLifecycleObservation,
+    CaptureObserverScope,
+    CapturePhase,
+    CaptureProgressObservation,
+)
 from cora.shared.identity import MonitorSourceId
 
 if TYPE_CHECKING:
@@ -166,17 +212,20 @@ if TYPE_CHECKING:
 
     from cora.infrastructure.config import Settings
     from cora.infrastructure.kernel import Kernel
+    from cora.run.aggregates.run import FeedHeartbeatStore
     from cora.run.aggregates.run.state import Run
+    from cora.run.features.append_observations.handler import Handler as AppendObservationsHandler
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
     from cora.run.features.record_witnessed_run.handler import Handler as RecordWitnessedRunHandler
     from cora.run.features.record_witnessed_run_outcome.handler import (
         Handler as RecordWitnessedRunOutcomeHandler,
     )
     from cora.run.features.truncate_run.handler import Handler as TruncateRunHandler
-    from cora.run.ports.capture_observer import CaptureObservation, CaptureObserver
+    from cora.run.ports.capture_observer import CaptureObserver
     from cora.shared.identifier import Identifier
 
 _RECONNECT_DELAY_SECONDS = 5.0
+_CAPTURE_PROGRESS_DEFAULT_FLUSH_TICK_SECONDS = 10.0
 _PAGE_LIMIT = 100
 _CAPTURE_CODE_SCHEME = "capture-code"
 
@@ -197,8 +246,28 @@ _PHASE_LOG_EVENT: dict[CapturePhase, str] = {
 
 _TERMINAL_PHASES = (CapturePhase.ENDED, CapturePhase.ABORTED)
 
+_FLUSH_TRIGGER_PHASES = frozenset({CapturePhase.BEGUN, CapturePhase.ENDED, CapturePhase.ABORTED})
+"""Phases where the recorder may close or replace a Run (slice 10).
+`run_witness_loop` flushes a capture's buffered progress readings
+BEFORE the recorder acts on one of these, so a reading already
+BUFFERED at that instant is attributed to the Run it belongs to rather
+than lost to a closed logbook or attached to the wrong Run after a
+truncate-then-promote. This narrows the window; it does not close it:
+`_capture_observer.py` runs a status/abort/images_saved/images_collected
+pump per role, all feeding one unordered merge queue, and slice 9
+already accepts that pump ordering is not structurally guaranteed, only
+realistic CA delivery. A progress reading whose callback lands AFTER
+this dispatch (rather than before) is either dropped
+(`capture_progress.dropped_no_open_run`) or, on the rarer truncate-then-
+promote path, attributed to the newly-promoted Run instead of the one
+closing. Accepted residual, same severity class as the existing
+status/abort ordering one: one row, not a trail, and 2-BM's TomoScan
+only calls `update_status()` from its polling loop, so the progress
+PVs do not move at `Beginning scan` time in practice -- a fact about
+the deployed tool, not something this ordering enforces."""
 
-def observe_capture(observation: CaptureObservation) -> None:
+
+def observe_capture(observation: CaptureLifecycleObservation) -> None:
     """Log one observation. The entire body of shadow mode: no writes."""
     if observation.phase is None:
         event = "run_witness.capture_unreached"
@@ -242,7 +311,29 @@ class RunWitnessRecorder:
         self._settings = settings
         self._open_captures: dict[str, UUID] = dict(open_captures or {})
 
-    async def observe_capture(self, observation: CaptureObservation) -> None:
+    def open_captures(self) -> dict[str, UUID]:
+        """A snapshot of every capture_code currently open, mapped to
+        its run_id.
+
+        Read-only accessor over the same dedup map `_promote` /
+        `_truncate_stale` / `_record_outcome` mutate (populated from
+        this process's own promotions, plus a prior process's via the
+        boot-time `rebuild_open_captures`, which is itself scoped to
+        `conduct_mode="Witnessed"` Runs only); `_open_captures` stays
+        single-writer (this recorder). Slice 10's `CaptureProgressFeeder`
+        is the consumer: it scopes every write it makes to a run_id this
+        method names, never one sourced any other way, which is what
+        keeps its `AppendObservations` grant (no `conduct_mode` gate)
+        from being able to reach an operator-driven Run -- the same
+        chain (this map, fed only by a Witnessed-filtered query) that
+        already backstops `TruncateRun`'s equally ungated decider. See
+        `cora.agent.seed_capture_progress_feeder` for the full security
+        note. Returns a copy: the caller cannot mutate this recorder's
+        own state through it.
+        """
+        return dict(self._open_captures)
+
+    async def observe_capture(self, observation: CaptureLifecycleObservation) -> None:
         observe_capture(observation)
         if not self._settings.run_witness_recording_enabled:
             return
@@ -258,7 +349,7 @@ class RunWitnessRecorder:
         # PROGRESSING, UNRECOGNIZED, and a None phase make no status
         # claim this state machine acts on: no-op regardless of state.
 
-    async def _promote(self, observation: CaptureObservation) -> None:
+    async def _promote(self, observation: CaptureLifecycleObservation) -> None:
         plan_id = self._settings.capture_watch_plan_id
         if plan_id is None:
             # Unreachable when `_enforce_run_witness_recording_gate`
@@ -310,7 +401,7 @@ class RunWitnessRecorder:
             run_id=str(run_id),
         )
 
-    async def _truncate_stale(self, observation: CaptureObservation) -> None:
+    async def _truncate_stale(self, observation: CaptureLifecycleObservation) -> None:
         code = observation.capture_code
         # Pop unconditionally, before attempting the truncate: the new
         # capture promotes regardless of whether the stale Run could be
@@ -363,7 +454,7 @@ class RunWitnessRecorder:
                 run_id=str(stale_run_id),
             )
 
-    async def _record_outcome(self, observation: CaptureObservation) -> None:
+    async def _record_outcome(self, observation: CaptureLifecycleObservation) -> None:
         phase = observation.phase
         if phase is not CapturePhase.ENDED and phase is not CapturePhase.ABORTED:
             # Defensive: observe_capture only calls this method for a
@@ -473,16 +564,41 @@ async def run_witness_loop(
     observer: CaptureObserver,
     capture_codes: frozenset[str],
     recorder: RunWitnessRecorder | None = None,
+    feeder: CaptureProgressFeeder | None = None,
     reconnect_delay_seconds: float = _RECONNECT_DELAY_SECONDS,
 ) -> None:
     """Drain the observer, logging (and, with a recorder, promoting)
-    each observation; re-subscribe on stream end."""
+    each observation; re-subscribe on stream end.
+
+    A `CaptureProgressObservation` (slice 10's progress roles) is
+    handed to `feeder.offer()` and never reaches the recorder; a
+    `CaptureLifecycleObservation` on a phase in `_FLUSH_TRIGGER_PHASES`
+    triggers `feeder.flush_capture()` BEFORE the recorder acts on it,
+    so a capture's buffered progress trail is attributed to its Run
+    before that Run can close or be replaced. `feeder=None` (recording
+    off, or `capture_progress_recording_enabled=False`) makes both
+    branches no-ops, same posture as `recorder=None`.
+    """
     if not capture_codes:
         return
     scope = CaptureObserverScope(capture_codes=capture_codes)
     while True:
         try:
             async for observation in observer.observe(scope):
+                if isinstance(observation, CaptureProgressObservation):
+                    if feeder is not None:
+                        feeder.offer(observation)
+                    continue
+                if feeder is not None and observation.phase in _FLUSH_TRIGGER_PHASES:
+                    try:
+                        await feeder.flush_capture(observation.capture_code)
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception:
+                        _log.exception(
+                            "run_witness.progress_flush_failed",
+                            capture_code=observation.capture_code,
+                        )
                 try:
                     if recorder is not None:
                         await recorder.observe_capture(observation)
@@ -512,6 +628,10 @@ async def run_witness_lifespan(
     record_witnessed_run_outcome: RecordWitnessedRunOutcomeHandler | None = None,
     truncate_run: TruncateRunHandler | None = None,
     open_captures: dict[str, UUID] | None = None,
+    append_observations: AppendObservationsHandler | None = None,
+    feed_heartbeat_store: FeedHeartbeatStore | None = None,
+    capture_progress_recording_enabled: bool = False,
+    capture_progress_flush_tick_seconds: float = _CAPTURE_PROGRESS_DEFAULT_FLUSH_TICK_SECONDS,
 ) -> AsyncGenerator[None]:
     """Run the watcher as a background task for the app's lifetime.
 
@@ -527,6 +647,13 @@ async def run_witness_lifespan(
     also supplied. All three: a recorder that could promote but not
     terminate would reintroduce the exact wedge (a witnessed Run stuck
     in `Running` forever) this slice exists to close.
+
+    `capture_progress_recording_enabled=True` (slice 10) additionally
+    requires `record_witnessed_run`, `append_observations`, and
+    `feed_heartbeat_store`: a `CaptureProgressFeeder` writes progress
+    readings against a Run only the recorder can name, so it cannot
+    exist without one. Runs a second background task,
+    `capture_progress_flush_loop`, alongside the drain loop.
     """
     if not capture_codes:
         yield
@@ -560,16 +687,93 @@ async def run_witness_lifespan(
             open_captures=open_captures,
         )
 
-    task = asyncio.create_task(
-        run_witness_loop(observer=observer, capture_codes=capture_codes, recorder=recorder),
-        name="run-witness",
-    )
+    feeder: CaptureProgressFeeder | None = None
+    if capture_progress_recording_enabled:
+        missing = [
+            name
+            for name, value in (
+                ("record_witnessed_run", record_witnessed_run),
+                ("append_observations", append_observations),
+                ("feed_heartbeat_store", feed_heartbeat_store),
+            )
+            if value is None
+        ]
+        if missing:
+            msg = (
+                "run_witness_lifespan: capture_progress_recording_enabled "
+                f"requires {', '.join(missing)}"
+            )
+            raise ValueError(msg)
+        # Narrowed by the checks above: record_witnessed_run is not None
+        # here, so the recorder-building block above already ran and
+        # deps is not None either.
+        assert deps is not None
+        assert recorder is not None
+        assert append_observations is not None
+        assert feed_heartbeat_store is not None
+        if not deps.settings.run_witness_recording_enabled:
+            # Defensive, mirrors `_promote`'s own capture_watch_plan_id
+            # check: `_enforce_run_witness_recording_gate` (main.py)
+            # already refuses to boot in this state, but a direct
+            # in-process caller that sets this flag without also
+            # enabling run_witness_recording_enabled would otherwise get
+            # a feeder that writes REAL rows while the recorder is still
+            # shadow-only (writes nothing). Refuse rather than silently
+            # break shadow mode's own promise.
+            msg = (
+                "run_witness_lifespan: capture_progress_recording_enabled=True "
+                "requires deps.settings.run_witness_recording_enabled=True"
+            )
+            raise ValueError(msg)
+        feeder = CaptureProgressFeeder(
+            deps=deps,
+            append_observations=append_observations,
+            feed_heartbeat_store=feed_heartbeat_store,
+            open_captures=recorder.open_captures,
+            principal_id=CAPTURE_PROGRESS_FEEDER_AGENT_ID,
+        )
+
+    tasks = [
+        asyncio.create_task(
+            run_witness_loop(
+                observer=observer,
+                capture_codes=capture_codes,
+                recorder=recorder,
+                feeder=feeder,
+            ),
+            name="run-witness",
+        )
+    ]
+    if feeder is not None:
+        tasks.append(
+            asyncio.create_task(
+                capture_progress_flush_loop(
+                    feeder, interval_seconds=capture_progress_flush_tick_seconds
+                ),
+                name="capture-progress-flush",
+            )
+        )
     try:
         yield
     finally:
-        task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await task
+        # Cancel + await both tasks BEFORE the final flush below: this
+        # guarantees the periodic flush loop is no longer running (so
+        # it cannot race the final flush for the same capture_code) and
+        # that `_flush_lock` is free (an `async with` block releases a
+        # lock on cancellation same as on any other exit).
+        for task in tasks:
+            task.cancel()
+        for task in tasks:
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+        if feeder is not None:
+            # Best-effort: whatever is still buffered at shutdown is the
+            # highest-water-mark reading per channel (the buffer is
+            # latest-wins), so losing it silently would discard the
+            # single most informative row. Never let this raise past
+            # lifespan teardown.
+            with contextlib.suppress(Exception):
+                await feeder.flush()
 
 
 __all__ = [

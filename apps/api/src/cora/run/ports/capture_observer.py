@@ -1,13 +1,13 @@
 """CaptureObserver port: substrate-driven capture-lifecycle observation stream.
 
 `CaptureObserver` is the BC-local async Protocol a Run-watching runtime
-uses to drain capture-lifecycle observations from an external
-acquisition tool's substrate (EPICS PV monitors, P4P PVA subscriptions,
-Tango attribute callbacks). Substrate details live behind concrete
-adapters; the runtime never touches substrate-specific symbols
-directly. Mirrors `EnclosureObserver`
-([[project_enclosure_stage1_design]] L-port-1 + L-CHARTER-4) at every
-layer; the two ports differ only in what they watch.
+uses to drain capture readings from an external acquisition tool's
+substrate (EPICS PV monitors, P4P PVA subscriptions, Tango attribute
+callbacks). Substrate details live behind concrete adapters; the
+runtime never touches substrate-specific symbols directly. Mirrors
+`EnclosureObserver` ([[project_enclosure_stage1_design]] L-port-1 +
+L-CHARTER-4) at every layer; the two ports differ only in what they
+watch.
 
 ## BC-local, not promoted to infrastructure/ports
 
@@ -16,6 +16,20 @@ is zero cross-BC consumption today: no other BC reads observations off
 this port. Promote to `infrastructure/ports/` only on a real second
 cross-BC consumer (rule-of-three), exactly the `RunChannelLookup`
 precedent.
+
+## Two reading kinds, one stream
+
+`observe()` yields `AnyCaptureObservation`, the union of
+`CaptureLifecycleObservation` (a phase claim: BEGUN / PROGRESSING /
+ENDED / ABORTED / UNRECOGNIZED, or no claim at all on a probe-only or
+disconnect reading) and `CaptureProgressObservation` (a numeric
+progress counter, e.g. `ImagesSaved`). A consumer narrows with
+`isinstance`. The two are peers, not a supertype and a subtype: a
+single reading is never both a phase claim and a progress reading, so
+one closed-over `CaptureObservation` name for "the default kind" would
+have made an isinstance check on the lifecycle kind read as a
+supertype check rather than the kind check it actually is. Kept
+distinct instead, per R2/R4 (naming review, slice 10).
 
 ## Domain vocabulary (substrate-neutral)
 
@@ -31,10 +45,20 @@ precedent.
   own literals to `CapturePhase`; unmapped or unrecognized substrate
   values classify as `UNRECOGNIZED`, never silently as `PROGRESSING` or
   dropped.
-- `CaptureObservation`: one capture-lifecycle reading drained from the
-  substrate, scoped by `capture_code` (the identity surface the
-  runtime's configuration knows, e.g. a named acquisition path). Same
-  reach-tier and dual-clock shape as `EnclosureObservation`.
+- `CaptureLifecycleObservation`: one capture-lifecycle reading drained
+  from the substrate, scoped by `capture_code` (the identity surface
+  the runtime's configuration knows, e.g. a named acquisition path).
+  Same reach-tier and dual-clock shape as `EnclosureObservation`.
+- `CaptureProgressObservation`: one numeric progress reading (a
+  monotonic counter such as images saved or collected) drained from a
+  role the deployment declared under the same capture code. `role` is
+  the CORA-owned role key (`images_saved`, `images_collected`), the
+  same closed vocabulary `status` and `abort` already use; it is
+  deliberately not named `channel_name`, which is a different, operator-
+  authored identifier on the Run BC's `AppendObservations` write path
+  (`cora.run.aggregates.run.state.ChannelName`) that this reading does
+  not carry directly. A consumer that writes this value onward as an
+  observation entry chooses its own `channel_name` at that boundary.
 - `CaptureObserverScope`: the set of capture codes the substrate
   adapter should subscribe to. Empty scope is valid and yields no
   observations.
@@ -47,7 +71,9 @@ exists, is complete, or has arrived: 2-BM's own operations reopen the
 HDF5 file to append theta AFTER reporting "Scan complete", and the
 transfer-status messages mark transfer start, not arrival. Binding an
 observed capture to a Dataset is a separate, later, independently-
-verified act and is out of scope for this port entirely.
+verified act and is out of scope for this port entirely. Same rule for
+`CaptureProgressObservation`: a progress count is not a claim about
+what a file on disk contains.
 
 ## D6.L2-equivalent anti-lock posture
 
@@ -60,7 +86,7 @@ inbound adapter is responsible for that constraint, exactly as
 
 ## Subscribe shape
 
-`observe` is a plain `def` returning `AsyncIterator[CaptureObservation]`
+`observe` is a plain `def` returning `AsyncIterator[AnyCaptureObservation]`
 directly (no surrounding coroutine), iterated with
 `async for observation in observer.observe(scope):`. Connect setup may
 happen lazily on the first `__anext__`. Mid-stream disconnect is the
@@ -77,7 +103,7 @@ from cora.shared.reach import ReachTier
 
 
 @dataclass(frozen=True)
-class CaptureObservation:
+class CaptureLifecycleObservation:
     """One capture-lifecycle reading from the substrate.
 
     `capture_code` is the identity surface the runtime's configuration
@@ -118,6 +144,42 @@ class CaptureObservation:
 
 
 @dataclass(frozen=True)
+class CaptureProgressObservation:
+    """One numeric progress reading from the substrate.
+
+    Not a phase claim: a progress role (`images_saved`,
+    `images_collected`) reports how far a capture has gotten, never
+    whether it began, ended, or was aborted. `role` is the CORA-owned
+    role key the deployment declared this PV under in
+    `Settings.capture_watch_pvs` (the same closed vocabulary `status`
+    and `abort` already use), NOT the Run BC's operator-authored
+    `ChannelName`.
+
+    `value` is the decoded numeric reading. An adapter that cannot
+    decode a reading as a finite number emits nothing for it rather
+    than guessing; see `_capture_observer.py`.
+
+    `reach_tier`, `observed_at`, `source_kind`, `source_id` carry the
+    same meaning as on `CaptureLifecycleObservation`.
+    """
+
+    capture_code: str
+    role: str
+    value: float
+    reach_tier: ReachTier
+    observed_at: datetime | None
+    source_kind: str
+    source_id: str
+
+
+AnyCaptureObservation = CaptureLifecycleObservation | CaptureProgressObservation
+"""The union `observe()` yields. Named explicitly rather than reusing
+either member's name for the union, so a caller that has not yet been
+updated to narrow by `isinstance` fails type-check instead of silently
+treating a `CaptureProgressObservation` as a `CaptureLifecycleObservation`."""
+
+
+@dataclass(frozen=True)
 class CaptureObserverScope:
     """Subscription scope: the set of capture codes to observe.
 
@@ -130,7 +192,7 @@ class CaptureObserverScope:
 
 @runtime_checkable
 class CaptureObserver(Protocol):
-    """Async source of `CaptureObservation` values from the substrate.
+    """Async source of `AnyCaptureObservation` values from the substrate.
 
     The substrate adapter owns the subscription lifecycle. A runtime
     iterates and forwards each observation onward; this port makes no
@@ -142,10 +204,10 @@ class CaptureObserver(Protocol):
     concern.
     """
 
-    def observe(self, scope: CaptureObserverScope) -> AsyncIterator[CaptureObservation]:
+    def observe(self, scope: CaptureObserverScope) -> AsyncIterator[AnyCaptureObservation]:
         """Open an observation stream over the supplied scope.
 
-        Returns an `AsyncIterator[CaptureObservation]` directly (no
+        Returns an `AsyncIterator[AnyCaptureObservation]` directly (no
         surrounding coroutine). Connect setup may happen lazily on the
         first `__anext__` call.
         """
@@ -163,18 +225,20 @@ class QuietCaptureObserver:
     permit status, so silence is the honest stub here.
     """
 
-    def observe(self, scope: CaptureObserverScope) -> AsyncGenerator[CaptureObservation]:
+    def observe(self, scope: CaptureObserverScope) -> AsyncGenerator[AnyCaptureObservation]:
         return self._drain(scope)
 
-    async def _drain(self, scope: CaptureObserverScope) -> AsyncGenerator[CaptureObservation]:
+    async def _drain(self, scope: CaptureObserverScope) -> AsyncGenerator[AnyCaptureObservation]:
         for _ in ():
             yield _
 
 
 __all__ = [
-    "CaptureObservation",
+    "AnyCaptureObservation",
+    "CaptureLifecycleObservation",
     "CaptureObserver",
     "CaptureObserverScope",
     "CapturePhase",
+    "CaptureProgressObservation",
     "QuietCaptureObserver",
 ]

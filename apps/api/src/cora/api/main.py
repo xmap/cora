@@ -61,6 +61,7 @@ from cora.agent import (
     seed_authority_revocation_holder_agent,
     seed_calibration_watcher_agent,
     seed_campaign_watcher_agent,
+    seed_capture_progress_feeder_agent,
     seed_caution_drafter_agent,
     seed_caution_promoter_agent,
     seed_clearance_expirer_agent,
@@ -424,7 +425,18 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
     to. Catching the misconfiguration at boot is cheaper than discovering
     it the first time a real capture begins and record_witnessed_run has
     nowhere to point.
+
+    Also refuses to boot with capture_progress_recording_enabled=True
+    unless run_witness_recording_enabled is itself True (slice 10): with
+    no promoted Run there is nothing for a progress reading to attach to.
     """
+    if settings.capture_progress_recording_enabled and not settings.run_witness_recording_enabled:
+        msg = (
+            "CAPTURE_PROGRESS_RECORDING_ENABLED=true requires "
+            "RUN_WITNESS_RECORDING_ENABLED=true. A progress reading has no "
+            "promoted Run to attach to without it."
+        )
+        raise RuntimeError(msg)
     if not settings.run_witness_recording_enabled:
         return
     missing: list[str] = []
@@ -1009,6 +1021,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             await seed_experiment_steerer_agent(deps)
             # same shape for RunWitness (deterministic capture-promotion agent).
             await seed_run_witness_agent(deps)
+            # same shape for CaptureProgressFeeder (deterministic progress-write
+            # agent; a separate principal from RunWitness so progress-writing
+            # can be revoked without blinding the witness).
+            await seed_capture_progress_feeder_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
@@ -1172,6 +1188,14 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         record_witnessed_run_outcome=app.state.run.record_witnessed_run_outcome,
                         truncate_run=app.state.run.truncate_run,
                         open_captures=open_captures,
+                        append_observations=app.state.run.append_observations,
+                        feed_heartbeat_store=app.state.run.feed_heartbeat_store,
+                        capture_progress_recording_enabled=(
+                            settings.capture_progress_recording_enabled
+                        ),
+                        capture_progress_flush_tick_seconds=(
+                            settings.capture_progress_flush_tick_seconds
+                        ),
                     ),
                 ):
                     yield

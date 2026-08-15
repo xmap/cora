@@ -19,7 +19,13 @@ import pytest
 
 from cora.api._capture_observer import ControlPortCaptureObserver, classify_capture_status
 from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
-from cora.run.ports.capture_observer import CaptureObservation, CaptureObserverScope, CapturePhase
+from cora.run.ports.capture_observer import (
+    AnyCaptureObservation,
+    CaptureLifecycleObservation,
+    CaptureObserverScope,
+    CapturePhase,
+    CaptureProgressObservation,
+)
 from cora.shared.reach import ReachTier
 
 _T = datetime(2026, 8, 13, 12, 0, 0, tzinfo=UTC)
@@ -116,7 +122,22 @@ def _observer(
 
 async def _collect(
     observer: ControlPortCaptureObserver, codes: set[str]
-) -> list[CaptureObservation]:
+) -> list[CaptureLifecycleObservation]:
+    """Collect only the lifecycle kind. None of the scenarios this feeds
+    declare a progress role, so this is a lossless narrowing, not a
+    filter hiding anything -- see `_collect_any` for tests that mix
+    both kinds on purpose."""
+    scope = CaptureObserverScope(capture_codes=frozenset(codes))
+    return [
+        observation
+        async for observation in observer.observe(scope)
+        if isinstance(observation, CaptureLifecycleObservation)
+    ]
+
+
+async def _collect_any(
+    observer: ControlPortCaptureObserver, codes: set[str]
+) -> list[CaptureLifecycleObservation | CaptureProgressObservation]:
     scope = CaptureObserverScope(capture_codes=frozenset(codes))
     return [observation async for observation in observer.observe(scope)]
 
@@ -370,13 +391,24 @@ async def test_observe_merges_status_and_abort_readings_for_one_code() -> None:
     assert phases == {CapturePhase.BEGUN, CapturePhase.ABORTED}
 
 
+async def _only_lifecycle(
+    gen: AsyncGenerator[AnyCaptureObservation],
+) -> AsyncGenerator[CaptureLifecycleObservation]:
+    """Narrow a raw `observe()` stream for the poll tests below, none of
+    which declare a progress role: a lossless narrowing at runtime,
+    same posture as `_collect`."""
+    async for observation in gen:
+        if isinstance(observation, CaptureLifecycleObservation):
+            yield observation
+
+
 async def _collect_until(
-    gen: AsyncGenerator[CaptureObservation],
-    predicate: Callable[[list[CaptureObservation]], bool],
+    gen: AsyncGenerator[CaptureLifecycleObservation],
+    predicate: Callable[[list[CaptureLifecycleObservation]], bool],
     *,
     timeout_seconds: float = 2.0,
-) -> list[CaptureObservation]:
-    collected: list[CaptureObservation] = []
+) -> list[CaptureLifecycleObservation]:
+    collected: list[CaptureLifecycleObservation] = []
 
     async def _drain() -> None:
         async for observation in gen:
@@ -411,7 +443,8 @@ async def test_poll_emits_relayed_probe_on_successful_read() -> None:
         read_results={"pvA": [_reading("Scan complete")]},
     )
     observer = _observer(port, {"tomoscan": {"status": "pvA"}}, tick_seconds=0.01)
-    gen = observer.observe(CaptureObserverScope(capture_codes=frozenset({"tomoscan"})))
+    scope = CaptureObserverScope(capture_codes=frozenset({"tomoscan"}))
+    gen = _only_lifecycle(observer.observe(scope))
 
     collected = await _collect_until(gen, lambda obs: len(obs) >= 1)
 
@@ -433,7 +466,8 @@ async def test_poll_emits_unreached_probe_on_failed_read() -> None:
         read_results={"pvA": [ControlNotConnectedError("pvA")]},
     )
     observer = _observer(port, {"tomoscan": {"status": "pvA"}}, tick_seconds=0.01)
-    gen = observer.observe(CaptureObserverScope(capture_codes=frozenset({"tomoscan"})))
+    scope = CaptureObserverScope(capture_codes=frozenset({"tomoscan"}))
+    gen = _only_lifecycle(observer.observe(scope))
 
     collected = await _collect_until(gen, lambda obs: len(obs) >= 1)
 
@@ -456,11 +490,13 @@ async def test_poll_survives_a_disconnected_sibling_pump() -> None:
     observer = _observer(
         port, {"tomoscan-a": {"status": "pvA"}, "tomoscan-b": {"status": "pvB"}}, tick_seconds=0.01
     )
-    gen = observer.observe(
-        CaptureObserverScope(capture_codes=frozenset({"tomoscan-a", "tomoscan-b"}))
+    gen = _only_lifecycle(
+        observer.observe(
+            CaptureObserverScope(capture_codes=frozenset({"tomoscan-a", "tomoscan-b"}))
+        )
     )
 
-    def _seen_disconnect_and_a_probe(obs: list[CaptureObservation]) -> bool:
+    def _seen_disconnect_and_a_probe(obs: list[CaptureLifecycleObservation]) -> bool:
         disconnected = any(
             o.capture_code == "tomoscan-a"
             and o.reach_tier is ReachTier.UNREACHED
@@ -487,3 +523,198 @@ async def test_poll_survives_a_disconnected_sibling_pump() -> None:
     ]
     assert disconnect_obs, "pump A's disconnect must still be observed"
     assert probe_obs, "the poller for A must keep ticking after A's pump has died"
+
+
+# ---------- Progress roles (images_saved / images_collected) ----------
+
+
+@pytest.mark.unit
+async def test_observe_a_code_with_no_progress_roles_is_unaffected() -> None:
+    """A code declaring no progress role behaves exactly as before this
+    role existed: no progress pump, no extra observation."""
+    port = _ScriptedControlPort(readings={"pvA": [_reading("Beginning scan")]})
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CaptureProgressObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_a_numeric_progress_reading_is_a_progress_observation() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvSaved": [_reading(42)]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    progress = [o for o in observations if isinstance(o, CaptureProgressObservation)]
+    assert len(progress) == 1
+    assert progress[0].capture_code == "tomoscan"
+    assert progress[0].role == "images_saved"
+    assert progress[0].value == 42.0
+    assert progress[0].reach_tier is ReachTier.RELAYED
+    assert progress[0].source_id == "pvSaved"
+    assert progress[0].observed_at == _T
+
+
+@pytest.mark.unit
+async def test_observe_a_real_2bm_progress_string_keeps_only_the_numerator() -> None:
+    """2-BM's real PVs are `stringout` records: TomoScan's
+    `update_status()` writes `"<done>/<total>"`, never a bare number.
+    The regression this guards: the first cut assumed a plain float,
+    which would have silently recorded nothing against the real
+    beamline (caught by checking the upstream source, not by the unit
+    tests, which originally only exercised bare integers)."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvSaved": [_reading("1561/1561")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    progress = [o for o in observations if isinstance(o, CaptureProgressObservation)]
+    assert len(progress) == 1
+    assert progress[0].value == 1561.0
+
+
+@pytest.mark.unit
+async def test_observe_a_real_2bm_progress_string_mid_scan() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Collecting projections")], "pvSaved": [_reading("42/1561")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    progress = [o for o in observations if isinstance(o, CaptureProgressObservation)]
+    assert progress[0].value == 42.0
+
+
+@pytest.mark.unit
+async def test_observe_a_malformed_progress_fraction_emits_nothing() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvSaved": [_reading("/1561")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CaptureProgressObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_two_progress_roles_for_one_code_both_emit() -> None:
+    port = _ScriptedControlPort(
+        readings={
+            "pvA": [_reading("Beginning scan")],
+            "pvSaved": [_reading(3)],
+            "pvCollected": [_reading(5)],
+        }
+    )
+    observer = _observer(
+        port,
+        {
+            "tomoscan": {
+                "status": "pvA",
+                "images_saved": "pvSaved",
+                "images_collected": "pvCollected",
+            }
+        },
+    )
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    progress_roles = {o.role for o in observations if isinstance(o, CaptureProgressObservation)}
+    assert progress_roles == {"images_saved", "images_collected"}
+
+
+@pytest.mark.unit
+async def test_observe_a_non_numeric_progress_reading_emits_nothing() -> None:
+    """Fail-toward-silence, mirroring the abort role's unrecognized-label
+    posture: a garbled reading is dropped, never guessed at."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvSaved": [_reading("not-a-number")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CaptureProgressObservation) for o in observations)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("bad_value", [float("nan"), float("inf"), float("-inf")])
+async def test_observe_a_non_finite_progress_reading_emits_nothing(bad_value: float) -> None:
+    """NaN and +/-Infinity must never reach `append_observations`, which
+    raises `InvalidObservationValueError` and would fail an entire batch
+    over one bad reading."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvSaved": [_reading(bad_value)]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CaptureProgressObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_progress_pump_has_no_unreached_counterpart() -> None:
+    """A progress reading's disconnect or clean stream end simply stops
+    the pump; unlike the status/abort pumps, it must NOT synthesize a
+    `CaptureProgressObservation` with a fabricated value."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvSaved": []},
+        disconnect=frozenset({"pvSaved"}),
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CaptureProgressObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_progress_reading_preserves_a_present_substrate_time() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvSaved": [_reading(7, produced_at=_T)]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    progress = next(o for o in observations if isinstance(o, CaptureProgressObservation))
+    assert progress.observed_at == _T
+
+
+@pytest.mark.unit
+async def test_observe_progress_reading_with_no_substrate_time_is_none_not_synthesized() -> None:
+    port = _ScriptedControlPort(
+        readings={
+            "pvA": [_reading("Beginning scan")],
+            "pvSaved": [_reading(7, produced_at=None)],
+        }
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "images_saved": "pvSaved"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    progress = next(o for o in observations if isinstance(o, CaptureProgressObservation))
+    assert progress.observed_at is None
+
+
+@pytest.mark.unit
+async def test_observe_server_running_role_stays_declared_and_unread() -> None:
+    """`server_running` is not in `_PROGRESS_ROLES`: declaring it must
+    not spawn a pump or emit anything, per this slice's deliberate
+    scope cut."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvRunning": [_reading(1)]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "server_running": "pvRunning"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(o.source_id == "pvRunning" for o in observations)

@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 import pytest
 
 from cora.run.ports.capture_observer import (
-    CaptureObservation,
+    CaptureLifecycleObservation,
     CaptureObserver,
     CaptureObserverScope,
     CapturePhase,
@@ -51,7 +51,7 @@ async def test_quiet_observer_yields_nothing_for_a_populated_scope() -> None:
 
 @pytest.mark.unit
 def test_capture_observation_is_frozen_dataclass() -> None:
-    obs = CaptureObservation(
+    obs = CaptureLifecycleObservation(
         capture_code=_TOMOSCAN,
         reported_status="Scan complete",
         phase=CapturePhase.ENDED,
@@ -75,7 +75,7 @@ def test_capture_observer_scope_is_frozen_dataclass() -> None:
 def test_capture_observation_permits_a_probe_only_reading_with_no_phase() -> None:
     """A probe-only re-affirmation carries no status claim and therefore
     no phase, mirroring `EnclosureObservation.observed_status=None`."""
-    obs = CaptureObservation(
+    obs = CaptureLifecycleObservation(
         capture_code=_TOMOSCAN,
         reported_status=None,
         phase=None,
