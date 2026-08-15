@@ -15,15 +15,31 @@ for the per-agent constants below; the shared scaffolding lives in
     (`prompt_template_id=None`) and a sentinel `ModelRef`
     (`provider="deterministic"`). Never used to build an LLM: the
     runtime is a substrate-observation loop, not an LLM subscriber.
-  - Authorization: the runtime issues `RecordWitnessedRun` through the
+  - Authorization: the runtime issues four distinct commands through the
     Authorize port like any principal. Under the default AllowAllAuthorize
-    it is permitted; under TrustAuthorize the operator's single configured
-    Policy must include this principal + {RecordWitnessedRun, ListRuns}.
-    ListRuns is the restart-rebuild read: without it a restart cannot
-    rediscover which captures are already open, and would re-promote
-    them. Without the RecordWitnessedRun grant, a real BEGUN observation
-    logs `run_witness.promotion_unauthorized` and stays IDLE (retried on
-    the next BEGUN, same posture as RunInitiator's StartRun grant).
+    all four are permitted; under TrustAuthorize the operator's single
+    configured Policy must include this principal + {RecordWitnessedRun,
+    RecordWitnessedRunOutcome, TruncateRun, ListRuns}. ListRuns is the
+    restart-rebuild read: without it a restart cannot rediscover which
+    captures are already open, and would re-promote them. Without the
+    RecordWitnessedRun grant, a real BEGUN observation logs
+    `run_witness.promotion_unauthorized` and stays IDLE (retried on the
+    next BEGUN). Without RecordWitnessedRunOutcome, a real terminal logs
+    `run_witness.outcome_unauthorized` and leaves the Run open (retried
+    on the next BEGUN via truncation). Without TruncateRun, a missed
+    terminal cannot be recovered and logs `run_witness.truncate_unauthorized`,
+    but the new capture still promotes regardless.
+
+    UNLIKE the RecordWitnessedRunOutcome grant, TruncateRun's decider
+    carries no `conduct_mode` gate (it accepts any Running-or-Held Run,
+    same as every other operator-facing terminal). This principal's
+    safety therefore rests on `_run_witness.py`'s own bookkeeping
+    discipline: `_truncate_stale` only ever supplies a `run_id` it
+    popped from its own `_open_captures` dict, which is populated
+    exclusively by this same runtime's own promotions, so it can only
+    ever name a Run it created. A future change to `_run_witness.py`
+    that sources a `run_id` for this call from anywhere else would lose
+    that guarantee with no decider-level backstop to catch it.
 """
 
 from __future__ import annotations

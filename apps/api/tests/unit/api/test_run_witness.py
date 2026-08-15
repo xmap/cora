@@ -17,6 +17,7 @@ about the module's imports, not a per-test behavior to pin.
 
 import asyncio
 import contextlib
+import dataclasses
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Any
@@ -40,6 +41,8 @@ from cora.run.aggregates.run import ConductMode, RunStarted, event_type_name, to
 from cora.run.errors import UnauthorizedError
 from cora.run.features.list_runs import RunListPage, RunSummaryItem
 from cora.run.features.record_witnessed_run.command import RecordWitnessedRun
+from cora.run.features.record_witnessed_run_outcome.command import RecordWitnessedRunOutcome
+from cora.run.features.truncate_run.command import TruncateRun
 from cora.run.ports.capture_observer import CaptureObservation, CaptureObserverScope, CapturePhase
 from cora.shared.reach import ReachTier
 from tests.unit._helpers import build_deps
@@ -239,9 +242,55 @@ class _FakeRecordWitnessedRun:
         return self.run_id
 
 
+class _FakeRecordWitnessedRunOutcome:
+    """Fake `record_witnessed_run_outcome` handler: records every call,
+    returns None, or raises a configured exception instead."""
+
+    def __init__(self, *, raises: Exception | None = None) -> None:
+        self.raises = raises
+        self.calls: list[RecordWitnessedRunOutcome] = []
+
+    async def __call__(
+        self,
+        command: RecordWitnessedRunOutcome,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> None:
+        self.calls.append(command)
+        if self.raises is not None:
+            raise self.raises
+
+
+class _FakeTruncateRun:
+    """Fake `truncate_run` handler: records every call, returns None, or
+    raises a configured exception instead."""
+
+    def __init__(self, *, raises: Exception | None = None) -> None:
+        self.raises = raises
+        self.calls: list[TruncateRun] = []
+
+    async def __call__(
+        self,
+        command: TruncateRun,
+        *,
+        principal_id: UUID,
+        correlation_id: UUID,
+        causation_id: UUID | None = None,
+        surface_id: UUID = NIL_SENTINEL_ID,
+    ) -> None:
+        self.calls.append(command)
+        if self.raises is not None:
+            raise self.raises
+
+
 def _recorder(
     *,
     record_witnessed_run: _FakeRecordWitnessedRun,
+    record_witnessed_run_outcome: _FakeRecordWitnessedRunOutcome | None = None,
+    truncate_run: _FakeTruncateRun | None = None,
     run_witness_recording_enabled: bool = True,
     capture_watch_plan_id: UUID | None = _PLAN_ID,
     open_captures: dict[str, UUID] | None = None,
@@ -250,9 +299,13 @@ def _recorder(
         run_witness_recording_enabled=run_witness_recording_enabled,
         capture_watch_plan_id=capture_watch_plan_id,
     )
+    outcome = record_witnessed_run_outcome or _FakeRecordWitnessedRunOutcome()
+    truncate = truncate_run or _FakeTruncateRun()
     return RunWitnessRecorder(
         deps=build_deps(ids=[uuid4() for _ in range(10)]),
         record_witnessed_run=record_witnessed_run,
+        record_witnessed_run_outcome=outcome,
+        truncate_run=truncate,
         settings=settings,
         open_captures=open_captures,
     )
@@ -274,15 +327,43 @@ async def test_run_witness_recorder_promotes_a_begun_capture_while_idle() -> Non
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_does_not_repromote_a_begun_capture_while_open() -> None:
-    fake = _FakeRecordWitnessedRun()
-    recorder = _recorder(record_witnessed_run=fake)
+async def test_run_witness_recorder_truncates_stale_run_and_repromotes_on_a_second_begun() -> None:
+    """A second BEGUN for a code that is already open means the previous
+    terminal was missed: truncate the stale Run (interrupted_at=None,
+    the moment it actually ended is unknown), then promote a new one."""
+    stale_run_id = uuid4()
+    fresh_run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=stale_run_id)
+    truncate = _FakeTruncateRun()
+    recorder = _recorder(record_witnessed_run=genesis, truncate_run=truncate)
+
+    begun = _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)
+    await recorder.observe_capture(begun)
+
+    genesis.run_id = fresh_run_id
+    await recorder.observe_capture(begun)
+
+    assert len(genesis.calls) == 2
+    assert len(truncate.calls) == 1
+    truncate_command = truncate.calls[0]
+    assert truncate_command.run_id == stale_run_id
+    assert truncate_command.interrupted_at is None
+
+
+@pytest.mark.unit
+async def test_run_witness_recorder_promotes_even_when_the_stale_truncate_fails() -> None:
+    """The new capture is a real fact regardless of whether the stale Run
+    could be closed: a truncate failure must not block the promotion."""
+    genesis = _FakeRecordWitnessedRun()
+    truncate = _FakeTruncateRun(raises=RuntimeError("Run already terminal"))
+    recorder = _recorder(record_witnessed_run=genesis, truncate_run=truncate)
 
     begun = _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)
     await recorder.observe_capture(begun)
     await recorder.observe_capture(begun)
 
-    assert len(fake.calls) == 1
+    assert len(genesis.calls) == 2
+    assert len(truncate.calls) == 1
 
 
 @pytest.mark.unit
@@ -313,49 +394,116 @@ async def test_run_witness_recorder_logs_a_distinct_event_on_unauthorized() -> N
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_clears_on_ended_while_open() -> None:
+async def test_run_witness_recorder_records_ended_outcome_while_open() -> None:
     run_id = uuid4()
-    fake = _FakeRecordWitnessedRun(run_id=run_id)
-    recorder = _recorder(record_witnessed_run=fake, open_captures={_CODE: run_id})
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    outcome = _FakeRecordWitnessedRunOutcome()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=outcome,
+        open_captures={_CODE: run_id},
+    )
 
     await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    assert len(outcome.calls) == 1
+    command = outcome.calls[0]
+    assert command.run_id == run_id
+    assert command.capture_code == _CODE
+    assert command.observed_phase is CapturePhase.ENDED
+    assert command.observed_at == _NOW
+    assert command.trigger == "Monitor"
+    assert command.monitor_source_id == RUN_WITNESS_MONITOR_SOURCE_ID
 
     # Reopening after the close promotes again: proves the entry was
     # actually cleared, not merely left stale.
     await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
-    assert len(fake.calls) == 1
+    assert len(genesis.calls) == 1
 
 
 @pytest.mark.unit
-async def test_run_witness_recorder_clears_on_aborted_while_open() -> None:
+async def test_run_witness_recorder_records_aborted_outcome_while_open() -> None:
     run_id = uuid4()
-    fake = _FakeRecordWitnessedRun(run_id=run_id)
-    recorder = _recorder(record_witnessed_run=fake, open_captures={_CODE: run_id})
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    outcome = _FakeRecordWitnessedRunOutcome()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=outcome,
+        open_captures={_CODE: run_id},
+    )
 
     await recorder.observe_capture(_obs(reported_status="Scan aborted", phase=CapturePhase.ABORTED))
+    assert outcome.calls[0].observed_phase is CapturePhase.ABORTED
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+    assert len(genesis.calls) == 1
+
+
+@pytest.mark.unit
+async def test_run_witness_recorder_leaves_entry_open_after_a_failed_outcome() -> None:
+    """A failed outcome write leaves the entry open; the next BEGUN
+    truncates it (recovering via the same path as a missed terminal)
+    rather than the failure being silently swallowed."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun()
+    outcome = _FakeRecordWitnessedRunOutcome(raises=RuntimeError("append failed"))
+    truncate = _FakeTruncateRun()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=outcome,
+        truncate_run=truncate,
+        open_captures={_CODE: run_id},
+    )
+
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
     await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
 
-    assert len(fake.calls) == 1
+    assert len(truncate.calls) == 1
+    assert truncate.calls[0].run_id == run_id
+    assert len(genesis.calls) == 1
+
+
+@pytest.mark.unit
+async def test_run_witness_recorder_logs_a_distinct_event_on_outcome_unauthorized() -> None:
+    run_id = uuid4()
+    outcome = _FakeRecordWitnessedRunOutcome(raises=UnauthorizedError("not granted"))
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        record_witnessed_run_outcome=outcome,
+        open_captures={_CODE: run_id},
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        await recorder.observe_capture(
+            _obs(reported_status="Scan complete", phase=CapturePhase.ENDED)
+        )
+
+    events = [entry["event"] for entry in logs]
+    assert "run_witness.outcome_unauthorized" in events
 
 
 @pytest.mark.unit
 async def test_run_witness_recorder_noop_on_ended_while_idle() -> None:
-    fake = _FakeRecordWitnessedRun()
-    recorder = _recorder(record_witnessed_run=fake)
+    genesis = _FakeRecordWitnessedRun()
+    outcome = _FakeRecordWitnessedRunOutcome()
+    recorder = _recorder(record_witnessed_run=genesis, record_witnessed_run_outcome=outcome)
 
     await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
 
-    assert fake.calls == []
+    assert genesis.calls == []
+    assert outcome.calls == []
 
 
 @pytest.mark.unit
 async def test_run_witness_recorder_noop_on_aborted_while_idle() -> None:
-    fake = _FakeRecordWitnessedRun()
-    recorder = _recorder(record_witnessed_run=fake)
+    genesis = _FakeRecordWitnessedRun()
+    outcome = _FakeRecordWitnessedRunOutcome()
+    recorder = _recorder(record_witnessed_run=genesis, record_witnessed_run_outcome=outcome)
 
     await recorder.observe_capture(_obs(reported_status="Scan aborted", phase=CapturePhase.ABORTED))
 
-    assert fake.calls == []
+    assert genesis.calls == []
+    assert outcome.calls == []
 
 
 @pytest.mark.unit
@@ -424,21 +572,35 @@ async def test_run_witness_recorder_is_a_pass_through_when_recording_disabled() 
 
 @pytest.mark.unit
 async def test_run_witness_lifespan_seeds_open_captures_from_the_supplied_map() -> None:
+    """A code seeded as open at construction reads OPEN: a BEGUN for it
+    goes through the truncate-then-promote recovery path rather than a
+    blind idle-promote, proving the supplied map was actually consulted."""
     run_id = uuid4()
-    fake = _FakeRecordWitnessedRun()
+    genesis = _FakeRecordWitnessedRun()
+    truncate = _FakeTruncateRun()
     observer = _FakeObserver([_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)])
-    deps = build_deps()
+    deps = dataclasses.replace(
+        build_deps(ids=[uuid4() for _ in range(10)]),
+        settings=Settings(  # type: ignore[call-arg]
+            run_witness_recording_enabled=True,
+            capture_watch_plan_id=_PLAN_ID,
+        ),
+    )
 
     async with run_witness_lifespan(
         observer=observer,
         capture_codes=frozenset({_CODE}),
         deps=deps,
-        record_witnessed_run=fake,
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+        truncate_run=truncate,
         open_captures={_CODE: run_id},
     ):
         await asyncio.sleep(0.02)
 
-    assert fake.calls == []
+    assert len(truncate.calls) == 1
+    assert truncate.calls[0].run_id == run_id
+    assert len(genesis.calls) == 1
 
 
 @pytest.mark.unit
