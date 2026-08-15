@@ -237,7 +237,7 @@
 | src/cora/api/\_agent\_decision\_signing.py                                               |       10 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/api/\_calibration\_watcher.py                                                   |       59 |        1 |       10 |        1 |     97.1% |       145 |
 | src/cora/api/\_campaign\_watcher.py                                                      |       61 |        0 |       12 |        0 |    100.0% |           |
-| src/cora/api/\_capture\_observer.py                                                      |      146 |        4 |       40 |        1 |     96.2% |153-154, 337-338 |
+| src/cora/api/\_capture\_observer.py                                                      |      146 |        4 |       40 |        1 |     96.2% |159-160, 344-345 |
 | src/cora/api/\_capture\_progress\_feeder.py                                              |       78 |        6 |       16 |        0 |     93.6% |226, 268, 289-292 |
 | src/cora/api/\_clearance\_expirer.py                                                     |      109 |        1 |       14 |        0 |     99.2% |       297 |
 | src/cora/api/\_clearance\_watcher.py                                                     |       79 |        1 |       22 |        1 |     98.0% |       162 |
@@ -255,6 +255,7 @@
 | src/cora/api/\_run\_phase\_conduct.py                                                    |       36 |        1 |        4 |        1 |     95.0% |       191 |
 | src/cora/api/\_run\_supervisor.py                                                        |      450 |       22 |      172 |       16 |     93.6% |250, 591-592, 736-737, 794, 820, 823, 829, 831, 857-858, 1031-\>1041, 1201, 1204, 1207, 1210, 1212-1213, 1216, 1219, 1376-\>1345, 1456, 1479 |
 | src/cora/api/\_run\_witness.py                                                           |      227 |       15 |       72 |        5 |     93.3% |421-425, 441, 487, 504, 506, 531, 553, 639-\>638, 671, 723, 734-737, 742 |
+| src/cora/api/capture\_watch\_preflight.py                                                |       97 |        0 |       20 |        0 |    100.0% |           |
 | src/cora/api/errors.py                                                                   |        9 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/api/main.py                                                                     |      377 |        7 |       42 |        4 |     97.4% |381-\>380, 665-666, 1113-1125, 1228-\>1233, 1235-\>1238 |
 | src/cora/api/middleware.py                                                               |       31 |        0 |        6 |        0 |    100.0% |           |
@@ -2643,7 +2644,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **57583** | **1335** | **8484** |  **398** | **97.1%** |           |
+| **TOTAL**                                                                                | **57680** | **1335** | **8504** |  **398** | **97.2%** |           |
 
 
 ## Setup coverage badge
