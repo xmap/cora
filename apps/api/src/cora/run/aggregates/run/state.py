@@ -276,6 +276,145 @@ class RunStatus(StrEnum):
     TRUNCATED = "Truncated"
 
 
+class ConductMode(StrEnum):
+    """Who drove this Run's act: CORA's own Conductor, or an external tool.
+
+    Reifies the axis `docs/reference/modeling.md`'s "Run vs Procedure
+    boundary" section names in prose but never encoded: "Conducted vs
+    recorded (who drives the act) ... Both Runs and Procedures span
+    both modes." Orthogonal to `RunStatus`: every status transition is
+    reachable under either mode, and the mode never changes once set
+    at genesis.
+
+    `CONDUCTED` is CORA's own Conductor driving the act (every Run
+    started today, via `_run_initiator.py` or a phase-conduct bridge,
+    is Conducted). `WITNESSED` is an externally-driven act CORA only
+    observes after the fact, for example a 2-BM tomoscan scan witnessed
+    by `RunWitness` (see `cora.api._run_witness`) and promoted via
+    `record_witnessed_run`.
+
+    Named `WITNESSED`, not `RECORDED`: every Conducted Run is ALSO
+    recorded (in the event store, in `proj_run_summary`, in the export
+    bundle), so `RECORDED` was not actually a contrast pair with
+    `CONDUCTED` -- it answered a different question ("how did this
+    fact enter CORA") that happens to be true of both modes at once.
+    `WITNESSED` is the only candidate mutually exclusive with
+    `CONDUCTED`: CORA does not merely witness a Run it drove. This is
+    also the governing rule `record_witnessed_run/decider.py` states
+    verbatim: "refuse on what CORA can fix, witness what CORA cannot."
+    This is a provenance label, not an attestation guarantee: it says
+    CORA observed the act, not that the observation was independently
+    verified.
+
+    Named `conduct_mode`, not bare `mode`, on the `Run` field: Run
+    already carries a neighboring "how was this driven" fact,
+    `actuation_kind` (raw `ActuationKind`, stamped by the compute
+    CONDUCT runtime onto terminal events), and bare `mode` would read
+    ambiguously beside it.
+    """
+
+    CONDUCTED = "Conducted"
+    WITNESSED = "Witnessed"
+
+
+@dataclass(frozen=True)
+class SafetyEnvelopeVerdict:
+    """A recorded reading of the two live facility signals at a witnessed
+    genesis: did the enclosure permit hold, was beam available.
+
+    Plain bools only, deliberately. The record exporter's disposition
+    generator drops bare `str` and `Any`; `keep:number` covers `bool`, so
+    this VO survives export and redaction whole. Naming WHICH enclosure or
+    WHICH shutter failed is not this VO's job: that detail goes to the log
+    line at the moment of the reading and stays reconstructible from the
+    Enclosure stream in the same exported bundle.
+
+    Clearance and Supply are deliberately absent. Per the roadmap's rule
+    ("refuse on what CORA can fix, witness what CORA cannot"), those two
+    gates are CORA's own aggregates, not live facility readings, so they
+    stay refusals on every path (`check_safety_envelope` AND
+    `witness_safety_envelope` both raise on them); their passage is implied
+    by a `RunStarted` existing at all, the same reason `check_safety_envelope`
+    itself never persists a snapshot of the gates it enforces.
+
+    Lives beside `ConductMode` in this module (not in `events.py`, the
+    `CautionAcknowledgement` precedent's home) so that `safety_envelope.py`
+    and `events.py`, which both already import from `state.py`, gain no new
+    import edge to carry it.
+    """
+
+    enclosure_permitted: bool
+    beam_available: bool
+
+    @property
+    def all_gates_passed(self) -> bool:
+        """True only when every witnessed gate passed. Not a dataclass
+        field: a derived property never reaches the record-export
+        generator, which walks `dataclasses.fields()`. Named
+        `all_gates_passed`, not `held`: `Held` is already this module's
+        RunStatus vocabulary (a paused Run), and `verdict.held` would
+        read as the opposite of what it means here."""
+        return self.enclosure_permitted and self.beam_available
+
+
+@dataclass(frozen=True)
+class CaptureProgressSnapshot:
+    """The last progress counts CaptureObserver saw before a witnessed
+    capture's terminal, retained across the flush that clears them from
+    `CaptureProgressFeeder`'s own buffer.
+
+    Named `Snapshot`, not `Verdict`, deliberately: unlike
+    `SafetyEnvelopeVerdict`'s bools, these counts carry no judgment.
+    `wait_camera_done()`'s poll loop (upstream `tomoscan.py`) returns on
+    `CamAcquireBusy == 0` BEFORE its final `update_status()` call, so
+    `collected_count < collected_total` is the NORMAL terminal state of
+    a successful scan, not evidence of a shortfall, typically short by
+    about one poll interval's worth of frames. There is deliberately no
+    `all_counts_matched` property or similar: that would be exactly the
+    fabricated completeness verdict this type exists to avoid. A reader
+    who wants to judge tail lag against a frozen counter should compare
+    `collected_at` / `saved_at` against the owning `RunCompleted` /
+    `RunAborted` event's own `observed_at`; CORA deliberately does not
+    compute that comparison itself.
+
+    Field names are facility-neutral (`collected`, `saved`), not
+    `images_collected`, `images_saved`: this VO lives on the Run
+    aggregate's own event schema, which stays free of tomography
+    vocabulary the same way `CapturePhase` is documented
+    facility-neutral. A non-imaging deployment carries all-`None`
+    fields rather than a mismatched name.
+
+    The two totals (`collected_total`, `saved_total`) are kept separate
+    rather than assumed equal: they are independently sourced upstream
+    (2-BM's `CamNumImages` vs `FPNumCapture`), and a divergence between
+    them is itself evidence worth preserving, not noise to collapse.
+
+    Whole object is `None` when nothing was retained for either role
+    (never constructed with all fields `None`): absence means "no
+    reading reached CORA before this terminal", never "zero images".
+
+    `float`, not `int`, throughout: matches `CaptureProgressObservation
+    .value`'s type all the way from the substrate, and avoids inventing
+    a rounding rule for a non-integral reading CORA cannot explain.
+
+    Lives beside `SafetyEnvelopeVerdict` in this module for the same
+    reason: `events.py` already imports from `state.py`, so this adds
+    no new import edge.
+
+    `collected_at` / `saved_at` have no `_by` fact-act partner, and are
+    allowlisted in `test_fold_symmetry.py` on that basis: the physical
+    reading entity is TomoScan's camera or file-writer, not a CORA
+    Actor, the same shape as `data.Acquisition.captured_at`.
+    """
+
+    collected_count: float | None
+    collected_total: float | None
+    collected_at: datetime | None
+    saved_count: float | None
+    saved_total: float | None
+    saved_at: datetime | None
+
+
 class InvalidRunNameError(ValueError):
     """The supplied name is empty, whitespace-only, or too long."""
 
@@ -294,12 +433,100 @@ class RunAlreadyExistsError(Exception):
         self.run_id = run_id
 
 
+class RunMonitorTriggerNotPermittedError(Exception):
+    """A witnessed-path command carried a non-Monitor trigger.
+
+    Shared by both witnessed-path commands, `record_witnessed_run` (the
+    genesis) and `record_witnessed_run_outcome` (the terminal): the same
+    invariant governs both ends of a witnessed Run's lifecycle, so one
+    error class enforces it rather than a near-duplicate per slice.
+
+    Mirrors the Enclosure BC's `MonitorTriggerNotPermittedError`
+    (`observe_enclosure_status`, D6.L2 observation-axis-only anti-lock):
+    a witnessed act is reachable only via Monitor-driven inbound
+    observation from the substrate; there is no operator path to it. Each
+    command surface types `monitor_source_id` as `MonitorSourceId` so an
+    operator cannot supply non-Monitor attribution at the type level;
+    this error fences the same invariant defensively at the decider so a
+    programmer mistake in a custom handler, test fixture, or future
+    adapter cannot smuggle an operator-asserted act onto the spine
+    through the witnessed path.
+
+    HTTP 400 (semantically a request the caller cannot issue, not a
+    state-transition conflict).
+    """
+
+    def __init__(self, run_id: UUID, trigger: str) -> None:
+        super().__init__(
+            f"Run {run_id}: trigger {trigger!r} is not permitted on a "
+            f"witnessed-path command; only 'Monitor' is accepted per the "
+            f"observation-axis-only anti-lock."
+        )
+        self.run_id = run_id
+        self.trigger = trigger
+
+
+class RunCapturePhaseNotTerminalError(Exception):
+    """`record_witnessed_run_outcome` carried a non-terminal observed phase.
+
+    The command exists to record ONE of the two facts a witnessed
+    capture's lifecycle can end on, `Ended` or `Aborted`; every other
+    `CapturePhase` value (`Begun`, `Progressing`, `Unrecognized`) is
+    something the RunWitness runtime already handles without touching
+    the Run aggregate at all (dedup, or a no-op). A caller reaching this
+    decider with a non-terminal phase is a programmer mistake in the
+    runtime's own dispatch, not a fact about the world, so this is a
+    request-shape rejection like `RunMonitorTriggerNotPermittedError`,
+    checked before touching any state.
+
+    HTTP 400.
+    """
+
+    def __init__(self, run_id: UUID, observed_phase: str) -> None:
+        super().__init__(
+            f"Run {run_id}: observed_phase '{observed_phase}' is not a terminal "
+            f"capture phase; record_witnessed_run_outcome accepts only Ended or "
+            f"Aborted."
+        )
+        self.run_id = run_id
+        self.observed_phase = observed_phase
+
+
 class RunNotFoundError(Exception):
     """Attempted an operation on a run whose stream has no events."""
 
     def __init__(self, run_id: UUID) -> None:
         super().__init__(f"Run {run_id} not found")
         self.run_id = run_id
+
+
+class RunNotWitnessedError(Exception):
+    """`record_witnessed_run_outcome` targeted a Conducted Run.
+
+    The RunWitness runtime is granted this command so it can terminate
+    the Runs it itself created; a Conducted Run's terminal belongs
+    exclusively to `complete_run` / `abort_run` / `stop_run` /
+    `truncate_run`, reached by an operator or the RunSupervisor, never by
+    the monitor. `conduct_mode` is immutable after genesis
+    (see `ConductMode`'s own docstring), so this can never become true
+    later for a Run where it is false now; there is no retry that fixes
+    it. Checked defensively at the decider, mirroring
+    `RunMonitorTriggerNotPermittedError`'s posture, rather than trusting
+    the runtime's own bookkeeping never to misdirect a call: without
+    this guard, a granted RunWitness principal could terminate any
+    operator-driven Run.
+
+    HTTP 400 (the command itself does not apply to this Run, not a
+    timing conflict with its current status).
+    """
+
+    def __init__(self, run_id: UUID, conduct_mode: str) -> None:
+        super().__init__(
+            f"Run {run_id} cannot be recorded via record_witnessed_run_outcome: "
+            f"conduct_mode is '{conduct_mode}', not 'Witnessed'."
+        )
+        self.run_id = run_id
+        self.conduct_mode = conduct_mode
 
 
 class RunBoundPlanDeprecatedError(Exception):
@@ -1111,6 +1338,30 @@ class InvalidRunInterruptedAtError(ValueError):
         self.now = now
 
 
+class InvalidRunObservedAtError(ValueError):
+    """The supplied witnessed-outcome `observed_at` is in the future relative to `now`.
+
+    Same shape and same rationale as `InvalidRunInterruptedAtError`:
+    `observed_at` is the substrate's own claim about when a capture
+    ended or aborted, separate from `occurred_at` (when
+    `record_witnessed_run_outcome` was processed). A substrate cannot
+    report a time later than CORA's own clock at receipt, so this
+    catches a malformed or clock-skewed adapter reading before it
+    reaches the record.
+
+    Mapped to HTTP 400.
+    """
+
+    def __init__(self, observed_at: datetime, now: datetime) -> None:
+        super().__init__(
+            f"Run witnessed-outcome observed_at {observed_at.isoformat()} is in the "
+            f"future (now is {now.isoformat()}); the substrate cannot have reported "
+            f"this later than CORA learned of it"
+        )
+        self.observed_at = observed_at
+        self.now = now
+
+
 @dataclass(frozen=True)
 class RunTruncateReason:
     """Free-form truncate reason. Trimmed; 1-500 chars.
@@ -1292,6 +1543,14 @@ class Run:
     subject_id: UUID | None
     raid: str | None = None
     status: RunStatus = RunStatus.RUNNING
+    # who drove this act: CORA's own Conductor, or an external tool CORA
+    # only observes. Set once at genesis (RunStarted.conduct_mode) and
+    # IMMUTABLE thereafter: every transition arm in the evolver threads
+    # `prior.conduct_mode` verbatim, same as `pinned_calibration_ids`.
+    # Never Optional: a Run's cause is always one of the two named
+    # values, declared explicitly by the genesis command, never
+    # inferred. See `ConductMode`'s own docstring.
+    conduct_mode: ConductMode = ConductMode.CONDUCTED
     override_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     effective_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     trigger_source: str | None = None

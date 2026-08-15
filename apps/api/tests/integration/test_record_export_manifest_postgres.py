@@ -92,7 +92,7 @@ async def test_manifest_built_from_a_real_export(db_pool: asyncpg.Pool) -> None:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
 
-    manifest = build_manifest(exported, watermark=1, git_commit=capture_git_commit())
+    manifest = build_manifest(exported, git_commit=capture_git_commit())
 
     assert manifest.record_hash == hash_record(exported)
     assert len(manifest.redaction_profile_hash) == 64
@@ -101,5 +101,53 @@ async def test_manifest_built_from_a_real_export(db_pool: asyncpg.Pool) -> None:
     # No Run stream in this fixture (parent_run_id=None, no RunStarted
     # seeded), so the per-run map must be empty, not crash.
     assert manifest.expansion_digest_presence_by_run == {}
-    # No observation rows in this fixture: vacuously simulated.
-    assert manifest.is_simulated is True
+    # No observation rows in this fixture: vacuously NOT simulated,
+    # matching the Run BC's bool_or(is_simulated) identity on an empty set.
+    assert manifest.is_simulated is False
+
+
+@pytest.mark.integration
+async def test_watermark_is_the_real_captured_xmin_not_the_zero_default(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """`ExportedRecord.watermark` defaults to 0 for hand-built test
+    fixtures; a real export must never rely on that default. This is the
+    end-to-end proof the unit tests (which only check that `build_manifest`
+    reads back whatever a synthetic `ExportedRecord` carries) cannot give:
+    a real `capture_watermark()` call against live Postgres returns a
+    genuine, large `xid8`-derived integer, and it must reach the manifest
+    unchanged."""
+    procedure_id = uuid4()
+    registered = ProcedureRegistered(
+        procedure_id=procedure_id,
+        name="Watermark probe",
+        kind="bakeout",
+        target_asset_ids=(),
+        parent_run_id=None,
+        occurred_at=_NOW,
+    )
+    new_event = to_new_event(
+        event_type=event_type_name(registered),
+        payload=to_payload(registered),
+        occurred_at=registered.occurred_at,
+        event_id=uuid4(),
+        command_name="RegisterProcedure",
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+    )
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[uuid4(), uuid4()])
+    await deps.event_store.append(
+        stream_type="Procedure", stream_id=procedure_id, expected_version=0, events=[new_event]
+    )
+
+    async with db_pool.acquire() as conn:
+        pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
+        exported = await export_record(pg_conn)
+
+    assert exported.watermark > 0, (
+        "a real export's watermark must be a genuine captured xmin, never the "
+        "0 default hand-built ExportedRecord fixtures fall back to"
+    )
+
+    manifest = build_manifest(exported, git_commit=capture_git_commit())
+    assert manifest.watermark == exported.watermark

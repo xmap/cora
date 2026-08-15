@@ -290,11 +290,11 @@ async def test_handler_rejects_unknown_sampling_procedure() -> None:
 
 
 def _make_completed(rid: UUID) -> RunCompleted:
-    return RunCompleted(run_id=rid, occurred_at=_NOW)
+    return RunCompleted(run_id=rid, occurred_at=_NOW, observed_at=None)
 
 
 def _make_aborted(rid: UUID) -> RunAborted:
-    return RunAborted(run_id=rid, reason="emergency", occurred_at=_NOW)
+    return RunAborted(run_id=rid, reason="emergency", occurred_at=_NOW, observed_at=None)
 
 
 def _make_stopped(rid: UUID) -> RunStopped:

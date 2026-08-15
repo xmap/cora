@@ -10,6 +10,7 @@ import pytest
 from cora.run.aggregates.run import (
     LEGACY_CAUSE,
     LEGACY_CLAIM_ID,
+    ConductMode,
     Run,
     RunName,
     RunStatus,
@@ -35,6 +36,7 @@ def _run_started(
     run_id: UUID | None = None,
     plan_id: UUID | None = None,
     subject_id: UUID | None = None,
+    conduct_mode: ConductMode = ConductMode.CONDUCTED,
 ) -> RunStarted:
     """Test helper: RunStarted with sensible defaults."""
     return RunStarted(
@@ -42,6 +44,7 @@ def _run_started(
         name="32-ID FlyScan",
         plan_id=plan_id or uuid4(),
         subject_id=subject_id,
+        conduct_mode=conduct_mode,
         occurred_at=_NOW,
     )
 
@@ -80,6 +83,38 @@ def test_evolve_run_started_without_subject_sets_subject_id_to_none() -> None:
 
 
 @pytest.mark.unit
+def test_evolve_run_started_defaults_conduct_mode_to_conducted() -> None:
+    """Every StartRun caller today is Conducted; the default declares that
+    closed, currently-total fact rather than inferring it."""
+    state = evolve(None, _run_started())
+    assert state.conduct_mode is ConductMode.CONDUCTED
+
+
+@pytest.mark.unit
+def test_evolve_run_started_honors_explicit_witnessed_conduct_mode() -> None:
+    """A Witnessed genesis (record_witnessed_run's decider) must declare
+    its mode explicitly; the evolver copies it verbatim, never computing
+    or guessing it."""
+    state = evolve(None, _run_started(conduct_mode=ConductMode.WITNESSED))
+    assert state.conduct_mode is ConductMode.WITNESSED
+
+
+@pytest.mark.unit
+def test_conduct_mode_survives_hold_resume_complete_round_trip() -> None:
+    """conduct_mode is immutable after genesis: it must ride through every
+    transition arm unchanged, same as pinned_calibration_ids."""
+    started = _run_started(conduct_mode=ConductMode.WITNESSED)
+    running = evolve(None, started)
+    held = evolve(running, RunHeld(run_id=started.run_id, occurred_at=_NOW))
+    resumed = evolve(held, RunResumed(run_id=started.run_id, occurred_at=_NOW))
+    completed = evolve(
+        resumed, RunCompleted(run_id=started.run_id, occurred_at=_NOW, observed_at=None)
+    )
+    for state in (running, held, resumed, completed):
+        assert state.conduct_mode is ConductMode.WITNESSED
+
+
+@pytest.mark.unit
 def test_fold_empty_event_list_returns_none() -> None:
     assert fold([]) is None
 
@@ -106,7 +141,9 @@ def test_fold_is_pure_same_input_same_output() -> None:
 def test_evolve_run_completed_transitions_to_completed_preserving_other_fields() -> None:
     started = _run_started()
     state = evolve(None, started)
-    completed = evolve(state, RunCompleted(run_id=started.run_id, occurred_at=_NOW))
+    completed = evolve(
+        state, RunCompleted(run_id=started.run_id, occurred_at=_NOW, observed_at=None)
+    )
     assert completed == replace(state, status=RunStatus.COMPLETED)
     assert completed.status is RunStatus.COMPLETED
 
@@ -117,7 +154,9 @@ def test_evolve_run_aborted_transitions_to_aborted_preserving_other_fields() -> 
     state = evolve(None, started)
     aborted = evolve(
         state,
-        RunAborted(run_id=started.run_id, reason="detector overheating", occurred_at=_NOW),
+        RunAborted(
+            run_id=started.run_id, reason="detector overheating", occurred_at=_NOW, observed_at=None
+        ),
     )
     assert aborted == replace(state, status=RunStatus.ABORTED)
     assert aborted.status is RunStatus.ABORTED
@@ -128,19 +167,19 @@ def test_evolve_run_completed_on_none_state_raises() -> None:
     """Defensive guard: a transition event before a genesis means
     the stream is contaminated. Fail loud rather than silently fold."""
     with pytest.raises(ValueError, match="RunCompleted cannot be applied to empty state"):
-        evolve(None, RunCompleted(run_id=uuid4(), occurred_at=_NOW))
+        evolve(None, RunCompleted(run_id=uuid4(), occurred_at=_NOW, observed_at=None))
 
 
 @pytest.mark.unit
 def test_evolve_run_aborted_on_none_state_raises() -> None:
     with pytest.raises(ValueError, match="RunAborted cannot be applied to empty state"):
-        evolve(None, RunAborted(run_id=uuid4(), reason="X", occurred_at=_NOW))
+        evolve(None, RunAborted(run_id=uuid4(), reason="X", occurred_at=_NOW, observed_at=None))
 
 
 @pytest.mark.unit
 def test_fold_started_then_completed_yields_completed() -> None:
     started = _run_started()
-    state = fold([started, RunCompleted(run_id=started.run_id, occurred_at=_NOW)])
+    state = fold([started, RunCompleted(run_id=started.run_id, occurred_at=_NOW, observed_at=None)])
     assert state is not None
     assert state.status is RunStatus.COMPLETED
 
@@ -151,7 +190,9 @@ def test_fold_started_then_aborted_yields_aborted_and_preserves_run_fields() -> 
     plan_id = uuid4()
     subject_id = uuid4()
     started = _run_started(run_id=run_id, plan_id=plan_id, subject_id=subject_id)
-    state = fold([started, RunAborted(run_id=run_id, reason="beam dump", occurred_at=_NOW)])
+    state = fold(
+        [started, RunAborted(run_id=run_id, reason="beam dump", occurred_at=_NOW, observed_at=None)]
+    )
     assert state is not None
     assert state.id == run_id
     assert state.plan_id == plan_id
@@ -233,7 +274,7 @@ def test_fold_multi_cycle_hold_resume_then_complete_yields_completed() -> None:
             RunResumed(run_id=run_id, occurred_at=_NOW),
             RunHeld(run_id=run_id, occurred_at=_NOW),
             RunResumed(run_id=run_id, occurred_at=_NOW),
-            RunCompleted(run_id=run_id, occurred_at=_NOW),
+            RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None),
         ]
     )
     assert state is not None
@@ -249,7 +290,9 @@ def test_fold_started_then_held_then_aborted_yields_aborted() -> None:
         [
             started,
             RunHeld(run_id=run_id, occurred_at=_NOW),
-            RunAborted(run_id=run_id, reason="emergency during hold", occurred_at=_NOW),
+            RunAborted(
+                run_id=run_id, reason="emergency during hold", occurred_at=_NOW, observed_at=None
+            ),
         ]
     )
     assert state is not None
@@ -389,7 +432,9 @@ def test_fold_preserves_raid_across_every_transition_path(
     raid_value = "https://raid.org/10.7935/cora-fold-test"
     events: list[object] = [_run_started_with_raid(run_id=run_id, raid=raid_value)]
     for cls in transitions:
-        if cls is RunAborted or cls is RunStopped:
+        if cls is RunAborted:
+            events.append(RunAborted(run_id=run_id, reason="X", occurred_at=_NOW, observed_at=None))
+        elif cls is RunStopped:
             events.append(cls(run_id=run_id, reason="X", occurred_at=_NOW))
         elif cls is RunTruncated:
             events.append(
@@ -400,6 +445,8 @@ def test_fold_preserves_raid_across_every_transition_path(
                     occurred_at=_NOW,
                 )
             )
+        elif cls is RunCompleted:
+            events.append(RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None))
         else:
             events.append(cls(run_id=run_id, occurred_at=_NOW))
     state = fold(events)  # type: ignore[arg-type]
@@ -507,7 +554,7 @@ def test_evolve_terminal_after_logbook_opened_preserves_logbook_id() -> None:
                 schema=OBSERVATION_LOGBOOK_SCHEMA,
                 occurred_at=_NOW,
             ),
-            RunCompleted(run_id=run_id, occurred_at=_NOW),
+            RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None),
         ]
     )
     assert state is not None
@@ -516,11 +563,11 @@ def test_evolve_terminal_after_logbook_opened_preserves_logbook_id() -> None:
 
 
 def _make_completed(rid: UUID) -> RunCompleted:
-    return RunCompleted(run_id=rid, occurred_at=_NOW)
+    return RunCompleted(run_id=rid, occurred_at=_NOW, observed_at=None)
 
 
 def _make_aborted(rid: UUID) -> RunAborted:
-    return RunAborted(run_id=rid, reason="emergency", occurred_at=_NOW)
+    return RunAborted(run_id=rid, reason="emergency", occurred_at=_NOW, observed_at=None)
 
 
 def _make_stopped(rid: UUID) -> RunStopped:
@@ -619,7 +666,7 @@ def test_legacy_stream_without_reading_logbook_folds_with_none_reading_logbook_i
                 subject_id=None,
                 occurred_at=_NOW,
             ),
-            RunCompleted(run_id=run_id, occurred_at=_NOW),
+            RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None),
         ]
     )
     assert state is not None
@@ -764,7 +811,7 @@ def test_campaign_id_survives_lifecycle_transitions() -> None:
             ),
             RunHeld(run_id=run_id, occurred_at=_NOW),
             RunResumed(run_id=run_id, occurred_at=_NOW),
-            RunCompleted(run_id=run_id, occurred_at=_NOW),
+            RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None),
         ]
     )
     assert state is not None
@@ -787,7 +834,7 @@ def test_legacy_run_stream_without_campaign_id_folds_to_none() -> None:
                 subject_id=None,
                 occurred_at=_NOW,
             ),
-            RunCompleted(run_id=run_id, occurred_at=_NOW),
+            RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None),
         ]
     )
     assert state is not None
@@ -997,7 +1044,7 @@ def test_legacy_run_stream_without_run_adjusted_folds_to_zero_count() -> None:
                 subject_id=None,
                 occurred_at=_NOW,
             ),
-            RunCompleted(run_id=run_id, occurred_at=_NOW),
+            RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None),
         ]
     )
     assert state is not None

@@ -42,10 +42,13 @@ from pathlib import Path
 from typing import Any, Literal, NewType, Union, get_args, get_origin
 from uuid import UUID
 
+from cora.shared.closed_value import ClosedValueObject
+
 _API_ROOT = Path(__file__).resolve().parents[1]
 _SRC = _API_ROOT / "src"
 _OUT = _SRC / "cora" / "infrastructure" / "record_export" / "_dispositions.py"
 
+KEEP_CLOSED = "keep:closed"
 KEEP_ENUM = "keep:enum"
 KEEP_NUMBER = "keep:number"
 KEEP_TIME = "keep:time"
@@ -53,6 +56,49 @@ TOKEN_UUID = "token:uuid"
 DROP_TEXT = "drop:text"
 DROP_OPAQUE = "drop:opaque"
 BY_VALUE = "by-value"
+
+# A field's dataclass name occasionally differs, DELIBERATELY, from the
+# key `to_payload` actually writes it under. Every entry here is a
+# documented design decision in the event module itself, not a typo:
+# `to_payload` and `from_stored` already agree with EACH OTHER on the
+# wire key, so nothing about the stored bytes changes; only the
+# generated table's lookup key does, so redaction can find the field it
+# already knows the wire calls something else. Renaming the dataclass
+# field instead was rejected for the Seal events specifically because
+# the wire key is under a cryptographic-chain immutability lock (Seal
+# events.py's own module docstring, `project_slice6_design` L7); the
+# other two follow the same convention for consistency across
+# Federation's identity-bearing events.
+_OVERRIDE_WIRE_KEYS: dict[tuple[str, str], str] = {
+    ("CredentialRegistered", "facility_code"): "facility_id",
+    ("PermitDefined", "peer_facility_code"): "peer_facility_id",
+    ("SealInitialized", "facility_code"): "facility_id",
+    ("SealPointerSigned", "facility_code"): "facility_id",
+    ("SealOnlineKeyRotated", "facility_code"): "facility_id",
+    ("SealRepublishingStarted", "facility_code"): "facility_id",
+    ("SealRepublishingCompleted", "facility_code"): "facility_id",
+}
+
+# A field's TYPE-DRIVEN disposition is occasionally the wrong call for
+# what the field actually names, not what it happens to be declared as.
+# Every entry here is a documented design decision, not a generic
+# catch-all: `bool` defaults to `keep:number` (see `_SCALAR_KEEP`) because
+# most booleans are operator-facing flags safe to publish whole, but
+# `SafetyEnvelopeVerdict.enclosure_permitted` / `.beam_available` are a
+# point-in-time reading of live PSS/interlock and beam-shutter facility
+# state -- the same class of fact `EnclosurePermitObserved.from_status` /
+# `.to_status` already treat as `drop:text` (dropped entirely), not
+# `keep:*`. Gate-review finding (record/publishing lens, watched-genesis
+# review): the two events described the same category of fact but got
+# opposite export treatment purely because one used `str` and the other
+# `bool`. Keeping the fields genuinely typed `bool` (correct domain
+# modeling; no `str` coercion) while overriding their export disposition
+# to match the precedent this table already sets for the same class of
+# reading.
+_OVERRIDE_DISPOSITIONS: dict[tuple[str, str], str] = {
+    ("SafetyEnvelopeVerdict", "enclosure_permitted"): DROP_TEXT,
+    ("SafetyEnvelopeVerdict", "beam_available"): DROP_TEXT,
+}
 
 _SCALAR_KEEP: Mapping[type, str] = {
     bool: KEEP_NUMBER,
@@ -158,6 +204,14 @@ def _classify(annotation: Any, event: str, field: str) -> str | dict[str, Any]:
             if annotation is scalar:
                 return disposition
         if _is_value_object(annotation):
+            if issubclass(annotation, ClosedValueObject):
+                # The whole VO closes its own range by construction (see
+                # `ClosedValueObject`'s docstring for the criterion); KEEP
+                # it whole rather than resolving field by field, so a
+                # bare `str` field inside it (a hex digest) does not fall
+                # through the generic drop-by-default rule that field
+                # would otherwise get on its own.
+                return f"{KEEP_CLOSED}:{annotation.__name__}"
             return _resolve_fields(annotation)
 
     origin = get_origin(annotation)
@@ -182,11 +236,30 @@ def _classify(annotation: Any, event: str, field: str) -> str | dict[str, Any]:
 
 
 def _resolve_fields(cls: type) -> dict[str, Any]:
-    """Disposition per field of one dataclass, recursing into value objects."""
+    """Disposition per field of one dataclass, recursing into value objects.
+
+    The table is keyed on the STORED key, per `_OVERRIDE_WIRE_KEYS`, when
+    a field's dataclass name deliberately differs from what `to_payload`
+    writes it under; every other field's key is just its own name. Only
+    ever consulted with `cls.__name__` as the class actually being
+    resolved, so an override keyed on an EVENT class name (e.g.
+    `("CredentialRegistered", "facility_code")`) cannot accidentally
+    apply while recursing into an unrelated nested value object that
+    happens to share a field name. `_OVERRIDE_DISPOSITIONS` replaces the
+    type-driven classification outright, under the same recursion-safety
+    guarantee, for the rarer case where the type's default answer is
+    wrong for what the field actually names (see that dict's docstring).
+    """
     hints = typing.get_type_hints(cls)
     out: dict[str, Any] = {}
     for spec in dataclasses.fields(cls):
-        out[spec.name] = _classify(hints[spec.name], cls.__name__, spec.name)
+        wire_key = _OVERRIDE_WIRE_KEYS.get((cls.__name__, spec.name), spec.name)
+        override = _OVERRIDE_DISPOSITIONS.get((cls.__name__, spec.name))
+        out[wire_key] = (
+            override
+            if override is not None
+            else _classify(hints[spec.name], cls.__name__, spec.name)
+        )
     return out
 
 
@@ -216,6 +289,52 @@ def _event_classes(module_name: str) -> Iterable[type]:
         yield obj
 
 
+def _wire_name(module_name: str, cls: type) -> str:
+    """The string this class is STORED under, asked of the real writer.
+
+    The table is keyed on `events.event_type`, and that is not reliably
+    the class name: `ActorRegistered` writes `"ActorRegisteredV2"`. A
+    generator that assumes the two agree produces a table the exporter
+    cannot look up, which is not a degraded export but no export at all,
+    since redaction refuses an unknown event type. Every real database
+    holds an Actor registration from bootstrap, so the redacted export
+    path was unreachable for every real record until this was fixed.
+
+    So the name is taken from each module's own `event_type_name`, the
+    same function the append path calls, rather than re-derived here.
+    Those functions discriminate on type alone, so an instance that was
+    never `__init__`ed answers correctly and no field values have to be
+    invented. If one ever reads a field, this raises and the run ABORTS,
+    matching how the tool treats an annotation it cannot classify: an
+    unanswerable question about the model, not a row to skip.
+    """
+    module = importlib.import_module(module_name)
+    resolve = getattr(module, "event_type_name", None)
+    if resolve is None:
+        raise RuntimeError(
+            f"{module_name} defines event classes but no `event_type_name`, so "
+            "the string they are stored under cannot be established. Add the "
+            "function, or the export table will key on a name that may not be "
+            "what the append path writes."
+        )
+    try:
+        name = resolve(object.__new__(cls))
+    except Exception as exc:
+        raise RuntimeError(
+            f"{module_name}.event_type_name failed on an uninitialised "
+            f"{cls.__name__} ({exc!r}). It reads a field rather than "
+            "discriminating on type, so this tool can no longer establish the "
+            "stored name without inventing values. Teach the tool about it "
+            "deliberately rather than falling back to the class name."
+        ) from exc
+    if not isinstance(name, str) or not name:
+        raise RuntimeError(
+            f"{module_name}.event_type_name returned {name!r} for "
+            f"{cls.__name__}; expected the non-empty string it is stored under."
+        )
+    return name
+
+
 def build_table(survey: bool = False) -> tuple[dict[str, dict[str, Any]], list[str]]:
     """Disposition per (event type, field) across every bounded context.
 
@@ -228,17 +347,19 @@ def build_table(survey: bool = False) -> tuple[dict[str, dict[str, Any]], list[s
     unclassified: list[str] = []
     for module_name in _event_modules():
         for cls in _event_classes(module_name):
-            if cls.__name__ in table:
+            wire_name = _wire_name(module_name, cls)
+            if wire_name in table:
                 raise RuntimeError(
-                    f"Duplicate event class name {cls.__name__!r}; the table is "
-                    "keyed on the bare name because that is what `events.event_type` "
-                    "stores. Rename one, or key on the qualified name."
+                    f"Duplicate stored event type {wire_name!r} (from class "
+                    f"{cls.__name__}); the table is keyed on what "
+                    "`events.event_type` stores. Rename one, or key on the "
+                    "qualified name."
                 )
             if not survey:
-                table[cls.__name__] = _resolve_fields(cls)
+                table[wire_name] = _resolve_fields(cls)
                 continue
             try:
-                table[cls.__name__] = _resolve_fields(cls)
+                table[wire_name] = _resolve_fields(cls)
             except UnclassifiedAnnotationError as exc:
                 unclassified.append(str(exc).split(".", 1)[0] + ": " + str(exc))
     return dict(sorted(table.items())), unclassified
@@ -256,18 +377,26 @@ One entry per event type, one disposition per declared field, resolved
 from the field's real type by `tools/gen_record_dispositions.py`. The
 vocabulary:
 
-    keep:enum:<Name>  closed value set, provably reviewable. The enum is
-                      NAMED because a human signs off the value set, and
-                      swapping one enum for another must read as drift.
-    keep:number       int / float / bool
-    keep:time         datetime
-    token:uuid        replaced with a per-export random surrogate
-    drop:text         free text, no finite range, dropped by default
-    drop:opaque       a dict with no declared keys, nothing to allowlist
-    by-value          the slot is polymorphic across scalars and objects,
-                      so no static answer exists. Apply the tier-2 leaf
-                      rule at export time: numbers and booleans keep,
-                      UUID-shaped strings token, other strings drop.
+    keep:enum:<Name>       closed value set, provably reviewable. The
+                           enum is NAMED because a human signs off the
+                           value set, and swapping one enum for another
+                           must read as drift.
+    keep:closed:<Name>       a value object every one of whose fields is
+                           closed by construction (a fixed charset and
+                           length, a closed literal set), kept WHOLE
+                           rather than resolved field by field. See
+                           `cora.shared.closed_value.ClosedValueObject`.
+    keep:number            int / float / bool
+    keep:time              datetime
+    token:uuid             replaced with a per-export random surrogate
+    drop:text              free text, no finite range, dropped by default
+    drop:opaque            a dict with no declared keys, nothing to
+                           allowlist
+    by-value               the slot is polymorphic across scalars and
+                           objects, so no static answer exists. Apply the
+                           tier-2 leaf rule at export time: numbers and
+                           booleans keep, UUID-shaped strings token,
+                           other strings drop.
 
 A nested mapping is a value object recursed into. A mapping whose sole
 key is `[]` is a fixed-length heterogeneous tuple, and its value lists
@@ -277,6 +406,12 @@ Redaction iterates the STORED payload's keys and looks each up here. A
 key absent from its event's entry is dropped; an event type absent from
 this table aborts the export. The canonical hash of this mapping is the
 redaction profile hash recorded in the export manifest.
+
+A handful of entries are keyed on the WIRE key a field is actually
+stored under rather than its dataclass field name, per
+`gen_record_dispositions.py`'s `_OVERRIDE_WIRE_KEYS`: the two never
+disagree about what ships, only about which name this table's lookup
+uses to find it.
 """
 
 from typing import Any

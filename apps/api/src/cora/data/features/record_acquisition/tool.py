@@ -90,8 +90,10 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             Field(
                 default=None,
                 description=(
-                    "Capture-specific evidence (freeform placeholder). Shape-"
-                    "only validated today. Defaults to empty."
+                    "Capture-specific evidence: frame accounting and "
+                    "provenance. Validated against AcquisitionEvidence's "
+                    "known keys; unknown keys are rejected. Defaults to empty "
+                    "(no evidence supplied)."
                 ),
             ),
         ] = None,

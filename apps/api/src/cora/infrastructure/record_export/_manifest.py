@@ -12,10 +12,10 @@ added with the bundle writer). H3 is optional because an unredacted
 bundle genuinely has none; see the field's own docstring for why its
 absence is a signal rather than a default.
 
-`build_manifest` is pure: every input it needs (`git_commit`,
-`watermark`) is captured by the caller first and passed in, so the
-function itself does no I/O and is trivial to test with synthetic
-`ExportedRecord`s.
+`build_manifest` is pure: every input it needs (`git_commit`; the
+watermark comes off `record` itself) is captured by the caller first and
+passed in, so the function itself does no I/O and is trivial to test
+with synthetic `ExportedRecord`s.
 """
 
 import subprocess
@@ -30,6 +30,8 @@ from cora.infrastructure.record_export._hashing import (
     hash_redacted_record,
     hash_redaction_profile,
 )
+from cora.infrastructure.record_export._redaction import RedactionResult
+from cora.infrastructure.record_export._tokens import TokenMap
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +81,22 @@ class Manifest:
     every rule the profile declares", which is a caveat about coverage,
     not a leak.
     """
+    unfired_tier1_fields: tuple[str, ...] | None = None
+    """The same completeness fact as `unfired_tier2_clearances`, one tier
+    up: `"event_type/field"` pairs declared in the generated disposition
+    table for an event type this export carried, whose field never
+    appeared on any row of that type. Same `None`/empty-tuple convention.
+
+    Almost always empty in practice: tier 1's table is exhaustively
+    generated, and a declared field is normally present (even as `null`)
+    on every row of an event type the current dataclass produces. A
+    field appearing here means EVERY row of that event type in this
+    export predates the `schema_version` that added the field -- one
+    surviving row with the key present would have marked it fired -- a
+    narrowness caveat about THIS export, not a leak; see
+    `RedactionResult.unfired_tier1_fields`'s docstring for why a
+    build-time guard cannot see this and a per-export field can.
+    """
 
 
 def capture_git_commit(*, cwd: Path | str | None = None) -> str:
@@ -126,23 +144,44 @@ def _max_schema_version_by_event_type(record: ExportedRecord) -> dict[str, int]:
 
 
 def _is_simulated(record: ExportedRecord) -> bool:
-    """True unless an observation row explicitly says otherwise.
+    """False unless an observation row explicitly says otherwise.
 
-    Vacuously True when the export carries no observation rows at all:
-    nothing in the bundle contradicts "this is a simulated record". A
-    mixed result (some True, some False) reports as False rather than
-    raising -- the manifest's job is to report the fact, not gate on it.
+    Matches the Run BC's own fold of this exact column
+    (`postgres_run_channel_lookup.py`'s `coalesce(bool_or(is_simulated), false)`):
+    an observation asserts simulated by being present and True, so the
+    identity element for "no observations at all" is False, the same as
+    `bool_or` over an empty set. The manifest previously used `all(...)`,
+    whose empty-set identity is True, so a record with zero observation
+    rows -- including the pilot's first genuine beamline-attached export,
+    which had none -- was reported as simulated. A published record
+    cannot carry that flag by an accident of aggregation identity.
+
+    A mixed result (some True, some False) reports as True: ANY row
+    asserting simulated is enough to call the whole export simulated,
+    mirroring `bool_or`'s semantics exactly rather than requiring
+    unanimity in either direction.
     """
     observations = record.logbooks.get("observation", ())
-    return all(row["is_simulated"] is True for row in observations)
+    return any(row["is_simulated"] is True for row in observations)
 
 
-def _expansion_digest_presence_by_run(record: ExportedRecord) -> dict[str, bool]:
+def _expansion_digest_presence_by_run(
+    record: ExportedRecord, *, token_map: TokenMap | None = None
+) -> dict[str, bool]:
     """Per F8: a run has a pinned expansion digest iff at least one of its
     child Procedures was registered via `register_procedure_from_recipe`
     (carries a `RecipeExpansionRecorded` on its own stream). A Procedure
     registered directly, or a run recorded by observing an external
     scan, has no digest to compare against; that is correct, not a gap.
+
+    Without `token_map`, this dict is keyed by the RAW `stream_id` values
+    pulled straight from the unredacted `record` -- harmless on a full
+    bundle, but on a published one it would republish in plaintext
+    exactly the Run identifiers tier-1 redaction already replaced with
+    per-export surrogates in the streams body. Pass the SAME
+    `RedactionResult.token_map` tier-1 redaction used (via `token_uuid`,
+    memoized by source) so a run's key here always equals the surrogate
+    a reader finds on that run's rows.
     """
     run_ids = {
         _require_str(row["stream_id"]) for row in record.streams if row["stream_type"] == "Run"
@@ -159,12 +198,17 @@ def _expansion_digest_presence_by_run(record: ExportedRecord) -> dict[str, bool]
             )
         elif row["event_type"] == "RecipeExpansionRecorded":
             expanded_procedures.add(_require_str(_payload(row)["procedure_id"]))
-    return {
+    by_raw_run_id = {
         run_id: any(
             parent_run_id == run_id and procedure_id in expanded_procedures
             for procedure_id, parent_run_id in parent_run_by_procedure.items()
         )
         for run_id in run_ids
+    }
+    if token_map is None:
+        return by_raw_run_id
+    return {
+        _require_str(token_map.token_uuid(run_id)): value for run_id, value in by_raw_run_id.items()
     }
 
 
@@ -172,44 +216,73 @@ def _render_unfired_clearances(unfired: frozenset[tuple[str, str, str]]) -> tupl
     return tuple(sorted(f"{kind}/{column}/{pointer}" for kind, column, pointer in unfired))
 
 
+def _render_unfired_tier1_fields(unfired: frozenset[tuple[str, str]]) -> tuple[str, ...]:
+    return tuple(sorted(f"{event_type}/{field}" for event_type, field in unfired))
+
+
 def build_manifest(
     record: ExportedRecord,
     *,
-    watermark: int,
     git_commit: str,
-    redacted: TwoTierRecord | None = None,
-    unfired_tier2_clearances: frozenset[tuple[str, str, str]] | None = None,
+    redaction: RedactionResult | None = None,
 ) -> Manifest:
     """Assemble the manifest for one already-exported, already-rendered record.
 
-    Pass `redacted` (a `RedactionResult.redacted_record`) when the bundle
-    being written is the published projection, so the manifest carries
-    H3. The shape counts stay derived from the UNREDACTED `record`:
-    redaction never adds or removes a row, only rewrites values within
-    one, so the counts describe both, and deriving them from the
-    unredacted side keeps a reader's recomputation honest if redaction
-    ever does start dropping rows.
+    `watermark` is read from `record.watermark`, the value `export_record`
+    itself captured and bounded its query by, rather than taken as a
+    separate parameter: no caller could otherwise produce "the SAME value
+    the query used" without calling `capture_watermark` a second time,
+    which returns a different snapshot.
 
-    Pass `unfired_tier2_clearances` (a `RedactionResult.unfired_tier2_clearances`)
-    alongside `redacted` so the manifest carries the completeness caveat
-    described on `Manifest.unfired_tier2_clearances`. Meaningless without
-    `redacted` and ignored if `redacted` is `None`, matching that field's
-    same "no redaction happened" absence.
+    Pass `redaction` (the `RedactionResult` `redact_record` returned) when
+    the bundle being written is the published projection, so the manifest
+    carries H3 and its per-run map is keyed by the same surrogates tier-1
+    redaction already put on the streams body. The shape counts stay
+    derived from the UNREDACTED `record` regardless: redaction never adds
+    or removes a row, only rewrites values within one, so the counts
+    describe both, and deriving them from the unredacted side keeps a
+    reader's recomputation honest if redaction ever does start dropping
+    rows.
+
+    `redaction` carries `redacted_record`, `token_map`,
+    `unfired_tier2_clearances` and `unfired_tier1_fields` together as one
+    object, deliberately, not as four independently-omittable parameters:
+    a caller could otherwise supply a `token_map` from an unrelated
+    redaction (or none at all) alongside a genuinely redacted record,
+    producing a manifest whose per-run keys disagree with the surrogates
+    actually on the streams body; or supply `redacted` while omitting one
+    of the completeness fields, silently reporting a false "everything
+    fired" instead of the true count. All become structurally impossible
+    once every one of them comes from the one `RedactionResult` a real
+    redaction pass produced.
     """
+    if redaction is None:
+        redacted: TwoTierRecord | None = None
+        token_map: TokenMap | None = None
+        unfired_tier2: frozenset[tuple[str, str, str]] = frozenset()
+        unfired_tier1: frozenset[tuple[str, str]] = frozenset()
+    else:
+        redacted = redaction.redacted_record
+        token_map = redaction.token_map
+        unfired_tier2 = redaction.unfired_tier2_clearances
+        unfired_tier1 = redaction.unfired_tier1_fields
     return Manifest(
         git_commit=git_commit,
-        watermark=watermark,
+        watermark=record.watermark,
         record_hash=hash_record(record),
         redaction_profile_hash=hash_redaction_profile(),
         row_count_by_logbook_kind=_row_count_by_logbook_kind(record),
         max_schema_version_by_event_type=_max_schema_version_by_event_type(record),
         is_simulated=_is_simulated(record),
-        expansion_digest_presence_by_run=_expansion_digest_presence_by_run(record),
+        expansion_digest_presence_by_run=_expansion_digest_presence_by_run(
+            record, token_map=token_map
+        ),
         published_record_hash=None if redacted is None else hash_redacted_record(redacted),
         unfired_tier2_clearances=(
-            None
-            if redacted is None
-            else _render_unfired_clearances(unfired_tier2_clearances or frozenset())
+            None if redacted is None else _render_unfired_clearances(unfired_tier2)
+        ),
+        unfired_tier1_fields=(
+            None if redacted is None else _render_unfired_tier1_fields(unfired_tier1)
         ),
     )
 

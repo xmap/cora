@@ -30,6 +30,7 @@ from cora.infrastructure.record_export._bundle import (
     STREAMS_NAME,
     BundleDestinationNotEmptyError,
     MalformedBundleError,
+    ManifestRecordMismatchError,
     read_bundle_body,
     write_bundle,
 )
@@ -54,6 +55,9 @@ from cora.infrastructure.record_export._hashing import (
 )
 from cora.infrastructure.record_export._manifest import Manifest, build_manifest, capture_git_commit
 from cora.infrastructure.record_export._redact_tier1 import (
+    FIXED_DROP_COLUMNS,
+    FIXED_KEEP_COLUMNS,
+    FIXED_TOKEN_COLUMNS,
     Tier1Redactor,
     UnknownEventTypeError,
     redact_tier1_payload,
@@ -79,7 +83,11 @@ from cora.infrastructure.record_export._registry import (
     registered_envelope_classes,
     resolve,
 )
-from cora.infrastructure.record_export._render import render_row, render_value
+from cora.infrastructure.record_export._render import (
+    UndecodedJsonColumnError,
+    render_row,
+    render_value,
+)
 from cora.infrastructure.record_export._stream_types import (
     KNOWN_STREAM_TYPES,
     UnknownStreamTypeError,
@@ -88,6 +96,9 @@ from cora.infrastructure.record_export._stream_types import (
 from cora.infrastructure.record_export._tokens import TokenMap
 
 __all__ = [
+    "FIXED_DROP_COLUMNS",
+    "FIXED_KEEP_COLUMNS",
+    "FIXED_TOKEN_COLUMNS",
     "KNOWN_STREAM_TYPES",
     "LOGBOOKS_DIR",
     "LOGBOOKS_PAYLOAD_TYPE",
@@ -107,12 +118,14 @@ __all__ = [
     "ExportedRecord",
     "MalformedBundleError",
     "Manifest",
+    "ManifestRecordMismatchError",
     "RedactedRecord",
     "RedactionProfileMismatchError",
     "RedactionResult",
     "Tier1Redactor",
     "TokenMap",
     "TwoTierRecord",
+    "UndecodedJsonColumnError",
     "UnknownEventTypeError",
     "UnknownLogbookKindError",
     "UnknownStreamTypeError",

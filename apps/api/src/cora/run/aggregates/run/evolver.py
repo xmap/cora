@@ -157,6 +157,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
             name=name,
             plan_id=plan_id,
             subject_id=subject_id,
+            conduct_mode=conduct_mode,
             raid=raid,
             override_parameters=override_parameters,
             effective_parameters=effective_parameters,
@@ -176,6 +177,7 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 subject_id=subject_id,
                 raid=raid,
                 status=RunStatus.RUNNING,
+                conduct_mode=conduct_mode,
                 override_parameters=dict(override_parameters),
                 effective_parameters=dict(effective_parameters),
                 trigger_source=trigger_source,
@@ -208,6 +210,9 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 plan_id=prior.plan_id,
                 subject_id=prior.subject_id,
                 raid=prior.raid,
+                # Conduct provenance: who drove this act. IMMUTABLE after
+                # genesis, same as pinned_calibration_ids.
+                conduct_mode=prior.conduct_mode,
                 status=RunStatus.HELD,
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
@@ -239,6 +244,9 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 plan_id=prior.plan_id,
                 subject_id=prior.subject_id,
                 raid=prior.raid,
+                # Conduct provenance: who drove this act. IMMUTABLE after
+                # genesis, same as pinned_calibration_ids.
+                conduct_mode=prior.conduct_mode,
                 status=RunStatus.RUNNING,
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
@@ -270,6 +278,9 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 plan_id=prior.plan_id,
                 subject_id=prior.subject_id,
                 raid=prior.raid,
+                # Conduct provenance: who drove this act. IMMUTABLE after
+                # genesis, same as pinned_calibration_ids.
+                conduct_mode=prior.conduct_mode,
                 status=RunStatus.COMPLETED,
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
@@ -299,6 +310,9 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 plan_id=prior.plan_id,
                 subject_id=prior.subject_id,
                 raid=prior.raid,
+                # Conduct provenance: who drove this act. IMMUTABLE after
+                # genesis, same as pinned_calibration_ids.
+                conduct_mode=prior.conduct_mode,
                 status=RunStatus.ABORTED,
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
@@ -328,6 +342,9 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 plan_id=prior.plan_id,
                 subject_id=prior.subject_id,
                 raid=prior.raid,
+                # Conduct provenance: who drove this act. IMMUTABLE after
+                # genesis, same as pinned_calibration_ids.
+                conduct_mode=prior.conduct_mode,
                 status=RunStatus.STOPPED,
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
@@ -355,6 +372,9 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 plan_id=prior.plan_id,
                 subject_id=prior.subject_id,
                 raid=prior.raid,
+                # Conduct provenance: who drove this act. IMMUTABLE after
+                # genesis, same as pinned_calibration_ids.
+                conduct_mode=prior.conduct_mode,
                 status=RunStatus.TRUNCATED,
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
@@ -393,6 +413,9 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 plan_id=prior.plan_id,
                 subject_id=prior.subject_id,
                 raid=prior.raid,
+                # Conduct provenance: who drove this act. IMMUTABLE after
+                # genesis, same as pinned_calibration_ids.
+                conduct_mode=prior.conduct_mode,
                 status=prior.status,
                 override_parameters=prior.override_parameters,
                 effective_parameters=dict(effective_parameters),
@@ -426,6 +449,9 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 plan_id=prior.plan_id,
                 subject_id=prior.subject_id,
                 raid=prior.raid,
+                # Conduct provenance: who drove this act. IMMUTABLE after
+                # genesis, same as pinned_calibration_ids.
+                conduct_mode=prior.conduct_mode,
                 status=prior.status,
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
@@ -458,6 +484,9 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 plan_id=prior.plan_id,
                 subject_id=prior.subject_id,
                 raid=prior.raid,
+                # Conduct provenance: who drove this act. IMMUTABLE after
+                # genesis, same as pinned_calibration_ids.
+                conduct_mode=prior.conduct_mode,
                 status=prior.status,
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
@@ -490,6 +519,9 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 plan_id=prior.plan_id,
                 subject_id=prior.subject_id,
                 raid=prior.raid,
+                # Conduct provenance: who drove this act. IMMUTABLE after
+                # genesis, same as pinned_calibration_ids.
+                conduct_mode=prior.conduct_mode,
                 status=prior.status,
                 override_parameters=prior.override_parameters,
                 effective_parameters=prior.effective_parameters,
@@ -535,6 +567,9 @@ def evolve(state: Run | None, event: RunEvent) -> Run:
                 plan_id=prior.plan_id,
                 subject_id=prior.subject_id,
                 raid=prior.raid,
+                # Conduct provenance: who drove this act. IMMUTABLE after
+                # genesis, same as pinned_calibration_ids.
+                conduct_mode=prior.conduct_mode,
                 # Status deliberately unchanged: still HELD if it was.
                 status=prior.status,
                 override_parameters=prior.override_parameters,

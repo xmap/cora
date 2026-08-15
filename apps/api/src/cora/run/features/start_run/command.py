@@ -31,6 +31,14 @@ Status is implicit at start (`Running`) and not part of the
 command — see Run aggregate's `state.py` docstring for the
 enum-in-state, derived-from-event-type-in-evolver convention.
 
+`ConductMode` is likewise not a command field. Every Run started through
+this slice is driven by CORA's own Conductor, so the decider hardcodes
+`ConductMode.CONDUCTED` on the emitted `RunStarted` rather than accepting
+it from the caller: the mode is a property of which decider ran, not a
+value a caller could set. A `Witnessed` Run is genesis-only through the
+separate witnessed-genesis slice, never through this one. See
+`ConductMode`'s own docstring on `Run`.
+
 The handler additionally pre-loads Plan + Subject (if given) +
 each bound Asset (from `plan.asset_ids`) to build a
 `RunStartContext` for the decider (gate-review Q2 / Q5 pattern),

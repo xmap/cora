@@ -80,7 +80,7 @@ def test_complete_from_running_emits_single_event(run_id: UUID, now: datetime) -
         command=CompleteRun(run_id=run_id),
         now=now,
     )
-    assert events == [RunCompleted(run_id=run_id, occurred_at=now)]
+    assert events == [RunCompleted(run_id=run_id, occurred_at=now, observed_at=None)]
 
 
 @pytest.mark.unit

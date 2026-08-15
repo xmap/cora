@@ -79,7 +79,7 @@ def decide(
       - State must be None (genesis-only) -> AcquisitionAlreadyExistsError
       - settings must be primitive-leaf shaped
         -> InvalidAcquisitionSettingsError
-      - evidence must be primitive-leaf shaped
+      - evidence must fit AcquisitionEvidence's known keys/types
         -> InvalidAcquisitionEvidenceError
       - captured_at must be tz-aware and not in the future beyond
         now + skew_tolerance -> InvalidAcquisitionCapturedAtError

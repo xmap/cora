@@ -21,9 +21,20 @@ _NOW = datetime(2026, 6, 10, 12, 0, 0, tzinfo=UTC)
 _ID = UUID("01900000-0000-7000-8000-0000000000c0")
 
 
-def _wired_verifiers(roots: tuple[str, ...]) -> dict[str, object]:
+def _wired_verifiers(
+    roots: tuple[str, ...], max_walk_seconds: float | None = None
+) -> dict[str, object]:
     deps = build_deps(ids=[_ID], now=_NOW)
-    deps = replace(deps, settings=Settings(app_env="test", posix_checksum_roots=roots))
+    settings = (
+        Settings(app_env="test", posix_checksum_roots=roots)
+        if max_walk_seconds is None
+        else Settings(
+            app_env="test",
+            posix_checksum_roots=roots,
+            posix_checksum_max_walk_seconds=max_walk_seconds,
+        )
+    )
+    deps = replace(deps, settings=settings)
     wire_data(deps)  # attaches deps.data.checksum_verifiers
     return dict(deps.data.checksum_verifiers)  # type: ignore[attr-defined]
 
@@ -46,3 +57,28 @@ def test_file_scheme_absent_when_no_roots_configured() -> None:
 def test_file_scheme_wired_to_posix_adapter_when_roots_configured() -> None:
     verifiers = _wired_verifiers(("/gpfs/2bm/archive",))
     assert isinstance(verifiers["file"], PosixChecksumAdapter)
+
+
+@pytest.mark.unit
+def test_posix_adapter_takes_the_configured_walk_budget() -> None:
+    """The bound has to be reachable from configuration.
+
+    It was tunable at construction time and nothing passed it, so the
+    60 s default governed every deployment. A 24.5 GB scan takes 82 s to
+    hash on the 2-BM pilot before CORA's own chunked read is counted, so
+    the first real ingest refused with `walk exceeded max_walk_seconds`
+    and no deployment could raise it without editing code.
+    """
+    verifiers = _wired_verifiers(("/gpfs/2bm/archive",), 900.0)
+
+    adapter = verifiers["file"]
+    assert isinstance(adapter, PosixChecksumAdapter)
+    assert adapter._max_walk_seconds == 900.0  # pyright: ignore[reportPrivateUsage]
+
+
+@pytest.mark.unit
+def test_posix_adapter_keeps_the_default_walk_budget_when_unset() -> None:
+    adapter = _wired_verifiers(("/gpfs/2bm/archive",))["file"]
+
+    assert isinstance(adapter, PosixChecksumAdapter)
+    assert adapter._max_walk_seconds == 60.0  # pyright: ignore[reportPrivateUsage]

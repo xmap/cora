@@ -128,6 +128,7 @@ from urllib.parse import urlparse
 from uuid import UUID
 
 from cora.shared.bounded_text import bounded_name, validate_bounded_text
+from cora.shared.closed_value import ClosedValueObject
 from cora.shared.text_bounds import REASON_MAX_LENGTH
 
 DATASET_NAME_MAX_LENGTH = 200
@@ -823,7 +824,7 @@ class DatasetUri:
 
 
 @dataclass(frozen=True)
-class DatasetChecksum:
+class DatasetChecksum(ClosedValueObject):
     """Bulk-content integrity hash. Algorithm + canonical value.
 
     Deviation from Identifier VO: strict 64-char lowercase-hex value
@@ -836,6 +837,14 @@ class DatasetChecksum:
     are identical; only the algorithm tag distinguishes them. The
     `(algorithm, value)` shape stays forward-compatible for adding
     BLAKE3 / SHA3 / etc. when a real consumer asks.
+
+    `ClosedValueObject`: both fields are closed by construction
+    (`algorithm` to a 2-member set, `value` to 64 lowercase-hex chars),
+    so the record exporter's generated disposition table KEEPS this VO
+    whole rather than resolving `value` as an unbounded string. A hex
+    digest of file bytes discloses nothing about a person, and it is the
+    field that makes a published record checkable against the data it
+    describes.
     """
 
     algorithm: str

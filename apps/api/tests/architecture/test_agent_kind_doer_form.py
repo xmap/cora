@@ -32,10 +32,17 @@ from tests.architecture.conftest import CORA_ROOT, tracked_python_files
 _PASCAL_COMPOUND = re.compile(r"^[A-Z][a-z]+([A-Z][a-z]+)+$")
 
 # Natural English doer suffixes per R5. The list is not exhaustive
-# (zero-change doers like `Monitor` or `Coordinator` also count);
-# extend when a new agent legitimately needs a doer form outside
-# this set.
+# (zero-change doers like `Monitor` or `Coordinator` also count, though
+# both happen to already end in `-or`); extend when a new agent
+# legitimately needs a doer form outside this set.
 _DOER_SUFFIXES = ("er", "or", "ist", "ant", "tor")
+
+# Whole-word zero-change doers that are natural English doer nouns on
+# their own but do not end in any of `_DOER_SUFFIXES` (a witness is one
+# who witnesses, exactly as a monitor is one who monitors, but "witness"
+# has no suffix to match against). Checked against the compound's final
+# PascalCase segment, not the whole value.
+_ZERO_CHANGE_DOER_WORDS = frozenset({"Witness"})
 
 _AGENT_DIR = CORA_ROOT / "agent"
 
@@ -89,12 +96,16 @@ def test_seeded_agent_kinds_follow_r5_doer_form() -> None:
                 "`CautionDrafter`)."
             )
             continue
-        if not any(value.endswith(suffix) for suffix in _DOER_SUFFIXES):
+        final_segment = re.findall(r"[A-Z][a-z]+", value)[-1]
+        if not any(value.endswith(suffix) for suffix in _DOER_SUFFIXES) and (
+            final_segment not in _ZERO_CHANGE_DOER_WORDS
+        ):
             failures.append(
-                f"{ref}={value!r}: doesn't end in a doer suffix {_DOER_SUFFIXES}. "
-                "R5 also allows zero-change doers (`Monitor`, `Coordinator`); "
-                "if this name is intentionally a zero-change doer, extend "
-                "`_DOER_SUFFIXES` to include the relevant ending."
+                f"{ref}={value!r}: doesn't end in a doer suffix {_DOER_SUFFIXES} "
+                f"or a known zero-change doer word {sorted(_ZERO_CHANGE_DOER_WORDS)}. "
+                "If this name is intentionally a whole-word doer noun (a "
+                "witness is one who witnesses, exactly as a monitor is one "
+                "who monitors), extend `_ZERO_CHANGE_DOER_WORDS`."
             )
 
     assert not failures, "Found R5 violations:\n  - " + "\n  - ".join(failures)

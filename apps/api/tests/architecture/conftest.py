@@ -29,6 +29,7 @@ point all the usual invariants kick in.
 """
 
 import os
+import re
 import subprocess
 from functools import cache
 from pathlib import Path
@@ -161,3 +162,60 @@ def tracked_migration_files() -> tuple[Path, ...]:
     return tuple(
         sorted(_REPO_ROOT / line for line in result.stdout.splitlines() if line.endswith(".sql"))
     )
+
+
+_CREATE_TABLE_RE = re.compile(
+    r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-zA-Z_][a-zA-Z0-9_]*)",
+    re.IGNORECASE,
+)
+_RENAME_TABLE_RE = re.compile(
+    r"ALTER\s+TABLE\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+RENAME\s+TO\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+    re.IGNORECASE,
+)
+
+
+def append_only_table_lineage() -> dict[str, frozenset[str]]:
+    """Every CURRENTLY append-only (`entries_*` / `events`) table, keyed
+    by its CURRENT identifier and mapped to every name it has ever held.
+
+    Moved here from `test_entries_table_grants.py` (slice 6 of
+    project_record_publishing_campaign.md) once a second test
+    (`test_entries_tables_registered_in_record_export.py`) needed the
+    same rename-following lineage: single-sourced rather than a second
+    SQL parser.
+
+    Follows `ALTER TABLE ... RENAME TO ...` across ALL tables' migration
+    history, not just tables already matching `entries_`/`events`, then
+    filters to that prefix only on the final (current) name. A table can
+    enter the append-only family through a rename whose OLD name never
+    matched the prefix: `entries_conduit_verdicts` was created as
+    `observations_conduit_traversals`, renamed to
+    `entries_conduit_traversals`, then renamed again to its current name.
+    Gating the rename-follow on "old name already tracked as entries_/
+    events" would silently drop that chain the moment the origin name
+    fell outside the prefix, exactly the same blind spot this function
+    exists to close for the `entries_run_readings` case (see
+    `test_entries_table_grants.py`), just one hop earlier.
+
+    The full lineage (not just the current name) matters to callers that
+    search for a fact attached to an OLD name (e.g. a GRANT issued before
+    a rename); callers that only care about the current schema should
+    read just this dict's keys.
+    """
+    lineage: dict[str, set[str]] = {}
+    for path in tracked_migration_files():
+        text = path.read_text()
+        for match in _CREATE_TABLE_RE.finditer(text):
+            name = match.group(1)
+            lineage.setdefault(name, {name})
+        for match in _RENAME_TABLE_RE.finditer(text):
+            old_name, new_name = match.group(1), match.group(2)
+            if old_name in lineage:
+                names = lineage.pop(old_name)
+                names.add(new_name)
+                lineage[new_name] = names
+    return {
+        name: frozenset(names)
+        for name, names in lineage.items()
+        if name == "events" or name.startswith("entries_")
+    }

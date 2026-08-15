@@ -57,7 +57,7 @@ async def _seed_run_started(store: InMemoryEventStore, run_id: UUID) -> None:
 
 async def _seed_run_aborted(store: InMemoryEventStore, run_id: UUID) -> None:
     await _seed_run_started(store, run_id)
-    aborted = RunAborted(run_id=run_id, reason="prior abort", occurred_at=_NOW)
+    aborted = RunAborted(run_id=run_id, reason="prior abort", occurred_at=_NOW, observed_at=None)
     new_event = to_new_event(
         event_type=event_type_name(aborted),
         payload=to_payload(aborted),

@@ -24,6 +24,17 @@ FSM closes via four terminal transitions (`complete` / `abort` /
 strict-not-idempotent (the guard rejects double-application and
 ConcurrencyError catches the persistence-layer double-submit case).
 
+`record_witnessed_run` is a second, independent genesis (the witnessed
+path). NOT idempotency-wrapped despite being create-style: the Run id
+is fresh and random per call, so there is no Idempotency-Key to
+collapse a retry against. In-process-only; no route, no MCP tool ever
+call it.
+
+`record_witnessed_run_outcome` closes the witnessed path: update-style,
+bare Handler protocol, same posture as the four driven terminals (strict-
+not-idempotent, ConcurrencyError handles the double-submit case). Also
+in-process-only; no route, no MCP tool ever call it.
+
 `append_observations` writes the polymorphic sensor / motor observation
 logbook (SOSA `sampling_procedure` discriminator; lazy open-on-first-
 write). Not idempotency-wrapped: natural idempotence via the
@@ -37,13 +48,19 @@ handler is longhand (not the update-handler factory) because it
 cross-loads Plan → Practice → Method to surface the Method's
 `parameters_schema` for merged-result validation.
 
-## BC-internal ObservationStore wiring
+## BC-internal ObservationStore + FeedHeartbeatStore wiring
 
 `append_observations` needs a `ObservationStore` adapter. Per the
 per-category-writer pattern (mirrors Decision BC's InferenceStore
 and Conduit's VerdictStore), the store is built LOCALLY here from
 `deps.pool` (Postgres in production) or as `InMemoryObservationStore`
 in `app_env=test`. NOT promoted to Kernel fields.
+
+`feed_heartbeat_store` is surfaced on the bundle the same way
+`EnclosureHandlers.permit_probe_store` is: not a command handler, so
+routes/tools never touch it, but the composition-root lifespan
+(`_capture_progress_feeder.py`'s feeder, slice 10) needs the write
+store directly, not wrapped behind a command.
 """
 
 from dataclasses import dataclass
@@ -57,8 +74,11 @@ from cora.infrastructure.idempotency import (
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
 from cora.run.aggregates.run import (
+    FeedHeartbeatStore,
+    InMemoryFeedHeartbeatStore,
     InMemoryObservationStore,
     ObservationStore,
+    PostgresFeedHeartbeatStore,
     PostgresObservationStore,
 )
 from cora.run.features import (
@@ -69,6 +89,8 @@ from cora.run.features import (
     get_run,
     hold_run,
     list_runs,
+    record_witnessed_run,
+    record_witnessed_run_outcome,
     resume_run,
     start_run,
     stop_run,
@@ -83,6 +105,8 @@ class RunHandlers:
     """The Run BC's handler bundle, each closed over Kernel."""
 
     start_run: start_run.IdempotentHandler
+    record_witnessed_run: record_witnessed_run.Handler
+    record_witnessed_run_outcome: record_witnessed_run_outcome.Handler
     complete_run: complete_run.Handler
     abort_run: abort_run.Handler
     hold_run: hold_run.Handler
@@ -93,6 +117,11 @@ class RunHandlers:
     append_observations: append_observations.Handler
     get_run: get_run.Handler
     list_runs: list_runs.Handler
+    feed_heartbeat_store: FeedHeartbeatStore
+    """The feed-heartbeat trail's write store. Surfaced on the bundle,
+    not a handler, mirroring `EnclosureHandlers.permit_probe_store`
+    exactly: a composition-root lifespan needs this dependency
+    directly, and it isn't itself a command handler."""
 
 
 def wire_run(deps: Kernel) -> RunHandlers:
@@ -100,7 +129,13 @@ def wire_run(deps: Kernel) -> RunHandlers:
     observation_store: ObservationStore = (
         PostgresObservationStore(deps.pool) if deps.pool is not None else InMemoryObservationStore()
     )
+    feed_heartbeat_store: FeedHeartbeatStore = (
+        PostgresFeedHeartbeatStore(deps.pool)
+        if deps.pool is not None
+        else InMemoryFeedHeartbeatStore()
+    )
     return RunHandlers(
+        feed_heartbeat_store=feed_heartbeat_store,
         start_run=with_tracing(
             with_idempotency(
                 start_run.bind(deps),
@@ -113,6 +148,16 @@ def wire_run(deps: Kernel) -> RunHandlers:
                 lock_stale_seconds=deps.settings.idempotency_lock_stale_seconds,
             ),
             command_name="StartRun",
+            bc=_BC,
+        ),
+        record_witnessed_run=with_tracing(
+            record_witnessed_run.bind(deps),
+            command_name="RecordWitnessedRun",
+            bc=_BC,
+        ),
+        record_witnessed_run_outcome=with_tracing(
+            record_witnessed_run_outcome.bind(deps),
+            command_name="RecordWitnessedRunOutcome",
             bc=_BC,
         ),
         complete_run=with_tracing(

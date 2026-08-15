@@ -91,6 +91,11 @@ from uuid import UUID
 
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
+from cora.run.aggregates.run.state import (
+    CaptureProgressSnapshot,
+    ConductMode,
+    SafetyEnvelopeVerdict,
+)
 from cora.shared.identity import ActorId
 from cora.shared.logbook import LogbookSchema
 
@@ -197,6 +202,27 @@ class RunStarted:
     plan_id: UUID
     subject_id: UUID | None
     occurred_at: datetime
+    # who drove this act: CORA's own Conductor, or an external tool CORA
+    # only observes. See `ConductMode`'s own docstring (cora.run.aggregates
+    # .run.state) for the full rationale. A property of which decider ran,
+    # never a caller's choice: `StartRun` carries no `conduct_mode` field,
+    # and the driven decider hardcodes CONDUCTED here; a witnessed genesis
+    # (the separate decider) hardcodes WITNESSED. Defaults to CONDUCTED for
+    # forward-compat replay via `payload.get("conduct_mode",
+    # ConductMode.CONDUCTED.value)` in `from_stored` for legacy streams
+    # without the key, not because any caller supplies it.
+    conduct_mode: ConductMode = ConductMode.CONDUCTED
+    # The witnessed genesis's recorded reading of the two live facility
+    # signals (enclosure permit, beam availability) instead of an
+    # enforced gate. Always None on a driven Run: a driven Run
+    # necessarily passed both gates to exist at all, so a stored
+    # all-True verdict would carry no information beyond the event's
+    # own existence, the same reason `start_run`'s decider never
+    # persists its beam reading. Only `record_witnessed_run`'s decider
+    # ever constructs a non-None value. Forward-compat via
+    # `payload.get("safety_envelope_verdict")` returning None for legacy
+    # streams without the key.
+    safety_envelope_verdict: SafetyEnvelopeVerdict | None = None
     raid: str | None = None
     override_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
     effective_parameters: dict[str, Any] = field(default_factory=dict[str, Any])
@@ -480,13 +506,36 @@ class RunCompleted:
       - `artifact_uri` is where the conducted job wrote its output, the
         handoff a later `register_dataset` uses as the Dataset uri
         (not folded onto state).
+
+    `observed_at` is the SUBSTRATE's own time for the completion,
+    mirroring `EnclosurePermitObserved.observed_at`: it is `None` for a
+    driven completion (`complete_run` has no substrate reading to
+    report) and the TomoScan `ScanStatus` PV's own timestamp for a
+    witnessed one. Distinct from `occurred_at`, CORA's clock at
+    handler-append. NO default: every construction site must state
+    what the substrate said, including saying `None`, rather than let
+    a default silently drop the distinction.
+
+    `capture_progress_snapshot` is `None` for a driven completion (no
+    progress PVs to have observed) and, for a witnessed one, the last
+    per-role progress counts `RunWitness` retained before this
+    terminal, or `None` if nothing was retained. See
+    `CaptureProgressSnapshot`'s own docstring for why it carries no
+    completeness judgment: 2-BM's real counters routinely fall short of
+    their own commanded total even on a healthy scan, so this is
+    evidence for the false-completion gap tomography/tomoscan#181
+    describes, not a verdict on it. `= None` default: `complete_run`'s driven
+    path never populates it, and every stream written before this field
+    existed replays with it absent.
     """
 
     run_id: UUID
     occurred_at: datetime
+    observed_at: datetime | None
     actuation_kind: str | None = None
     producing_job_id: str | None = None
     artifact_uri: str | None = None
+    capture_progress_snapshot: CaptureProgressSnapshot | None = None
 
 
 @dataclass(frozen=True)
@@ -520,14 +569,31 @@ class RunAborted:
     `producing_job_id` is the failed job's handle, an audit breadcrumb
     on the stream (not folded onto state). Both forward-compat additive
     via `payload.get(...)` -> None.
+
+    `observed_at` is the SUBSTRATE's own time for the abort, mirroring
+    `EnclosurePermitObserved.observed_at`: `None` for an operator abort
+    (no substrate reading to report) and the TomoScan `ScanStatus` /
+    `AbortScan` PV's own timestamp for a witnessed one. Distinct from
+    `occurred_at`, CORA's clock at handler-append. NO default: every
+    construction site must state what the substrate said, including
+    saying `None`.
+
+    `capture_progress_snapshot` mirrors `RunCompleted`'s field of the
+    same name: `None` for an operator abort, and for a witnessed one
+    the last per-role progress counts retained before this terminal
+    (see `RunCompleted`'s docstring and `CaptureProgressSnapshot`).
+    Carried on both terminals from one command so its presence does not
+    depend on which terminal fired.
     """
 
     run_id: UUID
     reason: str
     occurred_at: datetime
+    observed_at: datetime | None
     decided_by_decision_id: UUID | None = None
     actuation_kind: str | None = None
     producing_job_id: str | None = None
+    capture_progress_snapshot: CaptureProgressSnapshot | None = None
 
 
 @dataclass(frozen=True)
@@ -729,6 +795,50 @@ def event_type_name(event: RunEvent) -> str:
     return type(event).__name__
 
 
+def _capture_progress_snapshot_to_payload(
+    snapshot: CaptureProgressSnapshot | None,
+) -> dict[str, Any] | None:
+    """Shared by `RunCompleted` and `RunAborted`'s `to_payload` arms:
+    `capture_progress_snapshot` is carried on both terminals from one
+    command (see `record_witnessed_run_outcome`'s decider), so both
+    arms need the identical nested shape. Whole object `None` when
+    absent, matching `safety_envelope_verdict`'s own precedent."""
+    if snapshot is None:
+        return None
+    return {
+        "collected_count": snapshot.collected_count,
+        "collected_total": snapshot.collected_total,
+        "collected_at": (
+            snapshot.collected_at.isoformat() if snapshot.collected_at is not None else None
+        ),
+        "saved_count": snapshot.saved_count,
+        "saved_total": snapshot.saved_total,
+        "saved_at": snapshot.saved_at.isoformat() if snapshot.saved_at is not None else None,
+    }
+
+
+def _capture_progress_snapshot_from_payload(
+    raw: dict[str, Any] | None,
+) -> CaptureProgressSnapshot | None:
+    """The `from_stored` inverse of `_capture_progress_snapshot_to_payload`,
+    shared by both terminals for the same reason. Inner keys read with
+    `[...]` not `.get`, matching `safety_envelope_verdict`'s own
+    precedent: once the VO is on the wire, all six of its fields are
+    assumed present."""
+    if raw is None:
+        return None
+    return CaptureProgressSnapshot(
+        collected_count=raw["collected_count"],
+        collected_total=raw["collected_total"],
+        collected_at=(
+            datetime.fromisoformat(raw["collected_at"]) if raw["collected_at"] is not None else None
+        ),
+        saved_count=raw["saved_count"],
+        saved_total=raw["saved_total"],
+        saved_at=datetime.fromisoformat(raw["saved_at"]) if raw["saved_at"] is not None else None,
+    )
+
+
 def to_payload(event: RunEvent) -> dict[str, Any]:
     """Serialize a Run event to a JSON-friendly dict for jsonb storage.
 
@@ -742,6 +852,8 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             name=name,
             plan_id=plan_id,
             subject_id=subject_id,
+            conduct_mode=conduct_mode,
+            safety_envelope_verdict=safety_envelope_verdict,
             raid=raid,
             override_parameters=override_parameters,
             effective_parameters=effective_parameters,
@@ -759,6 +871,15 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "name": name,
                 "plan_id": str(plan_id),
                 "subject_id": str(subject_id) if subject_id is not None else None,
+                "conduct_mode": conduct_mode.value,
+                "safety_envelope_verdict": (
+                    {
+                        "enclosure_permitted": safety_envelope_verdict.enclosure_permitted,
+                        "beam_available": safety_envelope_verdict.beam_available,
+                    }
+                    if safety_envelope_verdict is not None
+                    else None
+                ),
                 "raid": raid,
                 "override_parameters": override_parameters,
                 "effective_parameters": effective_parameters,
@@ -849,6 +970,8 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             producing_job_id=producing_job_id,
             artifact_uri=artifact_uri,
             occurred_at=occurred_at,
+            observed_at=observed_at,
+            capture_progress_snapshot=capture_progress_snapshot,
         ):
             return {
                 "run_id": str(run_id),
@@ -856,6 +979,13 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "producing_job_id": producing_job_id,
                 "artifact_uri": artifact_uri,
                 "occurred_at": occurred_at.isoformat(),
+                # Present-as-null, not omit-when-None: an event written
+                # before this field existed must stay distinguishable
+                # from one that says "the substrate gave no time".
+                "observed_at": observed_at.isoformat() if observed_at is not None else None,
+                "capture_progress_snapshot": _capture_progress_snapshot_to_payload(
+                    capture_progress_snapshot
+                ),
             }
         case RunAborted(
             run_id=run_id,
@@ -864,6 +994,8 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             actuation_kind=actuation_kind,
             producing_job_id=producing_job_id,
             occurred_at=occurred_at,
+            observed_at=observed_at,
+            capture_progress_snapshot=capture_progress_snapshot,
         ):
             return {
                 "run_id": str(run_id),
@@ -874,6 +1006,10 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "actuation_kind": actuation_kind,
                 "producing_job_id": producing_job_id,
                 "occurred_at": occurred_at.isoformat(),
+                "observed_at": observed_at.isoformat() if observed_at is not None else None,
+                "capture_progress_snapshot": _capture_progress_snapshot_to_payload(
+                    capture_progress_snapshot
+                ),
             }
         case RunStopped(
             run_id=run_id,
@@ -993,7 +1129,7 @@ def from_stored(stored: StoredEvent) -> RunEvent:
 
             def _build_run_started() -> RunStarted:
                 raw_subject = payload["subject_id"]
-                # Forward-compat additive evolution: `raid`,
+                # Forward-compat additive evolution: `conduct_mode`, `raid`,
                 # `override_parameters` / `effective_parameters` /
                 # `trigger_source`, `external_refs`,
                 # `acknowledged_cautions`, `campaign_id`,
@@ -1005,11 +1141,23 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                 # payload, so legacy streams replay without an upcaster.
                 raw_campaign_id = payload.get("campaign_id")
                 raw_decided_by = payload.get("decided_by_decision_id")
+                raw_verdict = payload.get("safety_envelope_verdict")
                 return RunStarted(
                     run_id=UUID(payload["run_id"]),
                     name=payload["name"],
                     plan_id=UUID(payload["plan_id"]),
                     subject_id=UUID(raw_subject) if raw_subject is not None else None,
+                    conduct_mode=ConductMode(
+                        payload.get("conduct_mode", ConductMode.CONDUCTED.value)
+                    ),
+                    safety_envelope_verdict=(
+                        SafetyEnvelopeVerdict(
+                            enclosure_permitted=raw_verdict["enclosure_permitted"],
+                            beam_available=raw_verdict["beam_available"],
+                        )
+                        if raw_verdict is not None
+                        else None
+                    ),
                     raid=payload.get("raid"),
                     override_parameters=payload.get("override_parameters", {}),
                     effective_parameters=payload.get("effective_parameters", {}),
@@ -1102,28 +1250,44 @@ def from_stored(stored: StoredEvent) -> RunEvent:
 
             return deserialize_or_raise("RunResumed", _build_run_resumed)
         case "RunCompleted":
-            return deserialize_or_raise(
-                "RunCompleted",
-                lambda: RunCompleted(
+
+            def _build_run_completed() -> RunCompleted:
+                # Compute-conduct provenance added additively; legacy
+                # (non-conducted) streams replay with these absent ->
+                # None via `.get(...)`. `observed_at` is the same
+                # additive shape: absent on every stream written before
+                # slice 9, `None` on a driven completion recorded since.
+                # `capture_progress_snapshot` is the same shape again,
+                # absent before this field existed.
+                raw_observed_at = payload.get("observed_at")
+                return RunCompleted(
                     run_id=UUID(payload["run_id"]),
-                    # Compute-conduct provenance added additively; legacy
-                    # (non-conducted) streams replay with these absent ->
-                    # None via `.get(...)`.
                     actuation_kind=payload.get("actuation_kind"),
                     producing_job_id=payload.get("producing_job_id"),
                     artifact_uri=payload.get("artifact_uri"),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
-                ),
-            )
+                    observed_at=(
+                        datetime.fromisoformat(raw_observed_at)
+                        if raw_observed_at is not None
+                        else None
+                    ),
+                    capture_progress_snapshot=_capture_progress_snapshot_from_payload(
+                        payload.get("capture_progress_snapshot")
+                    ),
+                )
+
+            return deserialize_or_raise("RunCompleted", _build_run_completed)
         case "RunAborted":
 
             def _build_run_aborted() -> RunAborted:
                 # `decided_by_decision_id` optional. Forward-compat
                 # additive evolution: pre-existing streams replay without the
                 # key via `.get(..., None)`. `actuation_kind` /
-                # `producing_job_id` are the same additive shape for
-                # conduct-failed aborts.
+                # `producing_job_id` / `observed_at` are the same
+                # additive shape for conduct-failed / witnessed aborts.
+                # `capture_progress_snapshot` is the same shape again.
                 raw_decided_by_abort = payload.get("decided_by_decision_id")
+                raw_observed_at = payload.get("observed_at")
                 return RunAborted(
                     run_id=UUID(payload["run_id"]),
                     reason=payload["reason"],
@@ -1133,6 +1297,14 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                     actuation_kind=payload.get("actuation_kind"),
                     producing_job_id=payload.get("producing_job_id"),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    observed_at=(
+                        datetime.fromisoformat(raw_observed_at)
+                        if raw_observed_at is not None
+                        else None
+                    ),
+                    capture_progress_snapshot=_capture_progress_snapshot_from_payload(
+                        payload.get("capture_progress_snapshot")
+                    ),
                 )
 
             return deserialize_or_raise("RunAborted", _build_run_aborted)

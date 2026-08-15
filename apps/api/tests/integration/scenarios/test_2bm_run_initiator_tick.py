@@ -31,9 +31,20 @@ from cora.agent.seed_run_initiator import RUN_INITIATOR_AGENT_ID, seed_run_initi
 from cora.api._run_initiator import initiate_tick
 from cora.campaign.aggregates.campaign import CampaignIntent
 from cora.equipment.aggregates.family import FamilyName, family_stream_id
+from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.run._projections import register_run_projections
+from cora.run.aggregates.run import (
+    ConductMode,
+)
+from cora.run.aggregates.run import (
+    event_type_name as run_event_type_name,
+)
+from cora.run.aggregates.run import (
+    to_payload as run_to_payload,
+)
+from cora.run.aggregates.run.events import RunStarted
 from cora.run.features.list_runs import bind as bind_list_runs
 from cora.subject._projections import register_subject_projections
 from cora.subject.features.list_subjects import bind as bind_list_subjects
@@ -301,6 +312,62 @@ async def test_initiator_tick_respects_max_in_flight(db_pool: asyncpg.Pool) -> N
         started=started,
     )
     assert second == []
+
+
+@pytest.mark.integration
+async def test_initiator_tick_counts_a_witnessed_run_toward_max_in_flight(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A Witnessed Run occupies the same one-stage hardware a driven
+    Run would: the cap counts it exactly like a Conducted Run, so the tick
+    starts nothing even though a ready Subject exists. Excluding it here
+    (unlike the RunSupervisor's hold/resume/liveness, which do skip a
+    Witnessed Run because CORA does not control it) would let the initiator
+    start a second, driven Run on the same stage an external tool is
+    already driving."""
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=_id_queue(with_subjects=True))
+    await _setup(deps, db_pool, with_subjects=True)
+    await _drain_subjects(db_pool)
+
+    witnessed_run_id = uuid4()
+    witnessed = RunStarted(
+        run_id=witnessed_run_id,
+        name="witnessed capture",
+        plan_id=_PLAN_ID,
+        subject_id=None,
+        occurred_at=_NOW,
+        conduct_mode=ConductMode.WITNESSED,
+    )
+    await deps.event_store.append(
+        stream_type="Run",
+        stream_id=witnessed_run_id,
+        expected_version=0,
+        events=[
+            to_new_event(
+                event_type=run_event_type_name(witnessed),
+                payload=run_to_payload(witnessed),
+                occurred_at=witnessed.occurred_at,
+                event_id=uuid4(),
+                command_name="seed",
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                principal_id=_PRINCIPAL_ID,
+            )
+        ],
+    )
+    await _drain_run(db_pool)
+
+    started: set[UUID] = set()
+    run_ids = await initiate_tick(
+        deps=deps,
+        list_runs=bind_list_runs(deps),
+        list_subjects=bind_list_subjects(deps),
+        plan_id=_PLAN_ID,
+        max_in_flight=1,
+        started=started,
+    )
+
+    assert run_ids == []
 
 
 @pytest.mark.integration

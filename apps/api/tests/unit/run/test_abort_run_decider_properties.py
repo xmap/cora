@@ -113,6 +113,7 @@ def test_abort_from_permitted_source_emits_single_event(
             reason=reason,
             decided_by_decision_id=decision_id,
             occurred_at=now,
+            observed_at=None,
         )
     ]
 

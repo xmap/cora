@@ -72,9 +72,11 @@ class RecordAcquisitionRequest(BaseModel):
     evidence: dict[str, Any] = Field(
         default_factory=dict,
         description=(
-            "Capture-specific evidence (freeform placeholder today; "
-            "shape-only validated). Per-Family evidence schemas are a "
-            "future slice."
+            "Capture-specific evidence: frame accounting and provenance "
+            "(reader_kind, checksum_computer_kind, captured_at_source, "
+            "frame counts by role, the angle range). Validated against "
+            "AcquisitionEvidence's known keys; unknown keys are rejected. "
+            "Empty means no evidence supplied."
         ),
     )
 

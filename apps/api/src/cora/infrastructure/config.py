@@ -13,6 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from cora.infrastructure.auth.config import IdentityProviderConfig
 from cora.infrastructure.control_port_route import ControlPortRoute
+from cora.shared.capture_phase import CapturePhase
 
 _ALLOWED_DATABASE_SCHEMES = ("postgresql://", "postgres://")
 
@@ -510,6 +511,40 @@ class Settings(BaseSettings):
     # See `cora.data.adapters.posix_checksum`.
     posix_checksum_roots: tuple[str, ...] = ()
 
+    # End-to-end budget for one POSIX digest walk, seconds. The bound
+    # exists so a file on a hung mount, or one still growing, cannot
+    # occupy a worker indefinitely; it is not a performance knob.
+    #
+    # The 60 s default suits the small files the adapter was written
+    # against and is far too short for a tomography scan. Measured on
+    # the 2-BM pilot: `sha256sum` alone takes 82 s on a 24.5 GB scan
+    # (77 s of it CPU), and CORA's chunked read is slower still, so the
+    # first real ingest refused with `walk exceeded max_walk_seconds`.
+    # A deployment holding files of that size raises this to something
+    # that bounds a hang without forbidding its own data. Read from
+    # POSIX_CHECKSUM_MAX_WALK_SECONDS.
+    posix_checksum_max_walk_seconds: float = 60.0
+
+    # Data BC -- which of a scan file's timestamps is the acquisition
+    # time. `start_date` (the default) preserves the behaviour every
+    # deployment had before this setting existed.
+    #
+    # A deployment overrides it when its writer emits a timestamp that
+    # is wrong rather than merely different. At 2-BM, measured across
+    # six consecutive files, `start_date` is the PREVIOUS scan's
+    # `end_date` because the areaDetector timestamp attribute refreshes
+    # only while frames flow; `end_date` is correct to within seconds of
+    # the file's own close. Ingesting there without `end_date` records a
+    # capture time that is wrong by however long the gap between scans
+    # was, and the policy that a file value beats an operator's means
+    # nobody can correct it afterwards.
+    #
+    # The value is validated against the layout's own timestamp set by
+    # the reader, which refuses a name the layout does not offer rather
+    # than silently reading nothing. Read from
+    # SCAN_CAPTURED_AT_SOURCE.
+    scan_captured_at_source: str = "start_date"
+
     # Equipment BC — PIDINST integration (slice E.1)
     # `facility_publisher` is the institutional `publisher` field emitted
     # on every PIDINST record produced by `GET /assets/{asset_id}/pidinst`
@@ -675,6 +710,139 @@ class Settings(BaseSettings):
     #
     # See `cora.operation.adapters.control_port_beam_availability_lookup`.
     beam_availability_pvs: dict[str, str] = {}
+
+    # Capture-observe seam (2-BM commissioning ladder rung 1: watch a
+    # TomoScan capture live rather than learn of it from a staged file).
+    # Outer key is the capture code (2-BM runs several tomoscan variants
+    # off the same base class, e.g. tomoscan_2bm / tomoscan_2bm_step /
+    # tomoscan_fpga_2bm; each gets its own code); inner dict is
+    # role -> read-only PV. `status` is the only role every variant must
+    # provide; the rest are optional per variant. When empty (default)
+    # the capture-watch runtime is a no-op, so a generic boot is
+    # unaffected. Read from CAPTURE_WATCH_PVS as JSON:
+    #
+    #   CAPTURE_WATCH_PVS='{
+    #     "2bmb-tomoscan": {
+    #       "status": "2bmb:TomoScan:ScanStatus",
+    #       "server_running": "2bmb:TomoScan:ServerRunning",
+    #       "abort": "2bmb:TomoScan:AbortScan",
+    #       "images_saved": "2bmb:TomoScan:ImagesSaved",
+    #       "images_collected": "2bmb:TomoScan:ImagesCollected"
+    #     }
+    #   }'
+    #
+    # `status` is a DBR_CHAR waveform at 2-BM; the deployment's
+    # CONTROL_PORT_ROUTES must declare it in `text_addresses` or it
+    # decodes as raw bytes, not text. See `cora.api._capture_observer`.
+    capture_watch_pvs: dict[str, dict[str, str]] = {}
+
+    # The `status` role's raw substrate literal, mapped onto CORA's
+    # closed `CapturePhase` vocabulary. These strings belong to one
+    # tomoscan commit at one facility and MUST NOT be hardcoded in the
+    # spine: 2-BM's `decarlof/tomoscan` reports free text like
+    # "Beginning scan" / "Collecting projections" / "Scan complete" on
+    # `ScanStatus`, and a different facility or a later tomoscan commit
+    # may use different words for the same phase. A literal absent from
+    # this table classifies as CapturePhase.UNRECOGNIZED rather than
+    # being silently dropped or coerced into a nearby phase, so a
+    # vocabulary drift (a tool upgrade renaming a status) is visible in
+    # the watcher's log rather than misread as routine progress. Applies
+    # across every code in `capture_watch_pvs`: the deployed variants
+    # are confirmed byte-identical forks of one tomoscan base class, so
+    # one shared table is the fact on the ground, not a shortcut.
+    #
+    #   CAPTURE_STATUS_PHASES='{
+    #     "Beginning scan": "Begun",
+    #     "Programming PSO": "Progressing",
+    #     "Collecting dark fields": "Progressing",
+    #     "Collecting flat fields": "Progressing",
+    #     "Collecting projections": "Progressing",
+    #     "fdt file transfer complete": "Progressing",
+    #     "scp file transfer complete": "Progressing",
+    #     "Scan complete": "Ended",
+    #     "Scan aborted": "Aborted"
+    #   }'
+    #
+    # NOTE the fdt / scp transfer messages map to Progressing, not
+    # Ended: they mark transfer START, not arrival, per
+    # docs/deployments/2-bm/operations.md.
+    capture_status_phases: dict[str, str] = {}
+
+    # Bounds how often the capture-watch runtime re-reads each
+    # configured `status` PV independent of push traffic, mirroring
+    # `enclosure_permit_probe_tick_seconds`. `None` (default) disables
+    # polling entirely: reach is then push-only. OPERATIONAL KILL
+    # SWITCH, not just a test convenience. Irrelevant when
+    # `capture_watch_pvs` is empty.
+    capture_watch_probe_tick_seconds: float | None = None
+
+    # Runs the capture-watch loop in shadow mode: drains observations,
+    # maps them through `capture_status_phases`, and logs. Writes
+    # nothing (no event, no entries row, no Run) unless
+    # `run_witness_recording_enabled` is ALSO True (see below). Default
+    # off; irrelevant when `capture_watch_pvs` is empty. See
+    # `cora.api._run_witness`.
+    run_witness_enabled: bool = False
+
+    # Which Plan a promoted witnessed Run references (record_witnessed_run's
+    # plan_id). Deployment-declared, not read from the substrate:
+    # TomoScan reports a scan began, never which Plan it corresponds to.
+    # `None` (default) disables promotion regardless of
+    # `run_witness_recording_enabled` (see
+    # `_enforce_run_witness_recording_gate` in `main.py`).
+    capture_watch_plan_id: UUID | None = None
+
+    # SECOND, independent kill switch above `run_witness_enabled`:
+    # shadow mode (drain + log) stays default-on once `run_witness_enabled`
+    # is True; this flag additionally gates whether a BEGUN observation is
+    # actually promoted to a real witnessed Run via `record_witnessed_run`.
+    # Default off, so enabling `run_witness_enabled` alone stays
+    # shadow-only, unchanged from today. OPERATIONAL KILL SWITCH: boot
+    # refuses to start if this is True without both
+    # `run_witness_enabled=True` and `capture_watch_plan_id` set (see
+    # `_enforce_run_witness_recording_gate` in `main.py`).
+    run_witness_recording_enabled: bool = False
+
+    # THIRD, independent kill switch (slice 10): gates whether the
+    # `images_saved` / `images_collected` progress roles are buffered and
+    # written as Observation entries against the promoted Run. Default
+    # off. Refuses to boot if True without `run_witness_recording_enabled`
+    # also True (see `_enforce_run_witness_recording_gate`): with no
+    # promoted Run there is nothing to attach a progress reading to.
+    # Writing to Postgres on a timer driven by a facility resource is
+    # exactly the same operational-rollback shape as
+    # `enclosure_permit_probe_tick_seconds`; this flag is the switch that
+    # touches no code. See `cora.api._capture_progress_feeder`.
+    capture_progress_recording_enabled: bool = False
+
+    # Flush cadence for buffered progress readings, matching the
+    # `*_tick_seconds` naming every other loop-cadence setting uses
+    # (run_supervisor / run_initiator / clearance_expirer /
+    # clearance_watcher / calibration_watcher / procedure_watcher /
+    # campaign_watcher / enclosure_permit_probe / capture_watch_probe).
+    # Bounds Postgres write rate to (codes x progress roles) per tick
+    # regardless of substrate update rate: the buffer always holds only
+    # the LATEST reading per (capture_code, role), so a shorter interval
+    # raises time-resolution, never row count per tick. Irrelevant when
+    # `capture_progress_recording_enabled` is False.
+    capture_progress_flush_tick_seconds: float = 10.0
+
+    @field_validator("capture_status_phases")
+    @classmethod
+    def _validate_capture_status_phases(cls, value: dict[str, str]) -> dict[str, str]:
+        """Refuse an unparseable phase table at boot, not at the first
+        capture: a typo here would otherwise silently classify every
+        observation as UNRECOGNIZED until someone reads the log."""
+        valid = {member.value for member in CapturePhase if member is not CapturePhase.UNRECOGNIZED}
+        bad = {literal: phase for literal, phase in value.items() if phase not in valid}
+        if bad:
+            msg = (
+                f"capture_status_phases has values outside CapturePhase {sorted(valid)}: "
+                f"{bad}. UNRECOGNIZED is not a valid mapping target; a literal "
+                "absent from this table already classifies as UNRECOGNIZED."
+            )
+            raise ValueError(msg)
+        return value
 
     @field_validator("database_url")
     @classmethod
@@ -976,6 +1144,20 @@ class Settings(BaseSettings):
             msg = (
                 f"campaign_watcher_stale_after_seconds must be > 0, got {value}; "
                 "a non-positive window would flag every Held campaign"
+            )
+            raise ValueError(msg)
+        return value
+
+    @field_validator("capture_progress_flush_tick_seconds")
+    @classmethod
+    def _validate_capture_progress_flush_tick_seconds(cls, value: float) -> float:
+        """Floor of 0.1s prevents a tight flush loop that also defeats
+        the decimation the feeder's buffering design rests on."""
+        if value < 0.1:
+            msg = (
+                f"capture_progress_flush_tick_seconds must be >= 0.1, got {value}; "
+                "values below 100ms would tight-loop the flush and turn the "
+                "buffer's decimation back into a PV-rate write firehose"
             )
             raise ValueError(msg)
         return value

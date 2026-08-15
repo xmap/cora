@@ -67,6 +67,124 @@ def test_recursed_value_object_drops_its_own_drop_text_subfields() -> None:
     assert "model_ref" not in redacted or redacted["model_ref"] == {}
 
 
+def test_safety_envelope_verdict_bools_are_redacted_not_kept_whole() -> None:
+    """`RunStarted.safety_envelope_verdict.enclosure_permitted` /
+    `.beam_available` are a point-in-time live PSS/interlock and
+    beam-shutter reading, the same class of fact `EnclosurePermitObserved`
+    already drops entirely. `_OVERRIDE_DISPOSITIONS`
+    (`tools/gen_record_dispositions.py`) overrides the generic
+    `bool -> keep:number` default for exactly these two fields; this pins
+    the outcome against the real, generated table rather than a
+    hand-tuned one, so a future regeneration that lost the override
+    would fail this test."""
+    payload = {
+        "run_id": "01900000-0000-7000-8000-0000000000d1",
+        "name": "2BM watched capture",
+        "plan_id": "01900000-0000-7000-8000-0000000000d2",
+        "subject_id": None,
+        "raid": None,
+        "conduct_mode": "Witnessed",
+        "safety_envelope_verdict": {
+            "enclosure_permitted": True,
+            "beam_available": False,
+        },
+        "override_parameters": {},
+        "effective_parameters": {},
+        "trigger_source": "Monitor:2bmb-tomoscan",
+        "external_refs": [{"scheme": "capture-code", "value": "2bmb-tomoscan"}],
+        "acknowledged_cautions": [],
+        "campaign_id": None,
+        "decided_by_decision_id": None,
+        "pinned_calibration_ids": [],
+        "input_dataset_ids": [],
+        "occurred_at": "2026-08-14T12:00:00+00:00",
+    }
+    redacted = redact_tier1_payload("RunStarted", payload, token_map=TokenMap())
+    assert "safety_envelope_verdict" not in redacted or redacted["safety_envelope_verdict"] == {}
+    # conduct_mode (keep:enum) survives, proving the drop is specific to
+    # the verdict's two bools, not a blanket omission of the whole event.
+    assert redacted["conduct_mode"] == "Witnessed"
+
+
+def test_a_none_nested_vo_field_redacts_to_explicit_null_not_omitted() -> None:
+    """A `None` on a dict-shaped (nested-VO) disposition is the field's
+    own declared absence, not a malformed value: it must survive as an
+    explicit null, exactly like `RunCompleted.observed_at`'s existing
+    "present-as-null, not omit-when-None" scalar convention. Regression
+    pin: this used to fall through to the generic "not a dict" OMITTED
+    branch, silently dropping `safety_envelope_verdict` for every
+    Conducted Run (the majority case) and `capture_progress_snapshot`
+    for every driven completion or operator abort."""
+    payload: dict[str, object] = {
+        "run_id": "01900000-0000-7000-8000-0000000000d1",
+        "name": "2BM conducted run",
+        "plan_id": "01900000-0000-7000-8000-0000000000d2",
+        "subject_id": None,
+        "raid": None,
+        "conduct_mode": "Conducted",
+        "safety_envelope_verdict": None,
+        "override_parameters": {},
+        "effective_parameters": {},
+        "trigger_source": None,
+        "external_refs": [],
+        "acknowledged_cautions": [],
+        "campaign_id": None,
+        "decided_by_decision_id": None,
+        "pinned_calibration_ids": [],
+        "input_dataset_ids": [],
+        "occurred_at": "2026-08-14T12:00:00+00:00",
+    }
+    redacted = redact_tier1_payload("RunStarted", payload, token_map=TokenMap())
+    assert "safety_envelope_verdict" in redacted
+    assert redacted["safety_envelope_verdict"] is None
+
+
+def test_capture_progress_snapshot_none_redacts_to_explicit_null_not_omitted() -> None:
+    payload = {
+        "run_id": "01900000-0000-7000-8000-0000000000d1",
+        "actuation_kind": None,
+        "producing_job_id": None,
+        "artifact_uri": None,
+        "occurred_at": "2026-08-14T12:00:00+00:00",
+        "observed_at": None,
+        "capture_progress_snapshot": None,
+    }
+    redacted = redact_tier1_payload("RunCompleted", payload, token_map=TokenMap())
+    assert "capture_progress_snapshot" in redacted
+    assert redacted["capture_progress_snapshot"] is None
+
+
+def test_capture_progress_snapshot_counts_are_kept_not_dropped() -> None:
+    """Unlike `safety_envelope_verdict`'s bools (overridden to drop:text
+    because they are live PSS/beam readings), these counts are scan
+    telemetry already kept in plain on the observation trail
+    (`_redact_tier2.py`'s `observation` row); dropping them here would
+    be the inconsistency, and would defeat the evidence this field
+    exists to preserve."""
+    payload = {
+        "run_id": "01900000-0000-7000-8000-0000000000d1",
+        "actuation_kind": None,
+        "producing_job_id": None,
+        "artifact_uri": None,
+        "occurred_at": "2026-08-14T12:00:00+00:00",
+        "observed_at": "2026-08-14T12:00:00+00:00",
+        "capture_progress_snapshot": {
+            "collected_count": 2987.0,
+            "collected_total": 3000.0,
+            "collected_at": "2026-08-14T11:59:59+00:00",
+            "saved_count": None,
+            "saved_total": None,
+            "saved_at": None,
+        },
+    }
+    redacted = redact_tier1_payload("RunCompleted", payload, token_map=TokenMap())
+    snapshot = redacted["capture_progress_snapshot"]
+    assert snapshot["collected_count"] == 2987.0
+    assert snapshot["collected_total"] == 3000.0
+    assert snapshot["collected_at"] == "2026-08-14T11:59:59+00:00"
+    assert snapshot["saved_count"] is None
+
+
 def test_a_payload_key_absent_from_a_known_events_field_list_drops() -> None:
     """Schema evolution: an older schema_version's row can carry a field
     the current dataclass no longer declares. Must drop, not abort --
@@ -161,3 +279,49 @@ def test_stream_id_correlation_id_and_event_id_are_tokened() -> None:
 def test_causation_id_none_stays_none() -> None:
     redacted = Tier1Redactor(TokenMap()).redact_row(_stream_row(causation_id=None))
     assert redacted["causation_id"] is None
+
+
+def test_fired_fields_records_declared_keys_actually_present_on_a_row() -> None:
+    """The tier-1 completeness twin to tier-2's `fired_pointers`: every
+    declared field key on the payload that had a real disposition entry,
+    not just a snapshot of the payload's own keys."""
+    fired: dict[str, set[str]] = {}
+    redact_tier1_payload(
+        "AgentDefined", _agent_defined_payload(), token_map=TokenMap(), fired_fields=fired
+    )
+    assert "agent_id" in fired["AgentDefined"]
+    assert "daily_token_cap" in fired["AgentDefined"]
+
+
+def test_fired_fields_excludes_an_unlisted_key_that_only_dropped_by_omission() -> None:
+    """A key with no table entry (schema-evolution drop) is not a fired
+    RULE: nothing in the disposition table was exercised by it."""
+    fired: dict[str, set[str]] = {}
+    payload = _agent_defined_payload()
+    payload["a_field_removed_in_a_later_schema_version"] = "still in an old row"
+    redact_tier1_payload("AgentDefined", payload, token_map=TokenMap(), fired_fields=fired)
+    assert "a_field_removed_in_a_later_schema_version" not in fired["AgentDefined"]
+
+
+def test_fired_fields_defaults_to_none_and_costs_nothing_when_omitted() -> None:
+    """Existing callers that never pass `fired_fields` keep working."""
+    redacted = redact_tier1_payload("AgentDefined", _agent_defined_payload(), token_map=TokenMap())
+    assert redacted["daily_token_cap"] == 1000
+
+
+def test_tier1_redactor_exposes_fired_fields_per_event_type_accumulated_across_rows() -> None:
+    redactor = Tier1Redactor(TokenMap())
+    redactor.redact_row(_stream_row(event_type="AgentDefined"))
+    fired = redactor.fired_fields
+    assert "AgentDefined" in fired
+    assert "agent_id" in fired["AgentDefined"]
+
+
+def test_tier1_redactor_fired_fields_is_a_copy_not_a_live_view() -> None:
+    redactor = Tier1Redactor(TokenMap())
+    redactor.redact_row(_stream_row())
+    snapshot = redactor.fired_fields
+    redactor.redact_row(
+        _stream_row(event_type="AgentSuspended", payload={"agent_id": str(uuid4())})
+    )
+    assert "AgentSuspended" not in snapshot

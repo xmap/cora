@@ -30,7 +30,11 @@ manifest body in hand rather than guessed at here.
 from typing import Protocol
 
 from cora.infrastructure.record_export._dispositions import DISPOSITIONS
-from cora.infrastructure.record_export._export import ExportedRecord
+from cora.infrastructure.record_export._redact_tier1 import (
+    FIXED_DROP_COLUMNS,
+    FIXED_KEEP_COLUMNS,
+    FIXED_TOKEN_COLUMNS,
+)
 from cora.infrastructure.record_export._redact_tier2 import (
     TIER2_DISPOSITIONS,
     TIER2_JSONB_CLEARED_POINTERS,
@@ -85,13 +89,18 @@ def hash_logbooks(logbooks: dict[str, tuple[dict[str, object], ...]]) -> str:
     return compute_content_hash(LOGBOOKS_PAYLOAD_TYPE, body)
 
 
-def hash_record(record: ExportedRecord) -> str:
+def hash_record(record: TwoTierRecord) -> str:
     """SHA-256 content hash over the whole bundle, both tiers, no exclusions.
 
     This is THE record hash (H1): per F2, it covers everything
     `export_record` produced. Re-running the export against an unchanged
     database reproduces this value exactly; any single differing byte
     anywhere in either tier changes it.
+
+    Takes the structural `TwoTierRecord`, not `ExportedRecord` by name,
+    so `_bundle.write_bundle`'s binding check can call this on whatever
+    it was actually handed and compare against what a manifest claims,
+    without needing to know which concrete type that is.
     """
     return compute_content_hash(RECORD_PAYLOAD_TYPE, _two_tier_body(record))
 
@@ -116,26 +125,38 @@ def hash_redacted_record(record: TwoTierRecord) -> str:
     Takes the structural `TwoTierRecord` rather than `RedactedRecord`
     only because importing `_redaction` here would invert this module's
     dependency; callers pass `RedactionResult.redacted_record`. Passing
-    an unredacted `ExportedRecord` is a caller error this signature
-    cannot catch, and the reason `write_bundle` derives H3 itself from
-    the record it is handed rather than accepting one as a parameter.
+    an unredacted `ExportedRecord` alongside a manifest whose
+    `published_record_hash` was computed from the real redacted record
+    is a caller error this function's signature cannot catch by itself
+    -- `write_bundle` is what catches it, by recomputing this same hash
+    over whatever record it was actually handed and refusing on
+    disagreement (`ManifestRecordMismatchError`) before writing a single
+    byte.
     """
     return compute_content_hash(PUBLISHED_RECORD_PAYLOAD_TYPE, _two_tier_body(record))
 
 
 def hash_redaction_profile() -> str:
     """SHA-256 content hash over every table that decides what a
-    published record discloses: tier 1's generated `DISPOSITIONS` AND
+    published record discloses: tier 1's generated per-field
+    `DISPOSITIONS` AND its hand-authored fixed-column dispositions
+    (`FIXED_KEEP_COLUMNS` / `FIXED_TOKEN_COLUMNS` / `FIXED_DROP_COLUMNS`
+    in `_redact_tier1.py`, which govern `stream_id`, `principal_id`,
+    `signature`, and every other `events` column outside `payload`), AND
     tier 2's hand-authored `TIER2_DISPOSITIONS` /
     `TIER2_JSONB_CLEARED_POINTERS` / `TIER2_JSONB_DROPPED_COLUMNS`.
 
     This IS the redaction profile hash (H2). Step 7's security re-review
-    found the tier-2 tables missing from this hash: the fail-closed
-    switch (`redact_record`'s `expected_redaction_profile_hash` check)
-    was fail-closed for tier 1 only, silently blind to a tier-2 table
-    edit that weakened a disposition (e.g. `conduit_verdicts.reason`
-    `DROP` -> `KEEP`) or dropped a jsonb clearance restriction. Both
-    tiers must be in H2, or "the hash matches" does not mean what
+    found the tier-2 tables missing from this hash and fixed that; this
+    fixes the same class of gap one seam over. `_redact_tier1.py`'s three
+    fixed-column tuples decide, unconditionally for every event, whether
+    `principal_id` tokens or `signature` drops -- editing either was
+    invisible to `redact_record`'s `expected_redaction_profile_hash`
+    check, so moving `principal_id` from TOKEN to KEEP, or `signature`
+    from DROP to KEEP (republishing a signature beside a redacted payload,
+    the exact confirmation oracle F5's anti-hooks forbid), would not have
+    moved H2 at all. Every table that decides a disposition must be in
+    H2, or "the hash matches" does not mean what
     `RedactionProfileMismatchError`'s docstring claims it means.
 
     Tuple-keyed dicts (`TIER2_JSONB_CLEARED_POINTERS` /
@@ -146,8 +167,8 @@ def hash_redaction_profile() -> str:
     reviewable string.
 
     Regenerating tier 1's table via `make record-dispositions` after a
-    real event-model change, or hand-editing tier 2's tables, is
-    expected to change this value; `test_record_dispositions_drift.py`
+    real event-model change, or hand-editing either tier's fixed tables,
+    is expected to change this value; `test_record_dispositions_drift.py`
     guards tier 1's generator output specifically, and
     `test_redact_tier2.py`'s live-schema drift test guards tier 2's
     column coverage, but only THIS hash is what a caller's
@@ -155,6 +176,9 @@ def hash_redaction_profile() -> str:
     """
     body = {
         "tier1": DISPOSITIONS,
+        "tier1_fixed_keep_columns": sorted(FIXED_KEEP_COLUMNS),
+        "tier1_fixed_token_columns": sorted(FIXED_TOKEN_COLUMNS),
+        "tier1_fixed_drop_columns": sorted(FIXED_DROP_COLUMNS),
         "tier2_dispositions": TIER2_DISPOSITIONS,
         "tier2_jsonb_cleared_pointers": {
             f"{kind}/{column}": sorted(pointers)

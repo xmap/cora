@@ -47,6 +47,8 @@ from datetime import datetime
 from typing import Any, assert_never
 from uuid import UUID
 
+from cora.data.aggregates.dataset.state import DatasetChecksum, DatasetEncoding
+from cora.data.aggregates.distribution.state import AccessProtocol
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.shared.identity import ActorId
@@ -61,11 +63,28 @@ class DistributionRegistered:
     eventual-consistency primitives; the handler pre-loads each on the
     write path, the evolver does NOT re-verify on fold.
 
-    Per CONTRIBUTING.md "Primitives in event payloads": every field here
-    is a primitive (str, int, UUID, datetime). VOs (``DistributionUri``,
-    ``DatasetChecksum``, ``DatasetEncoding``, ``AccessProtocol``) are
-    reconstructed by the evolver on fold; the decider unwraps VOs before
-    constructing the event.
+    ``checksum: DatasetChecksum`` and ``access_protocol: AccessProtocol``
+    are declared as their real value object / enum, not unwrapped to
+    primitives, for the same closed-vocabulary carve-out as
+    ``DatasetRegistered`` (see that event's docstring): the record
+    exporter's generated redaction table resolves a field's disposition
+    from its DECLARED TYPE, and ``DatasetChecksum`` marks itself
+    ``ClosedValueObject`` so the exporter keeps it whole, digest
+    included.
+
+    ``encoding: DatasetEncoding`` moved onto the event alongside
+    ``checksum`` for shape symmetry with ``DatasetRegistered``, not
+    because it independently qualifies for the carve-out: it is NOT a
+    ``ClosedValueObject`` and the exporter still recurses into it and
+    still drops ``media_type``/``conforms_to`` exactly as before. Do not
+    cite this field as carve-out precedent.
+
+    ``to_payload`` / ``from_stored`` still serialize the SAME on-disk
+    shapes as before this change (``checksum``/``encoding`` as nested
+    objects, ``access_protocol`` as ``AccessProtocol.value``'s bare
+    string, per [[project-facility-aggregate-design]] cryptographic-chain
+    immutability discipline); only the dataclass's declared shape moved
+    to match what was already on disk.
 
     Fold-symmetry attribution per [[project-fold-symmetry-design]]:
     ``registered_by: ActorId`` carries the envelope ``principal_id`` of
@@ -78,12 +97,10 @@ class DistributionRegistered:
     dataset_id: UUID
     supply_id: UUID
     uri: str
-    checksum_algorithm: str
-    checksum_value: str
+    checksum: DatasetChecksum
     byte_size: int
-    media_type: str
-    conforms_to: frozenset[str]
-    access_protocol: str
+    encoding: DatasetEncoding
+    access_protocol: AccessProtocol
     occurred_at: datetime
     registered_by: ActorId
 
@@ -139,11 +156,9 @@ def to_payload(event: DistributionEvent) -> dict[str, Any]:
             dataset_id=dataset_id,
             supply_id=supply_id,
             uri=uri,
-            checksum_algorithm=checksum_algorithm,
-            checksum_value=checksum_value,
+            checksum=checksum,
             byte_size=byte_size,
-            media_type=media_type,
-            conforms_to=conforms_to,
+            encoding=encoding,
             access_protocol=access_protocol,
             occurred_at=occurred_at,
             registered_by=registered_by,
@@ -154,15 +169,15 @@ def to_payload(event: DistributionEvent) -> dict[str, Any]:
                 "supply_id": str(supply_id),
                 "uri": uri,
                 "checksum": {
-                    "algorithm": checksum_algorithm,
-                    "value": checksum_value,
+                    "algorithm": checksum.algorithm,
+                    "value": checksum.value,
                 },
                 "byte_size": byte_size,
                 "encoding": {
-                    "media_type": media_type,
-                    "conforms_to": sorted(conforms_to),
+                    "media_type": encoding.media_type,
+                    "conforms_to": sorted(encoding.conforms_to),
                 },
-                "access_protocol": access_protocol,
+                "access_protocol": access_protocol.value,
                 "occurred_at": occurred_at.isoformat(),
                 "registered_by": str(registered_by),
             }
@@ -205,17 +220,22 @@ def from_stored(stored: StoredEvent) -> DistributionEvent:
                     dataset_id=UUID(payload["dataset_id"]),
                     supply_id=UUID(payload["supply_id"]),
                     uri=payload["uri"],
-                    checksum_algorithm=raw_checksum["algorithm"],
-                    checksum_value=raw_checksum["value"],
+                    checksum=DatasetChecksum(
+                        algorithm=raw_checksum["algorithm"], value=raw_checksum["value"]
+                    ),
                     byte_size=int(payload["byte_size"]),
-                    media_type=raw_encoding["media_type"],
-                    conforms_to=frozenset(raw_encoding["conforms_to"]),
-                    access_protocol=payload["access_protocol"],
+                    encoding=DatasetEncoding(
+                        media_type=raw_encoding["media_type"],
+                        conforms_to=frozenset(raw_encoding["conforms_to"]),
+                    ),
+                    access_protocol=AccessProtocol(payload["access_protocol"]),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                     registered_by=ActorId(UUID(payload["registered_by"])),
                 )
 
-            return deserialize_or_raise("DistributionRegistered", _build_registered)
+            return deserialize_or_raise(
+                "DistributionRegistered", _build_registered, extra=(ValueError,)
+            )
         case "DistributionDiscarded":
             return deserialize_or_raise(
                 "DistributionDiscarded",

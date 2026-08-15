@@ -127,7 +127,7 @@ async def _seed_held_run(store: EventStore, *, starter: UUID) -> UUID:
 async def _seed_completed_run(store: EventStore, *, starter: UUID) -> UUID:
     """Append RunStarted + RunCompleted so the run folds to a terminal status."""
     run_id = await _seed_running_run(store, starter=starter)
-    completed = RunCompleted(run_id=run_id, occurred_at=_NOW)
+    completed = RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None)
     envelope = to_new_event(
         event_type=run_event_type_name(completed),
         payload=run_to_payload(completed),

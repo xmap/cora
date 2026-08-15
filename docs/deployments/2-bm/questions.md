@@ -121,9 +121,17 @@ settled the same way, by a direct read against the live 2bmb deployment on 2026-
 reply; see [Operations](operations.md#inside-the-scan-file) for the evidence. Only what neither source can
 answer is left here.
 
+DATA-11 is answered and closed (#655). It asked whether the detector IOC could be made to refresh its
+timestamp attribute at file open; the answer is that it cannot, because an `EPICS_PV` NDAttribute is only
+refreshed by a frame passing through the plugin and no frame of a new scan has passed at file-open time.
+The write moved to the tomoscan client instead, and CORA now declares `captured_at_source: start_date`.
+What the fix left behind is DATA-12: it overwrites the stale value rather than preserving it, so a file
+gives a reader no way to tell which writer produced its own timestamp.
+
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| DATA-8 | `Nice-to-have` | How often do scans finish with dropped frames? `add_theta()` compares written frames against commanded angles and logs a warning when they disagree, so the condition is detected but not fatal. Knowing whether this is rare-and-alarming or routine decides whether a record of the scan should refuse to be written, or carry the shortfall as an ordinary recorded fact. | rare enough to treat as an exception worth surfacing, not a routine outcome to normalise | not yet (a genuine instance was found 2026-08-11 reading a live 2bmb test file, `test_000.h5`: 3601 angles commanded, 1 frame captured, `theta` absent; `DataExchangeScanReader` handled it exactly as designed, but the file was an early smoke test, not evidence about routine production frequency) | [Operations](operations.md) |
+| DATA-8 | `Nice-to-have` | How often do scans finish with dropped frames? `add_theta()` compares written frames against commanded angles and logs a warning when they disagree, so the condition is detected but not fatal. Knowing whether this is rare-and-alarming or routine decides whether a record of the scan should refuse to be written, or carry the shortfall as an ordinary recorded fact. | rare enough to treat as an exception worth surfacing, not a routine outcome to normalise | not yet, but the question is now askable: CORA could not read the commanded counts at all until 2026-08-12 (2-BM writes them as one-element arrays and the reader understood only plain scalars), so every shortfall check silently compared against nothing. Two data points since: `test_000.h5`, an early smoke test, 3601 commanded and 1 captured with `theta` absent; and `test_005.h5`, the first production scan CORA read end to end, 1501 commanded and 1501 captured, nothing dropped | [Operations](operations.md) |
+| DATA-12 | `Blocks-go-live` | From which date are 2-BM scan files written with the corrected `start_date`, and has the `2bmbSP2` IOC been restarted yet? A file gives no way to answer this from its own contents: the client fix overwrites the IOC's stale value instead of preserving it, so a pre-fix and a post-fix file are identical in shape. CORA now reads `start_date`, which is right for new files and silently wrong for old ones, and the ingest policy is that a parseable file timestamp beats an operator's, so a wrong value cannot be corrected after the fact. A date is a complete answer. A marker written into the file, even a one-line `start_date_writer` attribute, would retire the question permanently and would serve every other consumer of these files too. | the client fix (`decarlof/tomoscan@d0025a2`) went live 2026-08-13; the IOC restart that stops the stale write at file open has not happened yet | not yet (the descriptor declares `start_date`; no 2-BM file written after the fix has been read by CORA) | [Operations](operations.md#inside-the-scan-file) |
 
 ## Where CORA runs
 
@@ -140,9 +148,12 @@ interim choice for testing and development while nothing structured is decided y
 move later. Two consequences follow. `arcturus`'s own `EPICS_CA_ADDR_LIST` (an explicit address list,
 not broadcast) is simply what CORA now uses, which is what the former HOST-1 asked. And read access to a
 finished scan file has a working interim answer that needs no mount and never touches the beamline's
-write paths: read the file in place over SSH to `tomdet`, the same way `test_003.h5` was inspected on
-2026-08-11 (see [Operations](operations.md#inside-the-scan-file)). The durable version of that question,
-a mount or a supported fetch path, stays open below.
+write paths: copy the finished file from `tomdet` to a staging directory on the host and read it there.
+That was exercised end to end on 2026-08-12, staging `test_005.h5` (24.5 GB) to `/local/cora-scans` on
+`arcturus` and ingesting it. Two costs the durable answer should weigh: the copy duplicates the file, and
+digesting it takes real time (`sha256sum` alone is 82 seconds on this hardware, about 300 MB/s), which is
+why the deployment raises the digest walk budget rather than accepting the 60-second default. The durable
+version of the question, a mount or a supported fetch path, stays open below.
 
 These are likely controls, networking, or IT questions rather than floor questions. Routing them to the
 right person, or naming who that person is, is a complete answer to any row here.

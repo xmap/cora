@@ -81,7 +81,7 @@ async def _seed_run(deps, run_id: UUID, plan_id: UUID) -> None:
 
 
 def _terminal_event(run_id: UUID) -> StoredEvent:
-    domain = RunCompleted(run_id=run_id, occurred_at=_LATER)
+    domain = RunCompleted(run_id=run_id, occurred_at=_LATER, observed_at=None)
     return StoredEvent(
         position=1,
         event_id=UUID("01900000-0000-7000-8000-00000000fe01"),
