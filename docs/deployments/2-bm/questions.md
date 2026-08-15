@@ -121,10 +121,17 @@ settled the same way, by a direct read against the live 2bmb deployment on 2026-
 reply; see [Operations](operations.md#inside-the-scan-file) for the evidence. Only what neither source can
 answer is left here.
 
+DATA-11 is answered and closed (#655). It asked whether the detector IOC could be made to refresh its
+timestamp attribute at file open; the answer is that it cannot, because an `EPICS_PV` NDAttribute is only
+refreshed by a frame passing through the plugin and no frame of a new scan has passed at file-open time.
+The write moved to the tomoscan client instead, and CORA now declares `captured_at_source: start_date`.
+What the fix left behind is DATA-12: it overwrites the stale value rather than preserving it, so a file
+gives a reader no way to tell which writer produced its own timestamp.
+
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
 | DATA-8 | `Nice-to-have` | How often do scans finish with dropped frames? `add_theta()` compares written frames against commanded angles and logs a warning when they disagree, so the condition is detected but not fatal. Knowing whether this is rare-and-alarming or routine decides whether a record of the scan should refuse to be written, or carry the shortfall as an ordinary recorded fact. | rare enough to treat as an exception worth surfacing, not a routine outcome to normalise | not yet, but the question is now askable: CORA could not read the commanded counts at all until 2026-08-12 (2-BM writes them as one-element arrays and the reader understood only plain scalars), so every shortfall check silently compared against nothing. Two data points since: `test_000.h5`, an early smoke test, 3601 commanded and 1 captured with `theta` absent; and `test_005.h5`, the first production scan CORA read end to end, 1501 commanded and 1501 captured, nothing dropped | [Operations](operations.md) |
-| DATA-11 | `Blocks-go-live` | Can the detector IOC's timestamp attribute be made to refresh when a file opens? `start_date` is measurably the PREVIOUS scan's `end_date` (see [Operations](operations.md#inside-the-scan-file) for the six-file evidence), so every scan file 2-BM writes carries a wrong acquisition start, silently, for every consumer and not only CORA. CORA reads `end_date` here and is unblocked; the question is whether the file contract itself can be repaired at the source, and whether the inferred mechanism matches what the IOC configuration actually does. | the attribute can be refreshed at file open, making `start_date` true rather than inherited | not yet | [Operations](operations.md#inside-the-scan-file) |
+| DATA-12 | `Blocks-go-live` | From which date are 2-BM scan files written with the corrected `start_date`, and has the `2bmbSP2` IOC been restarted yet? A file gives no way to answer this from its own contents: the client fix overwrites the IOC's stale value instead of preserving it, so a pre-fix and a post-fix file are identical in shape. CORA now reads `start_date`, which is right for new files and silently wrong for old ones, and the ingest policy is that a parseable file timestamp beats an operator's, so a wrong value cannot be corrected after the fact. A date is a complete answer. A marker written into the file, even a one-line `start_date_writer` attribute, would retire the question permanently and would serve every other consumer of these files too. | the client fix (`decarlof/tomoscan@d0025a2`) went live 2026-08-13; the IOC restart that stops the stale write at file open has not happened yet | not yet (the descriptor declares `start_date`; no 2-BM file written after the fix has been read by CORA) | [Operations](operations.md#inside-the-scan-file) |
 
 ## Where CORA runs
 

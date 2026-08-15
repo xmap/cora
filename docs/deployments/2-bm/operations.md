@@ -80,31 +80,59 @@ dataset paths and lifecycle timing this section assumes. Two of its facts matter
 commanded scan geometry (`/process/acquisition/rotation/num_angles`, the flat and dark field
 mode-and-count groups) is written `OnFileClose`, so it exists only in cleanly closed files, and it is
 what a shortfall check compares captured frames against; the `/defaults` frame ids alone can never show
-tail truncation, because a missed trigger never receives an id. The two acquisition timestamps
-(`/process/acquisition/start_date` and `end_date`, both from the PV `S:IOC:timeOfDayISO8601`) are written
-`OnFileOpen` and `OnFileClose`, so a crashed file keeps a start time while losing its geometry. The PV
+tail truncation, because a missed trigger never receives an id. `end_date`
+(`/process/acquisition/end_date`, from the PV `S:IOC:timeOfDayISO8601`) is written `OnFileClose`. That PV
 carries an explicit UTC offset (confirmed 2026-08-11, DATA-10: `2026-08-11T12:01:05-0500`), not naive
-local time, so a reader parses either as an unambiguous instant with no site timezone rule needed.
+local time, so a reader parses it as an unambiguous instant with no site timezone rule needed.
+`start_date` used to be written the same way at `OnFileOpen`, and the section below is about why it is
+not written that way any more.
 
-**`start_date` does not say when the scan started, and `end_date` does say when it ended.** Measured
+**`start_date` was the previous scan's `end_date`, and it is now fixed at the source.** Measured
 2026-08-12 across the six files in `2026-08-DeCarlo-1015116`: every file's `end_date` falls within five
 seconds of its own close, and in three consecutive cases the `start_date` is the PREVIOUS file's
 `end_date` to the second (`test_003` carries `test_002`'s, `test_004` carries `test_003`'s, `test_005`
 carries `test_004`'s). `test_005` ran on the morning of 2026-08-12 and claims a start on the evening of
 2026-08-11, wrong by about twelve hours and across a day boundary. Two early smoke tests carry a value
 five days older than the file. One file, `test_002`, does look correct, which is part of why the defect
-is easy to miss.
+is easy to miss. CORA asked about it as DATA-11 and the reply was three upstream commits rather than a
+confirmation: the mechanism inferred from the measurements is the one that was there.
 
-The clock PV is healthy: read live on 2026-08-12 it returned the correct instant. The reading consistent
-with the evidence is that the areaDetector timestamp attribute refreshes only while frames are flowing,
-so a file opened before any frame of the new scan inherits the value the previous scan left, while the
-value written on close has been refreshed by that scan's own frames. That mechanism is inferred from the
-measurements rather than read out of the IOC configuration, and staff are the authority on it.
+An `EPICS_PV` NDAttribute is snapshotted onto each frame as that frame passes the areaDetector
+NDAttributes plugin. Between scans no frame flows, so the cached value stays frozen where the previous
+scan's last frame left it, and `when="OnFileOpen"` fires before any frame of the new scan has arrived.
+`end_date` escaped because by `when="OnFileClose"` this scan's own final frame has already refreshed the
+cache. The general form outlives this beamline: `when="OnFileOpen"` cannot carry an `EPICS_PV`
+NDAttribute that has to mean *now, at file open*, because the IOC-side pipeline cannot observe a scan
+boundary. Only the client can.
 
-Two consequences. A reader wanting when a scan happened uses `end_date` here, which is why the descriptor
-declares `captured_at_source: end_date` and CORA records which timestamp it used rather than leaving a
-reader to assume. And the defect is upstream of CORA: it is in every scan file 2-BM writes, so anything
-else reading `start_date` inherits it silently.
+So the write moved to the client. `tomoscan_2bm.py` captures the instant in Python at the top of
+`begin_scan()` and, once the HDF5 plugin has closed the file, reopens it with `h5py` and writes
+`/process/acquisition/start_date` itself
+([`decarlof/tomoscan@d0025a2`](https://github.com/decarlof/tomoscan/commit/d0025a2)). The
+`DateTimeStart` attribute and its `start_date` layout line were deleted from the areaDetector XML so the
+IOC stops writing the stale value at all
+([`data-exchange/dxfile@de33f3a`](https://github.com/data-exchange/dxfile/commit/de33f3a)), and `meta
+show` marks a pre-fix file's stale value `[derived]` without altering anything on disk
+([`xray-imaging/meta-cli@29a56bc`](https://github.com/xray-imaging/meta-cli/commit/29a56bc)). The
+canonical bug ticket is `tomography/tomoscan#180`.
+
+The descriptor now declares `captured_at_source: start_date`, and three things follow that a reader
+should not have to rediscover. The two timestamps no longer bracket the acquisition from two different
+moments: both are written after the file closes, so `start_date` inherited the fragility `end_date`
+always had, and a scan that dies before `end_scan()` runs leaves no client-written start time at all,
+where before it carried one that was at least wrong in a predictable direction. Nothing in a file names
+the writer that produced its `start_date`, because the committed fix overwrites the IOC's value rather
+than preserving it under the companion `start_date_from_ioc` that `tomoscan#180` had suggested, so a
+pre-fix and a post-fix file are identical in shape and the only discriminator is a deployment date the
+file does not carry. That is DATA-12, and until it is answered CORA must not ingest a 2-BM file older
+than the fix under this declaration, because the ingest policy is that a parseable file timestamp beats
+an operator's and a wrong one could not be corrected afterwards.
+
+The IOC half is also not finished. `dxfile@de33f3a` is deployed into the working tree at
+`/home/beams/2BMB/conda/dxfile/`, which the `2bmbSP2` boot directory symlinks into, so the corrected
+files already sit on the paths the IOC opens. Until that IOC is restarted it holds the old CA monitor
+and the old parsed layout and keeps writing the stale value at file open, and the client's post-close
+overwrite is the only thing making new files right.
 
 **A finished capture is not a finished file, and this is the fact an ingest reader must respect.** The
 end-of-scan sequence stops the file plugin (`FPCapture` to `Done`, then waits for `Capture_RBV` to reach

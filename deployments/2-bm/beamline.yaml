@@ -796,17 +796,31 @@ data:
     NOT declared: it is the open HOST-2 staff question, and the
     descriptor records answers, not assumptions.
 
-    The acquisition time is read from end_date, not start_date, and
-    that is a measurement rather than a preference. Across six
-    consecutive files written 2026-08-05 to 2026-08-12, every file's
-    start_date equalled the PREVIOUS file's end_date, while every
-    file's end_date fell within five seconds of its own close. The
-    areaDetector timestamp attribute refreshes only while frames flow,
-    so a file opened for scan N carries the value left from scan N-1's
-    last frame. The timestamp PV itself is healthy: read live it
-    returns the correct instant. Until the IOC's attribute
-    configuration is corrected upstream, end_date is the only
-    trustworthy instant the file carries.
+    The acquisition time is read from start_date, and that reading has
+    changed once. Across six consecutive files written 2026-08-05 to
+    2026-08-12, every file's start_date equalled the PREVIOUS file's
+    end_date while every file's end_date fell within five seconds of
+    its own close, so end_date was the only trustworthy instant and
+    this descriptor declared it. The mechanism was confirmed and the
+    defect fixed upstream on 2026-08-13 (cora#655): an EPICS_PV
+    NDAttribute is snapshotted onto each frame as it passes the
+    plugin, and at OnFileOpen no frame of the new scan has passed yet,
+    so the plugin's cache still held the previous scan's last value.
+    The write moved to the tomoscan client, which captures the instant
+    in Python at begin_scan and writes it with h5py once the file has
+    closed (decarlof/tomoscan@d0025a2), and the DateTimeStart
+    attribute with its OnFileOpen dataset line were deleted from the
+    layout XML (data-exchange/dxfile@de33f3a).
+
+    Two consequences travel with that. start_date is now written after
+    the file closes, so it no longer survives a scan that never
+    reaches end_scan: it has the fragility end_date always had, and
+    the pair no longer brackets the acquisition from two different
+    moments. And nothing in a file names the writer that produced its
+    start_date, so a file written before the fix reads exactly like
+    one written after it. That is DATA-12, and until it is answered a
+    file older than the fix must not be ingested under this
+    declaration.
   layout: data_exchange
   finality: transfer_status
-  captured_at_source: end_date
+  captured_at_source: start_date
