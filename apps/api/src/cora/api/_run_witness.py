@@ -65,22 +65,28 @@ Per capture_code, a small dedup state machine:
 `external_refs`, so a still-open capture at process restart is never
 re-promoted.
 
-## Known gap as of this commit: `ENDED` does not yet distinguish abort from success
+## Closing the abort/success gap needs a deployment change too
 
-`CaptureObservation.phase` classifies purely off the substrate's status
-literal (see `ControlPortCaptureObserver`), and as of this commit that
-adapter reads only the `status` PV role, not the deployment's `abort`
-role. At 2-BM, `fly_scan()`'s exception handlers for `ScanAbortError` /
-`CameraTimeoutError` / `FileOverwriteError` still run
-`finally: self.end_scan()`, which writes the identical
-`'Scan complete'` literal a genuine success writes. So until the abort
-PV is read (tracked as the very next commit in this same effort),
-`ENDED` unconditionally maps to `RunCompleted` here, which would
-misrecord a real 2-BM abort as a success the moment
-`run_witness_recording_enabled` is turned on. Nothing in this file or
+`CaptureObservation.phase` classifies the `status` role's literal off
+the deployment's declared table, and separately, `ControlPortCaptureObserver`
+now also reads an optional `abort` role: a decoded-asserted reading on
+it is a direct `ABORTED` claim (see that module's docstring), landing
+here as a terminal `_record_outcome` call ahead of whatever the
+`status` PV says next. At 2-BM, `fly_scan()`'s exception handlers for
+`ScanAbortError` / `CameraTimeoutError` / `FileOverwriteError` still
+run `finally: self.end_scan()`, which writes the identical
+`'Scan complete'` literal a genuine success writes, so the `abort` role
+is the only thing that can tell the two apart there.
+
+The code capability exists as of this commit; the gap only closes once
+a deployment's `capture_watch_pvs` also declares the `abort` role for
+each code (2-BM: `"abort": "2bmb:TomoScan:AbortScan"`). A code with no
+`abort` entry watches `status` only, unchanged, so `ENDED` still
+unconditionally maps to `RunCompleted` for it. Nothing in this file or
 in `Settings` gates recording on the abort role being configured; the
 locked deployment decision is to keep `run_witness_recording_enabled`
-off at 2-BM until both this slice and the abort-PV wiring are live.
+off at 2-BM until both this effort's code and its own deployment
+config change (adding the `abort` role) are live.
 
 ## Accepted residual: a reconnect can misread a still-open capture as new
 
