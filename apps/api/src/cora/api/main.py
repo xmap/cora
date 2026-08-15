@@ -424,7 +424,18 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
     to. Catching the misconfiguration at boot is cheaper than discovering
     it the first time a real capture begins and record_witnessed_run has
     nowhere to point.
+
+    Also refuses to boot with capture_progress_recording_enabled=True
+    unless run_witness_recording_enabled is itself True (slice 10): with
+    no promoted Run there is nothing for a progress reading to attach to.
     """
+    if settings.capture_progress_recording_enabled and not settings.run_witness_recording_enabled:
+        msg = (
+            "CAPTURE_PROGRESS_RECORDING_ENABLED=true requires "
+            "RUN_WITNESS_RECORDING_ENABLED=true. A progress reading has no "
+            "promoted Run to attach to without it."
+        )
+        raise RuntimeError(msg)
     if not settings.run_witness_recording_enabled:
         return
     missing: list[str] = []

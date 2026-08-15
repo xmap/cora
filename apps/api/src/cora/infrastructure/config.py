@@ -803,6 +803,26 @@ class Settings(BaseSettings):
     # `_enforce_run_witness_recording_gate` in `main.py`).
     run_witness_recording_enabled: bool = False
 
+    # THIRD, independent kill switch (slice 10): gates whether the
+    # `images_saved` / `images_collected` progress roles are buffered and
+    # written as Observation entries against the promoted Run. Default
+    # off. Refuses to boot if True without `run_witness_recording_enabled`
+    # also True (see `_enforce_run_witness_recording_gate`): with no
+    # promoted Run there is nothing to attach a progress reading to.
+    # Writing to Postgres on a timer driven by a facility resource is
+    # exactly the same operational-rollback shape as
+    # `enclosure_permit_probe_tick_seconds`; this flag is the switch that
+    # touches no code. See `cora.api._capture_progress_feeder`.
+    capture_progress_recording_enabled: bool = False
+
+    # Flush cadence for buffered progress readings. Bounds Postgres write
+    # rate to (codes x progress roles) per tick regardless of substrate
+    # update rate: the buffer always holds only the LATEST reading per
+    # (capture_code, role), so a shorter interval raises time-resolution,
+    # never row count per tick. Irrelevant when
+    # `capture_progress_recording_enabled` is False.
+    capture_progress_flush_seconds: float = 10.0
+
     @field_validator("capture_status_phases")
     @classmethod
     def _validate_capture_status_phases(cls, value: dict[str, str]) -> dict[str, str]:
