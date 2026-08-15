@@ -52,6 +52,40 @@ if TYPE_CHECKING:
 
 _SOURCE_KIND = "EpicsPv"
 _STATUS_ROLE = "status"
+_ABORT_ROLE = "abort"
+
+# Conventional EPICS binary state labels, mirroring
+# `_enclosure_permit_observer._PERMITTED_LABELS` / `_NOT_PERMITTED_LABELS`
+# exactly: a DBR_ENUM reading through `EpicsCaControlPort` reaches this
+# module as its resolved label, never as its index (2-BM's `AbortScan`
+# is confirmed live as one such ENUM, resolving to `'No'`), so the label
+# is the only thing left to compare against. `CaprotoControlPort`, by
+# contrast, leaves the raw integer unresolved; the `int(value)` fallback
+# below covers that shape too.
+_ASSERTED_LABELS = frozenset({"1", "ON", "TRUE", "YES"})
+_CLEAR_LABELS = frozenset({"0", "OFF", "FALSE", "NO"})
+
+
+def _binary_code(value: object) -> int | None:
+    """Resolve a binary-role reading to 1 / 0, or None when it is neither.
+
+    Unrecognized resolves to `None`, never a guess: same fail-toward-
+    silence posture as `_enclosure_permit_observer._binary_code`, whose
+    docstring documents the production incident (`int('ON')` raising)
+    that made string-label matching necessary in the first place.
+    """
+    if isinstance(value, str):
+        token = value.strip().upper()
+        if token in _ASSERTED_LABELS:
+            return 1
+        if token in _CLEAR_LABELS:
+            return 0
+        return None
+    try:
+        code = int(value)  # type: ignore[call-overload]
+    except (TypeError, ValueError):
+        return None
+    return code if code in (0, 1) else None
 
 
 def classify_capture_status(reported_status: str, status_phases: Mapping[str, str]) -> CapturePhase:
@@ -81,17 +115,23 @@ _PUMP_DONE = _PumpDone()
 
 
 class ControlPortCaptureObserver:
-    """`CaptureObserver` over a `ControlPort` (one `status` PV per capture code).
+    """`CaptureObserver` over a `ControlPort` (`status` + optional `abort` PV
+    per capture code).
 
     `capture_pvs` is code -> role -> PV, matching
-    `Settings.capture_watch_pvs`. Only the `status` role is subscribed
-    in this slice; a code whose PV set has no `status` entry cannot be
-    watched and is silently excluded from scope, mirroring the
-    Enclosure adapter's `if code in self._permit_pvs` filter. The other
-    declared roles (`server_running`, `abort`, `images_saved`,
-    `images_collected`) are read by a later slice; declaring them now
-    costs nothing and lets a deployment's config stabilize ahead of the
-    code that consumes it.
+    `Settings.capture_watch_pvs`. The `status` role is required; a code
+    whose PV set has no `status` entry cannot be watched and is
+    silently excluded from scope, mirroring the Enclosure adapter's
+    `if code in self._permit_pvs` filter. The `abort` role is optional
+    per code: when declared, a truthy reading on it is a direct
+    `ABORTED` phase claim, letting a real abort be distinguished from a
+    successful end even where the `status` PV alone cannot (2-BM's
+    `fly_scan` writes the identical `'Scan complete'` literal on both).
+    A code with no `abort` entry watches `status` only, exactly as
+    before this role existed. The remaining declared roles
+    (`server_running`, `images_saved`, `images_collected`) are read by
+    a later slice; declaring them now costs nothing and lets a
+    deployment's config stabilize ahead of the code that consumes it.
     """
 
     def __init__(
@@ -108,6 +148,9 @@ class ControlPortCaptureObserver:
             for code, roles in capture_pvs.items()
             if _STATUS_ROLE in roles
         }
+        self._abort_pvs = {
+            code: roles[_ABORT_ROLE] for code, roles in capture_pvs.items() if _ABORT_ROLE in roles
+        }
         self._status_phases = dict(status_phases)
         self._tick_seconds = tick_seconds
 
@@ -122,8 +165,15 @@ class ControlPortCaptureObserver:
         ]
         if not pvs:
             return
+        abort_pvs = [
+            (code, self._abort_pvs[code])
+            for code in sorted(scope.capture_codes)
+            if code in self._abort_pvs
+        ]
         queue: asyncio.Queue[CaptureObservation | _PumpDone] = asyncio.Queue()
-        pump_tasks = [asyncio.create_task(self._pump(code, pv, queue)) for code, pv in pvs]
+        pump_tasks = [asyncio.create_task(self._pump(code, pv, queue)) for code, pv in pvs] + [
+            asyncio.create_task(self._pump_abort(code, pv, queue)) for code, pv in abort_pvs
+        ]
         poll_tasks = (
             [asyncio.create_task(self._poll(code, pv, queue)) for code, pv in pvs]
             if self._tick_seconds is not None
@@ -171,6 +221,29 @@ class ControlPortCaptureObserver:
         finally:
             queue.put_nowait(_PUMP_DONE)
 
+    async def _pump_abort(
+        self,
+        code: str,
+        pv: str,
+        queue: asyncio.Queue[CaptureObservation | _PumpDone],
+    ) -> None:
+        """Sibling pump for the optional `abort` role.
+
+        Unlike `_pump`, not every reading is enqueued: a falsy value (the
+        busy record's idle/reset state) makes no phase claim at all and
+        must not be pushed as a no-op observation, per `_from_abort_reading`.
+        """
+        try:
+            async for reading in self._control_port.subscribe(pv):
+                observation = self._from_abort_reading(code, pv, reading)
+                if observation is not None:
+                    queue.put_nowait(observation)
+            queue.put_nowait(self._unreached(code, pv))
+        except ControlNotConnectedError:
+            queue.put_nowait(self._unreached(code, pv))
+        finally:
+            queue.put_nowait(_PUMP_DONE)
+
     async def _poll(
         self,
         code: str,
@@ -199,6 +272,36 @@ class ControlPortCaptureObserver:
             capture_code=code,
             reported_status=reported_status,
             phase=phase,
+            reach_tier=ReachTier.RELAYED,
+            observed_at=reading.produced_at,
+            source_kind=_SOURCE_KIND,
+            source_id=pv,
+        )
+
+    def _from_abort_reading(
+        self, code: str, pv: str, reading: Measurement
+    ) -> CaptureObservation | None:
+        """An asserted abort-role reading is a direct `ABORTED` claim.
+
+        NOT Python truthiness: 2-BM's `AbortScan` is a DBR_ENUM that
+        resolves to the label `'No'` when idle, and `bool('No')` is
+        `True`. `_binary_code` decodes the conventional EPICS binary
+        labels (or a raw 0/1 index) instead, so "No" correctly resolves
+        to clear, not asserted.
+
+        A clear or unresolvable reading makes no phase claim: it is not
+        "the capture is not aborted" so much as "nothing happened on
+        this PV" (or a label this cannot decode), and reporting it as a
+        phase would let a stale idle read silently arrive between a
+        real `Begun` and its `status` transitions. `None` return means
+        the caller enqueues nothing.
+        """
+        if _binary_code(reading.value) != 1:
+            return None
+        return CaptureObservation(
+            capture_code=code,
+            reported_status=str(reading.value),
+            phase=CapturePhase.ABORTED,
             reach_tier=ReachTier.RELAYED,
             observed_at=reading.produced_at,
             source_kind=_SOURCE_KIND,
