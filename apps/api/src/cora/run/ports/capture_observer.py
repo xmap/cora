@@ -73,7 +73,8 @@ transfer-status messages mark transfer start, not arrival. Binding an
 observed capture to a Dataset is a separate, later, independently-
 verified act and is out of scope for this port entirely. Same rule for
 `CaptureProgressObservation`: a progress count is not a claim about
-what a file on disk contains.
+what a file on disk contains, and `commanded_total` is not a claim
+that the capture will, or did, reach it.
 
 ## D6.L2-equivalent anti-lock posture
 
@@ -159,6 +160,18 @@ class CaptureProgressObservation:
     decode a reading as a finite number emits nothing for it rather
     than guessing; see `_capture_observer.py`.
 
+    `commanded_total` is the substrate's own target count for this role
+    when the reading carries one (2-BM's `"<reached>/<commanded>"`
+    stringout format), or `None` when the reading has no such second
+    half. It is NOT a completeness signal: `wait_camera_done()`'s poll
+    loop returns on `CamAcquireBusy == 0` before a final
+    `update_status()` call, so `value < commanded_total` is the normal
+    terminal state of a successful scan, not evidence of a shortfall.
+    Carried because a witnessed terminal needs the substrate's own
+    target as evidence, never because `value == commanded_total` is a
+    valid test; see `_capture_observer.py` and
+    `CaptureProgressSnapshot`.
+
     `reach_tier`, `observed_at`, `source_kind`, `source_id` carry the
     same meaning as on `CaptureLifecycleObservation`.
     """
@@ -166,6 +179,7 @@ class CaptureProgressObservation:
     capture_code: str
     role: str
     value: float
+    commanded_total: float | None
     reach_tier: ReachTier
     observed_at: datetime | None
     source_kind: str

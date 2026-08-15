@@ -89,6 +89,7 @@ def _command(**overrides: object) -> RecordWitnessedRunOutcome:
         "observed_at": _NOW,
         "monitor_source_id": _MONITOR_SOURCE_ID,
         "trigger": "Monitor",
+        "capture_progress_snapshot": None,
     }
     defaults.update(overrides)
     return RecordWitnessedRunOutcome(**defaults)  # type: ignore[arg-type]

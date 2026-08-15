@@ -37,6 +37,7 @@ _CODE = "2bmb-tomoscan"
 _STATUS_PV = "2bmb:TomoScan:ScanStatus"
 _ABORT_PV = "2bmb:TomoScan:AbortScan"
 _SAVED_PV = "2bmb:TomoScan:ImagesSaved"
+_COLLECTED_PV = "2bmb:TomoScan:ImagesCollected"
 _PLAN_ID = UUID("01900000-0000-7000-8000-000000007107")
 _NOW = datetime(2026, 8, 14, 22, 30, 34, tzinfo=UTC)
 
@@ -394,6 +395,7 @@ async def test_replay_a_late_progress_reading_after_close_is_dropped_not_written
             capture_code=_CODE,
             role="images_saved",
             value=1561.0,
+            commanded_total=None,
             reach_tier=ReachTier.RELAYED,
             observed_at=None,
             source_kind="EpicsPv",
@@ -403,3 +405,49 @@ async def test_replay_a_late_progress_reading_after_close_is_dropped_not_written
     await feeder.flush_capture(_CODE)
 
     assert append_observations.calls == []
+
+
+@pytest.mark.unit
+async def test_replay_a_healthy_scan_short_of_its_total_still_completes_with_evidence() -> None:
+    """The load-bearing case this slice exists for. `wait_camera_done()`
+    (upstream `tomoscan.py`) returns on `CamAcquireBusy == 0` BEFORE its
+    final `update_status()` call, so a real, healthy 2-BM scan routinely
+    ends with `ImagesCollected` short of its own commanded total, e.g.
+    "2987/3000". This must NOT be read as a shortfall: the terminal
+    stays `RunCompleted` (never reclassified to Aborted off the counts),
+    and the counts land as evidence on the outcome, not as a verdict."""
+    port = _ScriptedPort(
+        {
+            _STATUS_PV: [_reading(v) for v in _HAPPY_CYCLE],
+            _COLLECTED_PV: [
+                _progress_reading("1500/3000"),
+                _progress_reading("2987/3000"),
+            ],
+        }
+    )
+    genesis = _FakeGenesis()
+    outcome = _FakeOutcome()
+    truncate = _FakeTruncate()
+    append_observations = _FakeAppendObservations()
+    recorder = _recorder(genesis=genesis, outcome=outcome, truncate=truncate)
+    feeder = _feeder(recorder, append_observations)
+
+    await _run_loop_over(
+        port,
+        recorder,
+        feeder=feeder,
+        capture_pvs={"status": _STATUS_PV, "abort": _ABORT_PV, "images_collected": _COLLECTED_PV},
+    )
+
+    assert len(genesis.calls) == 1
+    assert len(outcome.calls) == 1
+    command = outcome.calls[0]
+    assert command.observed_phase.value == "Ended"
+
+    snapshot = command.capture_progress_snapshot
+    assert snapshot is not None
+    assert snapshot.collected_count == 2987.0
+    assert snapshot.collected_total == 3000.0
+    # The short count is evidence, not a verdict: still Ended, never
+    # reclassified as Aborted for falling short of its own total.
+    assert command.observed_phase.value != "Aborted"

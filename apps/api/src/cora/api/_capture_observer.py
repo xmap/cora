@@ -48,10 +48,33 @@ to parse and the feature would have shipped recording nothing on the
 real beamline, with no error anywhere; a deployment can watch a whole
 scan complete and never notice the record stayed empty. Caught by
 checking the upstream source's own write path rather than trusting the
-`Settings.capture_watch_pvs` docstring's example. `_finite_float` now
-accepts both shapes and keeps only the numerator; see that function's
-own docstring for why the denominator is deliberately discarded, not
-lost.
+`Settings.capture_watch_pvs` docstring's example. `_progress_counts`
+now accepts both shapes and carries both halves onto
+`CaptureProgressObservation`, per `commanded_total`'s own docstring for
+why it is carried and what it is NOT: a completeness test.
+
+## The denominator is carried, and is not a completeness signal
+
+Slice 10 originally discarded the `"<total>"` half of a `"<reached>/
+<total>"` reading, reasoning that a consumer needing the commanded
+count should read the Plan's own parameters instead. That reasoning
+does not hold on the witnessed path: a witnessed Run's Plan is a
+configured stand-in (`Settings.capture_watch_plan_id`), not the
+parameters TomoScan was actually given, so "read the Plan" means
+guessing at someone else's scan length. The commanded total is now
+carried through as `commanded_total`, because a witnessed terminal
+(`record_witnessed_run_outcome`) needs the substrate's own target as
+evidence when tomoscan reports a clean completion after an abort,
+camera timeout, or file-overwrite refusal that never reaches
+`ScanStatus` (see tomography/tomoscan#181).
+
+Carrying it does NOT make `value == commanded_total` a valid test.
+`wait_camera_done()`'s poll loop (upstream `tomoscan.py`) returns on
+`CamAcquireBusy == 0` BEFORE its final `update_status()` call, so a
+perfectly healthy scan routinely ends with `value` short of
+`commanded_total` by roughly one poll interval's worth of frames. See
+`CaptureProgressSnapshot` (`cora.run.aggregates.run.state`) for how the
+witnessed terminal records this without asserting a verdict.
 
 ## Permit probe trail's sibling-poller shape, reused unchanged
 
@@ -86,10 +109,17 @@ if TYPE_CHECKING:
 _SOURCE_KIND = "EpicsPv"
 _STATUS_ROLE = "status"
 _ABORT_ROLE = "abort"
-_PROGRESS_ROLES = ("images_saved", "images_collected")
+ROLE_IMAGES_SAVED = "images_saved"
+ROLE_IMAGES_COLLECTED = "images_collected"
 """CORA-owned progress role keys, matching `Settings.capture_watch_pvs`'s
-documented example. `server_running` stays declared-and-unread: tool
-liveness is a different concern from capture progress (slice 10)."""
+documented example. Module-public (not `_`-prefixed) because
+`RunWitnessRecorder._build_progress_snapshot` (`_run_witness.py`) reads
+observations back out by these same keys and must not carry its own
+copy of the literal strings; import these two, not `_PROGRESS_ROLES`
+below, so a rename or a third role addition here cannot silently
+desync from that reader. `server_running` stays declared-and-unread:
+tool liveness is a different concern from capture progress (slice 10)."""
+_PROGRESS_ROLES = (ROLE_IMAGES_SAVED, ROLE_IMAGES_COLLECTED)
 
 # Conventional EPICS binary state labels, mirroring
 # `_enclosure_permit_observer._PERMITTED_LABELS` / `_NOT_PERMITTED_LABELS`
@@ -126,42 +156,56 @@ def _binary_code(value: object) -> int | None:
 
 
 def _finite_float(value: object) -> float | None:
-    """Coerce a progress-role reading to a finite float, or `None`.
+    """Coerce a single reading to a finite float, or `None`.
 
-    Two accepted shapes: a bare number, and 2-BM's REAL format, a
-    `"<done>/<total>"` string. `ImagesSaved` / `ImagesCollected` are
-    `stringout` records at 2-BM (not numeric ones): TomoScan's
-    `update_status()` writes `f"{num_saved}/{num_to_save}"` /
-    `f"{num_collected}/{num_images}"` onto them, confirmed against the
-    upstream `decarlof/tomoscan` source, `tomoScan.template` (both
-    declared `record(stringout, ...)`) and `tomoscan.py`'s
-    `update_status`. A bare-number reading enqueues the number
-    unchanged, for a future substrate or role that IS numeric.
-
-    Only the numerator is kept: `images_saved`'s value is "how many
-    images have actually been saved", the count left of the slash. The
-    denominator (the commanded total) is a distinct fact -- the
-    intended scan length, not a progress count -- and is deliberately
-    NOT carried onto this channel; a consumer that needs it reads the
-    Plan's own parameters instead. This is a decision, not an
-    oversight: see this module's docstring.
-
-    Fail-toward-silence, mirroring `_binary_code`: a reading that is
-    neither shape, or resolves to NaN/Infinity, enqueues nothing
-    rather than reaching `append_observations`, which raises
+    Fail-toward-silence, mirroring `_binary_code`: a value that cannot
+    coerce, or resolves to NaN/Infinity, returns `None` rather than
+    reaching `append_observations`, which raises
     `InvalidObservationValueError` on NaN/Inf and would fail an entire
     batch over one bad reading.
     """
-    numerator: object = value
-    if isinstance(value, str) and "/" in value:
-        numerator, _, _total = value.partition("/")
     try:
-        result = float(numerator)  # type: ignore[arg-type]
+        result = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return None
     if math.isnan(result) or math.isinf(result):
         return None
     return result
+
+
+def _progress_counts(value: object) -> tuple[float, float | None] | None:
+    """Split a progress-role reading into `(reached, commanded_total)`.
+
+    Two accepted shapes: a bare number, and 2-BM's REAL format, a
+    `"<reached>/<commanded>"` string. `ImagesSaved` / `ImagesCollected`
+    are `stringout` records at 2-BM (not numeric ones): TomoScan's
+    `update_status()` writes `f"{num_saved}/{num_to_save}"` /
+    `f"{num_collected}/{num_images}"` onto them, confirmed against the
+    upstream `decarlof/tomoscan` source, `tomoScan.template` (both
+    declared `record(stringout, ...)`) and `tomoscan.py`'s
+    `update_status`. A bare-number reading returns `commanded_total`
+    `None`, for a future substrate or role that IS numeric.
+
+    Only the numerator's coercibility gates the whole reading, matching
+    `_finite_float`'s fail-toward-silence posture: a garbled, missing,
+    or absent denominator (`"2987/"`, `"2987/abc"`, a bare `2987`) still
+    returns the reached count with `commanded_total=None`, since the
+    reached count is a true progress fact on its own. Returns `None`
+    only when the numerator itself does not coerce to a finite float.
+    """
+    numerator: object = value
+    denominator: object = None
+    if isinstance(value, str) and "/" in value:
+        numerator, _, denominator = value.partition("/")
+    reached = _finite_float(numerator)
+    if reached is None:
+        return None
+    # `denominator is None` on a bare-number reading (no "/") is a
+    # normal, expected shape, not a coercion failure to route through
+    # `_finite_float`'s try/except: skip the call rather than raise and
+    # catch a `TypeError` on every single bare-number reading.
+    commanded_total = _finite_float(denominator) if denominator is not None else None
+    return reached, commanded_total
 
 
 def classify_capture_status(reported_status: str, status_phases: Mapping[str, str]) -> CapturePhase:
@@ -431,20 +475,24 @@ class ControlPortCaptureObserver:
     def _from_progress_reading(
         self, code: str, role: str, pv: str, reading: Measurement
     ) -> CaptureProgressObservation | None:
-        """A progress-role reading, decoded to a finite float.
+        """A progress-role reading, decoded to a finite float plus an
+        optional commanded total (see `_progress_counts`).
 
-        `None` return (no coercible finite value) means the caller
+        `None` return (no coercible reached count) means the caller
         enqueues nothing, matching `_from_abort_reading`'s fail-toward-
         silence posture: a garbled or non-numeric reading is dropped,
-        never guessed at.
+        never guessed at. A garbled or absent commanded total does NOT
+        drop the reading; it enqueues with `commanded_total=None`.
         """
-        value = _finite_float(reading.value)
-        if value is None:
+        counts = _progress_counts(reading.value)
+        if counts is None:
             return None
+        value, commanded_total = counts
         return CaptureProgressObservation(
             capture_code=code,
             role=role,
             value=value,
+            commanded_total=commanded_total,
             reach_tier=ReachTier.RELAYED,
             observed_at=reading.produced_at,
             source_kind=_SOURCE_KIND,
@@ -480,4 +528,9 @@ class ControlPortCaptureObserver:
         )
 
 
-__all__ = ["ControlPortCaptureObserver", "classify_capture_status"]
+__all__ = [
+    "ROLE_IMAGES_COLLECTED",
+    "ROLE_IMAGES_SAVED",
+    "ControlPortCaptureObserver",
+    "classify_capture_status",
+]

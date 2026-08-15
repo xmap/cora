@@ -91,7 +91,11 @@ from uuid import UUID
 
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
-from cora.run.aggregates.run.state import ConductMode, SafetyEnvelopeVerdict
+from cora.run.aggregates.run.state import (
+    CaptureProgressSnapshot,
+    ConductMode,
+    SafetyEnvelopeVerdict,
+)
 from cora.shared.identity import ActorId
 from cora.shared.logbook import LogbookSchema
 
@@ -511,6 +515,18 @@ class RunCompleted:
     handler-append. NO default: every construction site must state
     what the substrate said, including saying `None`, rather than let
     a default silently drop the distinction.
+
+    `capture_progress_snapshot` is `None` for a driven completion (no
+    progress PVs to have observed) and, for a witnessed one, the last
+    per-role progress counts `RunWitness` retained before this
+    terminal, or `None` if nothing was retained. See
+    `CaptureProgressSnapshot`'s own docstring for why it carries no
+    completeness judgment: 2-BM's real counters routinely fall short of
+    their own commanded total even on a healthy scan, so this is
+    evidence for the false-completion gap tomography/tomoscan#181
+    describes, not a verdict on it. `= None` default: `complete_run`'s driven
+    path never populates it, and every stream written before this field
+    existed replays with it absent.
     """
 
     run_id: UUID
@@ -519,6 +535,7 @@ class RunCompleted:
     actuation_kind: str | None = None
     producing_job_id: str | None = None
     artifact_uri: str | None = None
+    capture_progress_snapshot: CaptureProgressSnapshot | None = None
 
 
 @dataclass(frozen=True)
@@ -560,6 +577,13 @@ class RunAborted:
     `occurred_at`, CORA's clock at handler-append. NO default: every
     construction site must state what the substrate said, including
     saying `None`.
+
+    `capture_progress_snapshot` mirrors `RunCompleted`'s field of the
+    same name: `None` for an operator abort, and for a witnessed one
+    the last per-role progress counts retained before this terminal
+    (see `RunCompleted`'s docstring and `CaptureProgressSnapshot`).
+    Carried on both terminals from one command so its presence does not
+    depend on which terminal fired.
     """
 
     run_id: UUID
@@ -569,6 +593,7 @@ class RunAborted:
     decided_by_decision_id: UUID | None = None
     actuation_kind: str | None = None
     producing_job_id: str | None = None
+    capture_progress_snapshot: CaptureProgressSnapshot | None = None
 
 
 @dataclass(frozen=True)
@@ -770,6 +795,50 @@ def event_type_name(event: RunEvent) -> str:
     return type(event).__name__
 
 
+def _capture_progress_snapshot_to_payload(
+    snapshot: CaptureProgressSnapshot | None,
+) -> dict[str, Any] | None:
+    """Shared by `RunCompleted` and `RunAborted`'s `to_payload` arms:
+    `capture_progress_snapshot` is carried on both terminals from one
+    command (see `record_witnessed_run_outcome`'s decider), so both
+    arms need the identical nested shape. Whole object `None` when
+    absent, matching `safety_envelope_verdict`'s own precedent."""
+    if snapshot is None:
+        return None
+    return {
+        "collected_count": snapshot.collected_count,
+        "collected_total": snapshot.collected_total,
+        "collected_at": (
+            snapshot.collected_at.isoformat() if snapshot.collected_at is not None else None
+        ),
+        "saved_count": snapshot.saved_count,
+        "saved_total": snapshot.saved_total,
+        "saved_at": snapshot.saved_at.isoformat() if snapshot.saved_at is not None else None,
+    }
+
+
+def _capture_progress_snapshot_from_payload(
+    raw: dict[str, Any] | None,
+) -> CaptureProgressSnapshot | None:
+    """The `from_stored` inverse of `_capture_progress_snapshot_to_payload`,
+    shared by both terminals for the same reason. Inner keys read with
+    `[...]` not `.get`, matching `safety_envelope_verdict`'s own
+    precedent: once the VO is on the wire, all six of its fields are
+    assumed present."""
+    if raw is None:
+        return None
+    return CaptureProgressSnapshot(
+        collected_count=raw["collected_count"],
+        collected_total=raw["collected_total"],
+        collected_at=(
+            datetime.fromisoformat(raw["collected_at"]) if raw["collected_at"] is not None else None
+        ),
+        saved_count=raw["saved_count"],
+        saved_total=raw["saved_total"],
+        saved_at=datetime.fromisoformat(raw["saved_at"]) if raw["saved_at"] is not None else None,
+    )
+
+
 def to_payload(event: RunEvent) -> dict[str, Any]:
     """Serialize a Run event to a JSON-friendly dict for jsonb storage.
 
@@ -902,6 +971,7 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             artifact_uri=artifact_uri,
             occurred_at=occurred_at,
             observed_at=observed_at,
+            capture_progress_snapshot=capture_progress_snapshot,
         ):
             return {
                 "run_id": str(run_id),
@@ -913,6 +983,9 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 # before this field existed must stay distinguishable
                 # from one that says "the substrate gave no time".
                 "observed_at": observed_at.isoformat() if observed_at is not None else None,
+                "capture_progress_snapshot": _capture_progress_snapshot_to_payload(
+                    capture_progress_snapshot
+                ),
             }
         case RunAborted(
             run_id=run_id,
@@ -922,6 +995,7 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             producing_job_id=producing_job_id,
             occurred_at=occurred_at,
             observed_at=observed_at,
+            capture_progress_snapshot=capture_progress_snapshot,
         ):
             return {
                 "run_id": str(run_id),
@@ -933,6 +1007,9 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "producing_job_id": producing_job_id,
                 "occurred_at": occurred_at.isoformat(),
                 "observed_at": observed_at.isoformat() if observed_at is not None else None,
+                "capture_progress_snapshot": _capture_progress_snapshot_to_payload(
+                    capture_progress_snapshot
+                ),
             }
         case RunStopped(
             run_id=run_id,
@@ -1180,6 +1257,8 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                 # None via `.get(...)`. `observed_at` is the same
                 # additive shape: absent on every stream written before
                 # slice 9, `None` on a driven completion recorded since.
+                # `capture_progress_snapshot` is the same shape again,
+                # absent before this field existed.
                 raw_observed_at = payload.get("observed_at")
                 return RunCompleted(
                     run_id=UUID(payload["run_id"]),
@@ -1192,6 +1271,9 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                         if raw_observed_at is not None
                         else None
                     ),
+                    capture_progress_snapshot=_capture_progress_snapshot_from_payload(
+                        payload.get("capture_progress_snapshot")
+                    ),
                 )
 
             return deserialize_or_raise("RunCompleted", _build_run_completed)
@@ -1203,6 +1285,7 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                 # key via `.get(..., None)`. `actuation_kind` /
                 # `producing_job_id` / `observed_at` are the same
                 # additive shape for conduct-failed / witnessed aborts.
+                # `capture_progress_snapshot` is the same shape again.
                 raw_decided_by_abort = payload.get("decided_by_decision_id")
                 raw_observed_at = payload.get("observed_at")
                 return RunAborted(
@@ -1218,6 +1301,9 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                         datetime.fromisoformat(raw_observed_at)
                         if raw_observed_at is not None
                         else None
+                    ),
+                    capture_progress_snapshot=_capture_progress_snapshot_from_payload(
+                        payload.get("capture_progress_snapshot")
                     ),
                 )
 

@@ -88,6 +88,7 @@ def _progress_obs(
     *,
     role: str = "images_saved",
     value: float = 1.0,
+    commanded_total: float | None = None,
     capture_code: str = _CODE,
     observed_at: datetime | None = _NOW,
 ) -> CaptureProgressObservation:
@@ -95,6 +96,7 @@ def _progress_obs(
         capture_code=capture_code,
         role=role,
         value=value,
+        commanded_total=commanded_total,
         reach_tier=ReachTier.RELAYED,
         observed_at=observed_at,
         source_kind="EpicsPv",
@@ -251,8 +253,8 @@ async def test_run_witness_loop_survives_an_observer_that_raises() -> None:
 
 @pytest.mark.unit
 async def test_run_witness_loop_offers_a_progress_observation_to_the_feeder() -> None:
-    """A `CaptureProgressObservation` never reaches the recorder: it is
-    handed to `feeder.offer()` and the loop moves on."""
+    """A `CaptureProgressObservation` reaches `feeder.offer()`; with no
+    `recorder` supplied (as here), it reaches nothing else."""
     feeder = _FakeCaptureProgressFeeder()
     observer = _FakeObserver([_progress_obs(role="images_saved", value=3.0)])
     task = asyncio.create_task(
@@ -666,6 +668,191 @@ async def test_run_witness_recorder_logs_a_distinct_event_on_outcome_unauthorize
 
     events = [entry["event"] for entry in logs]
     assert "run_witness.outcome_unauthorized" in events
+
+
+# ---------- observe_progress / capture_progress_snapshot retention ----------
+
+
+@pytest.mark.unit
+async def test_observe_progress_then_ended_carries_a_snapshot_on_the_outcome() -> None:
+    run_id = uuid4()
+    outcome = _FakeRecordWitnessedRunOutcome()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        record_witnessed_run_outcome=outcome,
+        open_captures={_CODE: run_id},
+    )
+
+    recorder.observe_progress(
+        _progress_obs(role="images_collected", value=2987.0, commanded_total=3000.0)
+    )
+    recorder.observe_progress(
+        _progress_obs(role="images_saved", value=2987.0, commanded_total=3000.0)
+    )
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    assert len(outcome.calls) == 1
+    snapshot = outcome.calls[0].capture_progress_snapshot
+    assert snapshot is not None
+    assert snapshot.collected_count == 2987.0
+    assert snapshot.collected_total == 3000.0
+    assert snapshot.saved_count == 2987.0
+    assert snapshot.saved_total == 3000.0
+
+
+@pytest.mark.unit
+async def test_observe_progress_one_role_only_still_builds_a_snapshot() -> None:
+    """Both roles compose into one snapshot; a role that never reported
+    stays `None` inside it rather than blocking the other."""
+    run_id = uuid4()
+    outcome = _FakeRecordWitnessedRunOutcome()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        record_witnessed_run_outcome=outcome,
+        open_captures={_CODE: run_id},
+    )
+
+    recorder.observe_progress(_progress_obs(role="images_collected", value=42.0))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    snapshot = outcome.calls[0].capture_progress_snapshot
+    assert snapshot is not None
+    assert snapshot.collected_count == 42.0
+    assert snapshot.saved_count is None
+
+
+@pytest.mark.unit
+async def test_ended_with_nothing_retained_carries_no_snapshot() -> None:
+    """Absence must read as 'no reading reached CORA', never as an
+    all-None snapshot: the whole object is None."""
+    run_id = uuid4()
+    outcome = _FakeRecordWitnessedRunOutcome()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        record_witnessed_run_outcome=outcome,
+        open_captures={_CODE: run_id},
+    )
+
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    assert outcome.calls[0].capture_progress_snapshot is None
+
+
+@pytest.mark.unit
+async def test_observe_progress_is_a_noop_when_recording_disabled() -> None:
+    run_id = uuid4()
+    outcome = _FakeRecordWitnessedRunOutcome()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        record_witnessed_run_outcome=outcome,
+        open_captures={_CODE: run_id},
+        run_witness_recording_enabled=False,
+    )
+
+    recorder.observe_progress(_progress_obs(role="images_collected", value=2987.0))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    # Shadow mode: observe_capture itself no-ops before building any
+    # command, so there is nothing to assert on outcome.calls directly;
+    # the point is that retaining progress in shadow mode does not crash
+    # and leaves no state to leak into a later recording-enabled run.
+    assert outcome.calls == []
+
+
+@pytest.mark.unit
+async def test_promote_clears_progress_retained_for_a_different_prior_capture() -> None:
+    """A stale capture's retained progress must not ride onto the NEW
+    capture `_promote` is about to open for the same code."""
+    stale_run_id = uuid4()
+    fresh_run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=fresh_run_id)
+    outcome = _FakeRecordWitnessedRunOutcome()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=outcome,
+        truncate_run=_FakeTruncateRun(),
+        open_captures={_CODE: stale_run_id},
+    )
+
+    recorder.observe_progress(_progress_obs(role="images_collected", value=999.0))
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    assert outcome.calls[0].run_id == fresh_run_id
+    assert outcome.calls[0].capture_progress_snapshot is None
+
+
+@pytest.mark.unit
+async def test_truncate_then_promote_never_leaks_the_stale_captures_progress() -> None:
+    """Black-box companion to `test_promote_clears_progress_retained_for_a_different_prior_capture`:
+    the truncate-then-promote pair (both real state-mutation sites) must
+    together prevent a stale capture's progress from ever reaching the
+    NEW capture's own eventual terminal, regardless of which of the two
+    sites is doing the clearing."""
+    stale_run_id = uuid4()
+    fresh_run_id = uuid4()
+    outcome = _FakeRecordWitnessedRunOutcome()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(run_id=fresh_run_id),
+        record_witnessed_run_outcome=outcome,
+        truncate_run=_FakeTruncateRun(),
+        open_captures={_CODE: stale_run_id},
+    )
+
+    recorder.observe_progress(_progress_obs(role="images_collected", value=999.0))
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+    recorder.observe_progress(_progress_obs(role="images_collected", value=17.0))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    assert outcome.calls[0].run_id == fresh_run_id
+    snapshot = outcome.calls[0].capture_progress_snapshot
+    assert snapshot is not None
+    assert snapshot.collected_count == 17.0
+
+
+@pytest.mark.unit
+async def test_record_outcome_retains_progress_across_a_failed_attempt_for_a_retry() -> None:
+    """A failed outcome write leaves `_open_captures` populated so the
+    next attempt for the same code can retry; retained progress must
+    survive that failure too, since it describes the same still-open
+    capture, not the failed write."""
+    run_id = uuid4()
+
+    class _FailOnceThenSucceed:
+        def __init__(self) -> None:
+            self.calls: list[RecordWitnessedRunOutcome] = []
+            self._remaining_failures = 1
+
+        async def __call__(
+            self,
+            command: RecordWitnessedRunOutcome,
+            *,
+            principal_id: UUID,
+            correlation_id: UUID,
+            causation_id: UUID | None = None,
+            surface_id: UUID = NIL_SENTINEL_ID,
+        ) -> None:
+            self.calls.append(command)
+            if self._remaining_failures > 0:
+                self._remaining_failures -= 1
+                raise RuntimeError("append failed")
+
+    outcome = _FailOnceThenSucceed()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        record_witnessed_run_outcome=outcome,  # type: ignore[arg-type]
+        open_captures={_CODE: run_id},
+    )
+
+    recorder.observe_progress(_progress_obs(role="images_collected", value=2987.0))
+    ended = _obs(reported_status="Scan complete", phase=CapturePhase.ENDED)
+    await recorder.observe_capture(ended)  # fails; entry stays open
+    await recorder.observe_capture(ended)  # retried, same observation
+
+    assert len(outcome.calls) == 2
+    snapshot = outcome.calls[1].capture_progress_snapshot
+    assert snapshot is not None
+    assert snapshot.collected_count == 2987.0
 
 
 @pytest.mark.unit

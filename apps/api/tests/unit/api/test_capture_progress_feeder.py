@@ -39,6 +39,7 @@ def _reading(
     *,
     role: str = "images_saved",
     value: float = 1.0,
+    commanded_total: float | None = None,
     observed_at: datetime | None = _NOW,
     capture_code: str = _CODE,
 ) -> CaptureProgressObservation:
@@ -46,6 +47,7 @@ def _reading(
         capture_code=capture_code,
         role=role,
         value=value,
+        commanded_total=commanded_total,
         reach_tier=ReachTier.RELAYED,
         observed_at=observed_at,
         source_kind="EpicsPv",

@@ -75,18 +75,31 @@ here as a terminal `_record_outcome` call ahead of whatever the
 `status` PV says next. At 2-BM, `fly_scan()`'s exception handlers for
 `ScanAbortError` / `CameraTimeoutError` / `FileOverwriteError` still
 run `finally: self.end_scan()`, which writes the identical
-`'Scan complete'` literal a genuine success writes, so the `abort` role
-is the only thing that can tell the two apart there.
+`'Scan complete'` literal a genuine success writes.
 
-The code capability exists as of this commit; the gap only closes once
-a deployment's `capture_watch_pvs` also declares the `abort` role for
-each code (2-BM: `"abort": "2bmb:TomoScan:AbortScan"`). A code with no
-`abort` entry watches `status` only, unchanged, so `ENDED` still
-unconditionally maps to `RunCompleted` for it. Nothing in this file or
-in `Settings` gates recording on the abort role being configured; the
-locked deployment decision is to keep `run_witness_recording_enabled`
-off at 2-BM until both this effort's code and its own deployment
-config change (adding the `abort` role) are live.
+The `abort` role only closes ONE of those three. `AbortScan` is written
+only by `abort_scan()` (upstream `tomoscan.py`), itself reachable only
+by an operator or automation writing to that PV directly; that is the
+path that raises `ScanAbortError`. `CameraTimeoutError` and
+`FileOverwriteError` write to NO PV at all before `end_scan()`'s
+`'Scan complete'`, so no role this observer can subscribe to
+distinguishes them from a genuine success (see tomography/tomoscan#181,
+filed against this gap directly). `capture_progress_snapshot` on the
+resulting `RunCompleted` is the complementary, deployment-independent
+mitigation: the retained `collected` / `saved` counts are evidence a
+reader can weigh even when no role fired, though (per that VO's own
+docstring) they are evidence, never a verdict CORA computes itself.
+
+The `abort` role's code capability exists as of the commit that added
+it; the operator-abort slice of the gap only closes once a
+deployment's `capture_watch_pvs` also declares the role for each code
+(2-BM: `"abort": "2bmb:TomoScan:AbortScan"`). A code with no `abort`
+entry watches `status` only, unchanged, so `ENDED` still unconditionally
+maps to `RunCompleted` for it. Nothing in this file or in `Settings`
+gates recording on the abort role being configured; the locked
+deployment decision is to keep `run_witness_recording_enabled` off at
+2-BM until both this effort's code and its own deployment config
+change (adding the `abort` role) are live.
 
 ## Accepted residual: a reconnect can misread a still-open capture as new
 
@@ -192,8 +205,10 @@ from uuid import UUID
 
 from cora.agent.seed_capture_progress_feeder import CAPTURE_PROGRESS_FEEDER_AGENT_ID
 from cora.agent.seed_run_witness import RUN_WITNESS_AGENT_ID
+from cora.api._capture_observer import ROLE_IMAGES_COLLECTED, ROLE_IMAGES_SAVED
 from cora.api._capture_progress_feeder import CaptureProgressFeeder, capture_progress_flush_loop
 from cora.infrastructure.logging import get_logger
+from cora.run.aggregates.run.state import CaptureProgressSnapshot
 from cora.run.errors import UnauthorizedError
 from cora.run.features.list_runs.query import ListRuns
 from cora.run.features.record_witnessed_run.command import RecordWitnessedRun
@@ -209,6 +224,7 @@ from cora.shared.identity import MonitorSourceId
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+    from datetime import datetime
 
     from cora.infrastructure.config import Settings
     from cora.infrastructure.kernel import Kernel
@@ -310,6 +326,7 @@ class RunWitnessRecorder:
         self._truncate_run = truncate_run
         self._settings = settings
         self._open_captures: dict[str, UUID] = dict(open_captures or {})
+        self._last_progress: dict[str, dict[str, CaptureProgressObservation]] = {}
 
     def open_captures(self) -> dict[str, UUID]:
         """A snapshot of every capture_code currently open, mapped to
@@ -349,7 +366,51 @@ class RunWitnessRecorder:
         # PROGRESSING, UNRECOGNIZED, and a None phase make no status
         # claim this state machine acts on: no-op regardless of state.
 
+    def observe_progress(self, observation: CaptureProgressObservation) -> None:
+        """Retain the latest reading per (capture_code, role), so a
+        terminal can carry the counts even though
+        `CaptureProgressFeeder.flush_capture` pops its own buffer for
+        the same code before `_record_outcome` builds the command
+        (`run_witness_loop` flushes first; see that function's
+        docstring). Synchronous and non-blocking, same contract as
+        `CaptureProgressFeeder.offer`.
+
+        Gated on `run_witness_recording_enabled`, same as
+        `observe_capture`: shadow mode retains nothing because it
+        writes nothing. Bounded by (capture codes x progress roles)
+        from the deployment's own config, never by substrate rate, the
+        same argument `CaptureProgressFeeder`'s own buffer makes.
+
+        Deliberately NOT gated on `capture_progress_recording_enabled`.
+        That flag's own docstring (`Settings`) scopes it to one thing:
+        whether progress roles are buffered and written as
+        `AppendObservations` rows against the promoted Run, the full
+        per-tick trail. This retention is a different, cheaper feature:
+        the last value per role, kept only to attach as evidence on the
+        eventual terminal. A deployment can therefore get terminal
+        evidence without paying for the full trail; the reverse
+        (`capture_progress_recording_enabled=True` requiring
+        `run_witness_recording_enabled=True`) is enforced at boot in
+        `main.py`'s `_enforce_run_witness_recording_gate` for the
+        unrelated reason that a trail write needs a promoted Run to
+        write against.
+
+        Eviction lives in `_promote`, `_truncate_stale`, and
+        `_record_outcome`'s success path, alongside each one's existing
+        `_open_captures` mutation, so retained progress never outlives
+        the Run it was retained for.
+        """
+        if not self._settings.run_witness_recording_enabled:
+            return
+        by_role = self._last_progress.setdefault(observation.capture_code, {})
+        by_role[observation.role] = observation
+
     async def _promote(self, observation: CaptureLifecycleObservation) -> None:
+        # A prior capture's retained progress, if any, belongs to that
+        # capture's own terminal, never to this one: clear before
+        # promoting so a stale carry-over cannot ride onto the new
+        # Run's eventual outcome.
+        self._last_progress.pop(observation.capture_code, None)
         plan_id = self._settings.capture_watch_plan_id
         if plan_id is None:
             # Unreachable when `_enforce_run_witness_recording_gate`
@@ -416,6 +477,12 @@ class RunWitnessRecorder:
         # for this call from anywhere else (substrate input, a
         # capture_code-derived guess, etc.).
         stale_run_id = self._open_captures.pop(code, None)
+        # The stale Run's retained progress dies with it, same
+        # unconditional-before-the-call posture as `_open_captures`
+        # above: whatever this code's next BEGUN promotes is a
+        # different capture and must not inherit counts that describe
+        # the one being truncated.
+        self._last_progress.pop(code, None)
         if stale_run_id is None:
             return
 
@@ -474,6 +541,7 @@ class RunWitnessRecorder:
             observed_at=observation.observed_at,
             monitor_source_id=RUN_WITNESS_MONITOR_SOURCE_ID,
             trigger="Monitor",
+            capture_progress_snapshot=self._build_progress_snapshot(code),
         )
         try:
             await self._record_witnessed_run_outcome(
@@ -502,12 +570,62 @@ class RunWitnessRecorder:
             )
             return
         self._open_captures.pop(code, None)
+        # Success path only, mirroring `_open_captures` immediately
+        # above: on failure both dicts stay populated so the next
+        # BEGUN's truncate-then-promote clears them together, keeping
+        # the two eviction states in lockstep.
+        self._last_progress.pop(code, None)
         _log.info(
             "run_witness.outcome_recorded",
             capture_code=code,
             run_id=str(run_id),
             observed_phase=str(observation.phase),
         )
+
+    def _build_progress_snapshot(self, code: str) -> CaptureProgressSnapshot | None:
+        """The evidence a witnessed terminal carries for `code`: the
+        last `collected` / `saved` progress readings `observe_progress`
+        retained, or `None` if nothing was retained for either role.
+
+        Whole object `None`, never all-`None` fields: absence must read
+        as "no progress reading reached CORA before this terminal",
+        distinct from "readings arrived and reported zero images". See
+        `CaptureProgressSnapshot`'s own docstring for why these counts
+        carry no completeness judgment.
+        """
+        # Role keys are `_capture_observer.py`'s `ROLE_IMAGES_COLLECTED` /
+        # `ROLE_IMAGES_SAVED` (imported, not re-literaled here), the
+        # config-facing vocabulary; `CaptureProgressSnapshot`'s field
+        # names are the facility-neutral `collected` / `saved` pair,
+        # deliberately not the same strings (see that VO's own
+        # docstring).
+        by_role = self._last_progress.get(code, {})
+        collected = by_role.get(ROLE_IMAGES_COLLECTED)
+        saved = by_role.get(ROLE_IMAGES_SAVED)
+        if collected is None and saved is None:
+            return None
+        collected_count, collected_total, collected_at = _progress_fields(collected)
+        saved_count, saved_total, saved_at = _progress_fields(saved)
+        return CaptureProgressSnapshot(
+            collected_count=collected_count,
+            collected_total=collected_total,
+            collected_at=collected_at,
+            saved_count=saved_count,
+            saved_total=saved_total,
+            saved_at=saved_at,
+        )
+
+
+def _progress_fields(
+    observation: CaptureProgressObservation | None,
+) -> tuple[float | None, float | None, datetime | None]:
+    """`(value, commanded_total, observed_at)` for one retained role
+    reading, or `(None, None, None)` when nothing was retained for it.
+    Factored out of `_build_progress_snapshot` so its two roles share
+    one conversion instead of six near-identical guarded expressions."""
+    if observation is None:
+        return None, None, None
+    return observation.value, observation.commanded_total, observation.observed_at
 
 
 def _extract_capture_code(external_refs: frozenset[Identifier]) -> str | None:
@@ -570,14 +688,21 @@ async def run_witness_loop(
     """Drain the observer, logging (and, with a recorder, promoting)
     each observation; re-subscribe on stream end.
 
-    A `CaptureProgressObservation` (slice 10's progress roles) is
-    handed to `feeder.offer()` and never reaches the recorder; a
-    `CaptureLifecycleObservation` on a phase in `_FLUSH_TRIGGER_PHASES`
-    triggers `feeder.flush_capture()` BEFORE the recorder acts on it,
-    so a capture's buffered progress trail is attributed to its Run
-    before that Run can close or be replaced. `feeder=None` (recording
-    off, or `capture_progress_recording_enabled=False`) makes both
-    branches no-ops, same posture as `recorder=None`.
+    A `CaptureProgressObservation` fans out to TWO independent sinks:
+    `recorder.observe_progress()` (retains the latest per-role reading
+    so a terminal can carry it as evidence; see `RunWitnessRecorder
+    ._build_progress_snapshot`) and `feeder.offer()` (buffers it for
+    the next `AppendObservations` flush). Order between the two is
+    immaterial: both are synchronous and neither raises in normal
+    operation. A `CaptureLifecycleObservation` on a phase in
+    `_FLUSH_TRIGGER_PHASES` triggers `feeder.flush_capture()` BEFORE the
+    recorder acts on it, so a capture's buffered progress trail is
+    attributed to its Run before that Run can close or be replaced;
+    this ordering is unchanged by the fan-out above; `recorder
+    .observe_progress` retains independently of the flush and is not
+    itself flushed. `feeder=None` (recording off, or
+    `capture_progress_recording_enabled=False`) and `recorder=None`
+    each make their own branch a no-op independently.
     """
     if not capture_codes:
         return
@@ -586,6 +711,8 @@ async def run_witness_loop(
         try:
             async for observation in observer.observe(scope):
                 if isinstance(observation, CaptureProgressObservation):
+                    if recorder is not None:
+                        recorder.observe_progress(observation)
                     if feeder is not None:
                         feeder.offer(observation)
                     continue
