@@ -107,6 +107,27 @@ interlock concern. No narrower signal (comparing against the
 last-observed reading, or `reach_tier`) is implemented; revisit if this
 is ever observed in practice.
 
+## Accepted residual: the `status` and `abort` pumps have no enforced ordering
+
+`_capture_observer.py` runs the `status` and `abort` roles as two
+independent pumps feeding one merged queue; nothing in this file or
+that one enforces that an `ABORTED` reading is processed before a
+later, causally-dependent `ENDED` reading from the other pump, only
+that it usually will be, because 2-BM's own `abort_scan()` writes
+`AbortScan` before its caller's `finally: end_scan()` writes
+`ScanStatus`. This is a real ordering dependency on realistic,
+network-driven CA delivery interleaving the two subscriptions fairly,
+not a structural guarantee; a deliberately adversarial or bursty
+delivery pattern (confirmed by constructing exactly this case against
+a fake `ControlPort` that does not yield between readings, in
+`test_run_witness_capture_replay.py`) could let the trailing `ENDED`
+arrive first, in which case that capture records as `Completed` and
+the correct `ABORTED` observation lands on the now-idle no-open-Run
+path, a no-op. Same outcome, same severity, as the coalesced-abort
+residual in `_capture_observer.py`'s own docstring: a real 2-BM abort
+degrading to a `Completed` record, never a corrupted attribution to a
+different Run.
+
 ## Retry + resilience
 
 Mirrors `run_enclosure_permit_monitor`: `observe()` ending (stream
