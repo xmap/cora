@@ -1169,6 +1169,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         capture_codes=capture_watch_codes,
                         deps=deps,
                         record_witnessed_run=app.state.run.record_witnessed_run,
+                        record_witnessed_run_outcome=app.state.run.record_witnessed_run_outcome,
+                        truncate_run=app.state.run.truncate_run,
                         open_captures=open_captures,
                     ),
                 ):

@@ -457,14 +457,14 @@ def test_acknowledged_cautions_round_trip_preserves_every_field() -> None:
 
 @pytest.mark.unit
 def test_event_type_name_for_run_completed() -> None:
-    event = RunCompleted(run_id=uuid4(), occurred_at=_NOW)
+    event = RunCompleted(run_id=uuid4(), occurred_at=_NOW, observed_at=None)
     assert event_type_name(event) == "RunCompleted"
 
 
 @pytest.mark.unit
 def test_to_payload_serializes_run_completed_to_primitives() -> None:
     run_id = uuid4()
-    event = RunCompleted(run_id=run_id, occurred_at=_NOW)
+    event = RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None)
     assert to_payload(event) == {
         "run_id": str(run_id),
         # compute-conduct provenance: None for a non-conducted complete.
@@ -472,6 +472,9 @@ def test_to_payload_serializes_run_completed_to_primitives() -> None:
         "producing_job_id": None,
         "artifact_uri": None,
         "occurred_at": _NOW.isoformat(),
+        # Present-as-null, not omitted: a driven completion has no
+        # substrate reading to report.
+        "observed_at": None,
     }
 
 
@@ -484,6 +487,7 @@ def test_to_payload_serializes_run_completed_with_conduct_provenance() -> None:
         producing_job_id="inmem-job-1",
         artifact_uri="file:///data/recon.h5",
         occurred_at=_NOW,
+        observed_at=None,
     )
     assert to_payload(event) == {
         "run_id": str(run_id),
@@ -491,7 +495,15 @@ def test_to_payload_serializes_run_completed_with_conduct_provenance() -> None:
         "producing_job_id": "inmem-job-1",
         "artifact_uri": "file:///data/recon.h5",
         "occurred_at": _NOW.isoformat(),
+        "observed_at": None,
     }
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_run_completed_with_observed_at() -> None:
+    run_id = uuid4()
+    event = RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=_NOW)
+    assert to_payload(event)["observed_at"] == _NOW.isoformat()
 
 
 @pytest.mark.unit
@@ -505,12 +517,12 @@ def test_from_stored_rebuilds_run_completed() -> None:
         },
     )
     rebuilt = from_stored(stored)
-    assert rebuilt == RunCompleted(run_id=run_id, occurred_at=_NOW)
+    assert rebuilt == RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None)
 
 
 @pytest.mark.unit
 def test_run_completed_round_trips() -> None:
-    original = RunCompleted(run_id=uuid4(), occurred_at=_NOW)
+    original = RunCompleted(run_id=uuid4(), occurred_at=_NOW, observed_at=None)
     stored = _stored("RunCompleted", to_payload(original))
     assert from_stored(stored) == original
 
@@ -523,7 +535,15 @@ def test_run_completed_round_trips_with_conduct_provenance() -> None:
         producing_job_id="inmem-job-1",
         artifact_uri="file:///data/recon.h5",
         occurred_at=_NOW,
+        observed_at=None,
     )
+    stored = _stored("RunCompleted", to_payload(original))
+    assert from_stored(stored) == original
+
+
+@pytest.mark.unit
+def test_run_completed_round_trips_with_observed_at() -> None:
+    original = RunCompleted(run_id=uuid4(), occurred_at=_NOW, observed_at=_NOW)
     stored = _stored("RunCompleted", to_payload(original))
     assert from_stored(stored) == original
 
@@ -531,18 +551,21 @@ def test_run_completed_round_trips_with_conduct_provenance() -> None:
 @pytest.mark.unit
 def test_from_stored_rebuilds_run_completed_without_conduct_keys() -> None:
     """Pre-compute-conduct RunCompleted streams replay with the new keys
-    absent, folding to None via the `.get(...)` forward-compat path."""
+    absent, folding to None via the `.get(...)` forward-compat path.
+    `observed_at` is the same additive shape: absent entirely on any
+    stream written before slice 9."""
     run_id = uuid4()
     stored = _stored(
         "RunCompleted",
         {"run_id": str(run_id), "occurred_at": _NOW.isoformat()},
     )
     rebuilt = from_stored(stored)
-    assert rebuilt == RunCompleted(run_id=run_id, occurred_at=_NOW)
+    assert rebuilt == RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None)
     assert isinstance(rebuilt, RunCompleted)
     assert rebuilt.actuation_kind is None
     assert rebuilt.producing_job_id is None
     assert rebuilt.artifact_uri is None
+    assert rebuilt.observed_at is None
 
 
 # ---------- RunAborted ----------
@@ -550,14 +573,16 @@ def test_from_stored_rebuilds_run_completed_without_conduct_keys() -> None:
 
 @pytest.mark.unit
 def test_event_type_name_for_run_aborted() -> None:
-    event = RunAborted(run_id=uuid4(), reason="X", occurred_at=_NOW)
+    event = RunAborted(run_id=uuid4(), reason="X", occurred_at=_NOW, observed_at=None)
     assert event_type_name(event) == "RunAborted"
 
 
 @pytest.mark.unit
 def test_to_payload_serializes_run_aborted_to_primitives() -> None:
     run_id = uuid4()
-    event = RunAborted(run_id=run_id, reason="detector overheating", occurred_at=_NOW)
+    event = RunAborted(
+        run_id=run_id, reason="detector overheating", occurred_at=_NOW, observed_at=None
+    )
     assert to_payload(event) == {
         "run_id": str(run_id),
         "reason": "detector overheating",
@@ -568,14 +593,25 @@ def test_to_payload_serializes_run_aborted_to_primitives() -> None:
         "actuation_kind": None,
         "producing_job_id": None,
         "occurred_at": _NOW.isoformat(),
+        # Present-as-null, not omitted: an operator abort has no
+        # substrate reading to report.
+        "observed_at": None,
     }
+
+
+@pytest.mark.unit
+def test_to_payload_serializes_run_aborted_with_observed_at() -> None:
+    run_id = uuid4()
+    event = RunAborted(run_id=run_id, reason="X", occurred_at=_NOW, observed_at=_NOW)
+    assert to_payload(event)["observed_at"] == _NOW.isoformat()
 
 
 @pytest.mark.unit
 def test_from_stored_rebuilds_run_aborted() -> None:
     """Pre-Phase-1 RunAborted streams replay without the
     decided_by_decision_id key via the `.get(..., None)` forward-compat
-    fold."""
+    fold. `observed_at` is the same additive shape: absent entirely on
+    any stream written before slice 9."""
     run_id = uuid4()
     stored = _stored(
         "RunAborted",
@@ -590,12 +626,14 @@ def test_from_stored_rebuilds_run_aborted() -> None:
         run_id=run_id,
         reason="operator stop",
         occurred_at=_NOW,
+        observed_at=None,
     )
     assert isinstance(rebuilt, RunAborted)
     assert rebuilt.decided_by_decision_id is None
     # Pre-compute-conduct streams fold the conduct-provenance keys to None.
     assert rebuilt.actuation_kind is None
     assert rebuilt.producing_job_id is None
+    assert rebuilt.observed_at is None
 
 
 @pytest.mark.unit
@@ -606,6 +644,19 @@ def test_run_aborted_round_trips_with_conduct_provenance() -> None:
         actuation_kind="Simulated",
         producing_job_id="inmem-job-1",
         occurred_at=_NOW,
+        observed_at=None,
+    )
+    stored = _stored("RunAborted", to_payload(original))
+    assert from_stored(stored) == original
+
+
+@pytest.mark.unit
+def test_run_aborted_round_trips_with_observed_at() -> None:
+    original = RunAborted(
+        run_id=uuid4(),
+        reason="capture reported an abort",
+        occurred_at=_NOW,
+        observed_at=_NOW,
     )
     stored = _stored("RunAborted", to_payload(original))
     assert from_stored(stored) == original
@@ -632,6 +683,7 @@ def test_from_stored_rebuilds_run_aborted_without_decision_id_key_as_none() -> N
     event = from_stored(stored)
     assert isinstance(event, RunAborted)
     assert event.decided_by_decision_id is None
+    assert event.observed_at is None
 
 
 @pytest.mark.unit
@@ -640,6 +692,7 @@ def test_run_aborted_round_trips() -> None:
         run_id=uuid4(),
         reason="beam dump unscheduled",
         occurred_at=_NOW,
+        observed_at=None,
     )
     stored = _stored("RunAborted", to_payload(original))
     assert from_stored(stored) == original
@@ -656,6 +709,7 @@ def test_to_payload_serializes_run_aborted_with_decision_id() -> None:
         reason="agent EquipmentAbortDecision triggered",
         decided_by_decision_id=decision_id,
         occurred_at=_NOW,
+        observed_at=None,
     )
     assert to_payload(event)["decided_by_decision_id"] == str(decision_id)
 
@@ -667,6 +721,7 @@ def test_run_aborted_with_decision_id_round_trips() -> None:
         reason="agent OperatorAbortDecision recorded",
         decided_by_decision_id=uuid4(),
         occurred_at=_NOW,
+        observed_at=None,
     )
     stored = _stored("RunAborted", to_payload(original))
     assert from_stored(stored) == original

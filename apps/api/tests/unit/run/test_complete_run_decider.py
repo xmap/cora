@@ -42,7 +42,7 @@ def test_decide_emits_run_completed_for_running_state() -> None:
         command=CompleteRun(run_id=state.id),
         now=_NOW,
     )
-    assert events == [RunCompleted(run_id=state.id, occurred_at=_NOW)]
+    assert events == [RunCompleted(run_id=state.id, occurred_at=_NOW, observed_at=None)]
 
 
 @pytest.mark.unit

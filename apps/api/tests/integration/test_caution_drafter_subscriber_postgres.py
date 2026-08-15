@@ -135,6 +135,7 @@ def _terminal_aborted_event(run_id: UUID) -> StoredEvent:
         run_id=run_id,
         reason="rotary stage encoder offline; interlock fired",
         occurred_at=_LATER,
+        observed_at=None,
     )
     return StoredEvent(
         position=1,

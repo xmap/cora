@@ -46,5 +46,7 @@ def decide(
             producing_job_id=command.producing_job_id,
             artifact_uri=command.artifact_uri,
             occurred_at=now,
+            # A driven completion has no substrate reading to report.
+            observed_at=None,
         )
     ]

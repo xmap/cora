@@ -376,18 +376,23 @@ class RunAlreadyExistsError(Exception):
 
 
 class RunMonitorTriggerNotPermittedError(Exception):
-    """`record_witnessed_run` carried a non-Monitor trigger.
+    """A witnessed-path command carried a non-Monitor trigger.
+
+    Shared by both witnessed-path commands, `record_witnessed_run` (the
+    genesis) and `record_witnessed_run_outcome` (the terminal): the same
+    invariant governs both ends of a witnessed Run's lifecycle, so one
+    error class enforces it rather than a near-duplicate per slice.
 
     Mirrors the Enclosure BC's `MonitorTriggerNotPermittedError`
     (`observe_enclosure_status`, D6.L2 observation-axis-only anti-lock):
-    a witnessed genesis is reachable only via Monitor-driven inbound
-    observation from the substrate; there is no operator path to it. The
+    a witnessed act is reachable only via Monitor-driven inbound
+    observation from the substrate; there is no operator path to it. Each
     command surface types `monitor_source_id` as `MonitorSourceId` so an
     operator cannot supply non-Monitor attribution at the type level;
     this error fences the same invariant defensively at the decider so a
     programmer mistake in a custom handler, test fixture, or future
-    adapter cannot smuggle an operator-asserted Run genesis onto the
-    spine through the witnessed path.
+    adapter cannot smuggle an operator-asserted act onto the spine
+    through the witnessed path.
 
     HTTP 400 (semantically a request the caller cannot issue, not a
     state-transition conflict).
@@ -395,12 +400,38 @@ class RunMonitorTriggerNotPermittedError(Exception):
 
     def __init__(self, run_id: UUID, trigger: str) -> None:
         super().__init__(
-            f"Run {run_id}: trigger {trigger!r} is not permitted on "
-            f"record_witnessed_run; only 'Monitor' is accepted per the "
+            f"Run {run_id}: trigger {trigger!r} is not permitted on a "
+            f"witnessed-path command; only 'Monitor' is accepted per the "
             f"observation-axis-only anti-lock."
         )
         self.run_id = run_id
         self.trigger = trigger
+
+
+class RunCapturePhaseNotTerminalError(Exception):
+    """`record_witnessed_run_outcome` carried a non-terminal observed phase.
+
+    The command exists to record ONE of the two facts a witnessed
+    capture's lifecycle can end on, `Ended` or `Aborted`; every other
+    `CapturePhase` value (`Begun`, `Progressing`, `Unrecognized`) is
+    something the RunWitness runtime already handles without touching
+    the Run aggregate at all (dedup, or a no-op). A caller reaching this
+    decider with a non-terminal phase is a programmer mistake in the
+    runtime's own dispatch, not a fact about the world, so this is a
+    request-shape rejection like `RunMonitorTriggerNotPermittedError`,
+    checked before touching any state.
+
+    HTTP 400.
+    """
+
+    def __init__(self, run_id: UUID, observed_phase: str) -> None:
+        super().__init__(
+            f"Run {run_id}: observed_phase '{observed_phase}' is not a terminal "
+            f"capture phase; record_witnessed_run_outcome accepts only Ended or "
+            f"Aborted."
+        )
+        self.run_id = run_id
+        self.observed_phase = observed_phase
 
 
 class RunNotFoundError(Exception):
@@ -409,6 +440,35 @@ class RunNotFoundError(Exception):
     def __init__(self, run_id: UUID) -> None:
         super().__init__(f"Run {run_id} not found")
         self.run_id = run_id
+
+
+class RunNotWitnessedError(Exception):
+    """`record_witnessed_run_outcome` targeted a Conducted Run.
+
+    The RunWitness runtime is granted this command so it can terminate
+    the Runs it itself created; a Conducted Run's terminal belongs
+    exclusively to `complete_run` / `abort_run` / `stop_run` /
+    `truncate_run`, reached by an operator or the RunSupervisor, never by
+    the monitor. `conduct_mode` is immutable after genesis
+    (see `ConductMode`'s own docstring), so this can never become true
+    later for a Run where it is false now; there is no retry that fixes
+    it. Checked defensively at the decider, mirroring
+    `RunMonitorTriggerNotPermittedError`'s posture, rather than trusting
+    the runtime's own bookkeeping never to misdirect a call: without
+    this guard, a granted RunWitness principal could terminate any
+    operator-driven Run.
+
+    HTTP 400 (the command itself does not apply to this Run, not a
+    timing conflict with its current status).
+    """
+
+    def __init__(self, run_id: UUID, conduct_mode: str) -> None:
+        super().__init__(
+            f"Run {run_id} cannot be recorded via record_witnessed_run_outcome: "
+            f"conduct_mode is '{conduct_mode}', not 'Witnessed'."
+        )
+        self.run_id = run_id
+        self.conduct_mode = conduct_mode
 
 
 class RunBoundPlanDeprecatedError(Exception):
@@ -1217,6 +1277,30 @@ class InvalidRunInterruptedAtError(ValueError):
             f"the truncate command itself"
         )
         self.interrupted_at = interrupted_at
+        self.now = now
+
+
+class InvalidRunObservedAtError(ValueError):
+    """The supplied witnessed-outcome `observed_at` is in the future relative to `now`.
+
+    Same shape and same rationale as `InvalidRunInterruptedAtError`:
+    `observed_at` is the substrate's own claim about when a capture
+    ended or aborted, separate from `occurred_at` (when
+    `record_witnessed_run_outcome` was processed). A substrate cannot
+    report a time later than CORA's own clock at receipt, so this
+    catches a malformed or clock-skewed adapter reading before it
+    reaches the record.
+
+    Mapped to HTTP 400.
+    """
+
+    def __init__(self, observed_at: datetime, now: datetime) -> None:
+        super().__init__(
+            f"Run witnessed-outcome observed_at {observed_at.isoformat()} is in the "
+            f"future (now is {now.isoformat()}); the substrate cannot have reported "
+            f"this later than CORA learned of it"
+        )
+        self.observed_at = observed_at
         self.now = now
 
 

@@ -502,10 +502,20 @@ class RunCompleted:
       - `artifact_uri` is where the conducted job wrote its output, the
         handoff a later `register_dataset` uses as the Dataset uri
         (not folded onto state).
+
+    `observed_at` is the SUBSTRATE's own time for the completion,
+    mirroring `EnclosurePermitObserved.observed_at`: it is `None` for a
+    driven completion (`complete_run` has no substrate reading to
+    report) and the TomoScan `ScanStatus` PV's own timestamp for a
+    witnessed one. Distinct from `occurred_at`, CORA's clock at
+    handler-append. NO default: every construction site must state
+    what the substrate said, including saying `None`, rather than let
+    a default silently drop the distinction.
     """
 
     run_id: UUID
     occurred_at: datetime
+    observed_at: datetime | None
     actuation_kind: str | None = None
     producing_job_id: str | None = None
     artifact_uri: str | None = None
@@ -542,11 +552,20 @@ class RunAborted:
     `producing_job_id` is the failed job's handle, an audit breadcrumb
     on the stream (not folded onto state). Both forward-compat additive
     via `payload.get(...)` -> None.
+
+    `observed_at` is the SUBSTRATE's own time for the abort, mirroring
+    `EnclosurePermitObserved.observed_at`: `None` for an operator abort
+    (no substrate reading to report) and the TomoScan `ScanStatus` /
+    `AbortScan` PV's own timestamp for a witnessed one. Distinct from
+    `occurred_at`, CORA's clock at handler-append. NO default: every
+    construction site must state what the substrate said, including
+    saying `None`.
     """
 
     run_id: UUID
     reason: str
     occurred_at: datetime
+    observed_at: datetime | None
     decided_by_decision_id: UUID | None = None
     actuation_kind: str | None = None
     producing_job_id: str | None = None
@@ -882,6 +901,7 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             producing_job_id=producing_job_id,
             artifact_uri=artifact_uri,
             occurred_at=occurred_at,
+            observed_at=observed_at,
         ):
             return {
                 "run_id": str(run_id),
@@ -889,6 +909,10 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "producing_job_id": producing_job_id,
                 "artifact_uri": artifact_uri,
                 "occurred_at": occurred_at.isoformat(),
+                # Present-as-null, not omit-when-None: an event written
+                # before this field existed must stay distinguishable
+                # from one that says "the substrate gave no time".
+                "observed_at": observed_at.isoformat() if observed_at is not None else None,
             }
         case RunAborted(
             run_id=run_id,
@@ -897,6 +921,7 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             actuation_kind=actuation_kind,
             producing_job_id=producing_job_id,
             occurred_at=occurred_at,
+            observed_at=observed_at,
         ):
             return {
                 "run_id": str(run_id),
@@ -907,6 +932,7 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 "actuation_kind": actuation_kind,
                 "producing_job_id": producing_job_id,
                 "occurred_at": occurred_at.isoformat(),
+                "observed_at": observed_at.isoformat() if observed_at is not None else None,
             }
         case RunStopped(
             run_id=run_id,
@@ -1147,28 +1173,38 @@ def from_stored(stored: StoredEvent) -> RunEvent:
 
             return deserialize_or_raise("RunResumed", _build_run_resumed)
         case "RunCompleted":
-            return deserialize_or_raise(
-                "RunCompleted",
-                lambda: RunCompleted(
+
+            def _build_run_completed() -> RunCompleted:
+                # Compute-conduct provenance added additively; legacy
+                # (non-conducted) streams replay with these absent ->
+                # None via `.get(...)`. `observed_at` is the same
+                # additive shape: absent on every stream written before
+                # slice 9, `None` on a driven completion recorded since.
+                raw_observed_at = payload.get("observed_at")
+                return RunCompleted(
                     run_id=UUID(payload["run_id"]),
-                    # Compute-conduct provenance added additively; legacy
-                    # (non-conducted) streams replay with these absent ->
-                    # None via `.get(...)`.
                     actuation_kind=payload.get("actuation_kind"),
                     producing_job_id=payload.get("producing_job_id"),
                     artifact_uri=payload.get("artifact_uri"),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
-                ),
-            )
+                    observed_at=(
+                        datetime.fromisoformat(raw_observed_at)
+                        if raw_observed_at is not None
+                        else None
+                    ),
+                )
+
+            return deserialize_or_raise("RunCompleted", _build_run_completed)
         case "RunAborted":
 
             def _build_run_aborted() -> RunAborted:
                 # `decided_by_decision_id` optional. Forward-compat
                 # additive evolution: pre-existing streams replay without the
                 # key via `.get(..., None)`. `actuation_kind` /
-                # `producing_job_id` are the same additive shape for
-                # conduct-failed aborts.
+                # `producing_job_id` / `observed_at` are the same
+                # additive shape for conduct-failed / witnessed aborts.
                 raw_decided_by_abort = payload.get("decided_by_decision_id")
+                raw_observed_at = payload.get("observed_at")
                 return RunAborted(
                     run_id=UUID(payload["run_id"]),
                     reason=payload["reason"],
@@ -1178,6 +1214,11 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                     actuation_kind=payload.get("actuation_kind"),
                     producing_job_id=payload.get("producing_job_id"),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
+                    observed_at=(
+                        datetime.fromisoformat(raw_observed_at)
+                        if raw_observed_at is not None
+                        else None
+                    ),
                 )
 
             return deserialize_or_raise("RunAborted", _build_run_aborted)

@@ -50,7 +50,10 @@ InvalidRunInterruptedAtError).
   - 409 (Run adjust transition guard, 6j): RunCannotAdjustError
   - 400 (validation, 12b-5 adds): InvalidPinnedCalibrationsError
   - 400 (validation): InvalidInputDatasetsError
-  - 400 (witnessed-genesis trigger guard): RunMonitorTriggerNotPermittedError
+  - 400 (witnessed-path trigger guard, shared by record_witnessed_run and
+    record_witnessed_run_outcome): RunMonitorTriggerNotPermittedError
+  - 400 (witnessed-terminal guards): RunCapturePhaseNotTerminalError,
+    InvalidRunObservedAtError, RunNotWitnessedError
 """
 
 from fastapi import FastAPI, Request, status
@@ -68,6 +71,7 @@ from cora.run.aggregates.run import (
     InvalidRunExternalRefError,
     InvalidRunInterruptedAtError,
     InvalidRunNameError,
+    InvalidRunObservedAtError,
     InvalidRunParametersError,
     InvalidRunStopReasonError,
     InvalidRunTruncateReasonError,
@@ -85,6 +89,7 @@ from cora.run.aggregates.run import (
     RunCannotStopError,
     RunCannotTruncateError,
     RunCapabilitiesNotSatisfiedError,
+    RunCapturePhaseNotTerminalError,
     RunClearanceCoverageMismatchError,
     RunComputeResourceUnknownError,
     RunEnclosureCoverageMismatchError,
@@ -93,6 +98,7 @@ from cora.run.aggregates.run import (
     RunInputNotVerifiedError,
     RunMonitorTriggerNotPermittedError,
     RunNotFoundError,
+    RunNotWitnessedError,
     RunObservationLogbookClosedError,
     RunPlanAssetDecommissionedError,
     RunRequiresActiveClearanceError,
@@ -113,6 +119,7 @@ from cora.run.features import (
     hold_run,
     list_runs,
     record_witnessed_run,
+    record_witnessed_run_outcome,
     resume_run,
     start_run,
     stop_run,
@@ -206,6 +213,9 @@ def register_run_routes(app: FastAPI) -> None:
     # routes-completeness architecture fitness without exposing a public
     # HTTP surface.
     app.include_router(record_witnessed_run.router)
+    # Stub router inclusion for the in-process-only witnessed-terminal slice;
+    # same rationale as record_witnessed_run above.
+    app.include_router(record_witnessed_run_outcome.router)
     app.include_router(complete_run.router)
     app.include_router(abort_run.router)
     app.include_router(hold_run.router)
@@ -241,8 +251,18 @@ def register_run_routes(app: FastAPI) -> None:
         InvalidInputDatasetsError,
         # Watched-genesis trigger guard: mirrors the Enclosure BC's
         # MonitorTriggerNotPermittedError registration for an
-        # in-process-only slice even with no route mounted.
+        # in-process-only slice even with no route mounted. Shared by
+        # record_witnessed_run and record_witnessed_run_outcome.
         RunMonitorTriggerNotPermittedError,
+        # Witnessed-terminal request-shape guards (record_witnessed_run_outcome):
+        # a non-terminal observed phase, or a substrate timestamp in the future.
+        RunCapturePhaseNotTerminalError,
+        InvalidRunObservedAtError,
+        # Witnessed-terminal applicability guard: the targeted Run is
+        # Conducted, not Witnessed. Not a state-transition conflict (the
+        # command never applies to this Run, regardless of status), so
+        # 400 rather than 409.
+        RunNotWitnessedError,
     ):
         app.add_exception_handler(validation_cls, _handle_validation_error)
     # Obligation gate (Gate III): missing/invalid justification -> 422.

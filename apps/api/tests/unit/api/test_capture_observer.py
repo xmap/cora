@@ -234,6 +234,142 @@ async def test_observe_merges_multiple_codes() -> None:
     }
 
 
+# ---------- Abort role ----------
+
+
+@pytest.mark.unit
+async def test_observe_a_code_with_no_abort_role_watches_status_only() -> None:
+    """A code missing the `abort` entry behaves exactly as before this
+    role existed: no abort pump is spawned, no extra observation."""
+    port = _ScriptedControlPort(readings={"pvA": [_reading("Beginning scan")]})
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    assert [(o.capture_code, o.phase) for o in observations] == [
+        ("tomoscan", CapturePhase.BEGUN),
+        ("tomoscan", None),  # status pump's clean stream end
+    ]
+
+
+@pytest.mark.unit
+async def test_observe_a_truthy_abort_reading_is_a_direct_aborted_claim() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Collecting projections")], "pvAbort": [_reading(1)]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "abort": "pvAbort"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    aborted = [o for o in observations if o.phase is CapturePhase.ABORTED]
+    assert len(aborted) == 1
+    assert aborted[0].capture_code == "tomoscan"
+    assert aborted[0].reported_status == "1"
+    assert aborted[0].reach_tier is ReachTier.RELAYED
+    assert aborted[0].source_id == "pvAbort"
+    assert aborted[0].observed_at == _T
+
+
+@pytest.mark.unit
+async def test_observe_a_falsy_abort_reading_emits_nothing() -> None:
+    """The busy record's idle/reset value between scans makes no phase
+    claim at all: it must not be enqueued as a no-op observation. The
+    stream then ends cleanly, which still yields its own no-status
+    observation (same shape as `_pump`'s clean end) -- what must NOT
+    appear is an `ABORTED` claim from the falsy reading itself."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvAbort": [_reading(0)]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "abort": "pvAbort"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    assert not any(o.phase is CapturePhase.ABORTED for o in observations)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("clear_label", ["No", "no", "OFF", "False", "0"])
+async def test_observe_a_clear_enum_label_reading_is_not_a_python_truthiness_trap(
+    clear_label: str,
+) -> None:
+    """Regression: 2-BM's real `AbortScan` is a DBR_ENUM that resolves
+    through the aioca adapter to the label `'No'` when idle, and
+    `bool('No')` is `True` in Python. A naive truthiness check on
+    `reading.value` would misclassify every idle reading as an abort;
+    `_binary_code` must decode the label instead."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvAbort": [_reading(clear_label)]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "abort": "pvAbort"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    assert not any(o.phase is CapturePhase.ABORTED for o in observations)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("asserted_label", ["Yes", "yes", "ON", "True", "1"])
+async def test_observe_an_asserted_enum_label_reading_is_aborted(asserted_label: str) -> None:
+    port = _ScriptedControlPort(
+        readings={
+            "pvA": [_reading("Collecting projections")],
+            "pvAbort": [_reading(asserted_label)],
+        }
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "abort": "pvAbort"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    assert any(o.phase is CapturePhase.ABORTED for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_an_unrecognized_abort_label_makes_no_claim() -> None:
+    """A label this cannot decode fails toward silence, not toward a
+    guessed ABORTED claim, mirroring `_enclosure_permit_observer`'s
+    fail-closed posture for its own binary-label decode."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvAbort": [_reading("MAYBE")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "abort": "pvAbort"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    assert not any(o.phase is CapturePhase.ABORTED for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_abort_pump_disconnect_yields_a_no_status_observation() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvAbort": []},
+        disconnect=frozenset({"pvAbort"}),
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "abort": "pvAbort"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    abort_source_obs = [o for o in observations if o.source_id == "pvAbort"]
+    assert len(abort_source_obs) == 1
+    assert abort_source_obs[0].phase is None
+    assert abort_source_obs[0].reach_tier is ReachTier.UNREACHED
+
+
+@pytest.mark.unit
+async def test_observe_merges_status_and_abort_readings_for_one_code() -> None:
+    port = _ScriptedControlPort(
+        readings={
+            "pvA": [_reading("Beginning scan")],
+            "pvAbort": [_reading(1)],
+        }
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "abort": "pvAbort"}})
+
+    observations = await _collect(observer, {"tomoscan"})
+
+    phases = {o.phase for o in observations if o.phase is not None}
+    assert phases == {CapturePhase.BEGUN, CapturePhase.ABORTED}
+
+
 async def _collect_until(
     gen: AsyncGenerator[CaptureObservation],
     predicate: Callable[[list[CaptureObservation]], bool],

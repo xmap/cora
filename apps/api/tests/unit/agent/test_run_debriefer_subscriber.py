@@ -195,10 +195,10 @@ def _terminal_event(
     """Build a StoredEvent for one of the four terminal Run events."""
     domain: Any
     if event_type == "RunCompleted":
-        domain = RunCompleted(run_id=run_id, occurred_at=_LATER)
+        domain = RunCompleted(run_id=run_id, occurred_at=_LATER, observed_at=None)
     elif event_type == "RunAborted":
         assert reason is not None
-        domain = RunAborted(run_id=run_id, reason=reason, occurred_at=_LATER)
+        domain = RunAborted(run_id=run_id, reason=reason, occurred_at=_LATER, observed_at=None)
     elif event_type == "RunStopped":
         assert reason is not None
         domain = RunStopped(run_id=run_id, reason=reason, occurred_at=_LATER)

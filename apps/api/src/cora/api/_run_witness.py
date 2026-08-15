@@ -35,7 +35,7 @@ own docstring on why an adapter must never substitute a synthesized
 time for an absent one). These log lines are unconditional: they fire
 identically whether or not recording is enabled.
 
-## Promotion (when run_witness_recording_enabled is True)
+## Promotion and termination (when run_witness_recording_enabled is True)
 
 Per capture_code, a small dedup state machine:
 
@@ -43,11 +43,20 @@ Per capture_code, a small dedup state machine:
     and, on success, remember the returned run_id as OPEN. On failure
     (any raised error, including an authorization misconfiguration),
     log and stay unopened so the next `BEGUN` retries.
-  - `BEGUN` while a Run is already open for this code: no-op (already
-    promoted this capture cycle).
-  - `ENDED` / `ABORTED` while a Run is open: clear the local dedup entry
-    (log only, no Run action; terminal recording is a separate future
-    slice).
+  - `BEGUN` while a Run is already open for this code: the previous
+    terminal was missed (dropped CA transition, or the substrate
+    restarted mid-capture). `TruncateRun` the stale Run first
+    (`interrupted_at=None`: CORA does not know when it actually ended,
+    only that it did not see the terminal), then promote the new
+    capture as if idle. A truncate failure does not block the
+    promotion: the new capture is a real fact regardless of whether the
+    stale Run could be closed.
+  - `ENDED` / `ABORTED` while a Run is open: call
+    `record_witnessed_run_outcome` (`Ended` -> `RunCompleted`,
+    `Aborted` -> `RunAborted`), carrying the observation's own
+    `observed_at`. On success, clear the local dedup entry. On failure,
+    leave the entry open: the next `BEGUN` for this code truncates it
+    and promotes fresh, so the truncation path doubles as retry.
   - `ENDED` / `ABORTED` while nothing is open, or `PROGRESSING` /
     `UNRECOGNIZED` / a `None` phase in any state: no-op.
 
@@ -55,6 +64,69 @@ Per capture_code, a small dedup state machine:
 `rebuild_open_captures`) from every currently-Running Witnessed Run's
 `external_refs`, so a still-open capture at process restart is never
 re-promoted.
+
+## Closing the abort/success gap needs a deployment change too
+
+`CaptureObservation.phase` classifies the `status` role's literal off
+the deployment's declared table, and separately, `ControlPortCaptureObserver`
+now also reads an optional `abort` role: a decoded-asserted reading on
+it is a direct `ABORTED` claim (see that module's docstring), landing
+here as a terminal `_record_outcome` call ahead of whatever the
+`status` PV says next. At 2-BM, `fly_scan()`'s exception handlers for
+`ScanAbortError` / `CameraTimeoutError` / `FileOverwriteError` still
+run `finally: self.end_scan()`, which writes the identical
+`'Scan complete'` literal a genuine success writes, so the `abort` role
+is the only thing that can tell the two apart there.
+
+The code capability exists as of this commit; the gap only closes once
+a deployment's `capture_watch_pvs` also declares the `abort` role for
+each code (2-BM: `"abort": "2bmb:TomoScan:AbortScan"`). A code with no
+`abort` entry watches `status` only, unchanged, so `ENDED` still
+unconditionally maps to `RunCompleted` for it. Nothing in this file or
+in `Settings` gates recording on the abort role being configured; the
+locked deployment decision is to keep `run_witness_recording_enabled`
+off at 2-BM until both this effort's code and its own deployment
+config change (adding the `abort` role) are live.
+
+## Accepted residual: a reconnect can misread a still-open capture as new
+
+The `BEGUN`-while-open heuristic assumes a second `BEGUN` for the same
+code always means the prior terminal was missed. That is not quite
+total: `camonitor`-style subscriptions deliver the PV's CURRENT value
+immediately on a fresh subscribe (see `EpicsCaControlPort`), and the
+observer resubscribes after every disconnect (see "Retry + resilience"
+below). If a reconnect happens to land in the narrow window where the
+substrate's status PV still genuinely reads the `BEGUN` literal for a
+capture that has not actually restarted, this recorder cannot tell that
+apart from a real new capture: it truncates the still-live Run
+(spurious `RunTruncated`) and promotes a duplicate. The window is the
+duration of one `BEGUN`-classified literal (milliseconds, per the
+measured arcturus phase durations), and the outcome is a data-quality
+degradation (an extra Run pair for one physical scan), not a control or
+interlock concern. No narrower signal (comparing against the
+last-observed reading, or `reach_tier`) is implemented; revisit if this
+is ever observed in practice.
+
+## Accepted residual: the `status` and `abort` pumps have no enforced ordering
+
+`_capture_observer.py` runs the `status` and `abort` roles as two
+independent pumps feeding one merged queue; nothing in this file or
+that one enforces that an `ABORTED` reading is processed before a
+later, causally-dependent `ENDED` reading from the other pump, only
+that it usually will be, because 2-BM's own `abort_scan()` writes
+`AbortScan` before its caller's `finally: end_scan()` writes
+`ScanStatus`. This is a real ordering dependency on realistic,
+network-driven CA delivery interleaving the two subscriptions fairly,
+not a structural guarantee; a deliberately adversarial or bursty
+delivery pattern (confirmed by constructing exactly this case against
+a fake `ControlPort` that does not yield between readings, in
+`test_run_witness_capture_replay.py`) could let the trailing `ENDED`
+arrive first, in which case that capture records as `Completed` and
+the correct `ABORTED` observation lands on the now-idle no-open-Run
+path, a no-op. Same outcome, same severity, as the coalesced-abort
+residual in `_capture_observer.py`'s own docstring: a real 2-BM abort
+degrading to a `Completed` record, never a corrupted attribution to a
+different Run.
 
 ## Retry + resilience
 
@@ -84,6 +156,8 @@ from cora.infrastructure.logging import get_logger
 from cora.run.errors import UnauthorizedError
 from cora.run.features.list_runs.query import ListRuns
 from cora.run.features.record_witnessed_run.command import RecordWitnessedRun
+from cora.run.features.record_witnessed_run_outcome.command import RecordWitnessedRunOutcome
+from cora.run.features.truncate_run.command import TruncateRun
 from cora.run.ports.capture_observer import CaptureObserverScope, CapturePhase
 from cora.shared.identity import MonitorSourceId
 
@@ -95,6 +169,10 @@ if TYPE_CHECKING:
     from cora.run.aggregates.run.state import Run
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
     from cora.run.features.record_witnessed_run.handler import Handler as RecordWitnessedRunHandler
+    from cora.run.features.record_witnessed_run_outcome.handler import (
+        Handler as RecordWitnessedRunOutcomeHandler,
+    )
+    from cora.run.features.truncate_run.handler import Handler as TruncateRunHandler
     from cora.run.ports.capture_observer import CaptureObservation, CaptureObserver
     from cora.shared.identifier import Identifier
 
@@ -152,11 +230,15 @@ class RunWitnessRecorder:
         *,
         deps: Kernel,
         record_witnessed_run: RecordWitnessedRunHandler,
+        record_witnessed_run_outcome: RecordWitnessedRunOutcomeHandler,
+        truncate_run: TruncateRunHandler,
         settings: Settings,
         open_captures: dict[str, UUID] | None = None,
     ) -> None:
         self._deps = deps
         self._record_witnessed_run = record_witnessed_run
+        self._record_witnessed_run_outcome = record_witnessed_run_outcome
+        self._truncate_run = truncate_run
         self._settings = settings
         self._open_captures: dict[str, UUID] = dict(open_captures or {})
 
@@ -165,17 +247,14 @@ class RunWitnessRecorder:
         if not self._settings.run_witness_recording_enabled:
             return
 
-        code = observation.capture_code
         phase = observation.phase
 
         if phase is CapturePhase.BEGUN:
-            if code in self._open_captures:
-                return
+            if observation.capture_code in self._open_captures:
+                await self._truncate_stale(observation)
             await self._promote(observation)
         elif phase in _TERMINAL_PHASES:
-            run_id = self._open_captures.pop(code, None)
-            if run_id is not None:
-                _log.info("run_witness.open_capture_cleared", capture_code=code, run_id=str(run_id))
+            await self._record_outcome(observation)
         # PROGRESSING, UNRECOGNIZED, and a None phase make no status
         # claim this state machine acts on: no-op regardless of state.
 
@@ -229,6 +308,114 @@ class RunWitnessRecorder:
             "run_witness.promoted",
             capture_code=observation.capture_code,
             run_id=str(run_id),
+        )
+
+    async def _truncate_stale(self, observation: CaptureObservation) -> None:
+        code = observation.capture_code
+        # Pop unconditionally, before attempting the truncate: the new
+        # capture promotes regardless of whether the stale Run could be
+        # closed, so the dedup state must already read IDLE by the time
+        # `_promote` runs next in `observe_capture`.
+        #
+        # SECURITY NOTE (see seed_run_witness.py): TruncateRun's decider
+        # has no conduct_mode gate, unlike RecordWitnessedRunOutcome's.
+        # This principal's safety depends entirely on `stale_run_id`
+        # coming from `_open_captures`, which this runtime populates
+        # exclusively from its own promotions. Never source a run_id
+        # for this call from anywhere else (substrate input, a
+        # capture_code-derived guess, etc.).
+        stale_run_id = self._open_captures.pop(code, None)
+        if stale_run_id is None:
+            return
+
+        try:
+            await self._truncate_run(
+                TruncateRun(
+                    run_id=stale_run_id,
+                    reason=(
+                        f"RunWitness observed a new Begun for capture {code} "
+                        f"while the previous Run was still open: the terminal "
+                        f"for that capture was never observed."
+                    ),
+                    interrupted_at=None,
+                ),
+                principal_id=RUN_WITNESS_AGENT_ID,
+                correlation_id=self._deps.id_generator.new_id(),
+            )
+        except asyncio.CancelledError:
+            raise
+        except UnauthorizedError:
+            _log.warning(
+                "run_witness.truncate_unauthorized",
+                capture_code=code,
+                run_id=str(stale_run_id),
+            )
+        except Exception:
+            _log.exception(
+                "run_witness.truncate_failed",
+                capture_code=code,
+                run_id=str(stale_run_id),
+            )
+        else:
+            _log.info(
+                "run_witness.truncated_stale_run",
+                capture_code=code,
+                run_id=str(stale_run_id),
+            )
+
+    async def _record_outcome(self, observation: CaptureObservation) -> None:
+        phase = observation.phase
+        if phase is not CapturePhase.ENDED and phase is not CapturePhase.ABORTED:
+            # Defensive: observe_capture only calls this method for a
+            # terminal phase, but re-checking here (rather than trusting
+            # the caller) also narrows `phase` from `CapturePhase | None`
+            # for the RecordWitnessedRunOutcome construction below.
+            return
+        code = observation.capture_code
+        run_id = self._open_captures.get(code)
+        if run_id is None:
+            return
+
+        command = RecordWitnessedRunOutcome(
+            run_id=run_id,
+            capture_code=code,
+            observed_phase=phase,
+            observed_at=observation.observed_at,
+            monitor_source_id=RUN_WITNESS_MONITOR_SOURCE_ID,
+            trigger="Monitor",
+        )
+        try:
+            await self._record_witnessed_run_outcome(
+                command,
+                principal_id=RUN_WITNESS_AGENT_ID,
+                correlation_id=self._deps.id_generator.new_id(),
+            )
+        except asyncio.CancelledError:
+            raise
+        except UnauthorizedError:
+            # Configuration fault: the RunWitness principal is not
+            # granted RecordWitnessedRunOutcome. Log loudly; leave the
+            # entry open so the next BEGUN truncates it and promotes
+            # fresh once the grant is fixed.
+            _log.warning(
+                "run_witness.outcome_unauthorized",
+                capture_code=code,
+                run_id=str(run_id),
+            )
+            return
+        except Exception:
+            _log.exception(
+                "run_witness.outcome_failed",
+                capture_code=code,
+                run_id=str(run_id),
+            )
+            return
+        self._open_captures.pop(code, None)
+        _log.info(
+            "run_witness.outcome_recorded",
+            capture_code=code,
+            run_id=str(run_id),
+            observed_phase=str(observation.phase),
         )
 
 
@@ -322,6 +509,8 @@ async def run_witness_lifespan(
     capture_codes: frozenset[str],
     deps: Kernel | None = None,
     record_witnessed_run: RecordWitnessedRunHandler | None = None,
+    record_witnessed_run_outcome: RecordWitnessedRunOutcomeHandler | None = None,
+    truncate_run: TruncateRunHandler | None = None,
     open_captures: dict[str, UUID] | None = None,
 ) -> AsyncGenerator[None]:
     """Run the watcher as a background task for the app's lifetime.
@@ -333,22 +522,40 @@ async def run_witness_lifespan(
     `deps` stays optional (unlike the sibling `run_supervisor_lifespan`
     / `run_initiator_lifespan`, which require it) so every existing
     shadow-only caller needs no change: recording is the only thing that
-    needs a Kernel (for id generation), so it is only required when
-    `record_witnessed_run` is also supplied.
+    needs a Kernel (for id generation), so `deps`, `record_witnessed_run_outcome`,
+    and `truncate_run` are only required when `record_witnessed_run` is
+    also supplied. All three: a recorder that could promote but not
+    terminate would reintroduce the exact wedge (a witnessed Run stuck
+    in `Running` forever) this slice exists to close.
     """
     if not capture_codes:
         yield
         return
-    if record_witnessed_run is not None and deps is None:
-        msg = "run_witness_lifespan: record_witnessed_run requires deps"
-        raise ValueError(msg)
+    if record_witnessed_run is not None:
+        missing = [
+            name
+            for name, value in (
+                ("deps", deps),
+                ("record_witnessed_run_outcome", record_witnessed_run_outcome),
+                ("truncate_run", truncate_run),
+            )
+            if value is None
+        ]
+        if missing:
+            msg = f"run_witness_lifespan: record_witnessed_run requires {', '.join(missing)}"
+            raise ValueError(msg)
 
     recorder: RunWitnessRecorder | None = None
     if record_witnessed_run is not None:
-        assert deps is not None  # narrowed by the check above
+        # Narrowed by the check above.
+        assert deps is not None
+        assert record_witnessed_run_outcome is not None
+        assert truncate_run is not None
         recorder = RunWitnessRecorder(
             deps=deps,
             record_witnessed_run=record_witnessed_run,
+            record_witnessed_run_outcome=record_witnessed_run_outcome,
+            truncate_run=truncate_run,
             settings=deps.settings,
             open_captures=open_captures,
         )
