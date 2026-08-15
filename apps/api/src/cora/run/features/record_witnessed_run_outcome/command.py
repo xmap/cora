@@ -17,7 +17,7 @@ opened. Carries only the substrate-observed facts:
   - `observed_at` -- the substrate's own time for the terminal reading,
     carried straight onto `RunCompleted.observed_at` /
     `RunAborted.observed_at`. `None` when the substrate reported no time
-    at all (same shape as `CaptureObservation.observed_at`).
+    at all (same shape as `CaptureLifecycleObservation.observed_at`).
   - `monitor_source_id` -- the stable `MonitorSourceId` of the in-process
     RunWitness runtime, mirroring `RecordWitnessedRun.monitor_source_id`.
   - `trigger` -- command-tier guard string. The decider rejects any value

@@ -43,7 +43,11 @@ from cora.run.features.list_runs import RunListPage, RunSummaryItem
 from cora.run.features.record_witnessed_run.command import RecordWitnessedRun
 from cora.run.features.record_witnessed_run_outcome.command import RecordWitnessedRunOutcome
 from cora.run.features.truncate_run.command import TruncateRun
-from cora.run.ports.capture_observer import CaptureObservation, CaptureObserverScope, CapturePhase
+from cora.run.ports.capture_observer import (
+    CaptureLifecycleObservation,
+    CaptureObserverScope,
+    CapturePhase,
+)
 from cora.shared.reach import ReachTier
 from tests.unit._helpers import build_deps
 
@@ -59,8 +63,8 @@ def _obs(
     reach_tier: ReachTier = ReachTier.RELAYED,
     observed_at: datetime | None = _NOW,
     capture_code: str = _CODE,
-) -> CaptureObservation:
-    return CaptureObservation(
+) -> CaptureLifecycleObservation:
+    return CaptureLifecycleObservation(
         capture_code=capture_code,
         reported_status=reported_status,
         phase=phase,
@@ -74,13 +78,13 @@ def _obs(
 class _FakeObserver:
     """Yields a fixed observation sequence once, then ends the stream."""
 
-    def __init__(self, observations: list[CaptureObservation]) -> None:
+    def __init__(self, observations: list[CaptureLifecycleObservation]) -> None:
         self._observations = observations
 
-    def observe(self, scope: CaptureObserverScope) -> AsyncGenerator[CaptureObservation]:
+    def observe(self, scope: CaptureObserverScope) -> AsyncGenerator[CaptureLifecycleObservation]:
         return self._drain()
 
-    async def _drain(self) -> AsyncGenerator[CaptureObservation]:
+    async def _drain(self) -> AsyncGenerator[CaptureLifecycleObservation]:
         for observation in self._observations:
             yield observation
 
@@ -88,10 +92,10 @@ class _FakeObserver:
 class _BoomObserver:
     """Raises mid-iteration so the loop's outer resilience branch fires."""
 
-    def observe(self, scope: CaptureObserverScope) -> AsyncGenerator[CaptureObservation]:
+    def observe(self, scope: CaptureObserverScope) -> AsyncGenerator[CaptureLifecycleObservation]:
         return self._drain()
 
-    async def _drain(self) -> AsyncGenerator[CaptureObservation]:
+    async def _drain(self) -> AsyncGenerator[CaptureLifecycleObservation]:
         raise RuntimeError("observer boom")
         yield  # pragma: no cover - unreachable, marks this body an async generator
 

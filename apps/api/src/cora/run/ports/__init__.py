@@ -7,10 +7,12 @@ because their sole consumer is a Run-watching composition-root runtime
 """
 
 from cora.run.ports.capture_observer import (
-    CaptureObservation,
+    AnyCaptureObservation,
+    CaptureLifecycleObservation,
     CaptureObserver,
     CaptureObserverScope,
     CapturePhase,
+    CaptureProgressObservation,
     QuietCaptureObserver,
 )
 from cora.run.ports.run_channel_lookup import (
@@ -22,10 +24,12 @@ from cora.run.ports.run_channel_lookup import (
 )
 
 __all__ = [
-    "CaptureObservation",
+    "AnyCaptureObservation",
+    "CaptureLifecycleObservation",
     "CaptureObserver",
     "CaptureObserverScope",
     "CapturePhase",
+    "CaptureProgressObservation",
     "InMemoryRunChannelLookup",
     "QuietCaptureObserver",
     "RunChannelLatest",

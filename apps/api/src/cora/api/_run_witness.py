@@ -30,7 +30,7 @@ an Agent principal, and only `cora.api` may depend on both.
   read, or a disconnect the adapter reported with nothing to classify).
 
 Every line carries `capture_code`, `reported_status`, `source_kind`,
-`source_id`, and `observed_at` (nullable; see `CaptureObservation`'s
+`source_id`, and `observed_at` (nullable; see `CaptureLifecycleObservation`'s
 own docstring on why an adapter must never substitute a synthesized
 time for an absent one). These log lines are unconditional: they fire
 identically whether or not recording is enabled.
@@ -67,7 +67,7 @@ re-promoted.
 
 ## Closing the abort/success gap needs a deployment change too
 
-`CaptureObservation.phase` classifies the `status` role's literal off
+`CaptureLifecycleObservation.phase` classifies the `status` role's literal off
 the deployment's declared table, and separately, `ControlPortCaptureObserver`
 now also reads an optional `abort` role: a decoded-asserted reading on
 it is a direct `ABORTED` claim (see that module's docstring), landing
@@ -158,7 +158,11 @@ from cora.run.features.list_runs.query import ListRuns
 from cora.run.features.record_witnessed_run.command import RecordWitnessedRun
 from cora.run.features.record_witnessed_run_outcome.command import RecordWitnessedRunOutcome
 from cora.run.features.truncate_run.command import TruncateRun
-from cora.run.ports.capture_observer import CaptureObserverScope, CapturePhase
+from cora.run.ports.capture_observer import (
+    CaptureLifecycleObservation,
+    CaptureObserverScope,
+    CapturePhase,
+)
 from cora.shared.identity import MonitorSourceId
 
 if TYPE_CHECKING:
@@ -173,7 +177,7 @@ if TYPE_CHECKING:
         Handler as RecordWitnessedRunOutcomeHandler,
     )
     from cora.run.features.truncate_run.handler import Handler as TruncateRunHandler
-    from cora.run.ports.capture_observer import CaptureObservation, CaptureObserver
+    from cora.run.ports.capture_observer import CaptureObserver
     from cora.shared.identifier import Identifier
 
 _RECONNECT_DELAY_SECONDS = 5.0
@@ -198,7 +202,7 @@ _PHASE_LOG_EVENT: dict[CapturePhase, str] = {
 _TERMINAL_PHASES = (CapturePhase.ENDED, CapturePhase.ABORTED)
 
 
-def observe_capture(observation: CaptureObservation) -> None:
+def observe_capture(observation: CaptureLifecycleObservation) -> None:
     """Log one observation. The entire body of shadow mode: no writes."""
     if observation.phase is None:
         event = "run_witness.capture_unreached"
@@ -242,7 +246,7 @@ class RunWitnessRecorder:
         self._settings = settings
         self._open_captures: dict[str, UUID] = dict(open_captures or {})
 
-    async def observe_capture(self, observation: CaptureObservation) -> None:
+    async def observe_capture(self, observation: CaptureLifecycleObservation) -> None:
         observe_capture(observation)
         if not self._settings.run_witness_recording_enabled:
             return
@@ -258,7 +262,7 @@ class RunWitnessRecorder:
         # PROGRESSING, UNRECOGNIZED, and a None phase make no status
         # claim this state machine acts on: no-op regardless of state.
 
-    async def _promote(self, observation: CaptureObservation) -> None:
+    async def _promote(self, observation: CaptureLifecycleObservation) -> None:
         plan_id = self._settings.capture_watch_plan_id
         if plan_id is None:
             # Unreachable when `_enforce_run_witness_recording_gate`
@@ -310,7 +314,7 @@ class RunWitnessRecorder:
             run_id=str(run_id),
         )
 
-    async def _truncate_stale(self, observation: CaptureObservation) -> None:
+    async def _truncate_stale(self, observation: CaptureLifecycleObservation) -> None:
         code = observation.capture_code
         # Pop unconditionally, before attempting the truncate: the new
         # capture promotes regardless of whether the stale Run could be
@@ -363,7 +367,7 @@ class RunWitnessRecorder:
                 run_id=str(stale_run_id),
             )
 
-    async def _record_outcome(self, observation: CaptureObservation) -> None:
+    async def _record_outcome(self, observation: CaptureLifecycleObservation) -> None:
         phase = observation.phase
         if phase is not CapturePhase.ENDED and phase is not CapturePhase.ABORTED:
             # Defensive: observe_capture only calls this method for a
@@ -476,13 +480,22 @@ async def run_witness_loop(
     reconnect_delay_seconds: float = _RECONNECT_DELAY_SECONDS,
 ) -> None:
     """Drain the observer, logging (and, with a recorder, promoting)
-    each observation; re-subscribe on stream end."""
+    each observation; re-subscribe on stream end.
+
+    `observer.observe()` can also yield `CaptureProgressObservation`
+    (slice 10's progress roles); this loop has no consumer for that
+    kind yet; a `CaptureProgressFeeder` lands in a later commit this
+    slice and takes over dispatch. Until then a progress reading is a
+    silent no-op here, same posture as an unconfigured progress role.
+    """
     if not capture_codes:
         return
     scope = CaptureObserverScope(capture_codes=capture_codes)
     while True:
         try:
             async for observation in observer.observe(scope):
+                if not isinstance(observation, CaptureLifecycleObservation):
+                    continue
                 try:
                     if recorder is not None:
                         await recorder.observe_capture(observation)

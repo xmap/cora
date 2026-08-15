@@ -4,7 +4,7 @@ measured on arcturus (2026-08-14, 431 real captures) rather than
 pre-classified phases.
 
 Unlike `test_capture_observer.py` (adapter alone) and `test_run_witness.py`
-(recorder alone, fed pre-built `CaptureObservation`s), this file wires both
+(recorder alone, fed pre-built `CaptureLifecycleObservation`s), this file wires both
 together so the deployment's real `CAPTURE_STATUS_PHASES` table and the
 recorder's dedup/terminal/truncate state machine are exercised as one
 pipeline, the way `run_witness_loop` actually runs them.
