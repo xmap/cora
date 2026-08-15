@@ -18,6 +18,7 @@ from cora.api.capture_watch_preflight import (
     _finish,  # pyright: ignore[reportPrivateUsage]
     _Report,  # pyright: ignore[reportPrivateUsage]
     build_parser,
+    main,
     preflight_read_capture_pvs,
 )
 from cora.operation.ports.control_port import (
@@ -275,6 +276,31 @@ async def test_finish_exit_code_problem_when_any_line_is_bad(
 
 
 @pytest.mark.unit
+def test_finish_exit_code_clean_when_no_pvs_are_configured(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert _finish(_Report()) == _EXIT_CLEAN
+    assert "no PVs configured" in capsys.readouterr().out
+
+
+@pytest.mark.unit
 def test_build_parser_accepts_no_arguments() -> None:
     args = build_parser().parse_args([])
     assert args is not None
+
+
+@pytest.mark.unit
+def test_main_with_no_configured_pvs_builds_the_real_wiring_and_exits_clean(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Exercises `main`'s actual composition (`Settings()` +
+    `build_control_port`), not a fake: with no `CAPTURE_WATCH_PVS` /
+    `CONTROL_PORT_ROUTES` configured, `build_control_port` returns the
+    empty-routes `InMemoryControlPort`, the sweep has nothing to read, and
+    `main` still runs its full `_run` / `aclose` path end to end."""
+    monkeypatch.delenv("CAPTURE_WATCH_PVS", raising=False)
+    monkeypatch.delenv("CONTROL_PORT_ROUTES", raising=False)
+
+    assert main([]) == _EXIT_CLEAN
+    assert "no PVs configured" in capsys.readouterr().out
