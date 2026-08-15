@@ -42,13 +42,13 @@ Slice 9 caught 2-BM's `AbortScan` resolving to the ENUM label `'No'`,
 not `0`. Slice 10 caught the same class of trap on `ImagesSaved` /
 `ImagesCollected`: they are `stringout` records at 2-BM, and TomoScan
 writes `"<done>/<total>"` onto them (`update_status()` in the upstream
-`decarlof/tomoscan` source), never a bare number. `_finite_float`'s
+`decarlof/tomoscan` source), never a bare number. `finite_float`'s
 first cut assumed a plain float; every real reading would have failed
 to parse and the feature would have shipped recording nothing on the
 real beamline, with no error anywhere; a deployment can watch a whole
 scan complete and never notice the record stayed empty. Caught by
 checking the upstream source's own write path rather than trusting the
-`Settings.capture_watch_pvs` docstring's example. `_progress_counts`
+`Settings.capture_watch_pvs` docstring's example. `progress_counts`
 now accepts both shapes and carries both halves onto
 `CaptureProgressObservation`, per `commanded_total`'s own docstring for
 why it is carried and what it is NOT: a completeness test.
@@ -107,17 +107,19 @@ if TYPE_CHECKING:
     from cora.operation.ports.control_port import ControlPort, Measurement
 
 _SOURCE_KIND = "EpicsPv"
-_STATUS_ROLE = "status"
-_ABORT_ROLE = "abort"
+ROLE_STATUS = "status"
+ROLE_ABORT = "abort"
 ROLE_IMAGES_SAVED = "images_saved"
 ROLE_IMAGES_COLLECTED = "images_collected"
-"""CORA-owned progress role keys, matching `Settings.capture_watch_pvs`'s
-documented example. Module-public (not `_`-prefixed) because
+"""CORA-owned role keys, matching `Settings.capture_watch_pvs`'s documented
+example. Module-public (not `_`-prefixed) because other composition-root
+modules read observations back out, or dispatch decoders, by these same
+keys and must not carry their own copy of the literal strings:
 `RunWitnessRecorder._build_progress_snapshot` (`_run_witness.py`) reads
-observations back out by these same keys and must not carry its own
-copy of the literal strings; import these two, not `_PROGRESS_ROLES`
-below, so a rename or a third role addition here cannot silently
-desync from that reader. `server_running` stays declared-and-unread:
+`ROLE_IMAGES_SAVED` / `ROLE_IMAGES_COLLECTED`, and `capture_watch_preflight`
+dispatches its per-role decode check on all four. Import these, not
+`_PROGRESS_ROLES` below, so a rename or a new role here cannot silently
+desync from either reader. `server_running` stays declared-and-unread:
 tool liveness is a different concern from capture progress (slice 10)."""
 _PROGRESS_ROLES = (ROLE_IMAGES_SAVED, ROLE_IMAGES_COLLECTED)
 
@@ -133,13 +135,17 @@ _ASSERTED_LABELS = frozenset({"1", "ON", "TRUE", "YES"})
 _CLEAR_LABELS = frozenset({"0", "OFF", "FALSE", "NO"})
 
 
-def _binary_code(value: object) -> int | None:
+def binary_code(value: object) -> int | None:
     """Resolve a binary-role reading to 1 / 0, or None when it is neither.
 
     Unrecognized resolves to `None`, never a guess: same fail-toward-
     silence posture as `_enclosure_permit_observer._binary_code`, whose
     docstring documents the production incident (`int('ON')` raising)
     that made string-label matching necessary in the first place.
+
+    Module-public (not `_`-prefixed): `capture_watch_preflight` calls this
+    directly to report whether the `abort` role's reading decodes, and
+    must not carry a second copy of this logic.
     """
     if isinstance(value, str):
         token = value.strip().upper()
@@ -155,10 +161,10 @@ def _binary_code(value: object) -> int | None:
     return code if code in (0, 1) else None
 
 
-def _finite_float(value: object) -> float | None:
+def finite_float(value: object) -> float | None:
     """Coerce a single reading to a finite float, or `None`.
 
-    Fail-toward-silence, mirroring `_binary_code`: a value that cannot
+    Fail-toward-silence, mirroring `binary_code`: a value that cannot
     coerce, or resolves to NaN/Infinity, returns `None` rather than
     reaching `append_observations`, which raises
     `InvalidObservationValueError` on NaN/Inf and would fail an entire
@@ -173,7 +179,7 @@ def _finite_float(value: object) -> float | None:
     return result
 
 
-def _progress_counts(value: object) -> tuple[float, float | None] | None:
+def progress_counts(value: object) -> tuple[float, float | None] | None:
     """Split a progress-role reading into `(reached, commanded_total)`.
 
     Two accepted shapes: a bare number, and 2-BM's REAL format, a
@@ -187,24 +193,27 @@ def _progress_counts(value: object) -> tuple[float, float | None] | None:
     `None`, for a future substrate or role that IS numeric.
 
     Only the numerator's coercibility gates the whole reading, matching
-    `_finite_float`'s fail-toward-silence posture: a garbled, missing,
+    `finite_float`'s fail-toward-silence posture: a garbled, missing,
     or absent denominator (`"2987/"`, `"2987/abc"`, a bare `2987`) still
     returns the reached count with `commanded_total=None`, since the
     reached count is a true progress fact on its own. Returns `None`
     only when the numerator itself does not coerce to a finite float.
+
+    Module-public (not `_`-prefixed): `capture_watch_preflight` calls this
+    directly to report whether a progress role's reading decodes.
     """
     numerator: object = value
     denominator: object = None
     if isinstance(value, str) and "/" in value:
         numerator, _, denominator = value.partition("/")
-    reached = _finite_float(numerator)
+    reached = finite_float(numerator)
     if reached is None:
         return None
     # `denominator is None` on a bare-number reading (no "/") is a
     # normal, expected shape, not a coercion failure to route through
-    # `_finite_float`'s try/except: skip the call rather than raise and
+    # `finite_float`'s try/except: skip the call rather than raise and
     # catch a `TypeError` on every single bare-number reading.
-    commanded_total = _finite_float(denominator) if denominator is not None else None
+    commanded_total = finite_float(denominator) if denominator is not None else None
     return reached, commanded_total
 
 
@@ -264,12 +273,10 @@ class ControlPortCaptureObserver:
     ) -> None:
         self._control_port = control_port
         self._status_pvs = {
-            code: roles[_STATUS_ROLE]
-            for code, roles in capture_pvs.items()
-            if _STATUS_ROLE in roles
+            code: roles[ROLE_STATUS] for code, roles in capture_pvs.items() if ROLE_STATUS in roles
         }
         self._abort_pvs = {
-            code: roles[_ABORT_ROLE] for code, roles in capture_pvs.items() if _ABORT_ROLE in roles
+            code: roles[ROLE_ABORT] for code, roles in capture_pvs.items() if ROLE_ABORT in roles
         }
         self._progress_pvs = {
             code: filtered
@@ -449,7 +456,7 @@ class ControlPortCaptureObserver:
 
         NOT Python truthiness: 2-BM's `AbortScan` is a DBR_ENUM that
         resolves to the label `'No'` when idle, and `bool('No')` is
-        `True`. `_binary_code` decodes the conventional EPICS binary
+        `True`. `binary_code` decodes the conventional EPICS binary
         labels (or a raw 0/1 index) instead, so "No" correctly resolves
         to clear, not asserted.
 
@@ -460,7 +467,7 @@ class ControlPortCaptureObserver:
         real `Begun` and its `status` transitions. `None` return means
         the caller enqueues nothing.
         """
-        if _binary_code(reading.value) != 1:
+        if binary_code(reading.value) != 1:
             return None
         return CaptureLifecycleObservation(
             capture_code=code,
@@ -476,7 +483,7 @@ class ControlPortCaptureObserver:
         self, code: str, role: str, pv: str, reading: Measurement
     ) -> CaptureProgressObservation | None:
         """A progress-role reading, decoded to a finite float plus an
-        optional commanded total (see `_progress_counts`).
+        optional commanded total (see `progress_counts`).
 
         `None` return (no coercible reached count) means the caller
         enqueues nothing, matching `_from_abort_reading`'s fail-toward-
@@ -484,7 +491,7 @@ class ControlPortCaptureObserver:
         never guessed at. A garbled or absent commanded total does NOT
         drop the reading; it enqueues with `commanded_total=None`.
         """
-        counts = _progress_counts(reading.value)
+        counts = progress_counts(reading.value)
         if counts is None:
             return None
         value, commanded_total = counts
@@ -529,8 +536,13 @@ class ControlPortCaptureObserver:
 
 
 __all__ = [
+    "ROLE_ABORT",
     "ROLE_IMAGES_COLLECTED",
     "ROLE_IMAGES_SAVED",
+    "ROLE_STATUS",
     "ControlPortCaptureObserver",
+    "binary_code",
     "classify_capture_status",
+    "finite_float",
+    "progress_counts",
 ]
