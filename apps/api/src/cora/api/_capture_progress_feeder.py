@@ -33,8 +33,8 @@ calls `flush_capture` at the right moments and owns the ordering.
 `AppendObservations` accepts any Running or Held Run, driven ones
 included; there is no `conduct_mode` check the way
 `RecordWitnessedRunOutcome`'s decider has one. This feeder's safety
-rests entirely on `open_run_id` (supplied by the caller, in practice
-`RunWitnessRecorder.open_run_id`) only ever naming a Run the RunWitness
+rests entirely on `open_run_id_for` (supplied by the caller, in practice
+`RunWitnessRecorder.open_run_id_for`) only ever naming a Run the RunWitness
 runtime itself promoted. See `cora.agent.seed_capture_progress_feeder`
 for the full security note; this is the same structural residual
 already accepted for `TruncateRun` in `seed_run_witness.py`.
@@ -79,9 +79,9 @@ class CaptureProgressFeeder:
     """Buffers `CaptureProgressObservation` readings and flushes them as
     `AppendObservations` batches plus one `FeedHeartbeat` per open Run.
 
-    `open_run_id` resolves a capture_code to the Run currently open for
-    it, or `None` if none is open; in production this is
-    `RunWitnessRecorder.open_run_id`, so the feeder's write scope is
+    `open_run_id_for` resolves a capture_code to the Run currently open
+    for it, or `None` if none is open; in production this is
+    `RunWitnessRecorder.open_run_id_for`, so the feeder's write scope is
     exactly the witness's own promotions, never a run_id from anywhere
     else.
     """
@@ -92,14 +92,14 @@ class CaptureProgressFeeder:
         deps: Kernel,
         append_observations: AppendObservationsHandler,
         feed_heartbeat_store: FeedHeartbeatStore,
-        open_run_id: Callable[[str], UUID | None],
+        open_run_id_for: Callable[[str], UUID | None],
         principal_id: UUID,
         source_id: str = _DEFAULT_SOURCE_ID,
     ) -> None:
         self._deps = deps
         self._append_observations = append_observations
         self._heartbeat_store = feed_heartbeat_store
-        self._open_run_id = open_run_id
+        self._open_run_id_for = open_run_id_for
         self._principal_id = principal_id
         self._source_id = source_id
         self._buffer: dict[str, dict[str, CaptureProgressObservation]] = {}
@@ -126,7 +126,7 @@ class CaptureProgressFeeder:
         if not buffered:
             return
 
-        run_id = self._open_run_id(capture_code)
+        run_id = self._open_run_id_for(capture_code)
         if run_id is None:
             _log.info(
                 "capture_progress.dropped_no_open_run",

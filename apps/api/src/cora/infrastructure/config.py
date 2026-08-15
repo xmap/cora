@@ -815,13 +815,17 @@ class Settings(BaseSettings):
     # touches no code. See `cora.api._capture_progress_feeder`.
     capture_progress_recording_enabled: bool = False
 
-    # Flush cadence for buffered progress readings. Bounds Postgres write
-    # rate to (codes x progress roles) per tick regardless of substrate
-    # update rate: the buffer always holds only the LATEST reading per
-    # (capture_code, role), so a shorter interval raises time-resolution,
-    # never row count per tick. Irrelevant when
+    # Flush cadence for buffered progress readings, matching the
+    # `*_tick_seconds` naming every other loop-cadence setting uses
+    # (run_supervisor / run_initiator / clearance_expirer /
+    # clearance_watcher / calibration_watcher / procedure_watcher /
+    # campaign_watcher / enclosure_permit_probe / capture_watch_probe).
+    # Bounds Postgres write rate to (codes x progress roles) per tick
+    # regardless of substrate update rate: the buffer always holds only
+    # the LATEST reading per (capture_code, role), so a shorter interval
+    # raises time-resolution, never row count per tick. Irrelevant when
     # `capture_progress_recording_enabled` is False.
-    capture_progress_flush_seconds: float = 10.0
+    capture_progress_flush_tick_seconds: float = 10.0
 
     @field_validator("capture_status_phases")
     @classmethod

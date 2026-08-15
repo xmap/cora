@@ -85,7 +85,7 @@ def _feeder(
         deps=build_deps(ids=[uuid4() for _ in range(50)], now=_NOW),
         append_observations=append,  # type: ignore[arg-type]
         feed_heartbeat_store=heartbeats,
-        open_run_id=lambda _code: open_run_id,
+        open_run_id_for=lambda _code: open_run_id,
         principal_id=_PRINCIPAL_ID,
     )
     return feeder, append, heartbeats
