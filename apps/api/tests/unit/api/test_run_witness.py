@@ -1943,6 +1943,7 @@ def _summary_item(*, run_id: UUID, conduct_mode: str = "Witnessed") -> RunSummar
         snr_limit=None,
         expected_observation_interval_seconds=None,
         conduct_mode=conduct_mode,
+        capture_code=None,
     )
 
 

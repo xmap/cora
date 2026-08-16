@@ -40,6 +40,16 @@ class RunSummaryRow(BaseModel):
             "Campaign this Run is a member of (at-start or post-hoc). NULL for standalone Runs."
         ),
     )
+    capture_code: str | None = Field(
+        default=None,
+        description=(
+            "Deployment-declared capture identifier a witnessed genesis "
+            "stamps onto external_refs (slice 13). NULL for a Conducted "
+            "Run. NOT the observed capture file path: that value is "
+            "personal data, resolved per-run via the `get_run` tool, "
+            "never surfaced on this bulk list."
+        ),
+    )
 
 
 class RunListOutput(BaseModel):
@@ -112,6 +122,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
                     created_at=item.created_at,
                     override_parameters_present=item.override_parameters_present,
                     campaign_id=item.campaign_id,
+                    capture_code=item.capture_code,
                 )
                 for item in page.items
             ],

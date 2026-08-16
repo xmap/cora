@@ -9,7 +9,8 @@ transition):
                                       override_parameters_present +
                                       campaign_id? +
                                       pinned_calibration_ids +
-                                      conduct_mode from payload)
+                                      conduct_mode + capture_code? from
+                                      payload)
   - RunHeld                -> UPDATE status=Held
   - RunResumed             -> UPDATE status=Running + running_since reset
   - RunCompleted           -> UPDATE status=Completed   (terminal)
@@ -58,6 +59,19 @@ was this Run acquired against?" without folding the Run stream.
 Forward-compat: legacy RunStarted payloads lack the key entirely;
 `.get("pinned_calibration_ids", [])` returns `[]` so legacy rows land
 with an empty UUID array.
+
+`capture_code` (slice 13) surfaces the `Identifier(scheme="capture-code")`
+a witnessed genesis already stamps onto `RunStarted.external_refs`, so
+`list_runs` can filter/resolve without folding the Run stream. NULL for
+a Conducted Run (no external_refs entry at all) and, defensively, for
+any Witnessed row whose genesis somehow lacked one: this module's own
+`_extract_capture_code` returns `None` in both cases, mirroring the
+same "absent, not erroring" posture the public sibling function of the
+same name (`cora.run.aggregates.run.state.extract_capture_code`)
+already takes against the folded aggregate state. Deliberately NOT the
+resolved capture PATH: that value is
+personal data and lives only in the `run_capture_path` PII vault,
+resolved at query time, never folded into this projection.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -74,10 +88,33 @@ _INSERT_RUN_SQL = """
 INSERT INTO proj_run_summary
     (run_id, name, plan_id, subject_id, raid, status, created_at, running_since,
      override_parameters_present, campaign_id, pinned_calibration_ids,
-     snr_limit, expected_observation_interval_seconds, conduct_mode)
-VALUES ($1, $2, $3, $4, $5, 'Running', $6, $6, $7, $8, $9::uuid[], $10, $11, $12)
+     snr_limit, expected_observation_interval_seconds, conduct_mode, capture_code)
+VALUES ($1, $2, $3, $4, $5, 'Running', $6, $6, $7, $8, $9::uuid[], $10, $11, $12, $13)
 ON CONFLICT (run_id) DO NOTHING
 """
+
+_CAPTURE_CODE_SCHEME = "capture-code"
+
+
+def _extract_capture_code(external_refs: list[dict[str, Any]]) -> str | None:
+    """Find the `Identifier(scheme="capture-code")` entry's value in a
+    raw `RunStarted.external_refs` payload list.
+
+    Mirrors the public sibling `extract_capture_code` in
+    `cora.run.aggregates.run.state` (which does the same lookup against
+    the folded aggregate state's `frozenset[Identifier]`, and is what
+    `_run_witness.py` and `get_run`'s handler both call); this one
+    operates on the raw JSON list a stored event payload carries, a
+    genuinely different input type, so it stays a separate function.
+    `None` for a Conducted Run (empty list) and, defensively, for a
+    Witnessed row that somehow lacks the ref: never an error.
+    """
+    for ref in external_refs:
+        if ref.get("scheme") == _CAPTURE_CODE_SCHEME:
+            value = ref.get("value")
+            return str(value) if value is not None else None
+    return None
+
 
 _UPDATE_STATUS_SQL = """
 UPDATE proj_run_summary
@@ -197,6 +234,10 @@ class RunSummaryProjection:
             # historical default so legacy rows land as Conducted, which
             # is true of every Run started before this field existed.
             conduct_mode = payload.get("conduct_mode", "Conducted")
+            # Forward-compat: legacy RunStarted payloads have no
+            # external_refs key; .get(..., []) returns [] so legacy rows
+            # (and every Conducted Run) land with capture_code IS NULL.
+            capture_code = _extract_capture_code(payload.get("external_refs", []))
             await conn.execute(
                 _INSERT_RUN_SQL,
                 UUID(payload["run_id"]),
@@ -211,6 +252,7 @@ class RunSummaryProjection:
                 snr_limit,
                 expected_interval,
                 conduct_mode,
+                capture_code,
             )
             return
         if event.event_type == "RunResumed":

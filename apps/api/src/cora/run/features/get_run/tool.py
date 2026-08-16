@@ -1,4 +1,11 @@
-"""MCP tool for the `get_run` query slice."""
+"""MCP tool for the `get_run` query slice.
+
+`capture_code` / `observed_capture_path` (slice 13) are resolved
+inside `get_run`'s own `Handler` (`handler.py`'s `RunView`), mirroring
+`get_actor`'s `ActorView` exactly: this tool only destructures the
+already-composed view into its structured output, the same shape
+every other field already follows.
+"""
 
 from collections.abc import Callable
 from typing import Annotated, Any
@@ -28,6 +35,8 @@ class RunOutput(BaseModel):
     effective_parameters: dict[str, Any] = Field(default_factory=dict)
     trigger_source: str | None = None
     campaign_id: UUID | None = None
+    capture_code: str | None = None
+    observed_capture_path: str | None = None
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
@@ -45,15 +54,16 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
         ],
     ) -> RunOutput:
         handler = get_handler()
-        run = await handler(
+        view = await handler(
             GetRun(run_id=run_id),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),
             surface_id=get_mcp_surface_id(),
         )
-        if run is None:
+        if view is None:
             msg = f"Run {run_id} not found"
             raise ValueError(msg)
+        run = view.run
         return RunOutput(
             id=run.id,
             name=run.name.value,
@@ -65,4 +75,6 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             effective_parameters=run.effective_parameters,
             trigger_source=run.trigger_source,
             campaign_id=run.campaign_id,
+            capture_code=view.capture_code,
+            observed_capture_path=view.observed_capture_path,
         )

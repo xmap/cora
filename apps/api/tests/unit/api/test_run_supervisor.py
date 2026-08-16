@@ -266,6 +266,7 @@ def _running_item(
         snr_limit=snr_limit,
         expected_observation_interval_seconds=expected_observation_interval_seconds,
         conduct_mode=conduct_mode,
+        capture_code=None,
     )
 
 
@@ -840,6 +841,7 @@ def _held_item(run_id: UUID) -> RunSummaryItem:
         snr_limit=None,
         expected_observation_interval_seconds=None,
         conduct_mode="Conducted",
+        capture_code=None,
     )
 
 

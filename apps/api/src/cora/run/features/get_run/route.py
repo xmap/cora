@@ -5,6 +5,12 @@
 Response shape: `{id, name, plan_id, subject_id, raid, status}`.
 `subject_id` and `raid` are null when not set (calibration runs, or
 Runs not registered against a research activity respectively).
+
+`capture_code` / `observed_capture_path` (slice 13) are resolved
+inside `get_run`'s own `Handler` (`handler.py`'s `RunView`), mirroring
+`get_actor`'s `ActorView` exactly: this route only destructures the
+already-composed view into its wire DTO, the same shape every other
+field on this DTO already follows.
 """
 
 from typing import Annotated, Any
@@ -43,6 +49,19 @@ class RunResponse(BaseModel):
     add_run_to_campaign. None when the Run is standalone (not part of
     any Campaign). Closes design-memo Watch #17 (per Caution-design
     cross-BC consistency precedent).
+
+    `capture_code` (slice 13) is the deployment-declared capture
+    identifier a witnessed genesis stamps onto `external_refs`. None
+    for a Conducted Run. NOT personal data.
+
+    `observed_capture_path` (slice 13) is the areaDetector file the
+    capture wrote, resolved from the `run_capture_path` PII vault:
+    `None` when `capture_code` is `None` (not applicable, a Conducted
+    Run); the tombstone literal (`UNOBSERVED_CAPTURE_PATH`) when a
+    capture code exists but the vault has no row yet (never observed,
+    or rejected by the dual-clock guard); the real path otherwise.
+    This IS the authorized operator surface meant to let them find the
+    file for `ingest_scan`.
     """
 
     id: UUID
@@ -55,6 +74,8 @@ class RunResponse(BaseModel):
     effective_parameters: dict[str, Any] = Field(default_factory=dict)
     trigger_source: str | None = None
     campaign_id: UUID | None = None
+    capture_code: str | None = None
+    observed_capture_path: str | None = None
 
 
 def _get_handler(request: Request) -> Handler:
@@ -87,17 +108,18 @@ async def get_runs(
     principal_id: Annotated[UUID, Depends(get_principal_id)],
     surface_id: Annotated[UUID, Depends(get_surface_id)],
 ) -> RunResponse:
-    run = await handler(
+    view = await handler(
         GetRun(run_id=run_id),
         principal_id=principal_id,
         correlation_id=cid,
         surface_id=surface_id,
     )
-    if run is None:
+    if view is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Run {run_id} not found",
         )
+    run = view.run
     return RunResponse(
         id=run.id,
         name=run.name.value,
@@ -109,4 +131,6 @@ async def get_runs(
         effective_parameters=run.effective_parameters,
         trigger_source=run.trigger_source,
         campaign_id=run.campaign_id,
+        capture_code=view.capture_code,
+        observed_capture_path=view.observed_capture_path,
     )

@@ -1,7 +1,11 @@
 """Unit tests for the `get_run` query handler.
 
 Mirrors `test_get_plan_handler.py`. Round-trip seed + get verifies
-fold-on-read returns the started Run.
+fold-on-read returns the started Run, composed into a `RunView`
+(slice 13) mirroring `get_actor`'s `ActorView`. `capture_code` /
+`observed_capture_path` resolution itself is covered by
+`test_get_run_route.py` and the `get_run` contract tests; these tests
+pin the handler's OWN contract (authz, fold-on-read, RunView shape).
 """
 
 from datetime import UTC, datetime
@@ -13,6 +17,7 @@ from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStor
 from cora.infrastructure.event_envelope import to_new_event
 from cora.run import RunHandlers, UnauthorizedError, wire_run
 from cora.run.aggregates.run import (
+    InMemoryCapturePathStore,
     Run,
     RunName,
     RunStatus,
@@ -72,19 +77,22 @@ async def test_handler_returns_run_for_known_id_with_subject() -> None:
     store = InMemoryEventStore()
     await _seed_run(store, _RUN_ID, plan_id=_PLAN_ID, subject_id=_SUBJECT_ID)
     deps = build_deps(ids=[_RUN_ID], now=_NOW, event_store=store)
-    handler = get_run.bind(deps)
-    run = await handler(
+    handler = get_run.bind(deps, capture_path_store=InMemoryCapturePathStore())
+    view = await handler(
         GetRun(run_id=_RUN_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    assert run == Run(
+    assert view is not None
+    assert view.run == Run(
         id=_RUN_ID,
         name=RunName("32-ID FlyScan"),
         plan_id=_PLAN_ID,
         subject_id=_SUBJECT_ID,
         status=RunStatus.RUNNING,
     )
+    assert view.capture_code is None
+    assert view.observed_capture_path is None
 
 
 @pytest.mark.unit
@@ -93,26 +101,26 @@ async def test_handler_returns_run_for_known_id_without_subject() -> None:
     store = InMemoryEventStore()
     await _seed_run(store, _RUN_ID, plan_id=_PLAN_ID, subject_id=None, name="Dark field")
     deps = build_deps(ids=[_RUN_ID], now=_NOW, event_store=store)
-    handler = get_run.bind(deps)
-    run = await handler(
+    handler = get_run.bind(deps, capture_path_store=InMemoryCapturePathStore())
+    view = await handler(
         GetRun(run_id=_RUN_ID),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    assert run is not None
-    assert run.subject_id is None
+    assert view is not None
+    assert view.run.subject_id is None
 
 
 @pytest.mark.unit
 async def test_handler_returns_none_for_unknown_id() -> None:
     deps = build_deps(ids=[_RUN_ID], now=_NOW)
-    handler = get_run.bind(deps)
-    run = await handler(
+    handler = get_run.bind(deps, capture_path_store=InMemoryCapturePathStore())
+    view = await handler(
         GetRun(run_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
         correlation_id=_CORRELATION_ID,
     )
-    assert run is None
+    assert view is None
 
 
 @pytest.mark.unit
@@ -120,7 +128,7 @@ async def test_handler_authorizes_with_query_name_and_default_conduit() -> None:
     tracking = RecordingAuthorize()
     deps = build_deps(ids=[_RUN_ID], now=_NOW, authz=tracking)
 
-    handler = get_run.bind(deps)
+    handler = get_run.bind(deps, capture_path_store=InMemoryCapturePathStore())
     await handler(
         GetRun(run_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
@@ -133,7 +141,7 @@ async def test_handler_authorizes_with_query_name_and_default_conduit() -> None:
 @pytest.mark.unit
 async def test_handler_raises_unauthorized_on_deny() -> None:
     deps = build_deps(ids=[_RUN_ID], now=_NOW, deny=True)
-    handler = get_run.bind(deps)
+    handler = get_run.bind(deps, capture_path_store=InMemoryCapturePathStore())
     with pytest.raises(UnauthorizedError) as exc_info:
         await handler(
             GetRun(run_id=uuid4()),

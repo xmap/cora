@@ -77,6 +77,7 @@ from cora.run.aggregates.run.safety_envelope import (
     witness_safety_envelope,
 )
 from cora.run.aggregates.run.state import (
+    CAPTURE_CODE_EXTERNAL_REF_SCHEME,
     LOGBOOK_KIND_OBSERVATION,
     OBSERVATION_LOGBOOK_SCHEMA,
     READING_CHANNEL_NAME_MAX_LENGTH,
@@ -147,11 +148,13 @@ from cora.run.aggregates.run.state import (
     RunTruncateReason,
     SafetyEnvelopeVerdict,
     SamplingProcedure,
+    extract_capture_code,
     validate_input_dataset_ids,
     validate_pinned_calibration_ids,
 )
 
 __all__ = [
+    "CAPTURE_CODE_EXTERNAL_REF_SCHEME",
     "HOLD_CAUSES",
     "HOLD_CAUSE_AUTHORITY_REVOCATION",
     "HOLD_CAUSE_OPERATOR",
@@ -266,6 +269,7 @@ __all__ = [
     "enclosure_gate_refusal",
     "event_type_name",
     "evolve",
+    "extract_capture_code",
     "fold",
     "fold_hold_claims",
     "fold_hold_claims_from_stored",

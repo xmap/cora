@@ -63,15 +63,30 @@ routes/tools never touch it, but the composition-root lifespan
 store directly, not wrapped behind a command.
 
 `capture_path_store` (slice 13) follows the identical construction
-shape (built locally from `deps.pool`): it is surfaced on the bundle
-for the composition root's `RunWitnessRecorder` to write through (it
-verifies the observed path against the Run's own BEGUN time before
-writing, so the write cannot be a plain command). Kernel-level
-placement is wrong for the same reason as `feed_heartbeat_store`: this
-is a PII vault, so `ProfileStore` would be the closer precedent by
-subject matter, but `ProfileStore` is Kernel-level specifically
-because it is genuinely cross-BC-shared (Access + Agent); this store
-has exactly one BC.
+shape (built locally from `deps.pool`), but NOT the identical wiring:
+it is surfaced on the bundle for the composition root's
+`RunWitnessRecorder` to write through (it verifies the observed path
+against the Run's own BEGUN time before writing, so the write cannot be
+a plain command) AND passed into `get_run.bind(deps, capture_path_store=...)`,
+which resolves it inside the handler exactly the way `get_actor.bind(deps,
+profile_store=...)` resolves `ProfileStore` -- see `get_run/handler.py`'s
+`RunView`. It is deliberately NEVER passed into `list_runs.bind()`.
+`list_runs` is one shared handler instance read by every internal
+composition-root caller (`rebuild_open_captures`, the supervisor and
+initiator watchdogs) as well as the REST/MCP route; resolving personal
+data there would expose it to callers that only need `run_id` off each
+page item, and would do so under one bulk, cursor-paginated grant no
+different in kind from the coarse `ListRuns` authorization this BC's
+own `list_query.py` already documents as unscoped-per-row (BOLA
+deferred until ReBAC). `get_run` avoids the FIRST problem outright (no
+internal caller exists today) regardless of how its own authorization
+eventually gets scoped, mirroring why `list_actors` never touches
+`ProfileStore` while `get_actor` does. Kernel-level placement is still
+wrong for the same reason as before: this is a PII vault, so
+`ProfileStore` would be the closer precedent by subject matter, but
+`ProfileStore` is Kernel-level specifically because it is genuinely
+cross-BC-shared (Access + Agent); this store has exactly one
+BC.
 """
 
 from dataclasses import dataclass
@@ -140,7 +155,10 @@ class RunHandlers:
     """Slice 13's PII vault store for a witnessed Run's observed
     capture file path. Surfaced on the bundle for the same reason as
     `feed_heartbeat_store`: `RunWitnessRecorder` (composition root)
-    writes through it directly after its own dual-clock guard passes."""
+    writes through it directly after its own dual-clock guard passes.
+    `get_run.bind()` (single-entity, mirroring `get_actor`) reads
+    through the SAME instance; `list_runs` deliberately never touches
+    it at all -- see this class's own module docstring."""
 
 
 def wire_run(deps: Kernel) -> RunHandlers:
@@ -235,7 +253,7 @@ def wire_run(deps: Kernel) -> RunHandlers:
             bc=_BC,
         ),
         get_run=with_tracing(
-            get_run.bind(deps),
+            get_run.bind(deps, capture_path_store=capture_path_store),
             command_name="GetRun",
             bc=_BC,
             kind="query",
