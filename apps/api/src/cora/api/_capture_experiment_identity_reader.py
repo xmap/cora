@@ -85,9 +85,13 @@ cannot silently desync from it."""
 
 _ROLES: tuple[str, ...] = (ROLE_PROPOSAL_NUMBER, ROLE_ESAF_NUMBER, ROLE_ESAF_DOI)
 
-_ABSENT_LITERAL = "Unknown"
+ABSENT_IDENTITY_LITERAL = "Unknown"
 """The literal `dmagic` / the IOC leaves an unpopulated experiment-identity
-PV reading. Treated as ABSENT, never as a plausible value (Trap 1)."""
+PV reading. Treated as ABSENT, never as a plausible value (Trap 1).
+Module-public: `capture_watch_preflight` imports this directly (alongside
+`resolved_identity_text`) so its own decode verdict can distinguish
+"substrate's own placeholder" from "genuinely empty" without a second
+copy of the literal."""
 
 _log = get_logger(__name__)
 
@@ -105,7 +109,7 @@ def resolved_identity_text(value: object) -> str | None:
     if not isinstance(value, str):
         return None
     stripped = value.strip()
-    if not stripped or stripped == _ABSENT_LITERAL:
+    if not stripped or stripped == ABSENT_IDENTITY_LITERAL:
         return None
     return stripped
 
@@ -264,6 +268,7 @@ class ExperimentIdentityReader:
 
 
 __all__ = [
+    "ABSENT_IDENTITY_LITERAL",
     "ROLE_ESAF_DOI",
     "ROLE_ESAF_NUMBER",
     "ROLE_PROPOSAL_NUMBER",
