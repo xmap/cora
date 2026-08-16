@@ -741,6 +741,52 @@ class Settings(BaseSettings):
     # `Observation.is_simulated`. See `cora.api._capture_observer`.
     capture_watch_pvs: dict[str, dict[str, str]] = {}
 
+    # Genesis-baseline PVs (slice 12): a deployment-declared set read
+    # ONCE, at the instant a capture promotes to a witnessed Run, and
+    # written as `Observation` rows with `sampling_procedure="baseline"`.
+    # This closes the conditions-snapshot gap without touching any event
+    # payload: a witnessed Run's `effective_parameters` stays the
+    # Plan's DECLARED defaults, and these rows carry what the substrate
+    # actually read at that moment, discriminated from the progress
+    # feeder's `sampling_procedure="monitor"` rows by that same field.
+    #
+    # Same `code -> inner-key -> PV` shape as `capture_watch_pvs`, but the
+    # inner key is the observation's `channel_name`, not a role: baseline
+    # needs on the order of twenty PVs per code (scan geometry plus
+    # beamline conditions TomoScan never sees), which does not fit
+    # `capture_watch_pvs`'s CLOSED role vocabulary (`status`, `abort`,
+    # `images_saved`, `images_collected`, `testing`) and must not be
+    # crammed into one by prefixing role keys. A sibling setting with an
+    # open inner-key vocabulary is the natural fit; `capture_watch_pvs`
+    # itself stays closed because ITS keys are dispatched on by name in
+    # `_capture_observer.py` (an unrecognized role would silently do
+    # nothing), which is not true here: every baseline channel is
+    # treated identically (read once, coerced to float, appended), so an
+    # open vocabulary costs nothing.
+    #
+    # `Observation.value` is `float` (`run/aggregates/run/entries.py`):
+    # every PV declared here MUST read as numeric. A textual reading is
+    # REJECTED (skipped and logged), never coerced. When empty (default)
+    # no baseline read happens at genesis, so a generic boot is
+    # unaffected. Read from CAPTURE_BASELINE_PVS as JSON:
+    #
+    #   CAPTURE_BASELINE_PVS='{
+    #     "2bmb-tomoscan": {
+    #       "ExposureTime": "2bmb:TomoScan:ExposureTime",
+    #       "NumAngles": "2bmb:TomoScan:NumAngles",
+    #       "RotationStart": "2bmb:TomoScan:RotationStart",
+    #       "PropagationDistance": "2bmbAERO:m1"
+    #     }
+    #   }'
+    #
+    # The list is a UNION of two sources: TomoScan's own scan-geometry
+    # records (`ExposureTime`, `NumAngles`, `RotationStart`, ... under
+    # `2bmb:TomoScan:`) and beamline conditions TomoScan never reports
+    # (propagation distance at `2bmbAERO:m1`). Beam energy has no
+    # located readback PV as of this writing and is deliberately left
+    # undeclared rather than guessed. See `cora.api._capture_baseline_reader`.
+    capture_baseline_pvs: dict[str, dict[str, str]] = {}
+
     # The `status` role's raw substrate literal, mapped onto CORA's
     # closed `CapturePhase` vocabulary. These strings belong to one
     # tomoscan commit at one facility and MUST NOT be hardcoded in the
@@ -764,13 +810,25 @@ class Settings(BaseSettings):
     #     "Collecting projections": "Progressing",
     #     "fdt file transfer complete": "Progressing",
     #     "scp file transfer complete": "Progressing",
-    #     "Scan complete": "Ended",
-    #     "Scan aborted": "Aborted"
+    #     "Scan complete": "Ended"
     #   }'
     #
     # NOTE the fdt / scp transfer messages map to Progressing, not
     # Ended: they mark transfer START, not arrival, per
-    # docs/deployments/2-bm/operations.md.
+    # docs/deployments/2-bm/operations.md. An `Aborted` phase reaches
+    # `RunWitnessRecorder` via the separate `abort` role
+    # (`_from_abort_reading` in `_capture_observer.py`), never through
+    # this table: `decarlof/tomoscan@master` never calls
+    # `ScanStatus.put("Scan aborted")` (verified by extracting every
+    # `ScanStatus.put()` call in `tomoscan.py` / `tomoscan_2bm.py` /
+    # `tomoscan_pso.py`), so that literal was never a real mapping
+    # target and has been removed from this example. Two literals
+    # upstream DOES write are deliberately absent here too: "Error
+    # writing configuration" (`tomoscan.py`) and "Config File Write
+    # Error" (`tomoscan_pso.py`). Both classify UNRECOGNIZED until an
+    # operator decides what CapturePhase, if any, a config-write
+    # failure should map to; inventing one here would be a guess this
+    # table exists specifically to avoid.
     capture_status_phases: dict[str, str] = {}
 
     # Bounds how often the capture-watch runtime re-reads each
@@ -831,6 +889,19 @@ class Settings(BaseSettings):
     # raises time-resolution, never row count per tick. Irrelevant when
     # `capture_progress_recording_enabled` is False.
     capture_progress_flush_tick_seconds: float = 10.0
+
+    # FOURTH, independent kill switch (slice 12): gates whether the
+    # `capture_baseline_pvs` set is actually read and appended at
+    # promotion. Default off. Refuses to boot if True without
+    # `run_witness_recording_enabled` also True (see
+    # `_enforce_run_witness_recording_gate`): with no promoted Run there
+    # is nothing to attach a baseline reading to. Mirrors
+    # `capture_progress_recording_enabled`'s gate exactly, for the same
+    # reason: a one-time read driven by a facility resource is still a
+    # write this switch must be able to turn off independently of
+    # whether the PVs are merely declared. See
+    # `cora.api._capture_baseline_reader`.
+    capture_baseline_recording_enabled: bool = False
 
     @field_validator("capture_status_phases")
     @classmethod

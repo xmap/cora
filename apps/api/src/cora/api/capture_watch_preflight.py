@@ -1,12 +1,20 @@
-"""Preflight read: report every configured `capture_watch_pvs` PV against
-the live control system, before the recording switch flips.
+"""Preflight read: report every configured `capture_watch_pvs` PV, and
+every `capture_baseline_pvs` PV, against the live control system, before
+the recording switch flips.
 
 `python -m cora.api.capture_watch_preflight` reads every PV named under
 `Settings.capture_watch_pvs` exactly once and reports, per role: whether it
 connects, what `Measurement.kind` CORA's `ControlPort` sees it as, the raw
-decoded value, and whether CORA's own decoder for that role accepts it. Run
-it once the host is reachable and before `RUN_WITNESS_RECORDING_ENABLED` is
-set, and again after any `CAPTURE_WATCH_PVS` / `CAPTURE_STATUS_PHASES` edit.
+decoded value, and whether CORA's own decoder for that role accepts it. It
+also sweeps `Settings.capture_baseline_pvs` (slice 12): those channels have
+no per-role decoder in production (every baseline channel is treated
+identically, see `cora.api._capture_baseline_reader`), so the report shows
+`kind` / `value` / `units` with verdict `n/a`, EXCEPT that a non-numeric
+value is flagged BAD -- the one thing checkable ahead of time, since
+`Observation.value` is `float` and a textual reading would be rejected at
+append time anyway. Run this command once the host is reachable and before
+`RUN_WITNESS_RECORDING_ENABLED` is set, and again after any
+`CAPTURE_WATCH_PVS` / `CAPTURE_STATUS_PHASES` / `CAPTURE_BASELINE_PVS` edit.
 
 ## Why this exists
 
@@ -92,6 +100,7 @@ from cora.api._capture_observer import (
     ROLE_TESTING,
     binary_code,
     classify_capture_status,
+    finite_float,
     progress_counts,
 )
 from cora.infrastructure.config import Settings
@@ -122,7 +131,12 @@ class _PvReport:
     human reading the printed report."""
 
     code: str
-    role: str
+    pv_key: str
+    """The `capture_watch_pvs` role (`"status"`, `"abort"`, ...) for a
+    `group="watch"` line, or the `capture_baseline_pvs` channel_name for
+    a `group="baseline"` line. Named for what it structurally is (the
+    PV's inner-dict key) rather than "role", which is only true of half
+    this report's lines."""
     pv: str
     ok: bool
     connected: bool
@@ -130,15 +144,22 @@ class _PvReport:
     kind: str | None = None
     element_count: int | None = None
     value: object = None
+    units: str | None = None
     verdict: str = "n/a"
+    group: str = "watch"
+    """`"watch"` (`capture_watch_pvs`, the default) or `"baseline"`
+    (`capture_baseline_pvs`, slice 12). Purely a report-rendering
+    distinction; both groups share every other field."""
 
     def render(self) -> str:
         tag = "OK  " if self.ok else "BAD "
-        head = f"{tag}{self.code}/{self.role:<17} {self.pv}"
+        key_label = self.pv_key if self.group == "watch" else f"baseline:{self.pv_key}"
+        head = f"{tag}{self.code}/{key_label:<17} {self.pv}"
         if not self.connected:
             return f"{head}  NOT CONNECTED ({self.detail})"
         shape = self.kind if self.element_count is None else f"{self.kind}[{self.element_count}]"
-        return f"{head}  kind={shape}  value={self.value!r}  decode={self.verdict}"
+        unit_part = f"  units={self.units}" if self.units is not None else ""
+        return f"{head}  kind={shape}  value={self.value!r}{unit_part}  decode={self.verdict}"
 
 
 @dataclass
@@ -155,18 +176,24 @@ async def preflight_read_capture_pvs(
     control_port: ControlPort,
     capture_pvs: Mapping[str, Mapping[str, str]],
     status_phases: Mapping[str, str],
+    baseline_pvs: Mapping[str, Mapping[str, str]] | None = None,
 ) -> _Report:
-    """Read every configured `capture_watch_pvs` role once; report its shape.
+    """Read every configured `capture_watch_pvs` role, then every
+    `capture_baseline_pvs` channel (slice 12), once each; report shape.
 
-    Iteration order is sorted (code, then role) so two runs against an
-    unchanged config produce line-for-line identical output. Each PV is
-    read independently: one dead or misconfigured PV does not abort the
+    Iteration order is sorted (code, then role/channel_name), watch
+    lines before baseline lines, so two runs against an unchanged
+    config produce line-for-line identical output. Each PV is read
+    independently: one dead or misconfigured PV does not abort the
     sweep, it reports as its own failed line.
     """
     report = _Report()
     for code in sorted(capture_pvs):
         for role, pv in sorted(capture_pvs[code].items()):
             report.lines.append(await _read_one(control_port, code, role, pv, status_phases))
+    for code in sorted(baseline_pvs or {}):
+        for channel_name, pv in sorted((baseline_pvs or {})[code].items()):
+            report.lines.append(await _read_one_baseline(control_port, code, channel_name, pv))
     return report
 
 
@@ -180,7 +207,7 @@ async def _read_one(
     try:
         reading = await control_port.read(pv)
     except (ControlNotConnectedError, ControlTimeoutError, ControlAccessDeniedError) as exc:
-        return _PvReport(code=code, role=role, pv=pv, ok=False, connected=False, detail=str(exc))
+        return _PvReport(code=code, pv_key=role, pv=pv, ok=False, connected=False, detail=str(exc))
     except ControlValueCoercionError as exc:
         # Connected, but the adapter could not unpack the wire value into a
         # `Measurement` at all: a shape gap even more basic than a decoder
@@ -188,7 +215,7 @@ async def _read_one(
         # surface before the recording switch flips.
         return _PvReport(
             code=code,
-            role=role,
+            pv_key=role,
             pv=pv,
             ok=False,
             connected=True,
@@ -202,7 +229,7 @@ async def _read_one(
     verdict, ok = _decode_verdict(role, reading, status_phases)
     return _PvReport(
         code=code,
-        role=role,
+        pv_key=role,
         pv=pv,
         ok=ok,
         connected=True,
@@ -240,10 +267,78 @@ def _decode_verdict(
     return "n/a", True
 
 
+async def _read_one_baseline(
+    control_port: ControlPort,
+    code: str,
+    channel_name: str,
+    pv: str,
+) -> _PvReport:
+    """A `capture_baseline_pvs` channel's preflight result.
+
+    No per-channel decoder exists in production (every baseline channel
+    is treated identically; see `cora.api._capture_baseline_reader`), so
+    the only checkable-ahead-of-time defect is a non-numeric value:
+    `Observation.value` is `float`, so a textual reading here is BAD
+    even though this command has no decode verdict to report beyond that.
+    """
+    try:
+        reading = await control_port.read(pv)
+    except (ControlNotConnectedError, ControlTimeoutError, ControlAccessDeniedError) as exc:
+        return _PvReport(
+            code=code,
+            pv_key=channel_name,
+            pv=pv,
+            ok=False,
+            connected=False,
+            detail=str(exc),
+            group="baseline",
+        )
+    except ControlValueCoercionError as exc:
+        return _PvReport(
+            code=code,
+            pv_key=channel_name,
+            pv=pv,
+            ok=False,
+            connected=True,
+            detail=f"adapter could not decode the reading: {exc}",
+            group="baseline",
+        )
+    element_count = (
+        len(reading.value)
+        if reading.kind == "Array" and hasattr(reading.value, "__len__")
+        else None
+    )
+    verdict, ok = _baseline_verdict(reading)
+    return _PvReport(
+        code=code,
+        pv_key=channel_name,
+        pv=pv,
+        ok=ok,
+        connected=True,
+        kind=reading.kind,
+        element_count=element_count,
+        value=reading.value,
+        units=reading.units,
+        verdict=verdict,
+        group="baseline",
+    )
+
+
+def _baseline_verdict(reading: Measurement) -> tuple[str, bool]:
+    """BAD only when the value cannot coerce to a finite float: that is
+    the one baseline defect checkable ahead of a real append attempt.
+    Reuses `finite_float`, the same coercion `CaptureBaselineReader`
+    itself applies, so this can never drift from what production accepts.
+    """
+    if finite_float(reading.value) is None:
+        return "non-numeric", False
+    return "n/a", True
+
+
 def _finish(report: _Report) -> int:
     print("capture-watch preflight")
     if not report.lines:
-        print("  (no PVs configured under CAPTURE_WATCH_PVS)")
+        print("  (no PVs configured under CAPTURE_WATCH_PVS or CAPTURE_BASELINE_PVS)")
         return _EXIT_CLEAN
     for line in report.lines:
         print(f"  {line.render()}")
@@ -258,13 +353,15 @@ def build_parser() -> argparse.ArgumentParser:
     return argparse.ArgumentParser(
         prog="python -m cora.api.capture_watch_preflight",
         description=(
-            "Read every PV configured under CAPTURE_WATCH_PVS once against "
-            "the live control system and report, per role, whether it "
-            "connects, what shape CORA's ControlPort sees it as, the raw "
-            "value, and whether CORA's own decoder for that role accepts "
-            "it. Read-only; changes nothing. Run once the host is "
-            "reachable, before RUN_WITNESS_RECORDING_ENABLED is set, and "
-            "again after any CAPTURE_WATCH_PVS / CAPTURE_STATUS_PHASES edit."
+            "Read every PV configured under CAPTURE_WATCH_PVS, and every "
+            "channel under CAPTURE_BASELINE_PVS, once against the live "
+            "control system and report whether each connects, what shape "
+            "CORA's ControlPort sees it as, the raw value, and (for "
+            "CAPTURE_WATCH_PVS roles) whether CORA's own decoder for that "
+            "role accepts it. Read-only; changes nothing. Run once the host "
+            "is reachable, before RUN_WITNESS_RECORDING_ENABLED is set, and "
+            "again after any CAPTURE_WATCH_PVS / CAPTURE_STATUS_PHASES / "
+            "CAPTURE_BASELINE_PVS edit."
         ),
     )
 
@@ -282,6 +379,7 @@ def main(argv: list[str] | None = None) -> int:
                 control_port=control_port,
                 capture_pvs=settings.capture_watch_pvs,
                 status_phases=settings.capture_status_phases,
+                baseline_pvs=settings.capture_baseline_pvs,
             )
             return _finish(report)
         finally:

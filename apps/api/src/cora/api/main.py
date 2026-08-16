@@ -61,6 +61,7 @@ from cora.agent import (
     seed_authority_revocation_holder_agent,
     seed_calibration_watcher_agent,
     seed_campaign_watcher_agent,
+    seed_capture_baseline_reader_agent,
     seed_capture_progress_feeder_agent,
     seed_caution_drafter_agent,
     seed_caution_promoter_agent,
@@ -429,11 +430,24 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
     Also refuses to boot with capture_progress_recording_enabled=True
     unless run_witness_recording_enabled is itself True (slice 10): with
     no promoted Run there is nothing for a progress reading to attach to.
+
+    Also refuses to boot with capture_baseline_recording_enabled=True
+    unless run_witness_recording_enabled is itself True (slice 12): the
+    baseline read happens exactly once, at the instant a capture
+    promotes to a Run, so with no promotion there is nothing to attach
+    a baseline reading to either.
     """
     if settings.capture_progress_recording_enabled and not settings.run_witness_recording_enabled:
         msg = (
             "CAPTURE_PROGRESS_RECORDING_ENABLED=true requires "
             "RUN_WITNESS_RECORDING_ENABLED=true. A progress reading has no "
+            "promoted Run to attach to without it."
+        )
+        raise RuntimeError(msg)
+    if settings.capture_baseline_recording_enabled and not settings.run_witness_recording_enabled:
+        msg = (
+            "CAPTURE_BASELINE_RECORDING_ENABLED=true requires "
+            "RUN_WITNESS_RECORDING_ENABLED=true. A baseline reading has no "
             "promoted Run to attach to without it."
         )
         raise RuntimeError(msg)
@@ -1025,6 +1039,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # agent; a separate principal from RunWitness so progress-writing
             # can be revoked without blinding the witness).
             await seed_capture_progress_feeder_agent(deps)
+            # same shape for CaptureBaselineReader (deterministic genesis-baseline
+            # read agent; a separate principal from both RunWitness and
+            # CaptureProgressFeeder so baseline-writing can be revoked without
+            # blinding either).
+            await seed_capture_baseline_reader_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
@@ -1196,6 +1215,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         capture_progress_flush_tick_seconds=(
                             settings.capture_progress_flush_tick_seconds
                         ),
+                        control_port=app.state.operation.control_port,
+                        capture_baseline_pvs=settings.capture_baseline_pvs,
                     ),
                 ):
                     yield

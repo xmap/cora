@@ -549,10 +549,13 @@ def _recorder(
     run_witness_recording_enabled: bool = True,
     capture_watch_plan_id: UUID | None = _PLAN_ID,
     open_captures: dict[str, UUID] | None = None,
+    baseline_reader: object | None = None,
+    capture_baseline_recording_enabled: bool = False,
 ) -> RunWitnessRecorder:
     settings = Settings(  # type: ignore[call-arg]
         run_witness_recording_enabled=run_witness_recording_enabled,
         capture_watch_plan_id=capture_watch_plan_id,
+        capture_baseline_recording_enabled=capture_baseline_recording_enabled,
     )
     outcome = record_witnessed_run_outcome or _FakeRecordWitnessedRunOutcome()
     truncate = truncate_run or _FakeTruncateRun()
@@ -563,6 +566,7 @@ def _recorder(
         truncate_run=truncate,
         settings=settings,
         open_captures=open_captures,
+        baseline_reader=baseline_reader,  # type: ignore[arg-type]
     )
 
 
@@ -579,6 +583,114 @@ async def test_run_witness_recorder_promotes_a_begun_capture_while_idle() -> Non
     assert command.plan_id == _PLAN_ID
     assert command.trigger == "Monitor"
     assert command.monitor_source_id == RUN_WITNESS_MONITOR_SOURCE_ID
+
+
+class _FakeCaptureBaselineReader:
+    """Records every `read()` call, or raises a configured exception instead."""
+
+    def __init__(self, *, raises: Exception | None = None) -> None:
+        self.calls: list[tuple[str, UUID]] = []
+        self._raises = raises
+
+    async def read(self, capture_code: str, run_id: UUID) -> None:
+        self.calls.append((capture_code, run_id))
+        if self._raises is not None:
+            raise self._raises
+
+
+@pytest.mark.unit
+async def test_promotion_reads_the_baseline_when_configured_and_enabled() -> None:
+    fake = _FakeRecordWitnessedRun()
+    baseline = _FakeCaptureBaselineReader()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        baseline_reader=baseline,
+        capture_baseline_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    assert baseline.calls == [(_CODE, fake.run_id)]
+
+
+@pytest.mark.unit
+async def test_promotion_does_not_read_the_baseline_when_the_kill_switch_is_off() -> None:
+    """Declaring a reader is not sufficient; capture_baseline_recording_enabled
+    is the fourth, independent kill switch."""
+    fake = _FakeRecordWitnessedRun()
+    baseline = _FakeCaptureBaselineReader()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        baseline_reader=baseline,
+        capture_baseline_recording_enabled=False,
+    )
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    assert baseline.calls == []
+
+
+@pytest.mark.unit
+async def test_kill_switch_is_read_fresh_at_call_time_not_cached_at_construction() -> None:
+    """settings.capture_baseline_recording_enabled must be re-read on
+    every promotion, not captured once when the recorder is built: an
+    operator flips this at runtime via a live Settings object, the same
+    way `run_witness_recording_enabled` is already read fresh every
+    `observe_capture` call rather than snapshotted in `__init__`."""
+    fake = _FakeRecordWitnessedRun()
+    baseline = _FakeCaptureBaselineReader()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        baseline_reader=baseline,
+        capture_baseline_recording_enabled=False,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, capture_code="code-a")
+    )
+    assert baseline.calls == []
+
+    recorder._settings.capture_baseline_recording_enabled = True  # pyright: ignore[reportPrivateUsage]
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, capture_code="code-b")
+    )
+    assert baseline.calls == [("code-b", fake.run_id)]
+
+
+@pytest.mark.unit
+async def test_promotion_with_no_baseline_reader_configured_is_unaffected() -> None:
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        baseline_reader=None,
+        capture_baseline_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    # No exception, and the promotion itself still succeeded.
+    assert len(fake.calls) == 1
+
+
+@pytest.mark.unit
+async def test_promotion_survives_a_baseline_read_failure() -> None:
+    """A baseline-read failure must never unwind or be mistaken for a
+    failed promotion: by the time it runs, the promotion already
+    committed."""
+    fake = _FakeRecordWitnessedRun()
+    baseline = _FakeCaptureBaselineReader(raises=RuntimeError("boom"))
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        baseline_reader=baseline,
+        capture_baseline_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)
+    )  # must not raise
+
+    assert recorder.open_captures() == {_CODE: fake.run_id}
 
 
 @pytest.mark.unit
@@ -1339,6 +1451,128 @@ async def test_run_witness_lifespan_refuses_progress_recording_in_shadow_mode() 
             capture_progress_recording_enabled=True,
         ):
             pass
+
+
+class _FakeBaselineControlPort:
+    """Scripted `read()`-only fake for the baseline-reader e2e wiring test."""
+
+    def __init__(self, script: dict[str, Any]) -> None:
+        self._script = script
+
+    async def read(self, address: str) -> Any:
+        from cora.operation.ports.control_port import Measurement
+
+        return Measurement(
+            value=self._script[address],
+            kind="Scalar",
+            quality="Good",
+            produced_at=_NOW,
+        )
+
+
+@pytest.mark.unit
+async def test_run_witness_lifespan_rejects_capture_baseline_pvs_without_control_port() -> None:
+    deps = dataclasses.replace(
+        build_deps(ids=[uuid4() for _ in range(5)]),
+        settings=Settings(  # type: ignore[call-arg]
+            run_witness_recording_enabled=True,
+            capture_watch_plan_id=_PLAN_ID,
+        ),
+    )
+    with pytest.raises(ValueError, match="control_port"):
+        async with run_witness_lifespan(
+            observer=_FakeObserver([]),
+            capture_codes=frozenset({_CODE}),
+            deps=deps,
+            record_witnessed_run=_FakeRecordWitnessedRun(),
+            record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+            truncate_run=_FakeTruncateRun(),
+            append_observations=_FakeAppendObservations(),
+            capture_baseline_pvs={_CODE: {"ExposureTime": "2bmb:TomoScan:ExposureTime"}},
+        ):
+            pass
+
+
+@pytest.mark.unit
+async def test_run_witness_lifespan_with_capture_baseline_pvs_reads_and_appends_on_promotion() -> (
+    None
+):
+    """End-to-end wiring check: a BEGUN promotes and the baseline reader
+    actually reads through the real ControlPort fake and appends against
+    the promoted run_id -- proving the reader is constructed and invoked,
+    not just accepted as a parameter."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    append_observations = _FakeAppendObservations()
+    control_port = _FakeBaselineControlPort({"2bmb:TomoScan:ExposureTime": 1.5})
+    observer = _FakeObserver([_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)])
+    deps = dataclasses.replace(
+        build_deps(ids=[uuid4() for _ in range(20)]),
+        settings=Settings(  # type: ignore[call-arg]
+            run_witness_recording_enabled=True,
+            capture_watch_plan_id=_PLAN_ID,
+            capture_baseline_recording_enabled=True,
+        ),
+    )
+
+    async with run_witness_lifespan(
+        observer=observer,
+        capture_codes=frozenset({_CODE}),
+        deps=deps,
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+        truncate_run=_FakeTruncateRun(),
+        append_observations=append_observations,
+        control_port=control_port,  # type: ignore[arg-type]
+        capture_baseline_pvs={_CODE: {"ExposureTime": "2bmb:TomoScan:ExposureTime"}},
+    ):
+        await asyncio.sleep(0.02)
+
+    assert len(genesis.calls) == 1
+    assert len(append_observations.calls) == 1
+    assert append_observations.calls[0].run_id == run_id
+    (entry,) = append_observations.calls[0].entries
+    assert entry.channel_name == "ExposureTime"
+    assert entry.value == 1.5
+    assert entry.sampling_procedure == "baseline"
+
+
+@pytest.mark.unit
+async def test_run_witness_lifespan_declares_baseline_pvs_but_kill_switch_off_appends_nothing() -> (
+    None
+):
+    """Declaring capture_baseline_pvs builds a reader; the fourth kill
+    switch, capture_baseline_recording_enabled, is what actually gates
+    whether it is called."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    append_observations = _FakeAppendObservations()
+    control_port = _FakeBaselineControlPort({"2bmb:TomoScan:ExposureTime": 1.5})
+    observer = _FakeObserver([_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)])
+    deps = dataclasses.replace(
+        build_deps(ids=[uuid4() for _ in range(20)]),
+        settings=Settings(  # type: ignore[call-arg]
+            run_witness_recording_enabled=True,
+            capture_watch_plan_id=_PLAN_ID,
+            capture_baseline_recording_enabled=False,
+        ),
+    )
+
+    async with run_witness_lifespan(
+        observer=observer,
+        capture_codes=frozenset({_CODE}),
+        deps=deps,
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+        truncate_run=_FakeTruncateRun(),
+        append_observations=append_observations,
+        control_port=control_port,  # type: ignore[arg-type]
+        capture_baseline_pvs={_CODE: {"ExposureTime": "2bmb:TomoScan:ExposureTime"}},
+    ):
+        await asyncio.sleep(0.02)
+
+    assert len(genesis.calls) == 1
+    assert append_observations.calls == []
 
 
 @pytest.mark.unit

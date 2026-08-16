@@ -42,7 +42,11 @@ Per capture_code, a small dedup state machine:
   - `BEGUN` while no Run is open for this code: call `record_witnessed_run`
     and, on success, remember the returned run_id as OPEN. On failure
     (any raised error, including an authorization misconfiguration),
-    log and stay unopened so the next `BEGUN` retries.
+    log and stay unopened so the next `BEGUN` retries. On success, also
+    call the configured `CaptureBaselineReader` (slice 12) exactly once
+    to snapshot the genesis-baseline PVs against the new Run; a failure
+    there is logged and never unwinds the promotion that already
+    committed (see `RunWitnessRecorder._read_baseline`).
   - `BEGUN` while a Run is already open for this code: the previous
     terminal was missed (dropped CA transition, or the substrate
     restarted mid-capture). `TruncateRun` the stale Run first
@@ -203,8 +207,10 @@ import contextlib
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from cora.agent.seed_capture_baseline_reader import CAPTURE_BASELINE_READER_AGENT_ID
 from cora.agent.seed_capture_progress_feeder import CAPTURE_PROGRESS_FEEDER_AGENT_ID
 from cora.agent.seed_run_witness import RUN_WITNESS_AGENT_ID
+from cora.api._capture_baseline_reader import CaptureBaselineReader
 from cora.api._capture_observer import ROLE_IMAGES_COLLECTED, ROLE_IMAGES_SAVED
 from cora.api._capture_progress_feeder import CaptureProgressFeeder, capture_progress_flush_loop
 from cora.infrastructure.logging import get_logger
@@ -227,11 +233,12 @@ from cora.run.ports.capture_observer import (
 from cora.shared.identity import MonitorSourceId
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Mapping
     from datetime import datetime
 
     from cora.infrastructure.config import Settings
     from cora.infrastructure.kernel import Kernel
+    from cora.operation.ports.control_port import ControlPort
     from cora.run.aggregates.run import FeedHeartbeatStore
     from cora.run.aggregates.run.state import Run
     from cora.run.features.append_observations.handler import Handler as AppendObservationsHandler
@@ -323,6 +330,7 @@ class RunWitnessRecorder:
         truncate_run: TruncateRunHandler,
         settings: Settings,
         open_captures: dict[str, UUID] | None = None,
+        baseline_reader: CaptureBaselineReader | None = None,
     ) -> None:
         self._deps = deps
         self._record_witnessed_run = record_witnessed_run
@@ -332,6 +340,7 @@ class RunWitnessRecorder:
         self._open_captures: dict[str, UUID] = dict(open_captures or {})
         self._last_progress: dict[str, dict[str, CaptureProgressObservation]] = {}
         self._last_precondition_bypass: dict[str, CapturePreconditionBypassObservation] = {}
+        self._baseline_reader = baseline_reader
 
     def open_captures(self) -> dict[str, UUID]:
         """A snapshot of every capture_code currently open, mapped to
@@ -510,6 +519,35 @@ class RunWitnessRecorder:
             capture_code=observation.capture_code,
             run_id=str(run_id),
         )
+        await self._read_baseline(observation.capture_code, run_id)
+
+    async def _read_baseline(self, capture_code: str, run_id: UUID) -> None:
+        """Slice 12: read the genesis-baseline PVs once, right after a
+        successful promotion.
+
+        By this point the promotion has already fully committed
+        (`_open_captures` updated, `run_witness.promoted` logged), so a
+        baseline-read failure must never unwind or retry it. Gated on
+        BOTH a reader being configured (main.py wires one whenever
+        `capture_baseline_pvs` is declared) and the fourth kill switch,
+        `capture_baseline_recording_enabled`; `CaptureBaselineReader`
+        itself catches every failure internally (see its own module
+        docstring), the outer try/except here is defense in depth,
+        mirroring how `run_witness_loop` already wraps
+        `feeder.flush_capture` the same way.
+        """
+        if self._baseline_reader is None or not self._settings.capture_baseline_recording_enabled:
+            return
+        try:
+            await self._baseline_reader.read(capture_code, run_id)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            _log.exception(
+                "run_witness.baseline_read_failed",
+                capture_code=capture_code,
+                run_id=str(run_id),
+            )
 
     async def _truncate_stale(self, observation: CaptureLifecycleObservation) -> None:
         code = observation.capture_code
@@ -817,6 +855,8 @@ async def run_witness_lifespan(
     feed_heartbeat_store: FeedHeartbeatStore | None = None,
     capture_progress_recording_enabled: bool = False,
     capture_progress_flush_tick_seconds: float = _CAPTURE_PROGRESS_DEFAULT_FLUSH_TICK_SECONDS,
+    control_port: ControlPort | None = None,
+    capture_baseline_pvs: Mapping[str, Mapping[str, str]] | None = None,
 ) -> AsyncGenerator[None]:
     """Run the watcher as a background task for the app's lifetime.
 
@@ -839,6 +879,16 @@ async def run_witness_lifespan(
     readings against a Run only the recorder can name, so it cannot
     exist without one. Runs a second background task,
     `capture_progress_flush_loop`, alongside the drain loop.
+
+    A non-empty `capture_baseline_pvs` (slice 12) additionally requires
+    `record_witnessed_run`, `control_port`, and `append_observations`: a
+    `CaptureBaselineReader` is built and handed to the recorder, which
+    calls it exactly once per successful promotion. Whether a call to it
+    actually reads and appends anything is gated separately, inside the
+    recorder, by `deps.settings.capture_baseline_recording_enabled` (the
+    fourth kill switch) -- declaring the PVs here is necessary but not
+    sufficient, mirroring how declaring `capture_watch_pvs` alone does
+    not turn on recording either.
     """
     if not capture_codes:
         yield
@@ -857,6 +907,33 @@ async def run_witness_lifespan(
             msg = f"run_witness_lifespan: record_witnessed_run requires {', '.join(missing)}"
             raise ValueError(msg)
 
+    baseline_reader: CaptureBaselineReader | None = None
+    if capture_baseline_pvs:
+        missing = [
+            name
+            for name, value in (
+                ("record_witnessed_run", record_witnessed_run),
+                ("control_port", control_port),
+                ("append_observations", append_observations),
+            )
+            if value is None
+        ]
+        if missing:
+            msg = f"run_witness_lifespan: capture_baseline_pvs requires {', '.join(missing)}"
+            raise ValueError(msg)
+        # Narrowed by the checks above; deps is not None because
+        # record_witnessed_run is not None (see the first check above).
+        assert deps is not None
+        assert control_port is not None
+        assert append_observations is not None
+        baseline_reader = CaptureBaselineReader(
+            deps=deps,
+            control_port=control_port,
+            baseline_pvs=capture_baseline_pvs,
+            append_observations=append_observations,
+            principal_id=CAPTURE_BASELINE_READER_AGENT_ID,
+        )
+
     recorder: RunWitnessRecorder | None = None
     if record_witnessed_run is not None:
         # Narrowed by the check above.
@@ -870,6 +947,7 @@ async def run_witness_lifespan(
             truncate_run=truncate_run,
             settings=deps.settings,
             open_captures=open_captures,
+            baseline_reader=baseline_reader,
         )
 
     feeder: CaptureProgressFeeder | None = None

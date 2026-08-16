@@ -12,6 +12,9 @@ misconfiguration in every environment.
 Slice 10 adds a THIRD gate: `capture_progress_recording_enabled=True`
 requires `run_witness_recording_enabled=True`, checked ahead of (and
 independent of) the first gate's own prerequisites.
+
+Slice 12 adds a FOURTH gate, same shape: `capture_baseline_recording_enabled=True`
+requires `run_witness_recording_enabled=True`.
 """
 
 from uuid import UUID, uuid4
@@ -28,12 +31,14 @@ def _settings(
     capture_watch_plan_id: UUID | None = None,
     run_witness_recording_enabled: bool = False,
     capture_progress_recording_enabled: bool = False,
+    capture_baseline_recording_enabled: bool = False,
 ) -> Settings:
     return Settings(  # type: ignore[call-arg]
         run_witness_enabled=run_witness_enabled,
         capture_watch_plan_id=capture_watch_plan_id,
         run_witness_recording_enabled=run_witness_recording_enabled,
         capture_progress_recording_enabled=capture_progress_recording_enabled,
+        capture_baseline_recording_enabled=capture_baseline_recording_enabled,
     )
 
 
@@ -129,5 +134,43 @@ def test_progress_recording_enabled_with_run_witness_recording_passes() -> None:
             capture_watch_plan_id=uuid4(),
             run_witness_recording_enabled=True,
             capture_progress_recording_enabled=True,
+        )
+    )
+
+
+def test_baseline_recording_enabled_without_run_witness_recording_refuses_boot() -> None:
+    with pytest.raises(RuntimeError, match="RUN_WITNESS_RECORDING_ENABLED=true"):
+        _enforce_run_witness_recording_gate(
+            _settings(
+                run_witness_enabled=True,
+                capture_watch_plan_id=uuid4(),
+                run_witness_recording_enabled=False,
+                capture_baseline_recording_enabled=True,
+            )
+        )
+
+
+def test_baseline_recording_enabled_checked_before_the_first_gates_prerequisites() -> None:
+    """Same independence property as the progress gate: the baseline
+    gate's own message must appear even when the FIRST gate's
+    prerequisites are also missing."""
+    with pytest.raises(RuntimeError, match="RUN_WITNESS_RECORDING_ENABLED=true"):
+        _enforce_run_witness_recording_gate(
+            _settings(
+                run_witness_enabled=False,
+                capture_watch_plan_id=None,
+                run_witness_recording_enabled=False,
+                capture_baseline_recording_enabled=True,
+            )
+        )
+
+
+def test_baseline_recording_enabled_with_run_witness_recording_passes() -> None:
+    _enforce_run_witness_recording_gate(
+        _settings(
+            run_witness_enabled=True,
+            capture_watch_plan_id=uuid4(),
+            run_witness_recording_enabled=True,
+            capture_baseline_recording_enabled=True,
         )
     )
