@@ -127,6 +127,12 @@ _INTRINSIC_ALLOWLIST: dict[str, str] = {
         "tool's file-writer, not a CORA Actor, so there is no `saved_by` fact-act "
         "partner"
     ),
+    "run.Run.CapturePreconditionBypassSnapshot.observed_at": (
+        "substrate-observed PV timestamp (EPICS Testing), same shape as "
+        "CaptureProgressSnapshot.collected_at / .saved_at: the physical reading "
+        "entity is the external tool's own Testing flag, not a CORA Actor, so "
+        "there is no `observed_by` fact-act partner"
+    ),
 }
 
 # Aggregates whose events MUST carry the attribution half even though

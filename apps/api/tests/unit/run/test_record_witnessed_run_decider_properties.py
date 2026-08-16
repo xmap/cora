@@ -27,6 +27,7 @@ from hypothesis import strategies as st
 from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import (
+    CapturePreconditionBypassSnapshot,
     ConductMode,
     Run,
     RunAlreadyExistsError,
@@ -48,6 +49,19 @@ if TYPE_CHECKING:
 _NAME = printable_ascii_text(min_size=1, max_size=200)
 _CAPTURE_CODE = printable_ascii_text(min_size=1, max_size=50)
 _MONITOR_SOURCE_ID = MonitorSourceId(UUID("01900000-0000-7000-8000-000063617001"))
+_BYPASS_SNAPSHOTS = st.one_of(
+    st.none(),
+    st.builds(
+        CapturePreconditionBypassSnapshot,
+        beam_preconditions_bypassed=st.one_of(st.none(), st.booleans()),
+        observed_at=st.one_of(st.none(), aware_datetimes()),
+    ),
+)
+"""Every reachable shape of `capture_precondition_bypass_snapshot`: absent
+entirely, or present with any combination of the tri-state boolean and an
+optionally-absent substrate timestamp (the undecoded-reading and
+no-substrate-time cases `CapturePreconditionBypassSnapshot`'s own docstring
+calls out as independently nullable)."""
 
 
 def _plan(*, status: PlanStatus = PlanStatus.DEFINED) -> Plan:
@@ -86,7 +100,12 @@ def _context(
 
 
 def _command(
-    *, name: str, plan_id: UUID, capture_code: str, trigger: str = "Monitor"
+    *,
+    name: str,
+    plan_id: UUID,
+    capture_code: str,
+    trigger: str = "Monitor",
+    capture_precondition_bypass_snapshot: CapturePreconditionBypassSnapshot | None = None,
 ) -> RecordWitnessedRun:
     return RecordWitnessedRun(
         name=name,
@@ -94,6 +113,7 @@ def _command(
         capture_code=capture_code,
         monitor_source_id=_MONITOR_SOURCE_ID,
         trigger=trigger,
+        capture_precondition_bypass_snapshot=capture_precondition_bypass_snapshot,
     )
 
 
@@ -318,3 +338,44 @@ def test_witnessed_is_pure_same_input_same_output(
         new_id=new_id,
     )
     assert first.run_events == second.run_events
+
+
+@pytest.mark.unit
+@given(
+    name=_NAME,
+    plan_id=st.uuids(),
+    capture_code=_CAPTURE_CODE,
+    now=aware_datetimes(),
+    new_id=st.uuids(),
+    snapshot=_BYPASS_SNAPSHOTS,
+)
+def test_witnessed_carries_the_commands_precondition_bypass_snapshot_verbatim(
+    name: str,
+    plan_id: UUID,
+    capture_code: str,
+    now: datetime,
+    new_id: UUID,
+    snapshot: CapturePreconditionBypassSnapshot | None,
+) -> None:
+    """Pure pass-through across the whole generated shape space (absent,
+    decoded True/False, undecoded-with-a-timestamp, decoded-with-no-
+    timestamp): the decider neither validates nor transforms this field,
+    unlike every field it actually gates on."""
+    result = record_witnessed_run.decide(
+        state=None,
+        command=_command(
+            name=name,
+            plan_id=plan_id,
+            capture_code=capture_code,
+            capture_precondition_bypass_snapshot=snapshot,
+        ),
+        context=_context(),
+        needed_family_ids_snapshot=frozenset(),
+        effective_parameters={},
+        method_parameters_schema=None,
+        now=now,
+        new_id=new_id,
+    )
+    event = result.run_events[0]
+    assert isinstance(event, RunStarted)
+    assert event.capture_precondition_bypass_snapshot == snapshot

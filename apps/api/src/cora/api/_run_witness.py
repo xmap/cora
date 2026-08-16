@@ -208,7 +208,10 @@ from cora.agent.seed_run_witness import RUN_WITNESS_AGENT_ID
 from cora.api._capture_observer import ROLE_IMAGES_COLLECTED, ROLE_IMAGES_SAVED
 from cora.api._capture_progress_feeder import CaptureProgressFeeder, capture_progress_flush_loop
 from cora.infrastructure.logging import get_logger
-from cora.run.aggregates.run.state import CaptureProgressSnapshot
+from cora.run.aggregates.run.state import (
+    CapturePreconditionBypassSnapshot,
+    CaptureProgressSnapshot,
+)
 from cora.run.errors import UnauthorizedError
 from cora.run.features.list_runs.query import ListRuns
 from cora.run.features.record_witnessed_run.command import RecordWitnessedRun
@@ -218,6 +221,7 @@ from cora.run.ports.capture_observer import (
     CaptureLifecycleObservation,
     CaptureObserverScope,
     CapturePhase,
+    CapturePreconditionBypassObservation,
     CaptureProgressObservation,
 )
 from cora.shared.identity import MonitorSourceId
@@ -327,6 +331,7 @@ class RunWitnessRecorder:
         self._settings = settings
         self._open_captures: dict[str, UUID] = dict(open_captures or {})
         self._last_progress: dict[str, dict[str, CaptureProgressObservation]] = {}
+        self._last_precondition_bypass: dict[str, CapturePreconditionBypassObservation] = {}
 
     def open_captures(self) -> dict[str, UUID]:
         """A snapshot of every capture_code currently open, mapped to
@@ -405,6 +410,47 @@ class RunWitnessRecorder:
         by_role = self._last_progress.setdefault(observation.capture_code, {})
         by_role[observation.role] = observation
 
+    def observe_precondition_bypass(
+        self, observation: CapturePreconditionBypassObservation
+    ) -> None:
+        """Retain the latest `testing`-role reading per capture_code, so
+        the NEXT `BEGUN` for this code can stamp it onto the witnessed
+        genesis (see `_promote` / `_build_precondition_bypass_snapshot`).
+
+        Gated on `run_witness_recording_enabled`, same as
+        `observe_progress`: shadow mode retains nothing because it
+        writes nothing.
+
+        Deliberately NEVER evicted, unlike `_last_progress`: the
+        `testing` role is a substrate-level flag an operator sets
+        independent of any one capture (TomoScan does not reset it
+        between scans), so the reading retained across a capture
+        boundary is not stale evidence about the WRONG capture the way
+        a leftover progress count would be. It stays the honest answer
+        to "what did `testing` last read" until a fresh reading
+        replaces it, however long ago that was; `observed_at` is what
+        lets a reader judge that gap at genesis time, not eviction.
+        """
+        if not self._settings.run_witness_recording_enabled:
+            return
+        self._last_precondition_bypass[observation.capture_code] = observation
+
+    def _build_precondition_bypass_snapshot(
+        self, code: str
+    ) -> CapturePreconditionBypassSnapshot | None:
+        """The evidence a witnessed genesis carries for `code`: the last
+        `testing` reading `observe_precondition_bypass` retained, or
+        `None` if none has ever arrived (no `testing` role declared for
+        this code, or the substrate has not reported one yet).
+        """
+        observation = self._last_precondition_bypass.get(code)
+        if observation is None:
+            return None
+        return CapturePreconditionBypassSnapshot(
+            beam_preconditions_bypassed=observation.beam_preconditions_bypassed,
+            observed_at=observation.observed_at,
+        )
+
     async def _promote(self, observation: CaptureLifecycleObservation) -> None:
         # A prior capture's retained progress, if any, belongs to that
         # capture's own terminal, never to this one: clear before
@@ -430,6 +476,9 @@ class RunWitnessRecorder:
             capture_code=observation.capture_code,
             monitor_source_id=RUN_WITNESS_MONITOR_SOURCE_ID,
             trigger="Monitor",
+            capture_precondition_bypass_snapshot=self._build_precondition_bypass_snapshot(
+                observation.capture_code
+            ),
         )
         try:
             run_id = await self._record_witnessed_run(
@@ -694,7 +743,12 @@ async def run_witness_loop(
     ._build_progress_snapshot`) and `feeder.offer()` (buffers it for
     the next `AppendObservations` flush). Order between the two is
     immaterial: both are synchronous and neither raises in normal
-    operation. A `CaptureLifecycleObservation` on a phase in
+    operation. A `CapturePreconditionBypassObservation` goes only to
+    `recorder.observe_precondition_bypass()` (retains the latest
+    reading so the NEXT genesis can stamp it; see `RunWitnessRecorder
+    ._build_precondition_bypass_snapshot`): it has no `feeder`
+    counterpart, since it is never written as an `AppendObservations`
+    row, only carried onto `RunStarted`. A `CaptureLifecycleObservation` on a phase in
     `_FLUSH_TRIGGER_PHASES` triggers `feeder.flush_capture()` BEFORE the
     recorder acts on it, so a capture's buffered progress trail is
     attributed to its Run before that Run can close or be replaced;
@@ -715,6 +769,10 @@ async def run_witness_loop(
                         recorder.observe_progress(observation)
                     if feeder is not None:
                         feeder.offer(observation)
+                    continue
+                if isinstance(observation, CapturePreconditionBypassObservation):
+                    if recorder is not None:
+                        recorder.observe_precondition_bypass(observation)
                     continue
                 if feeder is not None and observation.phase in _FLUSH_TRIGGER_PHASES:
                     try:

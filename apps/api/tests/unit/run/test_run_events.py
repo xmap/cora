@@ -18,7 +18,11 @@ from cora.run.aggregates.run.events import (
     from_stored,
     to_payload,
 )
-from cora.run.aggregates.run.state import CaptureProgressSnapshot, ConductMode
+from cora.run.aggregates.run.state import (
+    CapturePreconditionBypassSnapshot,
+    CaptureProgressSnapshot,
+    ConductMode,
+)
 from cora.shared.identity import ActorId
 
 _NOW = datetime(2026, 5, 11, 12, 0, 0, tzinfo=UTC)
@@ -116,6 +120,11 @@ def test_to_payload_serializes_run_started_with_subject_to_primitives() -> None:
         # StartRun.input_dataset_ids was empty; forward-compat via
         # `payload.get("input_dataset_ids", [])`.
         "input_dataset_ids": [],
+        # slice 11 additive payload field: the witnessed genesis's
+        # retained `testing`-role reading. Always None on a driven Run;
+        # forward-compat via
+        # `payload.get("capture_precondition_bypass_snapshot")`.
+        "capture_precondition_bypass_snapshot": None,
         "occurred_at": _NOW.isoformat(),
     }
 
@@ -1461,6 +1470,136 @@ def test_run_started_pinned_calibration_ids_round_trip() -> None:
     )
     stored = _stored("RunStarted", to_payload(original))
     assert from_stored(stored) == original
+
+
+# ---------- Testing-role provenance on RunStarted (slice 11) ----------
+
+
+@pytest.mark.unit
+def test_from_stored_rebuilds_run_started_without_precondition_bypass_key_as_none() -> None:
+    """Forward-compat: legacy RunStarted payloads (and every driven-Run
+    payload) have no `capture_precondition_bypass_snapshot` key.
+    `from_stored` returns `None` via `payload.get(...)`, mirroring
+    `safety_envelope_verdict`'s own forward-compat shape."""
+    run_id = uuid4()
+    plan_id = uuid4()
+    stored = _stored(
+        "RunStarted",
+        {
+            "run_id": str(run_id),
+            "name": "Legacy run",
+            "plan_id": str(plan_id),
+            "subject_id": None,
+            "occurred_at": _NOW.isoformat(),
+            # NOTE: no "capture_precondition_bypass_snapshot" key.
+        },
+    )
+    event = from_stored(stored)
+    assert isinstance(event, RunStarted)
+    assert event.capture_precondition_bypass_snapshot is None
+
+
+@pytest.mark.unit
+def test_run_started_capture_precondition_bypass_snapshot_round_trips() -> None:
+    """Whole-object present-as-null-when-absent, non-null when present:
+    both `beam_preconditions_bypassed` and `observed_at` survive the
+    round trip, mirroring `capture_progress_snapshot`'s own contract."""
+    snapshot = CapturePreconditionBypassSnapshot(
+        beam_preconditions_bypassed=True,
+        observed_at=datetime(2026, 8, 15, 9, 0, 0, tzinfo=UTC),
+    )
+    original = RunStarted(
+        run_id=uuid4(),
+        name="Witnessed capture during commissioning shutdown",
+        plan_id=uuid4(),
+        subject_id=None,
+        occurred_at=_NOW,
+        conduct_mode=ConductMode.WITNESSED,
+        capture_precondition_bypass_snapshot=snapshot,
+    )
+    stored = _stored("RunStarted", to_payload(original))
+    assert from_stored(stored) == original
+
+
+@pytest.mark.unit
+def test_run_started_capture_precondition_bypass_snapshot_false_is_not_lost_to_falsy_coercion() -> (
+    None
+):
+    """`beam_preconditions_bypassed=False` is a positive claim of a real
+    acquisition, not an absent one; it must round-trip as `False`, not
+    be coerced to `None` by an `if snapshot.beam_preconditions_bypassed`
+    style check anywhere on the serialize/deserialize path."""
+    snapshot = CapturePreconditionBypassSnapshot(
+        beam_preconditions_bypassed=False,
+        observed_at=datetime(2026, 8, 15, 9, 0, 0, tzinfo=UTC),
+    )
+    original = RunStarted(
+        run_id=uuid4(),
+        name="Witnessed capture, beam confirmed",
+        plan_id=uuid4(),
+        subject_id=None,
+        occurred_at=_NOW,
+        conduct_mode=ConductMode.WITNESSED,
+        capture_precondition_bypass_snapshot=snapshot,
+    )
+    rebuilt = from_stored(_stored("RunStarted", to_payload(original)))
+    assert isinstance(rebuilt, RunStarted)
+    assert rebuilt.capture_precondition_bypass_snapshot is not None
+    assert rebuilt.capture_precondition_bypass_snapshot.beam_preconditions_bypassed is False
+
+
+@pytest.mark.unit
+def test_run_started_capture_precondition_bypass_snapshot_undecoded_reading_round_trips() -> None:
+    """The tri-state's third leg: a reading ARRIVED (there is a real
+    `observed_at`) but did not decode, so `beam_preconditions_bypassed`
+    is `None` while the snapshot object itself is present. Must not
+    collapse to a whole-object `None`, which would misreport this as
+    "no testing role declared" rather than "declared, but unresolved"."""
+    snapshot = CapturePreconditionBypassSnapshot(
+        beam_preconditions_bypassed=None,
+        observed_at=datetime(2026, 8, 15, 9, 0, 0, tzinfo=UTC),
+    )
+    original = RunStarted(
+        run_id=uuid4(),
+        name="Witnessed capture, testing role unresolved",
+        plan_id=uuid4(),
+        subject_id=None,
+        occurred_at=_NOW,
+        conduct_mode=ConductMode.WITNESSED,
+        capture_precondition_bypass_snapshot=snapshot,
+    )
+    rebuilt = from_stored(_stored("RunStarted", to_payload(original)))
+    assert isinstance(rebuilt, RunStarted)
+    assert rebuilt.capture_precondition_bypass_snapshot == snapshot
+    assert rebuilt.capture_precondition_bypass_snapshot is not None
+    assert rebuilt.capture_precondition_bypass_snapshot.beam_preconditions_bypassed is None
+    assert rebuilt.capture_precondition_bypass_snapshot.observed_at is not None
+
+
+@pytest.mark.unit
+def test_run_started_capture_precondition_bypass_snapshot_with_no_substrate_time_round_trips() -> (
+    None
+):
+    """A cleanly decoded reading can still carry `observed_at=None`
+    (the substrate gave no timestamp for it); the snapshot object stays
+    present with the real boolean, never coerced to whole-object `None`
+    just because its timestamp is absent."""
+    snapshot = CapturePreconditionBypassSnapshot(beam_preconditions_bypassed=True, observed_at=None)
+    original = RunStarted(
+        run_id=uuid4(),
+        name="Witnessed capture, no substrate timestamp",
+        plan_id=uuid4(),
+        subject_id=None,
+        occurred_at=_NOW,
+        conduct_mode=ConductMode.WITNESSED,
+        capture_precondition_bypass_snapshot=snapshot,
+    )
+    rebuilt = from_stored(_stored("RunStarted", to_payload(original)))
+    assert isinstance(rebuilt, RunStarted)
+    assert rebuilt.capture_precondition_bypass_snapshot == snapshot
+    assert rebuilt.capture_precondition_bypass_snapshot is not None
+    assert rebuilt.capture_precondition_bypass_snapshot.beam_preconditions_bypassed is True
+    assert rebuilt.capture_precondition_bypass_snapshot.observed_at is None
 
 
 @pytest.mark.unit

@@ -99,6 +99,17 @@ _OVERRIDE_DISPOSITIONS: dict[tuple[str, str], str] = {
     ("SafetyEnvelopeVerdict", "enclosure_permitted"): DROP_TEXT,
     ("SafetyEnvelopeVerdict", "beam_available"): DROP_TEXT,
 }
+# `CapturePreconditionBypassSnapshot.beam_preconditions_bypassed` (slice 11)
+# is deliberately NOT added here, despite being a bool that reads as the
+# same "live facility signal" shape as the two overrides above. It answers
+# a different question with a different sensitivity class: not a live
+# PSS/interlock/shutter security reading, but a scientific-provenance claim
+# ("was this a real acquisition or a beam-precondition-bypassed rehearsal")
+# that the record-export thesis wants published, per
+# [[project_run_witness_test_provenance_slice11]]'s own framing of this as
+# receipt-facing data the issue explicitly asked to be visible. `keep:number`
+# is therefore the correct disposition, not an oversight; do not "fix" it to
+# match the two entries above without re-reading that design memo first.
 
 _SCALAR_KEEP: Mapping[type, str] = {
     bool: KEEP_NUMBER,

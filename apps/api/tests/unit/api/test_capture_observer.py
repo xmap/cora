@@ -24,6 +24,7 @@ from cora.run.ports.capture_observer import (
     CaptureLifecycleObservation,
     CaptureObserverScope,
     CapturePhase,
+    CapturePreconditionBypassObservation,
     CaptureProgressObservation,
 )
 from cora.shared.reach import ReachTier
@@ -137,7 +138,7 @@ async def _collect(
 
 async def _collect_any(
     observer: ControlPortCaptureObserver, codes: set[str]
-) -> list[CaptureLifecycleObservation | CaptureProgressObservation]:
+) -> list[AnyCaptureObservation]:
     scope = CaptureObserverScope(capture_codes=frozenset(codes))
     return [observation async for observation in observer.observe(scope)]
 
@@ -759,6 +760,129 @@ async def test_observe_progress_reading_with_no_substrate_time_is_none_not_synth
 
     progress = next(o for o in observations if isinstance(o, CaptureProgressObservation))
     assert progress.observed_at is None
+
+
+# ---------- Testing role ----------
+
+
+@pytest.mark.unit
+async def test_observe_a_code_with_no_testing_role_is_unaffected() -> None:
+    """A code declaring no `testing` role behaves exactly as before this
+    role existed: no testing pump, no extra observation."""
+    port = _ScriptedControlPort(readings={"pvA": [_reading("Beginning scan")]})
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CapturePreconditionBypassObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_an_asserted_testing_reading_is_bypassed_true() -> None:
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvTesting": [_reading("Yes")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "testing": "pvTesting"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    bypass = [o for o in observations if isinstance(o, CapturePreconditionBypassObservation)]
+    assert len(bypass) == 1
+    assert bypass[0].capture_code == "tomoscan"
+    assert bypass[0].beam_preconditions_bypassed is True
+    assert bypass[0].reach_tier is ReachTier.RELAYED
+    assert bypass[0].source_id == "pvTesting"
+    assert bypass[0].observed_at == _T
+
+
+@pytest.mark.unit
+async def test_observe_a_clear_testing_reading_is_bypassed_false_not_a_python_truthiness_trap() -> (
+    None
+):
+    """Regression, same class as the `abort` role's own: 2-BM's `Testing`
+    is the identical `DBR_ENUM` record type as `AbortScan`, resolving to
+    the label `'No'` for a real acquisition, and `bool('No')` is `True`
+    in Python. `binary_code` must decode the label, and `False` here is
+    a POSITIVE claim of a real acquisition, not an absence."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvTesting": [_reading("No")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "testing": "pvTesting"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    bypass = [o for o in observations if isinstance(o, CapturePreconditionBypassObservation)]
+    assert len(bypass) == 1
+    assert bypass[0].beam_preconditions_bypassed is False
+
+
+@pytest.mark.unit
+async def test_observe_an_unresolvable_testing_reading_is_none_and_still_emitted() -> None:
+    """Unlike the `abort` role's clear-or-unresolvable fold, `testing`
+    must NOT drop an unresolvable reading: `None` is the third state
+    (unknown-or-unresolvable), distinct from a positive `False` claim,
+    and a reader needs to see that this reading arrived and did not
+    decode, not silence identical to no reading at all."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvTesting": [_reading("MAYBE")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "testing": "pvTesting"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    bypass = [o for o in observations if isinstance(o, CapturePreconditionBypassObservation)]
+    assert len(bypass) == 1
+    assert bypass[0].beam_preconditions_bypassed is None
+    assert bypass[0].observed_at == _T
+
+
+@pytest.mark.unit
+async def test_observe_testing_pump_has_no_unreached_counterpart() -> None:
+    """A disconnect or clean stream end simply stops the pump: it must
+    NOT synthesize a `CapturePreconditionBypassObservation`. Erasing the
+    last retained reading on every reconnect would defeat the dual-clock
+    discipline `observed_at` exists to provide."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvTesting": []},
+        disconnect=frozenset({"pvTesting"}),
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "testing": "pvTesting"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CapturePreconditionBypassObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_testing_reading_preserves_a_present_substrate_time() -> None:
+    port = _ScriptedControlPort(
+        readings={
+            "pvA": [_reading("Beginning scan")],
+            "pvTesting": [_reading("Yes", produced_at=_T)],
+        }
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "testing": "pvTesting"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    bypass = next(o for o in observations if isinstance(o, CapturePreconditionBypassObservation))
+    assert bypass.observed_at == _T
+
+
+@pytest.mark.unit
+async def test_observe_testing_reading_with_no_substrate_time_is_none_not_synthesized() -> None:
+    port = _ScriptedControlPort(
+        readings={
+            "pvA": [_reading("Beginning scan")],
+            "pvTesting": [_reading("Yes", produced_at=None)],
+        }
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "testing": "pvTesting"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    bypass = next(o for o in observations if isinstance(o, CapturePreconditionBypassObservation))
+    assert bypass.observed_at is None
 
 
 @pytest.mark.unit
