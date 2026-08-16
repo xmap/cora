@@ -15,6 +15,12 @@ from cora.run.aggregates.run.capture_path import (
     PostgresCapturePathStore,
     load_run_capture_path,
 )
+from cora.run.aggregates.run.capture_probes import (
+    CaptureProbe,
+    CaptureProbeStore,
+    InMemoryCaptureProbeStore,
+    PostgresCaptureProbeStore,
+)
 from cora.run.aggregates.run.entries import (
     InMemoryObservationStore,
     Observation,
@@ -183,6 +189,8 @@ __all__ = [
     "CapturePath",
     "CapturePathStore",
     "CapturePreconditionBypassSnapshot",
+    "CaptureProbe",
+    "CaptureProbeStore",
     "CaptureProgressSnapshot",
     "CautionAcknowledgement",
     "ChannelName",
@@ -194,6 +202,7 @@ __all__ = [
     "FeedHeartbeatStore",
     "HoldClaimReleased",
     "InMemoryCapturePathStore",
+    "InMemoryCaptureProbeStore",
     "InMemoryExperimentIdentityStore",
     "InMemoryFeedHeartbeatStore",
     "InMemoryObservationStore",
@@ -216,6 +225,7 @@ __all__ = [
     "Observation",
     "ObservationStore",
     "PostgresCapturePathStore",
+    "PostgresCaptureProbeStore",
     "PostgresExperimentIdentityStore",
     "PostgresFeedHeartbeatStore",
     "PostgresObservationStore",

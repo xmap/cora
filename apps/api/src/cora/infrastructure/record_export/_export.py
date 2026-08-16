@@ -12,9 +12,10 @@ resolve through Step 1's `resolve()` to the matching entries-tier reader.
 
 Deliberately does not: write bundle files (that is Step 3/4's job, once
 hashing and the manifest exist), or touch `entries_run_feed_heartbeats` /
-`entries_enclosure_permit_probes` (they have no envelope event to trigger
-them from an envelope-driven walk; see `project_record_export_build_brief.md`
-step 2 notes -- an explicit, written deferral, not an omission).
+`entries_enclosure_permit_probes` / `entries_run_capture_probes` (none
+of the three has an envelope event to trigger it from an envelope-driven
+walk; see `project_record_export_build_brief.md` step 2 notes -- an
+explicit, written deferral, not an omission).
 """
 
 from dataclasses import dataclass
