@@ -429,11 +429,24 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
     Also refuses to boot with capture_progress_recording_enabled=True
     unless run_witness_recording_enabled is itself True (slice 10): with
     no promoted Run there is nothing for a progress reading to attach to.
+
+    Also refuses to boot with capture_baseline_recording_enabled=True
+    unless run_witness_recording_enabled is itself True (slice 12): the
+    baseline read happens exactly once, at the instant a capture
+    promotes to a Run, so with no promotion there is nothing to attach
+    a baseline reading to either.
     """
     if settings.capture_progress_recording_enabled and not settings.run_witness_recording_enabled:
         msg = (
             "CAPTURE_PROGRESS_RECORDING_ENABLED=true requires "
             "RUN_WITNESS_RECORDING_ENABLED=true. A progress reading has no "
+            "promoted Run to attach to without it."
+        )
+        raise RuntimeError(msg)
+    if settings.capture_baseline_recording_enabled and not settings.run_witness_recording_enabled:
+        msg = (
+            "CAPTURE_BASELINE_RECORDING_ENABLED=true requires "
+            "RUN_WITNESS_RECORDING_ENABLED=true. A baseline reading has no "
             "promoted Run to attach to without it."
         )
         raise RuntimeError(msg)
