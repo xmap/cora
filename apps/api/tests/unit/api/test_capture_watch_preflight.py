@@ -39,8 +39,14 @@ _PHASES = {
 }
 
 
-def _reading(value: object, kind: str = "Scalar") -> Measurement:
-    return Measurement(value=value, kind=kind, quality="Good", produced_at=_T)  # type: ignore[arg-type]
+def _reading(value: object, kind: str = "Scalar", units: str | None = None) -> Measurement:
+    return Measurement(
+        value=value,
+        kind=kind,  # type: ignore[arg-type]
+        quality="Good",
+        produced_at=_T,
+        units=units,
+    )
 
 
 class _FakeControlPort:
@@ -61,6 +67,7 @@ async def _preflight(
     capture_pvs: dict[str, dict[str, str]],
     *,
     status_phases: dict[str, str] | None = None,
+    baseline_pvs: dict[str, dict[str, str]] | None = None,
 ) -> _Report:
     """`_FakeControlPort` implements `.read()` only (this command never
     writes or subscribes), so it satisfies `ControlPort` in practice but
@@ -70,6 +77,7 @@ async def _preflight(
         control_port=port,  # type: ignore[arg-type]
         capture_pvs=capture_pvs,
         status_phases=status_phases if status_phases is not None else _PHASES,
+        baseline_pvs=baseline_pvs,
     )
 
 
@@ -289,6 +297,92 @@ async def test_preflight_read_empty_capture_pvs_reports_no_lines() -> None:
 
     assert report.lines == []
     assert not report.problem
+
+
+# ---------------------------------------------------------------------------
+# capture_baseline_pvs sweep (slice 12): no per-channel decoder, verdict
+# n/a unless the value is non-numeric.
+# ---------------------------------------------------------------------------
+
+_BASELINE_PVS = {
+    "2bmb-tomoscan": {
+        "ExposureTime": "2bmb:TomoScan:ExposureTime",
+        "NumAngles": "2bmb:TomoScan:NumAngles",
+    }
+}
+
+
+@pytest.mark.unit
+async def test_preflight_read_baseline_numeric_reading_is_ok_with_na_verdict() -> None:
+    port = _FakeControlPort(
+        {
+            "2bmb:TomoScan:ExposureTime": _reading(1.5, units="s"),
+            "2bmb:TomoScan:NumAngles": _reading(3000.0),
+        }
+    )
+
+    report = await _preflight(port, {}, baseline_pvs=_BASELINE_PVS)
+
+    assert len(report.lines) == 2
+    assert all(line.ok for line in report.lines)
+    assert all(line.verdict == "n/a" for line in report.lines)
+    assert all(line.group == "baseline" for line in report.lines)
+    by_role = {line.role: line for line in report.lines}
+    assert by_role["ExposureTime"].units == "s"
+    assert by_role["NumAngles"].units is None
+
+
+@pytest.mark.unit
+async def test_preflight_read_baseline_non_numeric_reading_is_bad() -> None:
+    """`Observation.value` is `float`; a textual baseline reading is the
+    one defect this sweep can catch ahead of a real append attempt."""
+    port = _FakeControlPort({"pv:exp": _reading("garbled")})
+
+    report = await _preflight(port, {}, baseline_pvs={"code": {"ExposureTime": "pv:exp"}})
+
+    (line,) = report.lines
+    assert not line.ok
+    assert line.verdict == "non-numeric"
+    assert line.group == "baseline"
+
+
+@pytest.mark.unit
+async def test_preflight_read_baseline_not_connected_pv_reports_bad() -> None:
+    port = _FakeControlPort({"pv:dead": ControlNotConnectedError("pv:dead")})
+
+    report = await _preflight(port, {}, baseline_pvs={"code": {"ExposureTime": "pv:dead"}})
+
+    (line,) = report.lines
+    assert not line.ok
+    assert not line.connected
+    assert line.group == "baseline"
+
+
+@pytest.mark.unit
+async def test_preflight_read_baseline_alongside_watch_pvs_reports_both_groups() -> None:
+    port = _FakeControlPort(
+        {
+            "2bmb:TomoScan:ScanStatus": _reading("Scan complete", kind="Categorical"),
+            "2bmb:TomoScan:ExposureTime": _reading(1.5),
+        }
+    )
+
+    report = await _preflight(
+        port,
+        {"2bmb-tomoscan": {"status": "2bmb:TomoScan:ScanStatus"}},
+        baseline_pvs={"2bmb-tomoscan": {"ExposureTime": "2bmb:TomoScan:ExposureTime"}},
+    )
+
+    assert len(report.lines) == 2
+    groups = {line.group for line in report.lines}
+    assert groups == {"watch", "baseline"}
+
+
+@pytest.mark.unit
+async def test_preflight_read_empty_baseline_pvs_reports_no_baseline_lines() -> None:
+    report = await _preflight(_FakeControlPort({}), {}, baseline_pvs={})
+
+    assert report.lines == []
 
 
 @pytest.mark.unit
