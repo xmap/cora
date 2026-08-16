@@ -7,7 +7,7 @@ Response shape: `{id, name, plan_id, subject_id, raid, status}`.
 Runs not registered against a research activity respectively).
 
 `capture_code` / `observed_capture_path` (slice 13) and
-`proposal_number` / `esaf_number` / `esaf_doi` (slice 14a) are resolved
+`proposal_number` / `esaf_number` / `esaf_doi_number` (slice 14a) are resolved
 inside `get_run`'s own `Handler` (`handler.py`'s `RunView`), mirroring
 `get_actor`'s `ActorView` exactly: this route only destructures the
 already-composed view into its wire DTO, the same shape every other
@@ -65,7 +65,7 @@ class RunResponse(BaseModel):
     This IS the authorized operator surface meant to let them find the
     file for `ingest_scan`.
 
-    `proposal_number` / `esaf_number` / `esaf_doi` (slice 14a), each
+    `proposal_number` / `esaf_number` / `esaf_doi_number` (slice 14a), each
     paired with its own `*_observed_at` (the substrate's own reading
     time, for judging staleness -- these PVs persist across beamtimes
     with no in-band freshness signal), resolve from the
@@ -92,8 +92,8 @@ class RunResponse(BaseModel):
     proposal_number_observed_at: datetime | None = None
     esaf_number: str | None = None
     esaf_number_observed_at: datetime | None = None
-    esaf_doi: str | None = None
-    esaf_doi_observed_at: datetime | None = None
+    esaf_doi_number: str | None = None
+    esaf_doi_number_observed_at: datetime | None = None
 
 
 def _get_handler(request: Request) -> Handler:
@@ -155,6 +155,6 @@ async def get_runs(
         proposal_number_observed_at=view.proposal_number_observed_at,
         esaf_number=view.esaf_number,
         esaf_number_observed_at=view.esaf_number_observed_at,
-        esaf_doi=view.esaf_doi,
-        esaf_doi_observed_at=view.esaf_doi_observed_at,
+        esaf_doi_number=view.esaf_doi_number,
+        esaf_doi_number_observed_at=view.esaf_doi_number_observed_at,
     )

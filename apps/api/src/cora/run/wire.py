@@ -166,7 +166,7 @@ class RunHandlers:
     """Slice 14a's vault store for a witnessed Run's proposal / ESAF /
     ESAF-DOI experiment identity. Same surfacing reason and the same
     `list_runs`-never-touches-it posture as `capture_path_store`:
-    `RunWitnessRecorder`'s `ExperimentIdentityReader` writes through it
+    `RunWitnessRecorder`'s `CaptureExperimentIdentityReader` writes through it
     directly, and `get_run.bind()` reads through the SAME instance."""
 
 

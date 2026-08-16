@@ -117,8 +117,8 @@ async def test_get_run_route_resolves_the_experiment_identity_when_the_vault_has
         proposal_number_observed_at=_NOW,
         esaf_number="67890",
         esaf_number_observed_at=_NOW,
-        esaf_doi=None,
-        esaf_doi_observed_at=None,
+        esaf_doi_number=None,
+        esaf_doi_number_observed_at=None,
         created_at=_NOW,
     )
     handler = get_run.bind(
@@ -138,7 +138,7 @@ async def test_get_run_route_resolves_the_experiment_identity_when_the_vault_has
     assert response.proposal_number == "12345"
     assert response.proposal_number_observed_at == _NOW
     assert response.esaf_number == "67890"
-    assert response.esaf_doi is None
+    assert response.esaf_doi_number is None
 
 
 @pytest.mark.unit
@@ -163,7 +163,7 @@ async def test_get_run_route_experiment_identity_is_none_when_the_vault_has_no_r
 
     assert response.proposal_number is None
     assert response.esaf_number is None
-    assert response.esaf_doi is None
+    assert response.esaf_doi_number is None
 
 
 @pytest.mark.unit

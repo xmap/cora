@@ -439,13 +439,13 @@ def test_settings_capture_experiment_identity_pvs_reads_role_keyed_json(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Outer key is the capture code, inner dict is the closed role ->
-    PV vocabulary (`proposal_number` / `esaf_number` / `esaf_doi`)."""
+    PV vocabulary (`proposal_number` / `esaf_number` / `esaf_doi_number`)."""
     monkeypatch.setenv(
         "CAPTURE_EXPERIMENT_IDENTITY_PVS",
         '{"2bmb-tomoscan": {'
         '"proposal_number": "2bmb:TomoScan:ProposalNumber", '
         '"esaf_number": "2bmb:TomoScan:ESAFNumber", '
-        '"esaf_doi": "2bmb:TomoScan:ESAFDOINumber"'
+        '"esaf_doi_number": "2bmb:TomoScan:ESAFDOINumber"'
         "}}",
     )
     settings = Settings()
@@ -453,7 +453,7 @@ def test_settings_capture_experiment_identity_pvs_reads_role_keyed_json(
         "2bmb-tomoscan": {
             "proposal_number": "2bmb:TomoScan:ProposalNumber",
             "esaf_number": "2bmb:TomoScan:ESAFNumber",
-            "esaf_doi": "2bmb:TomoScan:ESAFDOINumber",
+            "esaf_doi_number": "2bmb:TomoScan:ESAFDOINumber",
         }
     }
 

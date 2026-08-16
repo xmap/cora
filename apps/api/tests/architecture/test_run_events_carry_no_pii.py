@@ -18,7 +18,7 @@ have silently exempted them.
 The deny-list covers slice 13's own field (`observed_path`,
 `capture_path`, plus the wire-level `full_file_name`), slice 14a's
 proposal/ESAF/ESAF-DOI fields (`proposal_number`, `esaf_number`,
-`esaf_doi` -- vaulted, never harvested onto an event: see
+`esaf_doi_number` -- vaulted, never harvested onto an event: see
 `cora.run.aggregates.run.experiment_identity`'s module docstring for
 the full argument), and the `User*` PVs slice 14b already named as
 blocked (`project_witnessed_run_prelive_slices.md`): a directory/proposal
@@ -49,7 +49,7 @@ _PII_FIELD_NAMES = frozenset(
         "surname",
         "proposal_number",
         "esaf_number",
-        "esaf_doi",
+        "esaf_doi_number",
         "user_name",
         "user_last_name",
         "user_badge",
@@ -94,7 +94,7 @@ def test_run_event_payloads_carry_no_pii() -> None:
     `User*` PV) onto an event for convenience; move it to the vault
     instead.
 
-    `proposal_number` / `esaf_number` / `esaf_doi` are NOT personal
+    `proposal_number` / `esaf_number` / `esaf_doi_number` are NOT personal
     data (institutional identifiers for a funded experiment), so their
     presence here widens this test's scope past pure PII: it also
     enforces slice 14a's own decision that a value auto-harvested off

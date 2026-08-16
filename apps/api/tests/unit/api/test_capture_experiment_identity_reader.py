@@ -1,4 +1,4 @@
-"""Unit tests for `ExperimentIdentityReader`
+"""Unit tests for `CaptureExperimentIdentityReader`
 (cora.api._capture_experiment_identity_reader).
 
 Covers the one-shot read-three-roles-and-vault-once contract, the two
@@ -15,11 +15,11 @@ from uuid import UUID, uuid4
 import pytest
 
 from cora.api._capture_experiment_identity_reader import (
-    ROLE_ESAF_DOI,
+    ROLE_ESAF_DOI_NUMBER,
     ROLE_ESAF_NUMBER,
     ROLE_PROPOSAL_NUMBER,
-    ExperimentIdentityReader,
-    resolved_identity_text,
+    CaptureExperimentIdentityReader,
+    resolved_experiment_identity_text,
 )
 from cora.operation.ports.control_port import (
     ControlAccessDeniedError,
@@ -35,11 +35,11 @@ _CODE = "2bmb-tomoscan"
 _NOW = datetime(2026, 8, 16, 12, 0, 0, tzinfo=UTC)
 _RUN_ID = UUID("01900000-0000-7000-8000-000000007114")
 
-_IDENTITY_PVS = {
+_EXPERIMENT_IDENTITY_PVS = {
     _CODE: {
         ROLE_PROPOSAL_NUMBER: "2bmb:TomoScan:ProposalNumber",
         ROLE_ESAF_NUMBER: "2bmb:TomoScan:ESAFNumber",
-        ROLE_ESAF_DOI: "2bmb:TomoScan:ESAFDOINumber",
+        ROLE_ESAF_DOI_NUMBER: "2bmb:TomoScan:ESAFDOINumber",
     }
 }
 
@@ -71,20 +71,22 @@ def _reader(
     *,
     control_port: _FakeControlPort,
     store: InMemoryExperimentIdentityStore | None = None,
-    identity_pvs: dict[str, dict[str, str]] | None = None,
-) -> tuple[ExperimentIdentityReader, InMemoryExperimentIdentityStore]:
+    experiment_identity_pvs: dict[str, dict[str, str]] | None = None,
+) -> tuple[CaptureExperimentIdentityReader, InMemoryExperimentIdentityStore]:
     vault = store if store is not None else InMemoryExperimentIdentityStore()
-    reader = ExperimentIdentityReader(
+    reader = CaptureExperimentIdentityReader(
         deps=build_deps(ids=[uuid4() for _ in range(10)], now=_NOW),
         control_port=control_port,  # type: ignore[arg-type]
-        identity_pvs=identity_pvs if identity_pvs is not None else _IDENTITY_PVS,
+        experiment_identity_pvs=experiment_identity_pvs
+        if experiment_identity_pvs is not None
+        else _EXPERIMENT_IDENTITY_PVS,
         store=vault,
     )
     return reader, vault
 
 
 # ---------------------------------------------------------------------------
-# resolved_identity_text: the shared absent-value rule (Trap 1)
+# resolved_experiment_identity_text: the shared absent-value rule (Trap 1)
 # ---------------------------------------------------------------------------
 
 
@@ -93,18 +95,18 @@ def _reader(
     "value",
     ["Unknown", "", "  ", "  Unknown  ", 42, None, 3.14],
 )
-def test_resolved_identity_text_treats_these_as_absent(value: object) -> None:
-    assert resolved_identity_text(value) is None
+def test_resolved_experiment_identity_text_treats_these_as_absent(value: object) -> None:
+    assert resolved_experiment_identity_text(value) is None
 
 
 @pytest.mark.unit
-def test_resolved_identity_text_strips_and_returns_a_real_value() -> None:
-    assert resolved_identity_text("  12345  ") == "12345"
-    assert resolved_identity_text("12345") == "12345"
+def test_resolved_experiment_identity_text_strips_and_returns_a_real_value() -> None:
+    assert resolved_experiment_identity_text("  12345  ") == "12345"
+    assert resolved_experiment_identity_text("12345") == "12345"
 
 
 # ---------------------------------------------------------------------------
-# ExperimentIdentityReader.read
+# CaptureExperimentIdentityReader.read
 # ---------------------------------------------------------------------------
 
 
@@ -125,7 +127,7 @@ async def test_read_with_all_roles_present_vaults_all_three() -> None:
     assert row is not None
     assert row.proposal_number == "12345"
     assert row.esaf_number == "67890"
-    assert row.esaf_doi == "10.1234/esaf.67890"
+    assert row.esaf_doi_number == "10.1234/esaf.67890"
     assert row.proposal_number_observed_at == _NOW
 
 
@@ -140,7 +142,7 @@ async def test_read_for_an_undeclared_code_is_a_no_op() -> None:
 
 @pytest.mark.unit
 async def test_read_with_no_roles_declared_for_the_code_is_a_no_op() -> None:
-    reader, vault = _reader(control_port=_FakeControlPort({}), identity_pvs={_CODE: {}})
+    reader, vault = _reader(control_port=_FakeControlPort({}), experiment_identity_pvs={_CODE: {}})
 
     await reader.read(_CODE, _RUN_ID)
 
@@ -152,7 +154,7 @@ async def test_a_partially_declared_code_reads_only_its_declared_roles() -> None
     port = _FakeControlPort({"2bmb:TomoScan:ProposalNumber": _reading("12345")})
     reader, vault = _reader(
         control_port=port,
-        identity_pvs={_CODE: {ROLE_PROPOSAL_NUMBER: "2bmb:TomoScan:ProposalNumber"}},
+        experiment_identity_pvs={_CODE: {ROLE_PROPOSAL_NUMBER: "2bmb:TomoScan:ProposalNumber"}},
     )
 
     await reader.read(_CODE, _RUN_ID)
@@ -161,7 +163,7 @@ async def test_a_partially_declared_code_reads_only_its_declared_roles() -> None
     assert row is not None
     assert row.proposal_number == "12345"
     assert row.esaf_number is None
-    assert row.esaf_doi is None
+    assert row.esaf_doi_number is None
 
 
 @pytest.mark.unit
@@ -183,7 +185,7 @@ async def test_unknown_literal_is_treated_as_absent_but_the_rest_of_the_sweep_su
     assert row is not None
     assert row.proposal_number is None
     assert row.esaf_number == "67890"
-    assert row.esaf_doi is None
+    assert row.esaf_doi_number is None
 
 
 @pytest.mark.unit
@@ -350,7 +352,7 @@ async def test_vault_write_failure_is_caught_and_does_not_raise() -> None:
     reader, _vault = _reader(
         control_port=port,
         store=_FailingStore(),
-        identity_pvs={_CODE: {ROLE_PROPOSAL_NUMBER: "2bmb:TomoScan:ProposalNumber"}},
+        experiment_identity_pvs={_CODE: {ROLE_PROPOSAL_NUMBER: "2bmb:TomoScan:ProposalNumber"}},
     )
 
     await reader.read(_CODE, _RUN_ID)  # must not raise
@@ -364,7 +366,7 @@ async def test_read_is_idempotent_on_run_id() -> None:
     port = _FakeControlPort({"2bmb:TomoScan:ProposalNumber": _reading("12345")})
     reader, vault = _reader(
         control_port=port,
-        identity_pvs={_CODE: {ROLE_PROPOSAL_NUMBER: "2bmb:TomoScan:ProposalNumber"}},
+        experiment_identity_pvs={_CODE: {ROLE_PROPOSAL_NUMBER: "2bmb:TomoScan:ProposalNumber"}},
     )
 
     await reader.read(_CODE, _RUN_ID)

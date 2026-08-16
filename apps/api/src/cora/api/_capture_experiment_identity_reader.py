@@ -1,4 +1,4 @@
-"""ExperimentIdentityReader: read a witnessed Run's proposal / ESAF /
+"""CaptureExperimentIdentityReader: read a witnessed Run's proposal / ESAF /
 ESAF-DOI PVs once, at the instant a capture promotes to a Run.
 
 Slice 14a. Mirrors `_capture_baseline_reader.py`'s ONE-READ-NOT-A-FEED
@@ -25,7 +25,7 @@ public identifier, so it vaults alongside the other two.
 
 1. Every one of these PVs defaults to the substrate literal `"Unknown"`
    when `dmagic` has not populated it. An unpopulated PV therefore
-   reads as a plausible string. `resolved_identity_text` treats
+   reads as a plausible string. `resolved_experiment_identity_text` treats
    `"Unknown"`, and an empty string, as ABSENT and returns `None`; the
    caller never writes a literal "Unknown" into the vault.
 2. Nothing in the IOC populates these PVs; `dmagic` does, from APS
@@ -77,26 +77,26 @@ if TYPE_CHECKING:
 
 ROLE_PROPOSAL_NUMBER = "proposal_number"
 ROLE_ESAF_NUMBER = "esaf_number"
-ROLE_ESAF_DOI = "esaf_doi"
+ROLE_ESAF_DOI_NUMBER = "esaf_doi_number"
 """CORA-owned role keys, matching `Settings.capture_experiment_identity_pvs`'s
 closed vocabulary. Module-public (not `_`-prefixed): `capture_watch_preflight`
 dispatches its own sweep on these same three keys, so a rename here
 cannot silently desync from it."""
 
-_ROLES: tuple[str, ...] = (ROLE_PROPOSAL_NUMBER, ROLE_ESAF_NUMBER, ROLE_ESAF_DOI)
+_ROLES: tuple[str, ...] = (ROLE_PROPOSAL_NUMBER, ROLE_ESAF_NUMBER, ROLE_ESAF_DOI_NUMBER)
 
-ABSENT_IDENTITY_LITERAL = "Unknown"
+UNKNOWN_EXPERIMENT_IDENTITY_LITERAL = "Unknown"
 """The literal `dmagic` / the IOC leaves an unpopulated experiment-identity
 PV reading. Treated as ABSENT, never as a plausible value (Trap 1).
 Module-public: `capture_watch_preflight` imports this directly (alongside
-`resolved_identity_text`) so its own decode verdict can distinguish
+`resolved_experiment_identity_text`) so its own decode verdict can distinguish
 "substrate's own placeholder" from "genuinely empty" without a second
 copy of the literal."""
 
 _log = get_logger(__name__)
 
 
-def resolved_identity_text(value: object) -> str | None:
+def resolved_experiment_identity_text(value: object) -> str | None:
     """Resolve one experiment-identity PV reading to a usable string, or
     `None` when it must be treated as absent.
 
@@ -109,16 +109,16 @@ def resolved_identity_text(value: object) -> str | None:
     if not isinstance(value, str):
         return None
     stripped = value.strip()
-    if not stripped or stripped == ABSENT_IDENTITY_LITERAL:
+    if not stripped or stripped == UNKNOWN_EXPERIMENT_IDENTITY_LITERAL:
         return None
     return stripped
 
 
-class ExperimentIdentityReader:
-    """Reads `identity_pvs[capture_code]`'s three roles once and vaults
+class CaptureExperimentIdentityReader:
+    """Reads `experiment_identity_pvs[capture_code]`'s three roles once and vaults
     whatever survives.
 
-    `identity_pvs` is code -> role -> PV, matching
+    `experiment_identity_pvs` is code -> role -> PV, matching
     `Settings.capture_experiment_identity_pvs`. A code with no entry (or
     an empty one) makes `read` a no-op, mirroring `CaptureBaselineReader`'s
     own per-code optionality. A role absent from a code's declared set is
@@ -130,12 +130,12 @@ class ExperimentIdentityReader:
         *,
         deps: Kernel,
         control_port: ControlPort,
-        identity_pvs: Mapping[str, Mapping[str, str]],
+        experiment_identity_pvs: Mapping[str, Mapping[str, str]],
         store: ExperimentIdentityStore,
     ) -> None:
         self._deps = deps
         self._control_port = control_port
-        self._identity_pvs = identity_pvs
+        self._experiment_identity_pvs = experiment_identity_pvs
         self._store = store
 
     async def read(self, capture_code: str, run_id: UUID) -> None:
@@ -151,19 +151,19 @@ class ExperimentIdentityReader:
         Never raises: every failure mode (a dead PV, an unusable
         reading, or the vault write itself) is caught and logged here.
         """
-        roles = self._identity_pvs.get(capture_code)
+        roles = self._experiment_identity_pvs.get(capture_code)
         if not roles:
             return
 
         (
             (proposal_number, proposal_number_observed_at),
             (esaf_number, esaf_number_observed_at),
-            (esaf_doi, esaf_doi_observed_at),
+            (esaf_doi_number, esaf_doi_number_observed_at),
         ) = await asyncio.gather(
             *(self._read_one(capture_code, role, roles.get(role)) for role in _ROLES)
         )
 
-        if proposal_number is None and esaf_number is None and esaf_doi is None:
+        if proposal_number is None and esaf_number is None and esaf_doi_number is None:
             _log.info(
                 "capture_experiment_identity.nothing_to_record",
                 capture_code=capture_code,
@@ -178,8 +178,8 @@ class ExperimentIdentityReader:
                 proposal_number_observed_at=proposal_number_observed_at,
                 esaf_number=esaf_number,
                 esaf_number_observed_at=esaf_number_observed_at,
-                esaf_doi=esaf_doi,
-                esaf_doi_observed_at=esaf_doi_observed_at,
+                esaf_doi_number=esaf_doi_number,
+                esaf_doi_number_observed_at=esaf_doi_number_observed_at,
                 created_at=self._deps.clock.now(),
             )
         except asyncio.CancelledError:
@@ -206,7 +206,7 @@ class ExperimentIdentityReader:
     ) -> tuple[str | None, datetime | None]:
         """One role's reading, or `(None, None)` when the role is
         undeclared for this code, unreachable, unusable, or resolves to
-        `resolved_identity_text`'s absent case (Trap 1)."""
+        `resolved_experiment_identity_text`'s absent case (Trap 1)."""
         if pv is None:
             return None, None
         try:
@@ -255,7 +255,7 @@ class ExperimentIdentityReader:
                 pv=pv,
             )
             return None, None
-        value = resolved_identity_text(reading.value)
+        value = resolved_experiment_identity_text(reading.value)
         if value is None:
             _log.info(
                 "capture_experiment_identity.absent_reading",
@@ -268,10 +268,10 @@ class ExperimentIdentityReader:
 
 
 __all__ = [
-    "ABSENT_IDENTITY_LITERAL",
-    "ROLE_ESAF_DOI",
+    "ROLE_ESAF_DOI_NUMBER",
     "ROLE_ESAF_NUMBER",
     "ROLE_PROPOSAL_NUMBER",
-    "ExperimentIdentityReader",
-    "resolved_identity_text",
+    "UNKNOWN_EXPERIMENT_IDENTITY_LITERAL",
+    "CaptureExperimentIdentityReader",
+    "resolved_experiment_identity_text",
 ]

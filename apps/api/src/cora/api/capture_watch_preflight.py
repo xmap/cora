@@ -16,7 +16,7 @@ append time anyway. It also sweeps `Settings.capture_experiment_identity_pvs`
 (slice 14a): the one thing worth flagging ahead of time here is that the
 substrate's own `"Unknown"` placeholder reads as a perfectly healthy
 string unless this preflight calls it out explicitly, so the verdict
-column shows `unknown` (distinct from `empty` and `text(len=N)`) rather
+column shows `placeholder` (distinct from `empty` and `text(len=N)`) rather
 than letting an unpopulated PV masquerade as a good reading -- see
 "Trap 1" in `cora.api._capture_experiment_identity_reader`'s own
 docstring. Run this command once the host is reachable and before
@@ -96,15 +96,15 @@ from what the running system actually accepts:
     elsewhere; it means no decoder exists in production for it either.
 
 `capture_experiment_identity_pvs`'s three roles (`proposal_number`,
-`esaf_number`, `esaf_doi`, slice 14a) are a separate `group="identity"`
-sweep, dispatched on `resolved_identity_text` from
+`esaf_number`, `esaf_doi_number`, slice 14a) are a separate `group="experiment_identity"`
+sweep, dispatched on `resolved_experiment_identity_text` from
 `cora.api._capture_experiment_identity_reader` so this can never drift
 from what the reader actually vaults. None of the three is personal
 data, so the printed `value` is the raw reading, unredacted (defensive
 path-shape redaction still applies if a `full_file_name` PV were
 accidentally declared here instead, mirroring the baseline sweep's own
-defense-in-depth). Verdict is `unknown` for the substrate's own
-placeholder literal, `empty` for a blank string, `text(len=N)` for a
+defense-in-depth). Verdict is `placeholder` for the substrate's own
+`"Unknown"` literal, `empty` for a blank string, `text(len=N)` for a
 real value, BAD only as `non-text`.
 
 Exit codes: 0 every configured PV connected and decoded clean; 2 anything
@@ -121,8 +121,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypeGuard
 
 from cora.api._capture_experiment_identity_reader import (
-    ABSENT_IDENTITY_LITERAL,
-    resolved_identity_text,
+    UNKNOWN_EXPERIMENT_IDENTITY_LITERAL,
+    resolved_experiment_identity_text,
 )
 from cora.api._capture_observer import (
     FULL_FILE_NAME_TRUNCATION_THRESHOLD,
@@ -169,8 +169,8 @@ class _PvReport:
     """The `capture_watch_pvs` role (`"status"`, `"abort"`, ...) for a
     `group="watch"` line, the `capture_baseline_pvs` channel_name for a
     `group="baseline"` line, or the `capture_experiment_identity_pvs`
-    role (`"proposal_number"`, `"esaf_number"`, `"esaf_doi"`) for a
-    `group="identity"` line. Named for what it structurally is (the
+    role (`"proposal_number"`, `"esaf_number"`, `"esaf_doi_number"`) for a
+    `group="experiment_identity"` line. Named for what it structurally is (the
     PV's inner-dict key) rather than "role", which is only true of two
     of this report's three groups."""
     pv: str
@@ -184,7 +184,7 @@ class _PvReport:
     verdict: str = "n/a"
     group: str = "watch"
     """`"watch"` (`capture_watch_pvs`, the default), `"baseline"`
-    (`capture_baseline_pvs`, slice 12), or `"identity"`
+    (`capture_baseline_pvs`, slice 12), or `"experiment_identity"`
     (`capture_experiment_identity_pvs`, slice 14a). Purely a
     report-rendering distinction; all groups share every other field."""
 
@@ -214,7 +214,7 @@ async def preflight_read_capture_pvs(
     capture_pvs: Mapping[str, Mapping[str, str]],
     status_phases: Mapping[str, str],
     baseline_pvs: Mapping[str, Mapping[str, str]] | None = None,
-    identity_pvs: Mapping[str, Mapping[str, str]] | None = None,
+    experiment_identity_pvs: Mapping[str, Mapping[str, str]] | None = None,
 ) -> _Report:
     """Read every configured `capture_watch_pvs` role, then every
     `capture_baseline_pvs` channel (slice 12), then every
@@ -222,7 +222,7 @@ async def preflight_read_capture_pvs(
     report shape.
 
     Iteration order is sorted (code, then role/channel_name), watch
-    lines before baseline lines before identity lines, so two runs
+    lines before baseline lines before experiment-identity lines, so two runs
     against an unchanged config produce line-for-line identical output.
     Each PV is read independently: one dead or misconfigured PV does
     not abort the sweep, it reports as its own failed line.
@@ -234,9 +234,9 @@ async def preflight_read_capture_pvs(
     for code in sorted(baseline_pvs or {}):
         for channel_name, pv in sorted((baseline_pvs or {})[code].items()):
             report.lines.append(await _read_one_baseline(control_port, code, channel_name, pv))
-    for code in sorted(identity_pvs or {}):
-        for role, pv in sorted((identity_pvs or {})[code].items()):
-            report.lines.append(await _read_one_identity(control_port, code, role, pv))
+    for code in sorted(experiment_identity_pvs or {}):
+        for role, pv in sorted((experiment_identity_pvs or {})[code].items()):
+            report.lines.append(await _read_one_experiment_identity(control_port, code, role, pv))
     return report
 
 
@@ -438,7 +438,7 @@ def _baseline_verdict(reading: Measurement) -> tuple[str, bool]:
     return "n/a", True
 
 
-async def _read_one_identity(
+async def _read_one_experiment_identity(
     control_port: ControlPort,
     code: str,
     role: str,
@@ -448,7 +448,7 @@ async def _read_one_identity(
     (slice 14a).
 
     None of the three roles (`proposal_number`, `esaf_number`,
-    `esaf_doi`) is personal data, so the printed `value` is the raw
+    `esaf_doi_number`) is personal data, so the printed `value` is the raw
     reading; the defensive path-shape redaction mirrors the baseline
     sweep's own guard against a `full_file_name` PV being declared
     under the wrong config key.
@@ -463,7 +463,7 @@ async def _read_one_identity(
             ok=False,
             connected=False,
             detail=str(exc),
-            group="identity",
+            group="experiment_identity",
         )
     except ControlValueCoercionError as exc:
         return _PvReport(
@@ -473,14 +473,14 @@ async def _read_one_identity(
             ok=False,
             connected=True,
             detail=f"adapter could not decode the reading: {exc}",
-            group="identity",
+            group="experiment_identity",
         )
     element_count = (
         len(reading.value)
         if reading.kind == "Array" and hasattr(reading.value, "__len__")
         else None
     )
-    verdict, ok = _identity_verdict(reading.value)
+    verdict, ok = _experiment_identity_verdict(reading.value)
     return _PvReport(
         code=code,
         pv_key=role,
@@ -495,29 +495,36 @@ async def _read_one_identity(
             else reading.value
         ),
         verdict=verdict,
-        group="identity",
+        group="experiment_identity",
     )
 
 
-def _identity_verdict(value: object) -> tuple[str, bool]:
+def _experiment_identity_verdict(value: object) -> tuple[str, bool]:
     """The `capture_experiment_identity_pvs` decode check (slice 14a),
-    dispatched through `resolved_identity_text` so this can never drift
-    from what `ExperimentIdentityReader` actually vaults.
+    dispatched through `resolved_experiment_identity_text` so this can
+    never drift from what `CaptureExperimentIdentityReader` actually
+    vaults.
 
     `non-text` is the only BAD outcome: a non-string reading is a
-    deployment misconfiguration, not a value to guess at. `unknown`
-    (the substrate's own placeholder literal, Trap 1) and `empty` are
+    deployment misconfiguration, not a value to guess at. `placeholder`
+    (the substrate's own `"Unknown"` literal, Trap 1) and `empty` are
     both OK -- they are legitimate substrate states this preflight
     exists to make VISIBLE, not defects to fail on -- and are reported
     as their own distinct verdicts specifically so an operator does not
-    mistake either for a healthy value.
+    mistake either for a healthy value. `placeholder`, not `unknown`:
+    this report's own `status` role already uses `unrecognized` for a
+    different failure (CORA's decoder rejected the literal, rather than
+    the substrate never having populated it), and `unknown` would read
+    as a synonym for that instead of naming this row's own condition.
     """
     if not isinstance(value, str):
         return "non-text", False
-    resolved = resolved_identity_text(value)
+    resolved = resolved_experiment_identity_text(value)
     if resolved is not None:
         return f"text(len={len(resolved)})", True
-    return ("unknown", True) if value.strip() == ABSENT_IDENTITY_LITERAL else ("empty", True)
+    if value.strip() == UNKNOWN_EXPERIMENT_IDENTITY_LITERAL:
+        return "placeholder", True
+    return "empty", True
 
 
 def _finish(report: _Report) -> int:
@@ -567,7 +574,7 @@ def main(argv: list[str] | None = None) -> int:
                 capture_pvs=settings.capture_watch_pvs,
                 status_phases=settings.capture_status_phases,
                 baseline_pvs=settings.capture_baseline_pvs,
-                identity_pvs=settings.capture_experiment_identity_pvs,
+                experiment_identity_pvs=settings.capture_experiment_identity_pvs,
             )
             return _finish(report)
         finally:

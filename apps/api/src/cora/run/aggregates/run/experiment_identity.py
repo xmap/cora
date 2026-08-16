@@ -119,7 +119,7 @@ import asyncpg
 class ExperimentIdentity:
     """One row in the `run_experiment_identity` vault.
 
-    Each of `proposal_number`, `esaf_number`, `esaf_doi` is independently
+    Each of `proposal_number`, `esaf_number`, `esaf_doi_number` is independently
     nullable, paired with its own `*_observed_at` (the substrate's own
     reading time, `Measurement.produced_at`), never CORA's clock: a
     deployment may configure fewer than three roles for a capture code,
@@ -132,8 +132,8 @@ class ExperimentIdentity:
     proposal_number_observed_at: datetime | None
     esaf_number: str | None
     esaf_number_observed_at: datetime | None
-    esaf_doi: str | None
-    esaf_doi_observed_at: datetime | None
+    esaf_doi_number: str | None
+    esaf_doi_number_observed_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -156,13 +156,13 @@ class ExperimentIdentityStore(Protocol):
         proposal_number_observed_at: datetime | None,
         esaf_number: str | None,
         esaf_number_observed_at: datetime | None,
-        esaf_doi: str | None,
-        esaf_doi_observed_at: datetime | None,
+        esaf_doi_number: str | None,
+        esaf_doi_number_observed_at: datetime | None,
         created_at: datetime,
     ) -> None:
         """Insert a new row or overwrite an existing one for `run_id`.
 
-        Idempotent on the run_id PK: `ExperimentIdentityReader` calls
+        Idempotent on the run_id PK: `CaptureExperimentIdentityReader` calls
         this at most once per promotion (one terminal genesis-read per
         Run), but retrying after a partial failure replays cleanly. A
         `None` value overwrites a previously-recorded one on retry: the
@@ -194,7 +194,7 @@ async def load_run_experiment_identity(
 _UPSERT_SQL = """
 INSERT INTO run_experiment_identity (
     run_id, proposal_number, proposal_number_observed_at,
-    esaf_number, esaf_number_observed_at, esaf_doi, esaf_doi_observed_at,
+    esaf_number, esaf_number_observed_at, esaf_doi_number, esaf_doi_number_observed_at,
     created_at, updated_at
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
@@ -203,14 +203,14 @@ ON CONFLICT (run_id) DO UPDATE
         proposal_number_observed_at = EXCLUDED.proposal_number_observed_at,
         esaf_number = EXCLUDED.esaf_number,
         esaf_number_observed_at = EXCLUDED.esaf_number_observed_at,
-        esaf_doi = EXCLUDED.esaf_doi,
-        esaf_doi_observed_at = EXCLUDED.esaf_doi_observed_at,
+        esaf_doi_number = EXCLUDED.esaf_doi_number,
+        esaf_doi_number_observed_at = EXCLUDED.esaf_doi_number_observed_at,
         updated_at = now()
 """
 
 _GET_SQL = """
 SELECT run_id, proposal_number, proposal_number_observed_at,
-       esaf_number, esaf_number_observed_at, esaf_doi, esaf_doi_observed_at,
+       esaf_number, esaf_number_observed_at, esaf_doi_number, esaf_doi_number_observed_at,
        created_at, updated_at
 FROM run_experiment_identity
 WHERE run_id = $1
@@ -224,8 +224,8 @@ def _row_to_experiment_identity(row: asyncpg.Record) -> ExperimentIdentity:
         proposal_number_observed_at=row["proposal_number_observed_at"],
         esaf_number=row["esaf_number"],
         esaf_number_observed_at=row["esaf_number_observed_at"],
-        esaf_doi=row["esaf_doi"],
-        esaf_doi_observed_at=row["esaf_doi_observed_at"],
+        esaf_doi_number=row["esaf_doi_number"],
+        esaf_doi_number_observed_at=row["esaf_doi_number_observed_at"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -245,8 +245,8 @@ class PostgresExperimentIdentityStore:
         proposal_number_observed_at: datetime | None,
         esaf_number: str | None,
         esaf_number_observed_at: datetime | None,
-        esaf_doi: str | None,
-        esaf_doi_observed_at: datetime | None,
+        esaf_doi_number: str | None,
+        esaf_doi_number_observed_at: datetime | None,
         created_at: datetime,
     ) -> None:
         async with self._pool.acquire() as conn:
@@ -257,8 +257,8 @@ class PostgresExperimentIdentityStore:
                 proposal_number_observed_at,
                 esaf_number,
                 esaf_number_observed_at,
-                esaf_doi,
-                esaf_doi_observed_at,
+                esaf_doi_number,
+                esaf_doi_number_observed_at,
                 created_at,
             )
 
@@ -289,8 +289,8 @@ class InMemoryExperimentIdentityStore:
         proposal_number_observed_at: datetime | None,
         esaf_number: str | None,
         esaf_number_observed_at: datetime | None,
-        esaf_doi: str | None,
-        esaf_doi_observed_at: datetime | None,
+        esaf_doi_number: str | None,
+        esaf_doi_number_observed_at: datetime | None,
         created_at: datetime,
     ) -> None:
         existing = self._rows.get(run_id)
@@ -300,8 +300,8 @@ class InMemoryExperimentIdentityStore:
             proposal_number_observed_at=proposal_number_observed_at,
             esaf_number=esaf_number,
             esaf_number_observed_at=esaf_number_observed_at,
-            esaf_doi=esaf_doi,
-            esaf_doi_observed_at=esaf_doi_observed_at,
+            esaf_doi_number=esaf_doi_number,
+            esaf_doi_number_observed_at=esaf_doi_number_observed_at,
             created_at=existing.created_at if existing is not None else created_at,
             updated_at=datetime.now(tz=UTC) if existing is not None else created_at,
         )

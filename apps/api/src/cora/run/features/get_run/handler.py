@@ -59,7 +59,7 @@ class RunView:
     a capture code exists but the vault has no row yet, the real path
     otherwise.
 
-    `proposal_number` / `esaf_number` / `esaf_doi` (slice 14a), each
+    `proposal_number` / `esaf_number` / `esaf_doi_number` (slice 14a), each
     paired with its own `*_observed_at`, resolve from the
     `run_experiment_identity` vault under the SAME `capture_code is not
     None` condition. Unlike `observed_capture_path`, no tombstone
@@ -78,8 +78,8 @@ class RunView:
     proposal_number_observed_at: datetime | None
     esaf_number: str | None
     esaf_number_observed_at: datetime | None
-    esaf_doi: str | None
-    esaf_doi_observed_at: datetime | None
+    esaf_doi_number: str | None
+    esaf_doi_number_observed_at: datetime | None
 
 
 class Handler(Protocol):
@@ -187,9 +187,11 @@ def bind(
                 if experiment_identity is not None
                 else None
             ),
-            esaf_doi=(experiment_identity.esaf_doi if experiment_identity is not None else None),
-            esaf_doi_observed_at=(
-                experiment_identity.esaf_doi_observed_at
+            esaf_doi_number=(
+                experiment_identity.esaf_doi_number if experiment_identity is not None else None
+            ),
+            esaf_doi_number_observed_at=(
+                experiment_identity.esaf_doi_number_observed_at
                 if experiment_identity is not None
                 else None
             ),

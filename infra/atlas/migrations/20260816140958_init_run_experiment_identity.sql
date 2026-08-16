@@ -25,7 +25,7 @@
 --     events table is INSERT-only at the role level per
 --     project_immutability_guarantee; FK enforcement is application
 --     discipline.
---   - Each of proposal_number / esaf_number / esaf_doi is independently
+--   - Each of proposal_number / esaf_number / esaf_doi_number is independently
 --     NULLABLE, paired with its own *_observed_at (the substrate's own
 --     reading time, never CORA's clock): a deployment may configure
 --     fewer than three roles, or the substrate may report "Unknown" /
@@ -37,7 +37,7 @@
 --     unconditionally in Postgres, so these do not force presence):
 --     200 chars for proposal_number / esaf_number (matches
 --     shared.identifier.IDENTIFIER_VALUE_MAX_LENGTH's bound for a
---     comparable free-form identifier value), 500 for esaf_doi (a DOI
+--     comparable free-form identifier value), 500 for esaf_doi_number (a DOI
 --     suffix can run longer than a bare proposal/ESAF number).
 --   - No forgotten_at / soft-delete column, mirroring run_capture_path:
 --     it would itself be identifying ("this Run's proposal existed and
@@ -61,8 +61,8 @@ CREATE TABLE run_experiment_identity (
     proposal_number_observed_at  TIMESTAMPTZ,
     esaf_number                  TEXT        CHECK (length(esaf_number) BETWEEN 1 AND 200),
     esaf_number_observed_at      TIMESTAMPTZ,
-    esaf_doi                     TEXT        CHECK (length(esaf_doi) BETWEEN 1 AND 500),
-    esaf_doi_observed_at         TIMESTAMPTZ,
+    esaf_doi_number              TEXT        CHECK (length(esaf_doi_number) BETWEEN 1 AND 500),
+    esaf_doi_number_observed_at  TIMESTAMPTZ,
     created_at                   TIMESTAMPTZ NOT NULL,
     updated_at                   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -79,9 +79,9 @@ COMMENT ON COLUMN run_experiment_identity.esaf_number IS
     'The ESAF (Experiment Safety Assessment Form) number read from 2bmb:TomoScan:ESAFNumber. Same posture as proposal_number.';
 COMMENT ON COLUMN run_experiment_identity.esaf_number_observed_at IS
     'The substrate''s own timestamp for this reading; see proposal_number_observed_at.';
-COMMENT ON COLUMN run_experiment_identity.esaf_doi IS
+COMMENT ON COLUMN run_experiment_identity.esaf_doi_number IS
     'The value read from 2bmb:TomoScan:ESAFDOINumber. Not confirmed as a publicly resolvable DOI (the upstream dmagic source reads it from an internal, authenticated APS API, not a DOI registry); vaulted alongside the other two rather than treated as a public identifier.';
-COMMENT ON COLUMN run_experiment_identity.esaf_doi_observed_at IS
+COMMENT ON COLUMN run_experiment_identity.esaf_doi_number_observed_at IS
     'The substrate''s own timestamp for this reading; see proposal_number_observed_at.';
 
 -- Mutable PII-vault-shaped table: cora_app gets full CRUD. DELETE is the

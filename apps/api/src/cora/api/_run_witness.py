@@ -47,7 +47,7 @@ Per capture_code, a small dedup state machine:
     to snapshot the genesis-baseline PVs against the new Run; a failure
     there is logged and never unwinds the promotion that already
     committed (see `RunWitnessRecorder._read_baseline`). Also calls the
-    configured `ExperimentIdentityReader` (slice 14a) exactly once, same
+    configured `CaptureExperimentIdentityReader` (slice 14a) exactly once, same
     posture, to vault the proposal / ESAF / ESAF-DOI PVs against the new
     Run (see `RunWitnessRecorder._read_experiment_identity`).
   - `BEGUN` while a Run is already open for this code: the previous
@@ -256,7 +256,7 @@ from cora.agent.seed_capture_baseline_reader import CAPTURE_BASELINE_READER_AGEN
 from cora.agent.seed_capture_progress_feeder import CAPTURE_PROGRESS_FEEDER_AGENT_ID
 from cora.agent.seed_run_witness import RUN_WITNESS_AGENT_ID
 from cora.api._capture_baseline_reader import CaptureBaselineReader
-from cora.api._capture_experiment_identity_reader import ExperimentIdentityReader
+from cora.api._capture_experiment_identity_reader import CaptureExperimentIdentityReader
 from cora.api._capture_observer import ROLE_IMAGES_COLLECTED, ROLE_IMAGES_SAVED
 from cora.api._capture_progress_feeder import CaptureProgressFeeder, capture_progress_flush_loop
 from cora.infrastructure.logging import get_logger
@@ -382,7 +382,7 @@ class RunWitnessRecorder:
         open_captures: dict[str, UUID] | None = None,
         baseline_reader: CaptureBaselineReader | None = None,
         capture_path_store: CapturePathStore | None = None,
-        experiment_identity_reader: ExperimentIdentityReader | None = None,
+        experiment_identity_reader: CaptureExperimentIdentityReader | None = None,
     ) -> None:
         self._deps = deps
         self._record_witnessed_run = record_witnessed_run
@@ -686,7 +686,7 @@ class RunWitnessRecorder:
         configured (main.py wires one whenever
         `capture_experiment_identity_pvs` is declared) and the sixth
         kill switch, `capture_experiment_identity_recording_enabled`;
-        `ExperimentIdentityReader` itself catches every failure
+        `CaptureExperimentIdentityReader` itself catches every failure
         internally (see its own module docstring), the outer
         try/except here is defense in depth, mirroring
         `_read_baseline`'s identical wrapper.
@@ -1130,7 +1130,7 @@ async def run_witness_lifespan(
 
     A non-empty `capture_experiment_identity_pvs` (slice 14a) additionally
     requires `record_witnessed_run`, `control_port`, and
-    `experiment_identity_store`: an `ExperimentIdentityReader` is built
+    `experiment_identity_store`: a `CaptureExperimentIdentityReader` is built
     and handed to the recorder, mirroring `capture_baseline_pvs`'s exact
     shape (a separate reader object, unlike `capture_path_store`'s
     handed-straight-through style, because this reader does its own
@@ -1184,7 +1184,7 @@ async def run_witness_lifespan(
             principal_id=CAPTURE_BASELINE_READER_AGENT_ID,
         )
 
-    experiment_identity_reader: ExperimentIdentityReader | None = None
+    experiment_identity_reader: CaptureExperimentIdentityReader | None = None
     if capture_experiment_identity_pvs:
         missing = [
             name
@@ -1206,10 +1206,10 @@ async def run_witness_lifespan(
         assert deps is not None
         assert control_port is not None
         assert experiment_identity_store is not None
-        experiment_identity_reader = ExperimentIdentityReader(
+        experiment_identity_reader = CaptureExperimentIdentityReader(
             deps=deps,
             control_port=control_port,
-            identity_pvs=capture_experiment_identity_pvs,
+            experiment_identity_pvs=capture_experiment_identity_pvs,
             store=experiment_identity_store,
         )
 

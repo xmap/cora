@@ -31,8 +31,8 @@ async def test_upsert_then_get_roundtrips_through_postgres(db_pool: asyncpg.Pool
         proposal_number_observed_at=_NOW,
         esaf_number="67890",
         esaf_number_observed_at=_NOW,
-        esaf_doi="10.1234/esaf.67890",
-        esaf_doi_observed_at=_NOW,
+        esaf_doi_number="10.1234/esaf.67890",
+        esaf_doi_number_observed_at=_NOW,
         created_at=_NOW,
     )
 
@@ -41,7 +41,7 @@ async def test_upsert_then_get_roundtrips_through_postgres(db_pool: asyncpg.Pool
     assert row.run_id == run_id
     assert row.proposal_number == "12345"
     assert row.esaf_number == "67890"
-    assert row.esaf_doi == "10.1234/esaf.67890"
+    assert row.esaf_doi_number == "10.1234/esaf.67890"
 
 
 @pytest.mark.integration
@@ -55,8 +55,8 @@ async def test_upsert_accepts_a_partial_reading_through_postgres(db_pool: asyncp
         proposal_number_observed_at=_NOW,
         esaf_number=None,
         esaf_number_observed_at=None,
-        esaf_doi=None,
-        esaf_doi_observed_at=None,
+        esaf_doi_number=None,
+        esaf_doi_number_observed_at=None,
         created_at=_NOW,
     )
 
@@ -64,7 +64,7 @@ async def test_upsert_accepts_a_partial_reading_through_postgres(db_pool: asyncp
     assert row is not None
     assert row.proposal_number == "12345"
     assert row.esaf_number is None
-    assert row.esaf_doi is None
+    assert row.esaf_doi_number is None
 
 
 @pytest.mark.integration
@@ -87,8 +87,8 @@ async def test_upsert_is_idempotent_on_run_id(db_pool: asyncpg.Pool) -> None:
         proposal_number_observed_at=_NOW,
         esaf_number=None,
         esaf_number_observed_at=None,
-        esaf_doi=None,
-        esaf_doi_observed_at=None,
+        esaf_doi_number=None,
+        esaf_doi_number_observed_at=None,
         created_at=_NOW,
     )
     await store.upsert(
@@ -97,8 +97,8 @@ async def test_upsert_is_idempotent_on_run_id(db_pool: asyncpg.Pool) -> None:
         proposal_number_observed_at=_NOW,
         esaf_number=None,
         esaf_number_observed_at=None,
-        esaf_doi=None,
-        esaf_doi_observed_at=None,
+        esaf_doi_number=None,
+        esaf_doi_number_observed_at=None,
         created_at=_NOW,
     )
 
@@ -143,14 +143,14 @@ async def test_proposal_number_length_constraint_rejects_an_oversized_value(
             proposal_number_observed_at=_NOW,
             esaf_number=None,
             esaf_number_observed_at=None,
-            esaf_doi=None,
-            esaf_doi_observed_at=None,
+            esaf_doi_number=None,
+            esaf_doi_number_observed_at=None,
             created_at=_NOW,
         )
 
 
 @pytest.mark.integration
-async def test_esaf_doi_length_constraint_rejects_an_oversized_value(
+async def test_esaf_doi_number_length_constraint_rejects_an_oversized_value(
     db_pool: asyncpg.Pool,
 ) -> None:
     store = PostgresExperimentIdentityStore(db_pool)
@@ -161,7 +161,7 @@ async def test_esaf_doi_length_constraint_rejects_an_oversized_value(
             proposal_number_observed_at=None,
             esaf_number=None,
             esaf_number_observed_at=None,
-            esaf_doi="a" * 501,
-            esaf_doi_observed_at=_NOW,
+            esaf_doi_number="a" * 501,
+            esaf_doi_number_observed_at=_NOW,
             created_at=_NOW,
         )

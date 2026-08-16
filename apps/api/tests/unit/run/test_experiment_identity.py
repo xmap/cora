@@ -33,8 +33,8 @@ async def test_upsert_then_get_roundtrips_all_three_fields() -> None:
         proposal_number_observed_at=_at(0),
         esaf_number="67890",
         esaf_number_observed_at=_at(1),
-        esaf_doi="10.1234/esaf.67890",
-        esaf_doi_observed_at=_at(2),
+        esaf_doi_number="10.1234/esaf.67890",
+        esaf_doi_number_observed_at=_at(2),
         created_at=_at(3),
     )
 
@@ -45,8 +45,8 @@ async def test_upsert_then_get_roundtrips_all_three_fields() -> None:
     assert row.proposal_number_observed_at == _at(0)
     assert row.esaf_number == "67890"
     assert row.esaf_number_observed_at == _at(1)
-    assert row.esaf_doi == "10.1234/esaf.67890"
-    assert row.esaf_doi_observed_at == _at(2)
+    assert row.esaf_doi_number == "10.1234/esaf.67890"
+    assert row.esaf_doi_number_observed_at == _at(2)
     assert row.created_at == _at(3)
     assert row.updated_at == _at(3)
 
@@ -66,8 +66,8 @@ async def test_upsert_accepts_a_partial_reading() -> None:
         proposal_number_observed_at=_at(0),
         esaf_number=None,
         esaf_number_observed_at=None,
-        esaf_doi=None,
-        esaf_doi_observed_at=None,
+        esaf_doi_number=None,
+        esaf_doi_number_observed_at=None,
         created_at=_at(0),
     )
 
@@ -76,8 +76,8 @@ async def test_upsert_accepts_a_partial_reading() -> None:
     assert row.proposal_number == "12345"
     assert row.esaf_number is None
     assert row.esaf_number_observed_at is None
-    assert row.esaf_doi is None
-    assert row.esaf_doi_observed_at is None
+    assert row.esaf_doi_number is None
+    assert row.esaf_doi_number_observed_at is None
 
 
 @pytest.mark.unit
@@ -101,8 +101,8 @@ async def test_upsert_overwrites_and_preserves_created_at() -> None:
         proposal_number_observed_at=_at(0),
         esaf_number=None,
         esaf_number_observed_at=None,
-        esaf_doi=None,
-        esaf_doi_observed_at=None,
+        esaf_doi_number=None,
+        esaf_doi_number_observed_at=None,
         created_at=_at(0),
     )
     before_second_upsert = datetime.now(tz=UTC)
@@ -113,8 +113,8 @@ async def test_upsert_overwrites_and_preserves_created_at() -> None:
         proposal_number_observed_at=_at(5),
         esaf_number="333",
         esaf_number_observed_at=_at(5),
-        esaf_doi=None,
-        esaf_doi_observed_at=None,
+        esaf_doi_number=None,
+        esaf_doi_number_observed_at=None,
         created_at=_at(5),
     )
 
@@ -136,8 +136,8 @@ async def test_load_run_experiment_identity_returns_the_row_when_present() -> No
         proposal_number_observed_at=_at(0),
         esaf_number=None,
         esaf_number_observed_at=None,
-        esaf_doi=None,
-        esaf_doi_observed_at=None,
+        esaf_doi_number=None,
+        esaf_doi_number_observed_at=None,
         created_at=_at(0),
     )
 

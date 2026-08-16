@@ -68,7 +68,7 @@ async def _preflight(
     *,
     status_phases: dict[str, str] | None = None,
     baseline_pvs: dict[str, dict[str, str]] | None = None,
-    identity_pvs: dict[str, dict[str, str]] | None = None,
+    experiment_identity_pvs: dict[str, dict[str, str]] | None = None,
 ) -> _Report:
     """`_FakeControlPort` implements `.read()` only (this command never
     writes or subscribes), so it satisfies `ControlPort` in practice but
@@ -79,7 +79,7 @@ async def _preflight(
         capture_pvs=capture_pvs,
         status_phases=status_phases if status_phases is not None else _PHASES,
         baseline_pvs=baseline_pvs,
-        identity_pvs=identity_pvs,
+        experiment_identity_pvs=experiment_identity_pvs,
     )
 
 
@@ -528,11 +528,11 @@ async def test_preflight_read_empty_baseline_pvs_reports_no_baseline_lines() -> 
 # are visible, distinct, non-BAD verdicts; only a non-text reading is BAD.
 # ---------------------------------------------------------------------------
 
-_IDENTITY_PVS = {
+_EXPERIMENT_IDENTITY_PVS = {
     "2bmb-tomoscan": {
         "proposal_number": "2bmb:TomoScan:ProposalNumber",
         "esaf_number": "2bmb:TomoScan:ESAFNumber",
-        "esaf_doi": "2bmb:TomoScan:ESAFDOINumber",
+        "esaf_doi_number": "2bmb:TomoScan:ESAFDOINumber",
     }
 }
 
@@ -547,15 +547,15 @@ async def test_preflight_read_identity_real_value_decodes_ok_with_length_verdict
         }
     )
 
-    report = await _preflight(port, {}, identity_pvs=_IDENTITY_PVS)
+    report = await _preflight(port, {}, experiment_identity_pvs=_EXPERIMENT_IDENTITY_PVS)
 
     assert len(report.lines) == 3
     assert all(line.ok for line in report.lines)
-    assert all(line.group == "identity" for line in report.lines)
+    assert all(line.group == "experiment_identity" for line in report.lines)
     by_role = {line.pv_key: line for line in report.lines}
     assert by_role["proposal_number"].verdict == "text(len=5)"
     assert by_role["proposal_number"].value == "12345"
-    assert by_role["esaf_doi"].verdict == "text(len=18)"
+    assert by_role["esaf_doi_number"].verdict == "text(len=18)"
 
 
 @pytest.mark.unit
@@ -566,12 +566,14 @@ async def test_preflight_read_identity_unknown_literal_is_a_distinct_ok_verdict(
     port = _FakeControlPort({"2bmb:TomoScan:ProposalNumber": _reading("Unknown")})
 
     report = await _preflight(
-        port, {}, identity_pvs={"code": {"proposal_number": "2bmb:TomoScan:ProposalNumber"}}
+        port,
+        {},
+        experiment_identity_pvs={"code": {"proposal_number": "2bmb:TomoScan:ProposalNumber"}},
     )
 
     (line,) = report.lines
     assert line.ok
-    assert line.verdict == "unknown"
+    assert line.verdict == "placeholder"
 
 
 @pytest.mark.unit
@@ -579,7 +581,9 @@ async def test_preflight_read_identity_empty_string_is_ok_with_empty_verdict() -
     port = _FakeControlPort({"2bmb:TomoScan:ProposalNumber": _reading("")})
 
     report = await _preflight(
-        port, {}, identity_pvs={"code": {"proposal_number": "2bmb:TomoScan:ProposalNumber"}}
+        port,
+        {},
+        experiment_identity_pvs={"code": {"proposal_number": "2bmb:TomoScan:ProposalNumber"}},
     )
 
     (line,) = report.lines
@@ -592,7 +596,9 @@ async def test_preflight_read_identity_non_text_is_bad() -> None:
     port = _FakeControlPort({"2bmb:TomoScan:ProposalNumber": _reading(12345)})
 
     report = await _preflight(
-        port, {}, identity_pvs={"code": {"proposal_number": "2bmb:TomoScan:ProposalNumber"}}
+        port,
+        {},
+        experiment_identity_pvs={"code": {"proposal_number": "2bmb:TomoScan:ProposalNumber"}},
     )
 
     (line,) = report.lines
@@ -604,19 +610,23 @@ async def test_preflight_read_identity_non_text_is_bad() -> None:
 async def test_preflight_read_identity_not_connected_pv_reports_bad() -> None:
     port = _FakeControlPort({"pv:dead": ControlNotConnectedError("pv:dead")})
 
-    report = await _preflight(port, {}, identity_pvs={"code": {"proposal_number": "pv:dead"}})
+    report = await _preflight(
+        port, {}, experiment_identity_pvs={"code": {"proposal_number": "pv:dead"}}
+    )
 
     (line,) = report.lines
     assert not line.ok
     assert not line.connected
-    assert line.group == "identity"
+    assert line.group == "experiment_identity"
 
 
 @pytest.mark.unit
 async def test_preflight_read_identity_value_coercion_error_reports_bad_but_connected() -> None:
     port = _FakeControlPort({"pv:bad": ControlValueCoercionError("pv:bad", "structured", "Scalar")})
 
-    report = await _preflight(port, {}, identity_pvs={"code": {"proposal_number": "pv:bad"}})
+    report = await _preflight(
+        port, {}, experiment_identity_pvs={"code": {"proposal_number": "pv:bad"}}
+    )
 
     (line,) = report.lines
     assert not line.ok
@@ -632,7 +642,7 @@ async def test_preflight_read_identity_mis_keyed_role_with_a_path_value_still_re
     port = _FakeControlPort({"pv:misdeclared": _reading("/data/2026-01-Smith-12345/scan.h5")})
 
     report = await _preflight(
-        port, {}, identity_pvs={"code": {"proposal_number": "pv:misdeclared"}}
+        port, {}, experiment_identity_pvs={"code": {"proposal_number": "pv:misdeclared"}}
     )
 
     (line,) = report.lines
@@ -656,17 +666,19 @@ async def test_preflight_read_identity_alongside_watch_and_baseline_reports_all_
         port,
         {"2bmb-tomoscan": {"status": "2bmb:TomoScan:ScanStatus"}},
         baseline_pvs={"2bmb-tomoscan": {"ExposureTime": "2bmb:TomoScan:ExposureTime"}},
-        identity_pvs={"2bmb-tomoscan": {"proposal_number": "2bmb:TomoScan:ProposalNumber"}},
+        experiment_identity_pvs={
+            "2bmb-tomoscan": {"proposal_number": "2bmb:TomoScan:ProposalNumber"}
+        },
     )
 
     assert len(report.lines) == 3
     groups = {line.group for line in report.lines}
-    assert groups == {"watch", "baseline", "identity"}
+    assert groups == {"watch", "baseline", "experiment_identity"}
 
 
 @pytest.mark.unit
-async def test_preflight_read_empty_identity_pvs_reports_no_identity_lines() -> None:
-    report = await _preflight(_FakeControlPort({}), {}, identity_pvs={})
+async def test_preflight_read_empty_experiment_identity_pvs_reports_no_lines() -> None:
+    report = await _preflight(_FakeControlPort({}), {}, experiment_identity_pvs={})
 
     assert report.lines == []
 

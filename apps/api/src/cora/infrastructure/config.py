@@ -20,7 +20,7 @@ _ALLOWED_DATABASE_SCHEMES = ("postgresql://", "postgres://")
 # Closed role vocabulary for `Settings.capture_experiment_identity_pvs`
 # (slice 14a), dispatched on by name in
 # `cora.api._capture_experiment_identity_reader`.
-_EXPERIMENT_IDENTITY_ROLES = frozenset({"proposal_number", "esaf_number", "esaf_doi"})
+_EXPERIMENT_IDENTITY_ROLES = frozenset({"proposal_number", "esaf_number", "esaf_doi_number"})
 
 OtelExporter = Literal["otlp", "console", "none"]
 
@@ -944,7 +944,7 @@ class Settings(BaseSettings):
     # ONCE, at the instant a capture promotes to a witnessed Run, mirroring
     # `capture_baseline_pvs`'s one-shot-at-BEGUN timing exactly. Same
     # `code -> inner-key -> PV` shape as `capture_watch_pvs`: a CLOSED
-    # inner-key vocabulary (`proposal_number`, `esaf_number`, `esaf_doi`),
+    # inner-key vocabulary (`proposal_number`, `esaf_number`, `esaf_doi_number`),
     # because these three roles are dispatched on by name in
     # `cora.api._capture_experiment_identity_reader` (an unrecognized role
     # would silently never be read), unlike `capture_baseline_pvs`'s open
@@ -954,7 +954,7 @@ class Settings(BaseSettings):
     #     "2bmb-tomoscan": {
     #       "proposal_number": "2bmb:TomoScan:ProposalNumber",
     #       "esaf_number": "2bmb:TomoScan:ESAFNumber",
-    #       "esaf_doi": "2bmb:TomoScan:ESAFDOINumber"
+    #       "esaf_doi_number": "2bmb:TomoScan:ESAFDOINumber"
     #     }
     #   }'
     #
@@ -972,7 +972,7 @@ class Settings(BaseSettings):
     # They default to the substrate literal `"Unknown"` when unpopulated;
     # CORA treats that literal, and an empty string, as ABSENT and records
     # nothing (see `cora.api._capture_experiment_identity_reader`'s
-    # `resolved_identity_text`).
+    # `resolved_experiment_identity_text`).
     #
     # Written to the `run_experiment_identity` PII-vault-shaped table
     # (mirroring `run_capture_path`), NEVER onto `RunStarted` or any other
@@ -1012,7 +1012,7 @@ class Settings(BaseSettings):
     ) -> dict[str, dict[str, str]]:
         """Refuse an unrecognized role key at boot, not at the first
         promotion: `cora.api._capture_experiment_identity_reader` dispatches
-        on exactly `{"proposal_number", "esaf_number", "esaf_doi"}` by name,
+        on exactly `{"proposal_number", "esaf_number", "esaf_doi_number"}` by name,
         so a typo'd role here would otherwise silently never be read, with
         no error anywhere -- the same class of silent-misconfiguration risk
         `_validate_capture_status_phases` already guards against."""
