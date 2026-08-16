@@ -131,7 +131,12 @@ class _PvReport:
     human reading the printed report."""
 
     code: str
-    role: str
+    pv_key: str
+    """The `capture_watch_pvs` role (`"status"`, `"abort"`, ...) for a
+    `group="watch"` line, or the `capture_baseline_pvs` channel_name for
+    a `group="baseline"` line. Named for what it structurally is (the
+    PV's inner-dict key) rather than "role", which is only true of half
+    this report's lines."""
     pv: str
     ok: bool
     connected: bool
@@ -148,8 +153,8 @@ class _PvReport:
 
     def render(self) -> str:
         tag = "OK  " if self.ok else "BAD "
-        role_label = self.role if self.group == "watch" else f"baseline:{self.role}"
-        head = f"{tag}{self.code}/{role_label:<17} {self.pv}"
+        key_label = self.pv_key if self.group == "watch" else f"baseline:{self.pv_key}"
+        head = f"{tag}{self.code}/{key_label:<17} {self.pv}"
         if not self.connected:
             return f"{head}  NOT CONNECTED ({self.detail})"
         shape = self.kind if self.element_count is None else f"{self.kind}[{self.element_count}]"
@@ -202,7 +207,7 @@ async def _read_one(
     try:
         reading = await control_port.read(pv)
     except (ControlNotConnectedError, ControlTimeoutError, ControlAccessDeniedError) as exc:
-        return _PvReport(code=code, role=role, pv=pv, ok=False, connected=False, detail=str(exc))
+        return _PvReport(code=code, pv_key=role, pv=pv, ok=False, connected=False, detail=str(exc))
     except ControlValueCoercionError as exc:
         # Connected, but the adapter could not unpack the wire value into a
         # `Measurement` at all: a shape gap even more basic than a decoder
@@ -210,7 +215,7 @@ async def _read_one(
         # surface before the recording switch flips.
         return _PvReport(
             code=code,
-            role=role,
+            pv_key=role,
             pv=pv,
             ok=False,
             connected=True,
@@ -224,7 +229,7 @@ async def _read_one(
     verdict, ok = _decode_verdict(role, reading, status_phases)
     return _PvReport(
         code=code,
-        role=role,
+        pv_key=role,
         pv=pv,
         ok=ok,
         connected=True,
@@ -281,7 +286,7 @@ async def _read_one_baseline(
     except (ControlNotConnectedError, ControlTimeoutError, ControlAccessDeniedError) as exc:
         return _PvReport(
             code=code,
-            role=channel_name,
+            pv_key=channel_name,
             pv=pv,
             ok=False,
             connected=False,
@@ -291,7 +296,7 @@ async def _read_one_baseline(
     except ControlValueCoercionError as exc:
         return _PvReport(
             code=code,
-            role=channel_name,
+            pv_key=channel_name,
             pv=pv,
             ok=False,
             connected=True,
@@ -306,7 +311,7 @@ async def _read_one_baseline(
     verdict, ok = _baseline_verdict(reading)
     return _PvReport(
         code=code,
-        role=channel_name,
+        pv_key=channel_name,
         pv=pv,
         ok=ok,
         connected=True,

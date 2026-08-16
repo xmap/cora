@@ -93,8 +93,8 @@ class CaptureBaselineReader:
 
     `baseline_pvs` is code -> channel_name -> PV, matching
     `Settings.capture_baseline_pvs`. A code with no entry (or an empty
-    one) makes `read_baseline` a no-op, mirroring
-    `ControlPortCaptureObserver`'s own per-code optionality.
+    one) makes `read` a no-op, mirroring `ControlPortCaptureObserver`'s
+    own per-code optionality.
     """
 
     def __init__(
@@ -112,7 +112,7 @@ class CaptureBaselineReader:
         self._append_observations = append_observations
         self._principal_id = principal_id
 
-    async def read_baseline(self, capture_code: str, run_id: UUID) -> None:
+    async def read(self, capture_code: str, run_id: UUID) -> None:
         """Read every channel declared for `capture_code`, once, and
         append whatever survives the per-reading checks as one
         `AppendObservations` batch against `run_id`.

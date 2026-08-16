@@ -117,7 +117,7 @@ async def test_read_baseline_appends_one_batch_for_every_declared_channel() -> N
     )
     reader, append = _reader(control_port=port)
 
-    await reader.read_baseline(_CODE, _RUN_ID)
+    await reader.read(_CODE, _RUN_ID)
 
     assert len(append.calls) == 1
     command = append.calls[0]
@@ -136,7 +136,7 @@ async def test_read_baseline_appends_one_batch_for_every_declared_channel() -> N
 async def test_read_baseline_for_an_undeclared_code_is_a_no_op() -> None:
     reader, append = _reader(control_port=_FakeControlPort({}))
 
-    await reader.read_baseline("some-other-code", _RUN_ID)
+    await reader.read("some-other-code", _RUN_ID)
 
     assert append.calls == []
 
@@ -145,7 +145,7 @@ async def test_read_baseline_for_an_undeclared_code_is_a_no_op() -> None:
 async def test_read_baseline_with_no_channels_declared_for_the_code_is_a_no_op() -> None:
     reader, append = _reader(control_port=_FakeControlPort({}), baseline_pvs={_CODE: {}})
 
-    await reader.read_baseline(_CODE, _RUN_ID)
+    await reader.read(_CODE, _RUN_ID)
 
     assert append.calls == []
 
@@ -160,7 +160,7 @@ async def test_non_numeric_reading_is_skipped_but_the_rest_of_the_sweep_survives
     )
     reader, append = _reader(control_port=port)
 
-    await reader.read_baseline(_CODE, _RUN_ID)
+    await reader.read(_CODE, _RUN_ID)
 
     assert len(append.calls) == 1
     assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
@@ -176,7 +176,7 @@ async def test_bad_quality_reading_is_skipped() -> None:
     )
     reader, append = _reader(control_port=port)
 
-    await reader.read_baseline(_CODE, _RUN_ID)
+    await reader.read(_CODE, _RUN_ID)
 
     assert len(append.calls) == 1
     assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
@@ -195,7 +195,7 @@ async def test_uncertain_quality_reading_is_kept_not_skipped() -> None:
     )
     reader, append = _reader(control_port=port)
 
-    await reader.read_baseline(_CODE, _RUN_ID)
+    await reader.read(_CODE, _RUN_ID)
 
     assert len(append.calls) == 1
     assert {e.channel_name for e in append.calls[0].entries} == {"ExposureTime", "NumAngles"}
@@ -211,7 +211,7 @@ async def test_reading_with_no_substrate_time_is_skipped_not_synthesized() -> No
     )
     reader, append = _reader(control_port=port)
 
-    await reader.read_baseline(_CODE, _RUN_ID)
+    await reader.read(_CODE, _RUN_ID)
 
     assert len(append.calls) == 1
     assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
@@ -227,7 +227,7 @@ async def test_every_reading_skipped_writes_nothing() -> None:
     )
     reader, append = _reader(control_port=port)
 
-    await reader.read_baseline(_CODE, _RUN_ID)
+    await reader.read(_CODE, _RUN_ID)
 
     assert append.calls == []
 
@@ -242,7 +242,7 @@ async def test_a_dead_pv_does_not_abort_the_sweep_over_the_rest() -> None:
     )
     reader, append = _reader(control_port=port)
 
-    await reader.read_baseline(_CODE, _RUN_ID)
+    await reader.read(_CODE, _RUN_ID)
 
     assert len(append.calls) == 1
     assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
@@ -258,7 +258,7 @@ async def test_a_timed_out_pv_is_skipped() -> None:
     )
     reader, append = _reader(control_port=port)
 
-    await reader.read_baseline(_CODE, _RUN_ID)
+    await reader.read(_CODE, _RUN_ID)
 
     assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
 
@@ -273,7 +273,7 @@ async def test_an_access_denied_pv_is_skipped() -> None:
     )
     reader, append = _reader(control_port=port)
 
-    await reader.read_baseline(_CODE, _RUN_ID)
+    await reader.read(_CODE, _RUN_ID)
 
     assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
 
@@ -290,7 +290,7 @@ async def test_a_value_coercion_error_is_skipped() -> None:
     )
     reader, append = _reader(control_port=port)
 
-    await reader.read_baseline(_CODE, _RUN_ID)
+    await reader.read(_CODE, _RUN_ID)
 
     assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
 
@@ -305,7 +305,7 @@ async def test_an_unexpected_read_exception_is_caught_and_the_sweep_survives() -
     )
     reader, append = _reader(control_port=port)
 
-    await reader.read_baseline(_CODE, _RUN_ID)
+    await reader.read(_CODE, _RUN_ID)
 
     assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
 
@@ -319,7 +319,7 @@ async def test_append_survives_unauthorized_and_does_not_raise() -> None:
         append_observations=_FakeAppendObservations(raises=UnauthorizedError("denied")),
     )
 
-    await reader.read_baseline(_CODE, _RUN_ID)  # must not raise
+    await reader.read(_CODE, _RUN_ID)  # must not raise
 
 
 @pytest.mark.unit
@@ -333,7 +333,7 @@ async def test_append_survives_a_closed_logbook_and_does_not_raise() -> None:
         ),
     )
 
-    await reader.read_baseline(_CODE, _RUN_ID)  # must not raise
+    await reader.read(_CODE, _RUN_ID)  # must not raise
 
 
 @pytest.mark.unit
@@ -345,4 +345,4 @@ async def test_append_survives_an_unexpected_exception_and_does_not_raise() -> N
         append_observations=_FakeAppendObservations(raises=RuntimeError("boom")),
     )
 
-    await reader.read_baseline(_CODE, _RUN_ID)  # must not raise
+    await reader.read(_CODE, _RUN_ID)  # must not raise

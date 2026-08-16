@@ -539,7 +539,7 @@ class RunWitnessRecorder:
         if self._baseline_reader is None or not self._settings.capture_baseline_recording_enabled:
             return
         try:
-            await self._baseline_reader.read_baseline(capture_code, run_id)
+            await self._baseline_reader.read(capture_code, run_id)
         except asyncio.CancelledError:
             raise
         except Exception:

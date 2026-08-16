@@ -250,7 +250,7 @@ async def test_preflight_read_not_connected_pv_reports_bad_without_aborting_the_
     report = await _preflight(port, {"code": {"status": "pv:good", "abort": "pv:dead"}})
 
     assert len(report.lines) == 2
-    by_role = {line.role: line for line in report.lines}
+    by_role = {line.pv_key: line for line in report.lines}
     assert not by_role["abort"].ok
     assert not by_role["abort"].connected
     assert by_role["status"].ok
@@ -327,7 +327,7 @@ async def test_preflight_read_baseline_numeric_reading_is_ok_with_na_verdict() -
     assert all(line.ok for line in report.lines)
     assert all(line.verdict == "n/a" for line in report.lines)
     assert all(line.group == "baseline" for line in report.lines)
-    by_role = {line.role: line for line in report.lines}
+    by_role = {line.pv_key: line for line in report.lines}
     assert by_role["ExposureTime"].units == "s"
     assert by_role["NumAngles"].units is None
 

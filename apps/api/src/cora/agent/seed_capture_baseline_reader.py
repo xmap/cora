@@ -42,7 +42,7 @@ scaffolding lives in `cora.agent._agent_seed`.
     `AppendObservations`'s decider carries NO `conduct_mode` gate: it
     accepts any Running-or-Held Run, driven ones included, the same as
     every other operator-facing entry writer. This principal's safety
-    rests entirely on `CaptureBaselineReader.read_baseline` only ever
+    rests entirely on `CaptureBaselineReader.read` only ever
     being called by `RunWitnessRecorder._promote` with the `run_id` it
     JUST minted via `record_witnessed_run`, never a run_id sourced any
     other way. Same structural residual already documented for

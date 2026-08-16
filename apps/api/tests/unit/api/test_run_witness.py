@@ -586,14 +586,13 @@ async def test_run_witness_recorder_promotes_a_begun_capture_while_idle() -> Non
 
 
 class _FakeCaptureBaselineReader:
-    """Records every `read_baseline()` call, or raises a configured
-    exception instead."""
+    """Records every `read()` call, or raises a configured exception instead."""
 
     def __init__(self, *, raises: Exception | None = None) -> None:
         self.calls: list[tuple[str, UUID]] = []
         self._raises = raises
 
-    async def read_baseline(self, capture_code: str, run_id: UUID) -> None:
+    async def read(self, capture_code: str, run_id: UUID) -> None:
         self.calls.append((capture_code, run_id))
         if self._raises is not None:
             raise self._raises
