@@ -63,6 +63,9 @@ from what the running system actually accepts:
   - `images_saved` / `images_collected` (`ROLE_IMAGES_SAVED` /
     `ROLE_IMAGES_COLLECTED`): `progress_counts`. BAD when it returns
     `None`.
+  - `testing` (`ROLE_TESTING`): `binary_code`, same decoder as `abort`
+    (2-BM's `Testing` PV is the identical `DBR_ENUM` record type as
+    `AbortScan`). BAD when it returns `None`.
   - any other declared role (e.g. `server_running`, which production
     itself declares and never decodes): reports `kind` / `value` only,
     verdict `n/a`. Not decoding it here does not make it undecodable
@@ -86,6 +89,7 @@ from cora.api._capture_observer import (
     ROLE_IMAGES_COLLECTED,
     ROLE_IMAGES_SAVED,
     ROLE_STATUS,
+    ROLE_TESTING,
     binary_code,
     classify_capture_status,
     progress_counts,
@@ -222,6 +226,11 @@ def _decode_verdict(
         if code is None:
             return "unrecognized", False
         return ("asserted" if code == 1 else "clear"), True
+    if role == ROLE_TESTING:
+        code = binary_code(reading.value)
+        if code is None:
+            return "unrecognized", False
+        return ("testing" if code == 1 else "real"), True
     if role in _PROGRESS_ROLES:
         counts = progress_counts(reading.value)
         if counts is None:
