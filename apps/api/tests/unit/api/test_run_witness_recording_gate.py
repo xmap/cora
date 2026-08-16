@@ -18,6 +18,10 @@ requires `run_witness_recording_enabled=True`.
 
 Slice 13 adds a FIFTH gate, same shape: `capture_path_recording_enabled=True`
 requires `run_witness_recording_enabled=True`.
+
+Slice 14a adds a SIXTH gate, same shape:
+`capture_experiment_identity_recording_enabled=True` requires
+`run_witness_recording_enabled=True`.
 """
 
 from uuid import UUID, uuid4
@@ -36,6 +40,7 @@ def _settings(
     capture_progress_recording_enabled: bool = False,
     capture_baseline_recording_enabled: bool = False,
     capture_path_recording_enabled: bool = False,
+    capture_experiment_identity_recording_enabled: bool = False,
 ) -> Settings:
     return Settings(  # type: ignore[call-arg]
         run_witness_enabled=run_witness_enabled,
@@ -44,6 +49,9 @@ def _settings(
         capture_progress_recording_enabled=capture_progress_recording_enabled,
         capture_baseline_recording_enabled=capture_baseline_recording_enabled,
         capture_path_recording_enabled=capture_path_recording_enabled,
+        capture_experiment_identity_recording_enabled=(
+            capture_experiment_identity_recording_enabled
+        ),
     )
 
 
@@ -215,5 +223,45 @@ def test_path_recording_enabled_with_run_witness_recording_passes() -> None:
             capture_watch_plan_id=uuid4(),
             run_witness_recording_enabled=True,
             capture_path_recording_enabled=True,
+        )
+    )
+
+
+def test_experiment_identity_recording_enabled_without_run_witness_recording_refuses_boot() -> None:
+    with pytest.raises(RuntimeError, match="RUN_WITNESS_RECORDING_ENABLED=true"):
+        _enforce_run_witness_recording_gate(
+            _settings(
+                run_witness_enabled=True,
+                capture_watch_plan_id=uuid4(),
+                run_witness_recording_enabled=False,
+                capture_experiment_identity_recording_enabled=True,
+            )
+        )
+
+
+def test_experiment_identity_recording_enabled_checked_before_the_first_gates_prerequisites() -> (
+    None
+):
+    """Same independence property as the progress / baseline / path
+    gates: this gate's own message must appear even when the FIRST
+    gate's prerequisites are also missing."""
+    with pytest.raises(RuntimeError, match="RUN_WITNESS_RECORDING_ENABLED=true"):
+        _enforce_run_witness_recording_gate(
+            _settings(
+                run_witness_enabled=False,
+                capture_watch_plan_id=None,
+                run_witness_recording_enabled=False,
+                capture_experiment_identity_recording_enabled=True,
+            )
+        )
+
+
+def test_experiment_identity_recording_enabled_with_run_witness_recording_passes() -> None:
+    _enforce_run_witness_recording_gate(
+        _settings(
+            run_witness_enabled=True,
+            capture_watch_plan_id=uuid4(),
+            run_witness_recording_enabled=True,
+            capture_experiment_identity_recording_enabled=True,
         )
     )

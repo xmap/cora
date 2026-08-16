@@ -101,12 +101,15 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
 from cora.run.aggregates.run import (
     CapturePathStore,
+    ExperimentIdentityStore,
     FeedHeartbeatStore,
     InMemoryCapturePathStore,
+    InMemoryExperimentIdentityStore,
     InMemoryFeedHeartbeatStore,
     InMemoryObservationStore,
     ObservationStore,
     PostgresCapturePathStore,
+    PostgresExperimentIdentityStore,
     PostgresFeedHeartbeatStore,
     PostgresObservationStore,
 )
@@ -159,6 +162,12 @@ class RunHandlers:
     `get_run.bind()` (single-entity, mirroring `get_actor`) reads
     through the SAME instance; `list_runs` deliberately never touches
     it at all -- see this class's own module docstring."""
+    experiment_identity_store: ExperimentIdentityStore
+    """Slice 14a's vault store for a witnessed Run's proposal / ESAF /
+    ESAF-DOI experiment identity. Same surfacing reason and the same
+    `list_runs`-never-touches-it posture as `capture_path_store`:
+    `RunWitnessRecorder`'s `CaptureExperimentIdentityReader` writes through it
+    directly, and `get_run.bind()` reads through the SAME instance."""
 
 
 def wire_run(deps: Kernel) -> RunHandlers:
@@ -174,9 +183,15 @@ def wire_run(deps: Kernel) -> RunHandlers:
     capture_path_store: CapturePathStore = (
         PostgresCapturePathStore(deps.pool) if deps.pool is not None else InMemoryCapturePathStore()
     )
+    experiment_identity_store: ExperimentIdentityStore = (
+        PostgresExperimentIdentityStore(deps.pool)
+        if deps.pool is not None
+        else InMemoryExperimentIdentityStore()
+    )
     return RunHandlers(
         feed_heartbeat_store=feed_heartbeat_store,
         capture_path_store=capture_path_store,
+        experiment_identity_store=experiment_identity_store,
         start_run=with_tracing(
             with_idempotency(
                 start_run.bind(deps),
@@ -253,7 +268,11 @@ def wire_run(deps: Kernel) -> RunHandlers:
             bc=_BC,
         ),
         get_run=with_tracing(
-            get_run.bind(deps, capture_path_store=capture_path_store),
+            get_run.bind(
+                deps,
+                capture_path_store=capture_path_store,
+                experiment_identity_store=experiment_identity_store,
+            ),
             command_name="GetRun",
             bc=_BC,
             kind="query",

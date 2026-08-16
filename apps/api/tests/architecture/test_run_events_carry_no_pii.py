@@ -15,12 +15,16 @@ starts with "Run": this module also defines `CautionAcknowledgement`,
 events that don't carry the `Run` prefix. A name-prefix filter would
 have silently exempted them.
 
-The deny-list covers both slice 13's own field (`observed_path`,
-`capture_path`, plus the wire-level `full_file_name`) and the `User*`
-PVs slice 14b already named as blocked (`project_witnessed_run_prelive_slices.md`):
-a directory/proposal composition embeds a surname, and those PVs carry
-a name, badge, and email directly. Widen it whenever a new identifying
-field is found on the substrate.
+The deny-list covers slice 13's own field (`observed_path`,
+`capture_path`, plus the wire-level `full_file_name`), slice 14a's
+proposal/ESAF/ESAF-DOI fields (`proposal_number`, `esaf_number`,
+`esaf_doi_number` -- vaulted, never harvested onto an event: see
+`cora.run.aggregates.run.experiment_identity`'s module docstring for
+the full argument), and the `User*` PVs slice 14b already named as
+blocked (`project_witnessed_run_prelive_slices.md`): a directory/proposal
+composition embeds a surname, and those PVs carry a name, badge, and
+email directly. Widen it whenever a new identifying field is found on
+the substrate.
 """
 
 import ast
@@ -44,6 +48,8 @@ _PII_FIELD_NAMES = frozenset(
         "file_path",
         "surname",
         "proposal_number",
+        "esaf_number",
+        "esaf_doi_number",
         "user_name",
         "user_last_name",
         "user_badge",
@@ -76,8 +82,9 @@ def _pii_field_violations(source_path: Path) -> list[str]:
 
 @pytest.mark.architecture
 def test_run_event_payloads_carry_no_pii() -> None:
-    """Pin: dataclass fields named like PII never land on any event
-    class in `cora/run/aggregates/run/events.py`.
+    """Pin: dataclass fields named like PII, PLUS the slice 14a
+    proposal/ESAF/ESAF-DOI fields, never land on any event class in
+    `cora/run/aggregates/run/events.py`.
 
     The observed capture path is personal data (2-BM's directory layout
     embeds a surname and a proposal number); it lives in the
@@ -86,12 +93,27 @@ def test_run_event_payloads_carry_no_pii() -> None:
     usually means someone tried to carry the resolved path (or a raw
     `User*` PV) onto an event for convenience; move it to the vault
     instead.
+
+    `proposal_number` / `esaf_number` / `esaf_doi_number` are NOT personal
+    data (institutional identifiers for a funded experiment), so their
+    presence here widens this test's scope past pure PII: it also
+    enforces slice 14a's own decision that a value auto-harvested off
+    an unauthenticated channel, with no operator gesture behind it,
+    must never ride an immutable, INSERT-only event regardless of
+    whether it identifies a person. See
+    `cora.run.aggregates.run.experiment_identity`'s module docstring
+    for the full argument. A regression here usually means someone
+    tried to carry one of these three values onto `RunStarted` for
+    convenience; move it to `run_experiment_identity` via
+    `ExperimentIdentityStore` instead.
     """
     violations = _pii_field_violations(_EVENTS_FILE)
     assert not violations, (
-        "Run event payloads must carry NO PII; move identifying fields to "
-        "run_capture_path via CapturePathStore (see "
-        "memory/project_witnessed_run_prelive_slices.md, slice 13):\n  " + "\n  ".join(violations)
+        "Run event payloads must carry NO PII and none of the slice 14a "
+        "experiment-identity fields; move identifying fields to "
+        "run_capture_path / run_experiment_identity via their stores (see "
+        "memory/project_witnessed_run_prelive_slices.md, slices 13 and "
+        "14a):\n  " + "\n  ".join(violations)
     )
 
 

@@ -1,6 +1,7 @@
 """MCP tool for the `get_run` query slice.
 
-`capture_code` / `observed_capture_path` (slice 13) are resolved
+`capture_code` / `observed_capture_path` (slice 13) and
+`proposal_number` / `esaf_number` / `esaf_doi_number` (slice 14a) are resolved
 inside `get_run`'s own `Handler` (`handler.py`'s `RunView`), mirroring
 `get_actor`'s `ActorView` exactly: this tool only destructures the
 already-composed view into its structured output, the same shape
@@ -8,6 +9,7 @@ every other field already follows.
 """
 
 from collections.abc import Callable
+from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -37,6 +39,12 @@ class RunOutput(BaseModel):
     campaign_id: UUID | None = None
     capture_code: str | None = None
     observed_capture_path: str | None = None
+    proposal_number: str | None = None
+    proposal_number_observed_at: datetime | None = None
+    esaf_number: str | None = None
+    esaf_number_observed_at: datetime | None = None
+    esaf_doi_number: str | None = None
+    esaf_doi_number_observed_at: datetime | None = None
 
 
 def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
@@ -77,4 +85,10 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], Handler]) -> None:
             campaign_id=run.campaign_id,
             capture_code=view.capture_code,
             observed_capture_path=view.observed_capture_path,
+            proposal_number=view.proposal_number,
+            proposal_number_observed_at=view.proposal_number_observed_at,
+            esaf_number=view.esaf_number,
+            esaf_number_observed_at=view.esaf_number_observed_at,
+            esaf_doi_number=view.esaf_doi_number,
+            esaf_doi_number_observed_at=view.esaf_doi_number_observed_at,
         )

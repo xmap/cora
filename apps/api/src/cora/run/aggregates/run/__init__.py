@@ -49,6 +49,13 @@ from cora.run.aggregates.run.events import (
     to_payload,
 )
 from cora.run.aggregates.run.evolver import evolve, fold
+from cora.run.aggregates.run.experiment_identity import (
+    ExperimentIdentity,
+    ExperimentIdentityStore,
+    InMemoryExperimentIdentityStore,
+    PostgresExperimentIdentityStore,
+    load_run_experiment_identity,
+)
 from cora.run.aggregates.run.feed_heartbeats import (
     FeedHeartbeat,
     FeedHeartbeatStore,
@@ -181,10 +188,13 @@ __all__ = [
     "ChannelName",
     "ConductMode",
     "DecisionDebriefRequested",
+    "ExperimentIdentity",
+    "ExperimentIdentityStore",
     "FeedHeartbeat",
     "FeedHeartbeatStore",
     "HoldClaimReleased",
     "InMemoryCapturePathStore",
+    "InMemoryExperimentIdentityStore",
     "InMemoryFeedHeartbeatStore",
     "InMemoryObservationStore",
     "InvalidChannelNameError",
@@ -206,6 +216,7 @@ __all__ = [
     "Observation",
     "ObservationStore",
     "PostgresCapturePathStore",
+    "PostgresExperimentIdentityStore",
     "PostgresFeedHeartbeatStore",
     "PostgresObservationStore",
     "Run",
@@ -277,6 +288,7 @@ __all__ = [
     "is_last_active_claim",
     "load_run",
     "load_run_capture_path",
+    "load_run_experiment_identity",
     "supply_gate_check",
     "to_payload",
     "validate_adjusted_parameters_against_method_schema",

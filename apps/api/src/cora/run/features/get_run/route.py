@@ -6,13 +6,15 @@ Response shape: `{id, name, plan_id, subject_id, raid, status}`.
 `subject_id` and `raid` are null when not set (calibration runs, or
 Runs not registered against a research activity respectively).
 
-`capture_code` / `observed_capture_path` (slice 13) are resolved
+`capture_code` / `observed_capture_path` (slice 13) and
+`proposal_number` / `esaf_number` / `esaf_doi_number` (slice 14a) are resolved
 inside `get_run`'s own `Handler` (`handler.py`'s `RunView`), mirroring
 `get_actor`'s `ActorView` exactly: this route only destructures the
 already-composed view into its wire DTO, the same shape every other
 field on this DTO already follows.
 """
 
+from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -62,6 +64,16 @@ class RunResponse(BaseModel):
     or rejected by the dual-clock guard); the real path otherwise.
     This IS the authorized operator surface meant to let them find the
     file for `ingest_scan`.
+
+    `proposal_number` / `esaf_number` / `esaf_doi_number` (slice 14a), each
+    paired with its own `*_observed_at` (the substrate's own reading
+    time, for judging staleness -- these PVs persist across beamtimes
+    with no in-band freshness signal), resolve from the
+    `run_experiment_identity` vault under the same `capture_code is
+    not None` condition. No tombstone: `None` here means either "not
+    applicable" (Conducted Run) or "nothing recorded yet"; `capture_code`
+    already distinguishes the two. Institutional identifiers for a
+    funded experiment, not personal data.
     """
 
     id: UUID
@@ -76,6 +88,12 @@ class RunResponse(BaseModel):
     campaign_id: UUID | None = None
     capture_code: str | None = None
     observed_capture_path: str | None = None
+    proposal_number: str | None = None
+    proposal_number_observed_at: datetime | None = None
+    esaf_number: str | None = None
+    esaf_number_observed_at: datetime | None = None
+    esaf_doi_number: str | None = None
+    esaf_doi_number_observed_at: datetime | None = None
 
 
 def _get_handler(request: Request) -> Handler:
@@ -133,4 +151,10 @@ async def get_runs(
         campaign_id=run.campaign_id,
         capture_code=view.capture_code,
         observed_capture_path=view.observed_capture_path,
+        proposal_number=view.proposal_number,
+        proposal_number_observed_at=view.proposal_number_observed_at,
+        esaf_number=view.esaf_number,
+        esaf_number_observed_at=view.esaf_number_observed_at,
+        esaf_doi_number=view.esaf_doi_number,
+        esaf_doi_number_observed_at=view.esaf_doi_number_observed_at,
     )
