@@ -22,7 +22,14 @@ the phase pumps. The optional `testing` role (slice 11) pumps its own
 the substrate is bypassing its own beam preconditions for this capture
 code, decoded via the same `binary_code` the `abort` role already
 uses (2-BM's `Testing` PV is the identical `DBR_ENUM` record type as
-`AbortScan`).
+`AbortScan`). The optional `full_file_name` role (slice 13) pumps its
+own `CapturePathObservation`: a text reading of the areaDetector file
+plugin's own filename readback (`2bmSP2:HDF1:FullFileName_RBV`, NOT
+tomoscan's own `FullFileName`, which is written too late relative to
+CORA's terminal -- see `_run_witness.py`'s "Capture path pairing"
+section for the full argument). `observed_path` is PERSONAL DATA; this
+module never logs it, only its length when rejecting a suspect
+reading.
 
 ## One deliberate inversion from the Enclosure precedent
 
@@ -96,11 +103,13 @@ import asyncio
 import math
 from typing import TYPE_CHECKING
 
+from cora.infrastructure.logging import get_logger
 from cora.operation.ports.control_port import ControlNotConnectedError
 from cora.run.ports.capture_observer import (
     AnyCaptureObservation,
     CaptureLifecycleObservation,
     CaptureObserverScope,
+    CapturePathObservation,
     CapturePhase,
     CapturePreconditionBypassObservation,
     CaptureProgressObservation,
@@ -112,23 +121,51 @@ if TYPE_CHECKING:
 
     from cora.operation.ports.control_port import ControlPort, Measurement
 
+_log = get_logger(__name__)
+
 _SOURCE_KIND = "EpicsPv"
 ROLE_STATUS = "status"
 ROLE_ABORT = "abort"
 ROLE_IMAGES_SAVED = "images_saved"
 ROLE_IMAGES_COLLECTED = "images_collected"
 ROLE_TESTING = "testing"
+ROLE_FULL_FILE_NAME = "full_file_name"
 """CORA-owned role keys, matching `Settings.capture_watch_pvs`'s documented
 example. Module-public (not `_`-prefixed) because other composition-root
 modules read observations back out, or dispatch decoders, by these same
 keys and must not carry their own copy of the literal strings:
 `RunWitnessRecorder._build_progress_snapshot` (`_run_witness.py`) reads
 `ROLE_IMAGES_SAVED` / `ROLE_IMAGES_COLLECTED`, and `capture_watch_preflight`
-dispatches its per-role decode check on all five. Import these, not
+dispatches its per-role decode check on all six. Import these, not
 `_PROGRESS_ROLES` below, so a rename or a new role here cannot silently
 desync from either reader. `server_running` stays declared-and-unread:
-tool liveness is a different concern from capture progress (slice 10)."""
+tool liveness is a different concern from capture progress (slice 10).
+
+`ROLE_FULL_FILE_NAME` (slice 13) names the raw substrate PV
+(`FullFileName_RBV`) rather than the semantic concept it feeds
+(`CapturePathObservation`, a `run_capture_path` vault row): matches the
+existing style, where a role key mirrors the wire (`abort`, `testing`,
+`images_saved`) and the domain type it produces is named for the fact,
+not the PV.
+"""
 _PROGRESS_ROLES = (ROLE_IMAGES_SAVED, ROLE_IMAGES_COLLECTED)
+
+FULL_FILE_NAME_TRUNCATION_THRESHOLD = 511
+"""The areaDetector file plugin's `FullFileName_RBV` is a DBR_CHAR
+waveform with `NELM=512` (confirmed against ADCore's `NDFile.template`,
+2026-08-16 -- NOT the 256 tomoscan's own `FullFileName` uses; the two
+PVs share no wire-shape assumption). Up to 511 usable characters remain
+after the NUL terminator. EPICS gives no separate "this got truncated"
+flag: a decoded string that fills the whole buffer is indistinguishable
+from one that was cut off mid-path. Rather than risk a truncated path
+silently looking like a good one, ANY decoded value at or over this
+length is treated as suspect and rejected (see
+`_from_full_file_name_reading`). Conservative: a genuine 511-character
+path would false-reject, but real 2-BM paths are far under this bound.
+
+Module-public (not `_`-prefixed): `capture_watch_preflight` imports this
+directly so its own truncation check can never drift from production's.
+"""
 
 # Conventional EPICS binary state labels, mirroring
 # `_enclosure_permit_observer._PERMITTED_LABELS` / `_NOT_PERMITTED_LABELS`
@@ -270,7 +307,10 @@ class ControlPortCaptureObserver:
     (also optional, independently declared per code) pumps
     `CapturePreconditionBypassObservation` readings, a tri-state claim
     rather than a phase or a counter; see that dataclass's own
-    docstring.
+    docstring. The `full_file_name` role (slice 13, also optional,
+    independently declared per code) pumps `CapturePathObservation`
+    readings, a text claim carrying personal data; see that dataclass's
+    own docstring.
     `server_running` stays declared and unread (tool liveness, not
     capture progress).
     """
@@ -294,6 +334,11 @@ class ControlPortCaptureObserver:
             code: roles[ROLE_TESTING]
             for code, roles in capture_pvs.items()
             if ROLE_TESTING in roles
+        }
+        self._full_file_name_pvs = {
+            code: roles[ROLE_FULL_FILE_NAME]
+            for code, roles in capture_pvs.items()
+            if ROLE_FULL_FILE_NAME in roles
         }
         self._progress_pvs = {
             code: filtered
@@ -324,6 +369,11 @@ class ControlPortCaptureObserver:
             for code in sorted(scope.capture_codes)
             if code in self._testing_pvs
         ]
+        full_file_name_pvs = [
+            (code, self._full_file_name_pvs[code])
+            for code in sorted(scope.capture_codes)
+            if code in self._full_file_name_pvs
+        ]
         progress_pvs = [
             (code, role, pv)
             for code in sorted(scope.capture_codes)
@@ -335,6 +385,10 @@ class ControlPortCaptureObserver:
             [asyncio.create_task(self._pump(code, pv, queue)) for code, pv in pvs]
             + [asyncio.create_task(self._pump_abort(code, pv, queue)) for code, pv in abort_pvs]
             + [asyncio.create_task(self._pump_testing(code, pv, queue)) for code, pv in testing_pvs]
+            + [
+                asyncio.create_task(self._pump_full_file_name(code, pv, queue))
+                for code, pv in full_file_name_pvs
+            ]
             + [
                 asyncio.create_task(self._pump_progress(code, role, pv, queue))
                 for code, role, pv in progress_pvs
@@ -463,6 +517,37 @@ class ControlPortCaptureObserver:
         finally:
             queue.put_nowait(_PUMP_DONE)
 
+    async def _pump_full_file_name(
+        self,
+        code: str,
+        pv: str,
+        queue: asyncio.Queue[AnyCaptureObservation | _PumpDone],
+    ) -> None:
+        """Sibling pump for the optional `full_file_name` role (slice 13).
+
+        Mirrors `_pump_testing` exactly, for the same reason: a
+        disconnect must not erase the last retained reading, since the
+        dual-clock guard `RunWitnessRecorder` applies (comparing this
+        reading's `observed_at` against the Run's own BEGUN time) needs
+        the last GOOD reading to survive a reconnect, not be replaced by
+        a synthesized "unreached". Unlike `_pump_abort` / `_pump`, no
+        `_from_full_file_name_reading` result is dropped for being
+        "no claim" the way an abort's clear reading is -- it can return
+        `None` (see that function), but that is a REJECTION (empty
+        string, suspected truncation, non-str value), not a "nothing
+        happened" no-op, so it is still correct to enqueue nothing for
+        it: there is no partial fact to carry.
+        """
+        try:
+            async for reading in self._control_port.subscribe(pv):
+                observation = self._from_full_file_name_reading(code, pv, reading)
+                if observation is not None:
+                    queue.put_nowait(observation)
+        except ControlNotConnectedError:
+            pass
+        finally:
+            queue.put_nowait(_PUMP_DONE)
+
     async def _poll(
         self,
         code: str,
@@ -579,6 +664,49 @@ class ControlPortCaptureObserver:
             source_id=pv,
         )
 
+    def _from_full_file_name_reading(
+        self, code: str, pv: str, reading: Measurement
+    ) -> CapturePathObservation | None:
+        """A `full_file_name`-role reading (slice 13), rejected rather
+        than enqueued for three reasons, in order.
+
+        1. Not a string: the adapter's own text-waveform decode
+           (`text_addresses`) failed to apply or produced something
+           else. Never coerced; a non-text reading on this role is a
+           deployment misconfiguration, not a value to guess at.
+        2. Empty string: the fresh-IOC-boot state (the file plugin has
+           never opened a file since the IOC started). A fine, ordinary
+           outcome, not an error -- just nothing to enqueue.
+        3. Length at or over `FULL_FILE_NAME_TRUNCATION_THRESHOLD`:
+           indistinguishable from a wire truncation (see that
+           constant's own docstring). Logs the length only, NEVER the
+           value -- `observed_path` is personal data.
+
+        `None` return means the caller enqueues nothing, matching
+        `_from_abort_reading` / `_from_progress_reading`'s fail-toward-
+        silence posture.
+        """
+        value = reading.value
+        if not isinstance(value, str):
+            return None
+        if not value:
+            return None
+        if len(value) >= FULL_FILE_NAME_TRUNCATION_THRESHOLD:
+            _log.warning(
+                "capture_observer.full_file_name_suspected_truncated",
+                capture_code=code,
+                length=len(value),
+            )
+            return None
+        return CapturePathObservation(
+            capture_code=code,
+            observed_path=value,
+            reach_tier=ReachTier.RELAYED,
+            observed_at=reading.produced_at,
+            source_kind=_SOURCE_KIND,
+            source_id=pv,
+        )
+
     def _probe_only(self, code: str, pv: str, reach_tier: ReachTier) -> CaptureLifecycleObservation:
         """A poll tick's result: reach evidence with no status claim."""
         return CaptureLifecycleObservation(
@@ -609,7 +737,9 @@ class ControlPortCaptureObserver:
 
 
 __all__ = [
+    "FULL_FILE_NAME_TRUNCATION_THRESHOLD",
     "ROLE_ABORT",
+    "ROLE_FULL_FILE_NAME",
     "ROLE_IMAGES_COLLECTED",
     "ROLE_IMAGES_SAVED",
     "ROLE_STATUS",

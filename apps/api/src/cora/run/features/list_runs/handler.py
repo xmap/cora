@@ -71,6 +71,20 @@ class RunSummaryItem:
     genesis. The RunSupervisor and RunInitiator runtimes filter on this
     to skip Witnessed Runs: those are not theirs to hold, resume,
     truncate, or count toward in-flight limits."""
+    capture_code: str | None
+    """The `capture-code` external_ref a witnessed genesis stamps onto
+    `RunStarted.external_refs` (slice 13), folded onto the projection at
+    insert time. `None` for a Conducted Run, which has no capture code
+    at all. NOT personal data (a deployment-declared identifier), unlike
+    the resolved capture path: that value is deliberately NOT resolved
+    here. This handler instance is shared by every internal
+    composition-root caller (`rebuild_open_captures`, the supervisor
+    and initiator watchdogs) as well as the REST/MCP route, none of
+    which need the observed path; resolving it here would touch the
+    vault on every one of those callers' every page, for no benefit.
+    `get_run` resolves it instead (single-entity, no internal caller of
+    its own today), mirroring why `list_actors` never touches
+    `ProfileStore` while `get_actor` does."""
 
 
 @dataclass(frozen=True)
@@ -97,7 +111,7 @@ class Handler(Protocol):
 _SELECT_COLUMNS = (
     "run_id, name, plan_id, subject_id, raid, status, created_at, running_since, "
     "override_parameters_present, campaign_id, snr_limit, "
-    "expected_observation_interval_seconds, conduct_mode"
+    "expected_observation_interval_seconds, conduct_mode, capture_code"
 )
 
 
@@ -116,6 +130,7 @@ def _row_to_item(row: Any) -> RunSummaryItem:
         snr_limit=row["snr_limit"],
         expected_observation_interval_seconds=row["expected_observation_interval_seconds"],
         conduct_mode=str(row["conduct_mode"]),
+        capture_code=str(row["capture_code"]) if row["capture_code"] is not None else None,
     )
 
 
@@ -129,7 +144,17 @@ def _log_fields(query: ListRuns) -> dict[str, Any]:
 
 
 def bind(deps: Kernel) -> Handler:
-    """Build a list_runs handler closed over the shared deps."""
+    """Build a list_runs handler closed over the shared deps.
+
+    Deliberately never touches `CapturePathStore`: this handler instance
+    is shared by every internal composition-root caller
+    (`RunWitnessRecorder.rebuild_open_captures`, the run-supervisor and
+    run-initiator watchdogs) as well as the REST/MCP route, all under
+    one coarse `ListRuns` authorization grant. Resolving the observed
+    capture path here would hand personal data to every one of them.
+    `get_run` (single-entity) resolves it instead; see
+    `RunSummaryItem.capture_code`'s own docstring for the full argument.
+    """
     return make_list_query_handler(
         deps,
         query_name="ListRuns",

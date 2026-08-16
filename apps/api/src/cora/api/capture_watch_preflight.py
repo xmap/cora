@@ -74,6 +74,14 @@ from what the running system actually accepts:
   - `testing` (`ROLE_TESTING`): `binary_code`, same decoder as `abort`
     (2-BM's `Testing` PV is the identical `DBR_ENUM` record type as
     `AbortScan`). BAD when it returns `None`.
+  - `full_file_name` (`ROLE_FULL_FILE_NAME`, slice 13): the value is
+    PERSONAL DATA (see `_capture_observer.py`), so this is the one role
+    whose printed `value` field is REDACTED to a length-only placeholder
+    rather than the raw reading -- `kind` and `element_count` still
+    print real. Verdict reports `text(len=N)`, `empty`, or
+    `suspected-truncated` (mirroring `_from_full_file_name_reading`'s
+    own truncation threshold); BAD only for `suspected-truncated`. A
+    non-str reading is BAD as `non-text`.
   - any other declared role (e.g. `server_running`, which production
     itself declares and never decodes): reports `kind` / `value` only,
     verdict `n/a`. Not decoding it here does not make it undecodable
@@ -90,10 +98,12 @@ import asyncio
 import contextlib
 import sys
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeGuard
 
 from cora.api._capture_observer import (
+    FULL_FILE_NAME_TRUNCATION_THRESHOLD,
     ROLE_ABORT,
+    ROLE_FULL_FILE_NAME,
     ROLE_IMAGES_COLLECTED,
     ROLE_IMAGES_SAVED,
     ROLE_STATUS,
@@ -235,9 +245,43 @@ async def _read_one(
         connected=True,
         kind=reading.kind,
         element_count=element_count,
-        value=reading.value,
+        value=_redacted_value(role, reading.value),
         verdict=verdict,
     )
+
+
+def _looks_like_a_filesystem_path(value: object) -> TypeGuard[str]:
+    """True for a string shaped like an absolute filesystem path.
+
+    Defense-in-depth redaction trigger, independent of role/channel
+    key: a `capture_watch_pvs` or `capture_baseline_pvs` operator typo
+    on the intended role/channel name (`"full_filename"`,
+    `"fullFileName"`, or the `full_file_name` PV accidentally declared
+    under `capture_baseline_pvs`) would otherwise fall through to a
+    generic branch and print the real path -- precisely the shape of
+    mistake this tool exists to catch, in the one case where catching
+    it here matters most: this preflight command is what an operator
+    runs, screenshots, and pastes into a ticket while debugging exactly
+    this kind of misconfiguration.
+    """
+    return isinstance(value, str) and value.startswith("/")
+
+
+def _redacted_value(role: str, value: object) -> object:
+    """The printed `value` for a `capture_watch_pvs` `_PvReport` line:
+    real for every role except `full_file_name` (slice 13, PERSONAL
+    DATA), which prints a length-only placeholder instead. Also
+    redacts defensively when the role doesn't match but the value is
+    still path-shaped; see `_looks_like_a_filesystem_path`. Production
+    (`_capture_observer.py`) fails safe on a role-key typo (no pump is
+    created for an undeclared role), so the defensive branch here is
+    this tool's own, not a mirror of a production check.
+    """
+    if role == ROLE_FULL_FILE_NAME:
+        return f"<redacted, len={len(value)}>" if isinstance(value, str) else "<redacted, non-text>"
+    if _looks_like_a_filesystem_path(value):
+        return f"<redacted, len={len(value)}>"
+    return value
 
 
 def _decode_verdict(
@@ -253,6 +297,8 @@ def _decode_verdict(
         if code is None:
             return "unrecognized", False
         return ("asserted" if code == 1 else "clear"), True
+    if role == ROLE_FULL_FILE_NAME:
+        return _full_file_name_verdict(reading.value)
     if role == ROLE_TESTING:
         code = binary_code(reading.value)
         if code is None:
@@ -265,6 +311,22 @@ def _decode_verdict(
         reached, commanded_total = counts
         return f"reached={reached} commanded_total={commanded_total}", True
     return "n/a", True
+
+
+def _full_file_name_verdict(value: object) -> tuple[str, bool]:
+    """The `full_file_name` role's decode check (slice 13): reports a
+    length-only verdict, NEVER the value, mirroring the same three
+    rejection reasons `_from_full_file_name_reading` applies in
+    production (`cora.api._capture_observer`) so this can never drift
+    from what the running system actually accepts.
+    """
+    if not isinstance(value, str):
+        return "non-text", False
+    if not value:
+        return "empty", True
+    if len(value) >= FULL_FILE_NAME_TRUNCATION_THRESHOLD:
+        return "suspected-truncated", False
+    return f"text(len={len(value)})", True
 
 
 async def _read_one_baseline(
@@ -317,7 +379,15 @@ async def _read_one_baseline(
         connected=True,
         kind=reading.kind,
         element_count=element_count,
-        value=reading.value,
+        # Defense-in-depth, not the primary guard: a `full_file_name` PV
+        # accidentally declared under `capture_baseline_pvs` (the wrong
+        # dict) would otherwise print its real, personal-data-bearing
+        # value here. See `_looks_like_a_filesystem_path`.
+        value=(
+            f"<redacted, len={len(reading.value)}>"
+            if _looks_like_a_filesystem_path(reading.value)
+            else reading.value
+        ),
         units=reading.units,
         verdict=verdict,
         group="baseline",

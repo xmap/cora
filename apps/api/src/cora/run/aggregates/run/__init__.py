@@ -7,6 +7,14 @@ lives at `cora.run.features.start_run.context` (slice-local; only
 start_run needs it today).
 """
 
+from cora.run.aggregates.run.capture_path import (
+    UNOBSERVED_CAPTURE_PATH,
+    CapturePath,
+    CapturePathStore,
+    InMemoryCapturePathStore,
+    PostgresCapturePathStore,
+    load_run_capture_path,
+)
 from cora.run.aggregates.run.entries import (
     InMemoryObservationStore,
     Observation,
@@ -69,6 +77,7 @@ from cora.run.aggregates.run.safety_envelope import (
     witness_safety_envelope,
 )
 from cora.run.aggregates.run.state import (
+    CAPTURE_CODE_EXTERNAL_REF_SCHEME,
     LOGBOOK_KIND_OBSERVATION,
     OBSERVATION_LOGBOOK_SCHEMA,
     READING_CHANNEL_NAME_MAX_LENGTH,
@@ -139,11 +148,13 @@ from cora.run.aggregates.run.state import (
     RunTruncateReason,
     SafetyEnvelopeVerdict,
     SamplingProcedure,
+    extract_capture_code,
     validate_input_dataset_ids,
     validate_pinned_calibration_ids,
 )
 
 __all__ = [
+    "CAPTURE_CODE_EXTERNAL_REF_SCHEME",
     "HOLD_CAUSES",
     "HOLD_CAUSE_AUTHORITY_REVOCATION",
     "HOLD_CAUSE_OPERATOR",
@@ -161,6 +172,9 @@ __all__ = [
     "RUN_NAME_MAX_LENGTH",
     "RUN_PINNED_CALIBRATIONS_MAX_ENTRIES",
     "SAMPLING_PROCEDURE_VALUES",
+    "UNOBSERVED_CAPTURE_PATH",
+    "CapturePath",
+    "CapturePathStore",
     "CapturePreconditionBypassSnapshot",
     "CaptureProgressSnapshot",
     "CautionAcknowledgement",
@@ -170,6 +184,7 @@ __all__ = [
     "FeedHeartbeat",
     "FeedHeartbeatStore",
     "HoldClaimReleased",
+    "InMemoryCapturePathStore",
     "InMemoryFeedHeartbeatStore",
     "InMemoryObservationStore",
     "InvalidChannelNameError",
@@ -190,6 +205,7 @@ __all__ = [
     "InvalidSamplingProcedureError",
     "Observation",
     "ObservationStore",
+    "PostgresCapturePathStore",
     "PostgresFeedHeartbeatStore",
     "PostgresObservationStore",
     "Run",
@@ -253,12 +269,14 @@ __all__ = [
     "enclosure_gate_refusal",
     "event_type_name",
     "evolve",
+    "extract_capture_code",
     "fold",
     "fold_hold_claims",
     "fold_hold_claims_from_stored",
     "from_stored",
     "is_last_active_claim",
     "load_run",
+    "load_run_capture_path",
     "supply_gate_check",
     "to_payload",
     "validate_adjusted_parameters_against_method_schema",

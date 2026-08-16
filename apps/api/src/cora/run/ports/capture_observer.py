@@ -17,16 +17,17 @@ this port. Promote to `infrastructure/ports/` only on a real second
 cross-BC consumer (rule-of-three), exactly the `RunChannelLookup`
 precedent.
 
-## Three reading kinds, one stream
+## Four reading kinds, one stream
 
 `observe()` yields `AnyCaptureObservation`, the union of
 `CaptureLifecycleObservation` (a phase claim: BEGUN / PROGRESSING /
 ENDED / ABORTED / UNRECOGNIZED, or no claim at all on a probe-only or
 disconnect reading), `CaptureProgressObservation` (a numeric
-progress counter, e.g. `ImagesSaved`), and
-`CapturePreconditionBypassObservation` (the optional `testing` role's
-tri-state reading, slice 11). A consumer narrows with `isinstance`.
-The three are peers, not a supertype and subtypes: a single reading is
+progress counter, e.g. `ImagesSaved`), `CapturePreconditionBypassObservation`
+(the optional `testing` role's tri-state reading, slice 11), and
+`CapturePathObservation` (the optional `full_file_name` role's text
+reading, slice 13). A consumer narrows with `isinstance`.
+The four are peers, not a supertype and subtypes: a single reading is
 never more than one of these at once, so one closed-over
 `CaptureObservation` name for "the default kind" would have made an
 isinstance check on the lifecycle kind read as a supertype check
@@ -79,6 +80,22 @@ R2/R4 (naming review, slice 10).
   orthogonal question from whether the facility had beam. See
   [[project_run_witness_test_provenance_slice11]] for the full
   argument against collapsing the two.
+- `CapturePathObservation` (slice 13): one reading of the optional
+  `full_file_name` role, the areaDetector file plugin's own filename
+  readback (`FullFileName_RBV`), drained continuously and independently
+  of any one capture (the file plugin fires this at file OPEN, which
+  can land before, during, or after any particular capture's own BEGUN
+  observation reaches this port). **`observed_path` is personal data**:
+  2-BM's directory layout embeds `{UserLastName}-{ProposalNumber}`
+  (`tomoscan_2bm.py:474-477`), so every real reading of this role
+  carries a person's surname. A consumer of this observation MUST NOT
+  log it, put it on an event, or persist it anywhere but the dedicated
+  `run_capture_path` PII vault (`CapturePathStore`, mirroring
+  `actor_profile` / `ProfileStore`). Recording an observed path is
+  NOT a claim the file is complete, so it does not violate "No terminal
+  claims about a file" below; it says only that the file plugin opened
+  a file at this substrate time, nothing about what it contains or
+  whether writing to it has finished.
 - `CaptureObserverScope`: the set of capture codes the substrate
   adapter should subscribe to. Empty scope is valid and yields no
   observations.
@@ -115,7 +132,7 @@ adapter's concern.
 """
 
 from collections.abc import AsyncGenerator, AsyncIterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Protocol, runtime_checkable
 
@@ -245,8 +262,54 @@ class CapturePreconditionBypassObservation:
     source_id: str
 
 
+@dataclass(frozen=True)
+class CapturePathObservation:
+    """One reading of the optional `full_file_name` role: the
+    areaDetector file plugin's own filename readback (`FullFileName_RBV`).
+
+    `observed_path` is PERSONAL DATA (see this module's docstring,
+    "Domain vocabulary" bullet on this class). It MUST NOT be logged,
+    placed on an event payload, or persisted anywhere but the
+    `run_capture_path` PII vault. A consumer that retains this
+    observation (e.g. to compare against a Run's own BEGUN time before
+    writing it to the vault) must audit every log line it emits along
+    that path for this field.
+
+    Not a phase claim, not a numeric counter, not a tri-state flag: a
+    plain text reading, the substrate's file plugin's own string, taken
+    as-is once it passes the length/emptiness checks in
+    `_capture_observer.py` (see `_from_full_file_name_reading`).
+
+    `role` is not carried (mirrors `CapturePreconditionBypassObservation`):
+    `full_file_name` is singular per capture code.
+
+    `reach_tier`, `observed_at`, `source_kind`, `source_id` carry the
+    same meaning as on `CaptureLifecycleObservation`. `observed_at` is
+    the substrate's OWN time for this reading, never CORA's clock: it
+    is the timestamp a consumer compares against a Run's own BEGUN time
+    to decide whether this reading belongs to that Run at all (Finding
+    A, memory/project_witnessed_run_prelive_slices.md slice 13): a
+    reading whose file plugin fired before this capture even started
+    almost certainly describes the PREVIOUS capture's file.
+    """
+
+    capture_code: str
+    observed_path: str = field(repr=False)
+    """Personal data. `repr=False` so an accidental bare `_log.info(...,
+    observation=observation)` or assertion-failure message renders this
+    dataclass without it; deliberate defense-in-depth, not the primary
+    guard (nothing should be logging this observation at all)."""
+    reach_tier: ReachTier
+    observed_at: datetime | None
+    source_kind: str
+    source_id: str
+
+
 AnyCaptureObservation = (
-    CaptureLifecycleObservation | CaptureProgressObservation | CapturePreconditionBypassObservation
+    CaptureLifecycleObservation
+    | CaptureProgressObservation
+    | CapturePreconditionBypassObservation
+    | CapturePathObservation
 )
 """The union `observe()` yields. Named explicitly rather than reusing
 any one member's name for the union, so a caller that has not yet been
@@ -313,6 +376,7 @@ __all__ = [
     "CaptureLifecycleObservation",
     "CaptureObserver",
     "CaptureObserverScope",
+    "CapturePathObservation",
     "CapturePhase",
     "CapturePreconditionBypassObservation",
     "CaptureProgressObservation",

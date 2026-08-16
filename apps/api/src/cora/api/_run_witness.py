@@ -184,6 +184,48 @@ threading a promotion timestamp through `RunWitnessRecorder`, a real
 fix but, again, a deliberate design decision to make later if this is
 ever observed in practice, not a wiring change.
 
+## Capture path pairing (slice 13)
+
+Closes the "which file did this Run produce" findability gap (auto-
+correlation stays deferred; this only makes the manual pairing
+possible). Source is the areaDetector file plugin's own filename
+readback (`full_file_name` role, `_capture_observer.py`), NOT
+tomoscan's own `FullFileName`: upstream `tomoscan.py`'s `end_scan()`
+writes `ScanStatus='Scan complete'` (CORA's terminal) FOUR statements
+BEFORE it writes `FullFileName`, so a synchronous read at the terminal
+against that PV would return the PREVIOUS scan's filename. The
+areaDetector PV is written at file OPEN, i.e. before the terminal, so
+it does not have this race -- but "written before the terminal" is not
+by itself sufficient: the file plugin also fires independently of any
+one capture, so a value retained from a PREVIOUS capture (or a
+reconnect redelivering one) could still be sitting in
+`_last_capture_path` when THIS capture's terminal arrives.
+
+The guard: `_promote` records the BEGUN observation's OWN substrate
+time into `_begun_at[code]` (never CORA's clock -- comparing two
+substrate timestamps from the same control system avoids a
+CORA-host-vs-IOC clock-skew question this guard does not need to
+answer). At the terminal, `_resolve_capture_path` accepts the retained
+reading only if its `observed_at` is at or after that value. This is
+the freshness guard the "CA's redeliver-on-resubscribe" residual above
+names as a real fix "if this is ever observed in practice" for
+progress readings -- implemented here, scoped to this one role, because
+Finding A makes it load-bearing rather than optional: without it, this
+feature would silently pair Runs with the WRONG file on every
+reconnect-during-BEGUN window, not just degrade one row's ordering.
+
+`observed_path` is personal data (2-BM's directory layout embeds a
+surname and a proposal number,`tomoscan_2bm.py:474-477`), so it is
+never written to `RunCompleted` / `RunAborted` or any other event: it
+goes to the `run_capture_path` PII vault (`CapturePathStore`,
+mirroring `actor_profile` / `ProfileStore`) via `_write_capture_path`,
+called at the end of `_record_outcome`'s success branch -- the outcome
+has already committed by then, so (mirroring `_read_baseline`'s exact
+posture) a vault-write failure is logged and never unwinds it. Gated
+on the fifth kill switch, `capture_path_recording_enabled`. No log
+line in this section ever includes `observed_path` itself; only
+`capture_code` / `run_id` / lengths.
+
 ## Retry + resilience
 
 Mirrors `run_enclosure_permit_monitor`: `observe()` ending (stream
@@ -217,6 +259,7 @@ from cora.infrastructure.logging import get_logger
 from cora.run.aggregates.run.state import (
     CapturePreconditionBypassSnapshot,
     CaptureProgressSnapshot,
+    extract_capture_code,
 )
 from cora.run.errors import UnauthorizedError
 from cora.run.features.list_runs.query import ListRuns
@@ -226,6 +269,7 @@ from cora.run.features.truncate_run.command import TruncateRun
 from cora.run.ports.capture_observer import (
     CaptureLifecycleObservation,
     CaptureObserverScope,
+    CapturePathObservation,
     CapturePhase,
     CapturePreconditionBypassObservation,
     CaptureProgressObservation,
@@ -239,7 +283,7 @@ if TYPE_CHECKING:
     from cora.infrastructure.config import Settings
     from cora.infrastructure.kernel import Kernel
     from cora.operation.ports.control_port import ControlPort
-    from cora.run.aggregates.run import FeedHeartbeatStore
+    from cora.run.aggregates.run import CapturePathStore, FeedHeartbeatStore
     from cora.run.aggregates.run.state import Run
     from cora.run.features.append_observations.handler import Handler as AppendObservationsHandler
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
@@ -249,12 +293,10 @@ if TYPE_CHECKING:
     )
     from cora.run.features.truncate_run.handler import Handler as TruncateRunHandler
     from cora.run.ports.capture_observer import CaptureObserver
-    from cora.shared.identifier import Identifier
 
 _RECONNECT_DELAY_SECONDS = 5.0
 _CAPTURE_PROGRESS_DEFAULT_FLUSH_TICK_SECONDS = 10.0
 _PAGE_LIMIT = 100
-_CAPTURE_CODE_SCHEME = "capture-code"
 
 _log = get_logger(__name__)
 
@@ -331,6 +373,7 @@ class RunWitnessRecorder:
         settings: Settings,
         open_captures: dict[str, UUID] | None = None,
         baseline_reader: CaptureBaselineReader | None = None,
+        capture_path_store: CapturePathStore | None = None,
     ) -> None:
         self._deps = deps
         self._record_witnessed_run = record_witnessed_run
@@ -341,6 +384,19 @@ class RunWitnessRecorder:
         self._last_progress: dict[str, dict[str, CaptureProgressObservation]] = {}
         self._last_precondition_bypass: dict[str, CapturePreconditionBypassObservation] = {}
         self._baseline_reader = baseline_reader
+        self._capture_path_store = capture_path_store
+        self._last_capture_path: dict[str, CapturePathObservation] = {}
+        """Slice 13: the latest `full_file_name` reading retained per
+        capture_code, mirroring `_last_progress`'s retain-latest shape.
+        Evicted in lockstep with `_begun_at` below in `_promote` /
+        `_truncate_stale` / `_record_outcome`'s success path."""
+        self._begun_at: dict[str, datetime] = {}
+        """Slice 13: the BEGUN observation's OWN substrate time per
+        capture_code, recorded in `_promote`. The dual-clock guard in
+        `_resolve_capture_path` compares a retained
+        `CapturePathObservation.observed_at` against this value, never
+        against CORA's own clock (see this module's "Capture path
+        pairing" docstring section)."""
 
     def open_captures(self) -> dict[str, UUID]:
         """A snapshot of every capture_code currently open, mapped to
@@ -460,12 +516,72 @@ class RunWitnessRecorder:
             observed_at=observation.observed_at,
         )
 
+    def observe_capture_path(self, observation: CapturePathObservation) -> None:
+        """Retain the latest `full_file_name`-role reading per
+        capture_code (slice 13), so a terminal can resolve it through
+        `_resolve_capture_path`.
+
+        Gated on `run_witness_recording_enabled`, same as
+        `observe_progress`: shadow mode retains nothing because it
+        writes nothing.
+
+        Evicted WITH `_begun_at`, unlike `_last_precondition_bypass`:
+        `full_file_name` describes one specific capture's output file,
+        so a reading retained across a capture boundary IS stale
+        evidence about the wrong capture, the same reasoning
+        `_last_progress` already applies. See `_promote` /
+        `_truncate_stale` / `_record_outcome`'s success path.
+
+        Note this method does NOT itself apply the dual-clock guard: it
+        retains whatever arrives, latest-wins, exactly like
+        `observe_progress`. The guard is `_resolve_capture_path`'s job,
+        applied once, at the terminal -- not here, on every reading.
+        """
+        if not self._settings.run_witness_recording_enabled:
+            return
+        self._last_capture_path[observation.capture_code] = observation
+
+    def _resolve_capture_path(self, code: str) -> tuple[str, datetime] | None:
+        """The dual-clock guard (Finding A, slice 13): a retained
+        `full_file_name` reading is usable for `code`'s terminal only if
+        its OWN substrate time is at or after this code's own BEGUN
+        substrate time. Returns `(observed_path, observed_at)` when the
+        guard passes, `None` when there is nothing retained, `code` was
+        never promoted with a substrate time to compare against
+        (`_begun_at` has no entry), or the retained reading predates it.
+
+        `None` is a legitimate, expected outcome (never observed yet,
+        or correctly rejected as belonging to a previous capture), not
+        an error; callers must not log it as one.
+        """
+        observation = self._last_capture_path.get(code)
+        begun_at = self._begun_at.get(code)
+        if observation is None or begun_at is None:
+            return None
+        if observation.observed_at is None or observation.observed_at < begun_at:
+            return None
+        return observation.observed_path, observation.observed_at
+
     async def _promote(self, observation: CaptureLifecycleObservation) -> None:
         # A prior capture's retained progress, if any, belongs to that
         # capture's own terminal, never to this one: clear before
         # promoting so a stale carry-over cannot ride onto the new
         # Run's eventual outcome.
         self._last_progress.pop(observation.capture_code, None)
+        # Slice 13: same reasoning for a retained full_file_name
+        # reading -- it describes the PREVIOUS capture's file, not this
+        # one's, until a fresh reading arrives.
+        self._last_capture_path.pop(observation.capture_code, None)
+        if observation.observed_at is not None:
+            # The dual-clock guard's reference point: recorded here,
+            # from this BEGUN's OWN substrate time, never CORA's clock.
+            self._begun_at[observation.capture_code] = observation.observed_at
+        else:
+            # No substrate time on this BEGUN means the guard has
+            # nothing to compare against; a stale prior entry must not
+            # be left standing to be compared against the WRONG
+            # promotion (see `_resolve_capture_path`).
+            self._begun_at.pop(observation.capture_code, None)
         plan_id = self._settings.capture_watch_plan_id
         if plan_id is None:
             # Unreachable when `_enforce_run_witness_recording_gate`
@@ -570,6 +686,10 @@ class RunWitnessRecorder:
         # different capture and must not inherit counts that describe
         # the one being truncated.
         self._last_progress.pop(code, None)
+        # Slice 13: same reasoning, for the retained full_file_name
+        # reading and its BEGUN reference point.
+        self._last_capture_path.pop(code, None)
+        self._begun_at.pop(code, None)
         if stale_run_id is None:
             return
 
@@ -656,17 +776,83 @@ class RunWitnessRecorder:
                 run_id=str(run_id),
             )
             return
+        # Resolve and write BEFORE evicting: `_write_capture_path` reads
+        # `_last_capture_path` / `_begun_at` via `_resolve_capture_path`,
+        # so eviction must come after, mirroring the success-only
+        # ordering `_last_progress` already follows below.
+        await self._write_capture_path(code, run_id)
         self._open_captures.pop(code, None)
         # Success path only, mirroring `_open_captures` immediately
         # above: on failure both dicts stay populated so the next
         # BEGUN's truncate-then-promote clears them together, keeping
         # the two eviction states in lockstep.
         self._last_progress.pop(code, None)
+        self._last_capture_path.pop(code, None)
+        self._begun_at.pop(code, None)
         _log.info(
             "run_witness.outcome_recorded",
             capture_code=code,
             run_id=str(run_id),
             observed_phase=str(observation.phase),
+        )
+
+    async def _write_capture_path(self, code: str, run_id: UUID) -> None:
+        """Slice 13: resolve and write the observed capture path for
+        `code`'s just-recorded terminal, if the dual-clock guard passes.
+
+        By this point `record_witnessed_run_outcome` has already
+        succeeded, so (mirroring `_read_baseline`'s exact posture) a
+        failure here must be logged and must never unwind it. Gated on
+        BOTH a store being configured (`run_witness_lifespan` wires one
+        whenever `capture_watch_pvs` declares the `full_file_name` role
+        for at least one code) and the fifth kill switch,
+        `capture_path_recording_enabled`.
+
+        No resolved value is a normal, expected outcome (never
+        observed, or correctly rejected by `_resolve_capture_path`),
+        logged at `info`, not `warning`: a missing filename is a fine
+        outcome, per the slice's own design lock; a wrong one is not,
+        which is exactly what the guard exists to prevent.
+        """
+        if self._capture_path_store is None or not self._settings.capture_path_recording_enabled:
+            return
+        resolved = self._resolve_capture_path(code)
+        if resolved is None:
+            _log.info(
+                "run_witness.capture_path_unresolved",
+                capture_code=code,
+                run_id=str(run_id),
+            )
+            return
+        observed_path, observed_at = resolved
+        try:
+            await self._capture_path_store.upsert(
+                run_id=run_id,
+                observed_path=observed_path,
+                observed_at=observed_at,
+                created_at=self._deps.clock.now(),
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            # `_log.exception` (unlike `_log.error`) renders the full
+            # traceback, whose final line is `str(exc)` -- and asyncpg
+            # appends a `DETAIL:` line to a CHECK-violation error that
+            # can include the failing row's own column VALUES. That
+            # value is `observed_path`, personal data, and this log
+            # sink is not the vault: it cannot be erased. Log the
+            # exception's class name only, never the object itself.
+            _log.error(
+                "run_witness.capture_path_write_failed",
+                capture_code=code,
+                run_id=str(run_id),
+                error_class=type(exc).__name__,
+            )
+            return
+        _log.info(
+            "run_witness.capture_path_recorded",
+            capture_code=code,
+            run_id=str(run_id),
         )
 
     def _build_progress_snapshot(self, code: str) -> CaptureProgressSnapshot | None:
@@ -715,19 +901,6 @@ def _progress_fields(
     return observation.value, observation.commanded_total, observation.observed_at
 
 
-def _extract_capture_code(external_refs: frozenset[Identifier]) -> str | None:
-    """Find the `Identifier(scheme="capture-code", ...)` entry's value.
-
-    Defensive: `record_witnessed_run`'s decider always stamps exactly one,
-    so `None` should not happen for a Witnessed Run, but a missing ref
-    must not crash the boot-time rebuild.
-    """
-    for ref in external_refs:
-        if ref.scheme == _CAPTURE_CODE_SCHEME:
-            return ref.value
-    return None
-
-
 async def rebuild_open_captures(deps: Kernel, *, list_runs: ListRunsHandler) -> dict[str, UUID]:
     """Page through every Running, Witnessed Run and return
     capture_code -> run_id for each one's `external_refs`.
@@ -756,7 +929,7 @@ async def rebuild_open_captures(deps: Kernel, *, list_runs: ListRunsHandler) -> 
             run: Run | None = await load_run(deps.event_store, item.run_id)
             if run is None:
                 continue
-            capture_code = _extract_capture_code(run.external_refs)
+            capture_code = extract_capture_code(run.external_refs)
             if capture_code is not None:
                 open_captures[capture_code] = item.run_id
         if page.next_cursor is None:
@@ -786,7 +959,13 @@ async def run_witness_loop(
     reading so the NEXT genesis can stamp it; see `RunWitnessRecorder
     ._build_precondition_bypass_snapshot`): it has no `feeder`
     counterpart, since it is never written as an `AppendObservations`
-    row, only carried onto `RunStarted`. A `CaptureLifecycleObservation` on a phase in
+    row, only carried onto `RunStarted`. A `CapturePathObservation`
+    (slice 13) likewise goes only to `recorder.observe_capture_path()`
+    (retains the latest reading so a terminal can resolve it through
+    the dual-clock guard; see `RunWitnessRecorder._resolve_capture_path`):
+    no `feeder` counterpart either, since it never rides
+    `AppendObservations` -- it goes to the `run_capture_path` PII
+    vault, not the observation logbook. A `CaptureLifecycleObservation` on a phase in
     `_FLUSH_TRIGGER_PHASES` triggers `feeder.flush_capture()` BEFORE the
     recorder acts on it, so a capture's buffered progress trail is
     attributed to its Run before that Run can close or be replaced;
@@ -811,6 +990,10 @@ async def run_witness_loop(
                 if isinstance(observation, CapturePreconditionBypassObservation):
                     if recorder is not None:
                         recorder.observe_precondition_bypass(observation)
+                    continue
+                if isinstance(observation, CapturePathObservation):
+                    if recorder is not None:
+                        recorder.observe_capture_path(observation)
                     continue
                 if feeder is not None and observation.phase in _FLUSH_TRIGGER_PHASES:
                     try:
@@ -857,6 +1040,7 @@ async def run_witness_lifespan(
     capture_progress_flush_tick_seconds: float = _CAPTURE_PROGRESS_DEFAULT_FLUSH_TICK_SECONDS,
     control_port: ControlPort | None = None,
     capture_baseline_pvs: Mapping[str, Mapping[str, str]] | None = None,
+    capture_path_store: CapturePathStore | None = None,
 ) -> AsyncGenerator[None]:
     """Run the watcher as a background task for the app's lifetime.
 
@@ -889,6 +1073,16 @@ async def run_witness_lifespan(
     fourth kill switch) -- declaring the PVs here is necessary but not
     sufficient, mirroring how declaring `capture_watch_pvs` alone does
     not turn on recording either.
+
+    A supplied `capture_path_store` (slice 13) is handed straight to
+    the recorder with no extra required-params check: unlike
+    `capture_baseline_pvs`, there is no separate reader object to build
+    here (the observer already pumps `CapturePathObservation` whenever
+    a code's `capture_watch_pvs` declares `full_file_name`; the store
+    is only where the recorder writes the RESULT). Whether a write
+    actually happens is gated, same pattern as the fourth switch,
+    inside the recorder by `deps.settings.capture_path_recording_enabled`
+    (the fifth kill switch).
     """
     if not capture_codes:
         yield
@@ -948,6 +1142,7 @@ async def run_witness_lifespan(
             settings=deps.settings,
             open_captures=open_captures,
             baseline_reader=baseline_reader,
+            capture_path_store=capture_path_store,
         )
 
     feeder: CaptureProgressFeeder | None = None

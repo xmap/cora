@@ -39,6 +39,7 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.aggregates.run import (
     ConductMode,
+    InMemoryCapturePathStore,
     InMemoryFeedHeartbeatStore,
     RunStarted,
     event_type_name,
@@ -54,6 +55,7 @@ from cora.run.ports.capture_observer import (
     AnyCaptureObservation,
     CaptureLifecycleObservation,
     CaptureObserverScope,
+    CapturePathObservation,
     CapturePhase,
     CapturePreconditionBypassObservation,
     CaptureProgressObservation,
@@ -118,6 +120,22 @@ def _testing_obs(
         observed_at=observed_at,
         source_kind="EpicsPv",
         source_id="2bmb:TomoScan:Testing",
+    )
+
+
+def _path_obs(
+    *,
+    observed_path: str = "/data/2026-01-Smith-12345/scan_001.h5",
+    capture_code: str = _CODE,
+    observed_at: datetime | None = _NOW,
+) -> CapturePathObservation:
+    return CapturePathObservation(
+        capture_code=capture_code,
+        observed_path=observed_path,
+        reach_tier=ReachTier.RELAYED,
+        observed_at=observed_at,
+        source_kind="EpicsPv",
+        source_id="2bmSP2:HDF1:FullFileName_RBV",
     )
 
 
@@ -551,11 +569,14 @@ def _recorder(
     open_captures: dict[str, UUID] | None = None,
     baseline_reader: object | None = None,
     capture_baseline_recording_enabled: bool = False,
+    capture_path_store: object | None = None,
+    capture_path_recording_enabled: bool = False,
 ) -> RunWitnessRecorder:
     settings = Settings(  # type: ignore[call-arg]
         run_witness_recording_enabled=run_witness_recording_enabled,
         capture_watch_plan_id=capture_watch_plan_id,
         capture_baseline_recording_enabled=capture_baseline_recording_enabled,
+        capture_path_recording_enabled=capture_path_recording_enabled,
     )
     outcome = record_witnessed_run_outcome or _FakeRecordWitnessedRunOutcome()
     truncate = truncate_run or _FakeTruncateRun()
@@ -567,6 +588,7 @@ def _recorder(
         settings=settings,
         open_captures=open_captures,
         baseline_reader=baseline_reader,  # type: ignore[arg-type]
+        capture_path_store=capture_path_store,  # type: ignore[arg-type]
     )
 
 
@@ -691,6 +713,274 @@ async def test_promotion_survives_a_baseline_read_failure() -> None:
     )  # must not raise
 
     assert recorder.open_captures() == {_CODE: fake.run_id}
+
+
+# ---------- Capture path pairing / dual-clock guard (slice 13) ----------
+
+_T0 = _NOW
+_T1 = datetime(2026, 8, 13, 12, 5, 0, tzinfo=UTC)
+
+
+class _FakeCapturePathStore:
+    """Records every `upsert()` call, or raises a configured exception
+    instead. `get()` mirrors `InMemoryCapturePathStore` for tests that
+    need to read back what was (or wasn't) written."""
+
+    def __init__(self, *, raises: Exception | None = None) -> None:
+        self.calls: list[dict[str, Any]] = []
+        self._raises = raises
+
+    async def upsert(
+        self, *, run_id: UUID, observed_path: str, observed_at: datetime, created_at: datetime
+    ) -> None:
+        self.calls.append(
+            {
+                "run_id": run_id,
+                "observed_path": observed_path,
+                "observed_at": observed_at,
+                "created_at": created_at,
+            }
+        )
+        if self._raises is not None:
+            raise self._raises
+
+
+@pytest.mark.unit
+async def test_capture_path_recorded_when_observed_after_begun() -> None:
+    """The normal case: the file plugin opens a file sometime after
+    BEGUN, before the terminal. The guard passes and the vault gets the
+    real path."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    store = InMemoryCapturePathStore()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        capture_path_store=store,
+        capture_path_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T0)
+    )
+    recorder.observe_capture_path(_path_obs(observed_at=_T1))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    row = await store.get(run_id)
+    assert row is not None
+    assert row.observed_path == "/data/2026-01-Smith-12345/scan_001.h5"
+    assert row.observed_at == _T1
+
+
+@pytest.mark.unit
+async def test_capture_path_not_recorded_when_observed_before_begun() -> None:
+    """Finding A's exact race: a retained reading whose OWN substrate
+    time predates this capture's BEGUN almost certainly describes the
+    PREVIOUS capture's file (e.g. a CA redelivery on reconnect). The
+    guard must reject it, not attach it to the wrong Run."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    store = InMemoryCapturePathStore()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        capture_path_store=store,
+        capture_path_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T1)
+    )
+    # Arrives AFTER promotion (so _promote's own clear cannot catch it)
+    # but carries an OLDER substrate time than BEGUN's own.
+    recorder.observe_capture_path(_path_obs(observed_at=_T0))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    assert await store.get(run_id) is None
+
+
+@pytest.mark.unit
+async def test_capture_path_not_recorded_when_never_observed() -> None:
+    """A missing filename is a fine outcome, per the slice's own design
+    lock: no reading arrived, so nothing is written, and nothing raises."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    store = InMemoryCapturePathStore()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        capture_path_store=store,
+        capture_path_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    assert await store.get(run_id) is None
+
+
+@pytest.mark.unit
+async def test_capture_path_not_recorded_when_the_kill_switch_is_off() -> None:
+    """Declaring a store is not sufficient; capture_path_recording_enabled
+    is the fifth, independent kill switch."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    store = InMemoryCapturePathStore()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        capture_path_store=store,
+        capture_path_recording_enabled=False,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T0)
+    )
+    recorder.observe_capture_path(_path_obs(observed_at=_T1))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    assert await store.get(run_id) is None
+
+
+@pytest.mark.unit
+async def test_capture_path_with_no_store_configured_is_unaffected() -> None:
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        capture_path_store=None,
+        capture_path_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T0)
+    )
+    recorder.observe_capture_path(_path_obs(observed_at=_T1))
+    await recorder.observe_capture(
+        _obs(reported_status="Scan complete", phase=CapturePhase.ENDED)
+    )  # must not raise
+
+
+@pytest.mark.unit
+async def test_capture_path_retention_does_not_carry_into_the_next_promotion() -> None:
+    """A path retained (and written) for one capture must not silently
+    re-attach to a LATER capture of the same code that never got its own
+    fresh reading -- the eviction on outcome success must actually run."""
+    first_run_id = uuid4()
+    second_run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=first_run_id)
+    store = InMemoryCapturePathStore()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        capture_path_store=store,
+        capture_path_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T0)
+    )
+    recorder.observe_capture_path(_path_obs(observed_at=_T1))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+    assert await store.get(first_run_id) is not None
+
+    genesis.run_id = second_run_id
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T1)
+    )
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+
+    assert await store.get(second_run_id) is None
+
+
+@pytest.mark.unit
+async def test_capture_path_write_failure_does_not_unwind_the_outcome() -> None:
+    """By the time this runs, record_witnessed_run_outcome has already
+    succeeded (mirrors `_read_baseline`'s exact posture): a vault-write
+    failure must be logged and must never unwind it."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    outcome = _FakeRecordWitnessedRunOutcome()
+    store = _FakeCapturePathStore(raises=RuntimeError("boom"))
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=outcome,
+        capture_path_store=store,
+        capture_path_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T0)
+    )
+    recorder.observe_capture_path(_path_obs(observed_at=_T1))
+    await recorder.observe_capture(
+        _obs(reported_status="Scan complete", phase=CapturePhase.ENDED)
+    )  # must not raise
+
+    assert len(outcome.calls) == 1
+    assert len(store.calls) == 1
+
+
+@pytest.mark.unit
+async def test_capture_path_write_never_logs_the_observed_path() -> None:
+    """`observed_path` is personal data: no log line this feature emits
+    may ever contain it, across the whole promote -> terminal -> write
+    flow."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    store = InMemoryCapturePathStore()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        capture_path_store=store,
+        capture_path_recording_enabled=True,
+    )
+    marker = "2026-01-Smith-12345"
+
+    with structlog.testing.capture_logs() as logs:
+        await recorder.observe_capture(
+            _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T0)
+        )
+        recorder.observe_capture_path(_path_obs(observed_path=f"/data/{marker}/scan_001.h5"))
+        await recorder.observe_capture(
+            _obs(reported_status="Scan complete", phase=CapturePhase.ENDED)
+        )
+
+    for entry in logs:
+        for value in entry.values():
+            assert marker not in str(value), f"leaked observed_path fragment in log entry: {entry}"
+
+
+@pytest.mark.unit
+async def test_capture_path_with_no_substrate_time_is_never_recorded() -> None:
+    """`_resolve_capture_path`'s `observed_at is None` short-circuit
+    (checked BEFORE the `<` comparison, to avoid `None < datetime`):
+    a retained reading with no substrate time can never satisfy the
+    guard, since there is nothing to compare against BEGUN."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    store = InMemoryCapturePathStore()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        capture_path_store=store,
+        capture_path_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, observed_at=_T0)
+    )
+    recorder.observe_capture_path(_path_obs(observed_at=None))
+    await recorder.observe_capture(
+        _obs(reported_status="Scan complete", phase=CapturePhase.ENDED)
+    )  # must not raise (no None < datetime comparison)
+
+    assert await store.get(run_id) is None
+
+
+@pytest.mark.unit
+async def test_observe_capture_path_is_a_noop_when_recording_disabled() -> None:
+    """Shadow mode must retain nothing at all, mirroring
+    `test_observe_precondition_bypass_is_a_noop_when_recording_disabled`."""
+    genesis = _FakeRecordWitnessedRun()
+    recorder = _recorder(record_witnessed_run=genesis, run_witness_recording_enabled=False)
+
+    recorder.observe_capture_path(_path_obs())
+
+    assert recorder._last_capture_path == {}
 
 
 @pytest.mark.unit
@@ -1653,6 +1943,7 @@ def _summary_item(*, run_id: UUID, conduct_mode: str = "Witnessed") -> RunSummar
         snr_limit=None,
         expected_observation_interval_seconds=None,
         conduct_mode=conduct_mode,
+        capture_code=None,
     )
 
 

@@ -1898,3 +1898,32 @@ def validate_input_dataset_ids(value: frozenset[UUID]) -> frozenset[UUID]:
     if len(value) > RUN_INPUT_DATASETS_MAX_ENTRIES:
         raise InvalidInputDatasetsError(len(value))
     return value
+
+
+CAPTURE_CODE_EXTERNAL_REF_SCHEME = "capture-code"
+"""The `Identifier.scheme` a witnessed genesis stamps onto
+`Run.external_refs` (`record_witnessed_run`'s decider). Public so every
+reader of `external_refs` looking for the capture code uses the exact
+same literal, never a second copy that can drift from the writer's own."""
+
+
+def extract_capture_code(external_refs: frozenset[Identifier]) -> str | None:
+    """Find the `Identifier(scheme="capture-code", ...)` entry's value.
+
+    `None` for a Conducted Run (no such ref at all) and, defensively,
+    for a Witnessed Run whose genesis somehow lacked one:
+    `record_witnessed_run`'s decider always stamps exactly one, so this
+    should not happen in practice, but a missing ref must never raise --
+    only degrade to "capture code unknown," e.g. at the boot-time
+    dedup rebuild (`rebuild_open_captures`) or a read-model query.
+
+    Single source of truth for this lookup against the FOLDED aggregate
+    state's `frozenset[Identifier]` shape; `RunSummaryProjection`'s
+    sibling `_extract_capture_code` (`run/projections/summary.py`)
+    performs the same lookup against a raw JSON event payload list, a
+    genuinely different input type, so it stays a separate function.
+    """
+    for ref in external_refs:
+        if ref.scheme == CAPTURE_CODE_EXTERNAL_REF_SCHEME:
+            return ref.value
+    return None

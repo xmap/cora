@@ -436,6 +436,11 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
     baseline read happens exactly once, at the instant a capture
     promotes to a Run, so with no promotion there is nothing to attach
     a baseline reading to either.
+
+    Also refuses to boot with capture_path_recording_enabled=True unless
+    run_witness_recording_enabled is itself True (slice 13): the write
+    happens at a promoted Run's terminal, so with no promotion there is
+    no run_id to write the observed path against either.
     """
     if settings.capture_progress_recording_enabled and not settings.run_witness_recording_enabled:
         msg = (
@@ -449,6 +454,13 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
             "CAPTURE_BASELINE_RECORDING_ENABLED=true requires "
             "RUN_WITNESS_RECORDING_ENABLED=true. A baseline reading has no "
             "promoted Run to attach to without it."
+        )
+        raise RuntimeError(msg)
+    if settings.capture_path_recording_enabled and not settings.run_witness_recording_enabled:
+        msg = (
+            "CAPTURE_PATH_RECORDING_ENABLED=true requires "
+            "RUN_WITNESS_RECORDING_ENABLED=true. An observed capture path "
+            "has no promoted Run's terminal to attach to without it."
         )
         raise RuntimeError(msg)
     if not settings.run_witness_recording_enabled:
@@ -1217,6 +1229,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         ),
                         control_port=app.state.operation.control_port,
                         capture_baseline_pvs=settings.capture_baseline_pvs,
+                        capture_path_store=app.state.run.capture_path_store,
                     ),
                 ):
                     yield

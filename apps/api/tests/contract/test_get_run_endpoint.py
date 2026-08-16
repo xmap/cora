@@ -82,6 +82,11 @@ def test_get_run_returns_200_with_running_status_for_sample_run() -> None:
         # None for standalone runs (no Campaign membership set at
         # start time or via add_run_to_campaign).
         "campaign_id": None,
+        # Slice 13 additive response surface: a Conducted Run (started
+        # via /runs, not the in-process-only record_witnessed_run) has
+        # no capture code at all, so neither field resolves.
+        "capture_code": None,
+        "observed_capture_path": None,
     }
 
 

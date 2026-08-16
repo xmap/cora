@@ -48,7 +48,7 @@ handler is longhand (not the update-handler factory) because it
 cross-loads Plan → Practice → Method to surface the Method's
 `parameters_schema` for merged-result validation.
 
-## BC-internal ObservationStore + FeedHeartbeatStore wiring
+## BC-internal ObservationStore + FeedHeartbeatStore + CapturePathStore wiring
 
 `append_observations` needs a `ObservationStore` adapter. Per the
 per-category-writer pattern (mirrors Decision BC's InferenceStore
@@ -61,6 +61,32 @@ in `app_env=test`. NOT promoted to Kernel fields.
 routes/tools never touch it, but the composition-root lifespan
 (`_capture_progress_feeder.py`'s feeder, slice 10) needs the write
 store directly, not wrapped behind a command.
+
+`capture_path_store` (slice 13) follows the identical construction
+shape (built locally from `deps.pool`), but NOT the identical wiring:
+it is surfaced on the bundle for the composition root's
+`RunWitnessRecorder` to write through (it verifies the observed path
+against the Run's own BEGUN time before writing, so the write cannot be
+a plain command) AND passed into `get_run.bind(deps, capture_path_store=...)`,
+which resolves it inside the handler exactly the way `get_actor.bind(deps,
+profile_store=...)` resolves `ProfileStore` -- see `get_run/handler.py`'s
+`RunView`. It is deliberately NEVER passed into `list_runs.bind()`.
+`list_runs` is one shared handler instance read by every internal
+composition-root caller (`rebuild_open_captures`, the supervisor and
+initiator watchdogs) as well as the REST/MCP route; resolving personal
+data there would expose it to callers that only need `run_id` off each
+page item, and would do so under one bulk, cursor-paginated grant no
+different in kind from the coarse `ListRuns` authorization this BC's
+own `list_query.py` already documents as unscoped-per-row (BOLA
+deferred until ReBAC). `get_run` avoids the FIRST problem outright (no
+internal caller exists today) regardless of how its own authorization
+eventually gets scoped, mirroring why `list_actors` never touches
+`ProfileStore` while `get_actor` does. Kernel-level placement is still
+wrong for the same reason as before: this is a PII vault, so
+`ProfileStore` would be the closer precedent by subject matter, but
+`ProfileStore` is Kernel-level specifically because it is genuinely
+cross-BC-shared (Access + Agent); this store has exactly one
+BC.
 """
 
 from dataclasses import dataclass
@@ -74,10 +100,13 @@ from cora.infrastructure.idempotency import (
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
 from cora.run.aggregates.run import (
+    CapturePathStore,
     FeedHeartbeatStore,
+    InMemoryCapturePathStore,
     InMemoryFeedHeartbeatStore,
     InMemoryObservationStore,
     ObservationStore,
+    PostgresCapturePathStore,
     PostgresFeedHeartbeatStore,
     PostgresObservationStore,
 )
@@ -122,6 +151,14 @@ class RunHandlers:
     not a handler, mirroring `EnclosureHandlers.permit_probe_store`
     exactly: a composition-root lifespan needs this dependency
     directly, and it isn't itself a command handler."""
+    capture_path_store: CapturePathStore
+    """Slice 13's PII vault store for a witnessed Run's observed
+    capture file path. Surfaced on the bundle for the same reason as
+    `feed_heartbeat_store`: `RunWitnessRecorder` (composition root)
+    writes through it directly after its own dual-clock guard passes.
+    `get_run.bind()` (single-entity, mirroring `get_actor`) reads
+    through the SAME instance; `list_runs` deliberately never touches
+    it at all -- see this class's own module docstring."""
 
 
 def wire_run(deps: Kernel) -> RunHandlers:
@@ -134,8 +171,12 @@ def wire_run(deps: Kernel) -> RunHandlers:
         if deps.pool is not None
         else InMemoryFeedHeartbeatStore()
     )
+    capture_path_store: CapturePathStore = (
+        PostgresCapturePathStore(deps.pool) if deps.pool is not None else InMemoryCapturePathStore()
+    )
     return RunHandlers(
         feed_heartbeat_store=feed_heartbeat_store,
+        capture_path_store=capture_path_store,
         start_run=with_tracing(
             with_idempotency(
                 start_run.bind(deps),
@@ -212,7 +253,7 @@ def wire_run(deps: Kernel) -> RunHandlers:
             bc=_BC,
         ),
         get_run=with_tracing(
-            get_run.bind(deps),
+            get_run.bind(deps, capture_path_store=capture_path_store),
             command_name="GetRun",
             bc=_BC,
             kind="query",

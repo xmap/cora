@@ -52,6 +52,16 @@ class RunSummaryDTO(BaseModel):
             "Campaign membership snapshot."
         ),
     )
+    capture_code: str | None = Field(
+        default=None,
+        description=(
+            "Deployment-declared capture identifier a witnessed genesis "
+            "stamps onto external_refs (slice 13). NULL for a Conducted "
+            "Run. NOT the observed capture file path: that value is "
+            "personal data and is resolved per-run via `GET "
+            "/runs/{run_id}`, never surfaced on this bulk list."
+        ),
+    )
 
 
 class RunListResponse(BaseModel):
@@ -148,6 +158,7 @@ async def list_runs(
                 created_at=item.created_at,
                 override_parameters_present=item.override_parameters_present,
                 campaign_id=item.campaign_id,
+                capture_code=item.capture_code,
             )
             for item in page.items
         ],

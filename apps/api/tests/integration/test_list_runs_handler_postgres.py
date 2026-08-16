@@ -493,3 +493,64 @@ async def test_conduct_mode_filter_narrows_to_recorded_runs_only(db_pool: asyncp
     assert len(page.items) == 1
     assert page.items[0].run_id == run_recorded
     assert page.items[0].conduct_mode == "Witnessed"
+
+
+@pytest.mark.integration
+async def test_witnessed_run_surfaces_its_capture_code(db_pool: asyncpg.Pool) -> None:
+    """Slice 13: `capture_code` folds from `RunStarted.external_refs`
+    onto `proj_run_summary` and surfaces via `list_runs` -- it is a
+    deployment-declared identifier, not personal data, so it is safe on
+    this bulk, cursor-paginated, coarsely-authorized query. The
+    OBSERVED PATH is deliberately NOT resolved here (`list_runs.bind`
+    never touches `CapturePathStore` at all; see that module's
+    docstring): `get_run` resolves it instead, mirroring why
+    `list_actors` never touches `ProfileStore` while `get_actor` does."""
+    deps = _build_deps(db_pool, [*_chain_ids(), uuid4(), uuid4()])
+    plan_id = await _seed_plan(deps, family_name="TomographyCaptureCode")
+    run_id = await bind_record_witnessed_run(deps)(
+        RecordWitnessedRun(
+            name="witnessed-with-code",
+            plan_id=plan_id,
+            capture_code="2bmb-tomoscan",
+            monitor_source_id=MonitorSourceId(uuid4()),
+            trigger="Monitor",
+        ),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain(db_pool)
+
+    handler = bind_list(deps)
+    page = await handler(
+        ListRuns(conduct_mode="Witnessed", limit=10),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    item = next(item for item in page.items if item.run_id == run_id)
+    assert item.capture_code == "2bmb-tomoscan"
+
+
+@pytest.mark.integration
+async def test_conducted_run_has_no_capture_code(db_pool: asyncpg.Pool) -> None:
+    """A Conducted Run has no capture_code at all: `None`, distinct from
+    a Witnessed Run whose genesis did stamp one."""
+    run_id = uuid4()
+    deps = _build_deps(db_pool, [*_chain_ids(), run_id, uuid4()])
+    plan_id = await _seed_plan(deps, family_name="TomographyConductedNoCode")
+    await bind_start(deps)(
+        StartRun(name="conducted-no-code", plan_id=plan_id, subject_id=None),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    await _drain(db_pool)
+
+    handler = bind_list(deps)
+    page = await handler(
+        ListRuns(plan_id=plan_id, limit=10),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    item = next(item for item in page.items if item.run_id == run_id)
+    assert item.capture_code is None
