@@ -645,8 +645,18 @@ class RunWitnessRecorder:
             capture_code=observation.capture_code,
             run_id=str(run_id),
         )
-        await self._read_baseline(observation.capture_code, run_id)
-        await self._read_experiment_identity(observation.capture_code, run_id)
+        # Concurrent, not sequential: both readers do their own PV
+        # sweep and neither depends on the other's result, so awaiting
+        # them back to back would double this loop's stall time for no
+        # correctness benefit -- exactly what this single-consumer path
+        # must not do (see this method's own "must not block" framing
+        # elsewhere in this module). Both readers already catch every
+        # failure internally, so a plain gather needs no
+        # return_exceptions.
+        await asyncio.gather(
+            self._read_baseline(observation.capture_code, run_id),
+            self._read_experiment_identity(observation.capture_code, run_id),
+        )
 
     async def _read_baseline(self, capture_code: str, run_id: UUID) -> None:
         """Slice 12: read the genesis-baseline PVs once, right after a

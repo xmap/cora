@@ -93,7 +93,7 @@ def _reader(
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "value",
-    ["Unknown", "", "  ", "  Unknown  ", 42, None, 3.14],
+    ["Unknown", "UNKNOWN", "unknown", "", "  ", "  Unknown  ", 42, None, 3.14],
 )
 def test_resolved_experiment_identity_text_treats_these_as_absent(value: object) -> None:
     assert resolved_experiment_identity_text(value) is None

@@ -101,7 +101,10 @@ def resolved_experiment_identity_text(value: object) -> str | None:
     `None` when it must be treated as absent.
 
     `None` for: a non-string reading, an empty (after stripping)
-    string, or the substrate's own `"Unknown"` placeholder literal.
+    string, or the substrate's own `"Unknown"` placeholder literal
+    (matched case-insensitively: the exact casing is an IOC default we
+    have observed, not a wire-level guarantee, and a differently-cased
+    variant is still the same "not populated" fact, not a real value).
     Otherwise the stripped string. Module-public: `capture_watch_preflight`
     imports this directly so its own decode verdict can never drift from
     what this reader actually accepts.
@@ -109,7 +112,7 @@ def resolved_experiment_identity_text(value: object) -> str | None:
     if not isinstance(value, str):
         return None
     stripped = value.strip()
-    if not stripped or stripped == UNKNOWN_EXPERIMENT_IDENTITY_LITERAL:
+    if not stripped or stripped.casefold() == UNKNOWN_EXPERIMENT_IDENTITY_LITERAL.casefold():
         return None
     return stripped
 

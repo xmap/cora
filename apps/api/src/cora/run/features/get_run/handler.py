@@ -21,6 +21,7 @@ DTO mapping (primitives only) off the returned `RunView`.
 Query handlers do NOT emit `causation_id` log fields.
 """
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
@@ -148,16 +149,17 @@ def bind(
             return None
 
         capture_code = extract_capture_code(run.external_refs)
-        observed_capture_path = (
-            await load_run_capture_path(capture_path_store, run.id)
-            if capture_code is not None
-            else None
-        )
-        experiment_identity = (
-            await load_run_experiment_identity(experiment_identity_store, run.id)
-            if capture_code is not None
-            else None
-        )
+        observed_capture_path: str | None = None
+        experiment_identity = None
+        if capture_code is not None:
+            # Two independent vault lookups; neither depends on the
+            # other's result, so run them concurrently rather than
+            # paying two sequential round trips on every witnessed-Run
+            # read.
+            observed_capture_path, experiment_identity = await asyncio.gather(
+                load_run_capture_path(capture_path_store, run.id),
+                load_run_experiment_identity(experiment_identity_store, run.id),
+            )
 
         _log.info(
             "get_run.success",
@@ -171,17 +173,17 @@ def bind(
             run=run,
             capture_code=capture_code,
             observed_capture_path=observed_capture_path,
-            proposal_number=(
-                experiment_identity.proposal_number if experiment_identity is not None else None
-            ),
+            proposal_number=experiment_identity.proposal_number
+            if experiment_identity is not None
+            else None,
             proposal_number_observed_at=(
                 experiment_identity.proposal_number_observed_at
                 if experiment_identity is not None
                 else None
             ),
-            esaf_number=(
-                experiment_identity.esaf_number if experiment_identity is not None else None
-            ),
+            esaf_number=experiment_identity.esaf_number
+            if experiment_identity is not None
+            else None,
             esaf_number_observed_at=(
                 experiment_identity.esaf_number_observed_at
                 if experiment_identity is not None
