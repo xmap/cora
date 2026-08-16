@@ -4,10 +4,12 @@ Cross-BC query-handler shape mirroring `get_plan` / `get_practice`
 / `get_method` / `get_family` / `get_subject` / `get_actor`.
 
 Returns `RunView`, not the bare domain `Run` (slice 13): the aggregate
-plus `capture_code` (folded from `external_refs`) and
-`observed_capture_path` (resolved from the `run_capture_path` PII
-vault), mirroring `get_actor`'s `ActorView` composition exactly --
-`bind(deps, *, capture_path_store=...)` resolves both here, in the
+plus `capture_code` (folded from `external_refs`), `observed_capture_path`
+(resolved from the `run_capture_path` PII vault), and (slice 14a) the
+proposal / ESAF / ESAF-DOI experiment identity resolved from the
+`run_experiment_identity` vault, mirroring `get_actor`'s `ActorView`
+composition exactly -- `bind(deps, *, capture_path_store=...,
+experiment_identity_store=...)` resolves all of it here, in the
 handler, not at the route/tool layer: unlike `list_runs` (one shared
 handler instance consumed by internal composition-root runtimes that
 don't need this value), `get_run`'s handler has no internal caller
@@ -20,6 +22,7 @@ Query handlers do NOT emit `causation_id` log fields.
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -29,10 +32,12 @@ from cora.infrastructure.ports import Deny
 from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.aggregates.run import (
     CapturePathStore,
+    ExperimentIdentityStore,
     Run,
     extract_capture_code,
     load_run,
     load_run_capture_path,
+    load_run_experiment_identity,
 )
 from cora.run.errors import UnauthorizedError
 from cora.run.features.get_run.query import GetRun
@@ -44,7 +49,7 @@ _log = get_logger(__name__)
 
 @dataclass(frozen=True)
 class RunView:
-    """Read-side composition of Run aggregate + capture-path resolution.
+    """Read-side composition of Run aggregate + vault resolutions.
 
     `capture_code` is folded from `run.external_refs`; `None` for a
     Conducted Run. `observed_capture_path` resolves from the
@@ -52,13 +57,29 @@ class RunView:
     `None` (a Conducted Run never touches the vault at all): `None`
     when not applicable, `UNOBSERVED_CAPTURE_PATH` (the tombstone) when
     a capture code exists but the vault has no row yet, the real path
-    otherwise. Route + MCP-tool layers destructure this into their wire
+    otherwise.
+
+    `proposal_number` / `esaf_number` / `esaf_doi` (slice 14a), each
+    paired with its own `*_observed_at`, resolve from the
+    `run_experiment_identity` vault under the SAME `capture_code is not
+    None` condition. Unlike `observed_capture_path`, no tombstone
+    placeholder: none of these three values is personal data, so a
+    plain `None` is already honest, and a Conducted Run (`capture_code
+    is None`) and a Witnessed Run with nothing recorded yet are both
+    `None` here -- the caller already has `capture_code` to tell them
+    apart. Route + MCP-tool layers destructure this into their wire
     DTOs.
     """
 
     run: Run
     capture_code: str | None
     observed_capture_path: str | None
+    proposal_number: str | None
+    proposal_number_observed_at: datetime | None
+    esaf_number: str | None
+    esaf_number_observed_at: datetime | None
+    esaf_doi: str | None
+    esaf_doi_observed_at: datetime | None
 
 
 class Handler(Protocol):
@@ -74,8 +95,13 @@ class Handler(Protocol):
     ) -> RunView | None: ...
 
 
-def bind(deps: Kernel, *, capture_path_store: CapturePathStore) -> Handler:
-    """Build a get_run handler closed over the shared deps + PII vault."""
+def bind(
+    deps: Kernel,
+    *,
+    capture_path_store: CapturePathStore,
+    experiment_identity_store: ExperimentIdentityStore,
+) -> Handler:
+    """Build a get_run handler closed over the shared deps + both vaults."""
 
     async def handler(
         query: GetRun,
@@ -127,6 +153,11 @@ def bind(deps: Kernel, *, capture_path_store: CapturePathStore) -> Handler:
             if capture_code is not None
             else None
         )
+        experiment_identity = (
+            await load_run_experiment_identity(experiment_identity_store, run.id)
+            if capture_code is not None
+            else None
+        )
 
         _log.info(
             "get_run.success",
@@ -137,7 +168,31 @@ def bind(deps: Kernel, *, capture_path_store: CapturePathStore) -> Handler:
             found=True,
         )
         return RunView(
-            run=run, capture_code=capture_code, observed_capture_path=observed_capture_path
+            run=run,
+            capture_code=capture_code,
+            observed_capture_path=observed_capture_path,
+            proposal_number=(
+                experiment_identity.proposal_number if experiment_identity is not None else None
+            ),
+            proposal_number_observed_at=(
+                experiment_identity.proposal_number_observed_at
+                if experiment_identity is not None
+                else None
+            ),
+            esaf_number=(
+                experiment_identity.esaf_number if experiment_identity is not None else None
+            ),
+            esaf_number_observed_at=(
+                experiment_identity.esaf_number_observed_at
+                if experiment_identity is not None
+                else None
+            ),
+            esaf_doi=(experiment_identity.esaf_doi if experiment_identity is not None else None),
+            esaf_doi_observed_at=(
+                experiment_identity.esaf_doi_observed_at
+                if experiment_identity is not None
+                else None
+            ),
         )
 
     return handler

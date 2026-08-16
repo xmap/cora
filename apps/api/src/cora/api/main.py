@@ -1246,6 +1246,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         control_port=app.state.operation.control_port,
                         capture_baseline_pvs=settings.capture_baseline_pvs,
                         capture_path_store=app.state.run.capture_path_store,
+                        capture_experiment_identity_pvs=(settings.capture_experiment_identity_pvs),
+                        experiment_identity_store=app.state.run.experiment_identity_store,
                     ),
                 ):
                     yield

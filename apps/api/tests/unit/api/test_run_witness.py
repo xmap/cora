@@ -40,6 +40,7 @@ from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.aggregates.run import (
     ConductMode,
     InMemoryCapturePathStore,
+    InMemoryExperimentIdentityStore,
     InMemoryFeedHeartbeatStore,
     RunStarted,
     event_type_name,
@@ -571,12 +572,17 @@ def _recorder(
     capture_baseline_recording_enabled: bool = False,
     capture_path_store: object | None = None,
     capture_path_recording_enabled: bool = False,
+    experiment_identity_reader: object | None = None,
+    capture_experiment_identity_recording_enabled: bool = False,
 ) -> RunWitnessRecorder:
     settings = Settings(  # type: ignore[call-arg]
         run_witness_recording_enabled=run_witness_recording_enabled,
         capture_watch_plan_id=capture_watch_plan_id,
         capture_baseline_recording_enabled=capture_baseline_recording_enabled,
         capture_path_recording_enabled=capture_path_recording_enabled,
+        capture_experiment_identity_recording_enabled=(
+            capture_experiment_identity_recording_enabled
+        ),
     )
     outcome = record_witnessed_run_outcome or _FakeRecordWitnessedRunOutcome()
     truncate = truncate_run or _FakeTruncateRun()
@@ -589,6 +595,7 @@ def _recorder(
         open_captures=open_captures,
         baseline_reader=baseline_reader,  # type: ignore[arg-type]
         capture_path_store=capture_path_store,  # type: ignore[arg-type]
+        experiment_identity_reader=experiment_identity_reader,  # type: ignore[arg-type]
     )
 
 
@@ -706,6 +713,113 @@ async def test_promotion_survives_a_baseline_read_failure() -> None:
         record_witnessed_run=fake,
         baseline_reader=baseline,
         capture_baseline_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)
+    )  # must not raise
+
+    assert recorder.open_captures() == {_CODE: fake.run_id}
+
+
+class _FakeExperimentIdentityReader:
+    """Records every `read()` call, or raises a configured exception instead."""
+
+    def __init__(self, *, raises: Exception | None = None) -> None:
+        self.calls: list[tuple[str, UUID]] = []
+        self._raises = raises
+
+    async def read(self, capture_code: str, run_id: UUID) -> None:
+        self.calls.append((capture_code, run_id))
+        if self._raises is not None:
+            raise self._raises
+
+
+@pytest.mark.unit
+async def test_promotion_reads_the_experiment_identity_when_configured_and_enabled() -> None:
+    fake = _FakeRecordWitnessedRun()
+    identity_reader = _FakeExperimentIdentityReader()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        experiment_identity_reader=identity_reader,
+        capture_experiment_identity_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    assert identity_reader.calls == [(_CODE, fake.run_id)]
+
+
+@pytest.mark.unit
+async def test_promotion_does_not_read_the_experiment_identity_when_the_kill_switch_is_off() -> (
+    None
+):
+    """Declaring a reader is not sufficient;
+    capture_experiment_identity_recording_enabled is the sixth,
+    independent kill switch."""
+    fake = _FakeRecordWitnessedRun()
+    identity_reader = _FakeExperimentIdentityReader()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        experiment_identity_reader=identity_reader,
+        capture_experiment_identity_recording_enabled=False,
+    )
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    assert identity_reader.calls == []
+
+
+@pytest.mark.unit
+async def test_experiment_identity_kill_switch_is_read_fresh_at_call_time() -> None:
+    """Mirrors the baseline kill switch's identical freshness contract."""
+    fake = _FakeRecordWitnessedRun()
+    identity_reader = _FakeExperimentIdentityReader()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        experiment_identity_reader=identity_reader,
+        capture_experiment_identity_recording_enabled=False,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, capture_code="code-a")
+    )
+    assert identity_reader.calls == []
+
+    recorder._settings.capture_experiment_identity_recording_enabled = True  # pyright: ignore[reportPrivateUsage]
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, capture_code="code-b")
+    )
+    assert identity_reader.calls == [("code-b", fake.run_id)]
+
+
+@pytest.mark.unit
+async def test_promotion_with_no_experiment_identity_reader_configured_is_unaffected() -> None:
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        experiment_identity_reader=None,
+        capture_experiment_identity_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    # No exception, and the promotion itself still succeeded.
+    assert len(fake.calls) == 1
+
+
+@pytest.mark.unit
+async def test_promotion_survives_an_experiment_identity_read_failure() -> None:
+    """A vault-read failure must never unwind or be mistaken for a
+    failed promotion: by the time it runs, the promotion already
+    committed."""
+    fake = _FakeRecordWitnessedRun()
+    identity_reader = _FakeExperimentIdentityReader(raises=RuntimeError("boom"))
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        experiment_identity_reader=identity_reader,
+        capture_experiment_identity_recording_enabled=True,
     )
 
     await recorder.observe_capture(
@@ -1863,6 +1977,110 @@ async def test_run_witness_lifespan_declares_baseline_pvs_but_kill_switch_off_ap
 
     assert len(genesis.calls) == 1
     assert append_observations.calls == []
+
+
+@pytest.mark.unit
+async def test_run_witness_lifespan_rejects_experiment_identity_pvs_no_control_port() -> None:
+    deps = dataclasses.replace(
+        build_deps(ids=[uuid4() for _ in range(5)]),
+        settings=Settings(  # type: ignore[call-arg]
+            run_witness_recording_enabled=True,
+            capture_watch_plan_id=_PLAN_ID,
+        ),
+    )
+    with pytest.raises(ValueError, match="control_port"):
+        async with run_witness_lifespan(
+            observer=_FakeObserver([]),
+            capture_codes=frozenset({_CODE}),
+            deps=deps,
+            record_witnessed_run=_FakeRecordWitnessedRun(),
+            record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+            truncate_run=_FakeTruncateRun(),
+            capture_experiment_identity_pvs={
+                _CODE: {"proposal_number": "2bmb:TomoScan:ProposalNumber"}
+            },
+            experiment_identity_store=InMemoryExperimentIdentityStore(),
+        ):
+            pass
+
+
+@pytest.mark.unit
+async def test_run_witness_lifespan_with_experiment_identity_pvs_reads_and_vaults() -> None:
+    """End-to-end wiring check: a BEGUN promotes and the experiment-
+    identity reader actually reads through the real ControlPort fake
+    and vaults against the promoted run_id -- proving the reader is
+    constructed and invoked, not just accepted as a parameter."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    experiment_identity_store = InMemoryExperimentIdentityStore()
+    control_port = _FakeBaselineControlPort({"2bmb:TomoScan:ProposalNumber": "12345"})
+    observer = _FakeObserver([_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)])
+    deps = dataclasses.replace(
+        build_deps(ids=[uuid4() for _ in range(20)]),
+        settings=Settings(  # type: ignore[call-arg]
+            run_witness_recording_enabled=True,
+            capture_watch_plan_id=_PLAN_ID,
+            capture_experiment_identity_recording_enabled=True,
+        ),
+    )
+
+    async with run_witness_lifespan(
+        observer=observer,
+        capture_codes=frozenset({_CODE}),
+        deps=deps,
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+        truncate_run=_FakeTruncateRun(),
+        control_port=control_port,  # type: ignore[arg-type]
+        capture_experiment_identity_pvs={
+            _CODE: {"proposal_number": "2bmb:TomoScan:ProposalNumber"}
+        },
+        experiment_identity_store=experiment_identity_store,
+    ):
+        await asyncio.sleep(0.02)
+
+    assert len(genesis.calls) == 1
+    row = await experiment_identity_store.get(run_id)
+    assert row is not None
+    assert row.proposal_number == "12345"
+
+
+@pytest.mark.unit
+async def test_run_witness_lifespan_declares_identity_pvs_but_switch_off_vaults_nothing() -> None:
+    """Declaring capture_experiment_identity_pvs builds a reader; the
+    sixth kill switch, capture_experiment_identity_recording_enabled,
+    is what actually gates whether it is called."""
+    run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=run_id)
+    experiment_identity_store = InMemoryExperimentIdentityStore()
+    control_port = _FakeBaselineControlPort({"2bmb:TomoScan:ProposalNumber": "12345"})
+    observer = _FakeObserver([_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)])
+    deps = dataclasses.replace(
+        build_deps(ids=[uuid4() for _ in range(20)]),
+        settings=Settings(  # type: ignore[call-arg]
+            run_witness_recording_enabled=True,
+            capture_watch_plan_id=_PLAN_ID,
+            capture_experiment_identity_recording_enabled=False,
+        ),
+    )
+
+    async with run_witness_lifespan(
+        observer=observer,
+        capture_codes=frozenset({_CODE}),
+        deps=deps,
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+        truncate_run=_FakeTruncateRun(),
+        control_port=control_port,  # type: ignore[arg-type]
+        capture_experiment_identity_pvs={
+            _CODE: {"proposal_number": "2bmb:TomoScan:ProposalNumber"}
+        },
+        experiment_identity_store=experiment_identity_store,
+    ):
+        await asyncio.sleep(0.02)
+
+    assert len(genesis.calls) == 1
+    assert await experiment_identity_store.get(run_id) is None
 
 
 @pytest.mark.unit

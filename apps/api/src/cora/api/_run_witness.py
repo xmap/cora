@@ -46,7 +46,10 @@ Per capture_code, a small dedup state machine:
     call the configured `CaptureBaselineReader` (slice 12) exactly once
     to snapshot the genesis-baseline PVs against the new Run; a failure
     there is logged and never unwinds the promotion that already
-    committed (see `RunWitnessRecorder._read_baseline`).
+    committed (see `RunWitnessRecorder._read_baseline`). Also calls the
+    configured `ExperimentIdentityReader` (slice 14a) exactly once, same
+    posture, to vault the proposal / ESAF / ESAF-DOI PVs against the new
+    Run (see `RunWitnessRecorder._read_experiment_identity`).
   - `BEGUN` while a Run is already open for this code: the previous
     terminal was missed (dropped CA transition, or the substrate
     restarted mid-capture). `TruncateRun` the stale Run first
@@ -253,6 +256,7 @@ from cora.agent.seed_capture_baseline_reader import CAPTURE_BASELINE_READER_AGEN
 from cora.agent.seed_capture_progress_feeder import CAPTURE_PROGRESS_FEEDER_AGENT_ID
 from cora.agent.seed_run_witness import RUN_WITNESS_AGENT_ID
 from cora.api._capture_baseline_reader import CaptureBaselineReader
+from cora.api._capture_experiment_identity_reader import ExperimentIdentityReader
 from cora.api._capture_observer import ROLE_IMAGES_COLLECTED, ROLE_IMAGES_SAVED
 from cora.api._capture_progress_feeder import CaptureProgressFeeder, capture_progress_flush_loop
 from cora.infrastructure.logging import get_logger
@@ -283,7 +287,11 @@ if TYPE_CHECKING:
     from cora.infrastructure.config import Settings
     from cora.infrastructure.kernel import Kernel
     from cora.operation.ports.control_port import ControlPort
-    from cora.run.aggregates.run import CapturePathStore, FeedHeartbeatStore
+    from cora.run.aggregates.run import (
+        CapturePathStore,
+        ExperimentIdentityStore,
+        FeedHeartbeatStore,
+    )
     from cora.run.aggregates.run.state import Run
     from cora.run.features.append_observations.handler import Handler as AppendObservationsHandler
     from cora.run.features.list_runs.handler import Handler as ListRunsHandler
@@ -374,6 +382,7 @@ class RunWitnessRecorder:
         open_captures: dict[str, UUID] | None = None,
         baseline_reader: CaptureBaselineReader | None = None,
         capture_path_store: CapturePathStore | None = None,
+        experiment_identity_reader: ExperimentIdentityReader | None = None,
     ) -> None:
         self._deps = deps
         self._record_witnessed_run = record_witnessed_run
@@ -385,6 +394,7 @@ class RunWitnessRecorder:
         self._last_precondition_bypass: dict[str, CapturePreconditionBypassObservation] = {}
         self._baseline_reader = baseline_reader
         self._capture_path_store = capture_path_store
+        self._experiment_identity_reader = experiment_identity_reader
         self._last_capture_path: dict[str, CapturePathObservation] = {}
         """Slice 13: the latest `full_file_name` reading retained per
         capture_code, mirroring `_last_progress`'s retain-latest shape.
@@ -636,6 +646,7 @@ class RunWitnessRecorder:
             run_id=str(run_id),
         )
         await self._read_baseline(observation.capture_code, run_id)
+        await self._read_experiment_identity(observation.capture_code, run_id)
 
     async def _read_baseline(self, capture_code: str, run_id: UUID) -> None:
         """Slice 12: read the genesis-baseline PVs once, right after a
@@ -661,6 +672,37 @@ class RunWitnessRecorder:
         except Exception:
             _log.exception(
                 "run_witness.baseline_read_failed",
+                capture_code=capture_code,
+                run_id=str(run_id),
+            )
+
+    async def _read_experiment_identity(self, capture_code: str, run_id: UUID) -> None:
+        """Slice 14a: vault the proposal / ESAF / ESAF-DOI PVs once,
+        right after a successful promotion.
+
+        Same posture as `_read_baseline`: the promotion has already
+        fully committed by this point, so a read/vault failure must
+        never unwind or retry it. Gated on BOTH a reader being
+        configured (main.py wires one whenever
+        `capture_experiment_identity_pvs` is declared) and the sixth
+        kill switch, `capture_experiment_identity_recording_enabled`;
+        `ExperimentIdentityReader` itself catches every failure
+        internally (see its own module docstring), the outer
+        try/except here is defense in depth, mirroring
+        `_read_baseline`'s identical wrapper.
+        """
+        if (
+            self._experiment_identity_reader is None
+            or not self._settings.capture_experiment_identity_recording_enabled
+        ):
+            return
+        try:
+            await self._experiment_identity_reader.read(capture_code, run_id)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            _log.exception(
+                "run_witness.experiment_identity_read_failed",
                 capture_code=capture_code,
                 run_id=str(run_id),
             )
@@ -1041,6 +1083,8 @@ async def run_witness_lifespan(
     control_port: ControlPort | None = None,
     capture_baseline_pvs: Mapping[str, Mapping[str, str]] | None = None,
     capture_path_store: CapturePathStore | None = None,
+    capture_experiment_identity_pvs: Mapping[str, Mapping[str, str]] | None = None,
+    experiment_identity_store: ExperimentIdentityStore | None = None,
 ) -> AsyncGenerator[None]:
     """Run the watcher as a background task for the app's lifetime.
 
@@ -1083,6 +1127,18 @@ async def run_witness_lifespan(
     actually happens is gated, same pattern as the fourth switch,
     inside the recorder by `deps.settings.capture_path_recording_enabled`
     (the fifth kill switch).
+
+    A non-empty `capture_experiment_identity_pvs` (slice 14a) additionally
+    requires `record_witnessed_run`, `control_port`, and
+    `experiment_identity_store`: an `ExperimentIdentityReader` is built
+    and handed to the recorder, mirroring `capture_baseline_pvs`'s exact
+    shape (a separate reader object, unlike `capture_path_store`'s
+    handed-straight-through style, because this reader does its own
+    `ControlPort.read()` calls rather than consuming an already-pumped
+    observation). Whether a call to it actually reads and vaults
+    anything is gated separately, inside the recorder, by
+    `deps.settings.capture_experiment_identity_recording_enabled` (the
+    sixth kill switch).
     """
     if not capture_codes:
         yield
@@ -1128,6 +1184,35 @@ async def run_witness_lifespan(
             principal_id=CAPTURE_BASELINE_READER_AGENT_ID,
         )
 
+    experiment_identity_reader: ExperimentIdentityReader | None = None
+    if capture_experiment_identity_pvs:
+        missing = [
+            name
+            for name, value in (
+                ("record_witnessed_run", record_witnessed_run),
+                ("control_port", control_port),
+                ("experiment_identity_store", experiment_identity_store),
+            )
+            if value is None
+        ]
+        if missing:
+            msg = (
+                "run_witness_lifespan: capture_experiment_identity_pvs requires "
+                f"{', '.join(missing)}"
+            )
+            raise ValueError(msg)
+        # Narrowed by the checks above; deps is not None because
+        # record_witnessed_run is not None (see the first check above).
+        assert deps is not None
+        assert control_port is not None
+        assert experiment_identity_store is not None
+        experiment_identity_reader = ExperimentIdentityReader(
+            deps=deps,
+            control_port=control_port,
+            identity_pvs=capture_experiment_identity_pvs,
+            store=experiment_identity_store,
+        )
+
     recorder: RunWitnessRecorder | None = None
     if record_witnessed_run is not None:
         # Narrowed by the check above.
@@ -1143,6 +1228,7 @@ async def run_witness_lifespan(
             open_captures=open_captures,
             baseline_reader=baseline_reader,
             capture_path_store=capture_path_store,
+            experiment_identity_reader=experiment_identity_reader,
         )
 
     feeder: CaptureProgressFeeder | None = None

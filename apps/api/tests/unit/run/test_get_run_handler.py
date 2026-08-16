@@ -18,6 +18,7 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.run import RunHandlers, UnauthorizedError, wire_run
 from cora.run.aggregates.run import (
     InMemoryCapturePathStore,
+    InMemoryExperimentIdentityStore,
     Run,
     RunName,
     RunStatus,
@@ -77,7 +78,11 @@ async def test_handler_returns_run_for_known_id_with_subject() -> None:
     store = InMemoryEventStore()
     await _seed_run(store, _RUN_ID, plan_id=_PLAN_ID, subject_id=_SUBJECT_ID)
     deps = build_deps(ids=[_RUN_ID], now=_NOW, event_store=store)
-    handler = get_run.bind(deps, capture_path_store=InMemoryCapturePathStore())
+    handler = get_run.bind(
+        deps,
+        capture_path_store=InMemoryCapturePathStore(),
+        experiment_identity_store=InMemoryExperimentIdentityStore(),
+    )
     view = await handler(
         GetRun(run_id=_RUN_ID),
         principal_id=_PRINCIPAL_ID,
@@ -101,7 +106,11 @@ async def test_handler_returns_run_for_known_id_without_subject() -> None:
     store = InMemoryEventStore()
     await _seed_run(store, _RUN_ID, plan_id=_PLAN_ID, subject_id=None, name="Dark field")
     deps = build_deps(ids=[_RUN_ID], now=_NOW, event_store=store)
-    handler = get_run.bind(deps, capture_path_store=InMemoryCapturePathStore())
+    handler = get_run.bind(
+        deps,
+        capture_path_store=InMemoryCapturePathStore(),
+        experiment_identity_store=InMemoryExperimentIdentityStore(),
+    )
     view = await handler(
         GetRun(run_id=_RUN_ID),
         principal_id=_PRINCIPAL_ID,
@@ -114,7 +123,11 @@ async def test_handler_returns_run_for_known_id_without_subject() -> None:
 @pytest.mark.unit
 async def test_handler_returns_none_for_unknown_id() -> None:
     deps = build_deps(ids=[_RUN_ID], now=_NOW)
-    handler = get_run.bind(deps, capture_path_store=InMemoryCapturePathStore())
+    handler = get_run.bind(
+        deps,
+        capture_path_store=InMemoryCapturePathStore(),
+        experiment_identity_store=InMemoryExperimentIdentityStore(),
+    )
     view = await handler(
         GetRun(run_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
@@ -128,7 +141,11 @@ async def test_handler_authorizes_with_query_name_and_default_conduit() -> None:
     tracking = RecordingAuthorize()
     deps = build_deps(ids=[_RUN_ID], now=_NOW, authz=tracking)
 
-    handler = get_run.bind(deps, capture_path_store=InMemoryCapturePathStore())
+    handler = get_run.bind(
+        deps,
+        capture_path_store=InMemoryCapturePathStore(),
+        experiment_identity_store=InMemoryExperimentIdentityStore(),
+    )
     await handler(
         GetRun(run_id=uuid4()),
         principal_id=_PRINCIPAL_ID,
@@ -141,7 +158,11 @@ async def test_handler_authorizes_with_query_name_and_default_conduit() -> None:
 @pytest.mark.unit
 async def test_handler_raises_unauthorized_on_deny() -> None:
     deps = build_deps(ids=[_RUN_ID], now=_NOW, deny=True)
-    handler = get_run.bind(deps, capture_path_store=InMemoryCapturePathStore())
+    handler = get_run.bind(
+        deps,
+        capture_path_store=InMemoryCapturePathStore(),
+        experiment_identity_store=InMemoryExperimentIdentityStore(),
+    )
     with pytest.raises(UnauthorizedError) as exc_info:
         await handler(
             GetRun(run_id=uuid4()),

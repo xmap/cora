@@ -14273,7 +14273,7 @@
         "type": "object"
       },
       "RunResponse": {
-        "description": "Read-side DTO at the API boundary.\n\nCarries primitives, not domain VOs. `status` is the StrEnum's\nstring value. `subject_id` is null for calibration / dark-field\nruns. `raid` is null when no Research Activity Identifier was\nsupplied at start time (additive retrofit).\n\n`override_parameters` and `effective_parameters` carry the\nparameter set: overrides the operator supplied at start\ntime, and the resolved merge of Plan defaults + overrides that\nactually governed this Run. Both default `{}`. `trigger_source`\ncaptures what initiated the Run (None if unrecorded).\n\n`campaign_id` (6i-c) is the Campaign this Run is a member of, set\neither at start time (StartRun.campaign_id) or post-hoc via\nadd_run_to_campaign. None when the Run is standalone (not part of\nany Campaign). Closes design-memo Watch #17 (per Caution-design\ncross-BC consistency precedent).\n\n`capture_code` (slice 13) is the deployment-declared capture\nidentifier a witnessed genesis stamps onto `external_refs`. None\nfor a Conducted Run. NOT personal data.\n\n`observed_capture_path` (slice 13) is the areaDetector file the\ncapture wrote, resolved from the `run_capture_path` PII vault:\n`None` when `capture_code` is `None` (not applicable, a Conducted\nRun); the tombstone literal (`UNOBSERVED_CAPTURE_PATH`) when a\ncapture code exists but the vault has no row yet (never observed,\nor rejected by the dual-clock guard); the real path otherwise.\nThis IS the authorized operator surface meant to let them find the\nfile for `ingest_scan`.",
+        "description": "Read-side DTO at the API boundary.\n\nCarries primitives, not domain VOs. `status` is the StrEnum's\nstring value. `subject_id` is null for calibration / dark-field\nruns. `raid` is null when no Research Activity Identifier was\nsupplied at start time (additive retrofit).\n\n`override_parameters` and `effective_parameters` carry the\nparameter set: overrides the operator supplied at start\ntime, and the resolved merge of Plan defaults + overrides that\nactually governed this Run. Both default `{}`. `trigger_source`\ncaptures what initiated the Run (None if unrecorded).\n\n`campaign_id` (6i-c) is the Campaign this Run is a member of, set\neither at start time (StartRun.campaign_id) or post-hoc via\nadd_run_to_campaign. None when the Run is standalone (not part of\nany Campaign). Closes design-memo Watch #17 (per Caution-design\ncross-BC consistency precedent).\n\n`capture_code` (slice 13) is the deployment-declared capture\nidentifier a witnessed genesis stamps onto `external_refs`. None\nfor a Conducted Run. NOT personal data.\n\n`observed_capture_path` (slice 13) is the areaDetector file the\ncapture wrote, resolved from the `run_capture_path` PII vault:\n`None` when `capture_code` is `None` (not applicable, a Conducted\nRun); the tombstone literal (`UNOBSERVED_CAPTURE_PATH`) when a\ncapture code exists but the vault has no row yet (never observed,\nor rejected by the dual-clock guard); the real path otherwise.\nThis IS the authorized operator surface meant to let them find the\nfile for `ingest_scan`.\n\n`proposal_number` / `esaf_number` / `esaf_doi` (slice 14a), each\npaired with its own `*_observed_at` (the substrate's own reading\ntime, for judging staleness -- these PVs persist across beamtimes\nwith no in-band freshness signal), resolve from the\n`run_experiment_identity` vault under the same `capture_code is\nnot None` condition. No tombstone: `None` here means either \"not\napplicable\" (Conducted Run) or \"nothing recorded yet\"; `capture_code`\nalready distinguishes the two. Institutional identifiers for a\nfunded experiment, not personal data.",
         "properties": {
           "campaign_id": {
             "anyOf": [
@@ -14302,6 +14302,52 @@
             "additionalProperties": true,
             "title": "Effective Parameters",
             "type": "object"
+          },
+          "esaf_doi": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esaf Doi"
+          },
+          "esaf_doi_observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esaf Doi Observed At"
+          },
+          "esaf_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esaf Number"
+          },
+          "esaf_number_observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Esaf Number Observed At"
           },
           "id": {
             "format": "uuid",
@@ -14333,6 +14379,29 @@
             "format": "uuid",
             "title": "Plan Id",
             "type": "string"
+          },
+          "proposal_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Number"
+          },
+          "proposal_number_observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Number Observed At"
           },
           "raid": {
             "anyOf": [
