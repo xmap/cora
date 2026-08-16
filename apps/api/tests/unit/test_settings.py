@@ -368,3 +368,48 @@ def test_settings_capture_status_phases_rejects_explicit_unrecognized(
     monkeypatch.setenv("CAPTURE_STATUS_PHASES", '{"Weird status": "Unrecognized"}')
     with pytest.raises(pydantic.ValidationError, match="capture_status_phases has values"):
         Settings()
+
+
+# ---------------------------------------------------------------------------
+# capture_baseline_pvs: the genesis-baseline PV set (slice 12)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_settings_capture_baseline_defaults_are_empty_and_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A generic boot declares no baseline PVs and reads nothing at genesis."""
+    monkeypatch.delenv("CAPTURE_BASELINE_PVS", raising=False)
+    monkeypatch.delenv("CAPTURE_BASELINE_RECORDING_ENABLED", raising=False)
+
+    settings = Settings()
+
+    assert settings.capture_baseline_pvs == {}
+    assert settings.capture_baseline_recording_enabled is False
+
+
+@pytest.mark.unit
+def test_settings_capture_baseline_pvs_reads_channel_keyed_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Outer key is the capture code, inner key is the observation's
+    channel_name (not a role), matching the sibling `capture_watch_pvs`
+    shape but with an open, deployment-chosen inner vocabulary."""
+    monkeypatch.setenv(
+        "CAPTURE_BASELINE_PVS",
+        '{"2bmb-tomoscan": {"ExposureTime": "2bmb:TomoScan:ExposureTime"}}',
+    )
+    settings = Settings()
+    assert settings.capture_baseline_pvs == {
+        "2bmb-tomoscan": {"ExposureTime": "2bmb:TomoScan:ExposureTime"}
+    }
+
+
+@pytest.mark.unit
+def test_settings_capture_baseline_recording_enabled_reads_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CAPTURE_BASELINE_RECORDING_ENABLED", "true")
+    settings = Settings()
+    assert settings.capture_baseline_recording_enabled is True
