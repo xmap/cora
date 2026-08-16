@@ -215,6 +215,112 @@ async def test_preflight_read_testing_role_unrecognized_token_is_bad() -> None:
 
 
 @pytest.mark.unit
+async def test_preflight_read_full_file_name_role_redacts_the_real_value() -> None:
+    """The one role whose printed `value` is REDACTED: `observed_path`
+    is personal data (see `_capture_observer.py`). `kind` stays real."""
+    port = _FakeControlPort({"pv:file": _reading("/data/2026-01-Smith-12345/scan_001.h5")})
+
+    report = await _preflight(port, {"code": {"full_file_name": "pv:file"}})
+
+    (line,) = report.lines
+    assert line.ok
+    assert "Smith" not in str(line.value)
+    assert "Smith" not in line.render()
+    assert line.value == "<redacted, len=37>"
+    assert line.verdict == "text(len=37)"
+
+
+@pytest.mark.unit
+async def test_preflight_read_full_file_name_role_empty_string_is_ok() -> None:
+    """The fresh-IOC-boot state: a fine, ordinary outcome, not a
+    connectivity or decode problem."""
+    port = _FakeControlPort({"pv:file": _reading("")})
+
+    report = await _preflight(port, {"code": {"full_file_name": "pv:file"}})
+
+    (line,) = report.lines
+    assert line.ok
+    assert line.verdict == "empty"
+    assert line.value == "<redacted, len=0>"
+
+
+@pytest.mark.unit
+async def test_preflight_read_full_file_name_role_suspected_truncated_is_bad() -> None:
+    from cora.api._capture_observer import FULL_FILE_NAME_TRUNCATION_THRESHOLD
+
+    long_path = "/" + ("a" * (FULL_FILE_NAME_TRUNCATION_THRESHOLD - 1))
+    port = _FakeControlPort({"pv:file": _reading(long_path)})
+
+    report = await _preflight(port, {"code": {"full_file_name": "pv:file"}})
+
+    (line,) = report.lines
+    assert not line.ok
+    assert line.verdict == "suspected-truncated"
+    assert "a" * 10 not in str(line.value)  # never the real (redacted) content
+
+
+@pytest.mark.unit
+async def test_preflight_read_full_file_name_role_just_under_the_threshold_is_ok() -> None:
+    from cora.api._capture_observer import FULL_FILE_NAME_TRUNCATION_THRESHOLD
+
+    ok_path = "/" + ("a" * (FULL_FILE_NAME_TRUNCATION_THRESHOLD - 2))
+    port = _FakeControlPort({"pv:file": _reading(ok_path)})
+
+    report = await _preflight(port, {"code": {"full_file_name": "pv:file"}})
+
+    (line,) = report.lines
+    assert line.ok
+    assert line.verdict == f"text(len={FULL_FILE_NAME_TRUNCATION_THRESHOLD - 1})"
+
+
+@pytest.mark.unit
+async def test_preflight_read_full_file_name_role_non_text_is_bad() -> None:
+    port = _FakeControlPort({"pv:file": _reading(0)})
+
+    report = await _preflight(port, {"code": {"full_file_name": "pv:file"}})
+
+    (line,) = report.lines
+    assert not line.ok
+    assert line.verdict == "non-text"
+    assert line.value == "<redacted, non-text>"
+
+
+@pytest.mark.unit
+async def test_preflight_read_a_mis_keyed_role_with_a_path_value_still_redacts() -> None:
+    """Defense-in-depth: a `capture_watch_pvs` role-key typo
+    (`"full_filename"` instead of `"full_file_name"`) falls through to
+    the generic unknown-role branch (verdict `n/a`), which must NOT
+    print the real path just because the role name didn't match --
+    this preflight tool is exactly what an operator runs, screenshots,
+    and pastes into a ticket while debugging that kind of typo."""
+    port = _FakeControlPort({"pv:file": _reading("/data/2026-01-Smith-12345/scan_001.h5")})
+
+    report = await _preflight(port, {"code": {"full_filename": "pv:file"}})
+
+    (line,) = report.lines
+    assert line.pv_key == "full_filename"
+    assert line.verdict == "n/a"
+    assert "Smith" not in str(line.value)
+    assert "Smith" not in line.render()
+    assert line.value == "<redacted, len=37>"
+
+
+@pytest.mark.unit
+async def test_preflight_read_baseline_full_file_name_pv_misdeclared_still_redacts() -> None:
+    """Same defense, for the OTHER wrong-dict mistake: the
+    `full_file_name` PV declared under `capture_baseline_pvs` instead
+    of `capture_watch_pvs`."""
+    port = _FakeControlPort({"pv:file": _reading("/data/2026-01-Smith-12345/scan_001.h5")})
+
+    report = await _preflight(port, {}, baseline_pvs={"code": {"FullFileName": "pv:file"}})
+
+    (line,) = report.lines
+    assert "Smith" not in str(line.value)
+    assert "Smith" not in line.render()
+    assert line.value == "<redacted, len=37>"
+
+
+@pytest.mark.unit
 async def test_preflight_read_progress_role_non_numeric_is_bad() -> None:
     port = _FakeControlPort({"pv:saved": _reading("garbled")})
 
