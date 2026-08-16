@@ -7,6 +7,14 @@ lives at `cora.run.features.start_run.context` (slice-local; only
 start_run needs it today).
 """
 
+from cora.run.aggregates.run.capture_path import (
+    UNOBSERVED_CAPTURE_PATH,
+    CapturePath,
+    CapturePathStore,
+    InMemoryCapturePathStore,
+    PostgresCapturePathStore,
+    load_run_capture_path,
+)
 from cora.run.aggregates.run.entries import (
     InMemoryObservationStore,
     Observation,
@@ -161,6 +169,9 @@ __all__ = [
     "RUN_NAME_MAX_LENGTH",
     "RUN_PINNED_CALIBRATIONS_MAX_ENTRIES",
     "SAMPLING_PROCEDURE_VALUES",
+    "UNOBSERVED_CAPTURE_PATH",
+    "CapturePath",
+    "CapturePathStore",
     "CapturePreconditionBypassSnapshot",
     "CaptureProgressSnapshot",
     "CautionAcknowledgement",
@@ -170,6 +181,7 @@ __all__ = [
     "FeedHeartbeat",
     "FeedHeartbeatStore",
     "HoldClaimReleased",
+    "InMemoryCapturePathStore",
     "InMemoryFeedHeartbeatStore",
     "InMemoryObservationStore",
     "InvalidChannelNameError",
@@ -190,6 +202,7 @@ __all__ = [
     "InvalidSamplingProcedureError",
     "Observation",
     "ObservationStore",
+    "PostgresCapturePathStore",
     "PostgresFeedHeartbeatStore",
     "PostgresObservationStore",
     "Run",
@@ -259,6 +272,7 @@ __all__ = [
     "from_stored",
     "is_last_active_claim",
     "load_run",
+    "load_run_capture_path",
     "supply_gate_check",
     "to_payload",
     "validate_adjusted_parameters_against_method_schema",
