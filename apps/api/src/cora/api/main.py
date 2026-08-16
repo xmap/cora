@@ -61,6 +61,7 @@ from cora.agent import (
     seed_authority_revocation_holder_agent,
     seed_calibration_watcher_agent,
     seed_campaign_watcher_agent,
+    seed_capture_baseline_reader_agent,
     seed_capture_progress_feeder_agent,
     seed_caution_drafter_agent,
     seed_caution_promoter_agent,
@@ -1038,6 +1039,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # agent; a separate principal from RunWitness so progress-writing
             # can be revoked without blinding the witness).
             await seed_capture_progress_feeder_agent(deps)
+            # same shape for CaptureBaselineReader (deterministic genesis-baseline
+            # read agent; a separate principal from both RunWitness and
+            # CaptureProgressFeeder so baseline-writing can be revoked without
+            # blinding either).
+            await seed_capture_baseline_reader_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
@@ -1209,6 +1215,8 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         capture_progress_flush_tick_seconds=(
                             settings.capture_progress_flush_tick_seconds
                         ),
+                        control_port=app.state.operation.control_port,
+                        capture_baseline_pvs=settings.capture_baseline_pvs,
                     ),
                 ):
                     yield
