@@ -413,3 +413,72 @@ def test_settings_capture_baseline_recording_enabled_reads_env(
     monkeypatch.setenv("CAPTURE_BASELINE_RECORDING_ENABLED", "true")
     settings = Settings()
     assert settings.capture_baseline_recording_enabled is True
+
+
+# ---------------------------------------------------------------------------
+# capture_experiment_identity_pvs: proposal / ESAF / ESAF-DOI (slice 14a)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_settings_capture_experiment_identity_defaults_are_empty_and_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A generic boot declares no experiment-identity PVs and vaults nothing."""
+    monkeypatch.delenv("CAPTURE_EXPERIMENT_IDENTITY_PVS", raising=False)
+    monkeypatch.delenv("CAPTURE_EXPERIMENT_IDENTITY_RECORDING_ENABLED", raising=False)
+
+    settings = Settings()
+
+    assert settings.capture_experiment_identity_pvs == {}
+    assert settings.capture_experiment_identity_recording_enabled is False
+
+
+@pytest.mark.unit
+def test_settings_capture_experiment_identity_pvs_reads_role_keyed_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Outer key is the capture code, inner dict is the closed role ->
+    PV vocabulary (`proposal_number` / `esaf_number` / `esaf_doi`)."""
+    monkeypatch.setenv(
+        "CAPTURE_EXPERIMENT_IDENTITY_PVS",
+        '{"2bmb-tomoscan": {'
+        '"proposal_number": "2bmb:TomoScan:ProposalNumber", '
+        '"esaf_number": "2bmb:TomoScan:ESAFNumber", '
+        '"esaf_doi": "2bmb:TomoScan:ESAFDOINumber"'
+        "}}",
+    )
+    settings = Settings()
+    assert settings.capture_experiment_identity_pvs == {
+        "2bmb-tomoscan": {
+            "proposal_number": "2bmb:TomoScan:ProposalNumber",
+            "esaf_number": "2bmb:TomoScan:ESAFNumber",
+            "esaf_doi": "2bmb:TomoScan:ESAFDOINumber",
+        }
+    }
+
+
+@pytest.mark.unit
+def test_settings_capture_experiment_identity_pvs_rejects_unrecognized_role(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A typo'd role must fail at boot: the reader dispatches on exactly
+    the three closed role names and would otherwise silently never read
+    an unrecognized one, with no error anywhere."""
+    import pydantic
+
+    monkeypatch.setenv(
+        "CAPTURE_EXPERIMENT_IDENTITY_PVS",
+        '{"2bmb-tomoscan": {"proposal_numberr": "2bmb:TomoScan:ProposalNumber"}}',
+    )
+    with pytest.raises(pydantic.ValidationError, match="capture_experiment_identity_pvs has roles"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_experiment_identity_recording_enabled_reads_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CAPTURE_EXPERIMENT_IDENTITY_RECORDING_ENABLED", "true")
+    settings = Settings()
+    assert settings.capture_experiment_identity_recording_enabled is True

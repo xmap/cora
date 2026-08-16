@@ -17,6 +17,11 @@ from cora.shared.capture_phase import CapturePhase
 
 _ALLOWED_DATABASE_SCHEMES = ("postgresql://", "postgres://")
 
+# Closed role vocabulary for `Settings.capture_experiment_identity_pvs`
+# (slice 14a), dispatched on by name in
+# `cora.api._capture_experiment_identity_reader`.
+_EXPERIMENT_IDENTITY_ROLES = frozenset({"proposal_number", "esaf_number", "esaf_doi"})
+
 OtelExporter = Literal["otlp", "console", "none"]
 
 # ComputePort substrate selector. Deliberately NARROWER than the
@@ -934,6 +939,96 @@ class Settings(BaseSettings):
     # is necessary but not sufficient, mirroring every other switch
     # here. See `cora.api._run_witness`'s "Capture path pairing" section.
     capture_path_recording_enabled: bool = False
+
+    # Experiment-identity PVs (slice 14a): a deployment-declared set read
+    # ONCE, at the instant a capture promotes to a witnessed Run, mirroring
+    # `capture_baseline_pvs`'s one-shot-at-BEGUN timing exactly. Same
+    # `code -> inner-key -> PV` shape as `capture_watch_pvs`: a CLOSED
+    # inner-key vocabulary (`proposal_number`, `esaf_number`, `esaf_doi`),
+    # because these three roles are dispatched on by name in
+    # `cora.api._capture_experiment_identity_reader` (an unrecognized role
+    # would silently never be read), unlike `capture_baseline_pvs`'s open
+    # per-channel vocabulary.
+    #
+    #   CAPTURE_EXPERIMENT_IDENTITY_PVS='{
+    #     "2bmb-tomoscan": {
+    #       "proposal_number": "2bmb:TomoScan:ProposalNumber",
+    #       "esaf_number": "2bmb:TomoScan:ESAFNumber",
+    #       "esaf_doi": "2bmb:TomoScan:ESAFDOINumber"
+    #     }
+    #   }'
+    #
+    # `ProposalNumber` / `ESAFNumber` are `stringout` records (native
+    # DBR_STRING; no `text_addresses` declaration needed). `ESAFDOINumber`
+    # is a `waveform` (DBR_CHAR), the identical wire shape as the
+    # `full_file_name` role's PV: the deployment's `CONTROL_PORT_ROUTES`
+    # MUST also declare it in `text_addresses`, or it decodes as a
+    # character array, not text.
+    #
+    # These three values are stamped by dmagic from APS scheduling data,
+    # not by the IOC itself, and are NOT personal data (unlike the `User*`
+    # PVs under the same `2bmb:TomoScan:` prefix, which slice 14b leaves
+    # unread): they are institutional identifiers for a funded experiment.
+    # They default to the substrate literal `"Unknown"` when unpopulated;
+    # CORA treats that literal, and an empty string, as ABSENT and records
+    # nothing (see `cora.api._capture_experiment_identity_reader`'s
+    # `resolved_identity_text`).
+    #
+    # Written to the `run_experiment_identity` PII-vault-shaped table
+    # (mirroring `run_capture_path`), NEVER onto `RunStarted` or any other
+    # event: the value read here is auto-harvested off an unauthenticated
+    # channel with no operator gesture behind it, unlike `start_run`'s
+    # operator-supplied `external_refs`, and events are immutable and
+    # INSERT-only, so a harvested proposal/ESAF number written there could
+    # never be withdrawn. A public-resolvability check against DataCite and
+    # the upstream `dmagic`/APS-DM-SDK source found `ESAFDOINumber` is
+    # populated from an internal, authenticated APS API
+    # (`EsafApsDbApi.getStationEsafById`), with no public DOI-registry
+    # record found; unconfirmed as a genuinely resolvable DOI, so it vaults
+    # with the other two rather than riding an event. See
+    # `cora.api._capture_experiment_identity_reader`'s module docstring for
+    # the full argument (memory/project_witnessed_run_prelive_slices.md,
+    # slice 14a).
+    capture_experiment_identity_pvs: dict[str, dict[str, str]] = {}
+
+    # SIXTH, independent kill switch (slice 14a): gates whether the
+    # `capture_experiment_identity_pvs` set is actually read and vaulted at
+    # promotion. Default off. Refuses to boot if True without
+    # `run_witness_recording_enabled` also True (see
+    # `_enforce_run_witness_recording_gate`): with no promoted Run there is
+    # no run_id to vault a reading against. Independently revocable from
+    # the other five switches for the same reason `capture_path_recording_enabled`
+    # is: an operator must be able to turn OFF only this write pending a
+    # privacy/provenance review, without disabling progress, baseline, or
+    # path recording. Declaring the PVs in `capture_experiment_identity_pvs`
+    # alone is necessary but not sufficient, mirroring every other switch
+    # here.
+    capture_experiment_identity_recording_enabled: bool = False
+
+    @field_validator("capture_experiment_identity_pvs")
+    @classmethod
+    def _validate_capture_experiment_identity_pvs(
+        cls, value: dict[str, dict[str, str]]
+    ) -> dict[str, dict[str, str]]:
+        """Refuse an unrecognized role key at boot, not at the first
+        promotion: `cora.api._capture_experiment_identity_reader` dispatches
+        on exactly `{"proposal_number", "esaf_number", "esaf_doi"}` by name,
+        so a typo'd role here would otherwise silently never be read, with
+        no error anywhere -- the same class of silent-misconfiguration risk
+        `_validate_capture_status_phases` already guards against."""
+        bad = {
+            code: sorted(set(roles) - _EXPERIMENT_IDENTITY_ROLES)
+            for code, roles in value.items()
+            if set(roles) - _EXPERIMENT_IDENTITY_ROLES
+        }
+        if bad:
+            msg = (
+                "capture_experiment_identity_pvs has roles outside "
+                f"{sorted(_EXPERIMENT_IDENTITY_ROLES)}: {bad}. An unrecognized role "
+                "is never read by cora.api._capture_experiment_identity_reader."
+            )
+            raise ValueError(msg)
+        return value
 
     @field_validator("capture_status_phases")
     @classmethod

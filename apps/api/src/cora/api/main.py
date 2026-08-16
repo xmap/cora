@@ -441,6 +441,12 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
     run_witness_recording_enabled is itself True (slice 13): the write
     happens at a promoted Run's terminal, so with no promotion there is
     no run_id to write the observed path against either.
+
+    Also refuses to boot with capture_experiment_identity_recording_enabled=True
+    unless run_witness_recording_enabled is itself True (slice 14a): the
+    read happens exactly once, at the instant a capture promotes to a Run
+    (mirroring the baseline read's timing), so with no promotion there is
+    no run_id to vault a reading against either.
     """
     if settings.capture_progress_recording_enabled and not settings.run_witness_recording_enabled:
         msg = (
@@ -461,6 +467,16 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
             "CAPTURE_PATH_RECORDING_ENABLED=true requires "
             "RUN_WITNESS_RECORDING_ENABLED=true. An observed capture path "
             "has no promoted Run's terminal to attach to without it."
+        )
+        raise RuntimeError(msg)
+    if (
+        settings.capture_experiment_identity_recording_enabled
+        and not settings.run_witness_recording_enabled
+    ):
+        msg = (
+            "CAPTURE_EXPERIMENT_IDENTITY_RECORDING_ENABLED=true requires "
+            "RUN_WITNESS_RECORDING_ENABLED=true. An experiment-identity reading "
+            "has no promoted Run to vault it against without it."
         )
         raise RuntimeError(msg)
     if not settings.run_witness_recording_enabled:
