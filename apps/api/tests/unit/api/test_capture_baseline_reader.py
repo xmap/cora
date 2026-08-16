@@ -167,6 +167,45 @@ async def test_non_numeric_reading_is_skipped_but_the_rest_of_the_sweep_survives
 
 
 @pytest.mark.unit
+async def test_oversized_units_is_skipped_and_does_not_fail_the_rest_of_the_batch() -> None:
+    """PostgresObservationStore.append writes the whole batch in one
+    executemany call: a units string past the DB's CHECK bound would
+    otherwise fail every OTHER reading in this same batch too, not just
+    the offending channel. Rejected here, ahead of the batch."""
+    from cora.run.aggregates.run import READING_UNITS_MAX_LENGTH
+
+    port = _FakeControlPort(
+        {
+            "2bmb:TomoScan:ExposureTime": _reading(1.5, units="x" * (READING_UNITS_MAX_LENGTH + 1)),
+            "2bmb:TomoScan:NumAngles": _reading(3000.0),
+        }
+    )
+    reader, append = _reader(control_port=port)
+
+    await reader.read(_CODE, _RUN_ID)
+
+    assert len(append.calls) == 1
+    assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
+
+
+@pytest.mark.unit
+async def test_units_at_exactly_the_max_length_is_kept() -> None:
+    from cora.run.aggregates.run import READING_UNITS_MAX_LENGTH
+
+    port = _FakeControlPort(
+        {"2bmb:TomoScan:ExposureTime": _reading(1.5, units="x" * READING_UNITS_MAX_LENGTH)}
+    )
+    reader, append = _reader(
+        control_port=port, baseline_pvs={_CODE: {"ExposureTime": "2bmb:TomoScan:ExposureTime"}}
+    )
+
+    await reader.read(_CODE, _RUN_ID)
+
+    assert len(append.calls) == 1
+    assert append.calls[0].entries[0].units == "x" * READING_UNITS_MAX_LENGTH
+
+
+@pytest.mark.unit
 async def test_bad_quality_reading_is_skipped() -> None:
     port = _FakeControlPort(
         {

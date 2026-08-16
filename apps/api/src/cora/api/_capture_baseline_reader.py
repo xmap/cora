@@ -32,7 +32,7 @@ read that fails must never prevent or unwind the promotion that
 triggered it, because by the time this runs the promotion has already
 succeeded and `RunWitnessRecorder._open_captures` already reflects it.
 
-## Three reasons a reading is skipped rather than appended
+## Four reasons a reading is skipped rather than appended
 
 1. **Bad quality** (`Measurement.quality == "Bad"`, the adapter's
    collapse of EPICS INVALID / Tango ALARM|INVALID / OPC UA's Bad
@@ -51,6 +51,13 @@ succeeded and `RunWitnessRecorder._open_captures` already reflects it.
    reject rather than coerce, and log it, mirroring
    `finite_float`'s fail-toward-silence posture everywhere else in this
    module's sibling.
+4. **Oversized units** (`len(Measurement.units) > READING_UNITS_MAX_LENGTH`):
+   `PostgresObservationStore.append` writes an entire batch in one
+   `executemany` call, so a single row that fails the DB's `units`
+   CHECK constraint would fail every OTHER reading in this promotion's
+   batch too, not just the offending channel. Checked here, ahead of
+   the batch, so one long substrate string cannot erase every valid
+   reading for the same promotion.
 
 Reuses `finite_float` from `cora.api._capture_observer` rather than a
 second copy, so the two modules can never drift on what counts as a
@@ -70,7 +77,7 @@ from cora.operation.ports.control_port import (
     ControlTimeoutError,
     ControlValueCoercionError,
 )
-from cora.run.aggregates.run import RunObservationLogbookClosedError
+from cora.run.aggregates.run import READING_UNITS_MAX_LENGTH, RunObservationLogbookClosedError
 from cora.run.errors import UnauthorizedError
 from cora.run.features.append_observations import AppendObservations, ObservationInput
 
@@ -113,9 +120,18 @@ class CaptureBaselineReader:
         self._principal_id = principal_id
 
     async def read(self, capture_code: str, run_id: UUID) -> None:
-        """Read every channel declared for `capture_code`, once, and
-        append whatever survives the per-reading checks as one
+        """Read every channel declared for `capture_code` CONCURRENTLY,
+        once, and append whatever survives the per-reading checks as one
         `AppendObservations` batch against `run_id`.
+
+        Concurrent, not sequential: this runs inline inside
+        `RunWitnessRecorder._promote`, itself on `run_witness_loop`'s
+        single consumer path, so a slow or partially-unreachable
+        control system must not block that loop from reacting to the
+        NEXT lifecycle observation (for a different capture_code, or a
+        terminal for this one) for the sum of every configured PV's own
+        timeout. `_read_one` never raises (see below), so a plain
+        `asyncio.gather` is safe with no `return_exceptions` needed.
 
         Never raises: every failure mode (a dead PV, an unusable
         reading, or the append itself) is caught and logged here, per
@@ -125,11 +141,13 @@ class CaptureBaselineReader:
         if not channels:
             return
 
-        entries: list[ObservationInput] = []
-        for channel_name, pv in sorted(channels.items()):
-            entry = await self._read_one(capture_code, channel_name, pv)
-            if entry is not None:
-                entries.append(entry)
+        readings = await asyncio.gather(
+            *(
+                self._read_one(capture_code, channel_name, pv)
+                for channel_name, pv in sorted(channels.items())
+            )
+        )
+        entries = [entry for entry in readings if entry is not None]
 
         if not entries:
             _log.info(
@@ -239,6 +257,26 @@ class CaptureBaselineReader:
                 channel_name=channel_name,
                 pv=pv,
                 value=repr(reading.value),
+            )
+            return None
+        units = reading.units
+        if units is not None and len(units) > READING_UNITS_MAX_LENGTH:
+            # `AppendObservations` writes its whole batch in one
+            # `executemany` call (`PostgresObservationStore.append`), so
+            # ONE row failing the DB's `units` CHECK constraint would
+            # fail every other reading in this promotion's batch too,
+            # not just this channel's -- exactly the per-PV-independence
+            # guarantee this module otherwise holds. Reject here, before
+            # the batch is built, rather than let a single oversized
+            # substrate string erase every valid reading for a live
+            # ExposureTime, RotationStart, etc.
+            _log.warning(
+                "capture_baseline.units_too_long",
+                capture_code=capture_code,
+                channel_name=channel_name,
+                pv=pv,
+                units_length=len(units),
+                max_length=READING_UNITS_MAX_LENGTH,
             )
             return None
         return ObservationInput(
