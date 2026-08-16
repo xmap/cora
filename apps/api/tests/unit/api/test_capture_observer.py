@@ -17,12 +17,17 @@ from datetime import UTC, datetime
 
 import pytest
 
-from cora.api._capture_observer import ControlPortCaptureObserver, classify_capture_status
+from cora.api._capture_observer import (
+    FULL_FILE_NAME_TRUNCATION_THRESHOLD,
+    ControlPortCaptureObserver,
+    classify_capture_status,
+)
 from cora.operation.ports.control_port import ControlNotConnectedError, Measurement
 from cora.run.ports.capture_observer import (
     AnyCaptureObservation,
     CaptureLifecycleObservation,
     CaptureObserverScope,
+    CapturePathObservation,
     CapturePhase,
     CapturePreconditionBypassObservation,
     CaptureProgressObservation,
@@ -898,3 +903,136 @@ async def test_observe_server_running_role_stays_declared_and_unread() -> None:
     observations = await _collect_any(observer, {"tomoscan"})
 
     assert not any(o.source_id == "pvRunning" for o in observations)
+
+
+# ---------- Full file name role (slice 13) ----------
+
+
+@pytest.mark.unit
+async def test_observe_a_code_with_no_full_file_name_role_is_unaffected() -> None:
+    """A code declaring no `full_file_name` role behaves exactly as
+    before this role existed: no pump, no extra observation."""
+    port = _ScriptedControlPort(readings={"pvA": [_reading("Beginning scan")]})
+    observer = _observer(port, {"tomoscan": {"status": "pvA"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CapturePathObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_a_full_file_name_reading_is_a_path_observation() -> None:
+    port = _ScriptedControlPort(
+        readings={
+            "pvA": [_reading("Beginning scan")],
+            "pvFile": [_reading("/data/2026-01-Smith-12345/scan_001.h5")],
+        }
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "full_file_name": "pvFile"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    paths = [o for o in observations if isinstance(o, CapturePathObservation)]
+    assert len(paths) == 1
+    assert paths[0].capture_code == "tomoscan"
+    assert paths[0].observed_path == "/data/2026-01-Smith-12345/scan_001.h5"
+    assert paths[0].reach_tier is ReachTier.RELAYED
+    assert paths[0].source_id == "pvFile"
+    assert paths[0].observed_at == _T
+
+
+@pytest.mark.unit
+async def test_observe_an_empty_full_file_name_reading_emits_nothing() -> None:
+    """The fresh-IOC-boot state: a fine, ordinary outcome, not an error,
+    but not a fact to enqueue either."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvFile": [_reading("")]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "full_file_name": "pvFile"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CapturePathObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_a_non_text_full_file_name_reading_emits_nothing() -> None:
+    """A non-str value means the adapter's text-waveform decode did not
+    apply; never coerced or guessed at."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvFile": [_reading(0)]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "full_file_name": "pvFile"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CapturePathObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_a_suspected_truncated_full_file_name_reading_emits_nothing() -> None:
+    """A decoded value at or over the truncation threshold is
+    indistinguishable from a wire truncation (NELM=512 on the real PV,
+    511 usable chars): rejected rather than recorded as if complete."""
+    long_path = "/" + ("a" * (FULL_FILE_NAME_TRUNCATION_THRESHOLD - 1))
+    assert len(long_path) == FULL_FILE_NAME_TRUNCATION_THRESHOLD
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvFile": [_reading(long_path)]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "full_file_name": "pvFile"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CapturePathObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_a_full_file_name_reading_just_under_the_threshold_is_accepted() -> None:
+    ok_path = "/" + ("a" * (FULL_FILE_NAME_TRUNCATION_THRESHOLD - 2))
+    assert len(ok_path) == FULL_FILE_NAME_TRUNCATION_THRESHOLD - 1
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvFile": [_reading(ok_path)]}
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "full_file_name": "pvFile"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    paths = [o for o in observations if isinstance(o, CapturePathObservation)]
+    assert len(paths) == 1
+    assert paths[0].observed_path == ok_path
+
+
+@pytest.mark.unit
+async def test_observe_full_file_name_pump_has_no_unreached_counterpart() -> None:
+    """A disconnect or clean stream end simply stops the pump: it must
+    NOT synthesize a `CapturePathObservation`. Mirrors the `testing`
+    role's identical guarantee, for the identical reason: erasing the
+    last retained reading on every reconnect would defeat the
+    dual-clock discipline `observed_at` exists to provide."""
+    port = _ScriptedControlPort(
+        readings={"pvA": [_reading("Beginning scan")], "pvFile": []},
+        disconnect=frozenset({"pvFile"}),
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "full_file_name": "pvFile"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    assert not any(isinstance(o, CapturePathObservation) for o in observations)
+
+
+@pytest.mark.unit
+async def test_observe_full_file_name_reading_with_no_substrate_time_is_none_not_synthesized() -> (
+    None
+):
+    port = _ScriptedControlPort(
+        readings={
+            "pvA": [_reading("Beginning scan")],
+            "pvFile": [_reading("/data/scan.h5", produced_at=None)],
+        }
+    )
+    observer = _observer(port, {"tomoscan": {"status": "pvA", "full_file_name": "pvFile"}})
+
+    observations = await _collect_any(observer, {"tomoscan"})
+
+    path = next(o for o in observations if isinstance(o, CapturePathObservation))
+    assert path.observed_at is None

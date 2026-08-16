@@ -728,7 +728,8 @@ class Settings(BaseSettings):
     #       "abort": "2bmb:TomoScan:AbortScan",
     #       "images_saved": "2bmb:TomoScan:ImagesSaved",
     #       "images_collected": "2bmb:TomoScan:ImagesCollected",
-    #       "testing": "2bmb:TomoScan:Testing"
+    #       "testing": "2bmb:TomoScan:Testing",
+    #       "full_file_name": "2bmSP2:HDF1:FullFileName_RBV"
     #     }
     #   }'
     #
@@ -739,6 +740,21 @@ class Settings(BaseSettings):
     # tomoscan is bypassing its own beam preconditions for this capture,
     # carried onto the witnessed genesis, never onto
     # `Observation.is_simulated`. See `cora.api._capture_observer`.
+    #
+    # `full_file_name` (slice 13, optional per code) is ALSO a DBR_CHAR
+    # waveform needing a `text_addresses` declaration, but deliberately
+    # NOT `2bmb:TomoScan:FullFileName` (tomoscan's own mirror of it):
+    # upstream `end_scan()` writes that PV four statements AFTER the
+    # `ScanStatus='Scan complete'` write that fires CORA's terminal, so a
+    # read there returns the PREVIOUS scan's filename. The areaDetector
+    # file plugin's own readback is written at file OPEN, before the
+    # terminal, and CORA's conducted path already reads the same PV
+    # family (`operation/acquisitions.py`), so this is the correct
+    # source, not a workaround. The value is PERSONAL DATA (2-BM's
+    # directory layout embeds a surname and a proposal number): it is
+    # never logged in full and never lands on an event; it goes to the
+    # `run_capture_path` PII vault via `RunWitnessRecorder`'s dual-clock
+    # guard. See `_run_witness.py`'s "Capture path pairing" section.
     capture_watch_pvs: dict[str, dict[str, str]] = {}
 
     # Genesis-baseline PVs (slice 12): a deployment-declared set read
@@ -902,6 +918,22 @@ class Settings(BaseSettings):
     # whether the PVs are merely declared. See
     # `cora.api._capture_baseline_reader`.
     capture_baseline_recording_enabled: bool = False
+
+    # FIFTH, independent kill switch (slice 13): gates whether the
+    # `full_file_name` role's observed path is actually resolved and
+    # written to the `run_capture_path` PII vault at a witnessed Run's
+    # terminal. Default off. Refuses to boot if True without
+    # `run_witness_recording_enabled` also True (see
+    # `_enforce_run_witness_recording_gate`): the write happens at a
+    # promoted Run's terminal, so with no promotion there is no run_id
+    # to write against. Independently revocable from the other four
+    # switches because it is the one that writes personal data: an
+    # operator must be able to turn OFF only this write (e.g. pending a
+    # privacy review) without also disabling progress or baseline
+    # recording. Declaring `full_file_name` in `capture_watch_pvs` alone
+    # is necessary but not sufficient, mirroring every other switch
+    # here. See `cora.api._run_witness`'s "Capture path pairing" section.
+    capture_path_recording_enabled: bool = False
 
     @field_validator("capture_status_phases")
     @classmethod
