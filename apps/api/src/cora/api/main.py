@@ -447,6 +447,15 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
     read happens exactly once, at the instant a capture promotes to a Run
     (mirroring the baseline read's timing), so with no promotion there is
     no run_id to vault a reading against either.
+
+    Also refuses to boot with capture_probe_recording_enabled=True unless
+    run_witness_enabled is itself True (slice 16) -- an INDEPENDENT check
+    from the four above, deliberately not chained off
+    run_witness_recording_enabled: the capture-probe trail scopes on
+    capture_code, not run_id (see entries_run_capture_probes' migration
+    header), so its value is realized precisely while recording is off.
+    It needs only the shadow observer running to have anything to write
+    from.
     """
     if settings.capture_progress_recording_enabled and not settings.run_witness_recording_enabled:
         msg = (
@@ -477,6 +486,13 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
             "CAPTURE_EXPERIMENT_IDENTITY_RECORDING_ENABLED=true requires "
             "RUN_WITNESS_RECORDING_ENABLED=true. An experiment-identity reading "
             "has no promoted Run to vault it against without it."
+        )
+        raise RuntimeError(msg)
+    if settings.capture_probe_recording_enabled and not settings.run_witness_enabled:
+        msg = (
+            "CAPTURE_PROBE_RECORDING_ENABLED=true requires "
+            "RUN_WITNESS_ENABLED=true. The capture-probe trail has no shadow "
+            "observer to record reach from without it."
         )
         raise RuntimeError(msg)
     if not settings.run_witness_recording_enabled:
@@ -1248,6 +1264,7 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         capture_path_store=app.state.run.capture_path_store,
                         capture_experiment_identity_pvs=(settings.capture_experiment_identity_pvs),
                         experiment_identity_store=app.state.run.experiment_identity_store,
+                        capture_probe_store=app.state.run.capture_probe_store,
                     ),
                 ):
                     yield

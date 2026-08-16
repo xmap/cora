@@ -482,3 +482,26 @@ def test_settings_capture_experiment_identity_recording_enabled_reads_env(
     monkeypatch.setenv("CAPTURE_EXPERIMENT_IDENTITY_RECORDING_ENABLED", "true")
     settings = Settings()
     assert settings.capture_experiment_identity_recording_enabled is True
+
+
+# ---------------------------------------------------------------------------
+# capture_probe_recording_enabled (slice 16, the SEVENTH kill switch)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_settings_capture_probe_recording_enabled_defaults_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CAPTURE_PROBE_RECORDING_ENABLED", raising=False)
+    settings = Settings()
+    assert settings.capture_probe_recording_enabled is False
+
+
+@pytest.mark.unit
+def test_settings_capture_probe_recording_enabled_reads_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CAPTURE_PROBE_RECORDING_ENABLED", "true")
+    settings = Settings()
+    assert settings.capture_probe_recording_enabled is True

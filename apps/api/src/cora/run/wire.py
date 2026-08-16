@@ -101,14 +101,17 @@ from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
 from cora.run.aggregates.run import (
     CapturePathStore,
+    CaptureProbeStore,
     ExperimentIdentityStore,
     FeedHeartbeatStore,
     InMemoryCapturePathStore,
+    InMemoryCaptureProbeStore,
     InMemoryExperimentIdentityStore,
     InMemoryFeedHeartbeatStore,
     InMemoryObservationStore,
     ObservationStore,
     PostgresCapturePathStore,
+    PostgresCaptureProbeStore,
     PostgresExperimentIdentityStore,
     PostgresFeedHeartbeatStore,
     PostgresObservationStore,
@@ -168,6 +171,15 @@ class RunHandlers:
     `list_runs`-never-touches-it posture as `capture_path_store`:
     `RunWitnessRecorder`'s `CaptureExperimentIdentityReader` writes through it
     directly, and `get_run.bind()` reads through the SAME instance."""
+    capture_probe_store: CaptureProbeStore
+    """Slice 16's write store for the capture-watch coverage trail.
+    Surfaced on the bundle for the same reason as `feed_heartbeat_store`:
+    `RunWitnessRecorder` (composition root) writes through it directly.
+    UNLIKE `capture_path_store` / `experiment_identity_store`, never
+    passed to `get_run.bind()` or any other handler: this store is not
+    scoped by `run_id` at all (see `entries_run_capture_probes`'
+    migration header), so there is no single-Run read to resolve it
+    against."""
 
 
 def wire_run(deps: Kernel) -> RunHandlers:
@@ -188,10 +200,16 @@ def wire_run(deps: Kernel) -> RunHandlers:
         if deps.pool is not None
         else InMemoryExperimentIdentityStore()
     )
+    capture_probe_store: CaptureProbeStore = (
+        PostgresCaptureProbeStore(deps.pool)
+        if deps.pool is not None
+        else InMemoryCaptureProbeStore()
+    )
     return RunHandlers(
         feed_heartbeat_store=feed_heartbeat_store,
         capture_path_store=capture_path_store,
         experiment_identity_store=experiment_identity_store,
+        capture_probe_store=capture_probe_store,
         start_run=with_tracing(
             with_idempotency(
                 start_run.bind(deps),
