@@ -810,13 +810,25 @@ class Settings(BaseSettings):
     #     "Collecting projections": "Progressing",
     #     "fdt file transfer complete": "Progressing",
     #     "scp file transfer complete": "Progressing",
-    #     "Scan complete": "Ended",
-    #     "Scan aborted": "Aborted"
+    #     "Scan complete": "Ended"
     #   }'
     #
     # NOTE the fdt / scp transfer messages map to Progressing, not
     # Ended: they mark transfer START, not arrival, per
-    # docs/deployments/2-bm/operations.md.
+    # docs/deployments/2-bm/operations.md. An `Aborted` phase reaches
+    # `RunWitnessRecorder` via the separate `abort` role
+    # (`_from_abort_reading` in `_capture_observer.py`), never through
+    # this table: `decarlof/tomoscan@master` never calls
+    # `ScanStatus.put("Scan aborted")` (verified by extracting every
+    # `ScanStatus.put()` call in `tomoscan.py` / `tomoscan_2bm.py` /
+    # `tomoscan_pso.py`), so that literal was never a real mapping
+    # target and has been removed from this example. Two literals
+    # upstream DOES write are deliberately absent here too: "Error
+    # writing configuration" (`tomoscan.py`) and "Config File Write
+    # Error" (`tomoscan_pso.py`). Both classify UNRECOGNIZED until an
+    # operator decides what CapturePhase, if any, a config-write
+    # failure should map to; inventing one here would be a guess this
+    # table exists specifically to avoid.
     capture_status_phases: dict[str, str] = {}
 
     # Bounds how often the capture-watch runtime re-reads each
