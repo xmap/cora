@@ -17,19 +17,21 @@ this port. Promote to `infrastructure/ports/` only on a real second
 cross-BC consumer (rule-of-three), exactly the `RunChannelLookup`
 precedent.
 
-## Two reading kinds, one stream
+## Three reading kinds, one stream
 
 `observe()` yields `AnyCaptureObservation`, the union of
 `CaptureLifecycleObservation` (a phase claim: BEGUN / PROGRESSING /
 ENDED / ABORTED / UNRECOGNIZED, or no claim at all on a probe-only or
-disconnect reading) and `CaptureProgressObservation` (a numeric
-progress counter, e.g. `ImagesSaved`). A consumer narrows with
-`isinstance`. The two are peers, not a supertype and a subtype: a
-single reading is never both a phase claim and a progress reading, so
-one closed-over `CaptureObservation` name for "the default kind" would
-have made an isinstance check on the lifecycle kind read as a
-supertype check rather than the kind check it actually is. Kept
-distinct instead, per R2/R4 (naming review, slice 10).
+disconnect reading), `CaptureProgressObservation` (a numeric
+progress counter, e.g. `ImagesSaved`), and
+`CapturePreconditionBypassObservation` (the optional `testing` role's
+tri-state reading, slice 11). A consumer narrows with `isinstance`.
+The three are peers, not a supertype and subtypes: a single reading is
+never more than one of these at once, so one closed-over
+`CaptureObservation` name for "the default kind" would have made an
+isinstance check on the lifecycle kind read as a supertype check
+rather than the kind check it actually is. Kept distinct instead, per
+R2/R4 (naming review, slice 10).
 
 ## Domain vocabulary (substrate-neutral)
 
@@ -59,6 +61,24 @@ distinct instead, per R2/R4 (naming review, slice 10).
   (`cora.run.aggregates.run.state.ChannelName`) that this reading does
   not carry directly. A consumer that writes this value onward as an
   observation entry chooses its own `channel_name` at that boundary.
+- `CapturePreconditionBypassObservation`: one reading of the optional
+  `testing` role (slice 11), drained from a role the deployment
+  declared under the same capture code, same closed vocabulary as
+  `status` / `abort` / the progress roles. The type and field names are
+  facility-neutral (`beam_preconditions_bypassed`), NOT the substrate's
+  own `testing` word, mirroring `CaptureProgressSnapshot`'s own
+  precedent of keeping this domain vocabulary substrate-neutral even
+  where the CONFIG-facing role key mirrors the PV name. Tri-state, not
+  a phase claim and not a progress counter:
+  `beam_preconditions_bypassed=True` is a positive claim the substrate
+  is bypassing its own beam preconditions for this capture, `=False` is
+  a positive claim it is NOT (a real acquisition), and `=None` means
+  the reading did not decode or none has ever arrived. NOT
+  `Observation.is_simulated`: that column answers whether the NUMBERS
+  CORA recorded were invented (a simulator or replay feeder), an
+  orthogonal question from whether the facility had beam. See
+  [[project_run_witness_test_provenance_slice11]] for the full
+  argument against collapsing the two.
 - `CaptureObserverScope`: the set of capture codes the substrate
   adapter should subscribe to. Empty scope is valid and yields no
   observations.
@@ -186,11 +206,52 @@ class CaptureProgressObservation:
     source_id: str
 
 
-AnyCaptureObservation = CaptureLifecycleObservation | CaptureProgressObservation
+@dataclass(frozen=True)
+class CapturePreconditionBypassObservation:
+    """One reading of the optional `testing` role: whether the substrate
+    is bypassing its own beam preconditions for this capture code.
+
+    Named for the domain fact, not the substrate's own `testing` word
+    (which stays confined to the `Settings.capture_watch_pvs` role key
+    and `_capture_observer.py`), mirroring `CaptureProgressSnapshot`'s
+    own precedent of keeping this domain vocabulary facility-neutral.
+
+    `beam_preconditions_bypassed` is the decoded tri-state claim, via
+    `binary_code` (`_capture_observer.py`) applied to the raw reading:
+    `True` (asserted) is a positive claim the substrate is bypassing
+    its beam preconditions for this capture; `False` (clear) is a
+    positive claim it is NOT, i.e. a real acquisition; `None` means the
+    reading did not decode. Three states, not two: `None` must never
+    collapse into `False`, since "unknown" and "confirmed real" are
+    different claims a reader needs to tell apart.
+
+    `role` is not carried (unlike `CaptureProgressObservation`): the
+    `testing` role is singular per capture code, so there is nothing
+    to disambiguate between multiple readings of this kind.
+
+    `reach_tier`, `observed_at`, `source_kind`, `source_id` carry the
+    same meaning as on `CaptureLifecycleObservation`. `observed_at` is
+    the substrate's OWN time for this reading, never CORA's clock: the
+    role is read continuously and independently of any one capture, so
+    a consumer retaining the latest reading needs this to tell a fresh
+    reading from a stale one still standing from hours earlier.
+    """
+
+    capture_code: str
+    beam_preconditions_bypassed: bool | None
+    reach_tier: ReachTier
+    observed_at: datetime | None
+    source_kind: str
+    source_id: str
+
+
+AnyCaptureObservation = (
+    CaptureLifecycleObservation | CaptureProgressObservation | CapturePreconditionBypassObservation
+)
 """The union `observe()` yields. Named explicitly rather than reusing
-either member's name for the union, so a caller that has not yet been
+any one member's name for the union, so a caller that has not yet been
 updated to narrow by `isinstance` fails type-check instead of silently
-treating a `CaptureProgressObservation` as a `CaptureLifecycleObservation`."""
+treating one observation kind as another."""
 
 
 @dataclass(frozen=True)
@@ -253,6 +314,7 @@ __all__ = [
     "CaptureObserver",
     "CaptureObserverScope",
     "CapturePhase",
+    "CapturePreconditionBypassObservation",
     "CaptureProgressObservation",
     "QuietCaptureObserver",
 ]

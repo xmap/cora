@@ -25,6 +25,16 @@ rather than driving the act itself. Carries the caller-controlled inputs:
     `RunMonitorTriggerNotPermittedError`, closing the operator-assert-
     Witnessed backdoor (mirrors `ObserveEnclosureStatus.trigger`'s D6.L2
     anti-lock): there is no operator path to a witnessed genesis.
+  - `capture_precondition_bypass_snapshot` -- the latest `testing`-role
+    reading `RunWitness` retained before this genesis, or `None` if the
+    capture code declares no `testing` role, or none has ever arrived.
+    Carried straight onto
+    `RunStarted.capture_precondition_bypass_snapshot` with no
+    validation, same posture as `RecordWitnessedRunOutcome
+    .capture_progress_snapshot`: it carries a substrate-observed tri-
+    state claim and a substrate timestamp, never operator-authored text.
+    See `CapturePreconditionBypassSnapshot` for the tri-state contract
+    and why this is NOT `Manifest.is_simulated`.
 
 No `conduct_mode` field: this decider hardcodes `ConductMode.WITNESSED`,
 symmetric to `StartRun` carrying no `conduct_mode` field for the driven
@@ -49,6 +59,7 @@ Status is implicit at start (`Running`), same as `StartRun`.
 from dataclasses import dataclass
 from uuid import UUID
 
+from cora.run.aggregates.run.state import CapturePreconditionBypassSnapshot
 from cora.shared.identity import MonitorSourceId
 
 
@@ -62,3 +73,4 @@ class RecordWitnessedRun:
     monitor_source_id: MonitorSourceId
     trigger: str
     subject_id: UUID | None = None
+    capture_precondition_bypass_snapshot: CapturePreconditionBypassSnapshot | None = None

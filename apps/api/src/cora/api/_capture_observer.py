@@ -17,7 +17,12 @@ nearby phase. The optional `abort` role layers a direct `ABORTED`
 claim on top (slice 9); the optional `images_saved` /
 `images_collected` progress roles (slice 10) each pump their own
 `CaptureProgressObservation` onto the same merged stream, siblings of
-the phase pumps.
+the phase pumps. The optional `testing` role (slice 11) pumps its own
+`CapturePreconditionBypassObservation`: a tri-state reading of whether
+the substrate is bypassing its own beam preconditions for this capture
+code, decoded via the same `binary_code` the `abort` role already
+uses (2-BM's `Testing` PV is the identical `DBR_ENUM` record type as
+`AbortScan`).
 
 ## One deliberate inversion from the Enclosure precedent
 
@@ -97,6 +102,7 @@ from cora.run.ports.capture_observer import (
     CaptureLifecycleObservation,
     CaptureObserverScope,
     CapturePhase,
+    CapturePreconditionBypassObservation,
     CaptureProgressObservation,
 )
 from cora.shared.reach import ReachTier
@@ -111,13 +117,14 @@ ROLE_STATUS = "status"
 ROLE_ABORT = "abort"
 ROLE_IMAGES_SAVED = "images_saved"
 ROLE_IMAGES_COLLECTED = "images_collected"
+ROLE_TESTING = "testing"
 """CORA-owned role keys, matching `Settings.capture_watch_pvs`'s documented
 example. Module-public (not `_`-prefixed) because other composition-root
 modules read observations back out, or dispatch decoders, by these same
 keys and must not carry their own copy of the literal strings:
 `RunWitnessRecorder._build_progress_snapshot` (`_run_witness.py`) reads
 `ROLE_IMAGES_SAVED` / `ROLE_IMAGES_COLLECTED`, and `capture_watch_preflight`
-dispatches its per-role decode check on all four. Import these, not
+dispatches its per-role decode check on all five. Import these, not
 `_PROGRESS_ROLES` below, so a rename or a new role here cannot silently
 desync from either reader. `server_running` stays declared-and-unread:
 tool liveness is a different concern from capture progress (slice 10)."""
@@ -259,8 +266,13 @@ class ControlPortCaptureObserver:
     A code with no `abort` entry watches `status` only, exactly as
     before this role existed. The `images_saved` / `images_collected`
     progress roles (also optional, independently declared per code)
-    each pump `CaptureProgressObservation` readings; `server_running`
-    stays declared and unread (tool liveness, not capture progress).
+    each pump `CaptureProgressObservation` readings. The `testing` role
+    (also optional, independently declared per code) pumps
+    `CapturePreconditionBypassObservation` readings, a tri-state claim
+    rather than a phase or a counter; see that dataclass's own
+    docstring.
+    `server_running` stays declared and unread (tool liveness, not
+    capture progress).
     """
 
     def __init__(
@@ -277,6 +289,11 @@ class ControlPortCaptureObserver:
         }
         self._abort_pvs = {
             code: roles[ROLE_ABORT] for code, roles in capture_pvs.items() if ROLE_ABORT in roles
+        }
+        self._testing_pvs = {
+            code: roles[ROLE_TESTING]
+            for code, roles in capture_pvs.items()
+            if ROLE_TESTING in roles
         }
         self._progress_pvs = {
             code: filtered
@@ -302,6 +319,11 @@ class ControlPortCaptureObserver:
             for code in sorted(scope.capture_codes)
             if code in self._abort_pvs
         ]
+        testing_pvs = [
+            (code, self._testing_pvs[code])
+            for code in sorted(scope.capture_codes)
+            if code in self._testing_pvs
+        ]
         progress_pvs = [
             (code, role, pv)
             for code in sorted(scope.capture_codes)
@@ -312,6 +334,7 @@ class ControlPortCaptureObserver:
         pump_tasks = (
             [asyncio.create_task(self._pump(code, pv, queue)) for code, pv in pvs]
             + [asyncio.create_task(self._pump_abort(code, pv, queue)) for code, pv in abort_pvs]
+            + [asyncio.create_task(self._pump_testing(code, pv, queue)) for code, pv in testing_pvs]
             + [
                 asyncio.create_task(self._pump_progress(code, role, pv, queue))
                 for code, role, pv in progress_pvs
@@ -413,6 +436,33 @@ class ControlPortCaptureObserver:
         finally:
             queue.put_nowait(_PUMP_DONE)
 
+    async def _pump_testing(
+        self,
+        code: str,
+        pv: str,
+        queue: asyncio.Queue[AnyCaptureObservation | _PumpDone],
+    ) -> None:
+        """Sibling pump for the optional `testing` role.
+
+        Unlike `_pump_abort`, EVERY reading is enqueued, including one
+        that decodes clear or does not decode at all: `testing` is a
+        tri-state reading in its own right (see
+        `CapturePreconditionBypassObservation`), not a phase claim where
+        a clear or unresolvable reading means "nothing happened". No
+        `_unreached` counterpart, mirroring `_pump_progress`: a disconnect must not
+        erase the last reading `RunWitnessRecorder` retained, since the
+        dual-clock (`observed_at`) discipline exists precisely so
+        staleness is visible at genesis time rather than papered over by
+        a synthesized "unknown" on every reconnect.
+        """
+        try:
+            async for reading in self._control_port.subscribe(pv):
+                queue.put_nowait(self._from_testing_reading(code, pv, reading))
+        except ControlNotConnectedError:
+            pass
+        finally:
+            queue.put_nowait(_PUMP_DONE)
+
     async def _poll(
         self,
         code: str,
@@ -506,6 +556,29 @@ class ControlPortCaptureObserver:
             source_id=pv,
         )
 
+    def _from_testing_reading(
+        self, code: str, pv: str, reading: Measurement
+    ) -> CapturePreconditionBypassObservation:
+        """A `testing`-role reading, decoded via `binary_code` exactly as
+        the `abort` role's reading is (2-BM's `Testing` PV is the
+        identical `DBR_ENUM` record type as `AbortScan`): `1` -> `True`
+        (asserted: bypassing beam preconditions), `0` -> `False` (clear:
+        a positive claim of a real acquisition), `None` -> `None`
+        (unresolved). Unlike `_from_abort_reading`, every reading
+        constructs an observation; there is no reading here that means
+        "nothing happened".
+        """
+        code_value = binary_code(reading.value)
+        bypassed = None if code_value is None else code_value == 1
+        return CapturePreconditionBypassObservation(
+            capture_code=code,
+            beam_preconditions_bypassed=bypassed,
+            reach_tier=ReachTier.RELAYED,
+            observed_at=reading.produced_at,
+            source_kind=_SOURCE_KIND,
+            source_id=pv,
+        )
+
     def _probe_only(self, code: str, pv: str, reach_tier: ReachTier) -> CaptureLifecycleObservation:
         """A poll tick's result: reach evidence with no status claim."""
         return CaptureLifecycleObservation(
@@ -540,6 +613,7 @@ __all__ = [
     "ROLE_IMAGES_COLLECTED",
     "ROLE_IMAGES_SAVED",
     "ROLE_STATUS",
+    "ROLE_TESTING",
     "ControlPortCaptureObserver",
     "binary_code",
     "classify_capture_status",

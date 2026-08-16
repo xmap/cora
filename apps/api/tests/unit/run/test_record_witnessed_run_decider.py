@@ -23,6 +23,7 @@ from cora.infrastructure.ports.clearance_lookup import ClearanceLookupResult
 from cora.infrastructure.ports.enclosure_lookup import EnclosureLookupResult
 from cora.recipe.aggregates.plan import Plan, PlanName, PlanStatus
 from cora.run.aggregates.run import (
+    CapturePreconditionBypassSnapshot,
     ConductMode,
     InvalidRunNameError,
     Run,
@@ -172,6 +173,40 @@ def test_decide_emits_run_started_witnessed_for_a_valid_capture() -> None:
     )
     assert event.trigger_source == "RunWitness:2bmb-tomoscan"
     assert dict(event.external_refs[0]) == {"scheme": "capture-code", "value": "2bmb-tomoscan"}
+    # No `capture_precondition_bypass_snapshot` supplied on the command:
+    # the emitted genesis carries None, never a fabricated snapshot.
+    assert event.capture_precondition_bypass_snapshot is None
+
+
+@pytest.mark.unit
+def test_decide_carries_the_commands_precondition_bypass_snapshot_onto_the_event() -> None:
+    """`capture_precondition_bypass_snapshot` is a pure pass-through: the
+    decider does not validate or transform it, mirroring
+    `RecordWitnessedRunOutcome.capture_progress_snapshot`'s own posture."""
+    cap = uuid4()
+    asset_id = uuid4()
+    plan = _plan(asset_ids=frozenset({asset_id}))
+    asset = _asset(asset_id=asset_id, family_ids=frozenset({cap}))
+    context = RunWitnessedStartContext(
+        plan=plan,
+        subject=None,
+        assets={asset_id: asset},
+        referencing_clearances=_active_clearance_stub(),
+    )
+    snapshot = CapturePreconditionBypassSnapshot(beam_preconditions_bypassed=True, observed_at=_NOW)
+
+    decision = record_witnessed_run.decide(
+        state=None,
+        command=_command(plan_id=plan.id, capture_precondition_bypass_snapshot=snapshot),
+        context=context,
+        needed_family_ids_snapshot=frozenset({cap}),
+        effective_parameters={},
+        method_parameters_schema=None,
+        now=_NOW,
+        new_id=uuid4(),
+    )
+
+    assert decision.run_events[0].capture_precondition_bypass_snapshot == snapshot
 
 
 @pytest.mark.unit

@@ -214,6 +214,11 @@ async def test_start_run_persists_event_with_full_upstream_chain_against_postgre
         # input Dataset refs (PROV `used`). Empty list by default;
         # forward-compat via `payload.get("input_dataset_ids", [])`.
         "input_dataset_ids": [],
+        # slice 11 additive payload field: the witnessed genesis's
+        # retained `testing`-role reading. Always None on a driven Run
+        # (StartRun never sets it); forward-compat via
+        # `payload.get("capture_precondition_bypass_snapshot")`.
+        "capture_precondition_bypass_snapshot": None,
         "occurred_at": _NOW.isoformat(),
     }
     assert stored.event_id == run_event_id

@@ -1636,6 +1636,10 @@ DISPOSITIONS: dict[str, dict[str, Any]] = {
             "workaround_excerpt": "drop:text",
         },
         "campaign_id": "token:uuid",
+        "capture_precondition_bypass_snapshot": {
+            "beam_preconditions_bypassed": "keep:number",
+            "observed_at": "keep:time",
+        },
         "conduct_mode": "keep:enum:ConductMode",
         "decided_by_decision_id": "token:uuid",
         "effective_parameters": "drop:opaque",

@@ -55,6 +55,7 @@ from cora.run.ports.capture_observer import (
     CaptureLifecycleObservation,
     CaptureObserverScope,
     CapturePhase,
+    CapturePreconditionBypassObservation,
     CaptureProgressObservation,
 )
 from cora.shared.reach import ReachTier
@@ -101,6 +102,22 @@ def _progress_obs(
         observed_at=observed_at,
         source_kind="EpicsPv",
         source_id=f"2bmb:TomoScan:{role}",
+    )
+
+
+def _testing_obs(
+    *,
+    beam_preconditions_bypassed: bool | None,
+    capture_code: str = _CODE,
+    observed_at: datetime | None = _NOW,
+) -> CapturePreconditionBypassObservation:
+    return CapturePreconditionBypassObservation(
+        capture_code=capture_code,
+        beam_preconditions_bypassed=beam_preconditions_bypassed,
+        reach_tier=ReachTier.RELAYED,
+        observed_at=observed_at,
+        source_kind="EpicsPv",
+        source_id="2bmb:TomoScan:Testing",
     )
 
 
@@ -280,6 +297,56 @@ async def test_run_witness_loop_a_progress_observation_with_no_feeder_is_a_noop(
         run_witness_loop(observer=observer, capture_codes=frozenset({_CODE}))
     )
     await asyncio.sleep(0.02)  # would hang or crash if this branch mishandled feeder=None
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+
+@pytest.mark.unit
+async def test_run_witness_loop_routes_a_testing_observation_to_the_recorder_only() -> None:
+    """A `CapturePreconditionBypassObservation` reaches
+    `recorder.observe_precondition_bypass()` and nothing else: no
+    `feeder.offer()` (it is never written as an `AppendObservations`
+    row) and no `recorder.observe_capture()` (it is not a lifecycle
+    phase claim)."""
+    calls: list[CapturePreconditionBypassObservation] = []
+
+    class _RecordingRecorder:
+        def observe_precondition_bypass(
+            self, observation: CapturePreconditionBypassObservation
+        ) -> None:
+            calls.append(observation)
+
+        async def observe_capture(self, observation: CaptureLifecycleObservation) -> None:
+            raise AssertionError("must not reach observe_capture for a testing observation")
+
+    feeder = _FakeCaptureProgressFeeder()
+    observer = _FakeObserver([_testing_obs(beam_preconditions_bypassed=True)])
+    task = asyncio.create_task(
+        run_witness_loop(
+            observer=observer,
+            capture_codes=frozenset({_CODE}),
+            recorder=_RecordingRecorder(),  # type: ignore[arg-type]
+            feeder=feeder,  # type: ignore[arg-type]
+        )
+    )
+    await asyncio.sleep(0.02)
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+    assert [o.beam_preconditions_bypassed for o in calls] == [True]
+    assert feeder.calls == []
+
+
+@pytest.mark.unit
+async def test_run_witness_loop_a_testing_observation_with_no_recorder_is_a_noop() -> None:
+    """`recorder=None` (shadow mode) makes a testing observation a
+    silent no-op, same posture as a progress observation with no feeder."""
+    observer = _FakeObserver([_testing_obs(beam_preconditions_bypassed=True)])
+    task = asyncio.create_task(
+        run_witness_loop(observer=observer, capture_codes=frozenset({_CODE}))
+    )
+    await asyncio.sleep(0.02)  # would hang or crash if this branch mishandled recorder=None
     task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
         await task
@@ -853,6 +920,142 @@ async def test_record_outcome_retains_progress_across_a_failed_attempt_for_a_ret
     snapshot = outcome.calls[1].capture_progress_snapshot
     assert snapshot is not None
     assert snapshot.collected_count == 2987.0
+
+
+# ---------- observe_precondition_bypass / capture_precondition_bypass_snapshot retention ----------
+
+
+@pytest.mark.unit
+async def test_observe_precondition_bypass_then_begun_stamps_a_snapshot_on_the_genesis() -> None:
+    genesis = _FakeRecordWitnessedRun()
+    recorder = _recorder(record_witnessed_run=genesis)
+
+    recorder.observe_precondition_bypass(_testing_obs(beam_preconditions_bypassed=True))
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    assert len(genesis.calls) == 1
+    snapshot = genesis.calls[0].capture_precondition_bypass_snapshot
+    assert snapshot is not None
+    assert snapshot.beam_preconditions_bypassed is True
+    assert snapshot.observed_at == _NOW
+
+
+@pytest.mark.unit
+async def test_observe_precondition_bypass_false_is_a_positive_claim_not_absence() -> None:
+    """`beam_preconditions_bypassed=False` is a positive claim of a real
+    acquisition; it must survive onto the genesis as `False`, never
+    coerced to `None`."""
+    genesis = _FakeRecordWitnessedRun()
+    recorder = _recorder(record_witnessed_run=genesis)
+
+    recorder.observe_precondition_bypass(_testing_obs(beam_preconditions_bypassed=False))
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    snapshot = genesis.calls[0].capture_precondition_bypass_snapshot
+    assert snapshot is not None
+    assert snapshot.beam_preconditions_bypassed is False
+
+
+@pytest.mark.unit
+async def test_begun_with_nothing_retained_carries_no_precondition_bypass_snapshot() -> None:
+    """Absence must read as 'no `testing` role declared, or nothing has
+    arrived yet', never as an all-None snapshot: the whole object is
+    `None`, the same convention `capture_progress_snapshot` uses."""
+    genesis = _FakeRecordWitnessedRun()
+    recorder = _recorder(record_witnessed_run=genesis)
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    assert genesis.calls[0].capture_precondition_bypass_snapshot is None
+
+
+@pytest.mark.unit
+async def test_observe_precondition_bypass_is_a_noop_when_recording_disabled() -> None:
+    """Shadow mode must retain nothing at all, not merely fail to act on
+    it: asserted directly against the private retention dict, since
+    `observe_capture` itself would also no-op before ever consulting it
+    and so cannot distinguish "nothing retained" from "retained but
+    unused"."""
+    genesis = _FakeRecordWitnessedRun()
+    recorder = _recorder(record_witnessed_run=genesis, run_witness_recording_enabled=False)
+
+    recorder.observe_precondition_bypass(_testing_obs(beam_preconditions_bypassed=True))
+
+    assert recorder._last_precondition_bypass == {}
+
+
+@pytest.mark.unit
+async def test_observe_precondition_bypass_survives_across_a_capture_boundary() -> None:
+    """Unlike progress, a `testing` reading is NOT capture-scoped: the
+    substrate holds it independent of any one capture, so a reading
+    retained before one capture's terminal must still be the answer at
+    the NEXT capture's genesis, not cleared by `_promote` /
+    `_truncate_stale` / `_record_outcome` the way progress is."""
+    stale_run_id = uuid4()
+    fresh_run_id = uuid4()
+    genesis = _FakeRecordWitnessedRun(run_id=fresh_run_id)
+    outcome = _FakeRecordWitnessedRunOutcome()
+    recorder = _recorder(
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=outcome,
+        truncate_run=_FakeTruncateRun(),
+        open_captures={_CODE: stale_run_id},
+    )
+
+    recorder.observe_precondition_bypass(_testing_obs(beam_preconditions_bypassed=True))
+    await recorder.observe_capture(_obs(reported_status="Scan complete", phase=CapturePhase.ENDED))
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    snapshot = genesis.calls[0].capture_precondition_bypass_snapshot
+    assert snapshot is not None
+    assert snapshot.beam_preconditions_bypassed is True
+
+
+@pytest.mark.unit
+async def test_observe_precondition_bypass_replaces_a_stale_reading_with_a_fresher_one() -> None:
+    genesis = _FakeRecordWitnessedRun()
+    recorder = _recorder(record_witnessed_run=genesis)
+    stale_time = _NOW.replace(hour=9)
+
+    recorder.observe_precondition_bypass(
+        _testing_obs(beam_preconditions_bypassed=True, observed_at=stale_time)
+    )
+    recorder.observe_precondition_bypass(
+        _testing_obs(beam_preconditions_bypassed=False, observed_at=_NOW)
+    )
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    snapshot = genesis.calls[0].capture_precondition_bypass_snapshot
+    assert snapshot is not None
+    assert snapshot.beam_preconditions_bypassed is False
+    assert snapshot.observed_at == _NOW
+
+
+@pytest.mark.unit
+async def test_observe_precondition_bypass_is_keyed_per_capture_code() -> None:
+    """Two capture codes' retained readings must not cross-contaminate:
+    each code's own genesis is stamped with only ITS OWN retained
+    reading, never the other code's."""
+    other_code = "2bmb-tomoscan-step"
+    genesis = _FakeRecordWitnessedRun()
+    recorder = _recorder(record_witnessed_run=genesis)
+
+    recorder.observe_precondition_bypass(_testing_obs(beam_preconditions_bypassed=True))
+    recorder.observe_precondition_bypass(
+        _testing_obs(beam_preconditions_bypassed=False, capture_code=other_code)
+    )
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, capture_code=other_code)
+    )
+
+    by_code = {command.capture_code: command for command in genesis.calls}
+    snapshot_for_code = by_code[_CODE].capture_precondition_bypass_snapshot
+    snapshot_for_other = by_code[other_code].capture_precondition_bypass_snapshot
+    assert snapshot_for_code is not None
+    assert snapshot_for_code.beam_preconditions_bypassed is True
+    assert snapshot_for_other is not None
+    assert snapshot_for_other.beam_preconditions_bypassed is False
 
 
 @pytest.mark.unit

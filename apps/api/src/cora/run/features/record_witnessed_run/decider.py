@@ -209,6 +209,7 @@ def decide(
             external_refs=external_refs,
             acknowledged_cautions=acknowledged_cautions,
             safety_envelope_verdict=safety_envelope_verdict,
+            capture_precondition_bypass_snapshot=command.capture_precondition_bypass_snapshot,
             occurred_at=now,
         )
     ]

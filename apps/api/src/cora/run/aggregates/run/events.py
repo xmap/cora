@@ -92,6 +92,7 @@ from uuid import UUID
 from cora.infrastructure.event_payload import deserialize_or_raise
 from cora.infrastructure.ports.event_store import StoredEvent
 from cora.run.aggregates.run.state import (
+    CapturePreconditionBypassSnapshot,
     CaptureProgressSnapshot,
     ConductMode,
     SafetyEnvelopeVerdict,
@@ -195,6 +196,18 @@ class RunStarted:
     Forward-compat via `payload.get("trigger_source")`. Future
     Decision-BC integration may populate this from
     `Inference.entries` references.
+
+    `capture_precondition_bypass_snapshot` (slice 11) is the witnessed
+    genesis's recorded reading of the substrate's `testing` role at the
+    moment RunWitness promoted this capture, or `None` on every driven
+    Run and on a witnessed genesis whose capture code declares no
+    `testing` role. See `CapturePreconditionBypassSnapshot`'s own
+    docstring for the tri-state contract and why this is NOT
+    `Manifest.is_simulated`. Only `record_witnessed_run`'s decider ever
+    constructs a non-None value, mirroring `safety_envelope_verdict`'s
+    own precedent. Forward-compat via
+    `payload.get("capture_precondition_bypass_snapshot")` returning
+    None for legacy streams without the key.
     """
 
     run_id: UUID
@@ -286,6 +299,16 @@ class RunStarted:
     # `payload.get("input_dataset_ids", [])` returning an empty list for
     # legacy streams without the field.
     input_dataset_ids: tuple[UUID, ...] = ()
+    # the witnessed genesis's recorded reading of the substrate's
+    # `testing` role (slice 11): whether it was bypassing its beam
+    # preconditions when this capture began. Always None on a driven
+    # Run, same "only the witnessed decider ever constructs a non-None
+    # value" precedent as `safety_envelope_verdict`. See
+    # `CapturePreconditionBypassSnapshot` for the tri-state contract.
+    # Forward-compat via
+    # `payload.get("capture_precondition_bypass_snapshot")` returning
+    # None for legacy streams without the key.
+    capture_precondition_bypass_snapshot: CapturePreconditionBypassSnapshot | None = None
 
 
 @dataclass(frozen=True)
@@ -839,6 +862,43 @@ def _capture_progress_snapshot_from_payload(
     )
 
 
+def _capture_precondition_bypass_snapshot_to_payload(
+    snapshot: CapturePreconditionBypassSnapshot | None,
+) -> dict[str, Any] | None:
+    """`RunStarted`'s `capture_precondition_bypass_snapshot` -> jsonb.
+    Whole object `None` when absent, matching `safety_envelope_verdict`'s
+    own precedent: absence must read as "no testing role declared for
+    this capture code", distinct from "the role was read and did not
+    decode" (`beam_preconditions_bypassed=None` with a real
+    `observed_at` inside a present object)."""
+    if snapshot is None:
+        return None
+    return {
+        "beam_preconditions_bypassed": snapshot.beam_preconditions_bypassed,
+        "observed_at": (
+            snapshot.observed_at.isoformat() if snapshot.observed_at is not None else None
+        ),
+    }
+
+
+def _capture_precondition_bypass_snapshot_from_payload(
+    raw: dict[str, Any] | None,
+) -> CapturePreconditionBypassSnapshot | None:
+    """The `from_stored` inverse of
+    `_capture_precondition_bypass_snapshot_to_payload`. Inner keys read
+    with `[...]` not `.get`, matching `safety_envelope_verdict`'s own
+    precedent: once the VO is on the wire, both of its fields are
+    assumed present."""
+    if raw is None:
+        return None
+    return CapturePreconditionBypassSnapshot(
+        beam_preconditions_bypassed=raw["beam_preconditions_bypassed"],
+        observed_at=(
+            datetime.fromisoformat(raw["observed_at"]) if raw["observed_at"] is not None else None
+        ),
+    )
+
+
 def to_payload(event: RunEvent) -> dict[str, Any]:
     """Serialize a Run event to a JSON-friendly dict for jsonb storage.
 
@@ -864,6 +924,7 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
             decided_by_decision_id=decided_by_decision_id,
             pinned_calibration_ids=pinned_calibration_ids,
             input_dataset_ids=input_dataset_ids,
+            capture_precondition_bypass_snapshot=capture_precondition_bypass_snapshot,
             occurred_at=occurred_at,
         ):
             return {
@@ -909,6 +970,11 @@ def to_payload(event: RunEvent) -> dict[str, Any]:
                 # ordering (the typed in-memory shape is frozenset; the wire
                 # shape is a sorted list for stable bytes).
                 "input_dataset_ids": sorted(str(ds) for ds in input_dataset_ids),
+                "capture_precondition_bypass_snapshot": (
+                    _capture_precondition_bypass_snapshot_to_payload(
+                        capture_precondition_bypass_snapshot
+                    )
+                ),
                 "occurred_at": occurred_at.isoformat(),
             }
         case RunHeld(
@@ -1135,8 +1201,10 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                 # `acknowledged_cautions`, `campaign_id`,
                 # `decided_by_decision_id` (Decision-to-Run linkage),
                 # `pinned_calibration_ids` (Calibration AsShot anchor),
-                # `input_dataset_ids` (PROV `used` input Dataset refs)
-                # were all added additively. Each .get(...) returns
+                # `input_dataset_ids` (PROV `used` input Dataset refs),
+                # `capture_precondition_bypass_snapshot` (slice 11
+                # testing-role reading) were all added additively. Each
+                # .get(...) returns
                 # the field's default when the key isn't in the jsonb
                 # payload, so legacy streams replay without an upcaster.
                 raw_campaign_id = payload.get("campaign_id")
@@ -1183,6 +1251,11 @@ def from_stored(stored: StoredEvent) -> RunEvent:
                         UUID(p) for p in payload.get("pinned_calibration_ids", [])
                     ),
                     input_dataset_ids=tuple(UUID(x) for x in payload.get("input_dataset_ids", [])),
+                    capture_precondition_bypass_snapshot=(
+                        _capture_precondition_bypass_snapshot_from_payload(
+                            payload.get("capture_precondition_bypass_snapshot")
+                        )
+                    ),
                     occurred_at=datetime.fromisoformat(payload["occurred_at"]),
                 )
 

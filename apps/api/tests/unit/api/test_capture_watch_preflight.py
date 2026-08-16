@@ -80,6 +80,7 @@ _CAPTURE_PVS = {
         "images_saved": "2bmb:TomoScan:ImagesSaved",
         "images_collected": "2bmb:TomoScan:ImagesCollected",
         "server_running": "2bmb:TomoScan:ServerRunning",
+        "testing": "2bmb:TomoScan:Testing",
     }
 }
 
@@ -93,13 +94,14 @@ async def test_preflight_read_happy_path_every_role_connects_and_decodes_ok() ->
             "2bmb:TomoScan:ImagesSaved": _reading("120/500"),
             "2bmb:TomoScan:ImagesCollected": _reading("120/500"),
             "2bmb:TomoScan:ServerRunning": _reading("Yes", kind="Categorical"),
+            "2bmb:TomoScan:Testing": _reading("Yes", kind="Categorical"),
         }
     )
 
     report = await _preflight(port, _CAPTURE_PVS)
 
     assert not report.problem
-    assert len(report.lines) == 5
+    assert len(report.lines) == 6
     assert all(line.ok for line in report.lines)
 
 
@@ -162,6 +164,42 @@ async def test_preflight_read_abort_role_unrecognized_token_is_bad() -> None:
     port = _FakeControlPort({"pv:abort": _reading("Halted", kind="Categorical")})
 
     report = await _preflight(port, {"code": {"abort": "pv:abort"}})
+
+    (line,) = report.lines
+    assert not line.ok
+    assert line.verdict == "unrecognized"
+
+
+@pytest.mark.unit
+async def test_preflight_read_testing_role_enum_label_no_decodes_as_real_not_asserted() -> None:
+    """Same regression class as the `abort` role: 2-BM's `Testing` is the
+    identical `DBR_ENUM` record type, resolving to the label `'No'` for a
+    real acquisition, and `bool('No')` is `True`."""
+    port = _FakeControlPort({"pv:testing": _reading("No", kind="Categorical")})
+
+    report = await _preflight(port, {"code": {"testing": "pv:testing"}})
+
+    (line,) = report.lines
+    assert line.ok
+    assert line.verdict == "real"
+
+
+@pytest.mark.unit
+async def test_preflight_read_testing_role_enum_label_yes_decodes_as_testing() -> None:
+    port = _FakeControlPort({"pv:testing": _reading("Yes", kind="Categorical")})
+
+    report = await _preflight(port, {"code": {"testing": "pv:testing"}})
+
+    (line,) = report.lines
+    assert line.ok
+    assert line.verdict == "testing"
+
+
+@pytest.mark.unit
+async def test_preflight_read_testing_role_unrecognized_token_is_bad() -> None:
+    port = _FakeControlPort({"pv:testing": _reading("Halted", kind="Categorical")})
+
+    report = await _preflight(port, {"code": {"testing": "pv:testing"}})
 
     (line,) = report.lines
     assert not line.ok

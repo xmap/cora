@@ -415,6 +415,73 @@ class CaptureProgressSnapshot:
     saved_at: datetime | None
 
 
+@dataclass(frozen=True)
+class CapturePreconditionBypassSnapshot:
+    """The witnessed genesis's recorded reading of the substrate's `testing`
+    role: whether it was bypassing its own beam preconditions when this
+    capture began.
+
+    Named for the domain fact, not the substrate's own `testing` word:
+    the PV and the deployment-config role key stay called `testing`
+    (`Settings.capture_watch_pvs`, `_capture_observer.py`), but this
+    VO's own name and field follow `CaptureProgressSnapshot`'s
+    precedent of a facility-neutral schema on the Run aggregate's event
+    payload.
+
+    NOT `Observation.is_simulated` (`Manifest.is_simulated` folds it at
+    export). That column answers whether the NUMBERS CORA recorded were
+    invented by a simulator or replay feeder; this answers whether the
+    FACILITY had beam. The two are independent: at 2-BM during the 2026
+    commissioning shutdown, the detector, motors, and file are all real
+    (`is_simulated=False`) while there is no beam
+    (`beam_preconditions_bypassed=True`). Collapsing them would make
+    both unreadable. See
+    [[project_run_witness_test_provenance_slice11]] for the full
+    argument.
+
+    `beam_preconditions_bypassed` is tri-state, never coerced to two:
+    `True` is a positive claim the substrate reported bypassing its
+    beam preconditions, `False` is a positive claim it reported a real
+    acquisition, and `None` means no reading ever reached CORA for this
+    capture code, or the latest one did not decode. `None` must never
+    collapse into `False`: "unknown" and "confirmed real" are different
+    claims a reader needs to tell apart, per the issue's own
+    requirement that an unresolved reading say so explicitly rather
+    than default to a guess.
+
+    `observed_at` is the substrate's OWN time for the retained reading
+    (dual clock, mirroring `CaptureLifecycleObservation`), and can
+    predate this genesis by an arbitrary amount: `RunWitness` reads the
+    `testing` role continuously, independent of any one capture, and
+    retains only the LATEST reading seen so far, not a fresh read
+    triggered by the genesis itself. Independently nullable from
+    `beam_preconditions_bypassed`: it is `None` whenever no reading has
+    ever arrived (then both fields are `None` together), but it can
+    ALSO be `None` on a reading that decoded cleanly to `True` or
+    `False`, when the substrate itself supplied no timestamp for that
+    reading (`Measurement.produced_at=None`; never synthesized from
+    CORA's own clock, mirroring `CaptureLifecycleObservation`'s own
+    rule). A reader comparing `observed_at` against this event's own
+    `occurred_at` sees exactly how stale the retained reading was at
+    genesis time, which is the whole point of retaining it rather than
+    a bare boolean.
+
+    Whole object is `None` on every driven Run (there is no substrate
+    `testing` role to have read) and on a witnessed genesis for a
+    capture code with no `testing` role declared. Never constructed with
+    both fields `None` by omission; that shape is reached only through
+    "no reading has ever arrived", same convention as
+    `CaptureProgressSnapshot`.
+
+    Lives beside `CaptureProgressSnapshot` and `SafetyEnvelopeVerdict` in
+    this module for the same reason: `events.py` already imports from
+    `state.py`, so this adds no new import edge.
+    """
+
+    beam_preconditions_bypassed: bool | None
+    observed_at: datetime | None
+
+
 class InvalidRunNameError(ValueError):
     """The supplied name is empty, whitespace-only, or too long."""
 

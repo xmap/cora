@@ -727,13 +727,18 @@ class Settings(BaseSettings):
     #       "server_running": "2bmb:TomoScan:ServerRunning",
     #       "abort": "2bmb:TomoScan:AbortScan",
     #       "images_saved": "2bmb:TomoScan:ImagesSaved",
-    #       "images_collected": "2bmb:TomoScan:ImagesCollected"
+    #       "images_collected": "2bmb:TomoScan:ImagesCollected",
+    #       "testing": "2bmb:TomoScan:Testing"
     #     }
     #   }'
     #
     # `status` is a DBR_CHAR waveform at 2-BM; the deployment's
     # CONTROL_PORT_ROUTES must declare it in `text_addresses` or it
-    # decodes as raw bytes, not text. See `cora.api._capture_observer`.
+    # decodes as raw bytes, not text. `testing` (slice 11, optional per
+    # code) is a DBR_ENUM, the same record type as `abort`: whether
+    # tomoscan is bypassing its own beam preconditions for this capture,
+    # carried onto the witnessed genesis, never onto
+    # `Observation.is_simulated`. See `cora.api._capture_observer`.
     capture_watch_pvs: dict[str, dict[str, str]] = {}
 
     # The `status` role's raw substrate literal, mapped onto CORA's

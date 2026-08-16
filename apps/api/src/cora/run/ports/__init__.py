@@ -12,6 +12,7 @@ from cora.run.ports.capture_observer import (
     CaptureObserver,
     CaptureObserverScope,
     CapturePhase,
+    CapturePreconditionBypassObservation,
     CaptureProgressObservation,
     QuietCaptureObserver,
 )
@@ -29,6 +30,7 @@ __all__ = [
     "CaptureObserver",
     "CaptureObserverScope",
     "CapturePhase",
+    "CapturePreconditionBypassObservation",
     "CaptureProgressObservation",
     "InMemoryRunChannelLookup",
     "QuietCaptureObserver",
