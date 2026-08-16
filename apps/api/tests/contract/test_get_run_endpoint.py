@@ -87,6 +87,15 @@ def test_get_run_returns_200_with_running_status_for_sample_run() -> None:
         # no capture code at all, so neither field resolves.
         "capture_code": None,
         "observed_capture_path": None,
+        # Slice 14a additive response surface: same reasoning as
+        # capture_code/observed_capture_path above -- a Conducted Run
+        # never touches the run_experiment_identity vault at all.
+        "proposal_number": None,
+        "proposal_number_observed_at": None,
+        "esaf_number": None,
+        "esaf_number_observed_at": None,
+        "esaf_doi_number": None,
+        "esaf_doi_number_observed_at": None,
     }
 
 
