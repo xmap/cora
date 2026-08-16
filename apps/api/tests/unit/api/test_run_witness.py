@@ -631,6 +631,34 @@ async def test_promotion_does_not_read_the_baseline_when_the_kill_switch_is_off(
 
 
 @pytest.mark.unit
+async def test_kill_switch_is_read_fresh_at_call_time_not_cached_at_construction() -> None:
+    """settings.capture_baseline_recording_enabled must be re-read on
+    every promotion, not captured once when the recorder is built: an
+    operator flips this at runtime via a live Settings object, the same
+    way `run_witness_recording_enabled` is already read fresh every
+    `observe_capture` call rather than snapshotted in `__init__`."""
+    fake = _FakeRecordWitnessedRun()
+    baseline = _FakeCaptureBaselineReader()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        baseline_reader=baseline,
+        capture_baseline_recording_enabled=False,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, capture_code="code-a")
+    )
+    assert baseline.calls == []
+
+    recorder._settings.capture_baseline_recording_enabled = True  # pyright: ignore[reportPrivateUsage]
+
+    await recorder.observe_capture(
+        _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN, capture_code="code-b")
+    )
+    assert baseline.calls == [("code-b", fake.run_id)]
+
+
+@pytest.mark.unit
 async def test_promotion_with_no_baseline_reader_configured_is_unaffected() -> None:
     fake = _FakeRecordWitnessedRun()
     recorder = _recorder(

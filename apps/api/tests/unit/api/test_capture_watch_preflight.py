@@ -333,6 +333,36 @@ async def test_preflight_read_baseline_numeric_reading_is_ok_with_na_verdict() -
 
 
 @pytest.mark.unit
+async def test_preflight_read_baseline_ignores_quality_and_produced_at_unlike_the_real_reader() -> (
+    None
+):
+    """The real `CaptureBaselineReader` rejects Bad quality and a missing
+    substrate time; this preflight sweep has no such rules, since it
+    exists only to catch the one defect checkable ahead of time
+    (non-numeric). A Bad-quality or timestamp-less reading here must
+    still report `ok=True, verdict="n/a"` -- the contrast this module's
+    own docstring advertises."""
+    port = _FakeControlPort(
+        {
+            "pv:bad-quality": Measurement(value=1.5, kind="Scalar", quality="Bad", produced_at=_T),
+            "pv:no-time": Measurement(value=2.5, kind="Scalar", quality="Good", produced_at=None),
+        }
+    )
+
+    report = await _preflight(
+        port,
+        {},
+        baseline_pvs={
+            "code": {"BadQuality": "pv:bad-quality", "NoTime": "pv:no-time"},
+        },
+    )
+
+    assert len(report.lines) == 2
+    assert all(line.ok for line in report.lines)
+    assert all(line.verdict == "n/a" for line in report.lines)
+
+
+@pytest.mark.unit
 async def test_preflight_read_baseline_non_numeric_reading_is_bad() -> None:
     """`Observation.value` is `float`; a textual baseline reading is the
     one defect this sweep can catch ahead of a real append attempt."""
