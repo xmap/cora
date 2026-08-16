@@ -14,10 +14,13 @@ Three defects have now shipped on this exact PV set because a decoder was
 written from a docstring's assumed shape rather than what the real IOC
 puts on the wire: `NumAngles` a 1-element array not a scalar, `AbortScan`
 an ENUM label `'No'` not `0`, `ImagesSaved` / `ImagesCollected` a
-`"<done>/<total>"` string not a float. All three would have shown up in
-one run of this command: `kind` flags array-vs-scalar and, via
-`classify_capture_status` / `binary_code` / `progress_counts`, a decode
-verdict flags anything a role's real decoder cannot accept.
+`"<done>/<total>"` string not a float. Two of the three would have shown
+up in one run of this command: via `classify_capture_status` /
+`binary_code` / `progress_counts`, a decode verdict flags the `AbortScan`
+enum label and the `ImagesSaved` / `ImagesCollected` string. The third,
+`NumAngles`, would NOT: it is read from the HDF5 file
+(`data_exchange_scan_reader.py:106`), never from a PV, so it is not in
+`CAPTURE_WATCH_PVS` and no channel-access preflight can reach it.
 
 ## Read-only, changes nothing
 
@@ -33,13 +36,19 @@ beam-on session.
 `ControlPort.read()` already collapses the wire type into the closed
 `MeasurementKind` set (`_kind_for` in `epics_ca_control_port.py`: DBR_ENUM
 -> Categorical, `element_count > 1` -> Array, else Scalar) before this
-command ever sees a reading. That is sufficient to catch all three defects
-above: `kind` alone flags array-vs-scalar and enum-vs-int, and the raw
-`value` makes a `"12/100"` string visibly not a bare float. Reaching past
-`ControlPort` for the raw aioca `.datatype` would add a substrate-specific
-escape hatch that no other caller needs, breaking the discipline every
-other consumer in this codebase already keeps of never leaking EPICS
-specifics past the adapter.
+command ever sees a reading. That is enough to catch the two wire-shape
+defects this preflight can actually reach: `kind` flags a DBR_ENUM
+masquerading as a scalar (`AbortScan` resolves as Categorical, not
+Scalar) and the raw `value` makes a `"12/100"` string visibly not a bare
+float. It is NOT enough to flag a one-element array as anything but a
+Scalar: `_kind_for` classifies an array by `element_count > 1`, so a
+genuinely 1-element array (`NumAngles`'s own shape, had it been readable
+as a PV here) reports `kind=Scalar`, indistinguishable from a real
+scalar via `kind` alone. Reaching past `ControlPort` for the raw aioca
+`.datatype` would add a substrate-specific escape hatch that no other
+caller needs, breaking the discipline every other consumer in this
+codebase already keeps of never leaking EPICS specifics past the
+adapter.
 
 ## Per-role decode verdict
 
