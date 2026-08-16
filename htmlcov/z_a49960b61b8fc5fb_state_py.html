@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for src/cora/run/aggregates/run/state.py: 100.0%</title>
+    <title>Coverage for src/cora/run/aggregates/run/state.py: 99.7%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>src<span class="sep">/</span>cora<span class="sep">/</span>run<span class="sep">/</span>aggregates<span class="sep">/</span>run<span class="sep">/</span>state.py</b>:
-            <span class="pc_cov">100.0%</span>
+            <span class="pc_cov">99.7%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -55,11 +55,11 @@
             </div>
         </aside>
         <h2>
-            <span class="text">307 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">307<span class="text"> run</span></button>
+            <span class="text">314 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">314<span class="text"> run</span></button>
             <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
-            <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">14<span class="text"> excluded</span></button>
-            <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
+            <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">15<span class="text"> excluded</span></button>
+            <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">1<span class="text"> partial</span></button>
         </h2>
         <p class="text">
             <a id="prevFileLink" class="nav" href="z_a49960b61b8fc5fb_safety_envelope_py.html">&#xab; prev</a> &nbsp; &nbsp;
@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_60fefeb57b18d243_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-16 09:08 +0000
+            created at 2026-08-16 13:42 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -1982,6 +1982,35 @@
     <p class="run"><span class="n"><a id="t1898" href="#t1898">1898</a></span><span class="t">    <span class="key">if</span> <span class="nam">len</span><span class="op">(</span><span class="nam">value</span><span class="op">)</span> <span class="op">&gt;</span> <span class="nam">RUN_INPUT_DATASETS_MAX_ENTRIES</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1899" href="#t1899">1899</a></span><span class="t">        <span class="key">raise</span> <span class="nam">InvalidInputDatasetsError</span><span class="op">(</span><span class="nam">len</span><span class="op">(</span><span class="nam">value</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t1900" href="#t1900">1900</a></span><span class="t">    <span class="key">return</span> <span class="nam">value</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1901" href="#t1901">1901</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1902" href="#t1902">1902</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1903" href="#t1903">1903</a></span><span class="t"><span class="nam">CAPTURE_CODE_EXTERNAL_REF_SCHEME</span> <span class="op">=</span> <span class="str">&quot;capture-code&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1904" href="#t1904">1904</a></span><span class="t"><span class="str">&quot;&quot;&quot;The `Identifier.scheme` a witnessed genesis stamps onto</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t1905" href="#t1905">1905</a></span><span class="t"><span class="str">`Run.external_refs` (`record_witnessed_run`&#x27;s decider). Public so every</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t1906" href="#t1906">1906</a></span><span class="t"><span class="str">reader of `external_refs` looking for the capture code uses the exact</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t1907" href="#t1907">1907</a></span><span class="t"><span class="str">same literal, never a second copy that can drift from the writer&#x27;s own.&quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1908" href="#t1908">1908</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t1909" href="#t1909">1909</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1910" href="#t1910">1910</a></span><span class="t"><span class="key">def</span> <span class="nam">extract_capture_code</span><span class="op">(</span><span class="nam">external_refs</span><span class="op">:</span> <span class="nam">frozenset</span><span class="op">[</span><span class="nam">Identifier</span><span class="op">]</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t1911" href="#t1911">1911</a></span><span class="t">    <span class="str">&quot;&quot;&quot;Find the `Identifier(scheme=&quot;capture-code&quot;, ...)` entry&#x27;s value.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1912" href="#t1912">1912</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1913" href="#t1913">1913</a></span><span class="t"><span class="str">    `None` for a Conducted Run (no such ref at all) and, defensively,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1914" href="#t1914">1914</a></span><span class="t"><span class="str">    for a Witnessed Run whose genesis somehow lacked one:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1915" href="#t1915">1915</a></span><span class="t"><span class="str">    `record_witnessed_run`&#x27;s decider always stamps exactly one, so this</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1916" href="#t1916">1916</a></span><span class="t"><span class="str">    should not happen in practice, but a missing ref must never raise --</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1917" href="#t1917">1917</a></span><span class="t"><span class="str">    only degrade to &quot;capture code unknown,&quot; e.g. at the boot-time</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1918" href="#t1918">1918</a></span><span class="t"><span class="str">    dedup rebuild (`rebuild_open_captures`) or a read-model query.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1919" href="#t1919">1919</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1920" href="#t1920">1920</a></span><span class="t"><span class="str">    Single source of truth for this lookup against the FOLDED aggregate</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1921" href="#t1921">1921</a></span><span class="t"><span class="str">    state&#x27;s `frozenset[Identifier]` shape; `RunSummaryProjection`&#x27;s</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1922" href="#t1922">1922</a></span><span class="t"><span class="str">    sibling `_extract_capture_code` (`run/projections/summary.py`)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1923" href="#t1923">1923</a></span><span class="t"><span class="str">    performs the same lookup against a raw JSON event payload list, a</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1924" href="#t1924">1924</a></span><span class="t"><span class="str">    genuinely different input type, so it stays a separate function.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc exc2 show_exc"><span class="n"><a id="t1925" href="#t1925">1925</a></span><span class="t"><span class="str">    &quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1926" href="#t1926">1926</a></span><span class="t">    <span class="key">for</span> <span class="nam">ref</span> <span class="key">in</span> <span class="nam">external_refs</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="par run show_par"><span class="n"><a id="t1927" href="#t1927">1927</a></span><span class="t">        <span class="key">if</span> <span class="nam">ref</span><span class="op">.</span><span class="nam">scheme</span> <span class="op">==</span> <span class="nam">CAPTURE_CODE_EXTERNAL_REF_SCHEME</span><span class="op">:</span>&nbsp;</span><span class="r"><span class="annotate short">1927&#x202F;&#x219B;&#x202F;1926</span><span class="annotate long">line 1927 didn't jump to line 1926 because the condition on line 1927 was always true</span></span></p>
+    <p class="run"><span class="n"><a id="t1928" href="#t1928">1928</a></span><span class="t">            <span class="key">return</span> <span class="nam">ref</span><span class="op">.</span><span class="nam">value</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t1929" href="#t1929">1929</a></span><span class="t">    <span class="key">return</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -1991,7 +2020,7 @@
             <a class="nav" href="z_60fefeb57b18d243_errors_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-16 09:08 +0000
+            created at 2026-08-16 13:42 +0000
         </p>
     </div>
 </footer>
