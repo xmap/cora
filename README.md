@@ -1537,9 +1537,9 @@
 | src/cora/infrastructure/record\_export/\_bundle.py                                       |       63 |        4 |       20 |        3 |     91.6% |146-147, 228-229, 239-\>243 |
 | src/cora/infrastructure/record\_export/\_dispositions.py                                 |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_export.py                                       |       36 |        0 |        6 |        0 |    100.0% |           |
-| src/cora/infrastructure/record\_export/\_hashing.py                                      |       21 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/record\_export/\_hashing.py                                      |       25 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_leaf\_rule.py                                   |       39 |        1 |       22 |        3 |     93.4% |94-\>86, 105-\>107, 112 |
-| src/cora/infrastructure/record\_export/\_manifest.py                                     |       66 |        0 |       14 |        0 |    100.0% |           |
+| src/cora/infrastructure/record\_export/\_manifest.py                                     |       80 |        0 |       14 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_redact\_tier1.py                                |       88 |        7 |       42 |        4 |     90.0% |90-93, 103, 110, 122 |
 | src/cora/infrastructure/record\_export/\_redact\_tier2.py                                |       40 |        0 |       20 |        2 |     96.7% |317-\>304, 325-\>304 |
 | src/cora/infrastructure/record\_export/\_redaction.py                                    |       31 |        0 |        2 |        0 |    100.0% |           |
@@ -2651,7 +2651,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **58326** | **1349** | **8662** |  **401** | **97.2%** |           |
+| **TOTAL**                                                                                | **58344** | **1349** | **8662** |  **401** | **97.2%** |           |
 
 
 ## Setup coverage badge
