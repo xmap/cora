@@ -42,13 +42,14 @@ _BASELINE_PVS = {
 def _reading(
     value: object = 1.0,
     *,
+    kind: str = "Scalar",
     quality: str = "Good",
     produced_at: datetime | None = _NOW,
     units: str | None = None,
 ) -> Measurement:
     return Measurement(  # type: ignore[arg-type]
         value=value,
-        kind="Scalar",
+        kind=kind,  # type: ignore[arg-type]
         quality=quality,  # type: ignore[arg-type]
         produced_at=produced_at,
         units=units,
@@ -177,6 +178,120 @@ async def test_oversized_units_is_skipped_and_does_not_fail_the_rest_of_the_batc
     port = _FakeControlPort(
         {
             "2bmb:TomoScan:ExposureTime": _reading(1.5, units="x" * (READING_UNITS_MAX_LENGTH + 1)),
+            "2bmb:TomoScan:NumAngles": _reading(3000.0),
+        }
+    )
+    reader, append = _reader(control_port=port)
+
+    await reader.read(_CODE, _RUN_ID)
+
+    assert len(append.calls) == 1
+    assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
+
+
+@pytest.mark.unit
+async def test_categorical_reading_becomes_categorical_value_entry_not_numeric() -> None:
+    """A `Categorical` reading (an EPICS mbbo/bo scan-configuration PV)
+    carries the substrate's own enum label unchanged into
+    `categorical_value`, leaving `value` unset -- never coerced through
+    `finite_float`."""
+    port = _FakeControlPort(
+        {
+            "2bmb:TomoScan:ExposureTime": _reading("Fly", kind="Categorical"),
+            "2bmb:TomoScan:NumAngles": _reading(3000.0),
+        }
+    )
+    reader, append = _reader(control_port=port)
+
+    await reader.read(_CODE, _RUN_ID)
+
+    assert len(append.calls) == 1
+    entries = {e.channel_name: e for e in append.calls[0].entries}
+    assert entries["ExposureTime"].value is None
+    assert entries["ExposureTime"].categorical_value == "Fly"
+    assert entries["NumAngles"].value == 3000.0
+    assert entries["NumAngles"].categorical_value is None
+
+
+@pytest.mark.unit
+async def test_categorical_reading_with_non_string_value_is_skipped() -> None:
+    port = _FakeControlPort(
+        {
+            "2bmb:TomoScan:ExposureTime": _reading(1, kind="Categorical"),
+            "2bmb:TomoScan:NumAngles": _reading(3000.0),
+        }
+    )
+    reader, append = _reader(control_port=port)
+
+    await reader.read(_CODE, _RUN_ID)
+
+    assert len(append.calls) == 1
+    assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
+
+
+@pytest.mark.unit
+async def test_categorical_reading_with_empty_label_is_skipped() -> None:
+    port = _FakeControlPort(
+        {
+            "2bmb:TomoScan:ExposureTime": _reading("", kind="Categorical"),
+            "2bmb:TomoScan:NumAngles": _reading(3000.0),
+        }
+    )
+    reader, append = _reader(control_port=port)
+
+    await reader.read(_CODE, _RUN_ID)
+
+    assert len(append.calls) == 1
+    assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
+
+
+@pytest.mark.unit
+async def test_categorical_label_over_max_length_is_skipped() -> None:
+    from cora.run.aggregates.run import READING_CATEGORICAL_VALUE_MAX_LENGTH
+
+    port = _FakeControlPort(
+        {
+            "2bmb:TomoScan:ExposureTime": _reading(
+                "x" * (READING_CATEGORICAL_VALUE_MAX_LENGTH + 1), kind="Categorical"
+            ),
+            "2bmb:TomoScan:NumAngles": _reading(3000.0),
+        }
+    )
+    reader, append = _reader(control_port=port)
+
+    await reader.read(_CODE, _RUN_ID)
+
+    assert len(append.calls) == 1
+    assert [e.channel_name for e in append.calls[0].entries] == ["NumAngles"]
+
+
+@pytest.mark.unit
+async def test_categorical_label_at_exactly_the_max_length_is_kept() -> None:
+    from cora.run.aggregates.run import READING_CATEGORICAL_VALUE_MAX_LENGTH
+
+    label = "x" * READING_CATEGORICAL_VALUE_MAX_LENGTH
+    port = _FakeControlPort({"2bmb:TomoScan:ExposureTime": _reading(label, kind="Categorical")})
+    reader, append = _reader(
+        control_port=port, baseline_pvs={_CODE: {"ExposureTime": "2bmb:TomoScan:ExposureTime"}}
+    )
+
+    await reader.read(_CODE, _RUN_ID)
+
+    assert len(append.calls) == 1
+    assert append.calls[0].entries[0].categorical_value == label
+
+
+@pytest.mark.unit
+async def test_categorical_reading_with_oversized_units_is_skipped() -> None:
+    """The units-too-long guard applies to categorical readings the
+    same way it applies to numeric ones."""
+    from cora.run.aggregates.run import READING_UNITS_MAX_LENGTH
+
+    port = _FakeControlPort(
+        {
+            "2bmb:TomoScan:ExposureTime": _reading(
+                "Fly", kind="Categorical", units="x" * (READING_UNITS_MAX_LENGTH + 1)
+            ),
             "2bmb:TomoScan:NumAngles": _reading(3000.0),
         }
     )

@@ -128,6 +128,8 @@ TIER2_DISPOSITIONS: dict[str, dict[str, str]] = {
         "command_name": KEEP,  # judged low risk (3-of-8 group)
         "channel_name": KEEP,  # EPICS channel address, facility-fixed, already public
         "value": KEEP,
+        "categorical_value": KEEP,  # facility's own enum label (e.g. 'Fly'), same
+        # standard as channel_name/value: substrate vocabulary, not PII
         "units": KEEP,  # judged low risk: unvalidated, low risk, not closed
         "sampling_procedure": KEEP,  # proved closed: Literal + SAMPLING_PROCEDURE_VALUES
         "sampled_at": KEEP,

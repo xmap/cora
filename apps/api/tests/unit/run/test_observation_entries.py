@@ -32,6 +32,7 @@ def _row(**overrides: object) -> Observation:
         "command_name": "AppendObservations",
         "channel_name": "T_sample",
         "value": 295.1,
+        "categorical_value": None,
         "units": "K",
         "sampling_procedure": "baseline",
         "sampled_at": _NOW,
@@ -63,6 +64,18 @@ def test_run_observation_units_optional() -> None:
     """Units are optional (some channels are dimensionless)."""
     row = _row(units=None)
     assert row.units is None
+
+
+@pytest.mark.unit
+def test_run_observation_categorical_value_row_has_no_numeric_value() -> None:
+    """A categorical (enum-label) row sets `categorical_value` and
+    leaves `value` unset -- the mirror image of a numeric row. The
+    dataclass itself does not enforce the exclusive-or (that lives in
+    `InvalidObservationShapeError` and the DB CHECK constraint); this
+    test only pins the shape a categorical row actually takes."""
+    row = _row(value=None, categorical_value="Fly")
+    assert row.value is None
+    assert row.categorical_value == "Fly"
 
 
 @pytest.mark.unit

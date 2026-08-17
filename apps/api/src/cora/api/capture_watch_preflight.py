@@ -8,11 +8,16 @@ connects, what `Measurement.kind` CORA's `ControlPort` sees it as, the raw
 decoded value, and whether CORA's own decoder for that role accepts it. It
 also sweeps `Settings.capture_baseline_pvs` (slice 12): those channels have
 no per-role decoder in production (every baseline channel is treated
-identically, see `cora.api._capture_baseline_reader`), so the report shows
-`kind` / `value` / `units` with verdict `n/a`, EXCEPT that a non-numeric
-value is flagged BAD -- the one thing checkable ahead of time, since
-`Observation.value` is `float` and a textual reading would be rejected at
-append time anyway. It also sweeps `Settings.capture_experiment_identity_pvs`
+identically by wire kind, see `cora.api._capture_baseline_reader`), so the
+report shows `kind` / `value` / `units` with verdict `n/a`, EXCEPT that a
+non-numeric, non-categorical value is flagged BAD -- the one thing
+checkable ahead of time, since `Observation.value` /
+`Observation.categorical_value` are the only two shapes
+`AppendObservations` accepts. A `Categorical` reading (an EPICS
+`mbbo`/`bo` scan-configuration PV) reports its resolved label as the
+verdict instead of being flagged BAD: `CaptureBaselineReader` stores
+that label directly, so a healthy categorical PV is not a defect. It
+also sweeps `Settings.capture_experiment_identity_pvs`
 (slice 14a): the one thing worth flagging ahead of time here is that the
 substrate's own `"Unknown"` placeholder reads as a perfectly healthy
 string unless this preflight calls it out explicitly, so the verdict
@@ -145,6 +150,7 @@ from cora.operation.ports.control_port import (
     ControlTimeoutError,
     ControlValueCoercionError,
 )
+from cora.run.aggregates.run import READING_CATEGORICAL_VALUE_MAX_LENGTH
 from cora.shared.capture_phase import CapturePhase
 
 if TYPE_CHECKING:
@@ -428,11 +434,24 @@ async def _read_one_baseline(
 
 
 def _baseline_verdict(reading: Measurement) -> tuple[str, bool]:
-    """BAD only when the value cannot coerce to a finite float: that is
-    the one baseline defect checkable ahead of a real append attempt.
-    Reuses `finite_float`, the same coercion `CaptureBaselineReader`
-    itself applies, so this can never drift from what production accepts.
+    """A `Categorical` reading (an EPICS `mbbo`/`bo` scan-configuration
+    PV) reports its resolved label as the verdict, BAD only for a
+    non-string/empty value or one over
+    `READING_CATEGORICAL_VALUE_MAX_LENGTH`: `CaptureBaselineReader`
+    stores the label unchanged, so a healthy label is not a defect.
+    Every other kind is BAD only when the value cannot coerce to a
+    finite float: that is the one baseline defect checkable ahead of a
+    real append attempt. Reuses `finite_float`, the same coercion
+    `CaptureBaselineReader` itself applies, so this can never drift
+    from what production accepts.
     """
+    if reading.kind == "Categorical":
+        label = reading.value
+        if not isinstance(label, str) or not label:
+            return "non-text", False
+        if len(label) > READING_CATEGORICAL_VALUE_MAX_LENGTH:
+            return "label-too-long", False
+        return f"label={label!r}", True
     if finite_float(reading.value) is None:
         return "non-numeric", False
     return "n/a", True

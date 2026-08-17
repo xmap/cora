@@ -80,7 +80,7 @@ async def _read_readings_for_run(db_pool: asyncpg.Pool, run_id: UUID) -> list[as
             """
             SELECT
                 event_id, run_id, logbook_id, actor_id, command_name,
-                channel_name, value, units, sampling_procedure,
+                channel_name, value, categorical_value, units, sampling_procedure,
                 sampled_at, occurred_at, recorded_at,
                 correlation_id, causation_id, is_simulated
             FROM entries_run_observations
@@ -424,3 +424,105 @@ async def test_append_observations_polymorphic_baseline_and_monitor_coexist(
     stored, version = await deps.event_store.load("Run", run_id)
     assert version == 2
     assert [s.event_type for s in stored] == ["RunStarted", "RunObservationLogbookOpened"]
+
+
+@pytest.mark.integration
+async def test_append_observations_mixed_numeric_and_categorical_baseline_one_snapshot(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A genesis baseline batch carrying BOTH a numeric reading
+    (ExposureTime) and a categorical, enum-label reading (ScanType, an
+    EPICS mbbo scan-configuration PV) lands in ONE retrievable snapshot:
+    a single `SELECT ... WHERE run_id = $1` covers both, discriminated
+    by which of value / categorical_value is set, never by which table
+    they live in."""
+    run_id = UUID("01900000-0000-7000-8000-0000006f6001")
+    logbook_id = UUID("01900000-0000-7000-8000-0000006f6002")
+    open_event_id = UUID("01900000-0000-7000-8000-0000006f6003")
+    numeric_id = UUID("01900000-0000-7000-8000-0000006f6011")
+    categorical_id = UUID("01900000-0000-7000-8000-0000006f6012")
+
+    deps = build_postgres_deps(db_pool, now=_NOW, ids=[logbook_id, open_event_id])
+    observation_store = PostgresObservationStore(db_pool)
+    await _seed_run_started(deps.event_store, run_id)
+
+    entries = (
+        ObservationInput(
+            event_id=numeric_id,
+            channel_name="ExposureTime",
+            value=1.5,
+            sampled_at=_NOW,
+            sampling_procedure="baseline",
+            units="s",
+        ),
+        ObservationInput(
+            event_id=categorical_id,
+            channel_name="ScanType",
+            value=None,
+            categorical_value="Fly",
+            sampled_at=_NOW,
+            sampling_procedure="baseline",
+        ),
+    )
+    count = await bind_append(deps, observation_store=observation_store)(
+        AppendObservations(run_id=run_id, entries=entries),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count == 2
+
+    rows = await _read_readings_for_run(db_pool, run_id)
+    assert len(rows) == 2
+    by_id = {r["event_id"]: r for r in rows}
+
+    numeric_row = by_id[numeric_id]
+    assert numeric_row["value"] == pytest.approx(1.5)
+    assert numeric_row["categorical_value"] is None
+
+    categorical_row = by_id[categorical_id]
+    assert categorical_row["value"] is None
+    assert categorical_row["categorical_value"] == "Fly"
+    assert categorical_row["sampling_procedure"] == "baseline"
+    assert categorical_row["logbook_id"] == logbook_id
+
+
+@pytest.mark.integration
+async def test_entries_run_observations_value_exclusive_arc_constraint_rejects_neither_or_both(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """DB-level defense-in-depth: a raw INSERT with neither, or both,
+    of value / categorical_value set is refused by the
+    `entries_run_observations_value_exclusive_arc` CHECK constraint,
+    even bypassing the application-layer handler entirely."""
+    run_id = uuid4()
+    logbook_id = uuid4()
+
+    async def _insert(value: float | None, categorical_value: str | None) -> None:
+        async with db_pool.acquire() as conn:
+            await conn.execute(
+                """
+                INSERT INTO entries_run_observations (
+                    event_id, run_id, logbook_id, actor_id, command_name,
+                    channel_name, value, categorical_value, sampling_procedure,
+                    sampled_at, occurred_at, correlation_id
+                ) VALUES ($1, $2, $3, $4, 'TestCmd', 'test-channel', $5, $6,
+                    'baseline', now(), now(), $7)
+                """,
+                uuid4(),
+                run_id,
+                logbook_id,
+                uuid4(),
+                value,
+                categorical_value,
+                uuid4(),
+            )
+
+    with pytest.raises(
+        asyncpg.CheckViolationError, match="entries_run_observations_value_exclusive_arc"
+    ):
+        await _insert(None, None)
+
+    with pytest.raises(
+        asyncpg.CheckViolationError, match="entries_run_observations_value_exclusive_arc"
+    ):
+        await _insert(1.0, "Fly")

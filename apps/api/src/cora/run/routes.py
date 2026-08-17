@@ -26,6 +26,7 @@ InvalidRunInterruptedAtError).
     InvalidRunStopReasonError, InvalidRunTruncateReasonError,
     InvalidRunInterruptedAtError, InvalidRunParametersError,
     InvalidChannelNameError, InvalidObservationValueError,
+    InvalidObservationShapeError,
     InvalidSamplingProcedureError, InvalidRunExternalRefError
   - 404 (load miss): RunNotFoundError
   - 409 (defensive guard for AlreadyExists): RunAlreadyExistsError
@@ -62,6 +63,7 @@ from fastapi.responses import JSONResponse
 from cora.run.aggregates.run import (
     InvalidChannelNameError,
     InvalidInputDatasetsError,
+    InvalidObservationShapeError,
     InvalidObservationValueError,
     InvalidPinnedCalibrationsError,
     InvalidRunAbortReasonError,
@@ -236,6 +238,8 @@ def register_run_routes(app: FastAPI) -> None:
         # Reading-entry validation guards (6f-5b).
         InvalidChannelNameError,
         InvalidObservationValueError,
+        # value/categorical_value exclusivity guard.
+        InvalidObservationShapeError,
         InvalidSamplingProcedureError,
         # ExternalRef validation guard (11a-c-3).
         InvalidRunExternalRefError,

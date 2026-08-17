@@ -176,7 +176,7 @@ CREATE TABLE proj_run_summary (
 
 The `CHECK` constraint encodes the closed `RunStatus` enum at the row level. `GET /runs/{id}` reads from this projection (with fold-on-read fallback for fields not yet projected); `GET /runs` reads exclusively from this projection with keyset pagination over `(created_at, run_id)` and additive filters.
 
-**`entries_run_observations`** is the polymorphic per-Run reading logbook. One row per reading; the `sampling_procedure` column carries the SOSA-aligned discriminator (`baseline` for snapshots at Run boundaries; `monitor` for sub-Hz time-series during a Run). Defense-in-depth: NaN and Infinity are rejected at three layers (Pydantic at the API boundary, the in-decider `InvalidObservationValueError`, and a Postgres `CHECK` constraint on `value`).
+**`entries_run_observations`** is the polymorphic per-Run reading logbook. One row per reading; the `sampling_procedure` column carries the SOSA-aligned discriminator (`baseline` for snapshots at Run boundaries; `monitor` for sub-Hz time-series during a Run). A second, orthogonal discriminator picks the value's own shape: `value` for a numeric reading, `categorical_value` for an enum-label reading (a scan-configuration PV that `ControlPort` decodes as `Measurement(kind="Categorical")`), never both. Defense-in-depth: NaN and Infinity are rejected at three layers (Pydantic at the API boundary, the in-decider `InvalidObservationValueError`, and a Postgres `CHECK` constraint on `value`); the value/categorical_value exclusivity is enforced the same way, plus a DB exclusive-arc `CHECK` constraint.
 
 ```sql title="entries_run_observations"
 CREATE TABLE entries_run_observations (
@@ -186,17 +186,21 @@ CREATE TABLE entries_run_observations (
     actor_id            UUID              NOT NULL,
     command_name        TEXT              NOT NULL,
     channel_name        TEXT              NOT NULL CHECK (length(channel_name) BETWEEN 1 AND 255),
-    value               DOUBLE PRECISION  NOT NULL CHECK (
-        value = value
-        AND value <> 'Infinity'::DOUBLE PRECISION
-        AND value <> '-Infinity'::DOUBLE PRECISION
+    value               DOUBLE PRECISION  CHECK (
+        value IS NULL OR (
+            value = value
+            AND value <> 'Infinity'::DOUBLE PRECISION
+            AND value <> '-Infinity'::DOUBLE PRECISION
+        )
     ),
+    categorical_value   TEXT              CHECK (categorical_value IS NULL OR length(categorical_value) BETWEEN 1 AND 64),
     units               TEXT              CHECK (units IS NULL OR length(units) <= 64),
     sampling_procedure  TEXT              NOT NULL,
     sampled_at          TIMESTAMPTZ       NOT NULL,
     occurred_at         TIMESTAMPTZ       NOT NULL,
     recorded_at         TIMESTAMPTZ       NOT NULL DEFAULT now(),
-    is_simulated        BOOLEAN           NOT NULL DEFAULT false
+    is_simulated        BOOLEAN           NOT NULL DEFAULT false,
+    CHECK ((value IS NOT NULL) <> (categorical_value IS NOT NULL))
 );
 ```
 

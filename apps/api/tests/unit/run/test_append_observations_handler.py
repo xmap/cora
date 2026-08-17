@@ -17,6 +17,7 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.run.aggregates.run import (
     InMemoryObservationStore,
     InvalidChannelNameError,
+    InvalidObservationShapeError,
     InvalidObservationValueError,
     InvalidSamplingProcedureError,
     RunNotFoundError,
@@ -266,6 +267,59 @@ async def test_handler_rejects_nan_and_infinity(bad_value: float) -> None:
             correlation_id=_CORRELATION_ID,
         )
     assert observation_store.all() == []
+
+
+@pytest.mark.unit
+async def test_handler_rejects_neither_value_nor_categorical_value_set() -> None:
+    event_store = InMemoryEventStore()
+    await _seed_run_started(event_store, _RUN_ID)
+    observation_store = InMemoryObservationStore()
+    deps = build_deps(ids=[_LOGBOOK_ID, _LOGBOOK_OPEN_EVENT_ID], now=_NOW, event_store=event_store)
+    with pytest.raises(InvalidObservationShapeError):
+        await append_observations.bind(deps, observation_store=observation_store)(
+            AppendObservations(run_id=_RUN_ID, entries=(_entry(value=None),)),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert observation_store.all() == []
+
+
+@pytest.mark.unit
+async def test_handler_rejects_both_value_and_categorical_value_set() -> None:
+    event_store = InMemoryEventStore()
+    await _seed_run_started(event_store, _RUN_ID)
+    observation_store = InMemoryObservationStore()
+    deps = build_deps(ids=[_LOGBOOK_ID, _LOGBOOK_OPEN_EVENT_ID], now=_NOW, event_store=event_store)
+    with pytest.raises(InvalidObservationShapeError):
+        await append_observations.bind(deps, observation_store=observation_store)(
+            AppendObservations(
+                run_id=_RUN_ID,
+                entries=(_entry(categorical_value="Fly"),),
+            ),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert observation_store.all() == []
+
+
+@pytest.mark.unit
+async def test_handler_accepts_categorical_entry_with_no_numeric_value() -> None:
+    """A categorical (enum-label) entry round trips with `value=None`;
+    the NaN/Infinity check must not run against a None value."""
+    event_store = InMemoryEventStore()
+    await _seed_run_started(event_store, _RUN_ID)
+    observation_store = InMemoryObservationStore()
+    deps = build_deps(ids=[_LOGBOOK_ID, _LOGBOOK_OPEN_EVENT_ID], now=_NOW, event_store=event_store)
+    entry = _entry(channel_name="ScanType", value=None, categorical_value="Fly")
+    count = await append_observations.bind(deps, observation_store=observation_store)(
+        AppendObservations(run_id=_RUN_ID, entries=(entry,)),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+    assert count == 1
+    (row,) = observation_store.all()
+    assert row.value is None
+    assert row.categorical_value == "Fly"
 
 
 @pytest.mark.unit
@@ -741,6 +795,7 @@ async def test_handler_writes_baseline_and_monitor_to_same_run_logbook() -> None
     # Procedure split: 2 baseline (start + end), 3 monitor (mid-run).
     by_procedure: dict[str, list[float]] = {"baseline": [], "monitor": []}
     for r in rows:
+        assert r.value is not None
         by_procedure[r.sampling_procedure].append(r.value)
     assert sorted(by_procedure["baseline"]) == [295.1, 295.4]
     assert sorted(by_procedure["monitor"]) == [294.8, 295.0, 295.2]

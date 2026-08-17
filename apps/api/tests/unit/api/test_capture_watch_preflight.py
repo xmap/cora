@@ -485,6 +485,52 @@ async def test_preflight_read_baseline_non_numeric_reading_is_bad() -> None:
 
 
 @pytest.mark.unit
+async def test_preflight_read_baseline_categorical_reading_reports_resolved_label() -> None:
+    """A `Categorical` baseline PV (an EPICS mbbo/bo scan-configuration
+    PV) must stop being flagged BAD for being non-numeric: it reports
+    the resolved label as an OK verdict, since `CaptureBaselineReader`
+    stores that label directly."""
+    port = _FakeControlPort({"pv:scantype": _reading("Fly", kind="Categorical")})
+
+    report = await _preflight(port, {}, baseline_pvs={"code": {"ScanType": "pv:scantype"}})
+
+    (line,) = report.lines
+    assert line.ok
+    assert line.verdict == "label='Fly'"
+    assert line.group == "baseline"
+
+
+@pytest.mark.unit
+async def test_preflight_read_baseline_categorical_non_text_value_is_bad() -> None:
+    port = _FakeControlPort({"pv:scantype": _reading(1, kind="Categorical")})
+
+    report = await _preflight(port, {}, baseline_pvs={"code": {"ScanType": "pv:scantype"}})
+
+    (line,) = report.lines
+    assert not line.ok
+    assert line.verdict == "non-text"
+
+
+@pytest.mark.unit
+async def test_preflight_read_baseline_categorical_over_length_label_is_bad() -> None:
+    from cora.run.aggregates.run import READING_CATEGORICAL_VALUE_MAX_LENGTH
+
+    port = _FakeControlPort(
+        {
+            "pv:scantype": _reading(
+                "x" * (READING_CATEGORICAL_VALUE_MAX_LENGTH + 1), kind="Categorical"
+            )
+        }
+    )
+
+    report = await _preflight(port, {}, baseline_pvs={"code": {"ScanType": "pv:scantype"}})
+
+    (line,) = report.lines
+    assert not line.ok
+    assert line.verdict == "label-too-long"
+
+
+@pytest.mark.unit
 async def test_preflight_read_baseline_not_connected_pv_reports_bad() -> None:
     port = _FakeControlPort({"pv:dead": ControlNotConnectedError("pv:dead")})
 

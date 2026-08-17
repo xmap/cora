@@ -32,7 +32,20 @@ read that fails must never prevent or unwind the promotion that
 triggered it, because by the time this runs the promotion has already
 succeeded and `RunWitnessRecorder._open_captures` already reflects it.
 
-## Four reasons a reading is skipped rather than appended
+## Numeric and categorical readings, one entry kind
+
+A `capture_baseline_pvs` channel is read once and dispatched by
+`Measurement.kind`, not by a per-channel decoder: `"Categorical"`
+(EPICS `mbbo`/`bo` scan-configuration PVs, e.g. `ScanType`,
+`FlatFieldMode`) becomes a `categorical_value` entry carrying the
+substrate's own enum LABEL unchanged (`'Fly'`, `'Both'`, never a
+CORA-invented code); every other kind is coerced to a numeric `value`
+via `finite_float`, as before. `Observation.value` /
+`Observation.categorical_value` are mutually exclusive
+(`cora.run.aggregates.run.entries.Observation`), so exactly one is
+ever set per reading.
+
+## Reasons a reading is skipped rather than appended
 
 1. **Bad quality** (`Measurement.quality == "Bad"`, the adapter's
    collapse of EPICS INVALID / Tango ALARM|INVALID / OPC UA's Bad
@@ -44,20 +57,27 @@ succeeded and `RunWitnessRecorder._open_captures` already reflects it.
    port's dual-clock rule forbids substituting CORA's own clock for an
    absent substrate time, the same rule `CaptureProgressFeeder` already
    honors for `sampled_at`.
-3. **Non-numeric** (`finite_float` cannot coerce `Measurement.value`):
-   `Observation.value` is `float`
-   (`cora.run.aggregates.run.entries.Observation`). A deployment could
-   declare a `capture_baseline_pvs` entry that turns out to carry text;
-   reject rather than coerce, and log it, mirroring
-   `finite_float`'s fail-toward-silence posture everywhere else in this
-   module's sibling.
-4. **Oversized units** (`len(Measurement.units) > READING_UNITS_MAX_LENGTH`):
+3. **Non-numeric, non-categorical** (`finite_float` cannot coerce
+   `Measurement.value`, and `reading.kind != "Categorical"`): a
+   deployment could declare a `capture_baseline_pvs` entry that turns
+   out to carry text CORA cannot classify either way; reject rather
+   than coerce, and log it, mirroring `finite_float`'s
+   fail-toward-silence posture everywhere else in this module's
+   sibling.
+4. **Unusable categorical label** (`reading.kind == "Categorical"` but
+   the value is not a non-empty `str`, or exceeds
+   `READING_CATEGORICAL_VALUE_MAX_LENGTH`): the label itself, not a
+   coercion of it, is what gets stored, so a substrate that returns
+   something other than a short string here is a defect to log, not
+   guess at.
+5. **Oversized units** (`len(Measurement.units) > READING_UNITS_MAX_LENGTH`):
    `PostgresObservationStore.append` writes an entire batch in one
    `executemany` call, so a single row that fails the DB's `units`
    CHECK constraint would fail every OTHER reading in this promotion's
    batch too, not just the offending channel. Checked here, ahead of
    the batch, so one long substrate string cannot erase every valid
-   reading for the same promotion.
+   reading for the same promotion. Applies to numeric and categorical
+   readings alike.
 
 Reuses `finite_float` from `cora.api._capture_observer` rather than a
 second copy, so the two modules can never drift on what counts as a
@@ -77,7 +97,11 @@ from cora.operation.ports.control_port import (
     ControlTimeoutError,
     ControlValueCoercionError,
 )
-from cora.run.aggregates.run import READING_UNITS_MAX_LENGTH, RunObservationLogbookClosedError
+from cora.run.aggregates.run import (
+    READING_CATEGORICAL_VALUE_MAX_LENGTH,
+    READING_UNITS_MAX_LENGTH,
+    RunObservationLogbookClosedError,
+)
 from cora.run.errors import UnauthorizedError
 from cora.run.features.append_observations import AppendObservations, ObservationInput
 
@@ -249,16 +273,25 @@ class CaptureBaselineReader:
                 pv=pv,
             )
             return None
-        value = finite_float(reading.value)
-        if value is None:
-            _log.warning(
-                "capture_baseline.non_numeric_reading",
-                capture_code=capture_code,
-                channel_name=channel_name,
-                pv=pv,
-                value=repr(reading.value),
-            )
-            return None
+        value: float | None
+        categorical_value: str | None
+        if reading.kind == "Categorical":
+            value = None
+            categorical_value = self._categorical_label(capture_code, channel_name, pv, reading)
+            if categorical_value is None:
+                return None
+        else:
+            categorical_value = None
+            value = finite_float(reading.value)
+            if value is None:
+                _log.warning(
+                    "capture_baseline.non_numeric_reading",
+                    capture_code=capture_code,
+                    channel_name=channel_name,
+                    pv=pv,
+                    value=repr(reading.value),
+                )
+                return None
         units = reading.units
         if units is not None and len(units) > READING_UNITS_MAX_LENGTH:
             # `AppendObservations` writes its whole batch in one
@@ -283,11 +316,41 @@ class CaptureBaselineReader:
             event_id=self._deps.id_generator.new_id(),
             channel_name=channel_name,
             value=value,
+            categorical_value=categorical_value,
             sampled_at=reading.produced_at,
             sampling_procedure=_SAMPLING_PROCEDURE,
             units=reading.units,
             is_simulated=False,
         )
+
+    def _categorical_label(
+        self, capture_code: str, channel_name: str, pv: str, reading: Measurement
+    ) -> str | None:
+        """The enum LABEL for a `Categorical` reading, or `None` if it
+        cannot be stored as one. The facility's own substrate label is
+        stored unchanged; an unrecognized label is data, not an error,
+        so there is no allowlist here to reject against."""
+        label = reading.value
+        if not isinstance(label, str) or not label:
+            _log.warning(
+                "capture_baseline.non_text_categorical_reading",
+                capture_code=capture_code,
+                channel_name=channel_name,
+                pv=pv,
+                value=repr(label),
+            )
+            return None
+        if len(label) > READING_CATEGORICAL_VALUE_MAX_LENGTH:
+            _log.warning(
+                "capture_baseline.categorical_label_too_long",
+                capture_code=capture_code,
+                channel_name=channel_name,
+                pv=pv,
+                label_length=len(label),
+                max_length=READING_CATEGORICAL_VALUE_MAX_LENGTH,
+            )
+            return None
+        return label
 
 
 __all__ = ["CaptureBaselineReader"]
