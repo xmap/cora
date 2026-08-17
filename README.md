@@ -1533,7 +1533,7 @@
 | src/cora/infrastructure/published\_artifact/\_stages.py                                  |       64 |        3 |       28 |        0 |     96.7% |87-88, 238 |
 | src/cora/infrastructure/published\_artifact/orchestrator.py                              |       48 |        1 |       16 |        1 |     96.9% |       135 |
 | src/cora/infrastructure/read\_only\_event\_store.py                                      |       19 |        0 |        0 |        0 |    100.0% |           |
-| src/cora/infrastructure/record\_export/\_\_init\_\_.py                                   |       12 |        0 |        0 |        0 |    100.0% |           |
+| src/cora/infrastructure/record\_export/\_\_init\_\_.py                                   |       13 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_bundle.py                                       |       63 |        4 |       20 |        3 |     91.6% |146-147, 228-229, 239-\>243 |
 | src/cora/infrastructure/record\_export/\_dispositions.py                                 |        2 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_export.py                                       |       36 |        0 |        6 |        0 |    100.0% |           |
@@ -1545,6 +1545,7 @@
 | src/cora/infrastructure/record\_export/\_redaction.py                                    |       31 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_registry.py                                     |       19 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_render.py                                       |       22 |        0 |       10 |        0 |    100.0% |           |
+| src/cora/infrastructure/record\_export/\_shell.py                                        |       11 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_stream\_types.py                                |        8 |        0 |        2 |        0 |    100.0% |           |
 | src/cora/infrastructure/record\_export/\_tokens.py                                       |       14 |        0 |        4 |        0 |    100.0% |           |
 | src/cora/infrastructure/routing.py                                                       |       46 |        1 |       12 |        1 |     96.6% |       169 |
@@ -2650,7 +2651,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **58314** | **1349** | **8662** |  **401** | **97.2%** |           |
+| **TOTAL**                                                                                | **58326** | **1349** | **8662** |  **401** | **97.2%** |           |
 
 
 ## Setup coverage badge
