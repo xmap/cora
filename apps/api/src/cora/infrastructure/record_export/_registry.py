@@ -36,6 +36,19 @@ module docstring), so it scopes on `capture_code`, a deployment-declared
 string, not a UUID. `EntriesReader`'s scope-id type is widened
 (`UUID | str`) for exactly this one case; every other spec still passes
 a `UUID` at runtime, unaffected.
+
+`unscoped_reader` (S5,
+`project_record_completeness_design.md`) is a SEPARATE, optional field
+rather than a nullable scope argument on `reader`: an unscoped read
+(`SELECT * FROM <table> ORDER BY ...`, no `WHERE`) is a different
+operation from a scoped one, and letting a caller pass `None` as a
+scope id against one of the six envelope specs would silently read the
+whole table where the exporter meant to read one logbook's slice.
+`heartbeat` is the first kind to set it (S5a); every other spec's
+`reader` and its own call sites are unchanged. `permit_probe` and
+`capture_probe` are deliberately NOT wired here -- see S5b/S5c in the
+design memo; each holds every live entries row on the pilot database
+and owes its own disclosure review before a bundle can carry it.
 """
 
 from collections.abc import Awaitable, Callable
@@ -49,6 +62,7 @@ import asyncpg
 # entries-table readers (e.g. postgres_procedure_activity_lookup.py).
 
 EntriesReader = Callable[[asyncpg.Connection, UUID | str], Awaitable[list[asyncpg.Record]]]
+UnscopedEntriesReader = Callable[[asyncpg.Connection], Awaitable[list[asyncpg.Record]]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +90,9 @@ class EntriesTableSpec:
     scope_type: type[UUID] | type[str]
     order_by: tuple[str, ...]
     reader: EntriesReader
+    unscoped_reader: UnscopedEntriesReader | None = None
+    """Reads every row of `table`, unscoped, when set. `None` for every
+    kind but `heartbeat` today (S5a); see the module docstring."""
 
 
 class UnknownLogbookKindError(LookupError):
@@ -101,6 +118,29 @@ def _make_reader(table: str, scope_column: str, order_by: tuple[str, ...]) -> En
     return read
 
 
+def _make_unscoped_reader(table: str, order_by: tuple[str, ...]) -> UnscopedEntriesReader:
+    """`SELECT * FROM <table> ORDER BY <order_by>`, no `WHERE`.
+
+    `table` and `order_by` are registry-declared constants below, never
+    caller input, so the interpolation cannot carry attacker-controlled
+    SQL, matching `_make_reader`'s reasoning.
+
+    Unbounded: fetches the whole table in one round trip. Harmless at
+    `heartbeat`'s live row count today (zero on the pilot database); a
+    future kind wired the same way with a large table (`permit_probe`,
+    `capture_probe`, at 48,803 and 9,554 rows respectively on the pilot
+    database as of 2026-08-17) will need paging or a streaming cursor
+    before it is safe to wire the same way. Left as a note for S5b/S5c,
+    not fixed here.
+    """
+    sql = f"SELECT * FROM {table} ORDER BY {', '.join(order_by)}"
+
+    async def read(conn: asyncpg.Connection) -> list[asyncpg.Record]:
+        return await conn.fetch(sql)
+
+    return read
+
+
 def _spec(
     *,
     kind: str,
@@ -109,6 +149,7 @@ def _spec(
     scope_column: str,
     order_by: tuple[str, ...],
     scope_type: type[UUID] | type[str] = UUID,
+    unscoped: bool = False,
 ) -> EntriesTableSpec:
     return EntriesTableSpec(
         kind=kind,
@@ -118,6 +159,7 @@ def _spec(
         scope_type=scope_type,
         order_by=order_by,
         reader=_make_reader(table, scope_column, order_by),
+        unscoped_reader=_make_unscoped_reader(table, order_by) if unscoped else None,
     )
 
 
@@ -170,6 +212,7 @@ _ENTRIES: tuple[EntriesTableSpec, ...] = (
         envelope_class=None,
         scope_column="run_id",
         order_by=("event_id",),
+        unscoped=True,
     ),
     _spec(
         # Renamed from the bare "probe" (slice 16): a second, unrelated

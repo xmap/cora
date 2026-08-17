@@ -11,14 +11,18 @@ production handler for its kind (never raw SQL), following the pattern
 `test_record_export_shell_postgres.py` (added by S1) established for
 `activity`.
 
-`heartbeat`, `permit_probe`, and `capture_probe` are EXPECTED to seed
-real rows and still come out `untraversed`: their tables have no
-envelope and no reader wired into `export_record`'s walk (S5, not
+`permit_probe` and `capture_probe` are EXPECTED to seed real rows and
+still come out `untraversed`: their tables have no envelope and no
+unscoped reader wired into `export_record`'s walk yet (S5b/S5c, not
 this slice). That is the corrected behavior, not a bug in this test --
 before S2a, the shipped `row_count_by_logbook_kind` field could not
 even describe this case (`{}` is what the original defect reported for
 two genuinely populated kinds); after S2a, the manifest says
 `untraversed` in writing.
+
+`heartbeat` is the exception since S5a: its spec now declares an
+`unscoped_reader`, so it is expected to come out `included` like the
+six envelope-driven kinds, even though it has no envelope of its own.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false
@@ -403,14 +407,17 @@ async def test_manifest_accounts_for_every_registered_kind(
         "not only the one this test seeded"
     )
 
-    if spec.envelope_class is not None:  # type: ignore[attr-defined]
+    reachable = (
+        spec.envelope_class is not None or spec.unscoped_reader is not None  # type: ignore[attr-defined]
+    )
+    if reachable:
         assert extent[spec.kind]["status"] == "included"  # type: ignore[attr-defined]
         assert manifest["row_count_by_logbook_kind"].get(spec.kind, 0) >= 1  # type: ignore[attr-defined]
     else:
-        # heartbeat / permit_probe / capture_probe: real rows exist in the
-        # database (the seeder above just wrote them), but no code path
-        # reads them into the export, so the manifest must say so rather
-        # than silently reporting a coverage field that agrees with the
+        # permit_probe / capture_probe: real rows exist in the database
+        # (the seeder above just wrote them), but no code path reads them
+        # into the export, so the manifest must say so rather than
+        # silently reporting a coverage field that agrees with the
         # traversal by construction.
         assert extent[spec.kind]["status"] == "untraversed"  # type: ignore[attr-defined]
         assert spec.kind not in manifest["row_count_by_logbook_kind"]  # type: ignore[attr-defined]
