@@ -861,10 +861,15 @@ class Settings(BaseSettings):
     capture_watch_probe_tick_seconds: float | None = None
 
     # Runs the capture-watch loop in shadow mode: drains observations,
-    # maps them through `capture_status_phases`, and logs. Writes
-    # nothing (no event, no entries row, no Run) unless
-    # `run_witness_recording_enabled` is ALSO True (see below). Default
-    # off; irrelevant when `capture_watch_pvs` is empty. See
+    # maps them through `capture_status_phases`, and logs. Writes no
+    # event, no Run-scoped entries row, and promotes no Run unless
+    # `run_witness_recording_enabled` is ALSO True (see below). ONE
+    # exception, added by slice 16: `entries_run_capture_probes` writes
+    # in shadow mode too, gated on its own
+    # `capture_probe_recording_enabled` switch, precisely because that
+    # trail exists to cover the gaps a promoted Run cannot -- including
+    # the shadow-only window this comment used to say wrote nothing.
+    # Default off; irrelevant when `capture_watch_pvs` is empty. See
     # `cora.api._run_witness`.
     run_witness_enabled: bool = False
 
