@@ -88,6 +88,7 @@ from cora.infrastructure.record_export._render import (
     render_row,
     render_value,
 )
+from cora.infrastructure.record_export._shell import export_bundle
 from cora.infrastructure.record_export._stream_types import (
     KNOWN_STREAM_TYPES,
     UnknownStreamTypeError,
@@ -134,6 +135,7 @@ __all__ = [
     "capture_git_commit",
     "capture_watermark",
     "ensure_stream_type_known",
+    "export_bundle",
     "export_record",
     "hash_logbooks",
     "hash_record",
