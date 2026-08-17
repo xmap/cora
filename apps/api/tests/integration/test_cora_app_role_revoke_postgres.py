@@ -247,13 +247,29 @@ _ENTRIES_TABLE_INSERTS: dict[str, tuple[str, int]] = {
         """,
         4,
     ),
+    "entries_run_capture_probes": (
+        """
+        INSERT INTO entries_run_capture_probes (
+            event_id, capture_code, source_kind, source_id, reach_tier, phase_claimed
+        ) VALUES ($1, 'test-code', 'EpicsPv', 'test-pv', 'Relayed', true)
+        """,
+        1,
+    ),
 }
 """The five tables `20260810120000_grant_cora_app_entries_table_access.sql`
 fixed, by their CURRENT (post-rename) name, each mapped to a minimal
-valid INSERT and its UUID-parameter count. Column shapes copied from
-each table's own CREATE TABLE migration; `is_simulated` and other
-DEFAULT-bearing columns are omitted since a bare INSERT already proves
-the grant."""
+valid INSERT and its UUID-parameter count, PLUS one newer table
+(`entries_run_capture_probes`, slice 16) added for the same "a real
+INSERT against a cora_app-credentialed pool is the only proof Postgres
+actually honors the grant" assurance -- its migration issues an
+explicit GRANT from day one, so it never had the ALTER-DEFAULT-PRIVILEGES
+bug the other five did, but an untested GRANT statement is still just
+text until proven live. Column shapes copied from each table's own
+CREATE TABLE migration; `is_simulated` and other DEFAULT-bearing columns
+are omitted since a bare INSERT already proves the grant. Non-UUID
+columns (capture_code / source_kind / source_id / reach_tier /
+phase_claimed) are hardcoded literals in the INSERT text rather than
+params, matching how `activities` hardcodes `step_kind` / `payload`."""
 
 
 @pytest.mark.integration
@@ -262,12 +278,14 @@ async def test_cora_app_can_select_and_insert_entries_tables(
     cora_app_pool: asyncpg.Pool,
     table: str,
 ) -> None:
-    """The regression this test exists for: each of these five tables'
-    migration header claimed cora_app already had SELECT + INSERT via
-    ALTER DEFAULT PRIVILEGES, a claim that was false (that clause covers
-    sequences only). `test_entries_table_grants.py` proves a GRANT
-    statement is present in migration text; only a real INSERT against a
-    `cora_app`-credentialed pool proves Postgres actually honors it."""
+    """The regression this test exists for: each of the original five
+    tables' migration header claimed cora_app already had SELECT +
+    INSERT via ALTER DEFAULT PRIVILEGES, a claim that was false (that
+    clause covers sequences only). `test_entries_table_grants.py` proves
+    a GRANT statement is present in migration text; only a real INSERT
+    against a `cora_app`-credentialed pool proves Postgres actually
+    honors it -- which is why `entries_run_capture_probes` (slice 16)
+    joined the dict too, despite never having had the original bug."""
     sql, param_count = _ENTRIES_TABLE_INSERTS[table]
     event_id = uuid4()
     params = [event_id, *(uuid4() for _ in range(param_count - 1))]

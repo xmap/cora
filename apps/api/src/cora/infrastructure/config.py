@@ -1005,6 +1005,33 @@ class Settings(BaseSettings):
     # here.
     capture_experiment_identity_recording_enabled: bool = False
 
+    # SEVENTH, independent kill switch (slice 16): gates whether reach to
+    # the capture-watch substrate (`ControlPortCaptureObserver`'s status /
+    # abort pumps) is recorded as `entries_run_capture_probes` rows.
+    # Default off.
+    #
+    # DELIBERATELY DIVERGES from the THIRD/FOURTH/FIFTH/SIXTH switches
+    # above: those four all require `run_witness_recording_enabled` also True,
+    # because each writes against an already-promoted Run's row (a
+    # progress reading, a baseline reading, a capture path, an
+    # experiment identity), so with no promotion there is nothing to
+    # attach a write to. This switch's
+    # entire value is realized specifically while recording is OFF
+    # (shadow-only) or between Runs: `entries_run_capture_probes` scopes
+    # on `capture_code`, not `run_id` (see that table's migration header
+    # and `cora.run.aggregates.run.capture_probes`), precisely so it can
+    # answer "was CORA watching" during the gaps a promoted Run cannot
+    # cover. Requiring `run_witness_recording_enabled` here would silence
+    # the trail during exactly the shadow-only window it exists to cover
+    # -- the live 2-BM state as of this writing (three days of a dead
+    # IOC, `run_witness_enabled=True`, recording still off, and zero rows
+    # recorded anywhere). Refuses to boot if True without
+    # `run_witness_enabled` also True (see
+    # `_enforce_run_witness_recording_gate`): with the shadow observer not
+    # running there is nothing to write from. See
+    # `cora.api._run_witness`'s probe-write section.
+    capture_probe_recording_enabled: bool = False
+
     @field_validator("capture_experiment_identity_pvs")
     @classmethod
     def _validate_capture_experiment_identity_pvs(

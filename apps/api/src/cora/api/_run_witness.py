@@ -35,6 +35,22 @@ own docstring on why an adapter must never substitute a synthesized
 time for an absent one). These log lines are unconditional: they fire
 identically whether or not recording is enabled.
 
+## Coverage trail (slice 16), independent of the recording switch
+
+Every observation reaching `RunWitnessRecorder.observe_capture` also
+writes one `CaptureProbe` row (see `cora.run.aggregates.run.capture_probes`
+for the full design argument), gated on its OWN kill switch,
+`Settings.capture_probe_recording_enabled` -- NOT on
+`run_witness_recording_enabled`. This is deliberate: the trail's value
+is realized specifically while recording is off, since it scopes on
+`capture_code` rather than a promoted Run's id. The write happens
+BEFORE the `run_witness_recording_enabled` early-return below, mirrors
+`enclosure._monitor.record_observation`'s failure posture exactly (skip
+with a log line while `deps.schema_posture == "degraded"`; otherwise
+catch, log, and continue on any other exception -- never raise into the
+drain loop), and never suppresses the log line above it or the
+promotion/termination logic below it.
+
 ## Promotion and termination (when run_witness_recording_enabled is True)
 
 Per capture_code, a small dedup state machine:
@@ -260,6 +276,7 @@ from cora.api._capture_experiment_identity_reader import CaptureExperimentIdenti
 from cora.api._capture_observer import ROLE_IMAGES_COLLECTED, ROLE_IMAGES_SAVED
 from cora.api._capture_progress_feeder import CaptureProgressFeeder, capture_progress_flush_loop
 from cora.infrastructure.logging import get_logger
+from cora.run.aggregates.run.capture_probes import CaptureProbe
 from cora.run.aggregates.run.state import (
     CapturePreconditionBypassSnapshot,
     CaptureProgressSnapshot,
@@ -289,6 +306,7 @@ if TYPE_CHECKING:
     from cora.operation.ports.control_port import ControlPort
     from cora.run.aggregates.run import (
         CapturePathStore,
+        CaptureProbeStore,
         ExperimentIdentityStore,
         FeedHeartbeatStore,
     )
@@ -383,6 +401,7 @@ class RunWitnessRecorder:
         baseline_reader: CaptureBaselineReader | None = None,
         capture_path_store: CapturePathStore | None = None,
         experiment_identity_reader: CaptureExperimentIdentityReader | None = None,
+        capture_probe_store: CaptureProbeStore | None = None,
     ) -> None:
         self._deps = deps
         self._record_witnessed_run = record_witnessed_run
@@ -395,6 +414,7 @@ class RunWitnessRecorder:
         self._baseline_reader = baseline_reader
         self._capture_path_store = capture_path_store
         self._experiment_identity_reader = experiment_identity_reader
+        self._capture_probe_store = capture_probe_store
         self._last_capture_path: dict[str, CapturePathObservation] = {}
         """Slice 13: the latest `full_file_name` reading retained per
         capture_code, mirroring `_last_progress`'s retain-latest shape.
@@ -432,6 +452,7 @@ class RunWitnessRecorder:
 
     async def observe_capture(self, observation: CaptureLifecycleObservation) -> None:
         observe_capture(observation)
+        await self._write_capture_probe(observation)
         if not self._settings.run_witness_recording_enabled:
             return
 
@@ -445,6 +466,62 @@ class RunWitnessRecorder:
             await self._record_outcome(observation)
         # PROGRESSING, UNRECOGNIZED, and a None phase make no status
         # claim this state machine acts on: no-op regardless of state.
+
+    async def _write_capture_probe(self, observation: CaptureLifecycleObservation) -> None:
+        """Record one `CaptureProbe` row for `observation` (slice 16).
+
+        Gated on its OWN kill switch, `capture_probe_recording_enabled`,
+        independent of `run_witness_recording_enabled` -- see this
+        module's docstring, "Coverage trail". No-op when
+        `_capture_probe_store` is `None` (mirrors every other optional
+        store on this recorder) or the switch is off.
+
+        Mirrors `enclosure._monitor.record_observation`'s failure
+        posture exactly: no probe row at all while
+        `deps.schema_posture == "degraded"` (a probe row asserting reach
+        during a window CORA cannot actually record anything would be
+        worse than the gap it would paper over), otherwise a try/except
+        around the write that logs and continues on any exception other
+        than cancellation. A bookkeeping write must never suppress the
+        log line above it or the promotion/termination logic below it.
+        """
+        if self._capture_probe_store is None or not self._settings.capture_probe_recording_enabled:
+            return
+        if self._deps.schema_posture == "degraded":
+            _log.warning(
+                "run_witness.capture_probe_skipped_degraded_schema",
+                capture_code=observation.capture_code,
+            )
+            return
+        try:
+            await self._capture_probe_store.append(
+                [
+                    CaptureProbe(
+                        event_id=self._deps.id_generator.new_id(),
+                        capture_code=observation.capture_code,
+                        source_kind=observation.source_kind,
+                        source_id=observation.source_id,
+                        reach_tier=observation.reach_tier,
+                        phase_claimed=observation.phase is not None,
+                        observed_at=observation.observed_at,
+                    )
+                ]
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # `_log.exception` (rather than `_write_capture_path`'s
+            # `_log.error`-plus-class-name-only posture, see that
+            # method's own comment) is safe here: every column on this
+            # row -- capture_code, source_kind, source_id, reach_tier,
+            # phase_claimed -- is an instrument identifier, never
+            # personal data, so a CHECK-violation's asyncpg `DETAIL:`
+            # line carrying the row's own values discloses nothing this
+            # log sink would need to erase.
+            _log.exception(
+                "run_witness.capture_probe_write_failed",
+                capture_code=observation.capture_code,
+            )
 
     def observe_progress(self, observation: CaptureProgressObservation) -> None:
         """Retain the latest reading per (capture_code, role), so a
@@ -1095,6 +1172,7 @@ async def run_witness_lifespan(
     capture_path_store: CapturePathStore | None = None,
     capture_experiment_identity_pvs: Mapping[str, Mapping[str, str]] | None = None,
     experiment_identity_store: ExperimentIdentityStore | None = None,
+    capture_probe_store: CaptureProbeStore | None = None,
 ) -> AsyncGenerator[None]:
     """Run the watcher as a background task for the app's lifetime.
 
@@ -1149,6 +1227,23 @@ async def run_witness_lifespan(
     anything is gated separately, inside the recorder, by
     `deps.settings.capture_experiment_identity_recording_enabled` (the
     sixth kill switch).
+
+    A supplied `capture_probe_store` (slice 16) REQUIRES
+    `record_witnessed_run` (checked above, before this docstring's own
+    baseline/experiment-identity checks): the write is a
+    `RunWitnessRecorder` method, so with no recorder constructed the
+    store would otherwise be accepted and silently never written to --
+    precisely in the shadow-only configuration this store's own kill
+    switch exists to serve. Once that prerequisite holds, the store is
+    handed straight to the recorder with no separate reader to build
+    (the observer already pumps a `reach_tier` on every
+    `CaptureLifecycleObservation`), the same shape as `capture_path_store`.
+    Whether a row is actually written is gated, same pattern as every
+    other store, inside the recorder by
+    `deps.settings.capture_probe_recording_enabled` (the seventh kill
+    switch) -- which, UNLIKE the third/fourth/fifth/sixth, does not
+    require `run_witness_recording_enabled`; see that setting's own
+    docstring.
     """
     if not capture_codes:
         yield
@@ -1166,6 +1261,19 @@ async def run_witness_lifespan(
         if missing:
             msg = f"run_witness_lifespan: record_witnessed_run requires {', '.join(missing)}"
             raise ValueError(msg)
+
+    if capture_probe_store is not None and record_witnessed_run is None:
+        # The probe write is a RunWitnessRecorder method, and the
+        # recorder is only constructed below when record_witnessed_run
+        # is supplied. Without this guard, a caller passing
+        # capture_probe_store to an otherwise shadow-only lifespan (no
+        # record_witnessed_run, no Kernel) would see the store silently
+        # never written to -- the drain loop falls to the bare
+        # module-level `observe_capture` (log-only) branch instead --
+        # in exactly the shadow-only configuration this store's own
+        # kill switch is designed to serve.
+        msg = "run_witness_lifespan: capture_probe_store requires record_witnessed_run"
+        raise ValueError(msg)
 
     baseline_reader: CaptureBaselineReader | None = None
     if capture_baseline_pvs:
@@ -1239,6 +1347,7 @@ async def run_witness_lifespan(
             baseline_reader=baseline_reader,
             capture_path_store=capture_path_store,
             experiment_identity_reader=experiment_identity_reader,
+            capture_probe_store=capture_probe_store,
         )
 
     feeder: CaptureProgressFeeder | None = None

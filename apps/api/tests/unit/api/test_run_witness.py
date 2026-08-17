@@ -40,6 +40,7 @@ from cora.infrastructure.routing import NIL_SENTINEL_ID
 from cora.run.aggregates.run import (
     ConductMode,
     InMemoryCapturePathStore,
+    InMemoryCaptureProbeStore,
     InMemoryExperimentIdentityStore,
     InMemoryFeedHeartbeatStore,
     RunStarted,
@@ -574,6 +575,9 @@ def _recorder(
     capture_path_recording_enabled: bool = False,
     experiment_identity_reader: object | None = None,
     capture_experiment_identity_recording_enabled: bool = False,
+    capture_probe_store: object | None = None,
+    capture_probe_recording_enabled: bool = False,
+    schema_posture: str = "matched",
 ) -> RunWitnessRecorder:
     settings = Settings(  # type: ignore[call-arg]
         run_witness_recording_enabled=run_witness_recording_enabled,
@@ -583,11 +587,15 @@ def _recorder(
         capture_experiment_identity_recording_enabled=(
             capture_experiment_identity_recording_enabled
         ),
+        capture_probe_recording_enabled=capture_probe_recording_enabled,
     )
     outcome = record_witnessed_run_outcome or _FakeRecordWitnessedRunOutcome()
     truncate = truncate_run or _FakeTruncateRun()
+    deps = build_deps(ids=[uuid4() for _ in range(10)])
+    if schema_posture != "matched":
+        deps = dataclasses.replace(deps, schema_posture=schema_posture)  # type: ignore[arg-type]
     return RunWitnessRecorder(
-        deps=build_deps(ids=[uuid4() for _ in range(10)]),
+        deps=deps,
         record_witnessed_run=record_witnessed_run,
         record_witnessed_run_outcome=outcome,
         truncate_run=truncate,
@@ -596,6 +604,7 @@ def _recorder(
         baseline_reader=baseline_reader,  # type: ignore[arg-type]
         capture_path_store=capture_path_store,  # type: ignore[arg-type]
         experiment_identity_reader=experiment_identity_reader,  # type: ignore[arg-type]
+        capture_probe_store=capture_probe_store,  # type: ignore[arg-type]
     )
 
 
@@ -612,6 +621,211 @@ async def test_run_witness_recorder_promotes_a_begun_capture_while_idle() -> Non
     assert command.plan_id == _PLAN_ID
     assert command.trigger == "Monitor"
     assert command.monitor_source_id == RUN_WITNESS_MONITOR_SOURCE_ID
+
+
+class _RaisingCaptureProbeStore:
+    """`CaptureProbeStore` double that always raises on `append`."""
+
+    async def append(self, rows: list[Any]) -> None:
+        raise RuntimeError("boom")
+
+
+@pytest.mark.unit
+async def test_capture_probe_written_on_a_pushed_observation_when_enabled() -> None:
+    store = InMemoryCaptureProbeStore()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        run_witness_recording_enabled=False,
+        capture_probe_store=store,
+        capture_probe_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(
+        _obs(
+            reported_status="Beginning scan",
+            phase=CapturePhase.BEGUN,
+            reach_tier=ReachTier.RELAYED,
+        )
+    )
+
+    rows = store.all()
+    assert len(rows) == 1
+    assert rows[0].capture_code == _CODE
+    assert rows[0].reach_tier == ReachTier.RELAYED
+    assert rows[0].phase_claimed is True
+    assert rows[0].observed_at == _NOW
+    assert rows[0].source_id == "2bmb:TomoScan:ScanStatus"
+
+
+@pytest.mark.unit
+async def test_capture_probe_written_on_a_disconnected_observation() -> None:
+    """`phase_claimed` is False and `observed_at` is None for the
+    disconnect shape, matching `_capture_observer.py`'s `_unreached`."""
+    store = InMemoryCaptureProbeStore()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        run_witness_recording_enabled=False,
+        capture_probe_store=store,
+        capture_probe_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status=None, phase=None, reach_tier=ReachTier.UNREACHED, observed_at=None)
+    )
+
+    rows = store.all()
+    assert len(rows) == 1
+    assert rows[0].reach_tier == ReachTier.UNREACHED
+    assert rows[0].phase_claimed is False
+    assert rows[0].observed_at is None
+
+
+@pytest.mark.unit
+async def test_capture_probe_written_on_a_probe_only_tick() -> None:
+    """The AFFIRMATIVE half of the coverage claim: a periodic
+    re-affirmation poll reaches the substrate (`reach_tier=RELAYED`) but
+    carries no status claim (`phase=None`), matching
+    `_capture_observer.py`'s `_probe_only`. `phase_claimed` is still
+    False here -- it tracks the phase claim, not reach -- which is what
+    distinguishes this row from a real BEGUN/ENDED/ABORTED push at the
+    same RELAYED tier."""
+    store = InMemoryCaptureProbeStore()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        run_witness_recording_enabled=False,
+        capture_probe_store=store,
+        capture_probe_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(
+        _obs(reported_status=None, phase=None, reach_tier=ReachTier.RELAYED, observed_at=None)
+    )
+
+    rows = store.all()
+    assert len(rows) == 1
+    assert rows[0].reach_tier == ReachTier.RELAYED
+    assert rows[0].phase_claimed is False
+    assert rows[0].observed_at is None
+
+
+@pytest.mark.unit
+async def test_capture_probe_written_regardless_of_run_witness_recording_enabled() -> None:
+    """The whole point of the switch's independence: the trail writes
+    while shadow-only (recording disabled), matching the live 2-BM
+    state this slice exists for."""
+    store = InMemoryCaptureProbeStore()
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        run_witness_recording_enabled=False,
+        capture_probe_store=store,
+        capture_probe_recording_enabled=True,
+    )
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    assert len(store.all()) == 1
+    assert fake.calls == []  # recording is off: no promotion
+
+
+@pytest.mark.unit
+async def test_capture_probe_written_alongside_a_successful_promotion() -> None:
+    """The success-path co-existence case: with BOTH the probe switch
+    and `run_witness_recording_enabled` on, a single BEGUN observation
+    writes a probe row, logs the shadow-mode event, AND promotes -- all
+    three, from one call, none suppressing another. The other tests
+    around this one each isolate a single axis (switch off, recording
+    off, store raises); this is the one where everything succeeds
+    together, the actual live-deployment shape once recording is
+    turned on for real."""
+    store = InMemoryCaptureProbeStore()
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        run_witness_recording_enabled=True,
+        capture_probe_store=store,
+        capture_probe_recording_enabled=True,
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        await recorder.observe_capture(
+            _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)
+        )
+
+    assert len(store.all()) == 1
+    assert any(entry["event"] == "run_witness.capture_begun" for entry in logs)
+    assert len(fake.calls) == 1
+
+
+@pytest.mark.unit
+async def test_capture_probe_not_written_when_the_kill_switch_is_off() -> None:
+    store = InMemoryCaptureProbeStore()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        capture_probe_store=store,
+        capture_probe_recording_enabled=False,
+    )
+
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+    assert store.all() == []
+
+
+@pytest.mark.unit
+async def test_capture_probe_not_written_with_no_store_configured() -> None:
+    """`capture_probe_store=None` (the default) is a silent no-op, even
+    with the switch on -- mirrors every other optional store here."""
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        capture_probe_store=None,
+        capture_probe_recording_enabled=True,
+    )
+
+    # No assertion beyond "does not raise": there is no store to inspect.
+    await recorder.observe_capture(_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN))
+
+
+@pytest.mark.unit
+async def test_capture_probe_skipped_with_a_log_line_when_schema_degraded() -> None:
+    store = InMemoryCaptureProbeStore()
+    recorder = _recorder(
+        record_witnessed_run=_FakeRecordWitnessedRun(),
+        capture_probe_store=store,
+        capture_probe_recording_enabled=True,
+        schema_posture="degraded",
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        await recorder.observe_capture(
+            _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)
+        )
+
+    assert store.all() == []
+    assert any(
+        entry["event"] == "run_witness.capture_probe_skipped_degraded_schema" for entry in logs
+    )
+
+
+@pytest.mark.unit
+async def test_capture_probe_write_failure_does_not_suppress_the_log_or_promotion() -> None:
+    """A bookkeeping write must never take down the log line above it or
+    the promotion logic below it -- mirrors
+    `enclosure._monitor.record_observation`'s R6 posture."""
+    fake = _FakeRecordWitnessedRun()
+    recorder = _recorder(
+        record_witnessed_run=fake,
+        capture_probe_store=_RaisingCaptureProbeStore(),
+        capture_probe_recording_enabled=True,
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        await recorder.observe_capture(
+            _obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)
+        )
+
+    assert any(entry["log_level"] == "error" for entry in logs)  # _log.exception
+    assert any(entry["event"] == "run_witness.capture_begun" for entry in logs)
+    assert len(fake.calls) == 1  # promotion still happened
 
 
 class _FakeCaptureBaselineReader:
@@ -1749,6 +1963,22 @@ async def test_run_witness_lifespan_rejects_a_handler_without_deps() -> None:
 
 
 @pytest.mark.unit
+async def test_run_witness_lifespan_rejects_capture_probe_store_without_witness_handler() -> None:
+    """Without `record_witnessed_run`, no `RunWitnessRecorder` is ever
+    constructed, so a supplied `capture_probe_store` would otherwise be
+    silently accepted and never written to -- precisely in the
+    shadow-only case this store's kill switch exists to serve. Refuse
+    at boot instead."""
+    with pytest.raises(ValueError, match="capture_probe_store requires record_witnessed_run"):
+        async with run_witness_lifespan(
+            observer=_FakeObserver([]),
+            capture_codes=frozenset({_CODE}),
+            capture_probe_store=InMemoryCaptureProbeStore(),
+        ):
+            pass
+
+
+@pytest.mark.unit
 async def test_run_witness_lifespan_rejects_progress_recording_without_witness_handler() -> None:
     with pytest.raises(ValueError, match="capture_progress_recording_enabled requires"):
         async with run_witness_lifespan(
@@ -2081,6 +2311,43 @@ async def test_run_witness_lifespan_declares_identity_pvs_but_switch_off_vaults_
 
     assert len(genesis.calls) == 1
     assert await experiment_identity_store.get(run_id) is None
+
+
+@pytest.mark.unit
+async def test_run_witness_lifespan_with_capture_probe_store_writes_a_probe_row() -> None:
+    """End-to-end wiring check: `capture_probe_store` passed into
+    `run_witness_lifespan` actually reaches `RunWitnessRecorder`, not
+    just accepted as a parameter and dropped. This is the hop
+    `main.py`'s `capture_probe_store=app.state.run.capture_probe_store`
+    depends on; nothing else in this file exercises it, since every
+    other capture-probe test builds a `RunWitnessRecorder` directly via
+    `_recorder()`."""
+    store = InMemoryCaptureProbeStore()
+    genesis = _FakeRecordWitnessedRun()
+    observer = _FakeObserver([_obs(reported_status="Beginning scan", phase=CapturePhase.BEGUN)])
+    deps = dataclasses.replace(
+        build_deps(ids=[uuid4() for _ in range(20)]),
+        settings=Settings(  # type: ignore[call-arg]
+            run_witness_recording_enabled=False,
+            capture_probe_recording_enabled=True,
+        ),
+    )
+
+    async with run_witness_lifespan(
+        observer=observer,
+        capture_codes=frozenset({_CODE}),
+        deps=deps,
+        record_witnessed_run=genesis,
+        record_witnessed_run_outcome=_FakeRecordWitnessedRunOutcome(),
+        truncate_run=_FakeTruncateRun(),
+        capture_probe_store=store,
+    ):
+        await asyncio.sleep(0.02)
+
+    rows = store.all()
+    assert len(rows) == 1
+    assert rows[0].capture_code == _CODE
+    assert genesis.calls == []  # recording is off: no promotion
 
 
 @pytest.mark.unit

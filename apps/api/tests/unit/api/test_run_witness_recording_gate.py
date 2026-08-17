@@ -22,6 +22,13 @@ requires `run_witness_recording_enabled=True`.
 Slice 14a adds a SIXTH gate, same shape:
 `capture_experiment_identity_recording_enabled=True` requires
 `run_witness_recording_enabled=True`.
+
+Slice 16 adds a SEVENTH gate, a DIFFERENT shape from the four above:
+`capture_probe_recording_enabled=True` requires `run_witness_enabled=True`
+only, NOT `run_witness_recording_enabled` -- the capture-probe trail
+scopes on `capture_code`, not a promoted Run, so its value is realized
+specifically while recording is off. See `Settings.capture_probe_recording_enabled`'s
+own docstring for the full argument.
 """
 
 from uuid import UUID, uuid4
@@ -41,6 +48,7 @@ def _settings(
     capture_baseline_recording_enabled: bool = False,
     capture_path_recording_enabled: bool = False,
     capture_experiment_identity_recording_enabled: bool = False,
+    capture_probe_recording_enabled: bool = False,
 ) -> Settings:
     return Settings(  # type: ignore[call-arg]
         run_witness_enabled=run_witness_enabled,
@@ -52,6 +60,7 @@ def _settings(
         capture_experiment_identity_recording_enabled=(
             capture_experiment_identity_recording_enabled
         ),
+        capture_probe_recording_enabled=capture_probe_recording_enabled,
     )
 
 
@@ -263,5 +272,32 @@ def test_experiment_identity_recording_enabled_with_run_witness_recording_passes
             capture_watch_plan_id=uuid4(),
             run_witness_recording_enabled=True,
             capture_experiment_identity_recording_enabled=True,
+        )
+    )
+
+
+def test_capture_probe_recording_enabled_without_run_witness_enabled_refuses_boot() -> None:
+    with pytest.raises(RuntimeError, match="RUN_WITNESS_ENABLED=true"):
+        _enforce_run_witness_recording_gate(
+            _settings(
+                run_witness_enabled=False,
+                run_witness_recording_enabled=False,
+                capture_probe_recording_enabled=True,
+            )
+        )
+
+
+def test_capture_probe_recording_enabled_does_not_require_run_witness_recording() -> None:
+    """The point of the seventh gate's divergence: recording stays OFF,
+    no Plan is configured, and the boot still passes -- as long as the
+    shadow observer runs. This is the live 2-BM state this slice exists
+    for (three days of a dead IOC, run_witness_enabled=True, recording
+    still off)."""
+    _enforce_run_witness_recording_gate(
+        _settings(
+            run_witness_enabled=True,
+            capture_watch_plan_id=None,
+            run_witness_recording_enabled=False,
+            capture_probe_recording_enabled=True,
         )
     )

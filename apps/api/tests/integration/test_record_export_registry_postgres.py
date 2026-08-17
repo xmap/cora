@@ -2,7 +2,7 @@
 
 AST enumeration can prove a `*LogbookOpened` class exists; it cannot
 prove the table or columns the registry names for it are real, because
-renames defeat it. Three of these eight tables have already been
+renames defeat it. Three of these nine tables have already been
 renamed (see `project_record_is_two_tier.md`), so this test queries
 `information_schema` directly against the fully-migrated template
 database and fails if `_registry.py` still points at a name from before
@@ -17,7 +17,7 @@ registry or SQL error.
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import asyncpg
 import pytest
@@ -69,7 +69,13 @@ async def test_registered_table_exists_with_its_declared_columns(
 async def test_reader_returns_empty_list_for_an_unscoped_id(
     db_pool: asyncpg.Pool, spec: EntriesTableSpec
 ) -> None:
+    """Self-classifying on `spec.scope_type`: a bare `uuid4()` bound
+    against a TEXT scope column (`capture_probe`'s `capture_code`) is a
+    type mismatch at the wire, so the dummy value's TYPE must match what
+    the spec itself declares rather than assuming every spec is
+    UUID-scoped."""
+    dummy_scope_id: UUID | str = uuid4() if spec.scope_type is UUID else "no-such-capture-code"
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
-        rows = await spec.reader(pg_conn, uuid4())
+        rows = await spec.reader(pg_conn, dummy_scope_id)
     assert rows == []

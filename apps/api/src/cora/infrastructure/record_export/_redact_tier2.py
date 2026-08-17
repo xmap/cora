@@ -144,7 +144,10 @@ TIER2_DISPOSITIONS: dict[str, dict[str, str]] = {
         "heartbeat_at": KEEP,
         "recorded_at": KEEP,
     },
-    "probe": {
+    "permit_probe": {
+        # Renamed from "probe" (slice 16): disambiguates from the new
+        # "capture_probe" kind below; no data migration needed, this
+        # key never lands in a stored payload (see _registry.py).
         "event_id": TOKEN,
         "enclosure_id": TOKEN,
         "source_kind": KEEP,  # judged low risk, same standard as heartbeat.source_id
@@ -153,6 +156,20 @@ TIER2_DISPOSITIONS: dict[str, dict[str, str]] = {
         # closer to a security disclosure about a safety system than to science.
         "reach_tier": KEEP,  # proved closed: ReachTier StrEnum
         "status_claimed": KEEP,  # grouped with reach_tier; needs its own human pass (watch item)
+        "recorded_at": KEEP,
+    },
+    "capture_probe": {
+        "event_id": TOKEN,
+        "capture_code": KEEP,  # deployment-declared watch code, not PII; same standard
+        # as observation.channel_name -- an instrument identifier, not a person.
+        "source_kind": KEEP,  # judged low risk, same standard as heartbeat.source_id
+        "source_id": KEEP,  # UNLIKE permit_probe.source_id: a TomoScan status/abort PV
+        # is experiment instrumentation, not a PSS/interlock safety system, so the
+        # security-disclosure reasoning that justifies DROP there does not carry
+        # over here. Same standard as heartbeat.source_id.
+        "reach_tier": KEEP,  # proved closed: ReachTier StrEnum
+        "phase_claimed": KEEP,  # grouped with reach_tier; needs its own human pass (watch item)
+        "observed_at": KEEP,  # substrate timestamp, same standard as sampled_at/occurred_at
         "recorded_at": KEEP,
     },
 }
