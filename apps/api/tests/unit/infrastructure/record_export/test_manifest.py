@@ -10,14 +10,18 @@ Procedure + Run) lives in
 import re
 
 from cora.infrastructure.record_export import (
+    MANIFEST_SCHEMA_VERSION,
     ExportedRecord,
+    LogbookKindExtentStatus,
     RedactedRecord,
     RedactionResult,
     TokenMap,
+    all_specs,
     build_manifest,
     capture_git_commit,
     hash_record,
     hash_redaction_profile,
+    hash_registered_kinds,
 )
 
 _RUN_A = "01900000-0000-7000-8000-0000000000a1"
@@ -82,6 +86,52 @@ def _record(*, watermark: int = 100) -> ExportedRecord:
 def test_logbook_row_counts_match_each_kinds_length() -> None:
     manifest = build_manifest(_record(), git_commit="deadbeef")
     assert manifest.row_count_by_logbook_kind == {"activity": 2, "observation": 2}
+
+
+def test_extent_by_logbook_kind_has_one_slot_per_registered_kind() -> None:
+    """One mandatory slot per `all_specs()` kind, present even though this
+    fixture's `record.logbooks` only carries two of the nine kinds:
+    proof the enumeration comes from the registry, not from `record`."""
+    manifest = build_manifest(_record(), git_commit="deadbeef")
+    assert set(manifest.extent_by_logbook_kind) == {spec.kind for spec in all_specs()}
+
+
+def test_envelope_driven_kinds_are_included_regardless_of_this_records_own_rows() -> None:
+    """`activity` and `observation` are in this fixture's `record.logbooks`;
+    `verdict`, `inference`, `diagnostic`, and `outcome` are not. Both
+    groups are envelope-driven and must read `included` all the same:
+    status is a registry fact, never derived from what THIS record
+    happened to carry."""
+    manifest = build_manifest(_record(), git_commit="deadbeef")
+    for kind in ("verdict", "inference", "activity", "diagnostic", "outcome", "observation"):
+        assert manifest.extent_by_logbook_kind[kind].status == LogbookKindExtentStatus.INCLUDED
+
+
+def test_kinds_with_no_envelope_are_untraversed() -> None:
+    manifest = build_manifest(_record(), git_commit="deadbeef")
+    for kind in ("heartbeat", "permit_probe", "capture_probe"):
+        assert manifest.extent_by_logbook_kind[kind].status == LogbookKindExtentStatus.UNTRAVERSED
+
+
+def test_registered_kinds_hash_matches_hashing_all_specs_kinds_directly() -> None:
+    manifest = build_manifest(_record(), git_commit="deadbeef")
+    assert manifest.registered_kinds_hash == hash_registered_kinds(
+        spec.kind for spec in all_specs()
+    )
+
+
+def test_registered_kinds_hash_is_insensitive_to_registry_iteration_order() -> None:
+    """Independence from the registry's declaration order: a reader
+    recomputing this hash from their own checkout's `all_specs()` must
+    land on the same value regardless of iteration order."""
+    manifest = build_manifest(_record(), git_commit="deadbeef")
+    kinds = [spec.kind for spec in all_specs()]
+    assert manifest.registered_kinds_hash == hash_registered_kinds(reversed(kinds))
+
+
+def test_manifest_schema_version_matches_the_module_constant() -> None:
+    manifest = build_manifest(_record(), git_commit="deadbeef")
+    assert manifest.manifest_schema_version == MANIFEST_SCHEMA_VERSION
 
 
 def test_max_schema_version_takes_the_max_per_event_type() -> None:

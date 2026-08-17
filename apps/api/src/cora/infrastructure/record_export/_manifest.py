@@ -20,6 +20,7 @@ with synthetic `ExportedRecord`s.
 
 import subprocess
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import cast
 
@@ -29,9 +30,47 @@ from cora.infrastructure.record_export._hashing import (
     hash_record,
     hash_redacted_record,
     hash_redaction_profile,
+    hash_registered_kinds,
 )
 from cora.infrastructure.record_export._redaction import RedactionResult
+from cora.infrastructure.record_export._registry import all_specs
 from cora.infrastructure.record_export._tokens import TokenMap
+
+MANIFEST_SCHEMA_VERSION = 1
+"""Versions the registered logbook-kind universe a manifest was built
+against, per `project_record_completeness_design.md`'s "Two
+authorities, two times". Bump this, together with `registered_kinds_hash`
+and the pin in `tests/architecture/test_manifest_registered_kinds_pin.py`,
+only when the registered kind SET changes (a tenth `EntriesTableSpec`,
+or a kind's status graduating out of `untraversed`). Adding an unrelated
+field to `Manifest` itself does not need a bump."""
+
+
+class LogbookKindExtentStatus(StrEnum):
+    """Whether the exporter can account for one registered logbook kind.
+
+    `INCLUDED` means the exporter's traversal reads that kind's rows,
+    regardless of how many it finds this export: an envelope-driven
+    kind is reached by the full, unbounded stream walk whether or not
+    any instance of its envelope occurred in this particular database,
+    so zero rows is a genuine zero, not a coverage gap. `EXCLUDED` is a
+    still-open, registry-level policy decision (see
+    `project_record_completeness_design.md`'s S4); nothing in the
+    registry sets it today, so no kind currently resolves to it.
+    `UNTRAVERSED` means no code path reads that kind's table at all yet.
+    """
+
+    INCLUDED = "included"
+    EXCLUDED = "excluded"
+    UNTRAVERSED = "untraversed"
+
+
+@dataclass(frozen=True, slots=True)
+class LogbookKindExtent:
+    """One `extent_by_logbook_kind` slot. Carries only `status` today;
+    S2b adds `source_row_count` / `exported_row_count` alongside it."""
+
+    status: LogbookKindExtentStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +91,21 @@ class Manifest:
     max_schema_version_by_event_type: dict[str, int]
     is_simulated: bool
     expansion_digest_presence_by_run: dict[str, bool]
+    extent_by_logbook_kind: dict[str, LogbookKindExtent]
+    """One mandatory slot per kind registered in `_registry.all_specs()`,
+    present even at zero rows. Iterated from the registry at build time,
+    NEVER from `record.logbooks`: `row_count_by_logbook_kind` above is
+    exactly the enumeration that agreed-by-construction with the
+    traversal it was meant to check and missed 53,499 rows across two
+    kinds while reporting `{}`. See
+    `project_independent_check_principle.md` and
+    `project_record_completeness_design.md`."""
+    registered_kinds_hash: str
+    """`hash_registered_kinds` over the sorted kind set this export's
+    checkout has registered, so a reader can tell whether their own
+    checkout's registry has since grown a kind this bundle's manifest
+    never had a slot for."""
+    manifest_schema_version: int
     published_record_hash: str | None = None
     """H3, present only on a manifest built alongside a redacted record.
 
@@ -129,6 +183,30 @@ def _payload(row: dict[str, object]) -> dict[str, object]:
 
 def _row_count_by_logbook_kind(record: ExportedRecord) -> dict[str, int]:
     return {kind: len(rows) for kind, rows in record.logbooks.items()}
+
+
+def _extent_by_logbook_kind() -> dict[str, LogbookKindExtent]:
+    """Every registered kind, status derived from the registry alone.
+
+    `spec.envelope_class is not None` is a structural, registry-level
+    fact about whether ANY code path can reach that kind's table today;
+    it says nothing about what THIS export's traversal happened to
+    find, which is the whole point (see `Manifest.extent_by_logbook_kind`'s
+    docstring). The three kinds with `envelope_class is None`
+    (`heartbeat`, `permit_probe`, `capture_probe`) have no reader wired
+    into `export_record`'s walk at all and are `untraversed` until a
+    future slice widens `EntriesReader` for an unscoped read.
+    """
+    return {
+        spec.kind: LogbookKindExtent(
+            status=(
+                LogbookKindExtentStatus.INCLUDED
+                if spec.envelope_class is not None
+                else LogbookKindExtentStatus.UNTRAVERSED
+            )
+        )
+        for spec in all_specs()
+    }
 
 
 def _max_schema_version_by_event_type(record: ExportedRecord) -> dict[str, int]:
@@ -277,6 +355,9 @@ def build_manifest(
         expansion_digest_presence_by_run=_expansion_digest_presence_by_run(
             record, token_map=token_map
         ),
+        extent_by_logbook_kind=_extent_by_logbook_kind(),
+        registered_kinds_hash=hash_registered_kinds(spec.kind for spec in all_specs()),
+        manifest_schema_version=MANIFEST_SCHEMA_VERSION,
         published_record_hash=None if redacted is None else hash_redacted_record(redacted),
         unfired_tier2_clearances=(
             None if redacted is None else _render_unfired_clearances(unfired_tier2)
@@ -287,4 +368,11 @@ def build_manifest(
     )
 
 
-__all__ = ["Manifest", "build_manifest", "capture_git_commit"]
+__all__ = [
+    "MANIFEST_SCHEMA_VERSION",
+    "LogbookKindExtent",
+    "LogbookKindExtentStatus",
+    "Manifest",
+    "build_manifest",
+    "capture_git_commit",
+]
