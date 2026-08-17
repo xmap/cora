@@ -27,6 +27,7 @@ disk, that is a decision for whoever builds it, made with an actual
 manifest body in hand rather than guessed at here.
 """
 
+from collections.abc import Iterable
 from typing import Protocol
 
 from cora.infrastructure.record_export._dispositions import DISPOSITIONS
@@ -47,6 +48,7 @@ STREAMS_PAYLOAD_TYPE = "application/vnd.cora.record-streams+json"
 LOGBOOKS_PAYLOAD_TYPE = "application/vnd.cora.record-logbooks+json"
 REDACTION_PROFILE_PAYLOAD_TYPE = "application/vnd.cora.record-redaction-profile+json"
 PUBLISHED_RECORD_PAYLOAD_TYPE = "application/vnd.cora.record-published+json"
+REGISTERED_KINDS_PAYLOAD_TYPE = "application/vnd.cora.record-registered-kinds+json"
 
 
 class TwoTierRecord(Protocol):
@@ -136,6 +138,25 @@ def hash_redacted_record(record: TwoTierRecord) -> str:
     return compute_content_hash(PUBLISHED_RECORD_PAYLOAD_TYPE, _two_tier_body(record))
 
 
+def hash_registered_kinds(kinds: Iterable[str]) -> str:
+    """SHA-256 content hash over the sorted registered logbook kind set.
+
+    Takes the kind strings directly rather than importing
+    `_registry.all_specs` here: `_hashing` stays a leaf module hashing
+    whatever body a caller hands it, the same posture every other
+    `hash_*` function in this file takes. `_manifest.py` is the caller
+    that actually reads the registry.
+
+    Per `project_record_completeness_design.md`'s "Two authorities, two
+    times": this is the build-time half. A reader comparing a bundle's
+    `registered_kinds_hash` against a hash it computes from ITS OWN
+    checkout's registry can tell whether the universe of kinds this
+    export was measured against has since grown a tenth member, without
+    needing to trust the manifest's `extent_by_logbook_kind` keys alone.
+    """
+    return compute_content_hash(REGISTERED_KINDS_PAYLOAD_TYPE, sorted(kinds))
+
+
 def hash_redaction_profile() -> str:
     """SHA-256 content hash over every table that decides what a
     published record discloses: tier 1's generated per-field
@@ -196,11 +217,13 @@ __all__ = [
     "PUBLISHED_RECORD_PAYLOAD_TYPE",
     "RECORD_PAYLOAD_TYPE",
     "REDACTION_PROFILE_PAYLOAD_TYPE",
+    "REGISTERED_KINDS_PAYLOAD_TYPE",
     "STREAMS_PAYLOAD_TYPE",
     "TwoTierRecord",
     "hash_logbooks",
     "hash_record",
     "hash_redacted_record",
     "hash_redaction_profile",
+    "hash_registered_kinds",
     "hash_streams",
 ]
