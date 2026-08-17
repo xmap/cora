@@ -30,6 +30,7 @@ def _obs(run_id: UUID, channel: str, value: float, *, is_simulated: bool = False
         command_name="AppendObservations",
         channel_name=channel,
         value=value,
+        categorical_value=None,
         units=None,
         sampling_procedure="monitor",
         sampled_at=_NOW,
@@ -37,6 +38,30 @@ def _obs(run_id: UUID, channel: str, value: float, *, is_simulated: bool = False
         correlation_id=uuid4(),
         causation_id=None,
         is_simulated=is_simulated,
+    )
+
+
+def _categorical_obs(run_id: UUID, channel: str, label: str) -> Observation:
+    """A categorical (enum-label) row: `value` unset, `categorical_value`
+    set -- the shape `postgres_run_channel_lookup.py`'s `value IS NOT
+    NULL` guard exists to keep out of the numeric-only Rule Q/R read
+    path."""
+    return Observation(
+        event_id=uuid4(),
+        run_id=run_id,
+        logbook_id=uuid4(),
+        actor_id=uuid4(),
+        command_name="AppendObservations",
+        channel_name=channel,
+        value=None,
+        categorical_value=label,
+        units=None,
+        sampling_procedure="baseline",
+        sampled_at=_NOW,
+        occurred_at=_NOW,
+        correlation_id=uuid4(),
+        causation_id=None,
+        is_simulated=False,
     )
 
 
@@ -126,3 +151,60 @@ async def test_window_or_folds_is_simulated(db_pool: asyncpg.Pool) -> None:
     )
     assert signal.count_since == 2
     assert signal.is_simulated_window is True
+
+
+@pytest.mark.integration
+async def test_latest_never_surfaces_a_categorical_row(db_pool: asyncpg.Pool) -> None:
+    """A channel_name that only ever produced a categorical (enum-label)
+    reading must read as `None` (cannot-tell -> defer), never surface
+    the categorical row as if it were the numeric reading
+    `RunChannelLatest.value: float` promises. Guards the `value IS NOT
+    NULL` filter added to `_LATEST_SQL`."""
+    run_id = uuid4()
+    store = PostgresObservationStore(db_pool)
+    lookup = PostgresRunChannelLookup(db_pool)
+
+    await store.append([_categorical_obs(run_id, "ScanType", "Fly")])
+
+    got = await lookup.read_run_channel_latest(run_id=run_id, channel_name="ScanType")
+    assert got is None
+
+
+@pytest.mark.integration
+async def test_latest_returns_the_numeric_row_even_when_a_later_categorical_row_exists(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """A numeric row stays the latest reading even when a categorical
+    row for the SAME channel_name is written afterward -- the
+    categorical row must never mask the last real numeric value."""
+    run_id = uuid4()
+    store = PostgresObservationStore(db_pool)
+    lookup = PostgresRunChannelLookup(db_pool)
+
+    numeric = _obs(run_id, "shared_channel", 42.0)
+    await store.append([numeric])
+    await asyncio.sleep(0.01)
+    await store.append([_categorical_obs(run_id, "shared_channel", "Fly")])
+
+    latest = await lookup.read_run_channel_latest(run_id=run_id, channel_name="shared_channel")
+    assert latest is not None
+    assert latest.value == pytest.approx(42.0)
+
+
+@pytest.mark.integration
+async def test_window_never_counts_a_categorical_row(db_pool: asyncpg.Pool) -> None:
+    """A window read over a channel carrying only categorical rows
+    reports a zero-count signal (cannot-tell -> defer), never counting
+    the categorical arrival as a numeric one. Guards the `value IS NOT
+    NULL` filter added to `_WINDOW_SQL`."""
+    run_id = uuid4()
+    store = PostgresObservationStore(db_pool)
+    lookup = PostgresRunChannelLookup(db_pool)
+
+    await store.append([_categorical_obs(run_id, "FlatFieldMode", "Both")])
+
+    signal = await lookup.read_run_channel_window(
+        run_id=run_id, channel_name="FlatFieldMode", since=_NOW - timedelta(days=1)
+    )
+    assert signal.count_since == 0
+    assert signal.first_recorded_at is None

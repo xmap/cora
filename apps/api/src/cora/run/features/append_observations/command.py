@@ -20,10 +20,20 @@ observation arrives. Per [[project_run_reading_design]] §Decision and
 
 ## Polymorphic by sampling_procedure
 
-All entries share the same row shape `(channel_name, value, units?,
-sampled_at, sampling_procedure)`. The `sampling_procedure` field
-discriminates baseline vs monitor vs future-additive kinds. SOSA-
-aligned (W3C SOSA 2023 `sosa:samplingProcedure`).
+All entries share the same row shape `(channel_name, value?,
+categorical_value?, units?, sampled_at, sampling_procedure)`. The
+`sampling_procedure` field discriminates baseline vs monitor vs
+future-additive kinds. SOSA-aligned (W3C SOSA 2023
+`sosa:samplingProcedure`).
+
+## value vs categorical_value
+
+Exactly one is set per entry: `value` for a numeric reading,
+`categorical_value` for an enum-label reading (`ControlPort`'s
+`Measurement(kind="Categorical")`, carried as the facility's own
+substrate label). The handler raises `InvalidObservationShapeError`
+when neither or both are set; the DB enforces the same invariant via
+an exclusive-arc CHECK constraint.
 """
 
 from dataclasses import dataclass
@@ -43,7 +53,7 @@ class ObservationInput:
 
     event_id: UUID
     channel_name: str
-    value: float
+    value: float | None
     sampled_at: datetime
     sampling_procedure: str
     units: str | None = None
@@ -57,6 +67,10 @@ class ObservationInput:
     value. Defaults to False (real), the safe direction for the
     closed-loop gate: a real adapter that omits the flag is treated as
     real. Only the sim feeder sets it True."""
+    categorical_value: str | None = None
+    """Set instead of `value` for an enum-label reading. Exactly one of
+    the two must be set; numeric producers omit this field entirely and
+    rely on the default."""
 
 
 @dataclass(frozen=True)

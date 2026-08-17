@@ -137,6 +137,19 @@ def test_post_readings_omits_optional_units() -> None:
     assert response.status_code == 200
 
 
+@pytest.mark.contract
+def test_post_readings_accepts_a_categorical_entry_with_no_value() -> None:
+    """A scan-configuration ENUM PV round trips as `categorical_value`
+    with `value` omitted entirely."""
+    with TestClient(create_app()) as client:
+        run_id = _setup_full_run(client)
+        entry = _good_entry(channel_name="ScanType", categorical_value="Fly")
+        del entry["value"]
+        response = client.post(f"/runs/{run_id}/observations", json={"entries": [entry]})
+    assert response.status_code == 200
+    assert response.json() == {"event_count": 1}
+
+
 # ---------- 404 ----------
 
 
@@ -238,6 +251,59 @@ def test_post_readings_returns_422_for_empty_channel_name() -> None:
             json={"entries": [_good_entry(channel_name="")]},
         )
     assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_readings_returns_422_when_both_value_and_categorical_value_set() -> None:
+    """The `model_validator` exclusivity guard fires ahead of the
+    handler's own defensive copy."""
+    with TestClient(create_app()) as client:
+        run_id = _setup_full_run(client)
+        entry = _good_entry(categorical_value="Fly")
+        response = client.post(f"/runs/{run_id}/observations", json={"entries": [entry]})
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_readings_returns_422_when_neither_value_nor_categorical_value_set() -> None:
+    with TestClient(create_app()) as client:
+        run_id = _setup_full_run(client)
+        entry = _good_entry()
+        del entry["value"]
+        response = client.post(f"/runs/{run_id}/observations", json={"entries": [entry]})
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_readings_returns_422_for_empty_categorical_value() -> None:
+    """Pydantic min_length=1 on categorical_value catches at boundary,
+    mirroring channel_name's own empty-string bound."""
+    with TestClient(create_app()) as client:
+        run_id = _setup_full_run(client)
+        entry = _good_entry(categorical_value="")
+        del entry["value"]
+        response = client.post(f"/runs/{run_id}/observations", json={"entries": [entry]})
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_readings_returns_422_for_categorical_value_over_max_length() -> None:
+    with TestClient(create_app()) as client:
+        run_id = _setup_full_run(client)
+        entry = _good_entry(categorical_value="x" * 65)
+        del entry["value"]
+        response = client.post(f"/runs/{run_id}/observations", json={"entries": [entry]})
+    assert response.status_code == 422
+
+
+@pytest.mark.contract
+def test_post_readings_accepts_categorical_value_at_exactly_max_length() -> None:
+    with TestClient(create_app()) as client:
+        run_id = _setup_full_run(client)
+        entry = _good_entry(categorical_value="x" * 64)
+        del entry["value"]
+        response = client.post(f"/runs/{run_id}/observations", json={"entries": [entry]})
+    assert response.status_code == 200
 
 
 @pytest.mark.contract

@@ -39,6 +39,13 @@ on the request body. The handler ALSO validates against
 `SAMPLING_PROCEDURE_VALUES` so direct in-process callers (sagas,
 tests) get the same protection. Same defensive-validation posture
 as the bounded-text VOs across the codebase.
+
+## Defensive `value` / `categorical_value` exclusivity
+
+`ObservationRequest`'s `model_validator` catches neither-or-both at
+the API boundary; the handler ALSO checks it here (raising
+`InvalidObservationShapeError`) for the same direct-caller reasons.
+The DB's exclusive-arc CHECK constraint is the third, innermost layer.
 """
 
 import math
@@ -57,6 +64,7 @@ from cora.run.aggregates.run import (
     OBSERVATION_LOGBOOK_SCHEMA,
     SAMPLING_PROCEDURE_VALUES,
     ChannelName,
+    InvalidObservationShapeError,
     InvalidObservationValueError,
     InvalidSamplingProcedureError,
     Observation,
@@ -156,7 +164,11 @@ def bind(deps: Kernel, *, observation_store: ObservationStore) -> Handler:
         # per failure mode regardless of caller path.
         for entry in command.entries:
             ChannelName(entry.channel_name)  # raises InvalidChannelNameError
-            if math.isnan(entry.value) or math.isinf(entry.value):
+            if (entry.value is None) == (entry.categorical_value is None):
+                raise InvalidObservationShapeError(
+                    value=entry.value, categorical_value=entry.categorical_value
+                )
+            if entry.value is not None and (math.isnan(entry.value) or math.isinf(entry.value)):
                 raise InvalidObservationValueError(entry.value)
             if entry.sampling_procedure not in SAMPLING_PROCEDURE_VALUES:
                 raise InvalidSamplingProcedureError(
@@ -300,6 +312,7 @@ def _build_row(
         command_name=_COMMAND_NAME,
         channel_name=entry.channel_name,
         value=entry.value,
+        categorical_value=entry.categorical_value,
         units=entry.units,
         sampling_procedure=entry.sampling_procedure,
         sampled_at=entry.sampled_at,

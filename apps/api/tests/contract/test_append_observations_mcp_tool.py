@@ -111,6 +111,85 @@ def test_mcp_append_run_readings_tool_succeeds_on_minimum_args() -> None:
 
 
 @pytest.mark.contract
+def test_mcp_append_run_readings_tool_accepts_categorical_value_with_no_value() -> None:
+    """A scan-configuration ENUM PV goes through the tool as
+    `categorical_value` with `value` omitted."""
+    with TestClient(create_app()) as client:
+        run_id = _setup_full_run(client)
+        headers = open_session(client)
+        args = _good_args(run_id, channel_name="ScanType", categorical_value="Fly")
+        del args["value"]
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 6,
+                "method": "tools/call",
+                "params": {
+                    "name": "append_observations",
+                    "arguments": args,
+                },
+            },
+            headers=headers,
+        )
+    body = parse_sse_data(response.text)
+    assert body["result"]["isError"] is False
+    assert body["result"]["structuredContent"]["result"] == 1
+
+
+@pytest.mark.contract
+def test_mcp_append_run_readings_tool_iserror_when_both_value_shapes_set() -> None:
+    """The tool checks exclusivity itself, ahead of authz/the handler,
+    mirroring the REST route's `model_validator` failing before its own
+    handler call."""
+    with TestClient(create_app()) as client:
+        run_id = _setup_full_run(client)
+        headers = open_session(client)
+        args = _good_args(run_id, categorical_value="Fly")
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 7,
+                "method": "tools/call",
+                "params": {
+                    "name": "append_observations",
+                    "arguments": args,
+                },
+            },
+            headers=headers,
+        )
+    body = parse_sse_data(response.text)
+    assert body["result"]["isError"] is True
+    assert "exactly one" in body["result"]["content"][0]["text"].lower()
+
+
+@pytest.mark.contract
+def test_mcp_append_run_readings_tool_iserror_when_neither_value_shape_set() -> None:
+    with TestClient(create_app()) as client:
+        run_id = _setup_full_run(client)
+        headers = open_session(client)
+        args = _good_args(run_id)
+        del args["value"]
+        response = client.post(
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "id": 8,
+                "method": "tools/call",
+                "params": {
+                    "name": "append_observations",
+                    "arguments": args,
+                },
+            },
+            headers=headers,
+        )
+    body = parse_sse_data(response.text)
+    assert body["result"]["isError"] is True
+    assert "exactly one" in body["result"]["content"][0]["text"].lower()
+
+
+@pytest.mark.contract
 def test_mcp_append_run_readings_tool_returns_iserror_for_unknown_run() -> None:
     with TestClient(create_app()) as client:
         headers = open_session(client)

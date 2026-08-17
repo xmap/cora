@@ -12,6 +12,18 @@ are channel-scoped, so they ride the
 `(run_id, channel_name, recorded_at DESC)` btree added alongside this
 adapter. The pre-existing `sampled_at` indexes do NOT serve these
 queries (wrong column, no channel_name).
+
+## `value IS NOT NULL`: this path is numeric-only by construction
+
+`RunChannelLatest.value` is `float`, not `float | None`: Rule Q
+(quality-within-limits) and Rule R (rate-dropout) both compare against
+a threshold, which only a numeric reading supports. A channel_name can
+now legitimately carry categorical rows (scan-configuration enum PVs,
+`categorical_value` set instead of `value`), so both queries filter
+`value IS NOT NULL` to keep a misconfigured Rule Q/R pointed at, say,
+`ScanType` from surfacing a categorical row as if it were the numeric
+reading its own return type promises. This does not change behavior
+for any channel that is actually numeric.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -31,7 +43,7 @@ from cora.run.ports.run_channel_lookup import (
 _LATEST_SQL = """
 SELECT channel_name, value, units, sampled_at, recorded_at, is_simulated
 FROM entries_run_observations
-WHERE run_id = $1 AND channel_name = $2
+WHERE run_id = $1 AND channel_name = $2 AND value IS NOT NULL
 ORDER BY recorded_at DESC
 LIMIT 1
 """
@@ -43,7 +55,7 @@ SELECT
     max(recorded_at)               AS latest_recorded_at,
     coalesce(bool_or(is_simulated), false) AS is_simulated_window
 FROM entries_run_observations
-WHERE run_id = $1 AND channel_name = $2 AND recorded_at > $3
+WHERE run_id = $1 AND channel_name = $2 AND recorded_at > $3 AND value IS NOT NULL
 """
 
 _FEED_HEALTH_SQL = """

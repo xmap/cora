@@ -18,14 +18,22 @@ Postgres `ON CONFLICT (event_id) DO NOTHING` handles dedup silently.
 (extends to `Literal["baseline", "monitor"]` later). The DDL
 column is plain TEXT, extension lands as a code edit, not a
 migration, per [[project_run_reading_design]] §Locks.
+
+## value vs categorical_value: mutually exclusive, validated here
+
+Exactly one of `value` (a numeric reading) or `categorical_value` (an
+enum-label reading, e.g. a scan-configuration PV) must be set per
+entry. A `model_validator` enforces this ahead of the handler's own
+defensive copy, mirroring how Pydantic already front-doors the
+NaN/Infinity and `sampling_procedure` checks.
 """
 
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from cora.infrastructure.routing import (
     ErrorResponse,
@@ -49,8 +57,9 @@ batches should split client-side."""
 class ObservationRequest(BaseModel):
     """One observation entry's input payload (polymorphic, SOSA-aligned).
 
-    Required: event_id + channel_name + value + sampled_at +
-    sampling_procedure. `units` and `occurred_at` are optional.
+    Required: event_id + channel_name + sampled_at + sampling_procedure,
+    plus exactly one of value / categorical_value. `units` and
+    `occurred_at` are optional.
     """
 
     event_id: UUID = Field(
@@ -69,10 +78,23 @@ class ObservationRequest(BaseModel):
             "for example 'T_sample', 'motor_x', 'ring_current')."
         ),
     )
-    value: float = Field(
-        ...,
+    value: float | None = Field(
+        default=None,
         allow_inf_nan=False,
-        description="Scalar observation value. NaN and Infinity rejected.",
+        description=(
+            "Numeric observation value. NaN and Infinity rejected. "
+            "Exactly one of value / categorical_value must be set."
+        ),
+    )
+    categorical_value: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        description=(
+            "Enum-label observation value, carried as the facility's own "
+            "substrate label (for example 'Fly', 'Both'). Exactly one of "
+            "value / categorical_value must be set."
+        ),
     )
     sampled_at: datetime = Field(
         ...,
@@ -113,6 +135,15 @@ class ObservationRequest(BaseModel):
     )
 
     model_config = {"extra": "forbid"}
+
+    @model_validator(mode="after")
+    def _exactly_one_value_shape(self) -> Self:
+        if (self.value is None) == (self.categorical_value is None):
+            raise ValueError(
+                "exactly one of value / categorical_value must be set "
+                f"(got value={self.value!r}, categorical_value={self.categorical_value!r})"
+            )
+        return self
 
 
 class AppendRunReadingsRequest(BaseModel):
@@ -160,7 +191,7 @@ router = APIRouter(tags=["run"])
             "description": (
                 "Per-entry validation failed in the handler "
                 "(InvalidChannelNameError / InvalidObservationValueError / "
-                "InvalidSamplingProcedureError)."
+                "InvalidObservationShapeError / InvalidSamplingProcedureError)."
             ),
         },
         status.HTTP_403_FORBIDDEN: {
@@ -184,7 +215,8 @@ router = APIRouter(tags=["run"])
                 "Request body failed schema validation: empty entries "
                 "list, batch over cap, missing required fields, "
                 "invalid sampling_procedure value, NaN/Infinity observation "
-                "value, channel_name out of bounds."
+                "value, channel_name out of bounds, or neither/both of "
+                "value / categorical_value set."
             ),
         },
     },
@@ -206,6 +238,7 @@ async def post_runs_readings(
             event_id=e.event_id,
             channel_name=e.channel_name,
             value=e.value,
+            categorical_value=e.categorical_value,
             sampled_at=e.sampled_at,
             sampling_procedure=e.sampling_procedure,
             units=e.units,

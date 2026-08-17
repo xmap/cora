@@ -11,15 +11,25 @@ the owning aggregate, with a category-local `ObservationStore` Protocol
 Unlike Verdict (typed `decision: Allow|Deny + reason`) and
 Inference (typed 27+ OTel columns), Observation is
 **polymorphic across kinds** via the `sampling_procedure` field. All
-Observation rows share the SAME `(channel_name, value, units?,
-sampled_at, ...)` shape regardless of whether they are baseline
-snapshots, monitor time-series, or future kinds. This applies the
-OGC O&M criterion (typed when value-shape diverges, polymorphic when
-uniform) — see [[project_logbook_entry_storage]] for the cross-BC
-formulation. The `sampling_procedure` discriminator is W3C SOSA
-2023's `sosa:samplingProcedure` slot; values are Bluesky-aligned
-operator vocabulary (`baseline`, `monitor`, future-additive
-`primary` / `triggered`).
+Observation rows share the SAME `(channel_name, value?,
+categorical_value?, units?, sampled_at, ...)` shape regardless of
+whether they are baseline snapshots, monitor time-series, or future
+kinds. This applies the OGC O&M criterion (typed when value-shape
+diverges, polymorphic when uniform) — see
+[[project_logbook_entry_storage]] for the cross-BC formulation. The
+`sampling_procedure` discriminator is W3C SOSA 2023's
+`sosa:samplingProcedure` slot; values are Bluesky-aligned operator
+vocabulary (`baseline`, `monitor`, future-additive `primary` /
+`triggered`).
+
+`value` and `categorical_value` are a second, orthogonal discriminator:
+exactly one is set per row. A numeric reading (a motor
+readback, an exposure time) sets `value`; an enum-label reading (a
+scan-configuration `mbbo`/`bo` PV, `ControlPort`'s
+`Measurement(kind="Categorical")`) sets `categorical_value` to the
+facility's own substrate label. This is deliberately NOT a
+`value: float | str` union: numeric observations stay sortable,
+aggregable and range-queryable on their own typed column.
 
 ## Three timestamps
 
@@ -83,7 +93,14 @@ class Observation:
     actor_id: UUID
     command_name: str
     channel_name: str
-    value: float
+    value: float | None
+    categorical_value: str | None
+    """Exactly one of `value` / `categorical_value` is set per row,
+    enforced by the DB's exclusive-arc CHECK constraint and the
+    handler's `InvalidObservationShapeError` guard. `value` carries a
+    numeric reading; `categorical_value` carries an enum-label reading
+    (`ControlPort`'s `Measurement(kind="Categorical")`) as the facility's
+    own substrate label, never a CORA-invented code."""
     units: str | None
     sampling_procedure: str
     sampled_at: datetime
@@ -119,10 +136,10 @@ class ObservationStore(Protocol):
 _APPEND_SQL = """
 INSERT INTO entries_run_observations (
     event_id, run_id, logbook_id, actor_id, command_name,
-    channel_name, value, units, sampling_procedure,
+    channel_name, value, categorical_value, units, sampling_procedure,
     sampled_at, occurred_at, correlation_id, causation_id,
     is_simulated
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 ON CONFLICT (event_id) DO NOTHING
 """
 
@@ -155,6 +172,7 @@ class PostgresObservationStore:
                         row.command_name,
                         row.channel_name,
                         row.value,
+                        row.categorical_value,
                         row.units,
                         row.sampling_procedure,
                         row.sampled_at,

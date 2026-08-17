@@ -9319,8 +9319,22 @@
       },
       "ObservationRequest": {
         "additionalProperties": false,
-        "description": "One observation entry's input payload (polymorphic, SOSA-aligned).\n\nRequired: event_id + channel_name + value + sampled_at +\nsampling_procedure. `units` and `occurred_at` are optional.",
+        "description": "One observation entry's input payload (polymorphic, SOSA-aligned).\n\nRequired: event_id + channel_name + sampled_at + sampling_procedure,\nplus exactly one of value / categorical_value. `units` and\n`occurred_at` are optional.",
         "properties": {
+          "categorical_value": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Enum-label observation value, carried as the facility's own substrate label (for example 'Fly', 'Both'). Exactly one of value / categorical_value must be set.",
+            "title": "Categorical Value"
+          },
           "channel_name": {
             "description": "Sensor or motor identifier (operator-meaningful name; for example 'T_sample', 'motor_x', 'ring_current').",
             "maxLength": 255,
@@ -9382,15 +9396,21 @@
             "title": "Units"
           },
           "value": {
-            "description": "Scalar observation value. NaN and Infinity rejected.",
-            "title": "Value",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Numeric observation value. NaN and Infinity rejected. Exactly one of value / categorical_value must be set.",
+            "title": "Value"
           }
         },
         "required": [
           "event_id",
           "channel_name",
-          "value",
           "sampled_at",
           "sampling_procedure"
         ],
@@ -42988,7 +43008,7 @@
                 }
               }
             },
-            "description": "Per-entry validation failed in the handler (InvalidChannelNameError / InvalidObservationValueError / InvalidSamplingProcedureError)."
+            "description": "Per-entry validation failed in the handler (InvalidChannelNameError / InvalidObservationValueError / InvalidObservationShapeError / InvalidSamplingProcedureError)."
           },
           "403": {
             "content": {
@@ -43021,7 +43041,7 @@
             "description": "Run is in a terminal status (Completed | Aborted | Stopped | Truncated); the observation logbook is implicitly closed."
           },
           "422": {
-            "description": "Request body failed schema validation: empty entries list, batch over cap, missing required fields, invalid sampling_procedure value, NaN/Infinity observation value, channel_name out of bounds."
+            "description": "Request body failed schema validation: empty entries list, batch over cap, missing required fields, invalid sampling_procedure value, NaN/Infinity observation value, channel_name out of bounds, or neither/both of value / categorical_value set."
           }
         },
         "summary": "Append a batch of polymorphic sensor / motor observations to a Run's observation logbook (lazy open-on-first-write).",

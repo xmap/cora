@@ -147,6 +147,11 @@ RUN_EXTERNAL_REF_ID_MAX_LENGTH = IDENTIFIER_VALUE_MAX_LENGTH
 # Observation polymorphic logbook constants.
 READING_CHANNEL_NAME_MAX_LENGTH = 255
 READING_UNITS_MAX_LENGTH = 64
+READING_CATEGORICAL_VALUE_MAX_LENGTH = 64
+"""Bound on `Observation.categorical_value`. Mirrors
+`READING_UNITS_MAX_LENGTH`'s own bound: a generous, round ceiling for a
+short substrate string (an EPICS mbbo/bo state label), not a
+tightly-fitted spec number."""
 LOGBOOK_KIND_OBSERVATION: Final = "observation"
 """Discriminator string for the Run's observation logbook.
 
@@ -179,7 +184,18 @@ OBSERVATION_LOGBOOK_SCHEMA = LogbookSchema(
         ),
         "value": LogbookFieldSpec(
             type="float",
-            description="Scalar observation value. NaN and Infinity rejected at write time.",
+            description=(
+                "Numeric observation value. NaN and Infinity rejected at write time. "
+                "Exactly one of value / categorical_value is set per row."
+            ),
+        ),
+        "categorical_value": LogbookFieldSpec(
+            type="string",
+            description=(
+                "Enum-label observation value, carried as the facility's own "
+                "substrate label (for example 'Fly', 'Both'), never a CORA-invented "
+                "code. Exactly one of value / categorical_value is set per row."
+            ),
         ),
         "units": LogbookFieldSpec(
             type="string",
@@ -1484,6 +1500,31 @@ class InvalidObservationValueError(ValueError):
             f"Reading value must be finite (got: {value!r}; NaN and Infinity rejected)"
         )
         self.value = value
+
+
+class InvalidObservationShapeError(ValueError):
+    """An observation entry supplied neither or both of `value` /
+    `categorical_value`.
+
+    The two fields are mutually exclusive by design: a
+    numeric reading sets `value` and leaves `categorical_value` unset,
+    a categorical (enum-label) reading does the reverse. Pydantic
+    catches this at the API boundary via a `model_validator` on
+    `ObservationRequest`; this error class exists for direct
+    in-process callers (sagas, tests) that bypass Pydantic, and for the
+    handler's own defensive check. The Postgres adapter ALSO enforces
+    the invariant via a CHECK constraint, providing defense-in-depth.
+
+    Mapped to HTTP 400.
+    """
+
+    def __init__(self, *, value: float | None, categorical_value: str | None) -> None:
+        super().__init__(
+            "Observation entry must set exactly one of value / categorical_value "
+            f"(got value={value!r}, categorical_value={categorical_value!r})"
+        )
+        self.value = value
+        self.categorical_value = categorical_value
 
 
 class InvalidSamplingProcedureError(ValueError):
