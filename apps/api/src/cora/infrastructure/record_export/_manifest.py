@@ -37,13 +37,27 @@ from cora.infrastructure.record_export._registry import all_specs
 from cora.infrastructure.record_export._tokens import TokenMap
 
 MANIFEST_SCHEMA_VERSION = 1
-"""Versions the registered logbook-kind universe a manifest was built
-against, per `project_record_completeness_design.md`'s "Two
-authorities, two times". Bump this, together with `registered_kinds_hash`
-and the pin in `tests/architecture/test_manifest_registered_kinds_pin.py`,
-only when the registered kind SET changes (a tenth `EntriesTableSpec`,
-or a kind's status graduating out of `untraversed`). Adding an unrelated
-field to `Manifest` itself does not need a bump."""
+"""Versions the registered logbook-kind SET a manifest was built
+against: literally "which universe of kinds the claim was made
+against", `project_record_completeness_design.md`'s "Two authorities,
+two times" in its own words. Bump this, together with
+`registered_kinds_hash` and the pin in
+`tests/architecture/test_manifest_registered_kinds_pin.py`, only when
+that SET changes (a tenth `EntriesTableSpec`, or one retired).
+
+Adding an unrelated field to `Manifest` itself does not need a bump,
+and neither does a kind's status moving between `included` / `excluded`
+/ `untraversed`: `extent_by_logbook_kind` already carries that fact
+per-export, in band, for every kind the set pin below enumerates, so a
+reader comparing two bundles sees the difference directly and needs no
+second version axis to notice it. (A prior draft of this docstring
+named status graduation as a second bump trigger; S5a, S5b and S5c each
+moved a kind's status without bumping, correctly under this reading,
+so that draft was naming the wrong trigger, not describing a missed
+bump.) The set pin also freezes each kind's CURRENT status, so a status
+change still cannot land silently -- it fails that test and forces a
+deliberate look here -- it just does not by itself force a version
+bump."""
 
 
 class LogbookKindExtentStatus(StrEnum):
