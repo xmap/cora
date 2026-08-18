@@ -241,6 +241,20 @@ class Settings(BaseSettings):
     # whole Settings surface is repr-safe.
     anthropic_api_key: SecretStr | None = None
 
+    # In-house (built) serving path. `llm_provider` selects the LLM
+    # adapter the composition root builds: `anthropic` (the external,
+    # token-billed default) or `local` (a facility-hosted open model over
+    # an OpenAI-compatible endpoint). The `local` branch requires
+    # `local_llm_base_url` and `local_llm_model`, or `build_llm` returns
+    # None and subscribers fail-fast. `local_llm_gpu_usd_per_hour` feeds
+    # the GPU shadow-cost observability signal (0 = no shadow cost), and
+    # `local_llm_device_id` labels the served device in the meter.
+    llm_provider: Literal["anthropic", "local"] = "anthropic"
+    local_llm_base_url: str | None = None
+    local_llm_model: str | None = None
+    local_llm_gpu_usd_per_hour: float = 0.0
+    local_llm_device_id: str = "gpu0"
+
     # Idempotency
     # `idempotency_ttl_hours` is read by the pruner background task
     # which periodically deletes idempotency_keys rows older than this.

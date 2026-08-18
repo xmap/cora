@@ -6,14 +6,24 @@ Single-source transition: `Defined -> Approved`. Strict-not-idempotent.
 
   - State must not be None -> `LanguageModelNotFoundError`
   - Current status must be `Defined` -> `LanguageModelCannotApproveError`
+  - The entry must not be priced per GPU-hour ->
+    `LanguageModelCannotApproveGpuHourBasisError`. The pricing bridge
+    skips a GPU-hour basis on ANY serving route, so approving one would
+    install a live catalog member that silently records $0. Approval is
+    what feeds the entry to the bridge, so this is where the built
+    path's "declared free, never silent $0" rule is enforced; a GPU-hour
+    entry stays definable (the honest primitive can be recorded) but is
+    not approvable until the GPU-hour-debit arc gives it a live consumer.
 """
 
 from datetime import datetime
 
 from cora.agent.aggregates.language_model import (
+    GpuHourPricing,
     LanguageModel,
     LanguageModelApproved,
     LanguageModelCannotApproveError,
+    LanguageModelCannotApproveGpuHourBasisError,
     LanguageModelNotFoundError,
     LanguageModelStatus,
 )
@@ -33,11 +43,15 @@ def decide(
     Invariants:
       - State must not be None -> LanguageModelNotFoundError
       - Current status must be Defined -> LanguageModelCannotApproveError
+      - Cost basis must not be GpuHourPricing (bridge-skipped on any
+        route) -> LanguageModelCannotApproveGpuHourBasisError
     """
     if state is None:
         raise LanguageModelNotFoundError(command.language_model_id)
     if state.status not in _APPROVABLE_STATUSES:
         raise LanguageModelCannotApproveError(state.id, state.status)
+    if isinstance(state.cost_basis, GpuHourPricing):
+        raise LanguageModelCannotApproveGpuHourBasisError(state.id)
 
     return [
         LanguageModelApproved(

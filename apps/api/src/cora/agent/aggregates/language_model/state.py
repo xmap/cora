@@ -205,6 +205,32 @@ class InvalidCostBasisError(ValueError):
         self.message = message
 
 
+class LanguageModelCannotApproveGpuHourBasisError(Exception):
+    """Approval was attempted for an entry priced per GPU-hour.
+
+    `GpuHourPricing` is skipped by the pricing bridge, so approving an
+    entry priced that way would install a live catalog member that
+    silently records $0 on every call and never draws on the allocation
+    envelope, quietly breaking the one-budget guarantee. The skip is
+    route-agnostic, so this guard is too. GPU-hour pricing is reserved
+    for the future GPU-hour-debit arc and has no live debiting consumer
+    yet: a `GpuHourPricing` entry stays definable (the honest primitive
+    can be recorded) but is not approvable. Approve a served model with
+    token pricing instead, using zero rates for a metered-free model;
+    the serving meter still measures its GPU time.
+    """
+
+    def __init__(self, language_model_id: UUID) -> None:
+        super().__init__(
+            f"language model {language_model_id} is priced per GPU-hour, which "
+            "the pricing bridge skips, so approving it would silently record $0 "
+            "on every call. GPU-hour pricing has no live debiting consumer yet; "
+            "approve with token pricing (zero rates for a metered-free model). "
+            "The serving meter still measures its GPU time."
+        )
+        self.language_model_id = language_model_id
+
+
 # ---------------------------------------------------------------------------
 # Aggregate-level guard errors (genesis collision / not-found / cannot-transition)
 # ---------------------------------------------------------------------------
