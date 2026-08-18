@@ -38,11 +38,30 @@ compares against the manifest's own. `verify` is the stronger check,
 because the expected hash comes from outside the bundle (a paper, a
 DOI landing page) rather than from a file the same tamperer could edit.
 
-Exit codes: 0 success (hash printed, or verify matched); 1 verify
-mismatch; 2 the input could not be read or parsed, OR the wrong mode was
-used for this bundle (`verify-bundle` with no `--published` against a
-manifest that carries `published_record_hash`, or `--published` against
-one that does not).
+`verify-bundle` also prints two verdicts, per
+`project_record_completeness_design.md`'s "Verifier contract": `bundle:
+COMPLETE` / `bundle: INCOMPLETE` (extent, resolved from
+`extent_by_logbook_kind`) and `bundle: VALID` / `bundle: MISMATCH`
+(integrity, the hash comparison above, restated in these locked terms).
+Both are always printed; neither subcommand's own established output
+(`OK <hash>` / `MISMATCH: ...`) changes. Extent is resolved only over
+the kinds THIS MANIFEST declares -- the verifier has zero `cora`
+imports, so it cannot see the registry, and a kind the manifest never
+had a slot for is invisible to it by construction, not by oversight.
+See `_resolve_extent`'s docstring for the three ways a bundle can come
+back INCOMPLETE.
+
+Exit codes: 0 success (hash printed, or verify matched, and for
+`verify-bundle`, extent is also COMPLETE); 1 verify/integrity mismatch;
+2 the input could not be read or parsed, OR the wrong mode was used for
+this bundle (`verify-bundle` with no `--published` against a manifest
+that carries `published_record_hash`, or `--published` against one that
+does not); 3 `verify-bundle` only, reserved for INCOMPLETE-but-VALID: a
+bundle whose hash checks out but whose own manifest declares a kind it
+never traversed. A bundle that is both incomplete and invalid still
+exits 1: integrity takes precedence, because a tampered bundle cannot
+be trusted regardless of what its (possibly also tampered) extent claim
+says about itself.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -170,16 +189,126 @@ def read_bundle_body(bundle: Path) -> Any:
     return {"streams": _read_jsonl(streams_path), "logbooks": logbooks}
 
 
-def _verify_bundle(bundle: Path, *, published: bool) -> int:
-    """Recompute a bundle's own hash and compare it to its manifest.
+EXTENT_BY_LOGBOOK_KIND = "extent_by_logbook_kind"
 
-    The manifest is read for the EXPECTED value only. That is not
+STATUS_INCLUDED = "included"
+STATUS_EXCLUDED = "excluded"
+STATUS_UNTRAVERSED = "untraversed"
+_KNOWN_STATUSES = frozenset({STATUS_INCLUDED, STATUS_EXCLUDED, STATUS_UNTRAVERSED})
+
+RESIDUAL_NOTE = (
+    "note: extent is resolved only from the kinds this bundle's own manifest "
+    "declares and the rows actually present in its logbooks/ files. A kind "
+    "never registered in the exporting checkout, or a row never reached by "
+    "the exporter before export, is invisible to this check by construction "
+    "-- that omission-at-origin signal (source_row_count) is computed "
+    "in-process against the live database at export time, and is CORA-side "
+    "only; this artifact carries its result but cannot reproduce the check. "
+    "That in-process check has its own blind spot, not just this one: a row "
+    "deleted from the database before export, or never written by the "
+    "producing system at all, is invisible to it too, since both of its "
+    "counts query the same already-diminished table. No verdict here speaks "
+    "to either case."
+)
+
+
+def _resolve_extent(
+    manifest: dict[str, Any], body: dict[str, Any]
+) -> tuple[bool, list[str], list[str]]:
+    """Resolve the extent verdict from what the manifest itself declares.
+
+    Returns `(extent_ok, failures, excluded_kinds)`. Every kind is
+    resolved and every failure collected before returning -- severity is
+    not control flow, per `project_record_completeness_design.md`'s
+    verifier contract, so a caller can report all of them at once rather
+    than stopping at the first.
+
+    Three independent ways a bundle comes back INCOMPLETE, each proven
+    differentially in `test_standalone_verifier.py` (construct the bad
+    manifest, assert this returns `extent_ok=False`):
+
+    1. Any kind's status is `untraversed`: no code path in the exporting
+       checkout ever reached that table, so the record cannot claim to
+       be whole.
+    2. The converse invariant: a kind marked `excluded` or `untraversed`
+       whose bundle files nonetheless hold one or more rows. A kind
+       claiming it was not read while its own file holds rows is a
+       failure, not a curiosity -- nothing about the hash comparison
+       catches this, since the manifest's status field is not part of
+       the hashed body.
+    3. A `source_row_count` of `null` on any kind whose status is NOT
+       `untraversed`. `null` is permitted only there; an `included` (or
+       `excluded`) kind with no independent count is a coverage field
+       silently switched off, exactly the failure
+       `project_independent_check_principle.md` exists to catch.
+
+    `excluded` kinds are reported on their own line by the caller, never
+    folded into this verdict: a kind can be `excluded` and still count
+    toward COMPLETE, per the design's own status table.
+
+    Only `included`/`excluded`/`untraversed` are resolvable statuses; an
+    unrecognized one is reported as its own failure rather than silently
+    ignored or guessed at.
+    """
+    extent = manifest.get(EXTENT_BY_LOGBOOK_KIND)
+    if not isinstance(extent, dict) or not extent:
+        return False, [f"manifest carries no usable {EXTENT_BY_LOGBOOK_KIND!r}"], []
+
+    logbooks = body.get("logbooks")
+    logbooks = logbooks if isinstance(logbooks, dict) else {}
+
+    failures: list[str] = []
+    excluded_kinds: list[str] = []
+    any_untraversed = False
+
+    for kind in sorted(extent):
+        entry = extent[kind]
+        if not isinstance(entry, dict):
+            failures.append(f"{kind}: extent entry is not an object")
+            continue
+        status = entry.get("status")
+        source_row_count = entry.get("source_row_count")
+        rows = logbooks.get(kind)
+        rows_present = len(rows) if isinstance(rows, list) else 0
+
+        if status not in _KNOWN_STATUSES:
+            failures.append(f"{kind}: unrecognized status {status!r}")
+            continue
+
+        if status == STATUS_UNTRAVERSED:
+            any_untraversed = True
+        if status == STATUS_EXCLUDED:
+            excluded_kinds.append(kind)
+
+        if status in (STATUS_EXCLUDED, STATUS_UNTRAVERSED) and rows_present != 0:
+            failures.append(f"{kind}: marked {status} but the bundle holds {rows_present} row(s)")
+        if status != STATUS_UNTRAVERSED and source_row_count is None:
+            failures.append(f"{kind}: {status} but source_row_count is null")
+
+    extent_ok = not any_untraversed and not failures
+    return extent_ok, failures, excluded_kinds
+
+
+def _verify_bundle(bundle: Path, *, published: bool) -> int:
+    """Recompute a bundle's own hash, compare it to its manifest, and
+    resolve the manifest's own extent claim against the bundle on disk.
+
+    The manifest is read for the EXPECTED hash value only. That is not
     circular: the hash covers the two tiers, the manifest is not in
     them, so a tamperer who edits a row must also edit the manifest, and
     a tamperer who edits the manifest has changed the number a paper
     printed. Comparing against a hash quoted in a paper rather than in
     the bundle is strictly stronger, and is what `verify` (not
     `verify-bundle`) is for.
+
+    Both verdicts are always computed and printed, even when one already
+    determines the exit code: a reader scanning the output must be able
+    to see both facts about the bundle, not just the one that won.
+    Precedence for the exit code itself: integrity first. A bundle that
+    is both incomplete and invalid exits 1, not 3, because a tampered
+    bundle cannot be trusted to tell the truth about its own extent
+    either -- `3` is reserved for a bundle whose hash genuinely checks
+    out.
     """
     try:
         body = read_bundle_body(bundle)
@@ -223,11 +352,35 @@ def _verify_bundle(bundle: Path, *, published: bool) -> int:
         return 2
 
     digest = compute_content_hash(payload_type, body)
-    if digest == expected:
+    hash_matches = digest == expected
+    if hash_matches:
         print(f"OK {digest}")
-        return 0
-    print(f"MISMATCH: manifest says {expected}, computed {digest}", file=sys.stderr)
-    return 1
+    else:
+        print(f"MISMATCH: manifest says {expected}, computed {digest}", file=sys.stderr)
+
+    extent_ok, failures, excluded_kinds = _resolve_extent(manifest, body)
+
+    print(f"bundle: {'COMPLETE' if extent_ok else 'INCOMPLETE'}")
+    print("excluded kinds: " + (", ".join(excluded_kinds) if excluded_kinds else "none"))
+    for failure in failures:
+        print(f"extent failure: {failure}", file=sys.stderr)
+
+    print(f"bundle: {'VALID' if hash_matches else 'MISMATCH'}")
+    print(RESIDUAL_NOTE)
+
+    if not hash_matches and not extent_ok:
+        print(
+            "note: bundle is both incomplete and invalid; exit code reflects "
+            "integrity (1), not extent (3) -- see this function's own "
+            "docstring for the precedence rule.",
+            file=sys.stderr,
+        )
+
+    if not hash_matches:
+        return 1
+    if not extent_ok:
+        return 3
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
