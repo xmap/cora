@@ -338,12 +338,23 @@ class SafetyEnvelopeVerdict:
     """A recorded reading of the two live facility signals at a witnessed
     genesis: did the enclosure permit hold, was beam available.
 
-    Plain bools only, deliberately. The record exporter's disposition
-    generator drops bare `str` and `Any`; `keep:number` covers `bool`, so
-    this VO survives export and redaction whole. Naming WHICH enclosure or
-    WHICH shutter failed is not this VO's job: that detail goes to the log
-    line at the moment of the reading and stays reconstructible from the
-    Enclosure stream in the same exported bundle.
+    Plain bools only, deliberately: these are yes/no readings, and `bool`
+    is the honest domain type. That is NOT an export guarantee, and an
+    earlier version of this docstring wrongly claimed it was. `_SCALAR_KEEP`
+    does map `bool` to `keep:number`, but `gen_record_dispositions.py`'s
+    `_OVERRIDE_DISPOSITIONS` sends BOTH fields to `drop:text`, because a
+    point-in-time reading of live PSS/interlock and beam-shutter state is
+    the same class of fact `EnclosurePermitObserved.from_status` /
+    `.to_status` already drop. So this VO is present in the FULL,
+    unredacted bundle and ABSENT from the published one. Read that
+    override and its rationale before restoring any survives-export claim
+    here; the fields stay `bool` for domain correctness, not for their
+    disposition.
+
+    Naming WHICH enclosure or WHICH shutter failed is not this VO's job:
+    that detail goes to the log line at the moment of the reading and
+    stays reconstructible from the Enclosure stream in the same exported
+    bundle.
 
     Clearance and Supply are deliberately absent. Per the roadmap's rule
     ("refuse on what CORA can fix, witness what CORA cannot"), those two
