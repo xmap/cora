@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_8bc29534f10b867a__redact_tier1_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-18 00:22 +0000
+            created at 2026-08-18 02:10 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -274,13 +274,13 @@
     <p class="pln"><span class="n"><a id="t190" href="#t190">190</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t191" href="#t191">191</a></span><span class="t"><span class="str">    The predicate is &quot;does ANY reader reach this kind&quot;: either</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t192" href="#t192">192</a></span><span class="t"><span class="str">    `spec.envelope_class is not None` (the six envelope-driven kinds) or</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t193" href="#t193">193</a></span><span class="t"><span class="str">    `spec.unscoped_reader is not None` (`heartbeat`, S5a). Both are</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t194" href="#t194">194</a></span><span class="t"><span class="str">    structural, registry-level facts about whether the exporter&#x27;s</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t195" href="#t195">195</a></span><span class="t"><span class="str">    traversal CAN reach that kind&#x27;s table at all; neither says anything</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t196" href="#t196">196</a></span><span class="t"><span class="str">    about what THIS export happened to find, which is the whole point</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t197" href="#t197">197</a></span><span class="t"><span class="str">    (see `Manifest.extent_by_logbook_kind`&#x27;s docstring). `permit_probe`</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t198" href="#t198">198</a></span><span class="t"><span class="str">    and `capture_probe` have neither an envelope nor an unscoped reader</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t"><span class="str">    wired yet and stay `untraversed` until S5b/S5c wire their own.</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t193" href="#t193">193</a></span><span class="t"><span class="str">    `spec.unscoped_reader is not None` (`heartbeat` S5a, `capture_probe`</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t194" href="#t194">194</a></span><span class="t"><span class="str">    S5b). Both are structural, registry-level facts about whether the</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t195" href="#t195">195</a></span><span class="t"><span class="str">    exporter&#x27;s traversal CAN reach that kind&#x27;s table at all; neither says</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t196" href="#t196">196</a></span><span class="t"><span class="str">    anything about what THIS export happened to find, which is the whole</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t197" href="#t197">197</a></span><span class="t"><span class="str">    point (see `Manifest.extent_by_logbook_kind`&#x27;s docstring).</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t198" href="#t198">198</a></span><span class="t"><span class="str">    `permit_probe` has neither an envelope nor an unscoped reader wired</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t199" href="#t199">199</a></span><span class="t"><span class="str">    yet and stays `untraversed` until S5c wires its own.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t200" href="#t200">200</a></span><span class="t"><span class="str">    &quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t201" href="#t201">201</a></span><span class="t">    <span class="key">return</span> <span class="op">{</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t202" href="#t202">202</a></span><span class="t">        <span class="nam">spec</span><span class="op">.</span><span class="nam">kind</span><span class="op">:</span> <span class="nam">LogbookKindExtent</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
@@ -470,7 +470,7 @@
             <a class="nav" href="z_8bc29534f10b867a__redact_tier1_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-08-18 00:22 +0000
+            created at 2026-08-18 02:10 +0000
         </p>
     </div>
 </footer>
