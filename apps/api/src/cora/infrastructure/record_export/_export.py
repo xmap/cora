@@ -10,23 +10,21 @@ snapshot. On each row whose `event_type` names a `*LogbookOpened` class
 `logbook_id` come straight out of the already-decoded `payload` dict and
 resolve through Step 1's `resolve()` to the matching entries-tier reader.
 
-Deliberately does not: write bundle files (that is Step 3/4's job, once
-hashing and the manifest exist), or touch `entries_enclosure_permit_probes`
-(S5c, still deferred: it holds every live entries row on the pilot
-database and owes its own disclosure review; see
-`project_record_completeness_design.md`).
+Deliberately does not write bundle files: that is Step 3/4's job, once
+hashing and the manifest exist.
 
-`entries_run_feed_heartbeats` (S5a) and `entries_run_capture_probes`
-(S5b) have no envelope either, so neither can be reached from the
-envelope-driven walk below. Their rows are pulled separately, once, by a
-whole-table unscoped read each after the walk finishes, via
-`_registry.EntriesTableSpec.unscoped_reader`. That read shares this
-function's caller's `REPEATABLE READ` snapshot (opened in `_shell.py`,
-never here), same as every envelope-driven entries read above it, but
-the entries tier as a whole remains snapshot-bounded while the streams
-tier is xmin-bounded: an unscoped row can have been written by a
-transaction that committed above the watermark. Not closable without a
-`transaction_id` column on the entries tables; stated, not fixed, here.
+`entries_run_feed_heartbeats` (S5a), `entries_run_capture_probes`
+(S5b), and `entries_enclosure_permit_probes` (S5c) have no envelope, so
+none can be reached from the envelope-driven walk below. Their rows are
+pulled separately, once, by a whole-table unscoped read each after the
+walk finishes, via `_registry.EntriesTableSpec.unscoped_reader`. That
+read shares this function's caller's `REPEATABLE READ` snapshot (opened
+in `_shell.py`, never here), same as every envelope-driven entries read
+above it, but the entries tier as a whole remains snapshot-bounded
+while the streams tier is xmin-bounded: an unscoped row can have been
+written by a transaction that committed above the watermark. Not
+closable without a `transaction_id` column on the entries tables;
+stated, not fixed, here.
 """
 
 from dataclasses import dataclass
@@ -124,10 +122,11 @@ async def export_record(conn: asyncpg.Connection) -> ExportedRecord:
 
     After the envelope-driven walk, also pulls every kind whose registry
     spec declares an `unscoped_reader` (`heartbeat` since S5a,
-    `capture_probe` since S5b) with one whole-table read each, keyed onto
-    `logbooks` the same as an envelope-driven kind. Done once, after the
-    walk, so a kind can never be read twice even if a future spec somehow
-    declared both a `envelope_class` and an `unscoped_reader`.
+    `capture_probe` since S5b, `permit_probe` since S5c) with one
+    whole-table read each, keyed onto `logbooks` the same as an
+    envelope-driven kind. Done once, after the walk, so a kind can never
+    be read twice even if a future spec somehow declared both a
+    `envelope_class` and an `unscoped_reader`.
 
     Raises `EmptyExportError` on zero stream rows,
     `cora.infrastructure.record_export.UnknownStreamTypeError` on a

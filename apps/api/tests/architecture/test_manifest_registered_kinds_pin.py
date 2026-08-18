@@ -1,4 +1,5 @@
-"""Pins the registered logbook kind SET against `MANIFEST_SCHEMA_VERSION`.
+"""Pins the registered logbook kind SET against `MANIFEST_SCHEMA_VERSION`,
+and separately pins each kind's CURRENT extent status.
 
 Per `project_record_completeness_design.md`'s "Two authorities, two
 times": `registered_kinds_hash` lets a reader tell whether their own
@@ -14,11 +15,28 @@ SET, and not against the manifest's own version).
 A tenth `EntriesTableSpec` changes `_REGISTERED_KINDS` below, which is a
 deliberate, reviewed edit -- exactly the point: nothing here should
 change silently.
+
+`MANIFEST_SCHEMA_VERSION` versions the kind SET pinned above, not any
+kind's extent status; see the constant's own docstring in `_manifest.py`
+for why a status move is not a version-bump trigger. But "not a bump
+trigger" must not mean "not tracked" -- that gap (a status graduating
+out of `untraversed` with nothing to catch it) is exactly how S5a, S5b
+and S5c each slipped past a docstring that, at the time, claimed the
+opposite. `test_extent_status_pin_matches_every_registered_kinds_current_status`
+below pins the second axis so a future status change still fails
+loudly and forces a reader here, even though the fix it demands is
+updating this pin, not bumping the version.
 """
 
 import pytest
 
-from cora.infrastructure.record_export import MANIFEST_SCHEMA_VERSION, all_specs
+from cora.infrastructure.record_export import (
+    MANIFEST_SCHEMA_VERSION,
+    ExportedRecord,
+    LogbookKindExtentStatus,
+    all_specs,
+    build_manifest,
+)
 
 _REGISTERED_KINDS = (
     "activity",
@@ -32,6 +50,14 @@ _REGISTERED_KINDS = (
     "verdict",
 )
 
+# Every registered kind's current extent status, per the S4/S5 decisions
+# recorded in project_record_completeness_design.md: all nine kinds are
+# IN, and after S5a/S5b/S5c wired the last three unscoped readers, none
+# resolves UNTRAVERSED in production any more. A future kind losing its
+# reader (or a new kind registered with none) changes this dict, which
+# is the point: it must be a deliberate edit, not a silent one.
+_EXTENT_STATUS_BY_KIND = {kind: LogbookKindExtentStatus.INCLUDED for kind in _REGISTERED_KINDS}
+
 
 @pytest.mark.architecture
 def test_registered_kinds_pin_forces_a_deliberate_schema_version_bump() -> None:
@@ -43,4 +69,16 @@ def test_registered_kinds_pin_forces_a_deliberate_schema_version_bump() -> None:
     assert MANIFEST_SCHEMA_VERSION == 1, (
         "MANIFEST_SCHEMA_VERSION moved without updating this pin's expected "
         "value; update _REGISTERED_KINDS above in the same commit"
+    )
+
+
+@pytest.mark.architecture
+def test_extent_status_pin_matches_every_registered_kinds_current_status() -> None:
+    manifest = build_manifest(ExportedRecord(streams=(), logbooks={}), git_commit="deadbeef")
+    actual = {kind: extent.status for kind, extent in manifest.extent_by_logbook_kind.items()}
+    assert actual == _EXTENT_STATUS_BY_KIND, (
+        "a registered kind's extent status has changed; update "
+        "_EXTENT_STATUS_BY_KIND here and decide, per MANIFEST_SCHEMA_VERSION's "
+        "own docstring in _manifest.py, whether this move also warrants a "
+        "version bump (today: no, a status move alone never does)"
     )

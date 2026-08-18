@@ -415,8 +415,10 @@ def unfired_clearances(
     fire against any real payload-- is a fact about this file's code,
     not about any one export, and belongs in a build-time check against
     the real key space (the same shape as step 0's generated disposition
-    table), not in a per-export runtime gate. That check does not exist
-    yet; this function no longer stands in for it.
+    table), not in a per-export runtime gate. That check now exists,
+    shipped the same day as this correction:
+    `tests/architecture/test_tier2_jsonb_clearances_are_real_keys.py`.
+    This function no longer stands in for it.
     """
     result: set[tuple[str, str, str]] = set()
     for (kind, column), cleared in TIER2_JSONB_CLEARED_POINTERS.items():

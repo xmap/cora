@@ -12,11 +12,12 @@ main stream; three tables, `entries_run_feed_heartbeats`,
 `entries_enclosure_permit_probes`, and `entries_run_capture_probes`,
 have no envelope at all and are declared here explicitly, with
 `envelope_class` set to `None`, per `project_record_is_two_tier.md`'s
-"declare or exclude, in writing" finding. Whether the exporter actually
-pulls their rows into a published bundle, or excludes them as
-operational telemetry, is a separate, still-open call for the exporter
-step; this registry only has to make every table reachable and refuse
-to silently drop any of them.
+"declare or exclude, in writing" finding. The operator decided at S4
+(`project_record_completeness_design.md`) that all three are pulled
+into the published bundle rather than excluded as operational
+telemetry; `unscoped_reader` below is how S5a/S5b/S5c carried that
+decision into code. This registry's own job stays the same regardless:
+make every table reachable and refuse to silently drop any of them.
 
 The order key lives per kind because `sampled_at` exists on only four of
 the nine tables (activity, diagnostic, outcome, observation). The other
