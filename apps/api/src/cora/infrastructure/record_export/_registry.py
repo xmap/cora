@@ -44,11 +44,13 @@ rather than a nullable scope argument on `reader`: an unscoped read
 operation from a scoped one, and letting a caller pass `None` as a
 scope id against one of the six envelope specs would silently read the
 whole table where the exporter meant to read one logbook's slice.
-`heartbeat` is the first kind to set it (S5a); every other spec's
-`reader` and its own call sites are unchanged. `permit_probe` and
-`capture_probe` are deliberately NOT wired here -- see S5b/S5c in the
-design memo; each holds every live entries row on the pilot database
-and owes its own disclosure review before a bundle can carry it.
+`heartbeat` (S5a) and `capture_probe` (S5b) both set it now; every
+other spec's `reader` and its own call sites are unchanged.
+`permit_probe` is deliberately NOT wired here -- see S5c in the design
+memo; it holds every live entries row on the pilot database and owes
+its own disclosure review before a bundle can carry it. `capture_probe`
+owed and got that same review at S5b; see its disposition entries in
+`_redact_tier2.py` and this slice's commit message for the reasoning.
 """
 
 from collections.abc import Awaitable, Callable
@@ -91,8 +93,9 @@ class EntriesTableSpec:
     order_by: tuple[str, ...]
     reader: EntriesReader
     unscoped_reader: UnscopedEntriesReader | None = None
-    """Reads every row of `table`, unscoped, when set. `None` for every
-    kind but `heartbeat` today (S5a); see the module docstring."""
+    """Reads every row of `table`, unscoped, when set. `None` only for
+    `permit_probe` today (S5c, not yet wired); `heartbeat` (S5a) and
+    `capture_probe` (S5b) both set it. See the module docstring."""
 
 
 class UnknownLogbookKindError(LookupError):
@@ -125,13 +128,29 @@ def _make_unscoped_reader(table: str, order_by: tuple[str, ...]) -> UnscopedEntr
     caller input, so the interpolation cannot carry attacker-controlled
     SQL, matching `_make_reader`'s reasoning.
 
-    Unbounded: fetches the whole table in one round trip. Harmless at
-    `heartbeat`'s live row count today (zero on the pilot database); a
-    future kind wired the same way with a large table (`permit_probe`,
-    `capture_probe`, at 48,803 and 9,554 rows respectively on the pilot
-    database as of 2026-08-17) will need paging or a streaming cursor
-    before it is safe to wire the same way. Left as a note for S5b/S5c,
-    not fixed here.
+    Unbounded: fetches the whole table in one round trip. DECIDED at S5b
+    (`capture_probe`, `project_record_completeness_design.md`): one fetch
+    stays acceptable for now, not because the row count is small (it is
+    not, and it does not stabilize -- `run.aggregates.run.capture_probes`'s
+    own docstring documents a per-(capture_code, PV) rate from zero, while
+    the substrate is reachable and `capture_watch_probe_tick_seconds` is
+    left at its push-only default, up to roughly 8,640 rows/day/PV while a
+    code's substrate is fully unreachable, and this repo has no retention
+    policy on this table at any rate), but because a streaming cursor HERE
+    alone would not lower the export's peak memory: `export_record`
+    already holds every row of every kind it reads in one place at once
+    (`ExportedRecord.logbooks`, a `dict` of tuples), so the rows would
+    still all end up materialized before a single bundle file is written.
+    Swapping this call for an `asyncpg` server-side cursor without also
+    changing how `ExportedRecord` and `_bundle.write_bundle` consume a
+    kind's rows would move the buffering point, not remove it, and would
+    claim a memory fix it did not deliver. Trigger for revisiting, per
+    this design's own already-locked phrasing for the identical risk on
+    this same table (see the design memo's Watch items): the first export
+    measured in minutes. The fix at that point is coordinated across this
+    reader, `ExportedRecord`'s shape, and the bundle writer, not a cursor
+    swapped in here alone. `permit_probe`, same shape, larger table, is
+    still S5c's decision to make.
     """
     sql = f"SELECT * FROM {table} ORDER BY {', '.join(order_by)}"
 
@@ -234,6 +253,7 @@ _ENTRIES: tuple[EntriesTableSpec, ...] = (
         scope_column="capture_code",
         order_by=("event_id",),
         scope_type=str,
+        unscoped=True,
     ),
 )
 

@@ -168,9 +168,20 @@ TIER2_DISPOSITIONS: dict[str, dict[str, str]] = {
         "source_id": KEEP,  # UNLIKE permit_probe.source_id: a TomoScan status/abort PV
         # is experiment instrumentation, not a PSS/interlock safety system, so the
         # security-disclosure reasoning that justifies DROP there does not carry
-        # over here. Same standard as heartbeat.source_id.
+        # over here. Same standard as heartbeat.source_id. Rests on TomoScan's own PV
+        # naming being already public (same premise as observation.channel_name);
+        # inherited, not freshly reverified against 2bm-docs at S5b.
         "reach_tier": KEEP,  # proved closed: ReachTier StrEnum
-        "phase_claimed": KEEP,  # grouped with reach_tier; needs its own human pass (watch item)
+        "phase_claimed": DROP,  # watch item RESOLVED at S5b, reversed to DROP: the
+        # producer (`_run_witness.py`'s `phase_claimed=observation.phase is not None,
+        # observed_at=observation.observed_at`) sets this from a field independent of
+        # observed_at, not correlated with it as the compressed aggregate docstring
+        # implied, so keeping it would disclose a real, distinct "genuine status/abort
+        # observation vs background reaffirmation" cadence signal that was never
+        # threat-modeled. Same reversal shape as `ActionStep.name`/`capture_name` above:
+        # the first KEEP argument (bool, two values) was field-by-field and missed the
+        # joint signal with observed_at; dropping costs nothing against this table's
+        # actual purpose (reach/coverage, carried by reach_tier/observed_at/recorded_at).
         "observed_at": KEEP,  # substrate timestamp, same standard as sampled_at/occurred_at
         "recorded_at": KEEP,
     },

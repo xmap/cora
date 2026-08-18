@@ -2,11 +2,13 @@
 whole-table select, its extent status flips to `included`, and the read
 is proven genuinely unscoped rather than merely argued from the SQL text.
 
-Per `project_record_completeness_design.md`'s S5. `permit_probe` and
-`capture_probe` are S5b/S5c, not this slice, and must stay `untraversed`
-even when their tables hold rows; that is reasserted here narrowly as
-this slice's own exit criterion (the general sweep already lives in
-`test_manifest_extent_seeders_postgres.py`).
+Per `project_record_completeness_design.md`'s S5. `permit_probe` is
+S5c, not this slice, and must stay `untraversed` even when its table
+holds rows; that is reasserted here narrowly as this slice's own exit
+criterion (the general sweep already lives in
+`test_manifest_extent_seeders_postgres.py`). `capture_probe` was S5b's
+own probe kind and carries the identical assertion, now in
+`test_record_export_capture_probe_unscoped_postgres.py`.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -21,12 +23,7 @@ import pytest
 
 from cora.enclosure.aggregates.enclosure import PermitProbe, PostgresPermitProbeStore
 from cora.infrastructure.record_export import export_bundle
-from cora.run.aggregates.run import (
-    CaptureProbe,
-    FeedHeartbeat,
-    PostgresCaptureProbeStore,
-    PostgresFeedHeartbeatStore,
-)
+from cora.run.aggregates.run import FeedHeartbeat, PostgresFeedHeartbeatStore
 from cora.shared.reach import ReachTier
 
 _NOW = datetime(2026, 8, 17, 12, 0, 0, tzinfo=UTC)
@@ -99,16 +96,15 @@ async def test_heartbeat_unscoped_read_returns_rows_across_different_run_ids(
 
 
 @pytest.mark.integration
-async def test_probe_kinds_stay_untraversed_even_with_rows_present(
+async def test_permit_probe_kind_stays_untraversed_even_with_rows_present(
     db_pool: asyncpg.Pool, tmp_path: Path
 ) -> None:
-    """S4 decided all nine registered kinds are IN, but `permit_probe` and
-    `capture_probe` are S5b/S5c, deliberately not this slice: each holds
-    every live entries row on the pilot database and owes its own
-    disclosure review. A bundle built from a database holding their rows
-    must still report both `untraversed`, which is what keeps the bundle
-    not-complete rather than silently letting S4's decision read as done
-    everywhere at once."""
+    """S4 decided all nine registered kinds are IN, but `permit_probe` is
+    S5c, deliberately not this slice: it holds every live entries row on
+    the pilot database and owes its own disclosure review. A bundle built
+    from a database holding its rows must still report `untraversed`,
+    which is what keeps the bundle not-complete rather than silently
+    letting S4's decision read as done everywhere at once."""
     await PostgresPermitProbeStore(db_pool).append(
         [
             PermitProbe(
@@ -121,25 +117,10 @@ async def test_probe_kinds_stay_untraversed_even_with_rows_present(
             )
         ]
     )
-    await PostgresCaptureProbeStore(db_pool).append(
-        [
-            CaptureProbe(
-                event_id=uuid4(),
-                capture_code=f"2bmb-tomoscan-{uuid4().hex[:8]}",
-                source_kind="EpicsPv",
-                source_id="2bmb:TomoScan:ScanStatus",
-                reach_tier=ReachTier.RELAYED,
-                phase_claimed=True,
-                observed_at=_NOW,
-            )
-        ]
-    )
 
     bundle = await _export(db_pool, tmp_path)
 
     manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
     extent = manifest["extent_by_logbook_kind"]
     assert extent["permit_probe"]["status"] == "untraversed"
-    assert extent["capture_probe"]["status"] == "untraversed"
     assert "permit_probe" not in manifest["row_count_by_logbook_kind"]
-    assert "capture_probe" not in manifest["row_count_by_logbook_kind"]
