@@ -107,10 +107,23 @@ def test_envelope_driven_kinds_are_included_regardless_of_this_records_own_rows(
         assert manifest.extent_by_logbook_kind[kind].status == LogbookKindExtentStatus.INCLUDED
 
 
-def test_kinds_with_no_envelope_are_untraversed() -> None:
+def test_kinds_with_no_envelope_and_no_unscoped_reader_are_untraversed() -> None:
+    """`permit_probe` / `capture_probe` have neither an envelope nor an
+    `unscoped_reader` wired yet (S5b/S5c); `heartbeat` is covered
+    separately below since S5a gave it one."""
     manifest = build_manifest(_record(), git_commit="deadbeef")
-    for kind in ("heartbeat", "permit_probe", "capture_probe"):
+    for kind in ("permit_probe", "capture_probe"):
         assert manifest.extent_by_logbook_kind[kind].status == LogbookKindExtentStatus.UNTRAVERSED
+
+
+def test_heartbeat_is_included_via_its_unscoped_reader_despite_having_no_envelope() -> None:
+    """S5a: `heartbeat` has no `*LogbookOpened` envelope, but its registry
+    spec now declares an `unscoped_reader`, so the extent predicate ("does
+    ANY reader reach this kind") must resolve it to `included` regardless
+    of this fixture's own `record.logbooks`, which does not even carry a
+    `heartbeat` entry."""
+    manifest = build_manifest(_record(), git_commit="deadbeef")
+    assert manifest.extent_by_logbook_kind["heartbeat"].status == LogbookKindExtentStatus.INCLUDED
 
 
 def test_registered_kinds_hash_matches_hashing_all_specs_kinds_directly() -> None:

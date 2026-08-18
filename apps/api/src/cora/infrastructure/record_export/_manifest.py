@@ -188,20 +188,21 @@ def _row_count_by_logbook_kind(record: ExportedRecord) -> dict[str, int]:
 def _extent_by_logbook_kind() -> dict[str, LogbookKindExtent]:
     """Every registered kind, status derived from the registry alone.
 
-    `spec.envelope_class is not None` is a structural, registry-level
-    fact about whether ANY code path can reach that kind's table today;
-    it says nothing about what THIS export's traversal happened to
-    find, which is the whole point (see `Manifest.extent_by_logbook_kind`'s
-    docstring). The three kinds with `envelope_class is None`
-    (`heartbeat`, `permit_probe`, `capture_probe`) have no reader wired
-    into `export_record`'s walk at all and are `untraversed` until a
-    future slice widens `EntriesReader` for an unscoped read.
+    The predicate is "does ANY reader reach this kind": either
+    `spec.envelope_class is not None` (the six envelope-driven kinds) or
+    `spec.unscoped_reader is not None` (`heartbeat`, S5a). Both are
+    structural, registry-level facts about whether the exporter's
+    traversal CAN reach that kind's table at all; neither says anything
+    about what THIS export happened to find, which is the whole point
+    (see `Manifest.extent_by_logbook_kind`'s docstring). `permit_probe`
+    and `capture_probe` have neither an envelope nor an unscoped reader
+    wired yet and stay `untraversed` until S5b/S5c wire their own.
     """
     return {
         spec.kind: LogbookKindExtent(
             status=(
                 LogbookKindExtentStatus.INCLUDED
-                if spec.envelope_class is not None
+                if spec.envelope_class is not None or spec.unscoped_reader is not None
                 else LogbookKindExtentStatus.UNTRAVERSED
             )
         )
