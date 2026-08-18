@@ -46,6 +46,7 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.record_export import (
     build_manifest,
     capture_git_commit,
+    capture_source_row_count_by_logbook_kind,
     export_record,
     hash_redaction_profile,
     redact_record,
@@ -185,9 +186,15 @@ async def test_a_real_conducted_run_publishes_what_it_did(
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
+        source_row_count_by_logbook_kind = await capture_source_row_count_by_logbook_kind(pg_conn)
 
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
-    manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
+    manifest = build_manifest(
+        exported,
+        git_commit=capture_git_commit(),
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+        redaction=redaction,
+    )
     bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "published")
 
     verified = _verify(bundle, published=True)
@@ -290,9 +297,15 @@ async def test_a_failed_check_publishes_the_failure_without_leaking_the_message(
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
+        source_row_count_by_logbook_kind = await capture_source_row_count_by_logbook_kind(pg_conn)
 
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
-    manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
+    manifest = build_manifest(
+        exported,
+        git_commit=capture_git_commit(),
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+        redaction=redaction,
+    )
     bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "published")
 
     verified = _verify(bundle, published=True)

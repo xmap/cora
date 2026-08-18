@@ -414,7 +414,20 @@ async def test_manifest_accounts_for_every_registered_kind(
     )
     if reachable:
         assert extent[spec.kind]["status"] == "included"  # type: ignore[attr-defined]
-        assert manifest["row_count_by_logbook_kind"].get(spec.kind, 0) >= 1  # type: ignore[attr-defined]
+        assert extent[spec.kind]["exported_row_count"] >= 1  # type: ignore[attr-defined]
+        # This line cannot fail on its own: reaching it already required
+        # export_bundle to succeed, which already required source ==
+        # exported, and the line above already pins exported >= 1. It is
+        # not itself the anti-degeneracy guard; the guard is this test's
+        # OWN parametrization over every spec in all_specs() combined with
+        # the build-time raise in _extent_by_logbook_kind -- a
+        # capture_source_row_count_by_logbook_kind that vacuously returned
+        # 0 for every kind (the shape a broken counter takes, and the
+        # shape that would pass unnoticed on the pilot database, where six
+        # of nine kinds hold zero rows on an ordinary day) would make
+        # EVERY seeded kind here raise LogbookKindRowCountMismatchError
+        # before this bundle ever existed, failing this whole test.
+        assert extent[spec.kind]["source_row_count"] >= 1  # type: ignore[attr-defined]
     else:
         # No registered kind reaches this branch today (S5c wired the
         # last of the three no-envelope kinds, `permit_probe`), but the
@@ -425,4 +438,4 @@ async def test_manifest_accounts_for_every_registered_kind(
         # reporting a coverage field that agrees with the traversal by
         # construction.
         assert extent[spec.kind]["status"] == "untraversed"  # type: ignore[attr-defined]
-        assert spec.kind not in manifest["row_count_by_logbook_kind"]  # type: ignore[attr-defined]
+        assert extent[spec.kind]["exported_row_count"] == 0  # type: ignore[attr-defined]

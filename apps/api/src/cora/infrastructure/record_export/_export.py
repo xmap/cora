@@ -31,6 +31,14 @@ S5d), because this is the one place with a seam onto each individual
 `spec.reader` / `spec.unscoped_reader` call; a caller outside this
 module has no way to time a kind's read without re-issuing it a second
 time against a different snapshot.
+
+`capture_source_row_count_by_logbook_kind` (S2b) lives here too, alongside `capture_watermark`:
+a second, independent count per registered kind (an unscoped `count(*)` on
+each `spec.table`, sharing no predicate with any reader above) that
+`_manifest.py` compares against what this walk actually put in
+`ExportedRecord.logbooks`. See that function's own docstring for why
+independence is not the same shape for the six envelope-driven kinds as it
+is for the three unscoped ones.
 """
 
 import time
@@ -119,6 +127,94 @@ class ExportedRecord:
     logbooks: dict[str, tuple[dict[str, object], ...]]
     watermark: int = 0
     read_seconds_by_logbook_kind: dict[str, float] = field(default_factory=dict)
+
+
+async def capture_source_row_count_by_logbook_kind(conn: asyncpg.Connection) -> dict[str, int]:
+    """One independent count per registered kind, for S2b's `source_row_count`.
+
+    Delegates to each spec's own `count_reader` (`_registry.py`'s
+    `_make_count_reader`, `SELECT count(*) FROM <table>`, no predicate) so
+    the SQL itself lives beside `reader` / `unscoped_reader` rather than
+    being rebuilt here. Must run inside the SAME `REPEATABLE READ READ
+    ONLY` transaction as `export_record`, so both counts and the traversal
+    describe the same snapshot. Unlike `capture_watermark`, which
+    `export_record` calls itself (its own docstring: "`export_record` is
+    the sole caller"), this function has THREE callers today --
+    `_shell.py`'s `export_bundle` and `record_bundle_export.py`'s
+    `export_record_bundles` each call it directly, back to back with
+    `export_record`, inside the transaction they both open; neither calls
+    it FROM `export_record`. Deliberately not folded into `export_record`
+    / carried on `ExportedRecord` the way `watermark` and
+    `read_seconds_by_logbook_kind` are: doing so would make this dict a
+    mandatory field on every hand-built `ExportedRecord` test fixture
+    across this package (`_hashing.py`, `_redaction.py`, `_bundle.py`'s
+    tests build dozens, none caring about row counts), and giving it a
+    default would reopen exactly the "coverage field switched off by a
+    default" hole this design exists to close for `build_manifest`'s own
+    required `source_row_count_by_logbook_kind` parameter. The residual
+    this leaves is real and stated rather than hidden: nothing
+    structurally prevents a future caller from pairing this dict with an
+    `ExportedRecord` from a DIFFERENT snapshot the way `write_bundle`'s
+    `ManifestRecordMismatchError` prevents a mismatched record/manifest
+    pair; today's two production callers avoid it by construction (one
+    `conn`, one transaction, both calls before it closes), not by a type
+    that makes the mistake impossible.
+
+    Per `project_independent_check_principle.md`, this is the SECOND side of
+    the check `_manifest.py`'s `_extent_by_logbook_kind` performs against
+    `exported_row_count`. Independence is NOT uniform across the registry:
+
+    - For the six envelope-scoped kinds, this query shares no predicate at
+      all with `spec.reader` (which filters on `logbook_id`). A row whose
+      envelope never reached the stream walk still shows up here, which is
+      precisely the omission-at-origin signal this design exists to raise.
+    - For the three unscoped kinds (`heartbeat`, `capture_probe`,
+      `permit_probe`), `spec.unscoped_reader` already runs the identical
+      `SELECT * FROM <table>` shape, in the same snapshot. This count cannot
+      diverge from a correct fetch of that table: it is not independent in
+      the "different rows" sense for these three. What it still catches is a
+      row lost or duplicated between the fetch and `_manifest.py`'s render-
+      stage tally (`exported_row_count = len(record.logbooks[kind])`), since
+      this query never goes through `render_row` or the `logbooks` dict at
+      all. State this plainly rather than implying uniform independence; see
+      `tests/integration/test_record_export_row_count_independence_postgres.py`
+      for the proof (and the live-DB negative result) on each side, and
+      `test_manifest.py`'s render-stage-loss unit tests for the fetch-vs-
+      render axis.
+
+    Two limits worth stating in band rather than leaving implicit (the
+    design memo's own "Adversaries, and what is actually caught" table
+    names these as NOT CAUGHT by any form of this mechanism):
+
+    - Rows deleted from a table before this count runs are invisible to
+      BOTH sides alike; a divergence proves an omission, agreement never
+      proves nothing was deleted upstream of the whole export.
+    - A concurrent, unrelated long-lived transaction elsewhere in the
+      database can pin `pg_snapshot_xmin` below the actual point this
+      transaction's own snapshot was taken, so `_STREAM_SQL`'s explicit
+      `transaction_id < watermark` filter can exclude an envelope whose
+      committing transaction the REPEATABLE READ snapshot itself already
+      considers visible -- the same streams-xmin-vs-entries-snapshot
+      asymmetry `_export.py`'s own module docstring already names for the
+      three unscoped kinds, but reachable here for an envelope-scoped kind
+      too, because this count has no equivalent xmin bound (the entries
+      tables carry no `transaction_id` column to bound it by). A divergence
+      caused by this is real -- the rows genuinely are not in `logbooks` --
+      but it is not evidence of a code defect in the traversal; a fresh
+      retry captures a fresh watermark against a fresh snapshot and, absent
+      an actual bug, will not reproduce it. A divergence that survives a
+      retry is the actual signal to investigate. Closing this class fully
+      needs the `transaction_id` column already named as unbuilt in the
+      design memo's watch items; not done here.
+
+    Valid ONLY because `export_record` is a whole-database export with no run
+    or tenant filter (`_export.py`'s own module docstring): the same scoping
+    caveat `_make_unscoped_reader` already carries for its own read.
+    """
+    counts: dict[str, int] = {}
+    for spec in all_specs():
+        counts[spec.kind] = await spec.count_reader(conn)
+    return counts
 
 
 async def capture_watermark(conn: asyncpg.Connection) -> int:

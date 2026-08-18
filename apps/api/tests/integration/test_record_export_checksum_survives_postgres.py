@@ -36,6 +36,7 @@ from cora.infrastructure.projection import ProjectionRegistry, drain_projections
 from cora.infrastructure.record_export import (
     build_manifest,
     capture_git_commit,
+    capture_source_row_count_by_logbook_kind,
     export_record,
     hash_redaction_profile,
     read_bundle_body,
@@ -190,9 +191,15 @@ async def test_checksum_survives_redaction_in_the_published_bundle_on_disk(
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
+        source_row_count_by_logbook_kind = await capture_source_row_count_by_logbook_kind(pg_conn)
 
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
-    manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
+    manifest = build_manifest(
+        exported,
+        git_commit=capture_git_commit(),
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+        redaction=redaction,
+    )
     bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "published")
 
     body = read_bundle_body(bundle)

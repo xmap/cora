@@ -76,7 +76,9 @@ async def test_permit_probe_rows_land_in_the_bundle_and_manifest_reports_include
 
     manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["extent_by_logbook_kind"]["permit_probe"]["status"] == "included"
-    assert manifest["row_count_by_logbook_kind"]["permit_probe"] == 1
+    permit_probe_extent = manifest["extent_by_logbook_kind"]["permit_probe"]
+    assert permit_probe_extent["exported_row_count"] == 1
+    assert permit_probe_extent["source_row_count"] == 1
 
 
 @pytest.mark.integration
@@ -174,6 +176,10 @@ async def _unused_reader(conn: asyncpg.Connection, scope_id: object) -> list[asy
     raise AssertionError("an untraversed kind's reader must never be called")
 
 
+async def _unused_count_reader(conn: asyncpg.Connection) -> int:
+    raise AssertionError("an untraversed kind's count_reader must never be called")
+
+
 @pytest.mark.integration
 async def test_untraversed_status_survives_the_bundles_disk_round_trip(
     db_pool: asyncpg.Pool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -195,6 +201,7 @@ async def test_untraversed_status_survives_the_bundles_disk_round_trip(
         scope_type=UUID,
         order_by=("event_id",),
         reader=_unused_reader,
+        count_reader=_unused_count_reader,
     )
     monkeypatch.setattr(
         "cora.infrastructure.record_export._manifest.all_specs",
@@ -208,5 +215,6 @@ async def test_untraversed_status_survives_the_bundles_disk_round_trip(
     manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
     extent = manifest["extent_by_logbook_kind"]
     assert extent["untraversed_test_kind"]["status"] == "untraversed"
-    assert "untraversed_test_kind" not in manifest["row_count_by_logbook_kind"]
+    assert extent["untraversed_test_kind"]["exported_row_count"] == 0
+    assert extent["untraversed_test_kind"]["source_row_count"] is None
     assert not (bundle / "logbooks" / "untraversed_test_kind.jsonl").exists()
