@@ -12,7 +12,8 @@ added with the bundle writer). H3 is optional because an unredacted
 bundle genuinely has none; see the field's own docstring for why its
 absence is a signal rather than a default.
 
-`build_manifest` is pure: every input it needs (`git_commit`; the
+`build_manifest` is pure: every input it needs (`git_commit`;
+`source_row_count_by_logbook_kind`, S2b's independent per-kind count; the
 watermark comes off `record` itself) is captured by the caller first and
 passed in, so the function itself does no I/O and is trivial to test
 with synthetic `ExportedRecord`s.
@@ -57,7 +58,19 @@ so that draft was naming the wrong trigger, not describing a missed
 bump.) The set pin also freezes each kind's CURRENT status, so a status
 change still cannot land silently -- it fails that test and forces a
 deliberate look here -- it just does not by itself force a version
-bump."""
+bump.
+
+S2b (`project_record_completeness_design.md`) removed the top-level
+`row_count_by_logbook_kind` map and folded it into
+`extent_by_logbook_kind[kind].exported_row_count`, alongside the new
+`source_row_count`: a real change to the manifest's JSON shape, not an
+addition, and this constant did not bump for it. Consistent with the
+"kind SET only" reading above: no kind's set membership or status moved,
+and the fact `row_count_by_logbook_kind` carried is still present, in a
+new location, so a reader who could compute one map can compute the
+other. A future removal that actually drops information a reader could
+not otherwise recover would be a different case this docstring does not
+yet cover; decide it when it happens rather than by extrapolation now."""
 
 
 class LogbookKindExtentStatus(StrEnum):
@@ -79,41 +92,108 @@ class LogbookKindExtentStatus(StrEnum):
     UNTRAVERSED = "untraversed"
 
 
+class LogbookKindRowCountMismatchError(RuntimeError):
+    """An `included` kind's two independent row counts disagree, or its
+    `source_row_count` was never captured.
+
+    `source_row_count` (an unscoped `count(*)` against the kind's table,
+    sharing no predicate with any reader) and `exported_row_count`
+    (`len(record.logbooks[kind])`, the render-stage tally) must agree for
+    any kind whose extent status is `included`. Disagreement usually means
+    the exporter's traversal omitted rows the database actually holds, or
+    its render step lost or duplicated rows it did read -- the omission-
+    at-origin scenario `project_record_completeness_design.md` exists to
+    catch. A missing `source_row_count` (the kind absent from the caller's
+    `source_row_count_by_logbook_kind` mapping) is treated the same way,
+    never as "skip the check": see
+    `project_independent_check_principle.md`'s closing anti-hook against a
+    coverage field silently switched off by writing `null`.
+
+    One benign cause worth knowing before treating every occurrence as a
+    code defect: for an envelope-scoped kind, ordinary concurrency
+    elsewhere in the database can pin the stream walk's xmin watermark
+    below this transaction's own snapshot cutoff (see
+    `capture_source_row_count_by_logbook_kind`'s docstring), excluding an
+    envelope the snapshot itself would otherwise show. A fresh export
+    retry captures a fresh watermark and will not reproduce that specific
+    cause; a divergence that reproduces across a retry is the real signal
+    to investigate as an actual omission. This error does not distinguish
+    the two causes -- it cannot, from inside one export -- so retrying
+    once before escalating is a reasonable first response, not "ignoring"
+    the finding.
+    """
+
+    def __init__(self, *, kind: str, source_row_count: int | None, exported_row_count: int) -> None:
+        super().__init__(
+            f"logbook kind {kind!r} is included but its two independent row "
+            f"counts disagree: source_row_count={source_row_count!r}, "
+            f"exported_row_count={exported_row_count!r}. This is never safe "
+            "to ignore or paper over; see project_record_completeness_design.md."
+        )
+        self.kind = kind
+        self.source_row_count = source_row_count
+        self.exported_row_count = exported_row_count
+
+
 @dataclass(frozen=True, slots=True)
 class LogbookKindExtent:
-    """One `extent_by_logbook_kind` slot. Carries only `status` today;
-    S2b adds `source_row_count` / `exported_row_count` alongside it."""
+    """One `extent_by_logbook_kind` slot.
+
+    `source_row_count` is an unscoped `count(*)` against the kind's table
+    (`_export.py`'s `capture_source_row_count_by_logbook_kind`), sharing no predicate with
+    any reader. `exported_row_count` is `len(record.logbooks[kind])`, the
+    render-stage tally of what this export actually carries. For an
+    `included` kind the two must agree -- `_extent_by_logbook_kind` raises
+    `LogbookKindRowCountMismatchError` before they can land here disagreeing.
+    For `excluded` / `untraversed` both are populated and reported but never
+    compared. `source_row_count` is `None` only when the kind is absent from
+    the caller's mapping; per the design memo's own wording that is
+    permitted only for `untraversed` (a kind with no reader at all has
+    nothing forcing its table to be counted either). `excluded` is a
+    registry-level policy status nothing sets today, so this is unexercised
+    in production; a future `excluded` spec should still get a real,
+    non-`None` `source_row_count`, since `capture_source_row_count_by_logbook_kind`
+    counts every registered spec's table unconditionally.
+    """
 
     status: LogbookKindExtentStatus
+    source_row_count: int | None
+    exported_row_count: int
 
 
 @dataclass(frozen=True, slots=True)
 class Manifest:
     """One export's provenance and shape, independent of its bytes on disk.
 
-    `row_count_by_logbook_kind` and `max_schema_version_by_event_type`
-    are reader-facing sanity checks: a reader can recompute both from
-    the bundle itself and compare, catching truncation or a stale
-    generator without needing to trust this manifest blindly.
+    `max_schema_version_by_event_type` is a reader-facing sanity check: a
+    reader can recompute it from the bundle itself and compare, catching
+    truncation or a stale generator without needing to trust this manifest
+    blindly. The equivalent per-kind row-count check lives inside
+    `extent_by_logbook_kind` now (`exported_row_count`, cross-checked
+    against `source_row_count` at build time) rather than as its own
+    top-level field; see that field's docstring for why the two were never
+    allowed to coexist as separate coverage maps.
     """
 
     git_commit: str
     watermark: int
     record_hash: str
     redaction_profile_hash: str
-    row_count_by_logbook_kind: dict[str, int]
     max_schema_version_by_event_type: dict[str, int]
     is_simulated: bool
     expansion_digest_presence_by_run: dict[str, bool]
     extent_by_logbook_kind: dict[str, LogbookKindExtent]
     """One mandatory slot per kind registered in `_registry.all_specs()`,
     present even at zero rows. Iterated from the registry at build time,
-    NEVER from `record.logbooks`: `row_count_by_logbook_kind` above is
-    exactly the enumeration that agreed-by-construction with the
-    traversal it was meant to check and missed 53,499 rows across two
-    kinds while reporting `{}`. See
-    `project_independent_check_principle.md` and
-    `project_record_completeness_design.md`."""
+    NEVER from `record.logbooks` alone: an earlier version of this field
+    carried only a `row_count_by_logbook_kind` map that WAS computed from
+    `record.logbooks`, agreed-by-construction with the traversal it was
+    meant to check, and missed 53,499 rows across two kinds while
+    reporting `{}`. That field is gone; `exported_row_count` here is its
+    replacement, cross-checked at build time against the independent
+    `source_row_count` (S2b, `project_record_completeness_design.md`'s
+    "The independent count"). See
+    `project_independent_check_principle.md`."""
     registered_kinds_hash: str
     """`hash_registered_kinds` over the sorted kind set this export's
     checkout has registered, so a reader can tell whether their own
@@ -195,14 +275,13 @@ def _payload(row: dict[str, object]) -> dict[str, object]:
     return cast("dict[str, object]", payload)
 
 
-def _row_count_by_logbook_kind(record: ExportedRecord) -> dict[str, int]:
-    return {kind: len(rows) for kind, rows in record.logbooks.items()}
+def _extent_by_logbook_kind(
+    record: ExportedRecord, source_row_count_by_logbook_kind: dict[str, int]
+) -> dict[str, LogbookKindExtent]:
+    """Every registered kind, status derived from the registry alone, both
+    row counts cross-checked for every `included` kind.
 
-
-def _extent_by_logbook_kind() -> dict[str, LogbookKindExtent]:
-    """Every registered kind, status derived from the registry alone.
-
-    The predicate is "does ANY reader reach this kind": either
+    Status: the predicate is "does ANY reader reach this kind": either
     `spec.envelope_class is not None` (the six envelope-driven kinds) or
     `spec.unscoped_reader is not None` (`heartbeat` S5a, `capture_probe`
     S5b, `permit_probe` S5c). Both are structural, registry-level facts
@@ -214,17 +293,43 @@ def _extent_by_logbook_kind() -> dict[str, LogbookKindExtent]:
     production today; the status stays in the enum as the exporter-level
     coverage gap it exists to catch, exercised deliberately rather than
     incidentally (see `test_manifest.py`'s own construction of the case).
+
+    Counts: `exported_row_count` is `len(record.logbooks[kind])`, measured
+    here at the RENDER stage rather than at fetch time inside `_export.py`'s
+    read loop, so a row `render_row` drops or duplicates after the fetch
+    still shows up as a divergence. `source_row_count` comes from the
+    caller's `source_row_count_by_logbook_kind` (`_export.py`'s
+    `capture_source_row_count_by_logbook_kind`, an unscoped `count(*)`
+    sharing no predicate with any reader), keyed by `spec.kind`; a kind
+    absent from that mapping reads as `None`. For an
+    `included` kind the two must agree -- `None` counts as disagreement,
+    since a coverage field silently switched off by omission is exactly the
+    failure this check exists to prevent (`project_independent_check_principle.md`).
+    `excluded` and `untraversed` kinds get both counts populated and
+    reported, never compared: see `project_record_completeness_design.md`'s
+    "The independent count".
     """
-    return {
-        spec.kind: LogbookKindExtent(
-            status=(
-                LogbookKindExtentStatus.INCLUDED
-                if spec.envelope_class is not None or spec.unscoped_reader is not None
-                else LogbookKindExtentStatus.UNTRAVERSED
-            )
+    extents: dict[str, LogbookKindExtent] = {}
+    for spec in all_specs():
+        status = (
+            LogbookKindExtentStatus.INCLUDED
+            if spec.envelope_class is not None or spec.unscoped_reader is not None
+            else LogbookKindExtentStatus.UNTRAVERSED
         )
-        for spec in all_specs()
-    }
+        source_row_count = source_row_count_by_logbook_kind.get(spec.kind)
+        exported_row_count = len(record.logbooks.get(spec.kind, ()))
+        if status == LogbookKindExtentStatus.INCLUDED and source_row_count != exported_row_count:
+            raise LogbookKindRowCountMismatchError(
+                kind=spec.kind,
+                source_row_count=source_row_count,
+                exported_row_count=exported_row_count,
+            )
+        extents[spec.kind] = LogbookKindExtent(
+            status=status,
+            source_row_count=source_row_count,
+            exported_row_count=exported_row_count,
+        )
+    return extents
 
 
 def _max_schema_version_by_event_type(record: ExportedRecord) -> dict[str, int]:
@@ -320,6 +425,7 @@ def build_manifest(
     record: ExportedRecord,
     *,
     git_commit: str,
+    source_row_count_by_logbook_kind: dict[str, int],
     redaction: RedactionResult | None = None,
 ) -> Manifest:
     """Assemble the manifest for one already-exported, already-rendered record.
@@ -330,15 +436,32 @@ def build_manifest(
     the query used" without calling `capture_watermark` a second time,
     which returns a different snapshot.
 
+    `source_row_count_by_logbook_kind` is required, deliberately with no default: it is
+    `_export.py`'s `capture_source_row_count_by_logbook_kind`, called by the shell inside
+    the SAME transaction as `export_record` so both describe one snapshot.
+    There is no bypass here -- a caller cannot omit this and get a manifest
+    that silently skips the independent check; see
+    `LogbookKindRowCountMismatchError` and `_extent_by_logbook_kind`. Raises
+    that error before returning if any `included` kind's two counts
+    disagree, which means it also raises before either `write_bundle` call
+    a caller might make next.
+
     Pass `redaction` (the `RedactionResult` `redact_record` returned) when
     the bundle being written is the published projection, so the manifest
     carries H3 and its per-run map is keyed by the same surrogates tier-1
-    redaction already put on the streams body. The shape counts stay
-    derived from the UNREDACTED `record` regardless: redaction never adds
-    or removes a row, only rewrites values within one, so the counts
-    describe both, and deriving them from the unredacted side keeps a
-    reader's recomputation honest if redaction ever does start dropping
-    rows.
+    redaction already put on the streams body. The shape counts
+    (`extent_by_logbook_kind`, including S2b's two row counts) stay derived
+    from the UNREDACTED `record` regardless: `redact_record` maps each
+    kind's rows 1:1 (`tuple(redact_tier2_row(...) for row in rows)`),
+    never adding or removing one, so the counts describe both bundles
+    today. That is a property of `redact_record`'s current implementation,
+    not something checked here: if a future redaction pass ever starts
+    suppressing whole rows, the PUBLISHED manifest built by this branch
+    would keep reporting the unredacted counts, over-claiming what its own
+    `published/` bundle actually contains, and nothing in this function
+    would notice. Closing that gap belongs with whatever change first
+    makes redaction row-dropping possible, not guarded against
+    speculatively here.
 
     `redaction` carries `redacted_record`, `token_map`,
     `unfired_tier2_clearances` and `unfired_tier1_fields` together as one
@@ -367,13 +490,12 @@ def build_manifest(
         watermark=record.watermark,
         record_hash=hash_record(record),
         redaction_profile_hash=hash_redaction_profile(),
-        row_count_by_logbook_kind=_row_count_by_logbook_kind(record),
         max_schema_version_by_event_type=_max_schema_version_by_event_type(record),
         is_simulated=_is_simulated(record),
         expansion_digest_presence_by_run=_expansion_digest_presence_by_run(
             record, token_map=token_map
         ),
-        extent_by_logbook_kind=_extent_by_logbook_kind(),
+        extent_by_logbook_kind=_extent_by_logbook_kind(record, source_row_count_by_logbook_kind),
         registered_kinds_hash=hash_registered_kinds(spec.kind for spec in all_specs()),
         manifest_schema_version=MANIFEST_SCHEMA_VERSION,
         published_record_hash=None if redacted is None else hash_redacted_record(redacted),
@@ -390,6 +512,7 @@ __all__ = [
     "MANIFEST_SCHEMA_VERSION",
     "LogbookKindExtent",
     "LogbookKindExtentStatus",
+    "LogbookKindRowCountMismatchError",
     "Manifest",
     "build_manifest",
     "capture_git_commit",

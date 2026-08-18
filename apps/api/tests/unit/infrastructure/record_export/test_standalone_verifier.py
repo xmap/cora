@@ -207,6 +207,7 @@ def _write_bundle_for_cli(tmp_path: Path, *, published: bool) -> Path:
     """
     from cora.infrastructure.record_export import (
         ExportedRecord,
+        all_specs,
         build_manifest,
         hash_redaction_profile,
         redact_record,
@@ -232,15 +233,30 @@ def _write_bundle_for_cli(tmp_path: Path, *, published: bool) -> Path:
         ),
         logbooks={"activity": ({"event_id": "a1", "payload": {"channel": "2bma:x"}},)},
     )
+    # Matches record.logbooks for every registered kind: this fixture is
+    # about the verifier's byte-level behavior, not S2b's independent
+    # count, so the two must never diverge here.
+    source_row_count_by_logbook_kind = {
+        spec.kind: len(record.logbooks.get(spec.kind, ())) for spec in all_specs()
+    }
 
     bundle = tmp_path / "bundle"
     if not published:
-        manifest = build_manifest(record, git_commit="0" * 40)
+        manifest = build_manifest(
+            record,
+            git_commit="0" * 40,
+            source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+        )
         write_bundle(record, manifest, bundle)
         return bundle
 
     redaction = redact_record(record, expected_redaction_profile_hash=hash_redaction_profile())
-    manifest = build_manifest(record, git_commit="0" * 40, redaction=redaction)
+    manifest = build_manifest(
+        record,
+        git_commit="0" * 40,
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+        redaction=redaction,
+    )
     write_bundle(redaction.redacted_record, manifest, bundle)
     return bundle
 

@@ -42,7 +42,10 @@ from pathlib import Path
 import asyncpg
 
 from cora.infrastructure.record_export._bundle import write_bundle
-from cora.infrastructure.record_export._export import export_record
+from cora.infrastructure.record_export._export import (
+    capture_source_row_count_by_logbook_kind,
+    export_record,
+)
 from cora.infrastructure.record_export._manifest import build_manifest, capture_git_commit
 
 # pyright: reportUnknownMemberType=false
@@ -58,14 +61,20 @@ async def export_bundle(conn: asyncpg.Connection, destination: Path) -> Path:
     `destination`'s `manifest.json`, `streams.jsonl` and `logbooks/`,
     refusing if `destination` already holds anything.
 
-    The watermark capture and the export happen inside one `REPEATABLE
-    READ READ ONLY` transaction opened here, so the events stream and
-    every per-kind entries read share one fixed snapshot; see the
-    module docstring for why that transaction cannot live inside
+    The watermark capture, the export, and S2b's independent
+    `source_row_count_by_logbook_kind` all happen inside one `REPEATABLE READ READ ONLY`
+    transaction opened here, so the events stream, every per-kind entries
+    read, and the unscoped per-kind counts all share one fixed snapshot;
+    see the module docstring for why that transaction cannot live inside
     `export_record` itself, and why it closes before the manifest and
     bundle steps run.
     """
     async with conn.transaction(isolation="repeatable_read", readonly=True):
         record = await export_record(conn)
-    manifest = build_manifest(record, git_commit=capture_git_commit())
+        source_row_count_by_logbook_kind = await capture_source_row_count_by_logbook_kind(conn)
+    manifest = build_manifest(
+        record,
+        git_commit=capture_git_commit(),
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+    )
     return write_bundle(record, manifest, destination)

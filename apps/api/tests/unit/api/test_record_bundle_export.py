@@ -17,6 +17,7 @@ import pytest
 from cora.api.record_bundle_export import (
     _EXIT_CLEAN,  # pyright: ignore[reportPrivateUsage]
     _EXIT_REFUSED,  # pyright: ignore[reportPrivateUsage]
+    _REFUSAL_ERRORS,  # pyright: ignore[reportPrivateUsage]
     FULL_DIRNAME,
     PUBLISHED_DIRNAME,
     _bundle_bytes,  # pyright: ignore[reportPrivateUsage]
@@ -28,8 +29,18 @@ from cora.api.record_bundle_export import (
 from cora.infrastructure.record_export import (
     BundleDestinationNotEmptyError,
     ExportedRecord,
+    LogbookKindRowCountMismatchError,
+    all_specs,
     build_manifest,
 )
+
+
+def _matching_source_row_count_by_logbook_kind(record: ExportedRecord) -> dict[str, int]:
+    """Every registered kind's `source_row_count`, set to agree with
+    `record.logbooks`, matching `test_manifest.py`'s own helper: these
+    tests are about `_kind_lines`' rendering, not the S2b independent
+    count, so the two counts must never diverge here."""
+    return {spec.kind: len(record.logbooks.get(spec.kind, ())) for spec in all_specs()}
 
 
 def test_exit_codes_are_zero_and_two() -> None:
@@ -85,13 +96,18 @@ def _synthetic_record() -> ExportedRecord:
 
 def test_kind_lines_reports_status_rows_and_read_seconds_for_an_included_kind() -> None:
     record = _synthetic_record()
-    manifest = build_manifest(record, git_commit="deadbeef")
+    manifest = build_manifest(
+        record,
+        git_commit="deadbeef",
+        source_row_count_by_logbook_kind=_matching_source_row_count_by_logbook_kind(record),
+    )
 
     lines = {line.kind: line for line in _kind_lines(record, manifest)}
 
     activity = lines["activity"]
     assert activity.status == "included"
     assert activity.exported_row_count == 2
+    assert activity.source_row_count == 2
     assert activity.read_seconds == pytest.approx(0.125)
     assert "read=0.125s" in activity.render()
 
@@ -102,7 +118,11 @@ def test_kind_lines_reports_zero_read_seconds_for_an_included_kind_never_actuall
     (see `_export.py`'s docstring): that is a genuine zero read, not an
     unknown one, and must render as `0.000s`, never `n/a`."""
     record = ExportedRecord(streams=(), logbooks={}, watermark=0)
-    manifest = build_manifest(record, git_commit="deadbeef")
+    manifest = build_manifest(
+        record,
+        git_commit="deadbeef",
+        source_row_count_by_logbook_kind=_matching_source_row_count_by_logbook_kind(record),
+    )
 
     lines = {line.kind: line for line in _kind_lines(record, manifest)}
 
@@ -114,11 +134,31 @@ def test_kind_lines_reports_zero_read_seconds_for_an_included_kind_never_actuall
 
 
 def test_kind_line_renders_n_a_for_a_kind_never_read() -> None:
-    line = _KindLine(kind="widget", status="untraversed", exported_row_count=0, read_seconds=None)
+    line = _KindLine(
+        kind="widget",
+        status="untraversed",
+        exported_row_count=0,
+        source_row_count=None,
+        read_seconds=None,
+    )
     assert "read=n/a" in line.render()
+    assert "source=n/a" in line.render()
 
 
 def test_dirnames_are_distinct() -> None:
     """The whole disclosure guarantee rests on `full/` and `published/`
     never being the same path."""
     assert FULL_DIRNAME != PUBLISHED_DIRNAME
+
+
+def test_row_count_mismatch_is_not_a_refusal() -> None:
+    """`LogbookKindRowCountMismatchError` must stay OUT of `_REFUSAL_ERRORS`:
+    the module docstring's "Refusals, not tracebacks" section makes this a
+    load-bearing distinction (an omission-at-origin signal must surface as
+    a visible traceback, never get softened into a clean, retryable-looking
+    `refused: ...` line the way the three genuine operator mistakes do).
+    Pinned directly rather than only via the integration-level behavior in
+    `test_record_bundle_export_postgres.py`, so widening this tuple (or
+    swapping in a bare `except Exception`) fails fast, here, without
+    needing a database."""
+    assert LogbookKindRowCountMismatchError not in _REFUSAL_ERRORS

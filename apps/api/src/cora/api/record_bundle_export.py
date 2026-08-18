@@ -66,7 +66,22 @@ needing the two writes themselves to be atomic as a pair.
 
 Any other exception (a database connectivity failure, a coding defect)
 is not caught here and surfaces as a traceback: only operator-shaped
-conditions are softened. Residual worth naming: if `write_bundle` ever
+conditions are softened. `LogbookKindRowCountMismatchError` (S2b, raised
+from inside `build_manifest`) is deliberately NOT a fourth refusal: an
+`included` kind's independent row count disagreeing with what the
+traversal actually exported is not an operator mistake like the three
+conditions above, so it is not softened into a "refused" line the same
+way. It still fires before either `write_bundle` call (both manifests
+are built up front), so "no bundle written" holds for it too. Unlike the
+three refusals, though, this is not always evidence of a code defect:
+`capture_source_row_count_by_logbook_kind`'s own docstring names a
+benign, concurrency-driven cause specific to envelope-scoped kinds (a
+straggling transaction elsewhere pinning the stream walk's xmin
+watermark below this export's own snapshot), which a plain retry -- a fresh
+watermark against a fresh snapshot -- will usually not reproduce. A
+divergence that reproduces across a retry is the one worth escalating as
+a real omission; treat one occurrence as "retry once, then look closer,"
+not as an incident on its own. Residual worth naming: if `write_bundle` ever
 raised `ManifestRecordMismatchError` on the SECOND call (`published/`),
 after the first call (`full/`) already succeeded, this function would
 propagate that traceback with `full/` already complete on disk and
@@ -85,13 +100,15 @@ your publishable bundle."
 Three consecutive slices (S5a, S5b, S5c) argued that a single-round-trip
 unscoped read was acceptable without ever running one against a
 populated database. The report this command prints states, per
-registered logbook kind, its `extent` status, its exported row count,
-and the wall-clock time `export_record` spent reading it
-(`ExportedRecord.read_seconds_by_logbook_kind`, added in `_export.py`
-for this slice: it is the only place with a seam onto each individual
-`spec.reader` / `spec.unscoped_reader` call), plus each bundle's total
-byte count and the command's total elapsed time. Counts and timings
-only: no row contents are printed.
+registered logbook kind, its `extent` status, its exported row count, its
+independent source row count (S2b's `source_row_count`; the two can only
+ever agree by the time either reaches this report, since `build_manifest`
+raises before printing anything if they don't), and the wall-clock time
+`export_record` spent reading it (`ExportedRecord.read_seconds_by_logbook_kind`,
+added in `_export.py` for S5d: it is the only place with a seam onto each
+individual `spec.reader` / `spec.unscoped_reader` call), plus each
+bundle's total byte count and the command's total elapsed time. Counts
+and timings only: no row contents are printed.
 
 ## Exit codes
 
@@ -122,6 +139,7 @@ from cora.infrastructure.record_export import (
     RedactionProfileMismatchError,
     build_manifest,
     capture_git_commit,
+    capture_source_row_count_by_logbook_kind,
     export_record,
     hash_redaction_profile,
     redact_record,
@@ -153,6 +171,13 @@ class _KindLine:
     kind: str
     status: str
     exported_row_count: int
+    source_row_count: int | None
+    """The independent unscoped `count(*)` (S2b), or `None` for a kind
+    whose status left it absent from `source_row_count_by_logbook_kind` -- see
+    `LogbookKindExtent.source_row_count`. An `included` kind reaching this
+    report already agrees with `exported_row_count`: `build_manifest`
+    raises `LogbookKindRowCountMismatchError` before either bundle is written
+    if the two disagree, so a divergence never reaches a printed report."""
     read_seconds: float | None
     """`None` for a kind never read this export (`untraversed`, or an
     `included` envelope-driven kind whose envelope never occurred, which
@@ -162,9 +187,10 @@ class _KindLine:
 
     def render(self) -> str:
         read = "n/a" if self.read_seconds is None else f"{self.read_seconds:.3f}s"
+        source = "n/a" if self.source_row_count is None else str(self.source_row_count)
         return (
             f"  {self.kind:<15} status={self.status:<11} "
-            f"rows={self.exported_row_count:<8} read={read}"
+            f"rows={self.exported_row_count:<8} source={source:<8} read={read}"
         )
 
 
@@ -207,10 +233,14 @@ def _bundle_bytes(destination: Path) -> int:
 
 
 def _kind_lines(record: ExportedRecord, manifest: Manifest) -> tuple[_KindLine, ...]:
+    """`exported_row_count` and `source_row_count` come straight off the
+    manifest's own `extent_by_logbook_kind` rather than being recomputed
+    from `record` here: the manifest already carries both (S2b), and
+    `record` is only still needed for `read_seconds_by_logbook_kind`, which
+    has no manifest-side home."""
     lines: list[_KindLine] = []
     for kind in sorted(manifest.extent_by_logbook_kind):
         extent = manifest.extent_by_logbook_kind[kind]
-        rows = len(record.logbooks.get(kind, ()))
         read_seconds = (
             record.read_seconds_by_logbook_kind.get(kind, 0.0)
             if extent.status == LogbookKindExtentStatus.INCLUDED
@@ -220,7 +250,8 @@ def _kind_lines(record: ExportedRecord, manifest: Manifest) -> tuple[_KindLine, 
             _KindLine(
                 kind=kind,
                 status=extent.status.value,
-                exported_row_count=rows,
+                exported_row_count=extent.exported_row_count,
+                source_row_count=extent.source_row_count,
                 read_seconds=read_seconds,
             )
         )
@@ -257,13 +288,25 @@ async def export_record_bundles(*, destination: Path, database_url: str | None =
                 pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
                 async with pg_conn.transaction(isolation="repeatable_read", readonly=True):
                     record = await export_record(pg_conn)
+                    source_row_count_by_logbook_kind = (
+                        await capture_source_row_count_by_logbook_kind(pg_conn)
+                    )
 
             git_commit = capture_git_commit()
-            full_manifest = build_manifest(record, git_commit=git_commit)
+            full_manifest = build_manifest(
+                record,
+                git_commit=git_commit,
+                source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+            )
             redaction = redact_record(
                 record, expected_redaction_profile_hash=hash_redaction_profile()
             )
-            published_manifest = build_manifest(record, git_commit=git_commit, redaction=redaction)
+            published_manifest = build_manifest(
+                record,
+                git_commit=git_commit,
+                source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+                redaction=redaction,
+            )
 
             write_bundle(record, full_manifest, full_dir)
             write_bundle(redaction.redacted_record, published_manifest, published_dir)

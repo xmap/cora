@@ -19,6 +19,7 @@ from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.record_export import (
     build_manifest,
     capture_git_commit,
+    capture_source_row_count_by_logbook_kind,
     export_record,
     hash_record,
 )
@@ -91,12 +92,19 @@ async def test_manifest_built_from_a_real_export(db_pool: asyncpg.Pool) -> None:
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
+        source_row_count_by_logbook_kind = await capture_source_row_count_by_logbook_kind(pg_conn)
 
-    manifest = build_manifest(exported, git_commit=capture_git_commit())
+    manifest = build_manifest(
+        exported,
+        git_commit=capture_git_commit(),
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+    )
 
     assert manifest.record_hash == hash_record(exported)
     assert len(manifest.redaction_profile_hash) == 64
-    assert manifest.row_count_by_logbook_kind["activity"] == 1
+    activity_extent = manifest.extent_by_logbook_kind["activity"]
+    assert activity_extent.exported_row_count == 1
+    assert activity_extent.source_row_count == 1
     assert manifest.max_schema_version_by_event_type["ProcedureRegistered"] >= 1
     # No Run stream in this fixture (parent_run_id=None, no RunStarted
     # seeded), so the per-run map must be empty, not crash.
@@ -143,11 +151,16 @@ async def test_watermark_is_the_real_captured_xmin_not_the_zero_default(
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
+        source_row_count_by_logbook_kind = await capture_source_row_count_by_logbook_kind(pg_conn)
 
     assert exported.watermark > 0, (
         "a real export's watermark must be a genuine captured xmin, never the "
         "0 default hand-built ExportedRecord fixtures fall back to"
     )
 
-    manifest = build_manifest(exported, git_commit=capture_git_commit())
+    manifest = build_manifest(
+        exported,
+        git_commit=capture_git_commit(),
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+    )
     assert manifest.watermark == exported.watermark

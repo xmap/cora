@@ -76,7 +76,9 @@ async def test_capture_probe_rows_land_in_the_bundle_and_manifest_reports_includ
 
     manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["extent_by_logbook_kind"]["capture_probe"]["status"] == "included"
-    assert manifest["row_count_by_logbook_kind"]["capture_probe"] == 1
+    capture_probe_extent = manifest["extent_by_logbook_kind"]["capture_probe"]
+    assert capture_probe_extent["exported_row_count"] == 1
+    assert capture_probe_extent["source_row_count"] == 1
 
 
 @pytest.mark.integration

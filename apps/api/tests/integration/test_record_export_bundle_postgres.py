@@ -55,6 +55,7 @@ from cora.infrastructure.record_export import (
     ManifestRecordMismatchError,
     build_manifest,
     capture_git_commit,
+    capture_source_row_count_by_logbook_kind,
     export_record,
     hash_redaction_profile,
     read_bundle_body,
@@ -182,8 +183,13 @@ async def test_a_real_export_writes_a_bundle_a_stranger_can_verify(
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
+        source_row_count_by_logbook_kind = await capture_source_row_count_by_logbook_kind(pg_conn)
 
-    manifest = build_manifest(exported, git_commit=capture_git_commit())
+    manifest = build_manifest(
+        exported,
+        git_commit=capture_git_commit(),
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+    )
     bundle = write_bundle(exported, manifest, tmp_path / "bundle")
 
     assert (bundle / STREAMS_NAME).is_file()
@@ -204,9 +210,15 @@ async def test_a_real_redacted_export_verifies_against_h3(
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
+        source_row_count_by_logbook_kind = await capture_source_row_count_by_logbook_kind(pg_conn)
 
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
-    manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
+    manifest = build_manifest(
+        exported,
+        git_commit=capture_git_commit(),
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+        redaction=redaction,
+    )
     bundle = write_bundle(redaction.redacted_record, manifest, tmp_path / "published")
 
     result = _verify(bundle, published=True)
@@ -282,12 +294,18 @@ async def test_a_narrow_export_redacts_and_reports_what_it_could_not_exercise(
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
+        source_row_count_by_logbook_kind = await capture_source_row_count_by_logbook_kind(pg_conn)
 
     # This call itself is the regression assertion: it used to raise
     # UnfiredClearanceError for exactly this fixture.
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
 
-    manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
+    manifest = build_manifest(
+        exported,
+        git_commit=capture_git_commit(),
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+        redaction=redaction,
+    )
     expected_unfired_clearances = tuple(
         sorted(
             f"activity/payload/{pointer}"
@@ -316,9 +334,15 @@ async def test_write_bundle_refuses_a_real_unredacted_record_beside_an_h3_manife
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
+        source_row_count_by_logbook_kind = await capture_source_row_count_by_logbook_kind(pg_conn)
 
     redaction = redact_record(exported, expected_redaction_profile_hash=hash_redaction_profile())
-    manifest = build_manifest(exported, git_commit=capture_git_commit(), redaction=redaction)
+    manifest = build_manifest(
+        exported,
+        git_commit=capture_git_commit(),
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+        redaction=redaction,
+    )
 
     with pytest.raises(ManifestRecordMismatchError):
         write_bundle(exported, manifest, tmp_path / "should_not_exist")
@@ -335,8 +359,13 @@ async def test_a_real_bundle_fails_verification_after_one_edited_digit(
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
+        source_row_count_by_logbook_kind = await capture_source_row_count_by_logbook_kind(pg_conn)
 
-    manifest = build_manifest(exported, git_commit=capture_git_commit())
+    manifest = build_manifest(
+        exported,
+        git_commit=capture_git_commit(),
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+    )
     bundle = write_bundle(exported, manifest, tmp_path / "bundle")
     assert _verify(bundle).returncode == 0
 
@@ -361,8 +390,13 @@ async def test_both_reassembly_implementations_agree_on_a_real_bundle(
     async with db_pool.acquire() as conn:
         pg_conn: asyncpg.Connection = conn  # type: ignore[assignment]
         exported = await export_record(pg_conn)
+        source_row_count_by_logbook_kind = await capture_source_row_count_by_logbook_kind(pg_conn)
 
-    manifest = build_manifest(exported, git_commit=capture_git_commit())
+    manifest = build_manifest(
+        exported,
+        git_commit=capture_git_commit(),
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+    )
     bundle = write_bundle(exported, manifest, tmp_path / "bundle")
 
     # CORA's reader reassembles the body; the script's reader then has to

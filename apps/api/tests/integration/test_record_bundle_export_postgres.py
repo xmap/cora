@@ -42,7 +42,9 @@ from cora.api.record_bundle_export import (
 )
 from cora.infrastructure.event_envelope import to_new_event
 from cora.infrastructure.postgres.pool import create_pool
+from cora.infrastructure.record_export import LogbookKindRowCountMismatchError
 from cora.operation.aggregates.procedure import (
+    Activity,
     PostgresActivityStore,
     ProcedureRegistered,
     ProcedureStarted,
@@ -244,5 +246,54 @@ async def test_returns_the_refusal_exit_code_on_an_empty_database(
     destination = tmp_path / "bundle"
     exit_code = await export_record_bundles(destination=destination, database_url=url)
     assert exit_code == _EXIT_REFUSED
+    assert not (destination / "full" / "manifest.json").exists()
+    assert not (destination / "published" / "manifest.json").exists()
+
+
+async def test_row_count_mismatch_propagates_rather_than_a_clean_refusal(
+    export_database: ExportDatabase, tmp_path: Path
+) -> None:
+    """The S2b hard-error path through the REAL operator command, not just
+    `_shell.export_bundle` (covered in
+    `test_record_export_row_count_independence_postgres.py`): an orphan
+    `activity` row -- written directly through `PostgresActivityStore`
+    with a `logbook_id` no envelope ever names, the same technique as that
+    sibling test -- must make `export_record_bundles` raise
+    `LogbookKindRowCountMismatchError`, never return `_EXIT_REFUSED`. A
+    unit-level pin that the error stays out of `_REFUSAL_ERRORS` lives in
+    `tests/unit/api/test_record_bundle_export.py`; this is the end-to-end
+    proof that nothing between here and there ends up softening it, and
+    that no bundle lands on disk either way."""
+    pool, url = export_database
+    await _seed_a_procedure_with_one_activity(pool)
+    await PostgresActivityStore(pool).append(
+        [
+            Activity(
+                event_id=uuid4(),
+                procedure_id=uuid4(),
+                logbook_id=uuid4(),
+                actor_id=uuid4(),
+                command_name="AppendProcedureActivities",
+                step_kind="setpoint",
+                payload={"address": "T_orphan", "value": 1.0},
+                sampled_at=_NOW,
+                occurred_at=_NOW,
+                correlation_id=uuid4(),
+                causation_id=None,
+            )
+        ]
+    )
+
+    destination = tmp_path / "bundle"
+    with pytest.raises(LogbookKindRowCountMismatchError) as excinfo:
+        await export_record_bundles(destination=destination, database_url=url)
+
+    assert excinfo.value.kind == "activity"
+    assert excinfo.value.source_row_count == 2
+    assert excinfo.value.exported_row_count == 1
+    # _refuse_if_occupied pre-creates both directories (to check they're
+    # empty) even on this path, same as the empty-database refusal test
+    # above -- the property that matters is no manifest, meaning no
+    # complete-looking bundle, ever lands.
     assert not (destination / "full" / "manifest.json").exists()
     assert not (destination / "published" / "manifest.json").exists()

@@ -74,7 +74,16 @@ def test_registered_kinds_pin_forces_a_deliberate_schema_version_bump() -> None:
 
 @pytest.mark.architecture
 def test_extent_status_pin_matches_every_registered_kinds_current_status() -> None:
-    manifest = build_manifest(ExportedRecord(streams=(), logbooks={}), git_commit="deadbeef")
+    record = ExportedRecord(streams=(), logbooks={})
+    # Every registered kind is included with zero rows in this fixture, so
+    # a matching source_row_count_by_logbook_kind of all zeros keeps this test about
+    # status alone, not S2b's independent-count check.
+    source_row_count_by_logbook_kind = {spec.kind: 0 for spec in all_specs()}
+    manifest = build_manifest(
+        record,
+        git_commit="deadbeef",
+        source_row_count_by_logbook_kind=source_row_count_by_logbook_kind,
+    )
     actual = {kind: extent.status for kind, extent in manifest.extent_by_logbook_kind.items()}
     assert actual == _EXTENT_STATUS_BY_KIND, (
         "a registered kind's extent status has changed; update "

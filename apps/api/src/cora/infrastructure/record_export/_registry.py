@@ -65,6 +65,7 @@ import asyncpg
 
 EntriesReader = Callable[[asyncpg.Connection, UUID | str], Awaitable[list[asyncpg.Record]]]
 UnscopedEntriesReader = Callable[[asyncpg.Connection], Awaitable[list[asyncpg.Record]]]
+CountReader = Callable[[asyncpg.Connection], Awaitable[int]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +93,16 @@ class EntriesTableSpec:
     scope_type: type[UUID] | type[str]
     order_by: tuple[str, ...]
     reader: EntriesReader
+    count_reader: CountReader
+    """Unscoped `SELECT count(*) FROM table`: no predicate, no envelope, no
+    scope column, and no `ORDER BY` (a count has no order to carry). Set on
+    EVERY spec, unlike `unscoped_reader` below, because independence from
+    `reader`/`unscoped_reader` is the whole point of this field (S2b,
+    `project_record_completeness_design.md`'s "The independent count") and
+    that point applies to a scoped six-envelope kind exactly as much as an
+    unscoped one. Backs `_export.py`'s
+    `capture_source_row_count_by_logbook_kind`; see that function's
+    docstring for what this count can and cannot prove per kind."""
     unscoped_reader: UnscopedEntriesReader | None = None
     """Reads every row of `table`, unscoped, when set. `heartbeat` (S5a),
     `capture_probe` (S5b) and `permit_probe` (S5c) all set it today;
@@ -185,6 +196,29 @@ def _make_unscoped_reader(table: str, order_by: tuple[str, ...]) -> UnscopedEntr
     return read
 
 
+def _make_count_reader(table: str) -> CountReader:
+    """`SELECT count(*) FROM <table>`, no `WHERE`, no `ORDER BY`.
+
+    `table` is a registry-declared constant below, never caller input, so
+    the interpolation cannot carry attacker-controlled SQL, matching
+    `_make_reader`'s and `_make_unscoped_reader`'s reasoning. Deliberately
+    independent of both: it shares no predicate with `reader` (which
+    filters on `scope_column`) and is built by its own factory rather than
+    reusing `_make_unscoped_reader`'s SQL, even though the two coincide in
+    shape for the three kinds that set `unscoped_reader` -- see
+    `EntriesTableSpec.count_reader`'s own docstring for why that
+    coincidence does not make this field redundant there.
+    """
+    sql = f"SELECT count(*) FROM {table}"
+
+    async def count(conn: asyncpg.Connection) -> int:
+        value = await conn.fetchval(sql)
+        assert value is not None
+        return int(value)
+
+    return count
+
+
 def _spec(
     *,
     kind: str,
@@ -203,6 +237,7 @@ def _spec(
         scope_type=scope_type,
         order_by=order_by,
         reader=_make_reader(table, scope_column, order_by),
+        count_reader=_make_count_reader(table),
         unscoped_reader=_make_unscoped_reader(table, order_by) if unscoped else None,
     )
 

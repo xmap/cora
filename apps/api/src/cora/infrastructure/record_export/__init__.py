@@ -37,6 +37,7 @@ from cora.infrastructure.record_export._bundle import (
 from cora.infrastructure.record_export._export import (
     EmptyExportError,
     ExportedRecord,
+    capture_source_row_count_by_logbook_kind,
     capture_watermark,
     export_record,
 )
@@ -59,6 +60,7 @@ from cora.infrastructure.record_export._manifest import (
     MANIFEST_SCHEMA_VERSION,
     LogbookKindExtent,
     LogbookKindExtentStatus,
+    LogbookKindRowCountMismatchError,
     Manifest,
     build_manifest,
     capture_git_commit,
@@ -131,6 +133,7 @@ __all__ = [
     "ExportedRecord",
     "LogbookKindExtent",
     "LogbookKindExtentStatus",
+    "LogbookKindRowCountMismatchError",
     "MalformedBundleError",
     "Manifest",
     "ManifestRecordMismatchError",
@@ -148,6 +151,7 @@ __all__ = [
     "all_specs",
     "build_manifest",
     "capture_git_commit",
+    "capture_source_row_count_by_logbook_kind",
     "capture_watermark",
     "ensure_stream_type_known",
     "export_bundle",

@@ -61,7 +61,9 @@ async def test_heartbeat_rows_land_in_the_bundle_and_manifest_reports_included(
 
     manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["extent_by_logbook_kind"]["heartbeat"]["status"] == "included"
-    assert manifest["row_count_by_logbook_kind"]["heartbeat"] == 1
+    heartbeat_extent = manifest["extent_by_logbook_kind"]["heartbeat"]
+    assert heartbeat_extent["exported_row_count"] == 1
+    assert heartbeat_extent["source_row_count"] == 1
 
 
 @pytest.mark.integration
