@@ -5,9 +5,9 @@ text, and its tier-2 dispositions -- declared since before this slice but
 never exercised, because `_redact_tier2.py` skips a kind absent from
 `kinds_present` -- fire for the first time on a real exported row.
 
-Per `project_record_completeness_design.md`'s S5. `permit_probe` is
-S5c, not this slice, and stays `untraversed`; see
-`test_record_export_heartbeat_unscoped_postgres.py` for that assertion.
+Per `project_record_completeness_design.md`'s S5. `permit_probe` was
+S5c's own probe kind and carries the identical assertion, in
+`test_record_export_permit_probe_unscoped_postgres.py`.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false

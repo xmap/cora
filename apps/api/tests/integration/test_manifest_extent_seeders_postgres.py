@@ -11,18 +11,20 @@ production handler for its kind (never raw SQL), following the pattern
 `test_record_export_shell_postgres.py` (added by S1) established for
 `activity`.
 
-`permit_probe` and `capture_probe` are EXPECTED to seed real rows and
-still come out `untraversed`: their tables have no envelope and no
-unscoped reader wired into `export_record`'s walk yet (S5b/S5c, not
-this slice). That is the corrected behavior, not a bug in this test --
-before S2a, the shipped `row_count_by_logbook_kind` field could not
-even describe this case (`{}` is what the original defect reported for
-two genuinely populated kinds); after S2a, the manifest says
-`untraversed` in writing.
-
-`heartbeat` is the exception since S5a: its spec now declares an
-`unscoped_reader`, so it is expected to come out `included` like the
-six envelope-driven kinds, even though it has no envelope of its own.
+`heartbeat` (S5a), `capture_probe` (S5b) and `permit_probe` (S5c) each
+declare an `unscoped_reader` now, so all three are expected to come out
+`included` like the six envelope-driven kinds, even though none of them
+has an envelope of its own; the `reachable`/`included` branch below is
+computed from the registry, not hardcoded per kind, so it tracks
+whichever kinds are wired without needing an update here when a kind's
+spec changes. No registered kind is expected to come out `untraversed`
+in this test any more -- before S2a, the shipped
+`row_count_by_logbook_kind` field could not even describe that case
+(`{}` is what the original defect reported for two genuinely populated
+kinds); after S2a the manifest said `untraversed` in writing, and after
+S5c no registered kind reaches that branch in production (see
+`test_manifest.py`'s own construction of the state for where it is
+still exercised).
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false
@@ -414,10 +416,13 @@ async def test_manifest_accounts_for_every_registered_kind(
         assert extent[spec.kind]["status"] == "included"  # type: ignore[attr-defined]
         assert manifest["row_count_by_logbook_kind"].get(spec.kind, 0) >= 1  # type: ignore[attr-defined]
     else:
-        # permit_probe / capture_probe: real rows exist in the database
-        # (the seeder above just wrote them), but no code path reads them
-        # into the export, so the manifest must say so rather than
-        # silently reporting a coverage field that agrees with the
-        # traversal by construction.
+        # No registered kind reaches this branch today (S5c wired the
+        # last of the three no-envelope kinds, `permit_probe`), but the
+        # branch stays: a future kind registered with neither an
+        # envelope nor an unscoped reader would seed real rows here (the
+        # seeder above just wrote them) that no code path reads into the
+        # export, so the manifest must say so rather than silently
+        # reporting a coverage field that agrees with the traversal by
+        # construction.
         assert extent[spec.kind]["status"] == "untraversed"  # type: ignore[attr-defined]
         assert spec.kind not in manifest["row_count_by_logbook_kind"]  # type: ignore[attr-defined]

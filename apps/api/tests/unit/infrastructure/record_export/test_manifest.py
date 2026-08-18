@@ -8,9 +8,14 @@ Procedure + Run) lives in
 """
 
 import re
+from uuid import UUID
+
+import asyncpg
+import pytest
 
 from cora.infrastructure.record_export import (
     MANIFEST_SCHEMA_VERSION,
+    EntriesTableSpec,
     ExportedRecord,
     LogbookKindExtentStatus,
     RedactedRecord,
@@ -107,12 +112,34 @@ def test_envelope_driven_kinds_are_included_regardless_of_this_records_own_rows(
         assert manifest.extent_by_logbook_kind[kind].status == LogbookKindExtentStatus.INCLUDED
 
 
-def test_kind_with_no_envelope_and_no_unscoped_reader_is_untraversed() -> None:
-    """`permit_probe` has neither an envelope nor an `unscoped_reader`
-    wired yet (S5c); `heartbeat` and `capture_probe` are covered
-    separately below since S5a/S5b each gave theirs one."""
+async def _unused_reader(conn: asyncpg.Connection, scope_id: object) -> list[asyncpg.Record]:
+    raise AssertionError("build_manifest must never call a spec's reader")
+
+
+def test_kind_with_no_envelope_and_no_unscoped_reader_is_untraversed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No REGISTERED kind resolves `untraversed` in production any more:
+    `heartbeat` (S5a), `capture_probe` (S5b) and `permit_probe` (S5c) all
+    ended up wired with an `unscoped_reader`, alongside the six
+    envelope-driven kinds. Constructed here rather than pinned against a
+    real kind, per the trap this predicate would otherwise fall into once
+    its last real example (`permit_probe`) stopped demonstrating it."""
+    synthetic = EntriesTableSpec(
+        kind="untraversed_test_kind",
+        table="entries_untraversed_test_kind",
+        envelope_class=None,
+        scope_column="unused_id",
+        scope_type=UUID,
+        order_by=("event_id",),
+        reader=_unused_reader,
+    )
+    monkeypatch.setattr(
+        "cora.infrastructure.record_export._manifest.all_specs",
+        lambda: (*all_specs(), synthetic),
+    )
     manifest = build_manifest(_record(), git_commit="deadbeef")
-    assert manifest.extent_by_logbook_kind["permit_probe"].status == (
+    assert manifest.extent_by_logbook_kind["untraversed_test_kind"].status == (
         LogbookKindExtentStatus.UNTRAVERSED
     )
 
@@ -134,6 +161,20 @@ def test_capture_probe_is_included_via_its_unscoped_reader_despite_having_no_env
     assert manifest.extent_by_logbook_kind["capture_probe"].status == (
         LogbookKindExtentStatus.INCLUDED
     )
+
+
+def test_permit_probe_is_included_via_its_unscoped_reader_despite_having_no_envelope() -> None:
+    """S5c: same predicate, same shape as heartbeat's/capture_probe's tests
+    above, for `permit_probe`'s newly-wired `unscoped_reader` -- the last
+    of the three no-envelope kinds, so every registered kind now resolves
+    `included` here."""
+    manifest = build_manifest(_record(), git_commit="deadbeef")
+    assert manifest.extent_by_logbook_kind["permit_probe"].status == (
+        LogbookKindExtentStatus.INCLUDED
+    )
+    assert {extent.status for extent in manifest.extent_by_logbook_kind.values()} == {
+        LogbookKindExtentStatus.INCLUDED
+    }
 
 
 def test_registered_kinds_hash_matches_hashing_all_specs_kinds_directly() -> None:

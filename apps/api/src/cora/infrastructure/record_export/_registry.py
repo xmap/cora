@@ -44,13 +44,12 @@ rather than a nullable scope argument on `reader`: an unscoped read
 operation from a scoped one, and letting a caller pass `None` as a
 scope id against one of the six envelope specs would silently read the
 whole table where the exporter meant to read one logbook's slice.
-`heartbeat` (S5a) and `capture_probe` (S5b) both set it now; every
-other spec's `reader` and its own call sites are unchanged.
-`permit_probe` is deliberately NOT wired here -- see S5c in the design
-memo; it holds every live entries row on the pilot database and owes
-its own disclosure review before a bundle can carry it. `capture_probe`
-owed and got that same review at S5b; see its disposition entries in
-`_redact_tier2.py` and this slice's commit message for the reasoning.
+`heartbeat` (S5a), `capture_probe` (S5b) and `permit_probe` (S5c) all
+set it now; every other spec's `reader` and its own call sites are
+unchanged. Every kind owed its own disclosure review before a bundle
+could carry it; see each kind's disposition entries in
+`_redact_tier2.py` and its own slice's commit message for the
+reasoning, including `permit_probe.status_claimed`'s verdict (S5c).
 """
 
 from collections.abc import Awaitable, Callable
@@ -93,9 +92,9 @@ class EntriesTableSpec:
     order_by: tuple[str, ...]
     reader: EntriesReader
     unscoped_reader: UnscopedEntriesReader | None = None
-    """Reads every row of `table`, unscoped, when set. `None` only for
-    `permit_probe` today (S5c, not yet wired); `heartbeat` (S5a) and
-    `capture_probe` (S5b) both set it. See the module docstring."""
+    """Reads every row of `table`, unscoped, when set. `heartbeat` (S5a),
+    `capture_probe` (S5b) and `permit_probe` (S5c) all set it today;
+    every six-envelope spec leaves it `None`. See the module docstring."""
 
 
 class UnknownLogbookKindError(LookupError):
@@ -149,8 +148,33 @@ def _make_unscoped_reader(table: str, order_by: tuple[str, ...]) -> UnscopedEntr
     this same table (see the design memo's Watch items): the first export
     measured in minutes. The fix at that point is coordinated across this
     reader, `ExportedRecord`'s shape, and the bundle writer, not a cursor
-    swapped in here alone. `permit_probe`, same shape, larger table, is
-    still S5c's decision to make.
+    swapped in here alone.
+
+    RE-EXAMINED at S5c (`permit_probe`, now wired the same way): this is
+    the largest unscoped table in the tier, `count(*)` reported at
+    50,085 rows across two enclosures at 21:00 CDT 2026-08-17, growing
+    on a 60-second probe tick per enclosure -- roughly five times the
+    9,554 `capture_probe` figure S5a recorded (cbab110f1c) as a
+    forward-looking note about that table's own eventual disposition;
+    S5b's own commit (937abe4707) explicitly could NOT re-measure that
+    figure from its session, so this comparison is against the last
+    recorded number for that table, not a number S5b itself confirmed.
+    Still growing without a retention policy. The argument above is
+    about WHERE the buffering happens, not how many rows fit in it, and
+    that argument is row-count-independent: it still holds at this
+    size, because `ExportedRecord` still materializes every kind's rows
+    in one dict regardless of which kind is largest, so a cursor
+    swapped in here alone would still just move the same rows to a
+    different Python object. What DOES scale with row count is
+    wall-clock and network transfer, neither measured directly this
+    session (arcturus, the pilot database, was not reachable from this
+    environment; the count above is the figure this slice was given,
+    not one this session queried itself). Fifty thousand rows of seven
+    narrow columns each is not yet the "export measured in minutes"
+    trigger this design already named as the point to revisit; it is
+    the closest any unscoped table has come to it so far, which is
+    worth carrying forward rather than re-deciding silently next time a
+    table in this tier grows past it.
     """
     sql = f"SELECT * FROM {table} ORDER BY {', '.join(order_by)}"
 
@@ -245,6 +269,7 @@ _ENTRIES: tuple[EntriesTableSpec, ...] = (
         envelope_class=None,
         scope_column="enclosure_id",
         order_by=("event_id",),
+        unscoped=True,
     ),
     _spec(
         kind="capture_probe",
