@@ -247,6 +247,22 @@ async def test_read_beam_availability_out_of_range_numeric_fails_closed() -> Non
 
 
 @pytest.mark.unit
+async def test_read_beam_availability_non_numeric_non_string_value_fails_closed() -> None:
+    # Measurement.value is typed Any; a substrate handing back something
+    # that is neither a label nor coercible to int (e.g. None) must hit
+    # _binary_code's int(value) fallback and fail closed, not raise out
+    # of the adapter. Not differential: int(None) already raised on the
+    # old code too, so this is coverage for the fallback branch.
+    port = _port_with({FES_PV: _scalar(None), SBS_PV: _scalar(0), PERMIT_PV: _scalar(1)})
+    lookup = ControlPortBeamAvailabilityLookup(control_port=port, beam_pvs=ALL_PVS)
+
+    result = await lookup.read()
+
+    assert result.fes_open is False
+    assert result.quality_ok is False
+
+
+@pytest.mark.unit
 def test_build_beam_availability_lookup_with_empty_pvs_returns_stub() -> None:
     """Empty config -> always-open stub (beam-by-default)."""
     port = InMemoryControlPort()
