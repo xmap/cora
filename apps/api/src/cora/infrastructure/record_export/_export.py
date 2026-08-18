@@ -25,9 +25,16 @@ while the streams tier is xmin-bounded: an unscoped row can have been
 written by a transaction that committed above the watermark. Not
 closable without a `transaction_id` column on the entries tables;
 stated, not fixed, here.
+
+Also times each per-kind read (`ExportedRecord.read_seconds_by_logbook_kind`,
+S5d), because this is the one place with a seam onto each individual
+`spec.reader` / `spec.unscoped_reader` call; a caller outside this
+module has no way to time a kind's read without re-issuing it a second
+time against a different snapshot.
 """
 
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from uuid import UUID
 
 import asyncpg
@@ -91,11 +98,27 @@ class ExportedRecord:
     than the one the rows were actually bounded by. Defaults to 0 for
     hand-built test fixtures that do not exercise watermark plumbing;
     every real export sets it from the same call `export_record` used.
+
+    `read_seconds_by_logbook_kind` is the wall-clock time spent inside
+    `spec.reader` / `spec.unscoped_reader` calls for each kind, summed
+    across every envelope occurrence for an envelope-driven kind (one
+    call each time its `*LogbookOpened` envelope appears on the stream)
+    or the one call for an unscoped kind. Times the read alone, not
+    `render_row`. Added for S5d (`project_record_completeness_design.md`):
+    the operator command needs a per-kind timing to make the first real
+    export against a populated database a measurement rather than a
+    fourth deferral argument. A kind absent from this dict was never
+    read this export -- either it is `untraversed`, or it is an
+    envelope-driven kind whose envelope never occurred, which the S4
+    membership decision already treats as a genuine zero rather than a
+    coverage gap. Defaults to an empty dict for the same hand-built-
+    fixture reason `watermark` defaults to 0.
     """
 
     streams: tuple[dict[str, object], ...]
     logbooks: dict[str, tuple[dict[str, object], ...]]
     watermark: int = 0
+    read_seconds_by_logbook_kind: dict[str, float] = field(default_factory=dict)
 
 
 async def capture_watermark(conn: asyncpg.Connection) -> int:
@@ -146,6 +169,7 @@ async def export_record(conn: asyncpg.Connection) -> ExportedRecord:
     envelope_classes = registered_envelope_classes()
     streams: list[dict[str, object]] = []
     logbooks: dict[str, list[dict[str, object]]] = {}
+    read_seconds: dict[str, float] = {}
 
     for row in rows:
         ensure_stream_type_known(row["stream_type"])
@@ -157,17 +181,22 @@ async def export_record(conn: asyncpg.Connection) -> ExportedRecord:
         kind = payload["kind"]
         logbook_id = UUID(payload["logbook_id"])
         spec = resolve(kind)
+        started = time.perf_counter()
         entries = await spec.reader(conn, logbook_id)
+        read_seconds[kind] = read_seconds.get(kind, 0.0) + (time.perf_counter() - started)
         logbooks.setdefault(kind, []).extend(render_row(entry) for entry in entries)
 
     for spec in all_specs():
         if spec.unscoped_reader is None:
             continue
+        started = time.perf_counter()
         entries = await spec.unscoped_reader(conn)
+        read_seconds[spec.kind] = read_seconds.get(spec.kind, 0.0) + (time.perf_counter() - started)
         logbooks.setdefault(spec.kind, []).extend(render_row(entry) for entry in entries)
 
     return ExportedRecord(
         streams=tuple(streams),
         logbooks={kind: tuple(entries) for kind, entries in logbooks.items()},
         watermark=watermark,
+        read_seconds_by_logbook_kind=read_seconds,
     )
