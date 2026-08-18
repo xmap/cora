@@ -191,12 +191,15 @@ def _extent_by_logbook_kind() -> dict[str, LogbookKindExtent]:
     The predicate is "does ANY reader reach this kind": either
     `spec.envelope_class is not None` (the six envelope-driven kinds) or
     `spec.unscoped_reader is not None` (`heartbeat` S5a, `capture_probe`
-    S5b). Both are structural, registry-level facts about whether the
-    exporter's traversal CAN reach that kind's table at all; neither says
-    anything about what THIS export happened to find, which is the whole
-    point (see `Manifest.extent_by_logbook_kind`'s docstring).
-    `permit_probe` has neither an envelope nor an unscoped reader wired
-    yet and stays `untraversed` until S5c wires its own.
+    S5b, `permit_probe` S5c). Both are structural, registry-level facts
+    about whether the exporter's traversal CAN reach that kind's table
+    at all; neither says anything about what THIS export happened to
+    find, which is the whole point (see
+    `Manifest.extent_by_logbook_kind`'s docstring). Every registered
+    kind now sets one or the other, so no kind resolves `untraversed` in
+    production today; the status stays in the enum as the exporter-level
+    coverage gap it exists to catch, exercised deliberately rather than
+    incidentally (see `test_manifest.py`'s own construction of the case).
     """
     return {
         spec.kind: LogbookKindExtent(

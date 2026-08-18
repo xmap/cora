@@ -151,13 +151,58 @@ TIER2_DISPOSITIONS: dict[str, dict[str, str]] = {
         # "capture_probe" kind below; no data migration needed, this
         # key never lands in a stored payload (see _registry.py).
         "event_id": TOKEN,
-        "enclosure_id": TOKEN,
+        "enclosure_id": TOKEN,  # weak at a two-enclosure facility: see status_claimed's
+        # comment below for the residual re-identification risk this leaves open.
         "source_kind": KEEP,  # judged low risk, same standard as heartbeat.source_id
         "source_id": DROP,  # NOT cleared alongside its heartbeat twin, deliberately:
         # pairing a reachability failure with the exact substrate address is
         # closer to a security disclosure about a safety system than to science.
         "reach_tier": KEEP,  # proved closed: ReachTier StrEnum
-        "status_claimed": KEEP,  # grouped with reach_tier; needs its own human pass (watch item)
+        "status_claimed": DROP,  # watch item RESOLVED at S5c. This table has no
+        # observed_at column, so S5b's "not redundant with observed_at" argument for
+        # capture_probe.phase_claimed does not transfer; the case here is independent.
+        # The real assignment is enclosure._monitor.record_observation's
+        # status_claimed=observation.observed_status is not None, where observation
+        # comes from api._enclosure_permit_observer.ControlPortEnclosureObserver: its
+        # _pump sets observed_status (not None) on every push delivery (a real reading
+        # OR a disconnect flattened to "Unknown" via _unknown) and its _poll leaves
+        # observed_status None on every tick (a periodic reaffirmation CORA itself
+        # schedules, carrying no status, via _probe_only). So the bit does not track reach
+        # (reach_tier already does that; all four (reach_tier, status_claimed) pairs are
+        # live, confirmed by reading _pump/_poll/_unknown/_probe_only directly, so neither
+        # axis derives from the other) -- it tracks whether a row came from the PSS PV's
+        # OWN push traffic or from CORA's separately-configured polling clock. That is a
+        # fact about the safety substrate's own behavior, not about CORA's reach to it,
+        # which is exactly the line source_id's own DROP above already draws for this
+        # table ("closer to a security disclosure about a safety system than to
+        # science").
+        #
+        # Adversary (per feedback_claims_need_a_threat_model.md): a reader holding the
+        # published bundle plus the facility's public beamtime schedule, who wants to
+        # attribute a specific PSS reach/coverage event to a proposal or PI. enclosure_id
+        # is TOKEN, not cleartext like capture_probe's capture_code, but at a
+        # two-enclosure facility that tokenization is weak: schedule correlation
+        # plausibly reattaches a token to a physical hutch regardless, an accepted
+        # residual risk this DROP does not resolve and is not trying to. Once that
+        # reattachment is made, an exact push/poll label on every row -- which
+        # status_claimed would have supplied for free -- lets that adversary isolate the
+        # PSS's OWN traffic (real readings and disconnects) from CORA's self-scheduled
+        # polling noise, which is a finer-grained view of that specific safety system's
+        # behavior than the trail's stated purpose (S4: when was CORA not watching,
+        # carried in full by reach_tier + recorded_at) ever needed to publish.
+        #
+        # This DROP raises the cost of that reconstruction; it does not prove the
+        # reconstruction impossible, and the comment does not claim otherwise. `_poll`
+        # runs on a fixed `tick_seconds` cadence per PV while `_pump` deliveries are
+        # change-only and irregular, so a sophisticated reader could still approximate
+        # the same push/poll split from KEPT `recorded_at` inter-arrival timing grouped
+        # by `(enclosure_id, source_kind)`, if they also knew or guessed this
+        # deployment's `tick_seconds`. Dropping the column removes the free, certain,
+        # zero-effort version of that classification; it does not close the timing side
+        # channel, which is a property of `recorded_at`'s own KEEP, not of this field,
+        # and is not resolved here. Same DROP shape as phase_claimed's S5b reversal,
+        # reached independently from this table's own shape rather than by carrying that
+        # reasoning over.
         "recorded_at": KEEP,
     },
     "capture_probe": {
