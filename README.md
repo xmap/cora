@@ -1579,7 +1579,7 @@
 | src/cora/operation/adapters/botorch\_decide\_port.py                                     |       99 |        1 |       26 |        2 |     97.6% |300, 320-\>319 |
 | src/cora/operation/adapters/caproto\_control\_port.py                                    |      115 |        3 |       30 |        3 |     95.9% |173, 224-\>227, 251-\>253, 277-278 |
 | src/cora/operation/adapters/compute\_port\_config.py                                     |       22 |        0 |        6 |        0 |    100.0% |           |
-| src/cora/operation/adapters/control\_port\_beam\_availability\_lookup.py                 |       49 |        2 |       14 |        2 |     93.7% |    63, 75 |
+| src/cora/operation/adapters/control\_port\_beam\_availability\_lookup.py                 |       63 |        2 |       22 |        2 |     95.3% |  109, 121 |
 | src/cora/operation/adapters/control\_port\_config.py                                     |       45 |        0 |       18 |        0 |    100.0% |           |
 | src/cora/operation/adapters/control\_port\_registry.py                                   |       55 |        1 |       16 |        2 |     95.8% |113-\>exit, 240 |
 | src/cora/operation/adapters/decide\_port\_config.py                                      |       43 |        0 |       12 |        0 |    100.0% |           |
@@ -2652,7 +2652,7 @@
 | src/cora/trust/routes.py                                                                 |       74 |        2 |       12 |        0 |     97.7% |   167-168 |
 | src/cora/trust/tools.py                                                                  |       60 |        0 |        0 |        0 |    100.0% |           |
 | src/cora/trust/wire.py                                                                   |       11 |        0 |        0 |        0 |    100.0% |           |
-| **TOTAL**                                                                                | **58472** | **1351** | **8674** |  **401** | **97.2%** |           |
+| **TOTAL**                                                                                | **58486** | **1351** | **8682** |  **401** | **97.2%** |           |
 
 
 ## Setup coverage badge
