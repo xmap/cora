@@ -190,13 +190,13 @@ def _extent_by_logbook_kind() -> dict[str, LogbookKindExtent]:
 
     The predicate is "does ANY reader reach this kind": either
     `spec.envelope_class is not None` (the six envelope-driven kinds) or
-    `spec.unscoped_reader is not None` (`heartbeat`, S5a). Both are
-    structural, registry-level facts about whether the exporter's
-    traversal CAN reach that kind's table at all; neither says anything
-    about what THIS export happened to find, which is the whole point
-    (see `Manifest.extent_by_logbook_kind`'s docstring). `permit_probe`
-    and `capture_probe` have neither an envelope nor an unscoped reader
-    wired yet and stay `untraversed` until S5b/S5c wire their own.
+    `spec.unscoped_reader is not None` (`heartbeat` S5a, `capture_probe`
+    S5b). Both are structural, registry-level facts about whether the
+    exporter's traversal CAN reach that kind's table at all; neither says
+    anything about what THIS export happened to find, which is the whole
+    point (see `Manifest.extent_by_logbook_kind`'s docstring).
+    `permit_probe` has neither an envelope nor an unscoped reader wired
+    yet and stays `untraversed` until S5c wires its own.
     """
     return {
         spec.kind: LogbookKindExtent(

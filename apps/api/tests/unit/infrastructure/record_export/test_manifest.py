@@ -107,13 +107,14 @@ def test_envelope_driven_kinds_are_included_regardless_of_this_records_own_rows(
         assert manifest.extent_by_logbook_kind[kind].status == LogbookKindExtentStatus.INCLUDED
 
 
-def test_kinds_with_no_envelope_and_no_unscoped_reader_are_untraversed() -> None:
-    """`permit_probe` / `capture_probe` have neither an envelope nor an
-    `unscoped_reader` wired yet (S5b/S5c); `heartbeat` is covered
-    separately below since S5a gave it one."""
+def test_kind_with_no_envelope_and_no_unscoped_reader_is_untraversed() -> None:
+    """`permit_probe` has neither an envelope nor an `unscoped_reader`
+    wired yet (S5c); `heartbeat` and `capture_probe` are covered
+    separately below since S5a/S5b each gave theirs one."""
     manifest = build_manifest(_record(), git_commit="deadbeef")
-    for kind in ("permit_probe", "capture_probe"):
-        assert manifest.extent_by_logbook_kind[kind].status == LogbookKindExtentStatus.UNTRAVERSED
+    assert manifest.extent_by_logbook_kind["permit_probe"].status == (
+        LogbookKindExtentStatus.UNTRAVERSED
+    )
 
 
 def test_heartbeat_is_included_via_its_unscoped_reader_despite_having_no_envelope() -> None:
@@ -124,6 +125,15 @@ def test_heartbeat_is_included_via_its_unscoped_reader_despite_having_no_envelop
     `heartbeat` entry."""
     manifest = build_manifest(_record(), git_commit="deadbeef")
     assert manifest.extent_by_logbook_kind["heartbeat"].status == LogbookKindExtentStatus.INCLUDED
+
+
+def test_capture_probe_is_included_via_its_unscoped_reader_despite_having_no_envelope() -> None:
+    """S5b: same predicate, same shape as heartbeat's test above, for
+    `capture_probe`'s newly-wired `unscoped_reader`."""
+    manifest = build_manifest(_record(), git_commit="deadbeef")
+    assert manifest.extent_by_logbook_kind["capture_probe"].status == (
+        LogbookKindExtentStatus.INCLUDED
+    )
 
 
 def test_registered_kinds_hash_matches_hashing_all_specs_kinds_directly() -> None:
