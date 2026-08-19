@@ -97,6 +97,22 @@ def permit_status_from_reading(reading: Measurement) -> str:
     because CORA's permit status records what the interlock reports and
     actuates nothing; the PSS, not CORA, is what holds the hutch.
 
+    The floor also bears on the IOC-restart window, but it covers less
+    of that than it first appears, so do not lean on it. A record that
+    has never had a value assigned reports `STAT=UDF` with
+    `SEVR=INVALID`, which arrives here as `Bad` and flattens to
+    `Unknown`, closing the gate. A record that was GIVEN a value
+    without ever processing does not: a `field(VAL, ...)` default at
+    load, or an autosave restore at boot, clears `UDF` and leaves
+    `SEVR=NO_ALARM`, so it arrives as `Good` while still carrying no
+    substrate timestamp. Measured on a scratch IOC, base 7.0.8 with
+    autosave R5-11, 2026-08; see `tomography/tomoscan#182`.
+
+    Which group 2-BM's SecureM falls into is unconfirmed, so this floor
+    is not a restart guard. The only signal separating a stamped
+    reading from an unstamped one is `produced_at`, which this path
+    carries as evidence and never gates on.
+
     Both shapes a CA adapter can hand back are accepted, because a
     real SecureM is a `bi` record and arrives as `kind="Categorical"`.
     For DBR_ENUM, `EpicsCaControlPort` resolves the index to its label
