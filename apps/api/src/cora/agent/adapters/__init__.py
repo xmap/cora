@@ -1,9 +1,11 @@
 """Agent BC adapters: production implementors of `cora.infrastructure.ports`.
 
 Per cross-BC convention (Safety BC owns `PostgresClearanceLookup`,
-Caution BC owns `PostgresCautionLookup`), Agent BC owns the
-production `AnthropicLLM`. Adapters here import vendor
-SDKs; consumers everywhere else (subscribers, deciders, tests)
+Caution BC owns `PostgresCautionLookup`), Agent BC owns every
+production serving adapter: `AnthropicLLM` for the direct vendor
+call, `ArgoLLM` for the same models through Argonne's gateway, and
+`LocalLLM` for a facility-hosted open model. Adapters here import
+vendor SDKs; consumers everywhere else (subscribers, deciders, tests)
 depend only on `cora.infrastructure.ports.LLM`.
 """
 

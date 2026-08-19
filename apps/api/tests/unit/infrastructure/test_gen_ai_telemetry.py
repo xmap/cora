@@ -7,6 +7,7 @@ import logging
 import pytest
 from opentelemetry import trace
 
+from cora.infrastructure.observability import gen_ai
 from cora.infrastructure.observability.gen_ai import (
     PRICING,
     ModelPricing,
@@ -55,6 +56,33 @@ def test_compute_cost_sums_all_four_token_types() -> None:
 
 
 @pytest.mark.unit
+def test_zero_rate_overlay_prices_at_zero_and_shadows_static_table() -> None:
+    """A metered-free in-house model installs a zero-rate overlay entry: it must
+    price at exactly $0 WITHOUT the unpriced warning, and it must shadow the
+    static PRICING table so an entry whose identity collides with a priced static
+    row does not fall through to that nonzero rate. This is what keeps
+    "declared free" distinct from "silently unpriced"."""
+    # claude-opus-4-8 is priced nonzero in the static table ($5 / $25 per MTok).
+    ref = ModelRef(provider="anthropic", model="claude-opus-4-8")
+    set_pricing_overlay(
+        {
+            (ref.provider, ref.model): ModelPricing(
+                input_per_mtok=0.0,
+                output_per_mtok=0.0,
+                cache_write_per_mtok=0.0,
+                cache_read_per_mtok=0.0,
+            )
+        }
+    )
+    try:
+        cost = compute_cost_usd(ref, LLMUsage(input_tokens=1_000_000, output_tokens=1_000_000))
+        assert cost == 0.0
+        assert (ref.provider, ref.model) not in _warned_missing_pricing
+    finally:
+        set_pricing_overlay({})
+
+
+@pytest.mark.unit
 def test_unknown_model_returns_zero_and_logs_once(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -69,6 +97,118 @@ def test_unknown_model_returns_zero_and_logs_once(
     assert cost2 == 0.0
     matches = [r for r in caplog.records if "no PRICING entry" in r.getMessage()]
     assert len(matches) == 1, "warning must fire once per process per (provider, model)"
+
+
+class _SpyCounter:
+    """Records every `add`, standing in for the OTel counter.
+
+    A spy rather than an SDK `MeterProvider`: `set_meter_provider` is honoured
+    once per process, so installing one here would make the assertion depend on
+    test order.
+    """
+
+    def __init__(self) -> None:
+        self.adds: list[tuple[int, dict[str, str] | None]] = []
+
+    def add(self, amount: int, attributes: dict[str, str] | None = None) -> None:
+        self.adds.append((amount, attributes))
+
+
+@pytest.mark.unit
+def test_unpriced_call_counts_every_call_not_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The warning above dedupes to once per process, which is why it cannot
+    carry an alert. The counter has to fire on every unpriced call so that a
+    nonzero rate is alertable: an unpriced model leaves the USD arm of both
+    enforcement tiers inert while the token cap keeps working and hides it."""
+    spy = _SpyCounter()
+    monkeypatch.setattr(gen_ai, "_unpriced_call_counter", spy)
+    unknown = ModelRef(provider="acme", model="mystery-1")
+    usage = LLMUsage(input_tokens=1_000, output_tokens=1_000)
+
+    assert compute_cost_usd(unknown, usage) == 0.0
+    assert compute_cost_usd(unknown, usage) == 0.0
+
+    assert [amount for amount, _ in spy.adds] == [1, 1]
+    assert spy.adds[0][1] == {
+        "gen_ai.provider.name": "acme",
+        "gen_ai.request.model": "mystery-1",
+    }
+
+
+@pytest.mark.unit
+def test_priced_call_leaves_the_unpriced_counter_untouched(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    spy = _SpyCounter()
+    monkeypatch.setattr(gen_ai, "_unpriced_call_counter", spy)
+
+    compute_cost_usd(
+        ModelRef(provider="anthropic", model="claude-opus-4-8"),
+        LLMUsage(input_tokens=1_000_000, output_tokens=0),
+    )
+
+    assert spy.adds == []
+
+
+@pytest.mark.unit
+def test_sequential_calls_are_never_counted_as_concurrent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A zero rate is the whole point of the signal: it is what would retire
+    the shared-envelope race's trigger on evidence. So calls that do not
+    overlap must never inflate it."""
+    spy = _SpyCounter()
+    monkeypatch.setattr(gen_ai, "_concurrent_call_counter", spy)
+    ref = ModelRef(provider="anthropic", model="claude-opus-4-8")
+
+    with gen_ai.track_in_flight_call(ref):
+        pass
+    with gen_ai.track_in_flight_call(ref):
+        pass
+
+    assert spy.adds == []
+    assert gen_ai._in_flight_calls == 0
+
+
+@pytest.mark.unit
+def test_call_starting_inside_another_is_counted_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The second caller opening its window inside the first's is exactly the
+    precondition for the stale read the post-hoc arm admits on."""
+    spy = _SpyCounter()
+    monkeypatch.setattr(gen_ai, "_concurrent_call_counter", spy)
+    ref = ModelRef(provider="anthropic", model="claude-opus-4-8")
+
+    with gen_ai.track_in_flight_call(ref), gen_ai.track_in_flight_call(ref):
+        pass
+
+    assert [amount for amount, _ in spy.adds] == [1]
+    assert spy.adds[0][1] == {
+        "gen_ai.provider.name": "anthropic",
+        "gen_ai.request.model": "claude-opus-4-8",
+    }
+    assert gen_ai._in_flight_calls == 0
+
+
+@pytest.mark.unit
+def test_in_flight_depth_unwinds_when_the_call_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A leaked depth would make every later call look concurrent forever,
+    turning the one signal that can retire the trigger into a permanent false
+    positive. Provider errors are the normal case, not the exotic one."""
+    spy = _SpyCounter()
+    monkeypatch.setattr(gen_ai, "_concurrent_call_counter", spy)
+    ref = ModelRef(provider="anthropic", model="claude-opus-4-8")
+
+    with pytest.raises(RuntimeError), gen_ai.track_in_flight_call(ref):
+        raise RuntimeError("provider refused the call")
+
+    assert gen_ai._in_flight_calls == 0
+    with gen_ai.track_in_flight_call(ref):
+        pass
+    assert spy.adds == []
 
 
 @pytest.mark.unit

@@ -34,10 +34,18 @@ Anthropic-specific (not in spec yet, included per their cookbook):
 
 `cora.agent.llm.cost.usd` is a custom histogram (no OTel spec
 equivalent today). Computed in `compute_cost_usd` from `PRICING`
-indexed by `(provider, model)`. Unknown models cost 0.0 with a
-warning logged once per process (the adapter alerts so operators
-notice unpriced models in dashboards rather than discovering it
-silently at billing reconciliation).
+indexed by `(provider, model)`. Unknown models cost 0.0, with a
+warning logged once per process so it cannot flood, and the
+`cora.agent.llm.unpriced_calls` counter incremented on every such
+call so the condition is alertable rather than only visible as a
+flat $0 series someone has to notice at billing reconciliation.
+
+`cora.agent.llm.concurrent_calls` counts calls that begin while
+another is still in flight, via `track_in_flight_call`. It exists to
+answer one question the budget enforcement ladder cannot answer from
+the code alone: the shared-envelope race is characterized at its
+worst case, but its incidence is unmeasured. See that tracker's
+docstring for how to read a zero.
 
 The pricing table is intentionally a plain `dict` rather than a
 config file: cadence is too low for runtime overrides, and the
@@ -67,6 +75,7 @@ register orphan instruments.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
 from logging import getLogger
 from typing import TYPE_CHECKING
@@ -74,7 +83,7 @@ from typing import TYPE_CHECKING
 from opentelemetry import metrics
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Generator, Mapping
 
     from opentelemetry.trace import Span
 
@@ -143,6 +152,29 @@ PRICING: dict[tuple[str, str], ModelPricing] = {
     ),
 }
 
+# Argo serves these same vendor models, so the same list rates carry
+# over unchanged. This is a counterfactual price, not an invoice: the
+# facility absorbs the gateway's cost rather than the deployment, and
+# what the envelope debits is what the call WOULD have cost bought
+# directly. That is the point of a source-agnostic envelope, since a
+# route someone else funds is not a free one. A negotiated or
+# facility-specific rate belongs in the catalog overlay, which is
+# consulted first.
+#
+# Mirroring the table also gives the gateway the same safety net the
+# direct path has. Every call is gated at registration on an Approved
+# catalog entry, and approval refuses a GPU-hour basis, so the overlay
+# normally answers. Without these entries a retired catalog entry would
+# drop an Argo call to zero while the identical Anthropic call stayed
+# priced.
+PRICING.update(
+    {
+        ("argo", model): pricing
+        for (provider, model), pricing in list(PRICING.items())
+        if provider == "anthropic"
+    }
+)
+
 # Track which (provider, model) pairs we've already warned about,
 # so unpriced-model warnings fire once per process per pair rather
 # than per call (would flood the log under steady traffic).
@@ -185,6 +217,59 @@ _cost_histogram = _meter.create_histogram(
     unit="USD",
     description="Per-call LLM cost in USD computed from usage tokens and provider pricing",
 )
+_unpriced_call_counter = _meter.create_counter(
+    name="cora.agent.llm.unpriced_calls",
+    unit="{call}",
+    description="LLM calls recorded at $0 because no catalog or static pricing entry resolved",
+)
+_concurrent_call_counter = _meter.create_counter(
+    name="cora.agent.llm.concurrent_calls",
+    unit="{call}",
+    description="LLM calls started while another was already in flight in this process",
+)
+
+# Process-local in-flight depth. A plain int is sound here because the LLM
+# callers share one event loop (the projection worker runs its subscribers as
+# concurrent tasks in a single TaskGroup) and nothing awaits between the read
+# and the increment in the tracker below.
+_in_flight_calls = 0
+
+
+@contextmanager
+def track_in_flight_call(model_ref: ModelRef) -> Generator[None]:
+    """Count LLM calls that begin while another is already in flight.
+
+    This measures the PRECONDITION for the shared-envelope race, which is the
+    one quantity the enforcement ladder could not supply. The allocation
+    gate's post-hoc arm reads recorded spend and admits; a caller reaching the
+    gate before an earlier caller has posted reads a stale total and is
+    admitted against spend already committed. The worst case is characterized
+    (two callers leak two calls through a ceiling that should have stopped
+    one). What was never known is how often the window actually opens.
+
+    A nonzero `cora.agent.llm.concurrent_calls` rate says the window opens and
+    the residual is real. A flat zero across a representative period says the
+    race is theoretical in this deployment, and the reserve-post-void tier's
+    trigger can then be retired on evidence rather than on argument.
+
+    Scope: process-local, which is the scope of the observed race. Calls
+    racing from separate replicas are not counted; seeing those would need
+    the ledger to carry a call start time, which it does not.
+    """
+    global _in_flight_calls
+    if _in_flight_calls > 0:
+        _concurrent_call_counter.add(
+            1,
+            {
+                "gen_ai.provider.name": model_ref.provider,
+                "gen_ai.request.model": model_ref.model,
+            },
+        )
+    _in_flight_calls += 1
+    try:
+        yield
+    finally:
+        _in_flight_calls -= 1
 
 
 @dataclass(frozen=True)
@@ -230,12 +315,21 @@ def estimate_llm_call_ceiling(
 def compute_cost_usd(model_ref: ModelRef, usage: LLMUsage) -> float:
     """Compute the dollar cost of one LLM call.
 
-    Returns 0.0 with a one-time warning when `(provider, model)` is
-    in neither the catalog overlay nor `PRICING`. The 0.0 is
-    intentional: dashboards then show a flat $0 series for unpriced
-    models, which is easier to notice than raising and breaking the
-    call. Operators add a `PRICING` entry (or approve a catalog
-    entry) when they see the warning.
+    Returns 0.0 when `(provider, model)` is in neither the catalog
+    overlay nor `PRICING`. The 0.0 is intentional: dashboards then
+    show a flat $0 series for unpriced models, which is easier to
+    notice than raising and breaking the call. Operators add a
+    `PRICING` entry (or approve a catalog entry) when they see it.
+
+    Two signals fire on that path and they carry different weight.
+    The log warning is deduplicated to once per process per identity
+    so it cannot flood, which is also why it cannot carry an alert.
+    The `cora.agent.llm.unpriced_calls` counter increments on EVERY
+    unpriced call, so a nonzero rate is alertable. That matters
+    because an unpriced model does not merely mis-report a dashboard:
+    it makes the USD arm of both enforcement tiers inert (the
+    post-hoc gate sums $0 forever and the pre-estimate guard projects
+    $0), while the daily token cap keeps working and masks it.
 
     Cache-read tokens are billed at ~10% of base input; cache-write
     tokens are billed at 2x base input (the 1-hour TTL tier the
@@ -247,6 +341,13 @@ def compute_cost_usd(model_ref: ModelRef, usage: LLMUsage) -> float:
     key = (model_ref.provider, model_ref.model)
     pricing = _resolve_pricing(key)
     if pricing is None:
+        _unpriced_call_counter.add(
+            1,
+            {
+                "gen_ai.provider.name": model_ref.provider,
+                "gen_ai.request.model": model_ref.model,
+            },
+        )
         if key not in _warned_missing_pricing:
             _warned_missing_pricing.add(key)
             _log.warning(

@@ -59,6 +59,30 @@ the port-level error classes. Mapping:
   - `APIConnectionError`              -> `LLMServerError` (network-flavored)
   - Any other `APIStatusError`        -> `LLMServerError` (defensive default)
   - Tool-use missing / schema mismatch on response -> `LLMSchemaValidationError`
+
+## Serving the same protocol through a gateway
+
+Two constructor arguments, `provider_name` and `resolve_model_id`,
+exist so a gateway that speaks the Anthropic Messages protocol can
+reuse this adapter's mechanics without a second copy of them.
+`ArgoLLM` is the caller: Argonne's gateway serves `/v1/messages`
+unchanged (forced tool-use and 1h-TTL cache breakpoints both
+measured working through it) but wants bespoke model identifiers on
+the wire and its own name in telemetry.
+
+A third, `inspect_response`, exists because a gateway can return
+something that is shaped like a response but is not one. Argo answers
+an unrecognized username with HTTP 200 and a synthetic assistant
+message, so the hook runs before structured-output extraction and lets
+the gateway's adapter classify that as the authentication failure it
+is. Without it the missing tool-use block would surface as a schema
+error and send an operator to debug a prompt over a credential.
+
+None of the three make this a config-switched multi-provider
+adapter. Gateway-specific concerns (the identifier map, the refusal
+to accept a snapshot pin the gateway cannot honor) live in the
+gateway's own adapter class, so the direct-Anthropic path stays free
+of them.
 """
 
 from __future__ import annotations
@@ -74,7 +98,7 @@ from anthropic.types import (
 )
 from opentelemetry import trace
 
-from cora.infrastructure.observability.gen_ai import record_llm_call
+from cora.infrastructure.observability.gen_ai import record_llm_call, track_in_flight_call
 from cora.infrastructure.ports.llm import (
     CacheBreakpoint,
     LLMAuthenticationError,
@@ -90,7 +114,12 @@ from cora.infrastructure.ports.llm import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from anthropic.types.tool_choice_tool_param import ToolChoiceToolParam
+
+# Reported as `gen_ai.provider.name` when no gateway overrides it.
+_DIRECT_PROVIDER_NAME = "anthropic"
 
 # Single stable tool name across every call so the tools-layer
 # cache breakpoint stays warm. The schema differs per call (lives
@@ -139,12 +168,18 @@ class AnthropicLLM:
         max_retries: int = _DEFAULT_MAX_RETRIES,
         request_timeout_seconds: float = _DEFAULT_REQUEST_TIMEOUT_SECONDS,
         client: anthropic.AsyncAnthropic | None = None,
+        provider_name: str = _DIRECT_PROVIDER_NAME,
+        resolve_model_id: Callable[[ModelRef], str] | None = None,
+        inspect_response: Callable[[anthropic.types.Message], None] | None = None,
     ) -> None:
         self._client = client or anthropic.AsyncAnthropic(
             api_key=api_key,
             max_retries=max_retries,
             timeout=request_timeout_seconds,
         )
+        self._provider_name = provider_name
+        self._resolve_model_id = resolve_model_id or _resolve_model_id
+        self._inspect_response = inspect_response
 
     async def aclose(self) -> None:
         """Release the underlying httpx connection pool.
@@ -189,9 +224,12 @@ class AnthropicLLM:
         }
 
         extra_headers = _maybe_extended_cache_header(request)
-        model_id = _resolve_model_id(request.model_ref)
+        model_id = self._resolve_model_id(request.model_ref)
 
-        with _tracer.start_as_current_span("llm.chat") as span:
+        with (
+            track_in_flight_call(request.model_ref),
+            _tracer.start_as_current_span("llm.chat") as span,
+        ):
             try:
                 message = await self._client.messages.create(
                     model=model_id,
@@ -221,6 +259,9 @@ class AnthropicLLM:
                 # exception) would skip the retry layer.
                 raise LLMServerError(str(exc)) from exc
 
+            if self._inspect_response is not None:
+                self._inspect_response(message)
+
             parsed = _extract_structured_output(message)
             raw_text = _extract_raw_text(message)
             usage = _to_llm_usage(message.usage)
@@ -238,7 +279,7 @@ class AnthropicLLM:
             # consumers that want the value compute it from usage.
             record_llm_call(
                 span,
-                provider_name="anthropic",
+                provider_name=self._provider_name,
                 request_model_ref=request.model_ref,
                 response_model_id=response_model_id,
                 usage=usage,
