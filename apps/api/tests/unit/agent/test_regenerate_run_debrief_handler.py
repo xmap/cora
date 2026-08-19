@@ -54,6 +54,7 @@ from cora.infrastructure.ports import (
 from cora.run.aggregates.run import RunCompleted, RunNotFoundError, RunStarted
 from cora.run.aggregates.run import event_type_name as run_event_type_name
 from cora.run.aggregates.run import to_payload as run_to_payload
+from cora.run.aggregates.run.state import CaptureProgressSnapshot
 from cora.shared.identity import ActorId
 from tests.unit._helpers import build_deps
 from tests.unit.agent._helpers import (
@@ -125,6 +126,8 @@ async def _seed_run(
     run_id: UUID,
     *,
     completed: bool = False,
+    frames_saved: int | None = None,
+    frames_expected: int | None = None,
 ) -> None:
     """Seed a Run stream, optionally carrying its terminal event.
 
@@ -157,7 +160,22 @@ async def _seed_run(
     )
     if not completed:
         return
-    finished = RunCompleted(run_id=run_id, occurred_at=_NOW, observed_at=None)
+    snapshot = None
+    if frames_saved is not None and frames_expected is not None:
+        snapshot = CaptureProgressSnapshot(
+            saved_count=float(frames_saved),
+            saved_total=float(frames_expected),
+            saved_at=_NOW,
+            collected_count=None,
+            collected_total=None,
+            collected_at=None,
+        )
+    finished = RunCompleted(
+        run_id=run_id,
+        occurred_at=_NOW,
+        observed_at=_NOW,
+        capture_progress_snapshot=snapshot,
+    )
     await store.append(
         stream_type="Run",
         stream_id=run_id,
@@ -1087,3 +1105,36 @@ async def test_handler_payload_reports_the_runs_own_terminal_event() -> None:
     assert decision is not None
     assert decision.inputs is not None
     assert decision.inputs["trigger"] == "on-demand"
+
+
+@pytest.mark.unit
+async def test_handler_payload_carries_the_frame_tallies() -> None:
+    """A debrief cannot flag lost data it was never shown.
+
+    The choice set has always listed missing frames under DataSuspect,
+    while the payload withheld the frame counts. On 2-BM's record that
+    cost 255 Runs, each about 10 frames short, every one of them
+    debriefed as NominalCompletion, because the agent had no field that
+    said otherwise.
+    """
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_run(store, run_id, completed=True, frames_saved=1530, frames_expected=1541)
+    deps = build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm)
+    handler = bind(deps)
+
+    await handler(
+        RegenerateRunDebrief(run_id=run_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    sent = llm.received[0].user_message.text
+    assert '"frames_saved": 1530' in sent
+    assert '"frames_expected": 1541' in sent
+    # The staleness figure must travel with the tallies. Counts alone
+    # invite the model to read a reporting gap as lost data, which on
+    # 2-BM's record would have meant reporting data loss on 255 Runs.
+    assert "reading_age_seconds_before_terminal" in sent

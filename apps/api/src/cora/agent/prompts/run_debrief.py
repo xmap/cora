@@ -217,7 +217,25 @@ Pick ONE of these six values; do not invent your own.
   NEVER select this value. The system uses it when the LLM call itself fails.
 
 If the terminal event is `RunCompleted` and you see no signs of distress in
-the snapshot, pick `NominalCompletion` with high confidence. If the terminal
+the snapshot, pick `NominalCompletion` with high confidence.
+
+`capture_progress` reports the last frame counts that REACHED the record before
+the Run ended, not a completeness audit. `frames_saved` short of
+`frames_expected` does NOT by itself mean frames were lost, and you must not
+report it as data loss. Read it together with
+`reading_age_seconds_before_terminal`, which is how stale that reading was:
+
+- A shortfall with a LARGE reading age is most likely a reporting gap. The
+  counter stopped being read, not the acquisition. Note the shortfall as
+  unconfirmed, say the reading was stale, and keep `NominalCompletion` if
+  nothing else is wrong.
+- A shortfall with a SMALL reading age is harder to explain away and is worth
+  `DataSuspect`, still phrased as a shortfall in what was reported rather than
+  as a count of lost frames.
+
+Whether files on disk are complete is not in this payload and cannot be
+concluded from it. When `capture_progress` is absent, draw no conclusion from
+its absence. If the terminal
 event is `RunAborted` and the reason is ambiguous, prefer `EquipmentAbort` over
 `OperatorAbort` when the reason mentions hardware vocabulary (interlock, fault,
 loss, error, trip, offline, disconnect, timeout), otherwise prefer
@@ -324,6 +342,19 @@ class RunDebriefPayload:
     distinct from `terminal_event_occurred_at` which is when the
     truncate command was processed).
 
+    `capture_progress` carries the terminal snapshot's frame tallies
+    plus `reading_age_seconds_before_terminal`, or `None` for a Run with
+    no snapshot. Before it existed the payload said nothing about frame
+    counts, so a debrief could not reach `DataSuspect` on the "missing
+    frames" ground the choice set has always listed.
+
+    The staleness figure travels WITH the tallies and is not optional
+    decoration. On 2-BM's record a 14.5-hour window showed a consistent
+    11-frame shortfall that correlates with reading lag rising from 12 s
+    to 70 s, which reads as telemetry going quiet rather than frames
+    being lost. Counts alone would have led a debrief to report data
+    loss across 255 Runs on that evidence.
+
     Deferred to v2 (broader read scope; trigger per design memo:
     operators rate v1 as `misleading` citing absent context):
     `method_id` (requires Plan load), `acknowledged_cautions`
@@ -345,6 +376,7 @@ class RunDebriefPayload:
     adjustment_count: int
     last_adjusted_at: str | None  # ISO-8601 or None
     interrupted_at: str | None  # ISO-8601 (RunTruncated only)
+    capture_progress: dict[str, int] | None = None
 
 
 def build_run_debrief_chat_request(
@@ -406,6 +438,7 @@ def _payload_to_json_safe(payload: RunDebriefPayload) -> dict[str, Any]:
         "adjustment_count": payload.adjustment_count,
         "last_adjusted_at": payload.last_adjusted_at,
         "interrupted_at": payload.interrupted_at,
+        "capture_progress": payload.capture_progress,
     }
 
 

@@ -86,6 +86,7 @@ from cora.agent.seed import (
     RUN_DEBRIEFER_AGENT_NAME,
 )
 from cora.agent.subscribers._terminal_run_helpers import (
+    extract_capture_progress,
     extract_interrupted_at,
     extract_reason,
     find_terminal_run_event,
@@ -302,6 +303,7 @@ def bind(deps: Kernel) -> Handler:
                 run.last_adjusted_at.isoformat() if run.last_adjusted_at is not None else None
             ),
             interrupted_at=(extract_interrupted_at(terminal) if terminal is not None else None),
+            capture_progress=(extract_capture_progress(terminal) if terminal is not None else None),
         )
         # Same rule as the subscriber: serve the model the Agent
         # declares, so an operator-triggered regenerate cannot reach a
