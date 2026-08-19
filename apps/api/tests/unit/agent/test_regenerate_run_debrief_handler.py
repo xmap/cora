@@ -24,6 +24,7 @@ from cora.access.aggregates.actor import event_type_name as actor_event_type_nam
 from cora.access.aggregates.actor import to_payload as actor_to_payload
 from cora.agent.aggregates.agent import (
     AgentDeactivatedError,
+    AgentKindMismatchError,
     AgentNotSeededError,
     AgentSuspendedError,
 )
@@ -57,6 +58,7 @@ from tests.unit._helpers import build_deps
 from tests.unit.agent._helpers import (
     FakeInferenceRecorder,
     FakeSpendLookup,
+    seed_defined_agent,
     seed_suspended_agent,
     seed_versioned_agent,
 )
@@ -817,3 +819,140 @@ async def test_handler_serves_the_model_the_agent_declares() -> None:
     served = llm.received[0].model_ref
     assert served.provider == "argo"
     assert served.provider != DEFAULT_RUN_DEBRIEF_MODEL.provider
+
+
+_OTHER_DEBRIEFER_ID = UUID("01900000-0000-7000-8000-0000aaaa0b01")
+
+
+async def _seed_actor_at(store: InMemoryEventStore, actor_id: UUID) -> None:
+    """Register an Actor at an arbitrary id, for the named-agent tests."""
+    event = ActorRegistered(actor_id=actor_id, occurred_at=_NOW, kind=ActorKind.AGENT)
+    await store.append(
+        stream_type="Actor",
+        stream_id=actor_id,
+        expected_version=0,
+        events=[
+            to_new_event(
+                event_type=actor_event_type_name(event),
+                payload=actor_to_payload(event),
+                occurred_at=_NOW,
+                event_id=uuid4(),
+                command_name="SeedTestAgent",
+                correlation_id=_CORRELATION_ID,
+                causation_id=None,
+                principal_id=_PRINCIPAL_ID,
+            )
+        ],
+    )
+
+
+@pytest.mark.unit
+async def test_handler_named_agent_serves_that_agents_model_and_owns_the_decision() -> None:
+    """The operator half of the comparison: same Run, a different debriefer.
+
+    Both halves matter. The call must serve the named Agent's declared
+    model, and the resulting Decision must be attributed to that Agent,
+    or the record could not say which model produced which verdict.
+    """
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_actor_at(store, _OTHER_DEBRIEFER_ID)
+    await seed_versioned_agent(
+        store,
+        agent_id=_OTHER_DEBRIEFER_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        model_ref=AgentModelRef(provider="argo", model="claude-haiku-4-5"),
+    )
+    await _seed_run(store, run_id)
+    deps = build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm)
+    handler = bind(deps)
+
+    decision_id = await handler(
+        RegenerateRunDebrief(run_id=run_id, agent_id=_OTHER_DEBRIEFER_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert llm.received[0].model_ref.provider == "argo"
+    decision = await load_decision(store, decision_id)
+    assert decision is not None
+    assert decision.decided_by == _OTHER_DEBRIEFER_ID
+
+
+@pytest.mark.unit
+async def test_handler_refuses_a_named_agent_of_the_wrong_kind() -> None:
+    """A CautionDrafter must not author a RunDebrief-context Decision."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_actor_at(store, _OTHER_DEBRIEFER_ID)
+    await seed_defined_agent(
+        store,
+        agent_id=_OTHER_DEBRIEFER_ID,
+        genesis_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        occurred_at=_NOW,
+        kind="CautionDrafter",
+    )
+    await _seed_run(store, run_id)
+    deps = build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm)
+    handler = bind(deps)
+
+    with pytest.raises(AgentKindMismatchError):
+        await handler(
+            RegenerateRunDebrief(run_id=run_id, agent_id=_OTHER_DEBRIEFER_ID),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+    assert llm.received == []
+
+
+@pytest.mark.unit
+async def test_handler_refuses_a_named_agent_with_no_agent_record() -> None:
+    """An Actor alone is tolerated for the seeded default, not for a named one."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_actor_at(store, _OTHER_DEBRIEFER_ID)
+    await _seed_run(store, run_id)
+    deps = build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm)
+    handler = bind(deps)
+
+    with pytest.raises(AgentNotSeededError):
+        await handler(
+            RegenerateRunDebrief(run_id=run_id, agent_id=_OTHER_DEBRIEFER_ID),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+
+@pytest.mark.unit
+async def test_handler_without_a_named_agent_still_uses_the_seeded_singleton() -> None:
+    """Omitting agent_id leaves every existing caller on its current path."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_run(store, run_id)
+    deps = build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm)
+    handler = bind(deps)
+
+    decision_id = await handler(
+        RegenerateRunDebrief(run_id=run_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    decision = await load_decision(store, decision_id)
+    assert decision is not None
+    assert decision.decided_by == RUN_DEBRIEFER_AGENT_ID

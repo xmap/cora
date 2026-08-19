@@ -166,6 +166,7 @@ async def seed_defined_agent(
     monthly_usd_cap: float | None = None,
     daily_token_cap: int | None = None,
     model_ref: ModelRef | None = None,
+    kind: str = "RunDebriefer",
 ) -> None:
     """Append a single `AgentDefined` event to a fresh Agent stream.
 
@@ -181,7 +182,7 @@ async def seed_defined_agent(
     """
     genesis = AgentDefined(
         agent_id=agent_id,
-        kind="RunDebriefer",
+        kind=kind,
         name="Run Debrief",
         version="v1",
         model_ref=model_ref or ModelRef(provider="anthropic", model="claude-sonnet-4-6"),

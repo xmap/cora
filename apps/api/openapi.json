@@ -11797,6 +11797,19 @@
       "RegenerateRunDebriefRequest": {
         "description": "Body for `POST /agents/run-debriefer/runs/{run_id}/regenerate-debrief`.",
         "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which RunDebriefer performs the debrief. Omit for the seeded singleton. Naming another RunDebriefer re-debriefs the Run under that Agent's own declared model, which is how the same Run is compared across two approved models. Must be kind RunDebriefer.",
+            "title": "Agent Id"
+          },
           "parent_decision_id": {
             "anyOf": [
               {
@@ -18779,7 +18792,7 @@
                 }
               }
             },
-            "description": "Cross-aggregate invariant violated: Run missing, agent not seeded / deactivated, parent_decision missing, or parent Decision references a different Run."
+            "description": "Cross-aggregate invariant violated: Run missing, agent not seeded / deactivated / not a RunDebriefer, parent_decision missing, or parent Decision references a different Run."
           },
           "403": {
             "content": {

@@ -64,6 +64,7 @@ from cora.access.aggregates.actor import load_actor
 from cora.agent._model_ref import to_port_model_ref
 from cora.agent.aggregates.agent import (
     AgentDeactivatedError,
+    AgentKindMismatchError,
     AgentNotSeededError,
     AgentStatus,
     AgentSuspendedError,
@@ -78,7 +79,11 @@ from cora.agent.prompts import (
     build_run_debrief_chat_request,
 )
 from cora.agent.prompts.run_debrief import DEFAULT_RUN_DEBRIEF_MODEL
-from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID, RUN_DEBRIEFER_AGENT_NAME
+from cora.agent.seed import (
+    RUN_DEBRIEFER_AGENT_ID,
+    RUN_DEBRIEFER_AGENT_KIND,
+    RUN_DEBRIEFER_AGENT_NAME,
+)
 from cora.agent.subscribers.run_debriefer import redact_secrets
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_RUN_DEBRIEF,
@@ -158,9 +163,14 @@ def bind(deps: Kernel) -> Handler:
         causation_id: UUID | None = None,
         surface_id: UUID = NIL_SENTINEL_ID,
     ) -> UUID:
+        # Which RunDebriefer performs this. Defaults to the seeded
+        # singleton, so every existing caller is unaffected.
+        debriefer_agent_id = command.agent_id or RUN_DEBRIEFER_AGENT_ID
+
         log = _log.bind(
             command_name=_COMMAND_NAME,
             run_id=str(command.run_id),
+            debriefer_agent_id=str(debriefer_agent_id),
             parent_decision_id=(
                 str(command.parent_decision_id) if command.parent_decision_id is not None else None
             ),
@@ -186,11 +196,11 @@ def bind(deps: Kernel) -> Handler:
             raise RunNotFoundError(command.run_id)
 
         # Pre-load RunDebriefer Agent's Actor and gate on active.
-        actor = await load_actor(deps.event_store, RUN_DEBRIEFER_AGENT_ID)
+        actor = await load_actor(deps.event_store, debriefer_agent_id)
         if actor is None:
-            raise AgentNotSeededError(RUN_DEBRIEFER_AGENT_ID, RUN_DEBRIEFER_AGENT_NAME)
+            raise AgentNotSeededError(debriefer_agent_id, RUN_DEBRIEFER_AGENT_NAME)
         if not actor.active:
-            raise AgentDeactivatedError(RUN_DEBRIEFER_AGENT_ID)
+            raise AgentDeactivatedError(debriefer_agent_id)
 
         # Suspension gate: the reversible operator pause means the agent
         # takes no actions, and an on-demand regenerate must not defeat
@@ -198,9 +208,24 @@ def bind(deps: Kernel) -> Handler:
         # absent here: an operator-triggered regenerate is a conscious,
         # human-accountable spend (the coarse post-hoc tier targets the
         # autonomous subscribers), and the call still debits the ledger.
-        agent = await load_agent(deps.event_store, RUN_DEBRIEFER_AGENT_ID)
+        agent = await load_agent(deps.event_store, debriefer_agent_id)
         if agent is not None and agent.status is AgentStatus.SUSPENDED:
-            raise AgentSuspendedError(RUN_DEBRIEFER_AGENT_ID)
+            raise AgentSuspendedError(debriefer_agent_id)
+
+        # An operator-named agent has to exist as an Agent, not merely as
+        # an Actor, and has to be a RunDebriefer. The seeded default is
+        # exempt from the existence half because the apply path already
+        # tolerates an Actor-only deployment; an explicitly named one is
+        # a deliberate choice and gets checked.
+        if command.agent_id is not None:
+            if agent is None:
+                raise AgentNotSeededError(debriefer_agent_id, RUN_DEBRIEFER_AGENT_NAME)
+            if agent.kind.value != RUN_DEBRIEFER_AGENT_KIND:
+                raise AgentKindMismatchError(
+                    debriefer_agent_id,
+                    RUN_DEBRIEFER_AGENT_KIND,
+                    agent.kind.value,
+                )
 
         # Pre-load parent Decision when ref set; enforce same-agent +
         # same-Run scope.
@@ -327,7 +352,7 @@ def bind(deps: Kernel) -> Handler:
                 request=request,
                 response=response,
                 occurred_at=now,
-                principal_id=RUN_DEBRIEFER_AGENT_ID,
+                principal_id=debriefer_agent_id,
                 correlation_id=correlation_id,
                 causation_id=causation_id,
                 log=log,
