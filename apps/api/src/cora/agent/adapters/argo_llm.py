@@ -93,9 +93,9 @@ ARGO_PROVIDER_NAME = "argo"
 """Reported as `gen_ai.provider.name`, and required on `ModelRef.provider`.
 
 Pricing resolves from the ModelRef's own provider field, while span
-and histogram attributes come from the adapter. `chat` requires the
-two to agree so a call cannot be served by the gateway and priced as
-a direct-vendor purchase at the same time.
+and histogram attributes come from the adapter. `AnthropicLLM` requires
+the two to agree, so a call cannot be served by the gateway and priced
+as a direct-vendor purchase at the same time, nor the reverse.
 """
 
 _ARGO_MODEL_IDS = MappingProxyType(
@@ -234,15 +234,10 @@ class ArgoLLM:
         await self._inner.aclose()
 
     async def chat(self, request: LLMChatRequest) -> LLMResponse:
-        if request.model_ref.provider != ARGO_PROVIDER_NAME:
-            msg = (
-                f"ArgoLLM was handed a model_ref with provider "
-                f"{request.model_ref.provider!r}, but cost resolves from that "
-                f"field while the call is served by the gateway. Price the "
-                f"entry as {ARGO_PROVIDER_NAME!r} in the catalog, or select "
-                "the direct-vendor adapter."
-            )
-            raise LLMInvalidRequestError(msg)
+        # The provider-agreement guard is not repeated here. It lives in
+        # AnthropicLLM keyed on `provider_name`, which this adapter sets
+        # to `argo`, so both the gateway and the direct path are covered
+        # by one check rather than by two that could drift apart.
         return await self._inner.chat(request)
 
 
