@@ -102,13 +102,17 @@ once at boot (`cora.agent.build_llm.build_llm`), not hot-reloaded.
 3. Provider-specific settings, matching the `LLM_PROVIDER` chosen in step 2:
 
    **Argo arm:**
-   - `ARGO_USERNAME=<username>`: the ANL domain username Argo authenticates against (not the `@anl.gov` address;
-     `ac.*` accounts are rejected). **This has to name a real person's account.** Argo does not support service
-     account authentication as of 2026-08, so the gateway's audit trail for every call this deployment makes points
-     at whoever is named here. Treat it like an on-call rotation credential, not a durable system identity: when
-     that person leaves the project or the beamline, `ARGO_USERNAME` must be reassigned to their replacement and
-     the process restarted before the Argo arm is trusted again. There is no fallback that keeps working
-     unattended.
+   - `ARGO_USERNAME=<service account>`: the name Argo authenticates against (not an `@anl.gov` address; `ac.*`
+     accounts are rejected). **Use a service account, not a person.** Argo records the service account separately
+     in its usage tracking, which is what keeps this deployment's unattended, continuous calls attributable to the
+     beamline application instead of being mixed into an individual's personal Argo usage. A service account is
+     still owned by the ANL account, ALD, and division that registered it, so what this separates is attribution,
+     not ownership; if the registering person leaves, confirm the account survives the handover.
+
+     Verify the exact string before trusting it. The gateway's naming rules cap the requested name and may prefix
+     it, so the value that authenticates is whatever the provisioned account resolves to, which is not necessarily
+     the name as typed on the request form. A wrong value does not surface as an HTTP error (see below), so check
+     it deliberately rather than waiting for a failure.
    - `ARGO_BASE_URL`: leave at its default (`https://apps.inside.anl.gov/argoapi`) unless ANL moves the gateway.
 
    **In-house arm:**

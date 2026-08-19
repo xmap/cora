@@ -30,11 +30,12 @@ live here, and the shared mechanics stay in one place.
 
   - **Base URL and credential.** Argo authenticates with a bare ANL
     domain username in the API-key position; there is no issued key.
-    It must be a person's username: service accounts are documented for
-    Argo but are not usable at Argonne as of 2026-08, so a long-lived
-    deployment runs under a named individual and the gateway's audit
-    trail is tied to them. Plan for that rather than around it, and
-    revisit if service accounts become available.
+    A long-lived deployment should carry a SERVICE ACCOUNT rather than a
+    person, so the gateway's usage tracking attributes these calls to
+    the application instead of mixing them into someone's personal use.
+    A service account is not an unowned identity: it stays tied to the
+    ANL account, ALD, and division of whoever registered it. What it
+    separates is attribution, not ownership.
   - **Authentication failures arrive as successful responses.** An
     unrecognized username returns HTTP 200 carrying a synthetic
     assistant message that says access was denied, not a 401, so the
@@ -185,8 +186,11 @@ class ArgoLLM:
 
     `username` is the ANL domain username (not the `@anl.gov` address),
     passed in the API-key position because that is what the gateway
-    authenticates against. `ac.*` accounts are not authorized, and
-    neither, today, is a service account.
+    authenticates against. `ac.*` accounts are not authorized. A service
+    account name is accepted and is the right choice here; note that the
+    gateway's naming rules may prefix the requested name, so configure
+    whatever string the provisioned account actually resolves to rather
+    than the name as requested.
 
     Optionally accepts an explicit `client` so tests can point the
     whole adapter at a local HTTP server without reaching the gateway.

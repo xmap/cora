@@ -259,10 +259,12 @@ class Settings(BaseSettings):
     # domain username in the API-key position, so there is no issued
     # credential to rotate; it is held as a SecretStr anyway because it
     # travels in the same header an API key would and should not reach
-    # a log through a stray repr. It must name a person: Argo cannot
-    # authenticate a service account as of 2026-08, so the gateway's
-    # audit trail for this deployment points at whoever is named here,
-    # and it has to be reassigned when they leave.
+    # a log through a stray repr. Prefer a service account over a person:
+    # Argo records it separately in usage tracking, so an unattended
+    # deployment's calls are attributable to the application rather than
+    # mixed into someone's personal usage. The service account still
+    # belongs to the ANL account and division that registered it, so
+    # this separates attribution rather than ownership.
     argo_username: SecretStr | None = None
     argo_base_url: str = "https://apps.inside.anl.gov/argoapi"
 
