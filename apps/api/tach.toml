@@ -426,6 +426,13 @@ depends_on = [
     "cora.campaign",
     "cora.caution",
     "cora.data",
+    # CaptureScanIngestor runtime (cora.api._capture_scan_ingestor) catches
+    # IngestScan's own composed-decider errors (DatasetAlreadyIngestedError /
+    # ProducingRunNotFoundError / AcquisitionAssetNotFoundError /
+    # DistributionSupplyNotFoundError) the same way it composes the command
+    # itself (blessed cross-BC aggregate access, same pattern as
+    # cora.run.aggregates / cora.decision.aggregates above).
+    "cora.data.aggregates",
     "cora.decision",
     # RunSupervisor runtime (cora.api._run_supervisor) composes Decision events
     # the same way the agent subscribers do (blessed cross-BC aggregate access).

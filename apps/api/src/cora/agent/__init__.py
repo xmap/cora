@@ -61,6 +61,10 @@ from cora.agent.seed_capture_progress_feeder import (
     CAPTURE_PROGRESS_FEEDER_AGENT_ID,
     seed_capture_progress_feeder_agent,
 )
+from cora.agent.seed_capture_scan_ingestor import (
+    CAPTURE_SCAN_INGESTOR_AGENT_ID,
+    seed_capture_scan_ingestor_agent,
+)
 from cora.agent.seed_caution_drafter import seed_caution_drafter_agent
 from cora.agent.seed_caution_promoter import (
     CAUTION_PROMOTER_AGENT_ID,
@@ -108,6 +112,7 @@ __all__ = [
     "CAMPAIGN_WATCHER_AGENT_ID",
     "CAPTURE_BASELINE_READER_AGENT_ID",
     "CAPTURE_PROGRESS_FEEDER_AGENT_ID",
+    "CAPTURE_SCAN_INGESTOR_AGENT_ID",
     "CAUTION_PROMOTER_AGENT_ID",
     "CLEARANCE_EXPIRER_AGENT_ID",
     "CLEARANCE_WATCHER_AGENT_ID",
@@ -135,6 +140,7 @@ __all__ = [
     "seed_campaign_watcher_agent",
     "seed_capture_baseline_reader_agent",
     "seed_capture_progress_feeder_agent",
+    "seed_capture_scan_ingestor_agent",
     "seed_caution_drafter_agent",
     "seed_caution_promoter_agent",
     "seed_clearance_expirer_agent",

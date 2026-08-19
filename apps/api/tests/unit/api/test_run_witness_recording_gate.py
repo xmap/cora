@@ -29,6 +29,12 @@ only, NOT `run_witness_recording_enabled` -- the capture-probe trail
 scopes on `capture_code`, not a promoted Run, so its value is realized
 specifically while recording is off. See `Settings.capture_probe_recording_enabled`'s
 own docstring for the full argument.
+
+Slice 17 adds an EIGHTH gate, same shape as the four `run_witness_recording_enabled`
+gates but keyed on a DIFFERENT prerequisite: `capture_scan_ingestor_enabled=True`
+requires `capture_path_recording_enabled=True` -- the sweep's only
+candidate signal is a resolved `run_capture_path` row, so with path
+recording off no run ever becomes a candidate.
 """
 
 from uuid import UUID, uuid4
@@ -49,6 +55,7 @@ def _settings(
     capture_path_recording_enabled: bool = False,
     capture_experiment_identity_recording_enabled: bool = False,
     capture_probe_recording_enabled: bool = False,
+    capture_scan_ingestor_enabled: bool = False,
 ) -> Settings:
     return Settings(  # type: ignore[call-arg]
         run_witness_enabled=run_witness_enabled,
@@ -61,6 +68,7 @@ def _settings(
             capture_experiment_identity_recording_enabled
         ),
         capture_probe_recording_enabled=capture_probe_recording_enabled,
+        capture_scan_ingestor_enabled=capture_scan_ingestor_enabled,
     )
 
 
@@ -299,5 +307,30 @@ def test_capture_probe_recording_enabled_does_not_require_run_witness_recording(
             capture_watch_plan_id=None,
             run_witness_recording_enabled=False,
             capture_probe_recording_enabled=True,
+        )
+    )
+
+
+def test_capture_scan_ingestor_enabled_without_path_recording_refuses_boot() -> None:
+    with pytest.raises(RuntimeError, match="CAPTURE_PATH_RECORDING_ENABLED=true"):
+        _enforce_run_witness_recording_gate(
+            _settings(
+                capture_path_recording_enabled=False,
+                capture_scan_ingestor_enabled=True,
+            )
+        )
+
+
+def test_capture_scan_ingestor_enabled_with_path_recording_passes() -> None:
+    """The eighth gate's own prerequisite only; it does not additionally
+    require `run_witness_recording_enabled` (implied by
+    `capture_path_recording_enabled` already requiring it)."""
+    _enforce_run_witness_recording_gate(
+        _settings(
+            run_witness_enabled=True,
+            capture_watch_plan_id=uuid4(),
+            run_witness_recording_enabled=True,
+            capture_path_recording_enabled=True,
+            capture_scan_ingestor_enabled=True,
         )
     )

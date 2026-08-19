@@ -63,6 +63,7 @@ from cora.agent import (
     seed_campaign_watcher_agent,
     seed_capture_baseline_reader_agent,
     seed_capture_progress_feeder_agent,
+    seed_capture_scan_ingestor_agent,
     seed_caution_drafter_agent,
     seed_caution_promoter_agent,
     seed_clearance_expirer_agent,
@@ -81,6 +82,7 @@ from cora.agent.adapters import BudgetSpendGuard, PostgresLanguageModelLookup
 from cora.api._calibration_watcher import calibration_watcher_lifespan
 from cora.api._campaign_watcher import campaign_watcher_lifespan
 from cora.api._capture_observer import ControlPortCaptureObserver
+from cora.api._capture_scan_ingestor import capture_scan_ingestor_lifespan
 from cora.api._clearance_expirer import clearance_expirer_lifespan
 from cora.api._clearance_watcher import clearance_watcher_lifespan
 from cora.api._conduct_run_route import register_conduct_run_routes
@@ -448,6 +450,11 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
     (mirroring the baseline read's timing), so with no promotion there is
     no run_id to vault a reading against either.
 
+    Also refuses to boot with capture_scan_ingestor_enabled=True unless
+    capture_path_recording_enabled is itself True (slice 17): the sweep's
+    only candidate signal is a resolved run_capture_path row, so with no
+    path ever written there is nothing to ingest.
+
     Also refuses to boot with capture_probe_recording_enabled=True unless
     run_witness_enabled is itself True (slice 16) -- an INDEPENDENT check
     from the four above, deliberately not chained off
@@ -486,6 +493,14 @@ def _enforce_run_witness_recording_gate(settings: Settings) -> None:
             "CAPTURE_EXPERIMENT_IDENTITY_RECORDING_ENABLED=true requires "
             "RUN_WITNESS_RECORDING_ENABLED=true. An experiment-identity reading "
             "has no promoted Run to vault it against without it."
+        )
+        raise RuntimeError(msg)
+    if settings.capture_scan_ingestor_enabled and not settings.capture_path_recording_enabled:
+        msg = (
+            "CAPTURE_SCAN_INGESTOR_ENABLED=true requires "
+            "CAPTURE_PATH_RECORDING_ENABLED=true. The sweep's only candidate "
+            "signal is a resolved run_capture_path row; with path recording off "
+            "no run ever becomes a candidate."
         )
         raise RuntimeError(msg)
     if settings.capture_probe_recording_enabled and not settings.run_witness_enabled:
@@ -1088,6 +1103,11 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
             # CaptureProgressFeeder so baseline-writing can be revoked without
             # blinding either).
             await seed_capture_baseline_reader_agent(deps)
+            # same shape for CaptureScanIngestor (deterministic sweep agent;
+            # a separate principal from the other three so scan-ingest can
+            # be revoked without blinding the witness, progress feed, or
+            # baseline reads).
+            await seed_capture_scan_ingestor_agent(deps)
 
             # Drain Federation-owned projections so the Postgres-backed
             # FacilityLookup.list_active() resolves the self-Facility row
@@ -1265,6 +1285,10 @@ def create_app(*, settings: Settings | None = None) -> FastAPI:
                         capture_experiment_identity_pvs=(settings.capture_experiment_identity_pvs),
                         experiment_identity_store=app.state.run.experiment_identity_store,
                         capture_probe_store=app.state.run.capture_probe_store,
+                    ),
+                    capture_scan_ingestor_lifespan(
+                        deps,
+                        ingest_scan=app.state.data.ingest_scan,
                     ),
                 ):
                     yield
