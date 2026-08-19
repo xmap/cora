@@ -165,19 +165,26 @@ async def seed_defined_agent(
     occurred_at: datetime,
     monthly_usd_cap: float | None = None,
     daily_token_cap: int | None = None,
+    model_ref: ModelRef | None = None,
 ) -> None:
     """Append a single `AgentDefined` event to a fresh Agent stream.
 
     Optional caps land on the genesis payload (the additive
     `AgentDefined` budget fields) so budget-gate tests can seed a
     capped agent without a second `AgentBudgetUpdated` append.
+
+    `model_ref` overrides the declared model identity, which matters to
+    any test asserting that a debrief call serves what the AGENT
+    declares rather than the prompt module's default. The default here
+    is deliberately not that module default, so the two cannot be
+    confused for each other in an assertion.
     """
     genesis = AgentDefined(
         agent_id=agent_id,
         kind="RunDebriefer",
         name="Run Debrief",
         version="v1",
-        model_ref=ModelRef(provider="anthropic", model="claude-sonnet-4-6"),
+        model_ref=model_ref or ModelRef(provider="anthropic", model="claude-sonnet-4-6"),
         description=None,
         canonical_uri=None,
         prompt_template_id=None,
@@ -217,6 +224,7 @@ async def seed_versioned_agent(
     versioned_at: datetime,
     monthly_usd_cap: float | None = None,
     daily_token_cap: int | None = None,
+    model_ref: ModelRef | None = None,
 ) -> None:
     """Seed Defined then Versioned, leaving the Agent at stream version 2."""
     await seed_defined_agent(
@@ -228,6 +236,7 @@ async def seed_versioned_agent(
         occurred_at=defined_at,
         monthly_usd_cap=monthly_usd_cap,
         daily_token_cap=daily_token_cap,
+        model_ref=model_ref,
     )
     versioned = AgentVersioned(agent_id=agent_id, version="v1", occurred_at=versioned_at)
     await store.append(

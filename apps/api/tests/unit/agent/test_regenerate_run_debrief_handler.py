@@ -27,10 +27,12 @@ from cora.agent.aggregates.agent import (
     AgentNotSeededError,
     AgentSuspendedError,
 )
+from cora.agent.aggregates.agent import ModelRef as AgentModelRef
 from cora.agent.errors import UnauthorizedError
 from cora.agent.features import regenerate_run_debrief
 from cora.agent.features.regenerate_run_debrief import RegenerateRunDebrief
 from cora.agent.features.regenerate_run_debrief.handler import bind
+from cora.agent.prompts.run_debrief import DEFAULT_RUN_DEBRIEF_MODEL
 from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID, RUN_DEBRIEFER_AGENT_NAME
 from cora.decision.aggregates.decision import (
     DECISION_CONTEXT_RUN_DEBRIEF,
@@ -777,3 +779,41 @@ async def test_handler_inference_recorder_failure_does_not_break_decision() -> N
     decision = await load_decision(store, decision_id)
     assert decision is not None
     assert decision.choice.value == "NominalCompletion"
+
+
+@pytest.mark.unit
+async def test_handler_serves_the_model_the_agent_declares() -> None:
+    """On-demand regenerate obeys the same rule as the subscriber.
+
+    Without it an operator-triggered call could reach a model the
+    catalog never approved for this agent, which is the one path a
+    human is most likely to point at a new model by hand.
+    """
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    run_id = uuid4()
+    await _seed_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        model_ref=AgentModelRef(provider="argo", model="claude-haiku-4-5"),
+    )
+    await _seed_run(store, run_id)
+    deps = build_deps(ids=[_NEW_DECISION_ID], now=_NOW, event_store=store, llm=llm)
+    handler = bind(deps)
+
+    await handler(
+        RegenerateRunDebrief(run_id=run_id),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    served = llm.received[0].model_ref
+    assert served.provider == "argo"
+    assert served.provider != DEFAULT_RUN_DEBRIEF_MODEL.provider

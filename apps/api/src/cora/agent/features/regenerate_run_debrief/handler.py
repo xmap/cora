@@ -61,6 +61,7 @@ from typing import Any, Protocol
 from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
+from cora.agent._model_ref import to_port_model_ref
 from cora.agent.aggregates.agent import (
     AgentDeactivatedError,
     AgentNotSeededError,
@@ -76,6 +77,7 @@ from cora.agent.prompts import (
     RunDebriefPayload,
     build_run_debrief_chat_request,
 )
+from cora.agent.prompts.run_debrief import DEFAULT_RUN_DEBRIEF_MODEL
 from cora.agent.seed import RUN_DEBRIEFER_AGENT_ID, RUN_DEBRIEFER_AGENT_NAME
 from cora.agent.subscribers.run_debriefer import redact_secrets
 from cora.decision.aggregates.decision import (
@@ -239,7 +241,17 @@ def bind(deps: Kernel) -> Handler:
             ),
             interrupted_at=None,
         )
-        request = build_run_debrief_chat_request(payload)
+        # Same rule as the subscriber: serve the model the Agent
+        # declares, so an operator-triggered regenerate cannot reach a
+        # model the catalog never approved for it.
+        request = build_run_debrief_chat_request(
+            payload,
+            model_ref=(
+                to_port_model_ref(agent.model_ref)
+                if agent is not None
+                else DEFAULT_RUN_DEBRIEF_MODEL
+            ),
+        )
 
         response: LLMResponse | None = None
         try:
