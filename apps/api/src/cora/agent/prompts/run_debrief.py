@@ -219,23 +219,24 @@ Pick ONE of these six values; do not invent your own.
 If the terminal event is `RunCompleted` and you see no signs of distress in
 the snapshot, pick `NominalCompletion` with high confidence.
 
-`capture_progress` reports the last frame counts that REACHED the record before
-the Run ended, not a completeness audit. `frames_saved` short of
-`frames_expected` does NOT by itself mean frames were lost, and you must not
-report it as data loss. Read it together with
-`reading_age_seconds_before_terminal`, which is how stale that reading was:
+`capture_progress` reports the last frame counts that reached the record before
+the Run ended. When `frames_saved` is short of `frames_expected`, REPORT THE
+SHORTFALL: say how many frames short, and select `DataSuspect` unless a
+stronger terminal condition already applies. A Run can reach `RunCompleted`
+and still be short.
 
-- A shortfall with a LARGE reading age is most likely a reporting gap. The
-  counter stopped being read, not the acquisition. Note the shortfall as
-  unconfirmed, say the reading was stale, and keep `NominalCompletion` if
-  nothing else is wrong.
-- A shortfall with a SMALL reading age is harder to explain away and is worth
-  `DataSuspect`, still phrased as a shortfall in what was reported rather than
-  as a count of lost frames.
+Do not explain a shortfall away. In particular, do not attribute it to slow or
+stale reporting, and do not treat a large
+`reading_age_seconds_before_terminal` as evidence that the frames exist. That
+reasoning was tried against this beamline's own files and was wrong: a window
+of Runs whose counters read 11 frames short turned out to be 11 frames short on
+disk, having collected half their flat fields. The staleness figure is context
+for the reader, never an acquittal.
 
-Whether files on disk are complete is not in this payload and cannot be
-concluded from it. When `capture_progress` is absent, draw no conclusion from
-its absence. If the terminal
+Equally, do not assert that data is lost. You are reading a counter, not the
+files. State what the record shows, that the shortfall warrants checking the
+data, and stop there. When `capture_progress` is absent, draw no conclusion
+from its absence. If the terminal
 event is `RunAborted` and the reason is ambiguous, prefer `EquipmentAbort` over
 `OperatorAbort` when the reason mentions hardware vocabulary (interlock, fault,
 loss, error, trip, offline, disconnect, timeout), otherwise prefer
@@ -348,12 +349,20 @@ class RunDebriefPayload:
     counts, so a debrief could not reach `DataSuspect` on the "missing
     frames" ground the choice set has always listed.
 
-    The staleness figure travels WITH the tallies and is not optional
-    decoration. On 2-BM's record a 14.5-hour window showed a consistent
-    11-frame shortfall that correlates with reading lag rising from 12 s
-    to 70 s, which reads as telemetry going quiet rather than frames
-    being lost. Counts alone would have led a debrief to report data
-    loss across 255 Runs on that evidence.
+    The staleness figure travels with the tallies as context, and its
+    limits are worth stating because they were learned the hard way. On
+    2-BM's record a 14.5-hour window carried a consistent 11-frame
+    shortfall alongside reading lag rising from 12 s to 70 s. That
+    correlation invited the conclusion that telemetry had gone quiet
+    while acquisition continued, and an earlier version of this prompt
+    said so. Counting frames in the files refuted it: the affected scans
+    hold 1530 frames against 1541, having collected 10 flat fields
+    instead of 20. The counter was right and the inference was wrong.
+
+    Hence the guidance below tells the model to report a shortfall and
+    neither explain it away nor upgrade it to a claim about the files.
+    A debrief reads counters; only the files settle what the files
+    contain.
 
     Deferred to v2 (broader read scope; trigger per design memo:
     operators rate v1 as `misleading` citing absent context):
