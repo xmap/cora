@@ -61,7 +61,7 @@ immediately instead, and the warning is edge-triggered (once per denial
 episode, with a matching recovery log), mirroring
 `cora.api._flag_watcher`'s identical posture for the same reason.
 
-## Never logs the observed path
+## Never logs the observed path, and never mints an event carrying it
 
 `observed_path` is personal data (2-BM's directory layout embeds
 `{UserLastName}-{ProposalNumber}`; see
@@ -71,6 +71,16 @@ is not the vault: it cannot be erased. Every log line here carries
 exception's rendered message (`InvalidScanFileError`'s text embeds the
 locator via `repr()`), mirroring `_run_witness.py`'s identical rule for
 the same value.
+
+The same reasoning extends past logging to what this module hands
+`IngestScan`: `_mint_locator` builds an INDIRECT `cora-capture-path://`
+locator (`cora.data.adapters.capture_path_locator`), never a `file://`
+URI built directly from `observed_path`. `DatasetRegistered.uri` /
+`DistributionRegistered.uri` are immutable, INSERT-only fields with no
+erasure path today; this is the difference between a human pasting a
+real path into the ordinary POST route (always possible, always their
+choice) and this sweep doing it automatically and unconditionally for
+every run.
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
@@ -85,11 +95,14 @@ import contextlib
 import enum
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
-from urllib.parse import quote
 from uuid import UUID
 
 from cora.agent.seed_capture_scan_ingestor import CAPTURE_SCAN_INGESTOR_AGENT_ID
 from cora.api._flag_watcher import probe_read_grant
+from cora.data.adapters.capture_path_locator import (
+    active_scan_transport,
+    mint_capture_path_locator,
+)
 from cora.data.aggregates.acquisition import AcquisitionAssetNotFoundError
 from cora.data.aggregates.dataset import (
     DatasetAlreadyIngestedError,
@@ -193,11 +206,27 @@ class NeverScanIngestCandidateLookup:
         return None
 
 
-def _observed_path_to_locator(observed_path: str) -> str:
+def _mint_locator(candidate: ScanIngestCandidate, *, deps: Kernel) -> str | None:
     """`run_capture_path.observed_path` is a bare filesystem path (the
-    raw PV value), never a `file://` URI; `IngestScan.locator` needs the
-    URI form the scan reader / checksum computer both expect."""
-    return "file://" + quote(observed_path)
+    raw PV value) and, at 2-BM, embeds a real person's surname
+    (`{PIlastname}-{GUP#}`). `IngestScan.locator` gets an INDIRECT
+    `cora-capture-path://` locator instead of a `file://` URI built directly
+    from it: this is the one call in the whole automated sweep that
+    would otherwise put personal data onto an immutable event, per
+    `cora.data.adapters.capture_path_locator`'s module docstring.
+
+    `None` when `observed_path` matches none of the deployment's
+    configured roots: a misconfiguration, not this candidate's fault,
+    but not safe to mint a locator for either. Treated as SKIP by the
+    caller, mirroring the missing-binding case.
+    """
+    host, roots = active_scan_transport(deps)
+    return mint_capture_path_locator(
+        observed_path=candidate.observed_path,
+        run_id=candidate.run_id,
+        host=host,
+        roots=roots,
+    )
 
 
 class _Outcome(enum.Enum):
@@ -270,8 +299,17 @@ class CaptureScanIngestor:
             )
             return _Outcome.SKIP
 
+        locator = _mint_locator(candidate, deps=self._deps)
+        if locator is None:
+            _log.warning(
+                "capture_scan_ingestor.no_matching_root",
+                capture_code=candidate.capture_code,
+                run_id=str(candidate.run_id),
+            )
+            return _Outcome.SKIP
+
         command = IngestScan(
-            locator=_observed_path_to_locator(candidate.observed_path),
+            locator=locator,
             producing_asset_id=producing_asset_id,
             supply_id=supply_id,
             access_protocol=binding["access_protocol"],

@@ -27,6 +27,7 @@ from cora.data.aggregates.dataset import DatasetAlreadyIngestedError
 from cora.data.features import ingest_scan
 from cora.data.ports.checksum_computer import ComputedChecksum
 from cora.data.wire import (
+    _build_capture_path_store,  # pyright: ignore[reportPrivateUsage]
     _build_dataset_by_checksum_lookup,  # pyright: ignore[reportPrivateUsage]
 )
 from cora.infrastructure.adapters.in_memory_asset_lookup import InMemoryAssetLookup
@@ -85,6 +86,7 @@ def _bind(deps: Kernel, pool: asyncpg.Pool, roots: tuple[str, ...]) -> ingest_sc
         scan_reader=DataExchangeScanReader(allowed_roots=roots),
         checksum_computer=PosixChecksumAdapter(allowed_roots=roots),
         dataset_by_checksum_lookup=_build_dataset_by_checksum_lookup(deps),
+        capture_path_store=_build_capture_path_store(deps),
     )
 
 

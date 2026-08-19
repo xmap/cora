@@ -33,6 +33,7 @@ from cora.data.adapters.data_exchange_scan_reader import DataExchangeScanReader
 from cora.data.adapters.posix_checksum import PosixChecksumAdapter
 from cora.data.features import ingest_scan
 from cora.data.wire import (
+    _build_capture_path_store,  # pyright: ignore[reportPrivateUsage]
     _build_dataset_by_checksum_lookup,  # pyright: ignore[reportPrivateUsage]
 )
 from cora.enclosure.adapters.postgres_enclosure_lookup import PostgresEnclosureLookup
@@ -273,6 +274,7 @@ async def test_ingest_against_the_seeded_beamline_records_the_dataset(
         scan_reader=DataExchangeScanReader(allowed_roots=(str(tmp_path),)),
         checksum_computer=PosixChecksumAdapter(allowed_roots=(str(tmp_path),)),
         dataset_by_checksum_lookup=_build_dataset_by_checksum_lookup(deps),
+        capture_path_store=_build_capture_path_store(deps),
     )
 
     dataset_id = await handler(

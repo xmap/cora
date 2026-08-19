@@ -64,6 +64,10 @@ _PERSONAL_PATH_FRAGMENT = "Smith-1015116"
 def _deps(**settings_kwargs: Any) -> Any:
     from cora.infrastructure.config import Settings
 
+    # A matching root so `_mint_locator` succeeds by default; tests
+    # that need to exercise the no-matching-root SKIP path override
+    # `posix_checksum_roots` explicitly.
+    settings_kwargs.setdefault("posix_checksum_roots", ("/local1/2BM",))
     return make_inmemory_kernel(
         settings=Settings(**settings_kwargs),  # type: ignore[call-arg]
         clock=FakeClock(DEFAULT_NOW),
@@ -180,6 +184,26 @@ async def test_tick_with_no_binding_for_the_capture_code_skips_ingest() -> None:
 
 
 @pytest.mark.unit
+async def test_tick_with_no_root_matching_the_observed_path_skips_ingest() -> None:
+    """A misconfigured or drifted allowlist (`posix_checksum_roots` /
+    `scan_probe_allowed_roots`) must SKIP this candidate rather than
+    mint a locator with a fabricated tier segment; see
+    `test_capture_path_locator.py` for the minting unit itself."""
+    lookup = _ListCandidateLookup([_candidate()])
+    ingest_scan = _FakeIngestScan()
+    ingestor = CaptureScanIngestor(
+        deps=_deps(posix_checksum_roots=("/somewhere/else",)),
+        candidate_lookup=lookup,
+        ingest_scan=ingest_scan,
+        bindings=_bindings(),
+    )
+
+    await ingestor.tick()
+
+    assert ingest_scan.calls == []
+
+
+@pytest.mark.unit
 async def test_tick_with_a_bound_candidate_records_the_right_fields() -> None:
     lookup = _ListCandidateLookup([_candidate()])
     ingest_scan = _FakeIngestScan()
@@ -195,9 +219,12 @@ async def test_tick_with_a_bound_candidate_records_the_right_fields() -> None:
     assert command.producing_asset_id == _ASSET_ID
     assert command.supply_id == _SUPPLY_ID
     assert command.access_protocol == "POSIX"
-    # The bare observed_path becomes a file:// locator, never left bare
-    # (IngestScan / the scan reader both expect a URI).
-    assert command.locator.startswith("file:///local1/2BM/")
+    # The bare observed_path becomes an INDIRECT cora-capture-path:// locator,
+    # never the real file:// path (that would put a personal-data path
+    # onto the immutable event); see test_capture_path_locator.py for
+    # the minting/resolution unit tests themselves.
+    assert command.locator.startswith(f"cora-capture-path://localhost/local1/2BM/run-{_RUN_ID}/")
+    assert _PERSONAL_PATH_FRAGMENT not in command.locator
 
 
 @pytest.mark.unit

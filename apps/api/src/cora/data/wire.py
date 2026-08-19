@@ -31,6 +31,7 @@ from typing import cast
 from uuid import UUID
 
 from cora.data.adapters._ssh_probe import SshProbeConfig
+from cora.data.adapters.capture_path_locator import CapturePathLookup, active_scan_transport
 from cora.data.adapters.data_exchange_scan_reader import DataExchangeScanReader
 from cora.data.adapters.http_range_checksum import HttpRangeChecksumAdapter
 from cora.data.adapters.in_memory_distribution_lookup import (
@@ -75,6 +76,10 @@ from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
 from cora.infrastructure.idempotency import with_idempotency
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.observability import with_tracing
+from cora.run.aggregates.run import (
+    InMemoryCapturePathStore,
+    PostgresCapturePathStore,
+)
 from cora.shared.ports.persistent_identifier_minter import PersistentIdentifierMinter
 
 _BC = "data"
@@ -155,8 +160,11 @@ def _build_scan_ingest_pair(deps: Kernel) -> tuple[ScanReader, ChecksumComputer]
     tool use this SAME pair regardless of caller, so a human-triggered
     ingest and `CaptureScanIngestor`'s sweep read bytes identically.
     """
-    host = deps.settings.scan_probe_remote_host
-    if host is not None:
+    # Sourced from `active_scan_transport` (not read directly here)
+    # so this pair and `CaptureScanIngestor`'s minted locator always
+    # describe the SAME transport, per that function's own docstring.
+    host, roots = active_scan_transport(deps)
+    if deps.settings.scan_probe_remote_host is not None:
         remote_python = deps.settings.scan_probe_remote_python
         # `_validate_scan_probe_remote_python` already refused a
         # deployment where `host` is set and `remote_python` is not;
@@ -169,7 +177,7 @@ def _build_scan_ingest_pair(deps: Kernel) -> tuple[ScanReader, ChecksumComputer]
         config = SshProbeConfig(
             host=host,
             remote_python=remote_python,
-            allowed_roots=deps.settings.scan_probe_allowed_roots,
+            allowed_roots=roots,
             connect_timeout_seconds=deps.settings.scan_probe_ssh_connect_timeout_seconds,
             command_timeout_seconds=deps.settings.scan_probe_ssh_command_timeout_seconds,
         )
@@ -179,7 +187,6 @@ def _build_scan_ingest_pair(deps: Kernel) -> tuple[ScanReader, ChecksumComputer]
             ),
             SshPosixChecksumComputer(config=config),
         )
-    roots = deps.settings.posix_checksum_roots
     return (
         DataExchangeScanReader(
             allowed_roots=roots, captured_at_source=deps.settings.scan_captured_at_source
@@ -223,6 +230,39 @@ def _build_dataset_by_checksum_lookup(deps: Kernel) -> DatasetByChecksumLookup:
         return row["dataset_id"] if row is not None else None
 
     return probe
+
+
+def _build_capture_path_store(deps: Kernel) -> CapturePathLookup:
+    """Data BC's own `CapturePathStore` instance, for resolving a
+    `cora-capture-path://` locator back to its real path at ingest time.
+    Returned as `CapturePathLookup`, the narrow get-only Protocol
+    `resolve_capture_path_locator` actually calls.
+
+    `cora.run.wire`'s own `capture_path_store` is not reused: it lives
+    on `RunHandlers`, not the Kernel (see that module's docstring on
+    why it has exactly one BC), so Data BC constructs its own instance
+    rather than reaching into Run BC's handler bundle. Sanctioned by
+    `tach.toml`: `cora.data` already depends on `cora.run.aggregates`,
+    which is where `CapturePathStore` is re-exported from.
+
+    With a real pool, this and Run BC's own instance both wrap the SAME
+    connection pool and therefore the same `run_capture_path` table:
+    consistent. With `deps.pool is None` (in-memory), this builds a
+    SEPARATE `InMemoryCapturePathStore` with its own `_rows` dict --
+    genuinely divergent from Run BC's in-memory instance, not merely
+    stateless-and-therefore-equivalent. This is harmless on the
+    INTENDED path: `capture_scan_ingestor_lifespan` picks
+    `NeverScanIngestCandidateLookup` under the identical `pool is None`
+    condition, so the automated sweep never finds a candidate to mint a
+    `cora-capture-path://` locator for in the first place, and the manual
+    POST route never mints one either. It would matter only for a test
+    (or a crafted manual-route call) that seeds Run BC's in-memory store
+    directly and expects Data BC's resolve to see it in an in-memory
+    Kernel; no test in this codebase does that today.
+    """
+    return (
+        PostgresCapturePathStore(deps.pool) if deps.pool is not None else InMemoryCapturePathStore()
+    )
 
 
 def wire_data(deps: Kernel) -> DataHandlers:
@@ -369,7 +409,12 @@ def wire_data(deps: Kernel) -> DataHandlers:
         # `_build_scan_ingest_pair`. Both share one root
         # allowlist, local or remote depending on which pair is
         # selected; an empty allowlist refuses every locator, so ingest
-        # is off until a deployment opts in.
+        # is off until a deployment opts in. `capture_path_store`
+        # resolves a `cora-capture-path://` locator (minted only by
+        # CaptureScanIngestor) back to the real path before either
+        # port sees it; the POST route and MCP tool never mint one, so
+        # this is a pass-through for them (see
+        # `cora.data.adapters.capture_path_locator`).
         ingest_scan=with_tracing(
             with_idempotency(
                 ingest_scan.bind(
@@ -377,6 +422,7 @@ def wire_data(deps: Kernel) -> DataHandlers:
                     scan_reader=scan_reader,
                     checksum_computer=checksum_computer,
                     dataset_by_checksum_lookup=_build_dataset_by_checksum_lookup(deps),
+                    capture_path_store=_build_capture_path_store(deps),
                 ),
                 deps.idempotency_store,
                 command_name="IngestScan",

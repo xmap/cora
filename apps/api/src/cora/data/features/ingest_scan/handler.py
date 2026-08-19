@@ -60,6 +60,7 @@ from urllib.parse import unquote, urlparse
 from uuid import UUID
 
 from cora.data._ingest import StreamPlan, decide_ingest
+from cora.data.adapters.capture_path_locator import CapturePathLookup, resolve_capture_path_locator
 from cora.data.aggregates.acquisition import AcquisitionAssetNotFoundError
 from cora.data.aggregates.dataset import (
     DatasetAlreadyIngestedError,
@@ -141,12 +142,22 @@ def bind(
     scan_reader: ScanReader,
     checksum_computer: ChecksumComputer,
     dataset_by_checksum_lookup: DatasetByChecksumLookup,
+    capture_path_store: CapturePathLookup,
 ) -> Handler:
     """Build an ingest_scan handler closed over the shared deps.
 
-    The three extra ports arrive explicitly rather than through the
+    The four extra ports arrive explicitly rather than through the
     Kernel: they are Data-BC-local (the Kernel carries cross-BC
     primitives only), and `wire_data` constructs them from settings.
+    `capture_path_store` is typed as `CapturePathLookup`, the narrow
+    get-only slice of Run BC's `CapturePathStore` this module actually
+    calls (`cora.data.adapters.capture_path_locator`), per the
+    port-shaped-by-consumer convention -- even though `cora.data` is
+    separately sanctioned to import the full Run-BC Protocol directly.
+    The INSTANCE is still Data-BC-local, mirroring the other three --
+    see `wire.py`'s `_build_capture_path_store`. Used only to resolve a
+    `cora-capture-path://` locator; every other scheme passes through
+    it unchanged, so the ordinary POST route and MCP tool are unaffected.
     """
 
     async def handler(
@@ -186,17 +197,46 @@ def bind(
             )
             raise UnauthorizedError(decision.reason)
 
+        # 0. Resolve an indirect locator to the real URI the reader /
+        # computer can act on. A pass-through for every scheme except
+        # `cora-capture-path` (minted only by CaptureScanIngestor), so the
+        # POST route and MCP tool are unaffected. `command.locator`
+        # itself is left UNCHANGED below: it is what gets recorded on
+        # the Dataset/Distribution events, indirect form intact.
+        resolved_locator = await resolve_capture_path_locator(
+            command.locator, capture_path_store=capture_path_store
+        )
+        if resolved_locator is None:
+            raise InvalidScanFileError(
+                "scan file locator could not be resolved: the referenced "
+                "run's capture path is missing or no longer matches."
+            )
+        # Whether resolution actually substituted a DIFFERENT string:
+        # `described.reason` / `computed.error_detail` below come from
+        # `os.stat`/h5py error text and embed whatever path the reader
+        # actually opened, verbatim. For a direct file:// locator the
+        # caller supplied that path themselves, so echoing it back in
+        # a 400 discloses nothing new. For an indirect locator the
+        # caller does not necessarily have any prior right to the
+        # REAL path it resolved to (that is the whole point of the
+        # indirection), so that detail must never reach the response.
+        locator_was_resolved = resolved_locator != command.locator
+
         # 1. Read the file's facts. Any non-Description is a refusal
         # with the reader's reason; an incomplete file is refused too,
         # because its facts are still changing by construction.
-        described = await scan_reader.describe(locator_uri=command.locator)
+        described = await scan_reader.describe(locator_uri=resolved_locator)
         if isinstance(described, Unreadable):
             raise InvalidScanFileError(
-                f"scan file is not readable: {described.reason}. If the file "
-                f"is still transferring, retry once it has arrived."
+                "scan file is not readable"
+                + _redacted_suffix(described.reason, redact=locator_was_resolved)
+                + ". If the file is still transferring, retry once it has arrived."
             )
         if isinstance(described, Unrecognized):
-            raise InvalidScanFileError(f"not a recognizable scan file: {described.reason}")
+            raise InvalidScanFileError(
+                "not a recognizable scan file"
+                + _redacted_suffix(described.reason, redact=locator_was_resolved)
+            )
         if not described.structurally_complete:
             raise InvalidScanFileError(
                 "scan file is structurally incomplete: the rotation-angle "
@@ -210,10 +250,13 @@ def bind(
         # 2. Digest the bytes; this is also the second stat point of
         # the live-file guard.
         computed = await checksum_computer.compute(
-            locator_uri=command.locator, supply_id=command.supply_id
+            locator_uri=resolved_locator, supply_id=command.supply_id
         )
         if isinstance(computed, Unreachable):
-            raise InvalidScanFileError(f"could not digest scan file: {computed.error_detail}")
+            raise InvalidScanFileError(
+                "could not digest scan file"
+                + _redacted_suffix(computed.error_detail, redact=locator_was_resolved)
+            )
         if (computed.byte_size, computed.mtime_ns) != (described.byte_size, described.mtime_ns):
             raise InvalidScanFileError(
                 "scan file changed while being read (size or mtime moved "
@@ -341,6 +384,26 @@ def bind(
         return dataset_id
 
     return handler
+
+
+def _redacted_suffix(detail: str, *, redact: bool) -> str:
+    """`": {detail}"` normally, or a fixed placeholder with no `detail`
+    at all when `redact` is True.
+
+    `detail` is `Unreadable.reason` / `Unrecognized.reason` /
+    `Unreachable.error_detail`, sourced from a bare `os.stat`/h5py/SSH
+    error string that embeds the exact path the reader opened. Every
+    caller of this function reaches an HTTP 400 body (or an MCP tool
+    error) verbatim; `redact=True` is passed whenever the locator was
+    resolved from an INDIRECT reference, so the real, resolved path
+    (potentially personal data the caller has no prior right to) never
+    reaches that response. A direct file:// caller supplied the path
+    themselves, so `redact=False` there changes nothing they don't
+    already know.
+    """
+    if redact:
+        return ": detail withheld (locator was resolved from an indirect reference)"
+    return f": {detail}"
 
 
 def _resolve_captured_at(command: IngestScan, described: Description) -> tuple[Any, str]:

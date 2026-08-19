@@ -112,6 +112,15 @@ def test_uri_scheme_lookup_covers_pilot_schemes() -> None:
 
 
 @pytest.mark.unit
+def test_uri_scheme_lookup_covers_the_indirect_capture_path_scheme() -> None:
+    """`cora-capture-path` (cora.data.adapters.capture_path_locator) resolves
+    to a POSIX path before any byte is read, so it maps to POSIX here
+    too -- defense-in-depth for the backfill, not a new transport
+    family; see this entry's own citation in the source dict."""
+    assert URI_SCHEME_TO_ACCESS_PROTOCOL["cora-capture-path"] is AccessProtocol.POSIX
+
+
+@pytest.mark.unit
 def test_uri_scheme_lookup_has_no_fallback() -> None:
     """L24 + anti-hook: no `else HTTPS` fallback. Unmapped scheme raises
     KeyError on direct dict access (the Slice 2 backfill wraps in

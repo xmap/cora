@@ -159,6 +159,21 @@ URI_SCHEME_TO_ACCESS_PROTOCOL: Mapping[str, AccessProtocol] = {
     "nfs": AccessProtocol.NFS,
     "oai-pmh": AccessProtocol.OAI_PMH,
     "oaipmh": AccessProtocol.OAI_PMH,
+    # `cora-capture-path` (cora.data.adapters.capture_path_locator) resolves
+    # to a POSIX path before any byte is ever read; mapped here as
+    # defense-in-depth against this backfill. Not reached via
+    # `ingest_scan` specifically (it always registers a Dataset's
+    # Distribution atomically with it, and the backfill only considers
+    # Datasets that LACK one), BUT `register_dataset` is a separate,
+    # independently-callable slice with no tie to this scheme's minting
+    # rules: any principal authorized for it can register a Dataset
+    # with a fabricated URI of any non-blocked scheme (including this
+    # one) and never call register_distribution -- exactly the same
+    # pre-existing exposure every OTHER entry in this map already has,
+    # not a new one. Without this entry, that specific combination
+    # would abort the backfill for every OTHER pending Dataset too (no
+    # per-row skip), which is what mapping it here prevents.
+    "cora-capture-path": AccessProtocol.POSIX,
 }
 
 

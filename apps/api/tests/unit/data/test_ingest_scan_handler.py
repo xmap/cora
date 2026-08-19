@@ -13,6 +13,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from cora.data.adapters.capture_path_locator import mint_capture_path_locator
 from cora.data.aggregates.acquisition import (
     AcquisitionCannotRecordWithoutCapturingError,
     InvalidAcquisitionEvidenceError,
@@ -39,6 +40,7 @@ from cora.infrastructure.adapters.in_memory_asset_lookup import InMemoryAssetLoo
 from cora.infrastructure.adapters.in_memory_event_store import InMemoryEventStore
 from cora.infrastructure.kernel import Kernel
 from cora.infrastructure.ports.supply_lookup import SingleSupplyLookup, SupplyLookupResult
+from cora.run.aggregates.run import CapturePathStore, InMemoryCapturePathStore
 from tests.unit._helpers import build_deps
 
 pytestmark = pytest.mark.unit
@@ -143,18 +145,21 @@ def _bind(
     described: ScanReadResult | None = None,
     computed: ChecksumComputationResult | None = None,
     lookup: DatasetByChecksumLookup | None = None,
+    capture_path_store: CapturePathStore | None = None,
+    locator: str = _LOCATOR,
 ) -> ingest_scan.Handler:
-    reader = ConfiguredScanReader(
-        {_LOCATOR: described if described is not None else _description()}
-    )
+    reader = ConfiguredScanReader({locator: described if described is not None else _description()})
     computer = ConfiguredChecksumComputer(
-        {_LOCATOR: computed if computed is not None else _computed()}
+        {locator: computed if computed is not None else _computed()}
     )
     return ingest_scan.bind(
         deps,
         scan_reader=reader,
         checksum_computer=computer,
         dataset_by_checksum_lookup=lookup if lookup is not None else _NoDuplicate(),
+        capture_path_store=(
+            capture_path_store if capture_path_store is not None else InMemoryCapturePathStore()
+        ),
     )
 
 
@@ -174,6 +179,123 @@ async def _stream_counts(store: InMemoryEventStore) -> tuple[int, int, int]:
     distribution = await store.load("Distribution", _DISTRIBUTION_ID)
     acquisition = await store.load("Acquisition", _ACQUISITION_ID)
     return (len(dataset[0]), len(distribution[0]), len(acquisition[0]))
+
+
+async def test_ingest_through_an_indirect_locator_records_the_indirect_form() -> None:
+    """`CaptureScanIngestor`'s own path, exercised through the real
+    handler: the reader/computer receive the RESOLVED real path (proven
+    by keying the fakes on it, so a wrong resolution would 404 inside
+    `ConfiguredScanReader`), while the event actually recorded carries
+    the INDIRECT `cora-capture-path://` locator, never the real one -- the
+    property this whole slice exists for."""
+    real_path = "/local1/2BM/2026-08-Haridy-1015116/scan_005.h5"
+    run_id = uuid4()
+    capture_path_store = InMemoryCapturePathStore()
+    await capture_path_store.upsert(
+        run_id=run_id, observed_path=real_path, observed_at=_NOW, created_at=_NOW
+    )
+    indirect_locator = mint_capture_path_locator(
+        observed_path=real_path, run_id=run_id, host="tomdet", roots=("/local1/2BM",)
+    )
+    assert indirect_locator is not None
+    resolved_locator = "file://" + real_path
+
+    store = InMemoryEventStore()
+    dataset_id = await _bind(
+        _deps(store),
+        capture_path_store=capture_path_store,
+        locator=resolved_locator,
+    )(
+        _command(locator=indirect_locator),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert dataset_id == _DATASET_ID
+    dataset_events, _ = await store.load("Dataset", _DATASET_ID)
+    distribution_events, _ = await store.load("Distribution", _DISTRIBUTION_ID)
+    assert dataset_events[0].payload["uri"] == indirect_locator
+    assert distribution_events[0].payload["uri"] == indirect_locator
+    assert "Haridy" not in dataset_events[0].payload["uri"]
+
+
+async def test_ingest_through_an_indirect_locator_with_no_vault_row_raises() -> None:
+    """The erasure case: no `run_capture_path` row for this run_id (never
+    observed, or a future forget-style slice deleted it). Must refuse
+    cleanly, matching every other refusal's zero-events guarantee."""
+    run_id = uuid4()
+    indirect_locator = mint_capture_path_locator(
+        observed_path="/local1/2BM/2026-08-Haridy-1015116/scan_005.h5",
+        run_id=run_id,
+        host="tomdet",
+        roots=("/local1/2BM",),
+    )
+    assert indirect_locator is not None
+
+    store = InMemoryEventStore()
+    with pytest.raises(InvalidScanFileError):
+        await _bind(_deps(store), capture_path_store=InMemoryCapturePathStore())(
+            _command(locator=indirect_locator),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+    assert await _stream_counts(store) == (0, 0, 0)
+
+
+async def test_ingest_through_an_indirect_locator_never_echoes_the_real_path_on_failure() -> None:
+    """P0 from the slice-18 security review: `Unreadable.reason` /
+    `Unreachable.error_detail` are sourced from a bare os.stat/h5py
+    error string that embeds whatever path the reader actually opened
+    -- and `InvalidScanFileError` reaches an HTTP 400 body verbatim
+    (`_handle_validation_error`). For a DIRECT file:// locator the
+    caller supplied that path themselves, so echoing it is not a new
+    disclosure (see the sibling test below). For an INDIRECT locator
+    the caller has no such prior right to the REAL path it resolved
+    to -- that is the whole point of the indirection -- so it must
+    never reach the raised message."""
+    real_path = "/local1/2BM/2026-08-Haridy-1015116/scan_005.h5"
+    run_id = uuid4()
+    capture_path_store = InMemoryCapturePathStore()
+    await capture_path_store.upsert(
+        run_id=run_id, observed_path=real_path, observed_at=_NOW, created_at=_NOW
+    )
+    indirect_locator = mint_capture_path_locator(
+        observed_path=real_path, run_id=run_id, host="tomdet", roots=("/local1/2BM",)
+    )
+    assert indirect_locator is not None
+    resolved_locator = "file://" + real_path
+
+    store = InMemoryEventStore()
+    handler = _bind(
+        _deps(store),
+        capture_path_store=capture_path_store,
+        locator=resolved_locator,
+        described=Unreadable(
+            reason=f"stat failed: [Errno 2] No such file or directory: '{real_path}'"
+        ),
+    )
+
+    with pytest.raises(InvalidScanFileError) as exc_info:
+        await handler(
+            _command(locator=indirect_locator),
+            principal_id=_PRINCIPAL_ID,
+            correlation_id=_CORRELATION_ID,
+        )
+
+    assert "Haridy" not in str(exc_info.value)
+    assert real_path not in str(exc_info.value)
+
+
+async def test_ingest_through_a_direct_locator_still_echoes_the_reader_reason() -> None:
+    """No regression for the existing, unaffected manual-route case: a
+    direct file:// locator's reader failure detail is unchanged,
+    because the caller supplied that exact path themselves."""
+    store = InMemoryEventStore()
+    handler = _bind(_deps(store), described=Unreadable(reason="half-copied, still transferring"))
+
+    with pytest.raises(InvalidScanFileError, match="half-copied, still transferring"):
+        await handler(_command(), principal_id=_PRINCIPAL_ID, correlation_id=_CORRELATION_ID)
 
 
 async def test_ingest_lands_all_three_genesis_streams_atomically() -> None:
