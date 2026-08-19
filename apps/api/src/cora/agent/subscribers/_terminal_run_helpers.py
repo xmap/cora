@@ -18,7 +18,46 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cora.infrastructure.ports.event_store import StoredEvent
+    from uuid import UUID
+
+    from cora.infrastructure.ports.event_store import EventStore, StoredEvent
+
+TERMINAL_RUN_EVENTS = frozenset(
+    {
+        "RunCompleted",
+        "RunAborted",
+        "RunStopped",
+        "RunTruncated",
+    }
+)
+"""The four event types that end a Run.
+
+Lives here rather than in the subscriber because the on-demand
+regenerate path needs the same vocabulary to recover which terminal
+event a completed Run actually had, and importing it back from the
+subscriber would close an import cycle through this module.
+"""
+
+
+async def find_terminal_run_event(
+    event_store: EventStore,
+    run_id: UUID,
+) -> StoredEvent | None:
+    """Return the Run's most recent terminal event, or `None` if it has none.
+
+    The subscriber is handed its terminal event by the projection and
+    never needs this. The on-demand path has only a `run_id`, so it
+    reads the stream back to find what actually ended the Run.
+
+    Searches from the end because a Run stream can hold more than one
+    terminal event in a compensation sequence, and the debrief concerns
+    how the Run ended, not how it first tried to.
+    """
+    events, _ = await event_store.load("Run", run_id)
+    for event in reversed(events):
+        if event.event_type in TERMINAL_RUN_EVENTS:
+            return event
+    return None
 
 
 def extract_reason(event: StoredEvent) -> str | None:
@@ -41,4 +80,9 @@ def extract_interrupted_at(event: StoredEvent) -> str | None:
     return str(interrupted_at) if interrupted_at is not None else None
 
 
-__all__ = ["extract_interrupted_at", "extract_reason"]
+__all__ = [
+    "TERMINAL_RUN_EVENTS",
+    "extract_interrupted_at",
+    "extract_reason",
+    "find_terminal_run_event",
+]

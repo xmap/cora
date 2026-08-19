@@ -155,6 +155,7 @@ from cora.agent.seed import (
     RUN_DEBRIEFER_AGENT_NAME,
 )
 from cora.agent.subscribers._terminal_run_helpers import (
+    TERMINAL_RUN_EVENTS,
     extract_interrupted_at,
     extract_reason,
 )
@@ -216,14 +217,7 @@ _RUN_DEBRIEF_DECISION_NAMESPACE = UUID("01900000-0000-7000-8000-0000aaaa0002")
 # Terminal Run events this subscriber listens to. The four match
 # the design memo lock; the set does NOT include `RunHeld` /
 # `RunResumed` (those are mid-lifecycle, not terminal).
-_TERMINAL_RUN_EVENTS = frozenset(
-    {
-        "RunCompleted",
-        "RunAborted",
-        "RunStopped",
-        "RunTruncated",
-    }
-)
+_TERMINAL_RUN_EVENTS = TERMINAL_RUN_EVENTS
 
 # Regex used to strip Anthropic API-key-shaped substrings from
 # error messages before structured-logging them. The key format is
