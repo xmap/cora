@@ -152,6 +152,29 @@ PRICING: dict[tuple[str, str], ModelPricing] = {
     ),
 }
 
+# Argo serves these same vendor models, so the same list rates carry
+# over unchanged. This is a counterfactual price, not an invoice: the
+# facility absorbs the gateway's cost rather than the deployment, and
+# what the envelope debits is what the call WOULD have cost bought
+# directly. That is the point of a source-agnostic envelope, since a
+# route someone else funds is not a free one. A negotiated or
+# facility-specific rate belongs in the catalog overlay, which is
+# consulted first.
+#
+# Mirroring the table also gives the gateway the same safety net the
+# direct path has. Every call is gated at registration on an Approved
+# catalog entry, and approval refuses a GPU-hour basis, so the overlay
+# normally answers. Without these entries a retired catalog entry would
+# drop an Argo call to zero while the identical Anthropic call stayed
+# priced.
+PRICING.update(
+    {
+        ("argo", model): pricing
+        for (provider, model), pricing in list(PRICING.items())
+        if provider == "anthropic"
+    }
+)
+
 # Track which (provider, model) pairs we've already warned about,
 # so unpriced-model warnings fire once per process per pair rather
 # than per call (would flood the log under steady traffic).

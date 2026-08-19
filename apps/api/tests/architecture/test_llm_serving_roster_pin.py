@@ -29,6 +29,21 @@ basis the cost path cannot price, before a second adapter could be admitted; see
 [[project-reserve-post-void-stage0]] and the built-path grounding. Before adding
 any FURTHER adapter, confirm the same of it.
 
+`ArgoLLM` is on the roster, and the same was confirmed of it. Two facts do the
+work. Registration gates on the catalog: `define_agent` refuses an Agent whose
+`(provider, model)` holds no Approved entry, and approval refuses a GPU-hour
+basis on any route, so a call can only happen for an identity the overlay
+prices. That left one asymmetry, which was closed rather than tolerated: the
+direct path falls back to the static `PRICING` table when an entry is later
+retired, and the gateway had no such fallback, so a retired Argo entry would
+have dropped to zero where the identical Anthropic call stayed priced. `PRICING`
+now mirrors its Anthropic rows under the `argo` provider.
+
+The adapter also refuses a `ModelRef` whose provider is not `argo`. That guard is
+about the same money from the other direction: cost resolves from the ModelRef
+while the route is chosen by config, so without it a gateway-served call could be
+priced as a direct-vendor purchase and nothing would say so.
+
 The `LLM` Protocol and its always-pass stub live in the port module and are
 excluded here: the house convention keeps both beside the port they serve.
 """
@@ -46,7 +61,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 _PORT_MODULE = "infrastructure/ports/llm.py"
-_ALLOWED_SERVING_ADAPTERS = frozenset({"AnthropicLLM", "LocalLLM"})
+_ALLOWED_SERVING_ADAPTERS = frozenset({"AnthropicLLM", "ArgoLLM", "LocalLLM"})
 
 
 def _classes_defining_async_chat(path: Path) -> set[str]:

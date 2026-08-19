@@ -10,6 +10,7 @@ import pytest
 from pydantic import SecretStr
 
 from cora.agent.adapters.anthropic_llm import AnthropicLLM
+from cora.agent.adapters.argo_llm import ArgoLLM
 from cora.agent.adapters.local_llm import LocalLLM
 from cora.agent.build_llm import build_llm, llm_unwired_reason
 from cora.infrastructure.config import Settings
@@ -90,6 +91,48 @@ def test_anthropic_provider_without_a_key_returns_none() -> None:
 
 
 @pytest.mark.unit
+def test_argo_provider_enabled_with_a_username_builds_an_argo_llm() -> None:
+    settings = Settings(  # type: ignore[call-arg]
+        llm_enabled=True,
+        llm_provider="argo",
+        argo_username=SecretStr("svcbeamline"),
+    )
+    assert isinstance(build_llm(settings), ArgoLLM)
+
+
+@pytest.mark.unit
+def test_argo_provider_fully_configured_but_switch_off_returns_none() -> None:
+    """A gateway the facility already funds is still an LLM the switch governs."""
+    settings = Settings(  # type: ignore[call-arg]
+        llm_enabled=False,
+        llm_provider="argo",
+        argo_username=SecretStr("svcbeamline"),
+    )
+    assert build_llm(settings) is None
+
+
+@pytest.mark.unit
+def test_argo_provider_without_a_username_returns_none() -> None:
+    settings = Settings(  # type: ignore[call-arg]
+        llm_enabled=True, llm_provider="argo", argo_username=None
+    )
+    assert build_llm(settings) is None
+
+
+@pytest.mark.unit
+def test_argo_provider_ignores_an_anthropic_key_it_never_reads() -> None:
+    """The gateway authenticates a username; a vendor key configured alongside
+    it must not stand in for the identity that is actually missing."""
+    settings = Settings(  # type: ignore[call-arg]
+        llm_enabled=True,
+        llm_provider="argo",
+        argo_username=None,
+        anthropic_api_key=SecretStr("sk-not-a-real-key"),
+    )
+    assert build_llm(settings) is None
+
+
+@pytest.mark.unit
 def test_unwired_reason_with_switch_off_surfaces_the_switch_remedy() -> None:
     settings = Settings(llm_enabled=False, llm_provider="local")  # type: ignore[call-arg]
     reason = llm_unwired_reason(settings)
@@ -105,6 +148,17 @@ def test_unwired_reason_for_local_surfaces_the_endpoint_remedy() -> None:
     )
     reason = llm_unwired_reason(settings)
     assert "LOCAL_LLM_BASE_URL" in reason
+    assert "ANTHROPIC_API_KEY" not in reason
+
+
+@pytest.mark.unit
+def test_unwired_reason_for_argo_surfaces_the_username_remedy() -> None:
+    """Naming the Anthropic key sends an Argo deployment to a credential it never reads."""
+    settings = Settings(  # type: ignore[call-arg]
+        llm_enabled=True, llm_provider="argo", argo_username=None
+    )
+    reason = llm_unwired_reason(settings)
+    assert "ARGO_USERNAME" in reason
     assert "ANTHROPIC_API_KEY" not in reason
 
 

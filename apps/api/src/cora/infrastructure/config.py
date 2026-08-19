@@ -241,15 +241,30 @@ class Settings(BaseSettings):
     # whole Settings surface is repr-safe.
     anthropic_api_key: SecretStr | None = None
 
-    # In-house (built) serving path. `llm_provider` selects the LLM
-    # adapter the composition root builds: `anthropic` (the external,
-    # token-billed default) or `local` (a facility-hosted open model over
-    # an OpenAI-compatible endpoint). The `local` branch requires
+    # `llm_provider` selects the LLM adapter the composition root
+    # builds: `anthropic` (the external, token-billed default), `argo`
+    # (Argonne's internal gateway, which buys the same vendor models
+    # through facility-funded infrastructure), or `local` (a
+    # facility-hosted open model over an OpenAI-compatible endpoint).
+    # All three debit the same beamline envelope at the catalog's rate
+    # for the entry, which is what makes the envelope source-agnostic.
+    llm_provider: Literal["anthropic", "argo", "local"] = "anthropic"
+
+    # Bought-through-gateway path. Argo authenticates with a bare ANL
+    # domain username in the API-key position, so there is no issued
+    # credential to rotate; it is held as a SecretStr anyway because it
+    # travels in the same header an API key would and should not reach
+    # a log through a stray repr. A long-lived deployment should carry
+    # a service account here rather than a person, so the gateway's
+    # audit trail survives staff turnover.
+    argo_username: SecretStr | None = None
+    argo_base_url: str = "https://apps.inside.anl.gov/argoapi"
+
+    # In-house (built) serving path. The `local` branch requires
     # `local_llm_base_url` and `local_llm_model`, or `build_llm` returns
     # None and subscribers fail-fast. `local_llm_gpu_usd_per_hour` feeds
     # the GPU shadow-cost observability signal (0 = no shadow cost), and
     # `local_llm_device_id` labels the served device in the meter.
-    llm_provider: Literal["anthropic", "local"] = "anthropic"
     local_llm_base_url: str | None = None
     local_llm_model: str | None = None
     local_llm_gpu_usd_per_hour: float = 0.0

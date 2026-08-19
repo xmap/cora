@@ -2,8 +2,8 @@
 
 Bound from `cora.api.main` into `build_kernel` the same way
 `cora.trust.build_authorize.build_authorize` is bound. Lives in Agent BC
-because the production implementors (`AnthropicLLM`, and the in-house
-`LocalLLM`) live here too (cross-BC adapter-ownership convention; Safety
+because the production implementors (`AnthropicLLM`, `ArgoLLM`, and the
+in-house `LocalLLM`) live here too (cross-BC adapter-ownership convention; Safety
 BC owns `PostgresClearanceLookup`, Caution BC owns `PostgresCautionLookup`).
 
 Returns `None` unless BOTH `Settings.llm_enabled` (the switch) and the
@@ -17,8 +17,10 @@ switch off; that is the same mistake `is_simulated` exists to prevent on
 the control side, where a soft IOC still speaks real Channel Access. A
 local model still invokes an LLM, still debits the beamline envelope at
 its catalog rate, and still writes inference rows to the experiment
-record. `LLM_ENABLED` is the deployment's one answer to "does this
-instance run an LLM at all", so it gates every serving route.
+record. The same holds for a gateway the facility already funds: `argo`
+buys no tokens on the deployment's own account, and still does all three.
+`LLM_ENABLED` is the deployment's one answer to "does this instance run
+an LLM at all", so it gates every serving route.
 
 `llm=None` is a fully supported state, not a degraded one: every
 consumer already handles it because the key-absent case always
@@ -37,6 +39,7 @@ so a deployment may defer Agent rollout without refusing to boot.)
 
 from cora.agent._gpu_metrics import make_gpu_usage_sink
 from cora.agent.adapters.anthropic_llm import AnthropicLLM
+from cora.agent.adapters.argo_llm import ArgoLLM
 from cora.agent.adapters.local_llm import LocalLLM
 from cora.agent.adapters.openai_compatible_backend import OpenAICompatibleBackend
 from cora.infrastructure.config import Settings
@@ -55,27 +58,50 @@ def build_llm(settings: Settings) -> LLM | None:
         model on any serving route, so no experiment metadata leaves the
         facility, no tokens are bought, and no envelope is debited.
       - the selected provider is unconfigured: `anthropic` without
-        `anthropic_api_key`, or `local` without a base URL and a served
-        model name. Nothing to call it with either way.
+        `anthropic_api_key`, `argo` without `argo_username`, or `local`
+        without a base URL and a served model name. Nothing to call it
+        with in any of the three cases.
 
     `settings.llm_provider` chooses the adapter: `anthropic` buys an
-    external, token-billed call; `local` serves a facility-hosted model
-    over an OpenAI-compatible endpoint and meters the GPU time it holds.
-    Both debit the same beamline envelope through the catalog's price for
-    the entry, which is what makes the envelope source-agnostic.
+    external, token-billed call; `argo` buys the same vendor models
+    through Argonne's internal gateway, on facility-funded
+    infrastructure rather than the deployment's own account; `local`
+    serves a facility-hosted model over an OpenAI-compatible endpoint
+    and meters the GPU time it holds. All three debit the same beamline
+    envelope through the catalog's price for the entry, which is what
+    makes the envelope source-agnostic, and reaching it by one route is
+    the design rather than a coincidence.
 
-    `SecretStr.get_secret_value()` is the ONLY place in the codebase that
-    unwraps the Anthropic API key; passing the raw string to the adapter
-    constructor is the boundary at which "secret material" becomes "live
-    credential". Adapter scope is responsible for not re-exposing it.
+    The `get_secret_value()` calls below are the only places the
+    Anthropic key and the Argo username are unwrapped; passing the raw
+    string to an adapter constructor is the boundary at which "secret
+    material" becomes "live credential". Adapter scope is responsible
+    for not re-exposing it.
     """
     if not settings.llm_enabled:
         return None
+    if settings.llm_provider == "argo":
+        return _build_argo_llm(settings)
     if settings.llm_provider == "local":
         return _build_local_llm(settings)
     if settings.anthropic_api_key is None:
         return None
     return AnthropicLLM(api_key=settings.anthropic_api_key.get_secret_value())
+
+
+def _build_argo_llm(settings: Settings) -> LLM | None:
+    """Build `ArgoLLM`, or None when no gateway identity is configured.
+
+    The gateway takes an ANL domain username where a vendor takes an
+    API key, so the absent-identity case looks the same as the
+    absent-key case and returns None the same way.
+    """
+    if settings.argo_username is None:
+        return None
+    return ArgoLLM(
+        username=settings.argo_username.get_secret_value(),
+        base_url=settings.argo_base_url,
+    )
 
 
 def _build_local_llm(settings: Settings) -> LLM | None:
@@ -110,8 +136,8 @@ def llm_unwired_reason(settings: Settings) -> str:
     the operator to the remedy that actually applies. Naming the
     credential when the switch is simply off is the more likely mistake
     now, because off is the default; naming the Anthropic key when the
-    deployment selected `local` would be worse, because it sends the
-    operator to a credential that provider never reads.
+    deployment selected `argo` or `local` would be worse, because it
+    sends the operator to a credential that provider never reads.
 
     Callers are expected to have already established that the LLM is
     unwired; this only explains why.
@@ -121,6 +147,13 @@ def llm_unwired_reason(settings: Settings) -> str:
             "LLM_ENABLED is false, so this deployment runs no model on any "
             "serving route. Set LLM_ENABLED=true (and configure the provider "
             "named by LLM_PROVIDER) to turn the LLM features on."
+        )
+    if settings.llm_provider == "argo":
+        return (
+            "LLM_ENABLED is true and LLM_PROVIDER is argo, but ARGO_USERNAME "
+            "is not configured. Supply the ANL domain username the gateway "
+            "authenticates (a service account for a long-lived deployment) "
+            "and restart."
         )
     if settings.llm_provider == "local":
         return (
