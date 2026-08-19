@@ -30,6 +30,7 @@ from types import SimpleNamespace
 from typing import cast
 from uuid import UUID
 
+from cora.data.adapters._ssh_probe import SshProbeConfig
 from cora.data.adapters.data_exchange_scan_reader import DataExchangeScanReader
 from cora.data.adapters.http_range_checksum import HttpRangeChecksumAdapter
 from cora.data.adapters.in_memory_distribution_lookup import (
@@ -40,6 +41,8 @@ from cora.data.adapters.postgres_distribution_lookup import (
     PostgresDistributionLookup,
 )
 from cora.data.adapters.rocrate12_serializer import RoCrate12Adapter
+from cora.data.adapters.ssh_data_exchange_scan_reader import SshDataExchangeScanReader
+from cora.data.adapters.ssh_posix_checksum_computer import SshPosixChecksumComputer
 from cora.data.aggregates.edition import EditionKind
 from cora.data.features import (
     add_dataset_to_edition,
@@ -61,9 +64,11 @@ from cora.data.features import (
     withdraw_edition,
 )
 from cora.data.features.ingest_scan.handler import DatasetByChecksumLookup
+from cora.data.ports.checksum_computer import ChecksumComputer
 from cora.data.ports.checksum_verifier import ChecksumVerifier
 from cora.data.ports.distribution_lookup import DistributionLookup
 from cora.data.ports.edition_serializer import EditionSerializer
+from cora.data.ports.scan_reader import ScanReader
 from cora.infrastructure.adapters.stub_persistent_identifier_minter import (
     StubPersistentIdentifierMinter,
 )
@@ -137,6 +142,54 @@ def _build_checksum_verifiers(deps: Kernel) -> Mapping[str, ChecksumVerifier]:
     return verifiers
 
 
+def _build_scan_ingest_pair(deps: Kernel) -> tuple[ScanReader, ChecksumComputer]:
+    """Pick the SSH pair when `scan_probe_remote_host` is set, else the
+    local pair keyed off `posix_checksum_roots`.
+
+    The SSH pair is what a real 2-BM deployment needs (measured
+    2026-08-18: the scan bytes live on the detector host, not CORA's
+    own, and pulling one over the link takes roughly twice the scan
+    cadence -- see `cora.data._remote_scan_probe`). The local pair
+    stays the default for a deployment or test environment where the
+    files really are local; `ingest_scan`'s own POST route and MCP
+    tool use this SAME pair regardless of caller, so a human-triggered
+    ingest and `CaptureScanIngestor`'s sweep read bytes identically.
+    """
+    host = deps.settings.scan_probe_remote_host
+    if host is not None:
+        remote_python = deps.settings.scan_probe_remote_python
+        # `_validate_scan_probe_remote_python` already refused a
+        # deployment where `host` is set and `remote_python` is not;
+        # this is that invariant made visible rather than papered over
+        # with a silent `or ""` that would launch `ssh host '' -m ...`.
+        assert remote_python is not None, (
+            "scan_probe_remote_host is set; Settings validation guarantees "
+            "scan_probe_remote_python is too"
+        )
+        config = SshProbeConfig(
+            host=host,
+            remote_python=remote_python,
+            allowed_roots=deps.settings.scan_probe_allowed_roots,
+            connect_timeout_seconds=deps.settings.scan_probe_ssh_connect_timeout_seconds,
+            command_timeout_seconds=deps.settings.scan_probe_ssh_command_timeout_seconds,
+        )
+        return (
+            SshDataExchangeScanReader(
+                config=config, captured_at_source=deps.settings.scan_captured_at_source
+            ),
+            SshPosixChecksumComputer(config=config),
+        )
+    roots = deps.settings.posix_checksum_roots
+    return (
+        DataExchangeScanReader(
+            allowed_roots=roots, captured_at_source=deps.settings.scan_captured_at_source
+        ),
+        PosixChecksumAdapter(
+            allowed_roots=roots, max_walk_seconds=deps.settings.posix_checksum_max_walk_seconds
+        ),
+    )
+
+
 def _build_dataset_by_checksum_lookup(deps: Kernel) -> DatasetByChecksumLookup:
     """Digest-equality probe for ingest's natural-key refusal.
 
@@ -189,6 +242,7 @@ def wire_data(deps: Kernel) -> DataHandlers:
                 checksum_verifiers=_build_checksum_verifiers(deps),
             ),
         )
+    scan_reader, checksum_computer = _build_scan_ingest_pair(deps)
     return DataHandlers(
         register_dataset=with_tracing(
             with_idempotency(
@@ -309,23 +363,19 @@ def wire_data(deps: Kernel) -> DataHandlers:
             command_name="RecordAttestation",
             bc=_BC,
         ),
-        # The scan reader and the digest computer share one root
-        # allowlist (`posix_checksum_roots`): both are local-file
-        # readers over operator-supplied URIs, and one confinement rule
-        # for both is the point. Empty roots (the default) refuse every
-        # locator, so ingest is off until a deployment opts in.
+        # The scan reader and the digest computer are the SAME pair
+        # regardless of caller (the POST route, the MCP tool, or
+        # CaptureScanIngestor's sweep): see
+        # `_build_scan_ingest_pair`. Both share one root
+        # allowlist, local or remote depending on which pair is
+        # selected; an empty allowlist refuses every locator, so ingest
+        # is off until a deployment opts in.
         ingest_scan=with_tracing(
             with_idempotency(
                 ingest_scan.bind(
                     deps,
-                    scan_reader=DataExchangeScanReader(
-                        allowed_roots=deps.settings.posix_checksum_roots,
-                        captured_at_source=deps.settings.scan_captured_at_source,
-                    ),
-                    checksum_computer=PosixChecksumAdapter(
-                        allowed_roots=deps.settings.posix_checksum_roots,
-                        max_walk_seconds=deps.settings.posix_checksum_max_walk_seconds,
-                    ),
+                    scan_reader=scan_reader,
+                    checksum_computer=checksum_computer,
                     dataset_by_checksum_lookup=_build_dataset_by_checksum_lookup(deps),
                 ),
                 deps.idempotency_store,

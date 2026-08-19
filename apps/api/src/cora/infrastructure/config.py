@@ -8,7 +8,7 @@ environment variables directly.
 from typing import Literal
 from uuid import UUID
 
-from pydantic import SecretStr, field_validator
+from pydantic import SecretStr, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from cora.infrastructure.auth.config import IdentityProviderConfig
@@ -21,6 +21,11 @@ _ALLOWED_DATABASE_SCHEMES = ("postgresql://", "postgres://")
 # (slice 14a), dispatched on by name in
 # `cora.api._capture_experiment_identity_reader`.
 _EXPERIMENT_IDENTITY_ROLES = frozenset({"proposal_number", "esaf_number", "esaf_doi_number"})
+
+# Closed key vocabulary for one `Settings.capture_scan_ingestor_bindings` entry
+# (slice 17), consumed by name in `cora.api._capture_scan_ingestor` to build
+# `IngestScan`.
+_SCAN_INGEST_BINDING_KEYS = frozenset({"producing_asset_id", "supply_id", "access_protocol"})
 
 OtelExporter = Literal["otlp", "console", "none"]
 
@@ -1036,6 +1041,149 @@ class Settings(BaseSettings):
     # running there is nothing to write from. See
     # `cora.api._run_witness`'s probe-write section.
     capture_probe_recording_enabled: bool = False
+
+    # EIGHTH kill switch (slice 17), and the only one so far that is NOT a
+    # `*_recording_enabled`: the seven above gate entries or PII-vault
+    # writes; this one gates real EVENT appends across three streams
+    # (Dataset, Distribution, Acquisition) via `IngestScan`. Default off.
+    # Refuses to boot if True without `capture_path_recording_enabled` also
+    # True (see `_enforce_run_witness_recording_gate`): the sweep's only
+    # candidate signal is a resolved `run_capture_path` row, so with no
+    # path ever recorded there is nothing to ingest. Named after the
+    # agent (`capture_scan_ingestor_*`), matching every other lifespan
+    # switch's `snake(<AgentClass>)_enabled` convention. See
+    # `cora.api._capture_scan_ingestor`.
+    capture_scan_ingestor_enabled: bool = False
+
+    # Sweep cadence, matching every other loop's `*_tick_seconds` naming.
+    # Irrelevant when `capture_scan_ingestor_enabled` is False.
+    capture_scan_ingestor_tick_seconds: float = 30.0
+
+    # SSH host holding the scan bytes (e.g. "tomdet"), or `None` for a
+    # deployment where CORA's own host mounts the storage directly. When
+    # set, `ingest_scan` reads and digests the file entirely on this host
+    # via `cora.data._remote_scan_probe`, invoked over SSH, and only a
+    # JSON verdict crosses the network -- measured at 2-BM, pulling one
+    # ~24 GB scan file to CORA's host takes roughly twice the scan
+    # cadence, so mounting the detector volume is not viable; see
+    # `cora.data.adapters._ssh_probe`. `None` falls back to the local
+    # `DataExchangeScanReader` / `PosixChecksumAdapter` pair keyed off
+    # `posix_checksum_roots`, which suits a deployment or test
+    # environment where the files really are local.
+    #
+    # `scan_probe_*`, not `capture_scan_ingestor_*`: `wire_data` selects
+    # this pair unconditionally for `ingest_scan`, so it also governs the
+    # human POST route and the MCP tool, not only the sweep agent. Sharing
+    # the agent's own prefix would misname it as sweep-only.
+    scan_probe_remote_host: str | None = None
+
+    # Absolute path to the Python interpreter invoked on
+    # `scan_probe_remote_host` (CORA's own venv, reachable from that host
+    # over the same shared filesystem CORA itself runs from). Required
+    # when `scan_probe_remote_host` is set; validated together below.
+    scan_probe_remote_python: str | None = None
+
+    # Allowlist of absolute filesystem roots the remote probe may read --
+    # as valid ON `scan_probe_remote_host`, not on CORA's own filesystem.
+    # ONLY takes effect when `scan_probe_remote_host` is set; with no
+    # remote host, `_build_scan_ingest_pair` selects the LOCAL adapter
+    # pair instead, which is keyed off `posix_checksum_roots`, a
+    # separate setting (both enforce the same safety rule, via the same
+    # `resolve_confined_file_uri` helper, just on different hosts and
+    # under different names, since one governs a remote filesystem this
+    # deployment's own roots have no bearing on). Empty (default)
+    # refuses every locator, so scan-ingest is off until a deployment
+    # opts in. Read from SCAN_PROBE_ALLOWED_ROOTS as JSON, for example:
+    #
+    #   SCAN_PROBE_ALLOWED_ROOTS='["/local1/2BM"]'
+    scan_probe_allowed_roots: tuple[str, ...] = ()
+
+    # SSH connect + end-to-end command budget for one remote probe
+    # invocation. The command timeout must exceed the slowest expected
+    # digest walk (measured ~26 s for a 24 GB file on tomdet's local
+    # disk); the default gives roughly 2x headroom. A probe that exceeds
+    # either bound is killed and reported as unreachable, never left to
+    # hang a sweep tick indefinitely.
+    scan_probe_ssh_connect_timeout_seconds: float = 10.0
+    scan_probe_ssh_command_timeout_seconds: float = 60.0
+
+    # Per-capture-code binding: what `IngestScan` needs that no file or PV
+    # can say (which Asset produced it, which Supply holds it, over what
+    # access protocol). Same `code -> inner-dict` shape as
+    # `capture_watch_pvs`, closed inner-key vocabulary because
+    # `cora.api._capture_scan_ingestor` dispatches on these three names.
+    # A code absent from this map is never auto-ingested, mirroring every
+    # other per-code table's optionality. Read from
+    # CAPTURE_SCAN_INGESTOR_BINDINGS as JSON, for example:
+    #
+    #   CAPTURE_SCAN_INGESTOR_BINDINGS='{
+    #     "2bmb-tomoscan": {
+    #       "producing_asset_id": "0c5e...-camera-asset-uuid",
+    #       "supply_id": "b2a1...-storage-supply-uuid",
+    #       "access_protocol": "POSIX"
+    #     }
+    #   }'
+    capture_scan_ingestor_bindings: dict[str, dict[str, str]] = {}
+
+    @field_validator("capture_scan_ingestor_bindings")
+    @classmethod
+    def _validate_capture_scan_ingestor_bindings(
+        cls, value: dict[str, dict[str, str]]
+    ) -> dict[str, dict[str, str]]:
+        """Refuse an unrecognized or incomplete binding at boot, not at
+        the first sweep tick: `cora.api._capture_scan_ingestor` reads
+        exactly `producing_asset_id` / `supply_id` / `access_protocol` by
+        name, and `producing_asset_id` / `supply_id` must parse as a
+        UUID, since `IngestScan` requires one."""
+        bad_keys = {
+            code: sorted(set(binding) - _SCAN_INGEST_BINDING_KEYS)
+            for code, binding in value.items()
+            if set(binding) - _SCAN_INGEST_BINDING_KEYS
+        }
+        if bad_keys:
+            msg = (
+                "capture_scan_ingestor_bindings has keys outside "
+                f"{sorted(_SCAN_INGEST_BINDING_KEYS)}: {bad_keys}. An unrecognized "
+                "key is never read by cora.api._capture_scan_ingestor."
+            )
+            raise ValueError(msg)
+        missing = {
+            code: sorted(_SCAN_INGEST_BINDING_KEYS - set(binding))
+            for code, binding in value.items()
+            if _SCAN_INGEST_BINDING_KEYS - set(binding)
+        }
+        if missing:
+            msg = f"capture_scan_ingestor_bindings is missing required keys: {missing}."
+            raise ValueError(msg)
+        for code, binding in value.items():
+            for id_key in ("producing_asset_id", "supply_id"):
+                try:
+                    UUID(binding[id_key])
+                except ValueError as exc:
+                    msg = (
+                        f"capture_scan_ingestor_bindings[{code!r}][{id_key!r}] is not a "
+                        f"valid UUID: {binding[id_key]!r}"
+                    )
+                    raise ValueError(msg) from exc
+        return value
+
+    @field_validator("scan_probe_remote_python")
+    @classmethod
+    def _validate_scan_probe_remote_python(
+        cls, value: str | None, info: ValidationInfo
+    ) -> str | None:
+        """`scan_probe_remote_host` with no interpreter path is a
+        misconfiguration that would otherwise surface only as an
+        `ssh ... -m cora.data._remote_scan_probe` invoked with `None` as
+        an argv element, at the first sweep tick."""
+        if info.data.get("scan_probe_remote_host") and not value:
+            msg = (
+                "scan_probe_remote_host is set but "
+                "scan_probe_remote_python is not. The remote host needs "
+                "an explicit interpreter path to run cora.data._remote_scan_probe."
+            )
+            raise ValueError(msg)
+        return value
 
     @field_validator("capture_experiment_identity_pvs")
     @classmethod

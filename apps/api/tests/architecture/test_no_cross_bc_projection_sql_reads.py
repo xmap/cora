@@ -26,10 +26,11 @@ set, and remain out of scope by design: a migration legitimately defines
 or back-fills any table; it is schema authorship, not a command-time
 cross-BC read.
 
-The allowlist starts EMPTY and every BC source file already obeys.
-Adding an entry means a BC reads another BC's projection directly, which
-is a BC-seam violation absent a design memo overriding the
-port-mediated-integration convention.
+The allowlist started EMPTY and every BC source file obeyed until slice
+17's `("api", "run")` / `("api", "data")` pair (see that entry's own
+citation below for why). Adding an entry means a BC reads another BC's
+projection directly, which is a BC-seam violation absent a design memo
+overriding the port-mediated-integration convention.
 """
 
 from __future__ import annotations
@@ -44,10 +45,25 @@ from tests.architecture.conftest import CORA_ROOT, tracked_python_files
 if TYPE_CHECKING:
     from pathlib import Path
 
-# (owning_bc, referenced_bc) pairs permitted to cross. Empty: no BC
-# source file may read another BC's projection. Extend only with a
-# design memo overriding the port-mediated cross-BC integration rule.
-_CROSS_BC_READ_ALLOWLIST: frozenset[tuple[str, str]] = frozenset()
+# (owning_bc, referenced_bc) pairs permitted to cross. Extend only with
+# a design memo overriding the port-mediated cross-BC integration rule.
+#
+# ("api", "run") and ("api", "data"): `cora.api._capture_scan_ingestor`
+# (slice 17) reconciles Run BC's `run_capture_path` + `proj_run_summary`
+# against Data BC's `proj_data_dataset_summary` to find a terminated
+# witnessed Run with no Dataset yet. A single-BC port on either side
+# cannot express this: it is inherently a two-BC intersection, and
+# neither BC's own store is the right owner of a query answering "does
+# ANOTHER BC's projection already have a row for this run" (the Run BC
+# `CapturePathStore` deliberately has no batch/list method by design --
+# see its own docstring -- and Data BC's dataset-by-checksum lookup is
+# single-key by the same reasoning). `cora.api` is the one place the
+# codebase already treats as licensed to depend on more than one BC
+# (see `main.py`'s "only cora.api may depend on both" composition-root
+# rule), so the join lives there rather than inventing a new bulk query
+# surface on either BC for one composition-root consumer. Design plan:
+# /Users/dgursoy/.claude/plans/indexed-petting-bonbon.md.
+_CROSS_BC_READ_ALLOWLIST: frozenset[tuple[str, str]] = frozenset({("api", "run"), ("api", "data")})
 
 # Captures the BC prefix of a projection table named in a FROM / JOIN
 # clause: `FROM proj_equipment_asset_summary` -> "equipment". The

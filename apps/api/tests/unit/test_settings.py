@@ -505,3 +505,121 @@ def test_settings_capture_probe_recording_enabled_reads_env(
     monkeypatch.setenv("CAPTURE_PROBE_RECORDING_ENABLED", "true")
     settings = Settings()
     assert settings.capture_probe_recording_enabled is True
+
+
+# ---------------------------------------------------------------------------
+# capture_scan_ingestor_* / scan_probe_* (slice 17, the EIGHTH kill switch)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_defaults_are_empty_and_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CAPTURE_SCAN_INGESTOR_ENABLED", raising=False)
+    monkeypatch.delenv("CAPTURE_SCAN_INGESTOR_BINDINGS", raising=False)
+    monkeypatch.delenv("SCAN_PROBE_REMOTE_HOST", raising=False)
+
+    settings = Settings()
+
+    assert settings.capture_scan_ingestor_enabled is False
+    assert settings.capture_scan_ingestor_bindings == {}
+    assert settings.scan_probe_remote_host is None
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_reads_code_keyed_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "01900000-0000-7000-8000-000000000001", '
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}}",
+    )
+    settings = Settings()
+    assert settings.capture_scan_ingestor_bindings == {
+        "2bmb-tomoscan": {
+            "producing_asset_id": "01900000-0000-7000-8000-000000000001",
+            "supply_id": "01900000-0000-7000-8000-000000000002",
+            "access_protocol": "POSIX",
+        }
+    }
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_rejects_unrecognized_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A typo'd key must fail at boot: `_capture_scan_ingestor` reads
+    exactly the three closed keys by name and would otherwise silently
+    never read an unrecognized one."""
+    import pydantic
+
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {"producing_asset_idd": "01900000-0000-7000-8000-000000000001"}}',
+    )
+    with pytest.raises(pydantic.ValidationError, match="capture_scan_ingestor_bindings has keys"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_rejects_a_missing_required_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pydantic
+
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {"producing_asset_id": "01900000-0000-7000-8000-000000000001"}}',
+    )
+    with pytest.raises(
+        pydantic.ValidationError, match="capture_scan_ingestor_bindings is missing required keys"
+    ):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_capture_scan_ingestor_bindings_rejects_a_non_uuid_asset_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pydantic
+
+    monkeypatch.setenv(
+        "CAPTURE_SCAN_INGESTOR_BINDINGS",
+        '{"2bmb-tomoscan": {'
+        '"producing_asset_id": "not-a-uuid", '
+        '"supply_id": "01900000-0000-7000-8000-000000000002", '
+        '"access_protocol": "POSIX"'
+        "}}",
+    )
+    with pytest.raises(pydantic.ValidationError, match="is not a valid UUID"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_scan_probe_remote_host_without_remote_python_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`scan_probe_remote_host` with no interpreter path would otherwise
+    surface only as `ssh ... None -m ...` at the first sweep tick."""
+    import pydantic
+
+    monkeypatch.setenv("SCAN_PROBE_REMOTE_HOST", "tomdet")
+    monkeypatch.delenv("SCAN_PROBE_REMOTE_PYTHON", raising=False)
+    with pytest.raises(pydantic.ValidationError, match="scan_probe_remote_python is not"):
+        Settings()
+
+
+@pytest.mark.unit
+def test_settings_scan_probe_remote_host_with_remote_python_is_accepted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SCAN_PROBE_REMOTE_HOST", "tomdet")
+    monkeypatch.setenv("SCAN_PROBE_REMOTE_PYTHON", "/venv/bin/python3")
+    settings = Settings()
+    assert settings.scan_probe_remote_host == "tomdet"
+    assert settings.scan_probe_remote_python == "/venv/bin/python3"
