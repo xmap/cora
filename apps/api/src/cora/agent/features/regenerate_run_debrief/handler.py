@@ -353,6 +353,8 @@ def bind(deps: Kernel) -> Handler:
                 response=response,
                 occurred_at=now,
                 principal_id=debriefer_agent_id,
+                debriefer_agent_id=debriefer_agent_id,
+                debriefer_agent_name=RUN_DEBRIEFER_AGENT_NAME,
                 correlation_id=correlation_id,
                 causation_id=causation_id,
                 log=log,
@@ -372,6 +374,8 @@ async def _record_inference(
     response: LLMResponse,
     occurred_at: datetime,
     principal_id: UUID,
+    debriefer_agent_id: UUID,
+    debriefer_agent_name: str,
     correlation_id: UUID,
     causation_id: UUID | None,
     log: Any,
@@ -381,9 +385,19 @@ async def _record_inference(
     Mirrors the subscriber path: fire-and-forget (the recorder never raises
     per its port contract; the try/except is defense-in-depth), deterministic
     inference `event_id`, recorded only after the Decision append commits.
-    The inference is attributed to the RunDebriefer agent principal (the WHO of
-    the Decision), so the operator-initiated regenerate carries the same authz
-    requirement as the auto-fired subscriber path.
+    The inference is attributed to the agent that performed the debrief, which
+    is also the principal the recorder authorizes under, so the
+    operator-initiated regenerate carries the same authz requirement as the
+    auto-fired subscriber path.
+
+    The two have to be the SAME agent. `append_inferences` refuses a trace
+    whose `agent_id` disagrees with its principal, and it refuses it quietly
+    from the caller's point of view, because inference capture is
+    fire-and-forget and the Decision has already committed. A mismatch
+    therefore costs no error and no Decision, only the provenance: the model,
+    the token counts, and the cost silently fail to reach
+    `entries_decision_inferences`, which is the table the spend lookup and the
+    record export both read.
     """
     trace = AgentInferenceTrace(
         decision_id=decision_id,
@@ -398,8 +412,8 @@ async def _record_inference(
         output_tokens=response.usage.output_tokens,
         cost_usd=compute_cost_usd(request.model_ref, response.usage),
         request_max_tokens=request.max_output_tokens,
-        agent_id=str(RUN_DEBRIEFER_AGENT_ID),
-        agent_name=RUN_DEBRIEFER_AGENT_NAME,
+        agent_id=str(debriefer_agent_id),
+        agent_name=debriefer_agent_name,
     )
     try:
         await recorder.record(

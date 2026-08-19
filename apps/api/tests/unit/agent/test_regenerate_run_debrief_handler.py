@@ -956,3 +956,60 @@ async def test_handler_without_a_named_agent_still_uses_the_seeded_singleton() -
     decision = await load_decision(store, decision_id)
     assert decision is not None
     assert decision.decided_by == RUN_DEBRIEFER_AGENT_ID
+
+
+@pytest.mark.unit
+async def test_handler_attributes_the_inference_trace_to_the_named_agent() -> None:
+    """The trace's agent must match the principal it is recorded under.
+
+    `append_inferences` refuses a trace whose `agent_id` disagrees with its
+    principal, and refuses it where no caller can see: inference capture is
+    fire-and-forget and the Decision has already committed, so a mismatch
+    costs no error and no Decision, only the provenance. The model, the
+    token counts, and the cost never reach `entries_decision_inferences`,
+    which is the table the spend lookup and the record export both read.
+
+    That is exactly what happened when agent_id was first threaded through
+    this handler: every field was updated except the trace's, and a live
+    rehearsal produced five valid Decisions with no cost data behind any of
+    them. Unit tests missed it because the fake recorder does not enforce
+    the match that the real Decision BC does.
+    """
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    recorder = FakeInferenceRecorder()
+    run_id = uuid4()
+    await _seed_actor(store)
+    await _seed_actor_at(store, _OTHER_DEBRIEFER_ID)
+    await seed_versioned_agent(
+        store,
+        agent_id=_OTHER_DEBRIEFER_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        model_ref=AgentModelRef(provider="argo", model="claude-haiku-4-5"),
+    )
+    await _seed_run(store, run_id)
+    deps = build_deps(
+        ids=[_NEW_DECISION_ID],
+        now=_NOW,
+        event_store=store,
+        llm=llm,
+        inference_recorder=recorder,
+    )
+    handler = bind(deps)
+
+    await handler(
+        RegenerateRunDebrief(run_id=run_id, agent_id=_OTHER_DEBRIEFER_ID),
+        principal_id=_PRINCIPAL_ID,
+        correlation_id=_CORRELATION_ID,
+    )
+
+    assert len(recorder.calls) == 1
+    recorded = recorder.calls[0]
+    assert recorded.trace.agent_id == str(_OTHER_DEBRIEFER_ID)
+    assert recorded.principal_id == _OTHER_DEBRIEFER_ID
+    assert recorded.trace.provider_name == "argo"
