@@ -78,6 +78,13 @@ the gateway's adapter classify that as the authentication failure it
 is. Without it the missing tool-use block would surface as a schema
 error and send an operator to debug a prompt over a credential.
 
+`chat` refuses a request whose `model_ref.provider` disagrees with
+`provider_name`, and the guard lives here rather than in each gateway's
+adapter so both directions are covered by construction. The asymmetric
+version was worse than no guard in one respect: it made the gateway
+path fail loudly while the direct path stayed silent, which is the
+opposite of where a reader would expect the risk.
+
 None of the three make this a config-switched multi-provider
 adapter. Gateway-specific concerns (the identifier map, the refusal
 to accept a snapshot pin the gateway cannot honor) live in the
@@ -193,6 +200,17 @@ class AnthropicLLM:
         await self._client.close()
 
     async def chat(self, request: LLMChatRequest) -> LLMResponse:
+        if request.model_ref.provider != self._provider_name:
+            msg = (
+                f"model_ref names provider {request.model_ref.provider!r} but this "
+                f"adapter serves {self._provider_name!r}. Cost resolves from the "
+                "model_ref while the serving route comes from configuration, so a "
+                "call served by one and priced as the other misattributes spend "
+                "with nothing to show for it. Price the catalog entry as "
+                f"{self._provider_name!r}, or select the adapter that matches it."
+            )
+            raise LLMInvalidRequestError(msg)
+
         cache_count = _count_cache_breakpoints(request)
         if cache_count > _MAX_CACHE_BREAKPOINTS:
             msg = (

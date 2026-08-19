@@ -438,6 +438,28 @@ class AgentNotSeededError(Exception):
         self.agent_name = agent_name
 
 
+class AgentKindMismatchError(Exception):
+    """Cross-aggregate gate failure: the named Agent is the wrong kind
+    for the slice that was asked to run it.
+
+    Raised when an operator names an explicit agent on a slice that is
+    specific to one kind, such as pointing `regenerate_run_debrief` at a
+    CautionDrafter. Without this the Decision would be written in the
+    RunDebrief context but attributed to an agent that never debriefs
+    anything, and the record would carry an attribution no reader could
+    make sense of.
+    """
+
+    def __init__(self, agent_id: UUID, expected_kind: str, actual_kind: str) -> None:
+        super().__init__(
+            f"Agent {agent_id} is kind {actual_kind!r}, but this command "
+            f"requires kind {expected_kind!r}"
+        )
+        self.agent_id = agent_id
+        self.expected_kind = expected_kind
+        self.actual_kind = actual_kind
+
+
 class AgentDeactivatedError(Exception):
     """Cross-aggregate state-gate failure: the Agent's co-registered
     Actor is `active=False`.

@@ -45,6 +45,18 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             UUID,
             Field(description="The Run to regenerate the debrief for."),
         ],
+        agent_id: Annotated[
+            UUID | None,
+            Field(
+                default=None,
+                description=(
+                    "Which RunDebriefer performs the debrief. Omit for the "
+                    "seeded singleton. Naming another RunDebriefer re-debriefs "
+                    "the Run under that Agent's declared model, which is how "
+                    "one Run is compared across two approved models."
+                ),
+            ),
+        ] = None,
         parent_decision_id: Annotated[
             UUID | None,
             Field(
@@ -61,6 +73,7 @@ def register(mcp: FastMCP, *, get_handler: Callable[[], IdempotentHandler]) -> N
             RegenerateRunDebrief(
                 run_id=run_id,
                 parent_decision_id=parent_decision_id,
+                agent_id=agent_id,
             ),
             principal_id=get_mcp_principal_id(ctx),
             correlation_id=current_correlation_id(),

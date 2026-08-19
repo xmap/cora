@@ -11,6 +11,17 @@ re-invocation. Carries:
     `wasInformedBy` chain. Existence + same-Run-scope checked at
     handler.
 
+  - `agent_id`: which RunDebriefer performs it. `None` (the
+    default) means the seeded singleton, which is what every
+    existing caller gets. Naming one lets an operator re-debrief
+    the same Run under a DIFFERENT approved model, because the
+    model served is the named Agent's own `model_ref`, and that
+    declaration passed `define_agent`'s catalog gate when the
+    Agent was defined. The named Agent must be kind
+    `RunDebriefer`; anything else is refused rather than
+    attributed. This is the operator half of the buy-vs-build
+    comparison: same Run, same prompt, two agents.
+
 The Decision's `decision_id` is server-allocated by the handler
 from the IdGenerator port (NOT UUID5-derived; the subscriber's
 deterministic-id strategy is specific to terminal-event
@@ -34,3 +45,4 @@ class RegenerateRunDebrief:
 
     run_id: UUID
     parent_decision_id: UUID | None = None
+    agent_id: UUID | None = None

@@ -30,11 +30,12 @@ live here, and the shared mechanics stay in one place.
 
   - **Base URL and credential.** Argo authenticates with a bare ANL
     domain username in the API-key position; there is no issued key.
-    It must be a person's username: service accounts are documented for
-    Argo but are not usable at Argonne as of 2026-08, so a long-lived
-    deployment runs under a named individual and the gateway's audit
-    trail is tied to them. Plan for that rather than around it, and
-    revisit if service accounts become available.
+    A long-lived deployment should carry a SERVICE ACCOUNT rather than a
+    person, so the gateway's usage tracking attributes these calls to
+    the application instead of mixing them into someone's personal use.
+    A service account is not an unowned identity: it stays tied to the
+    ANL account, ALD, and division of whoever registered it. What it
+    separates is attribution, not ownership.
   - **Authentication failures arrive as successful responses.** An
     unrecognized username returns HTTP 200 carrying a synthetic
     assistant message that says access was denied, not a 401, so the
@@ -92,9 +93,9 @@ ARGO_PROVIDER_NAME = "argo"
 """Reported as `gen_ai.provider.name`, and required on `ModelRef.provider`.
 
 Pricing resolves from the ModelRef's own provider field, while span
-and histogram attributes come from the adapter. `chat` requires the
-two to agree so a call cannot be served by the gateway and priced as
-a direct-vendor purchase at the same time.
+and histogram attributes come from the adapter. `AnthropicLLM` requires
+the two to agree, so a call cannot be served by the gateway and priced
+as a direct-vendor purchase at the same time, nor the reverse.
 """
 
 _ARGO_MODEL_IDS = MappingProxyType(
@@ -120,12 +121,22 @@ catalog is NOT Anthropic's published catalog, so a model absent here
 should be confirmed against `/v1/models` before being added.
 """
 
+_BLOCKED_MESSAGE_ID_PREFIX = "msg_blocked_"
+"""How the gateway stamps a refused call's message id.
+
+Observed as `msg_blocked_<username>_<epoch>` on every denial measured
+(2026-08-18 and 2026-08-19). This is the structural signal and is
+checked first: an id scheme is far less likely to drift than the prose
+below, and a served response never carries it.
+"""
+
 _AUTH_NOTICE_MARKER = "NOTICE FROM ARGO"
 """Substring of the gateway's denial text, which it returns with HTTP 200.
 
-Matched alongside a zero-token usage report, which no served call
-produces, so a legitimate response that merely quotes this phrase is
-not mistaken for a denial.
+The fallback for the id check above, kept because it was the first
+signal observed and costs nothing. Matched only alongside a zero-token
+usage report, which no served call produces, so a legitimate response
+that merely quotes this phrase is not mistaken for a denial.
 """
 
 _DEFAULT_MAX_RETRIES = 2
@@ -166,10 +177,10 @@ def _reject_auth_notice(message: anthropic.types.Message) -> None:
     single text block carries the denial, so nothing upstream treats it
     as a failure.
     """
-    if message.usage.input_tokens != 0 or message.usage.output_tokens != 0:
-        return
     text = "".join(block.text for block in message.content if block.type == "text")
-    if _AUTH_NOTICE_MARKER not in text:
+    blocked_by_id = message.id.startswith(_BLOCKED_MESSAGE_ID_PREFIX)
+    spent_no_tokens = message.usage.input_tokens == 0 and message.usage.output_tokens == 0
+    if not blocked_by_id and not (spent_no_tokens and _AUTH_NOTICE_MARKER in text):
         return
     msg = (
         "Argo rejected the configured username. The gateway returns this as a "
@@ -185,8 +196,11 @@ class ArgoLLM:
 
     `username` is the ANL domain username (not the `@anl.gov` address),
     passed in the API-key position because that is what the gateway
-    authenticates against. `ac.*` accounts are not authorized, and
-    neither, today, is a service account.
+    authenticates against. `ac.*` accounts are not authorized. A service
+    account name is accepted and is the right choice here; note that the
+    gateway's naming rules may prefix the requested name, so configure
+    whatever string the provisioned account actually resolves to rather
+    than the name as requested.
 
     Optionally accepts an explicit `client` so tests can point the
     whole adapter at a local HTTP server without reaching the gateway.
@@ -220,15 +234,10 @@ class ArgoLLM:
         await self._inner.aclose()
 
     async def chat(self, request: LLMChatRequest) -> LLMResponse:
-        if request.model_ref.provider != ARGO_PROVIDER_NAME:
-            msg = (
-                f"ArgoLLM was handed a model_ref with provider "
-                f"{request.model_ref.provider!r}, but cost resolves from that "
-                f"field while the call is served by the gateway. Price the "
-                f"entry as {ARGO_PROVIDER_NAME!r} in the catalog, or select "
-                "the direct-vendor adapter."
-            )
-            raise LLMInvalidRequestError(msg)
+        # The provider-agreement guard is not repeated here. It lives in
+        # AnthropicLLM keyed on `provider_name`, which this adapter sets
+        # to `argo`, so both the gateway and the direct path are covered
+        # by one check rather than by two that could drift apart.
         return await self._inner.chat(request)
 
 

@@ -152,8 +152,9 @@ def llm_unwired_reason(settings: Settings) -> str:
         return (
             "LLM_ENABLED is true and LLM_PROVIDER is argo, but ARGO_USERNAME "
             "is not configured. Supply the ANL domain username the gateway "
-            "authenticates. It has to be a person's username; Argo cannot "
-            "take a service account today. Supply it and restart."
+            "authenticates: a service account for a long-lived deployment, "
+            "so the gateway attributes these calls to the application rather "
+            "than to an individual. Supply it and restart."
         )
     if settings.llm_provider == "local":
         return (

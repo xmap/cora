@@ -22,8 +22,10 @@ from cora.access.aggregates.actor import (
 from cora.access.aggregates.actor import event_type_name as actor_event_type_name
 from cora.access.aggregates.actor import to_payload as actor_to_payload
 from cora.agent.aggregates.agent import AgentDeprecated
+from cora.agent.aggregates.agent import ModelRef as AgentModelRef
 from cora.agent.aggregates.agent import event_type_name as agent_event_type_name
 from cora.agent.aggregates.agent import to_payload as agent_to_payload
+from cora.agent.prompts.run_debrief import DEFAULT_RUN_DEBRIEF_MODEL
 from cora.agent.seed import (
     RUN_DEBRIEFER_AGENT_ID,
     RUN_DEBRIEFER_AGENT_KIND,
@@ -1727,3 +1729,56 @@ def test_make_run_debriefer_subscriber_wires_spend_lookup_from_kernel() -> None:
     assert isinstance(subscriber, RunDebrieferSubscriber)
     assert subscriber.spend_lookup is deps.spend_lookup
     assert subscriber.allocation_lookup is deps.allocation_lookup
+
+
+@pytest.mark.unit
+async def test_apply_serves_the_model_the_agent_declares_not_the_module_default() -> None:
+    """The Agent's declaration reaches the LLM, so the catalog gate binds.
+
+    `define_agent` refuses an Agent whose `(provider, model)` holds no
+    Approved catalog entry. That gate governs nothing if the call then
+    serves a module-level constant instead, and it silently agreed with
+    the constant for as long as the Agent seed derived from it.
+    """
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store)
+    await seed_versioned_agent(
+        store,
+        agent_id=RUN_DEBRIEFER_AGENT_ID,
+        genesis_event_id=uuid4(),
+        version_event_id=uuid4(),
+        correlation_id=_CORRELATION_ID,
+        principal_id=_PRINCIPAL_ID,
+        defined_at=_NOW,
+        versioned_at=_NOW,
+        model_ref=AgentModelRef(provider="argo", model="claude-haiku-4-5"),
+    )
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert len(llm.received) == 1
+    served = llm.received[0].model_ref
+    assert served.provider == "argo"
+    assert served.model == "claude-haiku-4-5"
+    assert served.provider != DEFAULT_RUN_DEBRIEF_MODEL.provider
+
+
+@pytest.mark.unit
+async def test_apply_falls_back_to_the_default_model_when_no_agent_is_seeded() -> None:
+    """An Actor-only deployment keeps working, which the apply path allows."""
+    store = InMemoryEventStore()
+    llm = FakeLLM(responses=[_CANNED_OK])
+    await _seed_run_debrief_actor(store)
+    run_id = uuid4()
+    await _seed_run(store, run_id)
+    subscriber = await _build_subscriber(store, llm)
+    event = _terminal_event(event_type="RunCompleted", run_id=run_id)
+
+    await subscriber.apply(event, conn=None)
+
+    assert llm.received[0].model_ref == DEFAULT_RUN_DEBRIEF_MODEL

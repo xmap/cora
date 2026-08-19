@@ -34,6 +34,7 @@ deps = build_deps(ids=[...], now=custom_clock_time)  # custom clock
   testcontainers pool.
 """
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -59,6 +60,7 @@ from cora.infrastructure.ports import (
     FakeClock,
     FamilyLookup,
     FixedIdGenerator,
+    InferenceRecorder,
     LanguageModelLookup,
     ModelUsageLookup,
     ProfileStore,
@@ -139,6 +141,7 @@ def build_deps(
     language_model_lookup: LanguageModelLookup | None = None,
     model_usage_lookup: ModelUsageLookup | None = None,
     allocation_lookup: AllocationLookup | None = None,
+    inference_recorder: InferenceRecorder | None = None,
 ) -> Kernel:
     """Build a Kernel for unit-test handler invocation.
 
@@ -238,7 +241,7 @@ def build_deps(
     from cora.federation.adapters.in_memory_publish_port import InMemoryPublishPort
     from cora.federation.adapters.in_memory_signature_port import InMemorySignaturePort
 
-    return make_inmemory_kernel(
+    kernel = make_inmemory_kernel(
         settings=Settings(app_env="test", trust_policy_id=trust_policy_id),  # type: ignore[call-arg]
         clock=FakeClock(now or DEFAULT_NOW),
         id_generator=FixedIdGenerator(list(ids or [])),
@@ -260,6 +263,9 @@ def build_deps(
         model_usage_lookup=model_usage_lookup,
         allocation_lookup=allocation_lookup,
     )
+    if inference_recorder is None:
+        return kernel
+    return replace(kernel, inference_recorder=inference_recorder)
 
 
 async def seed_capability(

@@ -1,7 +1,7 @@
 """HTTP route for the `regenerate_run_debrief` slice.
 
 `POST /agents/run-debriefer/runs/{run_id}/regenerate-debrief` with
-optional body `{parent_decision_id?}`. Returns 201 + `{decision_id}`
+optional body `{agent_id?, parent_decision_id?}`. Returns 201 + `{decision_id}`
 on success (including the `DebriefDeferred` path, which still produces
 a Decision -- operators distinguish via the `choice` field on the
 returned Decision).
@@ -31,6 +31,15 @@ from cora.infrastructure.routing import (
 class RegenerateRunDebriefRequest(BaseModel):
     """Body for `POST /agents/run-debriefer/runs/{run_id}/regenerate-debrief`."""
 
+    agent_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Which RunDebriefer performs the debrief. Omit for the seeded "
+            "singleton. Naming another RunDebriefer re-debriefs the Run under "
+            "that Agent's own declared model, which is how the same Run is "
+            "compared across two approved models. Must be kind RunDebriefer."
+        ),
+    )
     parent_decision_id: UUID | None = Field(
         default=None,
         description=(
@@ -73,8 +82,8 @@ router = APIRouter(tags=["agent"])
             "model": ErrorResponse,
             "description": (
                 "Cross-aggregate invariant violated: Run missing, agent not "
-                "seeded / deactivated, parent_decision missing, or parent "
-                "Decision references a different Run."
+                "seeded / deactivated / not a RunDebriefer, parent_decision "
+                "missing, or parent Decision references a different Run."
             ),
         },
         status.HTTP_403_FORBIDDEN: {
@@ -107,10 +116,12 @@ async def post_regenerate_run_debrief(
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> RegenerateRunDebriefResponse:
     parent_decision_id = body.parent_decision_id if body is not None else None
+    agent_id = body.agent_id if body is not None else None
     decision_id = await handler(
         RegenerateRunDebrief(
             run_id=run_id,
             parent_decision_id=parent_decision_id,
+            agent_id=agent_id,
         ),
         principal_id=principal_id,
         correlation_id=cid,

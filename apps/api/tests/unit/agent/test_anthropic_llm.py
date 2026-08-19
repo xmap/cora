@@ -107,6 +107,7 @@ def _basic_request(
     user_cache: CacheBreakpoint | None = None,
     schema: dict[str, object] | None = None,
     model: str = "claude-haiku-4-5",
+    provider: str = "anthropic",
     snapshot_pin: str | None = None,
     max_output_tokens: int = 512,
 ) -> LLMChatRequest:
@@ -114,7 +115,7 @@ def _basic_request(
         system=LLMSystemPrompt(blocks=system_blocks),
         user_message=LLMContentBlock(text=user_text, cache=user_cache),
         structured_output_schema=schema or {"type": "object"},
-        model_ref=ModelRef(provider="anthropic", model=model, snapshot_pin=snapshot_pin),
+        model_ref=ModelRef(provider=provider, model=model, snapshot_pin=snapshot_pin),
         max_output_tokens=max_output_tokens,
     )
 
@@ -484,3 +485,24 @@ async def test_max_output_tokens_flows_to_api_call() -> None:
     adapter = AnthropicLLM(api_key="sk-test", client=fake)  # type: ignore[arg-type]
     await adapter.chat(_basic_request(max_output_tokens=2048))
     assert fake.messages.calls[0]["max_tokens"] == 2048
+
+
+@pytest.mark.unit
+async def test_chat_rejects_a_model_ref_priced_as_another_provider() -> None:
+    """The direct path refuses a mismatch too, not just the gateway's.
+
+    Cost resolves from `ModelRef.provider` while the serving route comes
+    from configuration, so an entry priced as a gateway purchase but
+    served direct bills one vendor's call at another's rate. Guarding
+    only the gateway direction left the quieter half of that mistake
+    unguarded: the direct adapter would have served it without comment.
+    """
+    fake = _FakeAsyncAnthropic(_ok_message())
+    adapter = AnthropicLLM(api_key="sk-test", client=fake)  # type: ignore[arg-type]
+
+    with pytest.raises(LLMInvalidRequestError) as excinfo:
+        await adapter.chat(_basic_request(provider="argo"))
+
+    assert "argo" in str(excinfo.value)
+    assert "anthropic" in str(excinfo.value)
+    assert fake.messages.calls == []

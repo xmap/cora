@@ -98,10 +98,14 @@ adapter matches on is unaffected.
 """
 
 
-def _denial_message() -> Message:
-    """The gateway's denial, which arrives as a normal 200 response."""
+def _denial_message(*, message_id: str = "msg_blocked_svccora_1787147786") -> Message:
+    """The gateway's denial, which arrives as a normal 200 response.
+
+    The default id is the real shape observed on a live refusal:
+    `msg_blocked_<username>_<epoch>`.
+    """
     return Message(
-        id="msg_vrtx_denied_01",
+        id=message_id,
         type="message",
         role="assistant",
         content=[TextBlock(type="text", text=_DENIAL_TEXT, citations=None)],
@@ -260,3 +264,21 @@ async def test_chat_accepts_a_served_response_that_quotes_the_denial_wording() -
     response = await adapter.chat(_request())
 
     assert response.parsed == {"choice": "NominalCompletion"}
+
+
+@pytest.mark.unit
+async def test_chat_rejects_a_blocked_message_id_even_without_the_notice_wording() -> None:
+    """The id prefix stands alone, so a reworded denial is still caught.
+
+    The prose was the first signal available and is the more fragile of
+    the two; a gateway is free to rewrite its own message text without
+    warning, and an authentication failure must not start reading as a
+    schema failure because someone edited a sentence.
+    """
+    reworded = _denial_message()
+    reworded.content = [TextBlock(type="text", text="Request refused.", citations=None)]
+    client = _FakeAsyncAnthropic(reworded)
+    adapter = ArgoLLM(username="svccora", client=client)  # type: ignore[arg-type]
+
+    with pytest.raises(LLMAuthenticationError):
+        await adapter.chat(_request())

@@ -5,10 +5,11 @@ Argonne's Argo gateway, and an open model built and served in-house on facility 
 source-agnostic [Allocation](../../architecture/modules/budget/index.md) envelope, at the catalog's price for
 whichever entry served the call.*
 
-This page covers what is armed today: the catalog entries, the serving settings, and the spend envelope. It does
-not yet cover running the comparison itself, running the same completed Run's debrief a second time under the
-other model, because that needs a `regenerate_run_debrief` change (letting the operator name which RunDebriefer
-variant re-debriefs a Run) that has not landed. This page gains that section once it does.
+This page covers the whole ceremony: the catalog entries, one Agent per arm, the serving settings, the spend
+envelope, and running the comparison itself.
+
+Read [One Agent per arm](#one-agent-per-arm) before setting `LLM_PROVIDER`. The model a debrief serves comes from
+the **Agent's** declared `model_ref`, not from `LLM_PROVIDER`, and the two have to agree or every call is refused.
 
 ## Catalog entries
 
@@ -38,6 +39,42 @@ The in-house entry's `model` field, `2bm-inhouse`, is a stable governance identi
 actually gets served: `LocalLLM` sends whatever `LOCAL_LLM_MODEL` names on the wire regardless of this string.
 Retargeting the GPU box to a different open model is a `LOCAL_LLM_MODEL` change, not a new catalog entry.
 
+## One Agent per arm
+
+The catalog entries above say a model is *approved*. They do not make anything *use* it. What a debrief serves is
+the declared `model_ref` of the Agent performing it, so each arm needs its own Agent declaring that arm's entry.
+
+These are **not** seeded. An Agent is a principal, and shipping two extra principals to every CORA deployment
+worldwide for one beamline's comparison would be wrong. Defining them by hand is also the better path, because
+`POST /agents` applies the catalog gate for real: an Agent declaring a `(provider, model)` with no Approved entry
+is refused at definition time, which is exactly the governance this comparison is meant to demonstrate.
+
+```
+POST /agents
+{
+  "kind": "RunDebriefer",
+  "name": "ArgoRunDebriefer",
+  "version": "1.0.0",
+  "model_ref": {"provider": "argo", "model": "claude-haiku-4-5"},
+  "description": "Buy-side arm of the 2-BM buy-vs-build debrief comparison."
+}
+```
+
+```
+POST /agents
+{
+  "kind": "RunDebriefer",
+  "name": "InHouseRunDebriefer",
+  "version": "1.0.0",
+  "model_ref": {"provider": "local", "model": "2bm-inhouse"},
+  "description": "Build-side arm of the 2-BM buy-vs-build debrief comparison."
+}
+```
+
+Keep both `agent_id` values. They are what selects an arm when re-debriefing, and there is no discovery query for
+them yet. `kind` must be `RunDebriefer` on both: `regenerate_run_debrief` refuses any other kind rather than
+attributing a RunDebrief-context Decision to an agent that does not debrief.
+
 ## Settings, in this order
 
 Nothing below takes effect until the process restarts: `LLM_PROVIDER` and the provider-specific settings are read
@@ -48,16 +85,34 @@ once at boot (`cora.agent.build_llm.build_llm`), not hot-reloaded.
 2. **`LLM_PROVIDER=argo`** or **`LLM_PROVIDER=local`**: one adapter per process. The two arms of the comparison are
    two separate passes over the corpus with a config change and restart between them, not two routes live at once;
    `kernel.llm` is a single bound adapter.
+
+    !!! warning "The live subscriber defers while an arm is armed"
+
+        `LLM_PROVIDER` binds one adapter for the whole process, and the automatic RunDebriefer subscriber uses the
+        **seeded singleton** Agent, which declares `anthropic`. With `LLM_PROVIDER=argo` or `local`, that
+        singleton's declared provider no longer matches the bound adapter, the adapter refuses the call, and every
+        newly completed Run debriefs to `DebriefDeferred` until the setting is put back.
+
+        The refusal is deliberate: cost resolves from the Agent's declared `(provider, model)` while the route
+        comes from configuration, so serving a call through one and pricing it as the other would silently
+        misattribute spend. Failing loudly is the better trade.
+
+        Practically: run the comparison in a no-beam window, when no Runs are completing. If beam is live, either
+        accept deferred automatic debriefs for the duration, or do not arm an alternate provider at all.
 3. Provider-specific settings, matching the `LLM_PROVIDER` chosen in step 2:
 
    **Argo arm:**
-   - `ARGO_USERNAME=<username>`: the ANL domain username Argo authenticates against (not the `@anl.gov` address;
-     `ac.*` accounts are rejected). **This has to name a real person's account.** Argo does not support service
-     account authentication as of 2026-08, so the gateway's audit trail for every call this deployment makes points
-     at whoever is named here. Treat it like an on-call rotation credential, not a durable system identity: when
-     that person leaves the project or the beamline, `ARGO_USERNAME` must be reassigned to their replacement and
-     the process restarted before the Argo arm is trusted again. There is no fallback that keeps working
-     unattended.
+   - `ARGO_USERNAME=<service account>`: the name Argo authenticates against (not an `@anl.gov` address; `ac.*`
+     accounts are rejected). **Use a service account, not a person.** Argo records the service account separately
+     in its usage tracking, which is what keeps this deployment's unattended, continuous calls attributable to the
+     beamline application instead of being mixed into an individual's personal Argo usage. A service account is
+     still owned by the ANL account, ALD, and division that registered it, so what this separates is attribution,
+     not ownership; if the registering person leaves, confirm the account survives the handover.
+
+     Verify the exact string before trusting it. The gateway's naming rules cap the requested name and may prefix
+     it, so the value that authenticates is whatever the provisioned account resolves to, which is not necessarily
+     the name as typed on the request form. A wrong value does not surface as an HTTP error (see below), so check
+     it deliberately rather than waiting for a failure.
    - `ARGO_BASE_URL`: leave at its default (`https://apps.inside.anl.gov/argoapi`) unless ANL moves the gateway.
 
    **In-house arm:**
@@ -121,6 +176,41 @@ POST /allocations/{allocation_id}/activate
   (subscriber registration, REST 503, MCP tool error) uses to say why `kernel.llm` is `None`. If it fires, the
   message names exactly which setting from the list above is still missing; there is nothing else to check.
 
-Do not point real Runs at either arm until both checks above are green. The comparison itself, which Run gets
-debriefed under which model, is not yet operator-selectable; that lands with the `regenerate_run_debrief` change
-noted at the top of this page.
+- **One real debrief, end to end.** The three checks above are all configuration; none of them proves a call
+  succeeds. Re-debrief a single Run under the arm's Agent and read back what was recorded:
+
+  ```
+  POST /agents/run-debriefer/runs/{run_id}/regenerate-debrief
+  { "agent_id": "<the arm's agent_id>" }
+  ```
+
+  ```sql
+  SELECT d.decided_by, i.provider_name, i.request_model, i.cost_usd
+  FROM proj_decision_summary d
+  JOIN inference_entries i ON i.decision_id = d.decision_id
+  WHERE d.decision_id = '<returned decision_id>';
+  ```
+
+  `decided_by` must be the arm's `agent_id`, and `provider_name` must be that arm's provider. A `choice` of
+  `DebriefDeferred` means the call failed, not that the model was uncertain; the deferral reason is in the
+  Decision's `inputs`.
+
+Do not point the corpus at an arm until all four checks are green. The first three can pass while the arm cannot
+serve a single call, which is precisely what the fourth catches.
+
+## Running the comparison
+
+With both Agents defined and one arm armed, re-debrief the same Run under each. `agent_id` selects which
+RunDebriefer performs it, and the model served is that Agent's own declared `model_ref`:
+
+```
+POST /agents/run-debriefer/runs/{run_id}/regenerate-debrief
+{ "agent_id": "<arm agent_id>", "parent_decision_id": "<the original debrief, optional>" }
+```
+
+Passing `parent_decision_id` chains the new Decision to the one it re-evaluates (a PROV-O `wasInformedBy` edge),
+which is what lets a reader see that two verdicts concern the same Run rather than two unrelated ones.
+
+Because one process binds one adapter, the corpus is walked twice: arm the first provider, walk it, change
+`LLM_PROVIDER`, restart, walk it again with the other Agent. Both passes debit the same envelope, at each entry's
+catalog rate, which is the property this comparison exists to demonstrate.

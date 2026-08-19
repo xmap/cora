@@ -140,6 +140,7 @@ from uuid import UUID, uuid5
 
 from cora.access.aggregates.actor import load_actor
 from cora.agent._budget_gate import find_allocation_breach, find_budget_breach
+from cora.agent._model_ref import to_port_model_ref
 from cora.agent._subscriber_lease import attempt_debrief_lease
 from cora.agent.aggregates.agent import AgentStatus, load_agent
 from cora.agent.prompts import (
@@ -147,6 +148,7 @@ from cora.agent.prompts import (
     RunDebriefPayload,
     build_run_debrief_chat_request,
 )
+from cora.agent.prompts.run_debrief import DEFAULT_RUN_DEBRIEF_MODEL
 from cora.agent.seed import (
     RUN_DEBRIEFER_AGENT_ID,
     RUN_DEBRIEFER_AGENT_KIND,
@@ -533,7 +535,19 @@ class RunDebrieferSubscriber:
             ),
             interrupted_at=interrupted_at,
         )
-        request = build_run_debrief_chat_request(payload)
+        # The Agent's declared model, not the module default: that
+        # declaration is what `define_agent` gated against the approved
+        # catalog, so serving anything else makes the gate decorative.
+        # `agent` is None only when the Agent stream was never seeded
+        # (the branch above tolerates it), and the default stands in.
+        request = build_run_debrief_chat_request(
+            payload,
+            model_ref=(
+                to_port_model_ref(agent.model_ref)
+                if agent is not None
+                else DEFAULT_RUN_DEBRIEF_MODEL
+            ),
+        )
 
         try:
             response = await self.llm.chat(request)
