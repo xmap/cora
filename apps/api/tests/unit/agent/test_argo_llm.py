@@ -18,7 +18,7 @@ the adapter's module docstring.
 from typing import Any
 
 import pytest
-from anthropic.types import Message, ToolUseBlock, Usage
+from anthropic.types import Message, TextBlock, ToolUseBlock, Usage
 
 from cora.agent.adapters.argo_llm import (
     ARGO_PROVIDER_NAME,
@@ -27,6 +27,7 @@ from cora.agent.adapters.argo_llm import (
 )
 from cora.infrastructure.observability.gen_ai import PRICING
 from cora.infrastructure.ports.llm import (
+    LLMAuthenticationError,
     LLMChatRequest,
     LLMContentBlock,
     LLMInvalidRequestError,
@@ -75,6 +76,41 @@ def _served_message(*, model: str = "claude-haiku-4-5-20251001") -> Message:
         usage=Usage(
             input_tokens=703,
             output_tokens=69,
+            cache_creation_input_tokens=0,
+            cache_read_input_tokens=0,
+            cache_creation=None,
+            server_tool_use=None,
+            service_tier=None,
+        ),
+    )
+
+
+_DENIAL_TEXT = (
+    "\n\n** IMPORTANT AUTHENTICATION NOTICE FROM ARGO **\n\n** ACCESS DENIED **\n\n"
+    "The username 'zzznotarealuser99' could not be validated as an authorized "
+    "Argo Gateway API user. Please ensure you are providing a valid ANL domain "
+    "user name in your API configuration.\n\n ** END NOTICE FROM ARGO **\n\n"
+)
+"""The gateway's real denial text, transcribed from a live probe on 2026-08-18.
+
+Emoji stripped, since source may not carry them; the marker the
+adapter matches on is unaffected.
+"""
+
+
+def _denial_message() -> Message:
+    """The gateway's denial, which arrives as a normal 200 response."""
+    return Message(
+        id="msg_vrtx_denied_01",
+        type="message",
+        role="assistant",
+        content=[TextBlock(type="text", text=_DENIAL_TEXT, citations=None)],
+        model="claudehaiku45",
+        stop_reason="end_turn",
+        stop_sequence=None,
+        usage=Usage(
+            input_tokens=0,
+            output_tokens=0,
             cache_creation_input_tokens=0,
             cache_read_input_tokens=0,
             cache_creation=None,
@@ -192,3 +228,35 @@ async def test_chat_rejects_a_model_ref_priced_as_a_direct_vendor_purchase() -> 
 
     assert "anthropic" in str(excinfo.value)
     assert client.messages.calls == []
+
+
+@pytest.mark.unit
+async def test_chat_raises_authentication_when_the_gateway_denies_the_username() -> None:
+    """A denial arrives as HTTP 200, so nothing below this would call it a failure.
+
+    Classifying it as a schema error would be actively harmful: it sends
+    the operator to the prompt rather than the credential, and it is the
+    one error class the debrief path defers on instead of retrying, so a
+    mistyped username would look like a model that cannot follow a
+    schema.
+    """
+    client = _FakeAsyncAnthropic(_denial_message())
+    adapter = ArgoLLM(username="zzznotarealuser99", client=client)  # type: ignore[arg-type]
+
+    with pytest.raises(LLMAuthenticationError) as excinfo:
+        await adapter.chat(_request())
+
+    assert "ARGO_USERNAME" in str(excinfo.value)
+
+
+@pytest.mark.unit
+async def test_chat_accepts_a_served_response_that_quotes_the_denial_wording() -> None:
+    """The marker alone must not condemn a real answer; usage tokens disambiguate."""
+    served = _served_message()
+    served.content.insert(0, TextBlock(type="text", text=_DENIAL_TEXT, citations=None))
+    client = _FakeAsyncAnthropic(served)
+    adapter = ArgoLLM(username="svcbeamline", client=client)  # type: ignore[arg-type]
+
+    response = await adapter.chat(_request())
+
+    assert response.parsed == {"choice": "NominalCompletion"}

@@ -70,7 +70,15 @@ unchanged (forced tool-use and 1h-TTL cache breakpoints both
 measured working through it) but wants bespoke model identifiers on
 the wire and its own name in telemetry.
 
-Neither argument makes this a config-switched multi-provider
+A third, `inspect_response`, exists because a gateway can return
+something that is shaped like a response but is not one. Argo answers
+an unrecognized username with HTTP 200 and a synthetic assistant
+message, so the hook runs before structured-output extraction and lets
+the gateway's adapter classify that as the authentication failure it
+is. Without it the missing tool-use block would surface as a schema
+error and send an operator to debug a prompt over a credential.
+
+None of the three make this a config-switched multi-provider
 adapter. Gateway-specific concerns (the identifier map, the refusal
 to accept a snapshot pin the gateway cannot honor) live in the
 gateway's own adapter class, so the direct-Anthropic path stays free
@@ -162,6 +170,7 @@ class AnthropicLLM:
         client: anthropic.AsyncAnthropic | None = None,
         provider_name: str = _DIRECT_PROVIDER_NAME,
         resolve_model_id: Callable[[ModelRef], str] | None = None,
+        inspect_response: Callable[[anthropic.types.Message], None] | None = None,
     ) -> None:
         self._client = client or anthropic.AsyncAnthropic(
             api_key=api_key,
@@ -170,6 +179,7 @@ class AnthropicLLM:
         )
         self._provider_name = provider_name
         self._resolve_model_id = resolve_model_id or _resolve_model_id
+        self._inspect_response = inspect_response
 
     async def aclose(self) -> None:
         """Release the underlying httpx connection pool.
@@ -248,6 +258,9 @@ class AnthropicLLM:
                 # retryable; the alternative (silently surfacing the SDK
                 # exception) would skip the retry layer.
                 raise LLMServerError(str(exc)) from exc
+
+            if self._inspect_response is not None:
+                self._inspect_response(message)
 
             parsed = _extract_structured_output(message)
             raw_text = _extract_raw_text(message)

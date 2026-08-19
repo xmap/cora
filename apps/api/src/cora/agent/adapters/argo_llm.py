@@ -30,9 +30,19 @@ live here, and the shared mechanics stay in one place.
 
   - **Base URL and credential.** Argo authenticates with a bare ANL
     domain username in the API-key position; there is no issued key.
-    Long-lived processes should carry a service account rather than a
-    person, so the audit trail is not tied to an individual who may
-    leave.
+    It must be a person's username: service accounts are documented for
+    Argo but are not usable at Argonne as of 2026-08, so a long-lived
+    deployment runs under a named individual and the gateway's audit
+    trail is tied to them. Plan for that rather than around it, and
+    revisit if service accounts become available.
+  - **Authentication failures arrive as successful responses.** An
+    unrecognized username returns HTTP 200 carrying a synthetic
+    assistant message that says access was denied, not a 401, so the
+    SDK raises nothing. `_reject_auth_notice` catches it and raises
+    `LLMAuthenticationError`, because the alternative is a missing
+    tool-use block reported as a schema failure, which sends the
+    operator to the prompt instead of the credential and, worse, is
+    the error class the debrief path defers on rather than retries.
   - **Model identifiers.** The gateway publishes its own handles
     (`claudehaiku45`), which `_ARGO_MODEL_IDS` maps from the upstream
     names the catalog and the pricing table use. The gateway also
@@ -70,7 +80,7 @@ from typing import TYPE_CHECKING
 import anthropic
 
 from cora.agent.adapters.anthropic_llm import AnthropicLLM
-from cora.infrastructure.ports.llm import LLMInvalidRequestError
+from cora.infrastructure.ports.llm import LLMAuthenticationError, LLMInvalidRequestError
 
 if TYPE_CHECKING:
     from cora.infrastructure.ports.llm import LLMChatRequest, LLMResponse, ModelRef
@@ -110,6 +120,14 @@ catalog is NOT Anthropic's published catalog, so a model absent here
 should be confirmed against `/v1/models` before being added.
 """
 
+_AUTH_NOTICE_MARKER = "NOTICE FROM ARGO"
+"""Substring of the gateway's denial text, which it returns with HTTP 200.
+
+Matched alongside a zero-token usage report, which no served call
+produces, so a legitimate response that merely quotes this phrase is
+not mistaken for a denial.
+"""
+
 _DEFAULT_MAX_RETRIES = 2
 _DEFAULT_REQUEST_TIMEOUT_SECONDS = 600.0
 
@@ -141,12 +159,34 @@ def resolve_argo_model_id(model_ref: ModelRef) -> str:
     return argo_model_id
 
 
+def _reject_auth_notice(message: anthropic.types.Message) -> None:
+    """Raise `LLMAuthenticationError` when the gateway denied the username.
+
+    Argo reports an unauthorized username as a normal 200 response whose
+    single text block carries the denial, so nothing upstream treats it
+    as a failure.
+    """
+    if message.usage.input_tokens != 0 or message.usage.output_tokens != 0:
+        return
+    text = "".join(block.text for block in message.content if block.type == "text")
+    if _AUTH_NOTICE_MARKER not in text:
+        return
+    msg = (
+        "Argo rejected the configured username. The gateway returns this as a "
+        "successful response rather than a 401, so it is surfaced here instead. "
+        "Check ARGO_USERNAME is a valid ANL domain username (an `ac.*` account "
+        f"is not authorized). Gateway said: {' '.join(text.split())}"
+    )
+    raise LLMAuthenticationError(msg)
+
+
 class ArgoLLM:
     """`LLM` served through the Argo gateway's Anthropic Messages endpoint.
 
     `username` is the ANL domain username (not the `@anl.gov` address),
     passed in the API-key position because that is what the gateway
-    authenticates against. `ac.*` accounts are not authorized.
+    authenticates against. `ac.*` accounts are not authorized, and
+    neither, today, is a service account.
 
     Optionally accepts an explicit `client` so tests can point the
     whole adapter at a local HTTP server without reaching the gateway.
@@ -172,6 +212,7 @@ class ArgoLLM:
             ),
             provider_name=ARGO_PROVIDER_NAME,
             resolve_model_id=resolve_argo_model_id,
+            inspect_response=_reject_auth_notice,
         )
 
     async def aclose(self) -> None:
