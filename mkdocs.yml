@@ -110,6 +110,7 @@ nav:
           - Cautions: deployments/2-bm/cautions.md
         - Experiment: deployments/2-bm/experiment.md
         - Governance: deployments/2-bm/governance.md
+        - LLM debrief comparison: deployments/2-bm/llm_debrief.md
         - Model: deployments/2-bm/model.md
         - Open questions: deployments/2-bm/questions.md
       - 2-ID:

@@ -18,3 +18,4 @@ For the aggregate shapes see the [architecture model](../../architecture/model.m
 | Supply (Supply) | [Operations > Supplies](operations.md#supplies) |
 | Zone, Conduit, Policy (Trust); Actor (Access) | [Governance](governance.md) |
 | Subject, Run, Campaign, Dataset, Decision | [Experiment](experiment.md) (live; app read-API) |
+| LanguageModel (Agent); Allocation (Budget) | [LLM debrief comparison](llm_debrief.md) |
