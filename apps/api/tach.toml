@@ -159,6 +159,11 @@ depends_on = [
     "cora.infrastructure",
     "cora.shared",
     "cora.data.aggregates",
+    # ALSO: cora.data.adapters.capture_path_locator resolves an
+    # indirect cora-capture-path:// locator (minted so an automated
+    # ingest never writes a personal-data path onto an event) via Run
+    # BC's CapturePathStore. A second, distinct reason for the same
+    # edge, stacked per the cora.api convention below.
     "cora.run.aggregates",
     "cora.subject.aggregates",
     # register_dataset loads the producing Procedure (Operation BC) to

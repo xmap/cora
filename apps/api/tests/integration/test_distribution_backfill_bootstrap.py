@@ -287,6 +287,45 @@ async def test_happy_path_backfills_three_datasets(db_pool: asyncpg.Pool) -> Non
 
 
 @pytest.mark.integration
+async def test_backfill_maps_the_indirect_capture_path_scheme_to_posix(
+    db_pool: asyncpg.Pool,
+) -> None:
+    """Defense-in-depth regression for `cora.data.adapters.capture_path_locator`
+    (indirect locators CaptureScanIngestor mints so no personal-data path
+    reaches an event): unreachable in practice today, since `ingest_scan`
+    always registers a Dataset's Distribution atomically with it and this
+    backfill only considers Datasets that LACK one, but a future caller
+    that broke that invariant would otherwise abort the WHOLE backfill,
+    for every other pending Dataset too -- there is no per-row skip."""
+    supply_id = uuid4()
+    await _register_storage_supply(db_pool, supply_id)
+    await _mark_supply_available(db_pool, supply_id)
+
+    dataset_id = uuid4()
+    await _register_dataset(
+        db_pool,
+        dataset_id,
+        uri="cora-capture-path://tomdet/local1/2BM/run-01900000-0000-7000-8000-000000009001/scan.h5",
+    )
+    await _drain_dataset(db_pool)
+
+    deps = build_postgres_deps(db_pool, now=_NOW)
+    deps = _bootstrap_deps(deps, _STORAGE_SUPPLY_NAME)
+    resolved = await bootstrap_default_storage_supply(deps)
+
+    count = await bootstrap_distribution_backfill(deps, resolved)
+
+    assert count == 1
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT access_protocol FROM proj_data_distribution_summary WHERE dataset_id = $1",
+            dataset_id,
+        )
+    assert row is not None
+    assert row["access_protocol"] == "POSIX"
+
+
+@pytest.mark.integration
 async def test_backfill_unmapped_uri_scheme_raises(db_pool: asyncpg.Pool) -> None:
     supply_id = uuid4()
     await _register_storage_supply(db_pool, supply_id)
