@@ -43,10 +43,12 @@ the power is the site's, neither is cut to 2-BM's shape.
 Beyond the physical utilities, a run also draws on a compute pool (for reconstruction) and on data-transfer and
 storage tiers. These are modelled through the `ComputePort` and `TransferPort` (a Method plus a port, not a new
 deployment aggregate). The confirmed pipeline (DATA-1 through DATA-7): the detector writes to fast local NVMe on
-`tomdet` (`/local2`, corrected 2026-08-11 by a direct read of `DetectorTopDir`; this page previously said
-`/local1`), tomoscan auto-uploads each scan to the analysis tier (`/data2` or `/data3`), tomocupy
-reconstructs there (`..._rec/` beside the raw), and an operator copies the experiment to its canonical home on
-Sojourner (`/gdata/dm/2BM/<yyyy-mm>/<exp>/{data,analysis,system}/`), shared to proposal and ESAF users through
+`tomdet` (`/local1`, re-measured 2026-08-19; the write target is an operator-settable PV that has moved at least
+once, so treat any value on this page as a reading rather than a constant, and re-read
+`2bmb:TomoScan:DetectorTopDir` before relying on it), tomoscan auto-uploads each scan to the analysis tier
+(`/data2` or `/data3`), tomocupy reconstructs there (`..._rec/` beside the raw), and an operator copies the
+experiment to its canonical home on Sojourner
+(`/gdata/dm/2BM/<yyyy-mm>/<exp>/{data,analysis,system}/`), shared to proposal and ESAF users through
 the Globus collection `APS:DM:2BM` and archived to tape on a per-experiment timer (default one year). The
 upstream tiers are transient, capacity-purged with no fixed schedule, so a dataset is briefly multi-homed and
 then collapses to the Sojourner copy; there is no continuous beamtime-long sync. The reconstruction compute
