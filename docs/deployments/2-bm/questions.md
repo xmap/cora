@@ -147,20 +147,34 @@ Decided 2026-08-11, internally rather than as a staff question: CORA runs on `ar
 interim choice for testing and development while nothing structured is decided yet, and the host may
 move later. Two consequences follow. `arcturus`'s own `EPICS_CA_ADDR_LIST` (an explicit address list,
 not broadcast) is simply what CORA now uses, which is what the former HOST-1 asked. And read access to a
-finished scan file has a working interim answer that needs no mount and never touches the beamline's
-write paths: copy the finished file from `tomdet` to a staging directory on the host and read it there.
-That was exercised end to end on 2026-08-12, staging `test_005.h5` (24.5 GB) to `/local/cora-scans` on
-`arcturus` and ingesting it. Two costs the durable answer should weigh: the copy duplicates the file, and
-digesting it takes real time (`sha256sum` alone is 82 seconds on this hardware, about 300 MB/s), which is
-why the deployment raises the digest walk budget rather than accepting the 60-second default. The durable
-version of the question, a mount or a supported fetch path, stays open below.
+finished scan file is settled: CORA reads it in place on `tomdet` and never copies it.
+
+Copying was the earlier posture, exercised end to end on 2026-08-12 by staging `test_005.h5` (24.5 GB) to
+`/local/cora-scans` on `arcturus` and ingesting it there. That worked for one supervised scan and does not
+survive a batch. Measured 2026-08-18 and 2026-08-19: a scan averages 24 GB, the link between the two hosts
+is 1 GbE (about 105 MB/s in practice), so one file takes roughly 230 seconds to move against a scan cadence
+near 120 seconds. Copying therefore falls permanently behind at about twice the rate it can keep up, and it
+saturates the same link the run witness uses for its EPICS traffic. A mount of the detector tier would
+inherit the same ceiling, because the constraint is the link rather than the protocol.
+
+Reading in place inverts the cost. Digesting a file on `tomdet`'s own disk runs at about 920 MB/s, roughly
+26 seconds per scan, and only a small verdict crosses the link. What travels to the detector host is a
+request; what comes back is a description and a checksum. The beamline confirmed on 2026-08-19 that a
+read-only reader may run there under the shared beamline account.
+
+Two properties this places on CORA rather than on the beamline. The path CORA is handed originates in a PV
+that anyone with Channel Access can write, so it is untrusted input: it never reaches a command line, and
+it is confined to a declared list of permitted roots, checked on the host that actually holds the bytes.
+And the write target is itself an operator-settable PV that has moved between tiers at least once, so the
+permitted roots are a deployment setting to be re-read against `2bmb:TomoScan:DetectorTopDir`, not a
+constant to be hard-coded.
 
 These are likely controls, networking, or IT questions rather than floor questions. Routing them to the
 right person, or naming who that person is, is a complete answer to any row here.
 
 | ID | Priority | Question | CORA assumes | Already done? | Resolves |
 | --- | --- | --- | --- | --- | --- |
-| HOST-2 | `Blocks-go-live` | Can the host read the scan files directly, as a mount of the analysis tier (`/data2`, `/data3`) or of the Sojourner experiment tree, and read-only is sufficient? If no mount is possible, what is the supported way for an off-host reader to fetch a finished file? The answer decides whether CORA reads a dataset in place or has to copy it first, which is a different design and not a setting. | a read-only mount of at least one tier holding finished scan files (confirmed 2026-08-11: none of `/local1`, `/local2`, `/data2`, `/data3`, `/gdata/dm/2BM` are visible from `arcturus`; finished files land on `tomdet` at `/local2/2BM/<experiment>/`, not `/local1` as Operations previously said; the interim posture is a read-in-place SSH hop to `tomdet`, not a mount) | not yet | [Operations](operations.md#inside-the-scan-file) |
+| HOST-2 | `Blocks-go-live` | Can the host read the scan files directly, as a mount of the analysis tier (`/data2`, `/data3`) or of the Sojourner experiment tree, and read-only is sufficient? If no mount is possible, what is the supported way for an off-host reader to fetch a finished file? The answer decides whether CORA reads a dataset in place or has to copy it first, which is a different design and not a setting. | no mount, and none needed: CORA reads in place on `tomdet` over an SSH hop (confirmed 2026-08-11 that none of `/local1`, `/local2`, `/data2`, `/data3`, `/gdata/dm/2BM` are visible from `arcturus`, and measured 2026-08-19 that copying cannot keep pace with the scan cadence, so a mount would not have helped either). Finished files land on `tomdet` at `/local1/2BM/<experiment>/`; an earlier reading of `/local2` on 2026-08-11 was real, 66 older scans still sit there, so the tier is operator-settable rather than fixed | resolved 2026-08-19, read-only access confirmed by the beamline | [Operations](operations.md#inside-the-scan-file) |
 | HOST-3 | `Blocks-go-live` | What durable storage can the host write backups to that is not the host's own disk, and does the host's own disk survive the host being lost or rebuilt? A backup written beside the database protects against operator error and corruption and against nothing else. This row also carries a deadline: backup-repository encryption is fixed when the repository is first created and cannot be added afterwards, so the target has to be known before that step, not after. | a facility share or object store is reachable; local disk is an interim posture only | not yet | [Deployment](../../stack/deployment.md) |
 | HOST-4 | `Blocks-go-live` | Who needs to reach CORA's web interface, and from where: the beamline network only, anyone on the APS network, remote users over VPN, or remote users without one? This decides whether CORA sits behind an existing APS proxy or brings its own, and whether it needs a certificate and a resolvable name. | beamline and APS-network access, behind a facility-provided proxy that terminates TLS | not yet | [Deployment](../../stack/deployment.md) |
 | HOST-5 | `Nice-to-have` | Who administers the host, and does the operating account have rights to install a scheduled system job? CORA needs a timer to run backups and expire old ones. If that is not permitted, the schedule has to live inside the application instead, which is a different and slightly worse design worth choosing deliberately. | beamline-administered, with rights to install a system timer | not yet | [Deployment](../../stack/deployment.md) |
