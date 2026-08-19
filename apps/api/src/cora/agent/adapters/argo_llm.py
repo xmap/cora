@@ -121,12 +121,22 @@ catalog is NOT Anthropic's published catalog, so a model absent here
 should be confirmed against `/v1/models` before being added.
 """
 
+_BLOCKED_MESSAGE_ID_PREFIX = "msg_blocked_"
+"""How the gateway stamps a refused call's message id.
+
+Observed as `msg_blocked_<username>_<epoch>` on every denial measured
+(2026-08-18 and 2026-08-19). This is the structural signal and is
+checked first: an id scheme is far less likely to drift than the prose
+below, and a served response never carries it.
+"""
+
 _AUTH_NOTICE_MARKER = "NOTICE FROM ARGO"
 """Substring of the gateway's denial text, which it returns with HTTP 200.
 
-Matched alongside a zero-token usage report, which no served call
-produces, so a legitimate response that merely quotes this phrase is
-not mistaken for a denial.
+The fallback for the id check above, kept because it was the first
+signal observed and costs nothing. Matched only alongside a zero-token
+usage report, which no served call produces, so a legitimate response
+that merely quotes this phrase is not mistaken for a denial.
 """
 
 _DEFAULT_MAX_RETRIES = 2
@@ -167,10 +177,10 @@ def _reject_auth_notice(message: anthropic.types.Message) -> None:
     single text block carries the denial, so nothing upstream treats it
     as a failure.
     """
-    if message.usage.input_tokens != 0 or message.usage.output_tokens != 0:
-        return
     text = "".join(block.text for block in message.content if block.type == "text")
-    if _AUTH_NOTICE_MARKER not in text:
+    blocked_by_id = message.id.startswith(_BLOCKED_MESSAGE_ID_PREFIX)
+    spent_no_tokens = message.usage.input_tokens == 0 and message.usage.output_tokens == 0
+    if not blocked_by_id and not (spent_no_tokens and _AUTH_NOTICE_MARKER in text):
         return
     msg = (
         "Argo rejected the configured username. The gateway returns this as a "
