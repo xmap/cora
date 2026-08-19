@@ -45,6 +45,8 @@ The cross-cutting reference view is the [Inventory](inventory.md): the flat Asse
 
 [Governance](governance.md): who may act at 2-BM and the trust policies (Zone, Conduit, Policy) that gate their commands. People and autonomous agents are facility principals at the [APS Site](../aps/index.md#safety-and-governance); on the beamline they surface through the actions they take.
 
+[LLM debrief comparison](llm_debrief.md): arming the RunDebriefer's Argo and in-house serving routes for the buy-vs-build comparison, the catalog entries and Allocation envelope both routes debit.
+
 ## Model
 
 [Model](model.md): the developer's by-kind index into where each CORA aggregate's 2-BM content lives.

@@ -14,6 +14,31 @@ they land Defined and are gated at runtime by `Actor.active`, not
 `deprecate_language_model`, which withdraws the seeded approval like
 any other.
 
+Two further entries are catalog-only: no fleet agent declares them as
+its compile-time default, but they are pre-approved so an operator can
+point a RunDebriefer variant at either one. Both serve the 2-BM
+buy-vs-build LLM debrief comparison, which debriefs the same completed
+Runs under a bought model (Claude Haiku 4.5 over Argonne's Argo
+gateway) and a built one (an open model served in-house on facility
+GPUs), debiting one source-agnostic Allocation envelope either way.
+The Argo entry mirrors `DEFAULT_RUN_DEBRIEF_MODEL`'s upstream model
+name but is priced and served under `provider="argo"`, never
+`"anthropic"`: `ArgoLLM.chat` refuses a `ModelRef` priced any other
+way, because pricing resolves from `ModelRef.provider` while the
+route is chosen by config, and letting the two disagree would bill a
+facility-funded call at the deployment's own list rate. The in-house
+entry's `model` field is a deployment-stable governance identifier,
+not the served checkpoint: `LocalLLM`'s backend sends whatever
+`Settings.local_llm_model` names on the wire regardless of what the
+catalog's `ModelRef.model` says, so retargeting the GPU box to a
+different open model is a config change, not a new catalog entry or a
+code change here. Its `TokenPricing` is legitimately all-zero
+(metered-free in-house serving); `approve_language_model` refuses any
+entry priced as `GpuHourPricing` outright (the pricing bridge skips
+that basis, which would silently record $0 forever), so a GPU-hour
+cost basis is not an option here even bypassing the handler as this
+seed does.
+
 Idempotent in the `_agent_seed` style: `expected_version=0` append
 with `ConcurrencyError`-as-no-op, so a stream that already exists is
 skipped (an operator's later transitions are never overwritten). The
@@ -28,12 +53,18 @@ same id at every deployment (the Role / Family seed posture rather
 than the per-agent literal ranges: catalog identity is derived from
 the model identity, not hand-allocated).
 
-Seeded tiers: `served_via=Direct` (CORA's own adapter holds the
-provider credentials today), `data_tier=Internal` (the fleet reads
-non-public working data), `archivability=Alias` (provider-hosted
-identities the vendor may move or retire). TokenPricing figures are
-copied from `cora.infrastructure.observability.gen_ai.PRICING`; the
-consistency test pins the copies against drift.
+Seeded tiers: `served_via` is `Direct` for the three fleet defaults
+(CORA's own adapter holds the provider credentials today), `Argo` for
+the gateway entry, and `InHouse` for the GPU-pool entry; `data_tier`
+is `Internal` for every entry (the fleet reads non-public working
+data); `archivability` is `Alias` for every entry (a provider-hosted
+identity the vendor may move or retire, or an in-house identity an
+operator may retarget). TokenPricing figures for the four token-priced
+entries are copied from
+`cora.infrastructure.observability.gen_ai.PRICING`; the consistency
+test pins the copies against drift. The in-house entry has no
+`PRICING` counterpart by design: its rate is catalog-only, set by the
+facility rather than mirrored from a vendor table.
 """
 
 from __future__ import annotations
@@ -42,6 +73,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 from uuid import UUID, uuid5
 
+from cora.agent.adapters.argo_llm import ARGO_PROVIDER_NAME
 from cora.agent.aggregates.agent import ModelRef
 from cora.agent.aggregates.language_model import (
     ArchivabilityTier,
@@ -69,6 +101,11 @@ _log = get_logger(__name__)
 
 _SEED_COMMAND_NAME: Final[str] = "SeedLanguageModels"
 
+# Matches Settings.llm_provider's "local" literal (cora.infrastructure.config);
+# no dedicated adapter-side constant exists for it the way ARGO_PROVIDER_NAME
+# does, because LocalLLM never checks this string the way ArgoLLM.chat does.
+_LOCAL_PROVIDER_NAME: Final[str] = "local"
+
 
 # Fixed UUID5 namespace for seeded catalog-entry ids. Generated once at
 # lock-time as `uuid5(NAMESPACE_DNS, 'cora.language-model')`. Hardcoded
@@ -84,11 +121,12 @@ def language_model_seed_id(provider: str, model: str) -> UUID:
 
 @dataclass(frozen=True)
 class LanguageModelSeedEntry:
-    """One fleet-default catalog entry's deployment-stable constants."""
+    """One seeded catalog entry's deployment-stable constants."""
 
     name: str
     model_ref: ModelRef
     cost_basis: TokenPricing
+    served_via: ServingRoute
 
 
 # The ExperimentSteerer default is `DEFAULT_LLM_DECIDE_MODEL` in
@@ -103,9 +141,11 @@ _LLM_DECIDE_MODEL: Final[ModelRef] = ModelRef(
 )
 
 
-# TokenPricing figures copied from
+# The first three entries are the shipped fleet's defaults; their
+# TokenPricing figures are copied from
 # `cora.infrastructure.observability.gen_ai.PRICING` (Anthropic public
-# pricing, Jul 2026; cache writes at the 1-hour TTL tier).
+# pricing, Jul 2026; cache writes at the 1-hour TTL tier). The last two
+# are the catalog-only entries described in the module docstring.
 SEED_LANGUAGE_MODELS: Final[tuple[LanguageModelSeedEntry, ...]] = (
     LanguageModelSeedEntry(
         name="Claude Haiku 4.5",
@@ -122,6 +162,7 @@ SEED_LANGUAGE_MODELS: Final[tuple[LanguageModelSeedEntry, ...]] = (
             cache_write_per_mtok=2.00,
             cache_read_per_mtok=0.10,
         ),
+        served_via=ServingRoute.DIRECT,
     ),
     LanguageModelSeedEntry(
         name="Claude Sonnet 4.6",
@@ -136,6 +177,7 @@ SEED_LANGUAGE_MODELS: Final[tuple[LanguageModelSeedEntry, ...]] = (
             cache_write_per_mtok=6.00,
             cache_read_per_mtok=0.30,
         ),
+        served_via=ServingRoute.DIRECT,
     ),
     LanguageModelSeedEntry(
         name="Claude Sonnet 4.5",
@@ -146,12 +188,57 @@ SEED_LANGUAGE_MODELS: Final[tuple[LanguageModelSeedEntry, ...]] = (
             cache_write_per_mtok=6.00,
             cache_read_per_mtok=0.30,
         ),
+        served_via=ServingRoute.DIRECT,
+    ),
+    # Catalog-only: pre-approved for the 2-BM buy-vs-build debrief
+    # comparison, not declared as any fleet agent's compile-time
+    # default. See the module docstring's "Two further entries" section.
+    LanguageModelSeedEntry(
+        name="Claude Haiku 4.5 (Argo)",
+        model_ref=ModelRef(
+            provider=ARGO_PROVIDER_NAME,
+            model=DEFAULT_RUN_DEBRIEF_MODEL.model,
+            # Argo cannot honor a snapshot pin on a request (the gateway
+            # selects and reports the served snapshot); never carry one
+            # here regardless of what the direct entry pins.
+            snapshot_pin=None,
+        ),
+        cost_basis=TokenPricing(
+            input_per_mtok=1.00,
+            output_per_mtok=5.00,
+            cache_write_per_mtok=2.00,
+            cache_read_per_mtok=0.10,
+        ),
+        served_via=ServingRoute.ARGO,
+    ),
+    LanguageModelSeedEntry(
+        name="2-BM In-House Model (GPU Pool)",
+        model_ref=ModelRef(
+            # Stable governance identifier, deliberately not a real
+            # checkpoint name: the served model is not yet chosen, and
+            # `LocalLLM` sends `Settings.local_llm_model` on the wire
+            # regardless of this string, so retargeting the GPU box
+            # needs no change here. See the module docstring.
+            provider=_LOCAL_PROVIDER_NAME,
+            model="2bm-inhouse",
+            snapshot_pin=None,
+        ),
+        cost_basis=TokenPricing(
+            # Metered-free in-house serving: legitimately all-zero.
+            # GpuHourPricing is refused at approval and is not an
+            # option regardless (see the module docstring).
+            input_per_mtok=0.0,
+            output_per_mtok=0.0,
+            cache_write_per_mtok=0.0,
+            cache_read_per_mtok=0.0,
+        ),
+        served_via=ServingRoute.IN_HOUSE,
     ),
 )
 
 
 async def seed_language_models(kernel: Kernel) -> None:
-    """Seed the fleet-default LanguageModel catalog entries (idempotent).
+    """Seed the shipped LanguageModel catalog entries (idempotent).
 
     Each entry is appended as `LanguageModelDefined` +
     `LanguageModelApproved` in ONE `expected_version=0` append, so the
@@ -182,7 +269,7 @@ async def seed_language_models(kernel: Kernel) -> None:
             provider=entry.model_ref.provider,
             model=entry.model_ref.model,
             snapshot_pin=entry.model_ref.snapshot_pin,
-            served_via=ServingRoute.DIRECT.value,
+            served_via=entry.served_via.value,
             endpoint_note=None,
             cost_basis=cost_basis_to_payload(entry.cost_basis),
             data_tier=DataSensitivityTier.INTERNAL.value,

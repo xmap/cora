@@ -1,11 +1,15 @@
-"""Unit tests for the fleet-default LanguageModel catalog seed.
+"""Unit tests for the LanguageModel catalog seed.
 
-Pins the consistency contract: every model the shipped fleet declares
-(RunDebriefer, CautionDrafter, and the ExperimentSteerer LLM-decide
-default, whose identity the seed mirrors as literals across the tach
-boundary) has a seeded catalog entry, born Approved, at a
+Pins two consistency contracts. First, every model the shipped fleet
+declares (RunDebriefer, CautionDrafter, and the ExperimentSteerer
+LLM-decide default, whose identity the seed mirrors as literals across
+the tach boundary) has a seeded catalog entry, born Approved, at a
 deterministic id, with pricing figures matching the observability
-PRICING table. Idempotency mirrors test_caution_drafter_seed.py.
+PRICING table. Second, the two catalog-only entries for the 2-BM
+buy-vs-build debrief comparison (Argo Haiku 4.5, the in-house
+placeholder) are priced and served under the right route, and the
+in-house entry deliberately has no PRICING counterpart. Idempotency
+mirrors test_caution_drafter_seed.py.
 """
 
 from datetime import UTC, datetime
@@ -15,10 +19,13 @@ import pytest
 import structlog.testing
 
 from cora.agent._pricing_bridge import to_model_pricing
+from cora.agent.adapters.argo_llm import ARGO_PROVIDER_NAME
 from cora.agent.aggregates.agent import ModelRef
 from cora.agent.aggregates.language_model import (
+    ArchivabilityTier,
     LanguageModelDefined,
     LanguageModelStatus,
+    ServingRoute,
     TokenPricing,
     cost_basis_to_payload,
     event_type_name,
@@ -46,6 +53,12 @@ _FLEET_DEFAULTS = (
     DEFAULT_LLM_DECIDE_MODEL,
 )
 
+# The in-house entry has no PRICING counterpart by design (its rate is
+# catalog-only); the Argo entry DOES mirror a PRICING row, same as the
+# three fleet defaults. Pricing-drift tests below scope to entries
+# PRICING actually prices.
+_LOCAL_PROVIDER_NAME = "local"
+
 
 def _kernel() -> Kernel:
     settings = Settings()  # type: ignore[call-arg]
@@ -64,15 +77,23 @@ def test_fleet_default_model_refs_each_equal_their_seeded_entry() -> None:
     fresh deployment's define_agent gate never refuses the shipped
     fleet and a snapshot-pin drift on either side fails here. Compares
     BOTH sides by import, including the LLM-decide default the seed
-    mirrors as literals across the tach boundary; the identity-set
-    equality pins that no seed entry is orphaned either."""
+    mirrors as literals across the tach boundary.
+
+    The identity-set relationship is a SUBSET, not an equality: two
+    further seed entries (Argo Haiku 4.5, the 2-BM in-house
+    placeholder) are catalog-only and declared by no fleet agent as
+    its compile-time default (see test_two_buy_vs_build_entries_are_
+    catalog_only_not_fleet_defaults below), so the seeded set is
+    strictly larger. Every fleet default still resolving to a seed
+    entry is what this subset check pins; no fleet default is
+    orphaned."""
     seeded_by_identity = {
         (entry.model_ref.provider, entry.model_ref.model): entry.model_ref
         for entry in SEED_LANGUAGE_MODELS
     }
-    assert set(seeded_by_identity) == {
+    assert {
         (fleet_default.provider, fleet_default.model) for fleet_default in _FLEET_DEFAULTS
-    }
+    } <= set(seeded_by_identity)
     for fleet_default in _FLEET_DEFAULTS:
         assert seeded_by_identity[(fleet_default.provider, fleet_default.model)] == ModelRef(
             provider=fleet_default.provider,
@@ -82,11 +103,35 @@ def test_fleet_default_model_refs_each_equal_their_seeded_entry() -> None:
 
 
 @pytest.mark.unit
+def test_two_buy_vs_build_entries_are_catalog_only_not_fleet_defaults() -> None:
+    """The Argo and in-house entries are pre-approved catalog members
+    that no fleet agent declares as its compile-time default; they
+    exist so an operator can point a RunDebriefer variant at either
+    one for the 2-BM buy-vs-build debrief comparison."""
+    fleet_identities = {
+        (fleet_default.provider, fleet_default.model) for fleet_default in _FLEET_DEFAULTS
+    }
+    seeded_identities = {
+        (entry.model_ref.provider, entry.model_ref.model) for entry in SEED_LANGUAGE_MODELS
+    }
+    extra_identities = seeded_identities - fleet_identities
+    assert extra_identities == {
+        (ARGO_PROVIDER_NAME, DEFAULT_RUN_DEBRIEF_MODEL.model),
+        (_LOCAL_PROVIDER_NAME, "2bm-inhouse"),
+    }
+
+
+@pytest.mark.unit
 def test_seed_pricing_figures_match_observability_pricing_table() -> None:
     """The seed copies PRICING numbers as literals; this pin catches a
-    repricing that forgets the catalog side (or vice versa)."""
+    repricing that forgets the catalog side (or vice versa). Scoped to
+    entries PRICING actually prices: the in-house entry is catalog-only
+    by design and is checked separately below."""
     for entry in SEED_LANGUAGE_MODELS:
-        pricing = PRICING[(entry.model_ref.provider, entry.model_ref.model)]
+        key = (entry.model_ref.provider, entry.model_ref.model)
+        if key not in PRICING:
+            continue
+        pricing = PRICING[key]
         assert entry.cost_basis == TokenPricing(
             input_per_mtok=pricing.input_per_mtok,
             output_per_mtok=pricing.output_per_mtok,
@@ -100,12 +145,71 @@ def test_overlay_built_from_seed_constants_equals_static_pricing_rows() -> None:
     """The day-1 no-behavior-change claim, pinned without a database:
     the mapping the pricing bridge would build from the seeded entries
     is exactly the static PRICING rows for those identities, so first
-    boot's overlay install changes no metered figure."""
+    boot's overlay install changes no metered figure. Scoped to
+    entries PRICING actually prices, same carve-out as above."""
     overlay = {
         (entry.model_ref.provider, entry.model_ref.model): to_model_pricing(entry.cost_basis)
         for entry in SEED_LANGUAGE_MODELS
+        if (entry.model_ref.provider, entry.model_ref.model) in PRICING
     }
     assert overlay == {key: PRICING[key] for key in overlay}
+
+
+@pytest.mark.unit
+def test_argo_entry_prices_and_serves_under_argo_not_anthropic() -> None:
+    """The Argo entry must never be priced or served as `anthropic`:
+    `ArgoLLM.chat` refuses a ModelRef priced any other way, because
+    pricing resolves from `ModelRef.provider` while the route is
+    chosen by config, and letting the two disagree would bill a
+    facility-funded call at the deployment's own list rate."""
+    argo_entries = [
+        entry for entry in SEED_LANGUAGE_MODELS if entry.model_ref.provider == ARGO_PROVIDER_NAME
+    ]
+    assert len(argo_entries) == 1
+    entry = argo_entries[0]
+    assert entry.model_ref.model == DEFAULT_RUN_DEBRIEF_MODEL.model
+    assert entry.model_ref.snapshot_pin is None
+    assert entry.served_via == ServingRoute.ARGO
+    assert entry.cost_basis == TokenPricing(
+        input_per_mtok=1.00,
+        output_per_mtok=5.00,
+        cache_write_per_mtok=2.00,
+        cache_read_per_mtok=0.10,
+    )
+    assert entry.cost_basis == TokenPricing(
+        input_per_mtok=PRICING[(ARGO_PROVIDER_NAME, entry.model_ref.model)].input_per_mtok,
+        output_per_mtok=PRICING[(ARGO_PROVIDER_NAME, entry.model_ref.model)].output_per_mtok,
+        cache_write_per_mtok=PRICING[
+            (ARGO_PROVIDER_NAME, entry.model_ref.model)
+        ].cache_write_per_mtok,
+        cache_read_per_mtok=PRICING[
+            (ARGO_PROVIDER_NAME, entry.model_ref.model)
+        ].cache_read_per_mtok,
+    )
+
+
+@pytest.mark.unit
+def test_in_house_entry_is_token_priced_and_has_no_static_pricing_row() -> None:
+    """The in-house entry must carry a token price (a zero rate is
+    legitimate for metered-free serving), never `GpuHourPricing`:
+    `approve_language_model` refuses any entry priced per GPU-hour
+    outright. It has no static PRICING row by design; its rate is
+    catalog-only, set by the facility rather than mirrored from a
+    vendor table."""
+    local_entries = [
+        entry for entry in SEED_LANGUAGE_MODELS if entry.model_ref.provider == _LOCAL_PROVIDER_NAME
+    ]
+    assert len(local_entries) == 1
+    entry = local_entries[0]
+    assert entry.served_via == ServingRoute.IN_HOUSE
+    assert isinstance(entry.cost_basis, TokenPricing)
+    assert entry.cost_basis == TokenPricing(
+        input_per_mtok=0.0,
+        output_per_mtok=0.0,
+        cache_write_per_mtok=0.0,
+        cache_read_per_mtok=0.0,
+    )
+    assert (entry.model_ref.provider, entry.model_ref.model) not in PRICING
 
 
 @pytest.mark.unit
@@ -125,6 +229,8 @@ async def test_seed_creates_each_entry_born_approved_at_deterministic_id() -> No
         assert state.model_ref.provider == entry.model_ref.provider
         assert state.model_ref.model == entry.model_ref.model
         assert state.cost_basis == entry.cost_basis
+        assert state.served_via == entry.served_via
+        assert state.archivability == ArchivabilityTier.ALIAS
 
 
 @pytest.mark.unit
